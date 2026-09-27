@@ -1,5 +1,7 @@
 # M004 — Single-player MVP
 
+Historical checkpoint: world scope was expanded by [M005](m005-four-villages.md), and progression, group battles, pet management and training were replaced by [M006](m006-progression-and-battle.md). The level-two automatic skill, simplified stat gains, fixed boss stats and guard interception described below are superseded.
+
 This checkpoint completes the agreed narrow playable loop. It supersedes M003's no-progression/no-save limitations; M003 remains a record of the earlier slice.
 
 ## Delivered loop

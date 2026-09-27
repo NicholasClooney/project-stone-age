@@ -48,11 +48,13 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original 30×30 shop interior and merchant, with functional native shop, inventory, status and pet frames.
 - Pure GDScript local battle/progression authority, profile-bound saves and backup recovery.
 
-The single-player loop now includes experience, leveling, currency, three capturable species, a five-pet roster, one active companion, a level-two pet skill, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports targeting/cancellation and player→pet command selection. Progress autosaves and resumes locally. Player levels grant three points: spend them with UP buttons in the status window. DEV 传送模式 makes destination shortcuts instant; 立即遇敌 starts a normal encounter.
+The single-player loop now includes experience, leveling, currency, three capturable species, a five-pet roster, one active companion, three trainable original pet skills, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports independent targets across one to three enemies, pet switching/withdrawal, learned skills, original miss/critical/counter effects, and player→pet command selection. Progress autosaves and resumes locally. Player and pet stats use original fixed-point formulas and species growth. Existing saves retain earned stats. Player levels grant three points: spend them with UP buttons in the status window. DEV 传送模式 makes destination shortcuts instant; 立即遇敌 starts a normal encounter.
+
+Visit the original 超级饲育员 in Samgir’s pet shop (1003, 18,13) to teach 破除防御, 连续攻击 or 背水之战其之１ at their source prices. All four villages share the original `sabgm_t0` theme; wilderness follows its original map music markers. See [restored slices and limits](docs/development/m006-progression-and-battle.md).
 
 **Start your adventure:** click the villager, choose **村外的伙伴 / 休息**, and accept the quest. Explore outside, weaken an enemy and capture it. When you already have a pet, tell it to **defend while weakening a capture target**. Win three battles, then prepare for the stronger encounter that appears during exploration. Return to the villager for recovery and the quest reward. Use the original bottom pet tab to rename/select your companion and the item tab to use/equip purchases.
 
-**World restoration:** the four starting villages, both complete islands, linked village interiors and the original undersea route are now visitable. Use **DEV → 传送地点** for direct visits; disable **野外随机遇敌** there for exploration. The normal island crossing retains its original reusable pass requirement. See [world scope and remaining services](docs/development/m005-four-villages.md).
+**World restoration:** the four starting villages, both complete islands, linked village interiors and the original undersea route are now visitable. Use **DEV → 传送地点** for direct visits, or **全图传送** to see the current map and click terrain, NPCs or exits to teleport nearby; disable **野外随机遇敌** there for exploration. The normal island crossing retains its original reusable pass requirement. See [world scope and remaining services](docs/development/m005-four-villages.md).
 
 Original assets and menu layouts are retained; battle balance, capture conditions, stat bonus formulas and pet growth, this short quest, shop stock/prices and encounter timing are MVP rules rather than verified historical parity. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
 
@@ -90,6 +92,7 @@ For the full MVP, use the [local server reference](docs/reverse-engineering/loca
 .tools/asset-venv/bin/python tools/import_battle.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_mvp.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_world.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_pet_training.py /path/to/stoneage2.5
 ./scripts/run.sh --headless --editor --import --quit
 ```
 
