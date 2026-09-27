@@ -10,12 +10,22 @@ func setup(manifest: Dictionary) -> void:
  mouse_filter = Control.MOUSE_FILTER_IGNORE
  z_index = 10
  metadata = manifest.ui
- for id in range(25502,25508):frames[id] = load("res://assets/legacy/battle/ui/%d.png" % id)
+ for id in range(25500,25508):frames[id] = load("res://assets/legacy/battle/ui/%d.png" % id)
 func reset() -> void:
  for entry in active:entry.node.queue_free()
  active.clear()
-func impact(point: Vector2, amount: int, guarded: bool = false) -> void:
+func impact(point: Vector2, amount: int, guarded: bool = false, critical: bool = false, knockout: bool = false) -> void:
  if amount<=0:return
+ if critical:
+  for i in range(5):
+   var star := TextureRect.new()
+   star.mouse_filter = Control.MOUSE_FILTER_IGNORE
+   add_child(star)
+   var angle := float((5-i)*6)/32.0*TAU
+   active.append({"node":star,"born":clock,"origin":point+Vector2(0,-32),"kind":"critical","velocity":Vector2(sin(angle),-cos(angle))*(4+i%4),"duration":32 if knockout else 8})
+  number(point,amount,false)
+  _update_effects()
+  return
  var flash := TextureRect.new()
  flash.mouse_filter = Control.MOUSE_FILTER_IGNORE
  add_child(flash)
@@ -77,4 +87,9 @@ func _update_effects() -> void:
    entry.node.texture = frames[id]
    var info: Dictionary = metadata[str(id)]
    entry.node.position = entry.origin+Vector2(info.x,info.y)
+  elif entry.kind=="critical":
+   var id := 25501 if ticks<int(entry.duration)/2 else 25500
+   entry.node.texture = frames[id]
+   var info: Dictionary = metadata[str(id)]
+   entry.node.position = entry.origin+entry.velocity*ticks+Vector2(info.x,info.y)
   elif entry.kind=="number":entry.node.position = entry.origin+Vector2(0,number_offset(ticks))

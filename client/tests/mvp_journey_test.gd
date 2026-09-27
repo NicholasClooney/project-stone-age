@@ -26,7 +26,7 @@ func settle() -> void:
 func fight(capture: bool = false, boss: bool = false) -> String:
 	settle()
 	if not game.battle_view.visible:
-		check(game.begin_battle(boss),"encounter starts through world")
+		check(game.begin_battle(boss,1),"encounter starts through world")
 	for i in range(30):
 		var s: Dictionary = game.battle_session.snapshot()
 		if not s.active:break
@@ -69,6 +69,7 @@ func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	game.profile_persistence = false
 	root.add_child(game)
+	game.random_encounters = false
 	await frames()
 	await visit_villager()
 	game.perform_adventure_action("accept_quest")
@@ -97,6 +98,9 @@ func run() -> void:
 	game.show_adventure_menu("pets")
 	await frames()
 	check(game.adventure_menu.visible,"original pet tab opens roster")
+	game.adventure_menu.pet_switch_view("detail")
+	game.adventure_menu.pet_rename = true
+	game.adventure_menu.rebuild()
 	game.adventure_menu.name_edit.text = "小伙伴"
 	game.perform_adventure_action("rename_pet",0)
 	game.close_adventure_menu()
@@ -104,7 +108,7 @@ func run() -> void:
 	for i in range(3):
 		await recover()
 		check(await fight()=="win","pet and player win progression encounter")
-	check(game.session.snapshot().player.level>=2 and game.session.snapshot().pets[0].skill_unlocked,"player levels and pet skill unlocks")
+	check(game.session.snapshot().player.level>=2 and game.session.snapshot().pets[0].level >= 2,"player and pet gain original growth")
 	await recover()
 	check(game.session.can_fight_boss(),"quest unlocks tougher encounter")
 	check(await fight(false,true)=="win","boss defeated with companion")

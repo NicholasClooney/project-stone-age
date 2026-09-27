@@ -30,6 +30,8 @@ var wilderness_music: AudioStream
 var village_music: AudioStream
 var area_music: AudioStream
 var session = GameSession.new()
+var dev_map_overview: Control
+var pet_training: Control
 var adventure_menu: Control
 var profile_persistence := true
 var area_transition_busy := false
@@ -254,7 +256,7 @@ func handle_arrival() -> bool:
 			return begin_battle(int(data.map_id)==100 and session.can_fight_boss())
 	return false
 
-func begin_battle(boss: bool = false) -> bool:
+func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if moving or paused_input or not world_catalog.field(int(data.map_id)) or battle_view==null:
 		return false
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
@@ -266,7 +268,7 @@ func begin_battle(boss: bool = false) -> bool:
 	help.hide()
 	classic_hud.map_panel.hide()
 	var species := ["wooli","wooli_wooli","woolistan"]
-	var config: Dictionary = session.start_battle_config("woolistan" if boss else species[encounter_serial%3],boss)
+	var config: Dictionary = session.start_battle_config("woolistan" if boss else species[encounter_serial%3],boss,1 if boss else (enemy_count if enemy_count > 0 else 1 + encounter_serial % 3))
 	if config.is_empty():
 		paused_input = false
 		return false
@@ -283,23 +285,29 @@ func battle_action(action: String) -> void:
 	if not battle_view.visible:
 		return
 	var before: Dictionary = session.snapshot()
-	var state: Dictionary = battle_session.submit_action(action)
+	var target: int = int(battle_view.get("player_target"))
+	battle_session.set_pet_target(int(battle_view.get("pet_target")))
+	var skill_id: int = int(battle_view.get("selected_pet_skill"))
+	if skill_id > 0 and battle_session.snapshot().pet_command == "skill":
+		battle_session.set_pet_skill(skill_id)
+	var state: Dictionary = battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
 	if not bool(state.active) and session.apply_battle_result(state):
-		if state.outcome=="win":
+		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
 			var after: Dictionary = session.snapshot()
 			state.result_summary = [{"name":"你","xp":int(state.get("xp",0)),"level_up":int(after.player.level)>int(before.player.level)}]
-			if int(after.active_pet)>=0:
-				var pet_index: int = after.active_pet
-				state.result_summary.append({"name":str(after.pets[pet_index].name),"xp":int(state.get("xp",0)),"level_up":int(after.pets[pet_index].level)>int(before.pets[pet_index].level)})
+			var pet_rewards: Array = state.get("pet_reward_xp",[])
+			for pet_index in range(mini(before.pets.size(),pet_rewards.size())):
+				if int(pet_rewards[pet_index])<=0: continue
+				state.result_summary.append({"name":str(after.pets[pet_index].name),"xp":int(pet_rewards[pet_index]),"level_up":int(after.pets[pet_index].level)>int(before.pets[pet_index].level)})
 			if int(after.player.level)>int(before.player.level):
 				state.events.append("升级！%d 级，体力恢复。状态窗口可分配 %d 点。" % [int(after.player.level),int(after.player.get("stat_points",0))])
-			if int(after.active_pet)>=0:
+			if int(after.active_pet)>=0 and int(after.active_pet) < before.pets.size():
 				var index: int = after.active_pet
 				if int(after.pets[index].level)>int(before.pets[index].level):
 					state.events.append("%s 成长到 %d 级！" % [after.pets[index].name,after.pets[index].level])
-					if not before.pets[index].skill_unlocked and after.pets[index].skill_unlocked:
-						state.events.append("伙伴学会了强力攻击！")
+					if int(after.pets[index].level) == 2:
+						state.events.append("可以向饲育员学习伙伴技能。")
 		elif state.outcome=="captured":
 			state.events.append("伙伴已加入宠物栏，可为它取名并选择出战。")
 		checkpoint()
@@ -393,6 +401,14 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if data.is_empty():
+		return
+	if is_instance_valid(dev_map_overview) and dev_map_overview.visible:
+		if event.is_action_pressed("ui_cancel"):dev_map_overview.close_map()
+		get_viewport().set_input_as_handled()
+		return
+	if is_instance_valid(pet_training) and pet_training.visible:
+		if event.is_action_pressed("ui_cancel"):pet_training.close_training()
+		get_viewport().set_input_as_handled()
 		return
 	if is_instance_valid(world_travel) and world_travel.overlay.visible:
 		if event.is_action_pressed("ui_cancel"):world_travel._close()
@@ -763,6 +779,9 @@ func build_ui() -> void:
 		else:call_deferred("dev_visit",id))
 	destinations.about_to_popup.connect(clear_input)
 	dev.add_child(dev_destinations)
+	var overview_button := button("全图传送",func(): dev_map_overview.open_map())
+	overview_button.name = "DevMapOverview"
+	dev.add_child(overview_button)
 	var teleport := button("传送模式",func(): pass)
 	teleport.name = "DevTeleportMode"
 	teleport.toggle_mode = true
@@ -819,6 +838,12 @@ func build_ui() -> void:
 	adventure_menu = AdventureMenu.new()
 	adventure_menu.configure(self)
 	root.add_child(adventure_menu)
+	pet_training = preload("res://scripts/pet_training.gd").new()
+	pet_training.configure(self)
+	root.add_child(pet_training)
+	dev_map_overview = preload("res://scripts/dev_map_overview.gd").new()
+	dev_map_overview.configure(self)
+	root.add_child(dev_map_overview)
 	adventure_hint = text("",14)
 	adventure_hint.position = Vector2(18,132)
 	adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
@@ -834,7 +859,9 @@ func build_ui() -> void:
 	battle_view.sound_requested.connect(play_battle_sound)
 	battle_view.capture_music_requested.connect(func(celebrating: bool):
 		set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
-	battle_view.pet_command_requested.connect(func(command: String): battle_session.set_pet_command(command))
+	battle_view.pet_command_requested.connect(func(command: String):
+		if command == "skill": battle_session.set_pet_skill(int(battle_view.get("selected_pet_skill")))
+		else: battle_session.set_pet_command(command))
 	world_travel = preload("res://scripts/world_travel.gd").new()
 	actors.add_child(world_travel)
 	var residents: Array = []
@@ -1049,6 +1076,8 @@ func update_adventure_hint() -> void:
 	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
 
 func show_adventure_menu(kind: String) -> void:
+	if is_instance_valid(dev_map_overview) and dev_map_overview.visible:return
+	if is_instance_valid(pet_training) and pet_training.visible:return
 	if is_instance_valid(world_travel) and world_travel.overlay.visible:return
 	if adventure_menu.visible and adventure_menu.kind == kind:
 		close_adventure_menu()

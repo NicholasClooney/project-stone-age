@@ -18,6 +18,8 @@ func run():
  root.add_child(game)
  await process_frame
  await process_frame
+ # Critically injured fixture bounds a loss under native guard probabilities.
+ game.session._profile.player.hp=1
  game.dev_encounter()
  var view=game.battle_view
  view._process(view.feedback_until+0.1)

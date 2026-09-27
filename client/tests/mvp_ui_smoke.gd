@@ -40,14 +40,16 @@ func run() -> void:
 	# Obtain a real companion through public authority commands; no profile mutation.
 	var setup_battle = load("res://server/battle_session.gd").new()
 	setup_battle.start_battle(game.session.start_battle_config("wooli"))
-	setup_battle.submit_action("attack")
-	setup_battle.submit_action("attack")
+	for turn in range(20):
+		var opponent: Dictionary = setup_battle.snapshot()
+		if not opponent.active or opponent.enemy_hp*100<=opponent.enemy_max_hp*60: break
+		setup_battle.submit_action("attack")
 	var captured: Dictionary = setup_battle.submit_action("capture")
 	check(captured.outcome=="captured" and game.session.apply_battle_result(captured),"companion obtained through authority capture flow")
 	game.session.heal()
 	game.switch_area(true,Vector2i(45,45))
 	await tick()
-	var started: bool = game.begin_battle()
+	var started: bool = game.begin_battle(false,3)
 	check(started,"real world starts companion battle")
 	if not started:
 		game.queue_free()
@@ -77,7 +79,12 @@ func run() -> void:
 	await cancel()
 	check(view.selected_action.is_empty() and game.battle_session.snapshot().potions==start.potions,"Escape cancels item menu without consuming potion or fleeing")
 	await click(view.commands[2])
-	await click(view.target_buttons[1])
+	var remaining := 1
+	for index in [1,3,4]:
+		if view.health_of(view.state,index)>0:
+			remaining=index
+			break
+	await click(view.target_buttons[remaining])
 	check(view.command_phase=="pet" and view.queued_player_action=="capture","capture target queued before pet command")
 	await cancel()
 	if view.command_phase=="pet": await cancel()
@@ -90,7 +97,7 @@ func run() -> void:
 	root.push_input(reset,true)
 	await tick()
 	check(game.cell==cell and int(game.data.map_id)==100 and view.visible,"world reset key cannot bypass modal battle")
-	# Finish two victories through public commands to reach the real pet skill unlock.
+	# Finish two victories through public commands to verify pet growth.
 	for fight in range(2):
 		for turn in range(15):
 			if not game.battle_session.snapshot().active: break
@@ -99,7 +106,21 @@ func run() -> void:
 		game.return_from_battle()
 		game.session.heal()
 		if fight==0: game.begin_battle()
-	check(game.session.snapshot().pets[0].level>=2 and game.session.snapshot().pets[0].skill_unlocked,"pet level progression unlocks skill after victories")
+	check(game.session.snapshot().pets[0].level>=2 and not game.session.snapshot().pets[0].skill_unlocked,"pet grows without granting an invented level-two skill")
+	# Earn the actual original training fee using settled battles.
+	for fight in range(160):
+		if int(game.session.snapshot().player.gold)>=1500: break
+		game.session.heal()
+		var earning = load("res://server/battle_session.gd").new()
+		earning.start_battle(game.session.start_battle_config("wooli"))
+		for turn in range(40):
+			if not earning.snapshot().active: break
+			earning.submit_action("attack")
+		if not game.session.apply_battle_result(earning.snapshot()): break
+	game.load_area_id(1003,Vector2i(18,15))
+	game.checkpoint()
+	check(game.session.learn_pet_skill(0,3),"original trainer accepts earned fee for learned skill")
+	game.load_area_id(100,Vector2i(637,493))
 	game.begin_battle()
 	view = game.battle_view
 	await settle()
@@ -109,7 +130,7 @@ func run() -> void:
 	var skill_available := false
 	for child in view.choice_panel.get_children():
 		if child is Button and child.text=="技能": skill_available = not child.disabled
-	check(skill_available,"real original pet menu enables unlocked skill")
+	check(skill_available,"real original pet menu enables trained skill")
 	game.music.stop()
 	game.effect.stop()
 	await create_timer(0.25).timeout

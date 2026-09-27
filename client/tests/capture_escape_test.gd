@@ -19,7 +19,7 @@ func picture(name: String):
  await RenderingServer.frame_post_draw
  root.get_texture().get_image().save_png("res://../artifacts/"+name+".png")
 func begin(authority, weaken: bool = false):
- var initial=authority.start_battle({"player_hp":100,"player_max_hp":100,"player_attack":16,"player_speed":20,"enemy_speed":1,"enemy_attack":2,"enemy_max_hp":30,"pet":{"species":"wooli","name":"乌力","sprite":100250,"hp":40,"max_hp":40,"attack":1,"speed":1}})
+ var initial=authority.start_battle({"player_hp":100,"player_max_hp":100,"player_attack":8,"player_speed":20,"enemy_speed":1,"enemy_attack":2,"enemy_max_hp":30,"pet":{"species":"wooli","name":"乌力","sprite":100250,"hp":40,"max_hp":40,"attack":1,"speed":1}})
  if weaken:
   authority.set_pet_command("defend")
   initial=authority.submit_action("attack")
@@ -103,6 +103,19 @@ func run():
   view.show_state(authority.submit_action("capture"))
   advance(float(view.actors[0].motions[1].end)+0.01)
   check(sounds.has(251) and view.actors[0].temporary=="7_3","equipped avatar "+avatar+" retains club capture sound and celebration")
+ var solo=Authority.new()
+ var solo_state=solo.start_battle({"player_hp":100,"player_max_hp":100})
+ view.open_battle(solo_state)
+ advance(view.feedback_until+0.01)
+ for i in range(3):
+  var escaped=solo.submit_action("escape")
+  if escaped.outcome=="escaped":
+   view.pending_action="escape"
+   view.show_state(escaped)
+   break
+ check(is_finite(view.feedback_until),"solo escape ignores absent pet slot when scheduling completion")
+ advance(view.feedback_until+0.01)
+ check(view.result_panel.visible,"solo escape releases input and shows result")
  begin(Authority.new())
  check(view.actors[0].sprite.visible and view.actors[1].sprite.visible,"new battle resets capture and escape visibility")
  view.queue_free()

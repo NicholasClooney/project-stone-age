@@ -6,6 +6,7 @@ signal return_requested
 signal sound_requested(ident: int)
 signal capture_music_requested(celebrating: bool)
 
+const PetSkills = preload("res://scripts/pet_skills.gd")
 const BattleEffects = preload("res://scripts/battle_effects.gd")
 const ART_ROOT := "res://assets/legacy/battle/"
 const STAGE_SIZE := Vector2(800,600)
@@ -49,7 +50,28 @@ var pet_slide_at := -10.0
 var actor_labels: Array[Label] = []
 var hp_bars: Array[Control] = []
 var hp_fills: Array[ColorRect] = []
-var displayed_hp: Array[int] = [0,0,0]
+var displayed_hp: Array[int] = [0,0,0,0,0]
+var player_target := 0
+var pet_target := 0
+var switch_pet_index := -2
+var selected_pet_skill := 0
+var pet_art_cues: Array[Dictionary] = []
+# oft.cpp monster_place_no reorders the five native slots center,left,right.
+# At 800x600 the friendly side receives DISPLACEMENT (160,120).
+func enemy_actor(index: int) -> int:
+	return 1 if index==0 else index+2
+func enemy_index(index: int) -> int:
+	return 0 if index==1 else index-2 if index>=3 else -1
+func enemies_of(snapshot: Dictionary) -> Array:
+	return snapshot.get("enemies",[{"hp":snapshot.get("enemy_hp",0),"max_hp":snapshot.get("enemy_max_hp",1),"name":snapshot.get("enemy_name","乌力"),"sprite":snapshot.get("enemy_sprite",100250)}])
+func health_of(snapshot: Dictionary, index: int, maximum: bool = false) -> int:
+	var key := "max_hp" if maximum else "hp"
+	if index==0: return int(snapshot.get("player_"+key,0))
+	if index==2: return int(snapshot.get("pet_"+key,0))
+	var opponents := enemies_of(snapshot)
+	var target := enemy_index(index)
+	return int(opponents[target].get(key,0)) if target>=0 and target<opponents.size() else 0
+
 var hp_cues: Array[Dictionary] = []
 var word_cues: Array[Dictionary] = []
 var music_cues: Array[Dictionary] = []
@@ -69,6 +91,7 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	var shade := ColorRect.new()
 	shade.color = Color.BLACK
+	shade.z_index = -2000
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	shade.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(shade)
@@ -78,11 +101,11 @@ func _ready() -> void:
 	add_child(stage)
 	if FileAccess.file_exists(ART_ROOT+"manifest.json"):
 		manifest = JSON.parse_string(FileAccess.get_file_as_string(ART_ROOT+"manifest.json"))
-		picture("background.png",Vector2.ZERO)
+		picture("background.png",Vector2.ZERO).z_index = -1000
 		for ident in manifest.get("images",{}):
 			textures[str(ident)] = load(ART_ROOT+"images/%s.png" % ident)
-		add_actor(str(manifest.get("player_id","100000")),Vector2(565,350),3)
-		add_actor(str(manifest.get("enemy_id","")),Vector2(245,230),7)
+		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
+		add_actor(str(manifest.get("enemy_id","")),Vector2(101,150),7)
 	status = label("",16,Vector2(20,12),Vector2(420,26))
 	report = label("",16,Vector2(20,508),Vector2(760,65))
 	report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -111,13 +134,13 @@ func _ready() -> void:
 	choice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	choice_panel.z_index = 10
 	stage.add_child(choice_panel)
-	for i in range(3):
+	for i in range(5):
 		var target := Button.new()
-		target.name = ["PlayerTarget","EnemyTarget","PetTarget"][i]
+		target.name = ["PlayerTarget","EnemyTarget","PetTarget","EnemyTarget2","EnemyTarget3"][i]
 		target.flat = true
 		for theme in ["normal","hover","pressed","disabled","focus"]:
 			target.add_theme_stylebox_override(theme,StyleBoxEmpty.new())
-		target.position = [Vector2(525,240),Vector2(205,120),Vector2(425,295)][i]
+		target.position = Vector2.ZERO
 		target.size = Vector2(80,125)
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		target.focus_mode = Control.FOCUS_NONE
@@ -140,7 +163,7 @@ func _ready() -> void:
 		meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		meter.z_index = 5
 		stage.add_child(meter)
-		ui_picture([26019,26014,26020][i],Vector2.ZERO,meter)
+		ui_picture([26019,26014,26020,26014,26014][i],Vector2.ZERO,meter)
 		var fill := ColorRect.new()
 		fill.color = Color(0,1,0)
 		fill.position = Vector2(-21,-3 if i==0 else -1)
@@ -263,16 +286,32 @@ func open_battle(next_state: Dictionary) -> void:
 			actors[0].animation = manifest.characters[ident]["3_%d" % int(actors[0].facing)]
 	var enemy_art := str(next_state.get("enemy_sprite",SPECIES_ART.get(str(next_state.get("enemy_species","wooli")),"100250")))
 	set_actor_art(1,enemy_art)
-	if actors.size() > 2:
-		actors[2].sprite.queue_free()
-		actors.resize(2)
+	for old_index in range(2,actors.size()): actors[old_index].sprite.queue_free()
+	actors.resize(2)
 	var pet: Dictionary = next_state.get("pet",{})
 	var pet_key := str(pet.get("species",""))+":"+str(pet.get("name",""))
 	if pet_key!=remembered_pet:
 		last_pet_command = ""
 		remembered_pet = pet_key
-	if not pet.is_empty():
-		add_actor(str(pet.get("sprite",SPECIES_ART.get(str(pet.get("species","wooli")),"100250"))),Vector2(465,420),3)
+	# Keep the pet slot stable while changing companions, even when withdrawn.
+	add_actor(str(pet.get("sprite",100250)),Vector2(581,432),3)
+	actors[2]["enabled"] = not pet.is_empty()
+	actors[2]["maximum"] = int(next_state.get("pet_max_hp",pet.get("max_hp",1)))
+	var opponents := enemies_of(next_state)
+	for i in range(opponents.size()):
+		var point: Vector2 = Vector2(101,150)+[Vector2.ZERO,Vector2(-32,24),Vector2(32,-24)][i]
+		if i>0: add_actor(str(opponents[i].get("sprite",100250)),point,7)
+		else:
+			actors[1].home = point
+			set_actor_art(1,str(opponents[0].get("sprite",enemy_art)))
+	player_target = 0
+	pet_target = 0
+	switch_pet_index = -2
+	pet_art_cues.clear()
+	for i in range(actor_labels.size()):
+		actor_labels[i].hide()
+		target_buttons[i].hide()
+		target_highlights[i].hide()
 	for actor in actors:
 		actor.temporary = ""
 		actor.cues = []
@@ -284,7 +323,7 @@ func open_battle(next_state: Dictionary) -> void:
 		actor.spin_start = INF
 		actor.spin_end = -INF
 		actor.rate = 1.0
-		actor.point = actor.home+Vector2(-300,-300) if i==1 else actor.home+Vector2(300,300)
+		actor.point = actor.home+Vector2(-300,-300) if enemy_index(i)>=0 else actor.home+Vector2(300,300)
 		actor.motions = []
 		queue_motion(i,actor.point,actor.home,TRANSITION_SECONDS,ENTRY_SECONDS,int(actor.facing))
 		queue_pose(i,4,TRANSITION_SECONDS,ENTRY_SECONDS)
@@ -341,7 +380,7 @@ func show_state(next_state: Dictionary) -> void:
 	var previous := state
 	state = next_state.duplicate(true)
 	if previous.is_empty():
-		for i in range(3): displayed_hp[i] = int(state.get(["player_hp","enemy_hp","pet_hp"][i],0))
+		for i in range(5): displayed_hp[i] = health_of(state,i)
 	if actors.size() >= 2 and not previous.is_empty() and int(state.get("turn",0)) != int(previous.get("turn",0)):
 		queue_turn_animation(previous)
 	pending_action = ""
@@ -358,7 +397,9 @@ func show_state(next_state: Dictionary) -> void:
 	actor_labels[2].text = "" if pet.is_empty() else str(pet.get("name","宠物"))+(" LV%d" % int(pet.level) if pet.has("level") else "")
 	for i in range(actor_labels.size()):
 		actor_labels[i].horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-		actor_labels[i].add_theme_color_override("font_color",Color.WHITE if i==1 else Color.YELLOW)
+		actor_labels[i].add_theme_color_override("font_color",Color.WHITE if enemy_index(i)>=0 else Color.YELLOW)
+	for i in range(enemies_of(state).size()):
+		actor_labels[enemy_actor(i)].text = str(enemies_of(state)[i].get("name","乌力"))
 	var messages := PackedStringArray()
 	for event in state.get("events",[]): messages.append(str(event))
 	var outcome := str(state.get("outcome",""))
@@ -380,8 +421,8 @@ func update_result_text() -> void:
 	var lines := PackedStringArray()
 	var profile: Dictionary = world.session.snapshot() if is_instance_valid(world) and world.get("session")!=null else {}
 	result_level_up = false
-	if outcome=="win":
-		lines.append("战斗胜利！")
+	if outcome=="win" or (outcome=="captured" and int(state.get("xp",0))>0):
+		lines.append("战斗胜利！" if outcome=="win" else "捕捉成功，战斗结束！")
 		lines.append("获得经验值  %d" % int(state.get("xp",0)))
 		lines.append("获得石币  %d" % int(state.get("gold",0)))
 		var summary: Array = state.get("result_summary",[])
@@ -427,7 +468,7 @@ func queue_strike(index: int, target: int, at: float) -> Dictionary:
 	var target_home: Vector2 = actors[target].home
 	var contact := target_home+(home-target_home).normalized()*64.0
 	var travel := clampf(home.distance_to(contact)/650.0,0.2,0.6)
-	var facing := 7 if index==1 else 3
+	var facing := 7 if enemy_index(index)>=0 else 3
 	var clip: Dictionary = actor.animations.get("0_%d" % facing,{})
 	var strike := clampf(float(clip.get("duration_ms",600))/1000.0,0.35,1.2)
 	var hit_fraction := 0.5
@@ -446,9 +487,9 @@ func queue_strike(index: int, target: int, at: float) -> Dictionary:
 
 # oft.cpp states35–46: contact, hit-marker capture, 60-tick pause,
 # slow return with a spinning follower, then anger/break-away or happy255.
-func queue_capture(at: float, success: bool) -> Dictionary:
+func queue_capture(at: float, success: bool, target: int = 1) -> Dictionary:
 	var home: Vector2 = actors[0].home
-	var enemy: Vector2 = actors[1].home
+	var enemy: Vector2 = actors[target].home
 	var contact := enemy+(home-enemy).normalized()*64.0
 	var travel := home.distance_to(contact)/480.0
 	var clip: Dictionary = actors[0].animations["0_3"]
@@ -467,22 +508,22 @@ func queue_capture(at: float, success: bool) -> Dictionary:
 	queue_motion(0,contact,home,retreat,duration,7)
 	actors[0].cues.append({"at":retreat,"action":4,"seconds":duration,"facing":7})
 	var follower := enemy+(home-contact)
-	queue_motion(1,enemy,follower,retreat,duration,7)
-	actors[1].spin_start = hit
-	actors[1].spin_end = arrival+(4.25 if success else 0.0)
+	queue_motion(target,enemy,follower,retreat,duration,7)
+	actors[target].spin_start = hit
+	actors[target].spin_end = arrival+(4.25 if success else 0.0)
 	word_cues.append({"at":hit,"index":0,"id":26512})
 	sound_cues.append({"at":hit,"id":251 if clip.frames.any(func(frame): return int(frame.get("sound",0))==10003) else 250})
 	word_cues.append({"at":arrival,"index":0,"id":26506 if success else 26505})
 	var end := arrival+(4.25 if success else 100.0/60.0)
 	actors[0].cues.append({"at":arrival,"action":7 if success else 8,"seconds":end-arrival,"facing":3})
 	if success:
-		actors[1].hide_at = end
+		actors[target].hide_at = end
 		music_cues.append({"at":arrival,"celebrate":true})
 		music_cues.append({"at":end,"celebrate":false})
 	else:
 		var back := follower.distance_to(enemy)/240.0
-		queue_motion(1,follower,enemy,arrival,back,3)
-		actors[1].cues.append({"at":arrival,"action":4,"seconds":back,"facing":3})
+		queue_motion(target,follower,enemy,arrival,back,3)
+		actors[target].cues.append({"at":arrival,"action":4,"seconds":back,"facing":3})
 		end = maxf(end,arrival+back)
 	return {"hit":hit,"end":end}
 
@@ -506,7 +547,7 @@ func queue_escape(at: float, success: bool, health: Dictionary) -> Dictionary:
 			actors[index].cues.append({"at":end,"action":4,"seconds":duration,"facing":7})
 			actors[index].hide_at = end+duration
 			# Both actors finish before exploration/result controls become available.
-		end = maxf(float(actors[0].hide_at),float(actors[2].get("hide_at",end)) if actors.size()>2 else end)
+		end = maxf(float(actors[0].hide_at),float(actors[2].get("hide_at",end)) if actors.size()>2 and int(health.get("pet_hp",0))>0 else end)
 	else:
 		for i in range(11):
 			actors[0].cues.append({"at":end+i*tick,"action":4,"seconds":tick,"facing":7,"rate":12.0/(i+1),"phase":phase})
@@ -518,6 +559,9 @@ func queue_escape(at: float, success: bool, health: Dictionary) -> Dictionary:
 	return {"hit":at,"end":end}
 
 func queue_turn_animation(previous: Dictionary) -> void:
+	if state.has("enemies"):
+		queue_group_turn(previous)
+		return
 	hp_cues.clear()
 	word_cues.clear()
 	music_cues.clear()
@@ -658,10 +702,7 @@ func _request_action(action: String) -> void:
 		choice_panel.add_child(description)
 		hint.text = "选择道具；右键 / Esc 取消。"
 	elif action == "pet":
-		ui_picture(26040,Vector2(650,280),choice_panel)
-		var pet: Dictionary = state.get("pet",{})
-		choice("无出战宠物" if pet.is_empty() else str(pet.get("name","宠物"))+"（出战中）",Vector2(545,165),cancel_selection)
-		hint.text = "出战宠物；战斗外可更换。"
+		show_pet_roster(0)
 	elif action in ["attack","capture"]:
 		hint.text = "请选择敌人；右键 / Esc 取消。"
 	else:
@@ -670,9 +711,11 @@ func _request_action(action: String) -> void:
 func select_target(index: int) -> void:
 	if world_modal_open(): return
 	if elapsed < feedback_until or not bool(state.get("active",false)): return
-	if command_phase == "pet" and index == 1 and selected_action in ["pet_attack","pet_skill"]:
+	if command_phase == "pet" and enemy_index(index)>=0 and health_of(state,index)>0 and selected_action in ["pet_attack","pet_skill"]:
+		pet_target = enemy_index(index)
 		finish_pet_command(selected_action.trim_prefix("pet_"))
-	elif index == 1 and selected_action in ["attack","capture"]:
+	elif enemy_index(index)>=0 and health_of(state,index)>0 and selected_action in ["attack","capture"]:
+		player_target = enemy_index(index)
 		complete_player_command(selected_action)
 	elif index == 0 and selected_action == "item_target":
 		complete_player_command("item")
@@ -681,11 +724,11 @@ func complete_player_command(action: String) -> void:
 	queued_player_action = action
 	selected_action = ""
 	var pet: Dictionary = state.get("pet",{})
-	if not pet.is_empty() and int(state.get("pet_hp",pet.get("hp",0))) > 0 and action != "escape":
+	if not pet.is_empty() and int(state.get("pet_hp",pet.get("hp",0))) > 0 and action not in ["escape","switch"]:
 		command_phase = "pet"
 		command_panel.hide()
 		var remembered := last_pet_command if not last_pet_command.is_empty() else "attack"
-		if remembered=="skill" and (not bool(state.get("skill_unlocked",false)) or bool(state.get("skill_used",false))): remembered = "attack"
+		if remembered=="skill" and selected_pet_skill not in pet.get("learned_skills",[]): remembered = "attack"
 		selected_action = "pet_"+remembered
 		show_pet_choices()
 		pet_slide_at = elapsed
@@ -701,24 +744,25 @@ func show_pet_choices() -> void:
 	var pet_title := label(str(state.get("pet_name",state.get("pet",{}).get("name","宠物"))),16,PET_MENU_ANCHOR+Vector2(-96,-14),Vector2(192,28))
 	pet_title.reparent(choice_panel)
 	ui_picture(26130,Vector2(650,300),choice_panel)
-	var actions := [["攻击","attack"],["技能","skill"],["防御","defend"]]
+	var actions := [["攻击","attack"],["技能","skill"],["防御","defend"],["待机","standby"]]
 	for i in range(actions.size()):
 		var action: String = actions[i][1]
 		var button := choice(str(actions[i][0]),Vector2(540,170+i*38),func():
 			if is_animating() or world_modal_open(): return
 			sound_requested.emit(217)
-			if action == "defend": finish_pet_command(action)
+			if action in ["defend","standby"]: finish_pet_command(action)
+			elif action == "skill" and state.get("pet",{}).has("learned_skills"): show_learned_skills()
 			else:
 				selected_action = "pet_"+action
 				for candidate in choice_panel.get_children():
 					if candidate is Button: candidate.set_pressed_no_signal(str(candidate.get_meta("pet_action",""))==action)
 				hint.text = "宠物：请选择敌人，或点击其他指令；右键 / Esc 取消。")
 		button.set_meta("pet_action",action)
-		button.toggle_mode = action!="defend"
+		button.toggle_mode = action not in ["defend","standby"]
 		button.set_pressed_no_signal(selected_action=="pet_"+action)
-		if action=="skill" and (not bool(state.get("skill_unlocked",false)) or bool(state.get("skill_used",false))):
+		if action=="skill" and (state.get("pet",{}).get("learned_skills",[]).is_empty() if state.get("pet",{}).has("learned_skills") else (not bool(state.get("skill_unlocked",false)) or bool(state.get("skill_used",false)))):
 			button.disabled = true
-			button.text = "技能（本场已使用）" if bool(state.get("skill_used",false)) else "技能（宠物 2 级解锁）"
+			button.text = "技能（尚未学习）"
 	hint.text = "宠物：请选择敌人，或点击其他指令；右键 / Esc 取消。" if selected_action.begins_with("pet_") else "请选择宠物指令；右键 / Esc 返回人物指令。"
 
 func finish_pet_command(command: String) -> void:
@@ -788,13 +832,24 @@ func _process(delta: float) -> void:
 	while not word_cues.is_empty() and elapsed>=float(word_cues[0].at):
 		var word: Dictionary = word_cues.pop_front()
 		if int(word.index)<actors.size(): battle_effects.word(actors[int(word.index)].point,int(word.id))
+	while not pet_art_cues.is_empty() and elapsed>=float(pet_art_cues[0].at):
+		var cue: Dictionary = pet_art_cues.pop_front()
+		var companion: Dictionary = cue.pet
+		actors[2].enabled = not companion.is_empty()
+		actors[2].maximum = int(companion.get("max_hp",1))
+		actors[2].hide_at = INF if not companion.is_empty() else elapsed
+		actors[2].temporary = ""
+		actors[2].until = 0.0
+		set_actor_art(2,str(companion.get("sprite",100250)))
+		displayed_hp[2] = int(companion.get("hp",0))
+		actor_labels[2].text = str(companion.get("name",""))
 	while not hp_cues.is_empty() and elapsed>=float(hp_cues[0].at):
 		var cue: Dictionary = hp_cues.pop_front()
 		var recipient := int(cue.index)
 		var difference := displayed_hp[recipient]-int(cue.hp)
 		if recipient<actors.size():
 			var point: Vector2 = actors[recipient].point
-			if difference>0: battle_effects.impact(point,difference,bool(cue.get("guarded",false)))
+			if difference>0: battle_effects.impact(point,difference,bool(cue.get("guarded",false)),bool(cue.get("critical",false)),int(cue.hp)<=0)
 			elif difference<0: battle_effects.heal(point,-difference)
 		displayed_hp[recipient] = int(cue.hp)
 	report.visible = not is_animating()
@@ -841,11 +896,11 @@ func _process(delta: float) -> void:
 			actor.point = Vector2(motion.from).lerp(Vector2(motion.to),amount)
 			if amount<1.0: break
 			motions.pop_front()
-		var shown := elapsed<float(actor.get("hide_at",INF))
+		var shown := bool(actor.get("enabled",true)) and elapsed<float(actor.get("hide_at",INF))
 		actor.sprite.visible = shown
 		actor_labels[actor_index].visible = shown
 		if actor_index<hp_bars.size():
-			var maximum := maxi(1,int(state.get(["player_max_hp","enemy_max_hp","pet_max_hp"][actor_index],1)))
+			var maximum := maxi(1,int(actor.get("maximum",1)) if actor_index==2 else health_of(state,actor_index,true))
 			hp_bars[actor_index].position = actor.point+Vector2(0,-80)
 			hp_bars[actor_index].visible = shown and displayed_hp[actor_index]>0
 			hp_fills[actor_index].size.x = int(clampf(float(displayed_hp[actor_index])/maximum,0,1)*40.0)
@@ -856,6 +911,8 @@ func _process(delta: float) -> void:
 			animation = actor.animations[actor.temporary]
 		if elapsed>=float(actor.get("spin_start",INF)) and elapsed<float(actor.get("spin_end",-INF)):
 			animation = actor.animations.get("1_%d" % (int(elapsed*60)%8),animation)
+		var resting_dead := displayed_hp[actor_index]<=0 and elapsed>=float(actor.until)
+		if resting_dead: animation = actor.animations.get("2_%d" % int(actor.facing),animation)
 		var frames: Array = animation.frames
 		if frames.is_empty():
 			continue
@@ -866,6 +923,7 @@ func _process(delta: float) -> void:
 			index = int(fmod((elapsed-float(actor.started))*float(actor.get("rate",1.0))+float(actor.get("phase",0.0)),duration)/duration*frames.size()) if int(str(actor.temporary).get_slice("_",0)) in [4,7,8] else mini(int((elapsed-float(actor.started))/duration*frames.size()),frames.size()-1)
 		if elapsed>=float(actor.get("spin_start",INF)) and elapsed<float(actor.get("spin_end",-INF)):
 			index = int(fmod(elapsed,duration)/duration*frames.size())
+		if resting_dead: index = frames.size()-1
 		var frame: Dictionary = frames[index]
 		var frame_key := str(actor.temporary)+"_"+str(index) if temporary else "idle_"+str(index)
 		if frame_key != str(actor.last_frame):
@@ -877,11 +935,13 @@ func _process(delta: float) -> void:
 		var metadata: Dictionary = manifest.images[ident]
 		var sprite: Sprite2D = actor.sprite
 		sprite.texture = textures[ident]
+		sprite.z_index = clampi(int(actor.point.y),0,599)-600
 		sprite.position = actor.point+Vector2(float(metadata.x)+float(frame.x),float(metadata.y)+float(frame.y))
 		var target: Button = target_buttons[actor_index]
+		target.visible = shown
 		target.position = sprite.position
 		target.size = sprite.texture.get_size()
-		var eligible := shown and not is_animating() and not world_modal_open() and bool(state.get("active",false)) and ((actor_index==1 and selected_action in ["attack","capture","pet_attack","pet_skill"]) or (actor_index==0 and selected_action=="item_target"))
+		var eligible := shown and not is_animating() and not world_modal_open() and bool(state.get("active",false)) and ((enemy_index(actor_index)>=0 and displayed_hp[actor_index]>0 and selected_action in ["attack","capture","pet_attack","pet_skill"]) or (actor_index==0 and selected_action=="item_target"))
 		target.disabled = not eligible
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if eligible else Control.CURSOR_ARROW
 		var highlight: Panel = target_highlights[actor_index]
@@ -891,3 +951,138 @@ func _process(delta: float) -> void:
 		var phase := int(elapsed*60.0)%60
 		var outline: StyleBoxFlat = highlight.get_theme_stylebox("panel")
 		outline.border_color = Color.GREEN if phase<45 else (Color(0,0.5,0) if phase>=50 and phase<55 else Color.WHITE)
+
+func show_learned_skills() -> void:
+	clear_choices()
+	ui_picture(26130,Vector2(650,300),choice_panel)
+	var known: Array = state.get("pet",{}).get("learned_skills",[])
+	for i in range(known.size()):
+		var skill_id := int(known[i])
+		if not PetSkills.SKILLS.has(skill_id): continue
+		var button := choice(str(PetSkills.SKILLS[skill_id].name),Vector2(530,170+i*38),func():
+			if is_animating(): return
+			sound_requested.emit(217)
+			selected_pet_skill = skill_id
+			selected_action = "pet_skill"
+			hint.text = "请选择技能目标；右键 / Esc 返回。")
+		button.tooltip_text = str(PetSkills.SKILLS[skill_id].description)
+
+# Every effect consumes an authority event. Rendering never rolls combat odds.
+func queue_group_turn(previous: Dictionary) -> void:
+	hp_cues.clear()
+	word_cues.clear()
+	music_cues.clear()
+	sound_cues.clear()
+	pet_art_cues.clear()
+	for actor in actors:
+		actor.cues = []
+		actor.motions = []
+		actor.point = actor.home
+		actor.spin_start = INF
+		actor.spin_end = -INF
+		actor.rate = 1.0
+	var at := elapsed
+	var before := previous
+	for frame in state.get("turn_frames",[]):
+		var who := str(frame.actor)
+		var index := enemy_actor(int(frame.get("enemy_index",0))) if who=="enemy" else 2 if who=="pet" else 0
+		var target := (2 if str(frame.get("enemy_target",""))=="pet" else 0) if who=="enemy" else enemy_actor(int(frame.get("target_index",0)))
+		var outcome := str(frame.get("outcome","hit"))
+		var timing := {"hit":at+0.25,"end":at+0.5}
+		if outcome=="switch":
+			var roster: Array = frame.get("pets",[])
+			var next_pet := int(frame.get("pet_index",-1))
+			if bool(actors[2].get("enabled",false)):
+				queue_motion(2,actors[2].home,actors[2].home+Vector2(300,300),at,0.5,7)
+				actors[2].cues.append({"at":at,"action":4,"seconds":0.5,"facing":7})
+			var companion: Dictionary = roster[next_pet] if next_pet>=0 and next_pet<roster.size() else {}
+			pet_art_cues.append({"at":at+0.5,"pet":companion})
+			if not companion.is_empty():
+				queue_motion(2,actors[2].home+Vector2(300,300),actors[2].home,at+0.5,0.5,3)
+				actors[2].cues.append({"at":at+0.5,"action":4,"seconds":0.5,"facing":3})
+			timing = {"hit":at+1.0,"end":at+1.0}
+		elif who=="player" and pending_action=="capture" and outcome in ["capture","captured"]:
+			timing = queue_capture(at,outcome=="captured",target)
+		elif who=="player" and pending_action=="escape" and outcome=="escape":
+			timing = queue_escape(at,str(state.get("outcome",""))=="escaped",before)
+		elif outcome in ["hit","miss","critical","counter","counter_miss","counter_critical"]:
+			timing = queue_strike(index,target,at)
+			if outcome.begins_with("counter"): word_cues.append({"at":at,"index":index,"id":26507})
+			if outcome.ends_with("miss"):
+				word_cues.append({"at":float(timing.hit),"index":target,"id":26504})
+			elif int(frame.get("damage",0))>0:
+				var dead := health_of(frame,target)<=0
+				var guarding := (target==0 and pending_action=="defend") or (target==2 and str(state.get("last_pet_command",""))=="defend")
+				queue_pose(target,2 if dead else 10 if guarding else 1,float(timing.hit),60.0 if dead else 0.35)
+		else:
+			queue_pose(index,3 if outcome=="standby" else 10,at,0.5)
+			if outcome=="defend": word_cues.append({"at":at,"index":index,"id":26510})
+		for recipient in range(actors.size()):
+			# Capturing removes a target without displaying fictitious damage.
+			if enemy_index(recipient)>=0 and bool(enemies_of(frame)[enemy_index(recipient)].get("captured",false)): continue
+			var guarded := (recipient==0 and pending_action=="defend") or (recipient==2 and str(state.get("last_pet_command",""))=="defend")
+			hp_cues.append({"at":float(timing.hit),"index":recipient,"hp":health_of(frame,recipient),"guarded":guarded,"critical":recipient==target and outcome.ends_with("critical")})
+		before = frame
+		at = float(timing.end)+0.08
+	hp_cues.sort_custom(func(a,b): return float(a.at)<float(b.at))
+	word_cues.sort_custom(func(a,b): return float(a.at)<float(b.at))
+	for actor in actors: actor.cues.sort_custom(func(a,b): return float(a.at)<float(b.at))
+	menu_slide_at = at
+	feedback_until = at+MENU_SLIDE_SECONDS
+	if not bool(state.get("active",false)) and not hp_cues.is_empty(): feedback_until = maxf(feedback_until,float(hp_cues.back().at)+85.0/60.0)
+
+# Classic asset26040 has three rows. Page a five-pet roster using original
+# arrow buttons; the later source's five-row126230 asset is absent in2.5.
+func show_pet_roster(page: int) -> void:
+	clear_choices()
+	ui_picture(26040,Vector2(650,280),choice_panel)
+	var roster: Array = state.get("pets",[])
+	for row in range(3):
+		var index := page*3+row
+		if index>=roster.size(): break
+		var companion: Dictionary = roster[index]
+		var origin := Vector2(522,120+row*87)
+		var active := index==int(state.get("active_pet",-1))
+		var button := choice(str(companion.get("name","宠物")),origin+Vector2(14,24),func():
+			if is_animating(): return
+			sound_requested.emit(203)
+			switch_pet_index = index
+			complete_player_command("switch"))
+		button.name = "RosterPet%d" % index
+		button.size = Vector2(228,24)
+		button.alignment = HORIZONTAL_ALIGNMENT_LEFT
+		button.add_theme_font_size_override("font_size",14)
+		var color := Color.YELLOW if active else Color.CYAN if int(companion.get("hp",0))>0 else Color.RED
+		button.add_theme_color_override("font_color",color)
+		button.add_theme_color_override("font_disabled_color",color)
+		button.disabled = active or int(companion.get("hp",0))<=0
+		for field in [[str(companion.get("level",1)),Vector2(43,59)],[str(companion.get("hp",0)),Vector2(130,59)],[str(companion.get("max_hp",0)),Vector2(183,59)],[str(companion.get("loyalty","—")),Vector2(64,81)]]:
+			var value := label(field[0],12,origin+field[1],Vector2(48,18))
+			value.add_theme_color_override("font_color",color)
+			value.reparent(choice_panel,false)
+	var withdraw := original_choice(26041,Vector2(576,423),func():
+		if is_animating(): return
+		sound_requested.emit(203)
+		switch_pet_index = -1
+		complete_player_command("switch"))
+	withdraw.name = "WithdrawPet"
+	withdraw.disabled = int(state.get("active_pet",-1))<0
+	original_choice(26042,Vector2(734,423),cancel_selection).name = "ClosePetRoster"
+	if roster.size()>3:
+		var previous := original_choice(26184,Vector2(641,423),func(): sound_requested.emit(217); show_pet_roster(0))
+		var next := original_choice(26186,Vector2(675,423),func(): sound_requested.emit(217); show_pet_roster(1))
+		previous.name = "PreviousPetPage"
+		next.name = "NextPetPage"
+		previous.disabled = page==0
+		next.disabled = page==1
+	hint.text = "选择出战伙伴；本回合更换或收回宠物。"
+
+func original_choice(ident: int, center: Vector2, callback: Callable) -> TextureButton:
+	var button := TextureButton.new()
+	button.texture_normal = load(ART_ROOT+"ui/%d.png" % ident)
+	button.texture_hover = button.texture_normal
+	button.position = center+ui_offset(ident)
+	button.focus_mode = Control.FOCUS_NONE
+	button.pressed.connect(callback)
+	choice_panel.add_child(button)
+	return button

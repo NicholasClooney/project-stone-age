@@ -54,7 +54,9 @@ func approach(index: int) -> void:
 	var cell := Vector2i(entries[index].cell[0],entries[index].cell[1])
 	var start: Vector2i = world.target_cell if world.moving else world.cell
 	var best: Array[Vector2i] = []
-	for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+	var offsets := [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]
+	if entries[index].get("role", "")=="trainer":offsets.append_array([Vector2i(-2,0),Vector2i(2,0),Vector2i(0,-2),Vector2i(0,2)])
+	for offset in offsets:
 		var destination: Vector2i = cell+offset
 		if not world.is_walkable(destination):continue
 		var route: Array[Vector2i] = world.navigation.get_id_path(start,destination)
@@ -70,7 +72,8 @@ func _process(_delta: float) -> void:
 	if pending < 0 or world.moving or not world.path.is_empty():return
 	var point := Vector2i(entries[pending].cell[0],entries[pending].cell[1])
 	var distance: Vector2i = (world.cell-point).abs()
-	if distance.x+distance.y==1:
+	var reach := 2 if entries[pending].get("role", "")=="trainer" else 1
+	if distance.x+distance.y<=reach:
 		selected = pending
 		pending = -1
 		_open()
@@ -81,6 +84,9 @@ func _open() -> void:
 	world.paused_input = true
 	world.player.set_action(3)
 	var entry: Dictionary = entries[selected]
+	if entry.get("role", "")=="trainer":
+		world.pet_training.open_training(int(world.data.map_id))
+		return
 	body.text = str(entry.get("name",""))+"\n\n"+str(entry.get("text",""))
 	choice.hide()
 	if entry.get("role","")=="vendor":

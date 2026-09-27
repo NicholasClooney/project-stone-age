@@ -77,7 +77,7 @@ func run() -> void:
 	var visible_commands := 0
 	for child in view.choice_panel.get_children():
 		if child is Button and child.has_meta("pet_action"): visible_commands += 1
-	check(visible_commands==3,"remembered pet attack keeps all command alternatives visible")
+	check(visible_commands==4,"remembered pet attack keeps all command alternatives visible")
 	view.cancel_selection()
 	check(view.command_phase=="pet" and view.selected_action.is_empty(),"cancel remembered pet target reopens skill picker")
 	view.cancel_selection()
@@ -171,7 +171,7 @@ func run() -> void:
 	check(view.displayed_hp[1]==18 and view.displayed_hp[0]==80,"first strike applies its exact authoritative HP snapshot")
 	check(view.battle_effects.active.any(func(entry): return entry.kind=="flash") and view.battle_effects.active.any(func(entry): return entry.kind=="number" and entry.node.text=="12"),"actual HP loss creates original hit flash and exact damage number")
 	settle(view)
-	check(view.displayed_hp==[72,12,30],"all overhead HP meters settle to final authoritative values")
+	check(view.displayed_hp.slice(0,3)==[72,12,30],"all overhead HP meters settle to final authoritative values")
 	view.open_battle(state)
 	settle(view)
 	var healing := state.duplicate(true)

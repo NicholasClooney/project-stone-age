@@ -67,8 +67,9 @@ func run() -> void:
 	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
 	game.session.heal()
-	game.begin_battle()
-	for i in range(30):game.battle_action("defend")
+	game.session._profile.player.hp=1
+	game.begin_battle(false,1)
+	for i in range(60):game.battle_action("defend")
 	check(game.battle_session.snapshot().outcome=="defeat","defeat outcome supported")
 	game.checkpoint()
 	check(game.session.snapshot().location.map_id==1000,"saving at defeat screen preserves safe village recovery")

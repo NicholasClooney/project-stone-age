@@ -5,6 +5,8 @@ var kind := "status"
 var panel: Control
 var feedback := ""
 var selected_pet := 0
+var pet_view := "list"
+var pet_rename := false
 var name_edit: LineEdit
 var art: Dictionary = {}
 var selected_item := "potion"
@@ -22,6 +24,8 @@ func _has_point(point: Vector2) -> bool:
 
 func open_menu(next_kind: String) -> void:
 	kind = next_kind
+	pet_view = "list"
+	pet_rename = false
 	feedback = ""
 	selected_pet = maxi(0,int(world.session.snapshot().active_pet))
 	show()
@@ -88,7 +92,7 @@ func rebuild() -> void:
 		remove_child(panel)
 		panel.queue_free()
 	panel = Control.new()
-	var dimensions := {"status":Vector2(272,360),"inventory":Vector2(272,440),"pets":Vector2(552,380),"shop":Vector2(432,468)}
+	var dimensions := {"status":Vector2(272,360),"inventory":Vector2(272,440),"pets":Vector2(272,320),"shop":Vector2(432,468)}
 	panel.size = dimensions.get(kind,Vector2(704,432))
 	layout_panel()
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -178,14 +182,15 @@ func portrait(sprite: int, point: Vector2, bounds: Vector2) -> void:
 
 func status_panel(profile: Dictionary) -> void:
 	var p: Dictionary = profile.player
+	var effective: Dictionary = world.session.effective_player_stats()
 	image(26073,Vector2.ZERO)
 	label("旅行者",Vector2(22,43),140,14)
 	portrait(100000,Vector2(177,84),Vector2(64,68))
-	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(int(p.attack)+(4 if profile.equipped else 0)),str(p.defence),str(p.get("speed",10)),"—"]
+	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(effective.attack),str(effective.defence),str(effective.speed),"—"]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
 	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]
 	var base_keys := ["vitality","strength","toughness","dexterity"]
-	for i in range(base_keys.size()):label(str(p.allocated_stats[base_keys[i]]),base_positions[i],28,13)
+	for i in range(base_keys.size()):label(str(int(int(p.base_stats[base_keys[i]])/100)),base_positions[i],28,13)
 	label("石币 %d" % p.gold,Vector2(18,331),248,13)
 	# Classic menu.cpp11801-11808: center(136,180) plus original
 	# ADRN offsets: LEVEL UP POINT(-71,88), UP(-26,109).
@@ -194,11 +199,11 @@ func status_panel(profile: Dictionary) -> void:
 		label(str(p.stat_points),Vector2(186,268),40,13)
 	var stats := ["vitality","strength","toughness","dexterity"]
 	var rows := [Vector2(110,289),Vector2(230,289),Vector2(110,309),Vector2(230,309)]
-	var hints := ["体力：最大体力 +4","腕力：攻击 +1","耐力：防御 +1","速度：敏捷 +1"]
+	var hints := ["体力：体力 +4，攻击及防御各 +0.1","腕力：体力 +1，攻击 +1，防御 +0.1","耐力：体力 +1，防御 +1，攻击 +0.1","速度：体力 +1，敏捷 +1，攻击及防御各 +0.05"]
 	for i in range(stats.size()):
 		var plus := art_button(26076,rows[i],"allocate_stat",stats[i],int(p.get("stat_points",0))>0)
 		plus.texture_pressed = original(26077)
-		plus.tooltip_text = hints[i] + "（消耗 1 点）"
+		plus.tooltip_text = hints[i] + "（消耗 1 点；小数累积后取整）"
 		plus.name = "Allocate_"+stats[i]
 		plus.visible = int(p.get("stat_points",0))>0
 
@@ -246,42 +251,111 @@ func inventory_panel(profile: Dictionary) -> void:
 	label("恢复体力；战斗中也可使用。" if potion else "攻击 +4；装备后生效。",Vector2(15,354),239,14)
 	choice("使用" if potion else ("卸下" if profile.equipped else "装备"),Vector2(14,404),"use_potion" if potion else "equip",null if potion else not profile.equipped,int(profile.inventory[selected_item])>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
 
+func pet_native_button(ident: int, center: Vector2, callback: Callable, title: String = "") -> TextureButton:
+	var button := TextureButton.new()
+	button.texture_normal = original(ident)
+	button.position = center-button.texture_normal.get_size()/2
+	button.tooltip_text = title
+	button.pressed.connect(callback)
+	panel.add_child(button)
+	return button
+
+func pet_switch_view(view: String) -> void:
+	pet_view = view
+	pet_rename = false
+	world.play_ui_sound(202)
+	rebuild()
+
 func pet_panel(profile: Dictionary) -> void:
-	image(26044,Vector2.ZERO)
 	var pets: Array = profile.pets
-	if pets.is_empty():
-		stone(Rect2(280,0,256,240))
-		label("还没有宠物。\n在村外削弱野生宠物后，\n使用战斗菜单的捕捉。",Vector2(298,34),218,15)
+	if pets.is_empty():pet_view="list"
+	selected_pet=clampi(selected_pet,0,maxi(0,pets.size()-1))
+	if pet_view=="list":
+		panel.size=Vector2(272,320)
+		image(26044,Vector2.ZERO)
+		for i in range(pets.size()):
+			var pet: Dictionary=pets[i]
+			var active: bool=int(profile.active_pet)==i
+			var y:=31+i*51
+			var color:=Color.YELLOW if active else Color.WHITE
+			var title:=label(str(pet.name),Vector2(69,y),155,14)
+			title.add_theme_color_override("font_color",color)
+			label(str(pet.level),Vector2(108,y+24),30,13).add_theme_color_override("font_color",color)
+			label(str(pet.hp),Vector2(168,y+24),35,13).add_theme_color_override("font_color",color)
+			label(str(pet.max_hp),Vector2(223,y+24),37,13).add_theme_color_override("font_color",color)
+			var row:=Button.new()
+			row.name="PetRow%d" % i
+			row.position=Vector2(67,y-3)
+			row.size=Vector2(190,47)
+			for style in ["normal","hover","pressed","focus"]:row.add_theme_stylebox_override(style,StyleBoxEmpty.new())
+			row.pressed.connect(func(): selected_pet=i; pet_switch_view("detail"))
+			panel.add_child(row)
+			var state:=pet_native_button(26053 if active else 26052,Vector2(39,y+10),func(): world.perform_adventure_action("select_pet",-1 if active else i),"休息" if active else "出战")
+			state.name="PetState%d" % i
+		if pets.is_empty():
+			label("你没有宠物",Vector2(76,31),160,14)
+			pet_native_button(26042,Vector2(136,299),world.close_adventure_menu)
+		else:
+			pet_native_button(26056,Vector2(80,299),func(): pet_switch_view("detail"),"详细资料")
+			pet_native_button(26042,Vector2(192,299),world.close_adventure_menu)
 		return
-	image(26045,Vector2(280,0))
-	selected_pet=clampi(selected_pet,0,pets.size()-1)
-	for i in range(pets.size()):
-		var pet: Dictionary=pets[i]
-		var y := 30+i*52
-		portrait(int(pet.sprite),Vector2(15,y),Vector2(58,48))
-		label(("★ " if int(profile.active_pet)==i else "")+str(pet.name),Vector2(77,y+1),180,13)
-		label(str(pet.level),Vector2(108,y+26),35,13)
-		label(str(pet.hp),Vector2(181,y+26),40,13)
-		label(str(pet.max_hp),Vector2(230,y+26),40,13)
-		var row:=choice("",Vector2(10,y),"pet_preview",i)
-		row.size=Vector2(250,50)
-		row.name="PetRow%d" % i
 	var pet: Dictionary=pets[selected_pet]
-	label(pet.name,Vector2(297,45),225,15)
-	portrait(int(pet.sprite),Vector2(455,57),Vector2(64,74))
-	var values := [str(pet.level),str(pet.xp),str(int(pet.level)*30-int(pet.xp)),"%d / %d" % [pet.hp,pet.max_hp],str(pet.attack),str(pet.defence),str(pet.speed),"—"]
-	for i in range(values.size()):label(values[i],Vector2(366,85+i*22),90,13)
-	label("强力攻击已学会" if pet.skill_unlocked else "Lv 2 学会强力攻击",Vector2(295,277),240,14)
+	if pet_view=="skills":
+		panel.size=Vector2(272,348)
+		image(26130,Vector2.ZERO)
+		var skills:=PackedStringArray(["待机","攻击","防御"])
+		for skill in pet.get("learned_skills",[]):skills.append(preload("res://scripts/pet_skills.gd").SKILLS[int(skill)].name)
+		var ui_metadata: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json")).ui
+		for i in range(skills.size()):
+			var bar: Dictionary=ui_metadata[str(26131+i)]
+			image(26131+i,Vector2(136+bar.x,174+bar.y))
+			label(skills[i],Vector2(70,58+i*25),185,14)
+		label(pet.name,Vector2(13,32),220,14)
+		pet_native_button(26043,Vector2(190,330),func(): pet_switch_view("detail"))
+		pet_navigation(pets.size(),330)
+		return
+	panel.size=Vector2(272,332)
+	image(26045,Vector2.ZERO)
+	label(pet.name,Vector2(13,35),150,14)
+	pet_native_button(26058,Vector2(86,66),func(): pet_rename=true; rebuild(),"更改名字")
+	var values := [str(pet.level),str(pet.xp),str(int(pet.level)*30-int(pet.xp))]
+	for i in range(3):label(values[i],Vector2(70,82+i*24),80,13)
+	label(str(pet.hp),Vector2(66,154),41,13)
+	label(str(pet.max_hp),Vector2(113,154),45,13)
+	for i in range(4):
+		var value:=str([pet.attack,pet.defence,pet.speed,pet.get("loyalty","—")][i])
+		label(value,Vector2(70,178+i*24),45,13)
+	var manifest: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+	var frame: Dictionary=manifest.characters[str(int(pet.sprite))]["3_0"].frames[0]
+	var metadata: Dictionary=manifest.images[str(int(frame.image))]
+	var portrait_view:=TextureRect.new()
+	portrait_view.name="PetPortrait"
+	portrait_view.texture=load("res://assets/legacy/battle/images/%d.png" % int(frame.image))
+	portrait_view.position=Vector2(200+metadata.x+frame.x,144+metadata.y+frame.y)
+	portrait_view.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	panel.add_child(portrait_view)
+	pet_native_button(26046,Vector2(198,286),func(): pet_switch_view("skills"),"宠物技能")
+	pet_native_button(26043,Vector2(190,317),func(): pet_switch_view("list"))
+	pet_navigation(pets.size(),317)
+	if pet_rename:pet_rename_panel(pet)
+
+func pet_navigation(count: int, y: float) -> void:
+	pet_native_button(26180,Vector2(60,y),func(): selected_pet=(selected_pet+count-1)%count; rebuild(),"上一只")
+	pet_native_button(26182,Vector2(104,y),func(): selected_pet=(selected_pet+1)%count; rebuild(),"下一只")
+
+func pet_rename_panel(pet: Dictionary) -> void:
+	var origin:=Vector2(0,336)
+	image(26049,origin)
 	name_edit=LineEdit.new()
 	name_edit.text=pet.name
 	name_edit.max_length=16
-	name_edit.position=Vector2(9,285)
-	name_edit.size=Vector2(175,28)
+	name_edit.position=origin+Vector2(18,20)
+	name_edit.size=Vector2(148,23)
 	name_edit.add_theme_font_size_override("font_size",14)
 	name_edit.add_theme_stylebox_override("normal",StyleBoxEmpty.new())
 	panel.add_child(name_edit)
-	art_button(26058,Vector2(183,289),"rename_pet",selected_pet).tooltip_text="更改名字"
-	art_button(26054,Vector2(291,308),"select_pet",selected_pet).tooltip_text="设为出战与跟随宠物"
+	pet_native_button(26093,origin+Vector2(80,67),func(): world.perform_adventure_action("rename_pet",selected_pet); pet_rename=false; rebuild(),"确定")
+	pet_native_button(26050,origin+Vector2(190,67),func(): pet_rename=false; rebuild(),"取消")
 
 func shop_panel(profile: Dictionary) -> void:
 	image(26138,Vector2.ZERO)
