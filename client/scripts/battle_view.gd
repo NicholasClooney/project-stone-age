@@ -302,7 +302,17 @@ func layout() -> void:
 	stage.scale = Vector2.ONE*factor
 	stage.position = (size-STAGE_SIZE*factor)/2
 
+var hunt_target_index := -1
+
+func mark_hunt_target(index: int) -> void:
+	hunt_target_index=index
+	if index>=0 and index<enemies_of(state).size():
+		var target: Label=actor_labels[enemy_actor(index)]
+		target.text="★ 达标 " + str(enemies_of(state)[index].get("name",""))
+		target.add_theme_color_override("font_color",Color.YELLOW)
+
 func open_battle(next_state: Dictionary) -> void:
+	hunt_target_index=-1
 	capture_transition()
 	if is_instance_valid(battlefield) and is_instance_valid(world):
 		var bitmap := str(world.terrain.ground.get(int(world.cell.y)*int(world.data.width)+int(world.cell.x),""))
@@ -452,6 +462,7 @@ func show_state(next_state: Dictionary) -> void:
 		actor_labels[i].add_theme_color_override("font_color",Color.WHITE if enemy_index(i)>=0 else Color.YELLOW)
 	for i in range(enemies_of(state).size()):
 		actor_labels[enemy_actor(i)].text = str(enemies_of(state)[i].get("name","乌力"))
+	mark_hunt_target(hunt_target_index)
 	var messages := PackedStringArray()
 	for event in state.get("events",[]): messages.append(str(event))
 	var outcome := str(state.get("outcome",""))

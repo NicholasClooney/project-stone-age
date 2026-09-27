@@ -34,6 +34,7 @@ var village_music: AudioStream
 var area_music: AudioStream
 var session = GameSession.new()
 var changelog_menu: Control
+var pet_hunt_menu: Control
 var dev_gm_menu: Control
 var dev_map_overview: Control
 var pet_training: Control
@@ -443,6 +444,10 @@ func _input(event: InputEvent) -> void:
 			held.erase(action)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_instance_valid(pet_hunt_menu) and pet_hunt_menu.visible:
+		if event.is_action_pressed("ui_cancel"):pet_hunt_menu.close_menu()
+		get_viewport().set_input_as_handled()
+		return
 	if data.is_empty():
 		return
 	if is_instance_valid(changelog_menu) and changelog_menu.visible:
@@ -876,6 +881,12 @@ func build_ui() -> void:
 	var encounter := button("立即遇敌",dev_encounter)
 	encounter.name = "DevEncounter"
 	dev.add_child(encounter)
+	pet_hunt_menu = preload("res://scripts/pet_hunt_menu.gd").new()
+	pet_hunt_menu.configure(self)
+	root.add_child(pet_hunt_menu)
+	var hunt := button("自动刷极品",pet_hunt_menu.open_menu)
+	hunt.name = "DevPetHunt"
+	dev.add_child(hunt)
 	if int(data.map_id)==1000:
 		dev.add_child(button("Villager",dev_go_villager))
 	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",dev_go_adventure)
