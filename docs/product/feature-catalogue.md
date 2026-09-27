@@ -4,6 +4,8 @@ Static source review, 2026-09-27. These are community client/server snapshots, n
 
 Calibration: completed original-resource Samgir = **1 point**; completed original villager conversation = **0.5 points**. Current original HUD/map work is also implemented within M002 scope but has no user-calibrated point value. These completed slices are excluded from all remaining estimates.
 
+Implementation update: [M003](../development/m003-first-battle.md) now provides a narrow battle authority, one wilderness portal pair and a prototype battle. The ranges below remain the original planning baseline; these partial systems are not full completion of C01/C02/C08/C09. Re-estimate remaining scope after progression and pet validation.
+
 Each row estimates a working system with representative content, original presentation where assets are available, and relevant tests. It does **not** include every map, quest, pet, skill or historical release. Dependencies refer to row IDs; client-only provisional features have research uncertainty. See [estimate assumptions and totals](../development/replication-estimates.md) and [source evidence](../reverse-engineering/feature-evidence.md).
 
 Difficulty: Medium = established pattern and modest integration; Hard = multiple interacting stateful systems; Research = missing/mismatched behavior evidence, regardless of coding complexity. Rows describe remaining scope: completed Samgir movement, one dialogue and map-window art are not recharged.

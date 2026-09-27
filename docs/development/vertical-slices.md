@@ -15,3 +15,5 @@ M000 village, M001 conversation and M002 classic HUD/map are already implemented
 These are subsets of catalogue systems, not additional costs to add to those estimates. New rules go through Godot authority. Introduce abstractions only with their first demonstrated consumer.
 
 After a portal works, add preload/cancel/failure behavior. After a battle works, expand targeting, skills, statuses and parties. Add the headless/network adapter only when testing two players. Each checkpoint keeps the original-resource Samgir playable.
+
+The fun-first MVP now takes priority: [M003 battle](m003-first-battle.md) is implemented. Next add saved progression, then capture and pet combat before expanding interiors or the NPC census. The rows above remain reusable system slices, not the current execution order.

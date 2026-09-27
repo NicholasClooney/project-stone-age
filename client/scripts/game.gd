@@ -1,6 +1,8 @@
 extends Node2D
 
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
+const BattleSession = preload("res://server/battle_session.gd")
+const BattleView = preload("res://scripts/battle_view.gd")
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
 const STEP_TIME := 0.19
@@ -8,6 +10,13 @@ const MIN_ZOOM := 0.4
 const MAX_ZOOM := 2.0
 const ZOOM_STEP := 0.1
 const SCREEN_DIRECTIONS := [Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1),Vector2i(0,-1)]
+var terrain: Node2D
+var ui_layer: CanvasLayer
+var battle_view: Control
+var battle_session = BattleSession.new()
+var field_steps := 0
+var battle_sounds: Dictionary = {}
+var village_music: AudioStream
 var data: Dictionary
 var textures: Dictionary = {}
 var player: Node2D
@@ -59,13 +68,31 @@ func _ready() -> void:
 		add_child(error_label)
 		return
 	data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir.json"))
+	build_world()
+	setup_audio()
+	build_ui()
+	get_window().focus_exited.connect(clear_input)
+	get_tree().auto_accept_quit = false
+	get_window().close_requested.connect(close_game)
+	if "--capture-once" in OS.get_cmdline_user_args():
+		capture_frame()
+
+
+func area_name() -> String:
+	return str(data.get("name","萨姆吉尔村"))
+
+func display_cell() -> Vector2i:
+	var origin: Array = data.get("origin",[0,0])
+	return cell+Vector2i(int(origin[0]),int(origin[1]))
+
+func build_world() -> void:
 	for ident in data.images:
 		textures[ident] = load("res://assets/legacy/images/"+ident+".png")
-	var ground := LegacyGround.new()
-	ground.world = self
+	terrain = LegacyGround.new()
+	terrain.world = self
 	for entry in data.ground:
-		ground.ground[int(entry[1])*int(data.width)+int(entry[0])] = str(int(entry[2]))
-	add_child(ground)
+		terrain.ground[int(entry[1])*int(data.width)+int(entry[0])] = str(int(entry[2]))
+	add_child(terrain)
 	actors = Node2D.new()
 	actors.y_sort_enabled = true
 	add_child(actors)
@@ -83,6 +110,7 @@ func _ready() -> void:
 		actors.add_child(pivot)
 	player = LegacyActor.new()
 	player.world = self
+	player.character_id = ["100000","100005","100010"][character_index]
 	player.position = project(logical_position)
 	actors.add_child(player)
 	camera = Camera2D.new()
@@ -90,6 +118,7 @@ func _ready() -> void:
 	camera.position_smoothing_enabled = true
 	camera.position_smoothing_speed = 10
 	player.add_child(camera)
+	navigation.clear()
 	navigation.region = Rect2i(0,0,int(data.width),int(data.height))
 	navigation.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
 	navigation.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
@@ -98,14 +127,101 @@ func _ready() -> void:
 	for y in range(int(data.height)):
 		for x in range(int(data.width)):
 			navigation.set_point_solid(Vector2i(x,y),not is_walkable(Vector2i(x,y)))
-	setup_npc()
-	setup_audio()
+	if int(data.map_id)==1000:
+		setup_npc()
+
+func switch_area(wilderness: bool, destination: Vector2i) -> bool:
+	var file := "res://assets/legacy/wilderness.json" if wilderness else "res://assets/legacy/samgir.json"
+	if not FileAccess.file_exists(file):
+		message.text = "Import the wilderness assets first; see README.md."
+		return false
+	var next_data: Variant = JSON.parse_string(FileAccess.get_file_as_string(file))
+	if not next_data is Dictionary:
+		return false
+	var width := int(next_data.width)
+	var height := int(next_data.height)
+	if destination.x<0 or destination.y<0 or destination.x>=width or destination.y>=height or int(next_data.blocked[destination.y*width+destination.x])!=0:
+		return false
+	var previous_zoom: Vector2 = camera.zoom
+	clear_input()
+	for node in [terrain,actors,ui_layer]:
+		remove_child(node)
+		node.queue_free()
+	data = next_data
+	textures.clear()
+	npc_data.clear()
+	npc_cell = Vector2i(-1,-1)
+	npc = null
+	npc_sprite = null
+	cell = destination
+	from_cell = destination
+	target_cell = destination
+	logical_position = Vector2(destination)
+	moving = false
+	paused_input = false
+	marker_cell = Vector2i(-1,-1)
+	field_steps = 0
+	build_world()
+	camera.zoom = previous_zoom
 	build_ui()
-	get_window().focus_exited.connect(clear_input)
-	get_tree().auto_accept_quit = false
-	get_window().close_requested.connect(close_game)
-	if "--capture-once" in OS.get_cmdline_user_args():
-		capture_frame()
+	camera.reset_smoothing()
+	queue_redraw()
+	return true
+
+func walk_to_exit() -> void:
+	if paused_input:
+		return
+	walk_to(Vector2i(49,118) if int(data.map_id)==1000 else Vector2i(46,45))
+
+func handle_arrival() -> bool:
+	if int(data.map_id)==1000:
+		if cell.x==49 and cell.y>=116 and cell.y<=119:
+			return switch_area(true,Vector2i(45,cell.y-73))
+	else:
+		if cell.x==46 and cell.y>=43 and cell.y<=46:
+			return switch_area(false,Vector2i(50,cell.y+73))
+		field_steps += 1
+		if field_steps>=8:
+			return begin_battle()
+	return false
+
+func begin_battle() -> bool:
+	if moving or paused_input or int(data.map_id)!=100 or battle_view==null:
+		return false
+	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
+		message.text = "Import original battle assets first; see README.md."
+		return false
+	clear_input()
+	paused_input = true
+	player.set_action(3)
+	help.hide()
+	classic_hud.map_panel.hide()
+	var state: Dictionary = battle_session.start_battle()
+	battle_view.open_battle(state)
+	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
+	play_ui_sound(202)
+	return true
+
+func battle_action(action: String) -> void:
+	if not battle_view.visible:
+		return
+	var state: Dictionary = battle_session.submit_action(action)
+	battle_view.show_state(state)
+	play_ui_sound(217 if ui_sounds.has(217) else 201)
+
+func return_from_battle() -> void:
+	if not battle_view.visible or battle_session.snapshot().active:
+		return
+	var outcome: String = battle_session.snapshot().outcome
+	battle_view.close_battle()
+	clear_input()
+	paused_input = false
+	field_steps = 0
+	set_music(village_music)
+	play_ui_sound(203)
+	if outcome=="defeat":
+		switch_area(false,SPAWN)
 
 func capture_frame() -> void:
 	await get_tree().create_timer(1.0).timeout
@@ -179,6 +295,13 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if data.is_empty():
 		return
+	if is_instance_valid(battle_view) and battle_view.visible:
+		if event.is_action_pressed("mute"):
+			toggle_mute()
+		elif event.is_action_pressed("ui_accept") and not battle_session.snapshot().active:
+			return_from_battle()
+		get_viewport().set_input_as_handled()
+		return
 	if dialogue.visible:
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
 			close_dialogue()
@@ -240,6 +363,8 @@ func _physics_process(delta: float) -> void:
 		if step_progress>=1:
 			cell = target_cell
 			moving = false
+			if handle_arrival():
+				return
 	if not moving:
 		var destination := cell
 		if not paused_input and not held.is_empty():
@@ -267,7 +392,7 @@ func _physics_process(delta: float) -> void:
 			open_dialogue()
 	if player.action == 6 and player.elapsed>1.1:
 		player.set_action(3)
-	coordinates.text = "萨姆吉尔村  ·  %d, %d" % [cell.x,cell.y]
+	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
 
 func _draw() -> void:
 	if marker_cell.x>=0:
@@ -280,6 +405,11 @@ func clear_input() -> void:
 	path.clear()
 
 func reset_player() -> void:
+	if is_instance_valid(battle_view) and battle_view.visible:
+		return
+	if int(data.map_id)!=1000:
+		switch_area(false,SPAWN)
+		return
 	if dialogue.visible:
 		close_dialogue()
 	clear_input()
@@ -305,21 +435,43 @@ func set_zoom(value: float) -> void:
 func maximum_zoom_out() -> void:
 	set_zoom(MIN_ZOOM)
 
+func set_music(stream: AudioStream) -> void:
+	music.stop()
+	music.stream = stream
+	if stream is AudioStreamWAV:
+		stream.loop_begin = 0
+		stream.loop_end = int(stream.get_length()*stream.mix_rate)
+		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	music.play()
+
 func setup_audio() -> void:
 	music = AudioStreamPlayer.new()
 	music.stream = load("res://assets/legacy/sabgm_t0.wav")
 	music.stream.loop_begin = 0
 	music.stream.loop_end = int(music.stream.get_length()*music.stream.mix_rate)
 	music.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	village_music = music.stream
 	music.volume_db = linear_to_db(volume)
 	add_child(music)
 	music.play()
 	effect = AudioStreamPlayer.new()
 	for entry in [[201,"sas_01.wav"],[202,"sas_02.wav"],[203,"sas_03.wav"]]:
 		ui_sounds[entry[0]] = load("res://assets/legacy/"+entry[1])
+	if FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
+		var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+		for ident in manifest.get("frame_sounds",{}):
+			battle_sounds[int(ident)] = load("res://assets/legacy/battle/"+str(manifest.frame_sounds[ident]))
+		if manifest.audio.has("battle_cancel"):
+			ui_sounds[217] = load("res://assets/legacy/battle/"+str(manifest.audio.battle_cancel))
 	effect.stream = ui_sounds[201]
 	effect.volume_db = -10
 	add_child(effect)
+
+func play_battle_sound(ident: int) -> void:
+	if muted or not battle_sounds.has(ident):
+		return
+	effect.stream = battle_sounds[ident]
+	effect.play()
 
 func play_click() -> void:
 	play_ui_sound(201)
@@ -372,8 +524,8 @@ func button(value: String, callback: Callable) -> Button:
 	return b
 
 func build_ui() -> void:
-	var layer := CanvasLayer.new()
-	add_child(layer)
+	ui_layer = CanvasLayer.new()
+	add_child(ui_layer)
 	var root := Control.new()
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -384,7 +536,7 @@ func build_ui() -> void:
 	readable_font.variation_opentype = {2003265652:450.0} # OpenType wght axis tag.
 	ui_theme.default_font = readable_font
 	root.theme = ui_theme
-	layer.add_child(root)
+	ui_layer.add_child(root)
 	coordinates = text("")
 	message = text("")
 	root.add_child(coordinates)
@@ -408,8 +560,13 @@ func build_ui() -> void:
 	var max_out := button("Max out",maximum_zoom_out)
 	max_out.name = "MaxOut"
 	dev.add_child(max_out)
-	dev.add_child(button("Villager",approach_npc))
+	if int(data.map_id)==1000:
+		dev.add_child(button("Villager",approach_npc))
+	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",walk_to_exit)
+	exit_button.name = "ExploreOutside"
+	dev.add_child(exit_button)
 	mute_button = button("Music: on  [M]",toggle_mute)
+	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
 	dev.add_child(mute_button)
 	var help_button := button("Help [H]",func():
 		if not dialogue.visible:
@@ -427,7 +584,7 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation",14)
 	help.add_child(content)
 	content.add_child(text("Welcome back to 萨姆吉尔",25))
-	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: change original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nThis slice supports exploration, animation, collision, and audio.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
+	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: change original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nClick 村外探险 to leave through the west exit.\nWalk eight steps outside to encounter 乌力 and try a battle.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
 	content.add_child(text("Music volume",14))
 	var slider := HSlider.new()
 	slider.min_value = 0
@@ -439,6 +596,12 @@ func build_ui() -> void:
 	content.add_child(button("Back to the village",func(): help.hide(); paused_input = false; clear_input()))
 	help.hide()
 	build_dialogue(root)
+	battle_view = BattleView.new()
+	root.add_child(battle_view)
+	battle_view.configure(self)
+	battle_view.action_requested.connect(battle_action)
+	battle_view.return_requested.connect(return_from_battle)
+	battle_view.sound_requested.connect(play_battle_sound)
 
 
 func setup_npc() -> void:

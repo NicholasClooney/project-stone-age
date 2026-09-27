@@ -20,7 +20,7 @@ func _ready() -> void:
 					colors[point.y*int(world.data.width)+point.x] = map_color(manifest,entry[2])
 
 func map_color(manifest: Dictionary, ident: float) -> Color:
-	var rgb: Array = manifest.map_colors[str(int(ident))]
+	var rgb: Array = world.data.get("map_colors",{}).get(str(int(ident)),manifest.map_colors.get(str(int(ident)),[0,0,0]))
 	return Color8(int(rgb[0]),int(rgb[1]),int(rgb[2]))
 
 func _process(_delta: float) -> void:

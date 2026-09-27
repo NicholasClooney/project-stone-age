@@ -104,9 +104,9 @@ func _process(delta: float) -> void:
 	taskbar.position = Vector2((size.x-640*SCALE)/2,size.y-24*SCALE*reveal)
 	taskbar.visible = reveal>0
 	status.visible = reveal<0.05
-	status.text = hover_label if not hover_label.is_empty() else "一般频道                     萨姆吉尔村 (1000) 坐标 (%d, %d)                     玩家模式 0" % [world.cell.x,world.cell.y]
-	map_coordinates.text = str(world.cell.x)
-	map_south_coordinates.text = str(world.cell.y)
+	status.text = hover_label if not hover_label.is_empty() else "一般频道                     %s (%d) 坐标 (%d, %d)                     玩家模式 0" % [world.area_name(),int(world.data.map_id),world.display_cell().x,world.display_cell().y]
+	map_coordinates.text = str(world.display_cell().x)
+	map_south_coordinates.text = str(world.display_cell().y)
 	if dragging:
 		map_panel.position = (pointer_position-drag_offset).clamp(Vector2.ZERO,(size-map_panel.size*SCALE).max(Vector2.ZERO))
 
@@ -125,7 +125,7 @@ func build_map() -> void:
 	map_panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(map_panel)
 	picture(map_panel,26081,Vector2.ZERO)
-	var name_label: Label = world.text("萨姆吉尔村",13)
+	var name_label: Label = world.text(world.area_name(),13)
 	name_label.position = Vector2(22,30)
 	name_label.add_theme_color_override("font_color",Color.WHITE)
 	name_label.add_theme_color_override("font_outline_color",Color.BLACK)

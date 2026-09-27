@@ -9,7 +9,7 @@ Now:    input/UI → local commands → authority → state/events → presentat
 Later:  input/UI → network adapter → headless authority (same project)
 ```
 
-This is the target architecture, not a claim that the current village already has a server boundary. M000–M002 currently use local scene state.
+This is the target architecture, not a claim that the current village already has a server boundary. M000–M002 use local scene state; M003 now has a pure GDScript battle authority while movement remains in the existing controller.
 
 | Area | Owns | Must not depend on |
 | --- | --- | --- |
@@ -20,7 +20,7 @@ This is the target architecture, not a claim that the current village already ha
 
 Keep the existing `client/` directory as the Godot project root. Introduce `client/server/`, `client/shared/`, and `client/network/` only as their first consumers arrive; the directory name does not make this a client-only project. Use GDScript classes for rules, with a small Node for session lifecycle if needed. No second Godot project or Swift package is required.
 
-The first authority slice moves one movement rule behind a local command boundary. Preserve the controls and original appearance, then route NPC interaction through the same owner. Avoid empty service layers or an entire simulation rewrite ahead of a working consumer.
+For the fun-first roadmap, the first authority slice owns battle commands and HP. Move movement and interaction validation behind the same architectural boundary as those systems need it. Preserve the controls and original appearance, then route NPC interaction through the same owner. Avoid empty service layers or an entire simulation rewrite ahead of a working consumer.
 
 Resolve a session profile into rules revision, features, content hashes, and protocol revision. Presentation settings stay separate. Local and remote modes must run the same rules. A legacy protocol adapter is optional and distinct from Godot networking.
 

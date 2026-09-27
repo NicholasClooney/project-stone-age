@@ -25,6 +25,8 @@ The project-local Godot runtime is already installed under `.tools/`. You can al
 | Max out (DEV controls) | Set the same zoom to its 40% minimum; keep following the player |
 | Hover bottom edge | Reveal the original seven menu tabs |
 | Map tab / Ctrl+M | Toggle the original map window; drag its title to move it |
+| 村外探险 / 返回村庄 | Walk to the original west exit / return portal |
+| Battle icons | Attack, defend or escape; continue after the result |
 | M | Mute / unmute |
 | H / Escape | Open / close help; music volume is in help |
 | R | Return to the village square |
@@ -41,7 +43,7 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original stone top controls, wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker.
 - Camera follow, consistent developer zoom controls, focus-loss input clearing, and a safe respawn.
 
-This is the local, Godot-only village slice. No login, separate gameplay authority, battle, interior transitions, saves, or multiplayer yet. The classic HUD uses the local 2.5 client artwork. Extra top-row buttons in the supplied reference belong to a different asset set and are not fabricated. Only the Map tab is functional; the other original menu items are visual with hover labels. DEV controls remain separate. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
+The first local-authority battle slice is now playable: click **村外探险**, walk through the original west exit, then walk eight steps outside to encounter 乌力. Attack, defend or escape; victory/escape resumes exploration, defeat returns to Samgir. Original battle terrain, actors, command icons, animations and BGM are imported. Combat numbers and encounter timing are prototype rules, not verified historical balance. HP resets for each encounter; XP, rewards, capture, saves, interiors and multiplayer are not implemented yet. See [first battle scope](docs/development/m003-first-battle.md). The classic HUD uses the local 2.5 client artwork. Extra top-row buttons in the supplied reference belong to a different asset set and are not fabricated. Only the Map tab is functional; the other original menu items are visual with hover labels. DEV controls remain separate. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
 
@@ -67,6 +69,14 @@ To import the resident, obtain `poru/samugiru01.create` and `poru/samugiru02` fr
 
 ```sh
 .tools/asset-venv/bin/python tools/import_npc.py /path/to/stoneage2.5 /path/to/npc
+```
+
+For the first battle, use the [local server reference](docs/reverse-engineering/local-references.md) and import the original wilderness and battle resources:
+
+```sh
+.tools/asset-venv/bin/python tools/import_wilderness.py /path/to/stoneage2.5 \
+  --server-map references/chenmingbiao-stone-age/gmsv/data/map/sainasu/sainasu
+.tools/asset-venv/bin/python tools/import_battle.py /path/to/stoneage2.5
 ./scripts/run.sh --headless --editor --import --quit
 ```
 
