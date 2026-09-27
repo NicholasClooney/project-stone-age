@@ -1,0 +1,67 @@
+extends RefCounted
+## Fixed-point rules from gmsv/char/char.c and char_data.c.
+const STATS := ["vitality", "strength", "toughness", "dexterity"]
+const DERIVED := ["max_hp", "attack", "defence", "speed"]
+const SPECIES := {
+	"wooli": {"initial":10,"weights":[20,12,15,25]},
+	"wooli_wooli": {"initial":20,"weights":[22,23,11,23]},
+	"woolistan": {"initial":15,"weights":[22,17,19,17]},
+}
+# Chosen legal 20-point starter distribution (9/7/0/4); creation UI deferred.
+const START := {"vitality":900,"strength":700,"toughness":0,"dexterity":400}
+static func derived(base: Dictionary) -> Dictionary:
+	var v := int(base.vitality)
+	var s := int(base.strength)
+	var t := int(base.toughness)
+	var d := int(base.dexterity)
+	return {"max_hp":maxi(1,int((4*v+s+t+d)/100)),"attack":maxi(1,int((20*s+2*t+2*v+d)/2000)),"defence":maxi(0,int((20*t+2*s+2*v+d)/2000)),"speed":maxi(1,int(d/100))}
+static func refresh(actor: Dictionary) -> void:
+	var result := derived(actor.base_stats)
+	var offset: Dictionary = actor.get("legacy_stat_offset",{})
+	for key in DERIVED:
+		actor[key] = maxi(0 if key == "defence" else 1,int(result[key])+int(offset.get(key,0)))
+	actor.hp = mini(int(actor.hp),int(actor.max_hp))
+static func migrate_player(actor: Dictionary) -> void:
+	if actor.has("base_stats"):return
+	actor.base_stats = START.duplicate()
+	for key in STATS:actor.base_stats[key] += int(actor.allocated_stats[key])*100
+	_preserve(actor)
+static func _preserve(actor: Dictionary) -> void:
+	var result := derived(actor.base_stats)
+	actor.legacy_stat_offset = {}
+	for key in DERIVED:actor.legacy_stat_offset[key] = int(actor[key])-int(result[key])
+static func species_actor(species: String, level: int, seed_value: int) -> Dictionary:
+	var rng := RandomNumberGenerator.new()
+	rng.seed = seed_value
+	var data: Dictionary = SPECIES[species]
+	var weights: Array = data.weights.duplicate()
+	for i in range(4):weights[i] += rng.randi_range(-2,2)
+	var initial: Array = weights.duplicate()
+	for i in range(10):initial[rng.randi_range(0,3)] += 1
+	var actor := {"base_stats":{},"growth_weights":weights,"growth_rank":5,"growth_seed":seed_value,"hp":1,"learned_skills":[]}
+	var total := 0
+	for weight in data.weights:total += int(weight)
+	for i in range(6):
+		if total >= [100,95,90,85,80,0][i]:
+			actor.growth_rank = i
+			break
+	for i in range(4):actor.base_stats[STATS[i]] = int(int(initial[i])*(float(data.initial)+(level-1)*4.5))
+	refresh(actor)
+	actor.hp = actor.max_hp
+	return actor
+static func grow_pet(actor: Dictionary, level: int) -> void:
+	var rng := RandomNumberGenerator.new()
+	# Stable per-pet/per-level draws survive saving without rerolls.
+	rng.seed = int(actor.growth_seed)+level*104729
+	var extra := [0,0,0,0]
+	for i in range(10):extra[rng.randi_range(0,3)] += 1
+	var low := 450+int(actor.growth_rank)*20
+	var roll := rng.randi_range(low,low+50)
+	for i in range(4):actor.base_stats[STATS[i]] += int((int(actor.growth_weights[i])+extra[i])*roll/100)
+	refresh(actor)
+static func migrate_pet(actor: Dictionary, seed_value: int) -> void:
+	if actor.has("base_stats"):return
+	var generated := species_actor(actor.species,1,seed_value)
+	for level in range(2,int(actor.level)+1):grow_pet(generated,level)
+	for key in ["base_stats","growth_weights","growth_rank","growth_seed"]:actor[key] = generated[key]
+	_preserve(actor)

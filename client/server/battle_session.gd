@@ -1,5 +1,5 @@
 extends RefCounted
-## Local authority. Balance and capture threshold are explicit MVP approximations.
+## Local authority for classic physical combat. Capture threshold/escape chance remain explicit approximations.
 const PLAYER_MAX_HP := 48
 const ENEMY_MAX_HP := 32
 var rng_seed := 42
@@ -8,6 +8,18 @@ var _state: Dictionary = {"active": false, "outcome": "", "player_hp":48,"player
 var _config: Dictionary = {}
 var _escape_attempts := 0
 var _skill_used := false
+const CombatRules = preload("res://server/classic_combat_rules.gd")
+var _acting_enemy := 0
+var _target := 0
+var _pet_choice := -2
+var _pet_target := -1
+var _last_outcome := ""
+var _last_damage := 0
+var _pending_counter: Dictionary = {}
+var _chosen_skill := 0
+var _player_guard := false
+var _player_command := "attack"
+var _pet_guard := false
 
 func start_battle(config: Dictionary = {}) -> Dictionary:
 	if _state.active:
@@ -15,43 +27,92 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_config = config.duplicate(true)
 	_rng.seed = rng_seed
 	_escape_attempts = 0
+	_chosen_skill = 0
+	_pet_target = -1
 	_skill_used = false
 	var pet: Dictionary = config.get("pet", {}).duplicate(true)
 	_state = {"active":true,"outcome":"","battle_id":config.get("battle_id", ""),"player_hp":config.get("player_hp",48),"player_max_hp":config.get("player_max_hp",48),"enemy_hp":config.get("enemy_max_hp",32),"enemy_max_hp":config.get("enemy_max_hp",32),"enemy_name":config.get("enemy_name","乌力"),"enemy_species":config.get("enemy_species","wooli"),"enemy_sprite":config.get("enemy_sprite",100250),"pet_sprite":pet.get("sprite",100250),"pet_name":pet.get("name",""),"skill_unlocked":pet.get("skill_unlocked",false),"boss":config.get("boss",false),"turn":0,"events":["遭遇野生石器伙伴！"],"pet":pet,"pet_command":"attack","pet_hp":pet.get("hp",0),"pet_max_hp":pet.get("max_hp",0),"potions":config.get("potions",0),"captured_species":"","xp":0,"gold":0,"skill_used":false}
 	var initial_order: Array[String] = []
 	_state["turn_order"] = initial_order
 	_state["turn_frames"] = []
+	_state["player_level"] = int(config.get("player_level",1))
 	_state["last_pet_command"] = "attack"
 	_state["enemy_target"] = ""
 	_state["can_capture"] = bool(config.get("can_capture",true)) and not bool(config.get("boss",false))
+	var enemies: Array = config.get("enemies", []).duplicate(true)
+	if enemies.is_empty():
+		enemies.append({"name":_state.enemy_name,"species":_state.enemy_species,"sprite":_state.enemy_sprite,"max_hp":_state.enemy_max_hp,"attack":config.get("enemy_attack",7),"defence":config.get("enemy_defence",0),"speed":config.get("enemy_speed",7),"reward_xp":config.get("reward_xp",20),"reward_gold":config.get("reward_gold",10)})
+	for enemy in enemies:
+		enemy["hp"] = enemy.get("hp",enemy.get("max_hp",32))
+		enemy["max_hp"] = enemy.get("max_hp",32)
+		enemy["captured"] = false
+	_state["enemies"] = enemies.slice(0,3)
+	_state["pets"] = config.get("pets", [pet] if not pet.is_empty() else []).duplicate(true)
+	_state["active_pet"] = int(config.get("active_pet",0 if not _state.pets.is_empty() else -1))
+	_state["selected_target"] = 0
+	_state["captured_species_list"] = []
+	_state["capture_success"] = false
+	_sync_pet()
+	_sync_enemy(0)
 	return snapshot()
 
-func set_pet_command(command: String) -> bool:
-	if not _state.active or _state.pet.is_empty() or command not in ["attack","skill","defend"]:
+func set_pet_target(index: int) -> bool:
+	if not _state.active or not _enemy_alive(index):
 		return false
-	if command == "skill" and (_skill_used or int(_state.pet.get("level",1)) < 2):
+	_pet_target = index
+	return true
+
+func set_pet_skill(skill_id: int) -> bool:
+	if not _state.active or _state.pet.is_empty() or skill_id not in [3,10,50] or skill_id not in _state.pet.get("learned_skills",[]):
+		return false
+	_chosen_skill = skill_id
+	_state["selected_skill"] = skill_id
+	_state.pet_command = "skill"
+	return true
+
+func set_pet_command(command: String) -> bool:
+	if not _state.active or _state.pet.is_empty() or command not in ["attack","skill","defend","standby"]:
+		return false
+	if command == "skill" and _chosen_skill not in _state.pet.get("learned_skills",[]):
 		return false
 	_state.pet_command = command
 	return true
 
-func submit_action(action: String) -> Dictionary:
-	if not _state.active or action not in ["attack","defend","escape","capture","item"]:
+func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
+	if not _state.active or action not in ["attack","defend","escape","capture","item","switch"]:
 		return snapshot()
 	if action == "item" and (_state.potions <= 0 or _state.player_hp >= _state.player_max_hp):
 		return snapshot()
-	if action == "capture" and (_state.boss or not _config.get("can_capture",true)):
+	if action == "capture" and (_state.boss or not _config.get("can_capture",true) or _state.captured_species_list.size() >= int(_config.get("capture_slots",5)) ):
 		return snapshot()
+	if action == "switch" and (pet_index < -1 or pet_index >= _state.pets.size() or pet_index == _state.active_pet):
+		return snapshot()
+	if action == "switch" and pet_index >= 0 and int(_state.pets[pet_index].get("hp",0)) <= 0:
+		return snapshot()
+	_target = target if target >= 0 else int(_state.selected_target)
+	if _target >= _state.enemies.size() or _target < 0 or not _enemy_alive(_target):
+		_target = _first_enemy()
+	_state.selected_target = _target
+	_sync_enemy(_target)
+	_pet_choice = pet_index
+	_state.capture_success = false
 	_state.turn += 1
 	_state.events = []
 	_state.enemy_target = ""
 	# Defence is selected for the whole round, even before a slower actor acts.
 	var pet_command: String = _state.pet_command
 	_state.last_pet_command = pet_command
+	_player_guard = action == "defend"
+	_player_command = action
+	_pet_guard = pet_command == "defend"
 	var actors: Array[Dictionary] = [
 		{"actor":"player","speed":int(_config.get("player_speed",10)),"tie":0},
-		{"actor":"enemy","speed":int(_config.get("enemy_speed",7)),"tie":2},
+
 	]
-	if not _state.pet.is_empty() and _state.pet_hp > 0:
+	for index in range(_state.enemies.size()):
+		if _enemy_alive(index):
+			actors.append({"actor":"enemy","enemy_index":index,"speed":int(_state.enemies[index].get("speed",7)),"tie":2 + index})
+	if action != "switch" and not _state.pet.is_empty() and _state.pet_hp > 0:
 		actors.append({"actor":"pet","speed":int(_state.pet.get("speed",8)),"tie":1})
 	actors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
 		return a.speed > b.speed or (a.speed == b.speed and a.tie < b.tie))
@@ -63,6 +124,12 @@ func submit_action(action: String) -> Dictionary:
 			break
 		if actor.actor == "pet" and _state.pet_hp <= 0:
 			continue
+		if actor.actor == "enemy" and not _enemy_alive(int(actor.enemy_index)):
+			continue
+		_acting_enemy = int(actor.get("enemy_index",-1))
+		_last_outcome = action if actor.actor == "player" else pet_command if actor.actor == "pet" else "attack"
+		_last_damage = 0
+		_pending_counter = {}
 		_state.turn_order.append(actor.actor)
 		match actor.actor:
 			"player":
@@ -71,15 +138,26 @@ func submit_action(action: String) -> Dictionary:
 				_pet_action(pet_command)
 			"enemy":
 				_enemy_action(action == "defend",pet_command == "defend")
-		_state.turn_frames.append({"actor":actor.actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target})
-	_state.pet_command = "attack"
+		if _state.active_pet >= 0:
+			_state.pets[_state.active_pet] = _state.pet.duplicate(true)
+		_record_frame(str(actor.actor))
+		for counter_step in range(5):
+			if not _state.active or _pending_counter.is_empty(): break
+			_resolve_counter()
+
+	_state.pet_command = pet_command if pet_command != "standby" else "attack"
 	return snapshot()
 
 func _player_action(action: String) -> void:
 	match action:
+		"switch":
+			_state.active_pet = _pet_choice
+			_sync_pet()
+			_chosen_skill = 0
+			_state["selected_skill"] = 0
+			_state.events.append("收回伙伴。" if _pet_choice == -1 else "出战：" + str(_state.pet_name))
 		"attack":
-			var damage := maxi(1, int(_config.get("player_attack",10)) + _rng.randi_range(-2,2) - int(_config.get("enemy_defence",0)))
-			_hit_enemy(damage,"你")
+			_attack_enemy(_player_stats(),"你")
 		"defend":
 			_state.events.append("你做好防御。")
 		"escape":
@@ -91,7 +169,17 @@ func _player_action(action: String) -> void:
 		"capture":
 			if _state.enemy_hp * 100 <= _state.enemy_max_hp * 60:
 				_state.captured_species = _state.enemy_species
-				_finish("captured","捕获成功！新的伙伴加入了。")
+				_state.captured_species_list.append(_state.enemy_species)
+				_state.capture_success = true
+				_state.can_capture = _state.captured_species_list.size() < int(_config.get("capture_slots",5))
+				_state.enemies[_target].captured = true
+				_state.enemies[_target].hp = 0
+				_state.enemy_hp = 0
+				_last_outcome = "captured"
+				if _first_enemy() < 0:
+					_finish("captured","捕获成功！新的伙伴加入了。")
+				else:
+					_state.events.append("捕获成功！战斗继续。")
 			else:
 				_state.events.append("捕获失败，先削弱对手的体力！")
 		"item":
@@ -100,42 +188,100 @@ func _player_action(action: String) -> void:
 			_state.events.append("使用药草，恢复体力。")
 
 func _pet_action(command: String) -> void:
+	if command == "standby":
+		# petskill.txt ID0 / PETSKILL_None: remain in place, consume the action.
+		return
 	if command == "defend":
 		return
-	var damage := int(_state.pet.get("attack",4))
-	if command == "skill" and not _skill_used and int(_state.pet.get("level",1)) >= 2:
-		damage *= 2
-		_skill_used = true
-		_state.skill_used = true
-	_hit_enemy(damage,str(_state.pet.get("name","伙伴")))
+	if _enemy_alive(_pet_target): _target = _pet_target
+	var stats: Dictionary = _state.pet.duplicate(true)
+	stats["kind"] = "pet"
+	if command == "skill" and _chosen_skill in [3,10,50]:
+		if _chosen_skill == 50:
+			stats.attack = int(stats.get("attack",4)) + int(int(stats.get("attack",4))*0.25)
+		if _chosen_skill == 3: stats["guard_break"] = true
+		if _chosen_skill == 10: stats["damage_divisor"] = 2
+		_attack_enemy(stats,str(stats.get("name","伙伴")))
+		if _chosen_skill == 10 and _state.active and _enemy_alive(_target):
+			_record_frame("pet")
+			_state.turn_order.append("pet")
+			_attack_enemy(stats,str(stats.get("name","伙伴")))
+		return
+	_attack_enemy(stats,str(stats.get("name","伙伴")))
+
+func _player_stats() -> Dictionary:
+	return {"kind":"player","attack":_config.get("player_attack",10),"defence":_config.get("player_defence",0),"speed":_config.get("player_speed",10),"level":_config.get("player_level",1),"vital":_config.get("player_vital",0),"luck":_config.get("player_luck",0),"weapon":_config.get("player_weapon","")}
+
+func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
+	_pending_counter = {}
+	if not _enemy_alive(_target):
+		_target = _first_enemy()
+	if _target < 0:
+		return
+	_sync_enemy(_target)
+	var enemy: Dictionary = _state.enemies[_target]
+	var result: Dictionary = CombatRules.resolve(stats,enemy,_rng,str(enemy.get("command","attack")) == "defend" and not stats.get("guard_break",false),str(_config.get("combat_profile","classic")))
+	_last_outcome = result.outcome
+	_last_damage = mini(int(int(result.damage)/int(stats.get("damage_divisor",1))),int(enemy.hp))
+	enemy.hp -= _last_damage
+	if int(enemy.hp) == 0: enemy["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
+	_sync_enemy(_target)
+	_state.events.append("%s攻击%s：%s %d。" % [actor_name,str(enemy.get("name","对手")),_last_outcome,_last_damage])
+	if int(enemy.hp) > 0 and str(enemy.get("command","attack")) == "attack" and _rng.randi_range(1,10000) < int(CombatRules.odds(enemy,stats,"counter")*100):
+		_pending_counter = {"actor":"enemy","enemy_index":_target,"target":"player" if stats.kind == "player" else "pet"}
+	if _first_enemy() < 0:
+		_finish("win","战斗胜利！")
 
 func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
-	# battle_ai.c:355–396 collects living opposing slots and supports random choice.
-	# MVP selects uniformly between the player and living companion; configurable
-	# legacy tactics, row restrictions and HP/attribute targeting remain deferred.
 	var pet_alive: bool = not _state.pet.is_empty() and _state.pet_hp > 0
-	var target_pet: bool = pet_alive and (pet_guarding or _rng.randi_range(0,1) == 1)
+	var target_pet: bool = pet_alive and _rng.randi_range(0,1) == 1
 	_state.enemy_target = "pet" if target_pet else "player"
-	var defence := int(_state.pet.get("defence",0)) if target_pet else int(_config.get("player_defence",0))
-	var damage := maxi(1,int(_config.get("enemy_attack",7)) + _rng.randi_range(-2,2) - defence)
-	if (target_pet and pet_guarding) or (not target_pet and guarding):
-		damage = maxi(1,int(damage / 2.0))
+	var defender: Dictionary = _state.pet.duplicate(true) if target_pet else _player_stats()
+	defender["kind"] = "pet" if target_pet else "player"
+	if target_pet and _state.last_pet_command == "skill" and _chosen_skill == 50:
+		defender.defence = int(defender.get("defence",0)) + int(int(defender.get("defence",0)) * -0.35)
+	if str(_state.enemies[_acting_enemy].get("command","attack")) == "defend":
+		_last_outcome = "defend"
+		return
+	var result: Dictionary = CombatRules.resolve(_state.enemies[_acting_enemy],defender,_rng,pet_guarding if target_pet else guarding,str(_config.get("combat_profile","classic")))
+	_last_outcome = result.outcome
+	_last_damage = mini(int(result.damage),int(_state.pet_hp if target_pet else _state.player_hp))
 	if target_pet:
-		_state.pet_hp = maxi(0,_state.pet_hp - damage)
+		_state.pet_hp -= _last_damage
 		_state.pet.hp = _state.pet_hp
-		_state.events.append("对手攻击%s，造成 %d 点伤害。" % [str(_state.pet.get("name","伙伴")),damage])
 	else:
-		_state.player_hp = maxi(0,_state.player_hp - damage)
-		_state.events.append("对手攻击你，造成 %d 点伤害。" % damage)
+		_state.player_hp -= _last_damage
+	_state.events.append("对手攻击%s：%s %d。" % [str(_state.pet_name) if target_pet else "你",_last_outcome,_last_damage])
+	var can_counter: bool = _state.pet_hp > 0 and _state.last_pet_command == "attack" if target_pet else _state.player_hp > 0 and _player_command == "attack"
+	if can_counter and _rng.randi_range(1,10000) < int(CombatRules.odds(defender,_state.enemies[_acting_enemy],"counter")*100):
+		_pending_counter = {"actor":"pet" if target_pet else "player","enemy_index":_acting_enemy,"target":"enemy"}
 	if _state.player_hp == 0:
 		_finish("defeat","你暂时落败，回村恢复体力。")
 
-func _hit_enemy(damage: int, actor: String) -> void:
-	damage = mini(damage,_state.enemy_hp)
-	_state.enemy_hp -= damage
-	_state.events.append("%s攻击，造成 %d 点伤害。" % [actor,damage])
-	if _state.enemy_hp == 0:
-		_finish("win","战斗胜利！")
+func _enemy_alive(index: int) -> bool:
+	return index >= 0 and index < _state.enemies.size() and int(_state.enemies[index].hp) > 0
+
+func _first_enemy() -> int:
+	for index in range(_state.enemies.size()):
+		if _enemy_alive(index):
+			return index
+	return -1
+
+func _sync_enemy(index: int) -> void:
+	if index < 0 or index >= _state.enemies.size():
+		return
+	var enemy: Dictionary = _state.enemies[index]
+	for key in ["hp","max_hp","name","species","sprite"]:
+		_state["enemy_" + key] = enemy.get(key,_state.get("enemy_" + key))
+
+func _sync_pet() -> void:
+	var index: int = _state.active_pet
+	_state.pet = _state.pets[index].duplicate(true) if index >= 0 and index < _state.pets.size() else {}
+	_state.pet_hp = _state.pet.get("hp",0)
+	_state.pet_max_hp = _state.pet.get("max_hp",0)
+	_state.pet_name = _state.pet.get("name","")
+	_state.pet_sprite = _state.pet.get("sprite",100250)
+	_state.skill_unlocked = not _state.pet.get("learned_skills",[]).is_empty()
 
 func snapshot() -> Dictionary:
 	return _state.duplicate(true)
@@ -143,7 +289,53 @@ func snapshot() -> Dictionary:
 func _finish(outcome: String, message: String) -> void:
 	_state.active = false
 	_state.outcome = outcome
-	if outcome == "win":
-		_state.xp = int(_config.get("reward_xp",20))
-		_state.gold = int(_config.get("reward_gold",10))
+	if outcome in ["win","captured"]:
+		for enemy in _state.enemies:
+			if not enemy.captured:
+				_state.xp += int(enemy.get("reward_xp",20))
+				_state.gold += int(enemy.get("reward_gold",10))
 	_state.events.append(message)
+
+func _record_frame(actor: String) -> void:
+	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and not _last_outcome.begins_with("counter") else 0})
+
+func _resolve_counter() -> void:
+	var counter: Dictionary = _pending_counter
+	_pending_counter = {}
+	var actor := str(counter.actor)
+	_acting_enemy = int(counter.enemy_index)
+	_target = _acting_enemy
+	var attacker: Dictionary = _state.enemies[_acting_enemy] if actor == "enemy" else _player_stats() if actor == "player" else _state.pet.duplicate(true)
+	attacker["kind"] = actor
+	var defender: Dictionary = (_state.enemies[_acting_enemy] if actor != "enemy" else _player_stats() if counter.target == "player" else _state.pet).duplicate(true)
+	defender["kind"] = "enemy" if actor != "enemy" else str(counter.target)
+	var result: Dictionary = CombatRules.resolve(attacker,defender,_rng,false,str(_config.get("combat_profile","classic")))
+	var damage := int(int(result.damage)*0.75)
+	if int(result.damage) > 0: damage = maxi(1,damage)
+	_last_outcome = "counter_miss" if result.outcome == "miss" else "counter_critical" if result.outcome == "critical" else "counter"
+	if actor != "enemy":
+		_last_damage = mini(damage,int(_state.enemies[_target].hp))
+		_state.enemies[_target].hp -= _last_damage
+		if int(_state.enemies[_target].hp) == 0: _state.enemies[_target]["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
+		_sync_enemy(_target)
+	else:
+		_state.enemy_target = counter.target
+		if counter.target == "player":
+			_last_damage = mini(damage,int(_state.player_hp))
+			_state.player_hp -= _last_damage
+		else:
+			_last_damage = mini(damage,int(_state.pet_hp))
+			_state.pet_hp -= _last_damage
+			_state.pet.hp = _state.pet_hp
+			_state.pets[_state.active_pet] = _state.pet.duplicate(true)
+	_state.events.append("反击！%d" % _last_damage)
+	_state.turn_order.append(actor)
+	_record_frame(actor)
+	if _state.player_hp <= 0: _finish("defeat","你暂时落败，回村恢复体力。")
+	elif _first_enemy() < 0: _finish("win","战斗胜利！")
+	if _state.active:
+		var next_actor := str(counter.target) if actor == "enemy" else "enemy"
+		var allowed: bool = _player_command == "attack" if next_actor == "player" else _state.last_pet_command == "attack" if next_actor == "pet" else str(_state.enemies[_acting_enemy].get("command","attack")) == "attack"
+		var alive: bool = _state.player_hp > 0 if next_actor == "player" else _state.pet_hp > 0 if next_actor == "pet" else _enemy_alive(_acting_enemy)
+		if allowed and alive and _rng.randi_range(1,10000) < int(CombatRules.odds(defender,attacker,"counter")*100):
+			_pending_counter = {"actor":next_actor,"enemy_index":_acting_enemy,"target":actor}

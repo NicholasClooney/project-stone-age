@@ -1,7 +1,8 @@
 extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
-const SAVE_VERSION := 1
+const SAVE_VERSION := 2
+const Progression = preload("res://server/progression.gd")
 const ITEM_PRICES := {"potion":10,"club":30}
 const SPECIES := {
 	"wooli":{"name":"乌力","sprite":100250,"hp":32,"attack":7,"defence":0,"speed":8},
@@ -14,6 +15,10 @@ var last_error := ""
 
 func _init() -> void:
 	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"travel_pass":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+
+	_profile.player.base_stats = Progression.START.duplicate()
+	Progression.refresh(_profile.player)
+	_profile.player.hp = _profile.player.max_hp
 
 # Original item 2422: reusable undersea passage permit, sold for 200 stone.
 func buy_travel_pass() -> bool:
@@ -30,15 +35,28 @@ func snapshot() -> Dictionary:
 	_sync_stat_points()
 	return _profile.duplicate(true)
 
-func start_battle_config(species: String = "wooli", boss: bool = false) -> Dictionary:
+func start_battle_config(species: String = "wooli", boss: bool = false, enemy_count: int = 1) -> Dictionary:
 	if not SPECIES.has(species) or not _pending.is_empty() or (boss and not can_fight_boss()):
 		return {}
-	var enemy: Dictionary = SPECIES[species]
+	var enemy: Dictionary = SPECIES[species].duplicate()
+	var native := Progression.species_actor(species,3 if boss else 1,int(_profile.next_battle)*7919)
+	for key in native:enemy[key] = native[key]
 	var player: Dictionary = _profile.player
 	var pet: Dictionary = {}
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
-	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack + (4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.hp + (24 if boss else 0),"enemy_attack":enemy.attack + (1 if boss else 0),"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < 5,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":effective_player_stats().attack,"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < 5,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	config.player_level = player.level
+	config.player_vital = int(player.base_stats.vitality)/100.0
+	config.player_weapon = "club" if _profile.equipped else ""
+	config.capture_slots = 5-_profile.pets.size()
+	config.pets = _profile.pets.duplicate(true)
+	config.active_pet = _profile.active_pet
+	config.enemies = []
+	for i in range(clampi(enemy_count,1,3)):
+		var actor := Progression.species_actor(species,3 if boss else 1,int(_profile.next_battle)*7919+i*97)
+		actor.merge({"name":config.enemy_name,"species":species,"sprite":enemy.sprite,"level":3 if boss else 1,"reward_xp":config.reward_xp,"reward_gold":config.reward_gold})
+		config.enemies.append(actor)
 	_profile.next_battle += 1
 	_pending = config.duplicate(true)
 	return config
@@ -56,35 +74,72 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var potions := int(result.get("potions",-1))
 	if hp < 0 or hp > _profile.player.max_hp or potions < 0 or potions > _pending.potions:
 		return false
-	var enemy_hp := int(result.get("enemy_hp",-1))
-	if enemy_hp < 0 or enemy_hp > _pending.enemy_max_hp or (outcome == "win" and enemy_hp != 0) or (outcome == "defeat" and hp != 0) or (outcome != "defeat" and hp == 0):
-		return false
-	if outcome == "captured" and (enemy_hp <= 0 or enemy_hp * 100 > _pending.enemy_max_hp * 60):
-		return false
-	if outcome == "captured" and (_pending.boss or not _pending.can_capture or result.get("captured_species","") != _pending.enemy_species):
-		return false
+	var captures: Array = result.get("captured_species_list",[])
+	var enemies: Array = result.get("enemies",[])
+	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>5:return false
+	var verified_captures := []
+	var earned_xp := 0
+	var earned_gold := 0
+	var remaining := 0
+	var pet_rewards: Array = []
+	pet_rewards.resize(_profile.pets.size())
+	pet_rewards.fill(0)
+	for i in range(enemies.size()):
+		var foe: Dictionary = enemies[i]
+		var original: Dictionary = _pending.enemies[i]
+		if not _integer(foe.get("hp"),0,original.max_hp) or foe.get("species") != original.species:return false
+		if foe.get("captured",false):
+			if _pending.boss or not _pending.can_capture or foe.hp != 0:return false
+			verified_captures.append(original.species)
+		elif foe.hp == 0:
+			earned_xp += int(original.reward_xp)
+			earned_gold += int(original.reward_gold)
+			var recipient = foe.get("defeated_by_pet_index",-1)
+			if not _integer(recipient,-1,_profile.pets.size()-1):return false
+			if int(recipient)>=0:pet_rewards[int(recipient)] += int(original.reward_xp)
+		else:remaining += 1
+	var sorted_captures := captures.duplicate()
+	sorted_captures.sort()
+	verified_captures.sort()
+	if sorted_captures != verified_captures:return false
+	if outcome in ["win","captured"] and remaining != 0:return false
+	if outcome == "captured" and captures.is_empty():return false
+	if (outcome == "defeat" and hp != 0) or (outcome != "defeat" and hp == 0):return false
+	var battle_pets: Array = result.get("pets",[])
+	if battle_pets.size() != _profile.pets.size():return false
+	for i in range(battle_pets.size()):
+		if not _integer(battle_pets[i].get("hp"),0,_profile.pets[i].max_hp):return false
+	if not _integer(result.get("active_pet",-1),-1,_profile.pets.size()-1):return false
 	_profile.player.hp = hp
 	_profile.inventory.potion = potions
-	if _profile.active_pet >= 0:
-		var pet: Dictionary = _profile.pets[_profile.active_pet]
-		pet.hp = clampi(int(result.get("pet_hp",pet.hp)),0,pet.max_hp)
-	if outcome == "win":
-		_profile.player.gold += _pending.reward_gold
-		_gain_xp(_profile.player,_pending.reward_xp)
-		if _profile.active_pet >= 0:
-			_gain_xp(_profile.pets[_profile.active_pet],_pending.reward_xp)
-		if _profile.quest.accepted and not _profile.quest.claimed:
+	for i in range(battle_pets.size()):_profile.pets[i].hp = int(battle_pets[i].hp)
+	_profile.active_pet = int(result.get("active_pet",-1))
+	if outcome in ["win","captured"]:
+		_profile.player.gold += earned_gold
+		_gain_xp(_profile.player,earned_xp)
+		for i in range(_profile.pets.size()):
+			if _profile.pets[i].hp>0:_gain_xp(_profile.pets[i],int(pet_rewards[i]))
+			else:pet_rewards[i] = 0
+		if outcome == "win" and _profile.quest.accepted and not _profile.quest.claimed:
 			if _pending.boss:
 				_profile.quest.boss_defeated = true
 			else:
 				_profile.quest.wins += 1
-	elif outcome == "captured":
-		var species: String = _pending.enemy_species
+	if outcome not in ["win","captured"]:
+		earned_xp = 0
+		earned_gold = 0
+		pet_rewards.fill(0)
+	result.xp = earned_xp
+	result.gold = earned_gold
+	result.pet_reward_xp = pet_rewards
+	for species in captures:
 		var base: Dictionary = SPECIES[species]
-		_profile.pets.append({"species":species,"name":base.name,"sprite":base.sprite,"hp":base.hp,"max_hp":base.hp,"attack":4 + base.defence,"defence":base.defence,"speed":base.speed,"level":1,"xp":0,"skill_unlocked":false})
-		if _profile.pets.size() == 1:
-			_profile.active_pet = 0
-	elif outcome == "defeat":
+		var captured := {"species":species,"name":base.name,"sprite":base.sprite,"level":1,"xp":0,"skill_unlocked":false}
+		var native := Progression.species_actor(species,1,int(_profile.next_battle)*7919+_profile.pets.size()*97)
+		captured.merge(native)
+		_profile.pets.append(captured)
+		if _profile.pets.size() == 1:_profile.active_pet = 0
+	if outcome == "defeat":
 		_recover()
 		_profile.location = {"map_id":1000,"x":80,"y":90}
 	_profile.completed_battles.append(id)
@@ -100,10 +155,9 @@ func _gain_xp(actor: Dictionary, amount: int) -> void:
 		actor.xp -= actor.level * 30
 		actor.level += 1
 		if actor.has("skill_unlocked"):
-			actor.max_hp += 8
-			actor.attack += 2
-			actor.speed = int(actor.get("speed",10)) + 1
-			actor.skill_unlocked = actor.level >= 2
+			Progression.migrate_pet(actor,int(actor.sprite))
+			Progression.grow_pet(actor,int(actor.level))
+			actor.skill_unlocked = not actor.get("learned_skills",[]).is_empty()
 		else:
 			# battle.c:3173 defaults to 3 skill-up points per level.
 			actor.stat_points += 3
@@ -226,6 +280,14 @@ func load_game(path: String) -> bool:
 			if not _profile.player.has("allocated_stats"):
 				# Preserve existing prototype gains, credit missed allocation once.
 				_profile.player.allocated_stats = {"vitality":0,"strength":0,"toughness":0,"dexterity":0}
+			Progression.migrate_player(_profile.player)
+			for i in range(_profile.pets.size()):
+				Progression.migrate_pet(_profile.pets[i],int(_profile.pets[i].sprite)+i*7919)
+				if not _profile.pets[i].has("learned_skills"):_profile.pets[i].learned_skills = []
+				_profile.pets[i].skill_unlocked = not _profile.pets[i].learned_skills.is_empty()
+			Progression.refresh(_profile.player)
+			for pet in _profile.pets:Progression.refresh(pet)
+			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true
 	last_error = "No valid save or backup."
@@ -234,7 +296,7 @@ func load_game(path: String) -> bool:
 func _valid_profile(value: Variant) -> bool:
 	if value is Dictionary and value.has("travel_pass") and not value.travel_pass is bool:
 		return false
-	if not value is Dictionary or value.get("version",0) != SAVE_VERSION or value.get("profile_id", "") != "samgir-singleplayer-v1":
+	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
 	for key in ["player","inventory","quest","location"]:
 		if not value.get(key) is Dictionary:
@@ -279,11 +341,31 @@ func _valid_profile(value: Variant) -> bool:
 	for pet in value.pets:
 		if not pet is Dictionary or not _actor_valid(pet) or not SPECIES.has(pet.get("species","")) or not pet.get("name") is String or pet.name.is_empty() or pet.name.length() > 16 or not pet.get("skill_unlocked") is bool:
 			return false
+		if pet.has("base_stats") and not pet.has("growth_weights"):return false
 		if pet.get("sprite") != SPECIES[pet.species].sprite:
 			return false
 	return true
 
 func _actor_valid(actor: Dictionary) -> bool:
+	if actor.has("base_stats"):
+		if not actor.base_stats is Dictionary:return false
+		for key in Progression.STATS:
+			if not _integer(actor.base_stats.get(key),0,100000000):return false
+	if actor.has("legacy_stat_offset"):
+		if not actor.legacy_stat_offset is Dictionary:return false
+		for key in Progression.DERIVED:
+			if not _integer(actor.legacy_stat_offset.get(key),-1000000,1000000):return false
+	if actor.has("growth_weights"):
+		if not actor.growth_weights is Array or actor.growth_weights.size() != 4:return false
+		for weight in actor.growth_weights:
+			if not _integer(weight,0,255):return false
+		if not _integer(actor.get("growth_rank"),0,5) or not _integer(actor.get("growth_seed"),0,100000000000000):return false
+	if actor.has("learned_skills"):
+		if not actor.learned_skills is Array or actor.learned_skills.size() > 3:return false
+		var seen := []
+		for skill in actor.learned_skills:
+			if not _integer(skill,0,1000) or int(skill) not in [3,10,50] or int(skill) in seen:return false
+			seen.append(int(skill))
 	if actor.has("speed") and not _integer(actor.speed,1,1000000):
 		return false
 	for key in ["max_hp","level","attack"]:
@@ -328,25 +410,43 @@ func _parse_save(text: String) -> Variant:
 	return parser.data
 
 func allocate_stat(stat: String) -> bool:
-	# char.c CHAR_SkillUp uses four base stats and consumes exactly one point.
-	# MVP uses primary effects only; fractional cross-stat formulas are deferred.
 	_sync_stat_points()
 	var p: Dictionary = _profile.player
-	if not _pending.is_empty() or not p.allocated_stats.has(stat) or p.stat_points <= 0:
-		return false
-	p.stat_points -= 1
+	if not _pending.is_empty() or not p.allocated_stats.has(stat) or p.stat_points <= 0:return false
+	Progression.migrate_player(p)
+	var old_max := int(p.max_hp)
 	p.allocated_stats[stat] += 1
-	match stat:
-		"vitality":
-			p.max_hp += 4
-			p.hp += 4
-		"strength":p.attack += 1
-		"toughness":p.defence += 1
-		"dexterity":p.speed += 1
+	p.base_stats[stat] += 100
+	Progression.refresh(p)
+	p.hp += int(p.max_hp)-old_max
+	_sync_stat_points()
 	return true
+
+func effective_player_stats() -> Dictionary:
+	var result := {}
+	for key in Progression.DERIVED:result[key] = _profile.player[key]
+	result.attack += 4 if _profile.equipped else 0
+	return result
 
 func _sync_stat_points() -> void:
 	var assigned := 0
 	for count in _profile.player.allocated_stats.values():
 		assigned += int(count)
 	_profile.player.stat_points = maxi(0,(int(_profile.player.level)-1)*3-assigned)
+
+func learn_pet_skill(index: int, skill_id: int) -> bool:
+	var catalog = preload("res://scripts/pet_skills.gd")
+	if not _pending.is_empty() or index < 0 or index >= _profile.pets.size() or not catalog.SKILLS.has(skill_id):return false
+	var location: Dictionary = _profile.location
+	if not catalog.TRAINERS.has(location.map_id):return false
+	var trainer: Dictionary = catalog.TRAINERS[location.map_id]
+	if skill_id not in trainer.skills or Vector2(location.x,location.y).distance_to(Vector2(trainer.cell[0],trainer.cell[1])) > 2.0:return false
+	var pet: Dictionary = _profile.pets[index]
+	var learned: Array = pet.get("learned_skills",[])
+	var cost := int(catalog.SKILLS[skill_id].cost)
+	if skill_id in learned or learned.size() >= 3 or _profile.player.gold < cost:return false
+	_profile.player.gold -= cost
+	learned.append(skill_id)
+	pet.learned_skills = learned
+	pet.skill_unlocked = true
+	return true

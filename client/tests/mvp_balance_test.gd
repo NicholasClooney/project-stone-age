@@ -36,7 +36,7 @@ func _initialize() -> void:
 	for species in ["wooli","wooli_wooli","woolistan"]:
 		check(game.heal(),"village recovery")
 		check(encounter(game,species).outcome == "win","win species encounter")
-	check(game.snapshot().pets[0].level == 2 and game.snapshot().pets[0].skill_unlocked,"three fights unlock pet skill")
+	check(game.snapshot().pets[0].level == 2,"three fights grow companion")
 	for stat in ["vitality","strength","toughness"]:
 		check(game.allocate_stat(stat),"spend earned point on " + stat)
 	check(game.buy_item("club") and game.equip_item("club"),"combat earnings buy weapon")

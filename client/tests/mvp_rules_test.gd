@@ -40,7 +40,7 @@ func _initialize() -> void:
 	for i in range(3):
 		game.heal()
 		check(fight(game).outcome == "win","player and pet win encounter")
-	check(game.snapshot().player.level > 1 and game.snapshot().pets[0].skill_unlocked,"player and pet progression unlock skill")
+	check(game.snapshot().player.level > 1 and game.snapshot().pets[0].level > 1,"player and pet earn levels")
 	check(game.can_fight_boss(),"three wins and capture unlock boss")
 	game.heal()
 	check(fight(game,false,true).outcome == "win","boss beatable through progression")
@@ -51,7 +51,7 @@ func _initialize() -> void:
 	for stat in ["vitality","strength","toughness","dexterity"]:
 		check(game.allocate_stat(stat),"allocate " + stat)
 	var after_stats: Dictionary = game.snapshot().player
-	check(after_stats.max_hp == before_stats.max_hp+4 and after_stats.attack == before_stats.attack+1 and after_stats.defence == before_stats.defence+1 and after_stats.speed == before_stats.speed+1,"all four allocations affect combat stats")
+	check(after_stats.max_hp == before_stats.max_hp+7 and after_stats.attack == before_stats.attack+1 and after_stats.defence == before_stats.defence+2 and after_stats.speed == before_stats.speed+1,"all four allocations affect combat stats")
 	while game.snapshot().player.stat_points > 0:game.allocate_stat("strength")
 	check(not game.allocate_stat("strength") and game.snapshot().player.stat_points == 0,"cannot overspend allocation points")
 	check(game.buy_item("club") and game.equip_item("club"),"shop weapon equipment")
@@ -104,6 +104,8 @@ func _initialize() -> void:
 	var fake := {"active":false,"battle_id":config.battle_id,"outcome":"win","player_hp":48,"potions":config.potions,"enemy_hp":20}
 	check(not game.apply_battle_result(fake),"impossible win rejected")
 	check(not game.save_game(path) and not game.heal() and game.start_battle_config().is_empty(),"active battle blocks out of combat changes")
+	# Guaranteed-danger fixture: native weak foes may deal zero against guarding defence.
+	config.enemies[0].attack = 100
 	var battle = Battle.new()
 	battle.start_battle(config)
 	while battle.snapshot().active:
@@ -119,7 +121,7 @@ func _initialize() -> void:
 		config.player_attack = 8
 		battle = Battle.new()
 		battle.start_battle(config)
-		while battle.snapshot().enemy_hp > 19:
+		while battle.snapshot().active and battle.snapshot().enemy_hp*100 > battle.snapshot().enemy_max_hp*60:
 			battle.submit_action("attack")
 		battle.submit_action("capture")
 		check(game.apply_battle_result(battle.snapshot()),"additional roster capture")
