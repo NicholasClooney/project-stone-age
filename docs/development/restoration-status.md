@@ -17,7 +17,7 @@ Verified against the implementation through v0.23.0 (2026-09-27). â€œDeliveredâ€
 | Global DEV map | Delivered | Zoom/pan, POIs, teleport or walking; cross-map routes follow actual portals and preserve gates. |
 | Pet categories/pages and growth comparison | Delivered | 30-slot collection, original five-row frame; conditional mean, approximate marginal 90% intervals and species normal mean. Theoretical extrema are secondary, not a normal-quality benchmark. |
 | GM tools and instant escape | Delivered | Player/pet levels and base stats, additional player allocation, heal and reward-free escape. |
-| In-game human-readable changelog | Delivered | v0.x.0 from first-parent feat/fix history; agent update workflow enforced. |
+| In-game human-readable changelog | Delivered | v0.MINOR.PATCH from first-parent feat/fix history; agent update workflow enforced. |
 | Accurate ordinary wild encounter data | Delivered for supported loaded areas | Original regional selection, levels, wild stats, enemy art and capture persistence; source gaps explicitly rejected. Does not imply all maps/enemies or all original combat rules. |
 | All village NPCs/services | Partial | Samgir 11 outdoor residents including initial villager; Marinas 8. Ordinary residents currently show first dialogue. Interiors/services/branches not fully populated. |
 | Capture-success and XP distribution parity | Partial | Original capture flags and source enemy XP included, but HP-threshold capture success, full healing on acquisition and MVP XP distribution remain simplified. |

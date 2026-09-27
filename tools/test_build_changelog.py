@@ -3,7 +3,7 @@ from build_changelog import build
 
 class ChangelogTest(unittest.TestCase):
     def test_only_feature_and_fix_commits_advance_version(self):
-        result=build([('docs: design','2026-01-01'),('feat(client): Village','2026-01-02'),('fix: Sound','2026-01-03'),('chore: refresh log','2026-01-04'),('feat!: Pets','2026-01-05')],{})
+        result=build([('docs: design','2026-01-01'),('feat(client): Village','2026-01-02'),('fix: Sound','2026-01-03'),('chore: refresh log','2026-01-04'),('feat!: Pets','2026-01-05')],{},legacy=99)
         self.assertEqual(result['version'],'v0.3.0')
         self.assertEqual([e['version'] for e in result['entries']],['v0.3.0','v0.2.0','v0.1.0'])
         self.assertEqual((result['feature_count'],result['fix_count']),(2,1))
@@ -12,6 +12,14 @@ class ChangelogTest(unittest.TestCase):
         self.assertEqual(result['entries'][0]['title'],'Close button')
         self.assertEqual(result['entries'][1]['title'],'宠物加入')
         self.assertNotIn('hash',result['entries'][1])
+    def test_after_legacy_feat_bumps_minor_and_fix_bumps_patch(self):
+        records=[('feat: A','d'),('fix: B','d'),('fix: C','d'),('feat: D','d'),('docs: E','d'),('fix: F','d')]
+        result=build(records,{},legacy=1)
+        self.assertEqual([e['version'] for e in reversed(result['entries'])],['v0.1.0','v0.1.1','v0.1.2','v0.2.0','v0.2.1'])
+        self.assertEqual(result['version'],'v0.2.1')
+    def test_legacy_fixes_keep_minor_numbers(self):
+        result=build([('feat: A','d'),('fix: B','d'),('fix: C','d')],{},legacy=2)
+        self.assertEqual([e['version'] for e in reversed(result['entries'])],['v0.1.0','v0.2.0','v0.2.1'])
     def test_empty_history(self):
         self.assertEqual(build([],{})['version'],'v0.0.0')
 
