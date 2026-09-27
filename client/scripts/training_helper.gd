@@ -20,7 +20,7 @@ var earned_xp:=0
 var earned_pet_xp:=0
 var turns:=0
 var cooldown:=0.0
-var settings: Dictionary={"speed":1.0,"xp":1,"compact":false,"hp":20,"level":120,"limit":1000}
+var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000}
 var origin_map: int
 var origin_cell: Vector2i
 var initial_level:=1
@@ -42,7 +42,7 @@ func _ready() -> void:
 	label_at(panel,"经验倍率",Vector2(420,116),17)
 	multiplier=options(["1× 原版","2×","10×","100×"],Vector2(555,106))
 	compact=CheckBox.new();compact.text="地图内简略战斗（不切换画面，只显示战况）";compact.position=Vector2(24,164);panel.add_child(compact)
-	label_at(panel,"低于此血量停机 %",Vector2(24,223),17);hp_floor=number(Vector2(230,213),1,100,20)
+	label_at(panel,"低于此血量停机 %",Vector2(24,223),17);hp_floor=number(Vector2(230,213),1,100,10)
 	label_at(panel,"角色等级（0不限）",Vector2(430,223),16);target_level=number(Vector2(610,213),0,120,120)
 	label_at(panel,"最多战斗场次",Vector2(24,273),17);battle_limit=number(Vector2(230,263),1,100000,1000)
 	label_at(panel,"保护玩家、出战宠与坐骑；不会自动补血。中途停止可接手战斗。",Vector2(24,318),16)
@@ -54,11 +54,11 @@ func _ready() -> void:
 	status=label_at(progress,"",Vector2(18,12),18);status.size=Vector2(840,42);status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	result=label_at(progress,"",Vector2(18,60),16);result.size=Vector2(840,76);result.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	stop_button=world.button("停止 / 接手",func():stop_training("已手动停止"));stop_button.position=Vector2(900,20);progress.add_child(stop_button)
-	if not world.training_settings.is_empty():
-		settings=world.training_settings.duplicate(true)
-		speed.select([1.0,2.0,4.0,8.0].find(float(settings.speed)))
-		multiplier.select([1,2,10,100].find(int(settings.xp)))
-		compact.button_pressed=settings.compact;hp_floor.value=settings.hp;target_level.value=settings.level;battle_limit.value=settings.limit
+	# Fresh UI defaults are opt-in; only Apply / Start changes live multipliers.
+	settings.merge(world.training_settings,true)
+	speed.select([1.0,2.0,4.0,8.0].find(float(settings.speed)))
+	multiplier.select([1,2,10,100].find(int(settings.xp)))
+	compact.button_pressed=settings.compact;hp_floor.value=settings.hp;target_level.value=settings.level;battle_limit.value=settings.limit
 	progress.hide();hide()
 func label_at(parent: Control,value: String,point: Vector2,font_size: int) -> Label:
 	var node: Label=world.text(value,font_size);node.position=point;node.mouse_filter=Control.MOUSE_FILTER_IGNORE;parent.add_child(node);return node

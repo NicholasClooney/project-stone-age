@@ -28,6 +28,10 @@ var filter: Dictionary = {}
 var last_hit: Dictionary = {}
 var candidates: Array = []
 var applying := false
+var started_usec := 0
+var hunt_catalog: RefCounted
+const FRAME_BUDGET_USEC := 4000
+const MAX_BACKLOG_SECONDS := 0.1
 
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:
@@ -63,7 +67,8 @@ func _ready() -> void:
 		var input:=number(Vector2(115+i*258,295),-2,2,-2)
 		input.value_changed.connect(filters_changed);offsets.append(input)
 	explanation=label("",Vector2(24,351),15);explanation.size=Vector2(1040,67);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,500,100)
+	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,100000,100)
+	rate.tooltip_text="目标速度；实际速度取决于敌群复杂度和设备性能，每帧约 4 毫秒工作预算。"
 	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),1,1000000,100000)
 	label("组；到上限暂停，可再次开始。",Vector2(610,433),16)
 	status=label("",Vector2(24,478),16);status.size=Vector2(1040,65);status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -153,26 +158,36 @@ func start_hunt() -> void:
 		status.text="当前没有素材齐全的目标宠物。";return
 	filter={"usable":usable,"template":species.get_selected_id(),"level_one":level_one.button_pressed,"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value)}
 	region_map=int(world.data.map_id);region_cell=world.cell
+	# Freeze the validated location for this run. Only trim the spatial lookup;
+	# retain original groups/enemies/templates and all roll checks/RNG calls.
+	var hunt_data: Dictionary=world.encounter_catalog.data.duplicate()
+	hunt_data.areas=[world.encounter_catalog.area_at(region_map,region_cell)]
+	hunt_catalog=preload("res://server/encounter_catalog.gd").new(hunt_data)
 	rolls=0;inspected=0;best=-9;elapsed=0;credit=0;last_hit={}
+	started_usec=Time.get_ticks_usec()
 	running=true;set_controls(true);update_status()
 func stop_hunt(reason: String) -> void:
 	running=false;set_controls(false);status.text=reason+"\n"+summary()
 func summary() -> String:
-	return "已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · %.1f 秒" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed]
+	var actual:=rolls / maxf(elapsed,0.001)
+	return "已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · %.1f 秒\n目标 %d 组/秒 · 实际 %.0f 组/秒" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,int(filter.get("rate",rate.value)),actual]
 func update_status() -> void:status.text=summary()+"\n筛选中；停止或 Esc 可随时结束。"
 func _process(delta: float) -> void:
 	if not running:return
 	if not visible or not world.paused_input or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell:
 		stop_hunt("场景状态变化，筛选已停止。");return
-	elapsed+=delta;credit=minf(credit+delta*float(filter.rate),20.0)
-	var until:=Time.get_ticks_usec()+4000
+	elapsed=(Time.get_ticks_usec()-started_usec)/1000000.0
+	# Discard old backlog after a stall; never catch up with an unbounded burst.
+	credit=minf(credit+delta*float(filter.rate),maxf(1.0,float(filter.rate)*MAX_BACKLOG_SECONDS))
+	var until:=Time.get_ticks_usec()+FRAME_BUDGET_USEC
 	while running and credit>=1 and Time.get_ticks_usec()<until:
 		credit-=1;scan_once()
+	elapsed=(Time.get_ticks_usec()-started_usec)/1000000.0
 	if running:update_status()
 func scan_once() -> void:
 	if not running:return
 	rolls+=1
-	var troop: Dictionary=world.encounter_catalog.roll(region_map,region_cell,world.encounter_rng)
+	var troop: Dictionary=hunt_catalog.roll(region_map,region_cell,world.encounter_rng)
 	if troop.is_empty():
 		stop_hunt("原版遇敌数据或条件不完整，已停止；没有替换敌群。");return
 	for i in range(troop.enemies.size()):
