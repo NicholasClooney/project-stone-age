@@ -41,14 +41,18 @@ func run() -> void:
 	helper.start_training();helper.advance()
 	check(helper.compact_active and game.battle_session.snapshot().active and not game.battle_view.visible,"compact mode starts real authority without battle screen")
 	check(game.paused_input and helper.visible,"map is visible but movement locked")
+	var expected_gold: Dictionary={}
 	for i in range(1000):
 		if not helper.running:break
+		if not game.session._pending.is_empty():expected_gold[game.session._pending.battle_id]=int(game.session._pending.battle_gold)
 		helper.advance()
 	check(helper.battles==2 and not helper.running,"two battles settle then encounter loop stops at cap")
 	check(game.session._pending.is_empty() and not game.paused_input,"final settlement leaves no pending battle or input lock")
 	check(game.session.snapshot().player.level>before.player.level,"100x awards actual levels")
 	check(game.session.snapshot().player.stat_points>before.player.stat_points,"multiple levels grant allocatable stats")
-	check(game.session.snapshot().player.gold==before.player.gold,"ordinary automation invents no gold")
+	var total_gold:=0
+	for amount in expected_gold.values():total_gold+=int(amount)
+	check(expected_gold.size()==2 and game.session.snapshot().player.gold==before.player.gold+total_gold,"automation awards original level-based currency once per battle without XP multiplier")
 	check(game.cell==Vector2i(637,493),"stationary encounters preserve location")
 	helper.open_menu();helper.target_level.value=game.session.snapshot().player.level;helper.start_training();helper.advance()
 	check(not helper.running and game.session._pending.is_empty(),"target level prevents next encounter")

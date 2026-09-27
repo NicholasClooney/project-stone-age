@@ -893,8 +893,7 @@ func build_ui() -> void:
 	var destinations := dev_destinations.get_popup()
 	destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	destinations.add_item("全部地点 / 搜索村民与出入口…",90001)
-	var destination_ids: Array=world_catalog.maps.keys()
-	destination_ids.sort_custom(func(a,b):return int(a)<int(b))
+	var destination_ids: Array=world_catalog.destination_maps(int(data.map_id))
 	for key in destination_ids:
 		var id:=int(key)
 		var info: Dictionary = world_catalog.info(id)
@@ -1299,7 +1298,12 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 		"sell_club":success = at_shop and session.sell_item("club")
 		"use_potion":success = session.use_item("potion")
 		"equip":success = session.equip_item("club")
-		"allocate_stat":success = session.allocate_stat(str(value))
+		"allocate_stat":success = session.allocate_stat(str(value),adventure_menu.allocation_amount)
+		"distribute_stats":
+			var selected: Array=[]
+			for key in ["vitality","strength","toughness","dexterity"]:
+				if key in adventure_menu.allocation_stats:selected.append(key)
+			success=session.distribute_stats(selected)
 		"select_pet":success = session.select_pet(int(value))
 		"rename_pet":success = session.rename_pet(int(value),adventure_menu.name_edit.text)
 		"accept_quest":success = at_villager and session.accept_quest()

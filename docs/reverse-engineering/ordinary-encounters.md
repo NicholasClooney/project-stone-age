@@ -20,7 +20,7 @@ Pinned `references/chenmingbiao-stone-age/gmsv`:
 - `char/enemy.c:1270–1481`: weighted group then weighted enemy choice; uniform troop size from 1 to the smaller of regional cap and sum of enemy caps. Respect duplicate per-type caps, 100-attempt limit, and up to five large enemies in the first row.
 - `char/enemy.c:1030–1075`: choose level from the original inclusive range, perturb each species weight by −2…+2, distribute ten shared points, multiply by initial-plus-wild-level factor. Wild enemies do **not** use repeated domesticated-pet level-up growth.
 - `char/enemy.c:295`: table fields use C `atoi`; the reference `4.50` wild-growth field becomes **4** in this compiled branch. Catalog retains both parsed and raw values. Do not silently use 4.5 while claiming parity with this branch.
-- `char/enemy.c:726–774`: explicit XP overrides or base XP table plus rank/resistance modifiers. Resolver supplies this raw enemy XP; battle reward distribution remains a separate concern. No invented fixed gold reward.
+- `char/enemy.c:726–774`: explicit XP overrides or base XP table plus rank/resistance modifiers. Resolver supplies this raw enemy XP; battle reward distribution remains a separate concern. Per-enemy fixed gold is zero; the server-wide battle currency rule below is applied once during settlement.
 - `battle/battle_event.c:3115`: enemy capture flag controls capturability; preserve the actual generated animal on capture instead of replacing it with a new level-one pet.
 
 ## API and boundary
@@ -52,3 +52,13 @@ Checks include original IDs/weights/levels, inclusive boundaries and overlap pre
 Regression suites: `wild_encounter_integration_test` (actual walking, region-provenance, escape and missing art), `wild_encounter_authority_test` (capture/save/validation), and `group_battle_ui_test` (ten mixed actors, targets, animation and removal).
 
 Capture eligibility flags are enforced, but the existing MVP HP-threshold success rule remains; original level-difference/resistance-based capture probability is not claimed restored.
+
+## Battle currency and remaining loot scope
+
+The pinned server fork enables `_BATTLE_GOLD` (`gmsv/include/version.h:345`), with `BATTLEGOLD=10` in `gmsv/setup.cf:64`. `BATTLE_GetExp` (`gmsv/battle/battle.c:2902–2912`) adds **the player’s level × that factor**, before the level-up check (`:3150`). This is a configurable fork feature, not evidence that every historical official release paid cash after battles. Enemy level/count do not determine this award.
+
+Source encounters now snapshot that pre-level-up amount and credit it once on successful win/capture settlement. Four temporary mirrors do not multiply it, and the XP assist multiplier does not affect it. The existing MVP defeat/escape policy still gives no rewards; this is not a claim of complete original retreat/stop settlement parity. Currency uses the current save-format cap (1,000,000,000), not a restoration of all original account-dependent wallet caps. Tutorial encounters retain their existing fixed rewards.
+
+Item loot is separate and still deferred: `ENEMY_createEnemy` (`gmsv/char/enemy.c:1109–1118`) rolls enemy item probabilities against 0–999 with `_FIX_ITEMPROB`, and `BATTLE_AddExpItem` (`gmsv/battle/battle.c:4715` onwards) distributes those items. The currency fix does not fabricate item drops or sell values.
+
+Regression: `./scripts/run.sh --script res://tests/wild_currency_test.gd` covers victory/capture, no retreat/death award, pre-level-up snapshot, clones/100× XP independence, forged/replayed rewards, save/load and the wallet cap.

@@ -4,6 +4,8 @@ var world: Node
 var kind := "status"
 var panel: Control
 var feedback := ""
+var allocation_amount := 1
+var allocation_stats: Array = ["vitality","strength","toughness","dexterity"]
 var selected_pet := 0
 var pet_view := "list"
 var pet_rename := false
@@ -230,6 +232,31 @@ func status_panel(profile: Dictionary) -> void:
 		plus.name = "Allocate_"+stats[i]
 		plus.visible = int(p.get("stat_points",0))>0
 
+	if int(p.get("stat_points",0))>0:
+		stone(Rect2(280,48,256,240))
+		label("便捷加点",Vector2(294,60),220,17)
+		label("UP 每次分配",Vector2(294,94),115,13)
+		var count:=SpinBox.new()
+		count.name="AllocationAmount"
+		count.min_value=1;count.max_value=1000000000;count.step=1
+		count.value=allocation_amount
+		count.position=Vector2(408,90);count.size=Vector2(115,28)
+		count.value_changed.connect(func(value):allocation_amount=int(value))
+		panel.add_child(count)
+		for i in range(stats.size()):
+			var toggle:=CheckBox.new()
+			toggle.name="Distribute_"+stats[i]
+			toggle.text=["体力","腕力","耐力","速度"][i]
+			toggle.position=Vector2(290+(i%2)*115,128+int(i/2)*32)
+			toggle.button_pressed=stats[i] in allocation_stats
+			var key: String=stats[i]
+			toggle.toggled.connect(func(on):
+				if on and key not in allocation_stats:allocation_stats.append(key)
+				elif not on:allocation_stats.erase(key))
+			panel.add_child(toggle)
+		var distribute:=choice("剩余点均分到勾选项",Vector2(289,201),"distribute_stats")
+		distribute.name="DistributeStats"
+		label("只分配剩余点；余数按体腕耐速分配。",Vector2(294,244),225,12)
 
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)

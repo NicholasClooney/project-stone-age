@@ -24,3 +24,35 @@ func links(id: int) -> Dictionary:
  return portals.get(str(id),{})
 func field(id: int) -> bool:
  return id in [100,200] or str(info(id).get("kind","")) == "training"
+
+# Village-local buildings belong to their nearest village through interior doors.
+# Wilderness and dungeons remain global destinations.
+func village_for(id: int) -> int:
+ if str(info(id).get("kind",""))=="village":return id
+ if str(info(id).get("kind",""))!="interior" or id>=5000:return -1
+ var pending: Array=[id]
+ var seen: Dictionary={id:true}
+ while not pending.is_empty():
+  var current:=int(pending.pop_front())
+  for link in links(current).values():
+   var next:=int(link.to_map)
+   var kind:=str(info(next).get("kind",""))
+   if kind=="village":return next
+   if kind=="interior" and next<5000 and not seen.has(next):
+    seen[next]=true;pending.append(next)
+ return -1
+
+func destination_maps(current: int) -> Array:
+ var village:=village_for(current)
+ var result: Array=[]
+ for key in maps:
+  var id:=int(key)
+  var owner:=village_for(id)
+  if str(info(id).get("kind",""))=="interior" and owner>=0 and owner!=village:continue
+  result.append(key)
+ result.sort_custom(func(a,b):
+  var local_a:=village>=0 and village_for(int(a))==village
+  var local_b:=village>=0 and village_for(int(b))==village
+  if local_a!=local_b:return local_a
+  return int(a)<int(b))
+ return result

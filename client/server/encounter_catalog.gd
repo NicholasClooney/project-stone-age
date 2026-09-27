@@ -118,7 +118,7 @@ func actor(enemy_id: int, rng: RandomNumberGenerator) -> Dictionary:
 			break
 	for i in range(4):result.base_stats[Rules.STATS[i]] = int(initial[i])*(int(template.initial)+(level-1)*int(template.wild_growth))
 	result.reward_xp = experience(enemy,template,level,int(result.growth_rank))
-	result.reward_gold = 0 # Original wild coins are not a fixed invented reward.
+	result.reward_gold = 0 # Per-enemy coins: none. Session applies pinned BATTLEGOLD once.
 	Rules.refresh(result)
 	result.hp = result.max_hp
 	return result

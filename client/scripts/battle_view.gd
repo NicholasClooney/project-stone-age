@@ -16,6 +16,8 @@ var manifest: Dictionary = {}
 var state: Dictionary = {}
 var status: Label
 var report: Label
+var hover_info: Label
+var displayed_mount: Dictionary = {}
 var return_button: Button
 var battle_effects: Control
 var result_panel: Control
@@ -162,6 +164,10 @@ func _ready() -> void:
 	report = label("",16,Vector2(20,508),Vector2(760,65))
 	report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	hint = label("",16,Vector2(20,578),Vector2(760,22))
+	hover_info = label("",14,Vector2(20,552),Vector2(760,22))
+	hover_info.name = "BattleHoverInfo"
+	hover_info.z_index = 20
+	hover_info.hide()
 	command_panel = Control.new()
 	command_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(command_panel)
@@ -971,7 +977,6 @@ func _advance_playback(delta: float) -> void:
 			if difference>0: battle_effects.impact(point,difference,bool(cue.get("guarded",false)),bool(cue.get("critical",false)),int(cue.hp)<=0)
 			elif difference<0: battle_effects.heal(point,-difference)
 		displayed_hp[recipient] = int(cue.hp)
-	report.visible = not is_animating()
 	hint.visible = not is_animating()
 	var finished := not str(state.get("outcome","")).is_empty() and not is_animating()
 	result_panel.visible = finished and (str(state.get("outcome",""))!="defeat" or not is_instance_valid(world))
@@ -1073,6 +1078,37 @@ func _advance_playback(delta: float) -> void:
 		var phase := int(elapsed*60.0)%60
 		var outline: StyleBoxFlat = highlight.get_theme_stylebox("panel")
 		outline.border_color = Color.GREEN if phase<45 else (Color(0,0.5,0) if phase>=50 and phase<55 else Color.WHITE)
+
+	update_hover_info(stage.get_local_mouse_position())
+
+func hover_actor_text(index: int) -> String:
+	var actor_name := actor_labels[index].text
+	var maximum := int(actors[index].get("maximum",1)) if index==2 else health_of(state,index,true)
+	var text := "%s  体力 %d/%d" % [actor_name,maxi(0,displayed_hp[index]),maximum]
+	# mouse.cpp:690-746 exposes friendly HP; enemy HP is _STONDEBUG_ only
+	# at797-818. Exposing it here is an intentional single-player convenience.
+	if index==0 and not displayed_mount.is_empty():
+		text += "  骑宠 %s  体力 %d/%d" % [displayed_mount.get("name",""),displayed_mount.get("hp",0),displayed_mount.get("max_hp",0)]
+	return text
+
+func update_hover_info(point: Vector2) -> void:
+	# Reset the normal report before applying this frame's transient hover.
+	report.visible = not is_animating()
+	hover_info.hide()
+	if not visible or world_modal_open() or result_panel.visible or elapsed<menu_slide_at: return
+	var hovered := -1
+	var front_y := -INF
+	for i in range(actors.size()):
+		if not actors[i].sprite.visible: continue
+		var over_meter := hp_bars[i].visible and Rect2(hp_bars[i].position-Vector2(25,10),Vector2(50,20)).has_point(point)
+		if not target_buttons[i].get_rect().has_point(point) and not over_meter: continue
+		if float(actors[i].point.y)>=front_y:
+			hovered = i
+			front_y = float(actors[i].point.y)
+	if hovered<0: return
+	hover_info.text = hover_actor_text(hovered)
+	hover_info.show()
+	report.hide()
 
 func show_learned_skills() -> void:
 	clear_choices()
@@ -1241,6 +1277,7 @@ func mounted_impact_sound(index: int) -> int:
 func update_riding_health(health: Dictionary) -> void:
 	var index := int(health.get("ride_pet",-1))
 	var roster: Array = health.get("pets",[])
+	displayed_mount = roster[index].duplicate(true) if index>=0 and index<roster.size() else {}
 	riding_hp_bar.visible = index >= 0 and index < roster.size()
 	if riding_hp_bar.visible:
 		riding_hp_fill.size.x = 40.0*clampf(float(roster[index].hp)/maxf(1,float(roster[index].max_hp)),0,1)

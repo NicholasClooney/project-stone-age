@@ -85,10 +85,24 @@ func add_entry(map_id: int, label: String, coordinates: Array, kind: int) -> voi
 func refresh() -> void:
  filtered.clear();destinations.clear()
  var query:=search.text.strip_edges().to_lower()
+ var current:=int(world.data.map_id)
+ var village: int=world.world_catalog.village_for(current)
+ var allowed: Array=world.world_catalog.destination_maps(current)
  for entry in entries:
+  if str(entry.map_id) not in allowed:continue
+  var owner:=int(world.world_catalog.village_for(entry.map_id))
+  if entry.kind!=1 and owner>=0 and owner!=village:continue
   if category.selected>0 and entry.kind!=category.selected:continue
   if not query.is_empty() and not str(entry.label).to_lower().contains(query):continue
   filtered.append(entry)
+ filtered.sort_custom(func(a,b):
+  var local_a: bool=village>=0 and world.world_catalog.village_for(a.map_id)==village
+  var local_b: bool=village>=0 and world.world_catalog.village_for(b.map_id)==village
+  if local_a!=local_b:return local_a
+  if a.map_id!=b.map_id:return a.map_id<b.map_id
+  if a.kind!=b.kind:return a.kind<b.kind
+  return str(a.label)<str(b.label))
+ for entry in filtered:
   destinations.add_item(str(entry.label)+("" if entry.available else " · 未导入"))
   destinations.set_item_disabled(destinations.item_count-1,not entry.available)
  visit_button.disabled=true

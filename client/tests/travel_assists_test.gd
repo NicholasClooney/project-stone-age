@@ -12,9 +12,11 @@ func run() -> void:
 	game.random_encounters=false
 	var popup=game.dev_destinations.get_popup()
 	var all_maps:=true
-	for key in game.world_catalog.maps:
+	for key in game.world_catalog.destination_maps(int(game.data.map_id)):
 		if popup.get_item_index(int(key))<0:all_maps=false
-	check(all_maps,"destination dropdown includes every imported map")
+	check(all_maps,"destination dropdown includes global regions and current village interiors")
+	check(popup.get_item_index(2002)<0 and popup.get_item_index(1002)>=0,"dropdown hides other villages interiors and retains current village shop")
+	check(popup.get_item_id(1)==1000,"dropdown prioritizes current village")
 	game.dev_blink_mode=true
 	game.handle_world_click(game.project(Vector2(85,95)))
 	check(game.cell==Vector2i(85,95) and game.path.is_empty() and not game.moving,"world click blinks immediately without walk path")

@@ -59,3 +59,17 @@ select these fields. Future unavailable selections log a warning and fall back
 to classic battlefield 0; this is compatibility behavior, not claimed original
 scenery. Terrain with no table assignment uses the server's initialized value 0.
 Original data remains ignored; rerun the importer when installing assets.
+
+## Battle hover health
+
+`system/mouse.cpp:690–746` writes name, level and current/maximum HP to
+`OneLineInfoStr` for the player and friendly units, including riding-pet HP.
+The enemy branch at797–818 exposes exact HP only under `_STONDEBUG_`; normal
+builds show name/level. Our single-player mode intentionally also exposes enemy
+HP as a convenience, rather than claiming this was the normal original mode.
+
+Hover a fighter or its overhead meter for an immediate line near the bottom
+of the battle. Numbers use the presentation's impact-timed HP, never the final
+turn snapshot before its animations finish. Menus/results suppress this line;
+hovering never changes the selected action or target. Riding HP uses the same
+frame as the riding meter. Verified headlessly by `battle_hover_test.gd`.

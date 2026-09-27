@@ -105,6 +105,9 @@ func start_wild_battle_config(troop: Dictionary) -> Dictionary:
 	config.reward_xp = first.reward_xp
 	config.reward_gold = first.reward_gold
 	config.source_encounter = true
+	# Pinned gmsv setup.cf BATTLEGOLD=10; battle.c BATTLE_GetExp pays
+	# once for the player before level-up, not once per defeated enemy.
+	config.battle_gold = int(_profile.player.level)*10
 	config.area_id = int(troop.get("area_id",-1))
 	config.group_id = int(troop.get("group_id",-1))
 	_pending = config.duplicate(true)
@@ -178,6 +181,8 @@ func apply_battle_result(result: Dictionary) -> bool:
 	for i in range(battle_pets.size()):_profile.pets[i].hp = int(battle_pets[i].hp)
 	_profile.active_pet = int(result.get("active_pet",-1))
 	if outcome in ["win","captured"]:
+		earned_gold += int(_pending.get("battle_gold",0))
+		earned_gold = mini(earned_gold,1000000000-int(_profile.player.gold))
 		_profile.player.gold += earned_gold
 		_gain_xp(_profile.player,earned_xp)
 		for i in range(_profile.pets.size()):
@@ -498,17 +503,33 @@ func _parse_save(text: String) -> Variant:
 		return null
 	return parser.data
 
-func allocate_stat(stat: String) -> bool:
+func allocate_stat(stat: String, amount: int = 1) -> bool:
 	_sync_stat_points()
 	var p: Dictionary = _profile.player
-	if not _pending.is_empty() or not p.allocated_stats.has(stat) or p.stat_points <= 0:return false
+	if not _pending.is_empty() or not p.allocated_stats.has(stat) or p.stat_points <= 0 or amount <= 0:return false
+	amount = mini(amount,int(p.stat_points))
 	Progression.migrate_player(p)
 	var old_max := int(p.max_hp)
-	p.allocated_stats[stat] += 1
-	p.base_stats[stat] += 100
+	p.allocated_stats[stat] += amount
+	p.base_stats[stat] += 100*amount
 	Progression.refresh(p)
 	p.hp += int(p.max_hp)-old_max
 	_sync_stat_points()
+	return true
+
+func distribute_stats(stats: Array) -> bool:
+	_sync_stat_points()
+	if not _pending.is_empty() or stats.is_empty() or _profile.player.stat_points<=0:return false
+	var unique: Array=[]
+	for stat in stats:
+		if not stat is String or not _profile.player.allocated_stats.has(stat) or stat in unique:return false
+		unique.append(stat)
+	var points:=int(_profile.player.stat_points)
+	var each:=int(points/unique.size())
+	var remainder:=points%unique.size()
+	for i in range(unique.size()):
+		var amount:=each+(1 if i<remainder else 0)
+		if amount>0:allocate_stat(unique[i],amount)
 	return true
 
 func effective_player_stats() -> Dictionary:

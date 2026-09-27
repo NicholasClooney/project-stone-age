@@ -30,7 +30,12 @@ func run():
   if not str(entry.label).contains("玛丽娜丝"):all_match=false
  check(all_match,"all search results match")
  menu.search.text="";menu.category.select(1);menu.refresh()
- check(menu.filtered.size()==maps.size(),"map filter includes every registered map")
+ check(menu.filtered.size()==game.world_catalog.destination_maps(1000).size(),"map filter hides other village interiors")
+ check(not game.world_catalog.destination_maps(100).has("1002"),"wilderness hides village interiors")
+ check(game.world_catalog.destination_maps(1002).has("1003"),"inside shop retains same village buildings")
+ check(not game.world_catalog.destination_maps(1002).has("2002"),"inside shop hides other village buildings")
+ check(game.world_catalog.destination_maps(100).has("10201"),"undersea dungeon remains a global destination")
+ check(menu.filtered[0].map_id==1000,"current village sorted first")
  var point=menu.safe_destination(1000,Vector2i(63,103))
  check(point!=Vector2i(63,103) and point.x>=0,"NPC coordinate relocates to adjacent walkable cell")
  check(not game.world_catalog.links(1000).has(point),"landing avoids automatic door triggers")

@@ -20,6 +20,23 @@ func _initialize() -> void:
 	check(game.snapshot().player.max_hp == before.max_hp+1,"strength also raises max HP")
 	game._profile.inventory.club = 1
 	check(game.equip_item() and game.effective_player_stats().attack == game.snapshot().player.attack+4,"equipment applies after base derivation once")
+
+	var bulk=Game.new()
+	bulk._profile.player.level=120
+	var bulk_before: Dictionary=bulk.snapshot().player
+	check(bulk.distribute_stats(["vitality","strength","dexterity"]),"hundreds of points distributed to selected stats")
+	var allocated: Dictionary=bulk.snapshot().player.allocated_stats
+	check(allocated=={"vitality":119,"strength":119,"toughness":0,"dexterity":119} and bulk.snapshot().player.stat_points==0,"exact three-way division leaves unselected stat unchanged")
+	check(bulk.snapshot().player.max_hp>bulk_before.max_hp,"bulk allocation applies derived stats")
+	bulk=Game.new();bulk._profile.player.level=2
+	check(not bulk.distribute_stats(["vitality","invalid"]) and bulk.snapshot().player.stat_points==3,"invalid distribution is atomic")
+	check(not bulk.distribute_stats(["strength","strength"]),"duplicate distribution rejected")
+	check(bulk.distribute_stats(["vitality","strength","toughness","dexterity"]) and bulk.snapshot().player.allocated_stats.dexterity==0,"uneven remainder is deterministic")
+	bulk=Game.new();bulk._profile.player.level=4
+	check(bulk.allocate_stat("strength",100) and bulk.snapshot().player.allocated_stats.strength==9,"bulk UP clamps to remaining points")
+	check(not bulk.allocate_stat("strength",-10),"negative allocation rejected")
+	bulk=Game.new();bulk._profile.player.level=2;bulk.start_battle_config()
+	check(not bulk.distribute_stats(["strength"]) and not bulk.allocate_stat("strength",2),"allocation blocked during active battle")
 	var a := Rules.species_actor("wooli",1,101)
 	var b := Rules.species_actor("wooli",1,101)
 	Rules.grow_pet(a,2);Rules.grow_pet(b,2)
