@@ -110,6 +110,9 @@ var hint: Label
 const MENU_ANCHOR := Vector2(680,65)
 const PET_MENU_ANCHOR := Vector2(675,48)
 
+var background_selector = preload("res://scripts/battle_background.gd").new()
+var battlefield: TextureRect
+
 func configure(next_world: Node) -> void:
 	world = next_world
 
@@ -129,7 +132,8 @@ func _ready() -> void:
 	add_child(stage)
 	if FileAccess.file_exists(ART_ROOT+"manifest.json"):
 		manifest = JSON.parse_string(FileAccess.get_file_as_string(ART_ROOT+"manifest.json"))
-		picture("background.png",Vector2.ZERO).z_index = -1000
+		battlefield = picture("background.png",Vector2.ZERO)
+		battlefield.z_index = -1000
 		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
 		add_actor(str(manifest.get("enemy_id","")),Vector2(101,150),7)
 	status = label("",16,Vector2(20,12),Vector2(420,26))
@@ -300,6 +304,9 @@ func layout() -> void:
 
 func open_battle(next_state: Dictionary) -> void:
 	capture_transition()
+	if is_instance_valid(battlefield) and is_instance_valid(world):
+		var bitmap := str(world.terrain.ground.get(int(world.cell.y)*int(world.data.width)+int(world.cell.x),""))
+		battlefield.texture = load(background_selector.choose(bitmap))
 	elapsed = 0.0
 	state = {}
 	starting_profile = world.session.snapshot() if is_instance_valid(world) and world.get("session")!=null else {}

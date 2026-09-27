@@ -1,5 +1,7 @@
 # Progression and battle restoration
 
+This is the historical M006 checkpoint; see the [current checklist](restoration-status.md) for later additions and limits.
+
 The five approved slices are implemented in the single Godot project, with local authority separated from presentation.
 
 | Slice | Playable result | Evidence |

@@ -39,3 +39,23 @@ Target: the current single-player battle subset, grounded in the locally archive
 ## Capture/escape verification
 
 `capture_escape_test.gd` resolves success/failure through the real local authority and checks follower movement, original emotion clips, audio events, return positions, offscreen removal, input/result timing and fresh-battle reset. Rendered captures cover following, celebration, breakaway, successful escape and failure. No capture thresholds or escape probabilities changed in this presentation slice.
+
+## Ground-dependent battle terrain
+
+`battle.c:BATTLE_getBattleFieldNo` reads the ground tile at the encounter's
+coordinate, looks up its three `MAP_BATTLEMAP` entries, and selects `RAND(0,2)`.
+This varies within a floor as well as between floors. `data/map/battlemap.txt`
+and `readmap.c` supply the mapping; a one-number entry repeats three times,
+and a two-number entry repeats its first number in slot three.
+
+`tools/import_battle_backgrounds.py` imports that mapping and renders the
+original 2.5 client's SAB terrain. Runtime selects a fresh source-table choice
+at battle entry from the actual player's ground tile, using a separate RNG so
+presentation does not perturb enemy selection or combat results.
+
+217 of 220 SAB files render. Fields 129–131 reference graphics absent from the
+local pack (4227, 4232 and 4230). No ground cells in the currently imported maps
+select these fields. Future unavailable selections log a warning and fall back
+to classic battlefield 0; this is compatibility behavior, not claimed original
+scenery. Terrain with no table assignment uses the server's initialized value 0.
+Original data remains ignored; rerun the importer when installing assets.

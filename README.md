@@ -98,6 +98,7 @@ For the full MVP, use the [local server reference](docs/reverse-engineering/loca
 .tools/asset-venv/bin/python tools/import_wilderness.py /path/to/stoneage2.5 \
   --server-map references/chenmingbiao-stone-age/gmsv/data/map/sainasu/sainasu
 .tools/asset-venv/bin/python tools/import_battle.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_battle_backgrounds.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_mvp.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_world.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_pet_training.py /path/to/stoneage2.5

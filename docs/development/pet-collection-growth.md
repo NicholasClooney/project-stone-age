@@ -22,7 +22,7 @@ The collection sidebar and calculator are modern convenience tools, not a claim 
 
 ## Comparing with the best possible native pet
 
-The forecast table compares **this pet's estimated level-120 value**, **the species' theoretical per-stat upper value at that same level**, and the difference. It does not confuse the selected pet's future conditional ceiling with the best possible newborn of its species.
+Since v0.20.0 the main table compares **this pet's estimated level-120 value**, an **approximate marginal 90% likely range**, and the **normal same-species mean**. Exact joint one-level moments preserve shared allocations and the common factor; a normal approximation produces each displayed interval. The theoretical per-stat ceiling described below is available only as secondary tooltip information. It is not a normal-quality benchmark or a jointly attainable set of four stats. See [statistical audit](../reverse-engineering/pet-growth-and-ui-highlights.md).
 
 Source evidence:
 
