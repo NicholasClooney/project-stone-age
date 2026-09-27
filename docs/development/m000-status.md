@@ -24,6 +24,6 @@ A separate system-font error was found in the persistent session and fixed by bu
 
 ## Remaining scope
 
-The scene uses historical resources from a community client and server map, not a certified official-build recreation. The HUD is new. One verified village conversation is now implemented; see [M001](m001-village-npc.md). Interiors, persistence, Swift authority, and multiplayer are not implemented. Imported assets remain local; a fresh clone needs the documented import step.
+The scene uses historical resources from a community client and server map, not a certified official-build recreation. The original-resource HUD and map window are now available; see [M002](m002-classic-ui.md). One verified village conversation is now implemented; see [M001](m001-village-npc.md). Interiors, persistence, Swift authority, and multiplayer are not implemented. Imported assets remain local; a fresh clone needs the documented import step.
 
 Next slices should build on the working village and its NPC interaction. Do not replace the legacy artwork or music with approximations.

@@ -8,7 +8,7 @@ The pinned community server revision is `0c58fb6683a49a178a8ad845a8c296c2cb83bd8
 
 - [poru/samugiru01.create](https://github.com/chenmingbiao/stone-age/blob/0c58fb6683a49a178a8ad845a8c296c2cb83bd81/gmsv/data/npc/poru/samugiru01.create), first block: 村民, map 1000, borncenter 93,72,1,1, direction 5, graphic 16039, dialogue file `poru/samugiru02`.
 - [poru/samugiru02](https://github.com/chenmingbiao/stone-age/blob/0c58fb6683a49a178a8ad845a8c296c2cb83bd81/gmsv/data/npc/poru/samugiru02): first comma-separated entry discusses the statue and village namesake. Imported verbatim using GB18030.
-- ADRN/REAL image 16039 in the existing client is a fixed NPC graphic, not a SPR animation. Preserve its original pixel art and drawing offset.
+- Logical graphic 16039 resolves through `ADRN.attr.bmpnumber` to archive bitmap 5885. This correction is included in M002; the first NPC commit incorrectly treated 16039 as a direct archive index. The graphic in the existing client is a fixed NPC graphic, not a SPR animation. Preserve its original pixel art and drawing offset.
 
 `tools/import_npc.py` reads local source files and emits the NPC JSON, source URLs/SHA-256 hashes, and PNG into ignored `client/assets/legacy/`. Run after the main resource importer. No networking occurs during play.
 

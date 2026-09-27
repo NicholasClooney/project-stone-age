@@ -21,7 +21,10 @@ The project-local Godot runtime is already installed under `.tools/`. You can al
 | E | Original waving animation |
 | X | Sit / stand |
 | Tab | Cycle three original character appearances |
-| Mouse wheel / + / − | Zoom |
+| Mouse wheel / + / − | Zoom; restores player camera after overview |
+| Max out (DEV controls) | Fit the complete village onscreen |
+| Hover bottom edge | Reveal the original seven menu tabs |
+| Map tab / Ctrl+M | Toggle the original map window; drag its title to move it |
 | M | Mute / unmute |
 | H / Escape | Open / close help; music volume is in help |
 | R | Return to the village square |
@@ -35,9 +38,10 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original map/ADRN collision footprints, keyboard movement, and click-to-walk with corner checks.
 - Original `sabgm_t0.wav` village BGM, loop and volume controls, and a legacy UI sound.
 - One original village resident at (93, 72), with the recorded sprite and first dialogue line.
-- Camera follow, zoom, focus-loss input clearing, and a safe respawn.
+- Original stone top controls, wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker.
+- Camera follow, full-village developer zoom, focus-loss input clearing, and a safe respawn.
 
-This is the local, Godot-only village slice. No login, Swift server, battle, interior transitions, saves, or multiplayer yet. The HUD is a small new overlay, not a reproduction of the original client UI. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
+This is the local, Godot-only village slice. No login, Swift server, battle, interior transitions, saves, or multiplayer yet. The classic HUD uses the local 2.5 client artwork. Extra top-row buttons in the supplied reference belong to a different asset set and are not fabricated. Only the Map tab is functional; the other original menu items are visual with hover labels. DEV controls remain separate. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
 
@@ -52,6 +56,7 @@ python3 -m venv .tools/asset-venv
 .tools/asset-venv/bin/pip install -r tools/requirements.txt
 .tools/asset-venv/bin/python tools/import_legacy.py /path/to/stoneage2.5 \
   --server-map /path/to/samugiru
+.tools/asset-venv/bin/python tools/import_ui.py /path/to/stoneage2.5
 ./scripts/run.sh --headless --editor --import --quit
 ./scripts/run.sh
 ```
@@ -76,7 +81,7 @@ See [resource evidence](docs/reverse-engineering/samgir-import.md) for hashes, f
 .tools/asset-venv/bin/python -m unittest discover -s tools -p 'test_*.py'
 ```
 
-The NPC suite checks approach, collision, cancellation, dialogue input, closing, and resumed exploration. The Godot movement suite exercises actual movement, original direction mapping, collision, pathfinding, 200 repeated movement steps, animation, character switching, and audio looping. It needs imported assets. [Verification notes](docs/development/m000-status.md) distinguish automated checks from visual inspection.
+The UI suite checks menu hover, click isolation, map toggles/live coordinates, and full-village zoom/culling. See [classic UI evidence](docs/development/m002-classic-ui.md). The NPC suite checks approach, collision, cancellation, dialogue input, closing, and resumed exploration. The Godot movement suite exercises actual movement, original direction mapping, collision, pathfinding, 200 repeated movement steps, animation, character switching, and audio looping. It needs imported assets. [Verification notes](docs/development/m000-status.md) distinguish automated checks from visual inspection.
 
 ## Layout
 

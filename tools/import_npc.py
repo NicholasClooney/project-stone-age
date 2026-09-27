@@ -28,9 +28,10 @@ def run(client, npc_source, output):
     graphic = int(fields['graphicname'])
     archive = Archive(client)
     output.mkdir(parents=True, exist_ok=True)
-    archive.image(graphic).save(output / 'samgir-villager.png')
-    metadata = archive.entries[graphic]
-    result = dict(name=fields['name'], cell=[x, y], graphic=graphic,
+    bitmap = next(e['id'] for e in archive.entries.values() if e['map_id'] == graphic)
+    archive.image(bitmap).save(output / 'samgir-villager.png')
+    metadata = archive.entries[bitmap]
+    result = dict(name=fields['name'], cell=[x, y], graphic=graphic, bitmap=bitmap,
                   facing=int(fields['dir']), offset=[metadata['x'], metadata['y']],
                   text=dialogue.decode('gb18030').strip().split(',')[0],
                   sources=[dict(url=SOURCE + path, sha256=hashlib.sha256(raw).hexdigest())

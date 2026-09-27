@@ -32,6 +32,8 @@ var marker_cell := Vector2i(-1,-1)
 var character_index := 0
 var paused_input := false
 var load_error := ""
+var classic_hud: Control
+var overview := false
 var npc_data: Dictionary = {}
 var npc: Node2D
 var npc_sprite: Sprite2D
@@ -44,7 +46,7 @@ var dialogue_text: Label
 func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
-	if not FileAccess.file_exists("res://assets/legacy/samgir.json"):
+	if not FileAccess.file_exists("res://assets/legacy/samgir.json") or not FileAccess.file_exists("res://assets/legacy/ui/manifest.json"):
 		load_error = "Original client assets have not been imported.\nSee README.md → Import original resources."
 		var error_label := Label.new()
 		error_label.text = load_error
@@ -177,6 +179,13 @@ func _unhandled_input(event: InputEvent) -> void:
 			close_dialogue()
 		get_viewport().set_input_as_handled()
 		return
+	if event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed and event.keycode==KEY_M:
+		classic_hud.toggle_map()
+		get_viewport().set_input_as_handled()
+		return
+	if event.is_action_pressed("ui_cancel") and classic_hud.map_panel.visible:
+		classic_hud.toggle_map()
+		return
 	if event.is_action_pressed("mute"):
 		toggle_mute()
 	elif event.is_action_pressed("help") or event.is_action_pressed("ui_cancel"):
@@ -254,6 +263,8 @@ func _physics_process(delta: float) -> void:
 			open_dialogue()
 	if player.action == 6 and player.elapsed>1.1:
 		player.set_action(3)
+	if overview:
+		camera.position = project(Vector2((float(data.width)-1)/2,(float(data.height)-1)/2))-player.position
 	coordinates.text = "萨姆吉尔村  ·  %d, %d" % [cell.x,cell.y]
 
 func _draw() -> void:
@@ -287,7 +298,18 @@ func change_character() -> void:
 	play_click()
 
 func set_zoom(value: float) -> void:
+	overview = false
+	camera.position = Vector2(0,-25)
 	camera.zoom = Vector2.ONE * clampf(value,0.65,2.0)
+	camera.reset_smoothing()
+
+func maximum_zoom_out() -> void:
+	overview = true
+	var available := get_viewport_rect().size-Vector2(64,200)
+	var extent := Vector2((int(data.width)+int(data.height))*32+256,(int(data.width)+int(data.height))*24+256)
+	camera.zoom = Vector2.ONE*minf(available.x/extent.x,available.y/extent.y)
+	camera.position = project(Vector2((float(data.width)-1)/2,(float(data.height)-1)/2))-player.position
+	camera.reset_smoothing()
 
 func setup_audio() -> void:
 	music = AudioStreamPlayer.new()
@@ -354,46 +376,41 @@ func build_ui() -> void:
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var ui_theme := Theme.new()
 	var font: Font = load("res://assets/fonts/NotoSansSC.ttf")
-	ui_theme.default_font = font
+	var readable_font := FontVariation.new()
+	readable_font.base_font = font
+	readable_font.variation_opentype = {2003265652:450.0} # OpenType wght axis tag.
+	ui_theme.default_font = readable_font
 	root.theme = ui_theme
 	layer.add_child(root)
-	var map_panel := PanelContainer.new()
-	map_panel.position = Vector2(18,16)
-	map_panel.add_theme_stylebox_override("panel",box(Color(0.16,0.2,0.16,0.92),Color("9d8354")))
-	root.add_child(map_panel)
-	coordinates = text("萨姆吉尔村",16)
-	map_panel.add_child(coordinates)
-	var info := PanelContainer.new()
-	info.position = Vector2(905,16)
-	info.add_theme_stylebox_override("panel",box(Color(0.16,0.2,0.16,0.92),Color("9d8354")))
-	root.add_child(info)
-	info.add_child(text("STONE AGE · Original resources\nGodot local preview · map 1000",13))
-	var bottom := PanelContainer.new()
-	bottom.position = Vector2(12,710)
-	bottom.size = Vector2(1256,78)
-	bottom.add_theme_stylebox_override("panel",box(Color(0.16,0.18,0.14,0.95),Color("9d8354")))
-	root.add_child(bottom)
-	var v := VBoxContainer.new()
-	bottom.add_child(v)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",12)
-	v.add_child(row)
-	var controls := text("Click to walk · WASD / arrows · E wave · X sit · Tab character",14)
-	controls.size_flags_horizontal = Control.SIZE_EXPAND_FILL
-	row.add_child(controls)
-	row.add_child(button("−",func(): set_zoom(camera.zoom.x-0.15)))
-	row.add_child(button("+",func(): set_zoom(camera.zoom.x+0.15)))
+	coordinates = text("")
+	message = text("")
+	root.add_child(coordinates)
+	root.add_child(message)
+	coordinates.hide()
+	message.hide()
+	classic_hud = preload("res://scripts/classic_hud.gd").new()
+	classic_hud.world = self
+	root.add_child(classic_hud)
+	var dev := HBoxContainer.new()
+	dev.position = Vector2(12,85)
+	dev.add_theme_constant_override("separation",5)
+	root.add_child(dev)
+	dev.add_child(text("DEV",12))
+	dev.add_child(button("−",func(): set_zoom(camera.zoom.x-0.15)))
+	dev.add_child(button("+",func(): set_zoom(camera.zoom.x+0.15)))
+	var max_out := button("Max out",maximum_zoom_out)
+	max_out.name = "MaxOut"
+	dev.add_child(max_out)
+	dev.add_child(button("Villager",approach_npc))
 	mute_button = button("Music: on  [M]",toggle_mute)
-	row.add_child(mute_button)
-	row.add_child(button("Villager",approach_npc))
-	row.add_child(button("Help [H]",func():
+	dev.add_child(mute_button)
+	var help_button := button("Help [H]",func():
 		if not dialogue.visible:
 			help.visible = not help.visible
 			paused_input = help.visible
-			clear_input()))
-	message = text("Click Villager to meet the resident by the statue at (93, 72).",12)
-	message.add_theme_color_override("font_color",Color("bdc6ae"))
-	v.add_child(message)
+			clear_input())
+	help_button.name = "DevHelp"
+	dev.add_child(help_button)
 	help = PanelContainer.new()
 	help.position = Vector2(310,200)
 	help.size = Vector2(660,330)

@@ -38,7 +38,7 @@ func run() -> void:
 	root.add_child(game)
 	await ticks(3)
 	check(game.npc_cell==Vector2i(93,72),"NPC uses original outdoor location")
-	check(game.npc_data.graphic==16039,"NPC uses original fixed graphic")
+	check(game.npc_data.graphic==16039 and game.npc_data.bitmap==5885,"NPC logical graphic resolves to original archive bitmap")
 	check(not game.is_walkable(game.npc_cell) and game.navigation.is_point_solid(game.npc_cell),"NPC blocks both keyboard and path movement")
 	game.approach_npc()
 	await ticks(4)
@@ -72,7 +72,7 @@ func run() -> void:
 	click_at(game.npc_sprite.get_global_transform_with_canvas()*Vector2(20,40))
 	await ticks(3)
 	check(game.dialogue.visible,"actual mouse click reopens adjacent conversation")
-	click_at(Vector2(1200,735))
+	click_at(game.find_child("DevHelp",true,false).get_global_rect().get_center())
 	await ticks(2)
 	check(game.dialogue.visible and not game.help.visible,"modal overlay prevents underlying Help button clicks")
 	if "--capture" in OS.get_cmdline_user_args():
