@@ -18,7 +18,7 @@ func run() -> void:
 	check(menu.preset.selected==2 and menu.total.value==6,"default is joint +6 quality")
 	check(not menu.start_button.disabled and game.paused_input,"modal pauses walking and enables local hunt")
 	check(menu.species.item_count==3 and menu.species.is_item_disabled(2),"unavailable original pet art is explicit")
-	if "--visual-review" in OS.get_cmdline_user_args():
+	if "--visual-review" in OS.get_cmdline_user_args() and DisplayServer.get_name() != "headless":
 		await process_frame
 		RenderingServer.force_draw()
 		root.get_texture().get_image().save_png("/tmp/pet-hunt-menu.png")

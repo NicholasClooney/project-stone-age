@@ -16,11 +16,18 @@ fi
 if [ ! -d client/.godot/imported ]; then
   "$engine" --headless --path client --editor --import --quit
 fi
-# Scripted verification must not play audio into the user's desktop.
+# Automated verification must not steal focus or play desktop audio.
+# Foreground visual testing requires an explicit user request and this opt-in.
 for argument in "$@"; do
   case "$argument" in
     --) break ;;
-    --script|-s|--headless)
+    --script|-s)
+      if [ "${STONE_AGE_FOREGROUND_TEST:-0}" = "1" ]; then
+        exec "$engine" --path client --audio-driver Dummy "$@"
+      fi
+      exec "$engine" --path client --headless --audio-driver Dummy "$@"
+      ;;
+    --headless)
       exec "$engine" --path client --audio-driver Dummy "$@"
       ;;
   esac

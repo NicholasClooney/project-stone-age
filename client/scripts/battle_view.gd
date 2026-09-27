@@ -30,6 +30,9 @@ var riding_art_cues: Array[Dictionary] = []
 var riding_hp_bar: Control
 var riding_hp_fill: ColorRect
 var unmounted_player_art := "100000"
+# Only the battle presentation clock changes; authority and world clocks stay intact.
+var playback_speed := 1.0:
+	set(value): playback_speed = clampf(value,1.0,8.0) if is_finite(value) else 1.0
 var elapsed := 0.0
 const SPECIES_ART := {"wooli":"100250","wooli_wooli":"100251","wooli_stan":"100252"}
 var built := false
@@ -217,6 +220,7 @@ func _ready() -> void:
 	battle_effects = BattleEffects.new()
 	stage.add_child(battle_effects)
 	battle_effects.setup(manifest)
+	battle_effects.externally_driven = true
 	result_panel = Control.new()
 	result_panel.position = Vector2(240,180)
 	result_panel.size = Vector2(320,288)
@@ -859,6 +863,8 @@ func cancel_selection() -> void:
 func world_modal_open() -> bool:
 	if not is_instance_valid(world): return false
 	var panel = world.get("adventure_menu")
+	var helper = world.get("training_helper")
+	if is_instance_valid(helper) and helper.visible:return true
 	var gm_panel = world.get("dev_gm_menu")
 	return (is_instance_valid(panel) and panel.visible) or (is_instance_valid(gm_panel) and gm_panel.visible)
 
@@ -883,7 +889,20 @@ func animate_actor(index: int, action: int, seconds: float = 0.65, facing: int =
 func _process(delta: float) -> void:
 	if not visible:
 		return
+	# Tick through every legacy frame even at 8x so short effects and frame SFX
+	# are not skipped. Effects share this clock instead of a separate process delta.
+	var remaining := maxf(0.0,delta)*playback_speed
+	if remaining == 0.0:
+		_advance_playback(0.0)
+		return
+	while remaining > 0.0:
+		var step := minf(remaining,1.0/60.0)
+		_advance_playback(step)
+		remaining -= step
+
+func _advance_playback(delta: float) -> void:
 	elapsed += delta
+	battle_effects.advance(delta)
 	for tile in transition_tiles:
 		var frames := maxf(0.0,(elapsed-float(tile.release))*60.0)
 		tile.node.position = tile.origin+Vector2(0,frames*(frames+1.0)*0.5*size.y/600.0)

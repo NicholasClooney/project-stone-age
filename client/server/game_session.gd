@@ -3,6 +3,7 @@ var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 const SAVE_VERSION := 2
 const PET_CAPACITY := 30
+const MAX_LEVEL := 120
 const Progression = preload("res://server/progression.gd")
 const ITEM_PRICES := {"potion":10,"club":30}
 const SPECIES := {
@@ -16,6 +17,10 @@ const SPECIES := {
 var _profile: Dictionary
 var _pending: Dictionary = {}
 var last_error := ""
+# Optional single-player assist; each battle snapshots this before any rewards.
+var experience_multiplier: int = 1:
+	set(value):
+		experience_multiplier = value if value in [1,2,10,100] else 1
 
 func _init() -> void:
 	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"travel_pass":false,"pets":[],"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
@@ -50,6 +55,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
 	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	config.experience_multiplier = experience_multiplier
 	config.ride_pet_index = int(_profile.get("ride_pet",-1))
 	config.ride_pet = _profile.pets[config.ride_pet_index].duplicate(true) if config.ride_pet_index>=0 else {}
 	config.mounted_sprite = preload("res://scripts/riding.gd").composite(str(_profile.character_id),int(config.ride_pet.get("sprite",0))) if not config.ride_pet.is_empty() else -1
@@ -117,6 +123,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var verified_captures := []
 	var captured_actors := []
 	var earned_xp := 0
+	var multiplier := int(_pending.get("experience_multiplier",1))
 	var earned_gold := 0
 	var remaining := 0
 	var pet_rewards: Array = []
@@ -131,16 +138,17 @@ func apply_battle_result(result: Dictionary) -> bool:
 			verified_captures.append(original.species)
 			captured_actors.append(original.duplicate(true))
 		elif foe.hp == 0:
-			earned_xp += int(original.reward_xp)
+			var enemy_xp := int(original.reward_xp)*multiplier
+			earned_xp += enemy_xp
 			earned_gold += int(original.reward_gold)
 			var recipient = foe.get("defeated_by_pet_index",-1)
 			if not _integer(recipient,-1,_profile.pets.size()-1):return false
-			if int(recipient)>=0:pet_rewards[int(recipient)] += int(original.reward_xp)
+			if int(recipient)>=0:pet_rewards[int(recipient)] += enemy_xp
 			var ridden = foe.get("defeated_with_ride_index",-1)
 			if not _integer(ridden,-1,_profile.pets.size()-1):return false
 			if int(ridden)>=0:
 				if int(ridden) != int(_pending.get("ride_pet_index",-1)):return false
-				pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(int(original.reward_xp),int(_profile.pets[int(ridden)].level),int(original.get("level",1)))
+				pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(enemy_xp,int(_profile.pets[int(ridden)].level),int(original.get("level",1)))
 		else:remaining += 1
 	var sorted_captures := captures.duplicate()
 	sorted_captures.sort()
@@ -178,6 +186,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 		earned_xp = 0
 		earned_gold = 0
 		pet_rewards.fill(0)
+	result.experience_multiplier = multiplier
 	result.xp = earned_xp
 	result.gold = earned_gold
 	result.pet_reward_xp = pet_rewards
@@ -212,7 +221,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 
 func _gain_xp(actor: Dictionary, amount: int) -> void:
 	actor.xp += amount
-	while actor.xp >= actor.level * 30:
+	while actor.level < MAX_LEVEL and actor.xp >= actor.level * 30:
 		actor.xp -= actor.level * 30
 		actor.level += 1
 		if actor.has("skill_unlocked"):
@@ -223,6 +232,8 @@ func _gain_xp(actor: Dictionary, amount: int) -> void:
 			# battle.c:3173 defaults to 3 skill-up points per level.
 			actor.stat_points += 3
 		actor.hp = actor.max_hp
+	# Excess assisted XP cannot grow past the supported level or overflow saves.
+	if actor.level >= MAX_LEVEL:actor.xp = 0
 
 func buy_item(item: String) -> bool:
 	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.player.gold < ITEM_PRICES[item] or _profile.inventory[item] >= 99:

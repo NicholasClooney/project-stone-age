@@ -17,4 +17,4 @@
 
 ## 验证
 
-`pet_hunt_rules_test.gd` 验证联合概率、边界、原表候选和缺数据；`pet_hunt_ui_test.gd` 验证村庄拒绝、取消、真实遇敌命中、无跳过奖励、同一个体进入战斗和不自动捕获。所有测试静音；可加 `-- --visual-review` 保存界面截图。
+`pet_hunt_rules_test.gd` 验证联合概率、边界、原表候选和缺数据；`pet_hunt_ui_test.gd` 验证村庄拒绝、取消、真实遇敌命中、无跳过奖励、同一个体进入战斗和不自动捕获。所有测试默认无窗口、静音；只有用户明确要求前台测试时才可使用 `STONE_AGE_FOREGROUND_TEST=1` 并加 `-- --visual-review` 保存界面截图。

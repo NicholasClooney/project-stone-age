@@ -3,6 +3,7 @@ extends Control
 ## Legacy tick motion is expressed at 60Hz here; source logic is not FPS-independent.
 const TICK_RATE := 60.0
 var clock := 0.0
+var externally_driven := false
 var active: Array[Dictionary] = []
 var frames: Dictionary = {}
 var metadata: Dictionary = {}
@@ -73,6 +74,8 @@ func number_offset(ticks: int) -> float:
   else:speed=0
  return offset
 func _process(delta: float) -> void:
+ if not externally_driven:advance(delta)
+func advance(delta: float) -> void:
  clock+=delta
  _update_effects()
 func _update_effects() -> void:

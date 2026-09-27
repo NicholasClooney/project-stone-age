@@ -13,6 +13,7 @@ var world_travel: Node
 var props: Node
 var dev_destinations: MenuButton
 var random_encounters := true
+var last_encounter_error := ""
 var encounter_catalog = preload("res://server/encounter_catalog.gd").new()
 var encounter_rng := RandomNumberGenerator.new()
 var arrival_lock := Vector2i(-1,-1)
@@ -34,6 +35,8 @@ var village_music: AudioStream
 var area_music: AudioStream
 var session = GameSession.new()
 var changelog_menu: Control
+var training_settings: Dictionary = {}
+var training_helper: Control
 var pet_hunt_menu: Control
 var dev_gm_menu: Control
 var dev_map_overview: Control
@@ -293,13 +296,16 @@ func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	return open_battle_config(config)
 
 func begin_wild_battle() -> bool:
+	last_encounter_error=""
 	if moving or paused_input or area_transition_busy or battle_view==null or battle_view.visible:return false
 	if not world_catalog.field(int(data.map_id)):return false
 	var troop: Dictionary = encounter_catalog.roll(int(data.map_id),cell,encounter_rng)
 	if troop.is_empty():
+		last_encounter_error="data"
 		message.text = "这里没有可用的普通野外遇敌。" if encounter_catalog.last_error.is_empty() else "此区域的原版遇敌数据或条件尚未完整支持，暂时跳过。"
 		return false
 	if not battle_view.can_render_troop(troop.enemies):
+		last_encounter_error="art"
 		message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
 		return false
 	var opened := open_battle_config(session.start_wild_battle_config(troop))
@@ -318,6 +324,8 @@ func open_battle_config(config: Dictionary) -> bool:
 	encounter_serial += 1
 	battle_session.rng_seed = 42+encounter_serial
 	var state: Dictionary = battle_session.start_battle(config)
+	if is_instance_valid(training_helper) and training_helper.compact_active:
+		return true
 	battle_view.open_battle(state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
@@ -325,7 +333,7 @@ func open_battle_config(config: Dictionary) -> bool:
 	return true
 
 func battle_action(action: String) -> void:
-	if not battle_view.visible:
+	if not battle_view.visible and not (is_instance_valid(training_helper) and training_helper.compact_active):
 		return
 	var before: Dictionary = session.snapshot()
 	var target: int = int(battle_view.get("player_target"))
@@ -335,6 +343,7 @@ func battle_action(action: String) -> void:
 		battle_session.set_pet_skill(skill_id)
 	var state: Dictionary = battle_session.developer_escape() if action=="developer_escape" else battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
 	if not bool(state.active) and session.apply_battle_result(state):
+		if is_instance_valid(training_helper) and training_helper.running:training_helper.record_result(state)
 		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
 			var after: Dictionary = session.snapshot()
@@ -354,13 +363,16 @@ func battle_action(action: String) -> void:
 		elif state.outcome=="captured":
 			state.events.append("伙伴已加入宠物栏，可为它取名并选择出战。")
 		checkpoint()
+	if is_instance_valid(training_helper) and training_helper.compact_active:return
 	battle_view.show_state(state)
 	play_ui_sound(217 if ui_sounds.has(217) else 201)
 
 func return_from_battle() -> void:
-	if not battle_view.visible or battle_session.snapshot().active or battle_view.is_animating():
+	var compact_battle: bool=is_instance_valid(training_helper) and training_helper.compact_active
+	if (not battle_view.visible and not compact_battle) or battle_session.snapshot().active or (not compact_battle and battle_view.is_animating()):
 		return
 	var outcome: String = battle_session.snapshot().outcome
+	if compact_battle:training_helper.compact_active=false
 	battle_view.close_battle()
 	clear_input()
 	paused_input = false
@@ -444,6 +456,10 @@ func _input(event: InputEvent) -> void:
 			held.erase(action)
 
 func _unhandled_input(event: InputEvent) -> void:
+	if is_instance_valid(training_helper) and training_helper.visible:
+		if event.is_action_pressed("ui_cancel"):training_helper.close_menu()
+		get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(pet_hunt_menu) and pet_hunt_menu.visible:
 		if event.is_action_pressed("ui_cancel"):pet_hunt_menu.close_menu()
 		get_viewport().set_input_as_handled()
@@ -884,6 +900,12 @@ func build_ui() -> void:
 	pet_hunt_menu = preload("res://scripts/pet_hunt_menu.gd").new()
 	pet_hunt_menu.configure(self)
 	root.add_child(pet_hunt_menu)
+	training_helper = preload("res://scripts/training_helper.gd").new()
+	training_helper.configure(self)
+	root.add_child(training_helper)
+	var training := button("自动练级",training_helper.open_menu)
+	training.name="DevTraining"
+	dev.add_child(training)
 	var hunt := button("自动刷极品",pet_hunt_menu.open_menu)
 	hunt.name = "DevPetHunt"
 	dev.add_child(hunt)
@@ -950,6 +972,8 @@ func build_ui() -> void:
 	root.add_child(dev_gm_menu)
 	adventure_hint = text("",14)
 	adventure_hint.position = Vector2(18,132)
+	dev.resized.connect(func():
+		if is_instance_valid(adventure_hint):adventure_hint.position.y=dev.position.y+dev.size.y+8)
 	adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
 	adventure_hint.add_theme_constant_override("shadow_offset_x",1)
 	adventure_hint.add_theme_constant_override("shadow_offset_y",1)
@@ -958,6 +982,7 @@ func build_ui() -> void:
 	battle_view = BattleView.new()
 	root.add_child(battle_view)
 	battle_view.configure(self)
+	battle_view.playback_speed=float(training_settings.get("speed",1.0))
 	battle_view.action_requested.connect(battle_action)
 	battle_view.return_requested.connect(return_from_battle)
 	battle_view.sound_requested.connect(play_battle_sound)
@@ -1139,7 +1164,7 @@ func restore_location() -> void:
 func checkpoint() -> bool:
 	if battle_session.snapshot().active:return false
 	var point := display_cell()
-	if is_instance_valid(battle_view) and battle_view.visible and battle_session.snapshot().outcome=="defeat":
+	if ((is_instance_valid(battle_view) and battle_view.visible) or (is_instance_valid(training_helper) and training_helper.compact_active)) and battle_session.snapshot().outcome=="defeat":
 		session.set_location(1000,SPAWN.x,SPAWN.y)
 	else:
 		session.set_location(int(data.map_id),point.x,point.y)

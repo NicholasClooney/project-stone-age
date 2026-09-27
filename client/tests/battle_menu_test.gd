@@ -6,8 +6,14 @@ class TestSession:
 	extends RefCounted
 	var equipped := false
 	func snapshot() -> Dictionary: return {"equipped":equipped}
+class TestTerrain:
+	extends RefCounted
+	var ground := {}
 class DefeatWorld:
 	extends Node
+	var cell := Vector2i.ZERO
+	var data := {"width":1}
+	var terrain := TestTerrain.new()
 	var returns := 0
 	var player := TestPlayer.new()
 	var session := TestSession.new()
