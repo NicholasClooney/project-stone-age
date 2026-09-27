@@ -54,14 +54,38 @@ var pet_slide_at := -10.0
 var actor_labels: Array[Label] = []
 var hp_bars: Array[Control] = []
 var hp_fills: Array[ColorRect] = []
-var displayed_hp: Array[int] = [0,0,0,0,0]
+var displayed_hp: Array[int] = [0,0,0,0,0,0,0,0,0,0,0,0]
 var player_target := 0
 var pet_target := 0
 var switch_pet_index := -2
 var selected_pet_skill := 0
 var pet_art_cues: Array[Dictionary] = []
-# oft.cpp monster_place_no reorders the five native slots center,left,right.
+# oft.cpp:144,11514-11605: classic two enemy rows and center-first ordering.
+const ENEMY_SLOT_ORDER := [2,1,3,0,4]
+var art_validation: Dictionary = {}
 # At 800x600 the friendly side receives DISPLACEMENT (160,120).
+func enemy_home(index: int) -> Vector2:
+	var slot: int = ENEMY_SLOT_ORDER[index % 5]
+	return Vector2(37,198)+Vector2(32,-24)*slot if index<5 else Vector2(69,298)+Vector2(64,-48)*slot
+
+func can_render_troop(enemies: Array) -> bool:
+	if enemies.is_empty() or enemies.size()>10:return false
+	for enemy in enemies:
+		var ident := str(enemy.get("sprite",-1))
+		if not art_validation.has(ident):
+			var valid: bool = manifest.get("characters",{}).has(ident)
+			var animations: Dictionary = manifest.get("characters",{}).get(ident,{})
+			for action in [0,1,2,3,4,10]:
+				for direction in range(8):
+					var frames: Array = animations.get("%d_%d" % [action,direction],{}).get("frames",[])
+					if frames.is_empty():valid=false
+					for frame in frames:
+						var bitmap := str(int(frame.image))
+						if not manifest.get("images",{}).has(bitmap) or not ResourceLoader.exists(ART_ROOT+"images/%s.png" % bitmap):valid=false
+			art_validation[ident]=valid
+		if not art_validation[ident]:return false
+	return true
+
 func enemy_actor(index: int) -> int:
 	return 1 if index==0 else index+2
 func enemy_index(index: int) -> int:
@@ -136,9 +160,9 @@ func _ready() -> void:
 	choice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	choice_panel.z_index = 10
 	stage.add_child(choice_panel)
-	for i in range(5):
+	for i in range(12):
 		var target := Button.new()
-		target.name = ["PlayerTarget","EnemyTarget","PetTarget","EnemyTarget2","EnemyTarget3"][i]
+		target.name = "PlayerTarget" if i==0 else "PetTarget" if i==2 else "EnemyTarget" if i==1 else "EnemyTarget%d" % (enemy_index(i)+1)
 		target.flat = true
 		for theme in ["normal","hover","pressed","disabled","focus"]:
 			target.add_theme_stylebox_override(theme,StyleBoxEmpty.new())
@@ -165,7 +189,7 @@ func _ready() -> void:
 		meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		meter.z_index = 5
 		stage.add_child(meter)
-		ui_picture([26019,26014,26020,26014,26014][i],Vector2.ZERO,meter)
+		ui_picture(26019 if i==0 else 26020 if i==2 else 26014,Vector2.ZERO,meter)
 		var fill := ColorRect.new()
 		fill.color = Color(0,1,0)
 		fill.position = Vector2(-21,-3 if i==0 else -1)
@@ -265,7 +289,7 @@ func add_actor(ident: String, point: Vector2, facing: int) -> void:
 	var sprite := Sprite2D.new()
 	sprite.centered = false
 	stage.add_child(sprite)
-	actors.append({"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
+	actors.append({"character_id":ident,"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
 
 func layout() -> void:
 	if stage == null:
@@ -318,7 +342,7 @@ func open_battle(next_state: Dictionary) -> void:
 	actors[2]["maximum"] = int(next_state.get("pet_max_hp",pet.get("max_hp",1)))
 	var opponents := enemies_of(next_state)
 	for i in range(opponents.size()):
-		var point: Vector2 = Vector2(101,150)+[Vector2.ZERO,Vector2(-32,24),Vector2(32,-24)][i]
+		var point: Vector2 = enemy_home(i)
 		if i>0: add_actor(str(opponents[i].get("sprite",100250)),point,7)
 		else:
 			actors[1].home = point
@@ -401,7 +425,7 @@ func show_state(next_state: Dictionary) -> void:
 	var previous := state
 	state = next_state.duplicate(true)
 	if previous.is_empty():
-		for i in range(5): displayed_hp[i] = health_of(state,i)
+		for i in range(displayed_hp.size()): displayed_hp[i] = health_of(state,i)
 	if actors.size() >= 2 and not previous.is_empty() and int(state.get("turn",0)) != int(previous.get("turn",0)):
 		queue_turn_animation(previous)
 	pending_action = ""
@@ -928,6 +952,8 @@ func _process(delta: float) -> void:
 		actor_labels[actor_index].visible = shown
 		if actor_index<hp_bars.size():
 			var maximum := maxi(1,int(actor.get("maximum",1)) if actor_index==2 else health_of(state,actor_index,true))
+			# Original battlemenu.cpp HpMeterDisp: every actor uses y-80,
+			# including small pets. The PET label is baked into frame26020.
 			hp_bars[actor_index].position = actor.point+Vector2(0,-80)
 			hp_bars[actor_index].visible = shown and displayed_hp[actor_index]>0
 			hp_fills[actor_index].size.x = int(clampf(float(displayed_hp[actor_index])/maximum,0,1)*40.0)

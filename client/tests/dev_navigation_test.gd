@@ -44,6 +44,7 @@ func run():
  # The shop hid this newly built toolbar before its first layout. Wait for
  # the visible frame a user would see before computing the button hit point.
  await process_frame
+ game.encounter_rng.seed=0
  await click(game.find_child("DevEncounter",true,false))
  check(game.battle_view.visible and game.battle_session.snapshot().active and int(game.data.map_id)==100,"dev encounter enters regular battle from interior")
  var id=game.battle_session.snapshot().get("battle_id","")

@@ -10,6 +10,7 @@ func tick(count: int = 2) -> void:
 	for i in range(count): await process_frame
 func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
+	game.profile_persistence = false
 	root.add_child(game)
 	await tick()
 	game.set_zoom(0.6)
@@ -27,13 +28,10 @@ func run() -> void:
 	await tick()
 	check(game.classic_hud.map_coordinates.text=="637","map coordinates show original world coordinates")
 	game.classic_hud.toggle_map()
-	# Walking, rather than a development-only launch, triggers the first encounter.
-	game.field_steps = 7
-	var next: Vector2i = game.cell+Vector2i.LEFT
-	check(game.request_step(next),"wilderness walking accepted")
-	game._physics_process(1.0)
+	# This suite fixes the prototype foe to verify battle choreography; ordinary
+	# walking/region selection is covered by wild_encounter_integration_test.
+	check(game.begin_battle(false,1),"prototype encounter opens battle and pauses exploration")
 	await tick()
-	check(game.battle_view.visible and game.paused_input,"eighth wilderness step opens battle and pauses exploration")
 	var before: Vector2i = game.cell
 	var key := InputEventKey.new()
 	key.physical_keycode = KEY_R; key.keycode = KEY_R; key.pressed = true
@@ -59,7 +57,7 @@ func run() -> void:
 	game.return_from_battle()
 	check(not game.battle_view.visible and not game.paused_input and game.cell==before,"victory returns to same wilderness position")
 	check(game.music.stream==game.exploration_music(),"exploration BGM restored")
-	check(game.field_steps==0,"return grants eight-step encounter grace")
+	check(game.field_steps==0,"return resets exploration step counter")
 	game.session.heal()
 	game.begin_battle()
 	for i in range(3):game.battle_action("escape")

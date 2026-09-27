@@ -20,7 +20,9 @@ func run():
  await process_frame
  # Critically injured fixture bounds a loss under native guard probabilities.
  game.session._profile.player.hp=1
- game.dev_encounter()
+ # Fix the opponent for HUD/defeat checks; source encounters have dedicated coverage.
+ game.switch_area(true,Vector2i(45,45))
+ check(game.begin_battle(false,1),"HUD fixture opens a battle")
  var view=game.battle_view
  view._process(view.feedback_until+0.1)
  game.effect.stop()

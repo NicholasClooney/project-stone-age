@@ -29,8 +29,8 @@ static func individual_upper(pet:Dictionary, target_level:int) -> Dictionary:
 		result[key]=maxi(0 if key=="defence" else 1,int(numerator/int(DENOMINATORS[key]))+int(pet.get("legacy_stat_offset",{}).get(key,0)))
 	return result
 static func species_upper(species:String, target_level:int=120) -> Dictionary:
-	if not Rules.SPECIES.has(species):return {}
-	var data:Dictionary=Rules.SPECIES[species]
+	var data:Dictionary=Rules.species_definition(species)
+	if data.is_empty():return {}
 	var total:=0
 	var weights:Array=[]
 	for weight in data.weights:
@@ -89,8 +89,8 @@ static func joint_moments(weights: Array, rank: int) -> Dictionary:
 	return result
 
 static func species_average(species: String, target_level: int) -> Dictionary:
-	if not Rules.SPECIES.has(species):return {}
-	var data: Dictionary=Rules.SPECIES[species]
+	var data: Dictionary=Rules.species_definition(species)
+	if data.is_empty():return {}
 	var rank := 5
 	var total := 0
 	for weight in data.weights:total+=int(weight)
@@ -141,8 +141,8 @@ static func forecast(pet: Dictionary, target_level: int = 120) -> Dictionary:
 	return {"likely":likely,"species_average":species_average(str(pet.get("species","")),maxi(target_level,int(pet.level))),"target_level":maxi(target_level,int(pet.get("level",1))),"expected":predicted,"minimum":minimum,"maximum":maximum,"species_maximum":species_upper(str(pet.get("species","")),maxi(target_level,int(pet.level))),"base_increment":increment,"steps":steps}
 static func category(pet: Dictionary) -> String:
 	match str(pet.get("species","")):
-		"blue_dragon":return "人龙"
-		"golden_tiger":return "老虎"
-		"red_rex","mechanical_rex":return "暴龙"
-		"wooli","wooli_wooli","woolistan":return "乌力"
+		"blue_dragon","original_92":return "人龙"
+		"golden_tiger","original_194":return "老虎"
+		"red_rex","mechanical_rex","original_303":return "暴龙"
+		"wooli","wooli_wooli","woolistan","original_1","original_2","original_3":return "乌力"
 	return "其他"

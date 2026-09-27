@@ -56,5 +56,26 @@ func _initialize() -> void:
 		starter.species=info[0];starter.level=1
 		var result:=Growth.forecast(starter,120)
 		print("STARTER QUALITY ",info[0]," weights=",starter.growth_weights," expected=",result.expected," normal=",result.species_average," likely=",result.likely)
+	# Imported wild captures retain their own current stats and fixed growth
+	# weights, while species comparison resolves the authoritative template.
+	var saved_templates:Dictionary=Rules._original_templates
+	var saved_loaded:bool=Rules._original_loaded
+	Rules._original_loaded=true
+	Rules._original_templates={"92":{"id":92,"name":"扬奇洛斯","initial":29,"weights":[27,36,16,20]},"9999":{"id":9999,"name":"测试种类","initial":17,"weights":[22,23,24,25]}}
+	check(Growth.species_average("original_92",120)==Growth.species_average("blue_dragon",120),"imported blue-dragon capture resolves same original species mean")
+	check(Growth.species_upper("original_92",120)==Growth.species_upper("blue_dragon",120),"imported species retains correct optional theoretical bound")
+	var captured:=Rules.species_actor("original_9999",12,7357)
+	captured.species="original_9999";captured.level=12
+	var captured_before:=captured.duplicate(true)
+	var imported_forecast:=Growth.forecast(captured,120)
+	check(imported_forecast.steps==108 and not imported_forecast.species_average.is_empty(),"arbitrary imported species receives future growth and species comparator")
+	check(Growth.forecast(captured,12).expected==Rules.derived(captured.base_stats),"wild capture forecast starts at actual captured stats, not ideal newborn")
+	check(captured==captured_before,"captured forecast preserves actual base, rank and growth identity")
+	check(Growth.category({"species":"original_92"})=="人龙" and Growth.category({"species":"original_194"})=="老虎" and Growth.category({"species":"original_303"})=="暴龙" and Growth.category({"species":"original_1"})=="乌力","known captured starters retain original pet-family filters")
+	check(Growth.category(captured)=="其他","uncatalogued family remains other rather than inferred from its name")
+	captured.species="unknown_custom"
+	var unknown_forecast:=Growth.forecast(captured,120)
+	check(not unknown_forecast.expected.is_empty() and unknown_forecast.species_average.is_empty() and unknown_forecast.species_maximum.is_empty(),"unknown species still forecasts documented individual weights without inventing comparator")
+	Rules._original_templates=saved_templates;Rules._original_loaded=saved_loaded
 	print("PET GROWTH: %d failures" % failures)
 	quit(1 if failures else 0)

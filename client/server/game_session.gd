@@ -68,6 +68,36 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	_pending = config.duplicate(true)
 	return config
 
+func start_wild_battle_config(troop: Dictionary) -> Dictionary:
+	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}
+	var enemies: Array = troop.enemies.duplicate(true)
+	if enemies.is_empty() or enemies.size()>10:return {}
+	for enemy in enemies:
+		if not enemy is Dictionary:return {}
+		enemy.xp = 0
+		var definition: Dictionary = Progression.species_definition(str(enemy.get("species","")))
+		if definition.is_empty() or not _actor_valid(enemy):return {}
+		if int(enemy.get("sprite",-1))!=int(definition.get("sprite",-2)):return {}
+		if not enemy.get("can_capture") is bool:return {}
+		if not _integer(enemy.get("reward_xp"),0,1000000000) or not _integer(enemy.get("reward_gold"),0,1000000000):return {}
+		if not enemy.get("name") is String or enemy.name.is_empty():return {}
+		if not enemy.has("growth_weights") or not enemy.has("base_stats"):return {}
+	var config := start_battle_config()
+	if config.is_empty():return {}
+	var first: Dictionary = enemies[0]
+	config.enemies = enemies
+	config.enemy_species = first.species
+	config.enemy_name = first.name
+	config.enemy_sprite = first.sprite
+	for field in ["max_hp","attack","defence","speed"]:config["enemy_"+field] = first[field]
+	config.reward_xp = first.reward_xp
+	config.reward_gold = first.reward_gold
+	config.source_encounter = true
+	config.area_id = int(troop.get("area_id",-1))
+	config.group_id = int(troop.get("group_id",-1))
+	_pending = config.duplicate(true)
+	return config
+
 func apply_battle_result(result: Dictionary) -> bool:
 	if _pending.is_empty() or result.get("active",true) or result.get("battle_id","") != _pending.battle_id:
 		return false
@@ -85,6 +115,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var enemies: Array = result.get("enemies",[])
 	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>PET_CAPACITY:return false
 	var verified_captures := []
+	var captured_actors := []
 	var earned_xp := 0
 	var earned_gold := 0
 	var remaining := 0
@@ -96,8 +127,9 @@ func apply_battle_result(result: Dictionary) -> bool:
 		var original: Dictionary = _pending.enemies[i]
 		if not _integer(foe.get("hp"),0,original.max_hp) or foe.get("species") != original.species:return false
 		if foe.get("captured",false):
-			if _pending.boss or not _pending.can_capture or foe.hp != 0:return false
+			if _pending.boss or not _pending.can_capture or not original.get("can_capture",true) or foe.hp != 0:return false
 			verified_captures.append(original.species)
+			captured_actors.append(original.duplicate(true))
 		elif foe.hp == 0:
 			earned_xp += int(original.reward_xp)
 			earned_gold += int(original.reward_gold)
@@ -149,11 +181,22 @@ func apply_battle_result(result: Dictionary) -> bool:
 	result.xp = earned_xp
 	result.gold = earned_gold
 	result.pet_reward_xp = pet_rewards
-	for species in captures:
-		var base: Dictionary = SPECIES[species]
-		var captured := {"species":species,"name":base.name,"sprite":base.sprite,"level":1,"xp":0,"skill_unlocked":false}
-		var native := Progression.species_actor(species,1,int(_profile.next_battle)*7919+_profile.pets.size()*97)
-		captured.merge(native)
+	for original in captured_actors:
+		var captured: Dictionary
+		if _pending.get("source_encounter",false):
+			# Capture keeps the actual wild animal, including caught level and rolls.
+			captured = original.duplicate(true)
+			for field in ["reward_xp","reward_gold","captured","defeated_by_pet_index","defeated_with_ride_index"]:captured.erase(field)
+			captured.hp = captured.max_hp
+			captured.xp = 0
+			captured.skill_unlocked = false
+			captured.learned_skills = []
+		else:
+			var species: String = original.species
+			var base: Dictionary = SPECIES[species]
+			captured = {"species":species,"name":base.name,"sprite":base.sprite,"level":1,"xp":0,"skill_unlocked":false}
+			var native := Progression.species_actor(species,1,int(_profile.next_battle)*7919+_profile.pets.size()*97)
+			captured.merge(native)
 		_profile.pets.append(captured)
 		if _profile.pets.size() == 1:_profile.active_pet = 0
 	if outcome == "defeat":
@@ -297,7 +340,7 @@ func load_game(path: String) -> bool:
 				_profile.player.speed = 10 + _profile.player.level - 1
 			for pet in _profile.pets:
 				if not pet.has("speed"):
-					pet.speed = SPECIES[pet.species].speed + pet.level - 1
+					pet.speed = int(SPECIES.get(pet.species,{}).get("speed",1)) + pet.level - 1
 			if not _profile.player.has("allocated_stats"):
 				# Preserve existing prototype gains, credit missed allocation once.
 				_profile.player.allocated_stats = {"vitality":0,"strength":0,"toughness":0,"dexterity":0}
@@ -365,10 +408,12 @@ func _valid_profile(value: Variant) -> bool:
 	if not _location_valid(value.location):
 		return false
 	for pet in value.pets:
-		if not pet is Dictionary or not _actor_valid(pet) or not SPECIES.has(pet.get("species","")) or not pet.get("name") is String or pet.name.is_empty() or pet.name.length() > 16 or not pet.get("skill_unlocked") is bool:
+		if not pet is Dictionary or not _actor_valid(pet) or Progression.species_definition(str(pet.get("species",""))).is_empty() or not pet.get("name") is String or pet.name.is_empty() or pet.name.length() > 16 or not pet.get("skill_unlocked") is bool:
 			return false
+		if str(pet.species).begins_with("original_") and (not pet.has("base_stats") or not pet.has("growth_weights")):return false
 		if pet.has("base_stats") and not pet.has("growth_weights"):return false
-		if pet.get("sprite") != SPECIES[pet.species].sprite:
+		var definition: Dictionary = SPECIES.get(pet.species,Progression.species_definition(pet.species))
+		if pet.get("sprite") != definition.get("sprite",-1):
 			return false
 	return true
 

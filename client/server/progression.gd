@@ -10,6 +10,21 @@ const SPECIES := {
 	"wooli_wooli": {"initial":20,"weights":[22,23,11,23]},
 	"woolistan": {"initial":15,"weights":[22,17,19,17]},
 }
+static var _original_templates: Dictionary = {}
+static var _original_loaded := false
+static func species_definition(species: String) -> Dictionary:
+	if SPECIES.has(species):return SPECIES[species]
+	if not species.begins_with("original_"):return {}
+	var identifier := species.trim_prefix("original_")
+	if not identifier.is_valid_int() or str(int(identifier))!=identifier:return {}
+	if not _original_loaded:
+		_original_loaded = true
+		var path := "res://assets/legacy/encounters/catalog.json"
+		if FileAccess.file_exists(path):
+			var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+			if parsed is Dictionary:_original_templates = parsed.get("templates",{})
+	return _original_templates.get(identifier,{})
+
 # Chosen legal 20-point starter distribution (9/7/0/4); creation UI deferred.
 const START := {"vitality":900,"strength":700,"toughness":0,"dexterity":400}
 static func derived(base: Dictionary) -> Dictionary:
@@ -36,7 +51,8 @@ static func _preserve(actor: Dictionary) -> void:
 static func species_actor(species: String, level: int, seed_value: int) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
-	var data: Dictionary = SPECIES[species]
+	var data: Dictionary = species_definition(species)
+	if data.is_empty():return {}
 	var weights: Array = data.weights.duplicate()
 	for i in range(4):weights[i] += rng.randi_range(-2,2)
 	var initial: Array = weights.duplicate()
@@ -48,7 +64,7 @@ static func species_actor(species: String, level: int, seed_value: int) -> Dicti
 		if total >= [100,95,90,85,80,0][i]:
 			actor.growth_rank = i
 			break
-	for i in range(4):actor.base_stats[STATS[i]] = int(int(initial[i])*(float(data.initial)+(level-1)*4.5))
+	for i in range(4):actor.base_stats[STATS[i]] = int(int(initial[i])*(float(data.initial)+(level-1)*float(data.get("wild_growth",4.5))))
 	refresh(actor)
 	actor.hp = actor.max_hp
 	return actor

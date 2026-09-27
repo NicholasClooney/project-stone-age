@@ -47,7 +47,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 		enemy["hp"] = enemy.get("hp",enemy.get("max_hp",32))
 		enemy["max_hp"] = enemy.get("max_hp",32)
 		enemy["captured"] = false
-	_state["enemies"] = enemies.slice(0,3)
+	_state["enemies"] = enemies.slice(0,10)
 	_state["pets"] = config.get("pets", [pet] if not pet.is_empty() else []).duplicate(true)
 	_state["active_pet"] = int(config.get("active_pet",0 if not _state.pets.is_empty() else -1))
 	_state["ride_pet"] = int(config.get("ride_pet_index",-1))
@@ -96,6 +96,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 	_target = target if target >= 0 else int(_state.selected_target)
 	if _target >= _state.enemies.size() or _target < 0 or not _enemy_alive(_target):
 		_target = _first_enemy()
+	if action == "capture" and not _state.enemies[_target].get("can_capture",true):return snapshot()
 	_state.selected_target = _target
 	_sync_enemy(_target)
 	_pet_choice = pet_index
@@ -172,7 +173,7 @@ func _player_action(action: String) -> void:
 			else:
 				_state.events.append("逃跑失败！下次机会增加了。")
 		"capture":
-			if _state.enemy_hp * 100 <= _state.enemy_max_hp * 60:
+			if _state.enemies[_target].get("can_capture",true) and _state.enemy_hp * 100 <= _state.enemy_max_hp * 60:
 				_state.captured_species = _state.enemy_species
 				_state.captured_species_list.append(_state.enemy_species)
 				_state.capture_success = true

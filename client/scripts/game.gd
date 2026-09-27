@@ -13,6 +13,8 @@ var world_travel: Node
 var props: Node
 var dev_destinations: MenuButton
 var random_encounters := true
+var encounter_catalog = preload("res://server/encounter_catalog.gd").new()
+var encounter_rng := RandomNumberGenerator.new()
 var arrival_lock := Vector2i(-1,-1)
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
@@ -93,6 +95,7 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _ready() -> void:
+	encounter_rng.randomize()
 	preload("res://scripts/legacy_cursor.gd").install()
 	marker = preload("res://scripts/legacy_grid_cursor.gd").new()
 	marker.world = self
@@ -274,8 +277,8 @@ func handle_arrival() -> bool:
 		return transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
 	if world_catalog.field(int(data.map_id)) and random_encounters:
 		field_steps += 1
-		if field_steps>=8:
-			return begin_battle(int(data.map_id)==100 and session.can_fight_boss())
+		if encounter_catalog.step(int(data.map_id),cell,encounter_rng):
+			return begin_wild_battle()
 	return false
 
 func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
@@ -284,17 +287,33 @@ func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
 		message.text = "Import original battle assets first; see README.md."
 		return false
+	var species := ["wooli","wooli_wooli","woolistan"]
+	var config: Dictionary = session.start_battle_config("woolistan" if boss else species[encounter_serial%3],boss,1 if boss else (enemy_count if enemy_count > 0 else 1 + encounter_serial % 3))
+	return open_battle_config(config)
+
+func begin_wild_battle() -> bool:
+	if moving or paused_input or area_transition_busy or battle_view==null or battle_view.visible:return false
+	if not world_catalog.field(int(data.map_id)):return false
+	var troop: Dictionary = encounter_catalog.roll(int(data.map_id),cell,encounter_rng)
+	if troop.is_empty():
+		message.text = "这里没有可用的普通野外遇敌。" if encounter_catalog.last_error.is_empty() else "此区域的原版遇敌数据或条件尚未完整支持，暂时跳过。"
+		return false
+	if not battle_view.can_render_troop(troop.enemies):
+		message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
+		return false
+	var opened := open_battle_config(session.start_wild_battle_config(troop))
+	if opened:
+		encounter_catalog.pressure = int(encounter_catalog.area_at(int(data.map_id),cell).get("probability_min",0))
+	return opened
+
+func open_battle_config(config: Dictionary) -> bool:
+	if config.is_empty():return false
 	if is_instance_valid(travel_router):travel_router.cancel("战斗中断了自动寻路，请重新选择目的地。")
 	clear_input()
 	paused_input = true
 	player.set_action(3)
 	help.hide()
 	classic_hud.map_panel.hide()
-	var species := ["wooli","wooli_wooli","woolistan"]
-	var config: Dictionary = session.start_battle_config("woolistan" if boss else species[encounter_serial%3],boss,1 if boss else (enemy_count if enemy_count > 0 else 1 + encounter_serial % 3))
-	if config.is_empty():
-		paused_input = false
-		return false
 	encounter_serial += 1
 	battle_session.rng_seed = 42+encounter_serial
 	var state: Dictionary = battle_session.start_battle(config)
@@ -594,15 +613,15 @@ func dev_go_shop() -> void:
 
 func dev_encounter() -> void:
 	if paused_input or area_transition_busy or battle_view.visible:return
-	# Uses the regular encounter authority and presentation, including quest boss eligibility.
+	# Force a source-backed local encounter; move to Samgir wilderness only from a safe map.
 	if moving:
 		moving = false
 		logical_position = Vector2(cell)
 		player.position = project(logical_position)
 	clear_input()
-	if int(data.map_id)!=100:
+	if not world_catalog.field(int(data.map_id)):
 		if not switch_area(true,Vector2i(45,45)):return
-	begin_battle(session.can_fight_boss())
+	begin_wild_battle()
 
 func clear_input() -> void:
 	if is_instance_valid(world_travel):world_travel.pending = -1
@@ -894,7 +913,7 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation",14)
 	help.add_child(content)
 	content.add_child(text("Welcome back to 萨姆吉尔",25))
-	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: choose original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nClick 村外探险 to leave through the west exit.\nWalk eight steps outside to encounter 乌力 and try a battle.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
+	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: choose original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nClick 村外探险 to leave through the west exit.\nWild encounters follow original regional enemy and level tables.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
 	content.add_child(text("Music volume",14))
 	var slider := HSlider.new()
 	slider.min_value = 0
@@ -1145,7 +1164,7 @@ func update_adventure_hint() -> void:
 	if is_instance_valid(boss_button):boss_button.disabled = not session.can_fight_boss()
 	var objective := "找村民聊聊，准备你的第一次冒险。"
 	if q.claimed:objective = "委托完成！继续培养与收集你的伙伴。"
-	elif session.can_fight_boss():objective = "强壮的乌力斯坦出现了：准备好后在村外继续探索。"
+	elif session.can_fight_boss():objective = "准备好后，在村外点击 DEV「挑战强敌」。"
 	elif q.boss_defeated:objective = "回到村民身边领取报酬。"
 	elif q.accepted:objective = "村外的伙伴：胜利 %d/3 · 捕获伙伴 %d/1" % [mini(3,int(q.wins)),mini(1,profile.pets.size())]
 	adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d   %s" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold,objective]

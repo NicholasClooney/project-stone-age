@@ -15,14 +15,16 @@ func pet(id: int) -> Dictionary:
  return {"name":"伙伴%d" % id,"species":"wooli","sprite":100250+id,"hp":120,"max_hp":120,"attack":4,"speed":10,"defence":2,"learned_skills":[3,10,50]}
 func foe(id: int) -> Dictionary:
  return {"name":["乌力","乌力乌力","乌力斯坦"][id],"species":"wooli","sprite":100250+id,"hp":100,"max_hp":100,"attack":2,"speed":1,"defence":1}
-func start(roster_count: int = 2):
+func start(roster_count: int = 2, enemy_count: int = 3):
  authority=Battle.new()
  var roster: Array = []
  for i in range(roster_count):
   var companion=pet(i%3)
   companion.name="伙伴%d"%i
   roster.append(companion)
- var initial=authority.start_battle({"player_hp":500,"player_max_hp":500,"player_attack":5,"player_speed":30,"enemies":[foe(0),foe(1),foe(2)],"pets":roster,"active_pet":0,"capture_slots":3})
+ var enemies: Array = []
+ for i in range(enemy_count): enemies.append(foe(i%3))
+ var initial=authority.start_battle({"player_hp":500,"player_max_hp":500,"player_attack":5,"player_speed":30,"enemies":enemies,"pets":roster,"active_pet":0,"capture_slots":3})
  view.open_battle(initial)
  settle()
 func submit(action: String):
@@ -122,6 +124,35 @@ func run():
  check(authority.snapshot().active_pet==4,"fifth roster companion switches through original menu")
  for i in range(3): start()
  check(view.actors.size()==5,"reopening grouped encounters does not accumulate actor nodes")
+ start(2,10)
+ check(view.can_render_troop(authority.snapshot().enemies),"ten mixed foes have verified original animation resources")
+ check(not view.can_render_troop([{"sprite":100298}]) and not view.can_render_troop([]),"unavailable original sprite and empty encounters are rejected without substitutes")
+ check(view.actors.size()==12,"ten enemies and player/pet retain twelve stable actor slots")
+ var expected=[Vector2(101,150),Vector2(69,174),Vector2(133,126),Vector2(37,198),Vector2(165,102),Vector2(197,202),Vector2(133,250),Vector2(261,154),Vector2(69,298),Vector2(325,106)]
+ for i in range(10):
+  var actor=int(view.enemy_actor(i))
+  check(view.hp_bars[actor].position==view.actors[actor].point+Vector2(0,-80),"enemy%d retains OG fixed HP anchor even for small sprites"%i)
+  check(view.actors[actor].home==expected[i],"enemy%d uses native row placement"%i)
+  check(view.hp_bars[actor].visible and view.displayed_hp[actor]==100,"enemy%d has independent original health bar"%i)
+  check(view.actors[actor].character_id==str(100250+i%3),"enemy%d keeps its own mixed-species art"%i)
+ await picture("battle-ten-mixed-enemies")
+ view.target_buttons[view.enemy_actor(9)].pressed.emit()
+ settle()
+ view.target_buttons[view.enemy_actor(8)].pressed.emit()
+ var ten_result=authority.snapshot()
+ check(view.player_target==9 and view.pet_target==8,"player and pet independently select second-row targets")
+ settle()
+ for i in range(12):check(view.displayed_hp[i]==view.health_of(ten_result,i),"ten-foe animation HP settles for actor%d"%i)
+ check(ten_result.turn_frames.any(func(frame):return frame.actor=="enemy" and frame.enemy_index==9),"last enemy attacks with its own animation slot")
+ authority._state.enemies[9].hp=1
+ authority.set_pet_command("defend")
+ view.pending_action="capture"
+ view.show_state(authority.submit_action("capture",9))
+ settle()
+ check(not view.actors[view.enemy_actor(9)].sprite.visible and view.actors[view.enemy_actor(8)].sprite.visible,"capturing tenth enemy removes only its original formation slot")
+ await picture("battle-ten-after-capture")
+ start()
+ check(view.actors.size()==5 and not view.hp_bars[11].visible,"returning to small troop hides unused large-formation health bars")
  view.queue_free()
  await process_frame
  print("GROUP BATTLE UI: %d failures"%failures)
