@@ -10,6 +10,7 @@ var multiplier: OptionButton
 var compact: CheckBox
 var hp_floor: SpinBox
 var target_level: SpinBox
+var level_explicit:=false
 var battle_limit: SpinBox
 var running:=false
 var compact_active:=false
@@ -56,9 +57,13 @@ func _ready() -> void:
 	stop_button=world.button("停止 / 接手",func():stop_training("已手动停止"));stop_button.position=Vector2(900,20);progress.add_child(stop_button)
 	# Fresh UI defaults are opt-in; only Apply / Start changes live multipliers.
 	settings.merge(world.training_settings,true)
+	level_explicit=bool(world.training_settings.get("level_explicit",world.training_settings.has("level") and int(world.training_settings.level)!=120))
 	speed.select([1.0,2.0,4.0,8.0].find(float(settings.speed)))
 	multiplier.select([1,2,10,100].find(int(settings.xp)))
 	compact.button_pressed=settings.compact;hp_floor.value=settings.hp;target_level.value=settings.level;battle_limit.value=settings.limit
+	_sync_default_level()
+	target_level.value_changed.connect(func(_value):level_explicit=true)
+	target_level.get_line_edit().text_submitted.connect(func(_text):level_explicit=true)
 	progress.hide();hide()
 func label_at(parent: Control,value: String,point: Vector2,font_size: int) -> Label:
 	var node: Label=world.text(value,font_size);node.position=point;node.mouse_filter=Control.MOUSE_FILTER_IGNORE;parent.add_child(node);return node
@@ -68,9 +73,15 @@ func options(values: Array,point: Vector2) -> OptionButton:
 	panel.add_child(node);return node
 func number(point: Vector2,lo: int,hi: int,value: int) -> SpinBox:
 	var node:=SpinBox.new();node.position=point;node.size=Vector2(135,36);node.min_value=lo;node.max_value=hi;node.value=value;panel.add_child(node);return node
+func _sync_default_level() -> void:
+	if level_explicit:return
+	settings.level=0 if int(world.session.snapshot().player.level)>=120 else 120
+	target_level.set_value_no_signal(settings.level)
+
 func open_menu() -> void:
 	if visible:return
 	if world.paused_input or world.moving or world.area_transition_busy:return
+	_sync_default_level()
 	world.clear_input();world.paused_input=true
 	if is_instance_valid(world.travel_router):world.travel_router.cancel("打开自动练级设置。")
 	get_parent().move_child(self,get_parent().get_child_count()-1)
@@ -79,7 +90,7 @@ func close_menu() -> void:
 	if running:stop_training("已手动停止");return
 	hide();world.paused_input=false;world.clear_input()
 func apply_settings() -> void:
-	settings={"speed":[1.0,2.0,4.0,8.0][speed.selected],"xp":[1,2,10,100][multiplier.selected],"compact":compact.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value)}
+	settings={"speed":[1.0,2.0,4.0,8.0][speed.selected],"xp":[1,2,10,100][multiplier.selected],"compact":compact.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit}
 	world.training_settings=settings.duplicate(true)
 	world.battle_view.playback_speed=float(settings.speed)
 	world.session.experience_multiplier=int(settings.xp)
