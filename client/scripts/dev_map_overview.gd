@@ -20,6 +20,10 @@ var drag_start := Vector2.ZERO
 var last_pointer := Vector2.ZERO
 var dragged := false
 var selector: OptionButton
+var category := 0
+var all_maps := false
+var tabs: TabBar
+var scope_button: Button
 var mode_button: Button
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:
@@ -56,9 +60,20 @@ func _ready() -> void:
 	var recenter: Button=world.button("居中 / 全图",recenter_map)
 	recenter.position=Vector2(485,72)
 	background.add_child(recenter)
+	tabs=TabBar.new()
+	tabs.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	tabs.add_theme_font_size_override("font_size",16)
+	tabs.position=Vector2(855,74)
+	tabs.size=Vector2(400,36)
+	for title in ["地点","练级点","Lv.1 宠物"]:tabs.add_tab(title)
+	tabs.tab_changed.connect(select_category)
+	background.add_child(tabs)
+	scope_button=world.button("当前地图",func():all_maps=not all_maps;_build_pois())
+	scope_button.position=Vector2(870,116)
+	background.add_child(scope_button)
 	var scroll:=ScrollContainer.new()
-	scroll.position=Vector2(870,80)
-	scroll.size=Vector2(380,570)
+	scroll.position=Vector2(870,158)
+	scroll.size=Vector2(380,492)
 	background.add_child(scroll)
 	list=VBoxContainer.new()
 	list.size_flags_horizontal=Control.SIZE_EXPAND_FILL
@@ -109,27 +124,70 @@ func _build_map() -> void:
 		var rgb: Array=colors.get(str(int(entry[2])),[48,64,48])
 		img.set_pixel(x,y,Color8(int(rgb[0]),int(rgb[1]),int(rgb[2])))
 	thumbnail=ImageTexture.create_from_image(img)
+	_build_pois()
+
+func select_category(index: int) -> void:
+	category=index
+	_build_pois()
+
+func _build_pois() -> void:
 	pois.clear()
-	for entry in world.world_catalog.residents:
-		if int(entry.map_id)==current_map:pois.append({"name":entry.name,"cell":Vector2i(entry.cell[0],entry.cell[1]),"color":Color.YELLOW})
-	if current_map==int(world.data.map_id) and not world.npc_data.is_empty():pois.append({"name":world.npc_data.name,"cell":world.npc_cell,"color":Color.YELLOW})
-	if FileAccess.file_exists("res://data/training-spots.json"):
-		var training: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://data/training-spots.json"))
-		for spot in training.get("spots",[]):
-			if int(spot.map_id)==current_map:pois.append({"name":"练级 Lv.%d–%d"%[spot.level_min,spot.level_max],"cell":Vector2i(spot.cell[0],spot.cell[1]),"color":Color.ORANGE})
-	var links: Dictionary=world.world_catalog.links(current_map)
-	var seen: Dictionary={}
-	for cell in links:
-		var link: Dictionary=links[cell]
-		var key:=str(link.to_map)+":"+str(Vector2i(int(cell.x)/8,int(cell.y)/8))
-		if seen.has(key):continue
-		seen[key]=true
-		pois.append({"name":"→ "+str(world.world_catalog.info(int(link.to_map)).get("name",link.to_map)),"cell":cell,"color":Color.CYAN})
-	for child in list.get_children():child.queue_free()
+	scope_button.visible=category!=0
+	scope_button.text="全部地图" if all_maps else "当前地图"
+	if category==0:
+		note.text="滚轮缩放 · 拖动平移 · 点击地点 · 白：自己  黄：NPC  蓝：出入口"
+		for entry in world.world_catalog.residents:
+			if int(entry.map_id)==current_map:pois.append({"name":entry.name,"cell":Vector2i(entry.cell[0],entry.cell[1]),"color":Color.YELLOW,"map_id":current_map})
+		if current_map==int(world.data.map_id) and not world.npc_data.is_empty():pois.append({"name":world.npc_data.name,"cell":world.npc_cell,"color":Color.YELLOW,"map_id":current_map})
+		var links: Dictionary=world.world_catalog.links(current_map)
+		var seen: Dictionary={}
+		for cell in links:
+			var link: Dictionary=links[cell]
+			var key:=str(link.to_map)+":"+str(Vector2i(int(cell.x)/8,int(cell.y)/8))
+			if seen.has(key):continue
+			seen[key]=true
+			pois.append({"name":"→ "+str(world.world_catalog.info(int(link.to_map)).get("name",link.to_map)),"cell":cell,"color":Color.CYAN,"map_id":current_map})
+	else:
+		note.text="点击地点按所选方式步行 / DEV 传送；遇敌随机，不保证每次出现 Lv.1 宠物。" if category==2 else "点击地点按所选方式步行 / DEV 传送；等级为原始遇敌范围。"
+		var file: String="res://data/level-one-spots.json" if category==2 else "res://data/training-spots.json"
+		if FileAccess.file_exists(file):
+			var catalog: Dictionary=JSON.parse_string(FileAccess.get_file_as_string(file))
+			for spot in catalog.get("spots",[]):
+				var ident:=int(spot.map_id)
+				if not world.world_catalog.maps.has(str(ident)) or (not all_maps and ident!=current_map):continue
+				var label: String
+				if category==2:
+					label="%s · 固定 Lv.1"%spot.name if int(spot.level_max)==1 else "%s · 可遇 Lv.1（1–%d）"%[spot.name,int(spot.level_max)]
+				else:label="练级 Lv.%d–%d"%[spot.level_min,spot.level_max]
+				if all_maps:label+=" · "+str(world.world_catalog.info(ident).name)
+				pois.append({"name":label,"cell":Vector2i(spot.cell[0],spot.cell[1]),"color":Color.LIME_GREEN if category==2 else Color.ORANGE,"map_id":ident,"area_id":int(spot.area_id)})
+	for child in list.get_children():
+		list.remove_child(child)
+		child.queue_free()
 	for poi in pois:
-		var button: Button=world.button("%s (%d,%d)" % [poi.name,poi.cell.x,poi.cell.y],func():select_target(poi.cell))
+		var button: Button=world.button("%s (%d,%d)" % [poi.name,poi.cell.x,poi.cell.y],func():select_poi(poi))
 		button.add_theme_font_size_override("font_size",13)
+		button.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		button.custom_minimum_size=Vector2(350,36)
 		list.add_child(button)
+	if pois.is_empty():list.add_child(world.text("这张地图没有可用的此类地点。",14))
+	queue_redraw()
+
+func select_poi(poi: Dictionary) -> bool:
+	if poi.has("area_id"):
+		var point: Vector2i=poi.cell
+		var area: Dictionary=world.encounter_catalog.area_at(int(poi.map_id),point)
+		if area.is_empty() or int(area.id)!=int(poi.area_id):
+			note.text="遇敌区域已改变，请重新生成导航地点。"
+			return false
+		if world.travel_destinations.safe_destination(int(poi.map_id),point)!=point:
+			note.text="该遇敌落点已不可用，请选择其他地点。"
+			return false
+	if int(poi.map_id)!=current_map:browse_map(int(poi.map_id))
+	if poi.has("area_id") and nearest_safe(poi.cell)!=poi.cell:
+		note.text="该遇敌落点已不可用，请选择其他地点。"
+		return false
+	return select_target(poi.cell)
 
 func cell_to_point(cell: Vector2i) -> Vector2:
 	return map_rect.position+(Vector2(cell)+Vector2.ONE*0.5)/Vector2(map_dimensions)*map_rect.size
@@ -219,6 +277,7 @@ func _draw() -> void:
 		var texture_rect:=Rect2((visible_rect.position-map_rect.position)/map_rect.size*thumbnail.get_size(),visible_rect.size/map_rect.size*thumbnail.get_size())
 		draw_texture_rect_region(thumbnail,visible_rect,texture_rect)
 	for poi in pois:
+		if int(poi.get("map_id",current_map))!=current_map:continue
 		var point:=cell_to_point(poi.cell)
 		if view_rect.has_point(point):draw_circle(point,3,poi.color)
 	if current_map==int(world.data.map_id) and view_rect.has_point(cell_to_point(world.cell)):draw_circle(cell_to_point(world.cell),5,Color.WHITE)

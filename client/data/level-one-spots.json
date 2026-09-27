@@ -1,0 +1,681 @@
+{
+  "schema": 1,
+  "method": "Positive ordinary encounter weights, capture flag, actual enemy row includes Lv.1; source-priority safe landing. Encounter chance is not guaranteed.",
+  "spots": [
+    {
+      "map_id": 100,
+      "area_id": 28,
+      "cell": [
+        81,
+        635
+      ],
+      "map_name": "萨伊那斯",
+      "name": "乌力",
+      "enemy_id": 140,
+      "template_id": 1,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 28,
+      "cell": [
+        81,
+        635
+      ],
+      "map_name": "萨伊那斯",
+      "name": "乌力斯坦",
+      "enemy_id": 143,
+      "template_id": 3,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 28,
+      "cell": [
+        81,
+        635
+      ],
+      "map_name": "萨伊那斯",
+      "name": "多利凯拉",
+      "enemy_id": 146,
+      "template_id": 213,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 28,
+      "cell": [
+        81,
+        635
+      ],
+      "map_name": "萨伊那斯",
+      "name": "贝恩达斯",
+      "enemy_id": 149,
+      "template_id": 212,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 37,
+      "cell": [
+        390,
+        463
+      ],
+      "map_name": "萨伊那斯",
+      "name": "邦洛洛克斯",
+      "enemy_id": 153,
+      "template_id": 331,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "布比",
+      "enemy_id": 156,
+      "template_id": 11,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "布伊",
+      "enemy_id": 160,
+      "template_id": 13,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "火鸡",
+      "enemy_id": 190,
+      "template_id": 291,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "奇宝",
+      "enemy_id": 194,
+      "template_id": 294,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 47,
+      "cell": [
+        490,
+        145
+      ],
+      "map_name": "萨伊那斯",
+      "name": "呼拔拔",
+      "enemy_id": 165,
+      "template_id": 72,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 47,
+      "cell": [
+        490,
+        145
+      ],
+      "map_name": "萨伊那斯",
+      "name": "鲁尼帖斯",
+      "enemy_id": 170,
+      "template_id": 74,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 49,
+      "cell": [
+        246,
+        159
+      ],
+      "map_name": "萨伊那斯",
+      "name": "特洛昆",
+      "enemy_id": 174,
+      "template_id": 63,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 49,
+      "cell": [
+        246,
+        159
+      ],
+      "map_name": "萨伊那斯",
+      "name": "达克尔",
+      "enemy_id": 178,
+      "template_id": 64,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 87,
+      "cell": [
+        601,
+        342
+      ],
+      "map_name": "加鲁卡",
+      "name": "乌宝宝",
+      "enemy_id": 369,
+      "template_id": 31,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 87,
+      "cell": [
+        601,
+        342
+      ],
+      "map_name": "加鲁卡",
+      "name": "威威",
+      "enemy_id": 372,
+      "template_id": 32,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 87,
+      "cell": [
+        601,
+        342
+      ],
+      "map_name": "加鲁卡",
+      "name": "乌宝宝",
+      "enemy_id": 370,
+      "template_id": 31,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 87,
+      "cell": [
+        601,
+        342
+      ],
+      "map_name": "加鲁卡",
+      "name": "威威",
+      "enemy_id": 373,
+      "template_id": 32,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 91,
+      "cell": [
+        460,
+        335
+      ],
+      "map_name": "加鲁卡",
+      "name": "克洛尔",
+      "enemy_id": 378,
+      "template_id": 103,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 95,
+      "cell": [
+        297,
+        625
+      ],
+      "map_name": "加鲁卡",
+      "name": "克雷尔",
+      "enemy_id": 382,
+      "template_id": 101,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 95,
+      "cell": [
+        297,
+        625
+      ],
+      "map_name": "加鲁卡",
+      "name": "里斯基",
+      "enemy_id": 385,
+      "template_id": 104,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 114,
+      "cell": [
+        323,
+        472
+      ],
+      "map_name": "加鲁卡",
+      "name": "尼可斯",
+      "enemy_id": 391,
+      "template_id": 62,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 115,
+      "cell": [
+        291,
+        386
+      ],
+      "map_name": "加鲁卡",
+      "name": "乌卡鲁",
+      "enemy_id": 388,
+      "template_id": 33,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 117,
+      "cell": [
+        222,
+        564
+      ],
+      "map_name": "加鲁卡",
+      "name": "克邦凯斯",
+      "enemy_id": 394,
+      "template_id": 221,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 138,
+      "cell": [
+        648,
+        669
+      ],
+      "map_name": "加鲁卡",
+      "name": "霍尔克",
+      "enemy_id": 402,
+      "template_id": 293,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 138,
+      "cell": [
+        648,
+        669
+      ],
+      "map_name": "加鲁卡",
+      "name": "克克洛斯",
+      "enemy_id": 398,
+      "template_id": 292,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 146,
+      "cell": [
+        87,
+        1117
+      ],
+      "map_name": "加鲁卡",
+      "name": "卡克尔",
+      "enemy_id": 406,
+      "template_id": 181,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 146,
+      "cell": [
+        87,
+        1117
+      ],
+      "map_name": "加鲁卡",
+      "name": "巴克",
+      "enemy_id": 410,
+      "template_id": 182,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 147,
+      "cell": [
+        354,
+        704
+      ],
+      "map_name": "加鲁卡",
+      "name": "贝鲁伊卡",
+      "enemy_id": 418,
+      "template_id": 192,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 150,
+      "cell": [
+        452,
+        631
+      ],
+      "map_name": "加鲁卡",
+      "name": "贝鲁卡",
+      "enemy_id": 414,
+      "template_id": 191,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 164,
+      "cell": [
+        94,
+        730
+      ],
+      "map_name": "加鲁卡",
+      "name": "海主人",
+      "enemy_id": 438,
+      "template_id": 243,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 165,
+      "cell": [
+        197,
+        711
+      ],
+      "map_name": "加鲁卡",
+      "name": "邦恩吉",
+      "enemy_id": 396,
+      "template_id": 224,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 168,
+      "cell": [
+        375,
+        190
+      ],
+      "map_name": "加鲁卡",
+      "name": "布伊比",
+      "enemy_id": 433,
+      "template_id": 14,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 300,
+      "area_id": 309,
+      "cell": [
+        176,
+        344
+      ],
+      "map_name": "吉鲁岛",
+      "name": "格尔顿",
+      "enemy_id": 976,
+      "template_id": 141,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 314,
+      "cell": [
+        509,
+        93
+      ],
+      "map_name": "吉鲁岛",
+      "name": "扬奇洛斯",
+      "enemy_id": 983,
+      "template_id": 92,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 315,
+      "cell": [
+        443,
+        113
+      ],
+      "map_name": "吉鲁岛",
+      "name": "邦奇诺",
+      "enemy_id": 985,
+      "template_id": 94,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 330,
+      "cell": [
+        457,
+        524
+      ],
+      "map_name": "吉鲁岛",
+      "name": "拉奇鲁哥",
+      "enemy_id": 997,
+      "template_id": 71,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 331,
+      "cell": [
+        373,
+        462
+      ],
+      "map_name": "吉鲁岛",
+      "name": "多萨金格",
+      "enemy_id": 999,
+      "template_id": 73,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 378,
+      "cell": [
+        137,
+        55
+      ],
+      "map_name": "吉鲁岛",
+      "name": "玛摩那斯",
+      "enemy_id": 987,
+      "template_id": 263,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 379,
+      "cell": [
+        105,
+        139
+      ],
+      "map_name": "吉鲁岛",
+      "name": "玛恩摩洛斯",
+      "enemy_id": 989,
+      "template_id": 264,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 473,
+      "cell": [
+        244,
+        68
+      ],
+      "map_name": "吉鲁岛",
+      "name": "齐尔格尔顿",
+      "enemy_id": 1188,
+      "template_id": 143,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 400,
+      "area_id": 383,
+      "cell": [
+        74,
+        74
+      ],
+      "map_name": "沙姆岛",
+      "name": "布拉奇多斯",
+      "enemy_id": 1065,
+      "template_id": 253,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 652,
+      "cell": [
+        547,
+        515
+      ],
+      "map_name": "五十年前波拉岛",
+      "name": "邦恩多斯",
+      "enemy_id": 1451,
+      "template_id": 255,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 32005,
+      "area_id": 615,
+      "cell": [
+        29,
+        30
+      ],
+      "map_name": "漆黑的洞窟 地下5楼",
+      "name": "朵洛将恩",
+      "enemy_id": 1382,
+      "template_id": 88,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 32009,
+      "area_id": 619,
+      "cell": [
+        29,
+        29
+      ],
+      "map_name": "漆黑的洞窟 地下9楼",
+      "name": "阿伊萨",
+      "enemy_id": 1386,
+      "template_id": 86,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 32011,
+      "area_id": 621,
+      "cell": [
+        29,
+        29
+      ],
+      "map_name": "漆黑的洞窟 地下11楼",
+      "name": "格洛格鲁",
+      "enemy_id": 1390,
+      "template_id": 87,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    }
+  ]
+}
