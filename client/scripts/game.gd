@@ -32,6 +32,14 @@ var marker_cell := Vector2i(-1,-1)
 var character_index := 0
 var paused_input := false
 var load_error := ""
+var npc_data: Dictionary = {}
+var npc: Node2D
+var npc_sprite: Sprite2D
+var npc_cell := Vector2i(-1,-1)
+var pending_talk := false
+var dialogue: Control
+var dialogue_name: Label
+var dialogue_text: Label
 
 func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
@@ -83,6 +91,7 @@ func _ready() -> void:
 	for y in range(int(data.height)):
 		for x in range(int(data.width)):
 			navigation.set_point_solid(Vector2i(x,y),not is_walkable(Vector2i(x,y)))
+	setup_npc()
 	setup_audio()
 	build_ui()
 	get_window().focus_exited.connect(clear_input)
@@ -125,7 +134,7 @@ func unproject(point: Vector2) -> Vector2:
 func is_walkable(point: Vector2i) -> bool:
 	if point.x<0 or point.y<0 or point.x>=int(data.width) or point.y>=int(data.height):
 		return false
-	return int(data.blocked[point.y*int(data.width)+point.x])==0
+	return point != npc_cell and int(data.blocked[point.y*int(data.width)+point.x])==0
 
 func can_step(origin: Vector2i, destination: Vector2i) -> bool:
 	var d := destination-origin
@@ -152,7 +161,8 @@ func _input(event: InputEvent) -> void:
 	if data.is_empty():
 		return
 	for action in ["north","south","west","east"]:
-		if event.is_action_pressed(action) and not event.is_echo():
+		if event.is_action_pressed(action) and not event.is_echo() and not paused_input:
+			pending_talk = false
 			held.erase(action)
 			held.append(action)
 			path.clear()
@@ -161,6 +171,11 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if data.is_empty():
+		return
+	if dialogue.visible:
+		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
+			close_dialogue()
+		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("mute"):
 		toggle_mute()
@@ -178,13 +193,14 @@ func _unhandled_input(event: InputEvent) -> void:
 		player.set_action(6)
 	elif event is InputEventMouseButton and event.pressed and not paused_input:
 		if event.button_index == MOUSE_BUTTON_LEFT:
-			walk_to(Vector2i(unproject(get_global_mouse_position()).round()))
+			handle_world_click(get_global_transform_with_canvas().affine_inverse()*event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			set_zoom(camera.zoom.x+0.1)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			set_zoom(camera.zoom.x-0.1)
 
 func walk_to(destination: Vector2i) -> void:
+	pending_talk = false
 	if not is_walkable(destination):
 		message.text = "That spot is blocked. Choose a path or clearing."
 		return
@@ -232,6 +248,10 @@ func _physics_process(delta: float) -> void:
 			player.set_action(3)
 			marker_cell = Vector2i(-1,-1)
 			queue_redraw()
+	if pending_talk and not moving and path.is_empty():
+		pending_talk = false
+		if in_talk_range(cell):
+			open_dialogue()
 	if player.action == 6 and player.elapsed>1.1:
 		player.set_action(3)
 	coordinates.text = "萨姆吉尔村  ·  %d, %d" % [cell.x,cell.y]
@@ -242,10 +262,13 @@ func _draw() -> void:
 		draw_polyline(PackedVector2Array([p+Vector2(0,-10),p+Vector2(15,0),p+Vector2(0,10),p+Vector2(-15,0),p+Vector2(0,-10)]),Color("fff1a6"),1)
 
 func clear_input() -> void:
+	pending_talk = false
 	held.clear()
 	path.clear()
 
 func reset_player() -> void:
+	if dialogue.visible:
+		close_dialogue()
 	clear_input()
 	moving = false
 	cell = SPAWN
@@ -362,8 +385,13 @@ func build_ui() -> void:
 	row.add_child(button("+",func(): set_zoom(camera.zoom.x+0.15)))
 	mute_button = button("Music: on  [M]",toggle_mute)
 	row.add_child(mute_button)
-	row.add_child(button("Help [H]",func(): help.visible = not help.visible; paused_input = help.visible; clear_input()))
-	message = text("Original Samgir map, character animation, palette, and village music. Explore the square.",12)
+	row.add_child(button("Villager",approach_npc))
+	row.add_child(button("Help [H]",func():
+		if not dialogue.visible:
+			help.visible = not help.visible
+			paused_input = help.visible
+			clear_input()))
+	message = text("Click Villager to meet the resident by the statue at (93, 72).",12)
 	message.add_theme_color_override("font_color",Color("bdc6ae"))
 	v.add_child(message)
 	help = PanelContainer.new()
@@ -375,7 +403,7 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation",14)
 	help.add_child(content)
 	content.add_child(text("Welcome back to 萨姆吉尔",25))
-	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: change original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nThis slice supports exploration, animation, collision, and audio.\nNPC logic, interiors, saving, and the Swift server come next.",17))
+	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: change original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nThis slice supports exploration, animation, collision, and audio.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
 	content.add_child(text("Music volume",14))
 	var slider := HSlider.new()
 	slider.min_value = 0
@@ -386,3 +414,110 @@ func build_ui() -> void:
 	content.add_child(slider)
 	content.add_child(button("Back to the village",func(): help.hide(); paused_input = false; clear_input()))
 	help.hide()
+	build_dialogue(root)
+
+
+func setup_npc() -> void:
+	if not FileAccess.file_exists("res://assets/legacy/samgir-npc.json"):
+		return
+	npc_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir-npc.json"))
+	npc_cell = Vector2i(npc_data.cell[0],npc_data.cell[1])
+	navigation.set_point_solid(npc_cell,true)
+	npc = Node2D.new()
+	npc.position = project(Vector2(npc_cell))
+	actors.add_child(npc)
+	npc_sprite = Sprite2D.new()
+	npc_sprite.texture = load("res://assets/legacy/samgir-villager.png")
+	npc_sprite.centered = false
+	npc_sprite.position = Vector2(npc_data.offset[0],npc_data.offset[1])
+	npc.add_child(npc_sprite)
+	var label := text(npc_data.name,14)
+	label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	label.add_theme_color_override("font_shadow_color",Color.BLACK)
+	label.add_theme_constant_override("shadow_offset_x",1)
+	label.add_theme_constant_override("shadow_offset_y",1)
+	label.position = Vector2(-28,-94)
+	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	npc.add_child(label)
+
+func handle_world_click(point: Vector2) -> void:
+	if paused_input:
+		return
+	if is_instance_valid(npc_sprite) and npc_sprite.get_rect().has_point(npc_sprite.to_local(point)):
+		approach_npc()
+	else:
+		walk_to(Vector2i(unproject(point).round()))
+
+func in_talk_range(point: Vector2i) -> bool:
+	var delta := (point-npc_cell).abs()
+	# Cardinal neighbours avoid talking diagonally through blocked corners.
+	return delta.x+delta.y == 1
+
+func approach_npc() -> void:
+	if paused_input:
+		return
+	if npc_data.is_empty():
+		message.text = "The villager has not been imported. See README.md."
+		return
+	clear_input()
+	var start := target_cell if moving else cell
+	var best: Array[Vector2i] = []
+	for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+		var destination: Vector2i = npc_cell+offset
+		if not is_walkable(destination):
+			continue
+		var candidate := navigation.get_id_path(start,destination)
+		if not candidate.is_empty() and (best.is_empty() or candidate.size()<best.size()):
+			best = candidate
+	if best.is_empty():
+		message.text = "There is no clear path to the villager."
+		return
+	best.pop_front()
+	path = best
+	pending_talk = true
+	message.text = "Approaching 村民 at (93, 72)…"
+	play_click()
+
+func open_dialogue() -> void:
+	if moving or not in_talk_range(cell):
+		return
+	clear_input()
+	paused_input = true
+	player.set_action(3)
+	player.facing = (SCREEN_DIRECTIONS.find(npc_cell-cell)+4)%8
+	dialogue_name.text = npc_data.name
+	dialogue_text.text = npc_data.text
+	dialogue.show()
+	play_click()
+
+func close_dialogue() -> void:
+	dialogue.hide()
+	paused_input = help.visible
+	clear_input()
+	message.text = "Click the villager to talk again, or keep exploring."
+
+func build_dialogue(root: Control) -> void:
+	dialogue = Control.new()
+	dialogue.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	dialogue.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(dialogue)
+	var panel := PanelContainer.new()
+	panel.position = Vector2(320,460)
+	panel.custom_minimum_size = Vector2(640,210)
+	panel.add_theme_stylebox_override("panel",box(Color("dbc391"),Color("705035")))
+	dialogue.add_child(panel)
+	var content := VBoxContainer.new()
+	content.add_theme_constant_override("separation",14)
+	panel.add_child(content)
+	dialogue_name = text("",22)
+	dialogue_name.add_theme_color_override("font_color",Color("66351f"))
+	content.add_child(dialogue_name)
+	dialogue_text = text("",22)
+	dialogue_text.add_theme_color_override("font_color",Color("342719"))
+	dialogue_text.custom_minimum_size = Vector2(600,80)
+	dialogue_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	content.add_child(dialogue_text)
+	var close_button := button("确定  ·  Enter / Esc",close_dialogue)
+	close_button.size_flags_horizontal = Control.SIZE_SHRINK_END
+	content.add_child(close_button)
+	dialogue.hide()

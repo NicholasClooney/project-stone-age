@@ -17,6 +17,7 @@ func press(code: int, down: bool) -> void:
 	event.physical_keycode = code
 	event.pressed = down
 	Input.parse_input_event(event)
+	Input.flush_buffered_events()
 func settle() -> void:
 	while game.moving:
 		await physics_frame
