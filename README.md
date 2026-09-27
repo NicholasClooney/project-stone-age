@@ -52,6 +52,8 @@ The single-player loop now includes experience, leveling, currency, three captur
 
 **Start your adventure:** click the villager, choose **村外的伙伴 / 休息**, and accept the quest. Explore outside, weaken an enemy and capture it. When you already have a pet, tell it to **defend while weakening a capture target**. Win three battles, then prepare for the stronger encounter that appears during exploration. Return to the villager for recovery and the quest reward. Use the original bottom pet tab to rename/select your companion and the item tab to use/equip purchases.
 
+**World restoration:** the four starting villages, both complete islands, linked village interiors and the original undersea route are now visitable. Use **DEV → 传送地点** for direct visits; disable **野外随机遇敌** there for exploration. The normal island crossing retains its original reusable pass requirement. See [world scope and remaining services](docs/development/m005-four-villages.md).
+
 Original assets and menu layouts are retained; battle balance, capture conditions, stat bonus formulas and pet growth, this short quest, shop stock/prices and encounter timing are MVP rules rather than verified historical parity. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
@@ -87,6 +89,7 @@ For the full MVP, use the [local server reference](docs/reverse-engineering/loca
   --server-map references/chenmingbiao-stone-age/gmsv/data/map/sainasu/sainasu
 .tools/asset-venv/bin/python tools/import_battle.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_mvp.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_world.py /path/to/stoneage2.5
 ./scripts/run.sh --headless --editor --import --quit
 ```
 

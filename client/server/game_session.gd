@@ -1,4 +1,5 @@
 extends RefCounted
+var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 const SAVE_VERSION := 1
 const ITEM_PRICES := {"potion":10,"club":30}
@@ -12,7 +13,18 @@ var _pending: Dictionary = {}
 var last_error := ""
 
 func _init() -> void:
-	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"travel_pass":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+
+# Original item 2422: reusable undersea passage permit, sold for 200 stone.
+func buy_travel_pass() -> bool:
+	if not _pending.is_empty() or _profile.get("travel_pass",false) or _profile.player.gold < 200:
+		return false
+	_profile.player.gold -= 200
+	_profile.travel_pass = true
+	return true
+
+func has_travel_pass() -> bool:
+	return _profile.get("travel_pass",false)
 
 func snapshot() -> Dictionary:
 	_sync_stat_points()
@@ -203,6 +215,8 @@ func load_game(path: String) -> bool:
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
 			_profile = _normalize_numbers(parsed)
+			if not _profile.has("travel_pass"):
+				_profile.travel_pass = false
 			# Earlier prototype saves predate speed; migrate only this optional field.
 			if not _profile.player.has("speed"):
 				_profile.player.speed = 10 + _profile.player.level - 1
@@ -218,6 +232,8 @@ func load_game(path: String) -> bool:
 	return false
 
 func _valid_profile(value: Variant) -> bool:
+	if value is Dictionary and value.has("travel_pass") and not value.travel_pass is bool:
+		return false
 	if not value is Dictionary or value.get("version",0) != SAVE_VERSION or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
 	for key in ["player","inventory","quest","location"]:
@@ -294,9 +310,12 @@ func _normalize_numbers(value: Variant) -> Variant:
 	return value
 
 func _location_valid(location: Dictionary) -> bool:
-	if not _integer(location.get("map_id"),0,10000):
+	if not _integer(location.get("map_id"),0,65535):
 		return false
 	var map_id := int(location.map_id)
+	var info: Dictionary = world_catalog.info(map_id)
+	if not info.is_empty():
+		return _integer(location.get("x"),0,int(info.width)-1) and _integer(location.get("y"),0,int(info.height)-1)
 	if map_id not in [1000,100,1002]:
 		return false
 	var bound := 800 if map_id == 100 else (160 if map_id == 1000 else 30)

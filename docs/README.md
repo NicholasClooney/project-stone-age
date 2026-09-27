@@ -43,3 +43,5 @@ These English Markdown documents capture the supplied design conversation. They 
 **Required** means a project decision or milestone acceptance criterion. **Proposed** means a reversible implementation default. **Research target** means unverified legacy behavior. Examples use project-defined identifiers; they do not assert historical map IDs, packet formats, feature availability, or animation timing.
 
 The latest explicit user decisions take precedence over this specification. Record subsequent architectural changes close to the affected document. Do not let documentation become a prerequisite for showing working gameplay.
+
+- [M005: four villages and the connecting world](development/m005-four-villages.md) — current priority before the next five progression/combat slices.

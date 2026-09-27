@@ -6,6 +6,13 @@ const AdventureMenu = preload("res://scripts/adventure_menu.gd")
 const PetFollower = preload("res://scripts/pet_follower.gd")
 const BattleSession = preload("res://server/battle_session.gd")
 const BattleView = preload("res://scripts/battle_view.gd")
+const WorldCatalog = preload("res://scripts/world_catalog.gd")
+var world_catalog = WorldCatalog.new()
+var world_travel: Node
+var props: Node
+var dev_destinations: MenuButton
+var random_encounters := true
+var arrival_lock := Vector2i(-1,-1)
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
 const STEP_TIME := 0.19
@@ -21,6 +28,7 @@ var field_steps := 0
 var battle_sounds: Dictionary = {}
 var wilderness_music: AudioStream
 var village_music: AudioStream
+var area_music: AudioStream
 var session = GameSession.new()
 var adventure_menu: Control
 var profile_persistence := true
@@ -85,14 +93,14 @@ func _ready() -> void:
 		mvp_manifest = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json"))
 	if profile_persistence and (FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak")):
 		load_profile()
-	if not FileAccess.file_exists("res://assets/legacy/samgir.json") or not FileAccess.file_exists("res://assets/legacy/ui/manifest.json"):
+	if not FileAccess.file_exists("res://assets/legacy/samgir.json") or not FileAccess.file_exists("res://assets/legacy/ui/manifest.json") or world_catalog.maps.is_empty():
 		load_error = "Original client assets have not been imported.\nSee README.md → Import original resources."
 		var error_label := Label.new()
 		error_label.text = load_error
 		error_label.position = Vector2(50,100)
 		add_child(error_label)
 		return
-	data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir.json"))
+	data = JSON.parse_string(FileAccess.get_file_as_string(world_catalog.file(1000)))
 	build_world()
 	setup_audio()
 	map_transition = preload("res://scripts/classic_map_transition.gd").new()
@@ -125,19 +133,8 @@ func build_world() -> void:
 	add_child(terrain)
 	actors = Node2D.new()
 	actors.y_sort_enabled = true
+	actors.z_index = 1
 	add_child(actors)
-	for entry in data.objects:
-		var ident := str(int(entry[2]))
-		var metadata: Dictionary = data.images[ident]
-		var pivot := Node2D.new()
-		pivot.position = project(Vector2(entry[0],entry[1]))
-		var art := Sprite2D.new()
-		art.texture = textures[ident]
-		art.centered = false
-		art.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-		art.position = Vector2(metadata.x,metadata.y)
-		pivot.add_child(art)
-		actors.add_child(pivot)
 	player = LegacyActor.new()
 	player.world = self
 	player.character_id = ["100000","100005","100010"][character_index]
@@ -157,18 +154,19 @@ func build_world() -> void:
 	for y in range(int(data.height)):
 		for x in range(int(data.width)):
 			navigation.set_point_solid(Vector2i(x,y),not is_walkable(Vector2i(x,y)))
+	props = preload("res://scripts/legacy_props.gd").new()
+	props.world = self
+	actors.add_child(props)
 	if int(data.map_id) in [1000,1002]:
 		setup_npc()
 	pet_trail.assign([cell,cell])
 	pet_follower = null
 
 func switch_area(wilderness: bool, destination: Vector2i) -> bool:
-	return load_area_id(100 if wilderness else 1000,destination)
+	return load_area_id(100 if wilderness else 1000,destination+Vector2i(592,448) if wilderness and world_catalog.maps.has("100") else destination)
 
 func load_area_id(map_id: int, destination: Vector2i) -> bool:
-	var filenames := {100:"wilderness.json",1000:"samgir.json",1002:"shop.json"}
-	if not filenames.has(map_id):return false
-	var file := "res://assets/legacy/"+str(filenames[map_id])
+	var file := world_catalog.file(map_id)
 	if not FileAccess.file_exists(file):
 		message.text = "Import the wilderness assets first; see README.md."
 		return false
@@ -186,11 +184,13 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 		node.queue_free()
 	data = next_data
 	textures.clear()
+	world_travel = null
 	npc_data.clear()
 	npc_cell = Vector2i(-1,-1)
 	npc = null
 	npc_sprite = null
 	cell = destination
+	arrival_lock = destination
 	from_cell = destination
 	target_cell = destination
 	logical_position = Vector2(destination)
@@ -202,7 +202,8 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	camera.zoom = previous_zoom
 	build_ui()
 	camera.reset_smoothing()
-	set_music(exploration_music())
+	area_music = exploration_music()
+	set_music(area_music)
 	queue_redraw()
 	refresh_companion()
 	checkpoint()
@@ -228,30 +229,33 @@ func _run_area_transition(map_id: int, destination: Vector2i) -> void:
 func walk_to_exit() -> void:
 	if paused_input:
 		return
-	var exits := {1000:Vector2i(49,118),100:Vector2i(46,45),1002:Vector2i(10,15)}
-	walk_to(exits[int(data.map_id)])
+	var links: Dictionary = world_catalog.links(int(data.map_id))
+	var closest := Vector2i(-1,-1)
+	var distance := INF
+	for point in links:
+		var link: Dictionary = links[point]
+		if int(data.map_id) in [1000,2000,3000,4000] and not world_catalog.field(int(link.to_map)):continue
+		if cell.distance_squared_to(point)<distance:
+			closest=point;distance=cell.distance_squared_to(point)
+	if closest.x>=0:walk_to(closest)
 
 func handle_arrival() -> bool:
 	pet_trail.append(cell)
 	while pet_trail.size()>3:pet_trail.pop_front()
-	if int(data.map_id)==1000:
-		if cell.x==67 and cell.y in [108,109]:
-			return transition_area(1002,Vector2i(11,cell.y-93))
-		if cell.x==49 and cell.y>=116 and cell.y<=119:
-			return transition_area(100,Vector2i(45,cell.y-73))
-	elif int(data.map_id)==1002:
-		if cell.x==10 and cell.y in [15,16]:
-			return transition_area(1000,Vector2i(67,cell.y+93))
-	elif int(data.map_id)==100:
-		if cell.x==46 and cell.y>=43 and cell.y<=46:
-			return transition_area(1000,Vector2i(50,cell.y+73))
+	if cell==arrival_lock:return false
+	arrival_lock = Vector2i(-1,-1)
+	var links: Dictionary = world_catalog.links(int(data.map_id))
+	if links.has(cell):
+		var link: Dictionary = links[cell]
+		return transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
+	if world_catalog.field(int(data.map_id)) and random_encounters:
 		field_steps += 1
 		if field_steps>=8:
-			return begin_battle(session.can_fight_boss())
+			return begin_battle(int(data.map_id)==100 and session.can_fight_boss())
 	return false
 
 func begin_battle(boss: bool = false) -> bool:
-	if moving or paused_input or int(data.map_id)!=100 or battle_view==null:
+	if moving or paused_input or not world_catalog.field(int(data.map_id)) or battle_view==null:
 		return false
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
 		message.text = "Import original battle assets first; see README.md."
@@ -352,7 +356,7 @@ func unproject(point: Vector2) -> Vector2:
 func is_walkable(point: Vector2i) -> bool:
 	if point.x<0 or point.y<0 or point.x>=int(data.width) or point.y>=int(data.height):
 		return false
-	return point != npc_cell and int(data.blocked[point.y*int(data.width)+point.x])==0
+	return point != npc_cell and not (is_instance_valid(world_travel) and world_travel.blocks(point)) and int(data.blocked[point.y*int(data.width)+point.x])==0
 
 func can_step(origin: Vector2i, destination: Vector2i) -> bool:
 	var d := destination-origin
@@ -389,6 +393,10 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if data.is_empty():
+		return
+	if is_instance_valid(world_travel) and world_travel.overlay.visible:
+		if event.is_action_pressed("ui_cancel"):world_travel._close()
+		get_viewport().set_input_as_handled()
 		return
 	if is_instance_valid(adventure_menu) and adventure_menu.visible:
 		if event.is_action_pressed("ui_cancel"):close_adventure_menu()
@@ -495,6 +503,7 @@ func _physics_process(delta: float) -> void:
 	save_elapsed += delta
 	if profile_persistence and save_elapsed>=5.0 and not moving and not battle_session.snapshot().active:
 		checkpoint()
+	if is_instance_valid(dev_destinations):dev_destinations.disabled = paused_input or area_transition_busy
 	update_adventure_hint()
 	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
 
@@ -507,6 +516,13 @@ func release_keyboard_input() -> void:
 	# Focus changes release held keys; an intentional click route keeps running.
 	held.clear()
 
+func dev_visit(id: int) -> bool:
+	if paused_input or area_transition_busy or battle_view.visible:return false
+	var info: Dictionary = world_catalog.info(id)
+	if info.is_empty():return false
+	var spawn: Array = info.spawn
+	return load_area_id(id,Vector2i(int(spawn[0]),int(spawn[1])))
+
 func dev_go_villager() -> void:
 	if paused_input or area_transition_busy:return
 	if dev_teleport_mode:
@@ -518,7 +534,7 @@ func dev_go_adventure() -> void:
 	if not dev_teleport_mode:
 		walk_to_exit()
 	elif int(data.map_id)==1000:
-		load_area_id(100,Vector2i(45,45))
+		switch_area(true,Vector2i(45,45))
 	else:
 		load_area_id(1000,SPAWN)
 
@@ -537,10 +553,11 @@ func dev_encounter() -> void:
 		player.position = project(logical_position)
 	clear_input()
 	if int(data.map_id)!=100:
-		if not load_area_id(100,Vector2i(45,45)):return
+		if not switch_area(true,Vector2i(45,45)):return
 	begin_battle(session.can_fight_boss())
 
 func clear_input() -> void:
+	if is_instance_valid(world_travel):world_travel.pending = -1
 	pending_talk = false
 	held.clear()
 	path.clear()
@@ -577,6 +594,11 @@ func maximum_zoom_out() -> void:
 	set_zoom(MIN_ZOOM)
 
 func exploration_music() -> AudioStream:
+	var info: Dictionary = world_catalog.info(int(data.map_id))
+	if info.get("music") is String and not str(info.music).is_empty():
+		var path := "res://assets/legacy/"+str(info.music)
+		if ResourceLoader.exists(path):return load(path)
+	if str(info.get("kind",""))=="interior" and area_music!=null:return area_music
 	return wilderness_music if int(data.map_id)==100 and wilderness_music!=null else village_music
 
 func set_music(stream: AudioStream) -> void:
@@ -665,6 +687,7 @@ func text(value: String, size: int = 15) -> Label:
 	var label := Label.new()
 	label.text = value
 	label.add_theme_font_size_override("font_size",size)
+	label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	label.add_theme_color_override("font_color",Color("f8edc7"))
 	return label
 
@@ -717,6 +740,29 @@ func build_ui() -> void:
 	var max_out := button("Max out",maximum_zoom_out)
 	max_out.name = "MaxOut"
 	dev.add_child(max_out)
+	dev_destinations = MenuButton.new()
+	dev_destinations.name = "DevDestinations"
+	dev_destinations.flat = false
+	dev_destinations.text = "传送地点 ▾"
+	dev_destinations.add_theme_stylebox_override("normal",box(Color("574431"),Color("9d8354")))
+	dev_destinations.add_theme_stylebox_override("hover",box(Color("775b3c"),Color("e6c284")))
+	dev_destinations.add_theme_font_size_override("font_size",13)
+	dev_destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	var destinations := dev_destinations.get_popup()
+	destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	for id in [1000,2000,3000,4000,100,200,1100,10201,10202,10203]:
+		var info: Dictionary = world_catalog.info(id)
+		if not info.is_empty():destinations.add_item("%s (%d)" % [str(info.name),id],id)
+	destinations.add_separator()
+	destinations.add_check_item("野外随机遇敌",90000)
+	destinations.set_item_checked(destinations.get_item_index(90000),random_encounters)
+	destinations.id_pressed.connect(func(id: int):
+		if id==90000:
+			random_encounters = not random_encounters
+			destinations.set_item_checked(destinations.get_item_index(90000),random_encounters)
+		else:call_deferred("dev_visit",id))
+	destinations.about_to_popup.connect(clear_input)
+	dev.add_child(dev_destinations)
 	var teleport := button("传送模式",func(): pass)
 	teleport.name = "DevTeleportMode"
 	teleport.toggle_mode = true
@@ -789,6 +835,12 @@ func build_ui() -> void:
 	battle_view.capture_music_requested.connect(func(celebrating: bool):
 		set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
 	battle_view.pet_command_requested.connect(func(command: String): battle_session.set_pet_command(command))
+	world_travel = preload("res://scripts/world_travel.gd").new()
+	actors.add_child(world_travel)
+	var residents: Array = []
+	for entry in world_catalog.residents:
+		if int(entry.map_id)==int(data.map_id) and Vector2i(entry.cell[0],entry.cell[1])!=npc_cell:residents.append(entry)
+	world_travel.setup(self,root,residents)
 
 
 func setup_npc() -> void:
@@ -820,6 +872,7 @@ func setup_npc() -> void:
 func handle_world_click(point: Vector2) -> void:
 	if paused_input:
 		return
+	if is_instance_valid(world_travel) and world_travel.handle_click(point):return
 	if is_instance_valid(npc_sprite) and npc_sprite.get_rect().has_point(npc_sprite.to_local(point)):
 		approach_npc()
 	else:
@@ -947,7 +1000,7 @@ func build_dialogue(root: Control) -> void:
 func restore_location() -> void:
 	var location: Dictionary = session.snapshot().location
 	var point := Vector2i(int(location.x),int(location.y))
-	if int(location.map_id)==100:point -= Vector2i(592,448)
+	if int(location.map_id)==100 and not world_catalog.maps.has("100"):point -= Vector2i(592,448)
 	if not load_area_id(int(location.map_id),point):
 		load_area_id(1000,SPAWN)
 
@@ -996,6 +1049,7 @@ func update_adventure_hint() -> void:
 	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
 
 func show_adventure_menu(kind: String) -> void:
+	if is_instance_valid(world_travel) and world_travel.overlay.visible:return
 	if adventure_menu.visible and adventure_menu.kind == kind:
 		close_adventure_menu()
 		return
