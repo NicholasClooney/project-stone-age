@@ -4,6 +4,9 @@ const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
 const STEP_TIME := 0.19
+const MIN_ZOOM := 0.4
+const MAX_ZOOM := 2.0
+const ZOOM_STEP := 0.1
 const SCREEN_DIRECTIONS := [Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1),Vector2i(0,-1)]
 var data: Dictionary
 var textures: Dictionary = {}
@@ -21,6 +24,9 @@ var navigation := AStarGrid2D.new()
 var held: Array[String] = []
 var music: AudioStreamPlayer
 var effect: AudioStreamPlayer
+var ui_sounds: Dictionary = {}
+var last_ui_sound := -1
+var ui_sound_count := 0
 var muted := false
 var volume := 0.55
 var coordinates: Label
@@ -33,7 +39,6 @@ var character_index := 0
 var paused_input := false
 var load_error := ""
 var classic_hud: Control
-var overview := false
 var npc_data: Dictionary = {}
 var npc: Node2D
 var npc_sprite: Sprite2D
@@ -204,9 +209,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			handle_world_click(get_global_transform_with_canvas().affine_inverse()*event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			set_zoom(camera.zoom.x+0.1)
+			set_zoom(camera.zoom.x+ZOOM_STEP)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			set_zoom(camera.zoom.x-0.1)
+			set_zoom(camera.zoom.x-ZOOM_STEP)
 
 func walk_to(destination: Vector2i) -> void:
 	pending_talk = false
@@ -219,7 +224,6 @@ func walk_to(destination: Vector2i) -> void:
 		path.pop_front()
 		marker_cell = destination
 		message.text = "Walking to (%d, %d)" % [destination.x,destination.y]
-		play_click()
 	else:
 		message.text = "No walkable route to that spot."
 	queue_redraw()
@@ -263,8 +267,6 @@ func _physics_process(delta: float) -> void:
 			open_dialogue()
 	if player.action == 6 and player.elapsed>1.1:
 		player.set_action(3)
-	if overview:
-		camera.position = project(Vector2((float(data.width)-1)/2,(float(data.height)-1)/2))-player.position
 	coordinates.text = "萨姆吉尔村  ·  %d, %d" % [cell.x,cell.y]
 
 func _draw() -> void:
@@ -298,18 +300,10 @@ func change_character() -> void:
 	play_click()
 
 func set_zoom(value: float) -> void:
-	overview = false
-	camera.position = Vector2(0,-25)
-	camera.zoom = Vector2.ONE * clampf(value,0.65,2.0)
-	camera.reset_smoothing()
+	camera.zoom = Vector2.ONE*clampf(value,MIN_ZOOM,MAX_ZOOM)
 
 func maximum_zoom_out() -> void:
-	overview = true
-	var available := get_viewport_rect().size-Vector2(64,200)
-	var extent := Vector2((int(data.width)+int(data.height))*32+256,(int(data.width)+int(data.height))*24+256)
-	camera.zoom = Vector2.ONE*minf(available.x/extent.x,available.y/extent.y)
-	camera.position = project(Vector2((float(data.width)-1)/2,(float(data.height)-1)/2))-player.position
-	camera.reset_smoothing()
+	set_zoom(MIN_ZOOM)
 
 func setup_audio() -> void:
 	music = AudioStreamPlayer.new()
@@ -321,13 +315,22 @@ func setup_audio() -> void:
 	add_child(music)
 	music.play()
 	effect = AudioStreamPlayer.new()
-	effect.stream = load("res://assets/legacy/sas_01.wav")
+	for entry in [[201,"sas_01.wav"],[202,"sas_02.wav"],[203,"sas_03.wav"]]:
+		ui_sounds[entry[0]] = load("res://assets/legacy/"+entry[1])
+	effect.stream = ui_sounds[201]
 	effect.volume_db = -10
 	add_child(effect)
 
 func play_click() -> void:
-	if not muted:
-		effect.play()
+	play_ui_sound(201)
+
+func play_ui_sound(ident: int) -> void:
+	if muted:
+		return
+	last_ui_sound = ident
+	ui_sound_count += 1
+	effect.stream = ui_sounds[ident]
+	effect.play()
 
 func toggle_mute() -> void:
 	muted = not muted
@@ -396,8 +399,12 @@ func build_ui() -> void:
 	dev.add_theme_constant_override("separation",5)
 	root.add_child(dev)
 	dev.add_child(text("DEV",12))
-	dev.add_child(button("−",func(): set_zoom(camera.zoom.x-0.15)))
-	dev.add_child(button("+",func(): set_zoom(camera.zoom.x+0.15)))
+	var zoom_minus := button("−",func(): set_zoom(camera.zoom.x-ZOOM_STEP))
+	zoom_minus.name = "ZoomMinus"
+	dev.add_child(zoom_minus)
+	var zoom_plus := button("+",func(): set_zoom(camera.zoom.x+ZOOM_STEP))
+	zoom_plus.name = "ZoomPlus"
+	dev.add_child(zoom_plus)
 	var max_out := button("Max out",maximum_zoom_out)
 	max_out.name = "MaxOut"
 	dev.add_child(max_out)
@@ -493,7 +500,6 @@ func approach_npc() -> void:
 	path = best
 	pending_talk = true
 	message.text = "Approaching 村民 at (93, 72)…"
-	play_click()
 
 func open_dialogue() -> void:
 	if moving or not in_talk_range(cell):
@@ -505,9 +511,12 @@ func open_dialogue() -> void:
 	dialogue_name.text = npc_data.name
 	dialogue_text.text = npc_data.text
 	dialogue.show()
-	play_click()
+	play_ui_sound(202)
 
 func close_dialogue() -> void:
+	if not dialogue.visible:
+		return
+	play_ui_sound(203)
 	dialogue.hide()
 	paused_input = help.visible
 	clear_input()
@@ -518,23 +527,32 @@ func build_dialogue(root: Control) -> void:
 	dialogue.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	dialogue.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(dialogue)
-	var panel := PanelContainer.new()
-	panel.position = Vector2(320,460)
-	panel.custom_minimum_size = Vector2(640,210)
-	panel.add_theme_stylebox_override("panel",box(Color("dbc391"),Color("705035")))
+	var panel := Control.new()
+	panel.name = "OriginalDialogue"
+	panel.size = Vector2(384,192)
+	panel.scale = Vector2.ONE*classic_hud.SCALE
+	panel.position = Vector2((1280-384*classic_hud.SCALE)/2,450)
 	dialogue.add_child(panel)
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation",14)
-	panel.add_child(content)
-	dialogue_name = text("",22)
-	dialogue_name.add_theme_color_override("font_color",Color("66351f"))
-	content.add_child(dialogue_name)
-	dialogue_text = text("",22)
-	dialogue_text.add_theme_color_override("font_color",Color("342719"))
-	dialogue_text.custom_minimum_size = Vector2(600,80)
+	# WindowDisp composes a stone frame from the original 64×48 tiles.
+	for y in range(4):
+		for x in range(6):
+			var row := 0 if y==0 else (2 if y==3 else 1)
+			var column := 0 if x==0 else (2 if x==5 else 1)
+			classic_hud.picture(panel,26001+row*3+column,Vector2(x*64,y*48))
+	dialogue_name = text("",15)
+	dialogue_name.position = Vector2(18,15)
+	dialogue_name.add_theme_color_override("font_color",Color.YELLOW)
+	dialogue_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(dialogue_name)
+	dialogue_text = text("",15)
+	dialogue_text.position = Vector2(18,45)
+	dialogue_text.size = Vector2(348,90)
 	dialogue_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	content.add_child(dialogue_text)
-	var close_button := button("确定  ·  Enter / Esc",close_dialogue)
-	close_button.size_flags_horizontal = Control.SIZE_SHRINK_END
-	content.add_child(close_button)
+	dialogue_text.add_theme_color_override("font_color",Color.WHITE)
+	dialogue_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(dialogue_text)
+	var button_art: Texture2D = classic_hud.art[26091]
+	var close_button: TextureButton = classic_hud.icon(panel,26091,26091,Vector2((384-button_art.get_width())/2.0,156),"确定 · Enter / Esc")
+	close_button.name = "ConfirmDialogue"
+	close_button.pressed.connect(close_dialogue)
 	dialogue.hide()

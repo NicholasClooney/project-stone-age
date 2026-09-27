@@ -12,7 +12,7 @@ The pinned community server revision is `0c58fb6683a49a178a8ad845a8c296c2cb83bd8
 
 `tools/import_npc.py` reads local source files and emits the NPC JSON, source URLs/SHA-256 hashes, and PNG into ignored `client/assets/legacy/`. Run after the main resource importer. No networking occurs during play.
 
-These records verify this community server's placement and line; they do not certify every official historical release. The parchment dialogue panel is newly implemented, not extracted original window art. Click-to-approach, cardinal talk range, and the convenience button are local interaction choices. Only the first line is included; no dialogue randomization, quest, reward, or server protocol is implemented.
+These records verify this community server's placement and line; they do not certify every official historical release. The dialogue now uses original stone-frame tiles 26001–26009 and confirmation art 26091, replacing the earlier parchment approximation. Its layout is a local composition of the original shared window assets. Open/close use original effects 202/203. Click-to-approach, cardinal talk range, and the convenience button are local interaction choices. Only the first line is included; no dialogue randomization, quest, reward, or server protocol is implemented.
 
 ## Acceptance and regression checks
 
@@ -23,4 +23,4 @@ These records verify this community server's placement and line; they do not cer
 - Dialogue blocks movement and underlying UI clicks; closing clears held input and allows exploration.
 - Repeat conversations work without restarting; original village music continues.
 
-Run `./scripts/test.sh` for movement plus NPC checks. Input tests flush injected keys and send mouse events through the viewport so delayed input cannot cancel a later test’s route. The movement suite and 18 NPC checks pass; the dialogue has also been rendered and visually inspected. Optional visual test: `./scripts/run.sh --script res://tests/npc_smoke.gd -- --capture`; it writes `artifacts/samgir-npc.png` and exits. **Use the normal launcher for play.**
+Run `./scripts/test.sh` for movement plus NPC checks. Input tests flush injected keys and send mouse events through the viewport so delayed input cannot cancel a later test’s route. The movement suite and 20 NPC checks pass; the dialogue has also been rendered and visually inspected. Optional visual test: `./scripts/run.sh --script res://tests/npc_smoke.gd -- --capture`; it writes `artifacts/samgir-npc.png` and exits. **Use the normal launcher for play.**

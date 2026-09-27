@@ -4,6 +4,7 @@ var world: Node2D
 var art: Dictionary = {}
 var map_panel: Control
 var map_coordinates: Label
+var map_south_coordinates: Label
 var status: Label
 var hover_label := ""
 var taskbar: Control
@@ -37,7 +38,10 @@ func _ready() -> void:
 	right_panel.clip_contents = true
 	right_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(right_panel)
-	picture(right_panel,26120,Vector2(128,0))
+	# Original center anchor + ADRN offset: y = 21 - 16 = 5.
+	# Two adjacent time-strip frames fill the aperture continuously.
+	picture(right_panel,26119,Vector2(72,5))
+	picture(right_panel,26120,Vector2(136,5))
 	picture(right_panel,26260,Vector2.ZERO)
 	icon(right_panel,26111,26112,Vector2(4,4),"加入战斗")
 	icon(right_panel,26113,26114,Vector2(35,4),"决斗")
@@ -76,7 +80,7 @@ func icon(parent: Node, normal: int, pressed: int, point: Vector2, caption: Stri
 	var result := TextureButton.new()
 	result.texture_normal = art[normal]
 	result.texture_pressed = art[pressed]
-	result.texture_hover = art[pressed]
+	result.texture_hover = art[normal]
 	result.position = point
 	result.focus_mode = Control.FOCUS_NONE
 	result.tooltip_text = caption
@@ -101,7 +105,8 @@ func _process(delta: float) -> void:
 	taskbar.visible = reveal>0
 	status.visible = reveal<0.05
 	status.text = hover_label if not hover_label.is_empty() else "一般频道                     萨姆吉尔村 (1000) 坐标 (%d, %d)                     玩家模式 0" % [world.cell.x,world.cell.y]
-	map_coordinates.text = "东 %3d      南 %3d" % [world.cell.x,world.cell.y]
+	map_coordinates.text = str(world.cell.x)
+	map_south_coordinates.text = str(world.cell.y)
 	if dragging:
 		map_panel.position = (pointer_position-drag_offset).clamp(Vector2.ZERO,(size-map_panel.size*SCALE).max(Vector2.ZERO))
 
@@ -110,7 +115,8 @@ func toggle_map() -> void:
 		return
 	map_panel.visible = not map_panel.visible
 	task_buttons[0].texture_normal = art[26151 if map_panel.visible else 26150]
-	world.play_click()
+	task_buttons[0].texture_hover = task_buttons[0].texture_normal
+	world.play_ui_sound(202 if map_panel.visible else 203)
 
 func build_map() -> void:
 	map_panel = Control.new()
@@ -129,13 +135,17 @@ func build_map() -> void:
 	var map_view := preload("res://scripts/classic_map.gd").new()
 	map_view.world = world
 	map_panel.add_child(map_view)
-	map_coordinates = world.text("",13)
-	map_coordinates.position = Vector2(61,183)
-	map_coordinates.add_theme_color_override("font_color",Color.YELLOW)
-	map_coordinates.add_theme_color_override("font_outline_color",Color.BLACK)
-	map_coordinates.add_theme_constant_override("outline_size",1)
-	map_coordinates.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	map_panel.add_child(map_coordinates)
+	# The original frame has two separate 20px direction plaques and number slots.
+	for info in [["东",61],["南",134]]:
+		var direction: Label = world.text(info[0],12)
+		direction.position = Vector2(info[1],185)
+		direction.size = Vector2(18,18)
+		direction.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		direction.add_theme_color_override("font_color",Color.YELLOW)
+		direction.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		map_panel.add_child(direction)
+	map_coordinates = coordinate_number(Vector2(83,185))
+	map_south_coordinates = coordinate_number(Vector2(156,185))
 	var close := icon(map_panel,26042,26042,Vector2(84,214),"关闭地图")
 	close.name = "CloseMap"
 	close.pressed.connect(toggle_map)
@@ -154,3 +164,13 @@ func _input(event: InputEvent) -> void:
 		pointer_position = get_global_transform_with_canvas().affine_inverse()*event.position
 	if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and not event.pressed:
 		dragging = false
+
+func coordinate_number(point: Vector2) -> Label:
+	var number: Label = world.text("",12)
+	number.position = point
+	number.size = Vector2(36,18)
+	number.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	number.add_theme_color_override("font_color",Color.YELLOW)
+	number.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	map_panel.add_child(number)
+	return number

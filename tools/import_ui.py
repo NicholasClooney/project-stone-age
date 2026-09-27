@@ -1,13 +1,14 @@
 """Extract classic UI art and palette-derived automap colors from local resources."""
 import argparse
 import json
+import shutil
 from pathlib import Path
 from import_legacy import Archive
 
 # Logical graphic numbers, resolved through ADRN.attr.bmpnumber (offset 76).
 IDS = [26012,26042,26081,26236,26260,26101,26102,26103,26104,26105,26106,
        26234,26235,26237,26238,26111,26112,26113,26114,26248,26249,
-       26115,26116,26120] + list(range(26150,26164))
+       26115,26116,26119,26120,26091] + list(range(26001,26010)) + list(range(26150,26164))
 
 def run(source, output):
     archive = Archive(source)
@@ -33,6 +34,8 @@ def run(source, output):
         palette_index = min([0]+list(range(16,240)), key=lambda i: sum((archive.palette[i][c]-mean[c])**2 for c in range(3)))
         colors[str(ident)] = list(archive.palette[palette_index])
     (folder / 'manifest.json').write_text(json.dumps(dict(images=metadata, map_colors=colors), indent=2)+'\n')
+    for name in ('sas_02.wav','sas_03.wav'):
+        shutil.copyfile(Path(source)/'data/se'/name,output/name)
     print(f'Imported {len(metadata)} original UI images and {len(colors)} automap colors')
 
 if __name__ == '__main__':

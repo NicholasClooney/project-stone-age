@@ -23,7 +23,7 @@ func run() -> void:
 	hud.pointer_position=Vector2.ZERO
 	hud._process(1)
 	game.maximum_zoom_out()
-	await snapshot("classic-ui-overview")
+	await snapshot("classic-ui-zoom-out")
 	game.set_zoom(1)
 	await snapshot("classic-ui")
 	game.music.stop()
