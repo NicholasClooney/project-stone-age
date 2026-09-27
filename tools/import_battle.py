@@ -45,17 +45,17 @@ def run(source, output):
     for folder in ('images', 'ui', 'audio'):
         (output / folder).mkdir(parents=True, exist_ok=True)
     logical = {e['map_id']: e['id'] for e in archive.entries.values() if e['map_id']}
-    characters = {str(sprite): animations(archive, sprite) for sprite in (100000, 100005, 100010, 100250)}
+    characters = {str(sprite): animations(archive, sprite) for sprite in (100000, 100005, 100010, 100250, 100251, 100252)}
     used = {f['image'] for actions in characters.values() for a in actions.values() for f in a['frames']}
     images = {}
     for bitmap in sorted(used):
         archive.image(bitmap).save(output / 'images' / f'{bitmap}.png')
         images[str(bitmap)] = {k: archive.entries[bitmap][k] for k in ('x', 'y', 'w', 'h')}
     ui = {}
-    for number in range(25100, 25118):
+    for number in list(range(25100, 25118)) + list(range(25140, 25144)) + [26040, 26130, 26072, 26061, 26070]:
         bitmap = logical[number]
         archive.image(bitmap).save(output / 'ui' / f'{number}.png')
-        ui[str(number)] = dict(bitmap=bitmap, width=archive.entries[bitmap]['w'], height=archive.entries[bitmap]['h'])
+        ui[str(number)] = dict(bitmap=bitmap, width=archive.entries[bitmap]['w'], height=archive.entries[bitmap]['h'], x=archive.entries[bitmap]['x'], y=archive.entries[bitmap]['y'])
     sab = archive.data / 'battleMap/battle01.sab'
     raw = sab.read_bytes()
     if raw[:4] != b'SAB ' or len(raw) != 804:
@@ -79,9 +79,9 @@ def run(source, output):
     evidence = {
         'client_revision': '1997fc20456dbda36d181b9680ae10bed2e9cdf9',
         'server_revision': '0c58fb6683a49a178a8ad845a8c296c2cb83bd81',
-        'ui': 'systeminc/anim_tbl.h CG_BTL_BUTTON_ATTACK_UP25100, GUARD_UP25108, ESCAPE_UP25114, BASE25116; visually checked against2.5pack',
+        'ui': 'systeminc/anim_tbl.h CG_BTL_BUTTON_ATTACK_UP25100, GUARD_UP25108, ESCAPE_UP25114, BASE25116; pet command25140..25143; directdraw.cpp3962-3981 pet change26040, item26061, selection26070, skills26130; visually checked against2.5pack',
         'actions': 'systeminc/loadsprbin.h ANIM_ATTACK=0, DAMAGE=1, DEAD=2, STAND=3, WALK=4, GUARD=10',
-        'enemy': 'gmsv/data/enemybase.txt first row: 乌力 sprite100250; selected classic species, not yet asserting encounter-table placement',
+        'enemy': 'gmsv/data/enemybase.txt first3 rows: 乌力100250, 乌力乌力100251, 乌力斯坦100252; selected classic species, not asserting encounter-table placement',
         'bgm': 'system/battleproc.cpp normal battle play_bgm(5); system/t_music.cpp bgm_tbl[5]=sabgm_b0.wav',
         'background': 'data/battleMap/battle01.sab from local2.5pack; big-endian20x20 graphic IDs; system/battlemap.cpp tile spacing32,-24 and row32,24; selected terrain, not claiming exact server battle-map mapping',
         'background_sha256': hashlib.sha256(raw).hexdigest(),

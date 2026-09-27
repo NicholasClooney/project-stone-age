@@ -49,9 +49,19 @@ func run() -> void:
 	check(hud.taskbar.visible and hud.reveal>0.99,"bottom hover reveals all seven menu items")
 	var safe=game.cell
 	for i in range(1,7):
+		pointer(Vector2(650,790))
+		await ticks(20)
 		click(hud.task_buttons[i].get_global_rect().get_center())
-	await ticks(4)
-	check(game.path.is_empty() and game.cell==safe,"visual-only menu items do not trigger movement or gameplay")
+		await ticks(2)
+		if i in [1,2,3,6]:
+			check(game.adventure_menu.visible and game.paused_input,"implemented original menu tab opens a modal")
+			key(KEY_ESCAPE)
+			await ticks(2)
+		else:
+			check(not game.adventure_menu.visible,"deferred social tab stays visual-only")
+	check(game.path.is_empty() and game.cell==safe,"menu tabs never trigger world movement")
+	pointer(Vector2(650,790))
+	await ticks(20)
 	click(hud.task_buttons[0].get_global_rect().get_center())
 	await ticks(3)
 	check(hud.map_panel.visible,"original Map button opens window")

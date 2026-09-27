@@ -25,7 +25,11 @@ Battle composition uses original assets but custom placement/status/transcript f
 
 `scripts/test.sh` includes existing movement, NPC and UI suites plus authority and battle integration suites. Checks cover original portal round trips, map coordinates, automatic encounter, movement/reset isolation, mute/BGM, win/escape/defeat, and restored village NPC. Authority tests reject invalid/terminal commands and copied-state mutation. `tools/test_import_wilderness.py` uses synthetic fixtures for bounds, collision footprints, missing graphics and malformed maps. Rendered battle captures live in ignored `artifacts/`.
 
-## Next slices, in order
+## Follow-up slices (now delivered in M004)
+
+See [M004](m004-single-player-mvp.md) for current behavior; the prototype limits above describe this earlier checkpoint.
+
+### Original order
 
 1. Earn XP/currency, level up, recover and save that progress.
 2. Capture one pet, name it and display ownership/following.

@@ -4,8 +4,18 @@ cd "$(dirname "$0")/.."
 ./scripts/run.sh --headless --editor --import --quit
 log_file=$(mktemp -t stone-age-tests)
 trap 'rm -f "$log_file"' EXIT
-for suite in smoke npc_smoke ui_smoke battle_rules_test battle_smoke; do
-if ./scripts/run.sh --headless --script "res://tests/$suite.gd" >"$log_file" 2>&1; then
+for suite in smoke npc_smoke ui_smoke battle_rules_test mvp_rules_test mvp_balance_test battle_menu_test battle_smoke mvp_ui_smoke mvp_journey_test; do
+if python3 - "$suite" "$log_file" <<'RUN_SUITE'
+import subprocess, sys
+with open(sys.argv[2], "w") as output:
+    try:
+        result = subprocess.run(["./scripts/run.sh", "--headless", "--script", f"res://tests/{sys.argv[1]}.gd"], stdout=output, stderr=subprocess.STDOUT, timeout=180)
+    except subprocess.TimeoutExpired:
+        output.write("FAIL: suite exceeded 180 seconds\n")
+        sys.exit(1)
+sys.exit(result.returncode)
+RUN_SUITE
+then
   cat "$log_file"
 else
   cat "$log_file"

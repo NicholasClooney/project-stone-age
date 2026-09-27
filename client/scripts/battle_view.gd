@@ -1,6 +1,7 @@
 extends Control
 ## Presentation only: the caller submits commands to the authority and supplies snapshots.
 signal action_requested(action: String)
+signal pet_command_requested(command: String)
 signal return_requested
 signal sound_requested(ident: int)
 
@@ -17,9 +18,21 @@ var commands: Array[TextureButton] = []
 var actors: Array[Dictionary] = []
 var textures: Dictionary = {}
 var elapsed := 0.0
+const SPECIES_ART := {"wooli":"100250","wooli_wooli":"100251","wooli_stan":"100252"}
 var built := false
 var pending_action := ""
 var feedback_until := 0.0
+var selected_action := ""
+var queued_player_action := ""
+var command_phase := "player"
+var command_panel: Control
+var choice_panel: Control
+var target_buttons: Array[Button] = []
+var actor_labels: Array[Label] = []
+var hint: Label
+# Legacy entry820 minus slide sum24..0=300, plus160 for800-wide stage.
+const MENU_ANCHOR := Vector2(680,65)
+const PET_MENU_ANCHOR := Vector2(675,48)
 
 func configure(next_world: Node) -> void:
 	world = next_world
@@ -44,42 +57,52 @@ func _ready() -> void:
 			textures[str(ident)] = load(ART_ROOT+"images/%s.png" % ident)
 		add_actor(str(manifest.get("player_id","100000")),Vector2(565,350),3)
 		add_actor(str(manifest.get("enemy_id","")),Vector2(245,230),7)
-	status = label("",19,Vector2(24,18),Vector2(752,60))
-	status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	# Reuse the original dialogue tiles for this first slice's combat transcript.
-	for y in range(3):
-		for x in range(8):
-			var row := 0 if y==0 else (2 if y==2 else 1)
-			var column := 0 if x==0 else (2 if x==7 else 1)
-			var tile := TextureRect.new()
-			tile.texture = load("res://assets/legacy/ui/%d.png" % (26001+row*3+column))
-			tile.position = Vector2(16+x*64,438+y*48)
-			tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
-			stage.add_child(tile)
-	report = label("",15,Vector2(34,451),Vector2(472,115))
+	status = label("",16,Vector2(20,12),Vector2(420,26))
+	report = label("",16,Vector2(20,508),Vector2(760,65))
 	report.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	var choices := [["attack",25100,25101,"攻击"],["defend",25108,25109,"防御"],["escape",25114,25115,"逃跑"]]
-	for i in range(choices.size()):
-		var choice: Array = choices[i]
+	hint = label("",16,Vector2(20,578),Vector2(760,22))
+	command_panel = Control.new()
+	command_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	stage.add_child(command_panel)
+	# StockDispBuffer uses a common anchor plus each bitmap's stored offset.
+	# battlemenu.cpp:3757-3765, anim_tbl.h:25000-series classic menu.
+	ui_picture(25116,MENU_ANCHOR,command_panel)
+	var choices := [["attack",25100,"攻击"],["magic",25102,"咒术（尚未习得）"],["capture",25104,"捕捉"],["help",25106,"求救（单人模式）"],["defend",25108,"防御"],["item",25110,"道具"],["pet",25112,"宠物"],["escape",25114,"逃跑"]]
+	for choice in choices:
 		var button := TextureButton.new()
 		button.name = str(choice[0]).capitalize()
-		var art_path := ART_ROOT+"ui/%d.png" % int(choice[1])
-		if ResourceLoader.exists(art_path):
-			button.texture_normal = load(art_path)
-			button.texture_hover = button.texture_normal
-			button.texture_pressed = load(ART_ROOT+"ui/%d.png" % int(choice[2]))
-		button.position = Vector2(556+i*74,446)
+		button.set_meta("action",choice[0])
+		button.texture_normal = load(ART_ROOT+"ui/%d.png" % int(choice[1]))
+		button.texture_hover = button.texture_normal
+		button.texture_pressed = load(ART_ROOT+"ui/%d.png" % (int(choice[1])+1))
+		button.position = MENU_ANCHOR+ui_offset(int(choice[1]))
 		button.focus_mode = Control.FOCUS_NONE
-		button.tooltip_text = str(choice[3])
+		button.tooltip_text = str(choice[2])
 		button.pressed.connect(_request_action.bind(str(choice[0])))
-		stage.add_child(button)
+		command_panel.add_child(button)
 		commands.append(button)
-		label(str(choice[3]),17,Vector2(558+i*74,500),Vector2(72,32))
+	choice_panel = Control.new()
+	choice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	choice_panel.z_index = 10
+	stage.add_child(choice_panel)
+	for i in range(3):
+		var target := Button.new()
+		target.name = ["PlayerTarget","EnemyTarget","PetTarget"][i]
+		target.flat = true
+		target.position = [Vector2(525,240),Vector2(205,120),Vector2(425,295)][i]
+		target.size = Vector2(80,125)
+		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
+		target.focus_mode = Control.FOCUS_NONE
+		target.pressed.connect(select_target.bind(i))
+		stage.add_child(target)
+		target_buttons.append(target)
+		actor_labels.append(label("",14,target.position+Vector2(-30,125),Vector2(200,45)))
 	return_button = Button.new()
 	return_button.name = "ReturnFromBattle"
-	return_button.text = "返回村庄"
-	return_button.position = Vector2(553,541)
-	return_button.size = Vector2(215,36)
+	return_button.text = "继续探索"
+	return_button.flat = true
+	return_button.position = Vector2(325,460)
+	return_button.size = Vector2(150,32)
 	return_button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	return_button.pressed.connect(func(): return_requested.emit())
 	stage.add_child(return_button)
@@ -144,11 +167,25 @@ func open_battle(next_state: Dictionary) -> void:
 		if manifest.characters.has(ident):
 			actors[0].animations = manifest.characters[ident]
 			actors[0].animation = manifest.characters[ident]["3_%d" % int(actors[0].facing)]
+	var enemy_art := str(next_state.get("enemy_sprite",SPECIES_ART.get(str(next_state.get("enemy_species","wooli")),"100250")))
+	set_actor_art(1,enemy_art)
+	if actors.size() > 2:
+		actors[2].sprite.queue_free()
+		actors.resize(2)
+	var pet: Dictionary = next_state.get("pet",{})
+	if not pet.is_empty():
+		add_actor(str(pet.get("sprite",SPECIES_ART.get(str(pet.get("species","wooli")),"100250"))),Vector2(465,420),3)
 	for actor in actors:
 		actor.temporary = ""
 		actor.cues = []
 	show_state(next_state)
 	show()
+
+func set_actor_art(index: int, ident: String) -> void:
+	if index >= actors.size() or not manifest.get("characters",{}).has(ident): return
+	actors[index].animations = manifest.characters[ident]
+	var key := "3_%d" % int(actors[index].facing)
+	if manifest.characters[ident].has(key): actors[index].animation = manifest.characters[ident][key]
 
 func close_battle() -> void:
 	hide()
@@ -156,42 +193,214 @@ func close_battle() -> void:
 func show_state(next_state: Dictionary) -> void:
 	var previous := state
 	state = next_state.duplicate(true)
-	if actors.size() == 2 and not previous.is_empty():
-		feedback_until = elapsed+1.2
-		for actor in actors:
-			actor.cues = []
-		animate_actor(0,0 if pending_action=="attack" else 10,0.55)
-		if int(state.get("enemy_hp",0)) < int(previous.get("enemy_hp",0)):
-			animate_actor(1,1,0.55)
-		if int(state.get("enemy_hp",0)) <= 0:
-			actors[1].cues.append({"at":elapsed+0.55,"action":2,"seconds":60.0})
-		elif int(state.get("player_hp",0)) < int(previous.get("player_hp",0)):
-			actors[1].cues.append({"at":elapsed+0.55,"action":0,"seconds":0.6})
-			actors[0].cues.append({"at":elapsed+0.55,"action":2 if int(state.get("player_hp",0))<=0 else 1,"seconds":60.0 if int(state.get("player_hp",0))<=0 else 0.6})
+	if actors.size() >= 2 and not previous.is_empty() and int(state.get("turn",0)) != int(previous.get("turn",0)):
+		queue_turn_animation(previous)
 	pending_action = ""
 	if not built:
 		return
-	status.text = "你  HP %d / %d       第 %d 回合       %s  HP %d / %d" % [int(state.get("player_hp",0)),int(state.get("player_max_hp",0)),int(state.get("turn",1)),str(manifest.get("enemy_name","野生石器宠物")),int(state.get("enemy_hp",0)),int(state.get("enemy_max_hp",0))]
+	selected_action = ""
+	queued_player_action = ""
+	command_phase = "player"
+	clear_choices()
+	status.text = "第 %d 回合" % (int(state.get("turn",0))+1)
+	actor_labels[0].text = "你  HP %d / %d" % [int(state.get("player_hp",0)),int(state.get("player_max_hp",0))]
+	actor_labels[1].text = "%s  HP %d / %d" % [str(state.get("enemy_name",manifest.get("enemy_name","乌力"))),int(state.get("enemy_hp",0)),int(state.get("enemy_max_hp",0))]
+	var pet: Dictionary = state.get("pet",{})
+	actor_labels[2].text = "" if pet.is_empty() else "%s  HP %d / %d" % [str(pet.get("name","宠物")),int(state.get("pet_hp",pet.get("hp",0))),int(state.get("pet_max_hp",pet.get("max_hp",0)))]
 	var messages := PackedStringArray()
-	for event in state.get("events",[]):
-		messages.append(str(event))
+	for event in state.get("events",[]): messages.append(str(event))
 	var outcome := str(state.get("outcome",""))
-	var ending := {"win":"战斗胜利！","defeat":"战斗结束，返回村庄恢复体力。","escaped":"成功逃离战斗。"}
-	if ending.has(outcome) and not messages.has(str(ending[outcome])):
-		messages.append(ending[outcome])
-	if messages.is_empty():
-		messages.append("野生宠物出现了！请选择攻击、防御或逃跑。")
-	report.text = "\n".join(messages)
-	for button in commands:
-		button.disabled = not bool(state.get("active",false))
+	var ending := {"win":"战斗胜利！","defeat":"战斗结束，返回村庄恢复体力。","escaped":"成功逃离战斗。","captured":"捕捉成功！"}
+	if ending.has(outcome): messages.append(ending[outcome])
+	report.text = "\n".join(messages.slice(maxi(0,messages.size()-3)))
+	hint.text = "请选择指令；攻击或捕捉后点击目标。右键 / Esc 取消。" if outcome.is_empty() else "按 Enter 继续"
+	command_panel.visible = outcome.is_empty()
 	return_button.visible = not outcome.is_empty()
 	return_button.text = "返回村庄" if outcome=="defeat" else "继续探索"
 
+func queue_pose(index: int, action: int, at: float, seconds: float) -> void:
+	if index >= actors.size(): return
+	actors[index].cues.append({"at":at,"action":action,"seconds":seconds})
+
+func queue_turn_animation(previous: Dictionary) -> void:
+	for actor in actors: actor.cues = []
+	var fallback: Array = ["player"]
+	if actors.size()>2: fallback.append("pet")
+	if int(state.get("enemy_hp",0))>0: fallback.append("enemy")
+	var order: Array = state.get("turn_order",fallback)
+	feedback_until = elapsed+order.size()*0.5
+	var pet_command := str(state.get("last_pet_command",state.get("pet_command","attack")))
+	for step in range(order.size()):
+		var who := str(order[step])
+		var at := elapsed+step*0.5
+		if who=="player":
+			queue_pose(0,0 if pending_action in ["attack","capture"] else 10,at,0.5)
+		elif who=="pet":
+			queue_pose(2,10 if pet_command=="defend" else 0,at,0.5)
+		elif who=="enemy":
+			queue_pose(1,0,at,0.5)
+			for target in [[0,"player_hp"],[2,"pet_hp"]]:
+				var hp_key: String = target[1]
+				if int(state.get(hp_key,0)) < int(previous.get(hp_key,0)):
+					var defeated := int(state.get(hp_key,0))<=0
+					queue_pose(int(target[0]),2 if defeated else 1,at+0.25,60.0 if defeated else 0.25)
+		if (who=="player" and pending_action=="attack") or (who=="pet" and pet_command!="defend"):
+			if int(state.get("enemy_hp",0)) < int(previous.get("enemy_hp",0)):
+				var defeated := int(state.get("enemy_hp",0))<=0 and step==order.size()-1
+				queue_pose(1,2 if defeated else 1,at+0.25,60.0 if defeated else 0.25)
+	for actor in actors:
+		actor.cues.sort_custom(func(a: Dictionary,b: Dictionary): return float(a.at)<float(b.at))
+
+func ui_offset(ident: int) -> Vector2:
+	var info: Dictionary = manifest.get("ui",{}).get(str(ident),{})
+	return Vector2(float(info.get("x",0)),float(info.get("y",0)))
+
+func ui_picture(ident: int, anchor: Vector2, parent: Control) -> void:
+	var path := ART_ROOT+"ui/%d.png" % ident
+	if not ResourceLoader.exists(path): return
+	var image := TextureRect.new()
+	image.texture = load(path)
+	image.position = anchor+ui_offset(ident)
+	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	parent.add_child(image)
+
+func clear_choices() -> void:
+	for child in choice_panel.get_children():
+		choice_panel.remove_child(child)
+		child.queue_free()
+
+func choice(text: String, position_at: Vector2, callback: Callable) -> Button:
+	var button := Button.new()
+	button.text = text
+	button.flat = true
+	button.position = position_at
+	button.size = Vector2(220,30)
+	button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	button.add_theme_color_override("font_color",Color.WHITE)
+	button.add_theme_color_override("font_outline_color",Color.BLACK)
+	button.add_theme_constant_override("outline_size",3)
+	button.add_theme_font_size_override("font_size",16)
+	button.pressed.connect(callback)
+	choice_panel.add_child(button)
+	return button
+
 func _request_action(action: String) -> void:
-	if not bool(state.get("active",false)) or elapsed < feedback_until:
-		return
-	pending_action = action
+	if not bool(state.get("active",false)) or elapsed < feedback_until: return
+	if action in ["magic","help"]: return
+	if action=="capture" and (bool(state.get("boss",false)) or not bool(state.get("can_capture",true))): return
+	sound_requested.emit(217)
+	clear_choices()
+	selected_action = action
+	if action == "item":
+		ui_picture(26061,Vector2(650,235),choice_panel)
+		ui_picture(26072,Vector2(650,222),choice_panel)
+		if ResourceLoader.exists("res://assets/legacy/mvp/images/potion.png"):
+			var icon := TextureRect.new()
+			icon.texture = load("res://assets/legacy/mvp/images/potion.png")
+			icon.position = Vector2(530,196)
+			icon.mouse_filter = Control.MOUSE_FILTER_IGNORE
+			choice_panel.add_child(icon)
+		var item_button := choice("",Vector2(522,188),func():
+			if int(state.get("potions",0)) > 0 and int(state.get("player_hp",0)) < int(state.get("player_max_hp",0)):
+				clear_choices()
+				selected_action = "item_target"
+				hint.text = "请选择自己使用回复药。")
+		item_button.size = Vector2(52,48)
+		item_button.disabled = int(state.get("potions",0))<=0 or int(state.get("player_hp",0))>=int(state.get("player_max_hp",0))
+		item_button.tooltip_text = "回复药 × %d" % int(state.get("potions",0))
+		if item_button.disabled:
+			item_button.tooltip_text += "（已用完）" if int(state.get("potions",0))<=0 else "（体力已满）"
+		var description := Label.new()
+		description.text = item_button.tooltip_text+"\n点击药瓶，再选择自己。"
+		description.position = Vector2(540,365)
+		description.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+		description.add_theme_color_override("font_outline_color",Color.BLACK)
+		description.add_theme_constant_override("outline_size",2)
+		choice_panel.add_child(description)
+		hint.text = "选择道具；右键 / Esc 取消。"
+	elif action == "pet":
+		ui_picture(26040,Vector2(650,280),choice_panel)
+		var pet: Dictionary = state.get("pet",{})
+		choice("无出战宠物" if pet.is_empty() else str(pet.get("name","宠物"))+"（出战中）",Vector2(545,165),cancel_selection)
+		hint.text = "出战宠物；战斗外可更换。"
+	elif action in ["attack","capture"]:
+		hint.text = "请选择敌人；右键 / Esc 取消。"
+	else:
+		complete_player_command(action)
+
+func select_target(index: int) -> void:
+	if elapsed < feedback_until or not bool(state.get("active",false)): return
+	if command_phase == "pet" and index == 1 and selected_action in ["pet_attack","pet_skill"]:
+		finish_pet_command(selected_action.trim_prefix("pet_"))
+	elif index == 1 and selected_action in ["attack","capture"]:
+		complete_player_command(selected_action)
+	elif index == 0 and selected_action == "item_target":
+		complete_player_command("item")
+
+func complete_player_command(action: String) -> void:
+	queued_player_action = action
+	selected_action = ""
+	var pet: Dictionary = state.get("pet",{})
+	if not pet.is_empty() and int(state.get("pet_hp",pet.get("hp",0))) > 0 and action != "escape":
+		command_phase = "pet"
+		command_panel.hide()
+		show_pet_choices()
+	else:
+		submit_command()
+
+func show_pet_choices() -> void:
+	clear_choices()
+	ui_picture(25140,PET_MENU_ANCHOR,choice_panel)
+	ui_picture(25141,PET_MENU_ANCHOR,choice_panel)
+	var pet_title := label(str(state.get("pet_name",state.get("pet",{}).get("name","宠物"))),16,PET_MENU_ANCHOR+Vector2(-96,-14),Vector2(192,28))
+	pet_title.reparent(choice_panel)
+	ui_picture(26130,Vector2(650,300),choice_panel)
+	var actions := [["攻击","attack"],["技能","skill"],["防御","defend"]]
+	for i in range(actions.size()):
+		var action: String = actions[i][1]
+		var button := choice(str(actions[i][0]),Vector2(540,170+i*38),func():
+			sound_requested.emit(217)
+			if action == "defend": finish_pet_command(action)
+			else:
+				clear_choices()
+				selected_action = "pet_"+action
+				hint.text = "宠物：请选择敌人；右键 / Esc 重新选择。")
+		if action=="skill" and (not bool(state.get("skill_unlocked",false)) or bool(state.get("skill_used",false))):
+			button.disabled = true
+			button.text = "技能（本场已使用）" if bool(state.get("skill_used",false)) else "技能（宠物 2 级解锁）"
+	hint.text = "请选择宠物指令；右键 / Esc 返回人物指令。"
+
+func finish_pet_command(command: String) -> void:
+	pet_command_requested.emit(command)
+	submit_command()
+
+func submit_command() -> void:
+	pending_action = queued_player_action
+	var action := queued_player_action
+	queued_player_action = ""
+	selected_action = ""
+	clear_choices()
 	action_requested.emit(action)
+
+func cancel_selection() -> void:
+	if not bool(state.get("active",false)): return
+	sound_requested.emit(217)
+	if command_phase == "pet" and selected_action.begins_with("pet_"):
+		selected_action = ""
+		show_pet_choices()
+		return
+	command_phase = "player"
+	queued_player_action = ""
+	selected_action = ""
+	clear_choices()
+	command_panel.show()
+	hint.text = "请选择指令；攻击或捕捉后点击目标。"
+
+func _input(event: InputEvent) -> void:
+	if not visible: return
+	if event.is_action_pressed("ui_cancel") or (event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT):
+		cancel_selection()
+		get_viewport().set_input_as_handled()
 
 func animate_actor(index: int, action: int, seconds: float = 0.65) -> void:
 	var actor: Dictionary = actors[index]
@@ -207,7 +416,13 @@ func _process(delta: float) -> void:
 		return
 	elapsed += delta
 	for button in commands:
-		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until
+		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or str(button.get_meta("action","")) in ["magic","help"]
+		if str(button.get_meta("action",""))=="capture":
+			var unavailable := bool(state.get("boss",false)) or not bool(state.get("can_capture",true))
+			button.disabled = button.disabled or unavailable
+			button.tooltip_text = "此战对手无法捕捉" if bool(state.get("boss",false)) else ("宠物栏已满" if not bool(state.get("can_capture",true)) else "捕捉")
+		button.texture_normal = load(ART_ROOT+"ui/%d.png" % (25100+commands.find(button)*2+(1 if selected_action==str(button.get_meta("action","")) else 0)))
+		button.texture_hover = button.texture_normal
 	for actor_index in range(actors.size()):
 		var actor: Dictionary = actors[actor_index]
 		var cues: Array = actor.cues

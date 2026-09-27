@@ -1,6 +1,9 @@
 extends Node2D
 
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
+const GameSession = preload("res://server/game_session.gd")
+const AdventureMenu = preload("res://scripts/adventure_menu.gd")
+const PetFollower = preload("res://scripts/pet_follower.gd")
 const BattleSession = preload("res://server/battle_session.gd")
 const BattleView = preload("res://scripts/battle_view.gd")
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
@@ -16,7 +19,21 @@ var battle_view: Control
 var battle_session = BattleSession.new()
 var field_steps := 0
 var battle_sounds: Dictionary = {}
+var wilderness_music: AudioStream
 var village_music: AudioStream
+var session = GameSession.new()
+var adventure_menu: Control
+var profile_persistence := true
+var save_path := "user://single-player.json"
+var pet_follower: Node2D
+var pet_trail: Array[Vector2i] = []
+var adventure_hint: Label
+var encounter_serial := 0
+var save_elapsed := 0.0
+var mvp_manifest: Dictionary = {}
+var last_adventure_message := ""
+var last_saved_payload := ""
+var boss_button: Button
 var data: Dictionary
 var textures: Dictionary = {}
 var player: Node2D
@@ -60,6 +77,11 @@ var dialogue_text: Label
 func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
+	if "--script" in OS.get_cmdline_args():profile_persistence = false
+	if FileAccess.file_exists("res://assets/legacy/mvp/manifest.json"):
+		mvp_manifest = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json"))
+	if profile_persistence and (FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak")):
+		load_profile()
 	if not FileAccess.file_exists("res://assets/legacy/samgir.json") or not FileAccess.file_exists("res://assets/legacy/ui/manifest.json"):
 		load_error = "Original client assets have not been imported.\nSee README.md → Import original resources."
 		var error_label := Label.new()
@@ -71,6 +93,9 @@ func _ready() -> void:
 	build_world()
 	setup_audio()
 	build_ui()
+	if profile_persistence:
+		restore_location()
+	refresh_companion()
 	get_window().focus_exited.connect(clear_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -127,11 +152,18 @@ func build_world() -> void:
 	for y in range(int(data.height)):
 		for x in range(int(data.width)):
 			navigation.set_point_solid(Vector2i(x,y),not is_walkable(Vector2i(x,y)))
-	if int(data.map_id)==1000:
+	if int(data.map_id) in [1000,1002]:
 		setup_npc()
+	pet_trail.assign([cell,cell])
+	pet_follower = null
 
 func switch_area(wilderness: bool, destination: Vector2i) -> bool:
-	var file := "res://assets/legacy/wilderness.json" if wilderness else "res://assets/legacy/samgir.json"
+	return load_area_id(100 if wilderness else 1000,destination)
+
+func load_area_id(map_id: int, destination: Vector2i) -> bool:
+	var filenames := {100:"wilderness.json",1000:"samgir.json",1002:"shop.json"}
+	if not filenames.has(map_id):return false
+	var file := "res://assets/legacy/"+str(filenames[map_id])
 	if not FileAccess.file_exists(file):
 		message.text = "Import the wilderness assets first; see README.md."
 		return false
@@ -165,27 +197,38 @@ func switch_area(wilderness: bool, destination: Vector2i) -> bool:
 	camera.zoom = previous_zoom
 	build_ui()
 	camera.reset_smoothing()
+	set_music(exploration_music())
 	queue_redraw()
+	refresh_companion()
+	checkpoint()
 	return true
 
 func walk_to_exit() -> void:
 	if paused_input:
 		return
-	walk_to(Vector2i(49,118) if int(data.map_id)==1000 else Vector2i(46,45))
+	var exits := {1000:Vector2i(49,118),100:Vector2i(46,45),1002:Vector2i(10,15)}
+	walk_to(exits[int(data.map_id)])
 
 func handle_arrival() -> bool:
+	pet_trail.append(cell)
+	while pet_trail.size()>3:pet_trail.pop_front()
 	if int(data.map_id)==1000:
+		if cell.x==67 and cell.y in [108,109]:
+			return load_area_id(1002,Vector2i(11,cell.y-93))
 		if cell.x==49 and cell.y>=116 and cell.y<=119:
 			return switch_area(true,Vector2i(45,cell.y-73))
-	else:
+	elif int(data.map_id)==1002:
+		if cell.x==10 and cell.y in [15,16]:
+			return load_area_id(1000,Vector2i(67,cell.y+93))
+	elif int(data.map_id)==100:
 		if cell.x==46 and cell.y>=43 and cell.y<=46:
 			return switch_area(false,Vector2i(50,cell.y+73))
 		field_steps += 1
 		if field_steps>=8:
-			return begin_battle()
+			return begin_battle(session.can_fight_boss())
 	return false
 
-func begin_battle() -> bool:
+func begin_battle(boss: bool = false) -> bool:
 	if moving or paused_input or int(data.map_id)!=100 or battle_view==null:
 		return false
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
@@ -196,7 +239,14 @@ func begin_battle() -> bool:
 	player.set_action(3)
 	help.hide()
 	classic_hud.map_panel.hide()
-	var state: Dictionary = battle_session.start_battle()
+	var species := ["wooli","wooli_wooli","woolistan"]
+	var config: Dictionary = session.start_battle_config("woolistan" if boss else species[encounter_serial%3],boss)
+	if config.is_empty():
+		paused_input = false
+		return false
+	encounter_serial += 1
+	battle_session.rng_seed = 42+encounter_serial
+	var state: Dictionary = battle_session.start_battle(config)
 	battle_view.open_battle(state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
@@ -206,7 +256,23 @@ func begin_battle() -> bool:
 func battle_action(action: String) -> void:
 	if not battle_view.visible:
 		return
+	var before: Dictionary = session.snapshot()
 	var state: Dictionary = battle_session.submit_action(action)
+	if not bool(state.active) and session.apply_battle_result(state):
+		if state.outcome=="win":
+			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
+			var after: Dictionary = session.snapshot()
+			if int(after.player.level)>int(before.player.level):
+				state.events.append("升级！你达到了 %d 级，体力恢复。" % int(after.player.level))
+			if int(after.active_pet)>=0:
+				var index: int = after.active_pet
+				if int(after.pets[index].level)>int(before.pets[index].level):
+					state.events.append("%s 成长到 %d 级！" % [after.pets[index].name,after.pets[index].level])
+					if not before.pets[index].skill_unlocked and after.pets[index].skill_unlocked:
+						state.events.append("伙伴学会了强力攻击！")
+		elif state.outcome=="captured":
+			state.events.append("伙伴已加入宠物栏，可为它取名并选择出战。")
+		checkpoint()
 	battle_view.show_state(state)
 	play_ui_sound(217 if ui_sounds.has(217) else 201)
 
@@ -218,10 +284,12 @@ func return_from_battle() -> void:
 	clear_input()
 	paused_input = false
 	field_steps = 0
-	set_music(village_music)
+	if outcome!="defeat":set_music(exploration_music())
 	play_ui_sound(203)
 	if outcome=="defeat":
 		switch_area(false,SPAWN)
+	refresh_companion()
+	checkpoint()
 
 func capture_frame() -> void:
 	await get_tree().create_timer(1.0).timeout
@@ -231,6 +299,7 @@ func capture_frame() -> void:
 	get_viewport().get_texture().get_image().save_png(folder.path_join("samgir-original.png"))
 
 func close_game() -> void:
+	checkpoint()
 	clear_input()
 	paused_input = true
 	music.stop()
@@ -300,6 +369,10 @@ func _unhandled_input(event: InputEvent) -> void:
 			toggle_mute()
 		elif event.is_action_pressed("ui_accept") and not battle_session.snapshot().active:
 			return_from_battle()
+		get_viewport().set_input_as_handled()
+		return
+	if is_instance_valid(adventure_menu) and adventure_menu.visible:
+		if event.is_action_pressed("ui_cancel"):close_adventure_menu()
 		get_viewport().set_input_as_handled()
 		return
 	if dialogue.visible:
@@ -392,6 +465,10 @@ func _physics_process(delta: float) -> void:
 			open_dialogue()
 	if player.action == 6 and player.elapsed>1.1:
 		player.set_action(3)
+	save_elapsed += delta
+	if profile_persistence and save_elapsed>=5.0 and not moving and not battle_session.snapshot().active:
+		checkpoint()
+	update_adventure_hint()
 	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
 
 func _draw() -> void:
@@ -435,7 +512,11 @@ func set_zoom(value: float) -> void:
 func maximum_zoom_out() -> void:
 	set_zoom(MIN_ZOOM)
 
+func exploration_music() -> AudioStream:
+	return wilderness_music if int(data.map_id)==100 and wilderness_music!=null else village_music
+
 func set_music(stream: AudioStream) -> void:
+	if music.stream==stream and music.playing:return
 	music.stop()
 	music.stream = stream
 	if stream is AudioStreamWAV:
@@ -451,6 +532,8 @@ func setup_audio() -> void:
 	music.stream.loop_end = int(music.stream.get_length()*music.stream.mix_rate)
 	music.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	village_music = music.stream
+	if mvp_manifest.get("audio",{}).has("wilderness"):
+		wilderness_music = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.wilderness))
 	music.volume_db = linear_to_db(volume)
 	add_child(music)
 	music.play()
@@ -546,6 +629,7 @@ func build_ui() -> void:
 	classic_hud = preload("res://scripts/classic_hud.gd").new()
 	classic_hud.world = self
 	root.add_child(classic_hud)
+	boss_button = null
 	var dev := HBoxContainer.new()
 	dev.position = Vector2(12,85)
 	dev.add_theme_constant_override("separation",5)
@@ -565,6 +649,14 @@ func build_ui() -> void:
 	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",walk_to_exit)
 	exit_button.name = "ExploreOutside"
 	dev.add_child(exit_button)
+	if int(data.map_id)==1000:
+		dev.add_child(button("道具店",func():
+			if not paused_input:walk_to(Vector2i(67,108))))
+	if int(data.map_id)==100:
+		boss_button = button("挑战强敌",func():
+			if session.can_fight_boss():begin_battle(true))
+		boss_button.tooltip_text = "接受委托、战胜三个对手并捕获伙伴后开放"
+		dev.add_child(boss_button)
 	mute_button = button("Music: on  [M]",toggle_mute)
 	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
 	dev.add_child(mute_button)
@@ -596,25 +688,39 @@ func build_ui() -> void:
 	content.add_child(button("Back to the village",func(): help.hide(); paused_input = false; clear_input()))
 	help.hide()
 	build_dialogue(root)
+	adventure_menu = AdventureMenu.new()
+	adventure_menu.configure(self)
+	root.add_child(adventure_menu)
+	adventure_hint = text("",14)
+	adventure_hint.position = Vector2(18,132)
+	adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
+	adventure_hint.add_theme_constant_override("shadow_offset_x",1)
+	adventure_hint.add_theme_constant_override("shadow_offset_y",1)
+	adventure_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(adventure_hint)
 	battle_view = BattleView.new()
 	root.add_child(battle_view)
 	battle_view.configure(self)
 	battle_view.action_requested.connect(battle_action)
 	battle_view.return_requested.connect(return_from_battle)
 	battle_view.sound_requested.connect(play_battle_sound)
+	battle_view.pet_command_requested.connect(func(command: String): battle_session.set_pet_command(command))
 
 
 func setup_npc() -> void:
-	if not FileAccess.file_exists("res://assets/legacy/samgir-npc.json"):
+	if int(data.map_id)==1002 and not mvp_manifest.is_empty():
+		npc_data = mvp_manifest.merchant.duplicate(true)
+	elif not FileAccess.file_exists("res://assets/legacy/samgir-npc.json"):
 		return
-	npc_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir-npc.json"))
+	else:
+		npc_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir-npc.json"))
 	npc_cell = Vector2i(npc_data.cell[0],npc_data.cell[1])
 	navigation.set_point_solid(npc_cell,true)
 	npc = Node2D.new()
 	npc.position = project(Vector2(npc_cell))
 	actors.add_child(npc)
 	npc_sprite = Sprite2D.new()
-	npc_sprite.texture = load("res://assets/legacy/samgir-villager.png")
+	npc_sprite.texture = load("res://assets/legacy/mvp/"+str(npc_data.path)) if int(data.map_id)==1002 else load("res://assets/legacy/samgir-villager.png")
 	npc_sprite.centered = false
 	npc_sprite.position = Vector2(npc_data.offset[0],npc_data.offset[1])
 	npc.add_child(npc_sprite)
@@ -638,7 +744,7 @@ func handle_world_click(point: Vector2) -> void:
 func in_talk_range(point: Vector2i) -> bool:
 	var delta := (point-npc_cell).abs()
 	# Cardinal neighbours avoid talking diagonally through blocked corners.
-	return delta.x+delta.y == 1
+	return (point==Vector2i(16,15)) if int(data.map_id)==1002 else delta.x+delta.y == 1
 
 func approach_npc() -> void:
 	if paused_input:
@@ -649,7 +755,8 @@ func approach_npc() -> void:
 	clear_input()
 	var start := target_cell if moving else cell
 	var best: Array[Vector2i] = []
-	for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+	var approaches := [Vector2i(-2,0)] if int(data.map_id)==1002 else [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]
+	for offset in approaches:
 		var destination: Vector2i = npc_cell+offset
 		if not is_walkable(destination):
 			continue
@@ -662,10 +769,13 @@ func approach_npc() -> void:
 	best.pop_front()
 	path = best
 	pending_talk = true
-	message.text = "Approaching 村民 at (93, 72)…"
+	message.text = "正在走向 %s…" % str(npc_data.name)
 
 func open_dialogue() -> void:
 	if moving or not in_talk_range(cell):
+		return
+	if int(data.map_id)==1002:
+		show_adventure_menu("shop")
 		return
 	clear_input()
 	paused_input = true
@@ -718,4 +828,123 @@ func build_dialogue(root: Control) -> void:
 	var close_button: TextureButton = classic_hud.icon(panel,26091,26091,Vector2((384-button_art.get_width())/2.0,156),"确定 · Enter / Esc")
 	close_button.name = "ConfirmDialogue"
 	close_button.pressed.connect(close_dialogue)
+	var quest_choice := Button.new()
+	quest_choice.text = "村外的伙伴 / 休息"
+	quest_choice.position = Vector2(105,112)
+	quest_choice.size = Vector2(190,30)
+	quest_choice.add_theme_stylebox_override("normal",StyleBoxEmpty.new())
+	quest_choice.add_theme_stylebox_override("hover",StyleBoxEmpty.new())
+	quest_choice.pressed.connect(func(): close_dialogue(); show_adventure_menu("quest"))
+	panel.add_child(quest_choice)
 	dialogue.hide()
+
+
+func restore_location() -> void:
+	var location: Dictionary = session.snapshot().location
+	var point := Vector2i(int(location.x),int(location.y))
+	if int(location.map_id)==100:point -= Vector2i(592,448)
+	if not load_area_id(int(location.map_id),point):
+		load_area_id(1000,SPAWN)
+
+func checkpoint() -> bool:
+	if battle_session.snapshot().active:return false
+	var point := display_cell()
+	if is_instance_valid(battle_view) and battle_view.visible and battle_session.snapshot().outcome=="defeat":
+		session.set_location(1000,SPAWN.x,SPAWN.y)
+	else:
+		session.set_location(int(data.map_id),point.x,point.y)
+	save_elapsed = 0
+	if not profile_persistence:return true
+	var payload := JSON.stringify(session.snapshot())
+	if payload==last_saved_payload:return true
+	var success: bool = session.save_game(save_path)
+	if success:last_saved_payload = payload
+	if not success:last_adventure_message = "保存失败，请检查存储空间。"
+	return success
+
+func refresh_companion() -> void:
+	if is_instance_valid(pet_follower):
+		pet_follower.queue_free()
+	pet_follower = null
+	var profile: Dictionary = session.snapshot()
+	if int(profile.active_pet)<0 or not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):return
+	var pet: Dictionary = profile.pets[int(profile.active_pet)]
+	if int(pet.hp)<=0:return
+	pet_follower = PetFollower.new()
+	pet_follower.world = self
+	pet_follower.position = player.position
+	actors.add_child(pet_follower)
+	pet_follower.select_pet(str(int(pet.sprite)),str(pet.name))
+
+func update_adventure_hint() -> void:
+	if not is_instance_valid(adventure_hint):return
+	adventure_hint.visible = not battle_view.visible and not adventure_menu.visible and not dialogue.visible
+	var profile: Dictionary = session.snapshot()
+	var q: Dictionary = profile.quest
+	if is_instance_valid(boss_button):boss_button.disabled = not session.can_fight_boss()
+	var objective := "找村民聊聊，准备你的第一次冒险。"
+	if q.claimed:objective = "委托完成！继续培养与收集你的伙伴。"
+	elif session.can_fight_boss():objective = "强壮的乌力斯坦出现了：准备好后在村外继续探索。"
+	elif q.boss_defeated:objective = "回到村民身边领取报酬。"
+	elif q.accepted:objective = "村外的伙伴：胜利 %d/3 · 捕获伙伴 %d/1" % [mini(3,int(q.wins)),mini(1,profile.pets.size())]
+	adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d   %s" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold,objective]
+	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
+
+func show_adventure_menu(kind: String) -> void:
+	if moving or battle_view.visible or dialogue.visible or help.visible:return
+	if kind=="shop" and (int(data.map_id)!=1002 or not in_talk_range(cell)):return
+	if kind=="quest" and (int(data.map_id)!=1000 or not in_talk_range(cell)):return
+	clear_input()
+	paused_input = true
+	classic_hud.map_panel.hide()
+	adventure_menu.open_menu(kind)
+	play_ui_sound(202)
+
+func close_adventure_menu() -> void:
+	adventure_menu.hide()
+	paused_input = false
+	clear_input()
+	refresh_companion()
+	checkpoint()
+	play_ui_sound(203)
+
+func perform_adventure_action(action: String, value: Variant = null) -> void:
+	if not adventure_menu.visible or battle_view.visible:return
+	var success := false
+	var note := ""
+	var at_shop := int(data.map_id)==1002 and in_talk_range(cell)
+	var at_villager := int(data.map_id)==1000 and in_talk_range(cell)
+	match action:
+		"pet_preview":
+			adventure_menu.selected_pet = int(value)
+			adventure_menu.refresh()
+			return
+		"buy_potion":success = at_shop and session.buy_item("potion")
+		"buy_club":success = at_shop and session.buy_item("club")
+		"sell_potion":success = at_shop and session.sell_item("potion")
+		"sell_club":success = at_shop and session.sell_item("club")
+		"use_potion":success = session.use_item("potion")
+		"equip":success = session.equip_item("club")
+		"select_pet":success = session.select_pet(int(value))
+		"rename_pet":success = session.rename_pet(int(value),adventure_menu.name_edit.text)
+		"accept_quest":success = at_villager and session.accept_quest()
+		"claim_quest":success = at_villager and session.claim_quest()
+		"heal":success = at_villager and session.heal()
+		"save":success = checkpoint()
+		"mute":toggle_mute(); success = true
+	if success:
+		checkpoint()
+		note = "已完成。"
+		if action=="claim_quest":note = "委托完成！获得石币、经验与回复药。"
+		elif action=="heal":note = "你与伙伴恢复了体力。"
+		elif action=="accept_quest":note = "委托已接受，出发去村外吧！"
+	else:note = "现在无法这样做，请检查条件、石币或数量。"
+	adventure_menu.refresh(note)
+	play_ui_sound(201)
+
+func load_profile() -> bool:
+	if session.load_game(save_path):return true
+	# Never overwrite an unreadable save by autosaving a fresh profile.
+	profile_persistence = false
+	last_adventure_message = "存档未能读取；现以临时旅程运行，原文件保留。"
+	return false

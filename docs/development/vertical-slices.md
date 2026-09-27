@@ -16,4 +16,4 @@ These are subsets of catalogue systems, not additional costs to add to those est
 
 After a portal works, add preload/cancel/failure behavior. After a battle works, expand targeting, skills, statuses and parties. Add the headless/network adapter only when testing two players. Each checkpoint keeps the original-resource Samgir playable.
 
-The fun-first MVP now takes priority: [M003 battle](m003-first-battle.md) is implemented. Next add saved progression, then capture and pet combat before expanding interiors or the NPC census. The rows above remain reusable system slices, not the current execution order.
+The fun-first MVP now takes priority: [M003 battle](m003-first-battle.md) is implemented. Those steps are now delivered in [M004](m004-single-player-mvp.md). Further work should prioritize observed playtest issues and additional original fidelity/content before networking or a full NPC census. The rows above remain reusable system slices, not the current execution order.

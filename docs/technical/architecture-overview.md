@@ -9,7 +9,7 @@ Now:    input/UI → local commands → authority → state/events → presentat
 Later:  input/UI → network adapter → headless authority (same project)
 ```
 
-This is the target architecture, not a claim that the current village already has a server boundary. M000–M002 use local scene state; M003 now has a pure GDScript battle authority while movement remains in the existing controller.
+This is the target architecture, not a claim that the current village already has a server boundary. M000–M002 use local scene state; M003 introduced battle authority; M004 adds progression, pets, inventory, quests and saves in pure GDScript authority. Movement remains in the existing controller.
 
 | Area | Owns | Must not depend on |
 | --- | --- | --- |

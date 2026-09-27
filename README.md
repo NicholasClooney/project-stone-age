@@ -1,6 +1,6 @@
 # Project Stone Age
 
-A playable **Godot 4.6** exploration slice of **萨姆吉尔村 / Samgir**, using the legacy game's map, sprites, palettes, animation frames, and music.
+A playable **Godot 4.6 single-player MVP** around **萨姆吉尔村 / Samgir**, using original maps, sprites, menus, animations, music and sound effects.
 
 ## Play
 
@@ -26,7 +26,10 @@ The project-local Godot runtime is already installed under `.tools/`. You can al
 | Hover bottom edge | Reveal the original seven menu tabs |
 | Map tab / Ctrl+M | Toggle the original map window; drag its title to move it |
 | 村外探险 / 返回村庄 | Walk to the original west exit / return portal |
-| Battle icons | Attack, defend or escape; continue after the result |
+| Battle icons | Choose a command, then its target; choose your pet command next |
+| Right click / Esc in battle | Cancel targeting or command selection |
+| 道具店 | Walk to the original shop doorway; click the merchant across the counter |
+| 状态 / 宠物 / 道具 / 系统 tabs | Stats, pet naming/selection, items/equipment, save and music |
 | M | Mute / unmute |
 | H / Escape | Open / close help; music volume is in help |
 | R | Return to the village square |
@@ -41,9 +44,15 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original `sabgm_t0.wav` village BGM, loop and volume controls, and a legacy UI sound.
 - One original village resident at (93, 72), with the recorded sprite and first dialogue line, original stone-frame art, confirmation button, and open/close sound effects.
 - Original stone top controls, wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker.
-- Camera follow, consistent developer zoom controls, focus-loss input clearing, and a safe respawn.
+- Camera follow, consistent zoom across maps, focus-loss input clearing, and safe defeat recovery.
+- Original 30×30 shop interior and merchant, with functional native shop, inventory, status and pet frames.
+- Pure GDScript local battle/progression authority, profile-bound saves and backup recovery.
 
-The first local-authority battle slice is now playable: click **村外探险**, walk through the original west exit, then walk eight steps outside to encounter 乌力. Attack, defend or escape; victory/escape resumes exploration, defeat returns to Samgir. Original battle terrain, actors, command icons, animations and BGM are imported. Combat numbers and encounter timing are prototype rules, not verified historical balance. HP resets for each encounter; XP, rewards, capture, saves, interiors and multiplayer are not implemented yet. See [first battle scope](docs/development/m003-first-battle.md). The classic HUD uses the local 2.5 client artwork. Extra top-row buttons in the supplied reference belong to a different asset set and are not fabricated. Only the Map tab is functional; the other original menu items are visual with hover labels. DEV controls remain separate. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
+The single-player loop now includes experience, leveling, currency, three capturable species, a five-pet roster, one active companion, a level-two pet skill, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports targeting/cancellation and player→pet command selection. Progress autosaves and resumes locally.
+
+**Start your adventure:** click the villager, choose **村外的伙伴 / 休息**, and accept the quest. Explore outside, weaken an enemy and capture it. When you already have a pet, tell it to **defend while weakening a capture target**. Win three battles, then prepare for the stronger encounter that appears during exploration. Return to the villager for recovery and the quest reward. Use the original bottom pet tab to rename/select your companion and the item tab to use/equip purchases.
+
+Original assets and menu layouts are retained; battle balance, capture conditions, automatic stat growth, this short quest, shop stock/prices and encounter timing are MVP rules rather than verified historical parity. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
 
@@ -71,12 +80,13 @@ To import the resident, obtain `poru/samugiru01.create` and `poru/samugiru02` fr
 .tools/asset-venv/bin/python tools/import_npc.py /path/to/stoneage2.5 /path/to/npc
 ```
 
-For the first battle, use the [local server reference](docs/reverse-engineering/local-references.md) and import the original wilderness and battle resources:
+For the full MVP, use the [local server reference](docs/reverse-engineering/local-references.md) and import the original wilderness and battle resources:
 
 ```sh
 .tools/asset-venv/bin/python tools/import_wilderness.py /path/to/stoneage2.5 \
   --server-map references/chenmingbiao-stone-age/gmsv/data/map/sainasu/sainasu
 .tools/asset-venv/bin/python tools/import_battle.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_mvp.py /path/to/stoneage2.5
 ./scripts/run.sh --headless --editor --import --quit
 ```
 
@@ -94,6 +104,8 @@ Full upstream checkouts and offline Git bundles are preserved in ignored `refere
 ./scripts/test.sh
 .tools/asset-venv/bin/python -m unittest discover -s tools -p 'test_*.py'
 ```
+
+The MVP suites cover the complete quest journey, shop and portals, capture/pet growth, original battle-menu input, speed-based turns, and save/reload including corrupt-save recovery. See [MVP acceptance](docs/development/m004-single-player-mvp.md).
 
 The UI suite checks menu hover, click isolation, map toggles/live coordinates, shared zoom limits, and original open/close UI sounds. See [classic UI evidence](docs/development/m002-classic-ui.md). The NPC suite checks approach, collision, cancellation, dialogue input, closing, and resumed exploration. The Godot movement suite exercises actual movement, original direction mapping, collision, pathfinding, 200 repeated movement steps, animation, character switching, and audio looping. It needs imported assets. [Verification notes](docs/development/m000-status.md) distinguish automated checks from visual inspection.
 

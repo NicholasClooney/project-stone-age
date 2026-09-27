@@ -64,6 +64,9 @@ func _ready() -> void:
 		task_buttons.append(item)
 		if i==0:
 			item.pressed.connect(toggle_map)
+		elif i in [1,2,3,6]:
+			var kind: String = {1:"status",2:"pets",3:"inventory",6:"system"}[i]
+			item.pressed.connect(func(): world.show_adventure_menu(kind))
 	build_map()
 	resized.connect(layout)
 	layout()
@@ -111,7 +114,7 @@ func _process(delta: float) -> void:
 		map_panel.position = (pointer_position-drag_offset).clamp(Vector2.ZERO,(size-map_panel.size*SCALE).max(Vector2.ZERO))
 
 func toggle_map() -> void:
-	if world.dialogue.visible or world.help.visible:
+	if world.dialogue.visible or world.help.visible or (is_instance_valid(world.adventure_menu) and world.adventure_menu.visible) or (is_instance_valid(world.battle_view) and world.battle_view.visible):
 		return
 	map_panel.visible = not map_panel.visible
 	task_buttons[0].texture_normal = art[26151 if map_panel.visible else 26150]
