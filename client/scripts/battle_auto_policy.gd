@@ -14,6 +14,13 @@ static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dict
  if not enemy.get("can_capture",false) or state.get("boss",false):return {"stop":"所选目标不可捕捉"}
  if int(enemy.hp)*100<=int(enemy.get("max_hp",1))*int(settings.get("capture_hp",59)):
   return {"action":"capture","pet":"defend","target":target}
+ var choice:=capture_pet_choice(state,settings,int(enemy.get("level",1)))
+ if choice.has("stop"):return choice
+ var best:=int(choice.index)
+ if best!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":best}
+ return {"action":"defend","pet":"attack","target":target}
+
+static func capture_pet_choice(state:Dictionary,settings:Dictionary,target_level:int)->Dictionary:
  var selected:=int(settings.get("capture_pet",-1))
  var pets: Array=state.get("pets",[])
  var ident:=str(settings.get("capture_pet_id",""))
@@ -21,15 +28,15 @@ static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dict
   selected=-1
   for i in range(pets.size()):
    if str(pets[i].get("pet_id",""))==ident:selected=i;break
-  if selected<0:return {"stop":"指定削血宠不在随身队伍，请先从仓库取回或重新选择"}
+  if selected<0:return {"stop":"指定削血宠 %s 不在随身队伍，请先从仓库取回或重新选择"%ident}
  var best:=-1
  for i in range(pets.size()):
   if selected>=0 and i!=selected:continue
   if i==int(state.get("ride_pet",-1)) or int(pets[i].get("hp",0))<=0:continue
   var limit:=int(settings.get("capture_pet_max_level",10))
-  if selected<0:limit=mini(limit,int(enemy.get("level",1)))
+  if selected<0:limit=mini(limit,target_level)
   if int(pets[i].get("level",1))>limit:continue
   if best<0 or int(pets[i].get("level",1))<int(pets[best].get("level",1)):best=i
+ if best<0 and selected>=0:return {"stop":"指定削血宠 %s 不符合条件：须存活、非骑乘且等级不超过上限"%(ident if not ident.is_empty() else str(selected+1))}
  if best<0:return {"stop":"没有可用低等级宠物：请选存活、非骑乘且符合等级上限的宠物"}
- if best!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":best}
- return {"action":"defend","pet":"attack","target":target}
+ return {"index":best}

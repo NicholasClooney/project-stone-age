@@ -50,3 +50,5 @@ Comparison and storage replace the collection content while open, preventing nat
 Warehouse and comparison rows expose a persistent favorite toggle keyed by stable pet ID. Old saves without this flag treat pets as unstarred. Transfers retain the flag. Warehouse favorites precede other pets; comparison retains carried-before-stored grouping, then prioritizes favorites within storage before the selected stat sort. Display sorting never reorders the authoritative roster or changes transfer targets.
 
 Comparison current and projected stat lines include 三围合 (attack + defence + speed, excluding HP); it is a convenience total, not a percentile or a species-independent quality score.
+
+Warehouse rows also show current attack, defence, speed, and their three-stat total below the pet name, alongside favorite/retrieve/compare actions.

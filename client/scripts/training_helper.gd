@@ -217,6 +217,8 @@ func stop_training(reason: String) -> void:
 	world.clear_input();hide()
 	world.last_adventure_message="自动练级：%s · 已完成 %d 场。"%[reason,battles]
 	world.message.text=world.last_adventure_message
+	if not is_queued_for_deletion() and is_instance_valid(world.battle_view) and world.battle_view.visible and world.battle_session.snapshot().active:
+		world.battle_view.report.text="自动抓宠／战斗已暂停："+reason+"；可手动接手。"
 func record_result(state: Dictionary) -> void:
 	earned_xp+=int(state.get("xp",0))
 	for amount in state.get("pet_reward_xp",[]):earned_pet_xp+=int(amount)

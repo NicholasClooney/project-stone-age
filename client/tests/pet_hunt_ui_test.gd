@@ -9,12 +9,12 @@ func run() -> void:
 	game.profile_persistence=false
 	root.add_child(game)
 	await process_frame
-	game.pet_hunt_menu.open_menu()
+	game.pet_hunt_menu.open_menu();game.pet_hunt_menu.auto_capture.button_pressed=false
 	check(game.pet_hunt_menu.start_button.disabled,"village cannot start hunting")
 	game.pet_hunt_menu.close_menu()
 	check(game.switch_area(true,Vector2i(45,45)),"enter original wilderness")
 	var menu=game.pet_hunt_menu
-	menu.open_menu()
+	menu.open_menu();menu.auto_capture.button_pressed=false
 	check(menu.preset.selected==3 and menu.total.value==8 and menu.min_offsets()==[2,2,2,2],"default is full four-stat +2 quality")
 	check(menu.rate.value==5000,"default requested rate is 5000 groups per second")
 	check(not menu.start_button.disabled and game.paused_input,"modal pauses walking and enables local hunt")
@@ -30,7 +30,7 @@ func run() -> void:
 	check(game.session.snapshot()==before,"skipping a troop grants nothing and starts no battle")
 	menu.close_menu()
 	check(not menu.running and not game.paused_input and menu.total.editable,"closing cancels and unlocks settings")
-	menu.open_menu()
+	menu.open_menu();menu.auto_capture.button_pressed=false
 	menu.start_hunt()
 	for i in range(20000):
 		if not menu.running:break

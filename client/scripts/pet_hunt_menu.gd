@@ -1,5 +1,6 @@
 extends Control
 ## Optional single-player data inspection. Rolls real local troops; never grants rewards.
+const CapturePolicy=preload("res://scripts/battle_auto_policy.gd")
 const Rules = preload("res://scripts/pet_hunt_rules.gd")
 var filter_nodes: Array[Control] = []
 var capture_page: Control
@@ -170,6 +171,15 @@ func start_hunt() -> void:
 	if not world.world_catalog.field(int(world.data.map_id)):return
 	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
 		status.text="宠物栏已满，请先腾出位置再寻找新伙伴。";return
+	if level_one.button_pressed and (auto_capture.button_pressed or (is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt")):
+		world.training_helper.save_capture_settings()
+		var profile:Dictionary=world.session.snapshot()
+		var choice:Dictionary=CapturePolicy.capture_pet_choice(profile,world.training_helper.settings,1)
+		if choice.has("stop"):
+			status.text=str(choice.stop)
+			if int(world.training_helper.settings.capture_pet)<0 and str(world.training_helper.settings.get("capture_pet_id","")).is_empty():status.text="缺少可用削血宠：请从仓库取出存活、非骑乘的Lv.1宠物，或手选符合等级上限的削血宠。"
+			world.message.text=status.text
+			return
 	if Rules.tail_probability(int(total.value),min_offsets())<=0:
 		status.text="这些条件无法同时满足，请降低门槛。";return
 	if Rules.candidates(world.encounter_catalog,int(world.data.map_id),world.cell,level_one.button_pressed).is_empty():

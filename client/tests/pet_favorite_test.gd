@@ -44,6 +44,11 @@ func run()->void:
 	var first=overlay.find_child("StorageRow_pet-121",true,false)
 	check(first!=null and first.get_index()==0,"star from second page moves to first visible row")
 	check(first.get_combined_minimum_size().x<=650,"warehouse row and all actions fit scroll width")
+	var stats=first.get_node("StorageStats_pet-121")
+	var stat_line:="攻%d 防%d 敏%d · 三围合%d"%[source.attack,source.defence,source.speed,int(source.attack)+int(source.defence)+int(source.speed)]
+	check(stats.text.contains("\n"+stat_line),"warehouse second line shows attack defence speed and their sum excluding HP")
+	check(first.size.y>=56 and stats.size.y>=56,"warehouse row reserves height for both name and stats")
+	check(stats.autowrap_mode!=TextServer.AUTOWRAP_OFF,"long warehouse labels wrap without pushing actions outside panel")
 	var toggle=overlay.find_child("StorageFavorite_pet-121",true,false);toggle.pressed.emit();await process_frame
 	check(not game.session.snapshot().pet_storage[21].favorite,"warehouse unstar acts on correct sorted identity")
 	menu.pet_storage_page=1;menu.rebuild();await process_frame

@@ -11,7 +11,7 @@ func run():
  game.random_encounters=false
  game.switch_area(true,Vector2i(45,45))
  var menu=game.pet_hunt_menu
- menu.open_menu()
+ menu.open_menu();menu.auto_capture.button_pressed=false
  check(menu.rate.max_value>=5000 and menu.rate.value==5000,"approved default requests 5000 with higher rates still supported")
  menu.rate.value=2000;menu.start_hunt()
  check(menu.running and menu.filter.rate==2000,"2000/s target starts")
@@ -45,14 +45,14 @@ func run():
  menu.start_hunt()
  check(menu.running and menu.hunt_catalog.data.areas.size()==1 and menu.hunt_catalog.data.areas[0]==game.encounter_catalog.area_at(int(game.data.map_id),game.cell),"restart prepares current validated source area afresh")
  menu.close_menu()
- menu.open_menu()
+ menu.open_menu();menu.auto_capture.button_pressed=false
  check(menu.rate.value==2000,"reopening preserves chosen requested rate")
  menu.apply_preset(1)
  check(menu.total.value==4 and menu.min_offsets()==[-2,-2,-2,-2],"switching away from full quality removes individual +2 minima")
  menu.apply_preset(3)
  check(menu.total.value==8 and menu.min_offsets()==[2,2,2,2],"full-quality preset restores all four explicit +2 minima")
  menu.offsets[0].value=1
- menu.close_menu();menu.open_menu()
+ menu.close_menu();menu.open_menu();menu.auto_capture.button_pressed=false
  check(menu.min_offsets()==[1,2,2,2] and menu.preset.selected==4,"reopening preserves customized thresholds")
  menu.close_menu()
  game.process_mode=Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();game.queue_free()

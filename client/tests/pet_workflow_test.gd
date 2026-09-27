@@ -10,6 +10,7 @@ func _initialize() -> void:call_deferred("run")
 func run() -> void:
 	var game=load("res://scenes/main.tscn").instantiate();game.profile_persistence=false;root.add_child(game)
 	await process_frame
+	game.session.grant_starter_pets()
 	game.load_area_id(100,Vector2i(637,493))
 	game.session.gm_raise_level(-1,120);game.session.gm_set_base_stat(-1,"toughness",500);game.session.gm_heal()
 	var flow=game.pet_workflow;flow.set_process(false)

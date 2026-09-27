@@ -642,7 +642,7 @@ func open_pet_comparison(pet_id:String)->bool:
 	return false
 
 func pet_storage_panel(profile:Dictionary)->void:
-	var overlay:=Panel.new();overlay.name="PetStoragePanel";overlay.position=Vector2.ZERO;overlay.z_index=10;overlay.mouse_filter=Control.MOUSE_FILTER_STOP;overlay.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"));overlay.size=Vector2(680,mini(600,160+maxi(1,mini(20,profile.get("pet_storage",[]).size()))*42));overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
+	var overlay:=Panel.new();overlay.name="PetStoragePanel";overlay.position=Vector2.ZERO;overlay.z_index=10;overlay.mouse_filter=Control.MOUSE_FILTER_STOP;overlay.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"));overlay.size=Vector2(680,mini(600,160+maxi(1,mini(20,profile.get("pet_storage",[]).size()))*60));overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
 	var title:Label=world.text("宠物仓库 · %d只 · 携带%d/%d" % [profile.get("pet_storage",[]).size(),profile.pets.size(),world.session.PET_CAPACITY],18);title.position=Vector2(14,12);overlay.add_child(title)
 	var close:Button=world.button("关闭",func():pet_storage_open=false;pet_view="list";rebuild());close.position=Vector2(575,8);overlay.add_child(close)
 	var store_index:=-1
@@ -665,7 +665,7 @@ func pet_storage_panel(profile:Dictionary)->void:
 		var pet:Dictionary=entry.pet
 		var identifier:=str(pet.pet_id)
 		var row:=HBoxContainer.new();row.name="StorageRow_"+identifier;list.add_child(row)
-		var text:Label=world.text("%s Lv.%d · %s" % [pet.name,pet.level,pet.get("pet_id","?")],14);text.custom_minimum_size=Vector2(270,38);row.add_child(text)
+		var text:Label=world.text("%s Lv.%d · %s\n攻%d 防%d 敏%d · 三围合%d" % [pet.name,pet.level,pet.get("pet_id","?"),pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)],14);text.name="StorageStats_"+identifier;text.custom_minimum_size=Vector2(270,56);text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;row.add_child(text)
 		add_pet_favorite_button(row,pet,"StorageFavorite_")
 		var retrieve:Button=world.button("取出",func():
 			if world.session.retrieve_pet_by_id(identifier):world.refresh_companion();world.checkpoint();feedback="已取出。"

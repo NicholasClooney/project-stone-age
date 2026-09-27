@@ -24,7 +24,7 @@ func run():
    if menu.species.get_item_id(i)==int(row.template_id):
     found=true;renderable=not menu.species.is_item_disabled(i)
   check(moved and game.cell==poi.cell and int(game.data.map_id)==int(row.map_id) and found and renderable and not menu.start_button.disabled,"%s map %d (%s) found=%s render=%s enabled=%s actual=%s"%[row.name,row.map_id,poi.cell,found,renderable,not menu.start_button.disabled,game.cell])
-  menu.start_hunt()
+  menu.auto_capture.button_pressed=false;menu.start_hunt()
   check(menu.running,"%s verified target starts real hunt"%row.name)
   menu.close_menu()
  var map=game.dev_map_overview
