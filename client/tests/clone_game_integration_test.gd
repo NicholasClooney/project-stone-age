@@ -34,7 +34,7 @@ func run() -> void:
 	game.encounter_rng.seed=0
 	helper.advance()
 	check(helper.compact_active and game.battle_session.snapshot().allies.size()==4,"map-only automation also uses five real fighters")
-	check(game.battle_session.get_script().resource_path.ends_with("squad_battle_session.gd"),"map-only automation selects the same squad authority")
+	check(game.backend.battle.get_script().resource_path.ends_with("squad_battle_session.gd"),"map-only automation selects the same squad authority")
 	helper.stop_training("test stop")
 	check(game.battle_view.visible and game.battle_view.actors.size()==20,"manual takeover restores five mounted fighters and five pets")
 	var mirrored: Dictionary=game.battle_session.snapshot()

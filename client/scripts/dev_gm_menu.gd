@@ -109,7 +109,7 @@ func _refresh_actor()->void:
 	for stat in stat_inputs:stat_inputs[stat].value=float(actor.base_stats.get(stat,0))/100.0
 	level_input.value=120
 	summary.text="Lv.%d%s\n体力 %d / %d\n攻击 %d　防御 %d\n速度 %d\n角色可分配点 %d" % [actor.level," · GM已修改" if actor.get("gm_modified",false) else "",actor.hp,actor.max_hp,actor.attack,actor.defence,actor.speed,profile.player.stat_points]
-	for button in mutation_buttons:button.disabled=world.battle_view.visible or not world.session._pending.is_empty()
+	for button in mutation_buttons:button.disabled=world.battle_view.visible or world.session.gm_pending()
 	escape_button.disabled=not world.battle_view.visible or not world.battle_session.snapshot().get("active",false)
 func _apply(success:bool,cleared:bool=false)->void:
 	feedback.text=world.session.last_error if not success else ""

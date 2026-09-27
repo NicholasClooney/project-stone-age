@@ -72,29 +72,13 @@ var selected_pet_skill := 0
 var pet_art_cues: Array[Dictionary] = []
 # oft.cpp:144,11514-11605: classic two enemy rows and center-first ordering.
 const ENEMY_SLOT_ORDER := [2,1,3,0,4]
-var art_validation: Dictionary = {}
 # At 800x600 the friendly side receives DISPLACEMENT (160,120).
 func enemy_home(index: int) -> Vector2:
 	var slot: int = ENEMY_SLOT_ORDER[index % 5]
 	return Vector2(37,198)+Vector2(32,-24)*slot if index<5 else Vector2(69,298)+Vector2(64,-48)*slot
 
 func can_render_troop(enemies: Array) -> bool:
-	if enemies.is_empty() or enemies.size()>10:return false
-	for enemy in enemies:
-		var ident := str(enemy.get("sprite",-1))
-		if not art_validation.has(ident):
-			var valid: bool = manifest.get("characters",{}).has(ident)
-			var animations: Dictionary = manifest.get("characters",{}).get(ident,{})
-			for action in [0,1,2,3,4,10]:
-				for direction in range(8):
-					var frames: Array = animations.get("%d_%d" % [action,direction],{}).get("frames",[])
-					if frames.is_empty():valid=false
-					for frame in frames:
-						var bitmap := str(int(frame.image))
-						if not manifest.get("images",{}).has(bitmap) or not ResourceLoader.exists(ART_ROOT+"images/%s.png" % bitmap):valid=false
-			art_validation[ident]=valid
-		if not art_validation[ident]:return false
-	return true
+	return preload("res://server/troop_art.gd").can_render(enemies)
 
 func enemy_actor(index: int) -> int:
 	return 1 if index==0 else index+2
