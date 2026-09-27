@@ -1,5 +1,7 @@
 extends Control
 ## Optional single-player data inspection. Rolls real local troops; never grants rewards.
+## Scanning runs in the backend (res://server/automation.gd); this menu chooses
+## the filter and presents progress.
 const StatFilter=preload("res://scripts/pet_stat_filter.gd")
 var stat_page: Control
 var stat_species: OptionButton
@@ -30,22 +32,39 @@ var explanation: Label
 var start_button: Button
 var stop_button: Button
 var controls: Array[Control] = []
-var running := false
-var rolls := 0
-var inspected := 0
-var best := -9
-var elapsed := 0.0
-var credit := 0.0
-var region_map := -1
-var region_cell := Vector2i.ZERO
-var filter: Dictionary = {}
-var last_hit: Dictionary = {}
 var candidates: Array = []
 var applying := false
-var started_usec := 0
-var hunt_catalog: RefCounted
-const FRAME_BUDGET_USEC := 12000
-const MAX_BACKLOG_SECONDS := 0.1
+
+func _hunt() -> Dictionary:
+	return world.state.automation.get("hunt",{}) if is_instance_valid(world) else {}
+
+var running: bool:
+	get:return bool(_hunt().get("running",false))
+var rolls: int:
+	get:return int(_hunt().get("rolls",0))
+var inspected: int:
+	get:return int(_hunt().get("inspected",0))
+var best: int:
+	get:return int(_hunt().get("best",-9))
+var elapsed: float:
+	get:return float(_hunt().get("elapsed",0.0))
+var credit: float:
+	get:return float(_hunt().get("credit",0.0))
+var last_hit: Dictionary:
+	get:return _hunt().get("last_hit",{})
+var region_map: int:
+	get:return int(_hunt().get("map_id",-1))
+var region_cell: Vector2i:
+	get:
+		var cell: Array=_hunt().get("cell",[0,0])
+		return Vector2i(int(cell[0]),int(cell[1]))
+## The live backend filter in-process, so tests may tighten it mid-run.
+var filter: Dictionary:
+	get:return world.backend.automation.hunt_filter if world.link.is_local() else _hunt().get("filter",{})
+## In-process test seam: the prepared encounter source for this run.
+var hunt_catalog:
+	get:return world.backend.automation.hunt_catalog
+	set(value):world.backend.automation.hunt_catalog = value
 
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:
@@ -167,21 +186,23 @@ func open_menu() -> void:
 	show();refresh_candidates();refresh_stat_species();world.training_helper._refresh_pet_choices();stop_button.disabled=true
 func close_menu() -> void:
 	if not visible:return
-	running=false;set_controls(false);hide();world.paused_input=false;world.clear_input()
+	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
+	set_controls(false);hide();world.paused_input=false;world.clear_input()
 func set_controls(locked: bool) -> void:
 	for control in controls:
 		if control is SpinBox:control.editable=not locked
 		elif control is BaseButton:control.disabled=locked
 	start_button.disabled=locked
 	stop_button.disabled=not locked
-func start_hunt() -> void:
+## Validated hunt filter from these controls, or {} with the reason shown.
+func build_filter(for_workflow: bool = false) -> Dictionary:
 	for control in controls:
 		if control is SpinBox and control.get_line_edit().has_focus():control.apply()
-	if running or not visible or world.battle_view.visible or world.area_transition_busy:return
-	if not world.world_catalog.field(int(world.data.map_id)):return
+	if running or not visible or world.battle_view.visible or world.area_transition_busy:return {}
+	if not world.world_catalog.field(int(world.data.map_id)):return {}
 	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
-		status.text="宠物栏已满，请先腾出位置再寻找新伙伴。";return
-	if int(world.training_helper.capture_hp.value)<100 and level_one.button_pressed and (auto_capture.button_pressed or (is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt")):
+		status.text="宠物栏已满，请先腾出位置再寻找新伙伴。";return {}
+	if int(world.training_helper.capture_hp.value)<100 and level_one.button_pressed and (auto_capture.button_pressed or for_workflow):
 		world.training_helper.save_capture_settings()
 		var profile:Dictionary=world.session.snapshot()
 		var choice:Dictionary=CapturePolicy.capture_pet_choice(profile,world.training_helper.settings,1)
@@ -189,28 +210,29 @@ func start_hunt() -> void:
 			status.text=str(choice.stop)
 			if int(world.training_helper.settings.capture_pet)<0 and str(world.training_helper.settings.get("capture_pet_id","")).is_empty():status.text="缺少可用削血宠：请从仓库取出存活、非骑乘的Lv.1宠物，或手选符合等级上限的削血宠。"
 			world.message.text=status.text
-			return
+			return {}
 	if Rules.tail_probability(int(total.value),min_offsets())<=0:
-		status.text="这些条件无法同时满足，请降低门槛。";return
+		status.text="这些条件无法同时满足，请降低门槛。";return {}
 	if Rules.candidates(world.encounter_catalog,int(world.data.map_id),world.cell,level_one.button_pressed).is_empty():
-		status.text="当前区域不会出现符合种类／等级条件的宠物。";return
+		status.text="当前区域不会出现符合种类／等级条件的宠物。";return {}
 	var usable:=[]
 	for index in range(1,species.item_count):
 		if not species.is_item_disabled(index):usable.append(species.get_item_id(index))
 	if usable.is_empty() or (species.get_selected_id()>=0 and not species.get_selected_id() in usable):
-		status.text="当前没有素材齐全的目标宠物。";return
-	filter={"usable":usable,"template":species.get_selected_id(),"level_one":level_one.button_pressed,"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value)}
-	region_map=int(world.data.map_id);region_cell=world.cell
-	# Freeze the validated location for this run. Only trim the spatial lookup;
-	# retain original groups/enemies/templates and all roll checks/RNG calls.
-	var hunt_data: Dictionary=world.encounter_catalog.data.duplicate()
-	hunt_data.areas=[world.encounter_catalog.area_at(region_map,region_cell)]
-	hunt_catalog=preload("res://server/encounter_catalog.gd").new(hunt_data)
-	rolls=0;inspected=0;best=-9;elapsed=0;credit=0;last_hit={}
-	started_usec=Time.get_ticks_usec()
-	running=true;set_controls(true);update_status()
+		status.text="当前没有素材齐全的目标宠物。";return {}
+	return {"usable":usable,"template":species.get_selected_id(),"level_one":level_one.button_pressed,"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"auto_capture":auto_capture.button_pressed}
+
+func start_hunt() -> void:
+	var chosen:=build_filter()
+	if chosen.is_empty():return
+	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"hunt","filter":chosen,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	if not reply.ok:
+		if not str(reply.reason).is_empty():status.text=str(reply.reason)
+		return
+	set_controls(true);update_status()
 func stop_hunt(reason: String) -> void:
-	running=false;set_controls(false);status.text=reason+"\n"+summary()
+	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":reason})
+	else:on_event({"kind":"hunt_stopped","reason":reason})
 func summary() -> String:
 	var actual:=rolls / maxf(elapsed,0.001)
 	return workflow_summary()+"已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · 本轮 %.1f 秒\n目标 %s · 实际 %.0f 组/秒 · 流程总用时 %s" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,rate_text(int(filter.get("rate",rate.value))),actual,world.pet_workflow.elapsed_text()]
@@ -220,53 +242,33 @@ func _process(delta: float) -> void:
 	if not running:return
 	if not visible or not world.paused_input or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell:
 		stop_hunt("场景状态变化，筛选已停止。");return
-	elapsed=(Time.get_ticks_usec()-started_usec)/1000000.0
-	# Discard old backlog after a stall; never catch up with an unbounded burst.
-	var unlimited:=int(filter.rate)<=0
-	if not unlimited:credit=minf(credit+delta*float(filter.rate),maxf(1.0,float(filter.rate)*MAX_BACKLOG_SECONDS))
-	var until:=Time.get_ticks_usec()+FRAME_BUDGET_USEC
-	while running and (unlimited or credit>=1) and Time.get_ticks_usec()<until:
-		if not unlimited:credit-=1
-		scan_once()
-	elapsed=(Time.get_ticks_usec()-started_usec)/1000000.0
+	# In-process, this frame drives the backend scan with the same budget.
+	if world.link.is_local():world.link.request({"type":"auto","name":"hunt_process","delta":delta})
 	if running:update_status()
+## Test seam: one backend scan now.
 func scan_once() -> void:
-	if not running:return
-	rolls+=1
-	var troop: Dictionary=hunt_catalog.roll(region_map,region_cell,world.encounter_rng)
-	if troop.is_empty():
-		stop_hunt("原版遇敌数据或条件不完整，已停止；没有替换敌群。");return
-	for i in range(troop.enemies.size()):
-		var actor: Dictionary=troop.enemies[i]
-		if not actor.get("can_capture",false):continue
-		if not int(actor.template_id) in filter.usable:continue
-		if int(filter.template)>=0 and int(actor.template_id)!=int(filter.template):continue
-		if filter.level_one and int(actor.level)!=1:continue
-		inspected+=1
-		var quality: Dictionary=Rules.quality(actor,world.encounter_catalog.data)
-		if quality.valid:best=maxi(best,int(quality.total_offset))
-		if Rules.matches(actor,int(filter.template),bool(filter.level_one),int(filter.total),filter.offsets,world.encounter_catalog.data):
-			if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt" and not world.pet_workflow.accepts_prediction(actor):continue
-			last_hit={"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
-			stop_hunt("找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset])
-			if not world.battle_view.can_render_troop(troop.enemies):
-				status.text+="\n敌群原版素材不可用，保留本次结果并停止，未进入战斗。";return
-			var config: Dictionary=world.session.start_wild_battle_config(troop)
-			if config.is_empty():status.text+="\n战斗校验未通过，已停止。";return
-			hide();world.paused_input=false
-			var workflow_capture:bool=is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt"
-			# The workflow resolves its capture fight without animation, like compact training.
-			if workflow_capture:world.training_helper.compact_active=true
-			world.open_battle_config(config)
+	world.link.request({"type":"auto","name":"hunt_scan"})
+
+func on_status(automation: Dictionary) -> void:
+	if visible and bool(automation.get("hunt",{}).get("running",false)):
+		set_controls(true);update_status()
+
+func on_event(detail: Dictionary) -> void:
+	match str(detail.kind):
+		"hunt_stopped":
+			set_controls(false);status.text=str(detail.reason)+"\n"+summary()
+		"hunt_refused":
+			status.text=str(detail.reason)
+			world.message.text=status.text
+		"hunt_hit":
+			var i:=int(detail.index)
+			var actor: Dictionary=detail.actor
+			hide()
 			world.battle_view.player_target=i
-			if not workflow_capture:world.battle_view.mark_hunt_target(i)
-			var automatic:bool=workflow_capture or auto_capture.button_pressed
-			world.battle_view.report.text="发现 %s Lv.%d · 成长档 %+d · %s" % [actor.name,actor.level,quality.total_offset,"自动捕捉中" if automatic else "请手动捕捉"]
-			world.message.text="极品筛选：%s，总成长档 %+d，已遇敌 %d 组。" % [actor.name,quality.total_offset,rolls]
-			if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt":world.pet_workflow.matched(i,actor)
-			elif auto_capture.button_pressed:world.training_helper.start_capture_battle(i)
-			return
-	if int(filter.limit)>0 and rolls>=int(filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
+			# A workflow capture resolves without animation, like compact training.
+			if not bool(detail.get("workflow",false)):world.battle_view.mark_hunt_target(i)
+			world.battle_view.report.text="发现 %s Lv.%d · 成长档 %+d · %s" % [actor.name,actor.level,detail.quality.total_offset,"自动捕捉中" if detail.automatic else "请手动捕捉"]
+			world.message.text="极品筛选：%s，总成长档 %+d，已遇敌 %d 组。" % [actor.name,detail.quality.total_offset,int(detail.rolls)]
 
 func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->void:
 	for control in [hp,pet,max_level]:control.reparent(capture_page);controls.append(control)

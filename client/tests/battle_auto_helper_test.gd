@@ -33,9 +33,10 @@ func run():
  game.battle_action("developer_escape")
  for i in range(100):game.battle_view._process(0.2)
  game.return_from_battle()
- game.session=preload("res://server/game_session.gd").new()
+ game.backend.session=preload("res://server/game_session.gd").new()
+ game.backend.battle=preload("res://server/battle_session.gd").new()
+ game.backend.battle_state={};game.backend.battle_open=false;game.sync_state()
  game.session.grant_starter_pets()
- game.battle_session=preload("res://server/battle_session.gd").new()
  game.load_area_id(100,Vector2i(637,493))
  helper=game.training_helper;helper.set_process(false)
  var pet:Dictionary=game.session.snapshot().pets[0]

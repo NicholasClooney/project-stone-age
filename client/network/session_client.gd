@@ -68,7 +68,9 @@ func level_pet_to(pet_id: String, target: int) -> bool:return request({"type":"l
 func prune_hunt_pets(template_id: int, keep: Dictionary) -> int:
 	return int(link.request({"type":"prune_hunt_pets","template_id":template_id,"keep":keep}).get("pruned",0))
 func release_pets(ids: Array) -> Dictionary:
-	return link.request({"type":"release_pets","ids":ids}).get("result",{"released":0})
+	var reply: Dictionary = link.request({"type":"release_pets","ids":ids})
+	last_error = str(reply.get("error",""))
+	return reply.get("result",{"released":0})
 func store_pet(index: int, auto_hunt: bool = false) -> bool:return request({"type":"store_pet","index":index,"auto_hunt":auto_hunt})
 func retrieve_pet(index: int) -> bool:return request({"type":"retrieve_pet","index":index})
 func retrieve_pet_by_id(pet_id: String) -> bool:return request({"type":"retrieve_pet_by_id","pet_id":pet_id})
@@ -122,3 +124,10 @@ func load_game(path: String) -> bool:
 
 func apply_battle_result(result: Dictionary) -> bool:
 	return _authority().apply_battle_result(result)
+
+var login_clock: Callable:
+	get:return _authority().login_clock
+	set(value):_authority().login_clock = value
+
+func _gain_xp(actor: Dictionary, amount: int) -> void:
+	_authority()._gain_xp(actor,amount)

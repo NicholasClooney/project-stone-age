@@ -23,6 +23,7 @@ var encounter_catalog:
 var encounter_rng: RandomNumberGenerator:
 	get:return link.backend.encounter_rng
 var arrival_lock := Vector2i(-1,-1)
+var _presented_key := ""
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
 const STEP_TIME := 0.19
@@ -120,12 +121,16 @@ func _init() -> void:
 	backend = Backend.new()
 	# Owned from construction so a game freed before entering the tree frees it too.
 	add_child(backend)
+	# In-process, the game's frame loop drives automation through its controls.
+	# (set_process(false) would not stick: Godot re-enables _process on ready.)
+	backend.automation.auto_tick = false
 	link = LocalLink.new(backend)
 	state = ClientState.new()
 	link.message.connect(state.apply)
 	session = SessionClient.new(link,state)
 	battle_session = BattleClient.new(link,state)
 	state.apply(link.request({"type":"hello","protocol":Backend.PROTOCOL}).snapshot)
+	link.message.connect(_on_backend_message)
 
 func _sync_persistence() -> void:
 	if backend!=null:backend.save_path = save_path if profile_persistence else ""
@@ -169,6 +174,7 @@ func _ready() -> void:
 			checkpoint()
 			message.text = "伙伴已加入：蓝人龙、金虎、红暴龙。打开宠物菜单查看。"
 	refresh_companion()
+	report_position()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -244,9 +250,6 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	var height := int(next_data.height)
 	if destination.x<0 or destination.y<0 or destination.x>=width or destination.y>=height or int(next_data.blocked[destination.y*width+destination.x])!=0:
 		return false
-	if is_instance_valid(training_helper):training_helper.release_clone_override()
-	var workflow_pause := ""
-	if is_instance_valid(pet_workflow):workflow_pause=pet_workflow.prepare_scene_reload()
 	var previous_zoom: Vector2 = camera.zoom
 	clear_input()
 	for node in [terrain,actors,ui_layer]:
@@ -271,9 +274,8 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	build_world()
 	camera.zoom = previous_zoom
 	build_ui()
+	var workflow_pause := str(link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true}).get("paused",""))
 	if not workflow_pause.is_empty():
-		pet_workflow.phase="paused"
-		pet_workflow.reason=workflow_pause
 		last_adventure_message="找宠流程暂停："+workflow_pause
 		message.text=last_adventure_message
 	camera.reset_smoothing()
@@ -315,6 +317,7 @@ func walk_to_exit() -> void:
 	if closest.x>=0:walk_to(closest)
 
 func handle_arrival() -> bool:
+	report_position()
 	pet_trail.append(cell)
 	while pet_trail.size()>3:pet_trail.pop_front()
 	if cell==arrival_lock:return false
@@ -335,8 +338,7 @@ func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
 		message.text = "Import original battle assets first; see README.md."
 		return false
-	var reply: Dictionary = link.request({"type":"begin_battle","boss":boss,"enemy_count":enemy_count})
-	return present_battle_start(reply.state) if reply.ok else false
+	return bool(link.request({"type":"begin_battle","boss":boss,"enemy_count":enemy_count}).ok)
 
 func begin_wild_battle() -> bool:
 	last_encounter_error=""
@@ -350,12 +352,11 @@ func begin_wild_battle() -> bool:
 		elif last_encounter_error=="art":
 			message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
 		return false
-	return present_battle_start(reply.state)
+	return true
 
 func open_battle_config(config: Dictionary) -> bool:
 	if config.is_empty():return false
-	var reply: Dictionary = link.request({"type":"open_battle","config":config})
-	return present_battle_start(reply.state) if reply.ok else false
+	return bool(link.request({"type":"open_battle","config":config}).ok)
 
 ## Presentation for a battle the backend has just opened.
 func present_battle_start(battle_state: Dictionary) -> bool:
@@ -381,11 +382,14 @@ func battle_action(action: String) -> void:
 	var skill_id: int = int(battle_view.get("selected_pet_skill"))
 	if skill_id > 0 and battle_session.snapshot().pet_command == "skill":
 		battle_session.set_pet_skill(skill_id)
-	var battle_state: Dictionary = battle_session.developer_escape() if action=="developer_escape" else battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
-	if battle_state.get("settled",false):
-		if is_instance_valid(training_helper) and training_helper.running:training_helper.record_result(battle_state)
-		checkpoint()
+	if action=="developer_escape":battle_session.developer_escape()
+	else:battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
+
+## Presentation for one resolved turn, from the player or a backend runner.
+func present_battle_turn(battle_state: Dictionary) -> void:
+	if battle_state.get("settled",false):checkpoint()
 	if is_instance_valid(training_helper) and training_helper.compact_active:return
+	if not is_instance_valid(battle_view) or not battle_view.visible:return
 	battle_view.show_state(battle_state)
 	play_ui_sound(217 if ui_sounds.has(217) else 201)
 
@@ -393,9 +397,10 @@ func return_from_battle() -> void:
 	var compact_battle: bool=is_instance_valid(training_helper) and training_helper.compact_active
 	if (not battle_view.visible and not compact_battle) or battle_session.snapshot().active or (not compact_battle and battle_view.is_animating()):
 		return
-	var outcome: String = battle_session.snapshot().outcome
 	link.request({"type":"battle_close"})
-	if compact_battle:training_helper.compact_active=false
+
+## Presentation after the backend closed a battle.
+func present_battle_close(outcome: String) -> void:
 	battle_view.close_battle()
 	clear_input()
 	paused_input = false
@@ -406,6 +411,8 @@ func return_from_battle() -> void:
 		switch_area(false,SPAWN)
 	refresh_companion()
 	checkpoint()
+	# A running automation keeps the map locked between its battles.
+	if bool(state.automation.get("running",false)):paused_input = true
 
 func capture_frame() -> void:
 	await get_tree().create_timer(1.0).timeout
@@ -626,6 +633,7 @@ func _physics_process(delta: float) -> void:
 	if profile_persistence and save_elapsed>=5.0 and not moving and not battle_session.snapshot().active:
 		checkpoint()
 	if is_instance_valid(clone_button):clone_button.disabled=paused_input or area_transition_busy
+	acknowledge_presentation()
 	update_adventure_hint()
 	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
 
@@ -671,6 +679,7 @@ func blink_to(destination: Vector2i) -> bool:
 	if is_instance_valid(travel_router):travel_router.cancel("点击瞬移停止了自动寻路。")
 	clear_input();moving=false
 	cell=landing;from_cell=landing;target_cell=landing;logical_position=Vector2(landing);step_progress=0
+	report_position()
 	player.position=project(logical_position);player.set_action(3)
 	marker_cell=landing;camera.reset_smoothing();refresh_companion();checkpoint();queue_redraw()
 	if world_catalog.links(int(data.map_id)).has(landing):
@@ -706,6 +715,7 @@ func reset_player() -> void:
 	clear_input()
 	moving = false
 	cell = SPAWN
+	report_position()
 	target_cell = SPAWN
 	logical_position = Vector2(SPAWN)
 	player.position = project(logical_position)
@@ -1382,4 +1392,37 @@ func dev_toggle_riding() -> void:
 
 func set_clone_squad_enabled(enabled:bool)->void:
 	session.clone_squad_enabled=enabled
-	if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(enabled)
+	if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(session.clone_squad_enabled)
+
+func report_position() -> void:
+	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
+
+## Paced automation waits until this client has finished animating a turn.
+func acknowledge_presentation() -> void:
+	if not bool(state.automation.get("running",false)) or not is_instance_valid(battle_view) or not battle_view.visible or battle_view.is_animating():return
+	var key := "%s:%d" % [str(state.battle.get("battle_id","")),int(state.battle.get("turn",0))]
+	if key==_presented_key:return
+	_presented_key = key
+	link.request({"type":"presented","battle_id":str(state.battle.get("battle_id","")),"turn":int(state.battle.get("turn",0))})
+
+func _on_backend_message(message: Dictionary) -> void:
+	if not is_inside_tree() or data.is_empty() or not is_instance_valid(battle_view):return
+	match str(message.type):
+		"battle_started":present_battle_start(message.state)
+		"battle_turn":present_battle_turn(message.state)
+		"battle_closed":present_battle_close(str(message.outcome))
+		"profile":
+			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
+		"auto_status":
+			for node in [training_helper,pet_hunt_menu,pet_workflow]:
+				if is_instance_valid(node):node.on_status(message.status)
+		"auto_event":_on_auto_event(message.detail)
+
+func _on_auto_event(detail: Dictionary) -> void:
+	match str(detail.kind):
+		"battle_stopped","battle_refused":
+			if is_instance_valid(training_helper):training_helper.on_event(detail)
+		"hunt_stopped","hunt_refused","hunt_hit":
+			if is_instance_valid(pet_hunt_menu):pet_hunt_menu.on_event(detail)
+		"flow_hunt","flow_paused","flow_stored","flow_compare":
+			if is_instance_valid(pet_workflow):pet_workflow.on_event(detail)
