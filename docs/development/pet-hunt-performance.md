@@ -29,7 +29,7 @@ Giru's non-monotonic results across requested rates reflect short samples and va
 
 ## Change and safety
 
-- UI target range: 1–100,000 groups/s; default remains 100. Requested speed is not a promise. UI displays achieved session-average wall-clock throughput.
+- UI target range: 1–100,000 groups/s; default was 100 at measurement time (later changed to 3,000; measurements below remain historical). Requested speed is not a promise. UI displays achieved session-average wall-clock throughput.
 - Preserve the 4,000 μs per-frame soft work budget, checked between complete scans. One scan and status formatting can overrun it; no running scan is interrupted. Backlog is capped at 100 ms of requested work, avoiding unbounded catch-up after stalls.
 - Remove the old 20-credit cap, which independently limited 60 Hz execution to 1,200 groups/s.
 - Prepare the already validated encounter area once per hunt. Original full catalog had 665 spatial areas; previously every roll searched them again. A run-local catalog keeps only this area while sharing immutable enemy/group/template definitions. Original generator, probabilities and RNG sequence are unchanged.

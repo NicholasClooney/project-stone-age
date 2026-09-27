@@ -12,7 +12,7 @@ func run():
  game.switch_area(true,Vector2i(45,45))
  var menu=game.pet_hunt_menu
  menu.open_menu()
- check(menu.rate.max_value>=2000 and menu.rate.value==100,"higher requested rates supported without changing default")
+ check(menu.rate.max_value>=3000 and menu.rate.value==3000,"approved default requests 3000 with higher rates still supported")
  menu.rate.value=2000;menu.start_hunt()
  check(menu.running and menu.filter.rate==2000,"2000/s target starts")
  # Impossible test-only quality threshold prevents random hit from ending sample.
@@ -44,6 +44,16 @@ func run():
  game.cell=old_cell
  menu.start_hunt()
  check(menu.running and menu.hunt_catalog.data.areas.size()==1 and menu.hunt_catalog.data.areas[0]==game.encounter_catalog.area_at(int(game.data.map_id),game.cell),"restart prepares current validated source area afresh")
+ menu.close_menu()
+ menu.open_menu()
+ check(menu.rate.value==2000,"reopening preserves chosen requested rate")
+ menu.apply_preset(1)
+ check(menu.total.value==4 and menu.min_offsets()==[-2,-2,-2,-2],"switching away from full quality removes individual +2 minima")
+ menu.apply_preset(3)
+ check(menu.total.value==8 and menu.min_offsets()==[2,2,2,2],"full-quality preset restores all four explicit +2 minima")
+ menu.offsets[0].value=1
+ menu.close_menu();menu.open_menu()
+ check(menu.min_offsets()==[1,2,2,2] and menu.preset.selected==4,"reopening preserves customized thresholds")
  menu.close_menu()
  game.process_mode=Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();game.queue_free()
  await process_frame;await create_timer(0.2).timeout

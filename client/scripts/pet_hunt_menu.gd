@@ -56,18 +56,18 @@ func _ready() -> void:
 	label("成长档预设",Vector2(24,194),17)
 	preset=OptionButton.new();preset.position=Vector2(140,184);preset.size=Vector2(480,38)
 	for title in ["不限品质 · 快速试用","优秀：总成长档 +4 或更高","极品：总成长档 +6 或更高","满档：四项成长档均 +2","自定义"]:preset.add_item(title)
-	preset.select(2);preset.item_selected.connect(apply_preset)
+	preset.select(3);preset.item_selected.connect(apply_preset)
 	panel.add_child(preset);controls.append(preset)
 	label("总档下限",Vector2(24,249),17)
-	total=number(Vector2(140,239),-8,8,6)
+	total=number(Vector2(140,239),-8,8,8)
 	total.value_changed.connect(filters_changed)
 	label("各项最低偏移（相对同种基础档）",Vector2(320,249),16)
 	for i in range(4):
 		label(["体力档","腕力档","耐力档","速度档"][i],Vector2(24+i*258,305),17)
-		var input:=number(Vector2(115+i*258,295),-2,2,-2)
+		var input:=number(Vector2(115+i*258,295),-2,2,2)
 		input.value_changed.connect(filters_changed);offsets.append(input)
 	explanation=label("",Vector2(24,351),15);explanation.size=Vector2(1040,67);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,100000,100)
+	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,100000,3000)
 	rate.tooltip_text="目标速度；实际速度取决于敌群复杂度和设备性能，每帧约 4 毫秒工作预算。"
 	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),1,1000000,100000)
 	label("组；到上限暂停，可再次开始。",Vector2(610,433),16)
@@ -94,7 +94,7 @@ func apply_preset(index: int) -> void:
 	if index>=4:return
 	applying=true
 	total.value=[-8,4,6,8][index]
-	for input in offsets:input.value=-2
+	for input in offsets:input.value=2 if index==3 else -2
 	applying=false
 	update_explanation()
 func filters_changed(_value: float) -> void:
@@ -103,7 +103,7 @@ func filters_changed(_value: float) -> void:
 func update_explanation() -> void:
 	if not is_instance_valid(explanation) or offsets.size()!=4:return
 	var probability: float=Rules.tail_probability(int(total.value),min_offsets())
-	explanation.text="同种自然出生个体中，约 %.2f%% 的成长档符合此条件（不是每次遇敌的命中率）。\n+2 是该项出生档上限；总档 +6 的极品可真实出现，不保证未来每级都长到最大值。" % (probability*100.0)
+	explanation.text="同种自然出生个体中，约 %.2f%% 的成长档符合此条件（不是每次遇敌的命中率）。\n+2 是该项出生档上限；四项均 +2 为满档，可真实出现，不保证未来每级都长到最大值。" % (probability*100.0)
 func refresh_candidates() -> void:
 	var selected:=species.get_selected_id() if species.item_count else -1
 	species.clear();species.add_item("任何本地可用宠物",-1)

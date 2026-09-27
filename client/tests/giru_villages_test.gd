@@ -12,7 +12,6 @@ func run():
  var catalog=game.world_catalog
  for village in [5000,5100]:
   check(catalog.info(village).get("kind")=="village","Giru village classified as settlement %d"%village)
-  check(game.dev_destinations.get_popup().get_item_index(village)>=0,"Giru village appears in global teleport %d"%village)
   check(game.dev_map_overview.selector.get_item_index(village)>=0,"Giru village appears in map navigator %d"%village)
  game.dev_map_overview.browse_map(300)
  for label in ["福尔德村","达那村"]:
@@ -27,13 +26,8 @@ func run():
   var interior:=5001 if village==5000 else 5101
   for building in ([5001,5003,5005] if village==5000 else [5101,5103,5105,5106]):
    check(catalog.village_for(building)==village,"building ownership uses declared village %d"%building)
-   check(not catalog.destination_maps(100).has(str(building)) and catalog.destination_maps(village).has(str(building)),"building visibility follows current village %d"%building)
+   check(game.dev_map_overview.selector.get_item_index(building)<0,"building hidden from navigation dropdown %d"%building)
   check(catalog.village_for(interior)==village,"interior ownership works beyond old map-number cutoff")
-  check(not catalog.destination_maps(100).has(str(interior)),"foreign village interior hidden from outside")
-  check(catalog.destination_maps(village).has(str(interior)),"current village shows its own interior")
-  game.travel_destinations.open_menu()
-  check(catalog.village_for(game.travel_destinations.filtered[0].map_id)==village,"current Giru village points sorted first")
-  game.travel_destinations.close_menu()
   check(game.dev_visit(interior),"ordinary village building can be entered")
   await process_frame
   var exit_link: Dictionary={}

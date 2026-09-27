@@ -11,7 +11,7 @@ var background: Panel
 var map_dimensions := Vector2i.ONE
 var current_map := -1
 var source_data: Dictionary = {}
-var walk_mode := true
+var walk_mode := false
 var zoom_level := 1.0
 var view_rect := Rect2(24,110,800,540)
 var base_size := Vector2.ONE
@@ -49,17 +49,25 @@ func _ready() -> void:
 	selector=OptionButton.new()
 	selector.position=Vector2(24,72)
 	selector.size=Vector2(320,30)
-	var ids: Array=world.world_catalog.maps.keys()
+	var ids: Array=world.world_catalog.navigation_maps()
 	ids.sort_custom(func(a,b):return int(a)<int(b))
 	for ident in ids:selector.add_item("%s (%s)" % [world.world_catalog.maps[ident].name,ident],int(ident))
 	selector.item_selected.connect(func(index:int):browse_map(selector.get_item_id(index)))
 	background.add_child(selector)
-	mode_button=world.button("步行",func():walk_mode=not walk_mode; mode_button.text="步行" if walk_mode else "DEV 传送")
+	mode_button=world.button("DEV 传送",func():walk_mode=not walk_mode; mode_button.text="步行" if walk_mode else "DEV 传送")
 	mode_button.position=Vector2(355,72)
 	background.add_child(mode_button)
 	var recenter: Button=world.button("居中 / 全图",recenter_map)
 	recenter.position=Vector2(485,72)
 	background.add_child(recenter)
+	var encounters:=CheckBox.new()
+	encounters.name="DevRandomEncounters"
+	encounters.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	encounters.text="随机遇敌"
+	encounters.position=Vector2(660,72)
+	encounters.button_pressed=world.random_encounters
+	encounters.toggled.connect(func(value):world.random_encounters=value)
+	background.add_child(encounters)
 	tabs=TabBar.new()
 	tabs.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	tabs.add_theme_font_size_override("font_size",16)
@@ -180,7 +188,7 @@ func select_poi(poi: Dictionary) -> bool:
 		if area.is_empty() or int(area.id)!=int(poi.area_id):
 			note.text="遇敌区域已改变，请重新生成导航地点。"
 			return false
-		if world.travel_destinations.safe_destination(int(poi.map_id),point)!=point:
+		if world.travel_landing.safe_destination(int(poi.map_id),point)!=point:
 			note.text="该遇敌落点已不可用，请选择其他地点。"
 			return false
 	if int(poi.map_id)!=current_map:browse_map(int(poi.map_id))

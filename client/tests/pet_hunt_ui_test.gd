@@ -15,7 +15,8 @@ func run() -> void:
 	check(game.switch_area(true,Vector2i(45,45)),"enter original wilderness")
 	var menu=game.pet_hunt_menu
 	menu.open_menu()
-	check(menu.preset.selected==2 and menu.total.value==6,"default is joint +6 quality")
+	check(menu.preset.selected==3 and menu.total.value==8 and menu.min_offsets()==[2,2,2,2],"default is full four-stat +2 quality")
+	check(menu.rate.value==3000,"default requested rate is 3000 groups per second")
 	check(not menu.start_button.disabled and game.paused_input,"modal pauses walking and enables local hunt")
 	check(menu.species.item_count==3 and menu.species.is_item_disabled(2),"unavailable original pet art is explicit")
 	if "--visual-review" in OS.get_cmdline_user_args() and DisplayServer.get_name() != "headless":
@@ -43,7 +44,7 @@ func run() -> void:
 		check(state.enemies[index].growth_weights==actor.growth_weights and state.enemies[index].base_stats==actor.base_stats,"exact individual survives battle handoff without reroll")
 		check(state.enemies[index].name==actor.name,"highlight does not mutate pet name")
 		check(game.battle_view.actor_labels[game.battle_view.enemy_actor(index)].text.begins_with("★"),"matched enemy is visibly marked")
-		check(menu.last_hit.quality.total_offset>=6 and actor.level==1,"found individual meets requested filters")
+		check(menu.last_hit.quality.total_offset==8 and actor.level==1,"found individual meets requested filters")
 	check(game.session.snapshot().pets==before.pets,"helper does not capture automatically")
 	game.process_mode=Node.PROCESS_MODE_DISABLED
 	game.music.stop();game.effect.stop();game.music.stream=null;game.effect.stream=null

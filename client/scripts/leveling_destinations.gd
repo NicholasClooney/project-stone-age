@@ -62,7 +62,7 @@ func visit(index: int) -> bool:
 	var point:=Vector2i(spot.cell[0],spot.cell[1])
 	var area: Dictionary=world.encounter_catalog.area_at(int(spot.map_id),point)
 	if area.is_empty() or int(area.id)!=int(spot.area_id):details.text="原表已改变，请重新生成练级地点。";return false
-	var checked: Vector2i=world.travel_destinations.safe_destination(int(spot.map_id),point)
+	var checked: Vector2i=world.travel_landing.safe_destination(int(spot.map_id),point)
 	if checked!=point:details.text="该落点已不可用，请选择其他练级区。";return false
 	close_menu()
 	return world.load_area_id(int(spot.map_id),point)

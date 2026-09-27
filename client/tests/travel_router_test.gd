@@ -16,7 +16,9 @@ func run()->void:
 	check(not router.map_route(1000,3000,true).is_empty(),"permit exposes realunderseaportals")
 	var menu=world.dev_map_overview
 	menu.open_map()
-	check(menu.walk_mode,"map defaults toWalk notTeleport")
+	check(not menu.walk_mode,"map defaults to developer teleport")
+	menu.mode_button.pressed.emit()
+	check(menu.walk_mode,"autopath remains available from mode toggle")
 	menu.browse_map(3000)
 	check(int(world.data.map_id)==1000 and menu.current_map==3000,"browsing othermap nevermovesplayer")
 	var pointer:Vector2=menu.cell_to_point(Vector2i(84,100))

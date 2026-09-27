@@ -1,60 +1,45 @@
 extends SceneTree
 var failures:=0
-var game
-func _initialize():call_deferred("run")
-func check(ok: bool, message: String):
- print(("PASS: " if ok else "FAIL: ")+message)
+func check(ok:bool,note:String):
+ print(("PASS: " if ok else "FAIL: ")+note)
  if not ok:failures+=1
+func _initialize():call_deferred("run")
 func run():
- game=load("res://scenes/main.tscn").instantiate()
- game.profile_persistence=false;root.add_child(game)
- await process_frame
- await process_frame
- var menu=load("res://scripts/travel_destinations.gd").new()
- menu.configure(game);game.ui_layer.add_child(menu)
- var maps: Dictionary={}
- var residents:=0
- var doors:=0
- for entry in menu.entries:
-  if entry.kind==1:maps[entry.map_id]=true
-  elif entry.kind==2:residents+=1
-  else:doors+=1
- check(maps.size()==game.world_catalog.maps.size() and maps.size()>=103,"all imported maps present, not just curated shortcuts")
- check(residents>=game.world_catalog.residents.size() and doors>0,"residents and original doors included")
- menu.open_menu()
- check(menu.visible and game.paused_input,"browser pauses movement")
- menu.search.text="玛丽娜丝";menu.refresh()
- check(not menu.filtered.is_empty(),"Chinese map-name search finds new locations")
- var all_match:=true
- for entry in menu.filtered:
-  if not str(entry.label).contains("玛丽娜丝"):all_match=false
- check(all_match,"all search results match")
- menu.search.text="";menu.category.select(1);menu.refresh()
- check(menu.filtered.size()==game.world_catalog.destination_maps(1000).size(),"map filter hides other village interiors")
- check(not game.world_catalog.destination_maps(100).has("1002"),"wilderness hides village interiors")
- check(game.world_catalog.destination_maps(1002).has("1003"),"inside shop retains same village buildings")
- check(not game.world_catalog.destination_maps(1002).has("2002"),"inside shop hides other village buildings")
- check(game.world_catalog.destination_maps(100).has("10201"),"undersea dungeon remains a global destination")
- check(menu.filtered[0].map_id==1000,"current village sorted first")
- var point=menu.safe_destination(1000,Vector2i(63,103))
- check(point!=Vector2i(63,103) and point.x>=0,"NPC coordinate relocates to adjacent walkable cell")
- check(not game.world_catalog.links(1000).has(point),"landing avoids automatic door triggers")
- check(menu.safe_destination(999999,Vector2i.ZERO)==Vector2i(-1,-1),"unknown map rejected")
- game.area_transition_busy=true
- check(not menu.visit_entry(menu.filtered[0]),"active map transition cannot be replaced")
- game.area_transition_busy=false
- menu.close_menu()
- check(not game.paused_input,"closing restores exploration")
- game.paused_input=true;menu.open_menu()
- check(not menu.visible,"cannot open over another modal")
- game.paused_input=false;menu.open_menu()
- var target: Dictionary={}
- for entry in menu.entries:
-  if entry.kind==1 and entry.map_id==2000:target=entry;break
- check(menu.visit_entry(target),"travel to restored village succeeds")
- check(int(game.data.map_id)==2000 and not game.paused_input,"destination loaded and input restored")
- game.process_mode=Node.PROCESS_MODE_DISABLED
- game.music.stop();game.effect.stop();game.music.stream=null;game.effect.stream=null
- game.queue_free();await process_frame;await create_timer(0.5).timeout
- print("TRAVEL DESTINATIONS: %d failures" % failures)
- quit(1 if failures else 0)
+ var game=load("res://scenes/main.tscn").instantiate()
+ game.profile_persistence=false;root.add_child(game);await process_frame
+ var menu=game.dev_map_overview
+ check(game.find_child("DevDestinations",true,false)==null,"independent teleport menu removed")
+ check(not menu.walk_mode and menu.mode_button.text=="DEV 传送","map navigation defaults to teleport")
+ var excluded:=0
+ for key in game.world_catalog.maps:
+  if game.world_catalog.is_building(int(key)):
+   excluded+=1
+   check(menu.selector.get_item_index(int(key))<0,"building excluded from map dropdown "+key)
+ check(excluded==94,"all94 imported settlement buildings excluded")
+ for id in [100,200,300,1000,2000,5000,5100,10201,10202,10203,32001]:
+  check(menu.selector.get_item_index(id)>=0,"outdoor village or cave remains selectable%d"%id)
+ var landing=game.travel_landing
+ var point:Vector2i=landing.safe_destination(1000,Vector2i(93,72))
+ check(point!=Vector2i(93,72) and point.x>=0,"safe landing still avoids separately stored MVP villager")
+ check(not game.world_catalog.links(1000).has(point),"safe landing avoids doors")
+ check(landing.safe_destination(999999,Vector2i.ZERO)==Vector2i(-1,-1),"unknown map rejected")
+ var encounters=menu.background.get_node("DevRandomEncounters")
+ encounters.button_pressed=false
+ check(not game.random_encounters,"moved random encounter toggle updates game state")
+ menu.open_map()
+ menu.selector.item_selected.emit(menu.selector.get_item_index(2000))
+ check(menu.current_map==2000 and int(game.data.map_id)==1000,"existing dropdown browses without instant movement")
+ var spawn:Array=game.world_catalog.info(2000).spawn
+ check(menu.select_target(Vector2i(spawn[0],spawn[1])),"clicking browsed map uses default teleport")
+ await process_frame;await process_frame
+ check(int(game.data.map_id)==2000 and not game.paused_input,"teleport changes village and closes navigation")
+ game.load_area_id(1002,Vector2i(11,15));menu=game.dev_map_overview
+ menu.open_map()
+ check(not menu.background.get_node("DevRandomEncounters").button_pressed,"random encounter toggle retains state after map rebuild")
+ check(menu.current_map==1002 and menu.selector.selected==-1 and menu.heading.text.contains("1002"),"current building remains viewable without appearing in dropdown")
+ check(not menu.pois.is_empty(),"building retains door and actor navigation points")
+ menu.mode_button.pressed.emit()
+ check(menu.walk_mode,"walk toggle still available")
+ menu.close_map()
+ game.music.stop();game.effect.stop();game.queue_free();await process_frame;await create_timer(0.3).timeout
+ print("TRAVEL DESTINATIONS: %d failures"%failures);quit(1 if failures else 0)

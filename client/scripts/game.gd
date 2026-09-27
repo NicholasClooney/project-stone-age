@@ -11,7 +11,6 @@ var world_catalog = WorldCatalog.new()
 var travel_router: Node
 var world_travel: Node
 var props: Node
-var dev_destinations: MenuButton
 var random_encounters := true
 var last_encounter_error := ""
 var encounter_catalog = preload("res://server/encounter_catalog.gd").new()
@@ -45,7 +44,7 @@ var adventure_menu: Control
 var profile_persistence := true
 var area_transition_busy := false
 var dev_blink_mode := false
-var travel_destinations: Control
+var travel_landing: RefCounted
 var leveling_destinations: Control
 var clone_button: Button
 var map_transition: CanvasLayer
@@ -460,7 +459,7 @@ func _input(event: InputEvent) -> void:
 			held.erase(action)
 
 func _unhandled_input(event: InputEvent) -> void:
-	for modal in [travel_destinations,leveling_destinations]:
+	for modal in [leveling_destinations]:
 		if is_instance_valid(modal) and modal.visible:
 			if event.is_action_pressed("ui_cancel"):modal.close_menu()
 			get_viewport().set_input_as_handled()
@@ -604,7 +603,6 @@ func _physics_process(delta: float) -> void:
 	save_elapsed += delta
 	if profile_persistence and save_elapsed>=5.0 and not moving and not battle_session.snapshot().active:
 		checkpoint()
-	if is_instance_valid(dev_destinations):dev_destinations.disabled = paused_input or area_transition_busy
 	if is_instance_valid(clone_button):clone_button.disabled=paused_input or area_transition_busy
 	update_adventure_hint()
 	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
@@ -882,35 +880,8 @@ func build_ui() -> void:
 		if id == 0: dev_toggle_riding()
 		elif not paused_input and not moving: change_character("100010"))
 	dev.add_child(riding_menu)
-	dev_destinations = MenuButton.new()
-	dev_destinations.name = "DevDestinations"
-	dev_destinations.flat = false
-	dev_destinations.text = "传送地点 ▾"
-	dev_destinations.add_theme_stylebox_override("normal",box(Color("574431"),Color("9d8354")))
-	dev_destinations.add_theme_stylebox_override("hover",box(Color("775b3c"),Color("e6c284")))
-	dev_destinations.add_theme_font_size_override("font_size",13)
-	dev_destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	var destinations := dev_destinations.get_popup()
-	destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	destinations.add_item("全部地点 / 搜索村民与出入口…",90001)
-	var destination_ids: Array=world_catalog.destination_maps(int(data.map_id))
-	for key in destination_ids:
-		var id:=int(key)
-		var info: Dictionary = world_catalog.info(id)
-		if not info.is_empty():destinations.add_item("%s (%d)" % [str(info.name),id],id)
-	destinations.add_separator()
-	destinations.add_check_item("野外随机遇敌",90000)
-	destinations.set_item_checked(destinations.get_item_index(90000),random_encounters)
-	destinations.id_pressed.connect(func(id: int):
-		if id==90000:
-			random_encounters = not random_encounters
-			destinations.set_item_checked(destinations.get_item_index(90000),random_encounters)
-		elif id==90001:travel_destinations.open_menu()
-		else:call_deferred("dev_visit",id))
-	destinations.about_to_popup.connect(clear_input)
-	dev.add_child(dev_destinations)
-	travel_destinations=preload("res://scripts/travel_destinations.gd").new()
-	travel_destinations.configure(self);root.add_child(travel_destinations)
+	travel_landing=preload("res://scripts/travel_landing.gd").new()
+	travel_landing.configure(self)
 	leveling_destinations=preload("res://scripts/leveling_destinations.gd").new()
 	leveling_destinations.configure(self);root.add_child(leveling_destinations)
 	var training_travel:=button("刷怪传送",leveling_destinations.open_menu)

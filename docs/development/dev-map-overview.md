@@ -1,9 +1,9 @@
 # Whole-map navigation and developer teleport
 
-Use **DEV → 地图导航** to open the map navigator. The dropdown browses every imported map without moving the player. The view covers the complete current island, including800×1200 Jaruga. Yellow markers are NPCs, cyan markers are original doors/exits, and white marks the player when viewing their map.
+Use **DEV → 地图导航** to open the map navigator. The dropdown browses villages, wilderness and caves without moving the player; building interiors are excluded. This replaces the separate teleport menu: 53 regions remain from 147 imported maps, excluding 94 building interiors. The current interior can still be viewed without appearing as a dropdown choice. The random-encounter toggle also lives here. The view covers the complete current island, including800×1200 Jaruga. Yellow markers are NPCs, cyan markers are original doors/exits, and white marks the player when viewing their map.
 
-- **步行** is the default. Click a map point or listed point of interest to walk there. Cross-map navigation follows original portal links and physically walks each segment. The map closes when walking begins.
-- **DEV 传送** explicitly bypasses walking and gates. Click to land on nearby walkable ground, excluding NPC cells and automatic portal triggers.
+- **步行** remains available. Click a map point or listed point of interest to walk there. Cross-map navigation follows original portal links and physically walks each segment. The map closes when walking begins.
+- **DEV 传送** is the initial default and explicitly bypasses walking and gates. Click to land on nearby walkable ground, excluding NPC cells and automatic portal triggers.
 - Scroll to zoom toward the pointer; drag to pan; **居中 / 全图** restores the full extent. Esc closes the navigator.
 
 Walking across islands requires the original reusable undersea permit. At the original guard, navigation opens the existing confirmation dialogue and waits for the player to confirm. It does not silently jump across the checkpoint. Cancelling that dialogue stops the route. Manual movement, another movement target or battle interrupts the route; focus loss does not. After combat, choose a destination again.

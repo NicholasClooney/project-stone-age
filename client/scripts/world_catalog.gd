@@ -58,3 +58,15 @@ func destination_maps(current: int) -> Array:
   if local_a!=local_b:return local_a
   return int(a)<int(b))
  return result
+
+# Settlement interiors are buildings; the three undersea maps and training
+# caves remain regions. 2020 is the standalone original village dojo counter.
+func is_building(id: int) -> bool:
+ return str(info(id).get("kind",""))=="interior" and (village_for(id)>=0 or id==2020)
+
+func navigation_maps() -> Array:
+ var result: Array=[]
+ for key in maps:
+  if not is_building(int(key)):result.append(key)
+ result.sort_custom(func(a,b):return int(a)<int(b))
+ return result

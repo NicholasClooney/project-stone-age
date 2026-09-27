@@ -10,13 +10,9 @@ func run() -> void:
 	root.add_child(game)
 	await process_frame
 	game.random_encounters=false
-	var popup=game.dev_destinations.get_popup()
-	var all_maps:=true
-	for key in game.world_catalog.destination_maps(int(game.data.map_id)):
-		if popup.get_item_index(int(key))<0:all_maps=false
-	check(all_maps,"destination dropdown includes global regions and current village interiors")
-	check(popup.get_item_index(2002)<0 and popup.get_item_index(1002)>=0,"dropdown hides other villages interiors and retains current village shop")
-	check(popup.get_item_id(1)==1000,"dropdown prioritizes current village")
+	var selector=game.dev_map_overview.selector
+	check(selector.item_count==game.world_catalog.navigation_maps().size(),"map dropdown includes all nonbuilding regions")
+	check(selector.get_item_index(2002)<0 and selector.get_item_index(1002)<0,"map dropdown hides all village buildings")
 	game.dev_blink_mode=true
 	game.handle_world_click(game.project(Vector2(85,95)))
 	check(game.cell==Vector2i(85,95) and game.path.is_empty() and not game.moving,"world click blinks immediately without walk path")
@@ -29,9 +25,9 @@ func run() -> void:
 	game.handle_world_click(game.project(Vector2(80,90)))
 	check(game.cell==saved and not game.path.is_empty(),"disabling blink restores click-to-walk")
 	game.clear_input()
-	game.travel_destinations.open_menu()
-	check(game.travel_destinations.visible and game.paused_input,"all destination browser opens from game integration")
-	game.travel_destinations.close_menu()
+	game.dev_map_overview.open_map()
+	check(game.dev_map_overview.visible and game.paused_input,"all destination browser opens from game integration")
+	game.dev_map_overview.close_map()
 	game.leveling_destinations.open_menu()
 	game.leveling_destinations.level.value=100
 	check(not game.leveling_destinations.ranked.is_empty(),"high-level training recommendations available")

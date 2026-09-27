@@ -65,7 +65,10 @@ func run():
   while game.area_transition_busy:await process_frame
   check(int(game.data.map_id)==id,"village %d return enters village" % id)
  # Real dev menu selection, not only direct helper calls.
- game.dev_destinations.get_popup().id_pressed.emit(3000)
+ game.dev_map_overview.open_map()
+ game.dev_map_overview.selector.item_selected.emit(game.dev_map_overview.selector.get_item_index(3000))
+ var spawn: Array=catalog.info(3000).spawn
+ game.dev_map_overview.select_target(Vector2i(spawn[0],spawn[1]))
  await frames()
  check(int(game.data.map_id)==3000,"developer menu selection travels to Jaja")
  game.paused_input=true
