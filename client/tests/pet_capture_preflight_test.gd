@@ -15,6 +15,9 @@ func run()->void:
 	var flow=game.pet_workflow;flow.set_process(false)
 	var helper=game.training_helper;helper.set_process(false)
 	hunt.open_menu();hunt.start_button.pressed.emit()
+	check(hunt.running and flow.phase=="hunt","full HP capture starts without any carried shaving pet")
+	flow.stop_cycle();helper.capture_hp.value=59
+	hunt.start_button.pressed.emit()
 	check(not hunt.running and hunt.rolls==0 and flow.phase=="paused","missing capture pet pauses before any search roll")
 	check(hunt.status.text.contains("仓库") and hunt.status.text.contains("Lv.1"),"preflight explains retrieval of a living newborn capture pet")
 	hunt.close_menu()
@@ -23,6 +26,11 @@ func run()->void:
 	for frame in range(100):game.battle_view._process(0.2)
 	helper.advance()
 	check(not helper.running and game.battle_view.visible and game.battle_view.report.text.contains("没有可用低等级宠物"),"battle safety pause exposes reason in visible battle report")
+	helper.capture_hp.value=100;helper.start_capture_battle(0);helper.advance()
+	var attempted:Dictionary=game.battle_session.snapshot()
+	check(attempted.has("capture_evaluation") and not attempted.turn_frames.any(func(frame):return frame.actor=="pet"),"real battle attempts full HP capture without an attacking pet")
+	check(attempted.enemies[0].captured or attempted.enemies[0].hp==attempted.enemies[0].max_hp,"capture attempt never shaves target HP by attacking")
+	helper.stop_training("test");helper.capture_hp.value=59
 	game.battle_action("developer_escape")
 	for frame in range(100):game.battle_view._process(0.2)
 	game.return_from_battle()

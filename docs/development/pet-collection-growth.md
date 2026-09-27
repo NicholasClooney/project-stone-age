@@ -54,3 +54,5 @@ Comparison current and projected stat lines include 三围合 (attack + defence 
 Warehouse rows also show current attack, defence, speed, and their three-stat total below the pet name, alongside favorite/retrieve/compare actions.
 
 Comparison initially sorts by descending three-stat total (attack + defence + speed), using current or projected values as selected. Carried-before-stored grouping and warehouse-favorite priority remain stronger than the metric sort.
+
+The automatic capture helper can evaluate actual level-120 stat conditions. When enabled, only the just-trained pet is automatically stored if it fails; the next cycle starts at the same location. A passing pet remains carried and opens comparison. This is separate from expected-stat sorting and never releases pets.

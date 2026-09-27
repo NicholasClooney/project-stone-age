@@ -35,6 +35,7 @@ var area_music: AudioStream
 var session = GameSession.new()
 var changelog_menu: Control
 var training_settings: Dictionary = {}
+var pet_stat_filters: Dictionary = {}
 var training_helper: Control
 var pet_workflow: Node
 var pet_hunt_menu: Control
@@ -455,6 +456,8 @@ func request_step(destination: Vector2i) -> bool:
 	return true
 
 func _input(event: InputEvent) -> void:
+	if event.is_action_pressed("ui_cancel") and is_instance_valid(pet_workflow) and pet_workflow.phase=="restart":
+		pet_workflow.stop_cycle("已手动停止");get_viewport().set_input_as_handled();return
 	if data.is_empty():
 		return
 	for action in ["north","south","west","east"]:

@@ -1,5 +1,13 @@
 extends Node
-## One local cycle. Delegates battle actions and rewards to existing authorities.
+## Local capture/train cycles. Stat failures store and repeat; a match stops for comparison.
+## Battle actions and rewards stay with existing authorities.
+const StatFilter=preload("res://scripts/pet_stat_filter.gd")
+var stat_filter_snapshot: Dictionary = {}
+var target_stat_filter: Dictionary = {}
+var stored_count := 0
+var last_result := ""
+var last_stored_id := ""
+var last_stored_total := 0
 var world: Node
 var phase := "idle"
 var reason := ""
@@ -12,13 +20,17 @@ var matched_index := -1
 var capture_battle_id := ""
 
 func configure(owner: Node) -> void:world=owner
-func active() -> bool:return phase in ["hunt","capture","train"]
-func start_cycle(species_key: String="") -> bool:
+func active() -> bool:return phase in ["hunt","capture","train","restart"]
+func start_cycle(species_key: String="", continuing: bool=false) -> bool:
 	if active():return false
 	if world.battle_session.snapshot().get("active",false) or world.battle_view.visible or world.moving or world.area_transition_busy:
 		reason="请先结束战斗或移动，再开始一轮找宠。";world.message.text=reason;return false
 	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
 		reason="宠物栏已满，请自行存放伙伴后再开始。";world.message.text=reason;return false
+	if not continuing:
+		world.pet_hunt_menu.commit_stat_settings()
+		stat_filter_snapshot=world.pet_stat_filters.duplicate(true)
+		stored_count=0;last_result="";last_stored_id=""
 	world.adventure_menu.hide();world.paused_input=false
 	origin_map=int(world.data.map_id);origin_cell=world.cell
 	known_ids.clear();pet_id="";matched_actor={};matched_index=-1;capture_battle_id="";reason=""
@@ -40,6 +52,7 @@ func start_cycle(species_key: String="") -> bool:
 
 func matched(index: int, actor: Dictionary) -> void:
 	if phase!="hunt":return
+	target_stat_filter=stat_filter_snapshot.get(int(actor.get("template_id",-1)),StatFilter.defaults(int(actor.get("template_id",-1)))).duplicate(true)
 	matched_index=index;matched_actor=actor.duplicate(true)
 	capture_battle_id=str(world.battle_session.snapshot().get("battle_id",""))
 	phase="capture"
@@ -57,6 +70,10 @@ func advance() -> void:
 	if not active():return
 	if int(world.data.map_id)!=origin_map or world.cell!=origin_cell or world.moving or world.area_transition_busy:
 		stop_cycle("位置发生变化；请在当前位置重新开始。");return
+	if phase=="restart":
+		phase="idle"
+		start_cycle("",true)
+		return
 	if phase=="hunt":
 		if not world.pet_hunt_menu.running:stop_cycle(world.pet_hunt_menu.status.text)
 		return
@@ -89,10 +106,33 @@ func advance() -> void:
 		for pet in world.session.snapshot().pets:
 			if str(pet.get("pet_id",""))==pet_id:found=pet
 		if found.is_empty() or int(found.level)<120:stop_cycle("目标宠物未达到120级，请手动检查。");return
-		phase="compare";reason="新伙伴已达到120级，请对比后自行决定去留。"
-		world.paused_input=true
-		world.adventure_menu.open_pet_comparison(pet_id)
-		world.message.text=reason
+		complete_trained_pet(found)
+
+func complete_trained_pet(found: Dictionary)->void:
+	if phase!="train":return
+	# Use settled actual attributes, never the forecast or a different pet's ID.
+	if str(found.get("pet_id",""))!=pet_id or int(found.get("level",0))<120:
+		stop_cycle("目标宠物未达到120级，请手动检查。");return
+	var filtered:=StatFilter.enabled(target_stat_filter)
+	var passed:=StatFilter.evaluate(found,target_stat_filter)
+	last_result="%s · %s" % [pet_id,StatFilter.describe(found,target_stat_filter)] if filtered else "新伙伴已达到120级"
+	if filtered and not passed:
+		var index:=-1
+		var pets:Array=world.session.snapshot().pets
+		for i in range(pets.size()):
+			if str(pets[i].get("pet_id",""))==pet_id:index=i;break
+		if index<0 or not world.session.store_pet(index):
+			stop_cycle("未达标但无法存仓："+str(world.session.last_error));return
+		stored_count+=1;last_stored_id=pet_id;last_stored_total=int(found.attack)+int(found.defence)+int(found.speed);last_result="未达标已存仓 · "+last_result
+		world.refresh_companion();world.checkpoint()
+		world.message.text=last_result
+		# A separate frame leaves cancellation/reload a boundary before restarting.
+		phase="restart";reason=last_result
+		return
+	phase="compare";reason=("已达标 · "+last_result) if filtered else "新伙伴已达到120级，请对比后自行决定去留。"
+	world.paused_input=true
+	world.adventure_menu.open_pet_comparison(pet_id)
+	world.message.text=reason
 
 static func same_capture(pet: Dictionary, actor: Dictionary) -> bool:
 	for key in ["template_id","species","level","growth_weights","growth_seed","growth_rank","base_stats"]:

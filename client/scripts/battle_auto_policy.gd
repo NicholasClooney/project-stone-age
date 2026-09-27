@@ -12,7 +12,7 @@ static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dict
  if int(enemy.hp)<=0:return {"stop":"捕捉目标已倒下，已停止；不会改抓其他敌人"}
  if not state.get("can_capture",true):return {"stop":"当前战斗不可继续捕捉，可能已达捕获数量上限"}
  if not enemy.get("can_capture",false) or state.get("boss",false):return {"stop":"所选目标不可捕捉"}
- if int(enemy.hp)*100<=int(enemy.get("max_hp",1))*int(settings.get("capture_hp",59)):
+ if int(enemy.hp)*100<=int(enemy.get("max_hp",1))*int(settings.get("capture_hp",100)):
   return {"action":"capture","pet":"defend","target":target}
  var choice:=capture_pet_choice(state,settings,int(enemy.get("level",1)))
  if choice.has("stop"):return choice

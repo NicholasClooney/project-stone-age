@@ -33,7 +33,7 @@ var earned_xp:=0
 var earned_pet_xp:=0
 var turns:=0
 var cooldown:=0.0
-var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":59,"capture_pet":-1,"capture_pet_max_level":10}
+var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":10}
 var origin_map: int
 var origin_cell: Vector2i
 var initial_level:=1
@@ -66,7 +66,7 @@ func _ready() -> void:
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(730,570);panel.add_child(close)
 	label_at(panel,"战斗预设",Vector2(24,366),17)
 	preset=options(["普通攻击","抓宠（分身全防御）","带宠升级（镜像助战）"],Vector2(180,356))
-	capture_hp=number(Vector2(610,356),1,99,59)
+	capture_hp=number(Vector2(610,356),1,100,100)
 	capture_pet=options(["自动最低等级"],Vector2(180,406));capture_pet.set_item_id(0,-1)
 	capture_pet_max_level=number(Vector2(610,406),1,120,10)
 	label_at(panel,"抓宠血量线与削血宠设置统一在「自动抓极品 → 抓宠设置」。",Vector2(24,416),16)

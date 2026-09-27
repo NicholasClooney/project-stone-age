@@ -11,7 +11,7 @@ func run()->void:
 	var hunt=game.pet_hunt_menu;hunt.set_process(false)
 	var helper=game.training_helper;helper.set_process(false)
 	var flow=game.pet_workflow;flow.set_process(false)
-	check(helper.capture_hp.value==59 and helper.settings.capture_hp==59,"new capture UI and helper default to59 percent")
+	check(helper.capture_hp.value==100 and helper.settings.capture_hp==100 and helper.capture_hp.max_value==100,"new capture UI and helper allow and default to100 percent")
 	check(hunt.limit.value==300000 and hunt.rate.value==5000,"requested hunt defaults are 300000 rolls and 5000 per second")
 	check(hunt.train_after_capture.button_pressed and hunt.auto_capture.button_pressed and not hunt.running,"capture-to120 is checked by default but opening does not start")
 	check(helper.capture_hp.get_parent()==hunt.capture_page and helper.capture_pet.get_parent()==hunt.capture_page and helper.capture_pet_max_level.get_parent()==hunt.capture_page,"capture settings are single shared controls owned by hunt tab")
@@ -56,8 +56,10 @@ func run()->void:
 	helper.start_capture_battle(0)
 	check(helper.settings.capture_hp==37 and helper.settings.capture_pet_id==ident and helper.settings.capture_pet_max_level==4,"ordinary capture handoff uses exact custom hunt settings")
 	helper.stop_training("test")
-	var state:={"enemies":[{"hp":59,"max_hp":100,"can_capture":true}],"pets":[],"active_pet":-1}
-	check(Policy.decide(state,{"preset":"capture"},0).get("action","")=="capture","policy fallback captures at59 percent")
+	var state:={"enemies":[{"hp":100,"max_hp":100,"can_capture":true}],"pets":[],"active_pet":-1}
+	check(Policy.decide(state,{"preset":"capture"},0).get("action","")=="capture","policy fallback attempts capture at full HP")
+	check(Policy.decide(state,{"preset":"capture"},0).get("pet","")=="defend","full HP capture does not attack with the pet")
+	check(Policy.decide(state,{"preset":"capture","capture_hp":59},0).has("stop"),"explicit59 still requires an eligible shaving pet above threshold")
 	check(Policy.decide(state,{"preset":"capture","capture_hp":20},0).has("stop"),"explicit20 percent threshold is not overwritten by new default")
 	game.process_mode=Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();await create_timer(0.3).timeout;game.queue_free();await process_frame;await process_frame
 	print("PET CAPTURE SETTINGS: %d failures"%failures);quit(1 if failures else 0)

@@ -584,8 +584,12 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	for caption in ["三围合降序","体力降序","攻击降序","防御降序","敏捷降序"]:sort.add_item(caption)
 	sort.select(keys.find(pet_compare_sort));sort.item_selected.connect(func(i):pet_compare_sort=keys[i];rebuild());overlay.add_child(sort)
 	var predicted:=CheckButton.new();predicted.text="按120级预期排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
-	var info:Label=world.text(feedback if not feedback.is_empty() else "跨等级比120预期；非出生快照／百分位。",12);info.position=Vector2(14,89);overlay.add_child(info)
+	var filter_result_height:=0
+	var info:Label=world.text(feedback if not feedback.is_empty() else "跨等级比120预期；非出生快照／百分位。",12);info.name="PetComparisonInfo";info.position=Vector2(14,89);overlay.add_child(info)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,196);scroll.size=Vector2(736,396);overlay.add_child(scroll)
+	if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id","")):
+		info.text=world.pet_workflow.reason;info.tooltip_text=info.text;info.clip_text=true;info.size=Vector2(730,60);info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		filter_result_height=44;scroll.position.y+=44;scroll.size.y-=44
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
 	var rows:=PetComparison.rows(profile,selected,pet_compare_sort,pet_compare_projected)
 	var focus_id:=str(selected.get("pet_id",""))
@@ -596,7 +600,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	for entry in [["选中",focus,108],["当前分组首位",leader,150]]:
 		var actor:Dictionary=entry[1]
 		var summary:Label=world.text("%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [entry[0],actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)],13)
-		summary.position=Vector2(14,entry[2]);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
+		summary.position=Vector2(14,int(entry[2])+filter_result_height);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
 	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
 	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(470,46);overlay.add_child(previous)
 	var next:Button=world.button("▶",func():pet_compare_page=mini(pages-1,pet_compare_page+1);rebuild());next.position=Vector2(640,46);overlay.add_child(next)
