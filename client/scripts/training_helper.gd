@@ -1,17 +1,11 @@
 extends Control
-## Opt-in single-player automation; uses the same battle authority and settlement.
-const Policy=preload("res://scripts/battle_auto_policy.gd")
+## Opt-in single-player automation settings and progress. The battle loop runs
+## in the backend (res://server/automation.gd); this control sends settings and
+## presents the status the backend reports.
 var preset: OptionButton
 var capture_hp: SpinBox
 var capture_pet: OptionButton
 var capture_pet_max_level: SpinBox
-var single_battle:=false
-var capture_target:=-1
-var training_pet_id:=""
-var training_pet_level:=120
-var finish_after_capture:=false
-var clone_override_active:=false
-var previous_clone_enabled:=false
 var world: Node
 var panel: Panel
 var progress: Panel
@@ -24,24 +18,46 @@ var hp_floor: SpinBox
 var target_level: SpinBox
 var level_explicit:=false
 var battle_limit: SpinBox
-var running:=false
-var compact_active:=false
-var battles:=0
-var skipped:=0
-var unavailable_streak:=0
-var earned_xp:=0
-var earned_pet_xp:=0
-var turns:=0
-var cooldown:=0.0
+## Settings chosen in this UI; the backend keeps its own copy while running.
 var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":10}
-var origin_map: int
-var origin_cell: Vector2i
-var initial_level:=1
-var stop_reason:=""
-var starting_ride:=-1
+var _capture_choice:=-1
+## The locked target: the backend's while running, else this UI's choice.
+var capture_target: int:
+	get:return int(_status().get("capture_target",-1)) if running else _capture_choice
+	set(value):_capture_choice=value
 var start_button: Button
 var target_note: Label
 var stop_button: Button
+
+func _status() -> Dictionary:
+	return world.state.automation if is_instance_valid(world) else {}
+
+var running: bool:
+	get:return bool(_status().get("running",false))
+var compact_active: bool:
+	get:return bool(_status().get("compact",false))
+var single_battle: bool:
+	get:return bool(_status().get("single_battle",false))
+var battles: int:
+	get:return int(_status().get("battles",0))
+var skipped: int:
+	get:return int(_status().get("skipped",0))
+var earned_xp: int:
+	get:return int(_status().get("earned_xp",0))
+var earned_pet_xp: int:
+	get:return int(_status().get("earned_pet_xp",0))
+var stop_reason: String:
+	get:return str(_status().get("stop_reason",""))
+var clone_override_active: bool:
+	get:return bool(_status().get("clone_override",false))
+
+## In-process test seam: write one backend runner field directly.
+func _seam(fields: Dictionary) -> void:
+	world.link.request({"type":"auto","name":"set","fields":fields})
+
+var starting_ride: int:
+	get:return int(world.backend.automation.starting_ride)
+	set(value):_seam({"starting_ride":value})
 
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:
@@ -134,8 +150,8 @@ func open_battle_menu() -> void:
 func start_capture_battle(target: int, finish_battle: bool = false) -> void:
 	if not world.battle_session.snapshot().active:return
 	capture_target=target;preset.select(1)
-	show();start_training()
-	finish_after_capture=finish_battle
+	apply_settings()
+	world.link.request({"type":"auto_start","kind":"capture_battle","target":target,"finish_battle":finish_battle,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
 func open_menu() -> void:
 	if visible:return
 	if world.paused_input or world.moving or world.area_transition_busy:return
@@ -158,166 +174,98 @@ func apply_settings() -> void:
 	world.training_settings=settings.duplicate(true)
 	world.battle_view.playback_speed=float(settings.speed)
 	world.session.experience_multiplier=int(settings.xp)
+	world.link.request({"type":"auto_update","settings":settings})
 func start_training() -> void:
-	training_pet_id="";finish_after_capture=false
 	apply_settings()
-	single_battle=bool(world.battle_session.snapshot().active)
-	if not single_battle and not world.world_catalog.field(int(world.data.map_id)):
-		world.message.text="请先到野外再开始自动练级。";panel.hide();progress.show();result.text="请先到野外再开始自动练级。";return
-	origin_map=int(world.data.map_id);origin_cell=world.cell
-	initial_level=int(world.session.snapshot().player.level)
-	battles=0;skipped=0;unavailable_streak=0;earned_xp=0;earned_pet_xp=0;turns=0;cooldown=0;stop_reason="";starting_ride=-1
-	if str(settings.preset)=="train_pet":
-		if single_battle and world.battle_session.snapshot().get("allies",[]).is_empty():
-			world.message.text="带宠升级请在遇敌前开启，以生成完整镜像队。";close_menu();return
-		acquire_clone_override()
-	if single_battle and str(settings.preset)=="capture" and capture_target<0:capture_target=int(world.battle_view.player_target)
-	world.battle_session.set_capture_assist(str(settings.preset)=="capture")
-	panel.hide();progress.show();running=true
-	update_status()
+	var command := {"type":"auto_start","kind":"battle","settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}
+	if world.battle_session.snapshot().active and str(settings.preset)=="capture":
+		command.capture_target=capture_target if capture_target>=0 else int(world.battle_view.player_target)
+	world.link.request(command)
 func start_pet_training(pet_id: String, target_level_value: int = 120) -> bool:
 	if running or world.battle_session.snapshot().active:return false
-	var profile: Dictionary=world.session.snapshot()
-	var chosen:=-1
-	for i in range(profile.pets.size()):
-		if str(profile.pets[i].get("pet_id",""))==pet_id:chosen=i;break
-	if chosen<0:stop_reason="目标宠物不在随身队伍";return false
-	if int(profile.get("ride_pet",-1))==chosen:stop_reason="目标宠物正在骑乘，请先下骑";return false
-	if not world.session.select_pet(chosen):stop_reason="无法让目标宠物出战";return false
 	preset.select(2);speed.select(3);multiplier.select(2);compact.button_pressed=true
 	target_level.value=0;level_explicit=true
-	show();start_training()
-	if not running:return false
-	training_pet_id=pet_id;training_pet_level=clampi(target_level_value,1,120)
-	return true
+	apply_settings()
+	return bool(world.link.request({"type":"auto_start","kind":"pet_train","pet_id":pet_id,"target_level":target_level_value,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}).ok)
 
 func health_reason(state: Dictionary) -> String:
-	if float(state.player_hp)/maxf(1,float(state.player_max_hp))*100<=int(settings.hp):return "玩家体力达到停机线"
-	for index in [int(state.get("active_pet",-1)),int(state.get("ride_pet",-1)),starting_ride]:
-		if index>=0 and index<state.get("pets",[]).size():
-			var pet: Dictionary=state.pets[index]
-			if float(pet.hp)/maxf(1,float(pet.max_hp))*100<=int(settings.hp):return "%s 体力达到停机线"%str(pet.get("name","宠物"))
-	return ""
-func profile_health_reason() -> String:
-	var p: Dictionary=world.session.snapshot()
-	return health_reason({"player_hp":p.player.hp,"player_max_hp":p.player.max_hp,"pets":p.pets,"active_pet":p.active_pet,"ride_pet":p.get("ride_pet",-1)})
+	return world.backend.automation.health_reason(state)
 func stop_training(reason: String) -> void:
-	release_clone_override()
-	running=false;stop_reason=reason
-	world.battle_session.set_capture_assist(false)
-	if compact_active and not world.battle_session.snapshot().active:
-		battles+=1
-		world.return_from_battle()
-		if is_queued_for_deletion():return
-	if compact_active:
-		compact_active=false
+	if running:world.link.request({"type":"auto","name":"stop_battle","reason":reason})
+	else:on_event({"kind":"battle_stopped","reason":reason,"battles":battles,"takeover":false})
+func record_result(_state: Dictionary) -> void:
+	pass
+func update_status() -> void:
+	var automation := _status()
+	var profile: Dictionary=world.session.snapshot()
+	var used: Dictionary=automation.get("settings",settings)
+	status.text="自动练级 · %d 场 · Lv.%d → %d · 经验 %d× · 播放 %d×"%[battles,int(automation.get("initial_level",profile.player.level)),profile.player.level,int(used.get("xp",1)),int(used.get("speed",1))]
+	var workflow=world.get("pet_workflow")
+	if is_instance_valid(workflow) and workflow.active():status.text="找宠流程 · "+("抓宠 · " if str(used.get("preset",""))=="capture" else "练宠 · ")+status.text
+	if world.session.clone_squad_enabled:status.text+=" · 五人镜像队"
+	status.text+=" · 获得经验 %d（宠物 %d） · 缺素材跳过 %d 组"%[earned_xp,earned_pet_xp,skipped]
+	if not str(automation.get("turn_text","")).is_empty():result.text=str(automation.turn_text)
+
+## Backend status: show progress while running and mirror the active settings.
+func on_status(automation: Dictionary) -> void:
+	if not bool(automation.get("running",false)):return
+	settings=automation.get("settings",settings).duplicate(true)
+	world.battle_view.playback_speed=float(settings.get("speed",1.0))
+	if not visible:
+		get_parent().move_child(self,get_parent().get_child_count()-1)
+		show()
+	panel.hide();progress.show()
+	update_status()
+
+func on_event(detail: Dictionary) -> void:
+	var reason:=str(detail.get("reason",""))
+	if str(detail.kind)=="battle_refused":
+		world.message.text=reason
+		if reason.begins_with("带宠升级"):close_menu()
+		else:panel.hide();progress.show();result.text=reason
+		return
+	if bool(detail.get("takeover",false)) and world.battle_session.snapshot().active:
 		world.battle_view.open_battle(world.battle_session.snapshot())
 		world.set_music(load("res://assets/legacy/battle/audio/sabgm_b0.wav"))
 	world.paused_input=world.battle_view.visible
 	world.clear_input();hide()
-	world.last_adventure_message="自动练级：%s · 已完成 %d 场。"%[reason,battles]
+	world.last_adventure_message="自动练级：%s · 已完成 %d 场。"%[reason,int(detail.get("battles",battles))]
 	world.message.text=world.last_adventure_message
-	if not is_queued_for_deletion() and is_instance_valid(world.battle_view) and world.battle_view.visible and world.battle_session.snapshot().active:
+	if world.battle_view.visible and world.battle_session.snapshot().active:
 		world.battle_view.report.text="自动抓宠／战斗已暂停："+reason+"；可手动接手。"
-func record_result(state: Dictionary) -> void:
-	earned_xp+=int(state.get("xp",0))
-	for amount in state.get("pet_reward_xp",[]):earned_pet_xp+=int(amount)
-func update_status() -> void:
-	var profile: Dictionary=world.session.snapshot()
-	status.text="自动练级 · %d 场 · Lv.%d → %d · 经验 %d× · 播放 %d×"%[battles,initial_level,profile.player.level,settings.xp,settings.speed]
-	var workflow=world.get("pet_workflow")
-	if is_instance_valid(workflow) and workflow.active():status.text="找宠流程 · "+("抓宠 · " if str(settings.preset)=="capture" else "练宠 · ")+status.text
-	if world.session.clone_squad_enabled:status.text+=" · 五人镜像队"
-	status.text+=" · 获得经验 %d（宠物 %d） · 缺素材跳过 %d 组"%[earned_xp,earned_pet_xp,skipped]
+func _process(delta: float) -> void:
+	if not running:return
+	if _moved():stop_training("位置发生变化");return
+	# In-process, this frame drives the backend runner at the chosen speed.
+	if world.link.is_local():world.link.request({"type":"auto","name":"tick_battle","delta":delta})
+
+func _moved() -> bool:
+	var automation:=_status()
+	var origin: Array=automation.get("origin_cell",[0,0])
+	return int(world.data.map_id)!=int(automation.get("origin_map",-1)) or world.cell!=Vector2i(int(origin[0]),int(origin[1])) or world.area_transition_busy
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):
 		close_menu();get_viewport().set_input_as_handled()
-func _process(delta: float) -> void:
-	if not running:return
-	cooldown-=delta
-	if cooldown>0:return
-	cooldown=0.25/float(settings.speed)
-	advance()
+## Test seam: run one backend runner step now, after acknowledging whatever
+## this client has finished presenting.
 func advance() -> void:
 	if not running:return
-	if int(world.data.map_id)!=origin_map or world.cell!=origin_cell or world.area_transition_busy:
-		stop_training("位置发生变化");return
-	var state: Dictionary=world.battle_session.snapshot()
-	if compact_active or world.battle_view.visible:
-		if not compact_active and world.battle_view.is_animating():return
-		if not state.active:
-			battles+=1;turns=0
-			var outcome: String=state.outcome
-			world.return_from_battle()
-			if outcome=="defeat":return # return rebuilds the map and this control.
-			world.paused_input=true;update_status()
-			if outcome not in ["win","captured"]:stop_training("战斗未获胜");return
-			if single_battle:stop_training("本场自动战斗已完成");return
-			return
-		var reason:=health_reason(state)
-		if not reason.is_empty():stop_training(reason);return
-		if turns>=200:stop_training("单场超过200回合，请手动处理");return
-		if str(settings.preset)=="capture" and world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
-			stop_training("宠物栏已满，请先腾出位置");return
-		if str(settings.preset)=="capture" and finish_after_capture and capture_target>=0 and capture_target<state.enemies.size() and state.enemies[capture_target].get("captured",false):
-			settings.preset="attack"
-		var decision: Dictionary=Policy.decide(state,settings,capture_target)
-		if decision.has("stop"):stop_training(str(decision.stop));return
-		world.battle_session.set_capture_assist(str(settings.preset)=="capture")
-		world.battle_view.player_target=int(decision.target);world.battle_view.pet_target=int(decision.target)
-		world.battle_view.switch_pet_index=int(decision.get("switch",-2))
-		world.battle_session.set_pet_command(str(decision.pet))
-		world.battle_action(str(decision.action))
-		turns+=1
-		var next: Dictionary=world.battle_session.snapshot()
-		result.text="第 %d 回合 · 体力 %d/%d\n%s"%[turns,next.player_hp,next.player_max_hp," / ".join(next.events)]
-		update_status();return
-	var p: Dictionary=world.session.snapshot()
-	if not training_pet_id.is_empty():
-		var selected:=-1
-		for i in range(p.pets.size()):
-			if str(p.pets[i].get("pet_id",""))==training_pet_id:selected=i;break
-		if selected<0:stop_training("目标宠物不在随身队伍");return
-		if selected!=int(p.active_pet):stop_training("目标宠物不再出战");return
-		if int(p.pets[selected].level)>=training_pet_level:stop_training("目标宠物已达到等级目标");return
-	if int(settings.level)>0 and int(p.player.level)>=int(settings.level):stop_training("已达到目标等级");return
-	if battles>=int(settings.limit):stop_training("已达到战斗场次上限");return
-	var reason:=profile_health_reason()
-	if not reason.is_empty():stop_training(reason);return
-	world.paused_input=false
-	compact_active=bool(settings.compact)
-	if not world.begin_wild_battle():
-		compact_active=false
-		if world.last_encounter_error=="art":
-			skipped+=1;unavailable_streak+=1;world.paused_input=true
-			result.text="该敌群原版素材不可用，已跳过，无奖励。";update_status()
-			if unavailable_streak>=100:stop_training("连续100组缺素材，请更换区域")
-			return
-		stop_training("当前位置遇敌数据或条件不可用，请换个位置");return
-	unavailable_streak=0
-	var opened: Dictionary=world.battle_session.snapshot()
-	starting_ride=int(opened.get("ride_pet",-1))
-	capture_target=-1
-	if str(settings.preset)=="capture":
-		for i in range(opened.enemies.size()):
-			if opened.enemies[i].get("can_capture",false) and int(opened.enemies[i].hp)>0:capture_target=i;break
-	world.battle_session.set_capture_assist(str(settings.preset)=="capture")
-	world.paused_input=true
+	if _moved():stop_training("位置发生变化");return
+	world.acknowledge_presentation()
+	world.link.request({"type":"auto_step"})
 
 func save_capture_settings() -> void:
 	settings.capture_hp=int(capture_hp.value)
 	settings.capture_pet=capture_pet.get_selected_id()
 	settings.capture_pet_max_level=int(capture_pet_max_level.value)
 	settings.capture_pet_id=str(capture_pet.get_item_metadata(capture_pet.selected)) if capture_pet.selected>=0 and capture_pet.get_item_metadata(capture_pet.selected)!=null else ""
-	for key in ["capture_hp","capture_pet","capture_pet_max_level","capture_pet_id"]:world.training_settings[key]=settings[key]
+	var capture:={}
+	for key in ["capture_hp","capture_pet","capture_pet_max_level","capture_pet_id"]:
+		world.training_settings[key]=settings[key];capture[key]=settings[key]
+	world.link.request({"type":"auto_update","settings":capture})
 
 func acquire_clone_override()->void:
-	if not clone_override_active:
-		previous_clone_enabled=world.session.clone_squad_enabled
-		clone_override_active=true
-	world.set_clone_squad_enabled(true)
+	world.link.request({"type":"auto","name":"acquire_clone"})
 
 func release_clone_override()->void:
-	if not clone_override_active:return
-	clone_override_active=false
-	world.set_clone_squad_enabled(previous_clone_enabled)
+	world.link.request({"type":"auto","name":"release_clone"})

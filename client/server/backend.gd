@@ -23,7 +23,6 @@ const PROFILE_COMMANDS := {
 	"equip_item":["equip_item",["item"]],
 	"buy_travel_pass":["buy_travel_pass",[]],
 	"heal":["heal",[]],
-	"heal_carried_pets":["heal_carried_pets",[]],
 	"store_pet":["store_pet",["index"]],
 	"retrieve_pet":["retrieve_pet",["index"]],
 	"retrieve_pet_by_id":["retrieve_pet_by_id",["pet_id"]],
@@ -38,7 +37,6 @@ const PROFILE_COMMANDS := {
 	"accept_quest":["accept_quest",[]],
 	"claim_quest":["claim_quest",[]],
 	"grant_starter_pets":["grant_starter_pets",[]],
-	"grant_pet_care_items":["grant_pet_care_items",[]],
 	"claim_default_companions":["claim_default_companions",[]],
 	"gm_raise_level":["gm_raise_level",["index","target"]],
 	"gm_set_base_stat":["gm_set_base_stat",["index","stat","value","additive"]],
@@ -61,12 +59,19 @@ var last_saved_payload := ""
 var rev := 0
 var _storage_json := ""
 var automation = Automation.new(self)
+## Events raised while a command or tick runs are delivered after it finishes,
+## so a client reacting to one never re-enters a half-applied change.
+var _depth := 0
+var _queue: Array[Dictionary] = []
 
 func _init() -> void:
 	encounter_rng.randomize()
 
 func _process(delta: float) -> void:
+	_depth += 1
 	automation.tick(delta)
+	_depth -= 1
+	_flush()
 
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
@@ -77,6 +82,13 @@ func load_profile(path: String) -> bool:
 	return true
 
 func handle(command: Dictionary) -> Dictionary:
+	_depth += 1
+	var reply := _handle(command)
+	_depth -= 1
+	_flush()
+	return reply
+
+func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
 	var reply: Dictionary
 	if PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
@@ -206,9 +218,13 @@ func _cmd_battle_pet_skill(command: Dictionary) -> Dictionary:
 	return {"ok":true}
 
 func _cmd_battle_capture_assist(command: Dictionary) -> Dictionary:
-	battle.set_capture_assist(bool(command.get("enabled",false)))
-	_refresh_battle_state()
+	set_capture_assist(bool(command.get("enabled",false)))
 	return {"ok":true}
+
+func set_capture_assist(enabled: bool) -> void:
+	if battle.capture_assist==enabled:return
+	battle.set_capture_assist(enabled)
+	if not battle_state.is_empty():_refresh_battle_state()
 
 func _cmd_battle_command(command: Dictionary) -> Dictionary:
 	if not battle_open:return _reject("no open battle")
@@ -272,7 +288,7 @@ func close_battle() -> String:
 
 func _refresh_battle_state() -> void:
 	battle_state = _live_battle_state()
-	_emit({"type":"battle_turn","state":battle_state.duplicate(true)})
+	_emit({"type":"battle_state","state":battle_state.duplicate(true)})
 
 ## Current authority state plus the settlement fields only this host adds.
 func _live_battle_state() -> Dictionary:
@@ -299,13 +315,15 @@ func _cmd_auto_step(_command: Dictionary) -> Dictionary:
 	automation.step()
 	return {"ok":true}
 
+func _cmd_auto(command: Dictionary) -> Dictionary:
+	return automation.command(str(command.get("name","")),command)
+
 func _cmd_presented(command: Dictionary) -> Dictionary:
 	automation.presented(str(command.get("battle_id","")),int(command.get("turn",-1)))
 	return {"ok":true}
 
 func _cmd_report_position(command: Dictionary) -> Dictionary:
-	automation.position_changed(int(command.map_id),_cell(command))
-	return {"ok":true}
+	return {"ok":true,"paused":automation.position_changed(int(command.map_id),_cell(command),bool(command.get("map_changed",false)))}
 
 # ---- persistence and events ------------------------------------------------
 
@@ -336,7 +354,15 @@ func emit_event(message: Dictionary) -> void:
 
 func _emit(message: Dictionary) -> void:
 	message.v = PROTOCOL
+	if _depth > 0:
+		_queue.append(message)
+		return
 	event.emit(message)
+
+func _flush() -> void:
+	if _depth > 0:return
+	while not _queue.is_empty():
+		event.emit(_queue.pop_front())
 
 func _derived() -> Dictionary:
 	return {"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}

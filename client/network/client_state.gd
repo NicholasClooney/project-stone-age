@@ -44,7 +44,7 @@ func apply(message: Dictionary) -> void:
 		"battle_started":
 			battle = message.state
 			battle_open = true
-		"battle_turn":
+		"battle_turn","battle_state":
 			battle = message.state
 		"battle_closed":
 			battle_open = false
