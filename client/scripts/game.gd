@@ -932,7 +932,7 @@ func build_ui() -> void:
 	clone_button=button("五人镜像队",func():pass)
 	clone_button.name="DevCloneSquad";clone_button.toggle_mode=true
 	clone_button.button_pressed=session.clone_squad_enabled
-	clone_button.tooltip_text="本体优先行动，四个镜像自动跟随目标；经验全归主角和自己的宠物，分身不分走经验。下一场生效。"
+	clone_button.tooltip_text="复制当前出战宠与骑乘状态，本体优先，四组人宠自动跟随目标；经验仍归本体和真实宠物。下一场生效。"
 	clone_button.toggled.connect(func(enabled):
 		if not paused_input and not battle_session.snapshot().active:session.clone_squad_enabled=enabled
 		else:clone_button.set_pressed_no_signal(session.clone_squad_enabled))

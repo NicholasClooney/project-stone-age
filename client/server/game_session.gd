@@ -65,9 +65,15 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "club" if _profile.equipped else ""
 	config.allies = []
+	config.ally_pets = []
 	if clone_squad_enabled:
 		for i in range(4):
 			config.allies.append({"name":"分身 %d" % (i+1),"character_id":str(_profile.character_id),"kind":"player","weapon":config.player_weapon,"hp":player.hp,"max_hp":player.max_hp,"attack":config.player_attack,"defence":player.defence,"speed":player.speed,"level":player.level,"vital":config.player_vital,"luck":0})
+			var mirror: Dictionary = config.allies.back()
+			mirror.mount = config.ride_pet.duplicate(true)
+			mirror.mounted_sprite = config.mounted_sprite
+			mirror.base_stats = {"attack":mirror.attack,"defence":mirror.defence,"speed":mirror.speed}
+			config.ally_pets.append(pet.duplicate(true) if int(_profile.active_pet)!=int(config.ride_pet_index) else {})
 	config.capture_slots = PET_CAPACITY-_profile.pets.size()
 	config.pets = _profile.pets.duplicate(true)
 	config.active_pet = _profile.active_pet

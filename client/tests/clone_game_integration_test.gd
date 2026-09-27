@@ -26,6 +26,8 @@ func run() -> void:
 	for i in range(300):game.battle_view._process(0.1)
 	game.return_from_battle()
 	game.session.gm_heal()
+	check(game.session.grant_starter_pets() and game.session.select_pet(0) and game.session.set_character("100010") and game.session.mount_pet(1),"configure real blue dragon and tiger mount before mirror battle")
+	var real_roster: Array=game.session.snapshot().pets.duplicate(true)
 	var helper=game.training_helper
 	helper.set_process(false)
 	helper.open_menu();helper.compact.button_pressed=true;helper.hp_floor.value=1;helper.battle_limit.value=1;helper.start_training()
@@ -34,10 +36,17 @@ func run() -> void:
 	check(helper.compact_active and game.battle_session.snapshot().allies.size()==4,"map-only automation also uses five real fighters")
 	check(game.battle_session.get_script().resource_path.ends_with("squad_battle_session.gd"),"map-only automation selects the same squad authority")
 	helper.stop_training("test stop")
-	check(game.battle_view.visible and game.battle_view.actors.size()==16,"manual takeover restores all five fighters")
+	check(game.battle_view.visible and game.battle_view.actors.size()==20,"manual takeover restores five mounted fighters and five pets")
+	var mirrored: Dictionary=game.battle_session.snapshot()
+	check(mirrored.get("ally_pets",[]).size()==4,"compact authority clones all four fighting pets")
+	for i in range(4):
+		check(int(mirrored.allies[i].mounted_sprite)==101006 and mirrored.allies[i].mount.sprite==100330,"mirror uses current tiger mount")
+		check(mirrored.ally_pets[i].sprite==100288 and game.battle_view.actors[16+i].enabled,"mirror fighting pet is independently rendered")
+		check(game.battle_view.actors[12+i].character_id=="101006","mirror renders original rider composite")
 	if game.battle_session.snapshot().active:game.battle_action("developer_escape")
 	for i in range(300):game.battle_view._process(0.1)
 	game.return_from_battle()
+	check(game.session.snapshot().pets==real_roster,"temporary mirror pet and mount state never writes into the real roster")
 	game.clone_button.button_pressed=false
 	game.begin_battle()
 	check(game.battle_session.snapshot().get("allies",[]).is_empty() and game.battle_view.actors.size()<16,"disabling mirrors restores ordinary single-player battle")
