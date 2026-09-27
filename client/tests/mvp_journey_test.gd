@@ -40,6 +40,16 @@ func fight(capture: bool = false, boss: bool = false) -> String:
 	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
 	await frames()
+	# Player growth is now chosen through the status menu, not automatic.
+	if int(game.session.snapshot().player.stat_points)>0:
+		game.show_adventure_menu("status")
+		var allocated := 0
+		while int(game.session.snapshot().player.stat_points)>0 and allocated<30:
+			game.perform_adventure_action("allocate_stat",["strength","vitality","toughness"][allocated%3])
+			allocated += 1
+		check(int(game.session.snapshot().player.stat_points)==0,"level-up points applied through status menu")
+		game.close_adventure_menu()
+		await frames()
 	return outcome
 func visit_villager() -> void:
 	if int(game.data.map_id)!=1000:game.load_area_id(1000,game.SPAWN)

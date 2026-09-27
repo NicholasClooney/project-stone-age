@@ -25,6 +25,7 @@ var session = GameSession.new()
 var adventure_menu: Control
 var profile_persistence := true
 var area_transition_busy := false
+var dev_teleport_mode := false
 var map_transition: CanvasLayer
 var save_path := "user://single-player.json"
 var pet_follower: Node2D
@@ -100,7 +101,7 @@ func _ready() -> void:
 	if profile_persistence:
 		restore_location()
 	refresh_companion()
-	get_window().focus_exited.connect(clear_input)
+	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
 	if "--capture-once" in OS.get_cmdline_user_args():
@@ -284,7 +285,7 @@ func battle_action(action: String) -> void:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
 			var after: Dictionary = session.snapshot()
 			if int(after.player.level)>int(before.player.level):
-				state.events.append("升级！你达到了 %d 级，体力恢复。" % int(after.player.level))
+				state.events.append("升级！%d 级，体力恢复。状态窗口可分配 %d 点。" % [int(after.player.level),int(after.player.get("stat_points",0))])
 			if int(after.active_pet)>=0:
 				var index: int = after.active_pet
 				if int(after.pets[index].level)>int(before.pets[index].level):
@@ -498,6 +499,43 @@ func _draw() -> void:
 		var p := project(Vector2(marker_cell))
 		draw_polyline(PackedVector2Array([p+Vector2(0,-10),p+Vector2(15,0),p+Vector2(0,10),p+Vector2(-15,0),p+Vector2(0,-10)]),Color("fff1a6"),1)
 
+func release_keyboard_input() -> void:
+	# Focus changes release held keys; an intentional click route keeps running.
+	held.clear()
+
+func dev_go_villager() -> void:
+	if paused_input or area_transition_busy:return
+	if dev_teleport_mode:
+		if not load_area_id(1000,Vector2i(92,72)):return
+	approach_npc()
+
+func dev_go_adventure() -> void:
+	if paused_input or area_transition_busy:return
+	if not dev_teleport_mode:
+		walk_to_exit()
+	elif int(data.map_id)==1000:
+		load_area_id(100,Vector2i(45,45))
+	else:
+		load_area_id(1000,SPAWN)
+
+func dev_go_shop() -> void:
+	if paused_input or area_transition_busy:return
+	if dev_teleport_mode:
+		if load_area_id(1002,Vector2i(16,15)):approach_npc()
+	else:walk_to(Vector2i(67,108))
+
+func dev_encounter() -> void:
+	if paused_input or area_transition_busy or battle_view.visible:return
+	# Uses the regular encounter authority and presentation, including quest boss eligibility.
+	if moving:
+		moving = false
+		logical_position = Vector2(cell)
+		player.position = project(logical_position)
+	clear_input()
+	if int(data.map_id)!=100:
+		if not load_area_id(100,Vector2i(45,45)):return
+	begin_battle(session.can_fight_boss())
+
 func clear_input() -> void:
 	pending_talk = false
 	held.clear()
@@ -654,7 +692,8 @@ func build_ui() -> void:
 	classic_hud.world = self
 	root.add_child(classic_hud)
 	boss_button = null
-	var dev := HBoxContainer.new()
+	var dev := HFlowContainer.new()
+	dev.size.x = get_viewport_rect().size.x-24
 	dev.position = Vector2(12,85)
 	dev.add_theme_constant_override("separation",5)
 	root.add_child(dev)
@@ -668,14 +707,23 @@ func build_ui() -> void:
 	var max_out := button("Max out",maximum_zoom_out)
 	max_out.name = "MaxOut"
 	dev.add_child(max_out)
+	var teleport := button("传送模式",func(): pass)
+	teleport.name = "DevTeleportMode"
+	teleport.toggle_mode = true
+	teleport.button_pressed = dev_teleport_mode
+	teleport.toggled.connect(func(enabled: bool): dev_teleport_mode=enabled)
+	teleport.tooltip_text = "开启后，村民 / 探险 / 道具店按钮直接传送"
+	dev.add_child(teleport)
+	var encounter := button("立即遇敌",dev_encounter)
+	encounter.name = "DevEncounter"
+	dev.add_child(encounter)
 	if int(data.map_id)==1000:
-		dev.add_child(button("Villager",approach_npc))
-	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",walk_to_exit)
+		dev.add_child(button("Villager",dev_go_villager))
+	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",dev_go_adventure)
 	exit_button.name = "ExploreOutside"
 	dev.add_child(exit_button)
 	if int(data.map_id)==1000:
-		dev.add_child(button("道具店",func():
-			if not paused_input:walk_to(Vector2i(67,108))))
+		dev.add_child(button("道具店",dev_go_shop))
 	if int(data.map_id)==100:
 		boss_button = button("挑战强敌",func():
 			if session.can_fight_boss():begin_battle(true))
@@ -973,6 +1021,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 		"sell_club":success = at_shop and session.sell_item("club")
 		"use_potion":success = session.use_item("potion")
 		"equip":success = session.equip_item("club")
+		"allocate_stat":success = session.allocate_stat(str(value))
 		"select_pet":success = session.select_pet(int(value))
 		"rename_pet":success = session.rename_pet(int(value),adventure_menu.name_edit.text)
 		"accept_quest":success = at_villager and session.accept_quest()

@@ -10,7 +10,7 @@ This checkpoint completes the agreed narrow playable loop. It supersedes M003's 
 | NPCs | Existing original villager dialogue plus quest/recovery choices; original shopkeeper behind the original counter |
 | Original battle menus | Native2×4 panel, original offsets/art, hover/pressed states, target selection, right-click/Esc cancellation, player→pet command phases, original item and pet selection frames |
 | Battle | Attack, defend, escape, capture, potion; one enemy, one active pet; speed-based turn order, guard applies at round start; win/capture/escape/defeat; stronger quest encounter |
-| Progression | Player and pet XP/levels, automatic growth, gold rewards; club improves attack |
+| Progression | Player XP/levels with allocatable points; pet automatic growth, gold rewards; club improves attack |
 | Pets | 乌力100250, 乌力乌力100251, 乌力斯坦100252; up to5 pets; naming, selection, field following, attack/guard, one level2 skill once per battle |
 | Items/services | Potion and club with original icons; buy/sell, equip/unequip, use potion; village recovery for player and pets |
 | Quest | Accept from villager, win3 ordinary encounters and capture a companion, defeat stronger 乌力斯坦, return for a once-only reward |
@@ -28,7 +28,7 @@ The quest finale triggers through normal wilderness exploration once eligible. N
 5. Earn gold, enter the original shop at Samgir(67,108), approach the merchant across the counter, buy potions/a club. Use the original item tab to heal or equip.
 6. After3 quest wins and a capture, the next wilderness encounter is the stronger opponent. Beat it and return to claim the reward. Reload the app to continue with your saved progress.
 
-Balance tests complete the core loop in7 encounters/25 turns, including all3 captures. That is a test route, not a measured20–30minute playtime guarantee. Walks, recovery and menu use add time; wider content and pacing remain future iterations.
+Balance tests complete the core loop in7 encounters (currently26 turns with allocated points), including all3 captures. That is a test route, not a measured20–30minute playtime guarantee. Walks, recovery and menu use add time; wider content and pacing remain future iterations.
 
 ## Original-flavor evidence and limits
 
@@ -68,3 +68,11 @@ Run `scripts/test.sh` and the Python test suite described in the root README. No
 - Regression coverage includes actual outside-floor shop clicks, collision/corners, modal input blocking, and animated battle/portal journey completion. Verification launches remain silent.
 - Battle motion follows `oft/oft.cpp`: appear state uses original walk clips and off-stage ±300 offsets (`VCT_NO_APPEAR`, around10192/11440/12001); melee approaches to64px, plays the original attack clip, then walks home (cases1/2/14 around6300/6430/7660). The menu slides in after arrivals. Falling entry tiles follow `ProduceHagare(mode2)` with8×8 pieces and accelerating downward release. Animation timing is adapted to elapsed seconds, and the falling order is seeded; this is a supported subset, not a full port of every original battle action. Result dismissal stays locked until the sequence finishes.
 - Remaining battle presentation gaps: numeric HP labels still show the resolved turn snapshot before individual impacts; original overhead bars are not restored yet. Special/projectile attacks and the pet command-panel entrance are not fully ported. These are fidelity gaps, not claims of original parity.
+
+## Level-up, defaults and development shortcuts
+
+Player levels award3 spendable points across vitality/strength/toughness/dexterity (reference `battle.c:3168–3173`, `char.c:1853–1879`). Allocate in the original status window; save/load validates and retains the budget. Older profiles retain earned derived stats and receive their missing points once. Current effects are simplified primary gains (+4HP/+1attack/+1defence/+1speed); historical cross-stat formulas remain deferred. Pet automatic growth is unchanged.
+
+Battle selection starts on attack (`battlemenu.cpp:186`) and restores player attack/capture and pet attack/skill target selections (`3665`, `593–612`, `3630–3642`, `3800+`). A target click is still required. Invalid choices fall back to attack; consumables do not replay automatically. Guard/escape return to the attack default.
+
+Losing focus releases held keys but preserves click-to-walk routes and pending NPC approach. Explicit cancellation still clears routes. The separate DEV toolbar has a session-only **传送模式** toggle: Villager/adventure/shop shortcuts teleport when enabled and walk when disabled. **立即遇敌** uses the normal encounter flow, moving to wilderness if needed, and cannot reset an active battle. These shortcuts intentionally accelerate testing, not normal progression.

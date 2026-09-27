@@ -90,7 +90,7 @@ func run() -> void:
 	game.clear_input()
 	game.approach_npc()
 	game.clear_input()
-	check(not game.pending_talk,"focus loss cancels pending interaction")
+	check(not game.pending_talk,"explicit route cancellation clears pending interaction")
 	game.approach_npc()
 	await ticks(3)
 	var close_button = game.dialogue.find_child("ConfirmDialogue",true,false)

@@ -44,15 +44,15 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original `sabgm_t0.wav` village BGM, loop and volume controls, and a legacy UI sound.
 - One original village resident at (93, 72), with the recorded sprite and first dialogue line, original stone-frame art, confirmation button, and open/close sound effects.
 - Original stone top controls, wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker.
-- Camera follow, consistent zoom across maps, focus-loss input clearing, and safe defeat recovery.
+- Camera follow, consistent zoom across maps, held-key release on focus loss while click paths continue, and safe defeat recovery.
 - Original 30×30 shop interior and merchant, with functional native shop, inventory, status and pet frames.
 - Pure GDScript local battle/progression authority, profile-bound saves and backup recovery.
 
-The single-player loop now includes experience, leveling, currency, three capturable species, a five-pet roster, one active companion, a level-two pet skill, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports targeting/cancellation and player→pet command selection. Progress autosaves and resumes locally.
+The single-player loop now includes experience, leveling, currency, three capturable species, a five-pet roster, one active companion, a level-two pet skill, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports targeting/cancellation and player→pet command selection. Progress autosaves and resumes locally. Player levels grant three points: spend them with UP buttons in the status window. DEV 传送模式 makes destination shortcuts instant; 立即遇敌 starts a normal encounter.
 
 **Start your adventure:** click the villager, choose **村外的伙伴 / 休息**, and accept the quest. Explore outside, weaken an enemy and capture it. When you already have a pet, tell it to **defend while weakening a capture target**. Win three battles, then prepare for the stronger encounter that appears during exploration. Return to the villager for recovery and the quest reward. Use the original bottom pet tab to rename/select your companion and the item tab to use/equip purchases.
 
-Original assets and menu layouts are retained; battle balance, capture conditions, automatic stat growth, this short quest, shop stock/prices and encounter timing are MVP rules rather than verified historical parity. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
+Original assets and menu layouts are retained; battle balance, capture conditions, stat bonus formulas and pet growth, this short quest, shop stock/prices and encounter timing are MVP rules rather than verified historical parity. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
 

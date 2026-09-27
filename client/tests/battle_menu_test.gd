@@ -17,6 +17,7 @@ func run() -> void:
 	var state := {"active":true,"player_hp":80,"player_max_hp":100,"enemy_hp":30,"enemy_max_hp":30,"turn":0,"potions":2}
 	view.open_battle(state)
 	settle(view)
+	check(view.selected_action=="attack" and submitted.is_empty(),"new battle defaults to attack targeting without submitting")
 	view._request_action("attack")
 	check(submitted.is_empty(),"attack waits for target selection")
 	view.select_target(0)
@@ -48,10 +49,14 @@ func run() -> void:
 	view.selected_action = "pet_skill"
 	view.select_target(1)
 	check(pet_commands==["skill"] and submitted==["capture","attack"],"pet command precedes turn submission")
+	check(view.last_pet_command=="skill","completed pet skill selection is remembered")
 	view.open_battle(state)
 	settle(view)
 	view._request_action("attack")
 	view.select_target(1)
+	check(view.selected_action=="pet_attack","unavailable remembered pet skill safely falls back to attack targeting")
+	view.cancel_selection()
+	check(view.command_phase=="pet" and view.selected_action.is_empty(),"cancel remembered pet target reopens skill picker")
 	view.cancel_selection()
 	check(view.command_phase=="player" and view.queued_player_action.is_empty(),"pet menu cancel returns to player phase")
 	for button in view.commands:
@@ -80,9 +85,20 @@ func run() -> void:
 	view.open_battle(entrance)
 	check(view.is_animating() and Vector2(view.actors[0].point).distance_to(view.actors[0].home)>300,"original diagonal entrance begins off formation")
 	view._request_action("attack")
-	check(view.selected_action.is_empty(),"entrance blocks commands until walk-in and menu slide finish")
+	check(view.selected_action=="attack" and view.is_animating(),"entrance keeps default attack pending until walk-in and menu slide finish")
 	settle(view)
 	check(Vector2(view.actors[0].point).is_equal_approx(view.actors[0].home) and is_zero_approx(view.command_panel.position.x),"walk-in and sliding menu settle at original endpoints")
+	view._request_action("capture")
+	var remember_state := state.duplicate(true)
+	remember_state.turn = 3
+	view.show_state(remember_state)
+	settle(view)
+	check(view.selected_action=="capture","next round restores last player capture target selection")
+	view._request_action("item")
+	remember_state.turn = 4
+	view.show_state(remember_state)
+	settle(view)
+	check(view.selected_action=="attack" and view.choice_panel.get_child_count()==0,"consumable selection is not replayed next round")
 	state.boss = true
 	view.open_battle(state)
 	settle(view)

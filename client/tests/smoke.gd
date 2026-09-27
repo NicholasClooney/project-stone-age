@@ -88,7 +88,7 @@ func run() -> void:
 	game.toggle_mute()
 	check(game.music.volume_db>-79,"unmute restores volume")
 	game.clear_input()
-	check(game.held.is_empty() and game.path.is_empty(),"focus reset clears input and route")
+	check(game.held.is_empty() and game.path.is_empty(),"explicit input reset clears input and route")
 	game.music.stop()
 	game.effect.stop()
 	await create_timer(0.2).timeout

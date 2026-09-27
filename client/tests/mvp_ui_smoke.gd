@@ -79,6 +79,7 @@ func run() -> void:
 	await click(view.target_buttons[1])
 	check(view.command_phase=="pet" and view.queued_player_action=="capture","capture target queued before pet command")
 	await cancel()
+	if view.command_phase=="pet": await cancel()
 	check(view.command_phase=="player" and game.battle_session.snapshot().turn==1,"cancel pet phase preserves battle and turn")
 	var cell: Vector2i = game.cell
 	var reset := InputEventKey.new()
@@ -103,6 +104,7 @@ func run() -> void:
 	await settle()
 	await click(view.commands[0])
 	await click(view.target_buttons[1])
+	if view.selected_action.begins_with("pet_"): await cancel()
 	var skill_available := false
 	for child in view.choice_panel.get_children():
 		if child is Button and child.text=="技能": skill_available = not child.disabled

@@ -12,7 +12,7 @@ var _pending: Dictionary = {}
 var last_error := ""
 
 func _init() -> void:
-	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10},"inventory":{"potion":2,"club":0},"equipped":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
 
 func snapshot() -> Dictionary:
 	return _profile.duplicate(true)
@@ -86,12 +86,15 @@ func _gain_xp(actor: Dictionary, amount: int) -> void:
 	while actor.xp >= actor.level * 30:
 		actor.xp -= actor.level * 30
 		actor.level += 1
-		actor.max_hp += 8
-		actor.hp = actor.max_hp
-		actor.attack += 2
-		actor.speed = int(actor.get("speed",10)) + 1
 		if actor.has("skill_unlocked"):
+			actor.max_hp += 8
+			actor.attack += 2
+			actor.speed = int(actor.get("speed",10)) + 1
 			actor.skill_unlocked = actor.level >= 2
+		else:
+			# battle.c:3173 defaults to 3 skill-up points per level.
+			actor.stat_points += 3
+		actor.hp = actor.max_hp
 
 func buy_item(item: String) -> bool:
 	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.player.gold < ITEM_PRICES[item] or _profile.inventory[item] >= 99:
@@ -204,6 +207,10 @@ func load_game(path: String) -> bool:
 			for pet in _profile.pets:
 				if not pet.has("speed"):
 					pet.speed = SPECIES[pet.species].speed + pet.level - 1
+			if not _profile.player.has("allocated_stats"):
+				# Preserve existing prototype gains, credit missed allocation once.
+				_profile.player.allocated_stats = {"vitality":0,"strength":0,"toughness":0,"dexterity":0}
+				_profile.player.stat_points = (_profile.player.level-1)*3
 			return true
 	last_error = "No valid save or backup."
 	return false
@@ -220,6 +227,16 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,1000000000):
 		return false
+	if value.player.has("allocated_stats") or value.player.has("stat_points"):
+		if not value.player.get("allocated_stats") is Dictionary or not _integer(value.player.get("stat_points"),0,(value.player.level-1)*3):
+			return false
+		var assigned := 0
+		for stat in ["vitality","strength","toughness","dexterity"]:
+			if not _integer(value.player.allocated_stats.get(stat),0,(value.player.level-1)*3):
+				return false
+			assigned += int(value.player.allocated_stats[stat])
+		if assigned + int(value.player.stat_points) != (int(value.player.level)-1)*3:
+			return false
 	for item in ITEM_PRICES:
 		if not _integer(value.inventory.get(item),0,99):
 			return false
@@ -286,3 +303,20 @@ func _parse_save(text: String) -> Variant:
 	if parser.parse(text) != OK:
 		return null
 	return parser.data
+
+func allocate_stat(stat: String) -> bool:
+	# char.c CHAR_SkillUp uses four base stats and consumes exactly one point.
+	# MVP uses primary effects only; fractional cross-stat formulas are deferred.
+	var p: Dictionary = _profile.player
+	if not _pending.is_empty() or not p.allocated_stats.has(stat) or p.stat_points <= 0:
+		return false
+	p.stat_points -= 1
+	p.allocated_stats[stat] += 1
+	match stat:
+		"vitality":
+			p.max_hp += 4
+			p.hp += 4
+		"strength":p.attack += 1
+		"toughness":p.defence += 1
+		"dexterity":p.speed += 1
+	return true

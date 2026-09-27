@@ -28,6 +28,9 @@ var transition_tiles: Array[Dictionary] = []
 const MENU_SLIDE_SECONDS := 0.4
 var menu_slide_at := 0.0
 var selected_action := ""
+var last_player_command := "attack"
+var last_pet_command := ""
+var remembered_pet := ""
 var queued_player_action := ""
 var command_phase := "player"
 var command_panel: Control
@@ -168,6 +171,7 @@ func open_battle(next_state: Dictionary) -> void:
 	capture_transition()
 	elapsed = 0.0
 	state = {}
+	last_player_command = "attack"
 	feedback_until = 0.0
 	if is_instance_valid(world) and actors.size() > 0:
 		var ident: String = str(world.player.character_id)
@@ -180,6 +184,10 @@ func open_battle(next_state: Dictionary) -> void:
 		actors[2].sprite.queue_free()
 		actors.resize(2)
 	var pet: Dictionary = next_state.get("pet",{})
+	var pet_key := str(pet.get("species",""))+":"+str(pet.get("name",""))
+	if pet_key!=remembered_pet:
+		last_pet_command = ""
+		remembered_pet = pet_key
 	if not pet.is_empty():
 		add_actor(str(pet.get("sprite",SPECIES_ART.get(str(pet.get("species","wooli")),"100250"))),Vector2(465,420),3)
 	for actor in actors:
@@ -268,6 +276,9 @@ func show_state(next_state: Dictionary) -> void:
 	command_panel.visible = outcome.is_empty()
 	return_button.visible = not outcome.is_empty()
 	return_button.text = "返回村庄" if outcome=="defeat" else "继续探索"
+	if bool(state.get("active",false)):
+		selected_action = last_player_command if last_player_command=="attack" or (last_player_command=="capture" and not bool(state.get("boss",false)) and bool(state.get("can_capture",true))) else "attack"
+		hint.text = "攻击：请选择敌人；右键 / Esc 取消。" if selected_action=="attack" else "捕捉：请选择敌人；右键 / Esc 取消。"
 
 func queue_pose(index: int, action: int, at: float, seconds: float) -> void:
 	if index >= actors.size(): return
@@ -379,6 +390,7 @@ func _request_action(action: String) -> void:
 	sound_requested.emit(217)
 	clear_choices()
 	selected_action = action
+	last_player_command = action if action in ["attack","capture"] else "attack"
 	if action == "item":
 		ui_picture(26061,Vector2(650,235),choice_panel)
 		ui_picture(26072,Vector2(650,222),choice_panel)
@@ -432,7 +444,14 @@ func complete_player_command(action: String) -> void:
 	if not pet.is_empty() and int(state.get("pet_hp",pet.get("hp",0))) > 0 and action != "escape":
 		command_phase = "pet"
 		command_panel.hide()
-		show_pet_choices()
+		if not last_pet_command.is_empty():
+			var remembered := last_pet_command
+			if remembered=="skill" and (not bool(state.get("skill_unlocked",false)) or bool(state.get("skill_used",false))): remembered = "attack"
+			clear_choices()
+			selected_action = "pet_"+remembered
+			hint.text = "宠物%s：请选择敌人；右键 / Esc 更换指令。" % ("技能" if remembered=="skill" else "攻击")
+		else:
+			show_pet_choices()
 	else:
 		submit_command()
 
@@ -459,6 +478,7 @@ func show_pet_choices() -> void:
 	hint.text = "请选择宠物指令；右键 / Esc 返回人物指令。"
 
 func finish_pet_command(command: String) -> void:
+	last_pet_command = command if command in ["attack","skill"] else "attack"
 	pet_command_requested.emit(command)
 	submit_command()
 

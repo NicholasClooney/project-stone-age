@@ -182,8 +182,19 @@ func status_panel(profile: Dictionary) -> void:
 	portrait(100000,Vector2(177,84),Vector2(64,68))
 	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(int(p.attack)+(4 if profile.equipped else 0)),str(p.defence),str(p.get("speed",10)),"—"]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
-	for point in [Vector2(90,289),Vector2(90,311),Vector2(211,289),Vector2(211,311)]:label("—",point,40,13)
-	label("石币 %d" % p.gold,Vector2(18,331),200,14)
+	var base_positions := [Vector2(80,289),Vector2(200,289),Vector2(80,311),Vector2(200,311)]
+	var base_keys := ["vitality","strength","toughness","dexterity"]
+	for i in range(base_keys.size()):label(str(p.allocated_stats[base_keys[i]]),base_positions[i],28,13)
+	label("石币 %d   剩余点数 %d" % [p.gold,p.get("stat_points",0)],Vector2(18,331),248,13)
+	var stats := ["vitality","strength","toughness","dexterity"]
+	var rows := [Vector2(109,289),Vector2(229,289),Vector2(109,311),Vector2(229,311)]
+	var hints := ["体力：最大体力 +4","腕力：攻击 +1","耐力：防御 +1","速度：敏捷 +1"]
+	for i in range(stats.size()):
+		var plus := art_button(26076,rows[i],"allocate_stat",stats[i],int(p.get("stat_points",0))>0)
+		plus.texture_pressed = original(26077)
+		plus.tooltip_text = hints[i] + "（消耗 1 点）"
+		plus.name = "Allocate_"+stats[i]
+
 
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
