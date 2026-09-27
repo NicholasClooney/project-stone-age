@@ -13,8 +13,13 @@ func configure(owner: Node) -> void:
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
+	resized.connect(layout_panel)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	hide()
+func _has_point(point: Vector2) -> bool:
+	# Leave the original bottom menu reachable while blocking world/dev clicks.
+	return point.y < size.y-40
+
 func open_menu(next_kind: String) -> void:
 	kind = next_kind
 	feedback = ""
@@ -83,9 +88,9 @@ func rebuild() -> void:
 		remove_child(panel)
 		panel.queue_free()
 	panel = Control.new()
-	var dimensions := {"status":Vector2(272,408),"inventory":Vector2(544,340),"pets":Vector2(552,380),"shop":Vector2(432,468)}
+	var dimensions := {"status":Vector2(272,360),"inventory":Vector2(272,440),"pets":Vector2(552,380),"shop":Vector2(432,468)}
 	panel.size = dimensions.get(kind,Vector2(704,432))
-	panel.position = (size-panel.size)/2
+	layout_panel()
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(panel)
 	var profile: Dictionary = world.session.snapshot()
@@ -115,6 +120,8 @@ func rebuild() -> void:
 			label("旅程会自动保存。\n继续探索，进度不会丢失。" if world.profile_persistence else "临时旅程：存档未启用。",Vector2(30,78),360,18)
 			choice("保存旅程",Vector2(420,90),"save",null,world.profile_persistence)
 			choice("音乐开关",Vector2(420,145),"mute")
+	if kind in ["status","inventory","pets"]:
+		return
 	var close := TextureButton.new()
 	close.texture_normal = original(26042)
 	close.texture_hover = close.texture_normal
@@ -124,6 +131,17 @@ func rebuild() -> void:
 	close.tooltip_text = "关闭 · Esc"
 	close.pressed.connect(world.close_adventure_menu)
 	panel.add_child(close)
+
+func layout_panel() -> void:
+	if not is_instance_valid(panel):return
+	# menu.cpp MakeWindowDisp: left windows (4,4), inventory (365,4)
+	# in 640px; higher resolutions add their extra width to right windows.
+	if kind == "inventory":
+		panel.position = Vector2(maxf(4,size.x-275),4)
+	elif kind in ["status","pets","system"]:
+		panel.position = Vector2(4,4)
+	else:
+		panel.position = (size-panel.size)/2
 
 func item_icon(item: String, point: Vector2) -> void:
 	var view := TextureRect.new()
@@ -169,24 +187,23 @@ func status_panel(profile: Dictionary) -> void:
 
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
-	image(26061,Vector2(272,0))
+	image(26061,Vector2(0,159))
 	label(str(profile.player.gold),Vector2(182,84),75,14)
 	if profile.equipped:item_icon("club",Vector2(15,46))
 	for i in range(2):
 		var key := "potion" if i==0 else "club"
 		if int(profile.inventory[key])>0:
-			item_icon(key,Vector2(290+i*50,12))
-			label(str(profile.inventory[key]),Vector2(303+i*50,42),40,12)
-		var slot := choice("",Vector2(283+i*50,5),"",null,int(profile.inventory[key])>0)
+			item_icon(key,Vector2(18+i*51,171))
+			label(str(profile.inventory[key]),Vector2(31+i*51,201),40,12)
+		var slot := choice("",Vector2(11+i*51,164),"",null,int(profile.inventory[key])>0)
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
 		slot.size=Vector2(48,48)
 		slot.tooltip_text="耐久力回复药" if key=="potion" else "小棍棒"
 		slot.pressed.connect(func(): selected_item=key;rebuild())
 	var potion := selected_item=="potion"
-	label("耐久力回复药" if potion else "小棍棒",Vector2(287,169),240,15)
-	label("恢复体力；战斗中也可使用。" if potion else "攻击 +4；装备后生效。",Vector2(287,195),239,14)
-	choice("使用" if potion else ("卸下" if profile.equipped else "装备"),Vector2(286,235),"use_potion" if potion else "equip",null if potion else not profile.equipped,int(profile.inventory[selected_item])>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
-	label("点击道具选择，再使用或装备。",Vector2(10,188),245,14)
+	label("耐久力回复药" if potion else "小棍棒",Vector2(15,328),240,15)
+	label("恢复体力；战斗中也可使用。" if potion else "攻击 +4；装备后生效。",Vector2(15,354),239,14)
+	choice("使用" if potion else ("卸下" if profile.equipped else "装备"),Vector2(14,404),"use_potion" if potion else "equip",null if potion else not profile.equipped,int(profile.inventory[selected_item])>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
 
 func pet_panel(profile: Dictionary) -> void:
 	image(26044,Vector2.ZERO)

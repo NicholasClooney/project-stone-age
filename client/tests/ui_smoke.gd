@@ -55,6 +55,16 @@ func run() -> void:
 		await ticks(2)
 		if i in [1,2,3,6]:
 			check(game.adventure_menu.visible and game.paused_input,"implemented original menu tab opens a modal")
+			if i==1:check(game.adventure_menu.panel.position==Vector2(4,4),"status uses original upper-left anchor")
+			if i==3:
+				check(game.adventure_menu.panel.position==Vector2(game.adventure_menu.size.x-275,4),"inventory follows original right edge anchor")
+				check(game.adventure_menu.panel.size==Vector2(272,440),"inventory has original vertical footprint")
+				await capture("classic-inventory-layout")
+			click(hud.task_buttons[i].get_global_rect().get_center())
+			await ticks(2)
+			check(not game.adventure_menu.visible and not game.paused_input,"same menu tab closes its window and resumes exploration")
+			click(hud.task_buttons[i].get_global_rect().get_center())
+			await ticks(2)
 			key(KEY_ESCAPE)
 			await ticks(2)
 		else:

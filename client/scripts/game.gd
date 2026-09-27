@@ -891,6 +891,9 @@ func update_adventure_hint() -> void:
 	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
 
 func show_adventure_menu(kind: String) -> void:
+	if adventure_menu.visible and adventure_menu.kind == kind:
+		close_adventure_menu()
+		return
 	if moving or battle_view.visible or dialogue.visible or help.visible:return
 	if kind=="shop" and (int(data.map_id)!=1002 or not in_talk_range(cell)):return
 	if kind=="quest" and (int(data.map_id)!=1000 or not in_talk_range(cell)):return
