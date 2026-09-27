@@ -331,10 +331,11 @@ func store_pet(index: int) -> bool:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return false
 	if index<0 or index>=_profile.pets.size():last_error="请选择随身宠物。";return false
-	if index==int(_profile.active_pet) or index==int(_profile.get("ride_pet",-1)):
-		last_error="请先取消这只宠物的出战或骑乘状态。";return false
+	if index==int(_profile.get("ride_pet",-1)):
+		last_error="请先取消这只宠物的骑乘状态。";return false
 	_ensure_pet_ids()
 	_profile.pet_storage.append(_profile.pets[index])
+	if index==int(_profile.active_pet):_profile.active_pet=-1
 	_profile.pets.remove_at(index)
 	if int(_profile.active_pet)>index:_profile.active_pet-=1
 	if int(_profile.get("ride_pet",-1))>index:_profile.ride_pet-=1

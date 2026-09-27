@@ -14,7 +14,7 @@ func run():
  var before:=profile.duplicate(true)
  var rows:=Compare.rows(profile,source)
  check(rows.size()==2,"blue starter and original92 same-species aliases include warehouse")
- check(rows[0].pet.pet_id=="pet-999","comparison sorts by attack descending")
+ check(rows[0].location=="pets" and rows[1].location=="pet_storage","carried group precedes higher-stat stored pet")
  check(profile==before,"sorting never mutates authoritative order or pets")
  check(Compare.expected(source)==preload("res://scripts/pet_growth.gd").forecast(source).expected,"lightweight projection matches full forecast exactly")
  var large:=profile.duplicate(true);large.pet_storage=[]
@@ -31,7 +31,7 @@ func run():
  check(menu.panel.has_node("PetComparisonPanel"),"comparison panel opens without requiring carried selection")
  var overlay=menu.panel.get_node("PetComparisonPanel")
  check(overlay.get_node("ComparePinned_选中").text.contains("pet-999"),"selected stable ID remains pinned independent of page")
- check(overlay.has_node("ComparePinned_排序首位"),"sorted leader has pinned comparison summary")
+ check(overlay.has_node("ComparePinned_当前分组首位"),"sorted leader has pinned comparison summary")
  check(not menu.continue_comparison_hunt(twin),"continue hunt rejects unavailable same species without wildcard fallback")
  overlay=menu.panel.get_node("PetComparisonPanel")
  check(overlay.find_children("CompareTransfer_*","Button",true,false).size()==2,"each row exposes location action")
@@ -40,7 +40,11 @@ func run():
  check(game.session.snapshot().pets.back().pet_id=="pet-999","retrieval preserves stable ID")
  menu.panel.find_child("CompareDeploy_pet-999",true,false).pressed.emit();await process_frame
  check(game.session.snapshot().pets[game.session.snapshot().active_pet].pet_id=="pet-999","comparison deploys chosen stable identity")
- check(menu.panel.find_child("CompareTransfer_pet-999",true,false).disabled,"active pet cannot be stored through comparison")
+ check(not menu.panel.find_child("CompareTransfer_pet-999",true,false).disabled,"active pet can be stored with automatic withdrawal")
+ menu.panel.find_child("CompareTransfer_pet-999",true,false).pressed.emit();await process_frame
+ check(game.session.snapshot().active_pet==-1 and game.session.snapshot().pet_storage.back().pet_id=="pet-999","comparison stores active pet and automatically withdraws it")
+ menu.panel.find_child("CompareTransfer_pet-999",true,false).pressed.emit();await process_frame
+ menu.panel.find_child("CompareDeploy_pet-999",true,false).pressed.emit();await process_frame
  check(menu.panel.find_child("CompareDeploy_pet-999",true,false).text=="撤回","active row offers withdrawal inside hub")
  menu.panel.find_child("CompareDeploy_pet-999",true,false).pressed.emit();await process_frame
  check(game.session.snapshot().active_pet==-1,"hub withdrawal clears battle selection")

@@ -38,6 +38,7 @@ static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="attack"
    var forecast:={"expected":expected(pet)}
    result.append({"pet":pet,"location":location,"index":index,"forecast":forecast,"quality":quality(pet)})
  result.sort_custom(func(a,b):
+  if a.location!=b.location:return a.location=="pets"
   var av:Dictionary=a.forecast.get("expected",a.pet) if projected else a.pet
   var bv:Dictionary=b.forecast.get("expected",b.pet) if projected else b.pet
   var x:=int(av.get(sort_key,0));var y:=int(bv.get(sort_key,0))

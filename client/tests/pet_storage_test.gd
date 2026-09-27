@@ -9,7 +9,7 @@ func _initialize():
  var before:Dictionary=session.snapshot()
  check(before.pet_storage.is_empty() and before.pets[0].pet_id!=before.pets[1].pet_id,"new pets receive distinct stable identities")
  session.select_pet(1);session._profile.ride_pet=2
- check(not session.store_pet(1) and not session.store_pet(2),"active and mounted pets cannot be stored")
+ check(not session.store_pet(2),"mounted pet remains protected")
  var original:Dictionary=session.snapshot().pets[0].duplicate(true)
  check(session.store_pet(0),"idle pet can be stored")
  var stored:Dictionary=session.snapshot()
@@ -22,6 +22,18 @@ func _initialize():
  session.store_pet(0)
  count=session.snapshot().pets.size();session.grant_starter_pets()
  check(session.snapshot().pets.size()==count,"stored starters do not get duplicated by grant")
+ var recalled=Session.new();recalled.grant_starter_pets();recalled.select_pet(1)
+ recalled._profile.ride_pet=2
+ var fighter:Dictionary=recalled.snapshot().pets[1].duplicate(true)
+ check(recalled.store_pet(1),"out-of-battle active pet can be stored directly")
+ var after_recall:Dictionary=recalled.snapshot()
+ check(after_recall.active_pet==-1 and after_recall.pet_storage[0]==fighter,"storing active pet recalls it and preserves full individual")
+ check(after_recall.ride_pet==1 and after_recall.pets[1].species=="red_rex","auto-recall preserves mounted pet identity after index shift")
+ var recall_path:="/tmp/stone-age-storage-recall-test.json"
+ var recall_loaded=Session.new()
+ check(recalled.save_game(recall_path) and recall_loaded.load_game(recall_path) and recall_loaded.snapshot()==after_recall,"auto-recalled active pet and warehouse survive save reload")
+ for name in [recall_path,recall_path+".bak"]:
+  if FileAccess.file_exists(name):DirAccess.remove_absolute(name)
  var path:="/tmp/stone-age-storage-test.json"
  check(session.save_game(path),"storage saves successfully")
  var restored=Session.new()
