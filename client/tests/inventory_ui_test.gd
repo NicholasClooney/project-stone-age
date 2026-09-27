@@ -12,6 +12,21 @@ func double_click(control: Control) -> void:
 	event.pressed=true
 	event.double_click=true
 	control.gui_input.emit(event)
+func click(control: Control) -> void:
+	var point := control.get_global_rect().get_center()
+	var motion := InputEventMouseMotion.new()
+	motion.position=point
+	motion.global_position=point
+	root.push_input(motion,true)
+	for pressed in [true,false]:
+		var event := InputEventMouseButton.new()
+		event.position=point
+		event.global_position=point
+		event.button_index=MOUSE_BUTTON_LEFT
+		event.pressed=pressed
+		root.push_input(event,true)
+		await process_frame
+
 func run() -> void:
 	var world = load("res://scenes/main.tscn").instantiate()
 	world.profile_persistence=false
@@ -45,7 +60,9 @@ func run() -> void:
 	world.session._profile.player.allocated_stats.vitality=2
 	menu.rebuild()
 	check(menu.panel.get_node("Allocate_vitality").visible,"Remaining point shows UP buttons")
-	menu.panel.get_node("Allocate_vitality").pressed.emit()
+	check(menu.panel.get_node("Allocate_vitality").position==Vector2(110,289),"Original UP position includes ADRN offsets")
+	check(menu.panel.get_node("Allocate_dexterity").position==Vector2(230,309),"Original second row advances exactly20 pixels")
+	await click(menu.panel.get_node("Allocate_vitality"))
 	await process_frame
 	check(not menu.panel.get_node("Allocate_vitality").visible,"Spending final earned point hides UP buttons")
 	world.music.stop();world.effect.stop()

@@ -183,12 +183,17 @@ func status_panel(profile: Dictionary) -> void:
 	portrait(100000,Vector2(177,84),Vector2(64,68))
 	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(int(p.attack)+(4 if profile.equipped else 0)),str(p.defence),str(p.get("speed",10)),"—"]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
-	var base_positions := [Vector2(80,289),Vector2(200,289),Vector2(80,311),Vector2(200,311)]
+	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]
 	var base_keys := ["vitality","strength","toughness","dexterity"]
 	for i in range(base_keys.size()):label(str(p.allocated_stats[base_keys[i]]),base_positions[i],28,13)
-	label("石币 %d   剩余点数 %d" % [p.gold,p.get("stat_points",0)],Vector2(18,331),248,13)
+	label("石币 %d" % p.gold,Vector2(18,331),248,13)
+	# Classic menu.cpp11801-11808: center(136,180) plus original
+	# ADRN offsets: LEVEL UP POINT(-71,88), UP(-26,109).
+	if int(p.get("stat_points",0))>0:
+		image(26075,Vector2(65,268))
+		label(str(p.stat_points),Vector2(186,268),40,13)
 	var stats := ["vitality","strength","toughness","dexterity"]
-	var rows := [Vector2(109,289),Vector2(229,289),Vector2(109,311),Vector2(229,311)]
+	var rows := [Vector2(110,289),Vector2(230,289),Vector2(110,309),Vector2(230,309)]
 	var hints := ["体力：最大体力 +4","腕力：攻击 +1","耐力：防御 +1","速度：敏捷 +1"]
 	for i in range(stats.size()):
 		var plus := art_button(26076,rows[i],"allocate_stat",stats[i],int(p.get("stat_points",0))>0)

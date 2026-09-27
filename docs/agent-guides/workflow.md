@@ -19,3 +19,5 @@
 Ask for clarification only when a material unresolved choice changes the requested outcome. Resolve ordinary implementation details using the milestone's constraints. Report blockers precisely and continue independent useful work when possible.
 
 A screenshot proves a rendered state; it does not prove animation, sound, networking, or persistence. Say which checks actually ran. Use the [task template](task-template.md) for bounded follow-up work.
+
+For original-flavor battle/UI work, follow the [battle fidelity audit](../reverse-engineering/battle-fidelity.md) acceptance gate. Inspect source behavior, not only artwork; run silent input tests and visually review rendered states before claiming fidelity.

@@ -61,6 +61,7 @@ func run() -> void:
 	check(view.selected_action=="attack" and game.battle_session.snapshot().turn==0,"real mouse selects original attack without consuming turn")
 	await click(view.target_buttons[1])
 	check(view.command_phase=="pet" and game.battle_session.snapshot().turn==0,"real enemy click enters pet phase")
+	await settle()
 	var pet_attack := pet_attack_button(view)
 	check(pet_attack!=null,"original pet skill panel has attack entry")
 	if pet_attack!=null:

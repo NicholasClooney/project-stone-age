@@ -46,10 +46,13 @@ func run():
  var id=game.battle_session.snapshot().get("battle_id","")
  game.dev_encounter()
  check(game.battle_session.snapshot().get("battle_id","")==id and not id.is_empty(),"dev encounter cannot reset active combat")
+ game.process_mode=Node.PROCESS_MODE_DISABLED
  game.music.stop();game.effect.stop()
- await create_timer(0.3).timeout
+ game.music.stream=null;game.effect.stream=null
  game.queue_free()
  await process_frame
+ # Let the audio mixer release stopped playbacks before engine shutdown.
+ await create_timer(0.5).timeout
  await process_frame
  print("DEV NAVIGATION: %d failures" % failures)
  quit(1 if failures else 0)

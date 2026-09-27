@@ -1,12 +1,22 @@
 extends SceneTree
+class TestPlayer:
+	extends RefCounted
+	var character_id := 100000
+class TestSession:
+	extends RefCounted
+	var equipped := false
+	func snapshot() -> Dictionary: return {"equipped":equipped}
 class DefeatWorld:
 	extends Node
 	var returns := 0
+	var player := TestPlayer.new()
+	var session := TestSession.new()
 	var adventure_menu: Control
 	func return_from_battle() -> void: returns += 1
 var failures := 0
 var submitted: Array[String] = []
 var pet_commands: Array[String] = []
+var sounds: Array[int] = []
 func _initialize() -> void: call_deferred("run")
 func check(ok: bool, description: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+description)
@@ -17,6 +27,7 @@ func run() -> void:
 	var view = load("res://scripts/battle_view.gd").new()
 	root.add_child(view)
 	view.action_requested.connect(func(action: String): submitted.append(action))
+	view.sound_requested.connect(func(ident: int): sounds.append(ident))
 	view.pet_command_requested.connect(func(command: String): pet_commands.append(command))
 	await process_frame
 	var state := {"active":true,"player_hp":80,"player_max_hp":100,"enemy_hp":30,"enemy_max_hp":30,"turn":0,"potions":2}
@@ -51,6 +62,9 @@ func run() -> void:
 	view._request_action("attack")
 	view.select_target(1)
 	check(view.command_phase=="pet" and submitted.size()==1,"player command waits for pet command")
+	check(view.is_animating() and view.choice_panel.position.x>0,"pet command panel slides into the battlefield")
+	settle(view)
+	check(is_zero_approx(view.choice_panel.position.x),"pet menu slide settles before target confirmation")
 	view.selected_action = "pet_skill"
 	view.select_target(1)
 	check(pet_commands==["skill"] and submitted==["capture","attack"],"pet command precedes turn submission")
@@ -60,6 +74,10 @@ func run() -> void:
 	view._request_action("attack")
 	view.select_target(1)
 	check(view.selected_action=="pet_attack","unavailable remembered pet skill safely falls back to attack targeting")
+	var visible_commands := 0
+	for child in view.choice_panel.get_children():
+		if child is Button and child.has_meta("pet_action"): visible_commands += 1
+	check(visible_commands==3,"remembered pet attack keeps all command alternatives visible")
 	view.cancel_selection()
 	check(view.command_phase=="pet" and view.selected_action.is_empty(),"cancel remembered pet target reopens skill picker")
 	view.cancel_selection()
@@ -77,7 +95,7 @@ func run() -> void:
 	check(view.feedback_until-view.elapsed>2.0,"three acted participants lock input through travel and strikes")
 	check(view.actors[1].motions[0].at>view.actors[0].motions[1].end,"enemy approaches only after player returns home")
 	check(view.actors[2].cues.any(func(cue): return cue.action==10 and cue.at>view.actors[1].motions[1].end),"pet defence uses guard pose after enemy returns")
-	check(view.actors[2].cues.any(func(cue): return cue.action==1 and cue.at>view.actors[1].motions[0].end),"enemy strike damages companion after approach")
+	check(view.actors[2].cues.any(func(cue): return cue.action==10 and cue.at>view.actors[1].motions[0].end),"guarding companion holds guard pose at enemy strike")
 	next = state.duplicate(true)
 	next.turn = 2
 	next.turn_order = ["enemy"]
@@ -151,8 +169,20 @@ func run() -> void:
 	var first_hit := float(view.hp_cues[0].at)
 	view._process(first_hit-view.elapsed+0.001)
 	check(view.displayed_hp[1]==18 and view.displayed_hp[0]==80,"first strike applies its exact authoritative HP snapshot")
+	check(view.battle_effects.active.any(func(entry): return entry.kind=="flash") and view.battle_effects.active.any(func(entry): return entry.kind=="number" and entry.node.text=="12"),"actual HP loss creates original hit flash and exact damage number")
 	settle(view)
 	check(view.displayed_hp==[72,12,30],"all overhead HP meters settle to final authoritative values")
+	view.open_battle(state)
+	settle(view)
+	var healing := state.duplicate(true)
+	healing.turn = 51
+	healing.player_hp = 100
+	healing.turn_order = ["player"]
+	healing.turn_frames = [{"actor":"player","player_hp":100,"enemy_hp":30,"pet_hp":30}]
+	view.pending_action = "item"
+	view.show_state(healing)
+	view._process(float(view.hp_cues[0].at)-view.elapsed+0.001)
+	check(view.battle_effects.active.any(func(entry): return entry.kind=="number" and entry.node.text=="20" and entry.node.get_theme_color("font_color")==Color("a0f43a")),"healing creates exact green recovery number at action time")
 	view.open_battle(state)
 	settle(view)
 	var fake := DefeatWorld.new()
@@ -181,8 +211,58 @@ func run() -> void:
 	await process_frame
 	check(fake.returns==1,"defeat returns automatically exactly once after animations")
 	check(not view.hp_bars[0].visible,"knocked-out actor loses overhead HP meter")
+	for base in [100000,100005,100010]:
+		fake.player.character_id = base
+		fake.session.equipped = true
+		view.open_battle(state)
+		settle(view)
+		var expected: String = str(view.manifest.equipment_variants.club[str(base)])
+		check(str(view.actors[0].character_id)==expected,"equipped avatar %d uses original club sprite mapping" % base)
+		check(view.actors[0].animations.has("0_3") and view.actors[0].animations.has("4_3") and view.actors[0].animations.has("10_3"),"club variant retains original attack, walk and guard animations")
+		if base==100000 and DisplayServer.get_name()!="headless":
+			var club_turn := state.duplicate(true)
+			club_turn.turn = 61
+			club_turn.turn_order = ["player"]
+			club_turn.enemy_hp = 18
+			view.pending_action = "attack"
+			view.show_state(club_turn)
+			var strike_at: float = (float(view.actors[0].motions[0].end)+float(view.actors[0].motions[1].at))/2.0
+			view._process(strike_at-view.elapsed)
+			await process_frame
+			await RenderingServer.frame_post_draw
+			root.get_texture().get_image().save_png("res://../artifacts/battle-club-strike.png")
+		fake.session.equipped = false
+		view.open_battle(state)
+		settle(view)
+		check(str(view.actors[0].character_id)==str(base),"unequipping restores original unarmed avatar")
 	view.world = null
 	fake.queue_free()
+	view.open_battle(state)
+	settle(view)
+	var rewards := state.duplicate(true)
+	rewards.turn = 70
+	rewards.active = false
+	rewards.outcome = "win"
+	rewards.enemy_hp = 0
+	rewards.xp = 20
+	rewards.gold = 10
+	rewards.turn_order = ["player"]
+	rewards.turn_frames = [{"actor":"player","player_hp":80,"enemy_hp":0,"pet_hp":30}]
+	rewards.result_summary = [{"name":"你","xp":20,"level_up":true},{"name":"乌力","xp":20,"level_up":false}]
+	sounds.clear()
+	view.pending_action = "attack"
+	view.show_state(rewards)
+	check(not view.result_panel.visible and view.is_animating() and not sounds.has(211),"result window and level-up sound wait for final strike and damage effects")
+	settle(view)
+	check(view.result_panel.visible and view.result_level_up and "LvUp!" in view.result_text.text and sounds.has(211),"original result panel displays authoritative level-up rewards with original sound")
+	check(view.result_panel.position==Vector2(240,180) and view.result_panel.size==Vector2(320,288) and view.result_text.position==Vector2(24,70),"result panel retains original five-by-six stone layout with text inside frame")
+	if DisplayServer.get_name() != "headless":
+		await process_frame
+		await RenderingServer.frame_post_draw
+		view.battle_effects._process(2.0)
+		await process_frame
+		await RenderingServer.frame_post_draw
+		root.get_texture().get_image().save_png("res://../artifacts/battle-results.png")
 	view.open_battle(state)
 	settle(view)
 	if DisplayServer.get_name() != "headless":
@@ -194,9 +274,10 @@ func run() -> void:
 		root.get_texture().get_image().save_png("res://../artifacts/mvp-original-battle-items.png")
 		view.cancel_selection()
 		view.complete_player_command("attack")
+		settle(view)
 		await process_frame
 		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("res://../artifacts/mvp-original-battle-pet.png")
+		root.get_texture().get_image().save_png("res://../artifacts/battle-pet-picker.png")
 	if DisplayServer.get_name() != "headless":
 		view.open_battle(state)
 		view._process(0.65)

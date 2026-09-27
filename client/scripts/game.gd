@@ -284,6 +284,10 @@ func battle_action(action: String) -> void:
 		if state.outcome=="win":
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
 			var after: Dictionary = session.snapshot()
+			state.result_summary = [{"name":"你","xp":int(state.get("xp",0)),"level_up":int(after.player.level)>int(before.player.level)}]
+			if int(after.active_pet)>=0:
+				var pet_index: int = after.active_pet
+				state.result_summary.append({"name":str(after.pets[pet_index].name),"xp":int(state.get("xp",0)),"level_up":int(after.pets[pet_index].level)>int(before.pets[pet_index].level)})
 			if int(after.player.level)>int(before.player.level):
 				state.events.append("升级！%d 级，体力恢复。状态窗口可分配 %d 点。" % [int(after.player.level),int(after.player.get("stat_points",0))])
 			if int(after.active_pet)>=0:
@@ -616,6 +620,9 @@ func setup_audio() -> void:
 	add_child(effect)
 
 func play_battle_sound(ident: int) -> void:
+	if ui_sounds.has(ident):
+		play_ui_sound(ident)
+		return
 	if muted or not battle_sounds.has(ident):
 		return
 	effect.stream = battle_sounds[ident]
