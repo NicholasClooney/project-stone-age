@@ -630,6 +630,21 @@ func _gm_mark(actor: Dictionary) -> void:
 	_profile.gm_modified=true
 	actor.gm_modified=true
 
+func gm_clear_modified(index: int = -2) -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能清除 GM 标记。")
+	if index==-2:
+		_profile.player.erase("gm_modified")
+		for pet in _profile.pets:pet.erase("gm_modified")
+	else:
+		var actor:=_gm_actor(index)
+		if actor.is_empty():return _gm_error("请选择有效角色或宠物。")
+		actor.erase("gm_modified")
+	_profile.gm_modified=bool(_profile.player.get("gm_modified",false))
+	for pet in _profile.pets:
+		_profile.gm_modified=bool(_profile.gm_modified) or bool(pet.get("gm_modified",false))
+	return true
+
 func gm_raise_level(index: int, target: Variant) -> bool:
 	last_error=""
 	if not _pending.is_empty():return _gm_error("战斗中不能修改等级。")

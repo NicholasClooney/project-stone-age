@@ -9,6 +9,8 @@ var stat_inputs: Dictionary={}
 var feedback: Label
 var summary: Label
 var mutation_buttons: Array[Button]=[]
+var clear_selected_button: Button
+var clear_all_button: Button
 var escape_button: Button
 var previous_pause := false
 func configure(owner: Node)->void:world=owner
@@ -47,6 +49,10 @@ func _ready()->void:
 	escape_button=world.button("立即脱战 · 无奖励",_escape)
 	escape_button.position=Vector2(24,440)
 	panel.add_child(escape_button)
+	clear_selected_button=_action("清除所选 GM 标记",Vector2(300,440),func():_apply(world.session.gm_clear_modified(_actor()),true))
+	clear_all_button=_action("清除全队 GM 标记",Vector2(580,440),func():_apply(world.session.gm_clear_modified(-2),true))
+	for button in [clear_selected_button,clear_all_button]:
+		button.tooltip_text="仅清除标记，不恢复数值；清除后不代表自然培养。全队指主角和全部真实宠物。"
 	var close: Button=world.button("关闭 · Esc",close_menu)
 	close.position=Vector2(770,490)
 	panel.add_child(close)
@@ -72,11 +78,12 @@ func _number(position:Vector2,minimum:float,maximum:float,step:float,value:float
 	field.value=value
 	panel.add_child(field)
 	return field
-func _action(title:String,position:Vector2,callback:Callable)->void:
+func _action(title:String,position:Vector2,callback:Callable)->Button:
 	var button:Button=world.button(title,callback)
 	button.position=position
 	panel.add_child(button)
 	mutation_buttons.append(button)
+	return button
 func _actor()->int:return actor_picker.get_selected_id()
 func open_menu()->void:
 	if world.paused_input and not world.battle_view.visible:return
@@ -102,13 +109,13 @@ func _refresh_actor()->void:
 	for stat in stat_inputs:stat_inputs[stat].value=float(actor.base_stats.get(stat,0))/100.0
 	level_input.value=120
 	summary.text="Lv.%d%s\n体力 %d / %d\n攻击 %d　防御 %d\n速度 %d\n角色可分配点 %d" % [actor.level," · GM已修改" if actor.get("gm_modified",false) else "",actor.hp,actor.max_hp,actor.attack,actor.defence,actor.speed,profile.player.stat_points]
-	for button in mutation_buttons:button.disabled=world.battle_view.visible
+	for button in mutation_buttons:button.disabled=world.battle_view.visible or not world.session._pending.is_empty()
 	escape_button.disabled=not world.battle_view.visible or not world.battle_session.snapshot().get("active",false)
-func _apply(success:bool)->void:
+func _apply(success:bool,cleared:bool=false)->void:
 	feedback.text=world.session.last_error if not success else ""
 	if success:
 		var saved: bool=world.checkpoint()
-		feedback.text="已修改并保存 · GM 标记已保留。" if saved else "已修改，但保存失败；请检查存储空间。"
+		feedback.text=("标记已清除并保存；数值未恢复，不代表自然培养。" if cleared else "已修改并保存 · GM 标记已保留。") if saved else "已修改，但保存失败；请检查存储空间。"
 		world.refresh_companion()
 		_refresh_actor()
 func _escape()->void:

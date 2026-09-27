@@ -209,6 +209,21 @@ func _walkable(point: Vector2i) -> bool:
 		if int(resident.map_id)==current_map and point==Vector2i(resident.cell[0],resident.cell[1]):return false
 	return not (current_map==int(world.data.map_id) and point==world.npc_cell)
 
+func select_map_point(point: Vector2) -> bool:
+	# Markers occupy several tiles at whole-island scale. Select their verified
+	# landing, rather than an adjacent tile with a different encounter table.
+	var nearest: Dictionary={}
+	var distance:=6.0
+	for poi in pois:
+		if int(poi.get("map_id",current_map))!=current_map:continue
+		var marker:=cell_to_point(poi.cell)
+		if not view_rect.has_point(marker):continue
+		var candidate:=point.distance_to(marker)
+		if candidate<distance:
+			nearest=poi;distance=candidate
+	if not nearest.is_empty():return select_poi(nearest)
+	return select_target(point_to_cell(point))
+
 func select_target(target: Vector2i) -> bool:
 	if not walk_mode:return teleport_near(target)
 	close_map()
@@ -261,7 +276,7 @@ func _gui_input(event: InputEvent) -> void:
 				last_pointer=event.position
 			elif not event.pressed and dragging:
 				dragging=false
-				if not dragged and event.button_index==MOUSE_BUTTON_LEFT and map_rect.has_point(event.position) and view_rect.has_point(event.position):select_target(point_to_cell(event.position))
+				if not dragged and event.button_index==MOUSE_BUTTON_LEFT and map_rect.has_point(event.position) and view_rect.has_point(event.position):select_map_point(event.position)
 			accept_event()
 	elif event is InputEventMouseMotion and dragging:
 		if event.position.distance_to(drag_start)>4:dragged=true

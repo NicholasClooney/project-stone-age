@@ -495,7 +495,7 @@ func pet_growth_panel(pet: Dictionary, origin: Vector2) -> void:
 	var base:Dictionary=pet.base_stats
 	label("当前基础：体 %.2f  腕 %.2f  耐 %.2f  速 %.2f" % [base.vitality/100.0,base.strength/100.0,base.toughness/100.0,base.dexterity/100.0],origin+Vector2(0,240),350,12)
 	label("同种均值：从 Lv.1 正常培养，非极限。\n范围为单项近似90%；不能保证同时落入。",origin+Vector2(0,268),350,12)
-	var modified:bool=bool(pet.get("gm_modified",false)) or not pet.get("legacy_stat_offset",{}).is_empty()
+	var modified:bool=bool(pet.get("gm_modified",false)) or pet.get("legacy_stat_offset",{}).values().any(func(value):return float(value)!=0.0)
 	label("含 GM／旧档修正，不用于天然品质比较。" if modified else "按原版随机规则；接近目标级时范围较粗略。",origin+Vector2(0,310),350,11)
 
 func pet_rename_panel(pet: Dictionary) -> void:
