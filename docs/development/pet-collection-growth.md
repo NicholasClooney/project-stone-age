@@ -44,3 +44,9 @@ The comparison hub includes carried and stored pets, groups verified starter/ori
 Store/retrieve preserves the entire pet dictionary. Storage has no artificial gameplay count cap; only carried pets use the existing30-slot capacity. Storing an active pet automatically withdraws it; mounted pets must first be dismounted. Comparison and storage paginate20 rows, and comparisons use cached expected increments rather than full confidence-band enumeration per pet.
 
 Comparison and storage replace the collection content while open, preventing native labels or controls from showing or receiving input through them. Collection actions stay inside their own frame; expanded growth uses a separate right-hand frame. Storage height adapts to its row count, and its store action is bound to a stable pet ID rather than a shifting array index.
+
+## Favorites
+
+Warehouse and comparison rows expose a persistent favorite toggle keyed by stable pet ID. Old saves without this flag treat pets as unstarred. Transfers retain the flag. Warehouse favorites precede other pets; comparison retains carried-before-stored grouping, then prioritizes favorites within storage before the selected stat sort. Display sorting never reorders the authoritative roster or changes transfer targets.
+
+Comparison current and projected stat lines include 三围合 (attack + defence + speed, excluding HP); it is a convenience total, not a percentile or a species-independent quality score.

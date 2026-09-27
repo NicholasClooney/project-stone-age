@@ -298,6 +298,7 @@ func _recover() -> void:
 
 # Stable identity distinguishes same-name pets across carried and warehouse lists.
 func _assign_pet_id(pet: Dictionary) -> void:
+	if not pet.has("favorite"):pet.favorite=false
 	pet.pet_id="pet-%d"%int(_profile.get("next_pet_id",1))
 	_profile.next_pet_id=int(_profile.get("next_pet_id",1))+1
 
@@ -309,6 +310,7 @@ func _ensure_pet_ids() -> void:
 	_profile.next_pet_id=next
 	for pet in _profile.pets+_profile.pet_storage:
 		if not pet.has("pet_id"):_assign_pet_id(pet)
+		if not pet.has("favorite"):pet.favorite=false
 
 func _valid_pet_ids(profile: Dictionary) -> bool:
 	var modern:=int(profile.version)>=3
@@ -317,6 +319,7 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 	var largest:=0
 	for pet in profile.pets+profile.get("pet_storage",[]):
 		if not pet is Dictionary:return false
+		if pet.has("favorite") and not pet.favorite is bool:return false
 		if not pet.has("pet_id"):
 			if modern:return false
 			continue
@@ -350,6 +353,19 @@ func retrieve_pet(index: int) -> bool:
 	_profile.pets.append(_profile.pet_storage[index])
 	_profile.pet_storage.remove_at(index)
 	return true
+
+func set_pet_favorite(pet_id: String, favorite: bool) -> bool:
+	last_error=""
+	if not _pending.is_empty():last_error="请先结束战斗。";return false
+	for pet in _profile.pets+_profile.get("pet_storage",[]):
+		if str(pet.get("pet_id",""))==pet_id:
+			pet.favorite=favorite;return true
+	last_error="找不到这只宠物。";return false
+
+func retrieve_pet_by_id(pet_id: String) -> bool:
+	for index in range(_profile.get("pet_storage",[]).size()):
+		if str(_profile.pet_storage[index].get("pet_id",""))==pet_id:return retrieve_pet(index)
+	last_error="这只宠物已不在仓库。";return false
 
 func select_pet(index: int) -> bool:
 	if not _pending.is_empty() or index < -1 or index >= _profile.pets.size():

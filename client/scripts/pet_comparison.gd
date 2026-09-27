@@ -39,9 +39,19 @@ static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="attack"
    result.append({"pet":pet,"location":location,"index":index,"forecast":forecast,"quality":quality(pet)})
  result.sort_custom(func(a,b):
   if a.location!=b.location:return a.location=="pets"
+  if a.location=="pet_storage" and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
   var av:Dictionary=a.forecast.get("expected",a.pet) if projected else a.pet
   var bv:Dictionary=b.forecast.get("expected",b.pet) if projected else b.pet
   var x:=int(av.get(sort_key,0));var y:=int(bv.get(sort_key,0))
   if x!=y:return x>y
   return str(a.pet.get("pet_id",a.location+str(a.index)))<str(b.pet.get("pet_id",b.location+str(b.index))))
+ return result
+
+static func storage_rows(profile:Dictionary)->Array:
+ var result:=[]
+ var pets:Array=profile.get("pet_storage",[])
+ for index in range(pets.size()):result.append({"pet":pets[index],"index":index})
+ result.sort_custom(func(a,b):
+  if bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
+  return int(a.index)<int(b.index))
  return result

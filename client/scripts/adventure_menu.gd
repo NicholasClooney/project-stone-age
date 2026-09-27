@@ -586,7 +586,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	var predicted:=CheckButton.new();predicted.text="按120级预期排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
 	var workflow:Button=world.button("自动找宠→抓宠→练至120→对比",func():world.close_adventure_menu();world.pet_workflow.start_cycle(PetComparison.species_key(selected)));workflow.name="CompareStartCycle";workflow.position=Vector2(14,83);overlay.add_child(workflow)
 	var info:Label=world.text(feedback if not feedback.is_empty() else "跨等级比120预期；非出生快照／百分位。",12);info.position=Vector2(385,89);overlay.add_child(info)
-	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,170);scroll.size=Vector2(736,422);overlay.add_child(scroll)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,196);scroll.size=Vector2(736,396);overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
 	var rows:=PetComparison.rows(profile,selected,pet_compare_sort,pet_compare_projected)
 	var focus_id:=str(selected.get("pet_id",""))
@@ -594,9 +594,9 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	for row in rows:
 		if str(row.pet.get("pet_id",""))==focus_id:focus=row.pet
 	var leader:Dictionary=rows[0].pet if not rows.is_empty() else focus
-	for entry in [["选中",focus,110],["当前分组首位",leader,138]]:
+	for entry in [["选中",focus,108],["当前分组首位",leader,150]]:
 		var actor:Dictionary=entry[1]
-		var summary:Label=world.text("%s %s · %s Lv.%d · 当前 血%d 攻%d 防%d 敏%d" % [entry[0],actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed],13)
+		var summary:Label=world.text("%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [entry[0],actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)],13)
 		summary.position=Vector2(14,entry[2]);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
 	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
 	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(470,46);overlay.add_child(previous)
@@ -609,15 +609,16 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 			var heading:Label=world.text("随身宠物" if last_group=="pets" else "仓库宠物",16);heading.name="CompareGroup_"+last_group;list.add_child(heading)
 		var pet:Dictionary=row.pet;var estimate:Dictionary=row.forecast.get("expected",pet);var q:Dictionary=row.quality
 		var identifier:=str(pet.get("pet_id",str(row.location)+"#"+str(row.index+1)))
-		var stats_line:="当前 血%d 攻%d 防%d 敏%d" % [pet.max_hp,pet.attack,pet.defence,pet.speed]
-		if int(pet.level)<120:stats_line+="　｜120预期 血%d 攻%d 防%d 敏%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed]
+		var stats_line:="当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [pet.max_hp,pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)]
+		if int(pet.level)<120:stats_line+="\n120预期 血%d 攻%d 防%d 敏%d · 三围合%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,int(estimate.attack)+int(estimate.defence)+int(estimate.speed)]
 		var content:="%s · Lv.%d · %s · ID %s\n%s\n先天 %s%s" % [pet.name,pet.level,"携带" if row.location=="pets" else "仓库",identifier,stats_line,"未知" if q.is_empty() else str(q.offsets)+" 总%+d"%q.total+(" 满档" if q.full else "")," · GM／旧档，不作天然品质判断" if PetComparison.warning(pet) else ""]
-		var text:Label=world.text(content,13);text.name="CompareRow_"+str(row.location)+"_"+str(row.index);text.custom_minimum_size=Vector2(700,85)
+		var text:Label=world.text(content,13);text.name="CompareRow_"+str(row.location)+"_"+str(row.index);text.custom_minimum_size=Vector2(700,100 if int(pet.level)<120 else 85);text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		if identifier==focus_id:text.modulate=Color("ffe680");text.text="▶ 当前选中 · "+text.text
 		list.add_child(text)
 		var actions:=HBoxContainer.new();list.add_child(actions)
+		add_pet_favorite_button(actions,pet,"CompareFavorite_")
 		var transfer:Button=world.button("存入仓库" if row.location=="pets" else "取出",func():
-			var ok:bool=world.session.store_pet(int(row.index)) if row.location=="pets" else world.session.retrieve_pet(int(row.index))
+			var ok:bool=world.session.store_pet(int(row.index)) if row.location=="pets" else world.session.retrieve_pet_by_id(identifier)
 			if ok:world.refresh_companion();world.checkpoint();feedback="已更新宠物位置。"
 			else:feedback=world.session.last_error
 			rebuild());transfer.name="CompareTransfer_"+identifier;transfer.disabled=(row.location=="pets" and int(row.index)==int(profile.get("ride_pet",-1))) or (row.location!="pets" and profile.pets.size()>=world.session.PET_CAPACITY);actions.add_child(transfer)
@@ -652,19 +653,23 @@ func pet_storage_panel(profile:Dictionary)->void:
 		if world.session.store_pet(store_index):world.refresh_companion();world.checkpoint();feedback="已存入仓库。"
 		else:feedback=world.session.last_error
 		rebuild());store.name="StoreSelectedPet";store.position=Vector2(14,50);store.disabled=store_index<0 or store_index==int(profile.get("ride_pet",-1));overlay.add_child(store)
-	var note:Label=world.text("出战宠存入时自动撤回；骑乘宠须先下骑。存取保留属性。",13);note.position=Vector2(14,92);overlay.add_child(note)
+	var note:Label=world.text("出战宠存入时自动撤回；骑乘宠须先下骑。存取保留属性；收藏优先。",13);note.position=Vector2(14,92);overlay.add_child(note)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(14,125);scroll.size=Vector2(650,maxf(40,overlay.size.y-140));overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
 	var count:int=profile.get("pet_storage",[]).size();var pages:=maxi(1,ceili(count/20.0));pet_storage_page=clampi(pet_storage_page,0,pages-1)
 	var previous:Button=world.button("◀",func():pet_storage_page=maxi(0,pet_storage_page-1);rebuild());previous.position=Vector2(310,50);overlay.add_child(previous)
 	var next:Button=world.button("▶",func():pet_storage_page=mini(pages-1,pet_storage_page+1);rebuild());next.position=Vector2(500,50);overlay.add_child(next)
 	var page:Label=world.text("%d/%d"%[pet_storage_page+1,pages],14);page.position=Vector2(405,56);overlay.add_child(page)
-	for index in range(pet_storage_page*20,mini(count,(pet_storage_page+1)*20)):
-		var pet:Dictionary=profile.pet_storage[index]
-		var row:=HBoxContainer.new();list.add_child(row)
-		var text:Label=world.text("%s Lv.%d · %s" % [pet.name,pet.level,pet.get("pet_id","?")],14);text.custom_minimum_size=Vector2(300,38);row.add_child(text)
+	var storage_rows:=PetComparison.storage_rows(profile)
+	for entry in storage_rows.slice(pet_storage_page*20,(pet_storage_page+1)*20):
+		var index:int=entry.index
+		var pet:Dictionary=entry.pet
+		var identifier:=str(pet.pet_id)
+		var row:=HBoxContainer.new();row.name="StorageRow_"+identifier;list.add_child(row)
+		var text:Label=world.text("%s Lv.%d · %s" % [pet.name,pet.level,pet.get("pet_id","?")],14);text.custom_minimum_size=Vector2(270,38);row.add_child(text)
+		add_pet_favorite_button(row,pet,"StorageFavorite_")
 		var retrieve:Button=world.button("取出",func():
-			if world.session.retrieve_pet(index):world.refresh_companion();world.checkpoint();feedback="已取出。"
+			if world.session.retrieve_pet_by_id(identifier):world.refresh_companion();world.checkpoint();feedback="已取出。"
 			else:feedback=world.session.last_error
 			rebuild());retrieve.name="RetrievePet_"+str(index);retrieve.disabled=profile.pets.size()>=world.session.PET_CAPACITY;row.add_child(retrieve)
 		var compare:Button=world.button("同种比较",func():
@@ -684,3 +689,14 @@ func continue_comparison_hunt(selected:Dictionary)->bool:
 		world.pet_hunt_menu.close_menu();world.paused_input=true;open_menu("pets");feedback="选中宠物素材不可用。";rebuild();return false
 	world.pet_hunt_menu.species.select(index)
 	return true
+
+func add_pet_favorite_button(parent:Control,pet:Dictionary,prefix:String)->void:
+	var identifier:=str(pet.get("pet_id",""))
+	var favorite:=bool(pet.get("favorite",false))
+	var toggle:Button=world.button("★ 已收藏" if favorite else "☆ 收藏",func():
+		if world.session.set_pet_favorite(identifier,not favorite):world.checkpoint();feedback="已取消收藏。" if favorite else "已收藏；仓库内优先显示。"
+		else:feedback=world.session.last_error
+		rebuild())
+	toggle.name=prefix+identifier
+	if favorite:toggle.modulate=Color("ffe680")
+	parent.add_child(toggle)
