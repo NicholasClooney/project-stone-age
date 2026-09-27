@@ -786,6 +786,8 @@ func build_ui() -> void:
 	battle_view.action_requested.connect(battle_action)
 	battle_view.return_requested.connect(return_from_battle)
 	battle_view.sound_requested.connect(play_battle_sound)
+	battle_view.capture_music_requested.connect(func(celebrating: bool):
+		set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
 	battle_view.pet_command_requested.connect(func(command: String): battle_session.set_pet_command(command))
 
 

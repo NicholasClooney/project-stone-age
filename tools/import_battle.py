@@ -34,7 +34,7 @@ def animations(archive, sprite):
             bitmap, x, y, sound = struct.unpack_from('<IhhH', raw, at)
             at += 10
             frames.append(dict(image=bitmap, x=x, y=y, sound=sound))
-        if action in (0, 1, 2, 3, 4, 10):
+        if action in (0, 1, 2, 3, 4, 7, 8, 9, 10):
             result[f'{action}_{direction}'] = dict(duration_ms=duration, frames=frames)
     return result
 
@@ -73,7 +73,7 @@ def run(source, output):
         raise ValueError('Battle background contains an uncovered tile or crop edge')
     background.save(output / 'background.png')
     audio = {}
-    for key, name in [('bgm', 'bgm/sabgm_b0.wav'), ('menu_open', 'se/sas_02.wav'), ('menu_close', 'se/sas_03.wav'), ('battle_cancel', 'se/sas_17.wav'), ('enemy_attack', 'se/sae_23.wav'), ('club_attack', 'se/sap_02.wav'), ('level_up', 'se/sas_11.wav')]:
+    for key, name in [('bgm', 'bgm/sabgm_b0.wav'), ('menu_open', 'se/sas_02.wav'), ('menu_close', 'se/sas_03.wav'), ('battle_cancel', 'se/sas_17.wav'), ('enemy_attack', 'se/sae_23.wav'), ('club_attack', 'se/sap_02.wav'), ('level_up', 'se/sas_11.wav'), ('capture_success', 'bgm/sabgm_s0.wav'), ('capture_hit', 'se/sad_01.wav'), ('capture_club_hit', 'se/sad_02.wav')]:
         origin = archive.data / name
         shutil.copyfile(origin, output / 'audio' / origin.name)
         audio[key] = 'audio/' + origin.name
@@ -82,6 +82,7 @@ def run(source, output):
         'server_revision': '0c58fb6683a49a178a8ad845a8c296c2cb83bd81',
         'ui': 'systeminc/anim_tbl.h CG_BTL_BUTTON_ATTACK_UP25100, GUARD_UP25108, ESCAPE_UP25114, BASE25116; pet command25140..25143; directdraw.cpp3962-3981 pet change26040, item26061, selection26070, skills26130; visually checked against2.5pack',
         'actions': 'systeminc/loadsprbin.h ANIM_ATTACK=0, DAMAGE=1, DEAD=2, STAND=3, WALK=4, GUARD=10',
+        'capture_escape': 'oft.cpp states35-46 capture approach/follow/return and HAPPY255; states50/52-54 escape acceleration/runoff or SAD60; t_music.cpp2783 BGM0=sabgm_s0.wav; play_damage10000->250/sad_01,10003->251/sad_02 (sndcnf.h129-130)',
         'weapons': 'char_data.c215-219/310-322 equipment lookup: ITEM_CLUB=2 maps 100000->100002,100005->100007,100010->100012; anim_tbl.h matching SPR_cl constants',
         'enemy': 'gmsv/data/enemybase.txt first3 rows: 乌力100250, 乌力乌力100251, 乌力斯坦100252; selected classic species, not asserting encounter-table placement',
         'bgm': 'system/battleproc.cpp normal battle play_bgm(5); system/t_music.cpp bgm_tbl[5]=sabgm_b0.wav',
@@ -90,7 +91,7 @@ def run(source, output):
         'frame_sounds': 'system/pattern.cpp219-224: nonzero SoundNo<10000 plays sound, >=10000 is hit marker. systeminc/sndcnf.h45:73=sae_23.wav (enemy attack SPR); line122:217=sas_17.wav used by BattleButtonOff.',
         'limitations': ['Unarmed attack clips lack audio; club clips reference verified sound2 and hit marker10003. No invented impact sound.', '2.5 assets and8.5 client references differ; newer full-screen background IDs are incompatible.'],
     }
-    manifest = dict(player_id='100000', enemy_id='100250', enemy_name='乌力', characters=characters, equipment_variants={'club':club_variants}, images=images, ui=ui, audio=audio, frame_sounds={'73': 'audio/sae_23.wav', '2':'audio/sap_02.wav', '211':'audio/sas_11.wav'}, background=dict(path='background.png', width=800, height=600), provenance=evidence)
+    manifest = dict(player_id='100000', enemy_id='100250', enemy_name='乌力', characters=characters, equipment_variants={'club':club_variants}, images=images, ui=ui, audio=audio, frame_sounds={'73': 'audio/sae_23.wav', '2':'audio/sap_02.wav', '211':'audio/sas_11.wav', '250':'audio/sad_01.wav', '251':'audio/sad_02.wav'}, background=dict(path='background.png', width=800, height=600), provenance=evidence)
     (output / 'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, indent=2) + '\n')
     print(f'Imported {len(images)} actor images, {len(ui)} UI images, original SAB terrain and battle BGM')
 

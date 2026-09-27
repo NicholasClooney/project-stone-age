@@ -4,6 +4,7 @@ signal action_requested(action: String)
 signal pet_command_requested(command: String)
 signal return_requested
 signal sound_requested(ident: int)
+signal capture_music_requested(celebrating: bool)
 
 const BattleEffects = preload("res://scripts/battle_effects.gd")
 const ART_ROOT := "res://assets/legacy/battle/"
@@ -51,6 +52,8 @@ var hp_fills: Array[ColorRect] = []
 var displayed_hp: Array[int] = [0,0,0]
 var hp_cues: Array[Dictionary] = []
 var word_cues: Array[Dictionary] = []
+var music_cues: Array[Dictionary] = []
+var sound_cues: Array[Dictionary] = []
 var defeat_return_queued := false
 var hint: Label
 # Legacy entry820 minus slide sum24..0=300, plus160 for800-wide stage.
@@ -247,6 +250,8 @@ func open_battle(next_state: Dictionary) -> void:
 	defeat_return_queued = false
 	hp_cues.clear()
 	word_cues.clear()
+	music_cues.clear()
+	sound_cues.clear()
 	feedback_until = 0.0
 	if is_instance_valid(world) and actors.size() > 0:
 		var ident: String = str(world.player.character_id)
@@ -274,6 +279,11 @@ func open_battle(next_state: Dictionary) -> void:
 	show_state(next_state)
 	for i in range(actors.size()):
 		var actor: Dictionary = actors[i]
+		actor.point = actor.home
+		actor.hide_at = INF
+		actor.spin_start = INF
+		actor.spin_end = -INF
+		actor.rate = 1.0
 		actor.point = actor.home+Vector2(-300,-300) if i==1 else actor.home+Vector2(300,300)
 		actor.motions = []
 		queue_motion(i,actor.point,actor.home,TRANSITION_SECONDS,ENTRY_SECONDS,int(actor.facing))
@@ -434,13 +444,92 @@ func queue_strike(index: int, target: int, at: float) -> Dictionary:
 	actors[index].cues.append({"at":at+travel*2+strike,"action":3,"seconds":0.01,"facing":int(actor.facing)})
 	return {"hit":at+travel+strike*hit_fraction,"end":at+travel*2+strike}
 
+# oft.cpp states35–46: contact, hit-marker capture, 60-tick pause,
+# slow return with a spinning follower, then anger/break-away or happy255.
+func queue_capture(at: float, success: bool) -> Dictionary:
+	var home: Vector2 = actors[0].home
+	var enemy: Vector2 = actors[1].home
+	var contact := enemy+(home-enemy).normalized()*64.0
+	var travel := home.distance_to(contact)/480.0
+	var clip: Dictionary = actors[0].animations["0_3"]
+	var strike := float(clip.duration_ms)/1000.0
+	var hit := at+travel+strike*0.5
+	for i in range(clip.frames.size()):
+		if int(clip.frames[i].get("sound",0))>=10000:
+			hit = at+travel+strike*float(i)/clip.frames.size()
+			break
+	queue_motion(0,home,contact,at,travel,3)
+	actors[0].cues.append({"at":at,"action":4,"seconds":travel,"facing":3})
+	actors[0].cues.append({"at":at+travel,"action":0,"seconds":strike,"facing":3})
+	var retreat := at+travel+strike+1.0
+	var duration := contact.distance_to(home)/120.0
+	var arrival := retreat+duration
+	queue_motion(0,contact,home,retreat,duration,7)
+	actors[0].cues.append({"at":retreat,"action":4,"seconds":duration,"facing":7})
+	var follower := enemy+(home-contact)
+	queue_motion(1,enemy,follower,retreat,duration,7)
+	actors[1].spin_start = hit
+	actors[1].spin_end = arrival+(4.25 if success else 0.0)
+	word_cues.append({"at":hit,"index":0,"id":26512})
+	sound_cues.append({"at":hit,"id":251 if clip.frames.any(func(frame): return int(frame.get("sound",0))==10003) else 250})
+	word_cues.append({"at":arrival,"index":0,"id":26506 if success else 26505})
+	var end := arrival+(4.25 if success else 100.0/60.0)
+	actors[0].cues.append({"at":arrival,"action":7 if success else 8,"seconds":end-arrival,"facing":3})
+	if success:
+		actors[1].hide_at = end
+		music_cues.append({"at":arrival,"celebrate":true})
+		music_cues.append({"at":end,"celebrate":false})
+	else:
+		var back := follower.distance_to(enemy)/240.0
+		queue_motion(1,follower,enemy,arrival,back,3)
+		actors[1].cues.append({"at":arrival,"action":4,"seconds":back,"facing":3})
+		end = maxf(end,arrival+back)
+	return {"hit":hit,"end":end}
+
+# oft.cpp52/53/54: 11 eight-tick gait stages accelerating, then
+# either state50 off-screen retreat or deceleration and SAD for60ticks.
+func queue_escape(at: float, success: bool, health: Dictionary) -> Dictionary:
+	word_cues.append({"at":at,"index":0,"id":26511})
+	var tick := 8.0/60.0
+	var phase := 0.0
+	for i in range(11):
+		actors[0].cues.append({"at":at+i*tick,"action":4,"seconds":tick,"facing":7,"rate":12.0/(12-i),"phase":phase})
+		phase += tick*12.0/(12-i)
+	var end := at+11*tick
+	if success:
+		for index in [0,2]:
+			if index>=actors.size() or int(health.get("player_hp" if index==0 else "pet_hp",0))<=0: continue
+			var origin: Vector2 = actors[index].home
+			var destination := origin+Vector2(960-origin.x,(960-origin.x)*0.75)
+			var duration := origin.distance_to(destination)/240.0
+			queue_motion(index,origin,destination,end,duration,7)
+			actors[index].cues.append({"at":end,"action":4,"seconds":duration,"facing":7})
+			actors[index].hide_at = end+duration
+			# Both actors finish before exploration/result controls become available.
+		end = maxf(float(actors[0].hide_at),float(actors[2].get("hide_at",end)) if actors.size()>2 else end)
+	else:
+		for i in range(11):
+			actors[0].cues.append({"at":end+i*tick,"action":4,"seconds":tick,"facing":7,"rate":12.0/(i+1),"phase":phase})
+			phase += tick*12.0/(i+1)
+		end += 11*tick
+		word_cues.append({"at":end,"index":0,"id":26505})
+		actors[0].cues.append({"at":end,"action":9,"seconds":1.0,"facing":7})
+		end += 1.0
+	return {"hit":at,"end":end}
+
 func queue_turn_animation(previous: Dictionary) -> void:
 	hp_cues.clear()
 	word_cues.clear()
+	music_cues.clear()
+	sound_cues.clear()
 	for actor in actors:
 		actor.cues = []
 		actor.motions = []
 		actor.point = actor.home
+		actor.hide_at = INF
+		actor.spin_start = INF
+		actor.spin_end = -INF
+		actor.rate = 1.0
 	var fallback: Array = ["player"]
 	if actors.size()>2: fallback.append("pet")
 	if int(state.get("enemy_hp",0))>0: fallback.append("enemy")
@@ -454,10 +543,14 @@ func queue_turn_animation(previous: Dictionary) -> void:
 		var after_step: Dictionary = turn_frames[step] if step<turn_frames.size() else state
 		var index: int = {"player":0,"enemy":1,"pet":2}.get(who,0)
 		if index>=actors.size(): continue
-		var attack := who=="enemy" or (who=="player" and pending_action in ["attack","capture"]) or (who=="pet" and pet_command!="defend")
+		var attack := who=="enemy" or (who=="player" and pending_action=="attack") or (who=="pet" and pet_command!="defend")
 		var target := 1 if who!="enemy" else (2 if actors.size()>2 and (str(after_step.get("enemy_target",""))=="pet" or int(after_step.get("pet_hp",0))<int(before_step.get("pet_hp",0))) else 0)
 		var timing := {"hit":at+0.25,"end":at+0.5}
-		if attack:
+		if who=="player" and pending_action=="capture":
+			timing = queue_capture(at,str(state.get("outcome",""))=="captured")
+		elif who=="player" and pending_action=="escape":
+			timing = queue_escape(at,str(state.get("outcome",""))=="escaped",before_step)
+		elif attack:
 			timing = queue_strike(index,target,at)
 		else:
 			queue_pose(index,10,at,0.5)
@@ -470,12 +563,7 @@ func queue_turn_animation(previous: Dictionary) -> void:
 		elif attack and int(after_step.get("enemy_hp",0)) < int(before_step.get("enemy_hp",0)):
 			var defeated := int(after_step.get("enemy_hp",0))<=0 and step==order.size()-1
 			queue_pose(1,2 if defeated else 1,float(timing.hit),60.0 if defeated else 0.35)
-		if who=="player" and pending_action=="capture":
-			word_cues.append({"at":float(timing.hit),"index":0,"id":26512})
-			word_cues.append({"at":float(timing.end),"index":0,"id":26506 if str(state.get("outcome",""))=="captured" else 26505})
-			timing.end = float(timing.end)+0.7
-		elif who=="player" and pending_action=="escape": word_cues.append({"at":at,"index":0,"id":26511})
-		elif (who=="player" and pending_action=="defend") or (who=="pet" and pet_command=="defend"):
+		if (who=="player" and pending_action=="defend") or (who=="pet" and pet_command=="defend"):
 			word_cues.append({"at":at,"index":index,"id":26510})
 		if step<turn_frames.size():
 			var health: Dictionary = turn_frames[step]
@@ -693,6 +781,10 @@ func _process(delta: float) -> void:
 	if elapsed>=TRANSITION_SECONDS and not transition_tiles.is_empty():
 		for tile in transition_tiles: tile.node.queue_free()
 		transition_tiles.clear()
+	while not sound_cues.is_empty() and elapsed>=float(sound_cues[0].at):
+		sound_requested.emit(int(sound_cues.pop_front().id))
+	while not music_cues.is_empty() and elapsed>=float(music_cues[0].at):
+		capture_music_requested.emit(bool(music_cues.pop_front().celebrate))
 	while not word_cues.is_empty() and elapsed>=float(word_cues[0].at):
 		var word: Dictionary = word_cues.pop_front()
 		if int(word.index)<actors.size(): battle_effects.word(actors[int(word.index)].point,int(word.id))
@@ -705,6 +797,8 @@ func _process(delta: float) -> void:
 			if difference>0: battle_effects.impact(point,difference,bool(cue.get("guarded",false)))
 			elif difference<0: battle_effects.heal(point,-difference)
 		displayed_hp[recipient] = int(cue.hp)
+	report.visible = not is_animating()
+	hint.visible = not is_animating()
 	var finished := not str(state.get("outcome","")).is_empty() and not is_animating()
 	result_panel.visible = finished and (str(state.get("outcome",""))!="defeat" or not is_instance_valid(world))
 	if result_panel.visible and not result_sound_played:
@@ -736,6 +830,8 @@ func _process(delta: float) -> void:
 		while not cues.is_empty() and elapsed >= float(cues[0].at):
 			var cue: Dictionary = cues.pop_front()
 			animate_actor(actor_index,int(cue.action),float(cue.seconds),int(cue.get("facing",-1)))
+			actor.rate = float(cue.get("rate",1.0))
+			actor.phase = float(cue.get("phase",0.0))
 			actor.started = float(cue.at)
 			actor.until = float(cue.at)+float(cue.seconds)
 		var motions: Array = actor.get("motions",[])
@@ -745,16 +841,21 @@ func _process(delta: float) -> void:
 			actor.point = Vector2(motion.from).lerp(Vector2(motion.to),amount)
 			if amount<1.0: break
 			motions.pop_front()
+		var shown := elapsed<float(actor.get("hide_at",INF))
+		actor.sprite.visible = shown
+		actor_labels[actor_index].visible = shown
 		if actor_index<hp_bars.size():
 			var maximum := maxi(1,int(state.get(["player_max_hp","enemy_max_hp","pet_max_hp"][actor_index],1)))
 			hp_bars[actor_index].position = actor.point+Vector2(0,-80)
-			hp_bars[actor_index].visible = displayed_hp[actor_index]>0
+			hp_bars[actor_index].visible = shown and displayed_hp[actor_index]>0
 			hp_fills[actor_index].size.x = int(clampf(float(displayed_hp[actor_index])/maximum,0,1)*40.0)
 		if actor_index<actor_labels.size():
 			actor_labels[actor_index].position = actor.point+Vector2(-100,-10)
 		var animation: Dictionary = actor.animation
 		if elapsed < float(actor.until) and not str(actor.temporary).is_empty():
 			animation = actor.animations[actor.temporary]
+		if elapsed>=float(actor.get("spin_start",INF)) and elapsed<float(actor.get("spin_end",-INF)):
+			animation = actor.animations.get("1_%d" % (int(elapsed*60)%8),animation)
 		var frames: Array = animation.frames
 		if frames.is_empty():
 			continue
@@ -762,7 +863,9 @@ func _process(delta: float) -> void:
 		var index := int(fmod(elapsed,duration)/duration*frames.size())%frames.size()
 		var temporary := elapsed < float(actor.until) and not str(actor.temporary).is_empty()
 		if temporary:
-			index = int(fmod(elapsed-float(actor.started),duration)/duration*frames.size()) if str(actor.temporary).begins_with("4_") else mini(int((elapsed-float(actor.started))/duration*frames.size()),frames.size()-1)
+			index = int(fmod((elapsed-float(actor.started))*float(actor.get("rate",1.0))+float(actor.get("phase",0.0)),duration)/duration*frames.size()) if int(str(actor.temporary).get_slice("_",0)) in [4,7,8] else mini(int((elapsed-float(actor.started))/duration*frames.size()),frames.size()-1)
+		if elapsed>=float(actor.get("spin_start",INF)) and elapsed<float(actor.get("spin_end",-INF)):
+			index = int(fmod(elapsed,duration)/duration*frames.size())
 		var frame: Dictionary = frames[index]
 		var frame_key := str(actor.temporary)+"_"+str(index) if temporary else "idle_"+str(index)
 		if frame_key != str(actor.last_frame):
@@ -778,7 +881,7 @@ func _process(delta: float) -> void:
 		var target: Button = target_buttons[actor_index]
 		target.position = sprite.position
 		target.size = sprite.texture.get_size()
-		var eligible := not is_animating() and not world_modal_open() and bool(state.get("active",false)) and ((actor_index==1 and selected_action in ["attack","capture","pet_attack","pet_skill"]) or (actor_index==0 and selected_action=="item_target"))
+		var eligible := shown and not is_animating() and not world_modal_open() and bool(state.get("active",false)) and ((actor_index==1 and selected_action in ["attack","capture","pet_attack","pet_skill"]) or (actor_index==0 and selected_action=="item_target"))
 		target.disabled = not eligible
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if eligible else Control.CURSOR_ARROW
 		var highlight: Panel = target_highlights[actor_index]

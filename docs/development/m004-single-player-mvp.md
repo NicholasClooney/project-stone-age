@@ -86,3 +86,5 @@ Losing focus releases held keys but preserves click-to-walk routes and pending N
 - Original classic equipment art26060 contains five slots, not a separate mannequin. `menu.cpp:InitItem` puts the ARM slot at(61,129); club bitmap offset(−12,−11) yields(49,118). Double-click bagclub equips, double-click equippedclub unequips. Inventory authority stores owned totals; the bag subtracts one equipped copy while retaining spares. No duplicate item is created.
 
 The source-led [battle fidelity audit](../reverse-engineering/battle-fidelity.md) tracks weapon variants, pet selection, hit effects, results and remaining historical differences. It supersedes earlier presentation-gap notes where implemented.
+
+Capture and escape now use the source-derived sequences recorded in the battle fidelity audit, including happy/angry/sad poses, capture celebration music and player/pet escape movement. Success rules remain the existing MVP rules.
