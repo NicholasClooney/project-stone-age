@@ -20,6 +20,8 @@ func click(control: Control) -> void:
 		event.pressed = down
 		root.push_input(event,true)
 		await process_frame
+func settle() -> void:
+	while game.battle_view.is_animating(): await process_frame
 func cancel() -> void:
 	var event := InputEventKey.new()
 	event.keycode = KEY_ESCAPE
@@ -52,6 +54,7 @@ func run() -> void:
 		quit(1)
 		return
 	await tick()
+	await settle()
 	var view: Control = game.battle_view
 	var start: Dictionary = game.battle_session.snapshot()
 	await click(view.commands[0])
@@ -67,7 +70,7 @@ func run() -> void:
 	await click(view.commands[0])
 	await click(view.target_buttons[1])
 	check(game.battle_session.snapshot().turn==1,"rapid mouse clicks blocked during animation")
-	await create_timer(1.6).timeout
+	await settle()
 	await click(view.commands[5])
 	check(view.selected_action=="item" and view.choice_panel.get_child_count()>0,"original item button opens inventory picker")
 	await cancel()
@@ -90,12 +93,14 @@ func run() -> void:
 		for turn in range(15):
 			if not game.battle_session.snapshot().active: break
 			game.battle_action("attack")
+		await settle()
 		game.return_from_battle()
 		game.session.heal()
 		if fight==0: game.begin_battle()
 	check(game.session.snapshot().pets[0].level>=2 and game.session.snapshot().pets[0].skill_unlocked,"pet level progression unlocks skill after victories")
 	game.begin_battle()
 	view = game.battle_view
+	await settle()
 	await click(view.commands[0])
 	await click(view.target_buttons[1])
 	var skill_available := false

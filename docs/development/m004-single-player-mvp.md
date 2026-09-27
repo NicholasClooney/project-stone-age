@@ -59,3 +59,12 @@ The schema is pinned to `samgir-singleplayer-v1`. Godot stores `user://single-pl
 - Python importer fixtures cover decoder and wilderness bounds/collision/malformed input. Rendered original battle and adventure menus are visually reviewed.
 
 Run `scripts/test.sh` and the Python test suite described in the root README. No multiplayer, parties, families, external services or payment systems are introduced.
+
+## World and battle motion fidelity follow-up
+
+- Empty map surroundings now clear to black. A click beyond a blocked/non-floor target advances toward it up to collision, allowing a click outside the shop doorway to cross its original warp cell. `map.cpp:getRouteMap` (3551 onward) supplies the directional-routing reference; the current bounded grid fallback is not a complete port of its obstacle-steering algorithm.
+- Doorway warps use `classic_map_transition.gd`: vertically compress to the center, replace the map, then expand. Reference: `process.cpp` cases201/204 and `produce.cpp:ProduceCenterPress`. Input is locked through the transition. The reference fork disables the effect dispatcher with `no = -1`; this project deliberately restores its source-defined effect, with configurable modern timing.
+- Battle entry uses verified sound215 (`sas_15.wav`, `process.cpp:681`). No ordinary map-transition sound has been verified or invented.
+- Regression coverage includes actual outside-floor shop clicks, collision/corners, modal input blocking, and animated battle/portal journey completion. Verification launches remain silent.
+- Battle motion follows `oft/oft.cpp`: appear state uses original walk clips and off-stage ±300 offsets (`VCT_NO_APPEAR`, around10192/11440/12001); melee approaches to64px, plays the original attack clip, then walks home (cases1/2/14 around6300/6430/7660). The menu slides in after arrivals. Falling entry tiles follow `ProduceHagare(mode2)` with8×8 pieces and accelerating downward release. Animation timing is adapted to elapsed seconds, and the falling order is seeded; this is a supported subset, not a full port of every original battle action. Result dismissal stays locked until the sequence finishes.
+- Remaining battle presentation gaps: numeric HP labels still show the resolved turn snapshot before individual impacts; original overhead bars are not restored yet. Special/projectile attacks and the pet command-panel entrance are not fully ported. These are fidelity gaps, not claims of original parity.

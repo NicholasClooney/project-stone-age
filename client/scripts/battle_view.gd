@@ -22,6 +22,11 @@ const SPECIES_ART := {"wooli":"100250","wooli_wooli":"100251","wooli_stan":"1002
 var built := false
 var pending_action := ""
 var feedback_until := 0.0
+const ENTRY_SECONDS := 1.0
+const TRANSITION_SECONDS := 1.9
+var transition_tiles: Array[Dictionary] = []
+const MENU_SLIDE_SECONDS := 0.4
+var menu_slide_at := 0.0
 var selected_action := ""
 var queued_player_action := ""
 var command_phase := "player"
@@ -104,7 +109,8 @@ func _ready() -> void:
 	return_button.position = Vector2(325,460)
 	return_button.size = Vector2(150,32)
 	return_button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	return_button.pressed.connect(func(): return_requested.emit())
+	return_button.pressed.connect(func():
+		if not is_animating(): return_requested.emit())
 	stage.add_child(return_button)
 	resized.connect(layout)
 	built = true
@@ -149,7 +155,7 @@ func add_actor(ident: String, point: Vector2, facing: int) -> void:
 	var sprite := Sprite2D.new()
 	sprite.centered = false
 	stage.add_child(sprite)
-	actors.append({"sprite":sprite,"point":point,"animation":animations[key],"animations":animations,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
+	actors.append({"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
 
 func layout() -> void:
 	if stage == null:
@@ -159,6 +165,7 @@ func layout() -> void:
 	stage.position = (size-STAGE_SIZE*factor)/2
 
 func open_battle(next_state: Dictionary) -> void:
+	capture_transition()
 	elapsed = 0.0
 	state = {}
 	feedback_until = 0.0
@@ -179,7 +186,51 @@ func open_battle(next_state: Dictionary) -> void:
 		actor.temporary = ""
 		actor.cues = []
 	show_state(next_state)
+	for i in range(actors.size()):
+		var actor: Dictionary = actors[i]
+		actor.point = actor.home+Vector2(-300,-300) if i==1 else actor.home+Vector2(300,300)
+		actor.motions = []
+		queue_motion(i,actor.point,actor.home,TRANSITION_SECONDS,ENTRY_SECONDS,int(actor.facing))
+		queue_pose(i,4,TRANSITION_SECONDS,ENTRY_SECONDS)
+	menu_slide_at = TRANSITION_SECONDS+ENTRY_SECONDS
+	feedback_until = TRANSITION_SECONDS+ENTRY_SECONDS+MENU_SLIDE_SECONDS
+	command_panel.position.x = 300
 	show()
+
+# produce.cpp ProduceHagare(mode2): 8x8 viewport tiles, one released each
+# frame, then y += ++acceleration. Reconstructed at60Hz independent of render FPS.
+func capture_transition() -> void:
+	for tile in transition_tiles:
+		tile.node.queue_free()
+	transition_tiles.clear()
+	if DisplayServer.get_name()=="headless": return
+	var screenshot := get_viewport().get_texture().get_image()
+	if screenshot==null or screenshot.is_empty(): return
+	var source := ImageTexture.create_from_image(screenshot)
+	var order: Array[int] = []
+	for i in range(64): order.append(i)
+	var random := RandomNumberGenerator.new()
+	random.seed = 215
+	for i in range(63,0,-1):
+		var other := random.randi_range(0,i)
+		var swap := order[i]
+		order[i] = order[other]
+		order[other] = swap
+	for release in range(64):
+		var cell := Vector2i(order[release]%8,order[release]/8)
+		var region := Rect2(Vector2(cell)*Vector2(screenshot.get_size())/8.0,Vector2(screenshot.get_size())/8.0)
+		var atlas := AtlasTexture.new()
+		atlas.atlas = source
+		atlas.region = region
+		var tile := TextureRect.new()
+		tile.texture = atlas
+		tile.position = Vector2(cell)*size/8.0
+		tile.size = size/8.0
+		tile.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		tile.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		tile.z_index = 100
+		add_child(tile)
+		transition_tiles.append({"node":tile,"origin":tile.position,"release":float(release)/60.0})
 
 func set_actor_art(index: int, ident: String) -> void:
 	if index >= actors.size() or not manifest.get("characters",{}).has(ident): return
@@ -222,32 +273,69 @@ func queue_pose(index: int, action: int, at: float, seconds: float) -> void:
 	if index >= actors.size(): return
 	actors[index].cues.append({"at":at,"action":action,"seconds":seconds})
 
+func is_animating() -> bool:
+	return visible and elapsed < feedback_until
+
+func queue_motion(index: int, origin: Vector2, destination: Vector2, at: float, seconds: float, facing: int) -> void:
+	actors[index].motions.append({"from":origin,"to":destination,"at":at,"end":at+seconds,"facing":facing})
+
+func queue_strike(index: int, target: int, at: float) -> Dictionary:
+	var actor: Dictionary = actors[index]
+	var home: Vector2 = actor.home
+	var target_home: Vector2 = actors[target].home
+	var contact := target_home+(home-target_home).normalized()*64.0
+	var travel := clampf(home.distance_to(contact)/650.0,0.2,0.6)
+	var facing := 7 if index==1 else 3
+	var clip: Dictionary = actor.animations.get("0_%d" % facing,{})
+	var strike := clampf(float(clip.get("duration_ms",600))/1000.0,0.35,1.2)
+	var hit_fraction := 0.5
+	var frames: Array = clip.get("frames",[])
+	for i in range(frames.size()):
+		if int(frames[i].get("sound",0))>=10000:
+			hit_fraction = float(i)/frames.size()
+			break
+	queue_motion(index,home,contact,at,travel,facing)
+	queue_pose(index,4,at,travel)
+	actors[index].cues.append({"at":at+travel,"action":0,"seconds":strike,"facing":facing})
+	queue_motion(index,contact,home,at+travel+strike,travel,(facing+4)%8)
+	actors[index].cues.append({"at":at+travel+strike,"action":4,"seconds":travel,"facing":(facing+4)%8})
+	actors[index].cues.append({"at":at+travel*2+strike,"action":3,"seconds":0.01,"facing":int(actor.facing)})
+	return {"hit":at+travel+strike*hit_fraction,"end":at+travel*2+strike}
+
 func queue_turn_animation(previous: Dictionary) -> void:
-	for actor in actors: actor.cues = []
+	for actor in actors:
+		actor.cues = []
+		actor.motions = []
+		actor.point = actor.home
 	var fallback: Array = ["player"]
 	if actors.size()>2: fallback.append("pet")
 	if int(state.get("enemy_hp",0))>0: fallback.append("enemy")
 	var order: Array = state.get("turn_order",fallback)
-	feedback_until = elapsed+order.size()*0.5
 	var pet_command := str(state.get("last_pet_command",state.get("pet_command","attack")))
+	var at := elapsed
 	for step in range(order.size()):
 		var who := str(order[step])
-		var at := elapsed+step*0.5
-		if who=="player":
-			queue_pose(0,0 if pending_action in ["attack","capture"] else 10,at,0.5)
-		elif who=="pet":
-			queue_pose(2,10 if pet_command=="defend" else 0,at,0.5)
-		elif who=="enemy":
-			queue_pose(1,0,at,0.5)
-			for target in [[0,"player_hp"],[2,"pet_hp"]]:
-				var hp_key: String = target[1]
+		var index: int = {"player":0,"enemy":1,"pet":2}.get(who,0)
+		if index>=actors.size(): continue
+		var attack := who=="enemy" or (who=="player" and pending_action in ["attack","capture"]) or (who=="pet" and pet_command!="defend")
+		var target := 1 if who!="enemy" else (2 if actors.size()>2 and int(state.get("pet_hp",0))<int(previous.get("pet_hp",0)) else 0)
+		var timing := {"hit":at+0.25,"end":at+0.5}
+		if attack:
+			timing = queue_strike(index,target,at)
+		else:
+			queue_pose(index,10,at,0.5)
+		if who=="enemy":
+			for recipient in [[0,"player_hp"],[2,"pet_hp"]]:
+				var hp_key: String = recipient[1]
 				if int(state.get(hp_key,0)) < int(previous.get(hp_key,0)):
 					var defeated := int(state.get(hp_key,0))<=0
-					queue_pose(int(target[0]),2 if defeated else 1,at+0.25,60.0 if defeated else 0.25)
-		if (who=="player" and pending_action=="attack") or (who=="pet" and pet_command!="defend"):
-			if int(state.get("enemy_hp",0)) < int(previous.get("enemy_hp",0)):
-				var defeated := int(state.get("enemy_hp",0))<=0 and step==order.size()-1
-				queue_pose(1,2 if defeated else 1,at+0.25,60.0 if defeated else 0.25)
+					queue_pose(int(recipient[0]),2 if defeated else 1,float(timing.hit),60.0 if defeated else 0.35)
+		elif attack and int(state.get("enemy_hp",0)) < int(previous.get("enemy_hp",0)):
+			var defeated := int(state.get("enemy_hp",0))<=0 and step==order.size()-1
+			queue_pose(1,2 if defeated else 1,float(timing.hit),60.0 if defeated else 0.35)
+		at = float(timing.end)+0.08
+	menu_slide_at = at
+	feedback_until = at+(MENU_SLIDE_SECONDS if bool(state.get("active",false)) else 0.0)
 	for actor in actors:
 		actor.cues.sort_custom(func(a: Dictionary,b: Dictionary): return float(a.at)<float(b.at))
 
@@ -398,13 +486,16 @@ func cancel_selection() -> void:
 
 func _input(event: InputEvent) -> void:
 	if not visible: return
+	if event.is_action_pressed("ui_accept") and is_animating():
+		get_viewport().set_input_as_handled()
+		return
 	if event.is_action_pressed("ui_cancel") or (event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT):
 		cancel_selection()
 		get_viewport().set_input_as_handled()
 
-func animate_actor(index: int, action: int, seconds: float = 0.65) -> void:
+func animate_actor(index: int, action: int, seconds: float = 0.65, facing: int = -1) -> void:
 	var actor: Dictionary = actors[index]
-	var key := "%d_%d" % [action,int(actor.facing)]
+	var key := "%d_%d" % [action,int(actor.facing) if facing<0 else facing]
 	if actor.animations.has(key):
 		actor.temporary = key
 		actor.until = elapsed+seconds
@@ -415,6 +506,17 @@ func _process(delta: float) -> void:
 	if not visible:
 		return
 	elapsed += delta
+	for tile in transition_tiles:
+		var frames := maxf(0.0,(elapsed-float(tile.release))*60.0)
+		tile.node.position = tile.origin+Vector2(0,frames*(frames+1.0)*0.5*size.y/600.0)
+	if elapsed>=TRANSITION_SECONDS and not transition_tiles.is_empty():
+		for tile in transition_tiles: tile.node.queue_free()
+		transition_tiles.clear()
+	return_button.disabled = is_animating()
+	if bool(state.get("active",false)) and command_phase=="player":
+		command_panel.visible = elapsed>=menu_slide_at
+		var slide := clampf((elapsed-menu_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
+		command_panel.position.x = 300.0*pow(1.0-slide,2)
 	for button in commands:
 		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or str(button.get_meta("action","")) in ["magic","help"]
 		if str(button.get_meta("action",""))=="capture":
@@ -426,9 +528,20 @@ func _process(delta: float) -> void:
 	for actor_index in range(actors.size()):
 		var actor: Dictionary = actors[actor_index]
 		var cues: Array = actor.cues
-		if not cues.is_empty() and elapsed >= float(cues[0].at):
+		while not cues.is_empty() and elapsed >= float(cues[0].at):
 			var cue: Dictionary = cues.pop_front()
-			animate_actor(actor_index,int(cue.action),float(cue.seconds))
+			animate_actor(actor_index,int(cue.action),float(cue.seconds),int(cue.get("facing",-1)))
+			actor.started = float(cue.at)
+			actor.until = float(cue.at)+float(cue.seconds)
+		var motions: Array = actor.get("motions",[])
+		while not motions.is_empty() and elapsed>=float(motions[0].at):
+			var motion: Dictionary = motions[0]
+			var amount := clampf((elapsed-float(motion.at))/(float(motion.end)-float(motion.at)),0.0,1.0)
+			actor.point = Vector2(motion.from).lerp(Vector2(motion.to),amount)
+			if amount<1.0: break
+			motions.pop_front()
+		if actor_index<actor_labels.size():
+			actor_labels[actor_index].position = actor.point+Vector2(-70,15)
 		var animation: Dictionary = actor.animation
 		if elapsed < float(actor.until) and not str(actor.temporary).is_empty():
 			animation = actor.animations[actor.temporary]
@@ -439,7 +552,7 @@ func _process(delta: float) -> void:
 		var index := int(fmod(elapsed,duration)/duration*frames.size())%frames.size()
 		var temporary := elapsed < float(actor.until) and not str(actor.temporary).is_empty()
 		if temporary:
-			index = mini(int((elapsed-float(actor.started))/duration*frames.size()),frames.size()-1)
+			index = int(fmod(elapsed-float(actor.started),duration)/duration*frames.size()) if str(actor.temporary).begins_with("4_") else mini(int((elapsed-float(actor.started))/duration*frames.size()),frames.size()-1)
 		var frame: Dictionary = frames[index]
 		var frame_key := str(actor.temporary)+"_"+str(index) if temporary else "idle_"+str(index)
 		if frame_key != str(actor.last_frame):

@@ -24,6 +24,8 @@ var village_music: AudioStream
 var session = GameSession.new()
 var adventure_menu: Control
 var profile_persistence := true
+var area_transition_busy := false
+var map_transition: CanvasLayer
 var save_path := "user://single-player.json"
 var pet_follower: Node2D
 var pet_trail: Array[Vector2i] = []
@@ -92,6 +94,8 @@ func _ready() -> void:
 	data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir.json"))
 	build_world()
 	setup_audio()
+	map_transition = preload("res://scripts/classic_map_transition.gd").new()
+	add_child(map_transition)
 	build_ui()
 	if profile_persistence:
 		restore_location()
@@ -203,6 +207,23 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	checkpoint()
 	return true
 
+func transition_area(map_id: int, destination: Vector2i) -> bool:
+	if area_transition_busy:return false
+	area_transition_busy = true
+	paused_input = true
+	clear_input()
+	_run_area_transition(map_id,destination)
+	return true
+
+func _run_area_transition(map_id: int, destination: Vector2i) -> void:
+	await map_transition.transition(func():
+		var changed := load_area_id(map_id,destination)
+		paused_input = true
+		return changed)
+	area_transition_busy = false
+	paused_input = false
+	clear_input()
+
 func walk_to_exit() -> void:
 	if paused_input:
 		return
@@ -214,15 +235,15 @@ func handle_arrival() -> bool:
 	while pet_trail.size()>3:pet_trail.pop_front()
 	if int(data.map_id)==1000:
 		if cell.x==67 and cell.y in [108,109]:
-			return load_area_id(1002,Vector2i(11,cell.y-93))
+			return transition_area(1002,Vector2i(11,cell.y-93))
 		if cell.x==49 and cell.y>=116 and cell.y<=119:
-			return switch_area(true,Vector2i(45,cell.y-73))
+			return transition_area(100,Vector2i(45,cell.y-73))
 	elif int(data.map_id)==1002:
 		if cell.x==10 and cell.y in [15,16]:
-			return load_area_id(1000,Vector2i(67,cell.y+93))
+			return transition_area(1000,Vector2i(67,cell.y+93))
 	elif int(data.map_id)==100:
 		if cell.x==46 and cell.y>=43 and cell.y<=46:
-			return switch_area(false,Vector2i(50,cell.y+73))
+			return transition_area(1000,Vector2i(50,cell.y+73))
 		field_steps += 1
 		if field_steps>=8:
 			return begin_battle(session.can_fight_boss())
@@ -250,7 +271,7 @@ func begin_battle(boss: bool = false) -> bool:
 	battle_view.open_battle(state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
-	play_ui_sound(202)
+	play_battle_sound(215)
 	return true
 
 func battle_action(action: String) -> void:
@@ -277,7 +298,7 @@ func battle_action(action: String) -> void:
 	play_ui_sound(217 if ui_sounds.has(217) else 201)
 
 func return_from_battle() -> void:
-	if not battle_view.visible or battle_session.snapshot().active:
+	if not battle_view.visible or battle_session.snapshot().active or battle_view.is_animating():
 		return
 	var outcome: String = battle_session.snapshot().outcome
 	battle_view.close_battle()
@@ -425,6 +446,7 @@ func walk_to(destination: Vector2i) -> void:
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
+	if area_transition_busy:return
 	if data.is_empty():
 		return
 	if moving:
@@ -546,6 +568,8 @@ func setup_audio() -> void:
 			battle_sounds[int(ident)] = load("res://assets/legacy/battle/"+str(manifest.frame_sounds[ident]))
 		if manifest.audio.has("battle_cancel"):
 			ui_sounds[217] = load("res://assets/legacy/battle/"+str(manifest.audio.battle_cancel))
+	if mvp_manifest.get("audio",{}).has("battle_enter"):
+		battle_sounds[215] = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.battle_enter))
 	effect.stream = ui_sounds[201]
 	effect.volume_db = -10
 	add_child(effect)
@@ -739,7 +763,28 @@ func handle_world_click(point: Vector2) -> void:
 	if is_instance_valid(npc_sprite) and npc_sprite.get_rect().has_point(npc_sprite.to_local(point)):
 		approach_npc()
 	else:
-		walk_to(Vector2i(unproject(point).round()))
+		var destination := Vector2i(unproject(point).round())
+		if is_walkable(destination):walk_to(destination)
+		else:walk_toward(destination)
+
+func walk_toward(destination: Vector2i) -> void:
+	# Original map.cpp getRouteMap advances toward even a blocked/outside click.
+	# Keep collision authoritative; walking across a doorway still triggers its warp.
+	pending_talk = false
+	path.clear()
+	var start := target_cell if moving else cell
+	var cursor := start
+	var direction := Vector2(destination-start)
+	var steps := maxi(absi(destination.x-start.x),absi(destination.y-start.y))
+	if steps==0:return
+	for i in range(1,mini(steps,int(data.width)+int(data.height))+1):
+		var next := start+Vector2i((direction*float(i)/float(steps)).round())
+		if next==cursor:continue
+		if not can_step(cursor,next):break
+		path.append(next)
+		cursor=next
+	marker_cell = cursor if not path.is_empty() else Vector2i(-1,-1)
+	queue_redraw()
 
 func in_talk_range(point: Vector2i) -> bool:
 	var delta := (point-npc_cell).abs()

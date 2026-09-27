@@ -18,6 +18,7 @@ func run() -> void:
 	for i in range(250):
 		game._physics_process(1.0)
 		if int(game.data.map_id)==100:break
+	while game.area_transition_busy:await process_frame
 	await tick()
 	check(int(game.data.map_id)==100 and game.display_cell()==Vector2i(637,493),"original portal reaches verified wilderness coordinates")
 	check(is_equal_approx(game.camera.zoom.x,0.6),"selected zoom survives map transitions")
@@ -43,16 +44,18 @@ func run() -> void:
 	game.toggle_mute()
 	check(game.music.volume_db<=-80,"mute persists during battle")
 	game.toggle_mute()
+	while game.battle_view.is_animating():await process_frame
 	game.battle_view._request_action("defend")
 	game.battle_view._request_action("attack")
 	check(game.battle_session.snapshot().turn==1,"animation feedback prevents double commands")
-	await create_timer(1.4).timeout
+	while game.battle_view.is_animating():await process_frame
 	check(game.effect.stream.resource_path.ends_with("sae_23.wav"),"original enemy attack frame plays verified sound")
 	check(game.battle_session.snapshot().turn==1,"UI command reaches local authority")
 	for i in range(10):
 		if not game.battle_session.snapshot().active:break
 		game.battle_action("attack")
 	check(game.battle_session.snapshot().outcome=="win","battle can be won")
+	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
 	check(not game.battle_view.visible and not game.paused_input and game.cell==before,"victory returns to same wilderness position")
 	check(game.music.stream==game.exploration_music(),"exploration BGM restored")
@@ -61,6 +64,7 @@ func run() -> void:
 	game.begin_battle()
 	for i in range(3):game.battle_action("escape")
 	check(game.battle_session.snapshot().outcome=="escaped","escape provides a reliable exit")
+	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
 	game.session.heal()
 	game.begin_battle()
@@ -68,13 +72,16 @@ func run() -> void:
 	check(game.battle_session.snapshot().outcome=="defeat","defeat outcome supported")
 	game.checkpoint()
 	check(game.session.snapshot().location.map_id==1000,"saving at defeat screen preserves safe village recovery")
+	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
+	while game.area_transition_busy:await process_frame
 	await tick()
 	check(int(game.data.map_id)==1000 and game.cell==game.SPAWN and not game.paused_input,"defeat recovers safely at Samgir")
 	check(game.npc_data.name=="村民","village NPC restored after map changes")
 	game.switch_area(true,Vector2i(45,45))
 	game.walk_to_exit()
 	for i in range(5):game._physics_process(1.0)
+	while game.area_transition_busy:await process_frame
 	await tick()
 	check(int(game.data.map_id)==1000,"original return portal restores village")
 	game.music.stop(); game.effect.stop()

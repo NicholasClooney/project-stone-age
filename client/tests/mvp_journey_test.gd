@@ -12,6 +12,7 @@ func frames(n: int = 2) -> void:
 func walk_until(map_id: int, modal: bool = false) -> void:
 	for i in range(600):
 		game._physics_process(0.5)
+		while game.area_transition_busy:await process_frame
 		if modal and (game.dialogue.visible or game.adventure_menu.visible):break
 		if not modal and int(game.data.map_id)==map_id and not game.moving and game.path.is_empty():break
 		if game.battle_view.visible:break
@@ -21,6 +22,7 @@ func settle() -> void:
 	for i in range(20):
 		if not game.moving:break
 		game._physics_process(0.5)
+		while game.area_transition_busy:await process_frame
 func fight(capture: bool = false, boss: bool = false) -> String:
 	settle()
 	if not game.battle_view.visible:
@@ -35,6 +37,7 @@ func fight(capture: bool = false, boss: bool = false) -> String:
 			if s.skill_unlocked and not s.skill_used:game.battle_session.set_pet_command("skill")
 			game.battle_action("item" if s.player_hp<18 and s.potions>0 else "attack")
 	var outcome: String = game.battle_session.snapshot().outcome
+	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
 	await frames()
 	return outcome
