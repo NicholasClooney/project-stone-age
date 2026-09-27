@@ -1,10 +1,13 @@
 extends Node2D
 
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
-const GameSession = preload("res://server/game_session.gd")
+const Backend = preload("res://server/backend.gd")
+const LocalLink = preload("res://network/local_link.gd")
+const ClientState = preload("res://network/client_state.gd")
+const SessionClient = preload("res://network/session_client.gd")
+const BattleClient = preload("res://network/battle_client.gd")
 const AdventureMenu = preload("res://scripts/adventure_menu.gd")
 const PetFollower = preload("res://scripts/pet_follower.gd")
-const BattleSession = preload("res://server/battle_session.gd")
 const BattleView = preload("res://scripts/battle_view.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 var world_catalog = WorldCatalog.new()
@@ -13,8 +16,12 @@ var world_travel: Node
 var props: Node
 var random_encounters := true
 var last_encounter_error := ""
-var encounter_catalog = preload("res://server/encounter_catalog.gd").new()
-var encounter_rng := RandomNumberGenerator.new()
+## Authority lives behind the link; these two expose its encounter content and
+## RNG for local developer tools and tests.
+var encounter_catalog:
+	get:return link.backend.encounter_catalog
+var encounter_rng: RandomNumberGenerator:
+	get:return link.backend.encounter_rng
 var arrival_lock := Vector2i(-1,-1)
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
@@ -26,13 +33,16 @@ const SCREEN_DIRECTIONS := [Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(
 var terrain: Node2D
 var ui_layer: CanvasLayer
 var battle_view: Control
-var battle_session = BattleSession.new()
+var backend
+var link
+var state
+var session
+var battle_session
 var field_steps := 0
 var battle_sounds: Dictionary = {}
 var wilderness_music: AudioStream
 var village_music: AudioStream
 var area_music: AudioStream
-var session = GameSession.new()
 var changelog_menu: Control
 var training_settings: Dictionary = {}
 var pet_stat_filters: Dictionary = {}
@@ -43,22 +53,26 @@ var dev_gm_menu: Control
 var dev_map_overview: Control
 var pet_training: Control
 var adventure_menu: Control
-var profile_persistence := true
+var profile_persistence := true:
+	set(value):
+		profile_persistence = value
+		_sync_persistence()
 var area_transition_busy := false
 var dev_blink_mode := false
 var travel_landing: RefCounted
 var leveling_destinations: Control
 var clone_button: Button
 var map_transition: CanvasLayer
-var save_path := "user://single-player.json"
+var save_path := "user://single-player.json":
+	set(value):
+		save_path = value
+		_sync_persistence()
 var pet_follower: Node2D
 var pet_trail: Array[Vector2i] = []
 var adventure_hint: Label
-var encounter_serial := 0
 var save_elapsed := 0.0
 var mvp_manifest: Dictionary = {}
 var last_adventure_message := ""
-var last_saved_payload := ""
 var boss_button: Button
 var data: Dictionary
 var textures: Dictionary = {}
@@ -102,8 +116,26 @@ var dialogue: Control
 var dialogue_name: Label
 var dialogue_text: Label
 
+func _init() -> void:
+	backend = Backend.new()
+	# Owned from construction so a game freed before entering the tree frees it too.
+	add_child(backend)
+	link = LocalLink.new(backend)
+	state = ClientState.new()
+	link.message.connect(state.apply)
+	session = SessionClient.new(link,state)
+	battle_session = BattleClient.new(link,state)
+	state.apply(link.request({"type":"hello","protocol":Backend.PROTOCOL}).snapshot)
+
+func _sync_persistence() -> void:
+	if backend!=null:backend.save_path = save_path if profile_persistence else ""
+
+## Resync after a test or tool changed authority internals directly.
+func sync_state() -> void:
+	state.apply(link.request({"type":"snapshot"}).snapshot)
+
 func _ready() -> void:
-	encounter_rng.randomize()
+	_sync_persistence()
 	preload("res://scripts/legacy_cursor.gd").install()
 	marker = preload("res://scripts/legacy_grid_cursor.gd").new()
 	marker.world = self
@@ -293,7 +325,7 @@ func handle_arrival() -> bool:
 		return transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
 	if world_catalog.field(int(data.map_id)) and random_encounters:
 		field_steps += 1
-		if encounter_catalog.step(int(data.map_id),cell,encounter_rng):
+		if link.request({"type":"field_step","map_id":int(data.map_id),"cell":[cell.x,cell.y]}).get("hit",false):
 			return begin_wild_battle()
 	return false
 
@@ -303,43 +335,39 @@ func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
 		message.text = "Import original battle assets first; see README.md."
 		return false
-	var species := ["wooli","wooli_wooli","woolistan"]
-	var config: Dictionary = session.start_battle_config("woolistan" if boss else species[encounter_serial%3],boss,1 if boss else (enemy_count if enemy_count > 0 else 1 + encounter_serial % 3))
-	return open_battle_config(config)
+	var reply: Dictionary = link.request({"type":"begin_battle","boss":boss,"enemy_count":enemy_count})
+	return present_battle_start(reply.state) if reply.ok else false
 
 func begin_wild_battle() -> bool:
 	last_encounter_error=""
 	if moving or paused_input or area_transition_busy or battle_view==null or battle_view.visible:return false
 	if not world_catalog.field(int(data.map_id)):return false
-	var troop: Dictionary = encounter_catalog.roll(int(data.map_id),cell,encounter_rng)
-	if troop.is_empty():
-		last_encounter_error="data"
-		message.text = "这里没有可用的普通野外遇敌。" if encounter_catalog.last_error.is_empty() else "此区域的原版遇敌数据或条件尚未完整支持，暂时跳过。"
+	var reply: Dictionary = link.request({"type":"wild_encounter","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
+	if not reply.ok:
+		last_encounter_error=str(reply.get("skipped",""))
+		if last_encounter_error=="data":
+			message.text = "这里没有可用的普通野外遇敌。" if str(reply.reason).is_empty() else "此区域的原版遇敌数据或条件尚未完整支持，暂时跳过。"
+		elif last_encounter_error=="art":
+			message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
 		return false
-	if not battle_view.can_render_troop(troop.enemies):
-		last_encounter_error="art"
-		message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
-		return false
-	var opened := open_battle_config(session.start_wild_battle_config(troop))
-	if opened:
-		encounter_catalog.pressure = int(encounter_catalog.area_at(int(data.map_id),cell).get("probability_min",0))
-	return opened
+	return present_battle_start(reply.state)
 
 func open_battle_config(config: Dictionary) -> bool:
 	if config.is_empty():return false
+	var reply: Dictionary = link.request({"type":"open_battle","config":config})
+	return present_battle_start(reply.state) if reply.ok else false
+
+## Presentation for a battle the backend has just opened.
+func present_battle_start(battle_state: Dictionary) -> bool:
 	if is_instance_valid(travel_router):travel_router.cancel("战斗中断了自动寻路，请重新选择目的地。")
 	clear_input()
 	paused_input = true
 	player.set_action(3)
 	help.hide()
 	classic_hud.map_panel.hide()
-	encounter_serial += 1
-	battle_session=preload("res://server/squad_battle_session.gd").new() if not config.get("allies",[]).is_empty() else BattleSession.new()
-	battle_session.rng_seed = 42+encounter_serial
-	var state: Dictionary = battle_session.start_battle(config)
 	if is_instance_valid(training_helper) and training_helper.compact_active:
 		return true
-	battle_view.open_battle(state)
+	battle_view.open_battle(battle_state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	play_battle_sound(215)
@@ -348,36 +376,17 @@ func open_battle_config(config: Dictionary) -> bool:
 func battle_action(action: String) -> void:
 	if not battle_view.visible and not (is_instance_valid(training_helper) and training_helper.compact_active):
 		return
-	var before: Dictionary = session.snapshot()
 	var target: int = int(battle_view.get("player_target"))
 	battle_session.set_pet_target(int(battle_view.get("pet_target")))
 	var skill_id: int = int(battle_view.get("selected_pet_skill"))
 	if skill_id > 0 and battle_session.snapshot().pet_command == "skill":
 		battle_session.set_pet_skill(skill_id)
-	var state: Dictionary = battle_session.developer_escape() if action=="developer_escape" else battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
-	if not bool(state.active) and session.apply_battle_result(state):
-		if is_instance_valid(training_helper) and training_helper.running:training_helper.record_result(state)
-		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
-			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
-			var after: Dictionary = session.snapshot()
-			state.result_summary = [{"name":"你","xp":int(state.get("xp",0)),"level_up":int(after.player.level)>int(before.player.level)}]
-			var pet_rewards: Array = state.get("pet_reward_xp",[])
-			for pet_index in range(mini(before.pets.size(),pet_rewards.size())):
-				if int(pet_rewards[pet_index])<=0: continue
-				state.result_summary.append({"name":str(after.pets[pet_index].name),"xp":int(pet_rewards[pet_index]),"level_up":int(after.pets[pet_index].level)>int(before.pets[pet_index].level)})
-			if int(after.player.level)>int(before.player.level):
-				state.events.append("升级！%d 级，体力恢复。状态窗口可分配 %d 点。" % [int(after.player.level),int(after.player.get("stat_points",0))])
-			if int(after.active_pet)>=0 and int(after.active_pet) < before.pets.size():
-				var index: int = after.active_pet
-				if int(after.pets[index].level)>int(before.pets[index].level):
-					state.events.append("%s 成长到 %d 级！" % [after.pets[index].name,after.pets[index].level])
-					if int(after.pets[index].level) == 2:
-						state.events.append("可以向饲育员学习伙伴技能。")
-		elif state.outcome=="captured":
-			state.events.append("伙伴已加入宠物栏，可为它取名并选择出战。")
+	var battle_state: Dictionary = battle_session.developer_escape() if action=="developer_escape" else battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
+	if battle_state.get("settled",false):
+		if is_instance_valid(training_helper) and training_helper.running:training_helper.record_result(battle_state)
 		checkpoint()
 	if is_instance_valid(training_helper) and training_helper.compact_active:return
-	battle_view.show_state(state)
+	battle_view.show_state(battle_state)
 	play_ui_sound(217 if ui_sounds.has(217) else 201)
 
 func return_from_battle() -> void:
@@ -385,6 +394,7 @@ func return_from_battle() -> void:
 	if (not battle_view.visible and not compact_battle) or battle_session.snapshot().active or (not compact_battle and battle_view.is_animating()):
 		return
 	var outcome: String = battle_session.snapshot().outcome
+	link.request({"type":"battle_close"})
 	if compact_battle:training_helper.compact_active=false
 	battle_view.close_battle()
 	clear_input()
@@ -1195,18 +1205,10 @@ func restore_location() -> void:
 func checkpoint() -> bool:
 	if battle_session.snapshot().active:return false
 	var point := display_cell()
-	if ((is_instance_valid(battle_view) and battle_view.visible) or (is_instance_valid(training_helper) and training_helper.compact_active)) and battle_session.snapshot().outcome=="defeat":
-		session.set_location(1000,SPAWN.x,SPAWN.y)
-	else:
-		session.set_location(int(data.map_id),point.x,point.y)
 	save_elapsed = 0
-	if not profile_persistence:return true
-	var payload := JSON.stringify(session.snapshot())
-	if payload==last_saved_payload:return true
-	var success: bool = session.save_game(save_path)
-	if success:last_saved_payload = payload
-	if not success:last_adventure_message = "保存失败，请检查存储空间。"
-	return success
+	var reply: Dictionary = link.request({"type":"checkpoint","map_id":int(data.map_id),"x":point.x,"y":point.y})
+	if str(reply.get("reason",""))=="save_failed":last_adventure_message = "保存失败，请检查存储空间。"
+	return bool(reply.ok)
 
 func refresh_companion() -> void:
 	refresh_riding()
@@ -1311,7 +1313,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 	play_ui_sound(201)
 
 func load_profile() -> bool:
-	if session.load_game(save_path):return true
+	if backend.load_profile(save_path):return true
 	# Never overwrite an unreadable save by autosaving a fresh profile.
 	profile_persistence = false
 	last_adventure_message = "存档未能读取；现以临时旅程运行，原文件保留。"
