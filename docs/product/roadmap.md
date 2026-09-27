@@ -10,3 +10,7 @@
 | Later | Second profile; modern preloading; two network clients | No code fork; coherent state and reconnect |
 
 M000's approximate 30-minute target was a vertical-slice goal, not a conversion from points into hours. Use the [catalogue](feature-catalogue.md) and [estimates](../development/replication-estimates.md) to choose later scope. Preserve small runnable increments; complete systems are split into several slices.
+
+## Parked: original missions and special progression
+
+Original quest restoration, special dungeons, quest-dependent gates and boss-specific mechanics are deferred together. Ordinary maps and source-backed wild encounters may proceed without bypassing progression locks. See [mission design, reference evidence and restoration plan](../game-systems/npcs-quests-items.md#original-mission-system--deferred). Full special combat skills are also parked.
