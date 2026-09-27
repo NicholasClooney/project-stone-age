@@ -10,6 +10,8 @@ var capture_target:=-1
 var training_pet_id:=""
 var training_pet_level:=120
 var finish_after_capture:=false
+var clone_override_active:=false
+var previous_clone_enabled:=false
 var world: Node
 var panel: Panel
 var progress: Panel
@@ -31,7 +33,7 @@ var earned_xp:=0
 var earned_pet_xp:=0
 var turns:=0
 var cooldown:=0.0
-var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":20,"capture_pet":-1,"capture_pet_max_level":10}
+var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":59,"capture_pet":-1,"capture_pet_max_level":10}
 var origin_map: int
 var origin_cell: Vector2i
 var initial_level:=1
@@ -64,11 +66,10 @@ func _ready() -> void:
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(730,570);panel.add_child(close)
 	label_at(panel,"战斗预设",Vector2(24,366),17)
 	preset=options(["普通攻击","抓宠（分身全防御）","带宠升级（镜像助战）"],Vector2(180,356))
-	label_at(panel,"抓宠血量线 %",Vector2(430,366),17);capture_hp=number(Vector2(610,356),1,99,20)
-	label_at(panel,"削血宠物",Vector2(24,416),17)
+	capture_hp=number(Vector2(610,356),1,99,59)
 	capture_pet=options(["自动最低等级"],Vector2(180,406));capture_pet.set_item_id(0,-1)
-	label_at(panel,"削血宠等级上限",Vector2(430,416),17);capture_pet_max_level=number(Vector2(610,406),1,120,10)
-	label_at(panel,"自动选择还要求宠物等级不高于目标；手选宠仅受右侧上限限制。",Vector2(24,460),16)
+	capture_pet_max_level=number(Vector2(610,406),1,120,10)
+	label_at(panel,"抓宠血量线与削血宠设置统一在「自动抓极品 → 抓宠设置」。",Vector2(24,416),16)
 	target_note=label_at(panel,"抓宠锁定目标；带宠升级需遇敌前启用。攻击或反击仍可能击倒目标。",Vector2(24,490),16)
 	progress=Panel.new();progress.position=Vector2(100,600);progress.size=Vector2(1080,145)
 	progress.add_theme_stylebox_override("panel",world.box(Color("20292f"),Color("b29b65")));add_child(progress)
@@ -87,6 +88,10 @@ func _ready() -> void:
 	_sync_default_level()
 	target_level.value_changed.connect(func(_value):level_explicit=true)
 	target_level.get_line_edit().text_submitted.connect(func(_text):level_explicit=true)
+	world.pet_hunt_menu.install_capture_controls(capture_hp,capture_pet,capture_pet_max_level)
+	capture_hp.value_changed.connect(func(_value):save_capture_settings())
+	capture_pet.item_selected.connect(func(_index):save_capture_settings())
+	capture_pet_max_level.value_changed.connect(func(_value):save_capture_settings())
 	progress.hide();hide()
 func label_at(parent: Control,value: String,point: Vector2,font_size: int) -> Label:
 	var node: Label=world.text(value,font_size);node.position=point;node.mouse_filter=Control.MOUSE_FILTER_IGNORE;parent.add_child(node);return node
@@ -146,6 +151,8 @@ func close_menu() -> void:
 	if running:stop_training("已手动停止");return
 	hide();world.paused_input=world.battle_view.visible;world.clear_input()
 func apply_settings() -> void:
+	for input in [capture_hp,capture_pet_max_level,hp_floor,target_level,battle_limit]:
+		if input.get_line_edit().has_focus():input.apply()
 	settings={"speed":[1.0,2.0,4.0,8.0][speed.selected],"xp":[1,2,10,100][multiplier.selected],"compact":compact.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][preset.selected],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
 	settings.capture_pet_id=str(capture_pet.get_item_metadata(capture_pet.selected)) if capture_pet.selected>=0 and capture_pet.get_item_metadata(capture_pet.selected)!=null else ""
 	world.training_settings=settings.duplicate(true)
@@ -163,7 +170,7 @@ func start_training() -> void:
 	if str(settings.preset)=="train_pet":
 		if single_battle and world.battle_session.snapshot().get("allies",[]).is_empty():
 			world.message.text="带宠升级请在遇敌前开启，以生成完整镜像队。";close_menu();return
-		world.session.clone_squad_enabled=true
+		acquire_clone_override()
 	if single_battle and str(settings.preset)=="capture" and capture_target<0:capture_target=int(world.battle_view.player_target)
 	world.battle_session.set_capture_assist(str(settings.preset)=="capture")
 	panel.hide();progress.show();running=true
@@ -195,6 +202,7 @@ func profile_health_reason() -> String:
 	var p: Dictionary=world.session.snapshot()
 	return health_reason({"player_hp":p.player.hp,"player_max_hp":p.player.max_hp,"pets":p.pets,"active_pet":p.active_pet,"ride_pet":p.get("ride_pet",-1)})
 func stop_training(reason: String) -> void:
+	release_clone_override()
 	running=false;stop_reason=reason
 	world.battle_session.set_capture_assist(false)
 	if compact_active and not world.battle_session.snapshot().active:
@@ -293,3 +301,21 @@ func advance() -> void:
 			if opened.enemies[i].get("can_capture",false) and int(opened.enemies[i].hp)>0:capture_target=i;break
 	world.battle_session.set_capture_assist(str(settings.preset)=="capture")
 	world.paused_input=true
+
+func save_capture_settings() -> void:
+	settings.capture_hp=int(capture_hp.value)
+	settings.capture_pet=capture_pet.get_selected_id()
+	settings.capture_pet_max_level=int(capture_pet_max_level.value)
+	settings.capture_pet_id=str(capture_pet.get_item_metadata(capture_pet.selected)) if capture_pet.selected>=0 and capture_pet.get_item_metadata(capture_pet.selected)!=null else ""
+	for key in ["capture_hp","capture_pet","capture_pet_max_level","capture_pet_id"]:world.training_settings[key]=settings[key]
+
+func acquire_clone_override()->void:
+	if not clone_override_active:
+		previous_clone_enabled=world.session.clone_squad_enabled
+		clone_override_active=true
+	world.set_clone_squad_enabled(true)
+
+func release_clone_override()->void:
+	if not clone_override_active:return
+	clone_override_active=false
+	world.set_clone_squad_enabled(previous_clone_enabled)

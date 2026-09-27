@@ -31,6 +31,8 @@ func start_cycle(species_key: String="") -> bool:
 		if choice<0 or world.pet_hunt_menu.species.is_item_disabled(choice):
 			stop_cycle("当前地点和等级条件没有此品种；请自行前往合适地点或调整找宠条件。");return false
 		world.pet_hunt_menu.species.select(choice)
+	# Starting from the already-open hunt panel must retain its modal lock.
+	world.clear_input();world.paused_input=true
 	world.pet_hunt_menu.start_hunt()
 	if not world.pet_hunt_menu.running:
 		stop_cycle(world.pet_hunt_menu.status.text);return false
@@ -104,6 +106,7 @@ func prepare_scene_reload() -> String:
 	reason="战斗失败，流程已暂停。" if world.battle_session.snapshot().get("outcome","")=="defeat" else "地图发生变化，流程已暂停。"
 	phase="paused"
 	world.pet_hunt_menu.running=false
+	world.training_helper.release_clone_override()
 	world.training_helper.running=false
 	world.training_helper.compact_active=false
 	world.battle_session.set_capture_assist(false)

@@ -12,7 +12,7 @@ func run():
  game.switch_area(true,Vector2i(45,45))
  var menu=game.pet_hunt_menu
  menu.open_menu()
- check(menu.rate.max_value>=3000 and menu.rate.value==3000,"approved default requests 3000 with higher rates still supported")
+ check(menu.rate.max_value>=5000 and menu.rate.value==5000,"approved default requests 5000 with higher rates still supported")
  menu.rate.value=2000;menu.start_hunt()
  check(menu.running and menu.filter.rate==2000,"2000/s target starts")
  # Impossible test-only quality threshold prevents random hit from ending sample.

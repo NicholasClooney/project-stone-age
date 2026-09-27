@@ -23,7 +23,7 @@ func run() -> void:
 	var config: Dictionary=game.session.start_battle_config()
 	game.open_battle_config(config)
 	var flow=game.pet_workflow;flow.set_process(false);flow.phase="capture"
-	var helper=game.training_helper;helper.set_process(false);helper.start_capture_battle(0,true)
+	var helper=game.training_helper;helper.set_process(false);helper.start_capture_battle(0,true);helper.acquire_clone_override()
 	for i in range(30):
 		for frame in range(100):game.battle_view._process(0.2)
 		if not game.battle_session.snapshot().active:break
@@ -33,6 +33,7 @@ func run() -> void:
 	game.return_from_battle()
 	check(game.pet_workflow!=flow and game.pet_workflow.phase=="paused","defeat return rebuilds UI once without recursive helper settlement")
 	check(not helper.running and not game.training_helper.running and not game.battle_session.capture_assist,"defeat disables old and new automation and capture assist")
+	check(not game.session.clone_squad_enabled and not game.clone_button.button_pressed,"defeat return restores clone setting and rebuilt DEV toggle")
 	check(game.last_adventure_message.contains("战斗失败") and game.pet_workflow.reason.contains("战斗失败"),"defeat-specific pause reason survives rebuild")
 	game.process_mode=Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame

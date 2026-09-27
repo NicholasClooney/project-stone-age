@@ -1,6 +1,9 @@
 extends Control
 ## Optional single-player data inspection. Rolls real local troops; never grants rewards.
 const Rules = preload("res://scripts/pet_hunt_rules.gd")
+var filter_nodes: Array[Control] = []
+var capture_page: Control
+var train_after_capture: CheckBox
 var world: Node
 var panel: Panel
 var species: OptionButton
@@ -44,7 +47,7 @@ func _ready() -> void:
 	panel.size=Vector2(1100,620)
 	panel.add_theme_stylebox_override("panel",world.box(Color("20292f"),Color("b29b65")))
 	add_child(panel)
-	label("轻松助手 · 自动刷极品",Vector2(24,18),24)
+	label("轻松助手 · 自动抓极品",Vector2(24,18),24)
 	label("直接检查隐藏成长档。按当地原表遇敌；未达标跳过，不战斗、不捕获、不发奖励。",Vector2(24,58),16)
 	location_label=label("",Vector2(24,92),16)
 	label("目标宠物",Vector2(24,139),17)
@@ -70,14 +73,29 @@ func _ready() -> void:
 		var input:=number(Vector2(115+i*258,295),-2,2,2)
 		input.value_changed.connect(filters_changed);offsets.append(input)
 	explanation=label("",Vector2(24,351),15);explanation.size=Vector2(1040,67);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,100000,3000)
+	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,100000,5000)
 	rate.tooltip_text="目标速度；实际速度取决于敌群复杂度和设备性能，每帧约 4 毫秒工作预算。"
-	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),1,1000000,100000)
+	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),1,1000000,300000)
 	label("组；到上限暂停，可再次开始。",Vector2(610,433),16)
 	status=label("",Vector2(24,478),16);status.size=Vector2(1040,65);status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	start_button=world.button("开始筛选",start_hunt);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
+	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
 	stop_button=world.button("停止",func():stop_hunt("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,560);panel.add_child(close)
+	for child in panel.get_children():
+		if child is Control and child.position.y>=129 and child.position.y<=460:filter_nodes.append(child)
+	capture_page=Control.new();capture_page.name="CaptureSettingsPage";capture_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(capture_page)
+	var filters_tab:Button=world.button("筛选条件",func():show_capture_settings(false));filters_tab.name="HuntFilterTab";filters_tab.position=Vector2(720,18);panel.add_child(filters_tab)
+	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(880,18);panel.add_child(capture_tab)
+	train_after_capture=CheckBox.new();train_after_capture.text="抓到后练至120级并停止 · 镜像助战 · 10×经验 · 8×简略战斗";train_after_capture.tooltip_text="只训练本轮新捕获的宠物；到120级打开比较并停止，不自动开始下一轮。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
+	train_after_capture.toggled.connect(func(enabled):
+		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
+		if enabled:auto_capture.button_pressed=true
+		refresh_ready_status())
+	auto_capture.toggled.connect(func(enabled):
+		if not enabled:train_after_capture.button_pressed=false
+		refresh_ready_status())
+	train_after_capture.button_pressed=true
+	show_capture_settings(false)
 	update_explanation()
 	hide()
 
@@ -124,7 +142,7 @@ func refresh_candidates() -> void:
 			if int(item.id)==selected:species.select(species.item_count-1)
 	start_button.disabled=available==0 or not world.world_catalog.field(int(world.data.map_id))
 	location_label.text="当前位置：%s (%d, %d) · 只使用此处原版敌群，不改种类、等级或成长随机值。" % [world.data.name,world.cell.x,world.cell.y]
-	status.text="这里没有可用的目标。可到萨姆吉尔西门外筛选 Lv.1 昆依，或关闭 Lv.1 限制。" if start_button.disabled else "准备就绪。达标后自动停止并进入原版战斗，由你手动捕捉。"
+	status.text="这里没有可用的目标。可到萨姆吉尔西门外筛选 Lv.1 昆依，或关闭 Lv.1 限制。" if start_button.disabled else ready_description()
 func open_menu() -> void:
 	if visible:close_menu();return
 	if world.paused_input or world.area_transition_busy or world.battle_view.visible:return
@@ -135,7 +153,7 @@ func open_menu() -> void:
 	world.player.set_action(3)
 	world.paused_input=true
 	get_parent().move_child(self,get_parent().get_child_count()-1)
-	show();refresh_candidates();stop_button.disabled=true
+	show();refresh_candidates();world.training_helper._refresh_pet_choices();stop_button.disabled=true
 func close_menu() -> void:
 	if not visible:return
 	running=false;set_controls(false);hide();world.paused_input=false;world.clear_input()
@@ -146,6 +164,8 @@ func set_controls(locked: bool) -> void:
 	start_button.disabled=locked
 	stop_button.disabled=not locked
 func start_hunt() -> void:
+	for control in controls:
+		if control is SpinBox and control.get_line_edit().has_focus():control.apply()
 	if running or not visible or world.battle_view.visible or world.area_transition_busy:return
 	if not world.world_catalog.field(int(world.data.map_id)):return
 	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
@@ -213,9 +233,34 @@ func scan_once() -> void:
 			world.open_battle_config(config)
 			world.battle_view.player_target=i
 			world.battle_view.mark_hunt_target(i)
-			world.battle_view.report.text="发现 %s Lv.%d · 成长档 %+d · 请手动捕捉" % [actor.name,actor.level,quality.total_offset]
+			var automatic:bool=(is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt") or auto_capture.button_pressed
+			world.battle_view.report.text="发现 %s Lv.%d · 成长档 %+d · %s" % [actor.name,actor.level,quality.total_offset,"自动捕捉中" if automatic else "请手动捕捉"]
 			world.message.text="极品筛选：%s，总成长档 %+d，已遇敌 %d 组。" % [actor.name,quality.total_offset,rolls]
 			if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt":world.pet_workflow.matched(i,actor)
 			elif auto_capture.button_pressed:world.training_helper.start_capture_battle(i)
 			return
 	if rolls>=int(filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
+
+func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->void:
+	for control in [hp,pet,max_level]:control.reparent(capture_page);controls.append(control)
+	hp.position=Vector2(230,139);hp.size=Vector2(150,38);hp.name="CaptureHp"
+	pet.position=Vector2(230,209);pet.size=Vector2(470,38);pet.name="CapturePet"
+	max_level.position=Vector2(230,279);max_level.size=Vector2(150,38);max_level.name="CapturePetMaxLevel"
+	for entry in [["抓宠血量线 %",Vector2(24,149)],["削血宠物",Vector2(24,219)],["削血宠等级上限",Vector2(24,289)],["自动选择最低等级存活宠，且等级不高于目标；手选宠受等级上限限制。",Vector2(24,349)],["默认59%时开始捕捉；攻击与反击仍可能击倒目标。找宠后自动抓宠与完整流程共用这些设置。",Vector2(24,389)]]:
+		var caption:Label=world.text(str(entry[0]),16);caption.position=entry[1];capture_page.add_child(caption)
+
+func show_capture_settings(enabled:bool)->void:
+	for node in filter_nodes:node.visible=not enabled
+	capture_page.visible=enabled
+
+func start_requested()->void:
+	if train_after_capture.button_pressed:world.pet_workflow.start_cycle()
+	else:start_hunt()
+
+func ready_description()->String:
+	if train_after_capture.button_pressed:return "准备就绪：开始后自动找宠→捕捉→练到120→比较；完成这一轮后停止。"
+	if auto_capture.button_pressed:return "准备就绪：开始后筛选达标宠物并自动捕捉。"
+	return "准备就绪：筛选达标后进入战斗，由你手动捕捉。"
+
+func refresh_ready_status()->void:
+	if not running and not start_button.disabled:status.text=ready_description()

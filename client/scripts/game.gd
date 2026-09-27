@@ -211,6 +211,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	var height := int(next_data.height)
 	if destination.x<0 or destination.y<0 or destination.x>=width or destination.y>=height or int(next_data.blocked[destination.y*width+destination.x])!=0:
 		return false
+	if is_instance_valid(training_helper):training_helper.release_clone_override()
 	var workflow_pause := ""
 	if is_instance_valid(pet_workflow):workflow_pause=pet_workflow.prepare_scene_reload()
 	var previous_zoom: Vector2 = camera.zoom
@@ -913,7 +914,7 @@ func build_ui() -> void:
 	clone_button.button_pressed=session.clone_squad_enabled
 	clone_button.tooltip_text="复制当前出战宠与骑乘状态，本体优先，四组人宠自动跟随目标；经验仍归本体和真实宠物。下一场生效。"
 	clone_button.toggled.connect(func(enabled):
-		if not paused_input and not battle_session.snapshot().active:session.clone_squad_enabled=enabled
+		if not paused_input and not battle_session.snapshot().active:set_clone_squad_enabled(enabled)
 		else:clone_button.set_pressed_no_signal(session.clone_squad_enabled))
 	dev.add_child(clone_button)
 	var encounter := button("立即遇敌",dev_encounter)
@@ -931,7 +932,7 @@ func build_ui() -> void:
 	var training := button("自动练级",training_helper.open_menu)
 	training.name="DevTraining"
 	dev.add_child(training)
-	var hunt := button("自动刷极品",pet_hunt_menu.open_menu)
+	var hunt := button("自动抓极品",pet_hunt_menu.open_menu)
 	hunt.name = "DevPetHunt"
 	dev.add_child(hunt)
 	if int(data.map_id)==1000:
@@ -1351,3 +1352,7 @@ func dev_toggle_riding() -> void:
 	refresh_companion()
 	play_click()
 	checkpoint()
+
+func set_clone_squad_enabled(enabled:bool)->void:
+	session.clone_squad_enabled=enabled
+	if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(enabled)
