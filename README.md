@@ -74,6 +74,10 @@ The importer reads the original position, fixed graphic, name, and first comma-s
 
 See [resource evidence](docs/reverse-engineering/samgir-import.md) for hashes, format decisions, and limitations. Do not add imported client archives or assets to a public release without resolving their distribution status. The bundled Noto Sans SC font is distributed under its included OFL license.
 
+## Local reference sources
+
+Full upstream checkouts and offline Git bundles are preserved in ignored `references/`. See [local reference archives](docs/reverse-engineering/local-references.md) for paths, checksums, and recovery instructions.
+
 ## Verify
 
 ```sh

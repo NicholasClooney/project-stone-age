@@ -1,0 +1,45 @@
+{
+  "archived_at_utc": "2026-09-27T06:40:41.738373+00:00",
+  "repositories": [
+    {
+      "repository": "https://github.com/anson1788/stoneage.git",
+      "checkout": "references/anson1788-stoneage",
+      "head": "1997fc20456dbda36d181b9680ae10bed2e9cdf9",
+      "commit_count": 8,
+      "refs": [
+        "refs/heads/master 1997fc20456dbda36d181b9680ae10bed2e9cdf9",
+        "refs/remotes/origin/HEAD 1997fc20456dbda36d181b9680ae10bed2e9cdf9",
+        "refs/remotes/origin/master 1997fc20456dbda36d181b9680ae10bed2e9cdf9"
+      ],
+      "bundle": "references/archives/anson1788-stoneage-2026-09-27.bundle",
+      "bundle_bytes": 153902448,
+      "bundle_sha256": "90f0bb24035e5059a9a6b015d55dcfa7910066d75182beeebd36bcd33f96b9b7",
+      "verification": {
+        "full_history": true,
+        "git_fsck": "passed",
+        "git_bundle_verify": "passed; complete history",
+        "submodules_at_head": false
+      }
+    },
+    {
+      "repository": "https://github.com/chenmingbiao/stone-age.git",
+      "checkout": "references/chenmingbiao-stone-age",
+      "head": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+      "commit_count": 14,
+      "refs": [
+        "refs/heads/master 0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+        "refs/remotes/origin/HEAD 0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+        "refs/remotes/origin/master 0c58fb6683a49a178a8ad845a8c296c2cb83bd81"
+      ],
+      "bundle": "references/archives/chenmingbiao-stone-age-2026-09-27.bundle",
+      "bundle_bytes": 12118485,
+      "bundle_sha256": "50b36aec961b0b3c703d365e345911737ad500fc3ae245f78bb05056a94972cf",
+      "verification": {
+        "full_history": true,
+        "git_fsck": "passed",
+        "git_bundle_verify": "passed; complete history",
+        "submodules_at_head": false
+      }
+    }
+  ]
+}

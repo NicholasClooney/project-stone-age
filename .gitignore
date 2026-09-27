@@ -9,3 +9,6 @@ client/assets/legacy/
 
 __pycache__/
 *.pyc
+
+# Local upstream checkouts and offline Git archives.
+/references/
