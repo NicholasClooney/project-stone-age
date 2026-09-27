@@ -115,11 +115,12 @@ func rebuild() -> void:
 			label("旅程会自动保存。\n继续探索，进度不会丢失。" if world.profile_persistence else "临时旅程：存档未启用。",Vector2(30,78),360,18)
 			choice("保存旅程",Vector2(420,90),"save",null,world.profile_persistence)
 			choice("音乐开关",Vector2(420,145),"mute")
-	label(feedback,Vector2(8,panel.size.y-42),panel.size.x-90,13)
 	var close := TextureButton.new()
 	close.texture_normal = original(26042)
 	close.texture_hover = close.texture_normal
-	close.position = Vector2(panel.size.x-72,panel.size.y-38)
+	# Keep the full original 80px artwork inside the frame.
+	close.position = Vector2(panel.size.x-close.texture_normal.get_width()-16,panel.size.y-38)
+	label(feedback,Vector2(8,panel.size.y-42),close.position.x-16,13)
 	close.tooltip_text = "关闭 · Esc"
 	close.pressed.connect(world.close_adventure_menu)
 	panel.add_child(close)
