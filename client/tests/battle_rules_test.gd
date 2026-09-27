@@ -73,6 +73,18 @@ func _initialize() -> void:
 	early_guard.start_battle({"pet":{"hp":30,"max_hp":30,"speed":2,"attack":4,"name":"伙伴"},"enemy_speed":20,"player_speed":10})
 	early_guard.set_pet_command("defend")
 	var guarded_state: Dictionary = early_guard.submit_action("defend")
-	check(guarded_state.player_hp == 48 and guarded_state.pet_hp >= 28 and guarded_state.pet_hp < 30,"slow actors defend from start of round")
+	check(guarded_state.player_hp == 48 and guarded_state.pet_hp >= 26 and guarded_state.pet_hp < 30,"slow actors defend from start of round")
+	var target_seen := {"player":false,"pet":false}
+	for seed_value in range(20):
+		var target_battle = Battle.new()
+		target_battle.rng_seed = seed_value
+		target_battle.start_battle({"pet":{"hp":30,"max_hp":30,"speed":8,"attack":1,"name":"伙伴"}})
+		var target_state: Dictionary = target_battle.submit_action("defend")
+		target_seen[target_state.enemy_target] = true
+		check(target_state.turn_frames.size() == target_state.turn_order.size(),"each resolved actor supplies exact HP frame")
+	check(target_seen.player and target_seen.pet,"enemy random targeting reaches both living allies")
+	var fainted = Battle.new()
+	fainted.start_battle({"pet":{"hp":0,"max_hp":30,"speed":8,"attack":1}})
+	check(fainted.submit_action("defend").enemy_target == "player","fainted pet cannot be targeted")
 	print("Battle rules failures: ", failures)
 	quit(1 if failures else 0)

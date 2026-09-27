@@ -40,6 +40,23 @@ func _initialize() -> void:
 	for stat in ["vitality","strength","toughness"]:
 		check(game.allocate_stat(stat),"spend earned point on " + stat)
 	check(game.buy_item("club") and game.equip_item("club"),"combat earnings buy weapon")
+	game.heal()
+	check(game.snapshot().player.level == 2,"boss balance baseline is level two")
+	var boss_path := "user://mvp-boss-baseline-test.json"
+	check(game.save_game(boss_path),"save legitimate level-two boss baseline")
+	var fair_wins := 0
+	for seed_value in range(30):
+		var attempt = Game.new()
+		attempt.load_game(boss_path)
+		var boss_battle = Battle.new()
+		boss_battle.rng_seed = seed_value
+		boss_battle.start_battle(attempt.start_battle_config("woolistan",true))
+		while boss_battle.snapshot().active:
+			if not boss_battle.snapshot().skill_used:boss_battle.set_pet_command("skill")
+			boss_battle.submit_action("attack")
+		if boss_battle.snapshot().outcome == "win":fair_wins += 1
+	check(fair_wins == 30,"level-two player pet and club beat modest boss across thirty seeds without potions")
+	for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(boss_path+suffix))
 	for species in ["wooli_wooli","woolistan"]:
 		game.heal()
 		check(encounter(game,species,true).outcome == "captured","capture species with equipped weapon and guarding pet")

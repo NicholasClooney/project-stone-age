@@ -90,6 +90,16 @@ func _initialize() -> void:
 	var migrated_profile: Dictionary = migrated.snapshot()
 	check(migrated.load_game(legacy_path) and migrated.snapshot() == migrated_profile,"migration cannot grant duplicate points after save reload")
 	for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(legacy_path+suffix))
+	var stale: Dictionary = migrated_profile.duplicate(true)
+	stale.player.stat_points = 0
+	var stale_file := FileAccess.open(legacy_path,FileAccess.WRITE)
+	stale_file.store_string(JSON.stringify(stale));stale_file.close()
+	check(migrated.load_game(legacy_path) and migrated.snapshot().player.stat_points == migrated_profile.player.stat_points,"stale zero points repaired from unspent level budget")
+	stale.player.erase("stat_points")
+	stale_file = FileAccess.open(legacy_path,FileAccess.WRITE)
+	stale_file.store_string(JSON.stringify(stale));stale_file.close()
+	check(migrated.load_game(legacy_path) and migrated.snapshot().player.allocated_stats == migrated_profile.player.allocated_stats and migrated.snapshot().player.stat_points == migrated_profile.player.stat_points,"missing points repaired without refunding spent allocations")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(legacy_path))
 	var config: Dictionary = game.start_battle_config()
 	var fake := {"active":false,"battle_id":config.battle_id,"outcome":"win","player_hp":48,"potions":config.potions,"enemy_hp":20}
 	check(not game.apply_battle_result(fake),"impossible win rejected")

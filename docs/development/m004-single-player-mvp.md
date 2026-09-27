@@ -67,7 +67,7 @@ Run `scripts/test.sh` and the Python test suite described in the root README. No
 - Battle entry uses verified sound215 (`sas_15.wav`, `process.cpp:681`). No ordinary map-transition sound has been verified or invented.
 - Regression coverage includes actual outside-floor shop clicks, collision/corners, modal input blocking, and animated battle/portal journey completion. Verification launches remain silent.
 - Battle motion follows `oft/oft.cpp`: appear state uses original walk clips and off-stage ±300 offsets (`VCT_NO_APPEAR`, around10192/11440/12001); melee approaches to64px, plays the original attack clip, then walks home (cases1/2/14 around6300/6430/7660). The menu slides in after arrivals. Falling entry tiles follow `ProduceHagare(mode2)` with8×8 pieces and accelerating downward release. Animation timing is adapted to elapsed seconds, and the falling order is seeded; this is a supported subset, not a full port of every original battle action. Result dismissal stays locked until the sequence finishes.
-- Remaining battle presentation gaps: numeric HP labels still show the resolved turn snapshot before individual impacts; original overhead bars are not restored yet. Special/projectile attacks and the pet command-panel entrance are not fully ported. These are fidelity gaps, not claims of original parity.
+- Remaining battle presentation gaps: special/projectile attacks and the pet command-panel entrance are not fully ported. MP gameplay remains absent; the original player HP frame is used without inventing an MP value.
 
 ## Level-up, defaults and development shortcuts
 
@@ -76,3 +76,11 @@ Player levels award3 spendable points across vitality/strength/toughness/dexteri
 Battle selection starts on attack (`battlemenu.cpp:186`) and restores player attack/capture and pet attack/skill target selections (`3665`, `593–612`, `3630–3642`, `3800+`). A target click is still required. Invalid choices fall back to attack; consumables do not replay automatically. Guard/escape return to the attack default.
 
 Losing focus releases held keys but preserves click-to-walk routes and pending NPC approach. Explicit cancellation still clears routes. The separate DEV toolbar has a session-only **传送模式** toggle: Villager/adventure/shop shortcuts teleport when enabled and walk when disabled. **立即遇敌** uses the normal encounter flow, moving to wilderness if needed, and cannot reset an active battle. These shortcuts intentionally accelerate testing, not normal progression.
+
+## Combat and equipment corrections
+
+- HP meters follow `battlemenu.cpp:HpMeterDisp`: frames26019(player),26020(own pet),26014(other), actor anchor y−80, green40×2 fill. Authoritative per-action HP snapshots update meters on impact. Defeat returns automatically after the final animation.
+- Combat selection/cancellation routes original217 (`sas_17.wav`); restricted bottom tabs use220 (`sas_20.wav`). The bottom bar stays visible on hover during battle. `menu.cpp:9864/9993/10036/10104` rejects field status/pets/inventory/map in combat; system music control remains available. Save and world mutations stay blocked during combat.
+- Earned stat budget is3×(level−1), with remaining derived from four spent counters. Stale/missing remaining counters repair without refunding spent allocations; impossible over-allocation is rejected.
+- Quest boss now72HP/10attack; a level-two player/pet withclub and allocated points wins30 seeded balance runs without potions. Enemy selection samples living player/pet targets, excluding fainted pets; guarding pets intercept. This is project balance using the live-target/random pattern in `battle_ai.c:355–396`, not full historical AI.
+- Original classic equipment art26060 contains five slots, not a separate mannequin. `menu.cpp:InitItem` puts the ARM slot at(61,129); club bitmap offset(−12,−11) yields(49,118). Double-click bagclub equips, double-click equippedclub unequips. Inventory authority stores owned totals; the bag subtracts one equipped copy while retaining spares. No duplicate item is created.

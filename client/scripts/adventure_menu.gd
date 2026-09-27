@@ -118,7 +118,7 @@ func rebuild() -> void:
 			choice("休息 / 恢复体力",Vector2(420,305),"heal")
 		"system":
 			label("旅程会自动保存。\n继续探索，进度不会丢失。" if world.profile_persistence else "临时旅程：存档未启用。",Vector2(30,78),360,18)
-			choice("保存旅程",Vector2(420,90),"save",null,world.profile_persistence)
+			choice("保存旅程",Vector2(420,90),"save",null,world.profile_persistence and not world.battle_view.visible)
 			choice("音乐开关",Vector2(420,145),"mute")
 	if kind in ["status","inventory","pets"]:
 		return
@@ -143,12 +143,13 @@ func layout_panel() -> void:
 	else:
 		panel.position = (size-panel.size)/2
 
-func item_icon(item: String, point: Vector2) -> void:
+func item_icon(item: String, point: Vector2) -> TextureRect:
 	var view := TextureRect.new()
 	view.texture = load("res://assets/legacy/mvp/images/%s.png" % item)
 	view.position = point
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(view)
+	return view
 
 func art_button(ident: int, point: Vector2, action: String, value: Variant = null, enabled: bool = true) -> TextureButton:
 	var button := TextureButton.new()
@@ -194,23 +195,47 @@ func status_panel(profile: Dictionary) -> void:
 		plus.texture_pressed = original(26077)
 		plus.tooltip_text = hints[i] + "（消耗 1 点）"
 		plus.name = "Allocate_"+stats[i]
+		plus.visible = int(p.get("stat_points",0))>0
 
 
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
 	image(26061,Vector2(0,159))
 	label(str(profile.player.gold),Vector2(182,84),75,14)
-	if profile.equipped:item_icon("club",Vector2(15,46))
+	# Classic five-slot frame: InitItem menu.cpp8940-8973. Weapon is
+	# CHAR_ARM=2 at(61,129), not the top-left accessory slot. The frame
+	# already contains head/body/hand silhouettes; no invented mannequin.
+	if profile.equipped:
+		item_icon("club",Vector2(49,118)).name="EquippedClubIcon"
+		var equipped_slot := choice("",Vector2(38,106),"",null)
+		for connection in equipped_slot.pressed.get_connections():equipped_slot.pressed.disconnect(connection.callable)
+		equipped_slot.name="EquippedClub"
+		equipped_slot.size=Vector2(48,48)
+		equipped_slot.tooltip_text="小棍棒 · 双击卸下"
+		equipped_slot.pressed.connect(func(): selected_item="club";rebuild())
+		equipped_slot.gui_input.connect(func(event: InputEvent):
+			if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
+				world.perform_adventure_action("equip",false)
+		)
 	for i in range(2):
 		var key := "potion" if i==0 else "club"
-		if int(profile.inventory[key])>0:
-			item_icon(key,Vector2(18+i*51,171))
-			label(str(profile.inventory[key]),Vector2(31+i*51,201),40,12)
-		var slot := choice("",Vector2(11+i*51,164),"",null,int(profile.inventory[key])>0)
+		# Authority inventory is total owned; equipment consumes one visible
+		# bag copy without deleting ownership. Spare copies remain in the bag.
+		var bag_count := maxi(0,int(profile.inventory[key])-(1 if key=="club" and profile.equipped else 0))
+		if bag_count>0:
+			var offset := Vector2(-11,-21) if key=="potion" else Vector2(-12,-11)
+			item_icon(key,Vector2(32+i*51,200)+offset).name="BagIcon_"+key
+			label(str(bag_count),Vector2(31+i*51,201),40,12).name="BagCount_"+key
+		var slot := choice("",Vector2(11+i*51,175),"",null,bag_count>0)
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
+		slot.name="ItemSlot_"+key
 		slot.size=Vector2(48,48)
-		slot.tooltip_text="耐久力回复药" if key=="potion" else "小棍棒"
+		slot.tooltip_text="耐久力回复药" if key=="potion" else "小棍棒 · 双击装备"
 		slot.pressed.connect(func(): selected_item=key;rebuild())
+		slot.gui_input.connect(func(event: InputEvent):
+			if key=="club" and event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
+				if not world.session.snapshot().equipped:world.perform_adventure_action("equip",true)
+		)
 	var potion := selected_item=="potion"
 	label("耐久力回复药" if potion else "小棍棒",Vector2(15,328),240,15)
 	label("恢复体力；战斗中也可使用。" if potion else "攻击 +4；装备后生效。",Vector2(15,354),239,14)

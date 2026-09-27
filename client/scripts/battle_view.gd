@@ -37,6 +37,11 @@ var command_panel: Control
 var choice_panel: Control
 var target_buttons: Array[Button] = []
 var actor_labels: Array[Label] = []
+var hp_bars: Array[Control] = []
+var hp_fills: Array[ColorRect] = []
+var displayed_hp: Array[int] = [0,0,0]
+var hp_cues: Array[Dictionary] = []
+var defeat_return_queued := false
 var hint: Label
 # Legacy entry820 minus slide sum24..0=300, plus160 for800-wide stage.
 const MENU_ANCHOR := Vector2(680,65)
@@ -105,6 +110,19 @@ func _ready() -> void:
 		stage.add_child(target)
 		target_buttons.append(target)
 		actor_labels.append(label("",14,target.position+Vector2(-30,125),Vector2(200,45)))
+		var meter := Control.new()
+		meter.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		meter.z_index = 5
+		stage.add_child(meter)
+		ui_picture([26019,26014,26020][i],Vector2.ZERO,meter)
+		var fill := ColorRect.new()
+		fill.color = Color(0,1,0)
+		fill.position = Vector2(-21,-3 if i==0 else -1)
+		fill.size = Vector2(40,2)
+		fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		meter.add_child(fill)
+		hp_bars.append(meter)
+		hp_fills.append(fill)
 	return_button = Button.new()
 	return_button.name = "ReturnFromBattle"
 	return_button.text = "继续探索"
@@ -172,6 +190,8 @@ func open_battle(next_state: Dictionary) -> void:
 	elapsed = 0.0
 	state = {}
 	last_player_command = "attack"
+	defeat_return_queued = false
+	hp_cues.clear()
 	feedback_until = 0.0
 	if is_instance_valid(world) and actors.size() > 0:
 		var ident: String = str(world.player.character_id)
@@ -252,6 +272,8 @@ func close_battle() -> void:
 func show_state(next_state: Dictionary) -> void:
 	var previous := state
 	state = next_state.duplicate(true)
+	if previous.is_empty():
+		for i in range(3): displayed_hp[i] = int(state.get(["player_hp","enemy_hp","pet_hp"][i],0))
 	if actors.size() >= 2 and not previous.is_empty() and int(state.get("turn",0)) != int(previous.get("turn",0)):
 		queue_turn_animation(previous)
 	pending_action = ""
@@ -262,10 +284,10 @@ func show_state(next_state: Dictionary) -> void:
 	command_phase = "player"
 	clear_choices()
 	status.text = "第 %d 回合" % (int(state.get("turn",0))+1)
-	actor_labels[0].text = "你  HP %d / %d" % [int(state.get("player_hp",0)),int(state.get("player_max_hp",0))]
-	actor_labels[1].text = "%s  HP %d / %d" % [str(state.get("enemy_name",manifest.get("enemy_name","乌力"))),int(state.get("enemy_hp",0)),int(state.get("enemy_max_hp",0))]
+	actor_labels[0].text = "你"
+	actor_labels[1].text = str(state.get("enemy_name",manifest.get("enemy_name","乌力")))
 	var pet: Dictionary = state.get("pet",{})
-	actor_labels[2].text = "" if pet.is_empty() else "%s  HP %d / %d" % [str(pet.get("name","宠物")),int(state.get("pet_hp",pet.get("hp",0))),int(state.get("pet_max_hp",pet.get("max_hp",0)))]
+	actor_labels[2].text = "" if pet.is_empty() else str(pet.get("name","宠物"))
 	var messages := PackedStringArray()
 	for event in state.get("events",[]): messages.append(str(event))
 	var outcome := str(state.get("outcome",""))
@@ -314,6 +336,7 @@ func queue_strike(index: int, target: int, at: float) -> Dictionary:
 	return {"hit":at+travel+strike*hit_fraction,"end":at+travel*2+strike}
 
 func queue_turn_animation(previous: Dictionary) -> void:
+	hp_cues.clear()
 	for actor in actors:
 		actor.cues = []
 		actor.motions = []
@@ -324,12 +347,15 @@ func queue_turn_animation(previous: Dictionary) -> void:
 	var order: Array = state.get("turn_order",fallback)
 	var pet_command := str(state.get("last_pet_command",state.get("pet_command","attack")))
 	var at := elapsed
+	var turn_frames: Array = state.get("turn_frames",[])
 	for step in range(order.size()):
 		var who := str(order[step])
+		var before_step: Dictionary = turn_frames[step-1] if step>0 and step-1<turn_frames.size() else previous
+		var after_step: Dictionary = turn_frames[step] if step<turn_frames.size() else state
 		var index: int = {"player":0,"enemy":1,"pet":2}.get(who,0)
 		if index>=actors.size(): continue
 		var attack := who=="enemy" or (who=="player" and pending_action in ["attack","capture"]) or (who=="pet" and pet_command!="defend")
-		var target := 1 if who!="enemy" else (2 if actors.size()>2 and int(state.get("pet_hp",0))<int(previous.get("pet_hp",0)) else 0)
+		var target := 1 if who!="enemy" else (2 if actors.size()>2 and (str(after_step.get("enemy_target",""))=="pet" or int(after_step.get("pet_hp",0))<int(before_step.get("pet_hp",0))) else 0)
 		var timing := {"hit":at+0.25,"end":at+0.5}
 		if attack:
 			timing = queue_strike(index,target,at)
@@ -338,13 +364,27 @@ func queue_turn_animation(previous: Dictionary) -> void:
 		if who=="enemy":
 			for recipient in [[0,"player_hp"],[2,"pet_hp"]]:
 				var hp_key: String = recipient[1]
-				if int(state.get(hp_key,0)) < int(previous.get(hp_key,0)):
-					var defeated := int(state.get(hp_key,0))<=0
+				if int(after_step.get(hp_key,0)) < int(before_step.get(hp_key,0)):
+					var defeated := int(after_step.get(hp_key,0))<=0
 					queue_pose(int(recipient[0]),2 if defeated else 1,float(timing.hit),60.0 if defeated else 0.35)
-		elif attack and int(state.get("enemy_hp",0)) < int(previous.get("enemy_hp",0)):
-			var defeated := int(state.get("enemy_hp",0))<=0 and step==order.size()-1
+		elif attack and int(after_step.get("enemy_hp",0)) < int(before_step.get("enemy_hp",0)):
+			var defeated := int(after_step.get("enemy_hp",0))<=0 and step==order.size()-1
 			queue_pose(1,2 if defeated else 1,float(timing.hit),60.0 if defeated else 0.35)
+		if step<turn_frames.size():
+			var health: Dictionary = turn_frames[step]
+			for recipient in range(3):
+				var key: String = ["player_hp","enemy_hp","pet_hp"][recipient]
+				if health.has(key): hp_cues.append({"at":float(timing.hit),"index":recipient,"hp":int(health[key])})
+		else:
+			var recipients: Array = [target] if attack else []
+			if who=="player" and pending_action=="item": recipients = [0]
+			for recipient in recipients:
+				for old in hp_cues.duplicate():
+					if int(old.index)==int(recipient): hp_cues.erase(old)
+				var key: String = ["player_hp","enemy_hp","pet_hp"][recipient]
+				hp_cues.append({"at":float(timing.hit),"index":recipient,"hp":int(state.get(key,0))})
 		at = float(timing.end)+0.08
+	hp_cues.sort_custom(func(a: Dictionary,b: Dictionary): return float(a.at)<float(b.at))
 	menu_slide_at = at
 	feedback_until = at+(MENU_SLIDE_SECONDS if bool(state.get("active",false)) else 0.0)
 	for actor in actors:
@@ -384,6 +424,7 @@ func choice(text: String, position_at: Vector2, callback: Callable) -> Button:
 	return button
 
 func _request_action(action: String) -> void:
+	if world_modal_open(): return
 	if not bool(state.get("active",false)) or elapsed < feedback_until: return
 	if action in ["magic","help"]: return
 	if action=="capture" and (bool(state.get("boss",false)) or not bool(state.get("can_capture",true))): return
@@ -429,6 +470,7 @@ func _request_action(action: String) -> void:
 		complete_player_command(action)
 
 func select_target(index: int) -> void:
+	if world_modal_open(): return
 	if elapsed < feedback_until or not bool(state.get("active",false)): return
 	if command_phase == "pet" and index == 1 and selected_action in ["pet_attack","pet_skill"]:
 		finish_pet_command(selected_action.trim_prefix("pet_"))
@@ -504,8 +546,13 @@ func cancel_selection() -> void:
 	command_panel.show()
 	hint.text = "请选择指令；攻击或捕捉后点击目标。"
 
+func world_modal_open() -> bool:
+	if not is_instance_valid(world): return false
+	var panel = world.get("adventure_menu")
+	return is_instance_valid(panel) and panel.visible
+
 func _input(event: InputEvent) -> void:
-	if not visible: return
+	if not visible or world_modal_open(): return
 	if event.is_action_pressed("ui_accept") and is_animating():
 		get_viewport().set_input_as_handled()
 		return
@@ -532,7 +579,13 @@ func _process(delta: float) -> void:
 	if elapsed>=TRANSITION_SECONDS and not transition_tiles.is_empty():
 		for tile in transition_tiles: tile.node.queue_free()
 		transition_tiles.clear()
+	while not hp_cues.is_empty() and elapsed>=float(hp_cues[0].at):
+		var cue: Dictionary = hp_cues.pop_front()
+		displayed_hp[int(cue.index)] = int(cue.hp)
 	return_button.disabled = is_animating()
+	if str(state.get("outcome",""))=="defeat" and not is_animating() and not defeat_return_queued and is_instance_valid(world):
+		defeat_return_queued = true
+		world.call_deferred("return_from_battle")
 	if bool(state.get("active",false)) and command_phase=="player":
 		command_panel.visible = elapsed>=menu_slide_at
 		var slide := clampf((elapsed-menu_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
@@ -545,6 +598,7 @@ func _process(delta: float) -> void:
 			button.tooltip_text = "此战对手无法捕捉" if bool(state.get("boss",false)) else ("宠物栏已满" if not bool(state.get("can_capture",true)) else "捕捉")
 		button.texture_normal = load(ART_ROOT+"ui/%d.png" % (25100+commands.find(button)*2+(1 if selected_action==str(button.get_meta("action","")) else 0)))
 		button.texture_hover = button.texture_normal
+	for i in range(actors.size(),hp_bars.size()): hp_bars[i].hide()
 	for actor_index in range(actors.size()):
 		var actor: Dictionary = actors[actor_index]
 		var cues: Array = actor.cues
@@ -560,6 +614,11 @@ func _process(delta: float) -> void:
 			actor.point = Vector2(motion.from).lerp(Vector2(motion.to),amount)
 			if amount<1.0: break
 			motions.pop_front()
+		if actor_index<hp_bars.size():
+			var maximum := maxi(1,int(state.get(["player_max_hp","enemy_max_hp","pet_max_hp"][actor_index],1)))
+			hp_bars[actor_index].position = actor.point+Vector2(0,-80)
+			hp_bars[actor_index].visible = displayed_hp[actor_index]>0
+			hp_fills[actor_index].size.x = int(clampf(float(displayed_hp[actor_index])/maximum,0,1)*40.0)
 		if actor_index<actor_labels.size():
 			actor_labels[actor_index].position = actor.point+Vector2(-70,15)
 		var animation: Dictionary = actor.animation

@@ -386,15 +386,15 @@ func _input(event: InputEvent) -> void:
 func _unhandled_input(event: InputEvent) -> void:
 	if data.is_empty():
 		return
+	if is_instance_valid(adventure_menu) and adventure_menu.visible:
+		if event.is_action_pressed("ui_cancel"):close_adventure_menu()
+		get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(battle_view) and battle_view.visible:
 		if event.is_action_pressed("mute"):
 			toggle_mute()
 		elif event.is_action_pressed("ui_accept") and not battle_session.snapshot().active:
 			return_from_battle()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(adventure_menu) and adventure_menu.visible:
-		if event.is_action_pressed("ui_cancel"):close_adventure_menu()
 		get_viewport().set_input_as_handled()
 		return
 	if dialogue.visible:
@@ -606,6 +606,9 @@ func setup_audio() -> void:
 			battle_sounds[int(ident)] = load("res://assets/legacy/battle/"+str(manifest.frame_sounds[ident]))
 		if manifest.audio.has("battle_cancel"):
 			ui_sounds[217] = load("res://assets/legacy/battle/"+str(manifest.audio.battle_cancel))
+	if ui_sounds.has(217):battle_sounds[217] = ui_sounds[217]
+	if mvp_manifest.get("audio",{}).has("menu_denied"):
+		battle_sounds[220] = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.menu_denied))
 	if mvp_manifest.get("audio",{}).has("battle_enter"):
 		battle_sounds[215] = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.battle_enter))
 	effect.stream = ui_sounds[201]
@@ -987,7 +990,10 @@ func show_adventure_menu(kind: String) -> void:
 	if adventure_menu.visible and adventure_menu.kind == kind:
 		close_adventure_menu()
 		return
-	if moving or battle_view.visible or dialogue.visible or help.visible:return
+	if battle_view.visible and kind!="system":
+		play_battle_sound(220)
+		return
+	if moving or dialogue.visible or help.visible:return
 	if kind=="shop" and (int(data.map_id)!=1002 or not in_talk_range(cell)):return
 	if kind=="quest" and (int(data.map_id)!=1000 or not in_talk_range(cell)):return
 	clear_input()
@@ -998,14 +1004,14 @@ func show_adventure_menu(kind: String) -> void:
 
 func close_adventure_menu() -> void:
 	adventure_menu.hide()
-	paused_input = false
+	paused_input = battle_view.visible
 	clear_input()
 	refresh_companion()
 	checkpoint()
 	play_ui_sound(203)
 
 func perform_adventure_action(action: String, value: Variant = null) -> void:
-	if not adventure_menu.visible or battle_view.visible:return
+	if not adventure_menu.visible or (battle_view.visible and action!="mute"):return
 	var success := false
 	var note := ""
 	var at_shop := int(data.map_id)==1002 and in_talk_range(cell)

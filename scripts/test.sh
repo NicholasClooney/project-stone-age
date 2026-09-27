@@ -4,7 +4,7 @@ cd "$(dirname "$0")/.."
 ./scripts/run.sh --headless --editor --import --quit
 log_file=$(mktemp -t stone-age-tests)
 trap 'rm -f "$log_file"' EXIT
-for suite in dev_navigation_test world_fidelity_test smoke npc_smoke ui_smoke battle_rules_test mvp_rules_test mvp_balance_test battle_menu_test battle_smoke mvp_ui_smoke mvp_journey_test; do
+for suite in inventory_ui_test battle_hud_test dev_navigation_test world_fidelity_test smoke npc_smoke ui_smoke battle_rules_test mvp_rules_test mvp_balance_test battle_menu_test battle_smoke mvp_ui_smoke mvp_journey_test; do
 if python3 - "$suite" "$log_file" <<'RUN_SUITE'
 import subprocess, sys
 with open(sys.argv[2], "w") as output:

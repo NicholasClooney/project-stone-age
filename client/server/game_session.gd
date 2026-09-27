@@ -15,6 +15,7 @@ func _init() -> void:
 	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
 
 func snapshot() -> Dictionary:
+	_sync_stat_points()
 	return _profile.duplicate(true)
 
 func start_battle_config(species: String = "wooli", boss: bool = false) -> Dictionary:
@@ -25,7 +26,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false) -> Dicti
 	var pet: Dictionary = {}
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
-	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack + (4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.hp * (2 if boss else 1),"enemy_attack":enemy.attack + (3 if boss else 0),"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < 5,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack + (4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.hp + (24 if boss else 0),"enemy_attack":enemy.attack + (1 if boss else 0),"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < 5,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
 	_profile.next_battle += 1
 	_pending = config.duplicate(true)
 	return config
@@ -172,6 +173,7 @@ func set_location(map_id: int, x: int, y: int) -> bool:
 	return true
 
 func save_game(path: String) -> bool:
+	_sync_stat_points()
 	last_error = ""
 	if not _pending.is_empty():
 		last_error = "Finish the battle before saving."
@@ -210,7 +212,7 @@ func load_game(path: String) -> bool:
 			if not _profile.player.has("allocated_stats"):
 				# Preserve existing prototype gains, credit missed allocation once.
 				_profile.player.allocated_stats = {"vitality":0,"strength":0,"toughness":0,"dexterity":0}
-				_profile.player.stat_points = (_profile.player.level-1)*3
+			_sync_stat_points()
 			return true
 	last_error = "No valid save or backup."
 	return false
@@ -227,15 +229,17 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,1000000000):
 		return false
-	if value.player.has("allocated_stats") or value.player.has("stat_points"):
-		if not value.player.get("allocated_stats") is Dictionary or not _integer(value.player.get("stat_points"),0,(value.player.level-1)*3):
+	if value.player.has("stat_points") and not _integer(value.player.stat_points,0,1000000000):
+		return false
+	if value.player.has("allocated_stats"):
+		if not value.player.get("allocated_stats") is Dictionary:
 			return false
 		var assigned := 0
 		for stat in ["vitality","strength","toughness","dexterity"]:
 			if not _integer(value.player.allocated_stats.get(stat),0,(value.player.level-1)*3):
 				return false
 			assigned += int(value.player.allocated_stats[stat])
-		if assigned + int(value.player.stat_points) != (int(value.player.level)-1)*3:
+		if assigned > (int(value.player.level)-1)*3:
 			return false
 	for item in ITEM_PRICES:
 		if not _integer(value.inventory.get(item),0,99):
@@ -307,6 +311,7 @@ func _parse_save(text: String) -> Variant:
 func allocate_stat(stat: String) -> bool:
 	# char.c CHAR_SkillUp uses four base stats and consumes exactly one point.
 	# MVP uses primary effects only; fractional cross-stat formulas are deferred.
+	_sync_stat_points()
 	var p: Dictionary = _profile.player
 	if not _pending.is_empty() or not p.allocated_stats.has(stat) or p.stat_points <= 0:
 		return false
@@ -320,3 +325,9 @@ func allocate_stat(stat: String) -> bool:
 		"toughness":p.defence += 1
 		"dexterity":p.speed += 1
 	return true
+
+func _sync_stat_points() -> void:
+	var assigned := 0
+	for count in _profile.player.allocated_stats.values():
+		assigned += int(count)
+	_profile.player.stat_points = maxi(0,(int(_profile.player.level)-1)*3-assigned)

@@ -67,6 +67,15 @@ func _ready() -> void:
 		elif i in [1,2,3,6]:
 			var kind: String = {1:"status",2:"pets",3:"inventory",6:"system"}[i]
 			item.pressed.connect(func(): world.show_adventure_menu(kind))
+	# Original bottom bar remains above battle presentation; top field HUD does not.
+	var bottom_layer := CanvasLayer.new()
+	bottom_layer.layer = 20
+	add_child(bottom_layer)
+	var bottom_root := Control.new()
+	bottom_root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	bottom_root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	bottom_layer.add_child(bottom_root)
+	for control in [bar,status,taskbar]:control.reparent(bottom_root)
 	build_map()
 	resized.connect(layout)
 	layout()
@@ -114,6 +123,9 @@ func _process(delta: float) -> void:
 		map_panel.position = (pointer_position-drag_offset).clamp(Vector2.ZERO,(size-map_panel.size*SCALE).max(Vector2.ZERO))
 
 func toggle_map() -> void:
+	if is_instance_valid(world.battle_view) and world.battle_view.visible:
+		world.play_battle_sound(220)
+		return
 	if world.dialogue.visible or world.help.visible or (is_instance_valid(world.adventure_menu) and world.adventure_menu.visible) or (is_instance_valid(world.battle_view) and world.battle_view.visible):
 		return
 	map_panel.visible = not map_panel.visible

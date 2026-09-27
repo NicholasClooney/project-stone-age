@@ -1,4 +1,9 @@
 extends SceneTree
+class DefeatWorld:
+	extends Node
+	var returns := 0
+	var adventure_menu: Control
+	func return_from_battle() -> void: returns += 1
 var failures := 0
 var submitted: Array[String] = []
 var pet_commands: Array[String] = []
@@ -130,6 +135,56 @@ func run() -> void:
 	view._process(0)
 	check(not view.commands[2].disabled,"ordinary battle restores capture availability")
 	await process_frame
+	check(is_equal_approx(view.hp_fills[0].size.x,32.0),"original 40-pixel HP meter shows 80 percent health")
+	check(view.hp_bars[0].position==Vector2(view.actors[0].point)+Vector2(0,-80),"original HP meter follows 80 pixels above actor")
+	check(not "HP" in view.actor_labels[0].text,"names no longer duplicate numeric HP overlay")
+	var health_turn := state.duplicate(true)
+	health_turn.turn = 50
+	health_turn.turn_order = ["player","enemy","pet"]
+	health_turn.last_pet_command = "attack"
+	health_turn.enemy_hp = 12
+	health_turn.player_hp = 72
+	health_turn.turn_frames = [{"actor":"player","player_hp":80,"enemy_hp":18,"pet_hp":30},{"actor":"enemy","player_hp":72,"enemy_hp":18,"pet_hp":30},{"actor":"pet","player_hp":72,"enemy_hp":12,"pet_hp":30}]
+	view.pending_action = "attack"
+	view.show_state(health_turn)
+	check(view.displayed_hp[1]==30,"HP does not jump to resolved result before strike")
+	var first_hit := float(view.hp_cues[0].at)
+	view._process(first_hit-view.elapsed+0.001)
+	check(view.displayed_hp[1]==18 and view.displayed_hp[0]==80,"first strike applies its exact authoritative HP snapshot")
+	settle(view)
+	check(view.displayed_hp==[72,12,30],"all overhead HP meters settle to final authoritative values")
+	view.open_battle(state)
+	settle(view)
+	var fake := DefeatWorld.new()
+	root.add_child(fake)
+	fake.adventure_menu = Control.new()
+	fake.add_child(fake.adventure_menu)
+	view.world = fake
+	var selected_before: String = view.selected_action
+	view._request_action("capture")
+	view.select_target(1)
+	check(view.selected_action==selected_before and view.command_phase=="player","system modal blocks battle commands behind it")
+	fake.adventure_menu.hide()
+	var defeat := state.duplicate(true)
+	defeat.turn = 60
+	defeat.active = false
+	defeat.outcome = "defeat"
+	defeat.player_hp = 0
+	defeat.turn_order = ["enemy"]
+	defeat.turn_frames = [{"actor":"enemy","player_hp":0,"enemy_hp":30,"pet_hp":30}]
+	view.show_state(defeat)
+	view._process(maxf(0.0,view.feedback_until-view.elapsed-0.01))
+	check(not view.defeat_return_queued,"defeat waits for final attack animation")
+	view._process(0.02)
+	await process_frame
+	view._process(0.1)
+	await process_frame
+	check(fake.returns==1,"defeat returns automatically exactly once after animations")
+	check(not view.hp_bars[0].visible,"knocked-out actor loses overhead HP meter")
+	view.world = null
+	fake.queue_free()
+	view.open_battle(state)
+	settle(view)
 	if DisplayServer.get_name() != "headless":
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("res://../artifacts/mvp-original-battle-menu.png")

@@ -20,7 +20,9 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state = {"active":true,"outcome":"","battle_id":config.get("battle_id", ""),"player_hp":config.get("player_hp",48),"player_max_hp":config.get("player_max_hp",48),"enemy_hp":config.get("enemy_max_hp",32),"enemy_max_hp":config.get("enemy_max_hp",32),"enemy_name":config.get("enemy_name","乌力"),"enemy_species":config.get("enemy_species","wooli"),"enemy_sprite":config.get("enemy_sprite",100250),"pet_sprite":pet.get("sprite",100250),"pet_name":pet.get("name",""),"skill_unlocked":pet.get("skill_unlocked",false),"boss":config.get("boss",false),"turn":0,"events":["遭遇野生石器伙伴！"],"pet":pet,"pet_command":"attack","pet_hp":pet.get("hp",0),"pet_max_hp":pet.get("max_hp",0),"potions":config.get("potions",0),"captured_species":"","xp":0,"gold":0,"skill_used":false}
 	var initial_order: Array[String] = []
 	_state["turn_order"] = initial_order
+	_state["turn_frames"] = []
 	_state["last_pet_command"] = "attack"
+	_state["enemy_target"] = ""
 	_state["can_capture"] = bool(config.get("can_capture",true)) and not bool(config.get("boss",false))
 	return snapshot()
 
@@ -41,6 +43,7 @@ func submit_action(action: String) -> Dictionary:
 		return snapshot()
 	_state.turn += 1
 	_state.events = []
+	_state.enemy_target = ""
 	# Defence is selected for the whole round, even before a slower actor acts.
 	var pet_command: String = _state.pet_command
 	_state.last_pet_command = pet_command
@@ -54,6 +57,7 @@ func submit_action(action: String) -> Dictionary:
 		return a.speed > b.speed or (a.speed == b.speed and a.tie < b.tie))
 	var resolved_order: Array[String] = []
 	_state["turn_order"] = resolved_order
+	_state["turn_frames"] = []
 	for actor in actors:
 		if not _state.active:
 			break
@@ -67,6 +71,7 @@ func submit_action(action: String) -> Dictionary:
 				_pet_action(pet_command)
 			"enemy":
 				_enemy_action(action == "defend",pet_command == "defend")
+		_state.turn_frames.append({"actor":actor.actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target})
 	_state.pet_command = "attack"
 	return snapshot()
 
@@ -105,16 +110,23 @@ func _pet_action(command: String) -> void:
 	_hit_enemy(damage,str(_state.pet.get("name","伙伴")))
 
 func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
-	var damage := maxi(1,int(_config.get("enemy_attack",7)) + _rng.randi_range(-2,2) - int(_config.get("player_defence",0)))
-	if guarding:
+	# battle_ai.c:355–396 collects living opposing slots and supports random choice.
+	# MVP selects uniformly between the player and living companion; configurable
+	# legacy tactics, row restrictions and HP/attribute targeting remain deferred.
+	var pet_alive: bool = not _state.pet.is_empty() and _state.pet_hp > 0
+	var target_pet: bool = pet_alive and (pet_guarding or _rng.randi_range(0,1) == 1)
+	_state.enemy_target = "pet" if target_pet else "player"
+	var defence := int(_state.pet.get("defence",0)) if target_pet else int(_config.get("player_defence",0))
+	var damage := maxi(1,int(_config.get("enemy_attack",7)) + _rng.randi_range(-2,2) - defence)
+	if (target_pet and pet_guarding) or (not target_pet and guarding):
 		damage = maxi(1,int(damage / 2.0))
-	if not _state.pet.is_empty() and _state.pet_hp > 0 and pet_guarding:
-		_state.pet_hp = maxi(0,_state.pet_hp - maxi(1,int(damage / 2.0)))
+	if target_pet:
+		_state.pet_hp = maxi(0,_state.pet_hp - damage)
 		_state.pet.hp = _state.pet_hp
-		_state.events.append("伙伴挡下了攻击。")
+		_state.events.append("对手攻击%s，造成 %d 点伤害。" % [str(_state.pet.get("name","伙伴")),damage])
 	else:
 		_state.player_hp = maxi(0,_state.player_hp - damage)
-		_state.events.append("对手攻击，造成 %d 点伤害。" % damage)
+		_state.events.append("对手攻击你，造成 %d 点伤害。" % damage)
 	if _state.player_hp == 0:
 		_finish("defeat","你暂时落败，回村恢复体力。")
 
