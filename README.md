@@ -66,7 +66,7 @@ On your next normal launch, **蓝人龙、金虎 and one 红暴龙** join once; 
 
 The pet window has five original rows per page, family filters, separate riding/battle states, and a growth comparison: your pet's projected level-120 stats versus its species' theoretical ceiling. These are estimates; the displayed maxima are independently optimal attributes, not a single jointly attainable perfect pet.
 
-**GM 调试** supports level increases through 120, setting/adding base stats, extra allocation points, recovery and reward-free instant escape. **更新日志** shows readable committed changes and the `v0.x.0` version derived from feature/fix history. See [agent changelog workflow](AGENTS.md), [riding evidence](docs/reverse-engineering/original-riding.md), [pet tools](docs/development/pet-collection-growth.md), and [GM controls](docs/development/gm-controls.md).
+**GM 调试** supports level increases through 120, setting/adding base stats, extra allocation points, recovery and reward-free instant escape. **更新日志** shows readable committed changes and the `v0.MINOR.PATCH` beta version derived from feature/fix history. See [agent changelog workflow](AGENTS.md), [riding evidence](docs/reverse-engineering/original-riding.md), [pet tools](docs/development/pet-collection-growth.md), and [GM controls](docs/development/gm-controls.md).
 
 ## Original resources
 

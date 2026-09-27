@@ -6,7 +6,7 @@
 
 ## Required in-game changelog
 
-Game versions are **v0.x.0**, as requested for this project. `x` is the cumulative number of conventional `feat` and `fix` commits on first-parent history. Documentation, chores and tests do not advance it. This project's scheme overrides unrelated dotfiles release instructions; do not create release tags automatically.
+Game versions are **v0.MINOR.PATCH** while the game is in beta; the `0` major means no save or protocol compatibility promise yet. Versions derive from conventional commits on first-parent history: up to v0.43.0 every `feat` or `fix` advanced MINOR, and after that a `feat` advances MINOR (resetting PATCH) while a `fix` advances PATCH. Documentation, chores and tests do not advance it. This project's scheme overrides unrelated dotfiles release instructions. Create annotated tags only for checkpoints the user asks for, not per commit. App version, `SAVE_VERSION` and the backend protocol revision are independent; see [version system](docs/versioning/version-system.md).
 
 For every feature/fix:
 
@@ -15,11 +15,11 @@ For every feature/fix:
 3. Immediately run `./scripts/refresh-changelog.sh`. It regenerates the in-game JSON and `config/version`, then amends **only those two generated files** into the commit just created. Run it only for your own fresh, unpushed commit. If that commit is already shared, regenerate and make a separate `chore(changelog)` commit instead.
 4. Run `python3 tools/build_changelog.py --check` (also enforced by `scripts/test.sh`). Never manually invent version numbers or edit generated entries. No commit hashes are embedded, so the amend is stable.
 
-The game reads `client/data/changelog.json` and exposes it through **更新日志**. History is generated offline; the running game does not need Git. First-parent counting avoids double-counting merged branch histories; a merge intended as a release must have an appropriate feat/fix subject.
+The game reads `client/data/changelog.json` and exposes it through **更新日志**. History is generated offline; the running game does not need Git. First-parent counting avoids double-counting merged branch histories, but a merge commit also hides the branch's feat/fix commits. Land feature branches by rebasing onto `main` and fast-forwarding. The two generated files conflict during that rebase: take either side, then regenerate them in every rebased commit with `--exec 'python3 tools/build_changelog.py && git add client/data/changelog.json client/project.godot && git commit --amend --no-edit -q'`.
 
 ## Tagging a release
 
 Only tag when the user asks. The tag must equal the generated version, not a bump of the previous tag. Tags are sparse, so the next tag usually skips numbers (for example `v0.43.0` then `v0.47.0`).
 
 1. Run `python3 tools/build_changelog.py --check` and fix any failure first.
-2. Read the version from `client/data/changelog.json` (`version`) and tag that commit with an annotated tag: `git tag -a v0.N.0 -m "v0.N.0"`.
+2. Read the version from `client/data/changelog.json` (`version`) and tag that commit with an annotated tag: `git tag -a v<version> -m "v<version>"` (for example `v0.47.2`).

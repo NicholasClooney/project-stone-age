@@ -18,6 +18,16 @@ A playable edition is the engine plus a resolved manifest, ruleset, feature set,
 
 M000 may hard-code `samgir-dev`. Add resolution once a second configuration is genuinely useful.
 
+## Release versions
+
+| Number | Source | Advances when |
+| --- | --- | --- |
+| App version `v0.MINOR.PATCH` | Generated from history by `tools/build_changelog.py` | `feat` advances MINOR, `fix` advances PATCH (entries through v0.43.0 keep their earlier minor-only numbers) |
+| Save format `SAVE_VERSION` | `client/server/game_session.gd` | The stored profile shape changes; add a migration |
+| Backend protocol `v` | Message envelope in the [backend interface](../technical/backend-interface.md) | A message changes incompatibly |
+
+Stay on major 0 during beta. Move to 1.0.0 only when saves are promised to carry across updates. Tag checkpoints on request (`v0.43.0` marks the state before the backend split), not every version.
+
 ## Resolver contract
 
 1. Parse and validate the manifest schema; reject unknown required fields or unsupported revisions.

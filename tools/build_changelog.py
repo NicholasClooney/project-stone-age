@@ -12,18 +12,28 @@ ROOT = Path(__file__).resolve().parents[1]
 PATTERN = re.compile(r'^(feat|fix)(?:\([^)]*\))?!?:\s+(.+)$')
 
 
-def build(records, notes):
+# Entries 1..43 predate patch releases and keep their v0.N.0 numbers (tag v0.43.0).
+# Afterwards feat bumps the minor version and fix bumps the patch version.
+LEGACY_ENTRIES = 43
+
+
+def build(records, notes, legacy=LEGACY_ENTRIES):
     entries = []
+    minor = patch = 0
     for subject, date in records:
         match = PATTERN.match(subject)
         if not match:
             continue
-        number = len(entries)+1
+        kind = match.group(1)
+        if len(entries) < legacy or kind == 'feat':
+            minor, patch = minor+1, 0
+        else:
+            patch += 1
         entry = notes.get(subject, {})
-        entries.append(dict(version=f'v0.{number}.0', date=date,
-                            kind=match.group(1), title=entry.get('title', match.group(2)),
+        entries.append(dict(version=f'v0.{minor}.{patch}', date=date,
+                            kind=kind, title=entry.get('title', match.group(2)),
                             details=entry.get('details', [])))
-    return dict(version=f'v0.{len(entries)}.0', count=len(entries),
+    return dict(version=f'v0.{minor}.{patch}', count=len(entries),
                 feature_count=sum(e['kind']=='feat' for e in entries),
                 fix_count=sum(e['kind']=='fix' for e in entries), entries=list(reversed(entries)))
 
