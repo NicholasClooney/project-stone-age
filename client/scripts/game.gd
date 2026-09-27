@@ -3,6 +3,8 @@ extends Node2D
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const Backend = preload("res://server/backend.gd")
 const LocalLink = preload("res://network/local_link.gd")
+const WsLink = preload("res://network/ws_link.gd")
+const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const ClientState = preload("res://network/client_state.gd")
 const SessionClient = preload("res://network/session_client.gd")
 const BattleClient = preload("res://network/battle_client.gd")
@@ -16,12 +18,23 @@ var world_travel: Node
 var props: Node
 var random_encounters := true
 var last_encounter_error := ""
-## Authority lives behind the link; these two expose its encounter content and
-## RNG for local developer tools and tests.
+## Authority lives behind the link. In-process these expose its encounter
+## content and RNG to developer tools and tests; a remote client reads the same
+## content from its own copy and never rolls.
+var _content_catalog
 var encounter_catalog:
-	get:return link.backend.encounter_catalog
+	get:
+		if link.is_local():return link.backend.encounter_catalog
+		if _content_catalog==null:_content_catalog = EncounterCatalog.new()
+		return _content_catalog
 var encounter_rng: RandomNumberGenerator:
-	get:return link.backend.encounter_rng
+	get:return link.backend.encounter_rng if link.is_local() else null
+## Set before instantiating to play against a remote backend (tests, tools).
+static var server_url_override := ""
+var remote_url := ""
+var _offline_profile: Dictionary = {}
+var _offline_battles := 0
+var _connection_label: Label
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
@@ -118,18 +131,36 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
-	backend = Backend.new()
-	# Owned from construction so a game freed before entering the tree frees it too.
-	add_child(backend)
-	# In-process, the game's frame loop drives automation through its controls.
-	backend.set_process(false)
-	link = LocalLink.new(backend)
+	remote_url = _server_url()
 	state = ClientState.new()
+	if remote_url.is_empty():
+		backend = Backend.new()
+		# Owned from construction so a game freed before entering the tree frees it too.
+		add_child(backend)
+		# In-process, the game's frame loop drives automation through its controls.
+		backend.set_process(false)
+		link = LocalLink.new(backend)
+	else:
+		link = WsLink.new(remote_url)
 	link.message.connect(state.apply)
 	session = SessionClient.new(link,state)
 	battle_session = BattleClient.new(link,state)
-	state.apply(link.request({"type":"hello","protocol":Backend.PROTOCOL}).snapshot)
+	if link.is_local():state.apply(link.request({"type":"hello","protocol":Backend.PROTOCOL}).snapshot)
 	link.message.connect(_on_backend_message)
+
+## Remote backend address: an explicit override, then --server=ws://host:port,
+## then on the web the page's ?server= parameter or the page host's port 8765.
+func _server_url() -> String:
+	if not server_url_override.is_empty():return server_url_override
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--server="):return argument.trim_prefix("--server=")
+	if OS.has_feature("web"):
+		var chosen = JavaScriptBridge.eval("new URLSearchParams(window.location.search).get('server') || ''",true)
+		if chosen is String and not chosen.is_empty():return chosen
+		var host = JavaScriptBridge.eval("window.location.hostname",true)
+		var secure = JavaScriptBridge.eval("window.location.protocol==='https:'",true)
+		return "%s://%s:8765" % ["wss" if secure else "ws",str(host) if host is String and not str(host).is_empty() else "localhost"]
+	return ""
 
 func _sync_persistence() -> void:
 	if backend!=null:backend.save_path = save_path if profile_persistence else ""
@@ -149,7 +180,7 @@ func _ready() -> void:
 	if "--script" in OS.get_cmdline_args():profile_persistence = false
 	if FileAccess.file_exists("res://assets/legacy/mvp/manifest.json"):
 		mvp_manifest = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json"))
-	if profile_persistence and (FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak")):
+	if link.is_local() and profile_persistence and (FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak")):
 		load_profile()
 	if not FileAccess.file_exists("res://assets/legacy/samgir.json") or not FileAccess.file_exists("res://assets/legacy/ui/manifest.json") or world_catalog.maps.is_empty():
 		load_error = "Original client assets have not been imported.\nSee README.md → Import original resources."
@@ -158,6 +189,8 @@ func _ready() -> void:
 		error_label.position = Vector2(50,100)
 		add_child(error_label)
 		return
+	if not link.is_local():
+		await _connect_remote()
 	data = JSON.parse_string(FileAccess.get_file_as_string(world_catalog.file(1000)))
 	build_world()
 	setup_audio()
@@ -167,7 +200,7 @@ func _ready() -> void:
 	travel_router = preload("res://scripts/travel_router.gd").new()
 	travel_router.configure(self)
 	add_child(travel_router)
-	if profile_persistence:
+	if profile_persistence or not link.is_local():
 		restore_location()
 		if FileAccess.file_exists("res://assets/legacy/pets/catalog.json") and session.claim_default_companions():
 			checkpoint()
@@ -273,10 +306,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	build_world()
 	camera.zoom = previous_zoom
 	build_ui()
-	var workflow_pause := str(link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true}).get("paused",""))
-	if not workflow_pause.is_empty():
-		last_adventure_message="找宠流程暂停："+workflow_pause
-		message.text=last_adventure_message
+	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true},_on_map_reported)
 	camera.reset_smoothing()
 	area_music = exploration_music()
 	set_music(area_music)
@@ -327,8 +357,9 @@ func handle_arrival() -> bool:
 		return transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
 	if world_catalog.field(int(data.map_id)) and random_encounters:
 		field_steps += 1
-		if link.request({"type":"field_step","map_id":int(data.map_id),"cell":[cell.x,cell.y]}).get("hit",false):
-			return begin_wild_battle()
+		var can_battle := not moving and not paused_input and not area_transition_busy and is_instance_valid(battle_view) and not battle_view.visible
+		last_encounter_error=""
+		return bool(link.request({"type":"field_step","map_id":int(data.map_id),"cell":[cell.x,cell.y],"encounter":can_battle},_on_encounter_reply).get("battle",false))
 	return false
 
 func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
@@ -337,25 +368,29 @@ func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
 		message.text = "Import original battle assets first; see README.md."
 		return false
-	return bool(link.request({"type":"begin_battle","boss":boss,"enemy_count":enemy_count}).ok)
+	var reply: Dictionary = link.request({"type":"begin_battle","boss":boss,"enemy_count":enemy_count})
+	return bool(reply.ok) or bool(reply.get("pending",false))
 
 func begin_wild_battle() -> bool:
 	last_encounter_error=""
 	if moving or paused_input or area_transition_busy or battle_view==null or battle_view.visible:return false
 	if not world_catalog.field(int(data.map_id)):return false
-	var reply: Dictionary = link.request({"type":"wild_encounter","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
-	if not reply.ok:
-		last_encounter_error=str(reply.get("skipped",""))
-		if last_encounter_error=="data":
-			message.text = "这里没有可用的普通野外遇敌。" if str(reply.reason).is_empty() else "此区域的原版遇敌数据或条件尚未完整支持，暂时跳过。"
-		elif last_encounter_error=="art":
-			message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
-		return false
-	return true
+	var reply: Dictionary = link.request({"type":"wild_encounter","map_id":int(data.map_id),"cell":[cell.x,cell.y]},_on_encounter_reply)
+	return bool(reply.ok) or bool(reply.get("pending",false))
+
+func _on_encounter_reply(reply: Dictionary) -> void:
+	var skipped := str(reply.get("skipped",""))
+	if skipped.is_empty():return
+	last_encounter_error=skipped
+	if skipped=="data":
+		message.text = "这里没有可用的普通野外遇敌。" if str(reply.reason).is_empty() else "此区域的原版遇敌数据或条件尚未完整支持，暂时跳过。"
+	elif skipped=="art":
+		message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
 
 func open_battle_config(config: Dictionary) -> bool:
 	if config.is_empty():return false
-	return bool(link.request({"type":"open_battle","config":config}).ok)
+	var reply: Dictionary = link.request({"type":"open_battle","config":config})
+	return bool(reply.ok) or bool(reply.get("pending",false))
 
 ## Presentation for a battle the backend has just opened.
 func present_battle_start(battle_state: Dictionary) -> bool:
@@ -587,6 +622,7 @@ func walk_to(destination: Vector2i) -> void:
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
+	if not link.is_local():link.poll(delta)
 	if area_transition_busy:return
 	if data.is_empty():
 		return
@@ -1215,9 +1251,9 @@ func checkpoint() -> bool:
 	if battle_session.snapshot().active:return false
 	var point := display_cell()
 	save_elapsed = 0
-	var reply: Dictionary = link.request({"type":"checkpoint","map_id":int(data.map_id),"x":point.x,"y":point.y})
-	if str(reply.get("reason",""))=="save_failed":last_adventure_message = "保存失败，请检查存储空间。"
-	return bool(reply.ok)
+	var reply: Dictionary = link.request({"type":"checkpoint","map_id":int(data.map_id),"x":point.x,"y":point.y},func(result: Dictionary):
+		if str(result.get("reason",""))=="save_failed":last_adventure_message = "保存失败，请检查存储空间。")
+	return bool(reply.ok) or bool(reply.get("pending",false))
 
 func refresh_companion() -> void:
 	refresh_riding()
@@ -1322,6 +1358,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 	play_ui_sound(201)
 
 func load_profile() -> bool:
+	if not link.is_local():return true
 	if backend.load_profile(save_path):return true
 	# Never overwrite an unreadable save by autosaving a fresh profile.
 	profile_persistence = false
@@ -1374,6 +1411,49 @@ func set_clone_squad_enabled(enabled:bool)->void:
 func report_position() -> void:
 	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
 
+func _on_map_reported(reply: Dictionary) -> void:
+	var workflow_pause := str(reply.get("paused",""))
+	if workflow_pause.is_empty():return
+	last_adventure_message="找宠流程暂停："+workflow_pause
+	if is_instance_valid(message):message.text=last_adventure_message
+
+## Remote start: wait for the backend's first snapshot before building the map.
+func _connect_remote() -> void:
+	_connection_label = Label.new()
+	_connection_label.text = "正在连接 MacBook 上的服务器 %s …" % remote_url
+	_connection_label.position = Vector2(50,100)
+	add_child(_connection_label)
+	link.connected.connect(_on_link_connected)
+	link.disconnected.connect(_on_link_disconnected)
+	link.connect_now()
+	await link.connected
+	_connection_label.queue_free()
+
+func _on_link_connected() -> void:
+	if data.is_empty() or not is_instance_valid(battle_view):return
+	# Resync presentation to the backend's current battle and progress.
+	if state.battle_open and not battle_view.visible and not training_helper.compact_active:present_battle_start(state.battle)
+	elif not state.battle_open and battle_view.visible:present_battle_close(str(state.battle.get("outcome","")))
+	report_position()
+	message.text = _offline_summary()
+
+func _on_link_disconnected() -> void:
+	_offline_profile = state.full_profile()
+	_offline_battles = int(state.automation.get("battles",0))
+	if is_instance_valid(message):message.text = "与服务器的连接中断，正在重连…"
+
+func _offline_summary() -> String:
+	if _offline_profile.is_empty():return "已重新连接服务器。"
+	var now: Dictionary = state.full_profile()
+	var parts: PackedStringArray = ["已重新连接"]
+	var battles := int(state.automation.get("battles",0))-_offline_battles
+	if battles > 0:parts.append("离线期间自动战斗 %d 场" % battles)
+	if int(now.player.level)!=int(_offline_profile.player.level):parts.append("等级 %d → %d" % [_offline_profile.player.level,now.player.level])
+	var caught: int = now.pets.size()+now.get("pet_storage",[]).size()-_offline_profile.pets.size()-_offline_profile.get("pet_storage",[]).size()
+	if caught > 0:parts.append("新伙伴 %d 只" % caught)
+	_offline_profile = {}
+	return " · ".join(parts)
+
 ## Paced automation waits until this client has finished animating a turn.
 func acknowledge_presentation() -> void:
 	if not bool(state.automation.get("running",false)) or not is_instance_valid(battle_view) or not battle_view.visible or battle_view.is_animating():return
@@ -1382,18 +1462,24 @@ func acknowledge_presentation() -> void:
 	_presented_key = key
 	link.request({"type":"presented","battle_id":str(state.battle.get("battle_id","")),"turn":int(state.battle.get("turn",0))})
 
-func _on_backend_message(message: Dictionary) -> void:
+func _on_backend_message(event: Dictionary) -> void:
 	if not is_inside_tree() or data.is_empty() or not is_instance_valid(battle_view):return
-	match str(message.type):
-		"battle_started":present_battle_start(message.state)
-		"battle_turn":present_battle_turn(message.state)
-		"battle_closed":present_battle_close(str(message.outcome))
+	match str(event.type):
+		"battle_started":present_battle_start(event.state)
+		"battle_turn":present_battle_turn(event.state)
+		"battle_closed":present_battle_close(str(event.outcome))
 		"profile":
 			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
 		"auto_status":
 			for node in [training_helper,pet_hunt_menu,pet_workflow]:
-				if is_instance_valid(node):node.on_status(message.status)
-		"auto_event":_on_auto_event(message.detail)
+				if is_instance_valid(node):node.on_status(event.status)
+		"auto_event":_on_auto_event(event.detail)
+		"rejected":
+			var reason := str(event.get("reason",""))
+			if not reason.is_empty():message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
+		"superseded":
+			message.text = "已在另一台设备上继续游戏；此窗口不再同步。"
+			paused_input = true
 
 func _on_auto_event(detail: Dictionary) -> void:
 	match str(detail.kind):

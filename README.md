@@ -12,6 +12,17 @@ On this Mac, double-click **Play Stone Age.command**, or run from the repository
 
 The project-local Godot runtime is already installed under `.tools/`. You can also open `client/project.godot` in Godot 4.6 and press F6/F5 as appropriate. For another installation, set `GODOT_BIN` to the Godot executable.
 
+### Play against a backend on this Mac
+
+The game's rules, automation and saves run in a backend. The desktop game hosts one in-process; it can also run on its own so automation keeps going with no window open:
+
+```sh
+./scripts/serve.sh                     # headless backend on ws://*:8765, same save as the desktop game
+./scripts/run.sh -- --server=ws://127.0.0.1:8765
+```
+
+Quit the desktop game before starting `serve.sh`; both would write the same save. A client reconnects by itself and shows what happened while it was away. See [backend interface](docs/technical/backend-interface.md).
+
 | Control | Action |
 | --- | --- |
 | Left click | Walk to a reachable tile; click the villager to approach and talk |
@@ -124,7 +135,8 @@ Full upstream checkouts and offline Git bundles are preserved in ignored `refere
 Scripted and headless runs through `scripts/run.sh` use Godot’s silent audio driver, including visual test scripts. Normal game launches keep audio enabled. Use `--audio-driver Dummy` for any direct engine test launch.
 
 ```sh
-./scripts/test.sh
+./scripts/test.sh          # stops at the first failing suite
+./scripts/test-all.sh      # every suite in parallel, one PASS/FAIL line each
 .tools/asset-venv/bin/python -m unittest discover -s tools -p 'test_*.py'
 ```
 

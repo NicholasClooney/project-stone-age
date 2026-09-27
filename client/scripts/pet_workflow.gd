@@ -64,7 +64,7 @@ func start_cycle(species_key: String="") -> bool:
 		stop_cycle(world.pet_hunt_menu.status.text);return false
 	world.training_helper.save_capture_settings()
 	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"find_pet","filter":filter,"stat_filters":world.pet_stat_filters,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
-	if not reply.ok:
+	if not reply.ok and not reply.get("pending",false):
 		world.message.text="找宠流程暂停："+str(reply.reason);return false
 	world.pet_hunt_menu.set_controls(true);world.pet_hunt_menu.update_status()
 	return true

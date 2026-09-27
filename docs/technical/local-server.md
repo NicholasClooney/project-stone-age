@@ -4,7 +4,7 @@ Initial delivery is one Godot app with an in-process authority. Starting a game 
 
 Local mode uses the same validation as a future remote session. Commands and returned state should be value data; do not pass mutable authority objects to UI. Shut down cleanly and flush saves once persistence exists.
 
-Later, select a separate headless startup scene through a dedicated-server export from the same project. A network adapter replaces local delivery; gameplay rules stay in `client/server/`. Separate process deployment does not imply a second codebase or Godot project.
+`scripts/serve.sh` now runs the same backend headless from this project (`client/server/server_main.gd`) behind a WebSocket adapter; gameplay rules stay in `client/server/`. It serves one controlling client at a time and keeps automation running with none. Separate process deployment does not imply a second codebase or Godot project; an exported dedicated-server build is not set up yet.
 
 Acceptance when that later slice is scheduled: run two clients against the headless authority, reject invalid movement, disconnect one client safely, and reconnect with a fresh snapshot. Client exports should exclude private server configuration; server exports should omit unnecessary visuals while retaining authoritative content.
 

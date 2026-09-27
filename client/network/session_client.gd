@@ -14,8 +14,13 @@ func _init(target_link, client_state) -> void:
 	link = target_link
 	state = client_state
 
+## True when accepted, or sent over an asynchronous link; a later rejection
+## arrives as a "rejected" message.
 func request(command: Dictionary) -> bool:
 	var reply: Dictionary = link.request(command)
+	if reply.get("pending",false):
+		last_error = ""
+		return true
 	last_error = "" if reply.get("ok",false) else str(reply.get("reason",""))
 	return bool(reply.get("ok",false))
 
