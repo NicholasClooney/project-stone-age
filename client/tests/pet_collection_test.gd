@@ -43,9 +43,9 @@ func run()->void:
 	var comparison_value:=false
 	for child in menu.panel.get_children():
 		if child is Label:
-			if child.text=="同种上限":comparison_header=true
-			if child.text=="1324":comparison_value=true
-	check(comparison_header and comparison_value,"forecast shows selected tiger species ceiling in comparison table")
+			if child.text=="同种均值":comparison_header=true
+			if "90%" in child.text:comparison_value=true
+	check(comparison_header and comparison_value,"forecast shows practical same-species mean and explicitly approximate range")
 	if DisplayServer.get_name()!="headless":
 		await RenderingServer.frame_post_draw
 		root.get_texture().get_image().save_png("/tmp/stone-age-pet-growth.png")

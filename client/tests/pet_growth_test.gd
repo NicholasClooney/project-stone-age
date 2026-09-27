@@ -39,5 +39,22 @@ func _initialize() -> void:
 	var gm_forecast:=Growth.forecast(modified,120)
 	check(gm_forecast.expected.max_hp>gm_forecast.species_maximum.max_hp and gm_forecast.species_maximum==upper,"GM stats can exceed natural bounds without redefining species maximum")
 	check(Growth.species_upper("missing",120).is_empty(),"unknown species does not invent a theoretical maximum")
+	var covered := {"max_hp":0,"attack":0,"defence":0,"speed":0}
+	# Independently advance source-authority RNG paths, not forecast's moments.
+	for trial in range(512):
+		var sample:=pet.duplicate(true)
+		sample.growth_seed=trial*7919+3
+		for level in range(2,121):Rules.grow_pet(sample,level)
+		for key in Rules.DERIVED:
+			if int(sample[key])>=int(projected.likely[key][0]) and int(sample[key])<=int(projected.likely[key][1]):covered[key]+=1
+	for key in Rules.DERIVED:
+		check(covered[key]>=420 and covered[key]<=500,"approximate90% interval covers independent source growth paths: "+key+" "+str(covered[key])+"/512")
+		check(projected.likely[key][0]<=projected.expected[key] and projected.likely[key][1]>=projected.expected[key],"practical mean lies within likely range: "+key)
+		check(Growth.forecast(pet,1).likely[key]==[pet[key],pet[key]],"zero remaining levels has no uncertainty: "+key)
+	for info in [["blue_dragon",100288],["golden_tiger",100330],["red_rex",100373]]:
+		var starter:=Rules.species_actor(info[0],1,info[1])
+		starter.species=info[0];starter.level=1
+		var result:=Growth.forecast(starter,120)
+		print("STARTER QUALITY ",info[0]," weights=",starter.growth_weights," expected=",result.expected," normal=",result.species_average," likely=",result.likely)
 	print("PET GROWTH: %d failures" % failures)
 	quit(1 if failures else 0)

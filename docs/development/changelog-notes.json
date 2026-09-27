@@ -17,5 +17,6 @@
   "feat(server): restore classic growth, pet commands and group combat": {"title":"成长规则、宠物指令和多敌战斗", "details":["恢复基础能力成长、宠物技能指令和多人形阵位。"]},
   "feat(client): restore original pet and battle flows with map teleport": {"title":"原版宠物窗口和全图传送", "details":["宠物列表、详情及技能窗口使用各自原版布局；开发地图支持传送。"]},
   "feat(client): restore original stone-fish cursor": {"title":"恢复石鱼鼠标", "details":["游戏和界面使用原版石鱼光标。"]},
-  "feat(client): add original riding, companions and player tools": {"title":"骑金虎、带伙伴出发", "details":["首次启动加入蓝人龙、金虎和一只红暴龙；现有宠物保留。", "DEV→骑乘可选择金虎骑手造型，再骑乘金虎；战斗宠物和坐骑分别设置。", "新增41个原版角色造型、跨地图步行、全图缩放与平移。", "宠物收藏支持30只、分类与分页；成长面板比较120级预测和原版理论上限。", "GM可提升至120级、调整基础能力与加点、恢复体力、立即脱战。", "恢复黄色格子光标；骑乘经验按原版规则结算。", "新增本更新日志；更大范围的地图与准确野外遇敌恢复仍待后续完成。"]}
+  "feat(client): add original riding, companions and player tools": {"title":"骑金虎、带伙伴出发", "details":["首次启动加入蓝人龙、金虎和一只红暴龙；现有宠物保留。", "DEV→骑乘可选择金虎骑手造型，再骑乘金虎；战斗宠物和坐骑分别设置。", "新增41个原版角色造型、跨地图步行、全图缩放与平移。", "宠物收藏支持30只、分类与分页；成长面板比较120级预测和原版理论上限。", "GM可提升至120级、调整基础能力与加点、恢复体力、立即脱战。", "恢复黄色格子光标；骑乘经验按原版规则结算。", "新增本更新日志；更大范围的地图与准确野外遇敌恢复仍待后续完成。"]},
+  "fix(client): clarify pet forecasts and restore native UI highlights": {"title": "更实用的宠物成长预测与原版选中框", "details": ["宠物→成长预估现在显示本宠预估、单项约90%常见范围和同种正常均值；悬停均值可查看理论单项极限。", "预测依据参考源码的随机成长规则；范围为近似值，不能保证四项同时落入，GM及旧存档修正会明确标示。", "道具栏恢复独立的悬停框与青色选中框，区分已装备武器和背包备用武器。", "宠物名称、原版按钮及菜单恢复参考客户端的绿色闪动悬停框；悬停不再冒充按下状态。"]}
 }

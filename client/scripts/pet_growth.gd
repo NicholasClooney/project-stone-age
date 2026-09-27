@@ -58,6 +58,53 @@ static func expected_increment(weight: int, rank: int) -> float:
 		for roll in range(low,low+51):
 			total += probability*int((weight+extra)*roll/100)/51.0
 	return total
+# Exact joint one-level moments: the four extras share ten draws and the
+# rank roll is shared too. Squaring the derived weighted sum keeps covariance.
+static var _moment_cache: Dictionary = {}
+static func joint_moments(weights: Array, rank: int) -> Dictionary:
+	var cache_key := str(weights)+":"+str(rank)
+	if _moment_cache.has(cache_key):return _moment_cache[cache_key]
+	var factorial := [1.0,1.0,2.0,6.0,24.0,120.0,720.0,5040.0,40320.0,362880.0,3628800.0]
+	var result: Dictionary = {}
+	for key in Rules.DERIVED:result[key]={"mean":0.0,"second":0.0}
+	var low := 450+clampi(rank,0,5)*20
+	for v in range(11):
+		for s in range(11-v):
+			for t in range(11-v-s):
+				var extras := [v,s,t,10-v-s-t]
+				var probability: float = factorial[10]/pow(4.0,10)/51.0
+				for e in extras:probability/=factorial[e]
+				for roll in range(low,low+51):
+					var values := []
+					for i in range(4):values.append(int((int(weights[i])+extras[i])*roll/100))
+					for key in Rules.DERIVED:
+						var value := 0.0
+						for i in range(4):value+=values[i]*COEFFICIENTS[key][i]
+						value/=float(DENOMINATORS[key])
+						result[key].mean+=probability*value
+						result[key].second+=probability*value*value
+	for key in Rules.DERIVED:
+		result[key]["variance"]=maxf(0.0,result[key].second-result[key].mean*result[key].mean)
+	_moment_cache[cache_key]=result
+	return result
+
+static func species_average(species: String, target_level: int) -> Dictionary:
+	if not Rules.SPECIES.has(species):return {}
+	var data: Dictionary=Rules.SPECIES[species]
+	var rank := 5
+	var total := 0
+	for weight in data.weights:total+=int(weight)
+	for i in range(6):
+		if total >= [100,95,90,85,80,0][i]:
+			rank=i
+			break
+	var expected_base: Dictionary={}
+	for i in range(4):
+		var mean := 0.0
+		for variation in range(-2,3):mean+=expected_increment(int(data.weights[i])+variation,rank)/5.0
+		expected_base[Rules.STATS[i]]=(float(data.weights[i])+2.5)*int(data.initial)+maxi(0,target_level-1)*mean
+	return Rules.derived(expected_base)
+
 static func forecast(pet: Dictionary, target_level: int = 120) -> Dictionary:
 	var steps := maxi(0,target_level-int(pet.get("level",1)))
 	var base: Dictionary = pet.get("base_stats",{}).duplicate(true)
@@ -81,7 +128,17 @@ static func forecast(pet: Dictionary, target_level: int = 120) -> Dictionary:
 		var floor_value := 0 if key=="defence" else 1
 		predicted[key] = maxi(floor_value,int(predicted[key])+offset)
 		minimum[key] = maxi(floor_value,int(minimum[key])+offset)
-	return {"target_level":maxi(target_level,int(pet.get("level",1))),"expected":predicted,"minimum":minimum,"maximum":maximum,"species_maximum":species_upper(str(pet.get("species","")),maxi(target_level,int(pet.level))),"base_increment":increment,"steps":steps}
+	var moments := joint_moments(pet.growth_weights,int(pet.get("growth_rank",0)))
+	var likely: Dictionary = {}
+	for key in Rules.DERIVED:
+		# Normal approximation to independent level draws, rounded outwards.
+		# For few remaining levels the screen explicitly calls this approximate.
+		var center: float = float(_weighted_base(base,COEFFICIENTS[key]))/float(DENOMINATORS[key])+steps*moments[key].mean+int(pet.get("legacy_stat_offset",{}).get(key,0))
+		var radius := 1.64485362695147*sqrt(steps*moments[key].variance)
+		var floor_value := 0 if key=="defence" else 1
+		likely[key]=[maxi(floor_value,int(floor(center-radius))),maxi(floor_value,int(floor(center+radius)))]
+		if steps==0:likely[key]=[predicted[key],predicted[key]]
+	return {"likely":likely,"species_average":species_average(str(pet.get("species","")),maxi(target_level,int(pet.level))),"target_level":maxi(target_level,int(pet.get("level",1))),"expected":predicted,"minimum":minimum,"maximum":maximum,"species_maximum":species_upper(str(pet.get("species","")),maxi(target_level,int(pet.level))),"base_increment":increment,"steps":steps}
 static func category(pet: Dictionary) -> String:
 	match str(pet.get("species","")):
 		"blue_dragon":return "人龙"

@@ -1,5 +1,6 @@
 extends Control
 const SCALE := 1.25
+const Highlight = preload("res://scripts/legacy_ui_highlight.gd")
 var world: Node2D
 var art: Dictionary = {}
 var map_panel: Control
@@ -99,6 +100,7 @@ func icon(parent: Node, normal: int, pressed: int, point: Vector2, caption: Stri
 	result.mouse_entered.connect(func(): hover_label = caption)
 	result.mouse_exited.connect(func(): hover_label = "")
 	parent.add_child(result)
+	Highlight.attach(result,Rect2(Vector2(-2,-2),result.texture_normal.get_size()+Vector2(4,4)))
 	return result
 
 func layout() -> void:

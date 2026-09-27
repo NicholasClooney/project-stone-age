@@ -14,6 +14,8 @@ const PetGrowth = preload("res://scripts/pet_growth.gd")
 var name_edit: LineEdit
 var art: Dictionary = {}
 var selected_item := "potion"
+var selected_item_slot := "potion"
+const Highlight = preload("res://scripts/legacy_ui_highlight.gd")
 var readable_font: FontVariation
 func _sync_dev_visibility() -> void:
 	if world==null or not is_instance_valid(world.ui_layer):return
@@ -185,6 +187,7 @@ func art_button(ident: int, point: Vector2, action: String, value: Variant = nul
 	button.focus_mode = Control.FOCUS_NONE
 	button.pressed.connect(func(): world.perform_adventure_action(action,value))
 	panel.add_child(button)
+	Highlight.attach(button,Rect2(Vector2(-2,-2),button.texture_normal.get_size()+Vector2(4,4)))
 	return button
 
 func portrait(sprite: int, point: Vector2, bounds: Vector2) -> void:
@@ -242,7 +245,8 @@ func inventory_panel(profile: Dictionary) -> void:
 		equipped_slot.name="EquippedClub"
 		equipped_slot.size=Vector2(48,48)
 		equipped_slot.tooltip_text="小棍棒 · 双击卸下"
-		equipped_slot.pressed.connect(func(): selected_item="club";rebuild())
+		Highlight.attach(equipped_slot,Rect2(Vector2(-1,-1),Vector2(50,47)),selected_item_slot=="equipped")
+		equipped_slot.pressed.connect(func(): selected_item="club";selected_item_slot="equipped";rebuild())
 		equipped_slot.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
 				world.perform_adventure_action("equip",false)
@@ -261,7 +265,8 @@ func inventory_panel(profile: Dictionary) -> void:
 		slot.name="ItemSlot_"+key
 		slot.size=Vector2(48,48)
 		slot.tooltip_text="耐久力回复药" if key=="potion" else "小棍棒 · 双击装备"
-		slot.pressed.connect(func(): selected_item=key;rebuild())
+		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_item_slot==key and bag_count>0)
+		slot.pressed.connect(func(): selected_item=key;selected_item_slot=key;rebuild())
 		slot.gui_input.connect(func(event: InputEvent):
 			if key=="club" and event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
 				if not world.session.snapshot().equipped:world.perform_adventure_action("equip",true)
@@ -278,6 +283,7 @@ func pet_native_button(ident: int, center: Vector2, callback: Callable, title: S
 	button.tooltip_text = title
 	button.pressed.connect(callback)
 	panel.add_child(button)
+	Highlight.attach(button,Rect2(Vector2(-2,-2),button.texture_normal.get_size()+Vector2(4,4)))
 	return button
 
 func pet_switch_view(view: String) -> void:
@@ -317,6 +323,9 @@ func pet_panel(profile: Dictionary) -> void:
 			for style in ["normal","hover","pressed","focus"]:row.add_theme_stylebox_override(style,StyleBoxEmpty.new())
 			row.pressed.connect(func(): selected_pet=i; pet_switch_view("detail"))
 			panel.add_child(row)
+			# Source pet names are font hitFlag2: outline the name, not the whole row.
+			var name_width := title.get_theme_font("font").get_string_size(title.text,HORIZONTAL_ALIGNMENT_LEFT,-1,14).x
+			Highlight.attach(row,Rect2(Vector2(-1,1),Vector2(minf(name_width+5,190),22)))
 			var state:=pet_native_button(26053 if active else 26052,Vector2(39,y+10),func(): world.perform_adventure_action("select_pet",-1 if active else i),"休息" if active else "出战")
 			state.name="PetState%d" % i
 		if filtered.is_empty():
@@ -438,27 +447,29 @@ func pet_growth_panel(pet: Dictionary, origin: Vector2) -> void:
 		label("缺少原始成长资料",origin,340,14)
 		return
 	label("%s · Lv.%d → %d 预估" % [pet.name,pet.level,forecast.target_level],origin+Vector2(0,20),350,15)
-	var maxima:Dictionary=forecast.species_maximum
-	for column in [["属性",0],["本宠预估",80],["同种上限",179],["差距",267]]:
+	var average:Dictionary=forecast.species_average
+	for column in [["属性",0],["预估",66],["约90%范围",128],["同种均值",257]]:
 		label(column[0],origin+Vector2(column[1],54),85,14)
 	var keys: Array = ["max_hp","attack","defence","speed"]
 	var names: Array = ["体力","攻击","防御","敏捷"]
 	for i in range(4):
 		var key:String=keys[i]
 		var value:=int(forecast.expected[key])
-		var upper:=int(maxima.get(key,0))
+		var typical:=int(average.get(key,0))
 		var y:=86+i*25
 		label(names[i],origin+Vector2(0,y),50,14)
-		label(str(value),origin+Vector2(80,y),65,14)
-		label(str(upper) if not maxima.is_empty() else "—",origin+Vector2(179,y),65,14)
-		label(str(upper-value) if upper>=value else "超出%d" % (value-upper),origin+Vector2(267,y),85,14)
+		label(str(value),origin+Vector2(66,y),60,14)
+		label("%d–%d" % forecast.likely[key],origin+Vector2(128,y),125,13)
+		var comparison:=label(str(typical) if not average.is_empty() else "—",origin+Vector2(257,y),90,14)
+		comparison.mouse_filter=Control.MOUSE_FILTER_PASS
+		comparison.tooltip_text="同种普通出生、从 Lv.1 培养的平均值。理论单项上限 %s；各项极限不能同时达到，不能作为正常品质标准。" % str(forecast.species_maximum.get(key,"未知"))
 	var gains:Dictionary=forecast.base_increment
 	label("每级基础成长：体 %.3f　腕 %.3f\n                         耐 %.3f　速 %.3f" % [gains.vitality,gains.strength,gains.toughness,gains.dexterity],origin+Vector2(0,196),350,13)
 	var base:Dictionary=pet.base_stats
 	label("当前基础：体 %.2f  腕 %.2f  耐 %.2f  速 %.2f" % [base.vitality/100.0,base.strength/100.0,base.toughness/100.0,base.dexterity/100.0],origin+Vector2(0,240),350,12)
-	label("同种上限：从 Lv.1 培养、各项分别最优。\n每级共分配10点，四项上限不能同时达到。",origin+Vector2(0,268),350,12)
+	label("同种均值：从 Lv.1 正常培养，非极限。\n范围为单项近似90%；不能保证同时落入。",origin+Vector2(0,268),350,12)
 	var modified:bool=bool(pet.get("gm_modified",false)) or not pet.get("legacy_stat_offset",{}).is_empty()
-	label("GM／旧存档修正可能超出原生成长上限。" if modified else "随机成长预估；不包含转生或 GM 加成。",origin+Vector2(0,310),350,11)
+	label("含 GM／旧档修正，不用于天然品质比较。" if modified else "按原版随机规则；接近目标级时范围较粗略。",origin+Vector2(0,310),350,11)
 
 func pet_rename_panel(pet: Dictionary) -> void:
 	var origin:=Vector2(0,336)
