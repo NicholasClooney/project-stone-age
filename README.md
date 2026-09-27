@@ -41,7 +41,7 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original stone top controls, wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker.
 - Camera follow, consistent developer zoom controls, focus-loss input clearing, and a safe respawn.
 
-This is the local, Godot-only village slice. No login, Swift server, battle, interior transitions, saves, or multiplayer yet. The classic HUD uses the local 2.5 client artwork. Extra top-row buttons in the supplied reference belong to a different asset set and are not fabricated. Only the Map tab is functional; the other original menu items are visual with hover labels. DEV controls remain separate. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
+This is the local, Godot-only village slice. No login, separate gameplay authority, battle, interior transitions, saves, or multiplayer yet. The classic HUD uses the local 2.5 client artwork. Extra top-row buttons in the supplied reference belong to a different asset set and are not fabricated. Only the Map tab is functional; the other original menu items are visual with hover labels. DEV controls remain separate. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
 

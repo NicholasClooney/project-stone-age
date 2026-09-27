@@ -1,6 +1,6 @@
 # Protocol archaeology and compatibility
 
-Legacy compatibility has two different paths: a Godot adapter connecting to an old server, and an old client connecting to the Swift server. Choose one exact build pair and one capability before implementing either. Both are deferred beyond M000.
+Legacy compatibility has two different paths: a Godot adapter connecting to an old server, and an old client connecting to the Godot server. Choose one exact build pair and one capability before implementing either. Both are deferred beyond M000.
 
 ## Trace one action
 

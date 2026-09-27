@@ -12,7 +12,7 @@ A playable edition is the engine plus a resolved manifest, ruleset, feature set,
 | Historical target | Build/region being reconstructed, if known |
 | Ruleset revision | Simulation behavior and formulas |
 | Content pack revision/hash | Specific resources and definitions |
-| Modern protocol revision | Godot/Swift wire contract |
+| Modern protocol revision | Godot client/server wire contract (once networking exists) |
 | Legacy adapter ID | A tested historical protocol variant |
 | Presentation preferences | Classic/modern, scale, audio, accessibility |
 

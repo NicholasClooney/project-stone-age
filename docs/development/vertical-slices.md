@@ -1,23 +1,17 @@
-# Vertical slices after M000
+# Next runnable slices
 
-Each row is a focused task; split again if it cannot leave a runnable checkpoint.
+M000 village, M001 conversation and M002 classic HUD/map are already implemented within their documented scope. Do not repeat them or reuse their IDs for server integration.
 
-| Slice | Implement | Show / verify |
+| Slice | Demonstrate | Relative planning points |
 | --- | --- | --- |
-| Directional polish | Replace temporary art with correct facing/frame mapping | Turn, walk, stop in each direction |
-| Collision fidelity | Trace one building and its doorway | Wall blocks; entrance remains reachable |
-| Swift connection | Handshake and initial position in the existing scene | Correct profile accepted; mismatch explained |
-| Swift movement | Move intent → validation → accepted position | Server rejects walking through one wall |
-| NPC | One actor, proximity check, short dialogue | Approach, interact, dismiss, leave |
-| Basic interior | One explicit portal and destination scene | Enter and return to valid spawn |
-| Modern transition | Preload that scene while approaching | Warm crossing without black screen |
-| Streaming resilience | Cancel stale load and retain current map on failure | Rapid approach/retreat; delayed or missing destination |
-| Encounter | One marked trigger and encounter state | Trigger once; no repeated encounters while busy |
-| Battle | One enemy, one command, one turn resolver | Win/lose then return to world |
-| Pet | One pet definition and ownership action | Persist acquisition once saves exist |
-| Save | One profile-bound save slot | Restart preserves progress |
-| Second profile | Add explicit differing content/rule choice | Switch sessions without modifying engine code |
+| Local movement authority | Existing walking through one owner; reject wall/bounds violations | 0.5–1 |
+| Interaction authority | Existing villager only talks when reachable and nearby | 0.25–0.5 |
+| One original interior | Enter one doorway and return to a valid exterior spawn | 0.5–1.5 |
+| One encounter trigger | Enter battle state once; suppress repeated triggers while busy | 0.5–1 |
+| First battle | One enemy, attack/guard, HP, win/lose, return to village | 1–2 |
+| First pet | Capture/obtain one pet, show ownership, use it in battle | 1–2 |
+| First save | Restart retains position and one progression field | 0.5–1 |
 
-For M001, first run Swift as a separate process. Bundle it only after the client-server slice works. A network abstraction, persistence interface, or feature registry is complete only when used by a demonstrated path.
+These are subsets of catalogue systems, not additional costs to add to those estimates. New rules go through Godot authority. Introduce abstractions only with their first demonstrated consumer.
 
-Legacy-client login, old-server connectivity, riding, clans, rebirth, and advanced magic are later capability slices. Their historical associations require evidence rather than assumptions based on an edition label.
+After a portal works, add preload/cancel/failure behavior. After a battle works, expand targeting, skills, statuses and parties. Add the headless/network adapter only when testing two players. Each checkpoint keeps the original-resource Samgir playable.

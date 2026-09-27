@@ -1,33 +1,27 @@
-# Architecture overview
+# Architecture — one Godot project
 
-## Delivery stages
+Decision, 2026-09-27: use Godot and GDScript for both client presentation and gameplay authority. This supersedes the earlier Swift server proposal. One app and one process come first; a dedicated server can later be exported from the same Godot project.
 
 ```text
-M000: Godot input → temporary local state → Samgir presentation
-
-M001+: Godot → GameConnection → command boundary → Swift game state
-             local or remote                     ↓
-                                              persistence
-
-Future: legacy client → build-specific adapter → same command boundary
+Now:    input/UI → local commands → authority → state/events → presentation
+                                      ↓
+                              content + persistence
+Later:  input/UI → network adapter → headless authority (same project)
 ```
 
-Godot owns input, rendering, UI, animation, audio, resource loading, and interpolation. Swift eventually owns movement validity, map membership, characters, battle, inventory, pets, quests, and saves. A local game uses the same server rules as a remote game.
+This is the target architecture, not a claim that the current village already has a server boundary. M000–M002 currently use local scene state.
 
-## Boundaries to introduce when needed
+| Area | Owns | Must not depend on |
+| --- | --- | --- |
+| Client | Input, original UI, graphics, audio, camera, interpolation, streaming visuals | Direct writes to authoritative state |
+| Server/authority | Movement validation, map membership, battles, inventory, pets, quests, saves | Camera, UI nodes, textures, audio, rendering frame rate |
+| Shared | Commands/events, content IDs, logical map geometry, profile definitions | Client scene paths or mutable client copies of authority |
+| Transport | Deliver commands and results; later encode network messages | Gameplay decisions |
 
-| Boundary | Contract |
-| --- | --- |
-| Presentation / simulation | Input requests an action; accepted state drives visuals |
-| Transport / domain | Decode messages into typed commands; do not leak packet offsets into game rules |
-| Content / code | Stable content IDs resolve through the selected profile |
-| Rules / edition | Ruleset and features are resolved once per session |
-| Local / remote | Share commands/events; local mode adds server process lifecycle |
+Keep the existing `client/` directory as the Godot project root. Introduce `client/server/`, `client/shared/`, and `client/network/` only as their first consumers arrive; the directory name does not make this a client-only project. Use GDScript classes for rules, with a small Node for session lifecycle if needed. No second Godot project or Swift package is required.
 
-For M000, direct scene references and one small player controller are sufficient. Keep temporary state identifiable so M001 can replace its owner. Do not build empty abstractions, entity frameworks, dependency injection systems, or services ahead of their first consumer.
+The first authority slice moves one movement rule behind a local command boundary. Preserve the controls and original appearance, then route NPC interaction through the same owner. Avoid empty service layers or an entire simulation rewrite ahead of a working consumer.
 
-Proposed later Swift layout: `GameServerCore` for rules/state, an executable for startup/transport, persistence adapters, and a small macOS launcher boundary. Split packages only when a concrete build or test needs the separation.
+Resolve a session profile into rules revision, features, content hashes, and protocol revision. Presentation settings stay separate. Local and remote modes must run the same rules. A legacy protocol adapter is optional and distinct from Godot networking.
 
-## Session identity
-
-Resolve a profile into rules revision, feature set, ordered content hashes, and protocol revision. Record that identity in handshakes, saves, and diagnostics. Presentation settings are separate. See [version resolution](../versioning/version-system.md).
+See [server rules](server.md), [local mode](local-server.md), [networking](networking.md), and the [feature catalogue](../product/feature-catalogue.md).

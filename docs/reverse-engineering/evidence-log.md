@@ -28,6 +28,6 @@ Implementation consequence:
 | Collision source and movement timing | Unknown | Trace one step and blocked step in a selected build |
 | 1.82/2.5/5.x/8.5 feature differences | Unknown | Compare one system across two exact revisions |
 | Legacy login and framing variant | Unknown | Trace encoder/decoder for a selected client/server pair |
-| Linux/Windows Swift dependency support | Deferred | Audit only when that deployment is scheduled |
+| Linux/Windows Godot application support | Deferred | Audit only when that deployment is scheduled |
 
 Link findings to the document and fixture they change. A design proposal can proceed with a labeled approximation while historical questions remain open.

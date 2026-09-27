@@ -1,20 +1,15 @@
-# Proposed game repository conventions
-
-These conventions describe a future game repository. This documentation package does not create that repository or supersede instructions in the directory where it is used.
+# Repository conventions
 
 ```text
-client/          Godot project and scenes
-server/          Swift package/executable when M001 starts
-content/         Runtime definitions and approved assets
-tools/           Focused import/research utilities as needed
-tests/fixtures/  Small reproducible protocol/resource samples
-docs/            This specification and evolving decisions
+client/          Existing Godot project: presentation and future authority
+client/server/   GDScript authority rules/state, added with first consumer
+client/shared/   Commands, definitions and logical geometry, when needed
+client/network/  Local delivery first; remote adapter when needed
+tools/           Resource import/research utilities
+docs/            Specification, evidence and delivery status
+references/      Ignored upstream clones and verified offline bundles
 ```
 
-Create folders only when used. Raw reference material should remain unchanged and separate from generated output; large or redistribution-restricted inputs may need local-only storage with an inventory of hashes.
+Create folders only when used. Keep one Godot project; dedicated-server exports reuse it. Do not create a separate Swift package. Use stable content IDs and reproducible import tools. Preserve upstream reference files unchanged. Keep raw/derived legacy assets, saves, credentials and editor caches out of tracked source as configured by `.gitignore`.
 
-Use stable namespaced content IDs, explicit configuration, and reproducible generation. Keep generated files identifiable and record how to rebuild them. Never hand-edit converted output as the only record of a format fix.
-
-Pin engine/toolchain/dependency versions when establishing the runnable project. Add a short real launch guide with exact commands only after verifying them. Keep local credentials, saves, caches, and derived editor state out of source control.
-
-Commit focused playable changes using the host repository's existing conventions. Do not initialize a nested repository or alter release numbering merely because this docs package is copied into an existing project.
+Use conventional commits, such as `feat(client): ...`, `feat(server): ...` and `docs(architecture): ...`. Verify a playable change before committing it. Documentation estimates and future architecture do not imply completed implementation.

@@ -6,7 +6,7 @@ Recreate the familiar StoneAge world through a modern client, retaining historic
 
 - Start directly in Samgir during development.
 - Eventually choose an installed historical or custom profile.
-- Play offline using an optional bundled local Swift server, or connect to a private/remote server.
+- Play offline using an in-process Godot authority, or connect to a private/remote server.
 - Switch presentation preferences without changing combat, progression, item ownership, or access rules.
 
 ## Historical targets
@@ -25,6 +25,6 @@ No edition is supported merely because its label exists. Track compatibility by 
 
 M000 contains one map, one character, movement, animation, BGM, SFX, and basic collision. It requires no login, networking, battle, pet system, pack manager, database, or general streaming framework.
 
-Later goals include NPC interaction, interiors, encounters, battles, pets, persistence, multiple profiles, and multiplayer. Public MMO operations, monetization, exhaustive historical parity, mobile packaging, and cross-platform Swift support are outside the initial delivery.
+Later goals include NPC interaction, interiors, encounters, battles, pets, persistence, multiple profiles, and multiplayer. Public MMO operations, monetization, exhaustive historical parity, mobile packaging, and cross-platform dedicated-server validation are outside the initial delivery.
 
 Faithfulness is measured against recorded evidence. Reconstruction and placeholders must be identifiable; visual resemblance alone does not prove compatibility.

@@ -22,7 +22,7 @@ Handoff: implemented, verified, remaining gaps, next task.
 
 Outcome: enter one Samgir shop and return to the same village doorway.
 
-In scope: one trigger, one interior scene, two spawns, single transition ownership. Use local transition state if Swift has not been integrated; otherwise require server acceptance.
+In scope: one trigger, one interior scene, two spawns, single transition ownership. Use local transition state if authority has not been integrated; otherwise require server acceptance.
 
 Deferred: whole-world streaming, multiple shops, edition-wide portal extraction, seamless camera treatment.
 

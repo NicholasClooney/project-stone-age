@@ -2,7 +2,7 @@
 
 M000 and M001 can use disposable in-memory state. Introduce saves when there is progress worth preserving.
 
-Proposed local storage: SQLite. A remote database such as PostgreSQL is a later deployment choice. Choose and pin a Swift database library during implementation; no library is mandated here.
+Begin with a versioned local save through Godot when needed. Use an atomic write/replace strategy and keep a recoverable backup. If transactional storage becomes necessary, select and pin a Godot-compatible SQLite adapter then. A remote database such as PostgreSQL is a later deployment choice; no database plugin is mandated now.
 
 ## Save contract
 

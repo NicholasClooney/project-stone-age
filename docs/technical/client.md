@@ -23,4 +23,4 @@ Input creates movement/interaction intents. The connection delivers authoritativ
 
 Start with authoritative movement and interpolation. Add prediction only after local-to-remote latency makes it useful, with sequence numbers and reconciliation. Keep the M000 local driver as a clearly labeled development mode, disabled for remote sessions.
 
-Verification: identical movement controls work with the development driver and the Swift connection; blocked movement does not continue animating translation; mode changes do not recreate domain state.
+Verification: identical movement controls work with the development driver and the local authority adapter (and later the network adapter); blocked movement does not continue animating translation; mode changes do not recreate domain state.

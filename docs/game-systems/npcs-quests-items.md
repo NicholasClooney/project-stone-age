@@ -1,6 +1,6 @@
 # NPCs, quests, inventory, and items
 
-Start with one NPC and a short dialogue tree. Represent NPC identity, map position, appearance, interaction radius, and dialogue reference as content. Validate distance and current player state on the server after M001.
+Start with one NPC and a short dialogue tree. Represent NPC identity, map position, appearance, interaction radius, and dialogue reference as content. When introducing authority, move the existing M001 proximity checks to that owner.
 
 Use declarative dialogue/actions first. Lua or another scripting layer is a future candidate only after actual content needs it; imported legacy scripts are references, not automatically executable modern content.
 

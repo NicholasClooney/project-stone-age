@@ -14,7 +14,7 @@ The conversation identified candidate legacy client/server repositories, GMSV/SA
 4. Which exact login/world-entry messages would a legacy adapter require?
 5. Which rules/content differences justify a second version profile?
 
-Trace legacy client resource loaders, projection, animation, and input code. Trace server dispatch into movement/map logic and account/persistence boundaries. Reproduce only the capability needed for the current slice; do not port the entire legacy architecture into Swift.
+Trace legacy client resource loaders, projection, animation, and input code. Trace server dispatch into movement/map logic and account/persistence boundaries. Reproduce only the capability needed for the current slice; do not port the entire legacy process architecture into Godot.
 
 For every finding store source revision, file/symbol or capture reference, observed behavior, confidence, and a reproduction method in the [evidence log](evidence-log.md). Separate direct observation, inference, and unknowns.
 

@@ -1,15 +1,11 @@
 # Platform policy
 
-| Component | Now | Future |
+| Component | Current target | Future target |
 | --- | --- | --- |
-| Godot client | macOS development and playable local scene | Desktop exports, then mobile/device-specific work |
-| Swift server | Easiest macOS executable and debugger workflow | Linux and Windows dedicated servers |
-| Bundled local server | macOS child process after M001 | Other desktop bundles; investigate mobile in-process integration |
+| Combined Godot app | macOS, existing Godot 4.6 workflow | Other desktop client platforms when requested |
+| In-process authority | Same macOS app | Same rules in a dedicated export |
+| Headless Godot server | Deferred | Linux and Windows, plus macOS development |
 
-Linux/Windows portability is an architectural constraint, not a release claim or MVP acceptance criterion. No cross-compilation, containers, CI matrix, or Windows wrapper is required before Samgir works.
+Prioritize playable slices. Keep UI, native plugins, OS launch behavior and filesystem paths outside authority rules. Use portable engine APIs when practical; do not add speculative platform abstractions.
 
-Prefer portable Swift/Foundation and transport APIs when equally simple. Keep app launching, filesystem locations, platform logging, and OS-specific integration at small boundaries. If an Apple-only API is the fastest reasonable option, use it and record the dependency plus likely replacement in a short note.
-
-Trigger portability work when a concrete deployment target is requested. At that time verify the selected Swift toolchain, dependencies, database driver, networking, shutdown behavior, path handling, and packaging on that OS. A shared language does not establish a working port.
-
-Record actual engine/toolchain versions and tested machines in implementation handoffs. Avoid unsupported promises about iOS, Android, visionOS, or server deployment targets.
+Godot supports headless operation, but our application ports are untested. Before claiming Linux/Windows support verify the pinned engine, plugins, resource paths/case, saves, networking, shutdown and packaging on each target. Do not block the MVP on these checks.

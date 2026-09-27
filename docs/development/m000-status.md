@@ -2,7 +2,7 @@
 
 ## Current playable slice
 
-Run `./scripts/run.sh` from the game repository root, or double-click `Play Stone Age.command`. Godot 4.6 starts directly in the original-resource Samgir village. No Swift process or network service is required.
+Run `./scripts/run.sh` from the game repository root, or double-click `Play Stone Age.command`. Godot 4.6 starts directly in the original-resource Samgir village. No separate server process or network service is required.
 
 The user's clarification supersedes the early placeholder fallback: **original map art, sprites, animation, and music are required for this MVP**. The geometric placeholder scene was rejected and moved out of the tracked client.
 
@@ -24,6 +24,6 @@ A separate system-font error was found in the persistent session and fixed by bu
 
 ## Remaining scope
 
-The scene uses historical resources from a community client and server map, not a certified official-build recreation. The original-resource HUD and map window are now available; see [M002](m002-classic-ui.md). One verified village conversation is now implemented; see [M001](m001-village-npc.md). Interiors, persistence, Swift authority, and multiplayer are not implemented. Imported assets remain local; a fresh clone needs the documented import step.
+The scene uses historical resources from a community client and server map, not a certified official-build recreation. The original-resource HUD and map window are now available; see [M002](m002-classic-ui.md). One verified village conversation is now implemented; see [M001](m001-village-npc.md). Interiors, persistence, a separate authority boundary, and multiplayer are not implemented. Imported assets remain local; a fresh clone needs the documented import step.
 
 Next slices should build on the working village and its NPC interaction. Do not replace the legacy artwork or music with approximations.

@@ -1,20 +1,11 @@
-# Optional local / bundled server
+# Local and dedicated sessions
 
-M000 runs entirely in Godot. M001 starts a Swift executable separately during development. Later, one macOS app may bundle the client, server executable, and selected content so offline play needs no separate installation or network access.
+Initial delivery is one Godot app with an in-process authority. Starting a game constructs the selected profile and world state, connects a local command/event adapter, then shows Samgir. No listening port, subprocess, account service or loopback token is needed for offline play.
 
-“Embedded” initially means a bundled child process. An in-process Swift library is a future option, not a first-slice requirement.
+Local mode uses the same validation as a future remote session. Commands and returned state should be value data; do not pass mutable authority objects to UI. Shut down cleanly and flush saves once persistence exists.
 
-## Launch contract
+Later, select a separate headless startup scene through a dedicated-server export from the same project. A network adapter replaces local delivery; gameplay rules stay in `client/server/`. Separate process deployment does not imply a second codebase or Godot project.
 
-1. Choose a save/profile and a writable user-data directory outside the app bundle.
-2. Spawn the bundled executable with that profile and save location.
-3. Bind only to loopback on an available port; generate a per-launch connection token.
-4. Return a structured ready message with port, protocol revision, and resolved profile digest.
-5. Connect through the normal client command/event boundary after readiness, not after an arbitrary sleep.
-6. On exit request a save and graceful shutdown; after a bounded timeout terminate only the child owned by this launch.
+Acceptance when that later slice is scheduled: run two clients against the headless authority, reject invalid movement, disconnect one client safely, and reconnect with a fresh snapshot. Client exports should exclude private server configuration; server exports should omit unnecessary visuals while retaining authoritative content.
 
-Track launch identity and process handle; never kill a process merely because it uses a familiar port. Surface startup errors and retain a useful log path. Prevent two server processes from concurrently writing the same save.
-
-`LocalConnection` handles startup/stop and then uses the same wire codec as `NetworkConnection`. It must not duplicate gameplay rules. LAN hosting is a separate explicit mode, not the default local bind.
-
-Acceptance: app restart restores state once persistence exists; clean exit leaves no owned child; occupied ports and crashes produce retryable errors; offline startup performs no required remote request. Mobile/in-process packaging remains deferred pending platform-specific investigation.
+Godot documents [headless execution and dedicated-server exports](https://docs.godotengine.org/en/stable/tutorials/export/exporting_for_dedicated_servers.html). Verify flags and export behavior against the pinned local engine before implementing; documentation for a newer stable release is not a project upgrade.

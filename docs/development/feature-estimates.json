@@ -1,0 +1,673 @@
+{
+  "as_of": "2026-09-27",
+  "unit": "relative story points; not hours",
+  "scope": "remaining representative systems, excluding full content restoration",
+  "anchors": {
+    "Samgir completed": 1,
+    "Villager completed": 0.5
+  },
+  "features": [
+    {
+      "group": "Core",
+      "id": "C01",
+      "name": "Local authority and command boundary",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 2,
+      "dependencies": "—",
+      "sources": [],
+      "scope": "Movement plus interaction use one owner; headless-compatible rules; no network yet."
+    },
+    {
+      "group": "Core",
+      "id": "C02",
+      "name": "Map/interior portals and spawn rules",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 2,
+      "dependencies": "C01",
+      "sources": [
+        "S:gmsv/npc/npc_warp.c",
+        "S:gmsv/npc/npc_warpman.c",
+        "S:gmsv/char/event.c"
+      ],
+      "scope": "One exterior/interior pair, spawn validation and failure recovery; bulk maps excluded."
+    },
+    {
+      "group": "Core",
+      "id": "C03",
+      "name": "Character creation, stats, growth and titles",
+      "difficulty": "Medium",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C01",
+      "sources": [
+        "S:gmsv/char/char_data.c",
+        "S:gmsv/char/title.c",
+        "C:system/character.cpp"
+      ],
+      "scope": "One creation flow, stat allocation, experience/level progression, status UI and representative titles."
+    },
+    {
+      "group": "Core",
+      "id": "C04",
+      "name": "Inventory, equipment and consumables",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C01,C03",
+      "sources": [
+        "S:gmsv/char/char_item.c",
+        "S:gmsv/item/item_event.c",
+        "C:system/magicitem.cpp"
+      ],
+      "scope": "Original inventory UI, use/equip/drop/pickup, slot restrictions and atomic ownership."
+    },
+    {
+      "group": "Core",
+      "id": "C05",
+      "name": "NPC window types and dialogue choices",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 2,
+      "dependencies": "C01",
+      "sources": [
+        "S:gmsv/npc/npc_windowman.c",
+        "C:systeminc/login.h",
+        "C:system/talkwindow.cpp"
+      ],
+      "scope": "Expand existing single line to choices, text entry and selections; original sounds/assets; shop logic belongs to C07."
+    },
+    {
+      "group": "Core",
+      "id": "C06",
+      "name": "Quest conditions, flags and rewards",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C04,C05",
+      "sources": [
+        "S:gmsv/npc/npc_eventaction.c",
+        "S:gmsv/npc/npc_action.c",
+        "S:gmsv/char/event.c"
+      ],
+      "scope": "One branching quest with prerequisites and once-only rewards; all story content excluded."
+    },
+    {
+      "group": "Core",
+      "id": "C07",
+      "name": "Item/pet shops, healers and storage",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C04,C05,C13",
+      "sources": [
+        "S:gmsv/npc/npc_itemshop.c",
+        "S:gmsv/npc/npc_petshop.c",
+        "S:gmsv/npc/npc_healer.c",
+        "S:gmsv/npc/npc_bankman.c",
+        "S:gmsv/npc/npc_poolitemshop.c",
+        "C:system/shop.cpp"
+      ],
+      "scope": "Representative buy/sell, heal and deposit/withdraw flows with balances/capacity checks."
+    },
+    {
+      "group": "Core",
+      "id": "C08",
+      "name": "Random encounters and enemy groups",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 2,
+      "dependencies": "C01,C02",
+      "sources": [
+        "S:gmsv/char/encount.c",
+        "S:gmsv/char/enemy.c"
+      ],
+      "scope": "Area/rate/group selection, busy-state suppression and reproducible RNG fixtures."
+    },
+    {
+      "group": "Core",
+      "id": "C09",
+      "name": "Turn battle engine and original battle UI",
+      "difficulty": "Hard",
+      "low": 3,
+      "high": 6,
+      "dependencies": "C03,C08",
+      "sources": [
+        "S:gmsv/battle/battle.c",
+        "S:gmsv/battle/battle_command.c",
+        "C:system/battleproc.cpp",
+        "C:system/battlemenu.cpp"
+      ],
+      "scope": "Turn collection, order, targets, attack/guard/escape, win/loss and world return; baseline formulas only."
+    },
+    {
+      "group": "Core",
+      "id": "C10",
+      "name": "Combat formula/status/element fidelity",
+      "difficulty": "Hard",
+      "low": 3,
+      "high": 6,
+      "dependencies": "C09",
+      "sources": [
+        "S:gmsv/battle/battle_event.c",
+        "S:gmsv/battle/battle_ai.c"
+      ],
+      "scope": "Trace representative damage, accuracy, elements, AI and statuses into fixtures; exact full skill matrix is content work."
+    },
+    {
+      "group": "Core",
+      "id": "C11",
+      "name": "Magic, battle items and skill dispatch",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C04,C09,C10",
+      "sources": [
+        "S:gmsv/magic/magic.c",
+        "S:gmsv/magic/magic_field.c",
+        "S:gmsv/battle/battle_magic.c",
+        "S:gmsv/battle/battle_item.c"
+      ],
+      "scope": "Costs, legal targets, effects and original feedback for representative field and battle actions."
+    },
+    {
+      "group": "Core",
+      "id": "C12",
+      "name": "Rewards, defeat and recovery",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 2,
+      "dependencies": "C04,C09",
+      "sources": [
+        "S:gmsv/battle/battle.c",
+        "S:gmsv/char/char_data.c",
+        "S:gmsv/npc/npc_savepoint.c"
+      ],
+      "scope": "Battle rewards and recovery/spawn handling, no duplicate grants; verify exact penalties for chosen profile."
+    },
+    {
+      "group": "Core",
+      "id": "C13",
+      "name": "Pets: capture, ownership, growth and roster",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C03,C09",
+      "sources": [
+        "S:gmsv/char/pet.c",
+        "S:gmsv/char/pet_event.c",
+        "S:gmsv/battle/battle_event.c"
+      ],
+      "scope": "One capture, capacity/loyalty/growth rules and original roster UI; full species import excluded."
+    },
+    {
+      "group": "Core",
+      "id": "C14",
+      "name": "Pet battle commands and skill training",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C10,C13",
+      "sources": [
+        "S:gmsv/battle/pet_skill.c",
+        "S:gmsv/npc/npc_petskillshop.c"
+      ],
+      "scope": "One active pet, representative attacks/support skills, training/replacement and validity checks."
+    },
+    {
+      "group": "Core",
+      "id": "C15",
+      "name": "Pet follow, riding and gestures",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 3,
+      "dependencies": "C13",
+      "sources": [
+        "S:gmsv/char/char_walk.c",
+        "S:gmsv/npc/npc_riderman.c",
+        "C:system/field.cpp"
+      ],
+      "scope": "Follow path, ride eligibility/sprites and action replication; sample rides only."
+    },
+    {
+      "group": "Core",
+      "id": "C16",
+      "name": "Party formation and following",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C01,C09",
+      "sources": [
+        "S:gmsv/char/char_party.c",
+        "S:gmsv/char/char_walk.c"
+      ],
+      "scope": "Join/leave/leader, formation, linked movement and battle entry; scripted actors can test before network."
+    },
+    {
+      "group": "Core",
+      "id": "C17",
+      "name": "Chat, friends/address book and mail",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C01,C18",
+      "sources": [
+        "S:gmsv/char/char_talk.c",
+        "S:gmsv/char/addressbook.c",
+        "S:gmsv/char/petmail.c",
+        "S:saac/mail.c",
+        "C:system/chat.cpp"
+      ],
+      "scope": "Original UI and local fixtures for channels/contact/mail lifecycle; actual multi-user delivery needs N01/N02."
+    },
+    {
+      "group": "Core",
+      "id": "C18",
+      "name": "Save/load and profile migrations",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C01",
+      "sources": [
+        "S:saac/char.c",
+        "S:saac/db.c",
+        "S:saac/lock.c"
+      ],
+      "scope": "Versioned saves, atomic writes, recovery, profile checks and duplicate reward tests; old save import excluded."
+    },
+    {
+      "group": "Core",
+      "id": "C19",
+      "name": "Trading items, pets and currency",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C04,C13,C18",
+      "sources": [
+        "S:gmsv/char/trade.c",
+        "C:other/trade.cpp"
+      ],
+      "scope": "Offer/confirm/cancel with atomic exchange, stale offer and disconnect tests; multi-user transport N01 separate."
+    },
+    {
+      "group": "Core",
+      "id": "C20",
+      "name": "Remaining classic HUD functions/map/time",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 3,
+      "dependencies": "C01,C03",
+      "sources": [
+        "C:system/menu.cpp",
+        "C:system/menu2.cpp",
+        "C:system/radar.cpp",
+        "C:system/handletime.cpp"
+      ],
+      "scope": "Current art/map are done; add time progression, relevant toggles and state. Inventory/pet/mail contents charged to their own rows."
+    },
+    {
+      "group": "Core",
+      "id": "C21",
+      "name": "Bus/airplane and scheduled travel",
+      "difficulty": "Hard",
+      "low": 1.5,
+      "high": 3,
+      "dependencies": "C02,C16",
+      "sources": [
+        "S:gmsv/npc/npc_bus.c",
+        "S:gmsv/npc/npc_airplane.c",
+        "S:gmsv/npc/npc_scheduleman.c"
+      ],
+      "scope": "One route, boarding/fare/schedule and safe arrival; all routes are content work."
+    },
+    {
+      "group": "Core",
+      "id": "C22",
+      "name": "Families/clans and shared facilities",
+      "difficulty": "Hard",
+      "low": 3,
+      "high": 6,
+      "dependencies": "C17,C18",
+      "sources": [
+        "S:gmsv/char/family.c",
+        "S:saac/acfamily.c",
+        "S:gmsv/npc/npc_familyman.c",
+        "S:gmsv/npc/npc_fmdengon.c",
+        "S:gmsv/npc/npc_fmhealer.c"
+      ],
+      "scope": "Creation, membership/ranks, shared notices/facilities and persistence; network N01/N02 separate."
+    },
+    {
+      "group": "Core",
+      "id": "C23",
+      "name": "Duels, spectating and rankings",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C09,C16",
+      "sources": [
+        "S:gmsv/battle/battle_command.c",
+        "S:gmsv/npc/npc_duelranking.c",
+        "C:system/battleproc.cpp"
+      ],
+      "scope": "Challenge/accept/end, observer lifecycle and representative ranking updates."
+    },
+    {
+      "group": "Extensions",
+      "id": "X01",
+      "name": "Family manor wars, schedules and tax",
+      "difficulty": "Hard",
+      "low": 3,
+      "high": 6,
+      "dependencies": "C22,C23",
+      "sources": [
+        "S:gmsv/npc/npc_fmpkman.c",
+        "S:gmsv/npc/npc_manorsman.c",
+        "C:systeminc/login.h"
+      ],
+      "scope": "One scheduled conflict and ownership/tax cycle; source variants need chosen rules."
+    },
+    {
+      "group": "Extensions",
+      "id": "X02",
+      "name": "Player rebirth and pet transformation",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 5,
+      "dependencies": "C03,C13,C18",
+      "sources": [
+        "S:gmsv/npc/npc_transmigration.c",
+        "S:gmsv/include/version.h"
+      ],
+      "scope": "Prerequisites, stat/ownership changes and persistence; _PET_TRANS is conditional evidence, not proof of every edition."
+    },
+    {
+      "group": "Extensions",
+      "id": "X03",
+      "name": "Pet maker/fusion variants",
+      "difficulty": "Research",
+      "low": 2,
+      "high": 6,
+      "dependencies": "C13,C18",
+      "sources": [
+        "S:gmsv/npc/npc_petmaker.c",
+        "S:gmsv/npc/npc_petfusion.c"
+      ],
+      "scope": "Pet maker code exists; npc_petfusion.c is empty. Fusion fidelity needs additional evidence before implementation."
+    },
+    {
+      "group": "Extensions",
+      "id": "X04",
+      "name": "Quizzes, janken and NPC minigames",
+      "difficulty": "Medium",
+      "low": 1.5,
+      "high": 3,
+      "dependencies": "C05,C06",
+      "sources": [
+        "S:gmsv/npc/npc_quiz.c",
+        "S:gmsv/npc/npc_janken.c",
+        "S:gmsv/npc/npc_luckyman.c"
+      ],
+      "scope": "One example per handler family with rewards; question banks and event scripts excluded."
+    },
+    {
+      "group": "Extensions",
+      "id": "X05",
+      "name": "Pet races and roulette/bank games",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C13,C18",
+      "sources": [
+        "S:gmsv/npc/npc_petracemaster.c",
+        "S:gmsv/npc/npc_petracepet.c",
+        "S:gmsv/npc/npc_gambleroulette.c",
+        "S:gmsv/npc/npc_gamblebank.c"
+      ],
+      "scope": "Representative race/betting lifecycle and atomic payouts; conditional source extensions, optional profile features."
+    },
+    {
+      "group": "Extensions",
+      "id": "X06",
+      "name": "VIP shops, auto-PK and extra exchange NPCs",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 5,
+      "dependencies": "C07,C23",
+      "sources": [
+        "S:gmsv/npc/npc_vipshop.c",
+        "S:gmsv/npc/npc_autopk.c",
+        "S:gmsv/npc/npc_itemchange.c",
+        "S:gmsv/function.c"
+      ],
+      "scope": "Representative optional handlers; do not enable private-server additions in a classic profile by default."
+    },
+    {
+      "group": "Extensions",
+      "id": "X07",
+      "name": "Crafting/production and professions",
+      "difficulty": "Research",
+      "low": 3,
+      "high": 7,
+      "dependencies": "C04,C11",
+      "sources": [
+        "C:system/produce.cpp",
+        "C:systeminc/login.h",
+        "S:gmsv/data/profession.txt"
+      ],
+      "scope": "Client/data evidence; full matching server flow not established. Needs rules reconciliation and representative recipes."
+    },
+    {
+      "group": "Extensions",
+      "id": "X08",
+      "name": "Auctions, black market and item mall",
+      "difficulty": "Research",
+      "low": 3,
+      "high": 8,
+      "dependencies": "C04,C18,C19",
+      "sources": [
+        "C:systeminc/login.h",
+        "C:other/ItemsMall.cpp"
+      ],
+      "scope": "Client UI evidence, matching server behavior unverified. No payment integration included."
+    },
+    {
+      "group": "Extensions",
+      "id": "X09",
+      "name": "Automation, sign-in, turntable and sky-island UI",
+      "difficulty": "Research",
+      "low": 3,
+      "high": 8,
+      "dependencies": "C06,C09",
+      "sources": [
+        "C:system/ai_setting.cpp",
+        "C:system/CharSignDay.cpp",
+        "C:system/Turntable.cpp",
+        "C:system/skyisland.cpp"
+      ],
+      "scope": "Later client modules; discover enabled build and matching rules before accepting parity scope."
+    },
+    {
+      "group": "Delivery",
+      "id": "N01",
+      "name": "Headless export and two-player networking",
+      "difficulty": "Hard",
+      "low": 3,
+      "high": 6,
+      "dependencies": "C01",
+      "sources": [
+        "C:system/netproc.cpp",
+        "S:gmsv/callfromcli.c"
+      ],
+      "scope": "New Godot transport, profile handshake, visibility, authoritative updates, disconnect/reconnect; legacy wire protocol excluded."
+    },
+    {
+      "group": "Delivery",
+      "id": "N02",
+      "name": "Accounts, character slots and session ownership",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C18,N01",
+      "sources": [
+        "S:saac/recv.c",
+        "S:saac/lock.c",
+        "C:system/login.cpp"
+      ],
+      "scope": "Modern authentication/session implementation and original login UI; no reuse of legacy password handling."
+    },
+    {
+      "group": "Delivery",
+      "id": "N03",
+      "name": "Administration and operational diagnostics",
+      "difficulty": "Medium",
+      "low": 1.5,
+      "high": 3,
+      "dependencies": "N01",
+      "sources": [
+        "S:gmsv/char/chatmagic.c",
+        "S:gmsv/configfile.c",
+        "C:system/onlinegm.cpp"
+      ],
+      "scope": "Minimal audited admin actions and useful logs; complete original GM command set requires separate selection."
+    },
+    {
+      "group": "Delivery",
+      "id": "N04",
+      "name": "Public-hosting integrity and load validation",
+      "difficulty": "Hard",
+      "low": 4,
+      "high": 10,
+      "dependencies": "N01,N02,C18",
+      "sources": [
+        "S:gmsv/net.c",
+        "S:saac/main.c"
+      ],
+      "scope": "Bounds/rates/auth transport, transactional saves, backup/restore, soak/load tests; capacity and production hosting costs not estimated."
+    },
+    {
+      "group": "Delivery",
+      "id": "N05",
+      "name": "Linux/Windows server packaging",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 3,
+      "dependencies": "N01",
+      "sources": [],
+      "scope": "Validate same-project headless export on both OSes; deferred, no MVP blocker."
+    },
+    {
+      "group": "Product",
+      "id": "P01",
+      "name": "Version manifests, flags and two content profiles",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C01",
+      "sources": [],
+      "scope": "Project requirement: two verified profiles, compatibility checks and save identity; no claim that source branches map cleanly to editions."
+    },
+    {
+      "group": "Product",
+      "id": "P02",
+      "name": "Modern seamless interior/map loading",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 4,
+      "dependencies": "C02",
+      "sources": [],
+      "scope": "Project requirement: preload, cancel, retain current map on failure; logical map transfer stays authoritative."
+    },
+    {
+      "group": "Product",
+      "id": "P03",
+      "name": "Classic/modern presentation options",
+      "difficulty": "Medium",
+      "low": 1,
+      "high": 3,
+      "dependencies": "C20",
+      "sources": [],
+      "scope": "Same rules, separate UI scale/camera/transition preferences; original assets preserved."
+    },
+    {
+      "group": "Product",
+      "id": "P04",
+      "name": "Resource/data conversion hardening",
+      "difficulty": "Hard",
+      "low": 2,
+      "high": 5,
+      "dependencies": "—",
+      "sources": [
+        "C:system/loadrealbin.cpp",
+        "C:system/loadsprbin.cpp",
+        "C:system/map.cpp"
+      ],
+      "scope": "Extend existing importer for representative missing formats, sound/animation fidelity and reproducible validation; bulk content excluded."
+    },
+    {
+      "group": "Optional interop",
+      "id": "L01",
+      "name": "Godot client to one original server build",
+      "difficulty": "Research",
+      "low": 4,
+      "high": 10,
+      "dependencies": "N01",
+      "sources": [
+        "C:system/lssproto_cli.cpp",
+        "S:gmsv/lssproto_serv.c"
+      ],
+      "scope": "One pinned protocol pair: login/movement/dialogue baseline only; full command parity requires a later estimate."
+    },
+    {
+      "group": "Optional interop",
+      "id": "L02",
+      "name": "One original client to Godot authority",
+      "difficulty": "Research",
+      "low": 5,
+      "high": 12,
+      "dependencies": "C01,N02",
+      "sources": [
+        "C:system/lssproto_cli.cpp",
+        "S:gmsv/callfromcli.c"
+      ],
+      "scope": "Separate legacy codec/adapter, same baseline as L01; depends on packet fixtures, not Godot RPC."
+    },
+    {
+      "group": "Optional interop",
+      "id": "L03",
+      "name": "Import one legacy save schema",
+      "difficulty": "Research",
+      "low": 2,
+      "high": 5,
+      "dependencies": "C18",
+      "sources": [
+        "S:saac/char.c",
+        "S:gmsv/char/char_data.c"
+      ],
+      "scope": "Read-only conversion fixtures, unknown-field report and identity mapping; never modify original saves."
+    }
+  ],
+  "group_totals": {
+    "Core": [
+      41.5,
+      85
+    ],
+    "Extensions": [
+      21.5,
+      52
+    ],
+    "Delivery": [
+      11.5,
+      26
+    ],
+    "Product": [
+      7,
+      16
+    ],
+    "Optional interop": [
+      11,
+      27
+    ]
+  }
+}

@@ -8,7 +8,7 @@ For `samgir-dev`, propose integer logical cells, east = +X and south = +Y. Proje
 
 M000 may use continuous local movement with four cardinal directions and simple solid geometry. Choose deterministic handling for two keys: most recently pressed cardinal direction wins. There is no diagonal speed bonus or corner cutting.
 
-When Swift takes ownership, choose the movement model for the active ruleset explicitly. A grid-step prototype is acceptable for `samgir-dev`, but must not be presented as verified historical timing. Server validation checks map bounds, collision, allowed speed/rate, and player state. The client animates/interpolates accepted movement.
+When Godot authority takes ownership, choose the movement model for the active ruleset explicitly. A grid-step prototype is acceptable for `samgir-dev`, but must not be presented as verified historical timing. Server validation checks map bounds, collision, allowed speed/rate, and player state. The client animates/interpolates accepted movement.
 
 Keep authoritative collision geometry aligned with the imported client collision. Use the same source data or a documented deterministic conversion, and include its revision in content identity.
 

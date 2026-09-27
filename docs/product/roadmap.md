@@ -1,19 +1,14 @@
 # Roadmap
 
-Only M000 has an approximate time target. Later milestones are ordered outcomes, not duration estimates.
-
-| Stage | Visible result | Completion evidence |
+| Stage | Status / visible result | Next acceptance |
 | --- | --- | --- |
-| M000 | Walk around Samgir with sound and animation | [Acceptance checklist](../development/milestone-000-samgir.md) and short recording |
-| M001 | Same scene driven by a local Swift server | Movement accepted/rejected by Swift; client-only baseline still available |
-| M002 | Meet and talk to one NPC | Interaction distance checked; dialogue opens and closes |
-| M003 | Enter and leave one interior | Correct map/spawn; basic transition works |
-| M004 | Preload that interior for modern presentation | No black loading screen on a warm transition; slow-load fallback works |
-| M005 | Trigger and complete one battle | Authoritative turn resolution and return to world |
-| M006 | Obtain/use one pet and persist progress | Reload preserves pet and player state |
-| M007 | Select two validated profiles | Different content/rules resolve without a code fork |
-| M008 | Two clients share a remote session | Movement, transitions, and reconnect behave coherently |
+| M000 | Complete: original-resource Samgir walking, animation and audio | Preserve [baseline](../development/m000-status.md) |
+| M001 | Complete: one original village conversation | Preserve [NPC behavior](../development/m001-village-npc.md) |
+| M002 | Complete within scope: original HUD assets and functional map window | Preserve [UI scope](../development/m002-classic-ui.md); most menu actions remain visual |
+| Next | Local Godot authority for movement and then interaction | Same visible game; invalid actions rejected |
+| Then | One original interior and return portal | Correct map/spawn; no stranded player |
+| Then | One encounter and one resolved battle | Win/lose and return to world |
+| Then | One pet, one item reward and a save | Restart preserves ownership and progress |
+| Later | Second profile; modern preloading; two network clients | No code fork; coherent state and reconnect |
 
-Improve directional fidelity, collision, audio, and map reconstruction between milestones whenever they give the next useful visible improvement. Legacy-client interoperability is a separate research track and never a gate for M000–M004.
-
-Keep each milestone decomposed into [runnable slices](../development/vertical-slices.md). Reorder later work when evidence or user priorities justify it; preserve the working Samgir baseline.
+M000's approximate 30-minute target was a vertical-slice goal, not a conversion from points into hours. Use the [catalogue](feature-catalogue.md) and [estimates](../development/replication-estimates.md) to choose later scope. Preserve small runnable increments; complete systems are split into several slices.

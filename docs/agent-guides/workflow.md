@@ -10,7 +10,7 @@
 ## Decision rules
 
 - For M000, prefer direct Godot code over server or framework preparation.
-- For subsequent gameplay, preserve Swift authority once integrated; temporary local state is a labeled development path.
+- For subsequent gameplay, preserve Godot authority once integrated; temporary local state is a labeled development path.
 - Keep edition rules, content, protocol, and presentation independent.
 - Do not claim historical behavior without an evidence entry.
 - Do not turn Linux/Windows support, embedded libraries, generalized streaming, scripting, or public-server operations into early gates.

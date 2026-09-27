@@ -4,7 +4,7 @@
 
 Within approximately 30 minutes of productive agent work, launch Godot into a playable 萨姆吉尔村 scene: visible map and player, four-direction movement, idle/walk animation, BGM, one basic SFX, and basic collision. This is a scope discipline, not a guarantee that missing tools or unknown asset formats can be resolved in 30 minutes.
 
-Godot-only implementation is explicitly allowed. No Swift, login, database, network transport, general importer, or version-selection UI is required.
+Godot-only implementation is explicitly allowed. No separate server, login, database, network transport, general importer, or version-selection UI is required.
 
 ## Current acceptance amendment
 
@@ -45,4 +45,4 @@ Four directional animation sets are preferred; if art only supports fewer direct
 
 ## Definition of completion
 
-All behavioral checks pass. Record fidelity separately as authentic-assets, reconstructed, or placeholder-assisted. Completion of a placeholder-assisted M000 does not establish historical accuracy. The next task should improve one visible gap or connect the working movement slice to Swift.
+All behavioral checks pass. Record fidelity separately as authentic-assets, reconstructed, or placeholder-assisted. Completion of a placeholder-assisted M000 does not establish historical accuracy. The next task should improve one visible gap or move the working movement slice behind local Godot authority.
