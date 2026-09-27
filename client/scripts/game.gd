@@ -88,6 +88,7 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _ready() -> void:
+	preload("res://scripts/legacy_cursor.gd").install()
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
 	if "--script" in OS.get_cmdline_args():profile_persistence = false
