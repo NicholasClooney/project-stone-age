@@ -186,10 +186,11 @@ func start_pet_training(pet_id: String, target_level_value: int = 120) -> bool:
 	preset.select(2);speed.select(3);multiplier.select(2);compact.button_pressed=true
 	target_level.value=0;level_explicit=true
 	apply_settings()
-	return bool(world.link.request({"type":"auto_start","kind":"pet_train","pet_id":pet_id,"target_level":target_level_value,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}).ok)
+	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"pet_train","pet_id":pet_id,"target_level":target_level_value,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	return bool(reply.ok) or bool(reply.get("pending",false))
 
 func health_reason(state: Dictionary) -> String:
-	return world.backend.automation.health_reason(state)
+	return world.backend.automation.health_reason(state) if world.link.is_local() else ""
 func stop_training(reason: String) -> void:
 	if running:world.link.request({"type":"auto","name":"stop_battle","reason":reason})
 	else:on_event({"kind":"battle_stopped","reason":reason,"battles":battles,"takeover":false})

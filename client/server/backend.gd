@@ -192,8 +192,15 @@ func _cmd_begin_battle(command: Dictionary) -> Dictionary:
 	if config.is_empty():return _reject("battle unavailable")
 	return {"ok":true,"state":open_battle(config)}
 
+## One step on a field cell. With encounter, a hit also opens the wild battle.
 func _cmd_field_step(command: Dictionary) -> Dictionary:
-	return {"ok":true,"hit":encounter_catalog.step(int(command.map_id),_cell(command),encounter_rng)}
+	var hit: bool = encounter_catalog.step(int(command.map_id),_cell(command),encounter_rng)
+	if not hit or not bool(command.get("encounter",false)):return {"ok":true,"hit":hit,"battle":false}
+	var opened := wild_encounter(int(command.map_id),_cell(command))
+	opened.hit = true
+	opened.battle = bool(opened.ok)
+	opened.ok = true
+	return opened
 
 func _cmd_wild_encounter(command: Dictionary) -> Dictionary:
 	var result := wild_encounter(int(command.map_id),_cell(command))

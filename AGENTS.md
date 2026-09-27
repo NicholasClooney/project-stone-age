@@ -3,6 +3,8 @@
 - Work from this repository root with relative paths. Keep changes runnable and preserve original-game fidelity using the local reference source.
 - Run all tests in the background without opening windows or taking focus. `scripts/run.sh --script …` defaults to headless and muted. Do not launch a graphical test unless the user explicitly requests it; only then use `STONE_AGE_FOREGROUND_TEST=1 ./scripts/run.sh --script …` (still muted). Headless tests cannot validate rendered pixels.
 - Use conventional commits. Do not commit imported original assets, reference archives or verification screenshots.
+- Gameplay authority lives in `client/server/backend.gd` and `client/server/automation.gd`. UI code reads `world.state` / `world.session.snapshot()` and changes anything only through `world.session`, `world.battle_session` or `world.link.request`; never mutate `world.backend` from UI. A remote client has no backend at all. See [backend interface](docs/technical/backend-interface.md).
+- `scripts/test-all.sh` reports every suite; `scripts/test.sh` stops at the first failure.
 
 ## Required in-game changelog
 

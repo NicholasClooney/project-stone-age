@@ -226,7 +226,7 @@ func start_hunt() -> void:
 	var chosen:=build_filter()
 	if chosen.is_empty():return
 	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"hunt","filter":chosen,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
-	if not reply.ok:
+	if not reply.ok and not reply.get("pending",false):
 		if not str(reply.reason).is_empty():status.text=str(reply.reason)
 		return
 	set_controls(true);update_status()
