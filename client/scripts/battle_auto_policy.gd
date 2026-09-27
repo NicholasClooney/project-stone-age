@@ -1,0 +1,35 @@
+extends RefCounted
+## Single-player convenience decisions; never mutate battle state or grant rewards.
+static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dictionary:
+ var enemies: Array=state.get("enemies",[])
+ if str(settings.get("preset","attack"))!="capture":
+  for i in range(enemies.size()):
+   if int(enemies[i].hp)>0 and not enemies[i].get("captured",false):return {"action":"attack","pet":"attack","target":i}
+  return {"stop":"找不到可攻击目标"}
+ if target<0 or target>=enemies.size():return {"stop":"请先选择要捕捉的敌人"}
+ var enemy: Dictionary=enemies[target]
+ if enemy.get("captured",false):return {"stop":"目标已捕获，已停止自动操作"}
+ if int(enemy.hp)<=0:return {"stop":"捕捉目标已倒下，已停止；不会改抓其他敌人"}
+ if not state.get("can_capture",true):return {"stop":"当前战斗不可继续捕捉，可能已达捕获数量上限"}
+ if not enemy.get("can_capture",false) or state.get("boss",false):return {"stop":"所选目标不可捕捉"}
+ if int(enemy.hp)*100<=int(enemy.get("max_hp",1))*int(settings.get("capture_hp",20)):
+  return {"action":"capture","pet":"defend","target":target}
+ var selected:=int(settings.get("capture_pet",-1))
+ var pets: Array=state.get("pets",[])
+ var ident:=str(settings.get("capture_pet_id",""))
+ if not ident.is_empty():
+  selected=-1
+  for i in range(pets.size()):
+   if str(pets[i].get("pet_id",""))==ident:selected=i;break
+  if selected<0:return {"stop":"指定削血宠不在随身队伍，请先从仓库取回或重新选择"}
+ var best:=-1
+ for i in range(pets.size()):
+  if selected>=0 and i!=selected:continue
+  if i==int(state.get("ride_pet",-1)) or int(pets[i].get("hp",0))<=0:continue
+  var limit:=int(settings.get("capture_pet_max_level",10))
+  if selected<0:limit=mini(limit,int(enemy.get("level",1)))
+  if int(pets[i].get("level",1))>limit:continue
+  if best<0 or int(pets[i].get("level",1))<int(pets[best].get("level",1)):best=i
+ if best<0:return {"stop":"没有可用低等级宠物：请选存活、非骑乘且符合等级上限的宠物"}
+ if best!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":best}
+ return {"action":"defend","pet":"attack","target":target}

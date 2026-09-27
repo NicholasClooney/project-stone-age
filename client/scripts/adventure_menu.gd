@@ -12,6 +12,15 @@ var pet_rename := false
 var pet_category := "全部"
 var pet_page := 0
 var pet_growth_open := false
+var pet_compare_open := false
+var pet_compare_subject:Dictionary={}
+var pet_compare_id := ""
+var pet_storage_open := false
+var pet_compare_page := 0
+var pet_storage_page := 0
+var pet_compare_sort := "attack"
+var pet_compare_projected := false
+const PetComparison=preload("res://scripts/pet_comparison.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 var name_edit: LineEdit
 var art: Dictionary = {}
@@ -133,6 +142,8 @@ func rebuild() -> void:
 			inventory_panel(profile)
 		"pets":
 			pet_panel(profile)
+			if pet_storage_open:pet_storage_panel(profile)
+			if pet_compare_open and not pet_compare_subject.is_empty():pet_comparison_panel(profile,pet_compare_subject)
 		"shop":
 			shop_panel(profile)
 		"quest":
@@ -258,6 +269,18 @@ func status_panel(profile: Dictionary) -> void:
 		distribute.name="DistributeStats"
 		label("只分配剩余点；余数按体腕耐速分配。",Vector2(294,244),225,12)
 
+func item_name(key: String) -> String:
+	return {"potion":"耐久力回复药","club":"小棍棒","mirror_charm":"美丽尼亚护身符1"}.get(key,key)
+
+func item_description(key: String) -> String:
+	return {"potion":"恢复体力；战斗中也可使用。","club":"攻击 +4；装备后生效。","mirror_charm":"主动镜之精灵：消耗行动，暂不消耗气力。"}.get(key,"")
+
+func item_equipped(profile: Dictionary, key: String) -> bool:
+	return bool(profile.get("equipped",false)) if key=="club" else bool(profile.get("equipped_mirror",false)) if key=="mirror_charm" else false
+
+func equip_action(key: String) -> String:
+	return "equip_mirror" if key=="mirror_charm" else "equip"
+
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
 	image(26061,Vector2(0,159))
@@ -265,24 +288,29 @@ func inventory_panel(profile: Dictionary) -> void:
 	# Classic five-slot frame: InitItem menu.cpp8940-8973. Weapon is
 	# CHAR_ARM=2 at(61,129), not the top-left accessory slot. The frame
 	# already contains head/body/hand silhouettes; no invented mannequin.
-	if profile.equipped:
-		item_icon("club",Vector2(49,118)).name="EquippedClubIcon"
-		var equipped_slot := choice("",Vector2(38,106),"",null)
+	for key in ["club","mirror_charm"]:
+		if not item_equipped(profile,key):continue
+		var center:=Vector2(61,129) if key=="club" else Vector2(32,68)
+		var icon:=item_icon(key,Vector2.ZERO)
+		icon.position=Vector2(49,118) if key=="club" else center-icon.texture.get_size()/2
+		icon.name="EquippedClubIcon" if key=="club" else "EquippedMirrorIcon"
+		var equipped_slot := choice("",center-Vector2(23,23),"",null)
 		for connection in equipped_slot.pressed.get_connections():equipped_slot.pressed.disconnect(connection.callable)
-		equipped_slot.name="EquippedClub"
+		equipped_slot.name="EquippedClub" if key=="club" else "EquippedMirror"
 		equipped_slot.size=Vector2(48,48)
-		equipped_slot.tooltip_text="小棍棒 · 双击卸下"
-		Highlight.attach(equipped_slot,Rect2(Vector2(-1,-1),Vector2(50,47)),selected_item_slot=="equipped")
-		equipped_slot.pressed.connect(func(): selected_item="club";selected_item_slot="equipped";rebuild())
+		equipped_slot.tooltip_text=item_name(key)+" · 双击卸下"
+		var selection:="equipped" if key=="club" else "equipped_mirror"
+		Highlight.attach(equipped_slot,Rect2(Vector2(-1,-1),Vector2(50,47)),selected_item_slot==selection)
+		equipped_slot.pressed.connect(func(): selected_item=key;selected_item_slot=selection;rebuild())
 		equipped_slot.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
-				world.perform_adventure_action("equip",false)
+				world.perform_adventure_action(equip_action(key),false)
 		)
-	for i in range(2):
-		var key := "potion" if i==0 else "club"
+	for i in range(3):
+		var key: String = ["potion","club","mirror_charm"][i]
 		# Authority inventory is total owned; equipment consumes one visible
 		# bag copy without deleting ownership. Spare copies remain in the bag.
-		var bag_count := maxi(0,int(profile.inventory[key])-(1 if key=="club" and profile.equipped else 0))
+		var bag_count := maxi(0,int(profile.inventory.get(key,0))-(1 if item_equipped(profile,key) else 0))
 		if bag_count>0:
 			var offset := Vector2(-11,-21) if key=="potion" else Vector2(-12,-11)
 			item_icon(key,Vector2(32+i*51,200)+offset).name="BagIcon_"+key
@@ -291,17 +319,17 @@ func inventory_panel(profile: Dictionary) -> void:
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
 		slot.name="ItemSlot_"+key
 		slot.size=Vector2(48,48)
-		slot.tooltip_text="耐久力回复药" if key=="potion" else "小棍棒 · 双击装备"
+		slot.tooltip_text=item_name(key)+( "" if key=="potion" else " · 双击装备")
 		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_item_slot==key and bag_count>0)
 		slot.pressed.connect(func(): selected_item=key;selected_item_slot=key;rebuild())
 		slot.gui_input.connect(func(event: InputEvent):
-			if key=="club" and event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
-				if not world.session.snapshot().equipped:world.perform_adventure_action("equip",true)
+			if key!="potion" and event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
+				if not item_equipped(world.session.snapshot(),key):world.perform_adventure_action(equip_action(key),true)
 		)
 	var potion := selected_item=="potion"
-	label("耐久力回复药" if potion else "小棍棒",Vector2(15,328),240,15)
-	label("恢复体力；战斗中也可使用。" if potion else "攻击 +4；装备后生效。",Vector2(15,354),239,14)
-	choice("使用" if potion else ("卸下" if profile.equipped else "装备"),Vector2(14,404),"use_potion" if potion else "equip",null if potion else not profile.equipped,int(profile.inventory[selected_item])>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
+	label(item_name(selected_item),Vector2(15,328),240,15)
+	label(item_description(selected_item),Vector2(15,354),239,14)
+	choice("使用" if potion else ("卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
 
 func pet_native_button(ident: int, center: Vector2, callback: Callable, title: String = "") -> TextureButton:
 	var button := TextureButton.new()
@@ -456,6 +484,9 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 		else:feedback="空间不足或当前不能领取。"
 		rebuild(),"StarterPets")
 	label(feedback,origin+Vector2(16,290),230,12)
+	pet_tool_button("宠物仓库",origin+Vector2(250,82),func():pet_storage_open=true;pet_compare_open=false;rebuild(),"PetStorage")
+	if not filtered.is_empty():
+		pet_tool_button("同种比较",origin+Vector2(250,47),func():pet_compare_subject=profile.pets[selected_pet].duplicate(true);pet_compare_open=true;rebuild(),"PetCompare")
 	if pet_growth_open and not filtered.is_empty():pet_growth_panel(profile.pets[selected_pet],origin+Vector2(16,326))
 
 func change_pet_page(delta:int,indices:Array)->void:
@@ -473,9 +504,11 @@ func pet_growth_panel(pet: Dictionary, origin: Vector2) -> void:
 	if forecast.is_empty():
 		label("缺少原始成长资料",origin,340,14)
 		return
-	label("%s · Lv.%d → %d 预估" % [pet.name,pet.level,forecast.target_level],origin+Vector2(0,20),350,15)
+	var at_target:=int(pet.level)>=120
+	label("ID %s" % str(pet.get("pet_id","?")),origin+Vector2(0,2),350,11).name="PetGrowthIdentity"
+	label(("%s · Lv.%d 当前能力" % [pet.name,pet.level]) if at_target else "%s · Lv.%d → %d 预估" % [pet.name,pet.level,forecast.target_level],origin+Vector2(0,20),350,15).name="PetGrowthHeading"
 	var average:Dictionary=forecast.species_average
-	for column in [["属性",0],["预估",66],["约90%范围",128],["同种均值",257]]:
+	for column in [["属性",0],["当前" if at_target else "预估",66],["较均值" if at_target else "约90%范围",128],["同种均值",257]]:
 		label(column[0],origin+Vector2(column[1],54),85,14)
 	var keys: Array = ["max_hp","attack","defence","speed"]
 	var names: Array = ["体力","攻击","防御","敏捷"]
@@ -486,15 +519,16 @@ func pet_growth_panel(pet: Dictionary, origin: Vector2) -> void:
 		var y:=86+i*25
 		label(names[i],origin+Vector2(0,y),50,14)
 		label(str(value),origin+Vector2(66,y),60,14)
-		label("%d–%d" % forecast.likely[key],origin+Vector2(128,y),125,13)
+		label(("%+d" % (value-typical)) if at_target else "%d–%d" % forecast.likely[key],origin+Vector2(128,y),125,13)
 		var comparison:=label(str(typical) if not average.is_empty() else "—",origin+Vector2(257,y),90,14)
 		comparison.mouse_filter=Control.MOUSE_FILTER_PASS
 		comparison.tooltip_text="同种普通出生、从 Lv.1 培养的平均值。理论单项上限 %s；各项极限不能同时达到，不能作为正常品质标准。" % str(forecast.species_maximum.get(key,"未知"))
 	var gains:Dictionary=forecast.base_increment
 	label("每级基础成长：体 %.3f　腕 %.3f\n                         耐 %.3f　速 %.3f" % [gains.vitality,gains.strength,gains.toughness,gains.dexterity],origin+Vector2(0,196),350,13)
-	var base:Dictionary=pet.base_stats
-	label("当前基础：体 %.2f  腕 %.2f  耐 %.2f  速 %.2f" % [base.vitality/100.0,base.strength/100.0,base.toughness/100.0,base.dexterity/100.0],origin+Vector2(0,240),350,12)
-	label("同种均值：从 Lv.1 正常培养，非极限。\n范围为单项近似90%；不能保证同时落入。",origin+Vector2(0,268),350,12)
+	var innate:=PetComparison.quality(pet)
+	var innate_text:="先天档未知" if innate.is_empty() else "先天 体%+d 腕%+d 耐%+d 速%+d · 总%+d%s" % [innate.offsets[0],innate.offsets[1],innate.offsets[2],innate.offsets[3],innate.total," 满档" if innate.full else ""]
+	label(innate_text,origin+Vector2(0,240),350,12).name="PetInnateQuality"
+	label("同种均值：从 Lv.1 正常培养，非极限。\n"+("已达目标级，显示当前结果。" if at_target else "范围为单项近似90%；不能保证同时落入。"),origin+Vector2(0,268),350,12)
 	var modified:bool=bool(pet.get("gm_modified",false)) or pet.get("legacy_stat_offset",{}).values().any(func(value):return float(value)!=0.0)
 	label("含 GM／旧档修正，不用于天然品质比较。" if modified else "按原版随机规则；接近目标级时范围较粗略。",origin+Vector2(0,310),350,11)
 
@@ -517,18 +551,116 @@ func shop_panel(profile: Dictionary) -> void:
 	label("萨姆吉尔的道具店",Vector2(121,13),220,17)
 	label("需要什么呢？",Vector2(18,53),200,15)
 	label("石币 %d" % profile.player.gold,Vector2(235,73),185,14)
-	for i in range(2):
-		var key := "potion" if i==0 else "club"
-		var caption := "耐久力回复药" if i==0 else "小棍棒"
+	for i in range(3):
+		var key: String = ["potion","club","mirror_charm"][i]
+		var caption := item_name(key)
 		item_icon(key,Vector2(25,119+i*64))
 		label(caption,Vector2(85,117+i*64),190,16)
-		label("%d 石币    持有 %d" % [10 if i==0 else 30,profile.inventory[key]],Vector2(85,141+i*64),230,14)
+		label("%d 石币    持有 %d" % [[10,30,4800][i],profile.inventory.get(key,0)],Vector2(85,141+i*64),230,14)
 		var row:=choice("",Vector2(18,111+i*64),"",null)
 		for connection in row.pressed.get_connections():row.pressed.disconnect(connection.callable)
 		row.size=Vector2(390,58)
 		row.pressed.connect(func(): selected_item=key;rebuild())
 	item_icon(selected_item,Vector2(43,319))
-	label("耐久力回复药 · 恢复体力" if selected_item=="potion" else "小棍棒 · 攻击 +4",Vector2(111,310),300,15)
-	label("售出 %d 石币" % (5 if selected_item=="potion" else 15),Vector2(111,338),200,14)
-	art_button(26098,Vector2(231,382),"buy_"+selected_item,null,int(profile.player.gold)>=(10 if selected_item=="potion" else 30)).tooltip_text="购买一个"
-	art_button(26097,Vector2(312,382),"sell_"+selected_item,null,int(profile.inventory[selected_item])>0 and (selected_item!="club" or not profile.equipped or int(profile.inventory.club)>1)).tooltip_text="卖出一个"
+	label(item_name(selected_item)+(" · 镜之精灵" if selected_item=="mirror_charm" else " · "+item_description(selected_item)),Vector2(111,310),300,13)
+	label("售出 %d 石币" % ({"potion":5,"club":15,"mirror_charm":2400}[selected_item]),Vector2(111,338),200,14)
+	art_button(26098,Vector2(231,382),"buy_"+selected_item,null,int(profile.player.gold)>=({"potion":10,"club":30,"mirror_charm":4800}[selected_item])).tooltip_text="购买一个"
+	art_button(26097,Vector2(312,382),"sell_"+selected_item,null,int(profile.inventory.get(selected_item,0))>0 and (not item_equipped(profile,selected_item) or int(profile.inventory.get(selected_item,0))>1)).tooltip_text="卖出一个"
+
+func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
+	var overlay:=Panel.new();overlay.name="PetComparisonPanel";overlay.position=Vector2(280,0);overlay.size=Vector2(760,610);overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
+	var title:Label=world.text("同种比较 · "+str(selected.name)+" · 携带与仓库",18);title.position=Vector2(14,12);overlay.add_child(title)
+	var close:Button=world.button("关闭",func():pet_compare_open=false;rebuild());close.position=Vector2(650,8);overlay.add_child(close)
+	var hunt:Button=world.button("继续刷宠",func():continue_comparison_hunt(selected));hunt.position=Vector2(490,8);hunt.name="CompareContinueHunt";overlay.add_child(hunt)
+	var sort:=OptionButton.new();sort.name="PetCompareSort";sort.position=Vector2(14,48)
+	var keys:=["max_hp","attack","defence","speed"]
+	for caption in ["体力降序","攻击降序","防御降序","敏捷降序"]:sort.add_item(caption)
+	sort.select(keys.find(pet_compare_sort));sort.item_selected.connect(func(i):pet_compare_sort=keys[i];rebuild());overlay.add_child(sort)
+	var predicted:=CheckButton.new();predicted.text="按120级预期排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
+	var workflow:Button=world.button("自动找宠→抓宠→练至120→对比",func():world.close_adventure_menu();world.pet_workflow.start_cycle(PetComparison.species_key(selected)));workflow.name="CompareStartCycle";workflow.position=Vector2(14,83);overlay.add_child(workflow)
+	var info:Label=world.text(feedback if not feedback.is_empty() else "等级不同请比120预期；不是品质百分位。",12);info.position=Vector2(385,89);overlay.add_child(info)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,170);scroll.size=Vector2(736,422);overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
+	var rows:=PetComparison.rows(profile,selected,pet_compare_sort,pet_compare_projected)
+	var focus_id:=str(selected.get("pet_id",""))
+	var focus:Dictionary=selected
+	for row in rows:
+		if str(row.pet.get("pet_id",""))==focus_id:focus=row.pet
+	var leader:Dictionary=rows[0].pet if not rows.is_empty() else focus
+	for entry in [["选中",focus,110],["排序首位",leader,138]]:
+		var actor:Dictionary=entry[1]
+		var summary:Label=world.text("%s %s · %s Lv.%d · 当前 血%d 攻%d 防%d 敏%d" % [entry[0],actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed],13)
+		summary.position=Vector2(14,entry[2]);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
+	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
+	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(470,46);overlay.add_child(previous)
+	var next:Button=world.button("▶",func():pet_compare_page=mini(pages-1,pet_compare_page+1);rebuild());next.position=Vector2(640,46);overlay.add_child(next)
+	var page:Label=world.text("%d/%d · %d只"%[pet_compare_page+1,pages,rows.size()],13);page.position=Vector2(530,53);overlay.add_child(page)
+	for row in rows.slice(pet_compare_page*20,(pet_compare_page+1)*20):
+		var pet:Dictionary=row.pet;var estimate:Dictionary=row.forecast.get("expected",pet);var q:Dictionary=row.quality
+		var identifier:=str(pet.get("pet_id",str(row.location)+"#"+str(row.index+1)))
+		var content:="%s · Lv.%d · %s · ID %s\n当前 血%d 攻%d 防%d 敏%d　｜120预期 血%d 攻%d 防%d 敏%d\n先天 %s%s" % [pet.name,pet.level,"携带" if row.location=="pets" else "仓库",identifier,pet.max_hp,pet.attack,pet.defence,pet.speed,estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,"未知" if q.is_empty() else str(q.offsets)+" 总%+d"%q.total+(" 满档" if q.full else "")," · GM／旧档，不作天然品质判断" if PetComparison.warning(pet) else " · 非历史出生快照"]
+		var text:Label=world.text(content,13);text.name="CompareRow_"+str(row.location)+"_"+str(row.index);text.custom_minimum_size=Vector2(700,85)
+		if identifier==focus_id:text.modulate=Color("ffe680");text.text="▶ 当前选中 · "+text.text
+		list.add_child(text)
+		var actions:=HBoxContainer.new();list.add_child(actions)
+		var transfer:Button=world.button("存入仓库" if row.location=="pets" else "取出",func():
+			var ok:bool=world.session.store_pet(int(row.index)) if row.location=="pets" else world.session.retrieve_pet(int(row.index))
+			if ok:world.refresh_companion();world.checkpoint();feedback="已更新宠物位置。"
+			else:feedback=world.session.last_error
+			rebuild());transfer.name="CompareTransfer_"+identifier;transfer.disabled=(row.location=="pets" and (int(row.index)==int(profile.active_pet) or int(row.index)==int(profile.get("ride_pet",-1)))) or (row.location!="pets" and profile.pets.size()>=world.session.PET_CAPACITY);actions.add_child(transfer)
+		if row.location=="pets":
+			var deploy:Button=world.button("撤回" if int(row.index)==int(profile.active_pet) else "出战",func():
+				if world.session.select_pet(-1 if int(row.index)==int(profile.active_pet) else int(row.index)):world.refresh_companion();world.checkpoint()
+				rebuild());deploy.name="CompareDeploy_"+identifier;actions.add_child(deploy)
+			if int(row.index)==int(profile.get("ride_pet",-1)):
+				var dismount:Button=world.button("下骑",func():
+					if world.session.mount_pet(-1):world.refresh_companion();world.checkpoint()
+					rebuild());dismount.name="CompareDismount_"+identifier;actions.add_child(dismount)
+
+func open_pet_comparison(pet_id:String)->bool:
+	if world.battle_view.visible or world.area_transition_busy:return false
+	var profile:Dictionary=world.session.snapshot()
+	for location in ["pets","pet_storage"]:
+		for pet in profile.get(location,[]):
+			if str(pet.get("pet_id",""))==pet_id:
+				pet_compare_subject=pet.duplicate(true);pet_compare_id=pet_id;pet_compare_open=true;world.clear_input();world.paused_input=true;world.classic_hud.map_panel.hide();open_menu("pets");return true
+	return false
+
+func pet_storage_panel(profile:Dictionary)->void:
+	var overlay:=Panel.new();overlay.name="PetStoragePanel";overlay.position=Vector2(280,0);overlay.size=Vector2(680,600);overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
+	var title:Label=world.text("宠物仓库 · %d只 · 携带%d/%d" % [profile.get("pet_storage",[]).size(),profile.pets.size(),world.session.PET_CAPACITY],18);title.position=Vector2(14,12);overlay.add_child(title)
+	var close:Button=world.button("关闭",func():pet_storage_open=false;rebuild());close.position=Vector2(575,8);overlay.add_child(close)
+	var store:Button=world.button("存入当前选中宠物",func():
+		if world.session.store_pet(selected_pet):world.refresh_companion();world.checkpoint();feedback="已存入仓库。"
+		else:feedback=world.session.last_error
+		rebuild());store.name="StoreSelectedPet";store.position=Vector2(14,50);store.disabled=profile.pets.is_empty() or selected_pet==int(profile.active_pet) or selected_pet==int(profile.get("ride_pet",-1));overlay.add_child(store)
+	var note:Label=world.text("出战或骑乘宠须先撤回／下骑。存取保留属性；仓库宠不参与战斗。",13);note.position=Vector2(14,92);overlay.add_child(note)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(14,125);scroll.size=Vector2(650,460);overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
+	var count:int=profile.get("pet_storage",[]).size();var pages:=maxi(1,ceili(count/20.0));pet_storage_page=clampi(pet_storage_page,0,pages-1)
+	var previous:Button=world.button("◀",func():pet_storage_page=maxi(0,pet_storage_page-1);rebuild());previous.position=Vector2(310,50);overlay.add_child(previous)
+	var next:Button=world.button("▶",func():pet_storage_page=mini(pages-1,pet_storage_page+1);rebuild());next.position=Vector2(500,50);overlay.add_child(next)
+	var page:Label=world.text("%d/%d"%[pet_storage_page+1,pages],14);page.position=Vector2(405,56);overlay.add_child(page)
+	for index in range(pet_storage_page*20,mini(count,(pet_storage_page+1)*20)):
+		var pet:Dictionary=profile.pet_storage[index]
+		var row:=HBoxContainer.new();list.add_child(row)
+		var text:Label=world.text("%s Lv.%d · %s" % [pet.name,pet.level,pet.get("pet_id","?")],14);text.custom_minimum_size=Vector2(300,38);row.add_child(text)
+		var retrieve:Button=world.button("取出",func():
+			if world.session.retrieve_pet(index):world.refresh_companion();world.checkpoint();feedback="已取出。"
+			else:feedback=world.session.last_error
+			rebuild());retrieve.name="RetrievePet_"+str(index);retrieve.disabled=profile.pets.size()>=world.session.PET_CAPACITY;row.add_child(retrieve)
+		var compare:Button=world.button("同种比较",func():
+			pet_compare_subject=pet.duplicate(true);pet_compare_open=true;rebuild());row.add_child(compare)
+
+func continue_comparison_hunt(selected:Dictionary)->bool:
+	var key:=PetComparison.species_key(selected)
+	var ident:=int(key.trim_prefix("original_")) if key.begins_with("original_") else -1
+	var options:Array=preload("res://scripts/pet_hunt_rules.gd").candidates(world.encounter_catalog,int(world.data.map_id),world.cell,world.pet_hunt_menu.level_one.button_pressed)
+	if ident<0 or not options.any(func(row):return int(row.id)==ident):
+		feedback="当前位置不能刷选中的同种宠物；请先到对应遇敌区域。";rebuild();return false
+	world.close_adventure_menu();world.pet_hunt_menu.open_menu()
+	var index:int=world.pet_hunt_menu.species.get_item_index(ident)
+	if index<0 or world.pet_hunt_menu.species.is_item_disabled(index):
+		world.pet_hunt_menu.close_menu();world.paused_input=true;open_menu("pets");feedback="选中宠物素材不可用。";rebuild();return false
+	world.pet_hunt_menu.species.select(index)
+	return true

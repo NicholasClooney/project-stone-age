@@ -36,3 +36,9 @@ For each displayed derived stat independently, the calculator takes the species'
 These are pointwise upper values: the HP-optimal allocation differs from the attack-, defence- and agility-optimal allocations. **One pet cannot attain all four listed ceilings simultaneously.** They describe un-reincarnated level-1-raised pets under the supported species rules; no GM bonuses or historical version extensions are included. GM/legacy offsets can place an individual above a native bound, and the table shows the excess without raising the species ceiling.
 
 Independent fixtures: 乌力 at level120 has separate upper values HP1346/attack211/defence231/agility267; blue dragon has HP1510/attack347/defence231/agility206. The latter also exercises rank-factor5.20 truncation. Tests distinguish expected growth, individual conditional ceiling and species ceiling.
+
+## Comparison and independent storage
+
+The comparison hub includes carried and stored pets, groups verified starter/original species aliases, and identifies same-name individuals by stable `pet_id`. Sort current or level-120 expected HP/attack/defence/speed without reordering the authoritative collection. At level120 the growth detail shows current results and mean differences instead of zero-width uncertainty. Innate weight offsets are separate from realized performance; no overall percentile score is invented.
+
+Store/retrieve preserves the entire pet dictionary. Storage has no artificial gameplay count cap; only carried pets use the existing30-slot capacity. Active and mounted pets must first be withdrawn/dismounted. Comparison and storage paginate20 rows, and comparisons use cached expected increments rather than full confidence-band enumeration per pet.

@@ -82,7 +82,7 @@ def run(source, reference, output):
     e=archive.entries[merchant_bitmap]
     merchant=dict(name='萨姆吉尔的道具店',cell=[18,15],interaction_cell=[16,15],direction=6,graphic=16033,bitmap=merchant_bitmap,path='images/merchant.png',offset=[e['x'],e['y']],width=e['w'],height=e['h'],text='欢迎光临',buy_text='需要什么呢？',sell_text='要卖什么吗？')
     items={}
-    for key,number,name,item_id in [('potion',23013,'耐久力回复药',1500),('club',20103,'小棍棒',100)]:
+    for key,number,name,item_id in [('potion',23013,'耐久力回复药',1500),('club',20103,'小棍棒',100),('mirror_charm',22018,'美丽尼亚护身符1',1460)]:
         bitmap=logical[number];e=archive.entries[bitmap]
         archive.image(bitmap).save(root/'images'/f'{key}.png')
         items[key]=dict(name=name,item_id=item_id,graphic=number,bitmap=bitmap,path=f'images/{key}.png',width=e['w'],height=e['h'])
@@ -92,6 +92,8 @@ def run(source, reference, output):
     shutil.copyfile(archive.data/'se/sas_20.wav',root/'audio/sas_20.wav')
     manifest=dict(audio={'wilderness':'audio/sabgm_f0.wav','battle_enter':'audio/sas_15.wav','menu_denied':'audio/sas_20.wav'},ui=ui,items=items,merchant=merchant,shop=dict(path='../shop.json',map_id=1002,spawn=[11,15],portals=[dict(from_map=1000,cell=[67,108],to_map=1002,target=[10,15]),dict(from_map=1000,cell=[67,109],to_map=1002,target=[10,16]),dict(from_map=1002,cell=[10,15],to_map=1000,target=[67,108]),dict(from_map=1002,cell=[10,16],to_map=1000,target=[67,109])]),species=[dict(id='100250',name='乌力'),dict(id='100251',name='乌力乌力'),dict(id='100252',name='乌力斯坦')],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',client_revision='1997fc20456dbda36d181b9680ae10bed2e9cdf9',map_sha256=hashlib.sha256(raw).hexdigest(),audio='gmsv/data/map/sainasu/sainasu props tone45 at633,493; system/map.cpp1004-1007 -> play_map_bgm; system/t_music.cpp3298-3300 tone45 -> bgm10; bgm_tbl2796 sabgm_f0.wav. Shop1002 has no music markers and keeps preceding village track. Battle entry process.cpp681 plays215; systeminc/sndcnf.h120 maps215 to sas_15.wav; sndcnf.h125 maps220 to sas_20.wav (rejected menu action).',missing_graphics=missing,npc='gmsv/data/npc/genout/shop_m.create: floor1002 merchant18,15 graphic16033',dialogue='gmsv/data/npc/genout/ss_1002_18_15',portals='gmsv/data/npc/genout/warp_y.create source lines27-29',ui='system/directdraw.cpp3962-3984 and systeminc/anim_tbl.h1650-1699',items='gmsv/data/itemset.txt item100 graphic20103; item1500 graphic23013',species='gmsv/data/enemybase.txt first3 rows; MVP encounter mix is designed, not verified original regional encounter table',limitations=['Shop stocks a narrow MVP selection; original shop1002 stock differs.','Safe entry spawn11,15 is one tile inside source portal10,15 to prevent immediate return.']))
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
+    from import_mirror import run as import_mirror
+    import_mirror(source, output)
     print(f'Imported shop {w}x{h}, {len(objects)} objects, {len(ui)} panels/buttons; missing graphics={len(missing)}')
 
 

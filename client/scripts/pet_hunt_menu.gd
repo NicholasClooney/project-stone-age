@@ -4,6 +4,7 @@ const Rules = preload("res://scripts/pet_hunt_rules.gd")
 var world: Node
 var panel: Panel
 var species: OptionButton
+var auto_capture: CheckBox
 var level_one: CheckBox
 var preset: OptionButton
 var total: SpinBox
@@ -53,6 +54,8 @@ func _ready() -> void:
 	level_one=CheckBox.new();level_one.text="只找 Lv.1";level_one.button_pressed=true
 	level_one.position=Vector2(555,132);panel.add_child(level_one);controls.append(level_one)
 	level_one.toggled.connect(func(_value):refresh_candidates())
+	auto_capture=CheckBox.new();auto_capture.text="达标后自动抓宠";auto_capture.position=Vector2(760,132)
+	panel.add_child(auto_capture);controls.append(auto_capture)
 	label("成长档预设",Vector2(24,194),17)
 	preset=OptionButton.new();preset.position=Vector2(140,184);preset.size=Vector2(480,38)
 	for title in ["不限品质 · 快速试用","优秀：总成长档 +4 或更高","极品：总成长档 +6 或更高","满档：四项成长档均 +2","自定义"]:preset.add_item(title)
@@ -212,5 +215,7 @@ func scan_once() -> void:
 			world.battle_view.mark_hunt_target(i)
 			world.battle_view.report.text="发现 %s Lv.%d · 成长档 %+d · 请手动捕捉" % [actor.name,actor.level,quality.total_offset]
 			world.message.text="极品筛选：%s，总成长档 %+d，已遇敌 %d 组。" % [actor.name,quality.total_offset,rolls]
+			if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt":world.pet_workflow.matched(i,actor)
+			elif auto_capture.button_pressed:world.training_helper.start_capture_battle(i)
 			return
 	if rolls>=int(filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")

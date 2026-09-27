@@ -36,6 +36,7 @@ var session = GameSession.new()
 var changelog_menu: Control
 var training_settings: Dictionary = {}
 var training_helper: Control
+var pet_workflow: Node
 var pet_hunt_menu: Control
 var dev_gm_menu: Control
 var dev_map_overview: Control
@@ -210,6 +211,8 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	var height := int(next_data.height)
 	if destination.x<0 or destination.y<0 or destination.x>=width or destination.y>=height or int(next_data.blocked[destination.y*width+destination.x])!=0:
 		return false
+	var workflow_pause := ""
+	if is_instance_valid(pet_workflow):workflow_pause=pet_workflow.prepare_scene_reload()
 	var previous_zoom: Vector2 = camera.zoom
 	clear_input()
 	for node in [terrain,actors,ui_layer]:
@@ -234,6 +237,11 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	build_world()
 	camera.zoom = previous_zoom
 	build_ui()
+	if not workflow_pause.is_empty():
+		pet_workflow.phase="paused"
+		pet_workflow.reason=workflow_pause
+		last_adventure_message="找宠流程暂停："+workflow_pause
+		message.text=last_adventure_message
 	camera.reset_smoothing()
 	area_music = exploration_music()
 	set_music(area_music)
@@ -917,6 +925,9 @@ func build_ui() -> void:
 	training_helper = preload("res://scripts/training_helper.gd").new()
 	training_helper.configure(self)
 	root.add_child(training_helper)
+	pet_workflow = preload("res://scripts/pet_workflow.gd").new()
+	pet_workflow.configure(self)
+	root.add_child(pet_workflow)
 	var training := button("自动练级",training_helper.open_menu)
 	training.name="DevTraining"
 	dev.add_child(training)
@@ -1265,10 +1276,13 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 			return
 		"buy_potion":success = at_shop and session.buy_item("potion")
 		"buy_club":success = at_shop and session.buy_item("club")
+		"buy_mirror_charm":success = at_shop and session.buy_item("mirror_charm")
 		"sell_potion":success = at_shop and session.sell_item("potion")
 		"sell_club":success = at_shop and session.sell_item("club")
+		"sell_mirror_charm":success = at_shop and session.sell_item("mirror_charm")
 		"use_potion":success = session.use_item("potion")
 		"equip":success = session.equip_item("club")
+		"equip_mirror":success = session.equip_item("mirror_charm")
 		"allocate_stat":success = session.allocate_stat(str(value),adventure_menu.allocation_amount)
 		"distribute_stats":
 			var selected: Array=[]

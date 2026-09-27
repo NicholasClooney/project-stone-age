@@ -2,6 +2,10 @@ extends RefCounted
 ## Local authority for classic physical combat. Capture threshold/escape chance remain explicit approximations.
 const PLAYER_MAX_HP := 48
 const ENEMY_MAX_HP := 32
+var capture_assist := false
+func set_capture_assist(enabled: bool) -> void:
+	capture_assist=enabled
+
 var rng_seed := 42
 var _rng := RandomNumberGenerator.new()
 var _state: Dictionary = {"active": false, "outcome": "", "player_hp":48,"player_max_hp":48,"enemy_hp":32,"enemy_max_hp":32,"turn":0,"events":[]}
@@ -41,6 +45,7 @@ func _extra_action(_actor: Dictionary, _action: String) -> void:
 func start_battle(config: Dictionary = {}) -> Dictionary:
 	if _state.active:
 		return snapshot()
+	capture_assist=false
 	_config = config.duplicate(true)
 	_rng.seed = rng_seed
 	_escape_attempts = 0
@@ -50,6 +55,9 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	var pet: Dictionary = config.get("pet", {}).duplicate(true)
 	_state = {"active":true,"outcome":"","battle_id":config.get("battle_id", ""),"player_hp":config.get("player_hp",48),"player_max_hp":config.get("player_max_hp",48),"enemy_hp":config.get("enemy_max_hp",32),"enemy_max_hp":config.get("enemy_max_hp",32),"enemy_name":config.get("enemy_name","乌力"),"enemy_species":config.get("enemy_species","wooli"),"enemy_sprite":config.get("enemy_sprite",100250),"pet_sprite":pet.get("sprite",100250),"pet_name":pet.get("name",""),"skill_unlocked":pet.get("skill_unlocked",false),"boss":config.get("boss",false),"turn":0,"events":["遭遇野生石器伙伴！"],"pet":pet,"pet_command":"attack","pet_hp":pet.get("hp",0),"pet_max_hp":pet.get("max_hp",0),"potions":config.get("potions",0),"captured_species":"","xp":0,"gold":0,"skill_used":false}
 	var initial_order: Array[String] = []
+	_state["mirror_available"]=bool(config.get("mirror_available",false))
+	_state["mirror_self"]=0
+	_state["mirror_pets"]={}
 	_state["turn_order"] = initial_order
 	_state["turn_frames"] = []
 	_state["player_level"] = int(config.get("player_level",1))
@@ -99,8 +107,11 @@ func set_pet_command(command: String) -> bool:
 	return true
 
 func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
-	if not _state.active or action not in ["attack","defend","escape","capture","item","switch"]:
+	if not _state.active or action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet"]:
 		return snapshot()
+	if action.begins_with("mirror_"):
+		if not _state.mirror_available:return snapshot()
+		if action=="mirror_pet" and (_state.active_pet<0 or _state.pet_hp<=0):return snapshot()
 	if action == "item" and (_state.potions <= 0 or _state.player_hp >= _state.player_max_hp):
 		return snapshot()
 	if action == "capture" and (_state.boss or not _config.get("can_capture",true) or _state.captured_species_list.size() >= int(_config.get("capture_slots",5)) ):
@@ -176,6 +187,11 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 
 func _player_action(action: String) -> void:
 	match action:
+		"mirror_self","mirror_pet":
+			if action=="mirror_self":_state.mirror_self=1
+			else:_state.mirror_pets[_state.active_pet]=1
+			_last_outcome="mirror_cast"
+			_state.events.append("镜子的精灵：%s获得一次直接攻击反射。" % ("你" if action=="mirror_self" else str(_state.pet_name)))
 		"switch":
 			_state.active_pet = _pet_choice
 			_sync_pet()
@@ -279,6 +295,7 @@ func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 		return
 	var result: Dictionary = CombatRules.resolve(_state.enemies[_acting_enemy],defender,_rng,pet_guarding if target_pet else guarding,str(_config.get("combat_profile","classic")))
 	_last_outcome = result.outcome
+	if _reflect_incoming(int(result.damage),target_pet):return
 	_last_damage = mini(int(result.damage),int(_state.pet_hp if target_pet else _state.player_hp))
 	if target_pet:
 		_state.pet_hp -= _last_damage
@@ -291,6 +308,26 @@ func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 		_pending_counter = {"actor":"pet" if target_pet else "player","enemy_index":_acting_enemy,"target":"enemy"}
 	if _state.player_hp == 0:
 		_finish("defeat","你暂时落败，回村恢复体力。")
+
+func _reflect_incoming(damage: int, target_pet: bool) -> bool:
+	# battle_event.c BATTLE_DamageSub: positive direct damage reflects once,
+	# before rider/pet splitting; reflection itself never generates a counter.
+	var charges:=int(_state.mirror_pets.get(_state.active_pet,0)) if target_pet else int(_state.mirror_self)
+	if damage<=0 or charges<=0:return false
+	if target_pet:_state.mirror_pets[_state.active_pet]=0
+	else:_state.mirror_self=0
+	_pending_counter={}
+	_last_outcome="reflect"
+	var enemy:Dictionary=_state.enemies[_acting_enemy]
+	_last_damage=mini(damage,int(enemy.hp))
+	enemy.hp-=_last_damage
+	if int(enemy.hp)==0:
+		enemy.defeated_by_pet_index=_state.active_pet if _state.pet_hp>0 else -1
+		enemy.defeated_with_ride_index=int(_state.get("ride_pet",-1)) if not target_pet else -1
+	_sync_enemy(_acting_enemy)
+	_state.events.append("镜子的精灵反射攻击！对手受到 %d 伤害。"%_last_damage)
+	if _first_enemy()<0:_finish("win","战斗胜利！")
+	return true
 
 func _enemy_alive(index: int) -> bool:
 	return index >= 0 and index < _state.enemies.size() and int(_state.enemies[index].hp) > 0
@@ -357,6 +394,10 @@ func _resolve_counter() -> void:
 		_sync_enemy(_target)
 	else:
 		_state.enemy_target = counter.target
+		if _reflect_incoming(damage,counter.target=="pet"):
+			_state.turn_order.append(actor)
+			_record_frame(actor)
+			return
 		if counter.target == "player":
 			_apply_player_damage(damage)
 		else:

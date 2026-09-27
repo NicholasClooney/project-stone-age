@@ -1,11 +1,11 @@
 extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
-const SAVE_VERSION := 2
+const SAVE_VERSION := 3
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const Progression = preload("res://server/progression.gd")
-const ITEM_PRICES := {"potion":10,"club":30}
+const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
 	"blue_dragon":{"name":"扬奇洛斯","alias":"蓝人龙","category":"人龙","sprite":100288,"speed":20},
 	"golden_tiger":{"name":"金格萨贝鲁","alias":"金虎","category":"老虎","sprite":100330,"speed":29},
@@ -25,7 +25,7 @@ var experience_multiplier: int = 1:
 		experience_multiplier = value if value in [1,2,10,100] else 1
 
 func _init() -> void:
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"travel_pass":false,"pets":[],"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
@@ -43,12 +43,14 @@ func has_travel_pass() -> bool:
 	return _profile.get("travel_pass",false)
 
 func snapshot() -> Dictionary:
+	_ensure_pet_ids()
 	_sync_stat_points()
 	return _profile.duplicate(true)
 
 func start_battle_config(species: String = "wooli", boss: bool = false, enemy_count: int = 1) -> Dictionary:
 	if not SPECIES.has(species) or not _pending.is_empty() or (boss and not can_fight_boss()):
 		return {}
+	_ensure_pet_ids()
 	var enemy: Dictionary = SPECIES[species].duplicate()
 	var native := Progression.species_actor(species,3 if boss else 1,int(_profile.next_battle)*7919)
 	for key in native:enemy[key] = native[key]
@@ -57,6 +59,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
 	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	config.mirror_available=bool(_profile.get("equipped_mirror",false))
 	config.experience_multiplier = experience_multiplier
 	config.ride_pet_index = int(_profile.get("ride_pet",-1))
 	config.ride_pet = _profile.pets[config.ride_pet_index].duplicate(true) if config.ride_pet_index>=0 else {}
@@ -223,6 +226,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 			captured = {"species":species,"name":base.name,"sprite":base.sprite,"level":1,"xp":0,"skill_unlocked":false}
 			var native := Progression.species_actor(species,1,int(_profile.next_battle)*7919+_profile.pets.size()*97)
 			captured.merge(native)
+		_assign_pet_id(captured)
 		_profile.pets.append(captured)
 		if _profile.pets.size() == 1:_profile.active_pet = 0
 	if outcome == "defeat":
@@ -260,7 +264,7 @@ func buy_item(item: String) -> bool:
 	return true
 
 func sell_item(item: String) -> bool:
-	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.inventory[item] <= 0 or (item == "club" and _profile.equipped and _profile.inventory.club == 1):
+	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.inventory[item] <= 0 or ((item == "club" and _profile.equipped and _profile.inventory.club == 1) or (item=="mirror_charm" and _profile.get("equipped_mirror",false) and _profile.inventory.mirror_charm==1)):
 		return false
 	_profile.inventory[item] -= 1
 	_profile.player.gold += int(ITEM_PRICES[item] / 2)
@@ -274,9 +278,10 @@ func use_item(item: String = "potion") -> bool:
 	return true
 
 func equip_item(item: String = "club") -> bool:
-	if not _pending.is_empty() or item != "club" or _profile.inventory.club <= 0:
+	if not _pending.is_empty() or item not in ["club","mirror_charm"] or int(_profile.inventory.get(item,0))<=0:
 		return false
-	_profile.equipped = not _profile.equipped
+	if item=="mirror_charm":_profile.equipped_mirror=not bool(_profile.get("equipped_mirror",false))
+	else:_profile.equipped = not _profile.equipped
 	return true
 
 func heal() -> bool:
@@ -289,6 +294,61 @@ func _recover() -> void:
 	_profile.player.hp = _profile.player.max_hp
 	for pet in _profile.pets:
 		pet.hp = pet.max_hp
+
+
+# Stable identity distinguishes same-name pets across carried and warehouse lists.
+func _assign_pet_id(pet: Dictionary) -> void:
+	pet.pet_id="pet-%d"%int(_profile.get("next_pet_id",1))
+	_profile.next_pet_id=int(_profile.get("next_pet_id",1))+1
+
+func _ensure_pet_ids() -> void:
+	if not _profile.has("pet_storage"):_profile.pet_storage=[]
+	var next:=int(_profile.get("next_pet_id",1))
+	for pet in _profile.pets+_profile.pet_storage:
+		if pet.has("pet_id"):next=maxi(next,int(str(pet.pet_id).trim_prefix("pet-"))+1)
+	_profile.next_pet_id=next
+	for pet in _profile.pets+_profile.pet_storage:
+		if not pet.has("pet_id"):_assign_pet_id(pet)
+
+func _valid_pet_ids(profile: Dictionary) -> bool:
+	var modern:=int(profile.version)>=3
+	if modern and (not profile.has("pet_storage") or not profile.has("next_pet_id")):return false
+	var seen:={}
+	var largest:=0
+	for pet in profile.pets+profile.get("pet_storage",[]):
+		if not pet is Dictionary:return false
+		if not pet.has("pet_id"):
+			if modern:return false
+			continue
+		if not pet.pet_id is String or not pet.pet_id.begins_with("pet-"):return false
+		var suffix:String=pet.pet_id.trim_prefix("pet-")
+		if not suffix.is_valid_int() or str(int(suffix))!=suffix or int(suffix)<1 or int(suffix)>=9007199254740991:return false
+		if seen.has(pet.pet_id):return false
+		seen[pet.pet_id]=true;largest=maxi(largest,int(suffix))
+	return not profile.has("next_pet_id") or _integer(profile.next_pet_id,largest+1,9007199254740991)
+
+func store_pet(index: int) -> bool:
+	last_error=""
+	if not _pending.is_empty():last_error="请先结束战斗。";return false
+	if index<0 or index>=_profile.pets.size():last_error="请选择随身宠物。";return false
+	if index==int(_profile.active_pet) or index==int(_profile.get("ride_pet",-1)):
+		last_error="请先取消这只宠物的出战或骑乘状态。";return false
+	_ensure_pet_ids()
+	_profile.pet_storage.append(_profile.pets[index])
+	_profile.pets.remove_at(index)
+	if int(_profile.active_pet)>index:_profile.active_pet-=1
+	if int(_profile.get("ride_pet",-1))>index:_profile.ride_pet-=1
+	return true
+
+func retrieve_pet(index: int) -> bool:
+	last_error=""
+	if not _pending.is_empty():last_error="请先结束战斗。";return false
+	if index<0 or index>=_profile.get("pet_storage",[]).size():last_error="请选择仓库宠物。";return false
+	if _profile.pets.size()>=PET_CAPACITY:last_error="随身宠物栏已满，请先存入其他宠物。";return false
+	_ensure_pet_ids()
+	_profile.pets.append(_profile.pet_storage[index])
+	_profile.pet_storage.remove_at(index)
+	return true
 
 func select_pet(index: int) -> bool:
 	if not _pending.is_empty() or index < -1 or index >= _profile.pets.size():
@@ -329,6 +389,7 @@ func set_location(map_id: int, x: int, y: int) -> bool:
 	return true
 
 func save_game(path: String) -> bool:
+	_ensure_pet_ids()
 	_sync_stat_points()
 	last_error = ""
 	if not _pending.is_empty():
@@ -359,6 +420,9 @@ func load_game(path: String) -> bool:
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
 			_profile = _normalize_numbers(parsed)
+			_ensure_pet_ids()
+			if not _profile.inventory.has("mirror_charm"):_profile.inventory.mirror_charm=0
+			if not _profile.has("equipped_mirror"):_profile.equipped_mirror=false
 			if not _profile.has("ride_pet"):_profile.ride_pet = -1
 			if not _profile.has("character_id"):_profile.character_id = "100000"
 			if not _profile.has("travel_pass"):
@@ -366,19 +430,21 @@ func load_game(path: String) -> bool:
 			# Earlier prototype saves predate speed; migrate only this optional field.
 			if not _profile.player.has("speed"):
 				_profile.player.speed = 10 + _profile.player.level - 1
-			for pet in _profile.pets:
+			for pet in _profile.pets+_profile.pet_storage:
 				if not pet.has("speed"):
 					pet.speed = int(SPECIES.get(pet.species,{}).get("speed",1)) + pet.level - 1
 			if not _profile.player.has("allocated_stats"):
 				# Preserve existing prototype gains, credit missed allocation once.
 				_profile.player.allocated_stats = {"vitality":0,"strength":0,"toughness":0,"dexterity":0}
 			Progression.migrate_player(_profile.player)
-			for i in range(_profile.pets.size()):
-				Progression.migrate_pet(_profile.pets[i],int(_profile.pets[i].sprite)+i*7919)
-				if not _profile.pets[i].has("learned_skills"):_profile.pets[i].learned_skills = []
-				_profile.pets[i].skill_unlocked = not _profile.pets[i].learned_skills.is_empty()
+			var all_pets: Array=_profile.pets+_profile.pet_storage
+			for i in range(all_pets.size()):
+				var pet: Dictionary=all_pets[i]
+				Progression.migrate_pet(pet,int(pet.sprite)+i*7919)
+				if not pet.has("learned_skills"):pet.learned_skills = []
+				pet.skill_unlocked = not pet.learned_skills.is_empty()
 			Progression.refresh(_profile.player)
-			for pet in _profile.pets:Progression.refresh(pet)
+			for pet in _profile.pets+_profile.pet_storage:Progression.refresh(pet)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true
@@ -416,8 +482,10 @@ func _valid_profile(value: Variant) -> bool:
 			assigned += int(value.player.allocated_stats[stat])
 		if assigned > (int(value.player.level)-1)*3+int(value.get("gm_bonus_points",0)):
 			return false
+	if value.has("equipped_mirror") and not value.equipped_mirror is bool:return false
+	if value.get("equipped_mirror",false) and int(value.inventory.get("mirror_charm",0))<1:return false
 	for item in ITEM_PRICES:
-		if not _integer(value.inventory.get(item),0,99):
+		if not _integer(value.inventory.get(item,0 if item=="mirror_charm" else null),0,99):
 			return false
 	if value.equipped and value.inventory.club < 1:
 		return false
@@ -435,7 +503,9 @@ func _valid_profile(value: Variant) -> bool:
 			return false
 	if not _location_valid(value.location):
 		return false
-	for pet in value.pets:
+	if not value.get("pet_storage",[]) is Array:return false
+	if not _valid_pet_ids(value):return false
+	for pet in value.pets+value.get("pet_storage",[]):
 		if not pet is Dictionary or not _actor_valid(pet) or Progression.species_definition(str(pet.get("species",""))).is_empty() or not pet.get("name") is String or pet.name.is_empty() or pet.name.length() > 16 or not pet.get("skill_unlocked") is bool:
 			return false
 		if str(pet.species).begins_with("original_") and (not pet.has("base_stats") or not pet.has("growth_weights")):return false
@@ -590,10 +660,11 @@ func set_character(id: String) -> bool:
 # Explicit developer starter pack: idempotent; preserves existing companions.
 func grant_starter_pets() -> bool:
 	if not _pending.is_empty():return false
+	_ensure_pet_ids()
 	var missing: Array[String] = []
 	for species in ["blue_dragon","golden_tiger","red_rex"]:
 		var found := false
-		for pet in _profile.pets:
+		for pet in _profile.pets+_profile.get("pet_storage",[]):
 			if pet.species == species:found = true
 		if not found:missing.append(species)
 	if _profile.pets.size()+missing.size()>PET_CAPACITY:return false
@@ -601,6 +672,7 @@ func grant_starter_pets() -> bool:
 		var data: Dictionary = SPECIES[species]
 		var pet := Progression.species_actor(species,1,int(data.sprite))
 		pet.merge({"species":species,"name":data.name,"sprite":data.sprite,"level":1,"xp":0,"skill_unlocked":false,"loyalty":100})
+		_assign_pet_id(pet)
 		_profile.pets.append(pet)
 	return true
 

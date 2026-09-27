@@ -151,3 +151,5 @@ After world import, run `python3 tools/import_encounters.py`, then `.tools/asset
 **Navigation categories:** 地图导航 separates **地点 / 练级点 / Lv.1宠物**. Training and level-one pet lists offer current-map or all-map scope; use the existing walk / DEV teleport choice to visit. Pet locations come from eligible original encounter records, not guaranteed spawns. After imports, regenerate both `tools/build_training_spots.py` and `tools/build_level_one_spots.py`.
 
 **怎样判断极品宠物？** See [宠物品质与成长窗口解读](docs/game-systems/pet-quality.md) for innate rolls versus actual growth, the project’s +6 preset and default full-grade filter, forecast ranges, and GM/legacy comparison limits.
+
+**宠物培养与镜之精灵：** 道具店可购买主动反射饰品；宠物窗口提供独立仓库、同种比较与找宠／捕获／练到120级的单轮辅助流程。比较后由玩家决定，不自动放生。见[镜之精灵](docs/development/mirror-accessory.md)、[宠物品质与比较](docs/game-systems/pet-quality.md)及[自动战斗](docs/development/training-helper.md)。

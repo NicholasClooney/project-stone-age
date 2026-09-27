@@ -40,7 +40,7 @@ func _extend_actors(actors: Array[Dictionary], action: String) -> void:
 	for index in range(_state.allies.size()):
 		for kind in ["ally","ally_pet"]:
 			if not _ally_alive(index,kind):continue
-			_member(index,kind)["defending"]=action in ["capture","escape"]
+			_member(index,kind)["defending"]=capture_assist or action in ["capture","escape"]
 			actors.append({"actor":kind,"ally_index":index,"speed":int(_stats(index,kind).get("speed",10)),"tie":12+index+(4 if kind=="ally_pet" else 0)})
 
 func _actor_precedes(a: Dictionary, b: Dictionary) -> bool:
@@ -57,7 +57,7 @@ func _before_actor(actor: Dictionary) -> void:
 
 func _extra_action(actor: Dictionary, action: String) -> void:
 	if actor.actor not in ["ally","ally_pet"]:return
-	if action in ["capture","escape"]:
+	if capture_assist or action in ["capture","escape"]:
 		_last_outcome="defend"
 		return
 	_target=int(_state.selected_target)

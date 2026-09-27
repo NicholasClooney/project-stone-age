@@ -42,6 +42,8 @@ var elapsed := 0.0
 const SPECIES_ART := {"wooli":"100250","wooli_wooli":"100251","wooli_stan":"100252"}
 var built := false
 var pending_action := ""
+var mirror_cues: Array[Dictionary] = []
+var mirror_effects: Array[Control] = []
 var feedback_until := 0.0
 const ENTRY_SECONDS := 1.0
 const TRANSITION_SECONDS := 1.9
@@ -186,7 +188,7 @@ func _ready() -> void:
 	# StockDispBuffer uses a common anchor plus each bitmap's stored offset.
 	# battlemenu.cpp:3757-3765, anim_tbl.h:25000-series classic menu.
 	ui_picture(25116,MENU_ANCHOR,command_panel)
-	var choices := [["attack",25100,"攻击"],["magic",25102,"咒术（尚未习得）"],["capture",25104,"捕捉"],["help",25106,"求救（单人模式）"],["defend",25108,"防御"],["item",25110,"道具"],["pet",25112,"宠物"],["escape",25114,"逃跑"]]
+	var choices := [["attack",25100,"攻击"],["magic",25102,"镜子的精灵（装备护身符后可用）"],["capture",25104,"捕捉"],["help",25106,"求救（单人模式）"],["defend",25108,"防御"],["item",25110,"道具"],["pet",25112,"宠物"],["escape",25114,"逃跑"]]
 	for choice in choices:
 		var button := TextureButton.new()
 		button.name = str(choice[0]).capitalize()
@@ -306,6 +308,12 @@ func _ready() -> void:
 		if not is_animating():
 			return_requested.emit())
 	result_panel.add_child(return_button)
+	var auto_button:=Button.new()
+	auto_button.text="自动战斗设置";auto_button.position=Vector2(12,90)
+	auto_button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	auto_button.pressed.connect(func():
+		if is_instance_valid(world) and not is_animating():world.training_helper.open_battle_menu())
+	add_child(auto_button)
 	resized.connect(layout)
 	built = true
 	layout()
@@ -382,6 +390,10 @@ func open_battle(next_state: Dictionary) -> void:
 	result_panel.hide()
 	last_player_command = "attack"
 	defeat_return_queued = false
+	for effect in mirror_effects:
+		if is_instance_valid(effect): effect.queue_free()
+	mirror_effects.clear()
+	mirror_cues.clear()
 	hp_cues.clear()
 	riding_art_cues.clear()
 	word_cues.clear()
@@ -812,13 +824,19 @@ func choice(text: String, position_at: Vector2, callback: Callable) -> Button:
 func _request_action(action: String) -> void:
 	if world_modal_open(): return
 	if not bool(state.get("active",false)) or elapsed < feedback_until: return
-	if action in ["magic","help"]: return
+	if action == "help": return
+	if action == "magic" and not bool(state.get("mirror_available",false)): return
 	if action=="capture" and (bool(state.get("boss",false)) or not bool(state.get("can_capture",true))): return
 	sound_requested.emit(217)
 	clear_choices()
 	selected_action = action
 	last_player_command = action if action in ["attack","capture"] else "attack"
-	if action == "item":
+	if action == "magic":
+		choice("镜子的精灵 → 自己",Vector2(500,220),func(): complete_player_command("mirror_self"))
+		var pet_choice := choice("镜子的精灵 → 出战宠物",Vector2(500,265),func(): complete_player_command("mirror_pet"))
+		pet_choice.disabled = int(state.get("pet_hp",0))<=0
+		hint.text = "反射一次直接物理攻击；暂不计算气力。"
+	elif action == "item":
 		ui_picture(26061,Vector2(650,235),choice_panel)
 		ui_picture(26072,Vector2(650,222),choice_panel)
 		if ResourceLoader.exists("res://assets/legacy/mvp/images/potion.png"):
@@ -978,6 +996,15 @@ func _process(delta: float) -> void:
 
 func _advance_playback(delta: float) -> void:
 	elapsed += delta
+	while not mirror_cues.is_empty() and elapsed>=float(mirror_cues[0].at):
+		var cue: Dictionary = mirror_cues.pop_front()
+		var effect = preload("res://scripts/mirror_effect.gd").new()
+		stage.add_child(effect)
+		effect.setup(int(cue.id),actors[int(cue.index)].point)
+		mirror_effects.append(effect)
+	for i in range(mirror_effects.size()-1,-1,-1):
+		if not is_instance_valid(mirror_effects[i]): mirror_effects.remove_at(i)
+		else: mirror_effects[i].advance(delta)
 	battle_effects.advance(delta)
 	for tile in transition_tiles:
 		var frames := maxf(0.0,(elapsed-float(tile.release))*60.0)
@@ -1035,7 +1062,7 @@ func _advance_playback(delta: float) -> void:
 		var progress := clampf((elapsed-pet_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
 		choice_panel.position.x = 300.0*pow(1.0-progress,2)
 	for button in commands:
-		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or str(button.get_meta("action","")) in ["magic","help"]
+		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or (str(button.get_meta("action","")) == "help" or (str(button.get_meta("action","")) == "magic" and not bool(state.get("mirror_available",false))))
 		if str(button.get_meta("action",""))=="capture":
 			var unavailable := bool(state.get("boss",false)) or not bool(state.get("can_capture",true))
 			button.disabled = button.disabled or unavailable
@@ -1175,6 +1202,7 @@ func show_learned_skills() -> void:
 
 # Every effect consumes an authority event. Rendering never rolls combat odds.
 func queue_group_turn(previous: Dictionary) -> void:
+	mirror_cues.clear()
 	hp_cues.clear()
 	riding_art_cues.clear()
 	word_cues.clear()
@@ -1196,7 +1224,17 @@ func queue_group_turn(previous: Dictionary) -> void:
 		var target := (ally_pet_actor(int(frame.get("ally_index",0))) if str(frame.get("enemy_target",""))=="ally_pet" else ally_actor(int(frame.get("ally_index",0))) if str(frame.get("enemy_target",""))=="ally" else 2 if str(frame.get("enemy_target",""))=="pet" else 0) if who=="enemy" else enemy_actor(int(frame.get("target_index",0)))
 		var outcome := str(frame.get("outcome","hit"))
 		var timing := {"hit":at+0.25,"end":at+0.5}
-		if outcome=="switch":
+		if outcome=="mirror_cast":
+			queue_pose(0,10,at,1.5)
+			mirror_cues.append({"at":at,"id":100600,"index":0})
+			mirror_cues.append({"at":at+1.5,"id":100610,"index":2 if pending_action=="mirror_pet" else 0})
+			timing={"hit":at+1.5,"end":at+3.0}
+		elif outcome=="reflect":
+			timing=queue_strike(index,target,at)
+			mirror_cues.append({"at":float(timing.hit),"id":100610,"index":target})
+			queue_pose(index,2 if health_of(frame,index)<=0 else 1,float(timing.hit),60.0 if health_of(frame,index)<=0 else 0.5)
+			timing.end=maxf(float(timing.end),float(timing.hit)+1.5)
+		elif outcome=="switch":
 			var roster: Array = frame.get("pets",[])
 			var next_pet := int(frame.get("pet_index",-1))
 			if bool(actors[2].get("enabled",false)):
