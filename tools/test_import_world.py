@@ -5,7 +5,7 @@ import struct
 import tempfile
 import unittest
 from test_import_wilderness import FakeArchive
-from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS
+from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS, settlement_owner
 
 
 class WorldImportTests(unittest.TestCase):
@@ -28,6 +28,20 @@ class WorldImportTests(unittest.TestCase):
         original=dict(from_map=100,to_map=1000)
         links=[original,dict(from_map=100,to_map=10001),dict(from_map=10001,to_map=100),dict(from_map=31701,to_map=31702)]
         self.assertEqual(ordinary_portals(links,{100,1000}),[original])
+
+    def test_giru_settlements_exclude_quest_rooms_and_self_gate_warp(self):
+        paths={5000:Path('map/giiru/south/furuudo'),5001:Path('map/giiru/south/5001'),
+               5100:Path('map/giiru/north/dana'),5106:Path('map/giiru/north/5106'),
+               5107:Path('map/giiru/north/5107'),9355:Path('map/giiru/north/snake_9355')}
+        links=[dict(from_map=a,to_map=b) for a,b in
+               [(300,5000),(5000,300),(5000,5001),(300,5100),(5100,5106),
+                (5106,5107),(5100,9355),(300,300),(300,31701)]]
+        selected=select_connected_maps(paths,links)
+        self.assertTrue({300,5000,5001,5100,5106} <= selected)
+        self.assertFalse({5107,9355,31701} & selected)
+        self.assertEqual(ordinary_portals(links,selected),links[:5])
+        self.assertEqual(settlement_owner(5001,paths),5000)
+        self.assertEqual(settlement_owner(5106,paths),5100)
 
     def test_conflicting_warps_are_disabled_without_changing_coordinates(self):
         portals=[dict(from_map=200,cell=[229,988],to_map=3413,target=[10,15]),

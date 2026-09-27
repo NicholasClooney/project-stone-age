@@ -28,6 +28,8 @@ func field(id: int) -> bool:
 # Village-local buildings belong to their nearest village through interior doors.
 # Wilderness and dungeons remain global destinations.
 func village_for(id: int) -> int:
+ var declared:=int(info(id).get("village_id",-1))
+ if declared>=0 and str(info(declared).get("kind",""))=="village":return declared
  if str(info(id).get("kind",""))=="village":return id
  if str(info(id).get("kind",""))!="interior" or id>=5000:return -1
  var pending: Array=[id]

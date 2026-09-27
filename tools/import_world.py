@@ -14,7 +14,10 @@ import struct
 from import_legacy import Archive
 
 VILLAGES = {1000, 2000, 3000, 4000}
-TOWNS = VILLAGES | {1100, 1300, 1400, 3100, 3200, 3300, 3400}
+TOWNS = VILLAGES | {1100, 1300, 1400, 3100, 3200, 3300, 3400, 5000, 5100}
+# Reviewed ordinary Giru buildings only. The same north directory also contains
+# quest-controlled snake caves and room 5107, which must stay excluded.
+GIRU_SETTLEMENT_MAPS = {5000, 5001, 5003, 5005, 5100, 5101, 5103, 5105, 5106}
 # Reviewed ordinary settlement directories only; never infer access from map IDs.
 ORDINARY_DIRECTORIES = {'sainasu/hotoru', 'sainasu/katan', 'sainasu/kuo',
                         'jyaruga/tamtam', 'jyaruga/toto', 'jyaruga/ururi', 'jyaruga/kikuku'}
@@ -61,11 +64,12 @@ def select_connected_maps(map_paths, portals):
     No dungeon/family/quest script traversal, synthetic links or gate bypasses.
     Existing core (including its implemented permit gate) is preserved.
     """
-    selected = CORE | {p['to_map'] for p in portals if p['from_map'] in VILLAGES}
+    selected = CORE | {300} | {p['to_map'] for p in portals if p['from_map'] in VILLAGES}
     while True:
         additions = {p['to_map'] for p in portals
                      if p['from_map'] in selected and p['to_map'] in map_paths
-                     and '/'.join(map_paths[p['to_map']].parts[-3:-1]) in ORDINARY_DIRECTORIES}
+                     and ('/'.join(map_paths[p['to_map']].parts[-3:-1]) in ORDINARY_DIRECTORIES
+                          or p['to_map'] in GIRU_SETTLEMENT_MAPS)}
         if additions <= selected:
             return selected
         selected |= additions
@@ -73,7 +77,16 @@ def select_connected_maps(map_paths, portals):
 
 def ordinary_portals(portals, ordinary):
     """DEV imports must not silently open quest-controlled routes."""
-    return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary]
+    return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary
+            and (300 not in (p['from_map'], p['to_map'])
+                 or (p['from_map'] in (5000, 5100) or p['to_map'] in (5000, 5100)))]
+
+
+def settlement_owner(ident, map_paths):
+    """Use reviewed town source folders, never numerical map-id ranges."""
+    path = map_paths[ident]
+    return next((town for town in sorted(TOWNS)
+                 if town in map_paths and map_paths[town].parent == path.parent), 0)
 
 
 def disable_conflicting_portals(portals):
@@ -232,6 +245,8 @@ def run(source, reference, output):
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.json',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
+        owner=settlement_owner(ident,maps)
+        if owner:metadata[str(ident)]['village_id']=owner
         if ident in DEV_TRAINING_MAPS:metadata[str(ident)]['dev_only']=True
         for p in portals:
             points=[]
@@ -254,7 +269,7 @@ def run(source, reference, output):
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only reviewed settlements connected by original unconditional warps are expanded. New interiors provide scenery and doors, not NPC services. Dungeons, special areas and quest-dependent routes are deferred; unsupported exits include reasons.', 'Explicit dev_only training maps restore scenery and ordinary source encounters for developer teleport only. Their entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
+    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only reviewed settlements connected by original unconditional warps are expanded. New interiors provide scenery and doors, not NPC services. Dungeons, special areas and quest-dependent routes are deferred; unsupported exits include reasons.', 'Explicit dev_only training maps restore scenery and ordinary source encounters. Giru 300 additionally has reviewed original doors to villages 5000/5100 and their ordinary interiors; other training entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     print(f'{len(metadata)} maps, {len(portals)} portals, {len(blocked_portals)} blocked endpoints, {len(images)} images')
 
