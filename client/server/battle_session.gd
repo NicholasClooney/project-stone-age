@@ -1,5 +1,5 @@
 extends RefCounted
-## Local authority for classic physical combat. Capture threshold/escape chance remain explicit approximations.
+## Local authority for classic physical combat. Capture follows the pinned reference; escape chance remains an approximation.
 const PLAYER_MAX_HP := 48
 const ENEMY_MAX_HP := 32
 var capture_assist := false
@@ -12,6 +12,7 @@ var _state: Dictionary = {"active": false, "outcome": "", "player_hp":48,"player
 var _config: Dictionary = {}
 var _escape_attempts := 0
 var _skill_used := false
+const CaptureRules = preload("res://server/capture_rules.gd")
 const CombatRules = preload("res://server/classic_combat_rules.gd")
 var _acting_enemy := 0
 var _target := 0
@@ -209,7 +210,16 @@ func _player_action(action: String) -> void:
 			else:
 				_state.events.append("逃跑失败！下次机会增加了。")
 		"capture":
-			if _state.enemies[_target].get("can_capture",true) and _state.enemy_hp * 100 <= _state.enemy_max_hp * 60:
+			var capture_player := {"level":_config.get("player_level",1),"speed":_config.get("player_speed",10),"charm":_config.get("player_charm",60),"luck":_config.get("player_luck",0),"capture_bonus":_config.get("capture_bonus",0)}
+			var evaluation := CaptureRules.evaluate(capture_player,_state.enemies[_target])
+			_config["capture_bonus"]=0 # Consumed after every attempt, including failures.
+			_state["capture_evaluation"]=evaluation
+			var captured := false
+			if evaluation.eligible:
+				var roll := _rng.randi_range(1,100)
+				_state.capture_evaluation["roll"]=roll
+				captured=CaptureRules.succeeds(evaluation,roll)
+			if captured:
 				_state.captured_species = _state.enemy_species
 				_state.captured_species_list.append(_state.enemy_species)
 				_state.capture_success = true
@@ -223,7 +233,7 @@ func _player_action(action: String) -> void:
 				else:
 					_state.events.append("捕获成功！战斗继续。")
 			else:
-				_state.events.append("捕获失败，先削弱对手的体力！")
+				_state.events.append("捕获失败，可继续尝试或降低目标体力。" if evaluation.eligible else str(evaluation.reason))
 		"item":
 			_state.potions -= 1
 			_state.player_hp = mini(_state.player_max_hp,_state.player_hp + 30)

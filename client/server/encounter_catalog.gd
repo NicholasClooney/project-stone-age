@@ -110,6 +110,7 @@ func actor(enemy_id: int, rng: RandomNumberGenerator) -> Dictionary:
 	var initial := weights.duplicate()
 	for i in range(10):initial[rng.randi_range(0,3)] += 1
 	var result := {"source_enemy_id":enemy_id,"template_id":int(template.id),"species":"original_%d"%int(template.id),"name":template.name,"sprite":int(template.sprite),"level":level,"base_stats":{},"growth_weights":weights,"growth_seed":rng.randi(),"growth_rank":5,"hp":1,"learned_skills":[],"source_experience":int(enemy.experience),"can_capture":int(enemy.pet_flag)!=0,"elements":template.elements.duplicate(),"size":int(template.size)}
+	if template.has("capture_resistance"):result.capture_parameter=int(template.capture_resistance)
 	var total := 0
 	for weight in template.weights:total += int(weight)
 	for i in range(6):

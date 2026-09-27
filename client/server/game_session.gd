@@ -4,6 +4,7 @@ var world_catalog = preload("res://scripts/world_catalog.gd").new()
 const SAVE_VERSION := 3
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
+const ClassicLuck = preload("res://server/classic_luck.gd")
 const Progression = preload("res://server/progression.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
@@ -17,6 +18,9 @@ const SPECIES := {
 var _profile: Dictionary
 var _pending: Dictionary = {}
 var last_error := ""
+# Injectable login clock/randomness; unrelated to combat and encounter RNG.
+var login_clock: Callable
+var login_rng: RandomNumberGenerator
 # Temporary solo-training companions; never duplicate persistent rewards or pets.
 var clone_squad_enabled := false
 # Optional single-player assist; each battle snapshots this before any rewards.
@@ -24,12 +28,20 @@ var experience_multiplier: int = 1:
 	set(value):
 		experience_multiplier = value if value in [1,2,10,100] else 1
 
-func _init() -> void:
+func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = null) -> void:
+	login_clock=clock
+	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
+	if luck_random==null:login_rng.randomize()
 	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
 	_profile.player.hp = _profile.player.max_hp
+	_refresh_login_luck()
+
+func _refresh_login_luck() -> void:
+	var now:=int(login_clock.call()) if login_clock.is_valid() else int(Time.get_unix_time_from_system())
+	ClassicLuck.login(_profile.player,now,login_rng)
 
 # Original item 2422: reusable undersea passage permit, sold for 200 stone.
 func buy_travel_pass() -> bool:
@@ -65,6 +77,9 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.ride_pet = _profile.pets[config.ride_pet_index].duplicate(true) if config.ride_pet_index>=0 else {}
 	config.mounted_sprite = preload("res://scripts/riding.gd").composite(str(_profile.character_id),int(config.ride_pet.get("sprite",0))) if not config.ride_pet.is_empty() else -1
 	config.player_level = player.level
+	# Reference effective charm/luck; login owns the native-day luck refresh.
+	config.player_charm = int(player.get("charm",60))
+	config.player_luck = int(player.get("luck",0))
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "club" if _profile.equipped else ""
 	config.allies = []
@@ -437,6 +452,7 @@ func load_game(path: String) -> bool:
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
 			_profile = _normalize_numbers(parsed)
+			_refresh_login_luck()
 			_ensure_pet_ids()
 			if not _profile.inventory.has("mirror_charm"):_profile.inventory.mirror_charm=0
 			if not _profile.has("equipped_mirror"):_profile.equipped_mirror=false
@@ -487,6 +503,8 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,1000000000):
 		return false
+	for field in ["charm","luck","last_luck_time"]:
+		if value.player.has(field) and not _integer(value.player[field],1 if field=="luck" else 0,4102444800 if field=="last_luck_time" else (100 if field=="charm" else 5)):return false
 	if value.player.has("stat_points") and not _integer(value.player.stat_points,0,1000000000):
 		return false
 	if value.player.has("allocated_stats"):
