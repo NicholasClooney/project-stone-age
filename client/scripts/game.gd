@@ -44,7 +44,10 @@ var pet_training: Control
 var adventure_menu: Control
 var profile_persistence := true
 var area_transition_busy := false
-var dev_teleport_mode := false
+var dev_blink_mode := false
+var travel_destinations: Control
+var leveling_destinations: Control
+var clone_button: Button
 var map_transition: CanvasLayer
 var save_path := "user://single-player.json"
 var pet_follower: Node2D
@@ -322,6 +325,7 @@ func open_battle_config(config: Dictionary) -> bool:
 	help.hide()
 	classic_hud.map_panel.hide()
 	encounter_serial += 1
+	battle_session=preload("res://server/squad_battle_session.gd").new() if not config.get("allies",[]).is_empty() else BattleSession.new()
 	battle_session.rng_seed = 42+encounter_serial
 	var state: Dictionary = battle_session.start_battle(config)
 	if is_instance_valid(training_helper) and training_helper.compact_active:
@@ -456,6 +460,11 @@ func _input(event: InputEvent) -> void:
 			held.erase(action)
 
 func _unhandled_input(event: InputEvent) -> void:
+	for modal in [travel_destinations,leveling_destinations]:
+		if is_instance_valid(modal) and modal.visible:
+			if event.is_action_pressed("ui_cancel"):modal.close_menu()
+			get_viewport().set_input_as_handled()
+			return
 	if is_instance_valid(training_helper) and training_helper.visible:
 		if event.is_action_pressed("ui_cancel"):training_helper.close_menu()
 		get_viewport().set_input_as_handled()
@@ -596,6 +605,7 @@ func _physics_process(delta: float) -> void:
 	if profile_persistence and save_elapsed>=5.0 and not moving and not battle_session.snapshot().active:
 		checkpoint()
 	if is_instance_valid(dev_destinations):dev_destinations.disabled = paused_input or area_transition_busy
+	if is_instance_valid(clone_button):clone_button.disabled=paused_input or area_transition_busy
 	update_adventure_hint()
 	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
 
@@ -613,24 +623,39 @@ func dev_visit(id: int) -> bool:
 
 func dev_go_villager() -> void:
 	if paused_input or area_transition_busy:return
-	if dev_teleport_mode:
-		if not load_area_id(1000,Vector2i(92,72)):return
-	approach_npc()
+	if load_area_id(1000,Vector2i(92,72)):approach_npc()
 
 func dev_go_adventure() -> void:
 	if paused_input or area_transition_busy:return
-	if not dev_teleport_mode:
-		walk_to_exit()
-	elif int(data.map_id)==1000:
-		switch_area(true,Vector2i(45,45))
-	else:
-		load_area_id(1000,SPAWN)
+	if int(data.map_id)==1000:switch_area(true,Vector2i(45,45))
+	else:load_area_id(1000,SPAWN)
 
 func dev_go_shop() -> void:
 	if paused_input or area_transition_busy:return
-	if dev_teleport_mode:
-		if load_area_id(1002,Vector2i(16,15)):approach_npc()
-	else:walk_to(Vector2i(67,108))
+	if load_area_id(1002,Vector2i(16,15)):approach_npc()
+
+func blink_to(destination: Vector2i) -> bool:
+	if paused_input or area_transition_busy or battle_session.snapshot().active:return false
+	if not Rect2i(0,0,int(data.width),int(data.height)).has_point(destination):return false
+	var landing:=Vector2i(-1,-1)
+	for radius in range(9):
+		for y in range(-radius,radius+1):
+			for x in range(-radius,radius+1):
+				if maxi(absi(x),absi(y))!=radius:continue
+				var candidate:=destination+Vector2i(x,y)
+				if is_walkable(candidate) and (radius==0 or not world_catalog.links(int(data.map_id)).has(candidate)):
+					landing=candidate;break
+			if landing.x>=0:break
+		if landing.x>=0:break
+	if landing.x<0:return false
+	if is_instance_valid(travel_router):travel_router.cancel("点击瞬移停止了自动寻路。")
+	clear_input();moving=false
+	cell=landing;from_cell=landing;target_cell=landing;logical_position=Vector2(landing);step_progress=0
+	player.position=project(logical_position);player.set_action(3)
+	marker_cell=landing;camera.reset_smoothing();refresh_companion();checkpoint();queue_redraw()
+	if world_catalog.links(int(data.map_id)).has(landing):
+		arrival_lock=Vector2i(-1,-1);handle_arrival()
+	return true
 
 func dev_encounter() -> void:
 	if paused_input or area_transition_busy or battle_view.visible:return
@@ -867,7 +892,11 @@ func build_ui() -> void:
 	dev_destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	var destinations := dev_destinations.get_popup()
 	destinations.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	for id in [1000,2000,3000,4000,100,200,1100,10201,10202,10203]:
+	destinations.add_item("全部地点 / 搜索村民与出入口…",90001)
+	var destination_ids: Array=world_catalog.maps.keys()
+	destination_ids.sort_custom(func(a,b):return int(a)<int(b))
+	for key in destination_ids:
+		var id:=int(key)
 		var info: Dictionary = world_catalog.info(id)
 		if not info.is_empty():destinations.add_item("%s (%d)" % [str(info.name),id],id)
 	destinations.add_separator()
@@ -877,9 +906,16 @@ func build_ui() -> void:
 		if id==90000:
 			random_encounters = not random_encounters
 			destinations.set_item_checked(destinations.get_item_index(90000),random_encounters)
+		elif id==90001:travel_destinations.open_menu()
 		else:call_deferred("dev_visit",id))
 	destinations.about_to_popup.connect(clear_input)
 	dev.add_child(dev_destinations)
+	travel_destinations=preload("res://scripts/travel_destinations.gd").new()
+	travel_destinations.configure(self);root.add_child(travel_destinations)
+	leveling_destinations=preload("res://scripts/leveling_destinations.gd").new()
+	leveling_destinations.configure(self);root.add_child(leveling_destinations)
+	var training_travel:=button("刷怪传送",leveling_destinations.open_menu)
+	training_travel.name="DevTrainingTravel";dev.add_child(training_travel)
 	var overview_button := button("地图导航",func(): dev_map_overview.open_map())
 	overview_button.name = "DevMapOverview"
 	dev.add_child(overview_button)
@@ -887,13 +923,21 @@ func build_ui() -> void:
 	gm_button.name="DevGM"
 	gm_button.z_index=190
 	dev.add_child(gm_button)
-	var teleport := button("传送模式",func(): pass)
-	teleport.name = "DevTeleportMode"
+	var teleport := button("瞬移模式",func(): pass)
+	teleport.name = "DevBlinkMode"
 	teleport.toggle_mode = true
-	teleport.button_pressed = dev_teleport_mode
-	teleport.toggled.connect(func(enabled: bool): dev_teleport_mode=enabled)
-	teleport.tooltip_text = "开启后，村民 / 探险 / 道具店按钮直接传送"
+	teleport.button_pressed = dev_blink_mode
+	teleport.toggled.connect(func(enabled: bool): dev_blink_mode=enabled)
+	teleport.tooltip_text = "开启后点击当前地图即可瞬移；障碍旁寻找可站立位置，关闭后恢复点击寻路"
 	dev.add_child(teleport)
+	clone_button=button("五人镜像队",func():pass)
+	clone_button.name="DevCloneSquad";clone_button.toggle_mode=true
+	clone_button.button_pressed=session.clone_squad_enabled
+	clone_button.tooltip_text="本体优先行动，四个镜像自动跟随目标；经验全归主角和自己的宠物，分身不分走经验。下一场生效。"
+	clone_button.toggled.connect(func(enabled):
+		if not paused_input and not battle_session.snapshot().active:session.clone_squad_enabled=enabled
+		else:clone_button.set_pressed_no_signal(session.clone_squad_enabled))
+	dev.add_child(clone_button)
 	var encounter := button("立即遇敌",dev_encounter)
 	encounter.name = "DevEncounter"
 	dev.add_child(encounter)
@@ -1028,6 +1072,8 @@ func setup_npc() -> void:
 func handle_world_click(point: Vector2) -> void:
 	if paused_input:
 		return
+	if dev_blink_mode:
+		blink_to(Vector2i(unproject(point).round()));return
 	if is_instance_valid(travel_router):travel_router.cancel("手动点击取消了自动寻路。")
 	if is_instance_valid(world_travel) and world_travel.handle_click(point):return
 	if is_instance_valid(npc_sprite) and npc_sprite.get_rect().has_point(npc_sprite.to_local(point)):

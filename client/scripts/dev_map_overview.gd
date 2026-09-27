@@ -113,6 +113,10 @@ func _build_map() -> void:
 	for entry in world.world_catalog.residents:
 		if int(entry.map_id)==current_map:pois.append({"name":entry.name,"cell":Vector2i(entry.cell[0],entry.cell[1]),"color":Color.YELLOW})
 	if current_map==int(world.data.map_id) and not world.npc_data.is_empty():pois.append({"name":world.npc_data.name,"cell":world.npc_cell,"color":Color.YELLOW})
+	if FileAccess.file_exists("res://data/training-spots.json"):
+		var training: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://data/training-spots.json"))
+		for spot in training.get("spots",[]):
+			if int(spot.map_id)==current_map:pois.append({"name":"练级 Lv.%d–%d"%[spot.level_min,spot.level_max],"cell":Vector2i(spot.cell[0],spot.cell[1]),"color":Color.ORANGE})
 	var links: Dictionary=world.world_catalog.links(current_map)
 	var seen: Dictionary={}
 	for cell in links:

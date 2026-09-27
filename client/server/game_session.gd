@@ -17,6 +17,8 @@ const SPECIES := {
 var _profile: Dictionary
 var _pending: Dictionary = {}
 var last_error := ""
+# Temporary solo-training companions; never duplicate persistent rewards or pets.
+var clone_squad_enabled := false
 # Optional single-player assist; each battle snapshots this before any rewards.
 var experience_multiplier: int = 1:
 	set(value):
@@ -62,6 +64,10 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.player_level = player.level
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "club" if _profile.equipped else ""
+	config.allies = []
+	if clone_squad_enabled:
+		for i in range(4):
+			config.allies.append({"name":"分身 %d" % (i+1),"character_id":str(_profile.character_id),"kind":"player","weapon":config.player_weapon,"hp":player.hp,"max_hp":player.max_hp,"attack":config.player_attack,"defence":player.defence,"speed":player.speed,"level":player.level,"vital":config.player_vital,"luck":0})
 	config.capture_slots = PET_CAPACITY-_profile.pets.size()
 	config.pets = _profile.pets.duplicate(true)
 	config.active_pet = _profile.active_pet

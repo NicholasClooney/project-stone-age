@@ -57,7 +57,7 @@ var pet_slide_at := -10.0
 var actor_labels: Array[Label] = []
 var hp_bars: Array[Control] = []
 var hp_fills: Array[ColorRect] = []
-var displayed_hp: Array[int] = [0,0,0,0,0,0,0,0,0,0,0,0]
+var displayed_hp: Array[int] = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0]
 var player_target := 0
 var pet_target := 0
 var switch_pet_index := -2
@@ -92,11 +92,30 @@ func can_render_troop(enemies: Array) -> bool:
 func enemy_actor(index: int) -> int:
 	return 1 if index==0 else index+2
 func enemy_index(index: int) -> int:
-	return 0 if index==1 else index-2 if index>=3 else -1
+	return 0 if index==1 else index-2 if index>=3 and index<12 else -1
+func ally_actor(index: int) -> int:
+	return 12+index
+func ally_home(index: int) -> Vector2:
+	# oft.cpp11399-11456, classic five-person row plus800x600 displacement.
+	return Vector2(613,552)+Vector2(32,-24)*int(ENEMY_SLOT_ORDER[index+1])
+func ally_art(ally: Dictionary) -> String:
+	var ident := str(ally.get("character_id",100000))
+	var weapon := str(ally.get("weapon",""))
+	return str(manifest.get("equipment_variants",{}).get(weapon,{}).get(ident,ident))
+func can_render_allies(allies: Array) -> bool:
+	if allies.size()>4:return false
+	for ally in allies:
+		var animations: Dictionary=manifest.get("characters",{}).get(ally_art(ally),{})
+		for action in [0,1,2,3,4,10]:
+			if animations.get("%d_3"%action,{}).get("frames",[]).is_empty():return false
+	return true
 func enemies_of(snapshot: Dictionary) -> Array:
 	return snapshot.get("enemies",[{"hp":snapshot.get("enemy_hp",0),"max_hp":snapshot.get("enemy_max_hp",1),"name":snapshot.get("enemy_name","乌力"),"sprite":snapshot.get("enemy_sprite",100250)}])
 func health_of(snapshot: Dictionary, index: int, maximum: bool = false) -> int:
 	var key := "max_hp" if maximum else "hp"
+	if index>=12:
+		var allies: Array = snapshot.get("allies",[])
+		return int(allies[index-12].get(key,0)) if index-12<allies.size() else 0
 	if index==0: return int(snapshot.get("player_"+key,0))
 	if index==2: return int(snapshot.get("pet_"+key,0))
 	var opponents := enemies_of(snapshot)
@@ -167,9 +186,9 @@ func _ready() -> void:
 	choice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	choice_panel.z_index = 10
 	stage.add_child(choice_panel)
-	for i in range(12):
+	for i in range(16):
 		var target := Button.new()
-		target.name = "PlayerTarget" if i==0 else "PetTarget" if i==2 else "EnemyTarget" if i==1 else "EnemyTarget%d" % (enemy_index(i)+1)
+		target.name = "AllyTarget%d" % (i-12) if i>=12 else "PlayerTarget" if i==0 else "PetTarget" if i==2 else "EnemyTarget" if i==1 else "EnemyTarget%d" % (enemy_index(i)+1)
 		target.flat = true
 		for theme in ["normal","hover","pressed","disabled","focus"]:
 			target.add_theme_stylebox_override(theme,StyleBoxEmpty.new())
@@ -368,6 +387,14 @@ func open_battle(next_state: Dictionary) -> void:
 		else:
 			actors[1].home = point
 			set_actor_art(1,str(opponents[0].get("sprite",enemy_art)))
+	var allies: Array = next_state.get("allies",[])
+	if not allies.is_empty():
+		# Preserve enemy actor0..9 mapping and the pet slot even for small troops.
+		while actors.size()<12:
+			add_actor(unmounted_player_art,Vector2.ZERO,3)
+			actors[-1]["enabled"]=false
+		for i in range(mini(4,allies.size())):
+			add_actor(ally_art(allies[i]),ally_home(i),3)
 	player_target = 0
 	pet_target = 0
 	switch_pet_index = -2
@@ -466,6 +493,8 @@ func show_state(next_state: Dictionary) -> void:
 		actor_labels[i].add_theme_color_override("font_color",Color.WHITE if enemy_index(i)>=0 else Color.YELLOW)
 	for i in range(enemies_of(state).size()):
 		actor_labels[enemy_actor(i)].text = str(enemies_of(state)[i].get("name","乌力"))
+	for i in range(mini(4,state.get("allies",[]).size())):
+		actor_labels[ally_actor(i)].text=str(state.allies[i].get("name","伙伴"))
 	mark_hunt_target(hunt_target_index)
 	var messages := PackedStringArray()
 	for event in state.get("events",[]): messages.append(str(event))
@@ -605,16 +634,18 @@ func queue_escape(at: float, success: bool, health: Dictionary) -> Dictionary:
 		phase += tick*12.0/(12-i)
 	var end := at+11*tick
 	if success:
-		for index in [0,2]:
-			if index>=actors.size() or int(health.get("player_hp" if index==0 else "pet_hp",0))<=0: continue
+		for index in [0,2,12,13,14,15]:
+			if index>=actors.size() or health_of(health,index)<=0: continue
 			var origin: Vector2 = actors[index].home
 			var destination := origin+Vector2(960-origin.x,(960-origin.x)*0.75)
 			var duration := origin.distance_to(destination)/240.0
 			queue_motion(index,origin,destination,end,duration,7)
 			actors[index].cues.append({"at":end,"action":4,"seconds":duration,"facing":7})
 			actors[index].hide_at = end+duration
-			# Both actors finish before exploration/result controls become available.
+			# All living allies finish before exploration/result controls become available.
 		end = maxf(float(actors[0].hide_at),float(actors[2].get("hide_at",end)) if actors.size()>2 and int(health.get("pet_hp",0))>0 else end)
+		for index in range(12,actors.size()):
+			if health_of(health,index)>0:end=maxf(end,float(actors[index].hide_at))
 	else:
 		for i in range(11):
 			actors[0].cues.append({"at":end+i*tick,"action":4,"seconds":tick,"facing":7,"rate":12.0/(i+1),"phase":phase})
@@ -1077,8 +1108,8 @@ func queue_group_turn(previous: Dictionary) -> void:
 	var before := previous
 	for frame in state.get("turn_frames",[]):
 		var who := str(frame.actor)
-		var index := enemy_actor(int(frame.get("enemy_index",0))) if who=="enemy" else 2 if who=="pet" else 0
-		var target := (2 if str(frame.get("enemy_target",""))=="pet" else 0) if who=="enemy" else enemy_actor(int(frame.get("target_index",0)))
+		var index := enemy_actor(int(frame.get("enemy_index",0))) if who=="enemy" else ally_actor(int(frame.get("ally_index",0))) if who=="ally" else 2 if who=="pet" else 0
+		var target := (ally_actor(int(frame.get("ally_index",0))) if str(frame.get("enemy_target",""))=="ally" else 2 if str(frame.get("enemy_target",""))=="pet" else 0) if who=="enemy" else enemy_actor(int(frame.get("target_index",0)))
 		var outcome := str(frame.get("outcome","hit"))
 		var timing := {"hit":at+0.25,"end":at+0.5}
 		if outcome=="switch":
@@ -1106,15 +1137,15 @@ func queue_group_turn(previous: Dictionary) -> void:
 				if str(actors[index].get("character_id","")).begins_with("101"):
 					sound_cues.append({"at":float(timing.hit),"id":mounted_impact_sound(index)})
 				var dead := health_of(frame,target)<=0
-				var guarding := (target==0 and pending_action=="defend") or (target==2 and str(state.get("last_pet_command",""))=="defend")
+				var guarding := (target==0 and pending_action=="defend") or (target==2 and str(state.get("last_pet_command",""))=="defend") or (target>=12 and bool(frame.get("allies",[])[target-12].get("defending",false)))
 				queue_pose(target,2 if dead else 10 if guarding else 1,float(timing.hit),60.0 if dead else 0.35)
 		else:
 			queue_pose(index,3 if outcome=="standby" else 10,at,0.5)
 			if outcome=="defend": word_cues.append({"at":at,"index":index,"id":26510})
 		for recipient in range(actors.size()):
 			# Capturing removes a target without displaying fictitious damage.
-			if enemy_index(recipient)>=0 and bool(enemies_of(frame)[enemy_index(recipient)].get("captured",false)): continue
-			var guarded := (recipient==0 and pending_action=="defend") or (recipient==2 and str(state.get("last_pet_command",""))=="defend")
+			if enemy_index(recipient)>=0 and enemy_index(recipient)<enemies_of(frame).size() and bool(enemies_of(frame)[enemy_index(recipient)].get("captured",false)): continue
+			var guarded := (recipient==0 and pending_action=="defend") or (recipient==2 and str(state.get("last_pet_command",""))=="defend") or (recipient>=12 and bool(frame.get("allies",[])[recipient-12].get("defending",false)))
 			hp_cues.append({"at":float(timing.hit),"index":recipient,"hp":health_of(frame,recipient),"guarded":guarded,"critical":recipient==target and outcome.ends_with("critical")})
 		if int(before.get("mounted_sprite",-1)) >= 0 or int(frame.get("mounted_sprite",-1)) >= 0:
 			var dismounted := int(frame.get("mounted_sprite",-1)) < 0

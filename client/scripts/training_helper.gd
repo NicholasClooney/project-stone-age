@@ -122,6 +122,7 @@ func record_result(state: Dictionary) -> void:
 func update_status() -> void:
 	var profile: Dictionary=world.session.snapshot()
 	status.text="自动练级 · %d 场 · Lv.%d → %d · 经验 %d× · 播放 %d×"%[battles,initial_level,profile.player.level,settings.xp,settings.speed]
+	if world.session.clone_squad_enabled:status.text+=" · 五人镜像队"
 	status.text+=" · 获得经验 %d（宠物 %d） · 缺素材跳过 %d 组"%[earned_xp,earned_pet_xp,skipped]
 func _unhandled_input(event: InputEvent) -> void:
 	if visible and event.is_action_pressed("ui_cancel"):

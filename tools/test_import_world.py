@@ -5,7 +5,7 @@ import struct
 import tempfile
 import unittest
 from test_import_wilderness import FakeArchive
-from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals
+from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS
 
 
 class WorldImportTests(unittest.TestCase):
@@ -20,6 +20,14 @@ class WorldImportTests(unittest.TestCase):
         self.assertFalse({1400,10001,999}&selected)
         self.assertIn('quest',excluded_reason(paths[10001]))
         self.assertIn('missing',excluded_reason(None))
+
+    def test_dev_training_maps_do_not_expand_ordinary_portals(self):
+        self.assertEqual(len(DEV_TRAINING_MAPS), 35)
+        self.assertTrue({300,400,500,10001,10006,31706,32020} <= DEV_TRAINING_MAPS)
+        self.assertNotIn(10007, DEV_TRAINING_MAPS)
+        original=dict(from_map=100,to_map=1000)
+        links=[original,dict(from_map=100,to_map=10001),dict(from_map=10001,to_map=100),dict(from_map=31701,to_map=31702)]
+        self.assertEqual(ordinary_portals(links,{100,1000}),[original])
 
     def test_conflicting_warps_are_disabled_without_changing_coordinates(self):
         portals=[dict(from_map=200,cell=[229,988],to_map=3413,target=[10,15]),

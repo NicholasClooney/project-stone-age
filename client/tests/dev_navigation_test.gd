@@ -25,15 +25,15 @@ func run():
  check(game.path==route and not route.is_empty() and game.held.is_empty(),"focus loss keeps click route but releases keyboard")
  for i in range(100):game._physics_process(0.5)
  check(game.cell==Vector2i(85,95),"route finishes after losing focus")
- await click(game.find_child("DevTeleportMode",true,false))
- check(game.dev_teleport_mode,"dev toggle enables teleport mode")
+ await click(game.find_child("DevBlinkMode",true,false))
+ check(game.dev_blink_mode,"dev toggle enables click blink mode")
  game.dev_go_villager()
  await physics_frame
  await physics_frame
  check(game.cell==Vector2i(92,72) and game.dialogue.visible,"villager shortcut teleports and opens real conversation")
  game.close_dialogue()
  game.dev_go_adventure()
- check(int(game.data.map_id)==100 and game.dev_teleport_mode and game.path.is_empty(),"adventure teleports and mode survives map rebuild")
+ check(int(game.data.map_id)==100 and game.dev_blink_mode and game.path.is_empty(),"adventure teleports and mode survives map rebuild")
  game.dev_go_adventure()
  check(int(game.data.map_id)==1000,"return shortcut teleports to village")
  game.dev_go_shop()

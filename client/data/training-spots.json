@@ -1,0 +1,3664 @@
+{
+  "schema": 1,
+  "method": "Match ordinary enemy mean level; not a measured XP/minute optimum. Source gates and missing art excluded.",
+  "spots": [
+    {
+      "map_id": 100,
+      "area_id": 26,
+      "name": "萨伊那斯",
+      "cell": [
+        452,
+        470
+      ],
+      "level_min": 4,
+      "level_max": 6,
+      "mean_level": 5.0,
+      "monsters": [
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 28,
+      "name": "萨伊那斯",
+      "cell": [
+        81,
+        635
+      ],
+      "level_min": 1,
+      "level_max": 2,
+      "mean_level": 1.12,
+      "monsters": [
+        "乌力",
+        "乌力斯坦",
+        "多利凯拉",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 29,
+      "name": "萨伊那斯",
+      "cell": [
+        258,
+        603
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 2.62,
+      "monsters": [
+        "乌力斯坦",
+        "多利凯拉",
+        "昆伊",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 30,
+      "name": "萨伊那斯",
+      "cell": [
+        185,
+        458
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 2.6,
+      "monsters": [
+        "乌力",
+        "乌力斯坦",
+        "昆伊",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 31,
+      "name": "萨伊那斯",
+      "cell": [
+        367,
+        607
+      ],
+      "level_min": 2,
+      "level_max": 5,
+      "mean_level": 3.86,
+      "monsters": [
+        "乌力",
+        "乌力斯坦",
+        "多利凯拉",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 32,
+      "name": "萨伊那斯",
+      "cell": [
+        165,
+        353
+      ],
+      "level_min": 2,
+      "level_max": 6,
+      "mean_level": 4.33,
+      "monsters": [
+        "多利凯拉",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 33,
+      "name": "萨伊那斯",
+      "cell": [
+        364,
+        452
+      ],
+      "level_min": 4,
+      "level_max": 6,
+      "mean_level": 5.0,
+      "monsters": [
+        "多利凯拉",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 37,
+      "name": "萨伊那斯",
+      "cell": [
+        390,
+        463
+      ],
+      "level_min": 1,
+      "level_max": 10,
+      "mean_level": 6.36,
+      "monsters": [
+        "多利凯拉",
+        "绿龟",
+        "贝恩达斯",
+        "邦洛洛克斯",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "name": "萨伊那斯",
+      "cell": [
+        623,
+        178
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 11.65,
+      "monsters": [
+        "奇宝",
+        "布伊",
+        "布比",
+        "火鸡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 39,
+      "name": "萨伊那斯",
+      "cell": [
+        613,
+        286
+      ],
+      "level_min": 9,
+      "level_max": 13,
+      "mean_level": 11.0,
+      "monsters": [
+        "奇宝",
+        "布伊",
+        "布比",
+        "火鸡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 40,
+      "name": "萨伊那斯",
+      "cell": [
+        563,
+        335
+      ],
+      "level_min": 9,
+      "level_max": 12,
+      "mean_level": 10.5,
+      "monsters": [
+        "布伊",
+        "布比"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 44,
+      "name": "萨伊那斯",
+      "cell": [
+        525,
+        311
+      ],
+      "level_min": 10,
+      "level_max": 14,
+      "mean_level": 12.0,
+      "monsters": [
+        "呼拔拔",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 47,
+      "name": "萨伊那斯",
+      "cell": [
+        490,
+        145
+      ],
+      "level_min": 1,
+      "level_max": 18,
+      "mean_level": 15.06,
+      "monsters": [
+        "呼拔拔",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 48,
+      "name": "萨伊那斯",
+      "cell": [
+        307,
+        72
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 17.5,
+      "monsters": [
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 49,
+      "name": "萨伊那斯",
+      "cell": [
+        246,
+        159
+      ],
+      "level_min": 1,
+      "level_max": 20,
+      "mean_level": 17.14,
+      "monsters": [
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 50,
+      "name": "萨伊那斯",
+      "cell": [
+        362,
+        148
+      ],
+      "level_min": 11,
+      "level_max": 16,
+      "mean_level": 13.5,
+      "monsters": [
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 51,
+      "name": "萨伊那斯",
+      "cell": [
+        271,
+        240
+      ],
+      "level_min": 9,
+      "level_max": 14,
+      "mean_level": 11.5,
+      "monsters": [
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 52,
+      "name": "萨伊那斯",
+      "cell": [
+        396,
+        257
+      ],
+      "level_min": 9,
+      "level_max": 14,
+      "mean_level": 11.5,
+      "monsters": [
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 54,
+      "name": "萨伊那斯",
+      "cell": [
+        590,
+        370
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 17.5,
+      "monsters": [
+        "乌力",
+        "乌力斯坦"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 55,
+      "name": "萨伊那斯",
+      "cell": [
+        618,
+        397
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 17.5,
+      "monsters": [
+        "乌力",
+        "乌力斯坦"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 56,
+      "name": "萨伊那斯",
+      "cell": [
+        633,
+        376
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 17.5,
+      "monsters": [
+        "乌力",
+        "乌力斯坦"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 57,
+      "name": "萨伊那斯",
+      "cell": [
+        646,
+        360
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 17.5,
+      "monsters": [
+        "乌力",
+        "乌力斯坦"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 64,
+      "name": "萨伊那斯",
+      "cell": [
+        156,
+        569
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 2.73,
+      "monsters": [
+        "乌力",
+        "乌力斯坦",
+        "多利凯拉",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 70,
+      "name": "萨伊那斯",
+      "cell": [
+        524,
+        324
+      ],
+      "level_min": 9,
+      "level_max": 13,
+      "mean_level": 11.14,
+      "monsters": [
+        "奇宝",
+        "布伊",
+        "布比",
+        "火鸡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 223,
+      "name": "萨伊那斯",
+      "cell": [
+        396,
+        160
+      ],
+      "level_min": 11,
+      "level_max": 22,
+      "mean_level": 13.89,
+      "monsters": [
+        "特洛昆",
+        "盗贼",
+        "盗贼鲁尼帖斯",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 224,
+      "name": "萨伊那斯",
+      "cell": [
+        396,
+        227
+      ],
+      "level_min": 9,
+      "level_max": 22,
+      "mean_level": 12.01,
+      "monsters": [
+        "特洛昆",
+        "盗贼",
+        "盗贼鲁尼帖斯",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 87,
+      "name": "加鲁卡",
+      "cell": [
+        601,
+        342
+      ],
+      "level_min": 1,
+      "level_max": 2,
+      "mean_level": 1.21,
+      "monsters": [
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 88,
+      "name": "加鲁卡",
+      "cell": [
+        653,
+        336
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 89,
+      "name": "加鲁卡",
+      "cell": [
+        493,
+        139
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌宝宝",
+        "克洛尔",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 91,
+      "name": "加鲁卡",
+      "cell": [
+        460,
+        335
+      ],
+      "level_min": 1,
+      "level_max": 5,
+      "mean_level": 3.5,
+      "monsters": [
+        "乌宝宝",
+        "克洛尔",
+        "多利诺布斯",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 92,
+      "name": "加鲁卡",
+      "cell": [
+        450,
+        471
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.33,
+      "monsters": [
+        "克洛尔",
+        "多利诺布斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 93,
+      "name": "加鲁卡",
+      "cell": [
+        486,
+        176
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.2,
+      "monsters": [
+        "克洛尔",
+        "多利诺布斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 94,
+      "name": "加鲁卡",
+      "cell": [
+        409,
+        398
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "克洛尔",
+        "多利诺布斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 95,
+      "name": "加鲁卡",
+      "cell": [
+        297,
+        625
+      ],
+      "level_min": 1,
+      "level_max": 3,
+      "mean_level": 1.59,
+      "monsters": [
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 96,
+      "name": "加鲁卡",
+      "cell": [
+        199,
+        532
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 97,
+      "name": "加鲁卡",
+      "cell": [
+        138,
+        412
+      ],
+      "level_min": 3,
+      "level_max": 5,
+      "mean_level": 4.0,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 98,
+      "name": "加鲁卡",
+      "cell": [
+        367,
+        615
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 99,
+      "name": "加鲁卡",
+      "cell": [
+        352,
+        529
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 100,
+      "name": "加鲁卡",
+      "cell": [
+        417,
+        561
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 102,
+      "name": "加鲁卡",
+      "cell": [
+        436,
+        535
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 103,
+      "name": "加鲁卡",
+      "cell": [
+        272,
+        287
+      ],
+      "level_min": 3,
+      "level_max": 5,
+      "mean_level": 4.0,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 104,
+      "name": "加鲁卡",
+      "cell": [
+        317,
+        287
+      ],
+      "level_min": 3,
+      "level_max": 5,
+      "mean_level": 4.0,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 105,
+      "name": "加鲁卡",
+      "cell": [
+        322,
+        290
+      ],
+      "level_min": 3,
+      "level_max": 5,
+      "mean_level": 4.0,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 106,
+      "name": "加鲁卡",
+      "cell": [
+        425,
+        342
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 107,
+      "name": "加鲁卡",
+      "cell": [
+        409,
+        323
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 108,
+      "name": "加鲁卡",
+      "cell": [
+        393,
+        320
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 109,
+      "name": "加鲁卡",
+      "cell": [
+        375,
+        316
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 110,
+      "name": "加鲁卡",
+      "cell": [
+        413,
+        372
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 111,
+      "name": "加鲁卡",
+      "cell": [
+        408,
+        380
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 112,
+      "name": "加鲁卡",
+      "cell": [
+        414,
+        346
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 113,
+      "name": "加鲁卡",
+      "cell": [
+        369,
+        386
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 114,
+      "name": "加鲁卡",
+      "cell": [
+        323,
+        472
+      ],
+      "level_min": 1,
+      "level_max": 5,
+      "mean_level": 3.6,
+      "monsters": [
+        "乌卡鲁",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 115,
+      "name": "加鲁卡",
+      "cell": [
+        291,
+        386
+      ],
+      "level_min": 1,
+      "level_max": 5,
+      "mean_level": 3.45,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "尼可斯",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 116,
+      "name": "加鲁卡",
+      "cell": [
+        170,
+        617
+      ],
+      "level_min": 2,
+      "level_max": 3,
+      "mean_level": 2.5,
+      "monsters": [
+        "克邦凯斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 117,
+      "name": "加鲁卡",
+      "cell": [
+        222,
+        564
+      ],
+      "level_min": 1,
+      "level_max": 2,
+      "mean_level": 1.5,
+      "monsters": [
+        "克邦凯斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 118,
+      "name": "加鲁卡",
+      "cell": [
+        124,
+        564
+      ],
+      "level_min": 2,
+      "level_max": 3,
+      "mean_level": 2.5,
+      "monsters": [
+        "克邦凯斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 119,
+      "name": "加鲁卡",
+      "cell": [
+        340,
+        311
+      ],
+      "level_min": 2,
+      "level_max": 4,
+      "mean_level": 3.0,
+      "monsters": [
+        "乌卡鲁",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 126,
+      "name": "加鲁卡",
+      "cell": [
+        506,
+        430
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 127,
+      "name": "加鲁卡",
+      "cell": [
+        514,
+        419
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 128,
+      "name": "加鲁卡",
+      "cell": [
+        521,
+        431
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 129,
+      "name": "加鲁卡",
+      "cell": [
+        518,
+        422
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 130,
+      "name": "加鲁卡",
+      "cell": [
+        518,
+        437
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 131,
+      "name": "加鲁卡",
+      "cell": [
+        516,
+        451
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 132,
+      "name": "加鲁卡",
+      "cell": [
+        514,
+        470
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 133,
+      "name": "加鲁卡",
+      "cell": [
+        561,
+        540
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 11.59,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 134,
+      "name": "加鲁卡",
+      "cell": [
+        491,
+        505
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 11.59,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 135,
+      "name": "加鲁卡",
+      "cell": [
+        482,
+        510
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 11.59,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 136,
+      "name": "加鲁卡",
+      "cell": [
+        486,
+        565
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 11.59,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 137,
+      "name": "加鲁卡",
+      "cell": [
+        586,
+        709
+      ],
+      "level_min": 11,
+      "level_max": 16,
+      "mean_level": 13.72,
+      "monsters": [
+        "克克洛斯",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 138,
+      "name": "加鲁卡",
+      "cell": [
+        648,
+        669
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 11.78,
+      "monsters": [
+        "克克洛斯",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 139,
+      "name": "加鲁卡",
+      "cell": [
+        472,
+        808
+      ],
+      "level_min": 11,
+      "level_max": 15,
+      "mean_level": 13.17,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 140,
+      "name": "加鲁卡",
+      "cell": [
+        341,
+        945
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 13.04,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 141,
+      "name": "加鲁卡",
+      "cell": [
+        405,
+        865
+      ],
+      "level_min": 11,
+      "level_max": 15,
+      "mean_level": 13.17,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 142,
+      "name": "加鲁卡",
+      "cell": [
+        351,
+        893
+      ],
+      "level_min": 11,
+      "level_max": 15,
+      "mean_level": 13.17,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 143,
+      "name": "加鲁卡",
+      "cell": [
+        289,
+        920
+      ],
+      "level_min": 13,
+      "level_max": 17,
+      "mean_level": 15.0,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 144,
+      "name": "加鲁卡",
+      "cell": [
+        196,
+        932
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.17,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 145,
+      "name": "加鲁卡",
+      "cell": [
+        224,
+        981
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.17,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 146,
+      "name": "加鲁卡",
+      "cell": [
+        87,
+        1117
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 12.61,
+      "monsters": [
+        "卡克尔",
+        "巴克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 147,
+      "name": "加鲁卡",
+      "cell": [
+        354,
+        704
+      ],
+      "level_min": 1,
+      "level_max": 18,
+      "mean_level": 16.45,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 148,
+      "name": "加鲁卡",
+      "cell": [
+        362,
+        701
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.62,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 149,
+      "name": "加鲁卡",
+      "cell": [
+        368,
+        690
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.62,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 150,
+      "name": "加鲁卡",
+      "cell": [
+        452,
+        631
+      ],
+      "level_min": 1,
+      "level_max": 18,
+      "mean_level": 16.45,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 151,
+      "name": "加鲁卡",
+      "cell": [
+        422,
+        676
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.62,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 152,
+      "name": "加鲁卡",
+      "cell": [
+        288,
+        750
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 153,
+      "name": "加鲁卡",
+      "cell": [
+        235,
+        767
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 154,
+      "name": "加鲁卡",
+      "cell": [
+        237,
+        793
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 155,
+      "name": "加鲁卡",
+      "cell": [
+        240,
+        799
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 156,
+      "name": "加鲁卡",
+      "cell": [
+        288,
+        816
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 157,
+      "name": "加鲁卡",
+      "cell": [
+        302,
+        824
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 158,
+      "name": "加鲁卡",
+      "cell": [
+        321,
+        821
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 159,
+      "name": "加鲁卡",
+      "cell": [
+        277,
+        822
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 160,
+      "name": "加鲁卡",
+      "cell": [
+        335,
+        777
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 161,
+      "name": "加鲁卡",
+      "cell": [
+        342,
+        758
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 162,
+      "name": "加鲁卡",
+      "cell": [
+        348,
+        752
+      ],
+      "level_min": 15,
+      "level_max": 20,
+      "mean_level": 18.55,
+      "monsters": [
+        "卡克尔",
+        "巴克",
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 163,
+      "name": "加鲁卡",
+      "cell": [
+        188,
+        778
+      ],
+      "level_min": 15,
+      "level_max": 17,
+      "mean_level": 16.0,
+      "monsters": [
+        "克邦凯斯",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 164,
+      "name": "加鲁卡",
+      "cell": [
+        94,
+        730
+      ],
+      "level_min": 1,
+      "level_max": 18,
+      "mean_level": 16.74,
+      "monsters": [
+        "克邦凯斯",
+        "海主人",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 165,
+      "name": "加鲁卡",
+      "cell": [
+        197,
+        711
+      ],
+      "level_min": 1,
+      "level_max": 18,
+      "mean_level": 16.48,
+      "monsters": [
+        "克邦凯斯",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 166,
+      "name": "加鲁卡",
+      "cell": [
+        66,
+        692
+      ],
+      "level_min": 16,
+      "level_max": 20,
+      "mean_level": 17.06,
+      "monsters": [
+        "克邦凯斯",
+        "海主人",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 167,
+      "name": "加鲁卡",
+      "cell": [
+        369,
+        285
+      ],
+      "level_min": 6,
+      "level_max": 10,
+      "mean_level": 7.86,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯",
+        "布伊比"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 168,
+      "name": "加鲁卡",
+      "cell": [
+        375,
+        190
+      ],
+      "level_min": 1,
+      "level_max": 9,
+      "mean_level": 7.19,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯",
+        "布伊比"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 169,
+      "name": "加鲁卡",
+      "cell": [
+        416,
+        201
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 170,
+      "name": "加鲁卡",
+      "cell": [
+        426,
+        207
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 171,
+      "name": "加鲁卡",
+      "cell": [
+        452,
+        289
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 172,
+      "name": "加鲁卡",
+      "cell": [
+        447,
+        331
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 173,
+      "name": "加鲁卡",
+      "cell": [
+        456,
+        328
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 174,
+      "name": "加鲁卡",
+      "cell": [
+        446,
+        241
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 175,
+      "name": "加鲁卡",
+      "cell": [
+        454,
+        246
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 176,
+      "name": "加鲁卡",
+      "cell": [
+        459,
+        256
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 177,
+      "name": "加鲁卡",
+      "cell": [
+        197,
+        831
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 178,
+      "name": "加鲁卡",
+      "cell": [
+        209,
+        822
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 179,
+      "name": "加鲁卡",
+      "cell": [
+        216,
+        815
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 180,
+      "name": "加鲁卡",
+      "cell": [
+        225,
+        812
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 181,
+      "name": "加鲁卡",
+      "cell": [
+        237,
+        818
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 182,
+      "name": "加鲁卡",
+      "cell": [
+        246,
+        820
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 183,
+      "name": "加鲁卡",
+      "cell": [
+        178,
+        830
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 184,
+      "name": "加鲁卡",
+      "cell": [
+        158,
+        837
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 185,
+      "name": "加鲁卡",
+      "cell": [
+        122,
+        840
+      ],
+      "level_min": 14,
+      "level_max": 18,
+      "mean_level": 16.33,
+      "monsters": [
+        "贝鲁伊卡",
+        "贝鲁卡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 186,
+      "name": "加鲁卡",
+      "cell": [
+        597,
+        452
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "克洛尔",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 187,
+      "name": "加鲁卡",
+      "cell": [
+        627,
+        483
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "克洛尔",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 188,
+      "name": "加鲁卡",
+      "cell": [
+        593,
+        513
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "克洛尔",
+        "克雷尔",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 189,
+      "name": "加鲁卡",
+      "cell": [
+        524,
+        444
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 190,
+      "name": "加鲁卡",
+      "cell": [
+        547,
+        450
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 191,
+      "name": "加鲁卡",
+      "cell": [
+        546,
+        479
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 192,
+      "name": "加鲁卡",
+      "cell": [
+        548,
+        424
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 193,
+      "name": "加鲁卡",
+      "cell": [
+        570,
+        421
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 194,
+      "name": "加鲁卡",
+      "cell": [
+        579,
+        412
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 195,
+      "name": "加鲁卡",
+      "cell": [
+        613,
+        394
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 196,
+      "name": "加鲁卡",
+      "cell": [
+        592,
+        405
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 197,
+      "name": "加鲁卡",
+      "cell": [
+        586,
+        398
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 198,
+      "name": "加鲁卡",
+      "cell": [
+        595,
+        396
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 199,
+      "name": "加鲁卡",
+      "cell": [
+        601,
+        432
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 200,
+      "name": "加鲁卡",
+      "cell": [
+        572,
+        445
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 201,
+      "name": "加鲁卡",
+      "cell": [
+        582,
+        440
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 202,
+      "name": "加鲁卡",
+      "cell": [
+        591,
+        442
+      ],
+      "level_min": 10,
+      "level_max": 12,
+      "mean_level": 11.0,
+      "monsters": [
+        "乌卡鲁",
+        "乌宝宝",
+        "威威"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 222,
+      "name": "加鲁卡",
+      "cell": [
+        410,
+        896
+      ],
+      "level_min": 11,
+      "level_max": 22,
+      "mean_level": 13.74,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "山贼",
+        "山贼格尔顿",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 257,
+      "name": "加鲁卡",
+      "cell": [
+        392,
+        760
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 13.0,
+      "monsters": [
+        "克克洛斯",
+        "卡克尔",
+        "巴克",
+        "霍尔克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 200,
+      "area_id": 398,
+      "name": "加鲁卡",
+      "cell": [
+        392,
+        248
+      ],
+      "level_min": 6,
+      "level_max": 9,
+      "mean_level": 7.5,
+      "monsters": [
+        "多利诺布斯",
+        "尼可斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 300,
+      "area_id": 309,
+      "name": "吉鲁岛",
+      "cell": [
+        176,
+        344
+      ],
+      "level_min": 1,
+      "level_max": 42,
+      "mean_level": 40.51,
+      "monsters": [
+        "格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 310,
+      "name": "吉鲁岛",
+      "cell": [
+        409,
+        461
+      ],
+      "level_min": 41,
+      "level_max": 43,
+      "mean_level": 42.0,
+      "monsters": [
+        "多萨金格",
+        "拉奇鲁哥"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 311,
+      "name": "吉鲁岛",
+      "cell": [
+        402,
+        307
+      ],
+      "level_min": 43,
+      "level_max": 45,
+      "mean_level": 44.0,
+      "monsters": [
+        "布鲁顿",
+        "邦浦洛斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 312,
+      "name": "吉鲁岛",
+      "cell": [
+        494,
+        158
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "扬奇洛斯",
+        "邦奇诺"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 313,
+      "name": "吉鲁岛",
+      "cell": [
+        371,
+        183
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "扬奇洛斯",
+        "邦奇诺"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 314,
+      "name": "吉鲁岛",
+      "cell": [
+        509,
+        93
+      ],
+      "level_min": 1,
+      "level_max": 46,
+      "mean_level": 44.46,
+      "monsters": [
+        "扬奇洛斯",
+        "邦奇诺"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 315,
+      "name": "吉鲁岛",
+      "cell": [
+        443,
+        113
+      ],
+      "level_min": 1,
+      "level_max": 46,
+      "mean_level": 44.46,
+      "monsters": [
+        "扬奇洛斯",
+        "邦奇诺"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 316,
+      "name": "吉鲁岛",
+      "cell": [
+        159,
+        116
+      ],
+      "level_min": 48,
+      "level_max": 50,
+      "mean_level": 49.0,
+      "monsters": [
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 317,
+      "name": "吉鲁岛",
+      "cell": [
+        254,
+        135
+      ],
+      "level_min": 48,
+      "level_max": 50,
+      "mean_level": 49.0,
+      "monsters": [
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 318,
+      "name": "吉鲁岛",
+      "cell": [
+        236,
+        98
+      ],
+      "level_min": 48,
+      "level_max": 50,
+      "mean_level": 49.0,
+      "monsters": [
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 330,
+      "name": "吉鲁岛",
+      "cell": [
+        457,
+        524
+      ],
+      "level_min": 1,
+      "level_max": 43,
+      "mean_level": 41.0,
+      "monsters": [
+        "多萨金格",
+        "拉奇鲁哥"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 331,
+      "name": "吉鲁岛",
+      "cell": [
+        373,
+        462
+      ],
+      "level_min": 1,
+      "level_max": 43,
+      "mean_level": 41.0,
+      "monsters": [
+        "多萨金格",
+        "拉奇鲁哥"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 378,
+      "name": "吉鲁岛",
+      "cell": [
+        137,
+        55
+      ],
+      "level_min": 1,
+      "level_max": 50,
+      "mean_level": 48.6,
+      "monsters": [
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 379,
+      "name": "吉鲁岛",
+      "cell": [
+        105,
+        139
+      ],
+      "level_min": 1,
+      "level_max": 50,
+      "mean_level": 47.45,
+      "monsters": [
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 470,
+      "name": "吉鲁岛",
+      "cell": [
+        337,
+        114
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 471,
+      "name": "吉鲁岛",
+      "cell": [
+        287,
+        209
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 472,
+      "name": "吉鲁岛",
+      "cell": [
+        268,
+        82
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 473,
+      "name": "吉鲁岛",
+      "cell": [
+        244,
+        68
+      ],
+      "level_min": 1,
+      "level_max": 54,
+      "mean_level": 52.25,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 474,
+      "name": "吉鲁岛",
+      "cell": [
+        320,
+        181
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 475,
+      "name": "吉鲁岛",
+      "cell": [
+        324,
+        174
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 476,
+      "name": "吉鲁岛",
+      "cell": [
+        329,
+        167
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 477,
+      "name": "吉鲁岛",
+      "cell": [
+        336,
+        160
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 478,
+      "name": "吉鲁岛",
+      "cell": [
+        348,
+        171
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 479,
+      "name": "吉鲁岛",
+      "cell": [
+        365,
+        151
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 564,
+      "name": "吉鲁岛",
+      "cell": [
+        317,
+        234
+      ],
+      "level_min": 51,
+      "level_max": 54,
+      "mean_level": 52.5,
+      "monsters": [
+        "利则诺顿",
+        "齐尔格尔顿"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 607,
+      "name": "吉鲁岛",
+      "cell": [
+        122,
+        232
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩",
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 608,
+      "name": "吉鲁岛",
+      "cell": [
+        106,
+        326
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩",
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 609,
+      "name": "吉鲁岛",
+      "cell": [
+        172,
+        291
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩",
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 610,
+      "name": "吉鲁岛",
+      "cell": [
+        163,
+        321
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩",
+        "玛恩摩洛斯",
+        "玛摩那斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 400,
+      "area_id": 383,
+      "name": "沙姆岛",
+      "cell": [
+        74,
+        74
+      ],
+      "level_min": 1,
+      "level_max": 45,
+      "mean_level": 36.53,
+      "monsters": [
+        "克克洛斯",
+        "奇宝",
+        "布拉奇多斯",
+        "火鸡",
+        "霍尔克"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 638,
+      "name": "五十年前波拉岛",
+      "cell": [
+        255,
+        326
+      ],
+      "level_min": 80,
+      "level_max": 90,
+      "mean_level": 85.0,
+      "monsters": [
+        "布拉奇多斯",
+        "布洛多斯",
+        "斯天多斯",
+        "邦恩多斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 639,
+      "name": "五十年前波拉岛",
+      "cell": [
+        400,
+        400
+      ],
+      "level_min": 90,
+      "level_max": 95,
+      "mean_level": 92.5,
+      "monsters": [
+        "可利多洛斯",
+        "奥卡洛斯",
+        "巴朵兰恩",
+        "布拉奇多斯",
+        "布洛多斯",
+        "斯天多斯",
+        "诺斯多洛斯",
+        "邦恩多斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 652,
+      "name": "五十年前波拉岛",
+      "cell": [
+        547,
+        515
+      ],
+      "level_min": 1,
+      "level_max": 105,
+      "mean_level": 94.05,
+      "monsters": [
+        "卡伊霍恩",
+        "可利多洛斯",
+        "奥卡洛斯",
+        "巴朵兰恩",
+        "布拉奇多斯",
+        "布洛多斯",
+        "拉伊霍恩",
+        "斯天多斯",
+        "诺斯多洛斯",
+        "邦恩多斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 659,
+      "name": "五十年前波拉岛",
+      "cell": [
+        218,
+        319
+      ],
+      "level_min": 90,
+      "level_max": 105,
+      "mean_level": 97.5,
+      "monsters": [
+        "克邦凯斯",
+        "加克拉",
+        "加格",
+        "史多拉奇顿",
+        "拉可拉斯",
+        "萨美洛斯",
+        "邦恩吉"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 660,
+      "name": "五十年前波拉岛",
+      "cell": [
+        196,
+        319
+      ],
+      "level_min": 90,
+      "level_max": 105,
+      "mean_level": 97.5,
+      "monsters": [
+        "克邦凯斯",
+        "加克拉",
+        "加格",
+        "史多拉奇顿",
+        "拉可拉斯",
+        "萨美洛斯",
+        "邦恩吉"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 500,
+      "area_id": 661,
+      "name": "五十年前波拉岛",
+      "cell": [
+        158,
+        312
+      ],
+      "level_min": 90,
+      "level_max": 105,
+      "mean_level": 97.5,
+      "monsters": [
+        "克邦凯斯",
+        "加克拉",
+        "加格",
+        "史多拉奇顿",
+        "拉可拉斯",
+        "萨美洛斯",
+        "邦恩吉"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10001,
+      "area_id": 72,
+      "name": "阿布的洞窟地下１楼",
+      "cell": [
+        25,
+        25
+      ],
+      "level_min": 20,
+      "level_max": 22,
+      "mean_level": 21.0,
+      "monsters": [
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10002,
+      "area_id": 73,
+      "name": "阿布的洞窟地下２楼",
+      "cell": [
+        27,
+        23
+      ],
+      "level_min": 20,
+      "level_max": 23,
+      "mean_level": 21.67,
+      "monsters": [
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10003,
+      "area_id": 74,
+      "name": "阿布的洞窟地下３楼",
+      "cell": [
+        13,
+        18
+      ],
+      "level_min": 22,
+      "level_max": 24,
+      "mean_level": 23.0,
+      "monsters": [
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10003,
+      "area_id": 75,
+      "name": "阿布的洞窟地下３楼",
+      "cell": [
+        28,
+        22
+      ],
+      "level_min": 21,
+      "level_max": 23,
+      "mean_level": 22.0,
+      "monsters": [
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10004,
+      "area_id": 76,
+      "name": "阿布的洞窟地下４楼",
+      "cell": [
+        25,
+        25
+      ],
+      "level_min": 22,
+      "level_max": 24,
+      "mean_level": 23.0,
+      "monsters": [
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10005,
+      "area_id": 77,
+      "name": "阿布的洞窟地下５楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 25,
+      "level_max": 27,
+      "mean_level": 26.0,
+      "monsters": [
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 10006,
+      "area_id": 78,
+      "name": "阿布的洞窟地下６楼",
+      "cell": [
+        25,
+        50
+      ],
+      "level_min": 28,
+      "level_max": 30,
+      "mean_level": 29.0,
+      "monsters": [
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31701,
+      "area_id": 338,
+      "name": "五兄弟的山寨地下１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 50,
+      "level_max": 54,
+      "mean_level": 51.75,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31702,
+      "area_id": 339,
+      "name": "五兄弟的山寨地下２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 50,
+      "level_max": 57,
+      "mean_level": 54.0,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31703,
+      "area_id": 340,
+      "name": "五兄弟的山寨地下３楼",
+      "cell": [
+        25,
+        23
+      ],
+      "level_min": 52,
+      "level_max": 56,
+      "mean_level": 54.25,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31704,
+      "area_id": 341,
+      "name": "五兄弟的山寨地下４楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 50,
+      "level_max": 56,
+      "mean_level": 53.2,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31705,
+      "area_id": 342,
+      "name": "五兄弟的山寨地下５楼",
+      "cell": [
+        24,
+        34
+      ],
+      "level_min": 52,
+      "level_max": 58,
+      "mean_level": 55.2,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31706,
+      "area_id": 343,
+      "name": "五兄弟的山寨地下６楼",
+      "cell": [
+        24,
+        39
+      ],
+      "level_min": 54,
+      "level_max": 58,
+      "mean_level": 56.0,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31706,
+      "area_id": 344,
+      "name": "五兄弟的山寨地下６楼",
+      "cell": [
+        4,
+        42
+      ],
+      "level_min": 54,
+      "level_max": 58,
+      "mean_level": 56.0,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 31706,
+      "area_id": 345,
+      "name": "五兄弟的山寨地下６楼",
+      "cell": [
+        34,
+        42
+      ],
+      "level_min": 54,
+      "level_max": 58,
+      "mean_level": 56.0,
+      "monsters": [
+        "布伊",
+        "布伊比",
+        "布比"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32001,
+      "area_id": 611,
+      "name": "漆黑的洞窟 地下1楼",
+      "cell": [
+        29,
+        30
+      ],
+      "level_min": 85,
+      "level_max": 87,
+      "mean_level": 86.0,
+      "monsters": [
+        "扬奇洛斯",
+        "朵洛将恩",
+        "格尔格"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32002,
+      "area_id": 612,
+      "name": "漆黑的洞窟 地下2楼",
+      "cell": [
+        28,
+        29
+      ],
+      "level_min": 85,
+      "level_max": 87,
+      "mean_level": 86.0,
+      "monsters": [
+        "扬奇洛斯",
+        "朵洛将恩",
+        "格尔格"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32003,
+      "area_id": 613,
+      "name": "漆黑的洞窟 地下3楼",
+      "cell": [
+        27,
+        30
+      ],
+      "level_min": 85,
+      "level_max": 87,
+      "mean_level": 86.0,
+      "monsters": [
+        "扬奇洛斯",
+        "朵洛将恩",
+        "格尔格"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32004,
+      "area_id": 614,
+      "name": "漆黑的洞窟 地下4楼",
+      "cell": [
+        30,
+        27
+      ],
+      "level_min": 50,
+      "level_max": 87,
+      "mean_level": 80.86,
+      "monsters": [
+        "大地守护兽",
+        "扬奇洛斯",
+        "朵洛将恩",
+        "格尔格",
+        "水的守护兽",
+        "火的守护兽",
+        "风的守护兽"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32005,
+      "area_id": 615,
+      "name": "漆黑的洞窟 地下5楼",
+      "cell": [
+        29,
+        30
+      ],
+      "level_min": 1,
+      "level_max": 87,
+      "mean_level": 85.58,
+      "monsters": [
+        "扬奇洛斯",
+        "朵洛将恩",
+        "格尔格"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32006,
+      "area_id": 616,
+      "name": "漆黑的洞窟 地下6楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 50,
+      "level_max": 90,
+      "mean_level": 83.43,
+      "monsters": [
+        "加宝格恩",
+        "大地守护兽",
+        "布鲁顿",
+        "水的守护兽",
+        "火的守护兽",
+        "阿伊萨",
+        "风的守护兽"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32007,
+      "area_id": 617,
+      "name": "漆黑的洞窟 地下7楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 88,
+      "level_max": 90,
+      "mean_level": 89.0,
+      "monsters": [
+        "加宝格恩",
+        "布鲁顿",
+        "阿伊萨"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32008,
+      "area_id": 618,
+      "name": "漆黑的洞窟 地下8楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 50,
+      "level_max": 90,
+      "mean_level": 83.43,
+      "monsters": [
+        "加宝格恩",
+        "大地守护兽",
+        "布鲁顿",
+        "水的守护兽",
+        "火的守护兽",
+        "阿伊萨",
+        "风的守护兽"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32009,
+      "area_id": 619,
+      "name": "漆黑的洞窟 地下9楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 90,
+      "mean_level": 88.56,
+      "monsters": [
+        "加宝格恩",
+        "布鲁顿",
+        "阿伊萨"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32010,
+      "area_id": 620,
+      "name": "漆黑的洞窟 地下10楼",
+      "cell": [
+        51,
+        47
+      ],
+      "level_min": 88,
+      "level_max": 90,
+      "mean_level": 89.0,
+      "monsters": [
+        "加宝格恩",
+        "布鲁顿",
+        "阿伊萨"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32011,
+      "area_id": 621,
+      "name": "漆黑的洞窟 地下11楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 93,
+      "mean_level": 91.55,
+      "monsters": [
+        "可利多洛斯",
+        "多萨金格",
+        "格洛格鲁"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32012,
+      "area_id": 622,
+      "name": "漆黑的洞窟 地下12楼",
+      "cell": [
+        28,
+        30
+      ],
+      "level_min": 50,
+      "level_max": 93,
+      "mean_level": 86.0,
+      "monsters": [
+        "可利多洛斯",
+        "多萨金格",
+        "大地守护兽",
+        "格洛格鲁",
+        "水的守护兽",
+        "火的守护兽",
+        "风的守护兽"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32013,
+      "area_id": 623,
+      "name": "漆黑的洞窟 地下13楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 91,
+      "level_max": 93,
+      "mean_level": 92.0,
+      "monsters": [
+        "可利多洛斯",
+        "多萨金格",
+        "格洛格鲁"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32014,
+      "area_id": 624,
+      "name": "漆黑的洞窟 地下14楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 91,
+      "level_max": 93,
+      "mean_level": 92.0,
+      "monsters": [
+        "可利多洛斯",
+        "多萨金格",
+        "格洛格鲁"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32015,
+      "area_id": 625,
+      "name": "漆黑的洞窟 地下15楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 91,
+      "level_max": 93,
+      "mean_level": 92.0,
+      "monsters": [
+        "可利多洛斯",
+        "多萨金格",
+        "格洛格鲁"
+      ],
+      "dev_only": true
+    }
+  ]
+}

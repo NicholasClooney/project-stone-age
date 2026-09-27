@@ -23,4 +23,4 @@ func file(id: int) -> String:
 func links(id: int) -> Dictionary:
  return portals.get(str(id),{})
 func field(id: int) -> bool:
- return id in [100,200]
+ return id in [100,200] or str(info(id).get("kind","")) == "training"

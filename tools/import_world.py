@@ -1,4 +1,4 @@
-"""Import original starting villages, connected ordinary towns and linked interiors.
+"""Import original towns/interiors and explicitly listed developer training areas.
 
 Read-only legacy inputs. Unavailable graphics remain blocked. Original warp
 coordinates are retained; developer spawns are selected from walkable cells.
@@ -19,6 +19,8 @@ TOWNS = VILLAGES | {1100, 1300, 1400, 3100, 3200, 3300, 3400}
 ORDINARY_DIRECTORIES = {'sainasu/hotoru', 'sainasu/katan', 'sainasu/kuo',
                         'jyaruga/tamtam', 'jyaruga/toto', 'jyaruga/ururi', 'jyaruga/kikuku'}
 CORE = VILLAGES | {100, 200, 1100, 10201, 10202, 10203}
+# Explicit developer destinations only: no quest entrances or script traversal.
+DEV_TRAINING_MAPS = {300, 400, 500} | set(range(10001, 10007)) | set(range(31701, 31707)) | set(range(32001, 32021))
 MUSIC = {40: 'sabgm_t0.wav', 41: 'sabgm_t1.wav', 44: 'sabgm_d2.wav', 45: 'sabgm_f0.wav', 46: 'sabgm_f1.wav'}
 
 
@@ -67,6 +69,11 @@ def select_connected_maps(map_paths, portals):
         if additions <= selected:
             return selected
         selected |= additions
+
+
+def ordinary_portals(portals, ordinary):
+    """DEV imports must not silently open quest-controlled routes."""
+    return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary]
 
 
 def disable_conflicting_portals(portals):
@@ -191,13 +198,16 @@ def run(source, reference, output):
             ident=struct.unpack_from('>H',path.read_bytes(),6)[0]
             if ident in maps and maps[ident].read_bytes()!=path.read_bytes():conflicting.add(ident)
             maps[ident]=path
-    selected=select_connected_maps(maps,all_portals)
+    ordinary=select_connected_maps(maps,all_portals)
+    selected=ordinary | DEV_TRAINING_MAPS
     if selected & conflicting:raise ValueError(f'Conflicting selected map IDs: {sorted(selected & conflicting)}')
     absent=selected-maps.keys()
     if absent:raise ValueError(f'Missing original maps: {absent}')
-    portals=[p for p in all_portals if p['from_map'] in selected and p['to_map'] in selected]
+    # Preserve the existing exploration graph. Extra areas are DEV-only until
+    # their entrances, quest gates and progression are restored explicitly.
+    portals=ordinary_portals(all_portals, ordinary)
     disable_conflicting_portals(portals)
-    unsupported=[dict(p, reason=excluded_reason(maps.get(p['to_map']))) for p in all_portals if p['from_map'] in selected and p['to_map'] not in selected]
+    unsupported=[dict(p, reason=excluded_reason(maps.get(p['to_map']))) for p in all_portals if p['from_map'] in ordinary and p['to_map'] not in ordinary]
     archive=Archive(source);base=json.loads((output/'samgir.json').read_text()); images={};colors={}; metadata={}; reports={};blocked_portals=[]
     residents=import_residents(archive,reference,root)
     preferred={100:[637,493],200:[570,377],1000:[89,73],2000:[74,56],3000:[84,100],4000:[76,90]}
@@ -218,10 +228,11 @@ def run(source, reference, output):
         arrival_region=reachable_cells(data,entrance)
         occupied=[npc['cell'] for npc in residents if npc['map_id']==ident]
         spawn=safe_spawn(data,preferred.get(ident,entrance),exits+occupied,arrival_region)
-        kind='village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
+        kind='training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.json',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
+        if ident in DEV_TRAINING_MAPS:metadata[str(ident)]['dev_only']=True
         for p in portals:
             points=[]
             if p['from_map']==ident:points.append(('cell',p['cell']))
@@ -243,7 +254,7 @@ def run(source, reference, output):
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only reviewed settlements connected by original unconditional warps are expanded. New interiors provide scenery and doors, not NPC services. Dungeons, special areas and quest-dependent routes are deferred; unsupported exits include reasons.']))
+    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only reviewed settlements connected by original unconditional warps are expanded. New interiors provide scenery and doors, not NPC services. Dungeons, special areas and quest-dependent routes are deferred; unsupported exits include reasons.', 'Explicit dev_only training maps restore scenery and ordinary source encounters for developer teleport only. Their entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     print(f'{len(metadata)} maps, {len(portals)} portals, {len(blocked_portals)} blocked endpoints, {len(images)} images')
 

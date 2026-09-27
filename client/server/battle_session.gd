@@ -22,6 +22,22 @@ var _player_command := "attack"
 var _pet_guard := false
 var _last_ride_damage := 0
 
+# Optional authority extensions. Defaults retain the original solo scheduler.
+func _extend_actors(_actors: Array[Dictionary], _action: String) -> void:
+	pass
+
+func _actor_precedes(a: Dictionary, b: Dictionary) -> bool:
+	return a.speed > b.speed or (a.speed == b.speed and a.tie < b.tie)
+
+func _extra_actor_alive(_actor: Dictionary) -> bool:
+	return true
+
+func _before_actor(_actor: Dictionary) -> void:
+	pass
+
+func _extra_action(_actor: Dictionary, _action: String) -> void:
+	pass
+
 func start_battle(config: Dictionary = {}) -> Dictionary:
 	if _state.active:
 		return snapshot()
@@ -119,8 +135,8 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 			actors.append({"actor":"enemy","enemy_index":index,"speed":int(_state.enemies[index].get("speed",7)),"tie":2 + index})
 	if action != "switch" and not _state.pet.is_empty() and _state.pet_hp > 0:
 		actors.append({"actor":"pet","speed":int(_state.pet.get("speed",8)),"tie":1})
-	actors.sort_custom(func(a: Dictionary, b: Dictionary) -> bool:
-		return a.speed > b.speed or (a.speed == b.speed and a.tie < b.tie))
+	_extend_actors(actors,action)
+	actors.sort_custom(_actor_precedes)
 	var resolved_order: Array[String] = []
 	_state["turn_order"] = resolved_order
 	_state["turn_frames"] = []
@@ -131,6 +147,8 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 			continue
 		if actor.actor == "enemy" and not _enemy_alive(int(actor.enemy_index)):
 			continue
+		if not _extra_actor_alive(actor):continue
+		_before_actor(actor)
 		_acting_enemy = int(actor.get("enemy_index",-1))
 		_last_outcome = action if actor.actor == "player" else pet_command if actor.actor == "pet" else "attack"
 		_last_damage = 0
@@ -144,6 +162,8 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 				_pet_action(pet_command)
 			"enemy":
 				_enemy_action(action == "defend",pet_command == "defend")
+			_:
+				_extra_action(actor,action)
 		if _state.active_pet >= 0:
 			_state.pets[_state.active_pet] = _state.pet.duplicate(true)
 		_record_frame(str(actor.actor))
