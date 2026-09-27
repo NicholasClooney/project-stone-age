@@ -149,3 +149,5 @@ After world import, run `python3 tools/import_encounters.py`, then `.tools/asset
 **Giru villages:** choose 福尔德村 or 达那村 in **地图导航 / DEV → 传送地点**, then walk through their original doors and island exits. Interior entries appear first while you are in their village. These restored interiors include scenery and doors; additional NPC services and quests remain deferred. See [travel coverage](docs/development/travel-and-leveling-assists.md).
 
 **Navigation categories:** 地图导航 separates **地点 / 练级点 / Lv.1宠物**. Training and level-one pet lists offer current-map or all-map scope; use the existing walk / DEV teleport choice to visit. Pet locations come from eligible original encounter records, not guaranteed spawns. After imports, regenerate both `tools/build_training_spots.py` and `tools/build_level_one_spots.py`.
+
+**怎样判断极品宠物？** See [宠物品质与成长窗口解读](docs/game-systems/pet-quality.md) for innate rolls versus actual growth, the project’s +6 filter, forecast ranges, and GM/legacy comparison limits.
