@@ -1,0 +1,11 @@
+.tools/
+client/.godot/
+.DS_Store
+build/
+artifacts/
+
+# Imported original client resources remain local.
+client/assets/legacy/
+
+__pycache__/
+*.pyc

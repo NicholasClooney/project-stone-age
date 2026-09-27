@@ -6,7 +6,11 @@ Within approximately 30 minutes of productive agent work, launch Godot into a pl
 
 Godot-only implementation is explicitly allowed. No Swift, login, database, network transport, general importer, or version-selection UI is required.
 
-## Preconditions and asset fallback
+## Current acceptance amendment
+
+The user explicitly clarified that the MVP must look and sound like the original. Original map, character, animation, and music assets are now required. The fallback below is retained as historical planning context and must not be used to declare this MVP complete. See [implemented status](m000-status.md).
+
+## Original planning: preconditions and asset fallback
 
 Use an installed working Godot editor, a writable project, and a ready asset subset where available. Inspect only enough to identify a usable map, sprite animation, BGM, and SFX. If tools are missing, report setup time separately rather than claiming a playable result.
 

@@ -1,0 +1,75 @@
+# Project Stone Age
+
+A playable **Godot 4.6** exploration slice of **萨姆吉尔村 / Samgir**, using the legacy game's map, sprites, palettes, animation frames, and music.
+
+## Play
+
+On this Mac, double-click **Play Stone Age.command**, or run from the repository root:
+
+```sh
+./scripts/run.sh
+```
+
+The project-local Godot runtime is already installed under `.tools/`. You can also open `client/project.godot` in Godot 4.6 and press F6/F5 as appropriate. For another installation, set `GODOT_BIN` to the Godot executable.
+
+| Control | Action |
+| --- | --- |
+| Left click | Walk to a reachable tile using pathfinding |
+| WASD / arrows | Walk in screen directions; combine keys for eight directions |
+| E | Original waving animation |
+| X | Sit / stand |
+| Tab | Cycle three original character appearances |
+| Mouse wheel / + / − | Zoom |
+| M | Mute / unmute |
+| H / Escape | Open / close help; music volume is in help |
+| R | Return to the village square |
+
+Normal play stays open until you close the window. `client/tests/capture.gd` is an automated screenshot test that exits; it is **not** the player launcher.
+
+## What works
+
+- Original 160 × 160 Samgir map, 482 scenery objects, original isometric projection and depth sorting.
+- 1,066 decoded original textures; three characters with original eight-direction idle/walk frames, sit, and wave.
+- Original map/ADRN collision footprints, keyboard movement, and click-to-walk with corner checks.
+- Original `sabgm_t0.wav` village BGM, loop and volume controls, and a legacy UI sound.
+- Camera follow, zoom, focus-loss input clearing, and a safe respawn.
+
+This is the local, Godot-only M000 slice. No login, Swift server, battle, NPC conversations, interior transitions, saves, or multiplayer yet. The HUD is a small new overlay, not a reproduction of the original client UI. Movement timing is a local implementation; complete historical gameplay parity is not claimed.
+
+The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
+
+## Original resources
+
+The imported resources are present locally in `client/assets/legacy/` and deliberately excluded from Git. The importer and provenance documentation are tracked. A fresh clone needs a compatible local resource import before playing; the game explains this if assets are absent.
+
+The current input is the community-distributed **SA2.5-20260823** client from [99ds.com](https://99ds.com/), with Samgir geometry from [chenmingbiao/stone-age](https://github.com/chenmingbiao/stone-age/tree/master/gmsv/data/map/sainasu/samugiru). This preserves the original village layout instead of later decorative additions in that client cache. The exact official release lineage is unverified.
+
+```sh
+python3 -m venv .tools/asset-venv
+.tools/asset-venv/bin/pip install -r tools/requirements.txt
+.tools/asset-venv/bin/python tools/import_legacy.py /path/to/stoneage2.5 \
+  --server-map /path/to/samugiru
+./scripts/run.sh --headless --editor --import --quit
+./scripts/run.sh
+```
+
+The client directory must contain `data/adrn_15.bin`, `real_15.bin`, `spradrn_5.bin`, `spr_4.bin`, `pal/Palet_1.sap`, the audio files, and `map/1000.DAT`. The optional `--server-map` reads a matching `LS2MAP` Samgir file. Without it, the client DAT is used and unresolved decorations are recorded, not silently replaced with invented art.
+
+See [resource evidence](docs/reverse-engineering/samgir-import.md) for hashes, format decisions, and limitations. Do not add imported client archives or assets to a public release without resolving their distribution status. The bundled Noto Sans SC font is distributed under its included OFL license.
+
+## Verify
+
+```sh
+./scripts/test.sh
+.tools/asset-venv/bin/python -m unittest discover -s tools -p 'test_*.py'
+```
+
+The Godot suite exercises actual movement, original direction mapping, collision, pathfinding, 200 repeated movement steps, animation, character switching, and audio looping. It needs imported assets. [Verification notes](docs/development/m000-status.md) distinguish automated checks from visual inspection.
+
+## Layout
+
+- `client/` — Godot scene, local simulation, renderer, and tests.
+- `tools/import_legacy.py` — bounded binary decoder and deterministic conversion.
+- `scripts/` — launch and test helpers.
+- `docs/` — [design specification](docs/README.md) and implementation notes.
+- `.tools/`, `artifacts/` — ignored local engine, source references, and verification output.

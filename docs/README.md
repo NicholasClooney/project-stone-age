@@ -2,7 +2,9 @@
 
 Build a modern StoneAge experience with a Godot client and Swift server. Keep every iteration runnable, observable, and incrementally better. The first result is walking around 萨姆吉尔村 (Samgir) with animation, music, sound, and basic collision.
 
-These English Markdown documents capture the supplied design conversation. They describe intended behavior, not an existing implementation or verified historical compatibility. No original game assets, source code, or runnable game are included.
+A playable Godot implementation now exists: see the [project launch guide](../README.md) and [M000 status](development/m000-status.md). Original assets are required following the user’s clarification; the earlier placeholder fallback is superseded.
+
+These English Markdown documents capture the supplied design conversation. They describe intended behavior, not an existing implementation or verified historical compatibility. The specification ZIP was documentation-only; this game repository now includes implementation code, with imported legacy resources kept local.
 
 ## Start here
 
