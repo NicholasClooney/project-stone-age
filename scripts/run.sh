@@ -16,4 +16,13 @@ fi
 if [ ! -d client/.godot/imported ]; then
   "$engine" --headless --path client --editor --import --quit
 fi
+# Scripted verification must not play audio into the user's desktop.
+for argument in "$@"; do
+  case "$argument" in
+    --) break ;;
+    --script|-s|--headless)
+      exec "$engine" --path client --audio-driver Dummy "$@"
+      ;;
+  esac
+done
 exec "$engine" --path client "$@"

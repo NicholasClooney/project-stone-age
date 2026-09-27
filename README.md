@@ -100,6 +100,8 @@ Full upstream checkouts and offline Git bundles are preserved in ignored `refere
 
 ## Verify
 
+Scripted and headless runs through `scripts/run.sh` use Godot’s silent audio driver, including visual test scripts. Normal game launches keep audio enabled. Use `--audio-driver Dummy` for any direct engine test launch.
+
 ```sh
 ./scripts/test.sh
 .tools/asset-venv/bin/python -m unittest discover -s tools -p 'test_*.py'
