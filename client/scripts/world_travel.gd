@@ -43,7 +43,7 @@ func blocks(cell: Vector2i) -> bool:
 func handle_click(point: Vector2) -> bool:
 	for i in range(sprites.size()-1,-1,-1):
 		if sprites[i].texture and sprites[i].get_rect().has_point(sprites[i].to_local(point)):
-			approach(i)
+			if entries[i].get("role","")!="decoration":approach(i)
 			return true
 	pending = -1
 	return false
@@ -87,7 +87,11 @@ func _open() -> void:
 	if entry.get("role", "")=="trainer":
 		world.pet_training.open_training(int(world.data.map_id))
 		return
-	body.text = str(entry.get("name",""))+"\n\n"+str(entry.get("text",""))
+	var dialogue: String=str(entry.get("text",""))
+	if entry.get("handler","")=="npcgen_man" and not entry.get("dialogues",[]).is_empty():
+		dialogue=str(entry.dialogues.pick_random())
+	body.text = str(entry.get("name",""))+"\n\n"+dialogue
+	if entry.get("role","")=="deferred_service":body.text+="\n\n【尚未还原此服务】"
 	choice.hide()
 	if entry.get("role","")=="vendor":
 		body.text += "\n\n"+("持有通行证。" if world.session.has_travel_pass() else "通行证：200 石币")

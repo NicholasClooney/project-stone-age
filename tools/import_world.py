@@ -198,6 +198,8 @@ def import_residents(archive, reference, root):
         npc['free_text']=fields.get('FreeMsg','').replace('\\n','\n').strip()
         npc['dialogue_source']=str(dialogue.relative_to(reference))
         residents.append(npc)
+    from import_dana_npcs import import_residents as dana_residents
+    residents.extend(dana_residents(archive, reference, root))
     return residents
 
 
