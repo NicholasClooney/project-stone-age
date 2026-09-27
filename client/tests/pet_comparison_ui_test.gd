@@ -16,6 +16,21 @@ func run():
  check(rows.size()==2,"blue starter and original92 same-species aliases include warehouse")
  check(rows[0].location=="pets" and rows[1].location=="pet_storage","carried group precedes higher-stat stored pet")
  check(profile==before,"sorting never mutates authoritative order or pets")
+ var sum_profile:={"pets":[],"pet_storage":[]}
+ for i in range(5):
+  var actor:Dictionary=source.duplicate(true);actor.pet_id="pet-%d"%(901+i)
+  actor.attack=10 if i==0 else 20;actor.defence=actor.attack;actor.speed=actor.attack
+  actor.max_hp=99999 if i==0 else 1
+  actor.favorite=i==3
+  if i<3:sum_profile.pets.append(actor)
+  else:sum_profile.pet_storage.append(actor)
+ sum_profile.pet_storage[1].attack=999
+ var summed:=Compare.rows(sum_profile,source,"stat_total")
+ check(summed.map(func(row):return row.pet.pet_id)==["pet-902","pet-903","pet-901","pet-904","pet-905"],"sum ordering excludes HP with stable ties carried first and warehouse favorites first")
+ sum_profile.pets[0].base_stats.strength=99999
+ var forecast_sum:=Compare.rows(sum_profile,source,"stat_total",true)
+ check(forecast_sum[0].pet.pet_id=="pet-901","projected sum orders by actual forecast rather than current stats")
+ check(forecast_sum[3].pet.pet_id=="pet-904" and forecast_sum[4].pet.pet_id=="pet-905","projected sum preserves warehouse favorite grouping")
  check(Compare.expected(source)==preload("res://scripts/pet_growth.gd").forecast(source).expected,"lightweight projection matches full forecast exactly")
  var large:=profile.duplicate(true);large.pet_storage=[]
  for i in range(300):
@@ -30,6 +45,10 @@ func run():
  await process_frame
  check(menu.panel.has_node("PetComparisonPanel"),"comparison panel opens without requiring carried selection")
  var overlay=menu.panel.get_node("PetComparisonPanel")
+ check(menu.pet_compare_sort=="stat_total" and overlay.get_node("PetCompareSort").get_item_text(overlay.get_node("PetCompareSort").selected)=="三围合降序","comparison opens with three-stat sum descending selected")
+ overlay.get_node("PetCompareSort").select(4);overlay.get_node("PetCompareSort").item_selected.emit(4)
+ overlay=menu.panel.get_node("PetComparisonPanel")
+ check(menu.pet_compare_sort=="speed" and overlay.get_node("PetCompareSort").selected==4,"explicit later sort choice survives panel rebuild")
  check(overlay.get_node("ComparePinned_选中").text.contains("pet-999"),"selected stable ID remains pinned independent of page")
  check(overlay.has_node("ComparePinned_当前分组首位"),"sorted leader has pinned comparison summary")
  var total:=int(twin.attack)+int(twin.defence)+int(twin.speed)

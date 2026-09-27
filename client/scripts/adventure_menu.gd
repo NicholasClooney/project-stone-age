@@ -19,7 +19,7 @@ var pet_storage_open := false
 var pet_storage_target_id := ""
 var pet_compare_page := 0
 var pet_storage_page := 0
-var pet_compare_sort := "attack"
+var pet_compare_sort := "stat_total"
 var pet_compare_projected := false
 const PetComparison=preload("res://scripts/pet_comparison.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
@@ -580,8 +580,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	var close:Button=world.button("关闭",func():pet_compare_open=false;pet_view="list";rebuild());close.position=Vector2(650,8);overlay.add_child(close)
 	var hunt:Button=world.button("自动抓极品",func():continue_comparison_hunt(selected));hunt.position=Vector2(490,8);hunt.name="CompareContinueHunt";overlay.add_child(hunt)
 	var sort:=OptionButton.new();sort.name="PetCompareSort";sort.position=Vector2(14,48)
-	var keys:=["max_hp","attack","defence","speed"]
-	for caption in ["体力降序","攻击降序","防御降序","敏捷降序"]:sort.add_item(caption)
+	var keys:=["stat_total","max_hp","attack","defence","speed"]
+	for caption in ["三围合降序","体力降序","攻击降序","防御降序","敏捷降序"]:sort.add_item(caption)
 	sort.select(keys.find(pet_compare_sort));sort.item_selected.connect(func(i):pet_compare_sort=keys[i];rebuild());overlay.add_child(sort)
 	var predicted:=CheckButton.new();predicted.text="按120级预期排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
 	var info:Label=world.text(feedback if not feedback.is_empty() else "跨等级比120预期；非出生快照／百分位。",12);info.position=Vector2(14,89);overlay.add_child(info)

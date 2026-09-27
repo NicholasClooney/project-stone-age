@@ -52,3 +52,5 @@ Warehouse and comparison rows expose a persistent favorite toggle keyed by stabl
 Comparison current and projected stat lines include 三围合 (attack + defence + speed, excluding HP); it is a convenience total, not a percentile or a species-independent quality score.
 
 Warehouse rows also show current attack, defence, speed, and their three-stat total below the pet name, alongside favorite/retrieve/compare actions.
+
+Comparison initially sorts by descending three-stat total (attack + defence + speed), using current or projected values as selected. Carried-before-stored grouping and warehouse-favorite priority remain stronger than the metric sort.

@@ -28,7 +28,7 @@ static func expected(pet:Dictionary)->Dictionary:
  var result:=Rules.derived(base)
  for key in Rules.DERIVED:result[key]=maxi(0 if key=="defence" else 1,int(result[key])+int(pet.get("legacy_stat_offset",{}).get(key,0)))
  return result
-static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="attack",projected:bool=false)->Array:
+static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="stat_total",projected:bool=false)->Array:
  var result:=[]
  for location in ["pets","pet_storage"]:
   var pets:Array=profile.get(location,[])
@@ -42,7 +42,7 @@ static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="attack"
   if a.location=="pet_storage" and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
   var av:Dictionary=a.forecast.get("expected",a.pet) if projected else a.pet
   var bv:Dictionary=b.forecast.get("expected",b.pet) if projected else b.pet
-  var x:=int(av.get(sort_key,0));var y:=int(bv.get(sort_key,0))
+  var x:=sort_value(av,sort_key);var y:=sort_value(bv,sort_key)
   if x!=y:return x>y
   return str(a.pet.get("pet_id",a.location+str(a.index)))<str(b.pet.get("pet_id",b.location+str(b.index))))
  return result
@@ -55,3 +55,7 @@ static func storage_rows(profile:Dictionary)->Array:
   if bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
   return int(a.index)<int(b.index))
  return result
+
+static func sort_value(stats:Dictionary,key:String)->int:
+ if key=="stat_total":return int(stats.get("attack",0))+int(stats.get("defence",0))+int(stats.get("speed",0))
+ return int(stats.get(key,0))
