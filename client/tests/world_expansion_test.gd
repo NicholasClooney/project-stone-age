@@ -15,8 +15,8 @@ func run():
  await frames()
  game.random_encounters=false
  var catalog=game.world_catalog
- check(catalog.maps.size()>=54,"original villages, interiors, wilderness and crossing route imported")
- for id in [1000,2000,3000,4000,100,200,1100,10201,10202,10203]:
+ check(catalog.maps.size()>=103,"original villages, interiors, wilderness and crossing route imported")
+ for id in [1000,2000,3000,4000,100,200,1100,1300,1400,3100,3200,3300,3400,10201,10202,10203]:
   var start=Time.get_ticks_msec()
   check(game.dev_visit(id),"developer destination loads original map %d" % id)
   await frames()
@@ -39,13 +39,13 @@ func run():
  # All imported interiors are valid for loading and persistence, not only dev-menu entries.
  for id_text in catalog.maps:
   var id=int(id_text)
-  if id in [1000,2000,3000,4000,100,200,1100,10201,10202,10203]:continue
+  if id in [1000,2000,3000,4000,100,200,1100,1300,1400,3100,3200,3300,3400,10201,10202,10203]:continue
   var info: Dictionary=catalog.info(id)
   check(game.load_area_id(id,Vector2i(info.spawn[0],info.spawn[1])),"interior %d loads original map" % id)
   await frames()
   check(game.checkpoint(),"interior %d can checkpoint" % id)
  # Exercise actual portal trigger/transition in both directions for each village.
- for id in [1000,2000,3000,4000]:
+ for id in [1000,2000,3000,4000,1300,1400,3100,3200,3300,3400]:
   var chosen: Dictionary={}
   for link in catalog.links(id).values():
    if int(link.to_map) in [100,200]:chosen=link;break

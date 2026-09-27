@@ -1,4 +1,4 @@
-"""Import original starting villages, both complete islands and linked interiors.
+"""Import original starting villages, connected ordinary towns and linked interiors.
 
 Read-only legacy inputs. Unavailable graphics remain blocked. Original warp
 coordinates are retained; developer spawns are selected from walkable cells.
@@ -14,6 +14,10 @@ import struct
 from import_legacy import Archive
 
 VILLAGES = {1000, 2000, 3000, 4000}
+TOWNS = VILLAGES | {1100, 1300, 1400, 3100, 3200, 3300, 3400}
+# Reviewed ordinary settlement directories only; never infer access from map IDs.
+ORDINARY_DIRECTORIES = {'sainasu/hotoru', 'sainasu/katan', 'sainasu/kuo',
+                        'jyaruga/tamtam', 'jyaruga/toto', 'jyaruga/ururi', 'jyaruga/kikuku'}
 CORE = VILLAGES | {100, 200, 1100, 10201, 10202, 10203}
 MUSIC = {40: 'sabgm_t0.wav', 41: 'sabgm_t1.wav', 44: 'sabgm_d2.wav', 45: 'sabgm_f0.wav', 46: 'sabgm_f1.wav'}
 
@@ -47,6 +51,45 @@ def read_portals(root):
                     key = (p['from_map'], x,y,p['to_map'],*p['target'])
                     result[key] = p
     return list(result.values())
+
+
+def select_connected_maps(map_paths, portals):
+    """Expand only through original unconditional warps into reviewed settlements.
+
+    No dungeon/family/quest script traversal, synthetic links or gate bypasses.
+    Existing core (including its implemented permit gate) is preserved.
+    """
+    selected = CORE | {p['to_map'] for p in portals if p['from_map'] in VILLAGES}
+    while True:
+        additions = {p['to_map'] for p in portals
+                     if p['from_map'] in selected and p['to_map'] in map_paths
+                     and '/'.join(map_paths[p['to_map']].parts[-3:-1]) in ORDINARY_DIRECTORIES}
+        if additions <= selected:
+            return selected
+        selected |= additions
+
+
+def disable_conflicting_portals(portals):
+    """Never select one of several contradictory source warps silently."""
+    destinations={}; conflicting_warps=set()
+    for p in portals:
+        key=(p['from_map'],*p['cell'])
+        value=(p['to_map'],*p['target'])
+        if key in destinations and destinations[key]!=value:conflicting_warps.add(key)
+        destinations[key]=value
+    for p in portals:
+        if (p['from_map'],*p['cell']) in conflicting_warps:
+            p.update(disabled=True,reason='Conflicting original warp destinations; requires source review')
+
+
+def excluded_reason(path):
+    if path is None:
+        return 'Original destination map missing'
+    if 'dungeon' in path.parts:
+        return 'Dungeon / gated progression deferred with quests'
+    if any(part in path.parts for part in ('family', 'quiz', 'king', 'EDEN')):
+        return 'Special area / quest mechanics deferred'
+    return 'Destination outside reviewed ordinary connected settlements'
 
 
 def convert(archive, parsed):
@@ -142,24 +185,19 @@ def run(source, reference, output):
     reference=Path(reference); output=Path(output); root=output/'world'
     root.mkdir(parents=True,exist_ok=True);(root/'audio').mkdir(exist_ok=True);(output/'images').mkdir(exist_ok=True)
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
-    selected=CORE|{p['to_map'] for p in all_portals if p['from_map'] in VILLAGES}
-    maps={}
+    maps={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
         if path.is_file() and path.read_bytes()[:6]==b'LS2MAP':
             ident=struct.unpack_from('>H',path.read_bytes(),6)[0]
-            if ident not in selected:continue
-            if ident in maps and maps[ident].read_bytes()!=path.read_bytes():raise ValueError(f'Conflicting map id {ident}')
+            if ident in maps and maps[ident].read_bytes()!=path.read_bytes():conflicting.add(ident)
             maps[ident]=path
+    selected=select_connected_maps(maps,all_portals)
+    if selected & conflicting:raise ValueError(f'Conflicting selected map IDs: {sorted(selected & conflicting)}')
     absent=selected-maps.keys()
     if absent:raise ValueError(f'Missing original maps: {absent}')
     portals=[p for p in all_portals if p['from_map'] in selected and p['to_map'] in selected]
-    destinations={}
-    for p in portals:
-        key=(p['from_map'],*p['cell'])
-        value=(p['to_map'],*p['target'])
-        if key in destinations and destinations[key]!=value:raise ValueError(f'Conflicting selected original warp {key}')
-        destinations[key]=value
-    unsupported=[p for p in all_portals if p['from_map'] in selected and p['to_map'] not in selected]
+    disable_conflicting_portals(portals)
+    unsupported=[dict(p, reason=excluded_reason(maps.get(p['to_map']))) for p in all_portals if p['from_map'] in selected and p['to_map'] not in selected]
     archive=Archive(source);base=json.loads((output/'samgir.json').read_text()); images={};colors={}; metadata={}; reports={};blocked_portals=[]
     residents=import_residents(archive,reference,root)
     preferred={100:[637,493],200:[570,377],1000:[89,73],2000:[74,56],3000:[84,100],4000:[76,90]}
@@ -180,7 +218,7 @@ def run(source, reference, output):
         arrival_region=reachable_cells(data,entrance)
         occupied=[npc['cell'] for npc in residents if npc['map_id']==ident]
         spawn=safe_spawn(data,preferred.get(ident,entrance),exits+occupied,arrival_region)
-        kind='village' if ident in VILLAGES | {1100} else 'wilderness' if ident in (100,200) else 'interior'
+        kind='village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.json',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
@@ -198,14 +236,14 @@ def run(source, reference, output):
             if p['from_map']==ident:
                 key=str(p['to_map']);exit_coverage.setdefault(key,dict(reachable=0,unreachable=0));x,y=p['cell']
                 exit_coverage[key]['reachable' if reachable[y*data['width']+x] else 'unreachable']+=1
-        if ident in VILLAGES and not all(v['reachable'] for v in exit_coverage.values()):raise ValueError(f'Village spawn cannot reach exits: {ident} {exit_coverage}')
+        if ident in TOWNS and not all(v['reachable'] for v in exit_coverage.values()):raise ValueError(f'Village spawn cannot reach exits: {ident} {exit_coverage}')
         reports[str(ident)]=dict(reachable_cells=sum(reachable),exit_coverage=exit_coverage,source=str(maps[ident].relative_to(reference)),sha256=hashlib.sha256(parsed[-1]).hexdigest(),missing_graphics=missing,walkable=data['blocked'].count(0),images=len(used),objects=len(data['objects']))
         print(f'{ident} {data["name"]} {data["width"]}x{data["height"]} missing={len(missing)} spawn={spawn}',flush=True)
     for name in set(MUSIC.values()):shutil.copyfile(archive.data/'bgm'/name,root/'audio'/name)
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only direct starting-village interiors are loaded; other island towns and dungeons remain unavailable.']))
+    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only reviewed settlements connected by original unconditional warps are expanded. New interiors provide scenery and doors, not NPC services. Dungeons, special areas and quest-dependent routes are deferred; unsupported exits include reasons.']))
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     print(f'{len(metadata)} maps, {len(portals)} portals, {len(blocked_portals)} blocked endpoints, {len(images)} images')
 

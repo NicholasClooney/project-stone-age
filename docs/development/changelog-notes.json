@@ -1,22 +1,133 @@
 {
-  "feat(client): add playable Samgir with original StoneAge resources": {"title":"回到萨姆吉尔村", "details":["使用原版地图、人物动作和音乐，可以在村内行走。"]},
-  "feat(client): add original Samgir villager conversation": {"title":"与村民交谈", "details":["点击村民会走近并打开对话。"]},
-  "feat(client): restore classic menus and map window": {"title":"原版菜单和地图窗口", "details":["恢复顶部菜单素材、地图窗口和缩放控制。"]},
-  "fix(client): correct classic UI, dialogue sounds, and zoom": {"title":"修正界面位置、音效和缩放", "details":["对话和菜单使用原版音效；最大缩小与加减按钮保持一致。"]},
-  "feat(client): add original-resource wilderness battles": {"title":"村外遇敌与战斗", "details":["离开村庄后可以与野生宠物战斗。"]},
-  "feat(client): complete original-style single-player adventure": {"title":"完成第一段单人冒险", "details":["可以购物、战斗、捕获宠物、成长并完成村民委托。"]},
-  "fix(client): keep dialogue close buttons inside their frames": {"title":"修正对话关闭按钮位置"},
-  "fix(test): silence Godot verification runs": {"title":"测试运行不再播放声音", "details":["正常游戏仍保留音乐和音效。"]},
-  "fix(client): restore classic inventory layout and menu toggles": {"title":"恢复道具栏布局和菜单开关", "details":["再次点击同一菜单可以关闭窗口。"]},
-  "fix(client): restore map transitions and battle choreography": {"title":"恢复地图切换和战斗动作", "details":["室内外切换、入场、走近攻击和返回位置使用原版动作。"]},
-  "feat(client): add stat allocation and faster development controls": {"title":"升级加点和快捷测试", "details":["升级获得可分配点数；增加快捷访问与遇敌按钮。"]},
-  "fix(client): restore combat health bars and equipment behavior": {"title":"恢复血条和装备效果", "details":["修正装备栏、武器显示及战斗血条。"]},
-  "feat(client): restore source-backed battle effects and weapon animations": {"title":"恢复原版战斗特效", "details":["攻击、武器动作和命中特效依据参考源码调整。"]},
-  "feat(client): restore original capture and escape choreography": {"title":"恢复捕获与逃跑演出"},
-  "feat(world): restore four villages and connecting wilderness": {"title":"开放四大村庄及连接区域", "details":["可访问四大村庄、两岛野外、海底通道和已导入的室内。"]},
-  "feat(server): restore classic growth, pet commands and group combat": {"title":"成长规则、宠物指令和多敌战斗", "details":["恢复基础能力成长、宠物技能指令和多人形阵位。"]},
-  "feat(client): restore original pet and battle flows with map teleport": {"title":"原版宠物窗口和全图传送", "details":["宠物列表、详情及技能窗口使用各自原版布局；开发地图支持传送。"]},
-  "feat(client): restore original stone-fish cursor": {"title":"恢复石鱼鼠标", "details":["游戏和界面使用原版石鱼光标。"]},
-  "feat(client): add original riding, companions and player tools": {"title":"骑金虎、带伙伴出发", "details":["首次启动加入蓝人龙、金虎和一只红暴龙；现有宠物保留。", "DEV→骑乘可选择金虎骑手造型，再骑乘金虎；战斗宠物和坐骑分别设置。", "新增41个原版角色造型、跨地图步行、全图缩放与平移。", "宠物收藏支持30只、分类与分页；成长面板比较120级预测和原版理论上限。", "GM可提升至120级、调整基础能力与加点、恢复体力、立即脱战。", "恢复黄色格子光标；骑乘经验按原版规则结算。", "新增本更新日志；更大范围的地图与准确野外遇敌恢复仍待后续完成。"]},
-  "fix(client): clarify pet forecasts and restore native UI highlights": {"title": "更实用的宠物成长预测与原版选中框", "details": ["宠物→成长预估现在显示本宠预估、单项约90%常见范围和同种正常均值；悬停均值可查看理论单项极限。", "预测依据参考源码的随机成长规则；范围为近似值，不能保证四项同时落入，GM及旧存档修正会明确标示。", "道具栏恢复独立的悬停框与青色选中框，区分已装备武器和背包备用武器。", "宠物名称、原版按钮及菜单恢复参考客户端的绿色闪动悬停框；悬停不再冒充按下状态。"]}
+  "feat(client): add playable Samgir with original StoneAge resources": {
+    "title": "回到萨姆吉尔村",
+    "details": [
+      "使用原版地图、人物动作和音乐，可以在村内行走。"
+    ]
+  },
+  "feat(client): add original Samgir villager conversation": {
+    "title": "与村民交谈",
+    "details": [
+      "点击村民会走近并打开对话。"
+    ]
+  },
+  "feat(client): restore classic menus and map window": {
+    "title": "原版菜单和地图窗口",
+    "details": [
+      "恢复顶部菜单素材、地图窗口和缩放控制。"
+    ]
+  },
+  "fix(client): correct classic UI, dialogue sounds, and zoom": {
+    "title": "修正界面位置、音效和缩放",
+    "details": [
+      "对话和菜单使用原版音效；最大缩小与加减按钮保持一致。"
+    ]
+  },
+  "feat(client): add original-resource wilderness battles": {
+    "title": "村外遇敌与战斗",
+    "details": [
+      "离开村庄后可以与野生宠物战斗。"
+    ]
+  },
+  "feat(client): complete original-style single-player adventure": {
+    "title": "完成第一段单人冒险",
+    "details": [
+      "可以购物、战斗、捕获宠物、成长并完成村民委托。"
+    ]
+  },
+  "fix(client): keep dialogue close buttons inside their frames": {
+    "title": "修正对话关闭按钮位置"
+  },
+  "fix(test): silence Godot verification runs": {
+    "title": "测试运行不再播放声音",
+    "details": [
+      "正常游戏仍保留音乐和音效。"
+    ]
+  },
+  "fix(client): restore classic inventory layout and menu toggles": {
+    "title": "恢复道具栏布局和菜单开关",
+    "details": [
+      "再次点击同一菜单可以关闭窗口。"
+    ]
+  },
+  "fix(client): restore map transitions and battle choreography": {
+    "title": "恢复地图切换和战斗动作",
+    "details": [
+      "室内外切换、入场、走近攻击和返回位置使用原版动作。"
+    ]
+  },
+  "feat(client): add stat allocation and faster development controls": {
+    "title": "升级加点和快捷测试",
+    "details": [
+      "升级获得可分配点数；增加快捷访问与遇敌按钮。"
+    ]
+  },
+  "fix(client): restore combat health bars and equipment behavior": {
+    "title": "恢复血条和装备效果",
+    "details": [
+      "修正装备栏、武器显示及战斗血条。"
+    ]
+  },
+  "feat(client): restore source-backed battle effects and weapon animations": {
+    "title": "恢复原版战斗特效",
+    "details": [
+      "攻击、武器动作和命中特效依据参考源码调整。"
+    ]
+  },
+  "feat(client): restore original capture and escape choreography": {
+    "title": "恢复捕获与逃跑演出"
+  },
+  "feat(world): restore four villages and connecting wilderness": {
+    "title": "开放四大村庄及连接区域",
+    "details": [
+      "可访问四大村庄、两岛野外、海底通道和已导入的室内。"
+    ]
+  },
+  "feat(server): restore classic growth, pet commands and group combat": {
+    "title": "成长规则、宠物指令和多敌战斗",
+    "details": [
+      "恢复基础能力成长、宠物技能指令和多人形阵位。"
+    ]
+  },
+  "feat(client): restore original pet and battle flows with map teleport": {
+    "title": "原版宠物窗口和全图传送",
+    "details": [
+      "宠物列表、详情及技能窗口使用各自原版布局；开发地图支持传送。"
+    ]
+  },
+  "feat(client): restore original stone-fish cursor": {
+    "title": "恢复石鱼鼠标",
+    "details": [
+      "游戏和界面使用原版石鱼光标。"
+    ]
+  },
+  "feat(client): add original riding, companions and player tools": {
+    "title": "骑金虎、带伙伴出发",
+    "details": [
+      "首次启动加入蓝人龙、金虎和一只红暴龙；现有宠物保留。",
+      "DEV→骑乘可选择金虎骑手造型，再骑乘金虎；战斗宠物和坐骑分别设置。",
+      "新增41个原版角色造型、跨地图步行、全图缩放与平移。",
+      "宠物收藏支持30只、分类与分页；成长面板比较120级预测和原版理论上限。",
+      "GM可提升至120级、调整基础能力与加点、恢复体力、立即脱战。",
+      "恢复黄色格子光标；骑乘经验按原版规则结算。",
+      "新增本更新日志；更大范围的地图与准确野外遇敌恢复仍待后续完成。"
+    ]
+  },
+  "fix(client): clarify pet forecasts and restore native UI highlights": {
+    "title": "更实用的宠物成长预测与原版选中框",
+    "details": [
+      "宠物→成长预估现在显示本宠预估、单项约90%常见范围和同种正常均值；悬停均值可查看理论单项极限。",
+      "预测依据参考源码的随机成长规则；范围为近似值，不能保证四项同时落入，GM及旧存档修正会明确标示。",
+      "道具栏恢复独立的悬停框与青色选中框，区分已装备武器和背包备用武器。",
+      "宠物名称、原版按钮及菜单恢复参考客户端的绿色闪动悬停框；悬停不再冒充按下状态。"
+    ]
+  },
+  "feat(world): expand ordinary towns and connected interiors": {
+    "title": "开放更多城镇和室内",
+    "details": [
+      "地图从54张扩展到103张，新增霍特尔、卡坦、塔姆塔姆、多多、乌鲁力、奇喀喀及43个室内。",
+      "DEV地图与目的地菜单可访问新区域；保留原版音乐、碰撞和门口。",
+      "新室内目前恢复场景与出入口，NPC服务和任务另行恢复。特殊区域及冲突出口保持关闭，不绕过任务门禁。"
+    ]
+  }
 }

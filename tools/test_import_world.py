@@ -5,10 +5,31 @@ import struct
 import tempfile
 import unittest
 from test_import_wilderness import FakeArchive
-from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells
+from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals
 
 
 class WorldImportTests(unittest.TestCase):
+    def test_expansion_follows_only_reviewed_unconditional_connected_maps(self):
+        paths={1300:Path('map/sainasu/hotoru/hotoru'),1301:Path('map/sainasu/hotoru/1301'),
+               1400:Path('map/sainasu/katan/katan'),10001:Path('map/sainasu/dungeon/10001'),
+               999:Path('map/family/hotoru/999')}
+        portals=[dict(from_map=100,to_map=1300),dict(from_map=1300,to_map=1301),
+                 dict(from_map=1300,to_map=10001),dict(from_map=1300,to_map=999)]
+        selected=select_connected_maps(paths,portals)
+        self.assertTrue({1300,1301}<=selected)
+        self.assertFalse({1400,10001,999}&selected)
+        self.assertIn('quest',excluded_reason(paths[10001]))
+        self.assertIn('missing',excluded_reason(None))
+
+    def test_conflicting_warps_are_disabled_without_changing_coordinates(self):
+        portals=[dict(from_map=200,cell=[229,988],to_map=3413,target=[10,15]),
+                 dict(from_map=200,cell=[229,988],to_map=3413,target=[10,16]),
+                 dict(from_map=200,cell=[230,988],to_map=3413,target=[10,16])]
+        disable_conflicting_portals(portals)
+        self.assertTrue(all(p['disabled'] for p in portals[:2]))
+        self.assertNotIn('disabled',portals[2])
+        self.assertEqual(portals[0]['target'],[10,15])
+
     def test_original_header_and_dimensions(self):
         with tempfile.TemporaryDirectory() as directory:
             path=Path(directory)/'map'
