@@ -8,6 +8,7 @@ const BattleSession = preload("res://server/battle_session.gd")
 const BattleView = preload("res://scripts/battle_view.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 var world_catalog = WorldCatalog.new()
+var travel_router: Node
 var world_travel: Node
 var props: Node
 var dev_destinations: MenuButton
@@ -30,6 +31,8 @@ var wilderness_music: AudioStream
 var village_music: AudioStream
 var area_music: AudioStream
 var session = GameSession.new()
+var changelog_menu: Control
+var dev_gm_menu: Control
 var dev_map_overview: Control
 var pet_training: Control
 var adventure_menu: Control
@@ -75,6 +78,8 @@ var help: PanelContainer
 var marker: Node2D
 var marker_cell := Vector2i(-1,-1)
 var character_index := 0
+var character_catalog: Dictionary = {}
+var character_selection: Control
 var paused_input := false
 var load_error := ""
 var classic_hud: Control
@@ -89,6 +94,9 @@ var dialogue_text: Label
 
 func _ready() -> void:
 	preload("res://scripts/legacy_cursor.gd").install()
+	marker = preload("res://scripts/legacy_grid_cursor.gd").new()
+	marker.world = self
+	add_child(marker)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
 	if "--script" in OS.get_cmdline_args():profile_persistence = false
@@ -109,8 +117,14 @@ func _ready() -> void:
 	map_transition = preload("res://scripts/classic_map_transition.gd").new()
 	add_child(map_transition)
 	build_ui()
+	travel_router = preload("res://scripts/travel_router.gd").new()
+	travel_router.configure(self)
+	add_child(travel_router)
 	if profile_persistence:
 		restore_location()
+		if FileAccess.file_exists("res://assets/legacy/pets/catalog.json") and session.claim_default_companions():
+			checkpoint()
+			message.text = "伙伴已加入：蓝人龙、金虎、红暴龙。打开宠物菜单查看。"
 	refresh_companion()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
@@ -127,7 +141,13 @@ func display_cell() -> Vector2i:
 	return cell+Vector2i(int(origin[0]),int(origin[1]))
 
 func build_world() -> void:
-	for ident in data.images:
+	var map_image_ids: Array = data.images.keys()
+	if character_catalog.is_empty() and FileAccess.file_exists("res://assets/legacy/characters/catalog.json"):
+		character_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/characters/catalog.json"))
+	if not character_catalog.is_empty():
+		data.characters.merge(character_catalog.characters,true)
+		data.images.merge(character_catalog.images,true)
+	for ident in map_image_ids:
 		textures[ident] = load("res://assets/legacy/images/"+ident+".png")
 	terrain = LegacyGround.new()
 	terrain.world = self
@@ -140,7 +160,8 @@ func build_world() -> void:
 	add_child(actors)
 	player = LegacyActor.new()
 	player.world = self
-	player.character_id = ["100000","100005","100010"][character_index]
+	player.character_id = str(session.snapshot().get("character_id","100000"))
+	if not data.characters.has(player.character_id):player.character_id = "100000"
 	player.position = project(logical_position)
 	actors.add_child(player)
 	camera = Camera2D.new()
@@ -263,6 +284,7 @@ func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
 		message.text = "Import original battle assets first; see README.md."
 		return false
+	if is_instance_valid(travel_router):travel_router.cancel("战斗中断了自动寻路，请重新选择目的地。")
 	clear_input()
 	paused_input = true
 	player.set_action(3)
@@ -291,7 +313,7 @@ func battle_action(action: String) -> void:
 	var skill_id: int = int(battle_view.get("selected_pet_skill"))
 	if skill_id > 0 and battle_session.snapshot().pet_command == "skill":
 		battle_session.set_pet_skill(skill_id)
-	var state: Dictionary = battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
+	var state: Dictionary = battle_session.developer_escape() if action=="developer_escape" else battle_session.submit_action(action,target,int(battle_view.get("switch_pet_index")))
 	if not bool(state.active) and session.apply_battle_result(state):
 		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
@@ -393,6 +415,7 @@ func _input(event: InputEvent) -> void:
 		return
 	for action in ["north","south","west","east"]:
 		if event.is_action_pressed(action) and not event.is_echo() and not paused_input:
+			if is_instance_valid(travel_router):travel_router.cancel("手动移动取消了自动寻路。")
 			pending_talk = false
 			held.erase(action)
 			held.append(action)
@@ -402,6 +425,17 @@ func _input(event: InputEvent) -> void:
 
 func _unhandled_input(event: InputEvent) -> void:
 	if data.is_empty():
+		return
+	if is_instance_valid(changelog_menu) and changelog_menu.visible:
+		if event.is_action_pressed("ui_cancel"):changelog_menu.close_menu()
+		get_viewport().set_input_as_handled()
+		return
+	if is_instance_valid(character_selection) and character_selection.visible:
+		get_viewport().set_input_as_handled()
+		return
+	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:
+		if event.is_action_pressed("ui_cancel"):dev_gm_menu.close_menu()
+		get_viewport().set_input_as_handled()
 		return
 	if is_instance_valid(dev_map_overview) and dev_map_overview.visible:
 		if event.is_action_pressed("ui_cancel"):dev_map_overview.close_map()
@@ -461,6 +495,7 @@ func _unhandled_input(event: InputEvent) -> void:
 			set_zoom(camera.zoom.x-ZOOM_STEP)
 
 func walk_to(destination: Vector2i) -> void:
+	if is_instance_valid(travel_router):travel_router.cancel("新的移动目标取消了跨地图路线。")
 	pending_talk = false
 	if not is_walkable(destination):
 		message.text = "That spot is blocked. Choose a path or clearing."
@@ -524,16 +559,12 @@ func _physics_process(delta: float) -> void:
 	update_adventure_hint()
 	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
 
-func _draw() -> void:
-	if marker_cell.x>=0:
-		var p := project(Vector2(marker_cell))
-		draw_polyline(PackedVector2Array([p+Vector2(0,-10),p+Vector2(15,0),p+Vector2(0,10),p+Vector2(-15,0),p+Vector2(0,-10)]),Color("fff1a6"),1)
-
 func release_keyboard_input() -> void:
 	# Focus changes release held keys; an intentional click route keeps running.
 	held.clear()
 
 func dev_visit(id: int) -> bool:
+	if is_instance_valid(travel_router):travel_router.cancel("开发传送取消了自动寻路。")
 	if paused_input or area_transition_busy or battle_view.visible:return false
 	var info: Dictionary = world_catalog.info(id)
 	if info.is_empty():return false
@@ -597,12 +628,19 @@ func reset_player() -> void:
 	camera.reset_smoothing()
 	message.text = "Back at the village square."
 
-func change_character() -> void:
-	character_index = (character_index+1)%3
-	player.character_id = ["100000","100005","100010"][character_index]
+func change_character(id: String = "") -> void:
+	if battle_view.visible or area_transition_busy:return
+	if id.is_empty():
+		character_selection.open_menu()
+		return
+	if not data.characters.has(id) or not session.set_character(id):return
+	player.character_id = id
+	refresh_riding()
 	player.current_image = -1
-	message.text = "Original character %s" % player.character_id
+	player.elapsed = 0.0
+	message.text = "Original character %s" % id
 	play_click()
+	checkpoint()
 
 func set_zoom(value: float) -> void:
 	camera.zoom = Vector2.ONE*clampf(value,MIN_ZOOM,MAX_ZOOM)
@@ -659,6 +697,9 @@ func setup_audio() -> void:
 	add_child(effect)
 
 func play_battle_sound(ident: int) -> void:
+	if not battle_sounds.has(ident):
+		var path := str(preload("res://scripts/riding.gd").manifest().get("frame_sounds",{}).get(str(ident),""))
+		if not path.is_empty(): battle_sounds[ident] = load("res://assets/legacy/riding/"+path)
 	if ui_sounds.has(ident):
 		play_ui_sound(ident)
 		return
@@ -685,6 +726,7 @@ func toggle_mute() -> void:
 	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
 
 func _exit_tree() -> void:
+	preload("res://scripts/legacy_cursor.gd").uninstall()
 	if is_instance_valid(music): music.stop()
 	if is_instance_valid(effect): effect.stop()
 
@@ -757,6 +799,24 @@ func build_ui() -> void:
 	var max_out := button("Max out",maximum_zoom_out)
 	max_out.name = "MaxOut"
 	dev.add_child(max_out)
+	character_selection = preload("res://scripts/character_selection.gd").new()
+	character_selection.configure(self)
+	root.add_child(character_selection)
+	var choose_character := button("角色",change_character)
+	choose_character.name = "DevCharacter"
+	dev.add_child(choose_character)
+	var riding_menu := MenuButton.new()
+	riding_menu.name = "DevRiding"
+	riding_menu.text = "骑乘 ▾"
+	riding_menu.flat = false
+	riding_menu.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	riding_menu.get_popup().add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	riding_menu.get_popup().add_item("骑乘金虎 / 下骑",0)
+	riding_menu.get_popup().add_item("选择金虎骑手造型（100010）",1)
+	riding_menu.get_popup().id_pressed.connect(func(id: int):
+		if id == 0: dev_toggle_riding()
+		elif not paused_input and not moving: change_character("100010"))
+	dev.add_child(riding_menu)
 	dev_destinations = MenuButton.new()
 	dev_destinations.name = "DevDestinations"
 	dev_destinations.flat = false
@@ -780,9 +840,13 @@ func build_ui() -> void:
 		else:call_deferred("dev_visit",id))
 	destinations.about_to_popup.connect(clear_input)
 	dev.add_child(dev_destinations)
-	var overview_button := button("全图传送",func(): dev_map_overview.open_map())
+	var overview_button := button("地图导航",func(): dev_map_overview.open_map())
 	overview_button.name = "DevMapOverview"
 	dev.add_child(overview_button)
+	var gm_button := button("GM 调试",func(): dev_gm_menu.open_menu())
+	gm_button.name="DevGM"
+	gm_button.z_index=190
+	dev.add_child(gm_button)
 	var teleport := button("传送模式",func(): pass)
 	teleport.name = "DevTeleportMode"
 	teleport.toggle_mode = true
@@ -808,6 +872,12 @@ func build_ui() -> void:
 	mute_button = button("Music: on  [M]",toggle_mute)
 	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
 	dev.add_child(mute_button)
+	changelog_menu = preload("res://scripts/changelog_menu.gd").new()
+	changelog_menu.configure(self)
+	root.add_child(changelog_menu)
+	var changes := button("更新日志 "+str(changelog_menu.history.get("version","v0.0.0")),changelog_menu.open_menu)
+	changes.name = "Changelog"
+	dev.add_child(changes)
 	var help_button := button("Help [H]",func():
 		if not dialogue.visible:
 			help.visible = not help.visible
@@ -824,7 +894,7 @@ func build_ui() -> void:
 	content.add_theme_constant_override("separation",14)
 	help.add_child(content)
 	content.add_child(text("Welcome back to 萨姆吉尔",25))
-	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: change original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nClick 村外探险 to leave through the west exit.\nWalk eight steps outside to encounter 乌力 and try a battle.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
+	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: choose original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nClick 村外探险 to leave through the west exit.\nWalk eight steps outside to encounter 乌力 and try a battle.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
 	content.add_child(text("Music volume",14))
 	var slider := HSlider.new()
 	slider.min_value = 0
@@ -845,6 +915,9 @@ func build_ui() -> void:
 	dev_map_overview = preload("res://scripts/dev_map_overview.gd").new()
 	dev_map_overview.configure(self)
 	root.add_child(dev_map_overview)
+	dev_gm_menu=preload("res://scripts/dev_gm_menu.gd").new()
+	dev_gm_menu.configure(self)
+	root.add_child(dev_gm_menu)
 	adventure_hint = text("",14)
 	adventure_hint.position = Vector2(18,132)
 	adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
@@ -900,6 +973,7 @@ func setup_npc() -> void:
 func handle_world_click(point: Vector2) -> void:
 	if paused_input:
 		return
+	if is_instance_valid(travel_router):travel_router.cancel("手动点击取消了自动寻路。")
 	if is_instance_valid(world_travel) and world_travel.handle_click(point):return
 	if is_instance_valid(npc_sprite) and npc_sprite.get_rect().has_point(npc_sprite.to_local(point)):
 		approach_npc()
@@ -1049,6 +1123,7 @@ func checkpoint() -> bool:
 	return success
 
 func refresh_companion() -> void:
+	refresh_riding()
 	if is_instance_valid(pet_follower):
 		pet_follower.queue_free()
 	pet_follower = null
@@ -1077,6 +1152,9 @@ func update_adventure_hint() -> void:
 	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
 
 func show_adventure_menu(kind: String) -> void:
+	if is_instance_valid(character_selection) and character_selection.visible:return
+	if is_instance_valid(changelog_menu) and changelog_menu.visible:return
+	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:return
 	if is_instance_valid(dev_map_overview) and dev_map_overview.visible:return
 	if is_instance_valid(pet_training) and pet_training.visible:return
 	if is_instance_valid(world_travel) and world_travel.overlay.visible:return
@@ -1144,3 +1222,42 @@ func load_profile() -> bool:
 	profile_persistence = false
 	last_adventure_message = "存档未能读取；现以临时旅程运行，原文件保留。"
 	return false
+
+func refresh_riding() -> void:
+	if not is_instance_valid(player): return
+	var profile: Dictionary = session.snapshot()
+	var index := int(profile.get("ride_pet",-1))
+	var composite := -1
+	if index >= 0 and index < profile.pets.size():
+		composite = preload("res://scripts/riding.gd").composite(str(profile.get("character_id","100000")),int(profile.pets[index].sprite))
+	player.mounted_character_id = str(composite) if composite >= 0 else ""
+
+func dev_toggle_riding() -> void:
+	if paused_input or moving or area_transition_busy or not session.has_method("mount_pet"): return
+	var profile: Dictionary = session.snapshot()
+	if int(profile.get("ride_pet",-1)) >= 0:
+		session.mount_pet(-1)
+		message.text = "下骑。"
+	else:
+		var index := -1
+		for i in range(profile.pets.size()):
+			if int(profile.pets[i].sprite) == 100330:
+				index = i
+				break
+		if index < 0:
+			message.text = "先领取测试伙伴，再骑乘金虎。"
+			return
+		var selected_as_fighter := int(profile.active_pet) == index
+		var candidate: Dictionary = profile.duplicate(true)
+		if selected_as_fighter: candidate.active_pet = -1
+		var reason := preload("res://scripts/riding.gd").can_mount(candidate,index)
+		if not reason.is_empty():
+			message.text = reason
+			refresh_companion()
+			return
+		if selected_as_fighter: session.select_pet(-1)
+		if not session.mount_pet(index): return
+		message.text = "骑乘金虎。"
+	refresh_companion()
+	play_click()
+	checkpoint()

@@ -14,17 +14,17 @@ static func install() -> bool:
 	var manifest: Variant = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
 	if not manifest is Dictionary or not manifest.has("path") or not manifest.has("hotspot"):
 		return false
-	var image := Image.load_from_file(MANIFEST.get_base_dir().path_join(str(manifest.path)))
+	var source_texture: Texture2D = load(MANIFEST.get_base_dir().path_join(str(manifest.path)))
+	var image: Image = source_texture.get_image() if source_texture != null else null
 	if image == null or image.is_empty():
 		return false
 	hotspot = Vector2(manifest.hotspot[0],manifest.hotspot[1])
 	bitmap = image
-	var texture := ImageTexture.create_from_image(image)
 	# Controls may request pointing hands, I-beams, resize arrows, etc. The legacy
 	# client always used SA_MOUSE1; assigning every shape preserves that behavior.
 	if DisplayServer.get_name() != "headless":
 		for shape in range(Input.CURSOR_HELP + 1):
-			Input.set_custom_mouse_cursor(texture,shape,hotspot)
+			Input.set_custom_mouse_cursor(source_texture,shape,hotspot)
 	installed = true
 	return true
 

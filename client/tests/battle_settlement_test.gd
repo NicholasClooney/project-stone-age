@@ -48,7 +48,7 @@ func _initialize() -> void:
 		check(result.outcome == outcome and game.apply_battle_result(result),"partial kill then "+outcome+" settles")
 		check(game.snapshot().player.xp == 0 and game.snapshot().player.gold == 20,"no XP or gold paid after "+outcome)
 	game = Game.new()
-	for i in range(4):game._profile.pets.append(pet(i))
+	for i in range(Game.PET_CAPACITY-1):game._profile.pets.append(pet(i))
 	config = game.start_battle_config("wooli",false,3)
 	config.player_attack = 100;config.player_speed = 100;config.player_defence = 100
 	# Wounded encounter fixture isolates capture-capacity accounting.
@@ -62,7 +62,7 @@ func _initialize() -> void:
 	var forged := result.duplicate(true)
 	forged.captured_species_list.append("wooli")
 	check(not game.apply_battle_result(forged),"over-capacity captured roster rejected atomically")
-	check(game.apply_battle_result(result) and game.snapshot().pets.size() == 5,"capture plus remaining kills settles exactly one new pet")
+	check(game.apply_battle_result(result) and game.snapshot().pets.size() == Game.PET_CAPACITY,"capture plus remaining kills settles exactly one new pet")
 	check(result.xp == 40 and game.snapshot().player.gold == 40,"captured foe awards no kill XP or gold")
 	print("SETTLEMENT: %d failures" % failures)
 	quit(1 if failures else 0)

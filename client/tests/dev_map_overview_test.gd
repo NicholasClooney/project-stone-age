@@ -12,6 +12,7 @@ func run()->void:
 	world.muted=true
 	var menu=world.dev_map_overview
 	menu.open_map()
+	menu.walk_mode=false
 	check(menu.visible and world.paused_input,"overview opens and blocks movement")
 	check(menu.thumbnail!=null and menu.pois.size()>0,"terrain and original POIs populated")
 	var point:=Vector2i(89,73)
@@ -27,12 +28,14 @@ func run()->void:
 	click.button_index=MOUSE_BUTTON_LEFT
 	click.pressed=true
 	root.push_input(click,true)
+	click.pressed=false
+	root.push_input(click,true)
 	check(world.cell==safe and not menu.visible and not world.paused_input,"actual map click teleports and closesmodal")
 	world.load_area_id(200,Vector2i(570,377))
 	menu=world.dev_map_overview
 	menu.open_map()
 	check(menu.map_dimensions==Vector2i(800,1200),"entirelargeisland represented")
-	check(menu.thumbnail.get_width()<=800 and menu.thumbnail.get_height()<=570,"largeisland boundedthumbnail")
+	check(menu.thumbnail.get_width()<=1600 and menu.thumbnail.get_height()<=1600,"largeisland boundedthumbnail")
 	point=Vector2i(700,1100)
 	check(menu.point_to_cell(menu.cell_to_point(point))==point,"largeisland transform roundtrip")
 	menu.close_map()

@@ -7,6 +7,9 @@ var action := 3
 var elapsed := 0.0
 var sprite: Sprite2D
 var current_image := -1
+var mounted_character_id := ""
+var mounted_textures: Dictionary = {}
+var last_render_character := ""
 
 func _ready() -> void:
 	sprite = Sprite2D.new()
@@ -19,9 +22,18 @@ func _process(delta: float) -> void:
 	if world == null or sprite == null:
 		return
 	var key := str(action)+"_"+str(facing)
-	var animations: Dictionary = world.data.characters[character_id]
+	var mounted: bool = not mounted_character_id.is_empty()
+	var rendered_id: String = mounted_character_id if mounted else character_id
+	var catalogue: Dictionary = preload("res://scripts/riding.gd").manifest() if mounted else world.data
+	if not catalogue.get("characters",{}).has(rendered_id): return
+	if rendered_id != last_render_character:
+		last_render_character = rendered_id
+		current_image = -1
+		elapsed = 0.0
+	var animations: Dictionary = catalogue.characters[rendered_id]
 	if not animations.has(key):
 		key = "3_"+str(facing)
+	if not animations.has(key): return
 	var animation: Dictionary = animations[key]
 	var frames: Array = animation.frames
 	if frames.is_empty():
@@ -32,8 +44,15 @@ func _process(delta: float) -> void:
 	var ident := int(frame.image)
 	if ident != current_image:
 		current_image = ident
-		sprite.texture = world.textures[str(ident)]
-	var metadata: Dictionary = world.data.images[str(ident)]
+		if mounted:
+			if not mounted_textures.has(str(ident)):
+				mounted_textures[str(ident)] = load("res://assets/legacy/riding/images/"+str(ident)+".png")
+			sprite.texture = mounted_textures[str(ident)]
+		else:
+			if not world.textures.has(str(ident)):
+				world.textures[str(ident)] = load("res://assets/legacy/images/"+str(ident)+".png")
+			sprite.texture = world.textures[str(ident)]
+	var metadata: Dictionary = catalogue.images[str(ident)]
 	sprite.position = Vector2(metadata.x+frame.x,metadata.y+frame.y)
 
 func set_action(next: int) -> void:

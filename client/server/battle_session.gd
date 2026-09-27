@@ -20,6 +20,7 @@ var _chosen_skill := 0
 var _player_guard := false
 var _player_command := "attack"
 var _pet_guard := false
+var _last_ride_damage := 0
 
 func start_battle(config: Dictionary = {}) -> Dictionary:
 	if _state.active:
@@ -49,6 +50,9 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["enemies"] = enemies.slice(0,3)
 	_state["pets"] = config.get("pets", [pet] if not pet.is_empty() else []).duplicate(true)
 	_state["active_pet"] = int(config.get("active_pet",0 if not _state.pets.is_empty() else -1))
+	_state["ride_pet"] = int(config.get("ride_pet_index",-1))
+	_state["mounted_sprite"] = int(config.get("mounted_sprite",-1))
+	if int(_state.ride_pet) == int(_state.active_pet): _state.active_pet = -1
 	_state["selected_target"] = 0
 	_state["captured_species_list"] = []
 	_state["capture_success"] = false
@@ -85,7 +89,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 		return snapshot()
 	if action == "capture" and (_state.boss or not _config.get("can_capture",true) or _state.captured_species_list.size() >= int(_config.get("capture_slots",5)) ):
 		return snapshot()
-	if action == "switch" and (pet_index < -1 or pet_index >= _state.pets.size() or pet_index == _state.active_pet):
+	if action == "switch" and (pet_index < -1 or pet_index >= _state.pets.size() or pet_index == _state.active_pet or pet_index == int(_state.get("ride_pet",-1)) and pet_index >= 0):
 		return snapshot()
 	if action == "switch" and pet_index >= 0 and int(_state.pets[pet_index].get("hp",0)) <= 0:
 		return snapshot()
@@ -106,7 +110,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 	_player_command = action
 	_pet_guard = pet_command == "defend"
 	var actors: Array[Dictionary] = [
-		{"actor":"player","speed":int(_config.get("player_speed",10)),"tie":0},
+		{"actor":"player","speed":int(_player_stats().speed),"tie":0},
 
 	]
 	for index in range(_state.enemies.size()):
@@ -129,6 +133,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 		_acting_enemy = int(actor.get("enemy_index",-1))
 		_last_outcome = action if actor.actor == "player" else pet_command if actor.actor == "pet" else "attack"
 		_last_damage = 0
+		_last_ride_damage = 0
 		_pending_counter = {}
 		_state.turn_order.append(actor.actor)
 		match actor.actor:
@@ -209,8 +214,14 @@ func _pet_action(command: String) -> void:
 		return
 	_attack_enemy(stats,str(stats.get("name","伙伴")))
 
-func _player_stats() -> Dictionary:
-	return {"kind":"player","attack":_config.get("player_attack",10),"defence":_config.get("player_defence",0),"speed":_config.get("player_speed",10),"level":_config.get("player_level",1),"vital":_config.get("player_vital",0),"luck":_config.get("player_luck",0),"weapon":_config.get("player_weapon","")}
+func _player_stats(defending: bool = false) -> Dictionary:
+	var stats := {"kind":"player","attack":_config.get("player_attack",10),"defence":_config.get("player_defence",0),"speed":_config.get("player_speed",10),"level":_config.get("player_level",1),"vital":_config.get("player_vital",0),"luck":_config.get("player_luck",0),"weapon":_config.get("player_weapon","")}
+
+	stats["dex"] = float(_config.get("player_speed",10))
+	var index := int(_state.get("ride_pet",-1))
+	if index >= 0 and index < _state.pets.size() and int(_state.pets[index].hp) > 0:
+		return preload("res://scripts/riding.gd").adjusted_stats(stats,_state.pets[index],str(_config.get("combat_profile","classic")),defending)
+	return stats
 
 func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 	_pending_counter = {}
@@ -224,7 +235,9 @@ func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 	_last_outcome = result.outcome
 	_last_damage = mini(int(int(result.damage)/int(stats.get("damage_divisor",1))),int(enemy.hp))
 	enemy.hp -= _last_damage
-	if int(enemy.hp) == 0: enemy["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
+	if int(enemy.hp) == 0:
+		enemy["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
+		enemy["defeated_with_ride_index"] = int(_state.get("ride_pet",-1)) if stats.kind == "player" else -1
 	_sync_enemy(_target)
 	_state.events.append("%s攻击%s：%s %d。" % [actor_name,str(enemy.get("name","对手")),_last_outcome,_last_damage])
 	if int(enemy.hp) > 0 and str(enemy.get("command","attack")) == "attack" and _rng.randi_range(1,10000) < int(CombatRules.odds(enemy,stats,"counter")*100):
@@ -236,7 +249,7 @@ func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 	var pet_alive: bool = not _state.pet.is_empty() and _state.pet_hp > 0
 	var target_pet: bool = pet_alive and _rng.randi_range(0,1) == 1
 	_state.enemy_target = "pet" if target_pet else "player"
-	var defender: Dictionary = _state.pet.duplicate(true) if target_pet else _player_stats()
+	var defender: Dictionary = _state.pet.duplicate(true) if target_pet else _player_stats(true)
 	defender["kind"] = "pet" if target_pet else "player"
 	if target_pet and _state.last_pet_command == "skill" and _chosen_skill == 50:
 		defender.defence = int(defender.get("defence",0)) + int(int(defender.get("defence",0)) * -0.35)
@@ -250,7 +263,7 @@ func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 		_state.pet_hp -= _last_damage
 		_state.pet.hp = _state.pet_hp
 	else:
-		_state.player_hp -= _last_damage
+		_apply_player_damage(int(result.damage))
 	_state.events.append("对手攻击%s：%s %d。" % [str(_state.pet_name) if target_pet else "你",_last_outcome,_last_damage])
 	var can_counter: bool = _state.pet_hp > 0 and _state.last_pet_command == "attack" if target_pet else _state.player_hp > 0 and _player_command == "attack"
 	if can_counter and _rng.randi_range(1,10000) < int(CombatRules.odds(defender,_state.enemies[_acting_enemy],"counter")*100):
@@ -297,9 +310,10 @@ func _finish(outcome: String, message: String) -> void:
 	_state.events.append(message)
 
 func _record_frame(actor: String) -> void:
-	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and not _last_outcome.begins_with("counter") else 0})
+	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"ride_pet":int(_state.get("ride_pet",-1)),"mounted_sprite":int(_state.get("mounted_sprite",-1)),"ride_damage":_last_ride_damage,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and not _last_outcome.begins_with("counter") else 0})
 
 func _resolve_counter() -> void:
+	_last_ride_damage = 0
 	var counter: Dictionary = _pending_counter
 	_pending_counter = {}
 	var actor := str(counter.actor)
@@ -307,7 +321,7 @@ func _resolve_counter() -> void:
 	_target = _acting_enemy
 	var attacker: Dictionary = _state.enemies[_acting_enemy] if actor == "enemy" else _player_stats() if actor == "player" else _state.pet.duplicate(true)
 	attacker["kind"] = actor
-	var defender: Dictionary = (_state.enemies[_acting_enemy] if actor != "enemy" else _player_stats() if counter.target == "player" else _state.pet).duplicate(true)
+	var defender: Dictionary = (_state.enemies[_acting_enemy] if actor != "enemy" else _player_stats(true) if counter.target == "player" else _state.pet).duplicate(true)
 	defender["kind"] = "enemy" if actor != "enemy" else str(counter.target)
 	var result: Dictionary = CombatRules.resolve(attacker,defender,_rng,false,str(_config.get("combat_profile","classic")))
 	var damage := int(int(result.damage)*0.75)
@@ -316,13 +330,14 @@ func _resolve_counter() -> void:
 	if actor != "enemy":
 		_last_damage = mini(damage,int(_state.enemies[_target].hp))
 		_state.enemies[_target].hp -= _last_damage
-		if int(_state.enemies[_target].hp) == 0: _state.enemies[_target]["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
+		if int(_state.enemies[_target].hp) == 0:
+			_state.enemies[_target]["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
+			_state.enemies[_target]["defeated_with_ride_index"] = int(_state.get("ride_pet",-1)) if actor == "player" else -1
 		_sync_enemy(_target)
 	else:
 		_state.enemy_target = counter.target
 		if counter.target == "player":
-			_last_damage = mini(damage,int(_state.player_hp))
-			_state.player_hp -= _last_damage
+			_apply_player_damage(damage)
 		else:
 			_last_damage = mini(damage,int(_state.pet_hp))
 			_state.pet_hp -= _last_damage
@@ -339,3 +354,42 @@ func _resolve_counter() -> void:
 		var alive: bool = _state.player_hp > 0 if next_actor == "player" else _state.pet_hp > 0 if next_actor == "pet" else _enemy_alive(_acting_enemy)
 		if allowed and alive and _rng.randi_range(1,10000) < int(CombatRules.odds(defender,attacker,"counter")*100):
 			_pending_counter = {"actor":next_actor,"enemy_index":_acting_enemy,"target":actor}
+
+func _apply_player_damage(damage: int) -> void:
+	var player_damage := damage
+	var index := int(_state.get("ride_pet",-1))
+	if damage > 0 and index >= 0 and index < _state.pets.size() and int(_state.pets[index].hp) > 0:
+		# battle_event.c:1738: native rider/mount damage split, including +1.
+		var own_def := maxi(1,int(_config.get("player_defence",0)))
+		var pet_def := maxi(1,int(_state.pets[index].get("defence",0)))
+		player_damage = int(float(damage*pet_def)/float(own_def+pet_def))+1
+		_last_ride_damage = mini(damage-player_damage+1,int(_state.pets[index].hp))
+		_state.pets[index].hp -= _last_ride_damage
+		if int(_state.pets[index].hp) <= 0:
+			_state.ride_pet = -1
+			_state.mounted_sprite = -1
+			_state.events.append("骑乘伙伴倒下了，下骑。")
+	_last_damage = mini(player_damage,int(_state.player_hp))
+	_state.player_hp -= _last_damage
+
+func developer_escape() -> Dictionary:
+	if not bool(_state.get("active",false)):return snapshot()
+	_state.turn+=1
+	_state.events=[]
+	_state.turn_order=["player"]
+	_state.turn_frames=[]
+	_state.capture_success=false
+	_state.captured_species=""
+	_state.captured_species_list=[]
+	for enemy in _state.enemies:enemy.captured=false
+	_state.xp=0
+	_state.gold=0
+	_state.gm_escape=true
+	_last_outcome="escape"
+	_last_damage=0
+	_last_ride_damage=0
+	_acting_enemy=-1
+	_target=maxi(0,int(_state.get("selected_target",0)))
+	_finish("escaped","DEV：立即脱战，不获得经验、石币或捕获奖励。")
+	_record_frame("player")
+	return snapshot()

@@ -74,7 +74,7 @@ func run() -> void:
 			await settle()
 		stress_valid = stress_valid and game.is_walkable(game.cell)
 	check(stress_valid,"200 repeated movement steps stay on valid terrain")
-	game.change_character()
+	game.change_character("100005")
 	await ticks(2)
 	check(game.player.character_id=="100005","original character switching works")
 	game.player.set_action(5)

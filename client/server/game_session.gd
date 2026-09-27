@@ -2,9 +2,13 @@ extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 const SAVE_VERSION := 2
+const PET_CAPACITY := 30
 const Progression = preload("res://server/progression.gd")
 const ITEM_PRICES := {"potion":10,"club":30}
 const SPECIES := {
+	"blue_dragon":{"name":"扬奇洛斯","alias":"蓝人龙","category":"人龙","sprite":100288,"speed":20},
+	"golden_tiger":{"name":"金格萨贝鲁","alias":"金虎","category":"老虎","sprite":100330,"speed":29},
+	"red_rex":{"name":"巴朵兰恩","alias":"红暴龙","category":"暴龙","sprite":100373,"speed":25},
 	"wooli":{"name":"乌力","sprite":100250,"hp":32,"attack":7,"defence":0,"speed":8},
 	"wooli_wooli":{"name":"乌力乌力","sprite":100251,"hp":40,"attack":8,"defence":1,"speed":6},
 	"woolistan":{"name":"乌力斯坦","sprite":100252,"hp":48,"attack":9,"defence":2,"speed":4},
@@ -14,7 +18,7 @@ var _pending: Dictionary = {}
 var last_error := ""
 
 func _init() -> void:
-	_profile = {"version":SAVE_VERSION,"profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"travel_pass":false,"pets":[],"active_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0},"equipped":false,"travel_pass":false,"pets":[],"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
@@ -45,11 +49,14 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	var pet: Dictionary = {}
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
-	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":effective_player_stats().attack,"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < 5,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	config.ride_pet_index = int(_profile.get("ride_pet",-1))
+	config.ride_pet = _profile.pets[config.ride_pet_index].duplicate(true) if config.ride_pet_index>=0 else {}
+	config.mounted_sprite = preload("res://scripts/riding.gd").composite(str(_profile.character_id),int(config.ride_pet.get("sprite",0))) if not config.ride_pet.is_empty() else -1
 	config.player_level = player.level
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "club" if _profile.equipped else ""
-	config.capture_slots = 5-_profile.pets.size()
+	config.capture_slots = PET_CAPACITY-_profile.pets.size()
 	config.pets = _profile.pets.duplicate(true)
 	config.active_pet = _profile.active_pet
 	config.enemies = []
@@ -76,7 +83,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 		return false
 	var captures: Array = result.get("captured_species_list",[])
 	var enemies: Array = result.get("enemies",[])
-	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>5:return false
+	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>PET_CAPACITY:return false
 	var verified_captures := []
 	var earned_xp := 0
 	var earned_gold := 0
@@ -97,6 +104,11 @@ func apply_battle_result(result: Dictionary) -> bool:
 			var recipient = foe.get("defeated_by_pet_index",-1)
 			if not _integer(recipient,-1,_profile.pets.size()-1):return false
 			if int(recipient)>=0:pet_rewards[int(recipient)] += int(original.reward_xp)
+			var ridden = foe.get("defeated_with_ride_index",-1)
+			if not _integer(ridden,-1,_profile.pets.size()-1):return false
+			if int(ridden)>=0:
+				if int(ridden) != int(_pending.get("ride_pet_index",-1)):return false
+				pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(int(original.reward_xp),int(_profile.pets[int(ridden)].level),int(original.get("level",1)))
 		else:remaining += 1
 	var sorted_captures := captures.duplicate()
 	sorted_captures.sort()
@@ -110,6 +122,11 @@ func apply_battle_result(result: Dictionary) -> bool:
 	for i in range(battle_pets.size()):
 		if not _integer(battle_pets[i].get("hp"),0,_profile.pets[i].max_hp):return false
 	if not _integer(result.get("active_pet",-1),-1,_profile.pets.size()-1):return false
+	var ride_index = result.get("ride_pet",int(_profile.get("ride_pet",-1)))
+	if not _integer(ride_index,-1,_profile.pets.size()-1):return false
+	if int(ride_index) not in [-1,int(_profile.get("ride_pet",-1))]:return false
+	if int(ride_index)>=0 and (int(result.get("active_pet",-1)) == int(ride_index) or int(battle_pets[int(ride_index)].hp)<=0):return false
+	_profile.ride_pet = int(ride_index)
 	_profile.player.hp = hp
 	_profile.inventory.potion = potions
 	for i in range(battle_pets.size()):_profile.pets[i].hp = int(battle_pets[i].hp)
@@ -142,6 +159,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 	if outcome == "defeat":
 		_recover()
 		_profile.location = {"map_id":1000,"x":80,"y":90}
+	if result.get("gm_escape",false):_profile.gm_modified=true
 	_profile.completed_battles.append(id)
 	# Monotonic IDs plus a bounded replay log keep save size bounded.
 	if _profile.completed_battles.size() > 128:
@@ -204,6 +222,7 @@ func _recover() -> void:
 func select_pet(index: int) -> bool:
 	if not _pending.is_empty() or index < -1 or index >= _profile.pets.size():
 		return false
+	if index >= 0 and index == int(_profile.get("ride_pet",-1)):return false
 	_profile.active_pet = index
 	return true
 
@@ -269,6 +288,8 @@ func load_game(path: String) -> bool:
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
 			_profile = _normalize_numbers(parsed)
+			if not _profile.has("ride_pet"):_profile.ride_pet = -1
+			if not _profile.has("character_id"):_profile.character_id = "100000"
 			if not _profile.has("travel_pass"):
 				_profile.travel_pass = false
 			# Earlier prototype saves predate speed; migrate only this optional field.
@@ -294,6 +315,10 @@ func load_game(path: String) -> bool:
 	return false
 
 func _valid_profile(value: Variant) -> bool:
+	if value is Dictionary and value.has("default_companions_claimed") and not value.default_companions_claimed is bool:return false
+	if value is Dictionary and value.has("gm_modified") and not value.gm_modified is bool:return false
+	if value is Dictionary and value.has("gm_bonus_points") and not _integer(value.gm_bonus_points,0,100000):return false
+	if value is Dictionary and value.has("character_id") and not _valid_character(value.character_id):return false
 	if value is Dictionary and value.has("travel_pass") and not value.travel_pass is bool:
 		return false
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
@@ -301,8 +326,9 @@ func _valid_profile(value: Variant) -> bool:
 	for key in ["player","inventory","quest","location"]:
 		if not value.get(key) is Dictionary:
 			return false
-	if not value.get("pets") is Array or value.pets.size() > 5 or not value.get("completed_battles") is Array:
+	if not value.get("pets") is Array or value.pets.size() > PET_CAPACITY or not value.get("completed_battles") is Array:
 		return false
+	if value.has("ride_pet") and (not _integer(value.ride_pet,-1,value.pets.size()-1) or (value.ride_pet >= 0 and value.ride_pet == value.get("active_pet"))):return false
 	if not _integer(value.get("active_pet"),-1,value.pets.size()-1) or not _integer(value.get("next_battle"),1,1000000000) or not value.get("equipped") is bool:
 		return false
 	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,1000000000):
@@ -314,10 +340,10 @@ func _valid_profile(value: Variant) -> bool:
 			return false
 		var assigned := 0
 		for stat in ["vitality","strength","toughness","dexterity"]:
-			if not _integer(value.player.allocated_stats.get(stat),0,(value.player.level-1)*3):
+			if not _integer(value.player.allocated_stats.get(stat),0,(value.player.level-1)*3+int(value.get("gm_bonus_points",0))):
 				return false
 			assigned += int(value.player.allocated_stats[stat])
-		if assigned > (int(value.player.level)-1)*3:
+		if assigned > (int(value.player.level)-1)*3+int(value.get("gm_bonus_points",0)):
 			return false
 	for item in ITEM_PRICES:
 		if not _integer(value.inventory.get(item),0,99):
@@ -347,6 +373,7 @@ func _valid_profile(value: Variant) -> bool:
 	return true
 
 func _actor_valid(actor: Dictionary) -> bool:
+	if actor.has("gm_modified") and not actor.gm_modified is bool:return false
 	if actor.has("base_stats"):
 		if not actor.base_stats is Dictionary:return false
 		for key in Progression.STATS:
@@ -426,13 +453,16 @@ func effective_player_stats() -> Dictionary:
 	var result := {}
 	for key in Progression.DERIVED:result[key] = _profile.player[key]
 	result.attack += 4 if _profile.equipped else 0
+	var riding := int(_profile.get("ride_pet",-1))
+	if riding>=0:
+		result = preload("res://scripts/riding.gd").adjusted_stats(result,_profile.pets[riding])
 	return result
 
 func _sync_stat_points() -> void:
 	var assigned := 0
 	for count in _profile.player.allocated_stats.values():
 		assigned += int(count)
-	_profile.player.stat_points = maxi(0,(int(_profile.player.level)-1)*3-assigned)
+	_profile.player.stat_points = maxi(0,(int(_profile.player.level)-1)*3+int(_profile.get("gm_bonus_points",0))-assigned)
 
 func learn_pet_skill(index: int, skill_id: int) -> bool:
 	var catalog = preload("res://scripts/pet_skills.gd")
@@ -449,4 +479,125 @@ func learn_pet_skill(index: int, skill_id: int) -> bool:
 	learned.append(skill_id)
 	pet.learned_skills = learned
 	pet.skill_unlocked = true
+	return true
+
+func _valid_character(id: Variant) -> bool:
+	if not id is String or not id.is_valid_int():return false
+	var number := int(id)
+	if str(number) != id or number < 100000 or number > 100235 or (number-100000)%5 != 0:return false
+	var path := "res://assets/legacy/characters/catalog.json"
+	if FileAccess.file_exists(path):
+		var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
+		return catalog.get("characters",{}).has(id)
+	return true
+
+func set_character(id: String) -> bool:
+	if not _pending.is_empty() or not _valid_character(id):return false
+	_profile.character_id = id
+	var index := int(_profile.get("ride_pet",-1))
+	if index>=0 and not preload("res://scripts/riding.gd").can_mount(_profile,index).is_empty():_profile.ride_pet = -1
+	return true
+
+# Explicit developer starter pack: idempotent; preserves existing companions.
+func grant_starter_pets() -> bool:
+	if not _pending.is_empty():return false
+	var missing: Array[String] = []
+	for species in ["blue_dragon","golden_tiger","red_rex"]:
+		var found := false
+		for pet in _profile.pets:
+			if pet.species == species:found = true
+		if not found:missing.append(species)
+	if _profile.pets.size()+missing.size()>PET_CAPACITY:return false
+	for species in missing:
+		var data: Dictionary = SPECIES[species]
+		var pet := Progression.species_actor(species,1,int(data.sprite))
+		pet.merge({"species":species,"name":data.name,"sprite":data.sprite,"level":1,"xp":0,"skill_unlocked":false,"loyalty":100})
+		_profile.pets.append(pet)
+	return true
+
+func mount_pet(index: int) -> bool:
+	last_error = ""
+	if not _pending.is_empty():return false
+	if index == -1:
+		_profile.ride_pet = -1
+		return true
+	last_error = preload("res://scripts/riding.gd").can_mount(_profile,index)
+	if not last_error.is_empty():return false
+	_profile.ride_pet = index
+	return true
+
+# Explicit developer-only mutations. The UI labels all values and checkpoints
+# successful changes; ordinary progression never invokes these methods.
+func _gm_actor(index: int) -> Dictionary:
+	if index == -1:return _profile.player
+	if index >= 0 and index < _profile.pets.size():return _profile.pets[index]
+	return {}
+
+func _gm_error(message: String) -> bool:
+	last_error=message
+	return false
+
+func _gm_mark(actor: Dictionary) -> void:
+	_profile.gm_modified=true
+	actor.gm_modified=true
+
+func gm_raise_level(index: int, target: Variant) -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能修改等级。")
+	var actor:=_gm_actor(index)
+	if actor.is_empty() or not _integer(target,1,120):return _gm_error("请选择角色或宠物，等级须为1至120的整数。")
+	if int(target)<int(actor.level):return _gm_error("只允许升至指定等级，不能降级。")
+	if int(target)==int(actor.level):return true
+	while int(actor.level)<int(target):_gain_xp(actor,int(actor.level)*30-int(actor.xp))
+	_gm_mark(actor)
+	_sync_stat_points()
+	return true
+
+func gm_set_base_stat(index: int, stat: String, value: Variant, additive: bool = false) -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能修改能力。")
+	var actor:=_gm_actor(index)
+	if actor.is_empty() or stat not in Progression.STATS or not (value is int or value is float) or not is_finite(float(value)) or absf(float(value))>10000:
+		return _gm_error("基础值必须是有限数字，范围0至10000；增加值可为负数。")
+	var planned:=actor.duplicate(true)
+	if index==-1:Progression.migrate_player(planned)
+	else:Progression.migrate_pet(planned,int(planned.sprite))
+	var fixed:=roundi(float(value)*100.0)
+	if additive:fixed+=int(planned.base_stats[stat])
+	if fixed<0 or fixed>1000000:return _gm_error("结果超出基础值0至10000的范围。")
+	planned.base_stats[stat]=fixed
+	Progression.refresh(planned)
+	actor.merge(planned,true)
+	_gm_mark(actor)
+	return true
+
+func gm_grant_points(amount: Variant) -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能增加分配点。")
+	if not _integer(amount,1,100000) or int(_profile.get("gm_bonus_points",0))+int(amount)>100000:return _gm_error("增加点数须为正整数，GM赠点累计上限100000。")
+	_profile.gm_bonus_points=int(_profile.get("gm_bonus_points",0))+int(amount)
+	_gm_mark(_profile.player)
+	_sync_stat_points()
+	return true
+
+func gm_heal(index: int = -2) -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能直接恢复；可使用立即脱战。")
+	var actors: Array=[]
+	if index==-2:
+		actors.append(_profile.player)
+		actors.append_array(_profile.pets)
+	else:
+		var actor:=_gm_actor(index)
+		if actor.is_empty():return _gm_error("请选择有效角色或宠物。")
+		actors.append(actor)
+	for actor in actors:
+		actor.hp=actor.max_hp
+		_gm_mark(actor)
+	return true
+
+func claim_default_companions() -> bool:
+	if bool(_profile.get("default_companions_claimed",false)):return false
+	if not grant_starter_pets():return false
+	_profile.default_companions_claimed = true
 	return true

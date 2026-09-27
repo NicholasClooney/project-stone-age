@@ -8,3 +8,7 @@ The preserved reference implements riding. It is not yet restored in the Godot g
 - `gmsv/include/version.h` contains `_EVERYONE_RIDE`, `_RIDEMODE_20`, `_NEW_RIDEPETS` and later family/item/custom riding switches. These variants must not be silently combined into one rule set.
 
 A restoration needs a chosen historical ruleset, valid rider/mount graphic mappings, mount/dismount state, battle integration and save migration. Matching mounted animations in the local2.5 asset archive still need verification; source support alone does not prove every mount asset is available.
+
+## Implemented subset
+
+Native gold-tiger riding, damage sharing, separate mount HP and mounted experience now work. See [implementation evidence and limitations](original-riding.md); the earlier asset-verification research note above is superseded for the imported pairs.

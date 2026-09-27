@@ -26,6 +26,10 @@ var result_level_up := false
 var commands: Array[TextureButton] = []
 var actors: Array[Dictionary] = []
 var textures: Dictionary = {}
+var riding_art_cues: Array[Dictionary] = []
+var riding_hp_bar: Control
+var riding_hp_fill: ColorRect
+var unmounted_player_art := "100000"
 var elapsed := 0.0
 const SPECIES_ART := {"wooli":"100250","wooli_wooli":"100251","wooli_stan":"100252"}
 var built := false
@@ -102,8 +106,6 @@ func _ready() -> void:
 	if FileAccess.file_exists(ART_ROOT+"manifest.json"):
 		manifest = JSON.parse_string(FileAccess.get_file_as_string(ART_ROOT+"manifest.json"))
 		picture("background.png",Vector2.ZERO).z_index = -1000
-		for ident in manifest.get("images",{}):
-			textures[str(ident)] = load(ART_ROOT+"images/%s.png" % ident)
 		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
 		add_actor(str(manifest.get("enemy_id","")),Vector2(101,150),7)
 	status = label("",16,Vector2(20,12),Vector2(420,26))
@@ -172,6 +174,18 @@ func _ready() -> void:
 		meter.add_child(fill)
 		hp_bars.append(meter)
 		hp_fills.append(fill)
+	riding_hp_bar = Control.new()
+	riding_hp_bar.position = Vector2(20,25)
+	riding_hp_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	hp_bars[0].add_child(riding_hp_bar)
+	ui_picture(26020,Vector2.ZERO,riding_hp_bar)
+	riding_hp_fill = ColorRect.new()
+	riding_hp_fill.color = Color.GREEN
+	riding_hp_fill.position = Vector2(-21,-1)
+	riding_hp_fill.size = Vector2(40,2)
+	riding_hp_fill.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	riding_hp_bar.add_child(riding_hp_fill)
+	riding_hp_bar.hide()
 	battle_effects = BattleEffects.new()
 	stage.add_child(battle_effects)
 	battle_effects.setup(manifest)
@@ -272,18 +286,23 @@ func open_battle(next_state: Dictionary) -> void:
 	last_player_command = "attack"
 	defeat_return_queued = false
 	hp_cues.clear()
+	riding_art_cues.clear()
 	word_cues.clear()
 	music_cues.clear()
 	sound_cues.clear()
 	feedback_until = 0.0
-	if is_instance_valid(world) and actors.size() > 0:
-		var ident: String = str(world.player.character_id)
-		if world.get("session")!=null and bool(world.session.snapshot().get("equipped",false)):
+	if actors.size() > 0:
+		var ident: String = str(world.player.character_id) if is_instance_valid(world) else unmounted_player_art
+		if is_instance_valid(world) and world.get("session")!=null and bool(world.session.snapshot().get("equipped",false)):
 			ident = str(manifest.get("equipment_variants",{}).get("club",{}).get(ident,ident))
+		unmounted_player_art = ident
+		var mounted := int(next_state.get("mounted_sprite",-1))
+		if mounted >= 0 and ensure_riding_art(str(mounted)): ident = str(mounted)
 		if manifest.characters.has(ident):
 			actors[0]["character_id"] = ident
 			actors[0].animations = manifest.characters[ident]
 			actors[0].animation = manifest.characters[ident]["3_%d" % int(actors[0].facing)]
+	update_riding_health(next_state)
 	var enemy_art := str(next_state.get("enemy_sprite",SPECIES_ART.get(str(next_state.get("enemy_species","wooli")),"100250")))
 	set_actor_art(1,enemy_art)
 	for old_index in range(2,actors.size()): actors[old_index].sprite.queue_free()
@@ -369,6 +388,8 @@ func capture_transition() -> void:
 
 func set_actor_art(index: int, ident: String) -> void:
 	if index >= actors.size() or not manifest.get("characters",{}).has(ident): return
+	actors[index]["character_id"] = ident
+	if index==0 and not preload("res://scripts/riding.gd").manifest().get("characters",{}).has(ident):unmounted_player_art=ident
 	actors[index].animations = manifest.characters[ident]
 	var key := "3_%d" % int(actors[index].facing)
 	if manifest.characters[ident].has(key): actors[index].animation = manifest.characters[ident][key]
@@ -512,7 +533,7 @@ func queue_capture(at: float, success: bool, target: int = 1) -> Dictionary:
 	actors[target].spin_start = hit
 	actors[target].spin_end = arrival+(4.25 if success else 0.0)
 	word_cues.append({"at":hit,"index":0,"id":26512})
-	sound_cues.append({"at":hit,"id":251 if clip.frames.any(func(frame): return int(frame.get("sound",0))==10003) else 250})
+	sound_cues.append({"at":hit,"id":mounted_impact_sound(0)})
 	word_cues.append({"at":arrival,"index":0,"id":26506 if success else 26505})
 	var end := arrival+(4.25 if success else 100.0/60.0)
 	actors[0].cues.append({"at":arrival,"action":7 if success else 8,"seconds":end-arrival,"facing":3})
@@ -563,6 +584,7 @@ func queue_turn_animation(previous: Dictionary) -> void:
 		queue_group_turn(previous)
 		return
 	hp_cues.clear()
+	riding_art_cues.clear()
 	word_cues.clear()
 	music_cues.clear()
 	sound_cues.clear()
@@ -795,7 +817,8 @@ func cancel_selection() -> void:
 func world_modal_open() -> bool:
 	if not is_instance_valid(world): return false
 	var panel = world.get("adventure_menu")
-	return is_instance_valid(panel) and panel.visible
+	var gm_panel = world.get("dev_gm_menu")
+	return (is_instance_valid(panel) and panel.visible) or (is_instance_valid(gm_panel) and gm_panel.visible)
 
 func _input(event: InputEvent) -> void:
 	if not visible or world_modal_open(): return
@@ -843,6 +866,10 @@ func _process(delta: float) -> void:
 		set_actor_art(2,str(companion.get("sprite",100250)))
 		displayed_hp[2] = int(companion.get("hp",0))
 		actor_labels[2].text = str(companion.get("name",""))
+	while not riding_art_cues.is_empty() and elapsed >= float(riding_art_cues[0].at):
+		var ride_cue: Dictionary = riding_art_cues.pop_front()
+		if not str(ride_cue.get("art","")).is_empty(): set_actor_art(0,str(ride_cue.art))
+		if ride_cue.has("health"): update_riding_health(ride_cue.health)
 	while not hp_cues.is_empty() and elapsed>=float(hp_cues[0].at):
 		var cue: Dictionary = hp_cues.pop_front()
 		var recipient := int(cue.index)
@@ -934,6 +961,7 @@ func _process(delta: float) -> void:
 		var ident := str(int(frame.image))
 		var metadata: Dictionary = manifest.images[ident]
 		var sprite: Sprite2D = actor.sprite
+		if not textures.has(ident): textures[ident] = load(ART_ROOT+"images/%s.png" % ident)
 		sprite.texture = textures[ident]
 		sprite.z_index = clampi(int(actor.point.y),0,599)-600
 		sprite.position = actor.point+Vector2(float(metadata.x)+float(frame.x),float(metadata.y)+float(frame.y))
@@ -970,6 +998,7 @@ func show_learned_skills() -> void:
 # Every effect consumes an authority event. Rendering never rolls combat odds.
 func queue_group_turn(previous: Dictionary) -> void:
 	hp_cues.clear()
+	riding_art_cues.clear()
 	word_cues.clear()
 	music_cues.clear()
 	sound_cues.clear()
@@ -1011,6 +1040,8 @@ func queue_group_turn(previous: Dictionary) -> void:
 			if outcome.ends_with("miss"):
 				word_cues.append({"at":float(timing.hit),"index":target,"id":26504})
 			elif int(frame.get("damage",0))>0:
+				if str(actors[index].get("character_id","")).begins_with("101"):
+					sound_cues.append({"at":float(timing.hit),"id":mounted_impact_sound(index)})
 				var dead := health_of(frame,target)<=0
 				var guarding := (target==0 and pending_action=="defend") or (target==2 and str(state.get("last_pet_command",""))=="defend")
 				queue_pose(target,2 if dead else 10 if guarding else 1,float(timing.hit),60.0 if dead else 0.35)
@@ -1022,6 +1053,9 @@ func queue_group_turn(previous: Dictionary) -> void:
 			if enemy_index(recipient)>=0 and bool(enemies_of(frame)[enemy_index(recipient)].get("captured",false)): continue
 			var guarded := (recipient==0 and pending_action=="defend") or (recipient==2 and str(state.get("last_pet_command",""))=="defend")
 			hp_cues.append({"at":float(timing.hit),"index":recipient,"hp":health_of(frame,recipient),"guarded":guarded,"critical":recipient==target and outcome.ends_with("critical")})
+		if int(before.get("mounted_sprite",-1)) >= 0 or int(frame.get("mounted_sprite",-1)) >= 0:
+			var dismounted := int(frame.get("mounted_sprite",-1)) < 0
+			riding_art_cues.append({"at":float(timing.hit),"art":unmounted_player_art if dismounted else "","health":frame})
 		before = frame
 		at = float(timing.end)+0.08
 	hp_cues.sort_custom(func(a,b): return float(a.at)<float(b.at))
@@ -1086,3 +1120,33 @@ func original_choice(ident: int, center: Vector2, callback: Callable) -> Texture
 	button.pressed.connect(callback)
 	choice_panel.add_child(button)
 	return button
+
+func ensure_riding_art(ident: String) -> bool:
+	var riding: Dictionary = preload("res://scripts/riding.gd").manifest()
+	if not riding.get("characters",{}).has(ident): return false
+	manifest.characters[ident] = riding.characters[ident]
+	manifest.frame_sounds.merge(riding.get("frame_sounds",{}),true)
+	for animation in riding.characters[ident].values():
+		for frame in animation.frames:
+			var bitmap := str(int(frame.image))
+			manifest.images[bitmap] = riding.images[bitmap]
+			if not textures.has(bitmap):
+				textures[bitmap] = load("res://assets/legacy/riding/images/"+bitmap+".png")
+	return true
+
+func mounted_impact_sound(index: int) -> int:
+	var facing := 7 if enemy_index(index)>=0 else 3
+	var clip: Dictionary = actors[index].animations.get("0_%d" % facing,{})
+	for frame in clip.get("frames",[]):
+		var marker := int(frame.get("sound",0))
+		if marker >= 10100: marker -= 100
+		if marker >= 10000:
+			return {10000:250,10001:254,10002:251,10003:251,10004:252,10007:254}.get(marker,250)
+	return 250
+
+func update_riding_health(health: Dictionary) -> void:
+	var index := int(health.get("ride_pet",-1))
+	var roster: Array = health.get("pets",[])
+	riding_hp_bar.visible = index >= 0 and index < roster.size()
+	if riding_hp_bar.visible:
+		riding_hp_fill.size.x = 40.0*clampf(float(roster[index].hp)/maxf(1,float(roster[index].max_hp)),0,1)

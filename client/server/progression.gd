@@ -3,6 +3,9 @@ extends RefCounted
 const STATS := ["vitality", "strength", "toughness", "dexterity"]
 const DERIVED := ["max_hp", "attack", "defence", "speed"]
 const SPECIES := {
+	"blue_dragon": {"initial":29,"weights":[27,36,16,20]},
+	"golden_tiger": {"initial":25,"weights":[19,29,18,29]},
+	"red_rex": {"initial":27,"weights":[23,37,20,25]},
 	"wooli": {"initial":10,"weights":[20,12,15,25]},
 	"wooli_wooli": {"initial":20,"weights":[22,23,11,23]},
 	"woolistan": {"initial":15,"weights":[22,17,19,17]},

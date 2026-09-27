@@ -41,6 +41,9 @@ func run():
  await physics_frame
  check(int(game.data.map_id)==1002 and game.adventure_menu.visible,"shop shortcut teleports to reachable merchant")
  game.close_adventure_menu()
+ # The shop hid this newly built toolbar before its first layout. Wait for
+ # the visible frame a user would see before computing the button hit point.
+ await process_frame
  await click(game.find_child("DevEncounter",true,false))
  check(game.battle_view.visible and game.battle_session.snapshot().active and int(game.data.map_id)==100,"dev encounter enters regular battle from interior")
  var id=game.battle_session.snapshot().get("battle_id","")

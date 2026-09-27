@@ -7,15 +7,29 @@ var feedback := ""
 var selected_pet := 0
 var pet_view := "list"
 var pet_rename := false
+var pet_category := "全部"
+var pet_page := 0
+var pet_growth_open := false
+const PetGrowth = preload("res://scripts/pet_growth.gd")
 var name_edit: LineEdit
 var art: Dictionary = {}
 var selected_item := "potion"
+var readable_font: FontVariation
+func _sync_dev_visibility() -> void:
+	if world==null or not is_instance_valid(world.ui_layer):return
+	if is_instance_valid(world.adventure_hint):world.adventure_hint.visible=not visible
+	for root_control in world.ui_layer.get_children():
+		for child in root_control.get_children():
+			if child is HFlowContainer:child.visible=not visible
+
 func configure(owner: Node) -> void:
 	world = owner
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	resized.connect(layout_panel)
+	z_index = 50
+	visibility_changed.connect(_sync_dev_visibility)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	hide()
 func _has_point(point: Vector2) -> bool:
@@ -59,6 +73,11 @@ func stone(rect: Rect2) -> void:
 			image(26001+row*3+col,rect.position+Vector2(x*64,y*48))
 func label(value: String, point: Vector2, width: float = 280, font_size: int = 16) -> Label:
 	var item: Label = world.text(value,font_size)
+	if readable_font==null:
+		readable_font=FontVariation.new()
+		readable_font.base_font=load("res://assets/fonts/NotoSansSC.ttf")
+		readable_font.variation_opentype={2003265652:600.0}
+	item.add_theme_font_override("font",readable_font)
 	item.position = point
 	item.size.x = width
 	item.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
@@ -67,6 +86,7 @@ func label(value: String, point: Vector2, width: float = 280, font_size: int = 1
 	item.add_theme_constant_override("shadow_offset_x",1)
 	item.add_theme_constant_override("shadow_offset_y",1)
 	item.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	item.z_index=1
 	panel.add_child(item)
 	return item
 func choice(caption: String, point: Vector2, action: String, value: Variant = null, enabled: bool = true) -> Button:
@@ -185,7 +205,7 @@ func status_panel(profile: Dictionary) -> void:
 	var effective: Dictionary = world.session.effective_player_stats()
 	image(26073,Vector2.ZERO)
 	label("旅行者",Vector2(22,43),140,14)
-	portrait(100000,Vector2(177,84),Vector2(64,68))
+	portrait(int(profile.get("character_id","100000")),Vector2(177,84),Vector2(64,68))
 	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(effective.attack),str(effective.defence),str(effective.speed),"—"]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
 	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]
@@ -268,17 +288,24 @@ func pet_switch_view(view: String) -> void:
 
 func pet_panel(profile: Dictionary) -> void:
 	var pets: Array = profile.pets
-	if pets.is_empty():pet_view="list"
+	var filtered := filtered_pet_indices(profile)
+	if pets.is_empty() or filtered.is_empty():pet_view="list"
 	selected_pet=clampi(selected_pet,0,maxi(0,pets.size()-1))
+	if not filtered.is_empty() and selected_pet not in filtered:selected_pet=int(filtered[0])
+	pet_collection_tools(profile,filtered)
 	if pet_view=="list":
 		panel.size=Vector2(272,320)
 		image(26044,Vector2.ZERO)
-		for i in range(pets.size()):
+		pet_page=clampi(pet_page,0,maxi(0,int((filtered.size()-1)/5)))
+		var page_indices := filtered.slice(pet_page*5,pet_page*5+5)
+		for row_index in range(page_indices.size()):
+			var i := int(page_indices[row_index])
 			var pet: Dictionary=pets[i]
 			var active: bool=int(profile.active_pet)==i
-			var y:=31+i*51
-			var color:=Color.YELLOW if active else Color.WHITE
-			var title:=label(str(pet.name),Vector2(69,y),155,14)
+			var y:=31+row_index*51
+			var riding: bool=int(profile.get("ride_pet",-1))==i
+			var color:=Color.YELLOW if active else (Color("82dfec") if riding else Color.WHITE)
+			var title:=label(("[骑] " if riding else "")+str(pet.name),Vector2(69,y),155,14)
 			title.add_theme_color_override("font_color",color)
 			label(str(pet.level),Vector2(108,y+24),30,13).add_theme_color_override("font_color",color)
 			label(str(pet.hp),Vector2(168,y+24),35,13).add_theme_color_override("font_color",color)
@@ -292,8 +319,8 @@ func pet_panel(profile: Dictionary) -> void:
 			panel.add_child(row)
 			var state:=pet_native_button(26053 if active else 26052,Vector2(39,y+10),func(): world.perform_adventure_action("select_pet",-1 if active else i),"休息" if active else "出战")
 			state.name="PetState%d" % i
-		if pets.is_empty():
-			label("你没有宠物",Vector2(76,31),160,14)
+		if filtered.is_empty():
+			label("没有此类宠物",Vector2(76,31),160,14)
 			pet_native_button(26042,Vector2(136,299),world.close_adventure_menu)
 		else:
 			pet_native_button(26056,Vector2(80,299),func(): pet_switch_view("detail"),"详细资料")
@@ -339,9 +366,99 @@ func pet_panel(profile: Dictionary) -> void:
 	pet_navigation(pets.size(),317)
 	if pet_rename:pet_rename_panel(pet)
 
-func pet_navigation(count: int, y: float) -> void:
-	pet_native_button(26180,Vector2(60,y),func(): selected_pet=(selected_pet+count-1)%count; rebuild(),"上一只")
-	pet_native_button(26182,Vector2(104,y),func(): selected_pet=(selected_pet+1)%count; rebuild(),"下一只")
+func pet_navigation(_count: int, y: float) -> void:
+	var indices := filtered_pet_indices(world.session.snapshot())
+	if indices.is_empty():return
+	var position := maxi(0,indices.find(selected_pet))
+	pet_native_button(26180,Vector2(60,y),func(): selected_pet=int(indices[(position+indices.size()-1)%indices.size()]); rebuild(),"上一只")
+	pet_native_button(26182,Vector2(104,y),func(): selected_pet=int(indices[(position+1)%indices.size()]); rebuild(),"下一只")
+
+func filtered_pet_indices(profile: Dictionary) -> Array:
+	var result := []
+	for i in range(profile.pets.size()):
+		if pet_category=="全部" or PetGrowth.category(profile.pets[i])==pet_category:result.append(i)
+	return result
+
+func pet_tool_button(caption: String, at: Vector2, callback: Callable, control_name: String) -> Button:
+	var control: Button = world.button(caption,callback)
+	control.name=control_name
+	control.position=at
+	control.custom_minimum_size=Vector2(220,28)
+	panel.add_child(control)
+	return control
+
+func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
+	var origin:=Vector2(288,0)
+	stone(Rect2(origin,Vector2(384,336) if pet_growth_open and not filtered.is_empty() else Vector2(256,336)))
+	label("宠物收藏 · %d / %d" % [profile.pets.size(),world.session.PET_CAPACITY],origin+Vector2(16,14),235,16)
+	var categories := ["全部","人龙","老虎","暴龙","乌力","其他"]
+	var selector:=OptionButton.new()
+	selector.name="PetCategory"
+	selector.position=origin+Vector2(16,47)
+	selector.size=Vector2(220,30)
+	for category in categories:selector.add_item(category)
+	selector.select(categories.find(pet_category))
+	selector.item_selected.connect(func(index:int):pet_category=categories[index];pet_page=0;rebuild())
+	panel.add_child(selector)
+	var pages:=maxi(1,int(ceil(filtered.size()/5.0)))
+	pet_page=clampi(pet_page,0,pages-1)
+	label("第 %d / %d 页 · %d 只" % [pet_page+1,pages,filtered.size()],origin+Vector2(16,88),230,14)
+	pet_native_button(26180,origin+Vector2(40,126),func(): change_pet_page(-1,filtered),"上一页")
+	pet_native_button(26182,origin+Vector2(112,126),func(): change_pet_page(1,filtered),"下一页")
+	label("黄色：出战　蓝色：[骑] 骑乘",origin+Vector2(16,154),230,12)
+	if not filtered.is_empty():
+		pet_tool_button("成长预估" if not pet_growth_open else "关闭成长预估",origin+Vector2(16,182),func(): pet_growth_open=not pet_growth_open;pet_view="detail";rebuild(),"PetGrowthToggle")
+		var riding:=int(profile.get("ride_pet",-1))==selected_pet
+		pet_tool_button("下骑" if riding else "骑乘选中伙伴",origin+Vector2(16,218),func():
+			if world.session.mount_pet(-1 if riding else selected_pet):
+				world.refresh_companion();world.checkpoint();feedback=""
+			else:feedback=world.session.last_error
+			rebuild(),"PetMount")
+	pet_tool_button("DEV · 领取起始伙伴",origin+Vector2(16,254),func():
+		if world.session.grant_starter_pets():
+			world.refresh_companion();world.checkpoint();feedback="起始伙伴已加入（重复领取不增加）。"
+		else:feedback="空间不足或当前不能领取。"
+		rebuild(),"StarterPets")
+	label(feedback,origin+Vector2(16,290),230,12)
+	if pet_growth_open and not filtered.is_empty():pet_growth_panel(profile.pets[selected_pet],origin+Vector2(16,326))
+
+func change_pet_page(delta:int,indices:Array)->void:
+	var pages:=maxi(1,int(ceil(indices.size()/5.0)))
+	pet_page=(pet_page+delta+pages)%pages
+	if not indices.is_empty():selected_pet=int(indices[pet_page*5])
+	pet_view="list"
+	pet_growth_open=false
+	rebuild()
+
+func pet_growth_panel(pet: Dictionary, origin: Vector2) -> void:
+	# Comparison level120 is a project choice, not the reference's level cap140.
+	stone(Rect2(Vector2(288,336),Vector2(384,336)))
+	var forecast:=PetGrowth.forecast(pet,120)
+	if forecast.is_empty():
+		label("缺少原始成长资料",origin,340,14)
+		return
+	label("%s · Lv.%d → %d 预估" % [pet.name,pet.level,forecast.target_level],origin+Vector2(0,20),350,15)
+	var maxima:Dictionary=forecast.species_maximum
+	for column in [["属性",0],["本宠预估",80],["同种上限",179],["差距",267]]:
+		label(column[0],origin+Vector2(column[1],54),85,14)
+	var keys: Array = ["max_hp","attack","defence","speed"]
+	var names: Array = ["体力","攻击","防御","敏捷"]
+	for i in range(4):
+		var key:String=keys[i]
+		var value:=int(forecast.expected[key])
+		var upper:=int(maxima.get(key,0))
+		var y:=86+i*25
+		label(names[i],origin+Vector2(0,y),50,14)
+		label(str(value),origin+Vector2(80,y),65,14)
+		label(str(upper) if not maxima.is_empty() else "—",origin+Vector2(179,y),65,14)
+		label(str(upper-value) if upper>=value else "超出%d" % (value-upper),origin+Vector2(267,y),85,14)
+	var gains:Dictionary=forecast.base_increment
+	label("每级基础成长：体 %.3f　腕 %.3f\n                         耐 %.3f　速 %.3f" % [gains.vitality,gains.strength,gains.toughness,gains.dexterity],origin+Vector2(0,196),350,13)
+	var base:Dictionary=pet.base_stats
+	label("当前基础：体 %.2f  腕 %.2f  耐 %.2f  速 %.2f" % [base.vitality/100.0,base.strength/100.0,base.toughness/100.0,base.dexterity/100.0],origin+Vector2(0,240),350,12)
+	label("同种上限：从 Lv.1 培养、各项分别最优。\n每级共分配10点，四项上限不能同时达到。",origin+Vector2(0,268),350,12)
+	var modified:bool=bool(pet.get("gm_modified",false)) or not pet.get("legacy_stat_offset",{}).is_empty()
+	label("GM／旧存档修正可能超出原生成长上限。" if modified else "随机成长预估；不包含转生或 GM 加成。",origin+Vector2(0,310),350,11)
 
 func pet_rename_panel(pet: Dictionary) -> void:
 	var origin:=Vector2(0,336)

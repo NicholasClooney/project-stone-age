@@ -10,6 +10,17 @@ var list: VBoxContainer
 var background: Panel
 var map_dimensions := Vector2i.ONE
 var current_map := -1
+var source_data: Dictionary = {}
+var walk_mode := true
+var zoom_level := 1.0
+var view_rect := Rect2(24,110,800,540)
+var base_size := Vector2.ONE
+var dragging := false
+var drag_start := Vector2.ZERO
+var last_pointer := Vector2.ZERO
+var dragged := false
+var selector: OptionButton
+var mode_button: Button
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -25,12 +36,26 @@ func _ready() -> void:
 	heading=world.text("",20)
 	heading.position=Vector2(24,16)
 	background.add_child(heading)
-	note=world.text("点击地图或地点传送 · 白：自己  黄：NPC  蓝：出入口",14)
+	note=world.text("滚轮缩放 · 拖动平移 · 点击地点 · 白：自己  黄：NPC  蓝：出入口",14)
 	note.position=Vector2(24,45)
 	background.add_child(note)
 	var close: Button=world.button("关闭 · Esc",close_map)
 	close.position=Vector2(1045,16)
 	background.add_child(close)
+	selector=OptionButton.new()
+	selector.position=Vector2(24,72)
+	selector.size=Vector2(320,30)
+	var ids: Array=world.world_catalog.maps.keys()
+	ids.sort_custom(func(a,b):return int(a)<int(b))
+	for ident in ids:selector.add_item("%s (%s)" % [world.world_catalog.maps[ident].name,ident],int(ident))
+	selector.item_selected.connect(func(index:int):browse_map(selector.get_item_id(index)))
+	background.add_child(selector)
+	mode_button=world.button("步行",func():walk_mode=not walk_mode; mode_button.text="步行" if walk_mode else "DEV 传送")
+	mode_button.position=Vector2(355,72)
+	background.add_child(mode_button)
+	var recenter: Button=world.button("居中 / 全图",recenter_map)
+	recenter.position=Vector2(485,72)
+	background.add_child(recenter)
 	var scroll:=ScrollContainer.new()
 	scroll.position=Vector2(870,80)
 	scroll.size=Vector2(380,570)
@@ -44,8 +69,7 @@ func open_map() -> void:
 	if world.battle_view.visible or world.paused_input:return
 	world.clear_input()
 	world.paused_input=true
-	if current_map!=int(world.data.map_id):_build_map()
-	heading.text="DEV 全图 · %s (%d) · %d × %d" % [world.area_name(),world.data.map_id,map_dimensions.x,map_dimensions.y]
+	if current_map!=int(world.data.map_id):browse_map(int(world.data.map_id))
 	show()
 	queue_redraw()
 
@@ -54,36 +78,41 @@ func close_map() -> void:
 	world.paused_input=false
 	world.clear_input()
 
+func browse_map(map_id: int) -> void:
+	current_map=map_id
+	source_data=world.data if map_id==int(world.data.map_id) else JSON.parse_string(FileAccess.get_file_as_string(world.world_catalog.file(map_id)))
+	selector.select(selector.get_item_index(map_id))
+	_build_map()
+	heading.text="DEV 地图导航 · %s (%d) · %d × %d" % [world.world_catalog.info(map_id).name,map_id,map_dimensions.x,map_dimensions.y]
+	queue_redraw()
+
+func recenter_map() -> void:
+	zoom_level=1.0
+	map_rect=Rect2(view_rect.position+(view_rect.size-base_size)/2,base_size)
+	queue_redraw()
+
 func _build_map() -> void:
-	current_map=int(world.data.map_id)
-	map_dimensions=Vector2i(world.data.width,world.data.height)
-	var scale_factor:=minf(800.0/map_dimensions.x,570.0/map_dimensions.y)
-	map_rect=Rect2(Vector2(24,80),Vector2(map_dimensions)*scale_factor)
-	# Rasterize at most800×570, once per map. No million-cell per-frame drawing.
-	var width:=maxi(1,int(map_rect.size.x))
-	var height:=maxi(1,int(map_rect.size.y))
+	map_dimensions=Vector2i(source_data.width,source_data.height)
+	var scale_factor:=minf(view_rect.size.x/map_dimensions.x,view_rect.size.y/map_dimensions.y)
+	base_size=Vector2(map_dimensions)*scale_factor
+	recenter_map()
+	# Rasterize once, retaining one texel per cell for the two full islands.
+	# Cap oversized future maps at1600²; zoom/pan only transform this texture.
+	var width:=clampi(map_dimensions.x,1,1600)
+	var height:=clampi(map_dimensions.y,1,1600)
 	var img:=Image.create(width,height,false,Image.FORMAT_RGB8)
 	img.fill(Color.BLACK)
-	var colors: Dictionary=world.data.get("map_colors",{})
-	for entry in world.data.ground:
+	var colors: Dictionary=source_data.get("map_colors",{})
+	for entry in source_data.ground:
 		var x:=int(float(entry[0])*width/map_dimensions.x)
 		var y:=int(float(entry[1])*height/map_dimensions.y)
 		var rgb: Array=colors.get(str(int(entry[2])),[48,64,48])
 		img.set_pixel(x,y,Color8(int(rgb[0]),int(rgb[1]),int(rgb[2])))
-	# Upsampled smallmaps need solid cell rectangles rather than isolated points.
-	if width>map_dimensions.x or height>map_dimensions.y:
-		var small:=Image.create(map_dimensions.x,map_dimensions.y,false,Image.FORMAT_RGB8)
-		small.fill(Color.BLACK)
-		for entry in world.data.ground:
-			var rgb: Array=colors.get(str(int(entry[2])),[48,64,48])
-			small.set_pixel(int(entry[0]),int(entry[1]),Color8(int(rgb[0]),int(rgb[1]),int(rgb[2])))
-		small.resize(width,height,Image.INTERPOLATE_NEAREST)
-		img=small
 	thumbnail=ImageTexture.create_from_image(img)
 	pois.clear()
 	for entry in world.world_catalog.residents:
 		if int(entry.map_id)==current_map:pois.append({"name":entry.name,"cell":Vector2i(entry.cell[0],entry.cell[1]),"color":Color.YELLOW})
-	if not world.npc_data.is_empty():pois.append({"name":world.npc_data.name,"cell":world.npc_cell,"color":Color.YELLOW})
+	if current_map==int(world.data.map_id) and not world.npc_data.is_empty():pois.append({"name":world.npc_data.name,"cell":world.npc_cell,"color":Color.YELLOW})
 	var links: Dictionary=world.world_catalog.links(current_map)
 	var seen: Dictionary={}
 	for cell in links:
@@ -94,7 +123,7 @@ func _build_map() -> void:
 		pois.append({"name":"→ "+str(world.world_catalog.info(int(link.to_map)).get("name",link.to_map)),"cell":cell,"color":Color.CYAN})
 	for child in list.get_children():child.queue_free()
 	for poi in pois:
-		var button: Button=world.button("%s (%d,%d)" % [poi.name,poi.cell.x,poi.cell.y],func():teleport_near(poi.cell))
+		var button: Button=world.button("%s (%d,%d)" % [poi.name,poi.cell.x,poi.cell.y],func():select_target(poi.cell))
 		button.add_theme_font_size_override("font_size",13)
 		list.add_child(button)
 
@@ -103,19 +132,40 @@ func cell_to_point(cell: Vector2i) -> Vector2:
 func point_to_cell(point: Vector2) -> Vector2i:
 	return Vector2i(((point-map_rect.position)/map_rect.size*Vector2(map_dimensions)).floor())
 func nearest_safe(target: Vector2i) -> Vector2i:
-	var links: Dictionary=world.world_catalog.links(int(world.data.map_id))
+	var links: Dictionary=world.world_catalog.links(current_map)
 	for radius in range(0,33):
 		for y in range(-radius,radius+1):
 			for x in range(-radius,radius+1):
 				if maxi(absi(x),absi(y))!=radius:continue
 				var point:=target+Vector2i(x,y)
-				if world.is_walkable(point) and not links.has(point):return point
+				if _walkable(point) and not links.has(point):return point
 	return Vector2i(-1,-1)
+func _walkable(point: Vector2i) -> bool:
+	if not Rect2i(Vector2i.ZERO,map_dimensions).has_point(point):return false
+	if int(source_data.blocked[point.y*map_dimensions.x+point.x])!=0:return false
+	for resident in world.world_catalog.residents:
+		if int(resident.map_id)==current_map and point==Vector2i(resident.cell[0],resident.cell[1]):return false
+	return not (current_map==int(world.data.map_id) and point==world.npc_cell)
+
+func select_target(target: Vector2i) -> bool:
+	if not walk_mode:return teleport_near(target)
+	close_map()
+	if world.travel_router.request(current_map,target):return true
+	note.text=world.travel_router.last_error
+	world.paused_input=true
+	show()
+	return false
+
 func teleport_near(target: Vector2i) -> bool:
 	var destination:=nearest_safe(target)
 	if destination.x<0:
 		note.text="附近没有可站立的地面，请选择其他地点。"
 		return false
+	world.travel_router.cancel("开发传送取消了步行路线。")
+	if current_map!=int(world.data.map_id):
+		close_map()
+		world.call_deferred("load_area_id",current_map,destination)
+		return true
 	world.clear_input()
 	world.moving=false
 	world.cell=destination
@@ -129,13 +179,43 @@ func teleport_near(target: Vector2i) -> bool:
 	world.queue_redraw()
 	close_map()
 	return true
+func zoom_at(pointer: Vector2, multiplier: float) -> void:
+	var cell_point: Vector2=(pointer-map_rect.position)/map_rect.size
+	zoom_level=clampf(zoom_level*multiplier,1.0,12.0)
+	map_rect.size=base_size*zoom_level
+	map_rect.position=pointer-cell_point*map_rect.size
+	queue_redraw()
+
 func _gui_input(event: InputEvent) -> void:
-	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and map_rect.has_point(event.position):
-		teleport_near(point_to_cell(event.position))
-		accept_event()
+	if event is InputEventMouseButton:
+		if event.pressed and view_rect.has_point(event.position) and event.button_index in [MOUSE_BUTTON_WHEEL_UP,MOUSE_BUTTON_WHEEL_DOWN]:
+			zoom_at(event.position,1.25 if event.button_index==MOUSE_BUTTON_WHEEL_UP else 0.8)
+			accept_event()
+		elif event.button_index in [MOUSE_BUTTON_LEFT,MOUSE_BUTTON_MIDDLE,MOUSE_BUTTON_RIGHT]:
+			if event.pressed and view_rect.has_point(event.position):
+				dragging=true
+				dragged=false
+				drag_start=event.position
+				last_pointer=event.position
+			elif not event.pressed and dragging:
+				dragging=false
+				if not dragged and event.button_index==MOUSE_BUTTON_LEFT and map_rect.has_point(event.position) and view_rect.has_point(event.position):select_target(point_to_cell(event.position))
+			accept_event()
+	elif event is InputEventMouseMotion and dragging:
+		if event.position.distance_to(drag_start)>4:dragged=true
+		if dragged:
+			map_rect.position+=event.position-last_pointer
+			queue_redraw()
+		last_pointer=event.position
+
 func _draw() -> void:
 	if not visible or not thumbnail:return
-	draw_texture_rect(thumbnail,map_rect,false)
-	for poi in pois:draw_circle(cell_to_point(poi.cell),3,poi.color)
-	draw_circle(cell_to_point(world.cell),5,Color.WHITE)
-	draw_rect(map_rect,Color.GRAY,false)
+	var visible_rect:=map_rect.intersection(view_rect)
+	if visible_rect.has_area():
+		var texture_rect:=Rect2((visible_rect.position-map_rect.position)/map_rect.size*thumbnail.get_size(),visible_rect.size/map_rect.size*thumbnail.get_size())
+		draw_texture_rect_region(thumbnail,visible_rect,texture_rect)
+	for poi in pois:
+		var point:=cell_to_point(poi.cell)
+		if view_rect.has_point(point):draw_circle(point,3,poi.color)
+	if current_map==int(world.data.map_id) and view_rect.has_point(cell_to_point(world.cell)):draw_circle(cell_to_point(world.cell),5,Color.WHITE)
+	draw_rect(view_rect,Color.GRAY,false)

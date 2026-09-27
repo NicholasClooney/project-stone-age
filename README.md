@@ -20,7 +20,7 @@ The project-local Godot runtime is already installed under `.tools/`. You can al
 | WASD / arrows | Walk in screen directions; combine keys for eight directions |
 | E | Original waving animation |
 | X | Sit / stand |
-| Tab | Cycle three original character appearances |
+| Tab / DEV → 角色 | Choose an original character with animated previews |
 | Mouse wheel / + / − | Zoom from 40% to 200%, in shared 10% steps |
 | Max out (DEV controls) | Set the same zoom to its 40% minimum; keep following the player |
 | Hover bottom edge | Reveal the original seven menu tabs |
@@ -39,7 +39,7 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 ## What works
 
 - Original 160 × 160 Samgir map, 482 scenery objects, original isometric projection and depth sorting.
-- 1,066 decoded original textures; three characters with original eight-direction idle/walk frames, sit, and wave.
+- Original eight-direction idle/walk frames, sit and wave; the optional [character pack](docs/development/character-selection.md) adds 41 validated animated appearances and matching club battle sprites.
 - Original map/ADRN collision footprints, keyboard movement, and click-to-walk with corner checks.
 - Original `sabgm_t0.wav` village BGM, loop and volume controls, and a legacy UI sound.
 - One original village resident at (93, 72), with the recorded sprite and first dialogue line, original stone-frame art, confirmation button, and open/close sound effects.
@@ -48,17 +48,25 @@ Normal play stays open until you close the window. `client/tests/capture.gd` is 
 - Original 30×30 shop interior and merchant, with functional native shop, inventory, status and pet frames.
 - Pure GDScript local battle/progression authority, profile-bound saves and backup recovery.
 
-The single-player loop now includes experience, leveling, currency, three capturable species, a five-pet roster, one active companion, three trainable original pet skills, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports independent targets across one to three enemies, pet switching/withdrawal, learned skills, original miss/critical/counter effects, and player→pet command selection. Progress autosaves and resumes locally. Player and pet stats use original fixed-point formulas and species growth. Existing saves retain earned stats. Player levels grant three points: spend them with UP buttons in the status window. DEV 传送模式 makes destination shortcuts instant; 立即遇敌 starts a normal encounter.
+The single-player loop now includes experience, leveling, currency, three capturable species, a paginated 30-pet collection, one active companion, three trainable original pet skills, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports independent targets across one to three enemies, pet switching/withdrawal, learned skills, original miss/critical/counter effects, and player→pet command selection. Progress autosaves and resumes locally. Player and pet stats use original fixed-point formulas and species growth. Existing saves retain earned stats. Player levels grant three points: spend them with UP buttons in the status window. DEV 传送模式 makes destination shortcuts instant; 立即遇敌 starts a normal encounter.
 
 Visit the original 超级饲育员 in Samgir’s pet shop (1003, 18,13) to teach 破除防御, 连续攻击 or 背水之战其之１ at their source prices. All four villages share the original `sabgm_t0` theme; wilderness follows its original map music markers. See [restored slices and limits](docs/development/m006-progression-and-battle.md).
 
 **Start your adventure:** click the villager, choose **村外的伙伴 / 休息**, and accept the quest. Explore outside, weaken an enemy and capture it. When you already have a pet, tell it to **defend while weakening a capture target**. Win three battles, then prepare for the stronger encounter that appears during exploration. Return to the villager for recovery and the quest reward. Use the original bottom pet tab to rename/select your companion and the item tab to use/equip purchases.
 
-**World restoration:** the four starting villages, both complete islands, linked village interiors and the original undersea route are now visitable. Use **DEV → 传送地点** for direct visits, or **全图传送** to see the current map and click terrain, NPCs or exits to teleport nearby; disable **野外随机遇敌** there for exploration. The normal island crossing retains its original reusable pass requirement. See [world scope and remaining services](docs/development/m005-four-villages.md).
+**World restoration:** the four starting villages, both complete islands, linked village interiors and the original undersea route are now visitable. Use **DEV → 传送地点** for direct visits, or **地图导航** to browse maps, zoom/pan, and click terrain or POIs. Choose **步行** for real portal-based travel or **DEV 传送** for instant visits; disable **野外随机遇敌** there for exploration. The normal island crossing retains its original reusable pass requirement. See [world scope and remaining services](docs/development/m005-four-villages.md).
 
-Original assets and menu layouts are retained; battle balance, capture conditions, stat bonus formulas and pet growth, this short quest, shop stock/prices and encounter timing are MVP rules rather than verified historical parity. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
+Original assets and menu layouts are retained. Fixed-point growth, supported physical combat and mounted experience now follow inspected source branches. Capture probability, this short quest, shop stock and ordinary encounter composition/timing still include explicit MVP rules; broader elemental/special skill behavior is incomplete. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
 
 The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
+
+## New player tools
+
+On your next normal launch, **蓝人龙、金虎 and one 红暴龙** join once; existing pets and progress stay intact. In **DEV → 骑乘**, select the compatible gold-tiger rider (100010), then mount the tiger. You can deploy a different pet for combat. Original mounted art, separate HP, damage sharing and source-based mounted experience are implemented.
+
+The pet window has five original rows per page, family filters, separate riding/battle states, and a growth comparison: your pet's projected level-120 stats versus its species' theoretical ceiling. These are estimates; the displayed maxima are independently optimal attributes, not a single jointly attainable perfect pet.
+
+**GM 调试** supports level increases through 120, setting/adding base stats, extra allocation points, recovery and reward-free instant escape. **更新日志** shows readable committed changes and the `v0.x.0` version derived from feature/fix history. See [agent changelog workflow](AGENTS.md), [riding evidence](docs/reverse-engineering/original-riding.md), [pet tools](docs/development/pet-collection-growth.md), and [GM controls](docs/development/gm-controls.md).
 
 ## Original resources
 
@@ -93,6 +101,12 @@ For the full MVP, use the [local server reference](docs/reverse-engineering/loca
 .tools/asset-venv/bin/python tools/import_mvp.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_world.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_pet_training.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_characters.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_pets.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_riding.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_grid_cursor.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_cursor.py \
+  'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'
 ./scripts/run.sh --headless --editor --import --quit
 ```
 

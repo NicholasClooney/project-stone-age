@@ -114,18 +114,17 @@ func _initialize() -> void:
 	check(game.apply_battle_result(battle.snapshot()),"defeat result accepted")
 	check(game.snapshot().player.hp == game.snapshot().player.max_hp and game.snapshot().location.map_id == 1000,"defeat safely recovers in village")
 	game.select_pet(-1)
-	for i in range(4):
+	for i in range(Game.PET_CAPACITY-game.snapshot().pets.size()):
 		game.heal()
-		# High-level attacks would one-shot; use an independent low-damage battle config.
+		# Isolate collection capacity from random critical hits that can kill a
+		# low-level target while weakening it. Capture and settlement remain real.
 		config = game.start_battle_config()
-		config.player_attack = 8
+		config.enemies[0].hp = int(config.enemies[0].max_hp/2)
 		battle = Battle.new()
 		battle.start_battle(config)
-		while battle.snapshot().active and battle.snapshot().enemy_hp*100 > battle.snapshot().enemy_max_hp*60:
-			battle.submit_action("attack")
 		battle.submit_action("capture")
-		check(game.apply_battle_result(battle.snapshot()),"additional roster capture")
-	check(game.snapshot().pets.size() == 5,"roster limit reached")
+		check(battle.snapshot().outcome == "captured" and game.apply_battle_result(battle.snapshot()),"additional roster capture")
+	check(game.snapshot().pets.size() == Game.PET_CAPACITY,"expanded collection limit reached")
 	config = game.start_battle_config()
 	battle = Battle.new()
 	battle.start_battle(config)

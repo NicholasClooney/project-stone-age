@@ -40,13 +40,13 @@ static func resolve(a: Dictionary, d: Dictionary, rng: RandomNumberGenerator, gu
 		return {"outcome":"miss","damage":0}
 	var critical := rng.randi_range(1,10000) < int(odds(a,d,"critical")*100)
 	var attack := float(a.get("attack",10))
-	var defence := float(d.get("defence",0))*0.45 + float(d.get("speed",7))*0.2 + float(d.get("vital",0))*0.1
+	var defence := float(d.get("defence",0))*0.45 + float(d.get("speed",7))*0.2 + float(d.get("vital",0))*(0.05 if d.get("mounted",false) else 0.1)
 	if profile == "reference": defence = float(d.get("defence",0))*0.70
 	var damage: int
 	if defence > attack: damage = rng.randi_range(0,1)
 	elif attack < defence*8.0/7.0: damage = rng.randi_range(0,int(attack/16.0))
 	else: damage = int((attack-defence)*2.0 + rng.randi_range(0,int(attack/8.0))-attack/16.0)
-	if critical: damage += int(float(d.get("defence",0))*float(a.get("level",1))/maxf(1,float(d.get("level",1)))*0.5)
+	if critical: damage += int(float(d.get("critical_defence",d.get("defence",0)))*float(a.get("level",1))/maxf(1,float(d.get("level",1)))*0.5)
 	if guard:
 		# BATTLE_GuardAdjust:1013: weighted retention of 0/10/20/30/40/50%.
 		var roll := rng.randi_range(1,100)
