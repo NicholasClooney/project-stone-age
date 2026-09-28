@@ -262,6 +262,7 @@ func _ready() -> void:
 	report_position()
 	# A remote backend may already be mid-battle (another device, or a reload).
 	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
+	else:resume_automation_view()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -1379,12 +1380,32 @@ func build_dialogue(root: Control) -> void:
 	dialogue.hide()
 
 
+## Places the character at startup: where a running backend already has it
+## (another device or automation may have moved it since the last save),
+## else the saved location. Arriving there is not travel, so it is not
+## reported as a map change, which would stop running automation.
 func restore_location() -> void:
 	var location: Dictionary = session.snapshot().location
+	var map_id := int(location.map_id)
 	var point := Vector2i(int(location.x),int(location.y))
-	if int(location.map_id)==100 and not world_catalog.maps.has("100"):point -= Vector2i(592,448)
-	if not load_area_id(int(location.map_id),point):
+	if map_id==100 and not world_catalog.maps.has("100"):point -= Vector2i(592,448)
+	var live: Dictionary = state.automation.get("position",{})
+	if not link.is_local() and int(live.get("map_id",-1))>=0:
+		map_id = int(live.map_id)
+		point = Vector2i(int(live.cell[0]),int(live.cell[1]))
+	_followed = [map_id,point]
+	if not load_area_id(map_id,point):
 		load_area_id(1000,SPAWN)
+
+## After a reload, reopens the window of a hunt or find-pet workflow that kept
+## running on the backend. (The auto-battle window reopens itself on status.)
+func resume_automation_view() -> void:
+	var automation: Dictionary = state.automation
+	var hunting := bool(automation.get("hunt",{}).get("running",false))
+	var flow := str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+	if (hunting or flow) and is_instance_valid(pet_hunt_menu) and not pet_hunt_menu.visible:
+		pet_hunt_menu.open_menu()
+		if hunting:pet_hunt_menu.on_status(automation)
 
 # Copies the on-disk save beside itself before an irreversible change; returns
 # the backup path or "" when there is no save file.
