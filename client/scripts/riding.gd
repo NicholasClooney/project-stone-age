@@ -8,8 +8,26 @@ static func manifest() -> Dictionary:
 		_manifest = JSON.parse_string(FileAccess.get_file_as_string(PATH))
 	return _manifest
 
+static func pair(character_id: String, pet_sprite: int) -> Dictionary:
+	return manifest().get("pairs",{}).get(character_id+":"+str(pet_sprite),{})
+
 static func composite(character_id: String, pet_sprite: int) -> int:
-	return int(manifest().get("pairs",{}).get(character_id+":"+str(pet_sprite),{}).get("sprite",-1))
+	return int(pair(character_id,pet_sprite).get("sprite",-1))
+
+## Riding certificates, the one switch for them. family.c:2376 (_NEW_RIDEPETS)
+## lets a rider use a RideCodeMode mount (扬奇洛斯, 帖拉所伊朵, 左迪洛斯 ...; pairs
+## with a "certificate" field) only when the RIDE_PETn bit is set in
+## CHAR_LOWRIDEPETS, which the certificate items teach (item_event.c:3096
+## ITEM_useLearnRideCode). The game has no certificate items, so, like the
+## family-leader requirement, it is skipped: anyone may ride these mounts under
+## the other rules. Set to true to require `player.riding_certificates` (the
+## learned RIDE_PETn numbers).
+const REQUIRE_RIDING_CERTIFICATES := false
+
+## Whether riding this pair needs a certificate the player has not learned.
+static func missing_certificate(player: Dictionary, ride: Dictionary) -> bool:
+	if not REQUIRE_RIDING_CERTIFICATES or not ride.has("certificate"): return false
+	return not player.get("riding_certificates",[]).has(int(ride.certificate))
 
 ## Pet sprites this rider appearance has a native composite for (ridePetTable).
 static func rideable_pets(character_id: String) -> Array:
@@ -24,8 +42,9 @@ static func pet_name(pet_sprite: int) -> String:
 
 ## Why this pet cannot be ridden now, or "" when it can. Source order and rules:
 ## family.c FAMILY_RidePet (battle pet, already riding, learned riding level,
-## loyalty 100, player level + 5, exact ridePetTable match) and the client's
-## checkRidePet (menu.cpp:21965).
+## loyalty 100, player level + 5, exact ridePetTable match or a certificate
+## mount, see REQUIRE_RIDING_CERTIFICATES) and the client's checkRidePet
+## (menu.cpp:21965).
 static func can_mount(profile: Dictionary, index: int) -> String:
 	var pets: Array = profile.get("pets",[])
 	if index < 0 or index >= pets.size(): return "没有这只伙伴。"
@@ -44,6 +63,7 @@ static func can_mount(profile: Dictionary, index: int) -> String:
 		for sprite in rideable_pets(character):names.append(pet_name(sprite))
 		if names.is_empty(): return "此造型没有原版骑乘动画。"
 		return "此造型不能骑乘这只伙伴。可骑乘：%s。" % "、".join(names)
+	if missing_certificate(player,pair(character,int(pet.get("sprite",0)))): return "尚未学会骑乘%s，需要骑乘证明。" % pet_name(int(pet.get("sprite",0)))
 	return ""
 
 static func adjusted_stats(player: Dictionary, pet: Dictionary, combat_profile: String = "classic", defending: bool = false) -> Dictionary:

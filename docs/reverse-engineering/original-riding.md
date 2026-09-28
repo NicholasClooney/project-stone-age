@@ -4,22 +4,47 @@
 
 `gmsv/char/char_base.c:50` supplies `ridePetTable`: mounted sprite, rider sprite, pet sprite and a historical enemy template ID. `char.c:3065` performs an exact rider/pet lookup. The resource pack contains actual combined rider-and-pet animations; Godot displays those frames directly, with their stored offsets and hit markers.
 
-Every classic player appearance (100000 to 100235, the `RPlistMode` rows at `char_base.c:549`) rides exactly two species: one tiger colour (贝鲁卡 100327, 贝鲁伊卡 100328, 格鲁西斯 100329 or 金格萨贝鲁 100330) and one large mount per body type (布洛多斯 100351, 布林帖斯 100352, 布拉奇多斯 100353, 斯天多斯 100354 or 邦恩多斯 100396). The gold tiger is **100330**, not red tiger 100329: rider **100010 + gold tiger 100330 → composite 101006**, while 100000 rides 格鲁西斯 (101004) and 布林帖斯 (101000). Names come from the enemy template each table row cites (`gmsv/data/enemy.txt`, `enemybase.txt`). Every appearance also rides 左迪洛斯 100372 and 巴朵兰恩 100373 (红暴龙), see below.
+Every classic player appearance (100000 to 100235, the `RPlistMode` rows at `char_base.c:549`) rides exactly two species from `ridePetTable`: one tiger colour (贝鲁卡 100327, 贝鲁伊卡 100328, 格鲁西斯 100329 or 金格萨贝鲁 100330) and one large mount per body type (布洛多斯 100351, 布林帖斯 100352, 布拉奇多斯 100353, 斯天多斯 100354 or 邦恩多斯 100396). The gold tiger is **100330**, not red tiger 100329: rider **100010 + gold tiger 100330 → composite 101006**, while 100000 rides 格鲁西斯 (101004) and 布林帖斯 (101000). Names come from the enemy template each table row cites (`gmsv/data/enemy.txt`, `enemybase.txt`).
+
+## Certificate mounts
+
+When no `ridePetTable` row matches, `FAMILY_RidePet` falls back to the `_NEW_RIDEPETS` certificate mounts (`family.c:2376-2393`): `RIDEPET_getPETindex` finds the mount's position in `RideCodeMode` (`char_base.c:500`, the same 15 mounts in the `_RIDE_CF` variant at 433), `RIDEPET_getNOindex` the rider's character row in `RPlistMode` (`char_base.c:549`), and `RideNoList[row][position]` (`char_base.c:534`, read by `RIDEPET_getRIDEno` at 630) is the composite. The row is per character, so a character's four colour variants share one composite. The 8.5 client's `anim_tbl.h:2275` table agrees for every shared mount.
+
+| Mount (`RideCodeMode`) | Certificate | Composite for character row *c* (0 to 11) | In 2.5 |
+| --- | --- | --- | --- |
+| 帖拉所伊朵 100374, 玛恩摩洛斯 100358, 朵拉比斯 100362, 拉奇鲁哥 100279, 扬奇洛斯 100288, 卡达鲁卡斯 100283, 卡卡金宝 100346, 格尔格 100310 | `RIDE_PET0` to `7` | 101305 + 8*c* + position (101305 to 101400) | no |
+| 左迪洛斯 100372, 巴朵兰恩 100373 | `RIDE_PET8`, `9` | 101008 / 101009 + 10*c* | yes |
+| 史卡鲁 101532, 罗多克雷 101576 | `RIDE_PET10`, `11` | 1019xx, listed per row (for example 101978 / 101989 for row 0) | no |
+| 奇宝 100370, 霍尔克 100369, 瑞里西尔 100904 | `RIDE_PET12` to `14` | 100425, 100420, 100445 for every row | yes |
+
+Two consequences of the original data, kept as is:
+
+- 左迪洛斯 and 巴朵兰恩 (红暴龙) use 101008 + 10*c* / 101009 + 10*c*, the same sprites as the commented family-leader rows (`char_base.c:60-61`: leader 100700 + 10*c* rides 左迪洛斯 as 101008 + 10*c*). Their rider wears the leader outfit. The 8.0 data has the same frames for these sprites and no client table names another composite, so there is no normal-outfit version to prefer. Pairs record the art's body as `leader_body`. A source without the certificate tables still gets these pairs from the leader rows.
+- 奇宝, 霍尔克 and 瑞里西尔 draw one shared composite with the same rider whatever the player's appearance.
+
+The mounted sprites for 101305 to 101400 and 1019xx exist only in the 8.0 data (`adrn_136.bin`, `real_136.bin`, `spradrn_115.bin`, `spr_115.bin`). Its bitmaps decode with the 2.5 decoder and palette (`PALET_1.SAP` is byte-identical to 2.5 `Palet_1.sap`): all 75,648 frames of the 180 target composites decoded, each has attack, damage, dead, stand and walk in all eight directions, and contact sheets of every row and mount showed clean art in the right colours.
 
 ```sh
-.tools/asset-venv/bin/python tools/import_riding.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_riding.py /path/to/stoneage2.5 --extra-source .tools/legacy/extracted/SA8.0-20260803
 ```
 
-The importer reads every uncommented `ridePetTable` row for those appearances (first match wins, as in the source loop) and skips riders missing from the imported player-character catalog.
+The importer reads every uncommented `ridePetTable` row for the player appearances first (first match wins, as in the source loop), then the certificate mounts, and skips riders missing from the imported player-character catalog. Composites come from the 2.5 pack when it has them and from `--extra-source` otherwise; a bitmap that both clients decode differently stops the import. Without `--extra-source` the missing certificate composites are listed in `unavailable` with a reason that names the option.
 
-左迪洛斯 100372 and 巴朵兰恩 100373 exist in the 2.5 pack only as family-leader composites: each character block of `ridePetTable` ends with commented-out rows for its leader bodies (`char_base.c:60-61`: leader 100700 + 10k rides 左迪洛斯 as 101008 + 10k, leader 100705 + 10k rides 巴朵兰恩 as 101009 + 10k). All 24 are complete (stand, walk and battle actions in every direction). Later servers let any appearance ride both with a certificate (`_NEW_RIDEPETS`, `RIDE_PET8/9`), but the per-appearance composites for that are not in the 2.5 pack. Since the game has no families, the importer gives each character's four colour variants (100000 + 20k + 0/5/10/15, the block the leader rows sit in) that character's leader composite; pairs record the art's body as `leader_body`. The rider therefore wears the leader outfit while on these two mounts.
+| Sources | Pairs | Species | Composites | Unavailable |
+| --- | --- | --- | --- | --- |
+| 2.5 only | 329 | 14 | 121 | 17 for 100100 (not a playable character), 470 whose composite only 8.0 has |
+| 2.5 and 8.0 | 799 | 24 | 241 (120 from 8.0) | 17 for 100100 |
 
-The ignored `assets/legacy/riding/` folder then holds **148 pairs** (11 species) and their original sounds; `unavailable` lists the 28 pairs of the 7 appearances the character import skips (100080, 100095, 100100, 100140 to 100155, whose own bitmaps are broken; 100150's gold-tiger composite 101076 is also corrupt). No battle manifest is overwritten.
+The ignored `assets/legacy/riding/` folder holds the pairs, composites, images and original sounds. Appearance 100100 stays out because its club sprite points at a missing bitmap in every known client. No battle manifest is overwritten. `manifest.json` records `certificate` (the `RIDE_PETn` number) on certificate pairs, and `extra_source` (the 8.0 files read and which composites came from them).
 
 Not imported, by design:
 
-- Family-leader appearances 1007xx as player characters (`_GM_METAMO_RIDE` blocks and the `#ifndef _GM_METAMO_RIDE` rows for 100710/100715): the game has no families. Their 左迪洛斯 / 巴朵兰恩 composites are used for normal appearances, above.
-- `_NEW_RIDEPETS` mounts (`RideCodeMode`, `RideNoList`, `char_base.c:431-560`): each needs a learned certificate bit (`CHAR_LOWRIDEPETS`, granted by items in `item_event.c`), and the 2.5 pack lacks their per-body composites 101305 to 101400 and 1019xx; only the shared 100420/100425/100445 exist.
+- Family-leader appearances 1007xx as player characters (`_GM_METAMO_RIDE` blocks and the `#ifndef _GM_METAMO_RIDE` rows for 100710/100715): the game has no families.
+- The 8.5 client's own extra certificate columns (蓝豹 100873, 金暴 100907 and composites 103262 to 103285, `anim_tbl.h:2262` and 2275): the server source this game follows does not list them.
+
+### Certificates
+
+The original requires the certificate bit for each mount (`CHAR_LOWRIDEPETS`, taught by the certificate items through `item_event.c:3096` `ITEM_useLearnRideCode`). The game has no certificate items, so, as with the family-leader requirement, the certificate is not required: anyone may ride these mounts subject to the rules below. The switch is `REQUIRE_RIDING_CERTIFICATES` in `client/scripts/riding.gd`; set to `true`, `can_mount` also requires the pair's `RIDE_PETn` number in `player.riding_certificates` and otherwise refuses with 尚未学会骑乘…，需要骑乘证明。 Only mounts the player already has as pets can be ridden; this change adds no pets.
 
 ## Controls and eligibility
 
@@ -35,7 +60,8 @@ The pet window's side panel has **骑乘 · <name>** / **下骑 · <name>** for 
 | Pet level within the learned riding level | `CHAR_LEARNRIDE`, raised by the riding teacher to 40/80/120/200 (`npc_riderman.c`) | 骑乘等级不足… (only when a saved `riding_level` exists) |
 | Loyalty 100 | `CHAR_WORKFIXAI < 100` | 骑乘需要忠诚度100。 |
 | Pet level at most player level + 5 | classic branch without `_RIDELEVEL` | 伙伴等级不能超过人物等级5级。 |
-| Exact rider + pet composite | `ridePetTable` lookup | 此造型不能骑乘这只伙伴。可骑乘：… |
+| Exact rider + pet composite | `ridePetTable` lookup, then `RideNoList` (`family.c:2376`) | 此造型不能骑乘这只伙伴。可骑乘：… |
+| Certificate (off, see above) | `CHAR_LOWRIDEPETS` bit for `RideCodeMode` mounts | 尚未学会骑乘…，需要骑乘证明。 |
 
 The game also refuses an unconscious mount. Transmigration (`_PET_2TRANS`) and pet equipment do not exist here. The riding-teacher quest and the configurable `RIDELEVEL` allowance (`setup.cf` RIDELEVEL=10) are not reproduced; without a saved `riding_level`, the level + 5 bound applies.
 
@@ -60,7 +86,7 @@ Ranged riding, elemental averaging and historical family/quest unlocks remain ou
 
 ## Verification
 
-`riding_test.gd` checks mapping, incompatible appearances, health/loyalty/level restrictions, independent riding/battle slots, exact stat blends, damage sharing, automatic dismount and four original walking directions. `riding_battle_test.gd` checks native mounted attack clips and absence of a duplicate companion. `riding_choice_test.gd` covers the imported pairs, the rejection reasons, the pet-window button, the DEV toggle and a mounted 格鲁西斯 battle that settles mount experience. `riding_settlement_test.gd` verifies mount experience and rejects unrelated reward recipients.
+`riding_test.gd` checks mapping, incompatible appearances, health/loyalty/level restrictions, independent riding/battle slots, exact stat blends, damage sharing, automatic dismount and four original walking directions. `riding_battle_test.gd` checks native mounted attack clips and absence of a duplicate companion. `riding_choice_test.gd` covers the imported pairs, the certificate mounts (per-character 扬奇洛斯 composites and their rules when the 8.0 data is imported, the `unavailable` entry otherwise), the rejection reasons, the pet-window button, the DEV toggle and a mounted 格鲁西斯 battle that settles mount experience. `riding_settlement_test.gd` verifies mount experience and rejects unrelated reward recipients.
 
 Muted graphical runs write `/tmp/original-gold-tiger-riding.png` and `/tmp/original-gold-tiger-battle.png`.
 

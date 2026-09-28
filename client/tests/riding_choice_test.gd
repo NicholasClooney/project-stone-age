@@ -22,11 +22,14 @@ func prepare(session) -> void:
 func run() -> void:
 	check(Riding.manifest().get("pairs",{}).size() > 19,"importer provides more than the gold tiger and brontosaurus pairs")
 	check(Riding.composite("100000",100329) == 101004 and Riding.composite("100020",100396) == 101010,"ridePetTable pairs for other mounts resolve")
-	check(Riding.rideable_pets("100000") == [100329,100352,100372,100373],"appearance 100000 rides its two source mounts and the two leader mounts")
-	# 左迪洛斯 / 巴朵兰恩 ride with the character's family-leader composite.
+	var rideable := Riding.rideable_pets("100000")
+	check([100329,100352,100372,100373,100369,100370,100904].all(func(pet): return rideable.has(pet)),"appearance 100000 rides its two ridePetTable mounts and the certificate mounts the 2.5 pack draws")
+	# RideNoList gives 左迪洛斯 / 巴朵兰恩 the character's family-leader composite; no client has another.
 	check(Riding.composite("100010",100373) == 101009 and Riding.composite("100035",100372) == 101018,"red rex and 左迪洛斯 use the character's leader mounted sprite")
+	check(int(Riding.pair("100010",100373).get("leader_body",0)) == 100705,"the leader art is recorded")
 	check(Riding.pet_name(100329) == "格鲁西斯","mount names come from the source enemy templates")
 	backend_rules()
+	certificate_mounts()
 	await menu_button()
 	await mounted_battle()
 	print("Riding choice failures: ",failures)
@@ -62,6 +65,42 @@ func backend_rules() -> void:
 	check(session.mount_pet(rex) and int(session.snapshot().ride_pet) == rex,"红暴龙 can be ridden")
 	check(Riding.composite(str(session.snapshot().character_id),100373) == 101009,"riding 红暴龙 draws this character's leader mounted sprite")
 	session.mount_pet(-1)
+
+## _NEW_RIDEPETS mounts: RideNoList[character][RideCodeMode index] composites.
+func certificate_mounts() -> void:
+	check(not Riding.REQUIRE_RIDING_CERTIFICATES,"riding certificates are not required (documented decision)")
+	check(int(Riding.pair("100000",100288).get("certificate",-1)) == 4,"扬奇洛斯 records its certificate RIDE_PET4")
+	var has_8_0: bool = not Riding.manifest().get("extra_source",{}).get("composites",[]).is_empty()
+	if not has_8_0:
+		var missing := false
+		for pair in Riding.manifest().get("unavailable",[]):
+			if int(pair.pet) == 100288 and str(pair.reason).contains("--extra-source"):missing = true
+		check(Riding.composite("100000",100288) < 0 and missing,"without the 8.0 data 扬奇洛斯 is listed as unavailable")
+		print("SKIP: 8.0 certificate composites not imported (setup --with-8.0)")
+		return
+	check(Riding.composite("100000",100288) == 101309 and Riding.composite("100005",100288) == 101309,"扬奇洛斯 draws character 0's composite for its colour variants")
+	check(Riding.composite("100035",100288) == 101317 and Riding.composite("100235",100374) == 101393,"other characters draw their own 扬奇洛斯 / 帖拉所伊朵 composite")
+	check(Riding.composite("100000",101532) == 101978 and Riding.composite("100000",101576) == 101989,"史卡鲁 and 罗多克雷 use the 1019xx composites")
+	check(Riding.manifest().characters.has("101309") and Riding.manifest().characters["101309"].has("0_3"),"the certificate composite includes battle actions")
+	check(Riding.pet_name(100288) == "扬奇洛斯" and Riding.pet_name(100370) == "奇宝","certificate mount names come from the enemy templates")
+	check(Riding.composite("100000",100373) == 101009,"红暴龙 keeps the leader composite: 8.0 has no normal-outfit one either")
+	var session = preload("res://server/game_session.gd").new()
+	prepare(session)
+	session._profile.pets[1].sprite = 100288
+	session._profile.pets[1].name = "扬奇洛斯"
+	session._profile.pets[1].level = 1
+	check(session.mount_pet(1) and int(session.snapshot().ride_pet) == 1,"扬奇洛斯 can be ridden without a certificate")
+	session.mount_pet(-1)
+	session._profile.pets[1].loyalty = 99
+	check(not session.mount_pet(1) and session.last_error.contains("忠诚"),"certificate mounts keep the loyalty rule")
+	session._profile.pets[1].loyalty = 100
+	session._profile.pets[1].level = 7
+	check(not session.mount_pet(1) and session.last_error.contains("5"),"certificate mounts keep the level rule")
+	session._profile.pets[1].level = 1
+	session.set_character("100020")
+	check(session.mount_pet(1) and Riding.composite(str(session.snapshot().character_id),100288) == 101313+4,"another character rides it with its own composite")
+	var config: Dictionary = session.start_battle_config("wooli",false,1)
+	check(int(config.mounted_sprite) == 101317,"the battle draws this appearance's 扬奇洛斯 composite")
 
 func menu_button() -> void:
 	var world = load("res://scenes/main.tscn").instantiate()
