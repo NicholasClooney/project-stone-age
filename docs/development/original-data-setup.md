@@ -24,11 +24,11 @@ Recorded checksums (SHA-256). A mismatch is reported as a warning: the upload ch
 
 Both archives also contain Windows executables and libraries. The script excludes them when extracting and never runs anything it downloads. Do not run them.
 
-The 8.0 data contains graphics the 2.5 client lacks (for example the per-appearance mounted sprites of the later certificate ride pets, 101305 to 101400 and 1019xx, and map graphic 22413). The importers read the 2.5 files; using the 8.0 set is work in progress.
+The 8.0 data contains graphics the 2.5 client lacks (for example the per-character mounted sprites of the later certificate ride pets, 101305 to 101400 and 1019xx, and map graphic 22413). With `--with-8.0` the riding import reads it for those mounts (`--extra-source`, below); every other importer reads the 2.5 files. `--import-only --with-8.0` re-imports with the 8.0 data already extracted. See [original riding](../reverse-engineering/original-riding.md#certificate-mounts).
 
 ## Timing
 
-Downloads are about 550 MB (1.8 GB with `--with-8.0`). The importers take a few minutes; Godot's first asset import of the roughly 100,000 extracted images takes most of the time. A test from a fresh clone (Godot, references and imports, the 2.5 archive already present) took 37 minutes on an M-series Mac, after which all test suites passed. Later runs skip finished steps; `--import-only` re-runs just the importers and Godot import.
+Downloads are about 550 MB (1.8 GB with `--with-8.0`). The importers take a few minutes (the riding import about two more with the 8.0 data, which also doubles its images to about 70,000); Godot's first asset import of the roughly 100,000 extracted images takes most of the time. A test from a fresh clone (Godot, references and imports, the 2.5 archive already present) took 37 minutes on an M-series Mac, after which all test suites passed. Later runs skip finished steps; `--import-only` re-runs just the importers and Godot import.
 
 ## Doing it by hand
 
@@ -54,6 +54,7 @@ $PY tools/import_mirror.py "$CLIENT"
 $PY tools/import_loading.py "$CLIENT"        # web waiting screen; uses ffmpeg if present
 $PY tools/import_music.py "$CLIENT"          # 电台 soundtrack; the 8.0 folder has 26 tracks, 2.5 has 24
 $PY tools/import_riding.py "$CLIENT"         # after characters: riders are checked against them
+#   with the 8.0 data: add --extra-source .tools/legacy/extracted/SA8.0-20260803
 $PY tools/import_grid_cursor.py "$CLIENT"
 $PY tools/import_cursor.py 'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'
 python3 tools/import_encounters.py
@@ -61,7 +62,7 @@ $PY tools/import_encounter_art.py "$CLIENT"
 ./scripts/run.sh --headless --editor --import --quit
 ```
 
-The client folder must contain `data/adrn_15.bin`, `real_15.bin`, `spradrn_5.bin`, `spr_4.bin`, `pal/Palet_1.sap`, the audio files and `map/1000.DAT`. `--server-map` reads the original Samgir layout from the server data instead of the client cache's later decorations; unresolved decorations are recorded, never replaced with invented art. See [resource evidence](../reverse-engineering/samgir-import.md) for formats and hashes.
+The client folder must contain `data/adrn_<n>.bin`, `real_<n>.bin`, `spradrn_<n>.bin`, `spr_<n>.bin`, `pal/Palet_1.sap`, the audio files and `map/1000.DAT`. `Archive` (`tools/import_legacy.py`) takes the highest-numbered file of each kind (2.5: `adrn_15`, `real_15`, `spradrn_5`, `spr_4`; 8.0: `adrn_136`, `real_136`, `spradrn_115`, `spr_115`; `adrntrue_*`/`realtrue_*` are other files) and finds the palette case-insensitively (8.0 names it `PALET_1.SAP`). The 8.0 data has no `map/` folder, so only the riding import uses it. `--server-map` reads the original Samgir layout from the server data instead of the client cache's later decorations; unresolved decorations are recorded, never replaced with invented art. See [resource evidence](../reverse-engineering/samgir-import.md) for formats and hashes.
 
 After re-importing maps or encounters, regenerate the tracked spot indexes: `python3 tools/build_training_spots.py` and `python3 tools/build_level_one_spots.py`.
 

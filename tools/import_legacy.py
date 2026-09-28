@@ -5,17 +5,45 @@ SAP BGR palette, and client DAT maps. Original inputs remain untouched.
 Requires Pillow. Imported proprietary data stays local and is gitignored.
 """
 from pathlib import Path
-import argparse, hashlib, json, struct, shutil
+import argparse, hashlib, json, re, struct, shutil
 from PIL import Image, ImageDraw
+
+
+def data_file(data, stem, extension='bin'):
+    """The highest-numbered `<stem>_<n>.<extension>` in a client's data folder.
+
+    Clients name each resource file by its revision: the 2.5 client ships
+    adrn_15/real_15/spradrn_5/spr_4, the 8.0 data adrn_136/real_136/
+    spradrn_115/spr_115. Names are matched case-insensitively and exactly, so
+    adrntrue_5.bin is not an ADRN file."""
+    pattern = re.compile(rf'{re.escape(stem)}_(\d+)\.{re.escape(extension)}', re.I)
+    found = [(int(m.group(1)), path) for path in Path(data).iterdir() if (m := pattern.fullmatch(path.name))]
+    if not found: raise FileNotFoundError(f'No {stem}_<n>.{extension} in {data}')
+    return max(found)[1]
+
+
+def palette_file(data, name='Palet_1.sap'):
+    """A palette under data/pal, matched case-insensitively (2.5 ships
+    Palet_1.sap, 8.0 PALET_1.SAP)."""
+    for path in sorted((Path(data) / 'pal').iterdir()):
+        if path.name.lower() == name.lower(): return path
+    raise FileNotFoundError(f'No pal/{name} in {data}')
+
 
 class Archive:
     def __init__(self, source):
         self.source = Path(source)
         self.data = self.source / 'data'
-        self.adrn = (self.data / 'adrn_15.bin').read_bytes()
+        self.adrn_path = data_file(self.data, 'adrn')
+        self.real_path = data_file(self.data, 'real')
+        self.spradrn_path = data_file(self.data, 'spradrn')
+        self.spr_path = data_file(self.data, 'spr')
+        self.palette_path = palette_file(self.data)
+        self.adrn = self.adrn_path.read_bytes()
         if len(self.adrn) % 80: raise ValueError('ADRN size is not a multiple of 80')
-        self.real = open(self.data / 'real_15.bin','rb')
-        self.real_size = (self.data / 'real_15.bin').stat().st_size
+        self.real = open(self.real_path,'rb')
+        self.real_size = self.real_path.stat().st_size
+        self._sprites = None
         self.entries = {}
         self.map_ids = {}
         for at in range(0,len(self.adrn),80):
@@ -30,7 +58,7 @@ class Archive:
         fixed=[(0,0,0),(128,0,0),(0,128,0),(128,128,0),(0,0,128),(128,0,128),(0,128,128),(192,192,192),(192,220,192),(166,202,240),(222,0,0),(255,95,0),(255,255,160),(0,95,210),(80,210,255),(40,225,40)]
         self.palette[:16]=fixed
         self.palette[240:]=[(245,195,150),(225,160,95),(195,125,70),(155,85,30),(70,65,55),(40,35,30),(255,251,240),(160,160,164),(128,128,128),(255,0,0),(0,255,0),(255,255,0),(0,0,255),(255,0,255),(0,255,255),(255,255,255)]
-        pal=(self.data/'pal/Palet_1.sap').read_bytes()
+        pal=self.palette_path.read_bytes()
         for i in range(224):
             b,g,r=pal[i*3:i*3+3];self.palette[i+16]=(r,g,b)
         self.palette[168]=(0,0,0)
@@ -56,9 +84,13 @@ class Archive:
         self.cache[ident]=img
         return img
 
+    def sprite_bytes(self):
+        """(SPRADRN index, SPR animation data), read once."""
+        if self._sprites is None: self._sprites=(self.spradrn_path.read_bytes(),self.spr_path.read_bytes())
+        return self._sprites
+
     def animations(self,ident):
-        idx=(self.data/'spradrn_5.bin').read_bytes()
-        raw=(self.data/'spr_4.bin').read_bytes()
+        idx,raw=self.sprite_bytes()
         found=None
         for at in range(0,len(idx),12):
             number,offset,count=struct.unpack_from('<IIH',idx,at)
@@ -167,7 +199,7 @@ def run(source,output,server_map=None):
     for file in ['bgm/sabgm_t0.wav','bgm/sabgm_t1.wav','se/sas_01.wav','se/sas_02.wav']:
         p=Path(source)/'data'/file
         if p.exists(): shutil.copyfile(p,output/p.name)
-    report=dict(source='99ds.com StoneAge 2.5 client package SA2.5-20260823',map_source=map_source,map_sha256=hashlib.sha256(server if server_map else raw).hexdigest(),palette_sha256=hashlib.sha256((archive.data/'pal/Palet_1.sap').read_bytes()).hexdigest(),missing_graphics=missing,images=len(used),ground_cells=len(cells),objects=len(objects),walkable=sum(not v for v in blocked),sprite_ids=list(characters))
+    report=dict(source='99ds.com StoneAge 2.5 client package SA2.5-20260823',map_source=map_source,map_sha256=hashlib.sha256(server if server_map else raw).hexdigest(),palette_sha256=hashlib.sha256(archive.palette_path.read_bytes()).hexdigest(),missing_graphics=missing,images=len(used),ground_cells=len(cells),objects=len(objects),walkable=sum(not v for v in blocked),sprite_ids=list(characters))
     (output/'provenance.json').write_text(json.dumps(report,indent=2))
     print(json.dumps(report,indent=2))
 

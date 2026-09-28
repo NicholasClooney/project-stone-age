@@ -15,8 +15,7 @@ from import_legacy import Archive
 
 def animations(archive, sprite):
     """Read battle actions omitted by the exploration-only decoder's filter."""
-    index = (archive.data / 'spradrn_5.bin').read_bytes()
-    raw = (archive.data / 'spr_4.bin').read_bytes()
+    index, raw = archive.sprite_bytes()
     for offset in range(0, len(index), 12):
         number, at, count = struct.unpack_from('<IIH', index, offset)
         if number == sprite:

@@ -4,8 +4,10 @@
 #
 #   ./scripts/setup-original-data.sh            # everything needed to play on desktop
 #   ./scripts/setup-original-data.sh --web      # also the Godot web export templates
-#   ./scripts/setup-original-data.sh --with-8.0 # also the 8.0 client data (1.2 GB download)
+#   ./scripts/setup-original-data.sh --with-8.0 # also the 8.0 client data (1.2 GB download),
+#                                               # used for the certificate ride mounts
 #   ./scripts/setup-original-data.sh --import-only   # re-run the importers only
+#                                                    # (add --with-8.0 to keep the 8.0 mounts)
 #
 # Steps (each skipped when already done):
 #   1. Godot 4.6 into .tools/Godot.app (macOS; elsewhere put `godot` on PATH)
@@ -45,7 +47,7 @@ for argument in "$@"; do
     --web) web=1 ;;
     --with-8.0) with80=1 ;;
     --import-only) import_only=1 ;;
-    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
     *) echo "Unknown option: $argument (see --help)" >&2; exit 2 ;;
   esac
 done
@@ -186,6 +188,11 @@ fi
 [ -f "$CLIENT25/data/adrn_15.bin" ] || { echo "No 2.5 client at $CLIENT25; run without --import-only first." >&2; exit 1; }
 [ -x "$PY" ] || { echo "No Python tools at $PY; run without --import-only first." >&2; exit 1; }
 [ -d "$SERVER/gmsv" ] || { echo "No server reference at $SERVER; run without --import-only first." >&2; exit 1; }
+riding_extra=""
+if [ "$with80" = 1 ]; then
+  [ -f "$CLIENT80/data/adrn_136.bin" ] || { echo "No 8.0 data at $CLIENT80; run with --with-8.0 but without --import-only first." >&2; exit 1; }
+  riding_extra="--extra-source $CLIENT80"
+fi
 
 step "Importing original resources (several minutes)"
 run() { echo "-- $*"; "$@"; }
@@ -204,7 +211,9 @@ run "$PY" tools/import_mirror.py "$CLIENT25"
 run "$PY" tools/import_loading.py "$CLIENT25"
 # The radio takes the 8.0 soundtrack (26 tracks) when it is extracted, else 2.5's 24.
 if [ -d "$CLIENT80/data/bgm" ]; then run "$PY" tools/import_music.py "$CLIENT80"; else run "$PY" tools/import_music.py "$CLIENT25"; fi
-run "$PY" tools/import_riding.py "$CLIENT25"
+# With --with-8.0 the riding import adds the certificate mounts only 8.0 has.
+# shellcheck disable=SC2086
+run "$PY" tools/import_riding.py "$CLIENT25" $riding_extra
 run "$PY" tools/import_grid_cursor.py "$CLIENT25"
 run "$PY" tools/import_cursor.py "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/123.cur"
 run python3 tools/import_encounters.py
