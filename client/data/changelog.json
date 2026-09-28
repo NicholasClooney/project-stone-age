@@ -1,9 +1,16 @@
 {
-  "version": "v0.50.1",
-  "count": 51,
+  "version": "v0.50.2",
+  "count": 52,
   "feature_count": 34,
-  "fix_count": 17,
+  "fix_count": 18,
   "entries": [
+    {
+      "version": "v0.50.2",
+      "date": "2026-09-28",
+      "kind": "fix",
+      "title": "never serve a half-built asset pack set",
+      "details": []
+    },
     {
       "version": "v0.50.1",
       "date": "2026-09-28",
