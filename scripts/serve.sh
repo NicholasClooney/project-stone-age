@@ -27,6 +27,13 @@ fi
 if [ -n "${STONE_AGE_TLS_CERT:-}" ] && [ -n "${STONE_AGE_TLS_KEY:-}" ]; then
   tls="--tls-cert=$STONE_AGE_TLS_CERT --tls-key=$STONE_AGE_TLS_KEY"
   web_tls="--cert $STONE_AGE_TLS_CERT --key $STONE_AGE_TLS_KEY"
+  echo "Serving HTTPS / WSS with $STONE_AGE_TLS_CERT"
+else
+  # Clients opened on https:// (or a desktop client given wss://) cannot talk
+  # to a plain server: the page fails and the WebSocket hangs while connecting.
+  # .tools/ is ignored, so every checkout or worktree needs its own copy.
+  echo "WARNING: no certificate in .tools/tls; serving plain HTTP / WS." >&2
+  echo "  Use http:// and ws:// URLs, or run scripts/make-cert.sh (or copy .tools/tls from another checkout)." >&2
 fi
 if [ -f build/web/index.html ]; then
   # shellcheck disable=SC2086
