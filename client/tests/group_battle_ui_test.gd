@@ -105,6 +105,8 @@ func run():
  authority._state.enemies[1].hp=30
  authority.set_pet_command("defend")
  view.pending_action="capture"
+ # Reference capture is a roll; a maximal bonus keeps these layout checks off the RNG.
+ authority._config.capture_bonus=100
  view.show_state(authority.submit_action("capture",1))
  check(view.state.active and view.actors[3].hide_at<INF,"capturing one target keeps battle active and schedules correct actor removal")
  settle()
@@ -147,6 +149,7 @@ func run():
  authority._state.enemies[9].hp=1
  authority.set_pet_command("defend")
  view.pending_action="capture"
+ authority._config.capture_bonus=100
  view.show_state(authority.submit_action("capture",9))
  settle()
  check(not view.actors[view.enemy_actor(9)].sprite.visible and view.actors[view.enemy_actor(8)].sprite.visible,"capturing tenth enemy removes only its original formation slot")

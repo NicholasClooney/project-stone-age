@@ -44,6 +44,8 @@ func run() -> void:
 		var opponent: Dictionary = setup_battle.snapshot()
 		if not opponent.active or opponent.enemy_hp*100<=opponent.enemy_max_hp*60: break
 		setup_battle.submit_action("attack")
+	# Reference capture is a roll; a maximal bonus makes this setup capture reliable.
+	setup_battle._config.capture_bonus=100
 	var captured: Dictionary = setup_battle.submit_action("capture")
 	check(captured.outcome=="captured" and game.session.apply_battle_result(captured),"companion obtained through authority capture flow")
 	game.session.heal()

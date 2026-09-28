@@ -85,7 +85,7 @@ func verify_wild_rounding() -> void:
 	result.enemies[0].defeated_with_ride_index=1
 	check(session.apply_battle_result(result),"source encounter settles")
 	check(lifetime_xp(session.snapshot().pets[1])-lifetime_xp(before.pets[1])==39,"multiplier precedes mount penalty and integer rounding")
-	check(result.xp==70 and result.gold==3,"source XP amplified but source currency unchanged")
+	check(result.xp==70 and result.gold==3+int(config.battle_gold),"source XP amplified; currency is troop gold plus one unmultiplied battle payout")
 
 func verify_level_cap() -> void:
 	var session = Session.new()
