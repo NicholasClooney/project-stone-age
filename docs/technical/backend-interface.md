@@ -20,7 +20,7 @@ client scripts ──► link.request(command, done) ──► Backend.handle(co
 | `ClientState` | `client/network/client_state.gd` | Latest snapshot, battle and automation status. UI reads only this. |
 | `SessionClient` / `BattleClient` | `client/network/` | `world.session` and `world.battle_session`: GameSession-shaped reads from `ClientState`, commands for every change. |
 
-The desktop game builds a `Backend` and a `LocalLink`. `scripts/serve.sh` runs `server_main.gd` headless with a `WsServer`; a client started with `--server=ws://host:8765` (or a web build, which defaults to the page host) uses `WsLink` and holds no authority.
+The desktop game builds a `Backend` and a `LocalLink`. `scripts/serve.sh` runs `server_main.gd` headless with a `WsServer`; a client started with `--server=ws://host:8781` (or a web build, which defaults to the page host) uses `WsLink` and holds no authority.
 
 ## Envelope
 

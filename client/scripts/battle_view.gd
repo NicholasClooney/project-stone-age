@@ -133,6 +133,7 @@ const MENU_ANCHOR := Vector2(680,65)
 const PET_MENU_ANCHOR := Vector2(675,48)
 
 var background_selector = preload("res://scripts/battle_background.gd").new()
+var next_background := ""
 var battlefield: TextureRect
 
 func configure(next_world: Node) -> void:
@@ -359,12 +360,38 @@ func mark_hunt_target(index: int) -> void:
 		target.text="★ 达标 " + str(enemies_of(state)[index].get("name",""))
 		target.add_theme_color_override("font_color",Color.YELLOW)
 
+## Battle art a battle needs before it can open: battle sprites, mounted
+## composites and the background, which is chosen now and reused when opening.
+func required_art(next_state: Dictionary) -> Dictionary:
+	# open_battle() also builds placeholder actors (an empty pet slot) with 100250.
+	var sprites := {"100250":true}
+	var riding := {}
+	if is_instance_valid(world):
+		var ident := str(world.player.character_id)
+		sprites[ident] = true
+		sprites[str(manifest.get("equipment_variants",{}).get("club",{}).get(ident,ident))] = true
+	if int(next_state.get("mounted_sprite",-1)) >= 0:riding[str(next_state.mounted_sprite)] = true
+	sprites[str(next_state.get("enemy_sprite",SPECIES_ART.get(str(next_state.get("enemy_species","wooli")),"100250")))] = true
+	for actor in enemies_of(next_state)+next_state.get("pets",[])+next_state.get("ally_pets",[])+[next_state.get("pet",{})]:
+		if actor is Dictionary and actor.has("sprite"):sprites[str(actor.sprite)] = true
+	for ally in next_state.get("allies",[]):
+		sprites[ally_art(ally,false)] = true
+		if int(ally.get("mounted_sprite",-1)) >= 0:riding[str(ally.mounted_sprite)] = true
+	var files: Array = []
+	if is_instance_valid(world) and is_instance_valid(battlefield):
+		if next_background.is_empty():next_background = background_selector.choose(_ground_bitmap())
+		files.append(next_background)
+	return {"sprites":sprites.keys(),"riding":riding.keys(),"files":files}
+
+func _ground_bitmap() -> String:
+	return str(world.terrain.ground.get(int(world.cell.y)*int(world.data.width)+int(world.cell.x),""))
+
 func open_battle(next_state: Dictionary) -> void:
 	hunt_target_index=-1
 	capture_transition()
 	if is_instance_valid(battlefield) and is_instance_valid(world):
-		var bitmap := str(world.terrain.ground.get(int(world.cell.y)*int(world.data.width)+int(world.cell.x),""))
-		battlefield.texture = load(background_selector.choose(bitmap))
+		battlefield.texture = load(next_background if not next_background.is_empty() else background_selector.choose(_ground_bitmap()))
+		next_background = ""
 	elapsed = 0.0
 	state = {}
 	starting_profile = world.session.snapshot() if is_instance_valid(world) and world.get("session")!=null else {}

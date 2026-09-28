@@ -22,6 +22,8 @@ var _callbacks: Dictionary = {}
 var _retry_in := 0.0
 var _backoff := 1.0
 var _hello_seq := -1
+var _last_state := -1
+var _started := false
 
 func _init(server_url: String) -> void:
 	url = server_url
@@ -29,11 +31,18 @@ func _init(server_url: String) -> void:
 func is_local() -> bool:
 	return false
 
+## Starts (or restarts) the connection; the link stays idle until called.
 func connect_now() -> void:
+	_started = true
+	if _peer!=null:_peer.close()
+	_hello_seq = -1
+	_last_state = -1
 	_peer = WebSocketPeer.new()
 	_peer.inbound_buffer_size = 8 << 20
 	_peer.outbound_buffer_size = 1 << 20
-	if _peer.connect_to_url(url)!=OK:
+	var error := _peer.connect_to_url(url)
+	print("[link] connecting to %s: error %d" % [url,error])
+	if error!=OK:
 		_peer = null
 		_schedule_retry()
 
@@ -51,12 +60,16 @@ func request(command: Dictionary, done: Callable = Callable()) -> Dictionary:
 
 func poll(delta: float) -> void:
 	if _peer==null:
-		if superseded or url.is_empty():return
+		if not _started or superseded or url.is_empty():return
 		_retry_in -= delta
 		if _retry_in <= 0:connect_now()
 		return
 	_peer.poll()
-	match _peer.get_ready_state():
+	var ready_state := _peer.get_ready_state()
+	if ready_state!=_last_state:
+		print("[link] %s state %d" % [url,ready_state])
+		_last_state = ready_state
+	match ready_state:
 		WebSocketPeer.STATE_OPEN:
 			if _hello_seq < 0:_send_hello()
 			_drain()
@@ -102,7 +115,8 @@ func _receive(text: String) -> void:
 			var done: Callable = _callbacks[seq]
 			_callbacks.erase(seq)
 			done.call(incoming)
-		if not bool(incoming.get("ok",false)) and not str(incoming.get("reason","")).is_empty():
+		# Skipped encounters are ordinary outcomes the caller explains itself.
+		if not bool(incoming.get("ok",false)) and not incoming.has("skipped") and not str(incoming.get("reason","")).is_empty():
 			message.emit({"type":"rejected","reason":incoming.reason,"seq":seq})
 		return
 	if str(incoming.get("type",""))=="superseded":

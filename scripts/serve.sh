@@ -1,6 +1,9 @@
 #!/bin/sh
-# Run the headless backend that remote clients (the web build) connect to.
-# Options: --port=8765 --bind=* --save=user://single-player.json
+# Run the headless backend that remote clients connect to, and, once
+# scripts/build-web.sh has produced build/web, the web client on port 8780.
+# Backend options: --port=8781 --bind=* --save=user://single-player.json
+# Web options via environment: STONE_AGE_WEB_PORT (8780), STONE_AGE_TLS_CERT and
+# STONE_AGE_TLS_KEY (serve both over TLS for a secure browser context).
 # Stop with Ctrl-C; progress is saved after every settlement and on exit.
 set -eu
 cd "$(dirname "$0")/.."
@@ -14,4 +17,17 @@ else
   echo 'Install Godot 4.6, or set GODOT_BIN to its executable.' >&2
   exit 1
 fi
-exec "$engine" --headless --path client --audio-driver Dummy --script res://server/server_main.gd -- "$@"
+tls=""
+web_tls=""
+if [ -n "${STONE_AGE_TLS_CERT:-}" ] && [ -n "${STONE_AGE_TLS_KEY:-}" ]; then
+  tls="--tls-cert=$STONE_AGE_TLS_CERT --tls-key=$STONE_AGE_TLS_KEY"
+  web_tls="--cert $STONE_AGE_TLS_CERT --key $STONE_AGE_TLS_KEY"
+fi
+if [ -f build/web/index.html ]; then
+  # shellcheck disable=SC2086
+  python3 tools/serve_web.py --port "${STONE_AGE_WEB_PORT:-8780}" $web_tls &
+  web_pid=$!
+  trap 'kill "$web_pid" 2>/dev/null' EXIT INT TERM
+fi
+# shellcheck disable=SC2086
+"$engine" --headless --path client --audio-driver Dummy --script res://server/server_main.gd -- $tls "$@"

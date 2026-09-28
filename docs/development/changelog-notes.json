@@ -334,8 +334,17 @@
     "details": [
       "游戏规则、自动练级、抓宠流程和存档改由后台负责；桌面版照常游玩，行为不变。",
       "开发者功能：运行 scripts/serve.sh 可在 MacBook 上单独启动后台，关闭游戏窗口后自动练级仍会继续。",
-      "用 scripts/run.sh -- --server=ws://127.0.0.1:8765 连接后台；断线后会自动重连，并显示离线期间的战斗、等级和新伙伴。",
+      "用 scripts/run.sh -- --server=ws://127.0.0.1:8781 连接后台；断线后会自动重连，并显示离线期间的战斗、等级和新伙伴。",
       "尚未完成：网页版、按需下载素材和手柄操作；Vision Pro 尚未实机验证。"
+    ]
+  },
+  "feat(web): browser client with on-demand original asset packs": {
+    "title": "网页版（按需下载素材）",
+    "details": [
+      "新增网页版：运行 scripts/build-web.sh 生成后，用 scripts/serve.sh 在 MacBook 上启动，同一 Wi-Fi 的浏览器打开 http://<MacBook地址>:8780 即可游玩。",
+      "首次只下载核心素材；进入新地图、开始战斗、查看宠物时才下载对应素材，并预先下载相邻地图。已下载的素材会缓存在浏览器，再次进入不再下载；失败会自动重试。",
+      "网页版由 MacBook 后台负责规则与存档，关闭网页后自动练级仍会继续。",
+      "尚未完成：手柄操作；Vision Pro 尚未实机验证。"
     ]
   }
 }
