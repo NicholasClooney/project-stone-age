@@ -54,6 +54,42 @@ func run() -> void:
 	await process_frame
 	check(game._scroll_areas(menu)[0].scroll_vertical==0,"a list at the top stays at the top")
 
+	# The 同种比较 view: the player's own actions (sort, checkboxes) rebuild the
+	# menu directly and must keep the place in the list too.
+	menu.pet_storage_open = false
+	menu.pet_view = "list"
+	menu.pet_compare_subject = game.session.snapshot().pets[0].duplicate(true)
+	menu.pet_compare_open = true
+	menu.rebuild()
+	await process_frame
+	await process_frame
+	var compare: ScrollContainer = game._scroll_areas(menu)[0]
+	check(compare.get_v_scroll_bar().max_value > compare.size.y,"the comparison list is long enough to scroll")
+	compare.scroll_vertical = 200
+	await process_frame
+	var compared: int = compare.scroll_vertical
+	menu.rebuild()
+	await process_frame
+	await process_frame
+	check(compared > 0 and game._scroll_areas(menu)[0].scroll_vertical==compared,"a rebuild from the player's own action keeps the comparison scroll")
+	menu.pet_compare_page += 1
+	menu.rebuild()
+	await process_frame
+	await process_frame
+	check(game._scroll_areas(menu)[0].scroll_vertical==0,"turning the page starts at the top")
+	menu.pet_compare_page = 0
+	menu.rebuild()
+	await process_frame
+	game._scroll_areas(menu)[0].scroll_vertical = 200
+	await process_frame
+	game.close_adventure_menu()
+	game.show_adventure_menu("pets")
+	menu.pet_compare_open = true
+	menu.rebuild()
+	await process_frame
+	await process_frame
+	check(game._scroll_areas(menu)[0].scroll_vertical==0,"reopening the menu starts at the top")
+
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame

@@ -19,6 +19,8 @@ var pet_storage_open := false
 var pet_storage_target_id := ""
 var pet_compare_page := 0
 var pet_storage_page := 0
+## The view and page the panel was last built for; scroll is kept within one.
+var _built_view: Array = []
 var pet_compare_sort := "stat_total"
 var pet_compare_projected := false
 # 放生 selection for the comparison overlay: stable pet_id -> true, per species.
@@ -127,8 +129,21 @@ func choice(caption: String, point: Vector2, action: String, value: Variant = nu
 	item.pressed.connect(func(): world.perform_adventure_action(action,value))
 	panel.add_child(item)
 	return item
+## Every rebuild (a sort, a checkbox, backend data) keeps the lists where the
+## player left them, as long as the same view and page stay on screen.
 func rebuild() -> void:
 	if world==null or not visible:return
+	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page]
+	var before: Array[Vector2i] = world.capture_scroll(self) if view==_built_view else ([] as Array[Vector2i])
+	_rebuild_panel()
+	_built_view = view
+	world.restore_scroll(self,before)
+
+func _notification(what: int) -> void:
+	# Reopening the menu starts at the top.
+	if what==NOTIFICATION_VISIBILITY_CHANGED and not visible:_built_view = []
+
+func _rebuild_panel() -> void:
 	if is_instance_valid(panel):
 		remove_child(panel)
 		panel.queue_free()

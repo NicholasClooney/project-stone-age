@@ -1,9 +1,18 @@
 {
-  "version": "v0.54.0",
-  "count": 63,
+  "version": "v0.54.1",
+  "count": 64,
   "feature_count": 38,
-  "fix_count": 25,
+  "fix_count": 26,
   "entries": [
+    {
+      "version": "v0.54.1",
+      "date": "2026-09-28",
+      "kind": "fix",
+      "title": "操作宠物菜单时保持滚动位置",
+      "details": [
+        "在同种比较、宠物仓库等列表中勾选、排序或操作后，列表停留在原来的位置；翻页或重新打开菜单时才回到顶部。"
+      ]
+    },
     {
       "version": "v0.54.0",
       "date": "2026-09-28",

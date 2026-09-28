@@ -1808,11 +1808,20 @@ func release_input() -> void:
 ## Rebuilds a panel for new data without moving the player's place in its
 ## lists: scroll areas are matched by order and restored once laid out.
 func rebuild_keeping_scroll(panel: Control) -> void:
-	var before: Array[Vector2i] = []
-	for scroll in _scroll_areas(panel):before.append(Vector2i(scroll.scroll_horizontal,scroll.scroll_vertical))
+	var before := capture_scroll(panel)
 	panel.rebuild()
+	restore_scroll(panel,before)
+
+## Scroll positions of every scroll area under root, in tree order.
+func capture_scroll(root: Node) -> Array[Vector2i]:
+	var before: Array[Vector2i] = []
+	for scroll in _scroll_areas(root):before.append(Vector2i(scroll.scroll_horizontal,scroll.scroll_vertical))
+	return before
+
+## Puts positions from capture_scroll back on root's rebuilt scroll areas.
+func restore_scroll(root: Node, before: Array[Vector2i]) -> void:
 	if before.is_empty() or before.all(func(position: Vector2i):return position==Vector2i.ZERO):return
-	var after := _scroll_areas(panel)
+	var after := _scroll_areas(root)
 	for i in range(mini(before.size(),after.size())):
 		var scroll: ScrollContainer = after[i]
 		var position: Vector2i = before[i]
