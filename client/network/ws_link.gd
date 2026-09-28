@@ -19,7 +19,7 @@ const SILENCE_LIMIT := 10.0
 var url := ""
 var backend = null
 var online := false
-var superseded := false
+var _closed := false
 var _peer: WebSocketPeer
 var _seq := 0
 var _callbacks: Dictionary = {}
@@ -69,7 +69,7 @@ func request(command: Dictionary, done: Callable = Callable()) -> Dictionary:
 
 func poll(delta: float) -> void:
 	if _peer==null:
-		if not _started or superseded or url.is_empty():return
+		if not _started or _closed or url.is_empty():return
 		_retry_in -= delta
 		if _retry_in <= 0:connect_now()
 		return
@@ -89,7 +89,6 @@ func poll(delta: float) -> void:
 			_drain()
 		WebSocketPeer.STATE_CLOSED:
 			_drain()
-			if _peer.get_close_code()==4000:superseded = true
 			_drop()
 
 ## Counts frame time rather than wall time, so a browser tab that was hidden
@@ -123,19 +122,13 @@ func _drop() -> void:
 func retry_seconds() -> int:
 	return ceili(maxf(_retry_in,0.0)) if _peer==null else 0
 
-## Takes the session back after another device superseded this one.
-func take_over() -> void:
-	superseded = false
-	_backoff = 1.0
-	connect_now()
-
 func _drain() -> void:
 	while _peer!=null and _peer.get_available_packet_count() > 0:
 		_since_heard = 0.0
 		_receive(_peer.get_packet().get_string_from_utf8())
 
 func close() -> void:
-	superseded = true
+	_closed = true
 	if _peer!=null:_peer.close()
 
 func _send_hello() -> void:
@@ -158,15 +151,14 @@ func _receive(text: String) -> void:
 			var done: Callable = _callbacks[seq]
 			_callbacks.erase(seq)
 			done.call(incoming)
-		# Skipped encounters are ordinary outcomes the caller explains itself.
-		if not bool(incoming.get("ok",false)) and not incoming.has("skipped") and not str(incoming.get("reason","")).is_empty():
+		# Skipped encounters are ordinary outcomes the caller explains itself;
+		# stale commands lost a race with another device and need no notice.
+		if not bool(incoming.get("ok",false)) and not incoming.has("skipped") and not incoming.has("stale") and not str(incoming.get("reason","")).is_empty():
 			message.emit({"type":"rejected","reason":incoming.reason,"seq":seq})
 		return
-	if str(incoming.get("type",""))=="superseded":
-		superseded = true
 	message.emit(incoming)
 
 func _schedule_retry() -> void:
-	if superseded:return
+	if _closed:return
 	_retry_in = _backoff
 	_backoff = minf(_backoff*2.0,MAX_BACKOFF)

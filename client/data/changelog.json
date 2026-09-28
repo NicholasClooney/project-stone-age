@@ -1,9 +1,19 @@
 {
-  "version": "v0.50.3",
-  "count": 53,
-  "feature_count": 34,
+  "version": "v0.51.0",
+  "count": 54,
+  "feature_count": 35,
   "fix_count": 19,
   "entries": [
+    {
+      "version": "v0.51.0",
+      "date": "2026-09-28",
+      "kind": "feat",
+      "title": "多台设备同时游玩",
+      "details": [
+        "网页、桌面等多台设备可同时连接同一个服务器，都能看到并操作同一份存档；同一回合以先到的指令为准。",
+        "在一台设备上走动，其他设备上的角色会跟着移动。"
+      ]
+    },
     {
       "version": "v0.50.3",
       "date": "2026-09-28",

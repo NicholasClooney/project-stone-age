@@ -1,7 +1,8 @@
 extends SceneTree
 ## A game client playing against a backend over a real localhost WebSocket:
 ## handshake, battles, profile commands, automation that keeps running while
-## the client is disconnected, reconnection with a summary, and takeover.
+## the client is disconnected, reconnection with a summary, and several
+## devices driving one session.
 const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const WsLink = preload("res://network/ws_link.gd")
@@ -73,7 +74,7 @@ func run() -> void:
 	helper.open_menu();helper.compact.button_pressed=true;helper.battle_limit.value=3;helper.hp_floor.value=1;helper.speed.select(3);helper.preset.select(0)
 	helper.start_training()
 	check(await until(func():return bool(game.state.automation.get("running",false))),"automation starts on the backend")
-	server._controller.close()
+	for peer in server.clients():peer.close()
 	check(await until(func():return not game.link.online and not backend.automation.client_attached),"client disconnect is noticed on both sides")
 	check(game.link_blocked() and game._link_status.text.contains("断开连接"),"a lost connection covers the game with a notice")
 	var cell_before: Vector2i = game.cell
@@ -97,17 +98,66 @@ func run() -> void:
 	check(await until(func():return game.link.online and not game.link_blocked(),15.0),"the client recovers once the server answers again")
 	game.link.silence_limit = game.link.SILENCE_LIMIT
 
-	# A second device takes over; the first stops syncing.
+	# A second device joins: both stay connected, see the same updates and can act.
+	backend.handle({"type":"auto_stop"})
 	var other = WsLink.new("ws://127.0.0.1:%d" % port)
+	var other_events: Array = []
+	other.message.connect(func(event: Dictionary):other_events.append(event))
 	other.connect_now()
+	var poll_other := func():other.poll(1.0/60.0)
 	check(await until(func():
-		other.poll(1.0/60.0)
-		return other.online and game.link.superseded),"newest connection takes control and the old client is told")
-	check(await until(func():return game.link_blocked() and game._take_over_button.visible),"the superseded window offers to continue here")
-	game._take_over_button.pressed.emit()
+		poll_other.call()
+		return other.online),"a second device connects")
+	for i in range(30):
+		poll_other.call()
+		await physics_frame
+	check(game.link.online and server.clients().size()==2,"the first device stays connected")
+	points = int(game.session.snapshot().player.stat_points)
+	other.request({"type":"gm_grant_points","amount":2})
 	check(await until(func():
-		other.poll(1.0/60.0)
-		return game.link.online and not game.link_blocked() and other.superseded),"continuing here takes control back")
+		poll_other.call()
+		return int(game.session.snapshot().player.stat_points)==points+2),"a command from one device updates the other")
+
+	# Walking on one device moves the character on the other.
+	var start_cell: Vector2i = game.cell
+	var next_cell := Vector2i(-1,-1)
+	for offset in game.SCREEN_DIRECTIONS:
+		if game.can_step(start_cell,start_cell+offset):next_cell = start_cell+offset;break
+	check(next_cell.x>=0,"the test finds a walkable neighbour")
+	var steps_before: int = game.field_steps
+	other.request({"type":"report_position","map_id":int(game.data.map_id),"cell":[next_cell.x,next_cell.y],"client":"other"})
+	check(await until(func():
+		poll_other.call()
+		return game.cell==next_cell and not game.moving),"another device's step is walked here")
+	check(game.field_steps==steps_before,"a mirrored step does not roll encounters again")
+	var reported := other_events.filter(func(event):return str(event.type)=="position")
+	check(reported.size()==1 and reported[0].client=="other","the follower does not echo the position back")
+	var far_cell := Vector2i(-1,-1)
+	for y in range(start_cell.y-12,start_cell.y+12):
+		for x in range(start_cell.x-12,start_cell.x+12):
+			if far_cell.x<0 and maxi(absi(x-next_cell.x),absi(y-next_cell.y))>3 and game.is_walkable(Vector2i(x,y)):far_cell = Vector2i(x,y)
+	other.request({"type":"report_position","map_id":int(game.data.map_id),"cell":[far_cell.x,far_cell.y],"client":"other"})
+	check(await until(func():
+		poll_other.call()
+		return game.cell==far_cell),"a distant position is jumped to")
+
+	# Two devices answering the same battle turn: the first wins, the second is dropped quietly.
+	var opened: Dictionary = backend.handle({"type":"begin_battle","enemy_count":1})
+	check(bool(opened.ok),"a battle opens for both devices")
+	var live: Dictionary = backend.battle.snapshot()
+	var first: Dictionary = backend.handle({"type":"battle_command","action":"defend","battle_id":live.battle_id,"turn":live.turn})
+	var second: Dictionary = backend.handle({"type":"battle_command","action":"defend","battle_id":live.battle_id,"turn":live.turn})
+	check(bool(first.ok) and not bool(second.ok) and bool(second.get("stale",false)),"a command for an already resolved turn is dropped")
+	check(bool(backend.handle({"type":"begin_battle"}).get("stale",false)),"starting a battle another device already started is stale")
+	await until(func():return game.battle_view.visible)
+	game.message.text = ""
+	game.battle_session.submit_action("defend")
+	var stale_turn: Dictionary = backend.battle.snapshot()
+	other.request({"type":"battle_command","action":"defend","battle_id":stale_turn.battle_id,"turn":int(stale_turn.turn)-1})
+	for i in range(30):
+		poll_other.call()
+		await physics_frame
+	check(not game.message.text.contains("服务器拒绝"),"a lost race shows no error")
 	other.close()
 	backend.handle({"type":"auto_stop"})
 	server.stop()

@@ -91,15 +91,25 @@ func handle(command: Dictionary) -> Dictionary:
 	_flush()
 	return reply
 
+## Battle commands that name the turn they answer. Several devices can drive
+## one battle; a command for a turn that has already been resolved (another
+## device acted first) is dropped instead of landing on the next turn.
+const TURN_COMMANDS := ["battle_command","battle_pet_command","battle_pet_skill","battle_escape_dev"]
+
 func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
 	var reply: Dictionary
-	if PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
+	if type in TURN_COMMANDS and command.has("turn") and not _current_turn(command):reply = _stale("battle turn already resolved")
+	elif PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
 	elif has_method("_cmd_"+type):reply = call("_cmd_"+type,command)
 	else:reply = _reject("unknown command "+type)
 	reply.seq = command.get("seq",0)
 	reply.type = "ack" if reply.get("ok",false) else "rejected"
 	return reply
+
+func _current_turn(command: Dictionary) -> bool:
+	var live: Dictionary = battle.snapshot()
+	return battle_open and bool(live.get("active",false)) and str(live.get("battle_id",""))==str(command.get("battle_id","")) and int(live.get("turn",-1))==int(command.turn)
 
 func full_snapshot() -> Dictionary:
 	var profile: Dictionary = session.snapshot()
@@ -127,7 +137,7 @@ func _cmd_set_options(command: Dictionary) -> Dictionary:
 	return {"ok":true}
 
 func _cmd_checkpoint(command: Dictionary) -> Dictionary:
-	if battle.snapshot().active:return _reject("battle active")
+	if battle.snapshot().active:return _stale("battle active")
 	if battle_open and str(battle.snapshot().outcome)=="defeat":
 		session.set_location(VILLAGE.map_id,VILLAGE.x,VILLAGE.y)
 	elif command.has("map_id"):
@@ -137,12 +147,19 @@ func _cmd_checkpoint(command: Dictionary) -> Dictionary:
 	if not saved:return _reject("save_failed")
 	return {"ok":true}
 
+func _required_arguments(method: String) -> int:
+	for info in session.get_script().get_script_method_list():
+		if info.name==method:return info.args.size()-info.default_args.size()
+	return 0
+
 func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	var spec: Array = PROFILE_COMMANDS[type]
 	var arguments := []
 	for field in spec[1]:
 		if not command.has(field):break
 		arguments.append(command[field])
+	# A remote command missing a required field is refused, not a script error.
+	if arguments.size() < _required_arguments(spec[0]):return _reject("missing %s" % spec[1][arguments.size()])
 	session.last_error = ""
 	var ok: bool = session.callv(spec[0],arguments)
 	if not ok:return _reject(session.last_error)
@@ -189,7 +206,7 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	return {"ok":true,"state":open_battle(config)}
 
 func _cmd_begin_battle(command: Dictionary) -> Dictionary:
-	if battle.snapshot().active:return _reject("battle active")
+	if battle.snapshot().active:return _stale("battle active")
 	var boss := bool(command.get("boss",false))
 	var enemy_count := int(command.get("enemy_count",0))
 	var config: Dictionary = session.start_battle_config("woolistan" if boss else DEBUG_SPECIES[encounter_serial%3],boss,1 if boss else (enemy_count if enemy_count > 0 else 1 + encounter_serial % 3))
@@ -211,7 +228,7 @@ func _cmd_wild_encounter(command: Dictionary) -> Dictionary:
 	return result
 
 func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
-	if battle.snapshot().active:return _reject("battle active")
+	if battle.snapshot().active:return _stale("battle active")
 	var troop: Dictionary = encounter_catalog.roll(map_id,cell,encounter_rng)
 	if troop.is_empty():
 		var reply := _reject(encounter_catalog.last_error)
@@ -258,7 +275,7 @@ func set_capture_assist(enabled: bool) -> void:
 	if not battle_state.is_empty():_refresh_battle_state()
 
 func _cmd_battle_command(command: Dictionary) -> Dictionary:
-	if not battle_open:return _reject("no open battle")
+	if not battle_open:return _stale("no open battle")
 	return {"ok":true,"state":battle_command(command)}
 
 func battle_command(command: Dictionary) -> Dictionary:
@@ -269,7 +286,7 @@ func battle_command(command: Dictionary) -> Dictionary:
 	return _after_turn(state)
 
 func _cmd_battle_escape_dev(_command: Dictionary) -> Dictionary:
-	if not battle_open:return _reject("no open battle")
+	if not battle_open:return _stale("no open battle")
 	return {"ok":true,"state":_after_turn(battle.developer_escape())}
 
 ## Settles a finished battle exactly once and appends the reward summary that
@@ -306,7 +323,8 @@ func _after_turn(state: Dictionary) -> Dictionary:
 	return state.duplicate(true)
 
 func _cmd_battle_close(_command: Dictionary) -> Dictionary:
-	if not battle_open or battle.snapshot().active:return _reject("battle not finished")
+	if not battle_open:return _stale("no open battle")
+	if battle.snapshot().active:return _reject("battle not finished")
 	return {"ok":true,"outcome":close_battle()}
 
 func close_battle() -> String:
@@ -353,8 +371,14 @@ func _cmd_presented(command: Dictionary) -> Dictionary:
 	automation.presented(str(command.get("battle_id","")),int(command.get("turn",-1)))
 	return {"ok":true}
 
+## Positions are reported by whichever client walks; every other client
+## follows the broadcast (the reporter recognises its own client id).
 func _cmd_report_position(command: Dictionary) -> Dictionary:
-	return {"ok":true,"paused":automation.position_changed(int(command.map_id),_cell(command),bool(command.get("map_changed",false)))}
+	var cell := _cell(command)
+	var moved: bool = int(command.map_id)!=automation.position_map or cell!=automation.position_cell
+	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)))
+	if moved:_emit({"type":"position","map_id":int(command.map_id),"cell":[cell.x,cell.y],"client":str(command.get("client",""))})
+	return {"ok":true,"paused":paused}
 
 # ---- persistence and events ------------------------------------------------
 
@@ -407,3 +431,7 @@ func _cell(command: Dictionary) -> Vector2i:
 
 func _reject(reason: String) -> Dictionary:
 	return {"ok":false,"reason":reason}
+
+## A command overtaken by another device's: rejected, but not an error to show.
+func _stale(reason: String) -> Dictionary:
+	return {"ok":false,"reason":reason,"stale":true}

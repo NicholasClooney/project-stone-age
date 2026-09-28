@@ -49,7 +49,14 @@ var _offline_battles := 0
 ## Remote play: covers the game and blocks input whenever the backend is unreachable.
 var link_overlay: Control
 var _link_status: Label
-var _take_over_button: Button
+## Several devices can drive one backend. This device's reports carry its id;
+## another device's walk arrives as a position event and is mirrored here
+## without rerunning arrival rules (encounters, map links), which the walking
+## device already ran.
+var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]
+var _follow: Array = []
+var _following_step := false
+var _followed: Array = []
 var asset_packs: Node
 var gamepad: Node
 var _download_layer: CanvasLayer
@@ -349,7 +356,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	build_world()
 	camera.zoom = previous_zoom
 	build_ui()
-	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true},_on_map_reported)
+	if [int(data.map_id),cell]!=_followed:link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true,"client":_client_id},_on_map_reported)
 	camera.reset_smoothing()
 	area_music = exploration_music()
 	set_music(area_music)
@@ -572,6 +579,8 @@ func request_step(destination: Vector2i) -> bool:
 	target_cell = destination
 	step_progress = 0
 	moving = true
+	_followed = []
+	_follow = []
 	player.set_action(4)
 	return true
 
@@ -713,9 +722,13 @@ func _physics_process(delta: float) -> void:
 		if step_progress>=1:
 			cell = target_cell
 			moving = false
-			if handle_arrival():
+			if _following_step:
+				_following_step = false
+				pet_trail.append(cell)
+				while pet_trail.size()>3:pet_trail.pop_front()
+			elif handle_arrival():
 				return
-	if not moving:
+	if not moving and not (held.is_empty() and path.is_empty() and _step_follow()):
 		var destination := cell
 		if not paused_input and not held.is_empty():
 			var d := Vector2i.ZERO
@@ -1664,7 +1677,37 @@ func _typing_in(panel: Control) -> bool:
 	return focused is LineEdit and panel.is_ancestor_of(focused)
 
 func report_position() -> void:
-	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
+	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"client":_client_id})
+
+## Walks (one cell) or jumps to where another device put the character, and
+## loads its map when that differs. Returns true while a mirrored move runs.
+func _step_follow() -> bool:
+	if _follow.is_empty() or area_transition_busy or battle_view.visible:return false
+	var map_id: int = _follow[0]
+	var target: Vector2i = _follow[1]
+	_followed = [map_id,target]
+	if map_id!=int(data.map_id):
+		_follow = []
+		load_area_id(map_id,target)
+		return true
+	if target==cell:
+		_follow = []
+		return false
+	var d := target-cell
+	if maxi(absi(d.x),absi(d.y))==1:
+		player.facing = (SCREEN_DIRECTIONS.find(d)+4)%8
+		from_cell = cell
+		target_cell = target
+		step_progress = 0
+		moving = true
+		_following_step = true
+		player.set_action(4)
+	else:
+		_follow = []
+		cell = target;from_cell = target;target_cell = target;logical_position = Vector2(target)
+		player.position = project(logical_position);player.set_action(3)
+		camera.reset_smoothing();refresh_companion();queue_redraw()
+	return true
 
 func _on_map_reported(reply: Dictionary) -> void:
 	var workflow_pause := str(reply.get("paused",""))
@@ -1699,12 +1742,6 @@ func _build_link_overlay() -> void:
 	_link_status = text("",20)
 	_link_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_link_status)
-	_take_over_button = button("在此设备继续",func():link.take_over())
-	# The overlay sits outside the themed UI layer, so it needs the font itself.
-	_take_over_button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	_take_over_button.add_theme_font_size_override("font_size",18)
-	_take_over_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
-	column.add_child(_take_over_button)
 	_update_link_overlay()
 
 ## True while the backend is unreachable; the overlay then owns all input.
@@ -1720,10 +1757,7 @@ func _update_link_overlay() -> void:
 			clear_input()
 			path.clear()
 	if not blocked:return
-	_take_over_button.visible = link.superseded
-	if link.superseded:
-		_link_status.text = "已在另一台设备上继续游戏。\n此窗口不再同步。"
-	elif data.is_empty():
+	if data.is_empty():
 		_link_status.text = "正在连接 MacBook 上的服务器\n%s …" % remote_url
 	else:
 		var retry: int = link.retry_seconds()
@@ -1780,9 +1814,12 @@ func _on_backend_message(event: Dictionary) -> void:
 		"rejected":
 			var reason := str(event.get("reason",""))
 			if not reason.is_empty():message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
-		"superseded":
-			message.text = "已在另一台设备上继续游戏；此窗口不再同步。"
-			_update_link_overlay()
+		"position":
+			if str(event.get("client",""))!=_client_id:
+				_follow = [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
+				pending_talk = false
+				path.clear()
+				if is_instance_valid(travel_router) and travel_router.active:travel_router.cancel("另一台设备移动了角色。")
 
 func _on_auto_event(detail: Dictionary) -> void:
 	match str(detail.kind):

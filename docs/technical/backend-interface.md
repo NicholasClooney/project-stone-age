@@ -36,8 +36,8 @@ Events raised while the backend handles a command or ticks are queued and delive
 | --- | --- |
 | Session | `hello` (protocol check, returns snapshot), `snapshot`, `ping` (heartbeat), `set_options` (`clone_squad`, `experience_multiplier`), `checkpoint` (`map_id`, `x`, `y`; saves) |
 | Profile | `buy_item`, `sell_item`, `use_item`, `equip_item`, `buy_travel_pass`, `heal`, `store_pet`, `retrieve_pet`, `retrieve_pet_by_id`, `select_pet`, `mount_pet`, `rename_pet`, `set_pet_favorite`, `allocate_stat`, `distribute_stats`, `learn_pet_skill`, `set_character`, `accept_quest`, `claim_quest`, `grant_starter_pets`, `claim_default_companions`, `gm_raise_level`, `gm_set_base_stat`, `gm_grant_points`, `gm_heal`, `gm_clear_modified`. Fields mirror the `GameSession` arguments (`PROFILE_COMMANDS` in `backend.gd`). |
-| World | `report_position` (`map_id`, `cell`, `map_changed`; reply `paused` names a workflow pause), `field_step` (`encounter`: open the wild battle on a hit), `wild_encounter`, `begin_battle` (`boss`, `enemy_count`) |
-| Battle | `battle_command` (`action`, `target`, `pet_target`, `switch_pet`, optional `pet_skill`), `battle_pet_command`, `battle_pet_skill`, `battle_escape_dev`, `battle_close` |
+| World | `report_position` (`map_id`, `cell`, `map_changed`, `client`; reply `paused` names a workflow pause), `field_step` (`encounter`: open the wild battle on a hit), `wild_encounter`, `begin_battle` (`boss`, `enemy_count`) |
+| Battle | `battle_command` (`action`, `target`, `pet_target`, `switch_pet`, optional `pet_skill`), `battle_pet_command`, `battle_pet_skill`, `battle_escape_dev`, `battle_close`. Remote clients add `battle_id` and `turn`; a command for a turn already resolved is rejected as stale. |
 | Fixtures | `start_battle_config`, `start_wild_battle_config`, `open_battle` (accepts only the pending config this backend issued) |
 | Automation | `auto_start` (`kind`: `battle`, `capture_battle`, `pet_train`, `hunt`, `find_pet`; plus `settings`, `map_id`, `cell`), `auto_update` (`settings`, `stat_filters`), `auto_stop`, `presented` (`battle_id`, `turn`), `auto` (named: `stop_battle`, `stop_hunt`, `stop_flow`, `acquire_clone`, `release_clone`, and the in-process ticks `tick_battle`, `hunt_process`, `flow_step`) |
 
@@ -53,7 +53,7 @@ Events raised while the backend handles a command or ticks are queued and delive
 | `battle_closed` | `battle_id`, `outcome`; a defeat also moves the saved location to the village |
 | `auto_status` | Runner counters, settings, origin, `hunt` and `flow` sub-status |
 | `auto_event` | `detail.kind`: `battle_stopped` (`takeover` hands a live battle to manual control), `battle_refused`, `hunt_stopped`, `hunt_refused`, `hunt_hit`, `flow_hunt`, `flow_paused`, `flow_stored`, `flow_compare` |
-| `superseded` | Sent to the older connection before a newer one takes control |
+| `position` | `map_id`, `cell`, `client`: the character moved; other clients mirror it |
 
 ## Automation and pacing
 
@@ -71,7 +71,9 @@ Clients also compare their own position with the runner's origin and stop it whe
 
 Movement stays client-driven and trusted (single player, own MacBook); `MoveIntent` validation remains a later slice. The backend owns the save: autosave after accepted mutations and settlements, and on `checkpoint`. The desktop game points it at `user://single-player.json`; `serve.sh` uses the same file by default, so do not run both against it at once.
 
-A `WsLink` pings every 3 s and drops a connection that has been silent for 10 s, so a killed server or dropped network is noticed even without a close frame. While offline the game is covered by a notice with the retry countdown and ignores input. It reconnects with backoff (1 s doubling to 10 s). On reconnect the `hello` reply's snapshot replaces client state, the game reopens or closes the battle view to match, and it shows a summary of battles, levels and new pets gained while offline. A newer connection takes control; the older client is told, stops reconnecting and offers "在此设备继续" to take control back.
+A `WsLink` pings every 3 s and drops a connection that has been silent for 10 s, so a killed server or dropped network is noticed even without a close frame. While offline the game is covered by a notice with the retry countdown and ignores input. It reconnects with backoff (1 s doubling to 10 s). On reconnect the `hello` reply's snapshot replaces client state, the game reopens or closes the battle view to match, and it shows a summary of battles, levels and new pets gained while offline. Any number of clients can be connected and drive the session. The server handles commands one at a time and sends every event to every client, so the first of two conflicting commands wins; the loser is rejected by the rules, and replies marked `stale` (another device already opened, closed or advanced the battle) are not shown as errors. Paced battles advance on the first `presented`.
+
+Walking is mirrored: each client tags `report_position` with its id, the backend broadcasts `position` when the character moves, and other clients walk one cell or jump to the reported spot, loading its map when it differs. Mirrored steps skip arrival rules (encounters, map links) and are not reported back, because the walking client already ran them. Local input cancels mirroring.
 
 ## Test seams
 
@@ -81,7 +83,7 @@ Tests may still reach authority internals through `world.session._profile`, `_pe
 
 1. Movement stays client-reported in v1; `MoveIntent` validation is a later slice.
 2. Paced automation waits for `presented` with a 5 s ceiling.
-3. A newer connection takes control; the older one receives `superseded`.
+3. Several connections share the session; the first conflicting command wins (revised 2026-09-28 from newest-takes-control).
 4. Whole-state events, no diffs: `profile` excludes storage and `pet_storage` is sent only on change. Add diffs only if parse or UI rebuild cost on Vision Pro is measured as a problem.
 
 Differences from the first proposal: the local link replies synchronously (the `done` callback keeps call sites asynchronous-safe); GM tools are flat `gm_*` commands; troop art is checked directly instead of from a generated sprite list; the offline summary is computed by the client from the reconnect snapshot.

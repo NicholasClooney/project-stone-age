@@ -26,18 +26,27 @@ func set_pet_target(index: int) -> bool:
 	return true
 
 func set_pet_skill(skill_id: int) -> bool:
-	return bool(link.request({"type":"battle_pet_skill","skill_id":skill_id}).get("ok",false))
+	return bool(link.request(_for_turn({"type":"battle_pet_skill","skill_id":skill_id})).get("ok",false))
 
 func set_pet_command(command: String) -> bool:
-	return bool(link.request({"type":"battle_pet_command","command":command}).get("ok",false))
+	return bool(link.request(_for_turn({"type":"battle_pet_command","command":command})).get("ok",false))
 
 func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
-	var reply: Dictionary = link.request({"type":"battle_command","action":action,"target":target,"pet_target":_pet_target,"switch_pet":pet_index})
+	var reply: Dictionary = link.request(_for_turn({"type":"battle_command","action":action,"target":target,"pet_target":_pet_target,"switch_pet":pet_index}))
 	return reply.get("state",snapshot())
 
 func developer_escape() -> Dictionary:
-	var reply: Dictionary = link.request({"type":"battle_escape_dev"})
+	var reply: Dictionary = link.request(_for_turn({"type":"battle_escape_dev"}))
 	return reply.get("state",snapshot())
+
+## Over a network other devices may act on the same battle; naming the turn
+## this device saw makes the backend drop the command if that turn is over.
+## In process there is only one client, so commands go unmarked.
+func _for_turn(command: Dictionary) -> Dictionary:
+	if link.is_local() or not state.battle.has("battle_id"):return command
+	command.battle_id = str(state.battle.battle_id)
+	command.turn = int(state.battle.get("turn",0))
+	return command
 
 # ---- in-process test seams: only valid with a LocalLink ----------------------
 
