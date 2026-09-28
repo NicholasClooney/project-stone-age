@@ -12,7 +12,7 @@ func run()->void:
 	var helper=game.training_helper;helper.set_process(false)
 	var flow=game.pet_workflow;flow.set_process(false)
 	check(helper.capture_hp.value==100 and helper.settings.capture_hp==100 and helper.capture_hp.max_value==100,"new capture UI and helper allow and default to100 percent")
-	check(hunt.limit.value==300000 and hunt.rate.value==5000,"requested hunt defaults are 300000 rolls and 5000 per second")
+	check(hunt.limit.value==0 and hunt.rate.value==0,"hunt defaults to unlimited rolls and unlimited rate")
 	check(hunt.train_after_capture.button_pressed and hunt.auto_capture.button_pressed and not hunt.running,"capture-to120 is checked by default but opening does not start")
 	check(helper.capture_hp.get_parent()==hunt.capture_page and helper.capture_pet.get_parent()==hunt.capture_page and helper.capture_pet_max_level.get_parent()==hunt.capture_page,"capture settings are single shared controls owned by hunt tab")
 	hunt.open_menu();hunt.show_capture_settings(true);await process_frame

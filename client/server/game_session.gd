@@ -354,6 +354,8 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 	for pet in profile.pets+profile.get("pet_storage",[]):
 		if not pet is Dictionary:return false
 		if pet.has("favorite") and not pet.favorite is bool:return false
+		for flag in ["auto_reject","auto_hunt"]:
+			if pet.has(flag) and not pet[flag] is bool:return false
 		if not pet.has("pet_id"):
 			if modern:return false
 			continue
@@ -364,13 +366,14 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 		seen[pet.pet_id]=true;largest=maxi(largest,int(suffix))
 	return not profile.has("next_pet_id") or _integer(profile.next_pet_id,largest+1,9007199254740991)
 
-func store_pet(index: int) -> bool:
+func store_pet(index: int, auto_hunt: bool=false) -> bool:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return false
 	if index<0 or index>=_profile.pets.size():last_error="请选择随身宠物。";return false
 	if index==int(_profile.get("ride_pet",-1)):
 		last_error="请先取消这只宠物的骑乘状态。";return false
 	_ensure_pet_ids()
+	if auto_hunt:_profile.pets[index].auto_hunt=true
 	_profile.pet_storage.append(_profile.pets[index])
 	if index==int(_profile.active_pet):_profile.active_pet=-1
 	_profile.pets.remove_at(index)
@@ -384,9 +387,47 @@ func retrieve_pet(index: int) -> bool:
 	if index<0 or index>=_profile.get("pet_storage",[]).size():last_error="请选择仓库宠物。";return false
 	if _profile.pets.size()>=PET_CAPACITY:last_error="随身宠物栏已满，请先存入其他宠物。";return false
 	_ensure_pet_ids()
+	# A retrieved pet belongs to the player again and is never auto-pruned.
+	_profile.pet_storage[index].erase("auto_reject");_profile.pet_storage[index].erase("auto_hunt")
 	_profile.pets.append(_profile.pet_storage[index])
 	_profile.pet_storage.remove_at(index)
 	return true
+
+# Rolling keep for pets the auto-hunt stored (flag auto_hunt): per metric in
+# order, keep the top N not already kept (e.g. 15 by sum, then 5 by attack) and
+# delete the rest. Player-stored and favorite pets are never touched. All-zero keeps prune nothing.
+func prune_hunt_pets(template_id: int, keep: Dictionary) -> int:
+	last_error=""
+	if not _pending.is_empty():last_error="请先结束战斗。";return 0
+	var total_keep:=0
+	for metric in keep:total_keep+=maxi(0,int(keep[metric]))
+	if total_keep<=0:return 0
+	var candidates:=[]
+	for pet in _profile.get("pet_storage",[]):
+		if (pet.get("auto_hunt",false) or pet.get("auto_reject",false)) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
+	if candidates.size()<=total_keep:return 0
+	var kept:={}
+	for metric in ["sum","attack","defence","speed"]:
+		var quota:=maxi(0,int(keep.get(metric,0)))
+		if quota==0:continue
+		var ranked:=candidates.filter(func(pet):return not kept.has(str(pet.pet_id)))
+		ranked.sort_custom(func(a,b):
+			var va:=_hunt_metric(a,metric);var vb:=_hunt_metric(b,metric)
+			if va!=vb:return va>vb
+			var sa:=_hunt_metric(a,"sum");var sb:=_hunt_metric(b,"sum")
+			if sa!=sb:return sa>sb
+			if int(a.attack)!=int(b.attack):return int(a.attack)>int(b.attack)
+			return str(a.pet_id)<str(b.pet_id))
+		for pet in ranked.slice(0,quota):kept[str(pet.pet_id)]=true
+	var doomed:={}
+	for pet in candidates:
+		if not kept.has(str(pet.pet_id)):doomed[str(pet.pet_id)]=true
+	_profile.pet_storage=_profile.pet_storage.filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
+	return doomed.size()
+
+static func _hunt_metric(pet: Dictionary, metric: String) -> int:
+	if metric=="sum":return int(pet.attack)+int(pet.defence)+int(pet.speed)
+	return int(pet.get(metric,0))
 
 func set_pet_favorite(pet_id: String, favorite: bool) -> bool:
 	last_error=""
@@ -772,6 +813,19 @@ func gm_clear_modified(index: int = -2) -> bool:
 	for pet in _profile.pets:
 		_profile.gm_modified=bool(_profile.gm_modified) or bool(pet.get("gm_modified",false))
 	return true
+
+# Workflow shortcut: spends exactly the XP each level needs through the normal
+# _gain_xp loop, so every level's seeded growth runs once and final stats match
+# battle training. Not a GM edit, so no GM mark.
+func level_pet_to(pet_id: String, target: int) -> bool:
+	last_error=""
+	if not _pending.is_empty():last_error="请先结束战斗。";return false
+	for pet in _profile.pets:
+		if str(pet.get("pet_id",""))!=pet_id:continue
+		var goal:=clampi(target,1,MAX_LEVEL)
+		while int(pet.level)<goal:_gain_xp(pet,int(pet.level)*30-int(pet.xp))
+		return true
+	last_error="目标宠物不在随身队伍。";return false
 
 func gm_raise_level(index: int, target: Variant) -> bool:
 	last_error=""

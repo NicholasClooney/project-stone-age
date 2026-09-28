@@ -17,7 +17,7 @@ func run() -> void:
 	var hunt=game.pet_hunt_menu;hunt.set_process(false)
 	var helper=game.training_helper;helper.set_process(false)
 	check(flow.start_cycle(),"cycle starts at current wilderness location")
-	check(hunt.preset.selected==3 and hunt.rate.value==5000,"cycle preserves default full +2 / 5000 criteria")
+	check(hunt.preset.selected==3 and hunt.rate.value==0,"cycle preserves default full +2 / unlimited-rate criteria")
 	flow.stop_cycle();flow.advance()
 	check(flow.phase=="paused" and not hunt.running,"stop cancels hunt without restarting")
 	hunt.close_menu();hunt.apply_preset(0)
@@ -37,25 +37,13 @@ func run() -> void:
 	for i in range(100):
 		game.battle_view._process(0.2);helper.advance();flow.advance()
 		if flow.phase!="capture":break
-	check(flow.phase=="train" and not flow.pet_id.is_empty(),"real capture settlement identifies new stable ID and starts training")
-	check(game.session.snapshot().pets[game.session.snapshot().active_pet].pet_id==flow.pet_id,"captured individual is active")
-	check(helper.running and helper.settings.level==0 and helper.settings.xp==10 and helper.settings.speed==8 and helper.compact_active==false,"level-120 player does not stop pet goal and uses requested speed/XP")
-	# Exercise one actual compact training battle before the fast level boundary.
-	game.encounter_rng.seed=1234
-	for i in range(100):
-		helper.advance()
-		if helper.compact_active or not helper.running:break
-	check(helper.compact_active and game.battle_session.snapshot().active and game.battle_session.snapshot().allies.size()==4,"training starts actual compact battle with five-person clone team")
-	for i in range(250):
-		helper.advance()
-		if helper.battles>=1 or not helper.running:break
-	check(helper.battles==1 and helper.running,"training settles one actual battle and continues below pet goal")
-	# Fast boundary fixture: progression authority raises this one pet to the goal;
-	# production helper still performs the real stop and controller comparison handoff.
-	game.session.gm_raise_level(game.session.snapshot().active_pet,120)
-	helper.advance();flow.advance()
-	check(flow.phase=="compare" and game.adventure_menu.visible,"pet level goal ends one cycle at comparison")
-	check(not game.session.clone_squad_enabled and not game.clone_button.button_pressed,"completed pet cycle restores original clone-off state and DEV toggle")
+	check(flow.phase=="compare" and not flow.pet_id.is_empty() and game.adventure_menu.visible,"real capture settlement identifies new stable ID, levels it and compares")
+	var active_pet:Dictionary=game.session.snapshot().pets[game.session.snapshot().active_pet]
+	check(active_pet.pet_id==flow.pet_id and int(active_pet.level)==120,"captured individual is active at level 120")
+	check(not helper.running and not game.battle_view.visible,"compact capture and instant levelling run no training battles")
+	var projected:Dictionary=preload("res://server/progression.gd").project_pet(fixture.troop.enemies[0],120)
+	check(projected.base_stats==active_pet.base_stats and int(projected.attack)==int(active_pet.attack) and int(projected.defence)==int(active_pet.defence) and int(projected.speed)==int(active_pet.speed) and int(projected.max_hp)==int(active_pet.max_hp),"hunt-time Lv.120 projection equals the real captured and levelled pet")
+	check(not game.session.clone_squad_enabled and not game.clone_button.button_pressed,"completed pet cycle leaves clone-off state and DEV toggle unchanged")
 	var count: int=game.session.snapshot().pets.size()
 	flow.advance();flow.advance()
 	check(game.session.snapshot().pets.size()==count and not helper.running and not hunt.running,"comparison waits with no repeated reward or next cycle")

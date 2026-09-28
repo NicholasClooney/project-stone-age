@@ -16,7 +16,7 @@ func run() -> void:
 	var menu=game.pet_hunt_menu
 	menu.open_menu();menu.auto_capture.button_pressed=false
 	check(menu.preset.selected==3 and menu.total.value==8 and menu.min_offsets()==[2,2,2,2],"default is full four-stat +2 quality")
-	check(menu.rate.value==5000,"default requested rate is 5000 groups per second")
+	check(menu.rate.value==0,"default requested rate is unlimited")
 	check(not menu.start_button.disabled and game.paused_input,"modal pauses walking and enables local hunt")
 	check(menu.species.item_count==3 and menu.species.is_item_disabled(2),"unavailable original pet art is explicit")
 	if "--visual-review" in OS.get_cmdline_user_args() and DisplayServer.get_name() != "headless":

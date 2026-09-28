@@ -33,6 +33,7 @@ var earned_xp:=0
 var earned_pet_xp:=0
 var turns:=0
 var cooldown:=0.0
+const COMPACT_BUDGET_USEC := 12000
 var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":10}
 var origin_map: int
 var origin_cell: Vector2i
@@ -234,6 +235,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		close_menu();get_viewport().set_input_as_handled()
 func _process(delta: float) -> void:
 	if not running:return
+	# Compact battles have nothing to watch: run steps back to back within a frame budget.
+	if bool(settings.compact) and not world.battle_view.visible:
+		var until:=Time.get_ticks_usec()+COMPACT_BUDGET_USEC
+		while running and not is_queued_for_deletion() and not world.battle_view.visible and Time.get_ticks_usec()<until:advance()
+		return
 	cooldown-=delta
 	if cooldown>0:return
 	cooldown=0.25/float(settings.speed)

@@ -12,7 +12,7 @@ func run():
  game.switch_area(true,Vector2i(45,45))
  var menu=game.pet_hunt_menu
  menu.open_menu();menu.auto_capture.button_pressed=false
- check(menu.rate.max_value>=5000 and menu.rate.value==5000,"approved default requests 5000 with higher rates still supported")
+ check(menu.rate.max_value>=5000 and menu.rate.value==0,"default is unlimited with explicit rates still supported")
  menu.rate.value=2000;menu.start_hunt()
  check(menu.running and menu.filter.rate==2000,"2000/s target starts")
  # Impossible test-only quality threshold prevents random hit from ending sample.
@@ -28,10 +28,13 @@ func run():
  menu.filter.total=9
  menu._process(1.0/60.0)
  check(menu.rolls>0,"real encounter work runs under the frame budget")
+ var before_stall:int=menu.rolls
  menu._process(2.0)
- check(menu.credit<=200.0,"long stall retains at most 100ms of requested work")
- check(menu.credit>20.0,"backlog is no longer artificially capped at 20 groups")
+ check(menu.credit<=200.0 and menu.rolls-before_stall<=201,"long stall retains at most 100ms of requested work")
  check(menu.status.text.contains("目标 2000") and menu.status.text.contains("实际"),"requested and actual throughput are visible")
+ menu.filter.rate=0;var before_unlimited:int=menu.rolls
+ menu._process(1.0/60.0)
+ check(menu.rolls>before_unlimited and menu.status.text.contains("不限速"),"rate 0 scans for the whole frame budget without throttling")
  menu.stop_hunt("test")
  var before:int=menu.rolls
  menu._process(1)

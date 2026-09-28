@@ -78,6 +78,15 @@ static func grow_pet(actor: Dictionary, level: int) -> void:
 	var roll := rng.randi_range(low,low+50)
 	for i in range(4):actor.base_stats[STATS[i]] += int((int(actor.growth_weights[i])+extra[i])*roll/100)
 	refresh(actor)
+# Exact future stats, not an estimate: grow_pet is seeded per pet and level, so
+# replaying the same levels here matches later XP-driven levelling (_gain_xp).
+static func project_pet(actor: Dictionary, target_level: int) -> Dictionary:
+	if not actor.has("base_stats") or actor.get("growth_weights",[]).size()!=4 or not actor.has("growth_seed"):return {}
+	var projected: Dictionary=actor.duplicate(true)
+	for level in range(int(projected.level)+1,target_level+1):grow_pet(projected,level)
+	projected.level=maxi(int(projected.level),target_level)
+	return projected
+
 static func migrate_pet(actor: Dictionary, seed_value: int) -> void:
 	if actor.has("base_stats"):return
 	var generated := species_actor(actor.species,1,seed_value)

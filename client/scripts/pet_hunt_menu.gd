@@ -6,6 +6,8 @@ var stat_species: OptionButton
 var stat_mode: OptionButton
 var stat_checks: Dictionary = {}
 var stat_numbers: Dictionary = {}
+var stat_stop_after: SpinBox
+var stat_keeps: Dictionary = {}
 var loading_stat_settings := false
 const CapturePolicy=preload("res://scripts/battle_auto_policy.gd")
 const Rules = preload("res://scripts/pet_hunt_rules.gd")
@@ -42,7 +44,7 @@ var candidates: Array = []
 var applying := false
 var started_usec := 0
 var hunt_catalog: RefCounted
-const FRAME_BUDGET_USEC := 4000
+const FRAME_BUDGET_USEC := 12000
 const MAX_BACKLOG_SECONDS := 0.1
 
 func configure(owner: Node) -> void:world=owner
@@ -81,10 +83,10 @@ func _ready() -> void:
 		var input:=number(Vector2(115+i*258,295),-2,2,2)
 		input.value_changed.connect(filters_changed);offsets.append(input)
 	explanation=label("",Vector2(24,351),15);explanation.size=Vector2(1040,67);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),1,100000,5000)
-	rate.tooltip_text="目标速度；实际速度取决于敌群复杂度和设备性能，每帧约 4 毫秒工作预算。"
-	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),1,1000000,300000)
-	label("组；到上限暂停，可再次开始。",Vector2(610,433),16)
+	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),0,100000,0)
+	rate.tooltip_text="0为不限速：每帧用满约12毫秒工作预算。填正数则按该目标限速。"
+	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),0,1000000,0)
+	label("组；0为不限，到上限暂停。",Vector2(610,433),16)
 	status=label("",Vector2(24,478),14);status.size=Vector2(1040,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
 	stop_button=world.button("停止",func():stop_hunt("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
@@ -94,7 +96,7 @@ func _ready() -> void:
 	capture_page=Control.new();capture_page.name="CaptureSettingsPage";capture_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(capture_page)
 	var filters_tab:Button=world.button("筛选条件",func():show_capture_settings(false));filters_tab.name="HuntFilterTab";filters_tab.position=Vector2(585,18);panel.add_child(filters_tab)
 	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(740,18);panel.add_child(capture_tab)
-	train_after_capture=CheckBox.new();train_after_capture.text="抓到后练至120级 · 按属性条件留存 · 镜像助战 · 10×经验 · 8×简略战斗";train_after_capture.tooltip_text="有属性条件：120级实测达标则停止比较，未达标自动存仓并继续；无条件则练完一只停止。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
+	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级 · 按属性条件留存 · 无动画抓宠";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。有属性条件：达标则停止比较，未达标存仓并继续；无条件则升完一只停止。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
 	train_after_capture.toggled.connect(func(enabled):
 		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
 		if enabled:auto_capture.button_pressed=true
@@ -211,7 +213,8 @@ func stop_hunt(reason: String) -> void:
 	running=false;set_controls(false);status.text=reason+"\n"+summary()
 func summary() -> String:
 	var actual:=rolls / maxf(elapsed,0.001)
-	return workflow_summary()+"已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · %.1f 秒\n目标 %d 组/秒 · 实际 %.0f 组/秒" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,int(filter.get("rate",rate.value)),actual]
+	return workflow_summary()+"已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · 本轮 %.1f 秒\n目标 %s · 实际 %.0f 组/秒 · 流程总用时 %s" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,rate_text(int(filter.get("rate",rate.value))),actual,world.pet_workflow.elapsed_text()]
+func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组/秒"%value
 func update_status() -> void:status.text=summary()+"\n筛选中；停止或 Esc 可随时结束。"
 func _process(delta: float) -> void:
 	if not running:return
@@ -219,10 +222,12 @@ func _process(delta: float) -> void:
 		stop_hunt("场景状态变化，筛选已停止。");return
 	elapsed=(Time.get_ticks_usec()-started_usec)/1000000.0
 	# Discard old backlog after a stall; never catch up with an unbounded burst.
-	credit=minf(credit+delta*float(filter.rate),maxf(1.0,float(filter.rate)*MAX_BACKLOG_SECONDS))
+	var unlimited:=int(filter.rate)<=0
+	if not unlimited:credit=minf(credit+delta*float(filter.rate),maxf(1.0,float(filter.rate)*MAX_BACKLOG_SECONDS))
 	var until:=Time.get_ticks_usec()+FRAME_BUDGET_USEC
-	while running and credit>=1 and Time.get_ticks_usec()<until:
-		credit-=1;scan_once()
+	while running and (unlimited or credit>=1) and Time.get_ticks_usec()<until:
+		if not unlimited:credit-=1
+		scan_once()
 	elapsed=(Time.get_ticks_usec()-started_usec)/1000000.0
 	if running:update_status()
 func scan_once() -> void:
@@ -241,6 +246,7 @@ func scan_once() -> void:
 		var quality: Dictionary=Rules.quality(actor,world.encounter_catalog.data)
 		if quality.valid:best=maxi(best,int(quality.total_offset))
 		if Rules.matches(actor,int(filter.template),bool(filter.level_one),int(filter.total),filter.offsets,world.encounter_catalog.data):
+			if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt" and not world.pet_workflow.accepts_prediction(actor):continue
 			last_hit={"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
 			stop_hunt("找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset])
 			if not world.battle_view.can_render_troop(troop.enemies):
@@ -248,16 +254,19 @@ func scan_once() -> void:
 			var config: Dictionary=world.session.start_wild_battle_config(troop)
 			if config.is_empty():status.text+="\n战斗校验未通过，已停止。";return
 			hide();world.paused_input=false
+			var workflow_capture:bool=is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt"
+			# The workflow resolves its capture fight without animation, like compact training.
+			if workflow_capture:world.training_helper.compact_active=true
 			world.open_battle_config(config)
 			world.battle_view.player_target=i
-			world.battle_view.mark_hunt_target(i)
-			var automatic:bool=(is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt") or auto_capture.button_pressed
+			if not workflow_capture:world.battle_view.mark_hunt_target(i)
+			var automatic:bool=workflow_capture or auto_capture.button_pressed
 			world.battle_view.report.text="发现 %s Lv.%d · 成长档 %+d · %s" % [actor.name,actor.level,quality.total_offset,"自动捕捉中" if automatic else "请手动捕捉"]
 			world.message.text="极品筛选：%s，总成长档 %+d，已遇敌 %d 组。" % [actor.name,quality.total_offset,rolls]
 			if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="hunt":world.pet_workflow.matched(i,actor)
 			elif auto_capture.button_pressed:world.training_helper.start_capture_battle(i)
 			return
-	if rolls>=int(filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
+	if int(filter.limit)>0 and rolls>=int(filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
 
 func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->void:
 	for control in [hp,pet,max_level]:control.reparent(capture_page);controls.append(control)
@@ -285,15 +294,20 @@ func refresh_ready_status()->void:
 	if not running and not start_button.disabled:status.text=ready_description()
 
 func workflow_summary()->String:
+	if is_instance_valid(world.pet_workflow) and (world.pet_workflow.predicted_rejects>0 or world.pet_workflow.kept_count>0):
+		var flow=world.pet_workflow
+		var best_seen:Dictionary=flow.best_predicted
+		var best_text:String="暂无" if best_seen.is_empty() else "三围合%d 攻%d"%[int(best_seen.sum),int(best_seen.attack)]
+		return "本轮达标存仓 %d/%s 只 · 滚动淘汰 %d 只 · 预测未达标跳过 %d 只 · 最好预测 %s\n" % [flow.collected_count,flow.collect_target_text(),flow.pruned_count,flow.predicted_rejects,best_text]
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.stored_count>0:
 		status.tooltip_text=world.pet_workflow.last_result
-		return "已自动存仓 %d 只 · 最近 %s 三围合%d 未达标，继续找宠\n" % [world.pet_workflow.stored_count,world.pet_workflow.last_stored_id,world.pet_workflow.last_stored_total]
+		return "未达标 %d 只（滚动淘汰 %d 只）· 最近 %s 三围合%d，继续找宠\n" % [world.pet_workflow.stored_count,world.pet_workflow.pruned_count,world.pet_workflow.last_stored_id,world.pet_workflow.last_stored_total]
 	return ""
 
 func build_stat_page()->void:
 	stat_page=Control.new();stat_page.name="PetStatConditionsPage";stat_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(stat_page)
 	var tab:Button=world.button("属性条件",show_stat_settings);tab.position=Vector2(895,18);panel.add_child(tab)
-	var heading:Label=world.text("120级实测筛选 · 不使用预测值",19);heading.position=Vector2(24,130);stat_page.add_child(heading)
+	var heading:Label=world.text("120级属性筛选 · 找宠时按成长种子精确计算",19);heading.position=Vector2(24,130);stat_page.add_child(heading)
 	stat_species=OptionButton.new();stat_species.name="StatFilterSpecies";stat_species.position=Vector2(24,170);stat_species.size=Vector2(370,38);stat_page.add_child(stat_species);controls.append(stat_species)
 	stat_species.item_selected.connect(func(_i):load_stat_settings())
 	stat_mode=OptionButton.new();stat_mode.name="StatFilterMode";stat_mode.position=Vector2(430,170)
@@ -301,9 +315,15 @@ func build_stat_page()->void:
 	for i in range(4):
 		var metric:String=StatFilter.METRICS[i]
 		var check:=CheckBox.new();check.name="StatEnabled_"+metric;check.text=["三围合 ≥","攻击 >","防御 >","敏捷 >"][i];check.position=Vector2(24+(i%2)*470,228+(i/2)*55);stat_page.add_child(check);controls.append(check);stat_checks[metric]=check
-		var input:=number(Vector2(210+(i%2)*470,228+(i/2)*55),0,1000000,0);input.name="StatMinimum_"+metric;input.reparent(stat_page);stat_numbers[metric]=input
-		check.toggled.connect(func(_on):save_stat_settings());input.value_changed.connect(func(_value):save_stat_settings())
-	var note:Label=world.text("仅在「抓到后练至120级」时生效；每个品种独立设置，本次游戏内保留。\n达标：停止并打开比较。未达标：通知、自动存仓、继续下一只。\n未启用任何条件：练完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。",16);note.position=Vector2(24,350);stat_page.add_child(note)
+		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),0,1000000,0);input.name="StatMinimum_"+metric;input.size.x=110;input.reparent(stat_page);stat_numbers[metric]=input
+		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(318+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
+		var keep:=number(Vector2(360+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=100;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
+		check.toggled.connect(func(_on):save_stat_settings());input.value_changed.connect(func(_value):save_stat_settings());keep.value_changed.connect(func(_value):save_stat_settings())
+	var stop_label:Label=world.text("找到",17);stop_label.position=Vector2(24,348);stat_page.add_child(stop_label)
+	stat_stop_after=number(Vector2(80,338),0,100000,10);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
+	stat_stop_after.value_changed.connect(func(_value):save_stat_settings())
+	var stop_note:Label=world.text("只达标宠物后停止（0＝不停止，1＝找到即停并比较）",17);stop_note.position=Vector2(230,348);stat_page.add_child(stop_note)
+	var note:Label=world.text("仅在「抓到后直接升至120级」时生效；每个品种独立设置，本次游戏内保留。\n预测不达标：直接跳过不抓。达标：抓到、升至120并存仓，数量到上限停止并打开比较。\n未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。",16);note.position=Vector2(24,395);stat_page.add_child(note)
 	refresh_stat_species()
 
 func refresh_stat_species()->void:
@@ -324,17 +344,19 @@ func load_stat_settings()->void:
 	stat_mode.select(1 if settings.get("mode","all")=="any" else 0)
 	for metric in StatFilter.METRICS:
 		var condition:Dictionary=settings.conditions[metric]
-		stat_checks[metric].button_pressed=condition.enabled;stat_numbers[metric].value=condition.value
+		stat_checks[metric].button_pressed=condition.enabled;stat_numbers[metric].value=condition.value;stat_keeps[metric].value=int(condition.get("keep",0))
+	stat_stop_after.value=int(settings.get("stop_after",StatFilter.defaults(stat_species.get_selected_id()).stop_after))
 	loading_stat_settings=false
 
 func save_stat_settings()->void:
 	if loading_stat_settings:return
 	var settings:=StatFilter.defaults(stat_species.get_selected_id());settings.mode="any" if stat_mode.selected==1 else "all"
 	for metric in StatFilter.METRICS:
-		settings.conditions[metric].enabled=stat_checks[metric].button_pressed;settings.conditions[metric].value=int(stat_numbers[metric].value)
+		settings.conditions[metric].enabled=stat_checks[metric].button_pressed;settings.conditions[metric].value=int(stat_numbers[metric].value);settings.conditions[metric].keep=int(stat_keeps[metric].value)
+	settings.stop_after=int(stat_stop_after.value)
 	world.pet_stat_filters[stat_species.get_selected_id()]=settings
 
 func commit_stat_settings()->void:
-	for input in stat_numbers.values():
+	for input in stat_numbers.values()+stat_keeps.values()+[stat_stop_after]:
 		if input.get_line_edit().has_focus():input.apply()
 	save_stat_settings()

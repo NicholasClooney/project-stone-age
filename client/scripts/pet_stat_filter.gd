@@ -1,6 +1,6 @@
 extends RefCounted
 ## Pure numerical filter. Callers explicitly supply current or projected stats.
-## Empty/disabled conditions pass, so adding this helper changes no defaults.
+## Disabled conditions pass; blue dragons default to total >=624 OR attack >292.
 const METRICS := ["sum", "attack", "defence", "speed"]
 
 static func evaluate(stats: Dictionary, settings: Dictionary) -> bool:
@@ -24,7 +24,14 @@ static func evaluate(stats: Dictionary, settings: Dictionary) -> bool:
 	return count == 0 or (any_match if settings.get("mode", "all") == "any" else all_match)
 
 static func defaults(template_id: int) -> Dictionary:
-	return {"mode":"all", "conditions":{"sum":{"enabled":template_id == 92,"value":620,"strict":false},"attack":{"enabled":false,"value":290,"strict":true},"defence":{"enabled":false,"value":178,"strict":true},"speed":{"enabled":false,"value":150,"strict":true}}}
+	# stop_after: matches to keep before the loop stops; 0 never stops, 1 is the classic single stop.
+	return {"mode":"any", "stop_after":10 if template_id == 92 else 1, "conditions":{"sum":{"enabled":template_id == 92,"value":624,"strict":false,"keep":15 if template_id == 92 else 0},"attack":{"enabled":template_id == 92,"value":292,"strict":true,"keep":5 if template_id == 92 else 0},"defence":{"enabled":false,"value":178,"strict":true,"keep":0},"speed":{"enabled":false,"value":150,"strict":true,"keep":0}}}
+
+# Rolling warehouse keep per metric (top N by that metric), independent of enabled.
+static func keep_counts(settings: Dictionary) -> Dictionary:
+	var result := {}
+	for metric in METRICS:result[metric] = int(settings.get("conditions", {}).get(metric, {}).get("keep", 0))
+	return result
 
 static func enabled(settings: Dictionary) -> bool:
 	for condition in settings.get("conditions", {}).values():
