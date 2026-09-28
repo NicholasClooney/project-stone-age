@@ -1192,6 +1192,25 @@ func restore_location() -> void:
 	if not load_area_id(int(location.map_id),point):
 		load_area_id(1000,SPAWN)
 
+# Copies the on-disk save beside itself before an irreversible change; returns
+# the backup path or "" when there is no save file.
+func backup_save(tag: String) -> String:
+	if not FileAccess.file_exists(save_path):return ""
+	var now:=Time.get_datetime_dict_from_system()
+	var stamp:="%04d%02d%02d-%02d%02d%02d"%[now.year,now.month,now.day,now.hour,now.minute,now.second]
+	var target:="%s.before-%s-%s.json"%[save_path.get_basename(),tag,stamp]
+	var serial:=1
+	while FileAccess.file_exists(target):
+		serial+=1;target="%s.before-%s-%s-%d.json"%[save_path.get_basename(),tag,stamp,serial]
+	return target if DirAccess.copy_absolute(ProjectSettings.globalize_path(save_path),ProjectSettings.globalize_path(target))==OK else ""
+
+func release_pets(ids: Array) -> Dictionary:
+	var backup:=backup_save("release") if profile_persistence else ""
+	var result: Dictionary=session.release_pets(ids)
+	result.backup=backup
+	if int(result.released)>0:refresh_companion();checkpoint()
+	return result
+
 func checkpoint() -> bool:
 	if battle_session.snapshot().active:return false
 	var point := display_cell()

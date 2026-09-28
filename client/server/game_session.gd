@@ -437,6 +437,42 @@ func set_pet_favorite(pet_id: String, favorite: bool) -> bool:
 			pet.favorite=favorite;return true
 	last_error="找不到这只宠物。";return false
 
+# Permanently removes pets by stable ID from the party and warehouse. Favorites,
+# the active pet and the mount are skipped; carried indices are re-pointed.
+func release_pets(ids: Array) -> Dictionary:
+	last_error=""
+	var result:={"released":0,"skipped":[]}
+	if not _pending.is_empty():last_error="请先结束战斗。";return result
+	var wanted:={}
+	for id in ids:wanted[str(id)]=true
+	var active_id:=""
+	var ride_id:=""
+	if int(_profile.active_pet)>=0 and int(_profile.active_pet)<_profile.pets.size():active_id=str(_profile.pets[int(_profile.active_pet)].get("pet_id",""))
+	if int(_profile.get("ride_pet",-1))>=0 and int(_profile.ride_pet)<_profile.pets.size():ride_id=str(_profile.pets[int(_profile.ride_pet)].get("pet_id",""))
+	var found:={}
+	var doomed:={}
+	for pet in _profile.pets+_profile.get("pet_storage",[]):
+		var identifier:=str(pet.get("pet_id",""))
+		if not wanted.has(identifier):continue
+		found[identifier]=true
+		if pet.get("favorite",false):result.skipped.append({"id":identifier,"reason":"收藏"})
+		elif identifier==ride_id:result.skipped.append({"id":identifier,"reason":"骑乘中"})
+		elif identifier==active_id:result.skipped.append({"id":identifier,"reason":"出战中"})
+		else:doomed[identifier]=true
+	for identifier in wanted:
+		if not found.has(identifier):result.skipped.append({"id":identifier,"reason":"找不到"})
+	if doomed.is_empty():return result
+	_profile.pets=_profile.pets.filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
+	_profile.pet_storage=_profile.get("pet_storage",[]).filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
+	_profile.active_pet=-1
+	if _profile.has("ride_pet"):_profile.ride_pet=-1
+	for i in range(_profile.pets.size()):
+		var identifier:=str(_profile.pets[i].get("pet_id",""))
+		if not active_id.is_empty() and identifier==active_id:_profile.active_pet=i
+		if not ride_id.is_empty() and identifier==ride_id:_profile.ride_pet=i
+	result.released=doomed.size()
+	return result
+
 func retrieve_pet_by_id(pet_id: String) -> bool:
 	for index in range(_profile.get("pet_storage",[]).size()):
 		if str(_profile.pet_storage[index].get("pet_id",""))==pet_id:return retrieve_pet(index)

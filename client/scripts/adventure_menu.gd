@@ -21,6 +21,13 @@ var pet_compare_page := 0
 var pet_storage_page := 0
 var pet_compare_sort := "stat_total"
 var pet_compare_projected := false
+# 放生 selection for the comparison overlay: stable pet_id -> true, per species.
+var pet_release_selected: Dictionary = {}
+var pet_release_species := ""
+var pet_release_confirm := false
+var pet_release_metric := 0
+var pet_release_below := 620
+const RELEASE_METRICS := ["stat_total","attack","defence","speed"]
 const PetComparison=preload("res://scripts/pet_comparison.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 var name_edit: LineEdit
@@ -577,7 +584,9 @@ func style_pet_modal(root_control:Control)->void:
 func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	var overlay:=Panel.new();overlay.name="PetComparisonPanel";overlay.position=Vector2.ZERO;overlay.z_index=10;overlay.mouse_filter=Control.MOUSE_FILTER_STOP;overlay.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"));overlay.size=Vector2(760,610);overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
 	var title:Label=world.text("同种比较 · "+str(selected.name)+" · 携带与仓库",18);title.position=Vector2(14,12);overlay.add_child(title)
-	var close:Button=world.button("关闭",func():pet_compare_open=false;pet_view="list";rebuild());close.position=Vector2(650,8);overlay.add_child(close)
+	var close:Button=world.button("关闭",func():pet_compare_open=false;pet_view="list";clear_release_selection();rebuild());close.position=Vector2(650,8);overlay.add_child(close)
+	if PetComparison.species_key(selected)!=pet_release_species:
+		clear_release_selection();pet_release_species=PetComparison.species_key(selected)
 	var hunt:Button=world.button("自动抓极品",func():continue_comparison_hunt(selected));hunt.position=Vector2(490,8);hunt.name="CompareContinueHunt";overlay.add_child(hunt)
 	var sort:=OptionButton.new();sort.name="PetCompareSort";sort.position=Vector2(14,48)
 	var keys:=["stat_total","max_hp","attack","defence","speed"]
@@ -590,8 +599,10 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id","")):
 		info.text=world.pet_workflow.reason;info.tooltip_text=info.text;info.clip_text=true;info.size=Vector2(730,60);info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		filter_result_height=44;scroll.position.y+=44;scroll.size.y-=44
+	scroll.size.y-=88
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
 	var rows:=PetComparison.rows(profile,selected,pet_compare_sort,pet_compare_projected)
+	release_controls(overlay,profile,rows,scroll.position.y+scroll.size.y+6)
 	var focus_id:=str(selected.get("pet_id",""))
 	var focus:Dictionary=selected
 	for row in rows:
@@ -619,6 +630,11 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		if identifier==focus_id:text.modulate=Color("ffe680");text.text="▶ 当前选中 · "+text.text
 		list.add_child(text)
 		var actions:=HBoxContainer.new();list.add_child(actions)
+		var pick:=CheckBox.new();pick.name="CompareSelect_"+identifier;pick.text="选";pick.focus_mode=Control.FOCUS_NONE;pick.button_pressed=pet_release_selected.has(identifier)
+		pick.toggled.connect(func(on):
+			if on:pet_release_selected[identifier]=true
+			else:pet_release_selected.erase(identifier)
+			pet_release_confirm=false;rebuild());actions.add_child(pick)
 		add_pet_favorite_button(actions,pet,"CompareFavorite_")
 		var transfer:Button=world.button("存入仓库" if row.location=="pets" else "取出",func():
 			var ok:bool=world.session.store_pet(int(row.index)) if row.location=="pets" else world.session.retrieve_pet_by_id(identifier)
@@ -635,6 +651,60 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 					rebuild());dismount.name="CompareDismount_"+identifier;actions.add_child(dismount)
 
 	style_pet_modal(overlay)
+
+func clear_release_selection()->void:
+	pet_release_selected.clear();pet_release_confirm=false
+
+func release_metric_value(pet:Dictionary,metric:String)->int:
+	if metric=="stat_total":return int(pet.attack)+int(pet.defence)+int(pet.speed)
+	return int(pet.get(metric,0))
+
+func release_controls(overlay:Control,profile:Dictionary,rows:Array,top:float)->void:
+	var bar:=HBoxContainer.new();bar.name="CompareReleaseBar";bar.position=Vector2(14,top);bar.add_theme_constant_override("separation",8);overlay.add_child(bar)
+	var count:Label=world.text("已选 %d 只"%pet_release_selected.size(),14);count.name="CompareSelectedCount";bar.add_child(count)
+	var page_all:Button=world.button("本页全选",func():
+		for row in rows.slice(pet_compare_page*20,(pet_compare_page+1)*20):pet_release_selected[str(row.pet.get("pet_id",""))]=true
+		pet_release_confirm=false;rebuild());page_all.name="CompareSelectPage";bar.add_child(page_all)
+	var clear:Button=world.button("清除选择",func():clear_release_selection();rebuild());clear.name="CompareClearSelection";bar.add_child(clear)
+	if pet_release_confirm:
+		var confirm:Button=world.button("确认放生 %d 只"%pet_release_selected.size(),func():perform_release());confirm.name="CompareReleaseConfirm";confirm.add_theme_color_override("font_color",Color("ff8a7a"));bar.add_child(confirm)
+		var cancel:Button=world.button("取消",func():pet_release_confirm=false;rebuild());cancel.name="CompareReleaseCancel";bar.add_child(cancel)
+	else:
+		var release:Button=world.button("放生所选 (%d)"%pet_release_selected.size(),func():
+			if not pet_release_selected.is_empty():pet_release_confirm=true
+			rebuild());release.name="CompareRelease";release.disabled=pet_release_selected.is_empty();release.tooltip_text="永久删除所选宠物；收藏、出战、骑乘的宠物会跳过。放生前自动备份存档。";bar.add_child(release)
+	var picker:=HBoxContainer.new();picker.name="CompareThresholdBar";picker.position=Vector2(14,top+42);picker.add_theme_constant_override("separation",8);overlay.add_child(picker)
+	picker.add_child(world.text("选择",14))
+	var metric:=OptionButton.new();metric.name="CompareThresholdMetric";metric.focus_mode=Control.FOCUS_NONE
+	for caption in ["三围合","攻击","防御","敏捷"]:metric.add_item(caption)
+	metric.select(pet_release_metric);metric.item_selected.connect(func(i):pet_release_metric=i);picker.add_child(metric)
+	picker.add_child(world.text("<",14))
+	var below:=SpinBox.new();below.name="CompareThresholdValue";below.min_value=0;below.max_value=100000;below.step=1;below.value=pet_release_below;below.custom_minimum_size=Vector2(110,0)
+	below.value_changed.connect(func(value):pet_release_below=int(value));picker.add_child(below)
+	picker.add_child(world.text("的宠物（不含收藏／出战／骑乘）",14))
+	var apply:Button=world.button("选择",func():
+		if below.get_line_edit().has_focus():below.apply()
+		pet_release_below=int(below.value)
+		var added:=select_release_below(profile,rows,RELEASE_METRICS[pet_release_metric],pet_release_below)
+		feedback="已按条件新增选择 %d 只。"%added;pet_release_confirm=false;rebuild());apply.name="CompareThresholdSelect";picker.add_child(apply)
+
+func select_release_below(profile:Dictionary,rows:Array,metric:String,limit:int)->int:
+	var added:=0
+	for row in rows:
+		var pet:Dictionary=row.pet;var identifier:=str(pet.get("pet_id",""))
+		if identifier.is_empty() or pet.get("favorite",false) or pet_release_selected.has(identifier):continue
+		if row.location=="pets" and (int(row.index)==int(profile.active_pet) or int(row.index)==int(profile.get("ride_pet",-1))):continue
+		if release_metric_value(pet,metric)<limit:pet_release_selected[identifier]=true;added+=1
+	return added
+
+func perform_release()->void:
+	var result:Dictionary=world.release_pets(pet_release_selected.keys())
+	if not world.session.last_error.is_empty():feedback=world.session.last_error;pet_release_confirm=false;rebuild();return
+	var skipped:Array=result.get("skipped",[])
+	feedback="已放生 %d 只"%int(result.released)
+	if not skipped.is_empty():feedback+="；跳过 %d 只（%s）"%[skipped.size(),"、".join(skipped.slice(0,4).map(func(item):return "%s %s"%[item.id,item.reason]))+("…" if skipped.size()>4 else "")]
+	if not str(result.get("backup","")).is_empty():feedback+="；已备份存档 "+str(result.backup).get_file()
+	clear_release_selection();rebuild()
 
 func open_pet_comparison(pet_id:String)->bool:
 	if world.battle_view.visible or world.area_transition_busy:return false
