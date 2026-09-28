@@ -16,3 +16,10 @@ For every feature/fix:
 4. Run `python3 tools/build_changelog.py --check` (also enforced by `scripts/test.sh`). Never manually invent version numbers or edit generated entries. No commit hashes are embedded, so the amend is stable.
 
 The game reads `client/data/changelog.json` and exposes it through **更新日志**. History is generated offline; the running game does not need Git. First-parent counting avoids double-counting merged branch histories; a merge intended as a release must have an appropriate feat/fix subject.
+
+## Tagging a release
+
+Only tag when the user asks. The tag must equal the generated version, not a bump of the previous tag. Tags are sparse, so the next tag usually skips numbers (for example `v0.43.0` then `v0.47.0`).
+
+1. Run `python3 tools/build_changelog.py --check` and fix any failure first.
+2. Read the version from `client/data/changelog.json` (`version`) and tag that commit with an annotated tag: `git tag -a v0.N.0 -m "v0.N.0"`.
