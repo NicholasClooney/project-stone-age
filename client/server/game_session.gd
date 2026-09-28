@@ -71,6 +71,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
 	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	config.healing_available=int(_profile.inventory.get("healing_charm",0))>0
 	config.mirror_available=bool(_profile.get("equipped_mirror",false))
 	config.experience_multiplier = experience_multiplier
 	config.ride_pet_index = int(_profile.get("ride_pet",-1))
@@ -299,6 +300,24 @@ func equip_item(item: String = "club") -> bool:
 	else:_profile.equipped = not _profile.equipped
 	return true
 
+# Single-player convenience grant, once per profile; loaded game writes normally.
+func grant_pet_care_items() -> bool:
+	if not _pending.is_empty() or _profile.get("pet_care_granted",false):return false
+	_profile.inventory.healing_charm=maxi(1,int(_profile.inventory.get("healing_charm",0)))
+	_profile.inventory.mirror_charm=maxi(1,int(_profile.inventory.get("mirror_charm",0)))
+	_profile.equipped_mirror=true
+	_profile.pet_care_granted=true
+	return true
+
+func heal_carried_pets() -> bool:
+	if not _pending.is_empty() or int(_profile.inventory.get("healing_charm",0))<=0:return false
+	var changed:=false
+	for pet in _profile.pets:
+		if int(pet.hp)>0 and int(pet.hp)<int(pet.max_hp):
+			pet.hp=pet.max_hp
+			changed=true
+	return changed
+
 func heal() -> bool:
 	if not _pending.is_empty():
 		return false
@@ -517,6 +536,8 @@ func _valid_profile(value: Variant) -> bool:
 			assigned += int(value.player.allocated_stats[stat])
 		if assigned > (int(value.player.level)-1)*3+int(value.get("gm_bonus_points",0)):
 			return false
+	if not _integer(value.inventory.get("healing_charm",0),0,99):return false
+	if value.has("pet_care_granted") and not value.pet_care_granted is bool:return false
 	if value.has("equipped_mirror") and not value.equipped_mirror is bool:return false
 	if value.get("equipped_mirror",false) and int(value.inventory.get("mirror_charm",0))<1:return false
 	for item in ITEM_PRICES:

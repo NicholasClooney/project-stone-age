@@ -1,6 +1,8 @@
 extends RefCounted
 ## Single-player convenience decisions; never mutate battle state or grant rewards.
 static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dictionary:
+ if state.get("healing_available",false) and int(state.get("pet_hp",0))>0 and int(state.get("pet_hp",0))*2<=int(state.get("pet_max_hp",0)):
+  return {"action":"heal_pet","pet":"defend","target":maxi(0,target)}
  var enemies: Array=state.get("enemies",[])
  if str(settings.get("preset","attack"))!="capture":
   for i in range(enemies.size()):

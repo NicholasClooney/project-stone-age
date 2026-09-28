@@ -825,16 +825,19 @@ func _request_action(action: String) -> void:
 	if world_modal_open(): return
 	if not bool(state.get("active",false)) or elapsed < feedback_until: return
 	if action == "help": return
-	if action == "magic" and not bool(state.get("mirror_available",false)): return
+	if action == "magic" and not (bool(state.get("mirror_available",false)) or bool(state.get("healing_available",false))): return
 	if action=="capture" and (bool(state.get("boss",false)) or not bool(state.get("can_capture",true))): return
 	sound_requested.emit(217)
 	clear_choices()
 	selected_action = action
 	last_player_command = action if action in ["attack","capture"] else "attack"
 	if action == "magic":
-		choice("镜子的精灵 → 自己",Vector2(500,220),func(): complete_player_command("mirror_self"))
+		var mirror_choice:=choice("镜子的精灵 → 自己",Vector2(500,220),func(): complete_player_command("mirror_self"))
+		mirror_choice.disabled=not bool(state.get("mirror_available",false))
 		var pet_choice := choice("镜子的精灵 → 出战宠物",Vector2(500,265),func(): complete_player_command("mirror_pet"))
-		pet_choice.disabled = int(state.get("pet_hp",0))<=0
+		pet_choice.disabled = not bool(state.get("mirror_available",false)) or int(state.get("pet_hp",0))<=0
+		var healing_choice:=choice("恢复护符 → 出战宠物",Vector2(500,310),func(): complete_player_command("heal_pet"))
+		healing_choice.disabled=not bool(state.get("healing_available",false)) or int(state.get("pet_hp",0))<=0 or int(state.get("pet_hp",0))>=int(state.get("pet_max_hp",0))
 		hint.text = "反射一次直接物理攻击；暂不计算气力。"
 	elif action == "item":
 		ui_picture(26061,Vector2(650,235),choice_panel)
@@ -1062,7 +1065,7 @@ func _advance_playback(delta: float) -> void:
 		var progress := clampf((elapsed-pet_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
 		choice_panel.position.x = 300.0*pow(1.0-progress,2)
 	for button in commands:
-		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or (str(button.get_meta("action","")) == "help" or (str(button.get_meta("action","")) == "magic" and not bool(state.get("mirror_available",false))))
+		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or (str(button.get_meta("action","")) == "help" or (str(button.get_meta("action","")) == "magic" and not (bool(state.get("mirror_available",false)) or bool(state.get("healing_available",false)))))
 		if str(button.get_meta("action",""))=="capture":
 			var unavailable := bool(state.get("boss",false)) or not bool(state.get("can_capture",true))
 			button.disabled = button.disabled or unavailable

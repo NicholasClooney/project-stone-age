@@ -56,6 +56,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	var pet: Dictionary = config.get("pet", {}).duplicate(true)
 	_state = {"active":true,"outcome":"","battle_id":config.get("battle_id", ""),"player_hp":config.get("player_hp",48),"player_max_hp":config.get("player_max_hp",48),"enemy_hp":config.get("enemy_max_hp",32),"enemy_max_hp":config.get("enemy_max_hp",32),"enemy_name":config.get("enemy_name","乌力"),"enemy_species":config.get("enemy_species","wooli"),"enemy_sprite":config.get("enemy_sprite",100250),"pet_sprite":pet.get("sprite",100250),"pet_name":pet.get("name",""),"skill_unlocked":pet.get("skill_unlocked",false),"boss":config.get("boss",false),"turn":0,"events":["遭遇野生石器伙伴！"],"pet":pet,"pet_command":"attack","pet_hp":pet.get("hp",0),"pet_max_hp":pet.get("max_hp",0),"potions":config.get("potions",0),"captured_species":"","xp":0,"gold":0,"skill_used":false}
 	var initial_order: Array[String] = []
+	_state["healing_available"]=bool(config.get("healing_available",false))
 	_state["mirror_available"]=bool(config.get("mirror_available",false))
 	_state["mirror_self"]=0
 	_state["mirror_pets"]={}
@@ -108,8 +109,9 @@ func set_pet_command(command: String) -> bool:
 	return true
 
 func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
-	if not _state.active or action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet"]:
+	if not _state.active or action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet"]:
 		return snapshot()
+	if action=="heal_pet" and (not _state.healing_available or _state.active_pet<0 or _state.pet_hp<=0 or _state.pet_hp>=_state.pet_max_hp):return snapshot()
 	if action.begins_with("mirror_"):
 		if not _state.mirror_available:return snapshot()
 		if action=="mirror_pet" and (_state.active_pet<0 or _state.pet_hp<=0):return snapshot()
@@ -188,6 +190,13 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 
 func _player_action(action: String) -> void:
 	match action:
+		"heal_pet":
+			if _state.pet_hp<=0:return # A slower healer cannot revive a fallen pet.
+			_state.pet_hp=_state.pet_max_hp
+			_state.pet.hp=_state.pet_hp
+			_state.pets[_state.active_pet].hp=_state.pet_hp
+			_last_outcome="heal_pet"
+			_state.events.append("恢复护符：你为%s恢复体力，不消耗气力。"%str(_state.pet_name))
 		"mirror_self","mirror_pet":
 			if action=="mirror_self":_state.mirror_self=1
 			else:_state.mirror_pets[_state.active_pet]=1

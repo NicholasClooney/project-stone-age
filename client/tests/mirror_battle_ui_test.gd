@@ -12,8 +12,9 @@ func run()->void:
 	view.open_battle(initial)
 	view._process(view.feedback_until-view.elapsed+0.1)
 	view._request_action("magic")
-	check(view.choice_panel.get_child_count()==2,"magic offers self and active-pet targets")
+	check(view.choice_panel.get_child_count()==3,"magic offers mirror self, mirror pet and healing charm")
 	check(view.choice_panel.get_child(1).disabled,"pet cast unavailable without active pet")
+	check(view.choice_panel.get_child(2).disabled,"healing charm unavailable without charm or active pet")
 	view.pending_action="mirror_self"
 	var after:Dictionary=battle.submit_action("mirror_self")
 	view.state=after

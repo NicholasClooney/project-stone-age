@@ -272,6 +272,8 @@ func advance() -> void:
 		var next: Dictionary=world.battle_session.snapshot()
 		result.text="第 %d 回合 · 体力 %d/%d\n%s"%[turns,next.player_hp,next.player_max_hp," / ".join(next.events)]
 		update_status();return
+	if world.session.heal_carried_pets():
+		world.checkpoint()
 	var p: Dictionary=world.session.snapshot()
 	if not training_pet_id.is_empty():
 		var selected:=-1

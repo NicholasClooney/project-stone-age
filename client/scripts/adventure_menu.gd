@@ -185,7 +185,7 @@ func layout_panel() -> void:
 
 func item_icon(item: String, point: Vector2) -> TextureRect:
 	var view := TextureRect.new()
-	view.texture = load("res://assets/legacy/mvp/images/%s.png" % item)
+	view.texture = load("res://assets/legacy/mvp/images/%s.png" % ("mirror_charm" if item=="healing_charm" else item))
 	view.position = point
 	view.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_child(view)
@@ -271,16 +271,16 @@ func status_panel(profile: Dictionary) -> void:
 		label("只分配剩余点；余数按体腕耐速分配。",Vector2(294,244),225,12)
 
 func item_name(key: String) -> String:
-	return {"potion":"耐久力回复药","club":"小棍棒","mirror_charm":"美丽尼亚护身符1"}.get(key,key)
+	return {"potion":"耐久力回复药","club":"小棍棒","healing_charm":"恢复护符（辅助）","mirror_charm":"美丽尼亚护身符1"}.get(key,key)
 
 func item_description(key: String) -> String:
-	return {"potion":"恢复体力；战斗中也可使用。","club":"攻击 +4；装备后生效。","mirror_charm":"主动镜之精灵：消耗行动，暂不消耗气力。"}.get(key,"")
+	return {"potion":"恢复体力；战斗中也可使用。","club":"攻击 +4；装备后生效。","healing_charm":"恢复存活随身宠；自动战斗半血治疗，不耗气。","mirror_charm":"主动镜之精灵：消耗行动，暂不消耗气力。"}.get(key,"")
 
 func item_equipped(profile: Dictionary, key: String) -> bool:
 	return bool(profile.get("equipped",false)) if key=="club" else bool(profile.get("equipped_mirror",false)) if key=="mirror_charm" else false
 
 func equip_action(key: String) -> String:
-	return "equip_mirror" if key=="mirror_charm" else "equip"
+	return "heal_pets" if key=="healing_charm" else "equip_mirror" if key=="mirror_charm" else "equip"
 
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
@@ -307,8 +307,8 @@ func inventory_panel(profile: Dictionary) -> void:
 			if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
 				world.perform_adventure_action(equip_action(key),false)
 		)
-	for i in range(3):
-		var key: String = ["potion","club","mirror_charm"][i]
+	for i in range(4):
+		var key: String = ["potion","club","mirror_charm","healing_charm"][i]
 		# Authority inventory is total owned; equipment consumes one visible
 		# bag copy without deleting ownership. Spare copies remain in the bag.
 		var bag_count := maxi(0,int(profile.inventory.get(key,0))-(1 if item_equipped(profile,key) else 0))
@@ -330,7 +330,7 @@ func inventory_panel(profile: Dictionary) -> void:
 	var potion := selected_item=="potion"
 	label(item_name(selected_item),Vector2(15,328),240,15)
 	label(item_description(selected_item),Vector2(15,354),239,14)
-	choice("使用" if potion else ("卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
+	choice("使用" if potion else ("恢复宠物" if selected_item=="healing_charm" else "卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
 
 func pet_native_button(ident: int, center: Vector2, callback: Callable, title: String = "") -> TextureButton:
 	var button := TextureButton.new()

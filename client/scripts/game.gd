@@ -1286,6 +1286,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 		"sell_mirror_charm":success = at_shop and session.sell_item("mirror_charm")
 		"use_potion":success = session.use_item("potion")
 		"equip":success = session.equip_item("club")
+		"heal_pets":success = session.heal_carried_pets()
 		"equip_mirror":success = session.equip_item("mirror_charm")
 		"allocate_stat":success = session.allocate_stat(str(value),adventure_menu.allocation_amount)
 		"distribute_stats":
@@ -1311,7 +1312,9 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 	play_ui_sound(201)
 
 func load_profile() -> bool:
-	if session.load_game(save_path):return true
+	if session.load_game(save_path):
+		session.grant_pet_care_items()
+		return true
 	# Never overwrite an unreadable save by autosaving a fresh profile.
 	profile_persistence = false
 	last_adventure_message = "存档未能读取；现以临时旅程运行，原文件保留。"
