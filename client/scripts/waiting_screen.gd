@@ -12,6 +12,9 @@ extends CanvasLayer
 ## so the screen never shows there.
 ## Browsers refuse audio until a user gesture; Godot resumes its audio context
 ## on the first click, tap or key, and until then the screen asks for one.
+## Once the game is running (enter_game), later waits (a new map, a battle's
+## art) show only a slim progress panel over the game: no image, no waiting
+## music, the game's own music keeps playing and clicks go through.
 
 const IMAGE := "res://assets/legacy/loading/now-loading.png"
 const TRACKS := ["res://assets/legacy/loading/sabgm_s1.ogg","res://assets/legacy/loading/sabgm_s1.wav"]
@@ -41,6 +44,11 @@ var _done := 0
 var _total := 0
 var _paused_music: AudioStreamPlayer
 var _gesture_seen := false
+## True after startup: waits use the slim in-game panel.
+var in_game := false
+var _root: Control
+var _backdrop: ColorRect
+var _panel: PanelContainer
 
 func configure(asset_packs: Node, music_player: Callable = Callable(), volume: Callable = Callable()) -> void:
 	packs = asset_packs
@@ -89,6 +97,16 @@ func fail(message: String) -> void:
 	player.stop()
 	_refresh()
 
+## Startup is over: from now on waits show only the progress panel.
+func enter_game() -> void:
+	in_game = true
+	_apply_mode()
+	if visible:
+		player.stop()
+		if is_instance_valid(_paused_music):_paused_music.stream_paused = false
+		_paused_music = null
+		_refresh()
+
 func blocking() -> bool:
 	return _held or (packs!=null and packs.blocking())
 
@@ -115,11 +133,12 @@ func _on_progress(label: String, done: int, total: int) -> void:
 func _show() -> void:
 	visible = true
 	shown_count += 1
-	var music: AudioStreamPlayer = game_music.call() if game_music.is_valid() else null
-	if is_instance_valid(music) and not music.stream_paused:
-		music.stream_paused = true
-		_paused_music = music
-	if not _failed:_start_music()
+	if not in_game:
+		var music: AudioStreamPlayer = game_music.call() if game_music.is_valid() else null
+		if is_instance_valid(music) and not music.stream_paused:
+			music.stream_paused = true
+			_paused_music = music
+		if not _failed:_start_music()
 	_refresh()
 
 func _hide() -> void:
@@ -129,7 +148,7 @@ func _hide() -> void:
 	_paused_music = null
 
 func _start_music() -> void:
-	if player.stream==null:return
+	if player.stream==null or in_game:return
 	player.volume_db = float(music_volume.call()) if music_volume.is_valid() else 0.0
 	if not player.playing:player.play()
 
@@ -144,7 +163,7 @@ func _refresh() -> void:
 		amount.text = "%.1f / %.1f MB" % [_done/1048576.0,_total/1048576.0]
 		percent.text = "%d%%" % int(bar.value)
 	if player.playing and music_volume.is_valid():player.volume_db = float(music_volume.call())
-	hint.visible = player.stream!=null and not _failed and _needs_gesture()
+	hint.visible = player.stream!=null and not _failed and not in_game and _needs_gesture()
 
 ## True on the web until the page has seen a click, tap or key press.
 func _needs_gesture() -> bool:
@@ -163,10 +182,12 @@ func _input(event: InputEvent) -> void:
 
 func _build() -> void:
 	var root := Control.new()
+	_root = root
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(root)
 	var backdrop := ColorRect.new()
+	_backdrop = backdrop
 	backdrop.color = BACKDROP
 	backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -178,14 +199,7 @@ func _build() -> void:
 	art.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(art)
 	var panel := PanelContainer.new()
-	# In the image's empty dark area, ahead of the rolling stone wheel and
-	# clear of its own "NOW LOADING" lettering (1280x800 canvas).
-	panel.set_anchors_preset(Control.PRESET_CENTER)
-	panel.offset_left = 150
-	panel.offset_right = 510
-	panel.offset_top = -70
-	panel.offset_bottom = 70
-	panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+	_panel = panel
 	panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	panel.add_theme_stylebox_override("panel",_box(Color(0.08,0.03,0.02,0.78),Color("9d8354"),16))
 	root.add_child(panel)
@@ -215,6 +229,31 @@ func _build() -> void:
 	column.add_child(hint)
 	player = AudioStreamPlayer.new()
 	add_child(player)
+	_apply_mode()
+
+## Startup: the full screen with the panel in the image's empty dark area,
+## ahead of the rolling stone wheel and clear of its "NOW LOADING" lettering
+## (1280x800 canvas). In game: only the panel, small, at the top centre.
+func _apply_mode() -> void:
+	_backdrop.visible = not in_game
+	art.visible = not in_game
+	_root.mouse_filter = Control.MOUSE_FILTER_IGNORE if in_game else Control.MOUSE_FILTER_STOP
+	if in_game:
+		_panel.set_anchors_preset(Control.PRESET_CENTER_TOP)
+		_panel.offset_left = -170
+		_panel.offset_right = 170
+		_panel.offset_top = 12
+		_panel.offset_bottom = 12
+		_panel.grow_vertical = Control.GROW_DIRECTION_END
+		title.add_theme_font_size_override("font_size",15)
+	else:
+		_panel.set_anchors_preset(Control.PRESET_CENTER)
+		_panel.offset_left = 150
+		_panel.offset_right = 510
+		_panel.offset_top = -70
+		_panel.offset_bottom = 70
+		_panel.grow_vertical = Control.GROW_DIRECTION_BOTH
+		title.add_theme_font_size_override("font_size",20)
 
 func _text(size: int) -> Label:
 	var label := Label.new()

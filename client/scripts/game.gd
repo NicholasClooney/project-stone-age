@@ -277,7 +277,9 @@ func _ready() -> void:
 	# A remote backend may already be mid-battle (another device, or a reload).
 	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
 	resume_automation_view()
-	if is_instance_valid(waiting_screen):waiting_screen.release()
+	if is_instance_valid(waiting_screen):
+		waiting_screen.release()
+		waiting_screen.enter_game()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)

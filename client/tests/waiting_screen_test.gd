@@ -100,16 +100,23 @@ func run() -> void:
 	await process_frame
 	await process_frame
 	check(not game.asset_packs.enabled and game.waiting_screen==null and not game.data.is_empty(),"the local game starts without a waiting screen")
-	# The same screen wired into a running game pauses and restores its music.
+	# In a running game (past startup) a wait shows only the progress panel over
+	# the map: no image, no waiting music, the area music keeps playing.
 	game._build_waiting_screen()
 	var game_screen = game.waiting_screen
 	game_screen.set_process(false)
+	game_screen.enter_game()
+	var was_playing: bool = game.music.playing
 	var pending := wait_for(game.asset_packs,"map-100","地图 萨姆吉尔村")
 	game_screen.tick(0.5)
-	check(game_screen.visible and game_screen._paused_music==game.music and (game.music.stream_paused or not game.music.playing),"a blocking wait in play covers the map and pauses the area music")
+	game.asset_packs.progress.emit("地图 萨姆吉尔村",1*MB,4*MB)
+	check(game_screen.visible and game_screen.bar.visible and game_screen.percent.text=="25%","a wait in play shows the progress bar")
+	check(not game_screen.art.visible and not game_screen._backdrop.visible,"in play the map stays visible: no loading image or backdrop")
+	check(game_screen._paused_music==null and not game.music.stream_paused and game.music.playing==was_playing and not game_screen.player.playing,"in play the area music keeps playing and no waiting music starts")
+	check(game_screen._root.mouse_filter==Control.MOUSE_FILTER_IGNORE and not game_screen.hint.visible,"the in-game bar does not block clicks or ask for audio")
 	game.asset_packs._waiters.erase(pending)
 	game_screen.tick(0.016)
-	check(not game_screen.visible and not game.music.stream_paused,"the area music comes back when the wait ends")
+	check(not game_screen.visible,"the bar goes away when the wait ends")
 	game.set_process(false);game.set_physics_process(false)
 	game.music.stop();game.effect.stop()
 	game.music.stream=null;game.effect.stream=null
