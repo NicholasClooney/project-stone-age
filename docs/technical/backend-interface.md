@@ -35,11 +35,19 @@ Events raised while the backend handles a command or ticks are queued and delive
 | Group | Types |
 | --- | --- |
 | Session | `hello` (protocol check, returns snapshot), `snapshot`, `ping` (heartbeat), `set_options` (`clone_squad`, `experience_multiplier`), `checkpoint` (`map_id`, `x`, `y`; saves) |
-| Profile | `buy_item`, `sell_item`, `use_item`, `equip_item`, `buy_travel_pass`, `heal`, `store_pet`, `retrieve_pet`, `retrieve_pet_by_id`, `select_pet`, `mount_pet`, `rename_pet`, `set_pet_favorite`, `allocate_stat`, `distribute_stats`, `learn_pet_skill`, `set_character`, `accept_quest`, `claim_quest`, `grant_starter_pets`, `claim_default_companions`, `gm_raise_level`, `gm_set_base_stat`, `gm_grant_points`, `gm_heal`, `gm_clear_modified`. Fields mirror the `GameSession` arguments (`PROFILE_COMMANDS` in `backend.gd`). |
+| Profile | `buy_item`, `sell_item`, `use_item`, `equip_item`, `buy_travel_pass`, `heal`, `store_pet`, `retrieve_pet`, `retrieve_pet_by_id`, `select_pet`, `mount_pet`, `rename_pet`, `set_pet_favorite`, `allocate_stat`, `distribute_stats`, `learn_pet_skill`, `set_character`, `set_automation_settings` (see below), `accept_quest`, `claim_quest`, `grant_starter_pets`, `claim_default_companions`, `gm_raise_level`, `gm_set_base_stat`, `gm_grant_points`, `gm_heal`, `gm_clear_modified`. Fields mirror the `GameSession` arguments (`PROFILE_COMMANDS` in `backend.gd`). |
 | World | `report_position` (`map_id`, `cell`, `map_changed`, `client`; reply `paused` names a workflow pause), `field_step` (`encounter`: open the wild battle on a hit), `wild_encounter`, `begin_battle` (`boss`, `enemy_count`) |
 | Battle | `battle_command` (`action`, `target`, `pet_target`, `switch_pet`, optional `pet_skill`), `battle_pet_command`, `battle_pet_skill`, `battle_escape_dev`, `battle_close`. Remote clients add `battle_id` and `turn`; a command for a turn already resolved is rejected as stale. |
 | Fixtures | `start_battle_config`, `start_wild_battle_config`, `open_battle` (accepts only the pending config this backend issued) |
-| Automation | `auto_start` (`kind`: `battle`, `capture_battle`, `pet_train`, `hunt`, `find_pet`; plus `settings`, `map_id`, `cell`), `auto_update` (`settings`, `stat_filters`), `auto_stop`, `presented` (`battle_id`, `turn`), `auto` (named: `stop_battle`, `stop_hunt`, `stop_flow`, `acquire_clone`, `release_clone`, and the in-process ticks `tick_battle`, `hunt_process`, `flow_step`) |
+| Automation | `auto_start` (`kind`: `battle`, `capture_battle`, `pet_train`, `hunt`, `find_pet`; `map_id`, `cell`, the device's playback `speed`; the run uses the profile's settings, and an optional `settings` / `filter` / `stat_filters` from older clients overrides them for that run only), `auto_update` (run-only `settings`, `stat_filters`), `auto_stop`, `presented` (`battle_id`, `turn`), `auto` (named: `stop_battle`, `stop_hunt`, `stop_flow`, `acquire_clone`, `release_clone`, and the in-process ticks `tick_battle`, `hunt_process`, `flow_step`) |
+
+## Automation settings
+
+Automation settings belong to the character: `profile.automation_settings` holds only the player's overrides, and effective values are the defaults in `client/data/automation_defaults.json` deep-merged with them (`client/scripts/automation_settings.gd`, shared by backend and clients). Sections: `training` (`xp`, `compact`, `hp`, `level`, `level_explicit`, `limit`, `preset`), `capture` (`hp`, `pet`, `pet_id`, `pet_max_level`), `hunt` (`template`, `level_one`, `auto_capture`, `train_after_capture`, `total`, `offsets`, `rate`, `limit`) and `stat_filters` keyed by template id (`mode`, `stop_after`, `conditions.<sum|attack|defence|speed>.{enabled,value,strict,keep}`); the defaults file also carries per-species filter defaults under `species`.
+
+`set_automation_settings` (`settings`: a partial object of that shape) validates every key, type and range first and rejects the whole update with a reason (`unknown setting training.speed`, `invalid hunt.offsets`); otherwise it deep-merges, drops overrides equal to their default, saves and publishes `profile` to every client. `null` resets a value, group or section to its default. A running capture follows capture changes at once; other settings apply from the next start, and a find-pet cycle keeps the stat conditions it started with. Older saves without the section load with defaults; invalid stored parts are dropped. Battle playback speed and minimized windows are per device (`user://viewer.cfg`) and never stored here; the backend paces an uncompacted run with the `speed` its starting device sent.
+
+Clients show effective settings from `ClientState.profile` and send changes: choices at once, numbers once the player pauses (`game.mark_settings_dirty` / `flush_automation_settings`), everything on Apply or Start. When the profile changes, open windows update only values that changed, skipping a field being typed in or one with an unsent change of this device.
 
 ## Events
 
@@ -77,7 +85,7 @@ Walking is mirrored: each client tags `report_position` with its id, the backend
 
 ## Test seams
 
-Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path.
+Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings.
 
 ## Decisions (2026-09-27)
 

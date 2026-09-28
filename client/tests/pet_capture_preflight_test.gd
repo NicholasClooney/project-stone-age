@@ -38,7 +38,7 @@ func run()->void:
 	hunt.open_menu();hunt.start_button.pressed.emit()
 	check(hunt.running and flow.phase=="hunt","explicit restart succeeds after eligible pet is retrieved")
 	flow.stop_cycle();hunt.close_menu()
-	helper.settings.capture_pet_id="pet-99999";helper._refresh_pet_choices();hunt.open_menu();hunt.start_button.pressed.emit()
+	game.link.request({"type":"set_automation_settings","settings":{"capture":{"pet":-2,"pet_id":"pet-99999"}}});hunt.open_menu();hunt.start_button.pressed.emit()
 	check(not hunt.running and hunt.status.text.contains("pet-99999"),"missing explicit stable-ID selection names the unavailable pet")
 	var state:={"pets":[{"pet_id":"pet-1","level":1,"hp":0},{"pet_id":"pet-2","level":1,"hp":50}],"ride_pet":1}
 	check(Policy.capture_pet_choice(state,{"capture_pet":-1,"capture_pet_max_level":10},1).has("stop"),"shared eligibility rejects dead and mounted newborn pets")

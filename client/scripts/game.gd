@@ -96,8 +96,16 @@ var wilderness_music: AudioStream
 var village_music: AudioStream
 var area_music: AudioStream
 var changelog_menu: Control
-var training_settings: Dictionary = {}
-var pet_stat_filters: Dictionary = {}
+## Automation settings belong to the character profile (automation_settings,
+## owned by the backend); windows read them through automation_settings().
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
+## This device's battle playback speed (viewer.cfg); 0 until the player applies one.
+var battle_speed := -1.0
+## Automation windows with control changes not yet sent to the backend.
+var _settings_dirty: Array = []
+var _settings_dirty_msec := 0
+const SETTINGS_SEND_MSEC := 500
+var _automation_settings_json := ""
 var training_helper: Control
 var pet_workflow: Node
 var pet_hunt_menu: Control
@@ -738,6 +746,7 @@ func _physics_process(delta: float) -> void:
 	if area_transition_busy:return
 	if data.is_empty():
 		return
+	if not _settings_dirty.is_empty() and Time.get_ticks_msec()-_settings_dirty_msec>=SETTINGS_SEND_MSEC:flush_automation_settings()
 	if _ui_stale and not _ui_refresh_held():
 		_ui_refreshed_msec = Time.get_ticks_msec()
 		_ui_stale = refresh_open_panels()
@@ -1180,7 +1189,7 @@ func build_ui() -> void:
 	battle_view = BattleView.new()
 	root.add_child(battle_view)
 	battle_view.configure(self)
-	battle_view.playback_speed=float(training_settings.get("speed",1.0))
+	battle_view.playback_speed=playback_speed()
 	battle_view.action_requested.connect(battle_action)
 	battle_view.return_requested.connect(return_from_battle)
 	battle_view.sound_requested.connect(play_battle_sound)
@@ -1421,6 +1430,55 @@ func resume_automation_view() -> void:
 		pet_hunt_menu.open_menu()
 		if hunting:pet_hunt_menu.on_status(automation)
 		if bool(viewer_pref("hunt_minimized")):pet_hunt_menu.minimize()
+
+# ---- automation settings ---------------------------------------------------
+
+## The player's overrides from the profile; effective values add the defaults.
+func automation_overrides() -> Dictionary:
+	var overrides = state.profile.get("automation_settings",{})
+	return overrides if overrides is Dictionary else {}
+
+## Effective training, capture and hunt settings of this character.
+func automation_settings() -> Dictionary:
+	return AutomationSettings.effective(automation_overrides())
+
+## Effective Lv.120 stat filter for one species.
+func stat_filter(template_id: int) -> Dictionary:
+	return AutomationSettings.stat_filter(automation_overrides(),template_id)
+
+## A window changed a settings control. Its patch is sent once the player
+## pauses (SETTINGS_SEND_MSEC), so spinbox ticks do not each reach the backend.
+func mark_settings_dirty(window: Node) -> void:
+	if not window in _settings_dirty:_settings_dirty.append(window)
+	_settings_dirty_msec = Time.get_ticks_msec()
+
+## Sends every pending window's changes now (on Apply / Start / Close).
+func flush_automation_settings() -> void:
+	var patch := {}
+	var windows := _settings_dirty.duplicate()
+	_settings_dirty.clear()
+	for window in windows:
+		if is_instance_valid(window):patch = AutomationSettings.merged(patch,window.settings_patch())
+	if not patch.is_empty():link.request({"type":"set_automation_settings","settings":patch})
+
+## The profile's automation settings changed (this or another device): open
+## windows show the new values, leaving a control being typed in alone.
+func _on_automation_settings() -> void:
+	var json := JSON.stringify(automation_overrides())
+	if json==_automation_settings_json:return
+	_automation_settings_json = json
+	for window in [training_helper,pet_hunt_menu]:
+		if is_instance_valid(window) and window.is_node_ready():window.load_settings()
+
+## Battle playback speed chosen on this device (1× until one is applied).
+func playback_speed() -> float:
+	if battle_speed<0:battle_speed = float(viewer_pref("battle_speed",0.0))
+	return battle_speed if battle_speed>0 else 1.0
+
+func set_battle_speed(value: float) -> void:
+	battle_speed = value
+	if is_instance_valid(battle_view):battle_view.playback_speed = value
+	set_viewer_pref("battle_speed",value)
 
 ## Per-device view choices (not game state, so not in the save or backend):
 ## which automation windows this device keeps minimized, so a reload comes
@@ -1956,6 +2014,7 @@ func _update_link_overlay() -> void:
 
 func _on_link_connected() -> void:
 	if data.is_empty() or not is_instance_valid(battle_view):return
+	_on_automation_settings()
 	# Resync presentation to the backend's current battle and progress.
 	if state.battle_open and not battle_view.visible and not training_helper.compact_active:present_battle_start(state.battle)
 	elif not state.battle_open and battle_view.visible:present_battle_close(str(state.battle.get("outcome","")))
@@ -1996,6 +2055,7 @@ func _on_backend_message(event: Dictionary) -> void:
 		"profile":
 			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
 			_mark_ui_stale()
+			_on_automation_settings()
 		"pet_storage":
 			_mark_ui_stale()
 		"auto_status":

@@ -26,7 +26,7 @@ func run()->void:
 	flow.stop_cycle()
 	helper.capture_hp.value=37;helper.capture_pet_max_level.value=4;helper.capture_pet.select(1);helper.capture_pet.item_selected.emit(1)
 	var ident:String=game.session.snapshot().pets[0].pet_id
-	check(game.training_settings.capture_hp==37 and game.training_settings.capture_pet_id==ident,"capture tab preserves explicit threshold and stable-ID selection")
+	check(game.automation_settings().capture.hp==37 and game.automation_settings().capture.pet_id==ident,"capture tab saves explicit threshold and stable-ID selection to the profile")
 	hunt.close_menu();helper.open_menu()
 	check(helper.capture_hp.value==37 and str(helper.capture_pet.get_item_metadata(helper.capture_pet.selected))==ident,"opening helper does not reset shared capture settings")
 	check(not helper.capture_hp.is_visible_in_tree(),"training panel has no duplicate visible capture controls")

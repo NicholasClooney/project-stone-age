@@ -1,8 +1,21 @@
 extends Control
 ## Optional single-player data inspection. Rolls real local troops; never grants rewards.
-## Scanning runs in the backend (res://server/automation.gd); this menu chooses
-## the filter and presents progress.
+## Scanning runs in the backend (res://server/automation.gd); this menu edits
+## the character's hunt settings (profile automation_settings: hunt, capture,
+## stat_filters) and presents progress. Changes are saved as the player makes
+## them and other devices' changes show up here.
 const StatFilter=preload("res://scripts/pet_stat_filter.gd")
+const AutomationSettings=preload("res://scripts/automation_settings.gd")
+## Profile hunt settings last shown; only values that change are rewritten.
+var _loaded: Dictionary = {}
+var _loading := false
+## The saved target species is not available here, so the list shows 任何.
+var _template_fallback := false
+## The next settings patch also stores the shown species (Start does this).
+var _commit_template := false
+## Species whose stat conditions the 属性条件 page shows.
+var _stat_species_shown := -1
+var _stat_loaded: Dictionary = {}
 var stat_page: Control
 var stat_species: OptionButton
 var stat_mode: OptionButton
@@ -90,13 +103,17 @@ func _ready() -> void:
 	panel.add_child(species);controls.append(species)
 	level_one=CheckBox.new();level_one.text="只找 Lv.1";level_one.button_pressed=true
 	level_one.position=Vector2(555,132);panel.add_child(level_one);controls.append(level_one)
-	level_one.toggled.connect(func(_value):refresh_candidates())
+	level_one.toggled.connect(func(_value):
+		refresh_candidates()
+		_settings_changed(true))
 	auto_capture=CheckBox.new();auto_capture.text="达标后自动抓宠";auto_capture.position=Vector2(760,132)
 	panel.add_child(auto_capture);controls.append(auto_capture)
 	label("成长档预设",Vector2(24,194),17)
 	preset=OptionButton.new();preset.position=Vector2(140,184);preset.size=Vector2(480,38)
 	for title in ["不限品质 · 快速试用","优秀：总成长档 +4 或更高","极品：总成长档 +6 或更高","满档：四项成长档均 +2","自定义"]:preset.add_item(title)
-	preset.select(3);preset.item_selected.connect(apply_preset)
+	preset.select(3);preset.item_selected.connect(func(index):
+		apply_preset(index)
+		_settings_changed(true))
 	panel.add_child(preset);controls.append(preset)
 	label("总档下限",Vector2(24,249),17)
 	total=number(Vector2(140,239),-8,8,8)
@@ -107,9 +124,9 @@ func _ready() -> void:
 		var input:=number(Vector2(115+i*258,295),-2,2,2)
 		input.value_changed.connect(filters_changed);offsets.append(input)
 	explanation=label("",Vector2(24,351),15);explanation.size=Vector2(1040,67);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),0,100000,0)
+	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),0,100000,0);rate.value_changed.connect(func(_value):_settings_changed(false))
 	rate.tooltip_text="0为不限速：每帧用满约12毫秒工作预算。填正数则按该目标限速。"
-	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),0,1000000,0)
+	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),0,1000000,0);limit.value_changed.connect(func(_value):_settings_changed(false))
 	label("组；0为不限，到上限暂停。",Vector2(610,433),16)
 	status=label("",Vector2(24,478),14);status.size=Vector2(1040,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
@@ -126,14 +143,18 @@ func _ready() -> void:
 	train_after_capture.toggled.connect(func(enabled):
 		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
 		if enabled:auto_capture.button_pressed=true
-		refresh_ready_status())
+		refresh_ready_status()
+		_settings_changed(true))
 	auto_capture.toggled.connect(func(enabled):
 		if not enabled:train_after_capture.button_pressed=false
-		refresh_ready_status())
-	train_after_capture.button_pressed=true
+		refresh_ready_status()
+		_settings_changed(true))
+	species.item_selected.connect(func(_index):
+		_template_fallback=false
+		_settings_changed(true))
 	build_stat_page()
 	show_capture_settings(false)
-	update_explanation()
+	load_settings()
 	hide()
 
 func label(text: String, at: Vector2, size: int) -> Label:
@@ -143,6 +164,8 @@ func label(text: String, at: Vector2, size: int) -> Label:
 func number(at: Vector2, minimum: int, maximum: int, value: int) -> SpinBox:
 	var result:=SpinBox.new();result.position=at;result.size=Vector2(130,38)
 	result.min_value=minimum;result.max_value=maximum;result.step=1;result.value=value
+	# Once the player stops typing, show any update that waited for them.
+	result.get_line_edit().focus_exited.connect(func():call_deferred("load_settings"))
 	panel.add_child(result);controls.append(result);return result
 func min_offsets() -> Array:
 	var values:=[]
@@ -158,12 +181,96 @@ func apply_preset(index: int) -> void:
 func filters_changed(_value: float) -> void:
 	if not applying and is_instance_valid(preset):preset.select(4)
 	update_explanation()
+	if not applying:_settings_changed(false)
+
+## Preset matching the thresholds; 4 is 自定义.
+func _preset_index() -> int:
+	var values:=min_offsets()
+	for index in range(4):
+		if int(total.value)==[-8,4,6,8][index] and values==([2,2,2,2] if index==3 else [-2,-2,-2,-2]):return index
+	return 4
+
+## A control changed: save now (a choice) or once the player pauses (numbers).
+func _settings_changed(now: bool) -> void:
+	if _loading or not is_instance_valid(world):return
+	world.mark_settings_dirty(self)
+	if now:world.flush_automation_settings()
+
+## Saves the controls, including the shown species, before a run starts.
+func commit_settings() -> void:
+	for control in controls:
+		if control is SpinBox and control.get_line_edit().has_focus():control.apply()
+	_commit_template=true
+	world.mark_settings_dirty(self)
+	world.flush_automation_settings()
+	_commit_template=false
+
+## What these controls change in the profile (see game.flush_automation_settings).
+func settings_patch() -> Dictionary:
+	var patch := {}
+	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
+		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value)}
+	# 任何 shown only because the saved species is not found here keeps the saved one.
+	if species.item_count>0 and (_commit_template or not _template_fallback):wanted.template=species.get_selected_id()
+	var hunt:=AutomationSettings.diff(world.automation_settings().hunt,wanted)
+	if not hunt.is_empty():patch.hunt=hunt
+	if _stat_species_shown>=0:
+		var conditions:={}
+		for metric in StatFilter.METRICS:
+			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"value":int(stat_numbers[metric].value),"keep":int(stat_keeps[metric].value)}
+		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","stop_after":int(stat_stop_after.value),"conditions":conditions}
+		var changed:=AutomationSettings.diff(world.stat_filter(_stat_species_shown),wanted_filter)
+		if not changed.is_empty():patch.stat_filters={str(_stat_species_shown):changed}
+	return patch
+
+## Shows the profile's hunt settings. Only values that changed since the last
+## load are rewritten, and never a number the player is typing.
+func load_settings() -> void:
+	var hunt: Dictionary=world.automation_settings().hunt
+	var old:=_loaded
+	_loading=true;applying=true
+	var refresh:=false
+	if _changed(old,hunt,"level_one"):level_one.set_pressed_no_signal(bool(hunt.level_one));refresh=true
+	if _changed(old,hunt,"auto_capture"):auto_capture.set_pressed_no_signal(bool(hunt.auto_capture))
+	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
+	start_button.text="开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"
+	var shown:=hunt.duplicate(true)
+	var numbers:={"total":total,"rate":rate,"limit":limit}
+	for key in numbers:
+		if not _sync_spin(numbers[key],old.get(key),hunt[key]):shown[key]=old[key]
+	var old_offsets: Array=old.get("offsets",[null,null,null,null])
+	for i in range(4):
+		if not _sync_spin(offsets[i],old_offsets[i],hunt.offsets[i]):shown.offsets[i]=old_offsets[i]
+	preset.select(_preset_index())
+	if _changed(old,hunt,"template"):refresh=true
+	_loaded=shown
+	if refresh and visible:refresh_candidates()
+	applying=false;_loading=false
+	update_explanation()
+	if is_instance_valid(stat_species) and stat_species.item_count>0:load_stat_settings()
+	if visible:refresh_ready_status()
+
+static func _changed(old: Dictionary, now: Dictionary, key: String) -> bool:
+	return not old.has(key) or str(old[key])!=str(now[key])
+
+static func _typing(input: SpinBox) -> bool:
+	return input.get_line_edit().has_focus()
+
+## Shows a profile value in a number field, unless the player is typing there
+## or has an unsent change of their own (it is saved shortly and wins).
+## Returns false when the field keeps its value; a later load retries.
+static func _sync_spin(input: SpinBox, old_value: Variant, new_value: Variant, force: bool = false) -> bool:
+	if not force and old_value!=null and str(old_value)==str(new_value):return true
+	if not force and input.get_line_edit().has_focus():return false
+	if not force and old_value!=null and int(input.value)!=int(old_value) and int(input.value)!=int(new_value):return false
+	input.value=new_value
+	return true
 func update_explanation() -> void:
 	if not is_instance_valid(explanation) or offsets.size()!=4:return
 	var probability: float=Rules.tail_probability(int(total.value),min_offsets())
 	explanation.text="同种自然出生个体中，约 %.2f%% 的成长档符合此条件（不是每次遇敌的命中率）。\n+2 是该项出生档上限；四项均 +2 为满档，可真实出现，不保证未来每级都长到最大值。" % (probability*100.0)
 func refresh_candidates() -> void:
-	var selected:=species.get_selected_id() if species.item_count else -1
+	var selected:=int(world.automation_settings().hunt.template)
 	species.clear();species.add_item("任何本地可用宠物",-1)
 	# OptionButton uses -1 for auto IDs; set it explicitly for the wildcard.
 	species.set_item_id(0,-1)
@@ -177,6 +284,7 @@ func refresh_candidates() -> void:
 		if renderable:
 			available+=1
 			if int(item.id)==selected:species.select(species.item_count-1)
+	_template_fallback=selected>=0 and species.get_selected_id()!=selected
 	start_button.disabled=available==0 or not world.world_catalog.field(int(world.data.map_id))
 	location_label.text="当前位置：%s (%d, %d) · 只使用此处原版敌群，不改种类、等级或成长随机值。" % [world.data.name,world.cell.x,world.cell.y]
 	status.text="这里没有可用的目标。可到萨姆吉尔西门外筛选 Lv.1 昆依，或关闭 Lv.1 限制。" if start_button.disabled else ready_description()
@@ -194,6 +302,7 @@ func open_menu() -> void:
 	show();refresh_candidates();refresh_stat_species();world.training_helper._refresh_pet_choices();stop_button.disabled=true
 func close_menu() -> void:
 	if not visible:return
+	world.flush_automation_settings()
 	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
 	set_controls(false);hide();world.release_input();world.clear_input()
 func set_controls(locked: bool) -> void:
@@ -212,12 +321,12 @@ func build_filter(for_workflow: bool = false) -> Dictionary:
 	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
 		status.text="宠物栏已满，请先腾出位置再寻找新伙伴。";return {}
 	if int(world.training_helper.capture_hp.value)<100 and level_one.button_pressed and (auto_capture.button_pressed or for_workflow):
-		world.training_helper.save_capture_settings()
 		var profile:Dictionary=world.session.snapshot()
-		var choice:Dictionary=CapturePolicy.capture_pet_choice(profile,world.training_helper.settings,1)
+		var chosen:Dictionary=world.training_helper.current_settings()
+		var choice:Dictionary=CapturePolicy.capture_pet_choice(profile,chosen,1)
 		if choice.has("stop"):
 			status.text=str(choice.stop)
-			if int(world.training_helper.settings.capture_pet)<0 and str(world.training_helper.settings.get("capture_pet_id","")).is_empty():status.text="缺少可用削血宠：请从仓库取出存活、非骑乘的Lv.1宠物，或手选符合等级上限的削血宠。"
+			if int(chosen.capture_pet)<0 and str(chosen.get("capture_pet_id","")).is_empty():status.text="缺少可用削血宠：请从仓库取出存活、非骑乘的Lv.1宠物，或手选符合等级上限的削血宠。"
 			world.message.text=status.text
 			return {}
 	if Rules.tail_probability(int(total.value),min_offsets())<=0:
@@ -234,7 +343,9 @@ func build_filter(for_workflow: bool = false) -> Dictionary:
 func start_hunt() -> void:
 	var chosen:=build_filter()
 	if chosen.is_empty():return
-	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"hunt","filter":chosen,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	# The backend hunts with the profile's settings; save these controls first.
+	commit_settings()
+	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"hunt","map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
 	if not reply.ok and not reply.get("pending",false):
 		if not str(reply.reason).is_empty():status.text=str(reply.reason)
 		return
@@ -331,21 +442,24 @@ func build_stat_page()->void:
 	var tab:Button=world.button("属性条件",show_stat_settings);tab.position=Vector2(895,18);panel.add_child(tab)
 	var heading:Label=world.text("120级属性筛选 · 找宠时按成长种子精确计算",19);heading.position=Vector2(24,130);stat_page.add_child(heading)
 	stat_species=OptionButton.new();stat_species.name="StatFilterSpecies";stat_species.position=Vector2(24,170);stat_species.size=Vector2(370,38);stat_page.add_child(stat_species);controls.append(stat_species)
-	stat_species.item_selected.connect(func(_i):load_stat_settings())
+	stat_species.item_selected.connect(func(_i):
+		# Changes to the species shown until now are saved before switching.
+		world.flush_automation_settings()
+		load_stat_settings())
 	stat_mode=OptionButton.new();stat_mode.name="StatFilterMode";stat_mode.position=Vector2(430,170)
-	stat_mode.add_item("全部满足（AND）");stat_mode.add_item("任一满足（OR）");stat_page.add_child(stat_mode);controls.append(stat_mode);stat_mode.item_selected.connect(func(_i):save_stat_settings())
+	stat_mode.add_item("全部满足（AND）");stat_mode.add_item("任一满足（OR）");stat_page.add_child(stat_mode);controls.append(stat_mode);stat_mode.item_selected.connect(func(_i):save_stat_settings(true))
 	for i in range(4):
 		var metric:String=StatFilter.METRICS[i]
 		var check:=CheckBox.new();check.name="StatEnabled_"+metric;check.text=["三围合 ≥","攻击 >","防御 >","敏捷 >"][i];check.position=Vector2(24+(i%2)*470,228+(i/2)*55);stat_page.add_child(check);controls.append(check);stat_checks[metric]=check
 		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),0,1000000,0);input.name="StatMinimum_"+metric;input.size.x=110;input.reparent(stat_page);stat_numbers[metric]=input
 		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(318+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
 		var keep:=number(Vector2(360+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=100;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
-		check.toggled.connect(func(_on):save_stat_settings());input.value_changed.connect(func(_value):save_stat_settings());keep.value_changed.connect(func(_value):save_stat_settings())
+		check.toggled.connect(func(_on):save_stat_settings(true));input.value_changed.connect(func(_value):save_stat_settings());keep.value_changed.connect(func(_value):save_stat_settings())
 	var stop_label:Label=world.text("找到",17);stop_label.position=Vector2(24,348);stat_page.add_child(stop_label)
 	stat_stop_after=number(Vector2(80,338),0,100000,0);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
 	stat_stop_after.value_changed.connect(func(_value):save_stat_settings())
 	var stop_note:Label=world.text("只达标宠物后停止（0＝不停止，1＝找到即停并比较）",17);stop_note.position=Vector2(230,348);stat_page.add_child(stop_note)
-	var note:Label=world.text("仅在「抓到后直接升至120级」时生效；每个品种独立设置，本次游戏内保留。\n预测不达标：直接跳过不抓。达标：抓到、升至120并存仓，数量到上限停止并打开比较。\n未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。",16);note.position=Vector2(24,395);stat_page.add_child(note)
+	var note:Label=world.text("仅在「抓到后直接升至120级」时生效；每个品种独立设置，随角色保存。\n预测不达标：直接跳过不抓。达标：抓到、升至120并存仓，数量到上限停止并打开比较。\n未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。",16);note.position=Vector2(24,395);stat_page.add_child(note)
 	refresh_stat_species()
 
 func refresh_stat_species()->void:
@@ -360,28 +474,39 @@ func show_stat_settings()->void:
 	for node in filter_nodes:node.hide()
 	stat_page.show()
 
+## Shows the selected species' conditions from the profile. Switching species
+## rewrites every control; a profile update skips the number being typed.
 func load_stat_settings()->void:
 	loading_stat_settings=true
-	var settings:Dictionary=world.pet_stat_filters.get(stat_species.get_selected_id(),StatFilter.defaults(stat_species.get_selected_id()))
-	stat_mode.select(1 if settings.get("mode","all")=="any" else 0)
+	var template_id:=stat_species.get_selected_id()
+	var switching:=template_id!=_stat_species_shown
+	_stat_species_shown=template_id
+	var settings:Dictionary=world.stat_filter(template_id)
+	var flat:={"mode":str(settings.mode),"stop_after":int(settings.stop_after)}
 	for metric in StatFilter.METRICS:
-		var condition:Dictionary=settings.conditions[metric]
-		stat_checks[metric].button_pressed=condition.enabled;stat_numbers[metric].value=condition.value;stat_keeps[metric].value=int(condition.get("keep",0))
-	stat_stop_after.value=int(settings.get("stop_after",StatFilter.defaults(stat_species.get_selected_id()).stop_after))
+		for field in ["enabled","value","keep"]:flat[metric+"."+field]=settings.conditions[metric][field]
+	var old:Dictionary={} if switching else _stat_loaded
+	var shown:=flat.duplicate()
+	if _changed(old,flat,"mode"):stat_mode.select(1 if flat.mode=="any" else 0)
+	for metric in StatFilter.METRICS:
+		if _changed(old,flat,metric+".enabled"):stat_checks[metric].set_pressed_no_signal(bool(flat[metric+".enabled"]))
+		for entry in [[stat_numbers[metric],metric+".value"],[stat_keeps[metric],metric+".keep"]]:
+			if not _sync_spin(entry[0],old.get(entry[1]),flat[entry[1]],switching):shown[entry[1]]=old[entry[1]]
+	if not _sync_spin(stat_stop_after,old.get("stop_after"),flat.stop_after,switching):shown.stop_after=old.stop_after
+	_stat_loaded=shown
 	loading_stat_settings=false
 
-func save_stat_settings()->void:
+## A condition changed: saved to the profile once the player pauses.
+func save_stat_settings(now: bool = false)->void:
 	if loading_stat_settings:return
-	var settings:=StatFilter.defaults(stat_species.get_selected_id());settings.mode="any" if stat_mode.selected==1 else "all"
-	for metric in StatFilter.METRICS:
-		settings.conditions[metric].enabled=stat_checks[metric].button_pressed;settings.conditions[metric].value=int(stat_numbers[metric].value);settings.conditions[metric].keep=int(stat_keeps[metric].value)
-	settings.stop_after=int(stat_stop_after.value)
-	world.pet_stat_filters[stat_species.get_selected_id()]=settings
+	_settings_changed(now)
 
+## Saves typed numbers and pending changes now (before a find-pet cycle).
 func commit_stat_settings()->void:
 	for input in stat_numbers.values()+stat_keeps.values()+[stat_stop_after]:
 		if input.get_line_edit().has_focus():input.apply()
-	save_stat_settings()
+	world.mark_settings_dirty(self)
+	world.flush_automation_settings()
 
 static func _automation_active(automation: Dictionary) -> bool:
 	return bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]

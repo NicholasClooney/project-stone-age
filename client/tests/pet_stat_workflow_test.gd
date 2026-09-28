@@ -17,14 +17,14 @@ func run()->void:
 	hunt.open_menu();hunt.show_stat_settings()
 	check(hunt.stat_page.visible and not hunt.capture_page.visible and not hunt.species.visible,"attribute tab exclusively displays its own controls")
 	hunt.stat_numbers.sum.get_line_edit().grab_focus();hunt.stat_numbers.sum.get_line_edit().text="625";hunt.commit_stat_settings()
-	check(game.pet_stat_filters[92].conditions.sum.value==625,"typed minimum commits on first start/apply")
+	check(game.stat_filter(92).conditions.sum.value==625,"typed minimum commits to the profile on first start/apply")
 	hunt.stat_numbers.sum.get_line_edit().release_focus();hunt.stat_numbers.sum.value=620;hunt.save_stat_settings()
 	check(flow.start_cycle(),"workflow starts with current per-species filter settings")
 	check(flow.stat_filter_snapshot[92].conditions.sum.value==620,"loop snapshots current configuration")
 	fake_msec=31000
 	check(flow.elapsed_seconds()==30.0 and hunt.summary().contains("流程总用时 00:00:30"),"workflow displays elapsed wall time separately from round duration")
-	game.pet_stat_filters[92].conditions.sum.value=999
-	check(flow.stat_filter_snapshot[92].conditions.sum.value==620,"later UI data mutation cannot change running loop threshold")
+	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"conditions":{"sum":{"value":999}}}}}})
+	check(game.stat_filter(92).conditions.sum.value==999 and flow.stat_filter_snapshot[92].conditions.sum.value==620,"a later settings change cannot change the running loop threshold")
 	hunt.stop_hunt("test boundary");hunt.hide();game.paused_input=false
 	var source:Dictionary=game.session.snapshot().pets[0].duplicate(true)
 	var previous_storage:int=game.session.snapshot().pet_storage.size()
@@ -113,8 +113,8 @@ func run()->void:
 	hunt.show_stat_settings();hunt.stat_species.select(hunt.stat_species.get_item_index(92));hunt.load_stat_settings()
 	check(hunt.stat_stop_after.value==0 and hunt.stat_keeps.sum.value==15 and hunt.stat_keeps.attack.value==10,"attribute tab shows blue dragon defaults: never stop, keep 15 by sum and 10 by attack")
 	hunt.stat_stop_after.get_line_edit().grab_focus();hunt.stat_stop_after.get_line_edit().text="7";hunt.commit_stat_settings()
-	check(int(game.pet_stat_filters[92].stop_after)==7,"typed stop-after commits to the species filter")
-	hunt.stat_stop_after.get_line_edit().release_focus();hunt.stat_stop_after.value=0;hunt.save_stat_settings();hunt.hide();game.paused_input=false
+	check(int(game.stat_filter(92).stop_after)==7,"typed stop-after commits to the species filter")
+	hunt.stat_stop_after.get_line_edit().release_focus();hunt.stat_stop_after.value=0;hunt.save_stat_settings();game.flush_automation_settings();hunt.hide();game.paused_input=false
 	flow.phase="idle"
 	var good:Dictionary=source.duplicate(true);good.pet_id="pet-filter-good";good.level=120;good.attack=292;good.defence=181;good.speed=151
 	game.session._profile.pets.append(good);game.session._profile.active_pet=game.session._profile.pets.size()-1

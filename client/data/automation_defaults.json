@@ -1,0 +1,53 @@
+{
+  "comment": "Defaults for 自动练级 / 自动抓极品. The character profile stores only the player's overrides (automation_settings); effective settings are these defaults deep-merged with them. See client/scripts/automation_settings.gd.",
+  "training": {
+    "xp": 10,
+    "compact": true,
+    "hp": 10,
+    "level": 120,
+    "level_explicit": false,
+    "limit": 1000,
+    "preset": "attack"
+  },
+  "capture": {
+    "hp": 100,
+    "pet": -1,
+    "pet_id": "",
+    "pet_max_level": 10
+  },
+  "hunt": {
+    "template": -1,
+    "level_one": true,
+    "auto_capture": true,
+    "train_after_capture": true,
+    "total": 8,
+    "offsets": [2, 2, 2, 2],
+    "rate": 0,
+    "limit": 0
+  },
+  "stat_filter": {
+    "mode": "any",
+    "stop_after": 1,
+    "conditions": {
+      "sum": {"enabled": false, "value": 624, "strict": false, "keep": 0},
+      "attack": {"enabled": false, "value": 292, "strict": true, "keep": 0},
+      "defence": {"enabled": false, "value": 178, "strict": true, "keep": 0},
+      "speed": {"enabled": false, "value": 150, "strict": true, "keep": 0}
+    }
+  },
+  "species": {
+    "92": {
+      "comment": "扬奇洛斯（蓝人龙）: keep collecting; total >=624 OR attack >292.",
+      "stat_filter": {
+        "stop_after": 0,
+        "conditions": {
+          "sum": {"enabled": true, "keep": 15},
+          "attack": {"enabled": true, "keep": 10}
+        }
+      }
+    }
+  },
+  "device": {
+    "battle_speed": 8
+  }
+}

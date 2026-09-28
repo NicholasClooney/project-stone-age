@@ -6,6 +6,7 @@ const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
 const Progression = preload("res://server/progression.gd")
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
 	"blue_dragon":{"name":"扬奇洛斯","alias":"蓝人龙","category":"人龙","sprite":100288,"speed":20},
@@ -32,7 +33,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{}}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
@@ -513,6 +514,19 @@ func claim_quest() -> bool:
 	_gain_xp(_profile.player,60)
 	return true
 
+## The player's automation overrides (defaults are applied by AutomationSettings).
+func automation_settings() -> Dictionary:
+	return _profile.get("automation_settings",{}).duplicate(true)
+
+## Deep-merges a validated partial update; null resets a value or section.
+func set_automation_settings(patch: Variant) -> bool:
+	var reply: Dictionary = AutomationSettings.apply_patch(_profile.get("automation_settings",{}),patch)
+	if not reply.ok:
+		last_error = str(reply.reason)
+		return false
+	_profile.automation_settings = reply.overrides
+	return true
+
 func set_location(map_id: int, x: int, y: int) -> bool:
 	if not _pending.is_empty() or not _location_valid({"map_id":map_id,"x":x,"y":y}):
 		return false
@@ -559,6 +573,8 @@ func load_game(path: String) -> bool:
 			if not _profile.has("character_id"):_profile.character_id = "100000"
 			if not _profile.has("travel_pass"):
 				_profile.travel_pass = false
+			# Saves before automation settings get the defaults; invalid parts are dropped.
+			_profile.automation_settings = AutomationSettings.sanitize(_profile.get("automation_settings",{}))
 			# Earlier prototype saves predate speed; migrate only this optional field.
 			if not _profile.player.has("speed"):
 				_profile.player.speed = 10 + _profile.player.level - 1

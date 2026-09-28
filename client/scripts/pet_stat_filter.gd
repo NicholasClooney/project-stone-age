@@ -1,6 +1,7 @@
 extends RefCounted
 ## Pure numerical filter. Callers explicitly supply current or projected stats.
-## Disabled conditions pass; blue dragons default to total >=624 OR attack >292.
+## Disabled conditions pass; defaults (blue dragons: total >=624 OR attack >292)
+## live in res://data/automation_defaults.json.
 const METRICS := ["sum", "attack", "defence", "speed"]
 
 static func evaluate(stats: Dictionary, settings: Dictionary) -> bool:
@@ -25,7 +26,8 @@ static func evaluate(stats: Dictionary, settings: Dictionary) -> bool:
 
 static func defaults(template_id: int) -> Dictionary:
 	# stop_after: matches to keep before the loop stops; 0 never stops, 1 is the classic single stop.
-	return {"mode":"any", "stop_after":0 if template_id == 92 else 1, "conditions":{"sum":{"enabled":template_id == 92,"value":624,"strict":false,"keep":15 if template_id == 92 else 0},"attack":{"enabled":template_id == 92,"value":292,"strict":true,"keep":10 if template_id == 92 else 0},"defence":{"enabled":false,"value":178,"strict":true,"keep":0},"speed":{"enabled":false,"value":150,"strict":true,"keep":0}}}
+	# Values (and per-species overrides) come from res://data/automation_defaults.json.
+	return preload("res://scripts/automation_settings.gd").default_stat_filter(template_id)
 
 # Rolling warehouse keep per metric (top N by that metric), independent of enabled.
 static func keep_counts(settings: Dictionary) -> Dictionary:

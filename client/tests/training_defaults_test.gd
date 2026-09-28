@@ -11,11 +11,11 @@ func run():
  check(helper.speed.selected==3 and helper.multiplier.selected==2 and helper.compact.button_pressed,"fresh controls default to8x playback10x XP compact battle")
  check(helper.hp_floor.value==10 and helper.target_level.value==120 and helper.battle_limit.value==1000,"fresh safety and limits default10percent120level1000battles")
  helper.open_menu()
- check(not helper.running and game.battle_view.playback_speed==1 and game.session.experience_multiplier==1 and game.training_settings.is_empty(),"opening defaults does not start automation or change live manual battle multipliers")
+ check(not helper.running and game.battle_view.playback_speed==1 and game.session.experience_multiplier==1 and game.automation_overrides().is_empty(),"opening defaults does not start automation or change live manual battle multipliers")
  helper.apply_settings();helper.close_menu()
  check(game.battle_view.playback_speed==8 and game.session.experience_multiplier==10,"applying defaults synchronizes runtime multipliers")
  game.load_area_id(1002,Vector2i(11,15));helper=game.training_helper
- check(helper.settings==game.training_settings and helper.compact.button_pressed and game.battle_view.playback_speed==8,"applied defaults survive map rebuild")
+ check(helper.settings.xp==10 and helper.settings.speed==8.0 and game.automation_overrides().is_empty() and helper.compact.button_pressed and game.battle_view.playback_speed==8,"applied defaults survive map rebuild")
  helper.speed.select(1);helper.multiplier.select(0);helper.compact.button_pressed=false;helper.hp_floor.value=45;helper.target_level.value=75;helper.battle_limit.value=23
  helper.apply_settings()
  var custom:Dictionary=helper.settings.duplicate(true)

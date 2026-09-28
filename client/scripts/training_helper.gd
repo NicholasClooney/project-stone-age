@@ -1,7 +1,10 @@
 extends Control
 ## Opt-in single-player automation settings and progress. The battle loop runs
-## in the backend (res://server/automation.gd); this control sends settings and
-## presents the status the backend reports.
+## in the backend (res://server/automation.gd). Settings belong to the
+## character profile: the controls show world.automation_settings(), Apply /
+## Start write them back, and changes from another device update them. Only the
+## battle playback speed is this device's own (viewer.cfg).
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
 var preset: OptionButton
 var capture_hp: SpinBox
 var capture_pet: OptionButton
@@ -18,8 +21,15 @@ var hp_floor: SpinBox
 var target_level: SpinBox
 var level_explicit:=false
 var battle_limit: SpinBox
-## Settings chosen in this UI; the backend keeps its own copy while running.
-var settings: Dictionary={"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":10}
+## The running backend's settings, else the choices in these controls.
+var settings: Dictionary:
+	get:return _status().get("settings",{}).duplicate(true) if running else current_settings()
+## Effective profile settings last shown in the controls; only values that
+## change from these are rewritten when the profile changes.
+var _loaded: Dictionary = {}
+var _loading := false
+## Apply was pressed: the training controls go into the next settings patch.
+var _training_applied := false
 var _capture_choice:=-1
 ## The locked target: the backend's while running, else this UI's choice.
 var capture_target: int:
@@ -99,21 +109,15 @@ func _ready() -> void:
 	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizeTraining";minimize_button.tooltip_text="收起为右下角进度条；自动战斗继续，可同时查看宠物与仓库"
 	minimize_button.position=Vector2(900,80);progress.add_child(minimize_button)
 	# Fresh UI defaults are opt-in; only Apply / Start changes live multipliers.
-	settings.merge(world.training_settings,true)
-	level_explicit=bool(world.training_settings.get("level_explicit",world.training_settings.has("level") and int(world.training_settings.level)!=120))
-	speed.select([1.0,2.0,4.0,8.0].find(float(settings.speed)))
-	multiplier.select([1,2,10,100].find(int(settings.xp)))
-	compact.button_pressed=settings.compact;hp_floor.value=settings.hp;target_level.value=settings.level;battle_limit.value=settings.limit
-	preset.select(["attack","capture","train_pet"].find(str(settings.preset)))
-	capture_hp.value=settings.capture_hp;capture_pet_max_level.value=settings.capture_pet_max_level
-	_refresh_pet_choices()
-	_sync_default_level()
-	target_level.value_changed.connect(func(_value):level_explicit=true)
+	var device_speed: float=world.battle_speed if world.battle_speed>0 else float(AutomationSettings.device_default("battle_speed",8))
+	speed.select(maxi(0,[1.0,2.0,4.0,8.0].find(device_speed)))
+	load_settings()
+	target_level.value_changed.connect(func(_value):if not _loading:level_explicit=true)
 	target_level.get_line_edit().text_submitted.connect(func(_text):level_explicit=true)
 	world.pet_hunt_menu.install_capture_controls(capture_hp,capture_pet,capture_pet_max_level)
-	capture_hp.value_changed.connect(func(_value):save_capture_settings())
-	capture_pet.item_selected.connect(func(_index):save_capture_settings())
-	capture_pet_max_level.value_changed.connect(func(_value):save_capture_settings())
+	capture_hp.value_changed.connect(func(_value):save_capture_settings(false))
+	capture_pet.item_selected.connect(func(_index):save_capture_settings(true))
+	capture_pet_max_level.value_changed.connect(func(_value):save_capture_settings(false))
 	progress.hide();hide()
 func label_at(parent: Control,value: String,point: Vector2,font_size: int) -> Label:
 	var node: Label=world.text(value,font_size);node.position=point;node.mouse_filter=Control.MOUSE_FILTER_IGNORE;parent.add_child(node);return node
@@ -122,11 +126,84 @@ func options(values: Array,point: Vector2) -> OptionButton:
 	for value in values:node.add_item(value)
 	panel.add_child(node);return node
 func number(point: Vector2,lo: int,hi: int,value: int) -> SpinBox:
-	var node:=SpinBox.new();node.position=point;node.size=Vector2(135,36);node.min_value=lo;node.max_value=hi;node.value=value;panel.add_child(node);return node
+	var node:=SpinBox.new();node.position=point;node.size=Vector2(135,36);node.min_value=lo;node.max_value=hi;node.value=value;panel.add_child(node)
+	# Once the player stops typing, show any update that waited for them.
+	node.get_line_edit().focus_exited.connect(func():call_deferred("load_settings"))
+	return node
 func _sync_default_level() -> void:
 	if level_explicit:return
-	settings.level=0 if int(world.session.snapshot().player.level)>=120 else 120
-	target_level.set_value_no_signal(settings.level)
+	target_level.set_value_no_signal(0 if int(world.session.snapshot().player.level)>=120 else 120)
+
+## Shows the profile's effective settings. Only values that changed since the
+## last load are rewritten, and never a number the player is typing.
+func load_settings() -> void:
+	var all: Dictionary=world.automation_settings()
+	var training: Dictionary=all.training
+	var capture: Dictionary=all.capture
+	var old_training: Dictionary=_loaded.get("training",{})
+	var old_capture: Dictionary=_loaded.get("capture",{})
+	_loading=true
+	if _changed(old_training,training,"xp"):multiplier.select(maxi(0,[1,2,10,100].find(int(training.xp))))
+	if _changed(old_training,training,"compact"):compact.set_pressed_no_signal(bool(training.compact))
+	var shown:=all.duplicate(true)
+	if not _sync_spin(hp_floor,old_training.get("hp"),training.hp):shown.training.hp=old_training.hp
+	if not _sync_spin(battle_limit,old_training.get("limit"),training.limit):shown.training.limit=old_training.limit
+	if _changed(old_training,training,"preset"):preset.select(maxi(0,["attack","capture","train_pet"].find(str(training.preset))))
+	if _changed(old_training,training,"level_explicit") or _changed(old_training,training,"level"):
+		if _typing(target_level):
+			for key in ["level","level_explicit"]:if old_training.has(key):shown.training[key]=old_training[key]
+		else:
+			level_explicit=bool(training.level_explicit)
+			if level_explicit:target_level.value=int(training.level)
+			else:_sync_default_level()
+	if not _sync_spin(capture_hp,old_capture.get("hp"),capture.hp):shown.capture.hp=old_capture.hp
+	if not _sync_spin(capture_pet_max_level,old_capture.get("pet_max_level"),capture.pet_max_level):shown.capture.pet_max_level=old_capture.pet_max_level
+	if _changed(old_capture,capture,"pet") or _changed(old_capture,capture,"pet_id"):_refresh_pet_choices()
+	_loading=false
+	_loaded=shown
+
+static func _changed(old: Dictionary, now: Dictionary, key: String) -> bool:
+	return not old.has(key) or str(old[key])!=str(now[key])
+
+static func _typing(input: SpinBox) -> bool:
+	return input.get_line_edit().has_focus()
+
+## Shows a profile value in a number field, unless the player is typing there
+## or has an unsent change of their own (it is saved shortly and wins).
+## Returns false when the field keeps its value; a later load retries.
+static func _sync_spin(input: SpinBox, old_value: Variant, new_value: Variant, force: bool = false) -> bool:
+	if not force and old_value!=null and str(old_value)==str(new_value):return true
+	if not force and input.get_line_edit().has_focus():return false
+	if not force and old_value!=null and int(input.value)!=int(old_value) and int(input.value)!=int(new_value):return false
+	input.value=new_value
+	return true
+
+## Every choice in these controls, in the runner's flat settings shape.
+func current_settings() -> Dictionary:
+	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
+	result.capture_pet_id=_selected_pet_id()
+	return result
+
+func _selected_pet_id() -> String:
+	return str(capture_pet.get_item_metadata(capture_pet.selected)) if capture_pet.selected>=0 and capture_pet.get_item_metadata(capture_pet.selected)!=null else ""
+
+## The changes these controls make to the profile's settings (see
+## game.flush_automation_settings). Capture settings always; training ones
+## only after Apply / Start. An automatic level target stores no level.
+func settings_patch() -> Dictionary:
+	var all: Dictionary=world.automation_settings()
+	var patch := {}
+	var capture:=AutomationSettings.diff(all.capture,{"hp":int(capture_hp.value),"pet":capture_pet.get_selected_id(),"pet_id":_selected_pet_id(),"pet_max_level":int(capture_pet_max_level.value)})
+	if not capture.is_empty():patch.capture=capture
+	if _training_applied:
+		_training_applied=false
+		var chosen: Dictionary=current_settings()
+		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
+		if level_explicit:wanted.level=chosen.level
+		var training:=AutomationSettings.diff(all.training,wanted)
+		if not level_explicit and world.automation_overrides().get("training",{}).has("level"):training.level=null
+		if not training.is_empty():patch.training=training
+	return patch
 
 func _refresh_pet_choices() -> void:
 	capture_pet.clear();capture_pet.add_item("自动最低等级");capture_pet.set_item_id(0,-1);capture_pet.set_item_metadata(0,"")
@@ -134,14 +211,15 @@ func _refresh_pet_choices() -> void:
 	for i in range(pets.size()):
 		capture_pet.add_item("%d. %s Lv.%d"%[i+1,pets[i].name,pets[i].level],i)
 		capture_pet.set_item_metadata(i+1,str(pets[i].get("pet_id","")))
-	var selected:=capture_pet.get_item_index(int(settings.get("capture_pet",-1)))
-	if not str(settings.get("capture_pet_id","")).is_empty():
+	var chosen: Dictionary=world.automation_settings().capture
+	var selected:=capture_pet.get_item_index(int(chosen.pet))
+	if not str(chosen.pet_id).is_empty():
 		selected=-1
 		for i in range(pets.size()):
-			if str(pets[i].get("pet_id",""))==str(settings.capture_pet_id):selected=capture_pet.get_item_index(i)
+			if str(pets[i].get("pet_id",""))==str(chosen.pet_id):selected=capture_pet.get_item_index(i)
 	if selected<0:
 		capture_pet.add_item("指定宠物不在随身队伍",-2)
-		capture_pet.set_item_metadata(capture_pet.item_count-1,str(settings.get("capture_pet_id","")))
+		capture_pet.set_item_metadata(capture_pet.item_count-1,str(chosen.pet_id))
 		selected=capture_pet.item_count-1
 	capture_pet.select(selected)
 func open_battle_menu() -> void:
@@ -156,9 +234,9 @@ func open_battle_menu() -> void:
 	show();panel.show();progress.hide()
 func start_capture_battle(target: int, finish_battle: bool = false) -> void:
 	if not world.battle_session.snapshot().active:return
-	capture_target=target;preset.select(1)
-	apply_settings()
-	world.link.request({"type":"auto_start","kind":"capture_battle","target":target,"finish_battle":finish_battle,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	capture_target=target
+	world.flush_automation_settings()
+	world.link.request({"type":"auto_start","kind":"capture_battle","target":target,"finish_battle":finish_battle,"speed":world.playback_speed(),"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
 func open_menu() -> void:
 	if minimized:restore();return
 	if visible:return
@@ -173,28 +251,37 @@ func open_menu() -> void:
 	show();panel.show();progress.hide()
 func close_menu() -> void:
 	if running:stop_training("已手动停止");return
+	world.flush_automation_settings()
 	hide();world.release_input();world.clear_input()
+## Saves these choices to the profile and applies this device's playback speed
+## and the live experience multiplier.
 func apply_settings() -> void:
 	for input in [capture_hp,capture_pet_max_level,hp_floor,target_level,battle_limit]:
 		if input.get_line_edit().has_focus():input.apply()
-	settings={"speed":[1.0,2.0,4.0,8.0][speed.selected],"xp":[1,2,10,100][multiplier.selected],"compact":compact.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][preset.selected],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
-	settings.capture_pet_id=str(capture_pet.get_item_metadata(capture_pet.selected)) if capture_pet.selected>=0 and capture_pet.get_item_metadata(capture_pet.selected)!=null else ""
-	world.training_settings=settings.duplicate(true)
-	world.battle_view.playback_speed=float(settings.speed)
-	world.session.experience_multiplier=int(settings.xp)
-	world.link.request({"type":"auto_update","settings":settings})
+	var chosen: Dictionary=current_settings()
+	world.set_battle_speed(float(chosen.speed))
+	world.session.experience_multiplier=int(chosen.xp)
+	_training_applied=true
+	world.mark_settings_dirty(self)
+	world.flush_automation_settings()
 func start_training() -> void:
 	apply_settings()
-	var command := {"type":"auto_start","kind":"battle","settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}
-	if world.battle_session.snapshot().active and str(settings.preset)=="capture":
+	var chosen: Dictionary=current_settings()
+	var command := {"type":"auto_start","kind":"battle","speed":float(chosen.speed),"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}
+	if world.battle_session.snapshot().active and str(chosen.preset)=="capture":
 		command.capture_target=capture_target if capture_target>=0 else int(world.battle_view.player_target)
 	world.link.request(command)
 func start_pet_training(pet_id: String, target_level_value: int = 120) -> bool:
 	if running or world.battle_session.snapshot().active:return false
-	preset.select(2);speed.select(3);multiplier.select(2);compact.button_pressed=true
-	target_level.value=0;level_explicit=true
-	apply_settings()
-	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"pet_train","pet_id":pet_id,"target_level":target_level_value,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	# The backend forces pet-training values for this run only (8×, 10× XP,
+	# compact, mirrors); the other choices here (health floor, limit) are saved
+	# and used as for any start.
+	for input in [hp_floor,battle_limit]:
+		if input.get_line_edit().has_focus():input.apply()
+	_training_applied=true
+	world.mark_settings_dirty(self)
+	world.flush_automation_settings()
+	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"pet_train","pet_id":pet_id,"target_level":target_level_value,"speed":8.0,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
 	return bool(reply.ok) or bool(reply.get("pending",false))
 
 func health_reason(state: Dictionary) -> String:
@@ -220,8 +307,6 @@ func on_status(automation: Dictionary) -> void:
 	if not bool(automation.get("running",false)):
 		if minimized:_end_minimized();world.release_input()
 		return
-	settings=automation.get("settings",settings).duplicate(true)
-	world.battle_view.playback_speed=float(settings.get("speed",1.0))
 	if minimized:_update_chip();return
 	# A find-pet cycle minimized from 自动抓极品 keeps its capture battles out of sight too.
 	if world.pet_hunt_menu.minimized:return
@@ -272,15 +357,12 @@ func advance() -> void:
 	world.acknowledge_presentation()
 	world.link.request({"type":"auto_step"})
 
-func save_capture_settings() -> void:
-	settings.capture_hp=int(capture_hp.value)
-	settings.capture_pet=capture_pet.get_selected_id()
-	settings.capture_pet_max_level=int(capture_pet_max_level.value)
-	settings.capture_pet_id=str(capture_pet.get_item_metadata(capture_pet.selected)) if capture_pet.selected>=0 and capture_pet.get_item_metadata(capture_pet.selected)!=null else ""
-	var capture:={}
-	for key in ["capture_hp","capture_pet","capture_pet_max_level","capture_pet_id"]:
-		world.training_settings[key]=settings[key];capture[key]=settings[key]
-	world.link.request({"type":"auto_update","settings":capture})
+## Capture settings (shown in 自动抓极品 → 抓宠设置) are saved on change: a
+## choice at once, typed or stepped numbers once the player pauses.
+func save_capture_settings(now: bool = true) -> void:
+	if _loading:return
+	world.mark_settings_dirty(self)
+	if now:world.flush_automation_settings()
 
 func acquire_clone_override()->void:
 	world.link.request({"type":"auto","name":"acquire_clone"})

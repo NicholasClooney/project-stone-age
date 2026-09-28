@@ -1,7 +1,8 @@
 extends RefCounted
 ## Backend automation: auto battles (attack, capture, pet training), hunt
 ## scanning and the find-pet workflow. These run on the backend tick whether or
-## not a client is attached; clients send settings, then present status and
+## not a client is attached. Settings come from the character profile
+## (scripts/automation_settings.gd); clients start runs and present status and
 ## events. Ported from the former client loops without rule changes.
 const GameSession = preload("res://server/game_session.gd")
 const Policy = preload("res://scripts/battle_auto_policy.gd")
@@ -10,12 +11,14 @@ const HuntRules = preload("res://scripts/pet_hunt_rules.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const TroopArt = preload("res://server/troop_art.gd")
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
 ## A presenting client may slow automation to its animation, never stall it.
 const PRESENT_TIMEOUT_MSEC := 5000
 const HUNT_FRAME_BUDGET_USEC := 12000
 const COMPACT_BUDGET_USEC := 12000
 const HUNT_MAX_BACKLOG_SECONDS := 0.1
-const DEFAULT_SETTINGS := {"speed":8.0,"xp":10,"compact":true,"hp":10,"level":120,"limit":1000,"preset":"attack","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":10}
+## Pace of an uncompacted run when the starting device names no playback speed.
+const DEFAULT_SPEED := 8.0
 
 var backend
 ## Tests drive step() themselves when false.
@@ -27,7 +30,9 @@ var position_cell := Vector2i.ZERO
 
 # ---- battle runner ---------------------------------------------------------
 var running := false
-var settings: Dictionary = DEFAULT_SETTINGS.duplicate(true)
+## The current run's flat settings: the profile's effective training and
+## capture settings, the starting device's playback speed and run-only forcing.
+var settings: Dictionary = {"speed":DEFAULT_SPEED}
 var single_battle := false
 var capture_target := -1
 var training_pet_id := ""
@@ -79,6 +84,8 @@ var flow_matched_actor: Dictionary = {}
 var flow_matched_index := -1
 var flow_capture_battle_id := ""
 var flow_stat_filters: Dictionary = {}
+## Profile overrides when the cycle started, for species not in flow_stat_filters.
+var flow_settings_overrides: Dictionary = {}
 var flow_target_filter: Dictionary = {}
 var flow_hunt_request: Dictionary = {}
 var flow_stored_count := 0
@@ -108,18 +115,67 @@ func start(command: Dictionary) -> Dictionary:
 	_set_position(command)
 	match str(command.get("kind","")):
 		"battle":return _start_battle_runner(command)
-		"capture_battle":return _reply(start_capture_battle(int(command.get("target",-1)),bool(command.get("finish_battle",false)),command.get("settings",{})),stop_reason)
-		"pet_train":return _reply(start_pet_training(str(command.get("pet_id","")),int(command.get("target_level",120)),command.get("settings",{})),stop_reason)
+		"capture_battle":
+			_set_speed(command)
+			return _reply(start_capture_battle(int(command.get("target",-1)),bool(command.get("finish_battle",false)),command.get("settings",{})),stop_reason)
+		"pet_train":
+			_set_speed(command)
+			return _reply(start_pet_training(str(command.get("pet_id","")),int(command.get("target_level",120)),command.get("settings",{})),stop_reason)
 		"hunt":
-			_set_position(command)
-			return _reply(start_hunt(command.get("filter",{})),hunt_status)
+			if hunt_running or running or flow_active():return _reply(false,"自动流程进行中")
+			_load_settings(command)
+			return _reply(start_hunt(hunt_request(command)),hunt_status)
 		"find_pet":
-			_set_position(command)
-			flow_stat_filters = _int_keys(command.get("stat_filters",{}))
-			flow_hunt_request = command.get("filter",{}).duplicate(true)
-			if command.has("settings"):settings.merge(command.settings,true)
+			if flow_active():return _reply(false,"找宠流程进行中")
+			# A cycle keeps the stat conditions it started with. Older clients may
+			# still send their own; the profile's are used otherwise.
+			flow_settings_overrides = backend.session.automation_settings()
+			flow_stat_filters = AutomationSettings.stat_filters(flow_settings_overrides)
+			flow_stat_filters.merge(_int_keys(command.get("stat_filters",{})),true)
+			flow_hunt_request = hunt_request(command)
+			_load_settings(command)
 			return _reply(start_cycle(false),flow_reason)
 	return {"ok":false,"reason":"unknown automation"}
+
+## The run's settings from the profile, the device's playback speed and any
+## run-only `settings` a command still carries (older clients, tests).
+func _load_settings(command: Dictionary = {}) -> void:
+	var speed := float(settings.get("speed",DEFAULT_SPEED))
+	settings = profile_settings()
+	settings.speed = speed
+	_set_speed(command)
+	if command.get("settings") is Dictionary:settings.merge(command.settings,true)
+
+func profile_settings() -> Dictionary:
+	return AutomationSettings.runner_settings(backend.session.automation_settings(),int(backend.session.snapshot().player.level))
+
+func _set_speed(command: Dictionary) -> void:
+	if command.has("speed"):settings.speed = clampf(float(command.speed),1.0,8.0)
+
+## Hunt filter from the profile plus the templates this backend can present
+## here; a command's own `filter` (older clients, tests) overrides fields.
+func hunt_request(command: Dictionary = {}) -> Dictionary:
+	var filter: Dictionary = AutomationSettings.hunt_filter(backend.session.automation_settings())
+	var given = command.get("filter",{})
+	if given is Dictionary:filter.merge(given,true)
+	if not filter.has("usable"):filter.usable = usable_templates(bool(filter.level_one))
+	return filter
+
+## Capturable templates at the reported position whose art this backend has.
+func usable_templates(level_one: bool) -> Array:
+	var usable := []
+	for item in HuntRules.candidates(backend.encounter_catalog,position_map,position_cell,level_one):
+		var definition: Dictionary = backend.encounter_catalog.data.get("templates",{}).get(str(item.id),{})
+		if TroopArt.can_render([{"sprite":int(definition.get("sprite",-1))}]):usable.append(int(item.id))
+	return usable
+
+## The profile's automation settings changed: a running capture follows the
+## new capture settings at once (training settings apply from the next start).
+func profile_settings_changed() -> void:
+	if not (running or hunt_running or flow_active()):return
+	var fresh := profile_settings()
+	for key in ["capture_hp","capture_pet","capture_pet_id","capture_pet_max_level"]:settings[key] = fresh[key]
+	_emit_status()
 
 func update(command: Dictionary) -> Dictionary:
 	if command.has("settings"):settings.merge(command.settings,true)
@@ -299,7 +355,7 @@ func _close_battle() -> void:
 
 func _start_battle_runner(command: Dictionary) -> Dictionary:
 	_set_position(command)
-	if command.has("settings"):settings.merge(command.settings,true)
+	_load_settings(command)
 	if command.has("capture_target"):capture_target = int(command.capture_target)
 	start_training()
 	return _reply(running,stop_reason)
@@ -330,7 +386,7 @@ func start_training() -> void:
 
 func start_capture_battle(target: int, finish_battle: bool = false, extra: Dictionary = {}) -> bool:
 	if not backend.battle.snapshot().active:return false
-	settings.merge(extra,true)
+	_load_settings({"settings":extra})
 	capture_target = target
 	settings.preset = "capture"
 	start_training()
@@ -348,7 +404,7 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 	if int(profile.get("ride_pet",-1))==chosen:stop_reason = "目标宠物正在骑乘，请先下骑";return false
 	if not backend.session.select_pet(chosen):stop_reason = "无法让目标宠物出战";return false
 	backend.publish()
-	settings.merge(extra,true)
+	_load_settings({"settings":extra})
 	settings.merge({"preset":"train_pet","speed":8.0,"xp":10,"compact":true,"level":0,"level_explicit":true},true)
 	start_training()
 	if not running:return false
@@ -520,7 +576,8 @@ func collect_target_text() -> String:
 	return "不限" if stop_after<=0 else str(stop_after)
 
 func filter_for(template_id: int) -> Dictionary:
-	return flow_stat_filters.get(template_id,StatFilter.defaults(template_id))
+	if flow_stat_filters.has(template_id):return flow_stat_filters[template_id]
+	return AutomationSettings.stat_filter(flow_settings_overrides,template_id)
 
 ## Hunt-time gate: compute the exact Lv.120 stats from the wild pet's own seed and
 ## only let pets that will meet the conditions through to capture.

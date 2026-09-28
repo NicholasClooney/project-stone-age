@@ -167,6 +167,18 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	_publish()
 	return {"ok":true}
 
+## Partial update of the profile's automation settings (see
+## scripts/automation_settings.gd): deep-merged and validated; null resets a
+## value or section to its default. Every client gets the profile event.
+func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
+	if not command.has("settings"):return _reject("missing settings")
+	session.last_error = ""
+	if not session.set_automation_settings(command.settings):return _reject(session.last_error)
+	save()
+	automation.profile_settings_changed()
+	_publish()
+	return {"ok":true}
+
 ## Drops the listed hunt-stored pets beyond the per-metric keep counts; replies with how many.
 func _cmd_prune_hunt_pets(command: Dictionary) -> Dictionary:
 	var pruned: int = session.prune_hunt_pets(int(command.get("template_id",-1)),command.get("keep",{}),command.get("ids",[]))
