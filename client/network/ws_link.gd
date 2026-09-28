@@ -3,7 +3,9 @@ extends RefCounted
 ## are asynchronous: request() returns {"pending":true} and passes the real
 ## reply to done later. Commands are never queued while offline, so a
 ## purchase or battle action cannot replay after reconnecting. Call poll()
-## every frame.
+## every frame. A connection that goes silent (server killed without a close,
+## Wi-Fi dropped, Mac asleep) is dropped after SILENCE_LIMIT seconds of
+## missed heartbeats, so the client always learns it is offline.
 signal message(event: Dictionary)
 signal connected
 signal disconnected
@@ -11,6 +13,8 @@ signal disconnected
 const Codec = preload("res://network/codec.gd")
 const PROTOCOL := 1
 const MAX_BACKOFF := 10.0
+const PING_INTERVAL := 3.0
+const SILENCE_LIMIT := 10.0
 
 var url := ""
 var backend = null
@@ -24,6 +28,9 @@ var _backoff := 1.0
 var _hello_seq := -1
 var _last_state := -1
 var _started := false
+var silence_limit := SILENCE_LIMIT
+var _since_heard := 0.0
+var _since_ping := 0.0
 
 func _init(server_url: String) -> void:
 	url = server_url
@@ -37,6 +44,8 @@ func connect_now() -> void:
 	if _peer!=null:_peer.close()
 	_hello_seq = -1
 	_last_state = -1
+	_since_heard = 0.0
+	_since_ping = 0.0
 	_peer = WebSocketPeer.new()
 	_peer.inbound_buffer_size = 8 << 20
 	_peer.outbound_buffer_size = 1 << 20
@@ -73,22 +82,56 @@ func poll(delta: float) -> void:
 		WebSocketPeer.STATE_OPEN:
 			if _hello_seq < 0:_send_hello()
 			_drain()
+			_heartbeat(delta)
+		WebSocketPeer.STATE_CONNECTING:
+			_heartbeat(delta)
 		WebSocketPeer.STATE_CLOSING:
 			_drain()
 		WebSocketPeer.STATE_CLOSED:
 			_drain()
 			if _peer.get_close_code()==4000:superseded = true
-			var was_online := online
-			online = false
-			_peer = null
-			_hello_seq = -1
-			for seq in _callbacks:_callbacks[seq].call({"ok":false,"reason":"offline","type":"rejected"})
-			_callbacks.clear()
-			if was_online:disconnected.emit()
-			_schedule_retry()
+			_drop()
+
+## Counts frame time rather than wall time, so a browser tab that was hidden
+## (and not polling) is not mistaken for a dead server when it comes back.
+func _heartbeat(delta: float) -> void:
+	if _peer==null:return
+	_since_heard += delta
+	if _since_heard > silence_limit:
+		print("[link] %s silent for %.0f s, dropping" % [url,_since_heard])
+		_peer.close()
+		_drop()
+		return
+	_since_ping += delta
+	if online and _since_ping >= PING_INTERVAL:
+		_since_ping = 0.0
+		_seq += 1
+		_peer.send_text(Codec.encode({"type":"ping","seq":_seq}))
+
+func _drop() -> void:
+	var was_online := online
+	online = false
+	_peer = null
+	_hello_seq = -1
+	var pending := _callbacks
+	_callbacks = {}
+	for seq in pending:pending[seq].call({"ok":false,"reason":"offline","type":"rejected"})
+	if was_online:disconnected.emit()
+	_schedule_retry()
+
+## Seconds until the next reconnection attempt; 0 while one is in progress.
+func retry_seconds() -> int:
+	return ceili(maxf(_retry_in,0.0)) if _peer==null else 0
+
+## Takes the session back after another device superseded this one.
+func take_over() -> void:
+	superseded = false
+	_backoff = 1.0
+	connect_now()
 
 func _drain() -> void:
 	while _peer!=null and _peer.get_available_packet_count() > 0:
+		_since_heard = 0.0
 		_receive(_peer.get_packet().get_string_from_utf8())
 
 func close() -> void:

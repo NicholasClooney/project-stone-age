@@ -62,6 +62,7 @@ static func bind_movement() -> void:
 
 ## The panel whose controls the highlight moves between, or null in the world.
 func panel() -> Control:
+	if world.has_method("link_blocked") and world.link_blocked():return world.link_overlay
 	for node in [world.leveling_destinations,world.training_helper,world.pet_hunt_menu,world.changelog_menu,world.character_selection,world.dev_gm_menu,world.dev_map_overview,world.pet_training]:
 		if is_instance_valid(node) and node.visible:return node
 	if is_instance_valid(world.world_travel) and world.world_travel.overlay.visible:return world.world_travel.overlay
@@ -154,7 +155,10 @@ func _process(delta: float) -> void:
 		return
 	var options := candidates(root)
 	if not is_instance_valid(target) or not target in options:
-		target = _initial(options)
+		target = _replacement(root,options)
+	if is_instance_valid(target):
+		_spot_root = root
+		_spot = _screen_rect(target)
 	if _direction!=Vector2i.ZERO:
 		_repeat -= delta
 		if _repeat<=0:
@@ -180,6 +184,16 @@ func _initial(options: Array[Control]) -> Control:
 		if a.y<b.y-4 or (absf(a.y-b.y)<=4 and a.x<b.x):best = option
 	return best
 
+## A panel redrawn with new data replaces its controls; the highlight stays on
+## whatever now sits where it was, instead of jumping back to the first control.
+var _spot_root: Control
+var _spot := Rect2()
+func _replacement(root: Control, options: Array[Control]) -> Control:
+	if root==_spot_root:
+		for option in options:
+			if _screen_rect(option).get_center().distance_to(_spot.get_center())<=6:return option
+	return _initial(options)
+
 ## Moves the highlight to the nearest control in a screen direction.
 func move(direction: Vector2) -> void:
 	_last_pad_msec = Time.get_ticks_msec()
@@ -187,7 +201,7 @@ func move(direction: Vector2) -> void:
 	if root==null:return
 	var options := candidates(root)
 	if not is_instance_valid(target) or not target in options:
-		target = _initial(options);return
+		target = _replacement(root,options);return
 	var origin := _screen_rect(target).get_center()
 	var best: Control
 	var best_score := INF

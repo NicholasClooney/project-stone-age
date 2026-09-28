@@ -113,6 +113,10 @@ func _cmd_hello(command: Dictionary) -> Dictionary:
 	if int(command.get("protocol",PROTOCOL))!=PROTOCOL:return _reject("protocol %d required" % PROTOCOL)
 	return {"ok":true,"snapshot":full_snapshot()}
 
+## Heartbeat: lets a client notice a connection that died without closing.
+func _cmd_ping(_command: Dictionary) -> Dictionary:
+	return {"ok":true}
+
 func _cmd_snapshot(_command: Dictionary) -> Dictionary:
 	return {"ok":true,"snapshot":full_snapshot()}
 

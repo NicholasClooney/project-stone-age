@@ -47,6 +47,17 @@ func run() -> void:
 	check(game.session.gm_grant_points(3),"profile command is sent")
 	check(await until(func():return int(game.session.snapshot().player.stat_points)==points+3),"accepted command updates the client through events")
 
+	# Open panels redraw when the backend's update arrives, not when a command is sent.
+	var gm = game.dev_gm_menu
+	gm.open_menu()
+	backend.session._profile.player.hp = 1
+	backend.publish()
+	check(await until(func():return gm.summary.text.contains("体力 1 /")),"an open GM panel shows data pushed by the backend")
+	var max_hp: int = int(backend.session._profile.player.max_hp)
+	gm._apply(game.session.gm_heal(-2))
+	check(await until(func():return gm.summary.text.contains("体力 %d / %d" % [max_hp,max_hp])),"restoring health over the network updates the open GM panel")
+	gm.close_menu()
+
 	check(game.begin_battle(false,1),"battle request is sent")
 	check(await until(func():return game.battle_view.visible and backend.battle_open),"backend battle opens the client battle view")
 	game.battle_action("developer_escape")
@@ -64,11 +75,27 @@ func run() -> void:
 	check(await until(func():return bool(game.state.automation.get("running",false))),"automation starts on the backend")
 	server._controller.close()
 	check(await until(func():return not game.link.online and not backend.automation.client_attached),"client disconnect is noticed on both sides")
+	check(game.link_blocked() and game._link_status.text.contains("断开连接"),"a lost connection covers the game with a notice")
+	var cell_before: Vector2i = game.cell
+	var press := InputEventAction.new();press.action = "east";press.pressed = true
+	Input.parse_input_event(press)
+	for i in range(30):await physics_frame
+	press.pressed = false;Input.parse_input_event(press)
+	check(game.cell==cell_before and game.held.is_empty(),"the world does not move while offline")
 	var before: int = backend.automation.battles
 	check(await until(func():return backend.automation.battles>before or not backend.automation.running,20.0),"backend keeps fighting while no client is connected")
 	check(await until(func():return game.link.online,15.0),"client reconnects on its own")
 	check(await until(func():return int(game.state.automation.get("battles",-1))==backend.automation.battles),"reconnect resyncs automation progress")
 	check(game.message.text.begins_with("已重新连接"),"reconnect shows an offline summary")
+	check(not game.link_blocked(),"reconnecting removes the notice")
+
+	# A server that stops answering without closing (killed host, Wi-Fi drop) is noticed too.
+	game.link.silence_limit = 1.5
+	server.process_mode = Node.PROCESS_MODE_DISABLED
+	check(await until(func():return game.link_blocked(),6.0),"a silent server is detected by the heartbeat")
+	server.process_mode = Node.PROCESS_MODE_INHERIT
+	check(await until(func():return game.link.online and not game.link_blocked(),15.0),"the client recovers once the server answers again")
+	game.link.silence_limit = game.link.SILENCE_LIMIT
 
 	# A second device takes over; the first stops syncing.
 	var other = WsLink.new("ws://127.0.0.1:%d" % port)
@@ -76,6 +103,11 @@ func run() -> void:
 	check(await until(func():
 		other.poll(1.0/60.0)
 		return other.online and game.link.superseded),"newest connection takes control and the old client is told")
+	check(await until(func():return game.link_blocked() and game._take_over_button.visible),"the superseded window offers to continue here")
+	game._take_over_button.pressed.emit()
+	check(await until(func():
+		other.poll(1.0/60.0)
+		return game.link.online and not game.link_blocked() and other.superseded),"continuing here takes control back")
 	other.close()
 	backend.handle({"type":"auto_stop"})
 	server.stop()

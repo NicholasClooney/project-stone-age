@@ -46,13 +46,18 @@ static var server_url_override := ""
 var remote_url := ""
 var _offline_profile: Dictionary = {}
 var _offline_battles := 0
-var _connection_label: Label
+## Remote play: covers the game and blocks input whenever the backend is unreachable.
+var link_overlay: Control
+var _link_status: Label
+var _take_over_button: Button
 var asset_packs: Node
 var gamepad: Node
 var _download_layer: CanvasLayer
 var _download_label: Label
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
+var _ui_stale := false
+var _companion_key: Array = []
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
 const STEP_TIME := 0.19
@@ -575,6 +580,9 @@ func _input(event: InputEvent) -> void:
 		pet_workflow.stop_cycle("已手动停止");get_viewport().set_input_as_handled();return
 	if data.is_empty():
 		return
+	if link_blocked():
+		if event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion:get_viewport().set_input_as_handled()
+		return
 	for action in ["north","south","west","east"]:
 		if event.is_action_pressed(action) and not event.is_echo() and not paused_input:
 			if is_instance_valid(travel_router):travel_router.cancel("手动移动取消了自动寻路。")
@@ -686,10 +694,16 @@ func walk_to(destination: Vector2i) -> void:
 	queue_redraw()
 
 func _physics_process(delta: float) -> void:
-	if not link.is_local():link.poll(delta)
+	if not link.is_local():
+		link.poll(delta)
+		_update_link_overlay()
+		if link_blocked():return
 	if area_transition_busy:return
 	if data.is_empty():
 		return
+	if _ui_stale:
+		_ui_stale = false
+		refresh_open_panels()
 	if moving:
 		var d := target_cell-from_cell
 		var distance_scale := sqrt(2.0) if d.x != 0 and d.y != 0 else 1.0
@@ -1629,6 +1643,26 @@ func _show_startup_error(text_value: String) -> void:
 	label.position = Vector2(50,100)
 	add_child(label)
 
+## Profile updates can arrive after the action that caused them (always over a
+## network link, or from automation). Redraw whatever is open, once per frame.
+func refresh_open_panels() -> void:
+	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:dev_gm_menu._refresh_actor()
+	for panel in [adventure_menu,pet_training]:
+		if is_instance_valid(panel) and panel.visible and not _typing_in(panel):panel.rebuild()
+	var profile_now: Dictionary = state.profile
+	var active := int(profile_now.get("active_pet",-1))
+	var pets: Array = profile_now.get("pets",[])
+	var companion_key := [active,int(profile_now.get("ride_pet",-1)),str(profile_now.get("character_id","")),
+		pets[active].get("sprite",-1) if active>=0 and active<pets.size() else -1,int(pets[active].get("hp",0))>0 if active>=0 and active<pets.size() else false]
+	if companion_key!=_companion_key:
+		_companion_key = companion_key
+		refresh_companion()
+
+## A rebuild would discard text the player is typing (a pet name, a filter).
+func _typing_in(panel: Control) -> bool:
+	var focused := get_viewport().gui_get_focus_owner()
+	return focused is LineEdit and panel.is_ancestor_of(focused)
+
 func report_position() -> void:
 	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
 
@@ -1640,14 +1674,58 @@ func _on_map_reported(reply: Dictionary) -> void:
 
 ## Remote start: wait for the backend's first snapshot before building the map.
 func _connect_remote() -> void:
-	_connection_label = text("正在连接 MacBook 上的服务器 %s …" % remote_url,20)
-	_connection_label.position = Vector2(50,100)
-	add_child(_connection_label)
+	_build_link_overlay()
 	link.connected.connect(_on_link_connected)
 	link.disconnected.connect(_on_link_disconnected)
 	link.connect_now()
 	await link.connected
-	_connection_label.queue_free()
+
+func _build_link_overlay() -> void:
+	var layer := CanvasLayer.new()
+	layer.layer = 150
+	add_child(layer)
+	link_overlay = ColorRect.new()
+	link_overlay.color = Color(0,0,0,0.72)
+	link_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	link_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
+	layer.add_child(link_overlay)
+	var column := VBoxContainer.new()
+	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
+	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	column.grow_vertical = Control.GROW_DIRECTION_BOTH
+	column.alignment = BoxContainer.ALIGNMENT_CENTER
+	column.add_theme_constant_override("separation",16)
+	link_overlay.add_child(column)
+	_link_status = text("",20)
+	_link_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	column.add_child(_link_status)
+	_take_over_button = button("在此设备继续",func():link.take_over())
+	_take_over_button.add_theme_font_size_override("font_size",18)
+	_take_over_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
+	column.add_child(_take_over_button)
+	_update_link_overlay()
+
+## True while the backend is unreachable; the overlay then owns all input.
+func link_blocked() -> bool:
+	return is_instance_valid(link_overlay) and link_overlay.visible
+
+func _update_link_overlay() -> void:
+	if not is_instance_valid(link_overlay):return
+	var blocked: bool = not link.online
+	if blocked!=link_overlay.visible:
+		link_overlay.visible = blocked
+		if blocked:
+			clear_input()
+			path.clear()
+	if not blocked:return
+	_take_over_button.visible = link.superseded
+	if link.superseded:
+		_link_status.text = "已在另一台设备上继续游戏。\n此窗口不再同步。"
+	elif data.is_empty():
+		_link_status.text = "正在连接 MacBook 上的服务器\n%s …" % remote_url
+	else:
+		var retry: int = link.retry_seconds()
+		_link_status.text = "与 MacBook 上的服务器断开连接\n%s\n自动战斗和找宠会在服务器上继续。" % ("%d 秒后重试…" % retry if retry > 0 else "正在重连…")
 
 func _on_link_connected() -> void:
 	if data.is_empty() or not is_instance_valid(battle_view):return
@@ -1690,6 +1768,9 @@ func _on_backend_message(event: Dictionary) -> void:
 		"battle_closed":present_battle_close(str(event.outcome))
 		"profile":
 			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
+			_ui_stale = not link.is_local()
+		"pet_storage":
+			_ui_stale = not link.is_local()
 		"auto_status":
 			for node in [training_helper,pet_hunt_menu,pet_workflow]:
 				if is_instance_valid(node):node.on_status(event.status)
@@ -1699,7 +1780,7 @@ func _on_backend_message(event: Dictionary) -> void:
 			if not reason.is_empty():message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
 		"superseded":
 			message.text = "已在另一台设备上继续游戏；此窗口不再同步。"
-			paused_input = true
+			_update_link_overlay()
 
 func _on_auto_event(detail: Dictionary) -> void:
 	match str(detail.kind):
