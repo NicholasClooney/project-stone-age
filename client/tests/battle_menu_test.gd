@@ -9,6 +9,7 @@ class TestSession:
 class TestTerrain:
 	extends RefCounted
 	var ground := {}
+	func ident_at(index: int) -> String:return str(ground.get(index,""))
 class DefeatWorld:
 	extends Node
 	var cell := Vector2i.ZERO

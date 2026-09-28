@@ -33,7 +33,7 @@ func _process(_delta: float) -> void:
     if int(metadata.get("priority",0))==3 and int(metadata.hit)!=0:pivot.z_index=-1
     pivot.position = world.project(Vector2(entry[0],entry[1]))
     var art := Sprite2D.new()
-    art.texture=world.textures[id];art.centered=false
+    art.texture=world.texture(id);art.centered=false
     art.position=Vector2(metadata.x,metadata.y)
     pivot.add_child(art)
     world.actors.add_child(pivot)

@@ -117,7 +117,11 @@ var mvp_manifest: Dictionary = {}
 var last_adventure_message := ""
 var boss_button: Button
 var data: Dictionary
+## Map art by image id, loaded when first drawn and kept across map changes
+## (maps share most tiles). Cleared on a map change once it grows past
+## TEXTURE_CACHE_LIMIT, so memory stays bounded on the web client.
 var textures: Dictionary = {}
+const TEXTURE_CACHE_LIMIT := 4000
 var player: Node2D
 var actors: Node2D
 var camera: Camera2D
@@ -268,18 +272,14 @@ func display_cell() -> Vector2i:
 	return cell+Vector2i(int(origin[0]),int(origin[1]))
 
 func build_world() -> void:
-	var map_image_ids: Array = data.images.keys()
 	if character_catalog.is_empty() and FileAccess.file_exists("res://assets/legacy/characters/catalog.json"):
 		character_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/characters/catalog.json"))
 	if not character_catalog.is_empty():
 		data.characters.merge(character_catalog.characters,true)
 		data.images.merge(character_catalog.images,true)
-	for ident in map_image_ids:
-		textures[ident] = load("res://assets/legacy/images/"+ident+".png")
 	terrain = LegacyGround.new()
 	terrain.world = self
-	for entry in data.ground:
-		terrain.ground[int(entry[1])*int(data.width)+int(entry[0])] = str(int(entry[2]))
+	terrain.fill(data.ground,int(data.width),int(data.height))
 	add_child(terrain)
 	actors = Node2D.new()
 	actors.y_sort_enabled = true
@@ -302,9 +302,12 @@ func build_world() -> void:
 	navigation.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
 	navigation.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
 	navigation.update()
-	for y in range(int(data.height)):
-		for x in range(int(data.width)):
-			navigation.set_point_solid(Vector2i(x,y),not is_walkable(Vector2i(x,y)))
+	# While the map is built nothing else blocks a cell (the resident and the
+	# travel overlay are placed afterwards), so only the map's own flags count.
+	var width := int(data.width)
+	var blocked: Array = data.blocked
+	for index in range(blocked.size()):
+		if blocked[index]!=0:navigation.set_point_solid(Vector2i(index%width,index/width))
 	props = preload("res://scripts/legacy_props.gd").new()
 	props.world = self
 	actors.add_child(props)
@@ -338,7 +341,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 		remove_child(node)
 		node.queue_free()
 	data = next_data
-	textures.clear()
+	if textures.size() > TEXTURE_CACHE_LIMIT:textures.clear()
 	world_travel = null
 	npc_data.clear()
 	npc_cell = Vector2i(-1,-1)
@@ -555,6 +558,13 @@ func project(grid: Vector2) -> Vector2:
 
 func unproject(point: Vector2) -> Vector2:
 	return Vector2(point.x/64-point.y/48,point.x/64+point.y/48)
+
+func texture(ident: String) -> Texture2D:
+	var cached: Texture2D = textures.get(ident)
+	if cached==null:
+		cached = load("res://assets/legacy/images/"+ident+".png")
+		textures[ident] = cached
+	return cached
 
 func is_walkable(point: Vector2i) -> bool:
 	if point.x<0 or point.y<0 or point.x>=int(data.width) or point.y>=int(data.height):

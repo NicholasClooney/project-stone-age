@@ -384,7 +384,7 @@ func required_art(next_state: Dictionary) -> Dictionary:
 	return {"sprites":sprites.keys(),"riding":riding.keys(),"files":files}
 
 func _ground_bitmap() -> String:
-	return str(world.terrain.ground.get(int(world.cell.y)*int(world.data.width)+int(world.cell.x),""))
+	return world.terrain.ident_at(int(world.cell.y)*int(world.data.width)+int(world.cell.x))
 
 func open_battle(next_state: Dictionary) -> void:
 	hunt_target_index=-1

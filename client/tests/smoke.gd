@@ -26,7 +26,16 @@ func run() -> void:
 	root.add_child(game)
 	await ticks(3)
 	check(game.load_error.is_empty(),"original assets load")
-	check(game.textures.size()>=1000,"original map and character textures loaded")
+	# Map art loads as it comes into view, not all at once.
+	var nearby_tile := ""
+	for offset in range(-5,6):
+		var tile: String = game.terrain.ident_at((game.cell.y+offset)*int(game.data.width)+game.cell.x+offset)
+		if nearby_tile.is_empty():nearby_tile = tile
+	check(not nearby_tile.is_empty() and game.texture(nearby_tile)!=null,"original map textures load for the visible area")
+	for i in range(60):
+		if not game.props.visible_props.is_empty():break
+		await process_frame
+	check(not game.props.visible_props.is_empty(),"original scenery streams in around the player")
 	check(game.is_walkable(game.SPAWN),"spawn lies on walkable original map cell")
 	check(game.music.playing,"original village music playing")
 	for pair in [[KEY_W,Vector2i(1,-1),4],[KEY_S,Vector2i(-1,1),0],[KEY_A,Vector2i(-1,-1),2],[KEY_D,Vector2i(1,1),6]]:

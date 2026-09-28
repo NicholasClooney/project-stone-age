@@ -1,9 +1,18 @@
 {
-  "version": "v0.51.1",
-  "count": 55,
+  "version": "v0.51.2",
+  "count": 56,
   "feature_count": 35,
-  "fix_count": 20,
+  "fix_count": 21,
   "entries": [
+    {
+      "version": "v0.51.2",
+      "date": "2026-09-28",
+      "kind": "fix",
+      "title": "切换地图更快",
+      "details": [
+        "进入村庄或野外的等待时间缩短到原来的三分之一到一半，大型野外地图尤其明显。"
+      ]
+    },
     {
       "version": "v0.51.1",
       "date": "2026-09-28",
