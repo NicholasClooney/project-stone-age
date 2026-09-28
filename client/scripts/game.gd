@@ -48,6 +48,7 @@ var _offline_profile: Dictionary = {}
 var _offline_battles := 0
 var _connection_label: Label
 var asset_packs: Node
+var gamepad: Node
 var _download_layer: CanvasLayer
 var _download_label: Label
 var arrival_lock := Vector2i(-1,-1)
@@ -194,6 +195,9 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
 	if "--script" in OS.get_cmdline_args():profile_persistence = false
+	gamepad = preload("res://scripts/gamepad.gd").new()
+	gamepad.configure(self)
+	add_child(gamepad)
 	asset_packs = AssetPacks.new()
 	add_child(asset_packs)
 	var pack_url := _asset_pack_url()
