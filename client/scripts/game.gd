@@ -72,6 +72,9 @@ var waiting_screen: CanvasLayer
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 var _ui_stale := false
+## When a key was last pressed in a text field; see _typing_in.
+var _last_typing_msec := -100000
+const TYPING_GRACE_MSEC := 2000
 ## Redraws while automation runs are spaced out so a panel's buttons survive a click.
 const UI_REFRESH_MSEC := 400
 var _ui_refreshed_msec := -100000
@@ -624,6 +627,8 @@ func request_step(destination: Vector2i) -> bool:
 	return true
 
 func _input(event: InputEvent) -> void:
+	if event is InputEventKey and event.pressed and get_viewport().gui_get_focus_owner() is LineEdit:
+		_last_typing_msec = Time.get_ticks_msec()
 	if event.is_action_pressed("ui_cancel") and is_instance_valid(pet_workflow) and pet_workflow.phase=="restart":
 		pet_workflow.stop_cycle("已手动停止");get_viewport().set_input_as_handled();return
 	if data.is_empty():
@@ -1914,9 +1919,12 @@ func _scroll_areas(root: Node) -> Array[ScrollContainer]:
 	return found
 
 ## A rebuild would discard text the player is typing (a pet name, a filter).
+## Focus alone is not typing: a number box keeps focus after a click on it or
+## its arrows, and treating that as typing froze the panel (for example the
+## 同种比较 list missing a newly caught pet) until focus moved elsewhere.
 func _typing_in(panel: Control) -> bool:
 	var focused := get_viewport().gui_get_focus_owner()
-	return focused is LineEdit and panel.is_ancestor_of(focused)
+	return focused is LineEdit and panel.is_ancestor_of(focused) and Time.get_ticks_msec()-_last_typing_msec < TYPING_GRACE_MSEC
 
 func report_position() -> void:
 	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"client":_client_id})

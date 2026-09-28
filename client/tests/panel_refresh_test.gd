@@ -90,6 +90,25 @@ func run() -> void:
 	await process_frame
 	check(game._scroll_areas(menu)[0].scroll_vertical==0,"reopening the menu starts at the top")
 
+	# A number box that merely holds focus (after a click on it or its arrows)
+	# must not freeze the panel: new pets have to appear in 同种比较.
+	game.close_adventure_menu()
+	game.show_adventure_menu("pets")
+	menu.pet_compare_open = true
+	menu.rebuild()
+	await process_frame
+	var threshold: SpinBox = menu.find_child("CompareThresholdValue",true,false)
+	check(threshold != null,"the comparison view has its threshold number box")
+	threshold.get_line_edit().grab_focus()
+	game._last_typing_msec = -100000
+	var deferred: bool = game.refresh_open_panels()
+	check(not deferred and not menu.is_ancestor_of(threshold),"a focused but idle number box does not stop the panel refreshing")
+	var fresh: SpinBox = menu.find_child("CompareThresholdValue",true,false)
+	fresh.get_line_edit().grab_focus()
+	game._last_typing_msec = Time.get_ticks_msec()
+	check(game.refresh_open_panels() and menu.is_ancestor_of(fresh),"while the player is typing the panel waits")
+	game._last_typing_msec = -100000
+
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame
