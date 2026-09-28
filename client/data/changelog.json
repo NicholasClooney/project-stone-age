@@ -1,9 +1,16 @@
 {
-  "version": "v0.50.2",
-  "count": 52,
+  "version": "v0.50.3",
+  "count": 53,
   "feature_count": 34,
-  "fix_count": 18,
+  "fix_count": 19,
   "entries": [
+    {
+      "version": "v0.50.3",
+      "date": "2026-09-28",
+      "kind": "fix",
+      "title": "show the take-over button text in Chinese",
+      "details": []
+    },
     {
       "version": "v0.50.2",
       "date": "2026-09-28",

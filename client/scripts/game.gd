@@ -1700,6 +1700,8 @@ func _build_link_overlay() -> void:
 	_link_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(_link_status)
 	_take_over_button = button("在此设备继续",func():link.take_over())
+	# The overlay sits outside the themed UI layer, so it needs the font itself.
+	_take_over_button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	_take_over_button.add_theme_font_size_override("font_size",18)
 	_take_over_button.size_flags_horizontal = Control.SIZE_SHRINK_CENTER
 	column.add_child(_take_over_button)
