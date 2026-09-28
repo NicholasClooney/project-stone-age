@@ -11,6 +11,8 @@ The browser build (Godot 4.6 Web export, Compatibility renderer, single-threaded
 
 Open `http://<MacBook address>:8780/` on any device on the same network; `serve.sh` prints the address. The page connects to `ws://<page host>:8781`. Override with `?server=ws://host:port` or `?packs=<url>`. Quit the desktop game first; both would write the same save.
 
+Rebuilds are incremental: the export imports only changed assets, and packs whose source files (including their imported copies) are unchanged are reused from the served set, so a code-only rebuild takes about 30 s instead of about 55 s. The fingerprints live in `build/web-packs/cache.json`; delete it to rewrite every pack. The page server can keep running during a build; the new build is swapped in only when complete, and clients pick it up on reload.
+
 Export templates live in `~/Library/Application Support/Godot/export_templates/4.6.stable/`; only the `web_*` archives are needed.
 
 ## Asset packs
