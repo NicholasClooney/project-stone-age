@@ -395,16 +395,19 @@ func retrieve_pet(index: int) -> bool:
 
 # Rolling keep for pets the auto-hunt stored (flag auto_hunt): per metric in
 # order, keep the top N not already kept (e.g. 15 by sum, then 5 by attack) and
-# delete the rest. Player-stored and favorite pets are never touched. All-zero keeps prune nothing.
-func prune_hunt_pets(template_id: int, keep: Dictionary) -> int:
+# delete the rest. Only pets listed in ids (this run's rejects) are candidates;
+# earlier warehouse pets, player-stored and favorite pets are never touched. All-zero keeps prune nothing.
+func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return 0
 	var total_keep:=0
 	for metric in keep:total_keep+=maxi(0,int(keep[metric]))
 	if total_keep<=0:return 0
+	var allowed:={}
+	for id in ids:allowed[str(id)]=true
 	var candidates:=[]
 	for pet in _profile.get("pet_storage",[]):
-		if (pet.get("auto_hunt",false) or pet.get("auto_reject",false)) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
+		if allowed.has(str(pet.get("pet_id",""))) and (pet.get("auto_hunt",false) or pet.get("auto_reject",false)) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
 	if candidates.size()<=total_keep:return 0
 	var kept:={}
 	for metric in ["sum","attack","defence","speed"]:

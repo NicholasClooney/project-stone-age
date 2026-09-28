@@ -70,8 +70,8 @@ func heal() -> bool:return request({"type":"heal"})
 func heal_carried_pets() -> bool:return request({"type":"heal_carried_pets"})
 func grant_pet_care_items() -> bool:return request({"type":"grant_pet_care_items"})
 func level_pet_to(pet_id: String, target: int) -> bool:return request({"type":"level_pet_to","pet_id":pet_id,"target":target})
-func prune_hunt_pets(template_id: int, keep: Dictionary) -> int:
-	return int(link.request({"type":"prune_hunt_pets","template_id":template_id,"keep":keep}).get("pruned",0))
+func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
+	return int(link.request({"type":"prune_hunt_pets","template_id":template_id,"keep":keep,"ids":ids}).get("pruned",0))
 func release_pets(ids: Array) -> Dictionary:
 	var reply: Dictionary = link.request({"type":"release_pets","ids":ids})
 	last_error = str(reply.get("error",""))

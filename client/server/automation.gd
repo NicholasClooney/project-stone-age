@@ -90,6 +90,8 @@ var flow_last_stored_total := 0
 var flow_kept_count := 0
 var flow_collected_count := 0
 var flow_pruned_count := 0
+# Rejects stored by this run; rolling keep only ever prunes among these.
+var flow_run_reject_ids: Array = []
 var flow_predicted_rejects := 0
 var flow_best_predicted: Dictionary = {}
 var timer_clock: Callable = Time.get_ticks_msec
@@ -540,7 +542,7 @@ func start_cycle(continuing: bool) -> bool:
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		flow_reason = "宠物栏已满，请自行存放伙伴后再开始。";return false
 	if not continuing:
-		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = ""
+		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = []
 		start_timer()
 	flow_map = position_map
 	flow_cell = position_cell
@@ -622,13 +624,13 @@ func flow_step() -> void:
 		if found.is_empty() or int(found.level)<120:stop_cycle("目标宠物未达到120级，请手动检查。");return
 		complete_trained_pet(found)
 
-func _store_hunt_pet(pet_id: String) -> bool:
+func _store_hunt_pet(pet_id: String, prunable: bool) -> bool:
 	var index := -1
 	var pets: Array = backend.session.snapshot().pets
 	for i in range(pets.size()):
 		if str(pets[i].get("pet_id",""))==pet_id:index = i;break
 	backend.session.last_error = ""
-	return index>=0 and backend.session.store_pet(index,true)
+	return index>=0 and backend.session.store_pet(index,prunable)
 
 func complete_trained_pet(found: Dictionary) -> void:
 	if flow_phase!="train":return
@@ -639,13 +641,14 @@ func complete_trained_pet(found: Dictionary) -> void:
 	var passed := StatFilter.evaluate(found,flow_target_filter)
 	flow_last_result = "%s · %s" % [flow_pet_id,StatFilter.describe(found,flow_target_filter)] if filtered else "新伙伴已达到120级"
 	if filtered and not passed:
-		if not _store_hunt_pet(flow_pet_id):
+		if not _store_hunt_pet(flow_pet_id,true):
 			stop_cycle("未达标但无法存仓："+str(backend.session.last_error));return
 		flow_stored_count += 1
+		flow_run_reject_ids.append(flow_pet_id)
 		flow_last_stored_id = flow_pet_id
 		flow_last_stored_total = int(found.attack)+int(found.defence)+int(found.speed)
 		flow_last_result = "未达标已存仓 · "+flow_last_result
-		flow_pruned_count += backend.session.prune_hunt_pets(int(found.get("template_id",-1)),StatFilter.keep_counts(flow_target_filter))
+		flow_pruned_count += backend.session.prune_hunt_pets(int(found.get("template_id",-1)),StatFilter.keep_counts(flow_target_filter),flow_run_reject_ids)
 		backend.save()
 		backend.publish()
 		# A separate step leaves cancellation/reload a boundary before restarting.
@@ -657,11 +660,10 @@ func complete_trained_pet(found: Dictionary) -> void:
 	var stop_after := int(flow_target_filter.get("stop_after",1))
 	if filtered and stop_after!=1:
 		# Keep the qualifier in the warehouse (never flagged for pruning) and continue.
-		if not _store_hunt_pet(flow_pet_id):
+		if not _store_hunt_pet(flow_pet_id,false):
 			stop_cycle("达标但无法存仓："+str(backend.session.last_error));return
 		flow_kept_count += 1
 		flow_collected_count += 1
-		flow_pruned_count += backend.session.prune_hunt_pets(int(found.get("template_id",-1)),StatFilter.keep_counts(flow_target_filter))
 		backend.save()
 		backend.publish()
 		flow_last_result = "达标已存仓 · "+flow_last_result

@@ -62,10 +62,12 @@ func run()->void:
 	check(storage.back().get("auto_hunt",false),"workflow flags pets it stores")
 	var manual:Dictionary=source.duplicate(true);manual.pet_id="pet-manual-low";manual.template_id=92;manual.attack=1;manual.defence=0;manual.speed=1;storage.append(manual)
 	var favored:Dictionary=source.duplicate(true);favored.pet_id="pet-fav-low";favored.template_id=92;favored.attack=1;favored.defence=0;favored.speed=1;favored.auto_hunt=true;favored.favorite=true;storage.append(favored)
+	var earlier:Dictionary=source.duplicate(true);earlier.pet_id="pet-earlier-low";earlier.template_id=92;earlier.attack=1;earlier.defence=0;earlier.speed=1;earlier.auto_hunt=true;storage.append(earlier)
+	var run_ids:=["pet-manual-low","pet-fav-low"]
 	for i in range(30):
 		# Sums rise with i; attack is highest for low i, so top-attack picks differ from top-sum picks.
-		var hunted:Dictionary=source.duplicate(true);hunted.pet_id="pet-hunt-%d"%i;hunted.template_id=92;hunted.attack=300-i;hunted.defence=150+2*i;hunted.speed=100;hunted.auto_hunt=true;storage.append(hunted)
-	var removed:int=game.session.prune_hunt_pets(92,{"sum":15,"attack":5,"defence":0,"speed":0})
+		var hunted:Dictionary=source.duplicate(true);hunted.pet_id="pet-hunt-%d"%i;hunted.template_id=92;hunted.attack=300-i;hunted.defence=150+2*i;hunted.speed=100;hunted.auto_hunt=true;storage.append(hunted);run_ids.append(hunted.pet_id)
+	var removed:int=game.session.prune_hunt_pets(92,{"sum":15,"attack":5,"defence":0,"speed":0},run_ids)
 	var ids:=[]
 	for pet in game.session._profile.pet_storage:ids.append(str(pet.pet_id))
 	var hunt_left:=ids.filter(func(id):return str(id).begins_with("pet-hunt-"))
@@ -73,12 +75,13 @@ func run()->void:
 	check("pet-hunt-29" in ids and "pet-hunt-15" in ids and not "pet-hunt-14" in ids,"top 15 sums survive and the 16th is not kept by sum")
 	check("pet-hunt-0" in ids and "pet-hunt-4" in ids and not "pet-hunt-5" in ids,"next 5 by attack survive among the rest")
 	check("pet-manual-low" in ids and "pet-fav-low" in ids,"player-stored and favorite pets are never pruned")
-	check(game.session.prune_hunt_pets(92,{"sum":0,"attack":0,"defence":0,"speed":0})==0,"all-zero keep deletes nothing")
+	check("pet-earlier-low" in ids,"flagged pets from earlier runs are never pruned")
+	check(game.session.prune_hunt_pets(92,{"sum":0,"attack":0,"defence":0,"speed":0},run_ids)==0,"all-zero keep deletes nothing")
 	var back_index:int=ids.find("pet-hunt-29")
 	game.session.retrieve_pet(back_index)
 	check(not game.session._profile.pets.back().has("auto_hunt"),"retrieving returns the pet to player ownership")
 	game.session.store_pet(game.session._profile.pets.size()-1)
-	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not (str(pet.pet_id).begins_with("pet-hunt-") or str(pet.pet_id) in ["pet-manual-low","pet-fav-low"]))
+	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not (str(pet.pet_id).begins_with("pet-hunt-") or str(pet.pet_id) in ["pet-manual-low","pet-fav-low","pet-earlier-low"]))
 	var keeper:Dictionary=source.duplicate(true);keeper.pet_id="pet-keep-0";keeper.species="original_92";keeper.template_id=92;keeper.level=120;keeper.attack=288;keeper.defence=184;keeper.speed=152;keeper.erase("gm_modified")
 	var keep_ids:=[]
 	flow.kept_count=0;flow.collected_count=0;flow.target_stat_filter=Filter.defaults(92)
@@ -89,7 +92,7 @@ func run()->void:
 		flow.pet_id=found.pet_id;flow.phase="train";flow.complete_trained_pet(found)
 		if turn<10-1:
 			var stored:Dictionary=game.session.snapshot().pet_storage.back()
-			check(flow.phase=="restart" and flow.collected_count==turn+1 and stored.pet_id==found.pet_id and stored.get("auto_hunt",false),"qualifier #%d is stored flagged for rolling keep and the hunt continues"%(turn+1))
+			check(flow.phase=="restart" and flow.collected_count==turn+1 and stored.pet_id==found.pet_id and not stored.get("auto_hunt",false),"qualifier #%d is stored unflagged, safe from rolling keep, and the hunt continues"%(turn+1))
 			flow.phase="idle"
 	check(flow.phase=="compare" and flow.reason.contains("收集完成") and flow.collected_count==10 and game.adventure_menu.pet_compare_id=="pet-keep-%d"%(10-1),"tenth qualifier found this run ends the hunt at comparison")
 	game.adventure_menu.hide();game.paused_input=false

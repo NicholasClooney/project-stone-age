@@ -167,9 +167,9 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	_publish()
 	return {"ok":true}
 
-## Drops hunt-stored pets beyond the per-metric keep counts; replies with how many.
+## Drops the listed hunt-stored pets beyond the per-metric keep counts; replies with how many.
 func _cmd_prune_hunt_pets(command: Dictionary) -> Dictionary:
-	var pruned: int = session.prune_hunt_pets(int(command.get("template_id",-1)),command.get("keep",{}))
+	var pruned: int = session.prune_hunt_pets(int(command.get("template_id",-1)),command.get("keep",{}),command.get("ids",[]))
 	if pruned > 0:
 		save()
 		_publish()
