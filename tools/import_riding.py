@@ -21,12 +21,40 @@ ROW = re.compile(r'^\s*\{\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*\}', re.
 
 
 def mappings(source):
-    """rider:pet -> pair for every uncommented ridePetTable row of a player appearance."""
+    """rider:pet -> pair for every uncommented ridePetTable row of a player
+    appearance, plus the leader mounts below."""
     text = Path(source).read_bytes().decode('latin1')
     result = {}
     for ride, rider, pet, enemy in ROW.findall(text):
         if int(rider) in PLAYER_RIDERS:
             result.setdefault(f'{rider}:{pet}', dict(sprite=int(ride), rider=int(rider), pet=int(pet), source_enemy_id=int(enemy)))
+    for key, pair in leader_mounts(text).items():
+        result.setdefault(key, pair)
+    return result
+
+
+# Commented-out family-leader rows (char_base.c:60-61 and every character block
+# after it): leader body 100700 + 10k rides 左迪洛斯 100372 and 100705 + 10k rides
+# 巴朵兰恩 100373, each with a complete mounted sprite (101008 + 10k, 101009 + 10k).
+LEADER_ROW = re.compile(r'^\s*//\s*\{\s*(\d+)\s*,\s*(1007\d\d)\s*,\s*(10037[23])\s*,\s*(\d+)\s*\}', re.M)
+LEADER_MOUNTS = {100372, 100373}
+
+
+def leader_mounts(text):
+    """左迪洛斯 and 巴朵兰恩 for every player appearance of the same character.
+
+    The 2.5 data has these two mounts only as family-leader composites; the
+    per-appearance certificate composites (_NEW_RIDEPETS) are missing. The game
+    has no families, so each character's four colour variants (100000 + 20k +
+    0/5/10/15, the block the leader rows sit in) ride with their character's
+    leader mounted sprite. `leader_body` records whose art it is."""
+    result = {}
+    for ride, leader, pet, enemy in LEADER_ROW.findall(text):
+        family = (int(leader)-100700)//10
+        for colour in range(4):
+            rider = 100000+20*family+5*colour
+            if rider in PLAYER_RIDERS:
+                result.setdefault(f'{rider}:{pet}', dict(sprite=int(ride), rider=rider, pet=int(pet), source_enemy_id=int(enemy), leader_body=int(leader)))
     return result
 
 

@@ -23,6 +23,34 @@ tagRidePetTable ridePetTable[296] =
 '''
 
 
+LEADER_TABLE = '''
+\t{ 101000, 100000, 100352, 331 },
+//\t{ 101008, 100700, 100372, 351 },
+//\t{ 101009, 100705, 100373, 352 },
+\t{ 101010, 100020, 100396, 483 },
+//\t{ 101018, 100710, 100372, 351 },
+//\t{ 101019, 100715, 100373, 352 },
+//\t{ 199999, 100720, 100330, 310 },
+'''
+
+
+class LeaderMountTest(unittest.TestCase):
+    def test_every_colour_of_a_character_rides_its_leader_mounts(self):
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder)/'table.c'
+            path.write_text(LEADER_TABLE)
+            result = mappings(path)
+        for rider in [100000, 100005, 100010, 100015]:
+            self.assertEqual(result[f'{rider}:100372'], dict(sprite=101008, rider=rider, pet=100372, source_enemy_id=351, leader_body=100700))
+            self.assertEqual(result[f'{rider}:100373']['sprite'], 101009)
+        for rider in [100020, 100025, 100030, 100035]:
+            self.assertEqual(result[f'{rider}:100372']['sprite'], 101018)
+            self.assertEqual(result[f'{rider}:100373']['leader_body'], 100715)
+        # Only the two leader mounts are taken from commented rows.
+        self.assertFalse(any(pair['pet']==100330 for pair in result.values()))
+        self.assertEqual(result['100000:100352']['sprite'], 101000)
+
+
 class RidingImportTest(unittest.TestCase):
     def table(self, folder):
         path = Path(folder)/'table.c'

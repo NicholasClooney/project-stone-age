@@ -22,7 +22,9 @@ func prepare(session) -> void:
 func run() -> void:
 	check(Riding.manifest().get("pairs",{}).size() > 19,"importer provides more than the gold tiger and brontosaurus pairs")
 	check(Riding.composite("100000",100329) == 101004 and Riding.composite("100020",100396) == 101010,"ridePetTable pairs for other mounts resolve")
-	check(Riding.rideable_pets("100000") == [100329,100352],"appearance 100000 rides its two source mounts")
+	check(Riding.rideable_pets("100000") == [100329,100352,100372,100373],"appearance 100000 rides its two source mounts and the two leader mounts")
+	# 左迪洛斯 / 巴朵兰恩 ride with the character's family-leader composite.
+	check(Riding.composite("100010",100373) == 101009 and Riding.composite("100035",100372) == 101018,"red rex and 左迪洛斯 use the character's leader mounted sprite")
 	check(Riding.pet_name(100329) == "格鲁西斯","mount names come from the source enemy templates")
 	backend_rules()
 	await menu_button()
@@ -50,6 +52,16 @@ func backend_rules() -> void:
 	check(session.mount_pet(0),"mount again after standby")
 	session.set_character("100010")
 	check(int(session.snapshot().ride_pet) == -1,"changing to an appearance without that composite dismounts")
+	# The starter 红暴龙 (巴朵兰恩) is rideable by any appearance.
+	var rex := -1
+	for i in range(session._profile.pets.size()):
+		if int(session._profile.pets[i].sprite) == 100373:rex = i
+	check(rex >= 0,"the starter pets include 红暴龙")
+	session._profile.pets[rex].loyalty = 100
+	session._profile.pets[rex].level = 1
+	check(session.mount_pet(rex) and int(session.snapshot().ride_pet) == rex,"红暴龙 can be ridden")
+	check(Riding.composite(str(session.snapshot().character_id),100373) == 101009,"riding 红暴龙 draws this character's leader mounted sprite")
+	session.mount_pet(-1)
 
 func menu_button() -> void:
 	var world = load("res://scenes/main.tscn").instantiate()
