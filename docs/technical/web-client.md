@@ -32,6 +32,22 @@ A measured build: 1,117 packs, 302 MB in total. First load transfers roughly 30 
 
 `tools/serve_web.py` gzips the engine, scripts, JSON and packs (the core pack shrinks from 29 MB to 6 MB), marks hashed packs immutable and revalidates the rest. Gzipped responses omit `Content-Length`: Godot's web `HTTPRequest` counts the decoded body the browser hands it against that header and would otherwise never complete.
 
+## Game controller
+
+`client/scripts/gamepad.gd` works in every build (desktop and web) on top of the original mouse UI, without changing it.
+
+| Button | World | Menus, battle, dialogue |
+| --- | --- | --- |
+| Left stick / D-pad | Walk | Move the yellow highlight to the nearest control in that direction |
+| A | Talk to the villager or resident in reach, else walk to the nearest one | Click the highlighted control |
+| B | Cancel | Close / back (same as Esc) |
+| X / Y | Status / pets | Switch to status / pets |
+| LB / RB | Zoom out / in | Previous / next page |
+| Start | Help | Help |
+| Back / View | Navigate the HUD and DEV buttons (Back or B returns) | |
+
+A click is a real mouse click at the control's centre, so battle commands, targets, pet rows and dialogue choices work unchanged; disabled controls are skipped and nothing depends on hover. `tests/gamepad_test.gd` plays walking, menus, paging, dialogue and a battle turn with simulated controller events only.
+
 ## Secure context and Vision Pro
 
 Plain `http://` on the local network works in desktop Chrome. Some browser features, gamepad input among them in some browsers, require a secure context. To serve both the page and the WebSocket over TLS:
