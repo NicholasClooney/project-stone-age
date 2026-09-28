@@ -34,7 +34,7 @@ class PlanWebPacksTest(unittest.TestCase):
         for prefix in ("battle/backgrounds/", "world/1000.json"):
             self.assertFalse(any(p.startswith(plan_web_packs.RES + prefix) for p in core), prefix)
         # Frames outside every sprite or rider animation are shared effects; keep them few.
-        effects = [p for p in core if p.startswith((plan_web_packs.RES + "battle/images/", plan_web_packs.RES + "riding/images/"))]
+        effects = [p for p in core if p.startswith((plan_web_packs.RES + "battle/images/", plan_web_packs.RES + "riding/sheets/"))]
         effect_bytes = sum((LEGACY / p[len(plan_web_packs.RES):]).stat().st_size for p in effects)
         self.assertLess(effect_bytes, 5_000_000)
 
@@ -53,9 +53,12 @@ class PlanWebPacksTest(unittest.TestCase):
             pack = self.plan["riding"].get(ident)
             self.assertEqual(pack, f"riding-{ident}", key)
             contents = set(self.plan["packs"][pack])
+            sheet = riding["sheets"][ident]
+            for name in sheet["files"]:
+                self.assertIn(f"{plan_web_packs.RES}riding/{name}", contents, key)
             for animation in riding["characters"][ident].values():
                 for frame in animation["frames"]:
-                    self.assertIn(f"{plan_web_packs.RES}riding/images/{int(frame['image'])}.png", contents, key)
+                    self.assertIn(str(int(frame["image"])), sheet["frames"], key)
 
     def test_villages_depend_on_character_art_they_draw(self):
         self.assertTrue(any(name.startswith("char-") for name in self.plan["maps"]["1000"]))

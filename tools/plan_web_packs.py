@@ -133,10 +133,11 @@ def plan() -> dict:
     riding_manifest = LEGACY / "riding/manifest.json"
     if riding_manifest.exists():
         riding = json.loads(riding_manifest.read_text())
-        for ident, images in sprite_images(riding.get("characters", {})).items():
+        # One composite's sprite sheet(s) per pack (tools/import_riding.py).
+        for ident, sheet in riding.get("sheets", {}).items():
             pack = f"riding-{ident}"
-            for image in sorted(images):
-                assign(pack, LEGACY / f"riding/images/{image}.png")
+            for name in sheet["files"]:
+                assign(pack, LEGACY / "riding" / name)
             lookups["riding"][ident] = pack
 
     for path in sorted((LEGACY / "battle/backgrounds").glob("*")):

@@ -1365,8 +1365,8 @@ func ensure_riding_art(ident: String) -> bool:
 		for frame in animation.frames:
 			var bitmap := str(int(frame.image))
 			manifest.images[bitmap] = riding.images[bitmap]
-			if not textures.has(bitmap):
-				textures[bitmap] = load("res://assets/legacy/riding/images/"+bitmap+".png")
+			if textures.get(bitmap)==null:
+				textures[bitmap] = preload("res://scripts/riding.gd").frame_texture(ident,int(bitmap))
 	return true
 
 func mounted_impact_sound(index: int) -> int:

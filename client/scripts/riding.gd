@@ -8,6 +8,30 @@ static func manifest() -> Dictionary:
 		_manifest = JSON.parse_string(FileAccess.get_file_as_string(PATH))
 	return _manifest
 
+## Loaded composite sheets and the frames cut from them.
+static var _sheets: Dictionary = {}
+static var _frames: Dictionary = {}
+
+## One frame of a rider+mount composite. The importer packs each composite's
+## frames into one sheet (manifest `sheets`, tools/import_riding.py), so the
+## frame is a region of it. Null while the sheet is not available (a web pack
+## still downloading); nothing is cached then.
+static func frame_texture(composite: String, bitmap: int) -> Texture2D:
+	var key := composite+":"+str(bitmap)
+	if _frames.has(key): return _frames[key]
+	var sheet: Dictionary = manifest().get("sheets",{}).get(composite,{})
+	var spot: Array = sheet.get("frames",{}).get(str(bitmap),[])
+	if spot.size() < 5: return null
+	var path := "res://assets/legacy/riding/"+str(sheet.files[int(spot[0])])
+	if not _sheets.has(path):
+		if not ResourceLoader.exists(path): return null
+		_sheets[path] = load(path)
+	var frame := AtlasTexture.new()
+	frame.atlas = _sheets[path]
+	frame.region = Rect2(int(spot[1]),int(spot[2]),int(spot[3]),int(spot[4]))
+	_frames[key] = frame
+	return frame
+
 static func pair(character_id: String, pet_sprite: int) -> Dictionary:
 	return manifest().get("pairs",{}).get(character_id+":"+str(pet_sprite),{})
 

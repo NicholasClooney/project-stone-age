@@ -19,6 +19,20 @@ func prepare(session) -> void:
 	session._profile.pets[1].name = "金虎"
 	for pet in session._profile.pets:pet.loyalty = 100
 
+## Every frame of a composite is cut from its sprite sheet at the frame's size.
+func sheet_frames() -> void:
+	var manifest := Riding.manifest()
+	check(manifest.get("sheets",{}).size()==manifest.characters.size(),"every composite has a sprite sheet")
+	for composite in ["101004","101009"]:
+		var complete := true
+		for animation in manifest.characters[composite].values():
+			for frame in animation.frames:
+				var texture := Riding.frame_texture(composite,int(frame.image))
+				var info: Dictionary = manifest.images[str(int(frame.image))]
+				if not texture is AtlasTexture or texture.get_size()!=Vector2(float(info.w),float(info.h)) or texture.get_image().is_invisible():complete = false
+		check(complete,"composite %s draws every frame from its sheet" % composite)
+	check(Riding.frame_texture("101004",-5)==null,"a frame the sheet lacks draws nothing instead of failing")
+
 func run() -> void:
 	check(Riding.manifest().get("pairs",{}).size() > 19,"importer provides more than the gold tiger and brontosaurus pairs")
 	check(Riding.composite("100000",100329) == 101004 and Riding.composite("100020",100396) == 101010,"ridePetTable pairs for other mounts resolve")
@@ -28,6 +42,7 @@ func run() -> void:
 	check(Riding.composite("100010",100373) == 101009 and Riding.composite("100035",100372) == 101018,"red rex and 左迪洛斯 use the character's leader mounted sprite")
 	check(int(Riding.pair("100010",100373).get("leader_body",0)) == 100705,"the leader art is recorded")
 	check(Riding.pet_name(100329) == "格鲁西斯","mount names come from the source enemy templates")
+	sheet_frames()
 	backend_rules()
 	certificate_mounts()
 	await menu_button()

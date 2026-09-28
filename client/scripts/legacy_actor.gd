@@ -8,7 +8,6 @@ var elapsed := 0.0
 var sprite: Sprite2D
 var current_image := -1
 var mounted_character_id := ""
-var mounted_textures: Dictionary = {}
 var last_render_character := ""
 
 func _ready() -> void:
@@ -45,9 +44,7 @@ func _process(delta: float) -> void:
 	if ident != current_image:
 		current_image = ident
 		if mounted:
-			if not mounted_textures.has(str(ident)):
-				mounted_textures[str(ident)] = load("res://assets/legacy/riding/images/"+str(ident)+".png")
-			sprite.texture = mounted_textures[str(ident)]
+			sprite.texture = preload("res://scripts/riding.gd").frame_texture(rendered_id,ident)
 		else:
 			if not world.textures.has(str(ident)):
 				world.textures[str(ident)] = load("res://assets/legacy/images/"+str(ident)+".png")
