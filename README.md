@@ -75,7 +75,7 @@ The rejected geometric placeholder demo is not the default or part of the tracke
 
 ## New player tools
 
-On your next normal launch, **蓝人龙、金虎 and one 红暴龙** join once; existing pets and progress stay intact. In **DEV → 骑乘**, select the compatible gold-tiger rider (100010), then mount the tiger. You can deploy a different pet for combat. Original mounted art, separate HP, damage sharing and source-based mounted experience are implemented.
+On your next normal launch, **蓝人龙、金虎 and one 红暴龙** join once; existing pets and progress stay intact. Ride a pet from the pet window (**骑乘 · 名字**, beside the list); each appearance rides the two species the original table gives it, and a disabled button says why. **DEV → 骑乘** toggles the first rideable pet, or switches to rider 100010 for the gold tiger. You can deploy a different pet for combat. Original mounted art, separate HP, damage sharing and source-based mounted experience are implemented.
 
 The pet window has five original rows per page, family filters, separate riding/battle states, and a growth comparison: your pet's projected level-120 stats versus its species' theoretical ceiling. These are estimates; the displayed maxima are independently optimal attributes, not a single jointly attainable perfect pet.
 

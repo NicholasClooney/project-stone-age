@@ -33,6 +33,7 @@ const RELEASE_METRICS := ["stat_total","attack","defence","speed"]
 const PetComparison=preload("res://scripts/pet_comparison.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
+const Riding = preload("res://scripts/riding.gd")
 ## Facing of the pet window's portrait; the original starts at 1 each time it opens.
 var pet_portrait_facing := 1
 var name_edit: LineEdit
@@ -476,6 +477,25 @@ func pet_tool_button(caption: String, at: Vector2, callback: Callable, control_n
 	panel.add_child(control)
 	return control
 
+## Ride or dismount the selected pet. Disabled, with the rule's reason below it,
+## when the current character cannot ride that pet (riding.gd can_mount).
+func pet_mount_button(profile: Dictionary, at: Vector2) -> Button:
+	var pet: Dictionary = profile.pets[selected_pet]
+	var riding:=int(profile.get("ride_pet",-1))==selected_pet
+	var reason:="" if riding else Riding.can_mount(profile,selected_pet)
+	var control:=pet_tool_button(("下骑 · " if riding else "骑乘 · ")+str(pet.name),at,func():
+		if world.session.mount_pet(-1 if riding else selected_pet):
+			world.refresh_companion();world.checkpoint();feedback=""
+		else:feedback=world.session.last_error
+		rebuild(),"PetMount")
+	control.disabled=not reason.is_empty()
+	control.tooltip_text=reason
+	if not reason.is_empty():
+		var note:=label(reason,at+Vector2(0,174),230,12)
+		note.name="PetMountReason"
+		note.add_theme_color_override("font_color",Color("ffd080"))
+	return control
+
 func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 	var origin:=Vector2(288,0)
 	stone(Rect2(origin,Vector2(256,432)))
@@ -497,12 +517,7 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 	label("黄色：出战　蓝色：[骑] 骑乘",origin+Vector2(16,154),230,12)
 	if not filtered.is_empty():
 		pet_tool_button("成长预估" if not pet_growth_open else "关闭成长预估",origin+Vector2(16,182),func(): pet_growth_open=not pet_growth_open;pet_view="detail";rebuild(),"PetGrowthToggle")
-		var riding:=int(profile.get("ride_pet",-1))==selected_pet
-		pet_tool_button("下骑" if riding else "骑乘选中伙伴",origin+Vector2(16,218),func():
-			if world.session.mount_pet(-1 if riding else selected_pet):
-				world.refresh_companion();world.checkpoint();feedback=""
-			else:feedback=world.session.last_error
-			rebuild(),"PetMount")
+		pet_mount_button(profile,origin+Vector2(16,218))
 	pet_tool_button("DEV · 领取起始伙伴",origin+Vector2(16,254),func():
 		if world.session.grant_starter_pets():
 			world.refresh_companion();world.checkpoint();feedback="起始伙伴已加入（重复领取不增加）。"

@@ -830,7 +830,10 @@ func grant_starter_pets() -> bool:
 
 func mount_pet(index: int) -> bool:
 	last_error = ""
-	if not _pending.is_empty():return false
+	if not _pending.is_empty():
+		# family.c FAMILY_RidePet: 战斗中不可骑宠！
+		last_error = "战斗中不能骑乘或下骑。"
+		return false
 	if index == -1:
 		_profile.ride_pet = -1
 		return true

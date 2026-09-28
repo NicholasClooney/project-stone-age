@@ -12,7 +12,7 @@ Verified against the implementation through v0.23.0 (2026-09-27). â€œDeliveredâ€
 | Four villages and connecting wilderness | Delivered; expanded | 103 maps: two loaded islands, ten towns and connected interiors. Not all 694 reference map IDs. |
 | Character selection | Delivered as approved DEV chooser | 41 validated original appearances; historical creation/login screen and seven damaged/missing appearances not restored. |
 | Requested default pets | Delivered | Blue human dragon, gold tiger and one red rex. Gold/mechanical/other rex starter additions were superseded by the user's one-red-rex correction. |
-| Riding and mounted XP | Delivered subset | Native gold-tiger rider composites, eligibility, combat stat/damage sharing and mounted XP; not every pet/appearance can ride. |
+| Riding and mounted XP | Delivered subset | All 82 classic `ridePetTable` rider composites (9 species), eligibility with reasons, a pet-window ride button, combat stat/damage sharing and mounted XP. Family-leader and certificate (`_NEW_RIDEPETS`) mounts are not restored. |
 | Stone-fish cursor and yellow world selection | Delivered | Native cursor and map hover marker; UI uses this reference branch's distinct green hover/cyan item selection. |
 | Global DEV map | Delivered | Zoom/pan, POIs, teleport or walking; cross-map routes follow actual portals and preserve gates. |
 | Pet categories/pages and growth comparison | Delivered | 30-slot collection, original five-row frame; conditional mean, approximate marginal 90% intervals and species normal mean. Theoretical extrema are secondary, not a normal-quality benchmark. |

@@ -11,18 +11,39 @@ static func manifest() -> Dictionary:
 static func composite(character_id: String, pet_sprite: int) -> int:
 	return int(manifest().get("pairs",{}).get(character_id+":"+str(pet_sprite),{}).get("sprite",-1))
 
+## Pet sprites this rider appearance has a native composite for (ridePetTable).
+static func rideable_pets(character_id: String) -> Array:
+	var result: Array = []
+	for pair in manifest().get("pairs",{}).values():
+		if str(int(pair.rider)) == character_id and not result.has(int(pair.pet)):result.append(int(pair.pet))
+	result.sort()
+	return result
+
+static func pet_name(pet_sprite: int) -> String:
+	return str(manifest().get("names",{}).get(str(pet_sprite),pet_sprite))
+
+## Why this pet cannot be ridden now, or "" when it can. Source order and rules:
+## family.c FAMILY_RidePet (battle pet, already riding, learned riding level,
+## loyalty 100, player level + 5, exact ridePetTable match) and the client's
+## checkRidePet (menu.cpp:21965).
 static func can_mount(profile: Dictionary, index: int) -> String:
 	var pets: Array = profile.get("pets",[])
 	if index < 0 or index >= pets.size(): return "没有这只伙伴。"
 	var pet: Dictionary = pets[index]
-	if int(pet.get("hp",0)) <= 0: return "伙伴需要先恢复体力。"
 	if index == int(profile.get("active_pet",-1)): return "骑乘伙伴不能同时出战，请先设为待机。"
-	if int(pet.get("loyalty",100)) < 100: return "骑乘需要忠诚度100。"
+	var riding := int(profile.get("ride_pet",-1))
+	if riding >= 0 and riding != index: return "请先下骑当前骑宠。"
+	if int(pet.get("hp",0)) <= 0: return "伙伴需要先恢复体力。"
 	var player: Dictionary = profile.get("player",{})
+	if player.has("riding_level") and int(pet.get("level",1)) > int(player.riding_level): return "骑乘等级不足，只能骑乘%d级以下的宠物。" % int(player.riding_level)
+	if int(pet.get("loyalty",100)) < 100: return "骑乘需要忠诚度100。"
 	if int(pet.get("level",1)) > int(player.get("level",1))+5: return "伙伴等级不能超过人物等级5级。"
-	if int(pet.get("level",1)) > int(player.get("riding_level",int(player.get("level",1))+5)): return "骑乘等级不足。"
-	if composite(str(profile.get("character_id","100000")),int(pet.get("sprite",0))) < 0:
-		return "此造型没有这只伙伴的原版骑乘动画。金虎可选择造型100010。"
+	var character := str(profile.get("character_id","100000"))
+	if composite(character,int(pet.get("sprite",0))) < 0:
+		var names := PackedStringArray()
+		for sprite in rideable_pets(character):names.append(pet_name(sprite))
+		if names.is_empty(): return "此造型没有原版骑乘动画。"
+		return "此造型不能骑乘这只伙伴。可骑乘：%s。" % "、".join(names)
 	return ""
 
 static func adjusted_stats(player: Dictionary, pet: Dictionary, combat_profile: String = "classic", defending: bool = false) -> Dictionary:

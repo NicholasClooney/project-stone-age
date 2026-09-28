@@ -44,6 +44,19 @@ class PlanWebPacksTest(unittest.TestCase):
         self.assertTrue(all(p.startswith(plan_web_packs.RES + "loading/") for p in loading))
         self.assertLess(sum((LEGACY / p[len(plan_web_packs.RES):]).stat().st_size for p in loading), 2_000_000)
 
+    @unittest.skipUnless((LEGACY / "riding/manifest.json").is_file(), "riding composites not imported")
+    def test_every_riding_pair_has_a_complete_pack(self):
+        import json
+        riding = json.loads((LEGACY / "riding/manifest.json").read_text())
+        for key, pair in riding["pairs"].items():
+            ident = str(pair["sprite"])
+            pack = self.plan["riding"].get(ident)
+            self.assertEqual(pack, f"riding-{ident}", key)
+            contents = set(self.plan["packs"][pack])
+            for animation in riding["characters"][ident].values():
+                for frame in animation["frames"]:
+                    self.assertIn(f"{plan_web_packs.RES}riding/images/{int(frame['image'])}.png", contents, key)
+
     def test_villages_depend_on_character_art_they_draw(self):
         self.assertTrue(any(name.startswith("char-") for name in self.plan["maps"]["1000"]))
 

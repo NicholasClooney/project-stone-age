@@ -11,4 +11,4 @@ A restoration needs a chosen historical ruleset, valid rider/mount graphic mappi
 
 ## Implemented subset
 
-Native gold-tiger riding, damage sharing, separate mount HP and mounted experience now work. See [implementation evidence and limitations](original-riding.md); the earlier asset-verification research note above is superseded for the imported pairs.
+Native riding for every classic `ridePetTable` pair (82 pairs, 9 species), damage sharing, separate mount HP and mounted experience now work. See [implementation evidence and limitations](original-riding.md); the earlier asset-verification research note above is superseded for the imported pairs.

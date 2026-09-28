@@ -25,6 +25,7 @@ const AdventureMenu = preload("res://scripts/adventure_menu.gd")
 const PetFollower = preload("res://scripts/pet_follower.gd")
 const BattleView = preload("res://scripts/battle_view.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
+const Riding = preload("res://scripts/riding.gd")
 var world_catalog = WorldCatalog.new()
 var travel_router: Node
 var world_travel: Node
@@ -1078,7 +1079,7 @@ func build_ui() -> void:
 	riding_menu.flat = false
 	riding_menu.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	riding_menu.get_popup().add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	riding_menu.get_popup().add_item("骑乘金虎 / 下骑",0)
+	riding_menu.get_popup().add_item("骑乘选中或首只可骑伙伴 / 下骑",0)
 	riding_menu.get_popup().add_item("选择金虎骑手造型（100010）",1)
 	riding_menu.get_popup().id_pressed.connect(func(id: int):
 		if id == 0: dev_toggle_riding()
@@ -1671,6 +1672,8 @@ func refresh_riding() -> void:
 		return
 	player.mounted_character_id = str(composite) if composite >= 0 else ""
 
+## DEV: dismount, or ride the pet selected in the pet window, else the first
+## carried pet this character can ride (a battling pet goes to standby first).
 func dev_toggle_riding() -> void:
 	if paused_input or moving or area_transition_busy or not session.has_method("mount_pet"): return
 	var profile: Dictionary = session.snapshot()
@@ -1678,25 +1681,31 @@ func dev_toggle_riding() -> void:
 		session.mount_pet(-1)
 		message.text = "下骑。"
 	else:
-		var index := -1
+		var order: Array = []
+		if is_instance_valid(adventure_menu) and adventure_menu.selected_pet >= 0 and adventure_menu.selected_pet < profile.pets.size():
+			order.append(adventure_menu.selected_pet)
 		for i in range(profile.pets.size()):
-			if int(profile.pets[i].sprite) == 100330:
+			if not order.has(i):order.append(i)
+		var index := -1
+		var first_reason := ""
+		for i in order:
+			var candidate: Dictionary = profile.duplicate(true)
+			if int(candidate.active_pet) == i: candidate.active_pet = -1
+			var reason: String = Riding.can_mount(candidate,i)
+			if reason.is_empty():
 				index = i
 				break
+			if first_reason.is_empty() and Riding.composite(str(profile.get("character_id","100000")),int(profile.pets[i].sprite)) >= 0:
+				first_reason = str(profile.pets[i].name)+"："+reason
 		if index < 0:
-			message.text = "先领取测试伙伴，再骑乘金虎。"
-			return
-		var selected_as_fighter := int(profile.active_pet) == index
-		var candidate: Dictionary = profile.duplicate(true)
-		if selected_as_fighter: candidate.active_pet = -1
-		var reason := preload("res://scripts/riding.gd").can_mount(candidate,index)
-		if not reason.is_empty():
-			message.text = reason
+			message.text = first_reason if not first_reason.is_empty() else "没有此造型可骑乘的伙伴。可骑乘：%s。" % "、".join(PackedStringArray(Riding.rideable_pets(str(profile.get("character_id","100000"))).map(func(sprite): return Riding.pet_name(sprite))))
 			refresh_companion()
 			return
-		if selected_as_fighter: session.select_pet(-1)
-		if not session.mount_pet(index): return
-		message.text = "骑乘金虎。"
+		if int(profile.active_pet) == index: session.select_pet(-1)
+		if not session.mount_pet(index):
+			message.text = session.last_error
+			return
+		message.text = "骑乘%s。" % str(profile.pets[index].name)
 	refresh_companion()
 	play_click()
 	checkpoint()

@@ -29,7 +29,9 @@ Export templates live in `~/Library/Application Support/Godot/export_templates/4
 | `sprite-<id>`, `riding-<id>`, `bg-<n>` | Battle sprite, mounted composite, battlefield | Opening a battle that shows them; pet menus; companions |
 | `music-<name>` | One track | Startup tracks, entering a map with it |
 
-A measured build: 1,117 packs, 302 MB in total. First load transfers roughly 30 MB compressed (engine 9 MB, base pack with the Chinese font 14 MB, core 6 MB, starting map and character); a new wilderness area about 3 MB including prefetched neighbours; a battle about 3 MB the first time.
+Riding has one `riding-<id>` pack per imported composite (82, about 2 to 5 MB of source PNGs each, 250 MB in total); mounting and mounted battles wait for the ridden composite only. The riding manifest (3.5 MB JSON, about 0.3 MB gzipped) stays in core. Re-run `tools/import_riding.py` in a checkout before its next web build after the importer changes, since imported assets are not in Git.
+
+A measured build (before all riding pairs were imported): 1,117 packs, 302 MB in total. First load transfers roughly 30 MB compressed (engine 9 MB, base pack with the Chinese font 14 MB, core 6 MB, starting map and character); a new wilderness area about 3 MB including prefetched neighbours; a battle about 3 MB the first time.
 
 `client/scripts/asset_packs.gd` fetches `packs.json`, downloads up to four packs at once into `user://packs/` (IndexedDB in a browser) under content-hashed names, mounts them with `ProjectSettings.load_resource_pack`, retries each download three times with backoff, and removes cached packs the index no longer names. After entering a map it prefetches the packs of every map linked from it. The desktop game ships all assets locally, so every `ensure()` completes immediately. On the web, troop art availability comes from the pack index rather than local files.
 
