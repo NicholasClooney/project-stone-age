@@ -1,9 +1,18 @@
 {
-  "version": "v0.55.0",
-  "count": 65,
+  "version": "v0.55.1",
+  "count": 66,
   "feature_count": 39,
-  "fix_count": 26,
+  "fix_count": 27,
   "entries": [
+    {
+      "version": "v0.55.1",
+      "date": "2026-09-28",
+      "kind": "fix",
+      "title": "网页版角色选择显示全部角色",
+      "details": [
+        "浏览器版打开角色选择时，先下载全部 41 个原版角色的素材（首次约 14 MB，之后使用缓存），不再有空白的角色格子。"
+      ]
+    },
     {
       "version": "v0.55.0",
       "date": "2026-09-28",

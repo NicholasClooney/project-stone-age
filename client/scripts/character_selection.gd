@@ -14,6 +14,14 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_DISABLED
 func open_menu() -> void:
 	if world.battle_view.visible or world.area_transition_busy:return
+	# On the web every character's art is a separate pack; fetch them all
+	# (once, then cached) before drawing, or most portraits would be empty.
+	var packs := character_packs()
+	if not world.asset_packs.is_ready(packs):
+		world.asset_packs.ensure(packs,func(ok: bool):
+			if ok:open_menu()
+			else:world.message.text = "角色素材下载失败，请检查与 MacBook 的连接后重试。","角色")
+		return
 	process_mode = Node.PROCESS_MODE_INHERIT
 	previous_pause = world.paused_input
 	world.clear_input()
@@ -90,6 +98,14 @@ func _build() -> void:
 		actor.facing = 0
 		actor.position = Vector2(49,83)
 		button.add_child(actor)
+## Packs holding the art of every selectable character (empty on desktop).
+func character_packs() -> Array:
+	var packs: Array = []
+	for choice in world.character_catalog.get("choices",[]):
+		var pack: String = world.asset_packs.character_pack(choice.id)
+		if not pack.is_empty() and not pack in packs:packs.append(pack)
+	return packs
+
 func _refresh() -> void:
 	var current: String = world.session.snapshot().get("character_id","100000")
 	for id in buttons:

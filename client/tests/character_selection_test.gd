@@ -13,6 +13,30 @@ func run() -> void:
 	root.add_child(game)
 	await frames()
 	check(game.character_catalog.choices.size() >= 12,"expanded source-validated appearances available")
+	# Web: each character's art is its own pack, and the chooser draws them all.
+	var packs = game.asset_packs
+	var saved := [packs.enabled,packs.index.duplicate(true),packs._mounted.duplicate(),packs.base_url]
+	packs.enabled = true
+	# Nothing listens there: the fake downloads fail quietly.
+	packs.base_url = "http://127.0.0.1:9/"
+	packs.index = {"packs":{},"characters":{}}
+	for choice in game.character_catalog.choices:
+		var pack_name := "char-%s" % str(choice.id)
+		packs.index.packs[pack_name] = {"file":pack_name+".pck","bytes":1,"sha256":"test"}
+		packs.index.characters[str(choice.id)] = pack_name
+	packs._mounted = {}
+	check(game.character_selection.character_packs().size()==game.character_catalog.choices.size(),"the chooser needs the art pack of every character")
+	game.character_selection.open_menu()
+	check(not game.character_selection.visible,"the chooser waits while character art is still downloading")
+	for pack_name in packs.index.packs:packs._mounted[pack_name] = true
+	game.character_selection.open_menu()
+	check(game.character_selection.visible,"the chooser opens once every character's art is available")
+	game.character_selection.close_menu()
+	# Drop the fake downloads the first attempt queued before restoring desktop mode.
+	for request in packs._active.keys():if is_instance_valid(request):request.cancel_request();request.queue_free()
+	packs._queued.clear();packs._active.clear();packs._attempts.clear();packs._failed.clear();packs._waiters.clear()
+	packs.enabled = saved[0];packs.index = saved[1];packs._mounted = saved[2];packs.base_url = saved[3]
+	await frames()
 	game.change_character()
 	await frames()
 	check(game.character_selection.visible and game.paused_input,"developer chooser pauses field movement")
