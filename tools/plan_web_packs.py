@@ -3,6 +3,8 @@
 Every file under client/assets/legacy lands in exactly one pack, so shared
 art is never downloaded twice:
 
+  loading         the waiting screen's image and music, fetched before
+                  anything else so the screen can cover the core download
   core            small always-needed data: catalogs, UI, battle
                   manifest/UI/audio, the map catalog
   map-<id>        one map's JSON plus tiles and residents no other map uses
@@ -53,6 +55,11 @@ def plan() -> dict:
         if path.exists() and path not in owner:
             owner[path] = pack
             packs[pack].append(res(path))
+
+    # Fetched first and kept tiny: the waiting screen shown during every other download.
+    for path in sorted((LEGACY / "loading").glob("*")):
+        if path.suffix != ".import" and path.name != ".DS_Store":
+            assign("loading", path)
 
     manifest = json.loads((LEGACY / "world/manifest.json").read_text())
     maps_images = {}
@@ -160,7 +167,7 @@ def main() -> None:
         for path in paths:
             sizes[name] += (LEGACY / path[len(RES):]).stat().st_size
     kinds = collections.Counter(name.split("-")[0] for name in result["packs"])
-    print(f"{len(result['packs'])} packs {dict(kinds)}; core {sizes['core']/1e6:.1f} MB; total {sum(sizes.values())/1e6:.1f} MB")
+    print(f"{len(result['packs'])} packs {dict(kinds)}; loading {sizes['loading']/1e3:.0f} KB; core {sizes['core']/1e6:.1f} MB; total {sum(sizes.values())/1e6:.1f} MB")
 
 
 if __name__ == "__main__":

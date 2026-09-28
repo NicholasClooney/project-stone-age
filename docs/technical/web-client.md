@@ -19,6 +19,7 @@ Export templates live in `~/Library/Application Support/Godot/export_templates/4
 
 | Pack | Contents | Needed when |
 | --- | --- | --- |
+| `loading` | The waiting screen's image and music (about 0.3 MB) | First, before core |
 | `core` | Catalogs, UI, battle manifest/UI/audio, shared effects | Startup |
 | `map-<id>` | One map's data, tiles and residents used nowhere else | Entering that map |
 | `tiles-<hash>` | Tiles shared by several maps, grouped by the exact set that uses them | Entering any of those maps |
@@ -29,6 +30,16 @@ Export templates live in `~/Library/Application Support/Godot/export_templates/4
 A measured build: 1,117 packs, 302 MB in total. First load transfers roughly 30 MB compressed (engine 9 MB, base pack with the Chinese font 14 MB, core 6 MB, starting map and character); a new wilderness area about 3 MB including prefetched neighbours; a battle about 3 MB the first time.
 
 `client/scripts/asset_packs.gd` fetches `packs.json`, downloads up to four packs at once into `user://packs/` (IndexedDB in a browser) under content-hashed names, mounts them with `ProjectSettings.load_resource_pack`, retries each download three times with backoff, and removes cached packs the index no longer names. After entering a map it prefetches the packs of every map linked from it. The desktop game ships all assets locally, so every `ensure()` completes immediately. On the web, troop art availability comes from the pack index rather than local files.
+
+## Waiting screen
+
+`client/scripts/waiting_screen.gd` covers any download the player waits for: the startup download (index, core, startup music, starting map and character) and later labelled waits such as entering a map or opening a battle whose packs are not cached. It shows the original `CG_TITLE_NOW_LOADING` art (graphic 29019, 640x480, letterboxed on its own dark red), plays the original `sabgm_s1` on a loop (bgm_tbl entry 2, which `login.cpp` plays after the character list downloads), and has a bar with what is downloading, MB done / total and a percentage from `AssetPacks.progress`.
+
+- A wait must last 0.3 s before the screen appears, so cached packs never flash it. Background prefetches (no label) never show it. Startup holds it (`hold()` / `release()`) across the gaps between downloads; a failed startup download stays on it with the error.
+- While it is up the game's music is paused; it resumes when the wait ends. The waiting music follows the game's volume and mute.
+- Browsers refuse audio until a gesture. Godot's web audio driver resumes its context on the first click, tap or key, so the screen shows 点击任意处开启音乐 until `navigator.userActivation` reports one.
+- Both assets must exist before core, so they come from the `loading` pack, mounted first. Import them once with `.tools/asset-venv/bin/python tools/import_loading.py /path/to/stoneage2.5`; it writes `client/assets/legacy/loading/` (ignored like every original asset) and transcodes the track to Ogg Vorbis with ffmpeg's built-in encoder (1.3 MB WAV to about 260 KB), or copies the WAV (QOA, about 0.5 MB) without ffmpeg. Without the import the screen still works, with the backdrop colour and no music.
+- Desktop and the in-process game ship assets locally and never create it. The remote startup notice (正在连接 MacBook 上的服务器…) sits on the same art, lightly dimmed, whenever the image is available; the disconnection notice in play is unchanged.
 
 `tools/serve_web.py` gzips the engine, scripts, JSON and packs (the core pack shrinks from 29 MB to 6 MB), marks hashed packs immutable and revalidates the rest. Gzipped responses omit `Content-Length`: Godot's web `HTTPRequest` counts the decoded body the browser hands it against that header and would otherwise never complete.
 

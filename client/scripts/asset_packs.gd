@@ -51,6 +51,12 @@ func _new_request() -> HTTPRequest:
 	request.accept_gzip = not OS.has_feature("web")
 	return request
 
+## True while a labelled request (one the player is waiting for) is pending.
+func blocking() -> bool:
+	for waiter in _waiters:
+		if not str(waiter.label).is_empty():return true
+	return false
+
 func is_ready(packs: Array) -> bool:
 	if not enabled:return true
 	for name in packs:

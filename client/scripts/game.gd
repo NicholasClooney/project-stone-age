@@ -6,6 +6,7 @@ const LocalLink = preload("res://network/local_link.gd")
 const WsLink = preload("res://network/ws_link.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const AssetPacks = preload("res://scripts/asset_packs.gd")
+const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 
 ## Resolves when AssetPacks finishes one ensure() call.
@@ -48,6 +49,7 @@ var _offline_profile: Dictionary = {}
 var _offline_battles := 0
 ## Remote play: covers the game and blocks input whenever the backend is unreachable.
 var link_overlay: Control
+var _link_backdrop: Control
 var _link_status: Label
 ## Several devices can drive one backend. This device's reports carry its id;
 ## another device's walk arrives as a position event and is mirrored here
@@ -64,8 +66,8 @@ var _following_step := false
 var _followed: Array = []
 var asset_packs: Node
 var gamepad: Node
-var _download_layer: CanvasLayer
-var _download_label: Label
+## Web build: full-screen waiting room while blocking packs download.
+var waiting_screen: CanvasLayer
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 var _ui_stale := false
@@ -227,7 +229,7 @@ func _ready() -> void:
 	var pack_url := _asset_pack_url()
 	if not pack_url.is_empty():
 		asset_packs.configure(pack_url)
-		_build_download_label()
+		_build_waiting_screen()
 		if not await _download_core():
 			_show_startup_error("素材索引或核心包下载失败，请检查与 MacBook 的连接后刷新页面。")
 			return
@@ -243,6 +245,7 @@ func _ready() -> void:
 		add_child(error_label)
 		return
 	if not link.is_local():
+		if is_instance_valid(waiting_screen):waiting_screen.hold("正在连接服务器…")
 		await _connect_remote()
 	if asset_packs.enabled and not await _download_start_area():
 		_show_startup_error("起始地图素材下载失败，请检查与 MacBook 的连接后刷新页面。")
@@ -266,6 +269,7 @@ func _ready() -> void:
 	# A remote backend may already be mid-battle (another device, or a reload).
 	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
 	resume_automation_view()
+	if is_instance_valid(waiting_screen):waiting_screen.release()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -1678,10 +1682,13 @@ func _asset_pack_url() -> String:
 
 func _download_core() -> bool:
 	var waiter := PackWaiter.new()
-	_download_label.text = "正在读取素材索引…"
+	waiting_screen.hold("正在读取素材索引…")
 	asset_packs.load_index(waiter.finish)
 	if not waiter.finished:await waiter.done
 	if not waiter.ok:return false
+	# The waiting screen's own image and music come first, in a tiny pack.
+	if await await_packs(["loading"],"等待画面"):waiting_screen.load_art()
+	waiting_screen.hold("正在准备素材…")
 	if not await await_packs(["core","music-sabgm_t0"],"核心素材"):return false
 	# setup_audio() loads every track the MVP manifest names at startup.
 	var startup_music: Array = []
@@ -1700,13 +1707,14 @@ func _download_start_area() -> bool:
 	for pack in area_packs(int(profile_now.get("location",{}).get("map_id",1000))):
 		if not packs.has(pack):packs.append(pack)
 	packs.append(asset_packs.character_pack(profile_now.get("character_id","100000")))
+	waiting_screen.hold("正在准备起始地图…")
 	return await await_packs(packs,"起始地图")
 
 ## Web only: window.stoneAge mirrors map, cell, connection and pack state
 ## once a second, for Safari's Web Inspector on another device.
 func _publish_web_status() -> void:
 	var status := {"map":int(data.get("map_id",-1)),"cell":[cell.x,cell.y],"online":bool(link.get("online")) if not link.is_local() else true,
-		"battle":bool(is_instance_valid(battle_view) and battle_view.visible),"mounted":asset_packs._mounted.size(),"pending":asset_packs._queued.size()+asset_packs._active.size(),"downloading":asset_packs._active.values(),"queued":asset_packs._queued,"waiters":asset_packs._waiters.size(),
+		"battle":bool(is_instance_valid(battle_view) and battle_view.visible),"mounted":asset_packs._mounted.size(),"pending":asset_packs._queued.size()+asset_packs._active.size(),"downloading":asset_packs._active.values(),"queued":asset_packs._queued,"waiters":asset_packs._waiters.size(),"waiting_screen":is_instance_valid(waiting_screen) and waiting_screen.visible,
 		"message":str(message.text) if is_instance_valid(message) else ""}
 	JavaScriptBridge.eval("window.stoneAge = %s" % JSON.stringify(status))
 
@@ -1728,7 +1736,7 @@ func _on_web_dev(arguments: Array) -> void:
 		"return":return_from_battle()
 		"pets":show_adventure_menu("pets")
 
-func _build_download_label() -> void:
+func _build_waiting_screen() -> void:
 	if OS.has_feature("web"):
 		_install_web_dev_hook()
 		var status_timer := Timer.new()
@@ -1736,26 +1744,15 @@ func _build_download_label() -> void:
 		status_timer.autostart = true
 		status_timer.timeout.connect(_publish_web_status)
 		add_child(status_timer)
-	_download_layer = CanvasLayer.new()
-	_download_layer.layer = 200
-	add_child(_download_layer)
-	_download_label = Label.new()
-	_download_label.position = Vector2(24,24)
-	_download_label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	_download_label.add_theme_font_size_override("font_size",20)
-	_download_label.add_theme_color_override("font_shadow_color",Color.BLACK)
-	_download_label.add_theme_constant_override("shadow_offset_x",1)
-	_download_label.add_theme_constant_override("shadow_offset_y",1)
-	_download_layer.add_child(_download_label)
-	asset_packs.progress.connect(func(label: String, done: int, total: int):
-		_download_label.text = "正在下载%s  %.1f / %.1f MB" % [label,done/1048576.0,total/1048576.0]
-		_download_label.show())
-	get_tree().process_frame.connect(func():
-		if is_instance_valid(_download_label) and not data.is_empty() and asset_packs._waiters.is_empty():_download_label.hide())
+	waiting_screen = WaitingScreen.new()
+	add_child(waiting_screen)
+	waiting_screen.configure(asset_packs,func():return music,func():return -80.0 if muted else linear_to_db(maxf(volume,0.0001)))
 
 func _show_startup_error(text_value: String) -> void:
+	if is_instance_valid(waiting_screen):
+		waiting_screen.fail(text_value)
+		return
 	var label := text(text_value,20)
-	if is_instance_valid(_download_label):_download_label.hide()
 	label.position = Vector2(50,100)
 	add_child(label)
 
@@ -1894,6 +1891,21 @@ func _build_link_overlay() -> void:
 	var layer := CanvasLayer.new()
 	layer.layer = 150
 	add_child(layer)
+	# Before the first snapshot the notice sits on the waiting screen's art,
+	# dimmed like the rest of the overlay, on every build that has it.
+	if ResourceLoader.exists(WaitingScreen.IMAGE):
+		_link_backdrop = ColorRect.new()
+		_link_backdrop.color = WaitingScreen.BACKDROP
+		_link_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		_link_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		var art := TextureRect.new()
+		art.texture = load(WaitingScreen.IMAGE)
+		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
+		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		_link_backdrop.add_child(art)
+		layer.add_child(_link_backdrop)
 	link_overlay = ColorRect.new()
 	link_overlay.color = Color(0,0,0,0.72)
 	link_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -1923,6 +1935,9 @@ func _update_link_overlay() -> void:
 		if blocked:
 			clear_input()
 			path.clear()
+	if is_instance_valid(_link_backdrop):
+		_link_backdrop.visible = blocked and data.is_empty()
+		link_overlay.color.a = 0.45 if _link_backdrop.visible else 0.72
 	if not blocked:return
 	if data.is_empty():
 		_link_status.text = "正在连接 MacBook 上的服务器\n%s …" % remote_url

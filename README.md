@@ -117,6 +117,7 @@ For the full MVP, use the [local server reference](docs/reverse-engineering/loca
 .tools/asset-venv/bin/python tools/import_pet_training.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_characters.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_pets.py /path/to/stoneage2.5
+.tools/asset-venv/bin/python tools/import_loading.py /path/to/stoneage2.5   # web waiting screen
 .tools/asset-venv/bin/python tools/import_riding.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_grid_cursor.py /path/to/stoneage2.5
 .tools/asset-venv/bin/python tools/import_cursor.py \

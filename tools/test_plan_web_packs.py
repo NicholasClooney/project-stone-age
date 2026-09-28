@@ -38,6 +38,12 @@ class PlanWebPacksTest(unittest.TestCase):
         effect_bytes = sum((LEGACY / p[len(plan_web_packs.RES):]).stat().st_size for p in effects)
         self.assertLess(effect_bytes, 5_000_000)
 
+    @unittest.skipUnless((LEGACY / "loading").is_dir(), "waiting screen assets not imported")
+    def test_loading_pack_holds_only_the_small_waiting_screen(self):
+        loading = self.plan["packs"]["loading"]
+        self.assertTrue(all(p.startswith(plan_web_packs.RES + "loading/") for p in loading))
+        self.assertLess(sum((LEGACY / p[len(plan_web_packs.RES):]).stat().st_size for p in loading), 2_000_000)
+
     def test_villages_depend_on_character_art_they_draw(self):
         self.assertTrue(any(name.startswith("char-") for name in self.plan["maps"]["1000"]))
 
