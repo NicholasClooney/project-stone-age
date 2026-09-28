@@ -46,6 +46,13 @@ const PROFILE_COMMANDS := {
 	"gm_grant_points":["gm_grant_points",["amount"]],
 	"gm_heal":["gm_heal",["index"]],
 	"gm_clear_modified":["gm_clear_modified",["index"]],
+	"set_music_favorite":["set_music_favorite",["track","favorite"]],
+	"create_music_playlist":["create_music_playlist",["name"]],
+	"rename_music_playlist":["rename_music_playlist",["name","new_name"]],
+	"delete_music_playlist":["delete_music_playlist",["name"]],
+	"add_music_to_playlist":["add_music_to_playlist",["name","track"]],
+	"remove_music_from_playlist":["remove_music_from_playlist",["name","position","track"]],
+	"move_music_in_playlist":["move_music_in_playlist",["name","position","track","step"]],
 }
 
 var session = GameSession.new()

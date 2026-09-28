@@ -116,6 +116,9 @@ var pet_hunt_menu: Control
 var dev_gm_menu: Control
 var dev_map_overview: Control
 var pet_training: Control
+## 电台 (scripts/radio.gd) and its window; the radio plays through `music`.
+var radio: Node
+var radio_panel: Control
 var adventure_menu: Control
 var profile_persistence := true:
 	set(value):
@@ -281,6 +284,8 @@ func _ready() -> void:
 	# A remote backend may already be mid-battle (another device, or a reload).
 	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
 	resume_automation_view()
+	# This device's radio, if it was left on (tests without a save keep scene music).
+	if profile_persistence or not link.is_local():radio.restore()
 	if is_instance_valid(waiting_screen):
 		waiting_screen.release()
 		waiting_screen.enter_game()
@@ -926,6 +931,10 @@ func exploration_music() -> AudioStream:
 	return wilderness_music if int(data.map_id)==100 and wilderness_music!=null else village_music
 
 func set_music(stream: AudioStream) -> void:
+	# The radio replaces map and battle music; remember what the scene wants.
+	if is_instance_valid(radio) and radio.on:
+		radio.scene_stream = stream
+		return
 	if music.stream==stream and music.playing:return
 	music.stop()
 	music.stream = stream
@@ -1139,6 +1148,19 @@ func build_ui() -> void:
 	mute_button = button("Music: on  [M]",toggle_mute)
 	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
 	dev.add_child(mute_button)
+	radio = preload("res://scripts/radio.gd").new()
+	radio.name = "Radio"
+	add_child(radio)
+	radio.configure(self)
+	radio_panel = preload("res://scripts/radio_panel.gd").new()
+	root.add_child(radio_panel)
+	radio_panel.configure(self,radio)
+	var radio_button := button("电台",func():
+		if radio_panel.visible:radio_panel.close_panel()
+		else:radio_panel.open_panel())
+	radio_button.name = "DevRadio"
+	radio_button.tooltip_text = "原版配乐电台：全部曲目、收藏和自己的歌单"
+	dev.add_child(radio_button)
 	changelog_menu = preload("res://scripts/changelog_menu.gd").new()
 	changelog_menu.configure(self)
 	root.add_child(changelog_menu)
@@ -2075,6 +2097,7 @@ func _on_backend_message(event: Dictionary) -> void:
 			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
 			_mark_ui_stale()
 			_on_automation_settings()
+			if is_instance_valid(radio):radio.on_profile()
 		"pet_storage":
 			_mark_ui_stale()
 		"auto_status":

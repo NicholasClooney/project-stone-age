@@ -15,6 +15,7 @@ art is never downloaded twice:
   riding-<id>     one mounted composite's frames
   bg-<name>       one battle background
   music-<name>    one music track
+  radio-<name>    one radio (电台) track, fetched when the radio plays it
 
 Writes build/web-packs/plan.json: pack name -> res:// paths, plus the
 lookups the game needs (map -> packs, sprite -> pack, file -> pack).
@@ -148,6 +149,11 @@ def plan() -> dict:
         pack = f"music-{path.stem}"
         assign(pack, path)
         lookups["files"][res(path)] = pack
+    for path in sorted((LEGACY / "music").glob("sabgm_*")):
+        if path.suffix != ".import":
+            pack = f"radio-{path.stem}"
+            assign(pack, path)
+            lookups["files"][res(path)] = pack
 
     for path in sorted(files):
         assign("core", path)

@@ -202,6 +202,8 @@ run "$PY" tools/import_characters.py "$CLIENT25"
 run "$PY" tools/import_pets.py "$CLIENT25"
 run "$PY" tools/import_mirror.py "$CLIENT25"
 run "$PY" tools/import_loading.py "$CLIENT25"
+# The radio takes the 8.0 soundtrack (26 tracks) when it is extracted, else 2.5's 24.
+if [ -d "$CLIENT80/data/bgm" ]; then run "$PY" tools/import_music.py "$CLIENT80"; else run "$PY" tools/import_music.py "$CLIENT25"; fi
 run "$PY" tools/import_riding.py "$CLIENT25"
 run "$PY" tools/import_grid_cursor.py "$CLIENT25"
 run "$PY" tools/import_cursor.py "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/123.cur"

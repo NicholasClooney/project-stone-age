@@ -52,6 +52,7 @@ $PY tools/import_characters.py "$CLIENT"
 $PY tools/import_pets.py "$CLIENT"
 $PY tools/import_mirror.py "$CLIENT"
 $PY tools/import_loading.py "$CLIENT"        # web waiting screen; uses ffmpeg if present
+$PY tools/import_music.py "$CLIENT"          # 电台 soundtrack; the 8.0 folder has 26 tracks, 2.5 has 24
 $PY tools/import_riding.py "$CLIENT"         # after characters: riders are checked against them
 $PY tools/import_grid_cursor.py "$CLIENT"
 $PY tools/import_cursor.py 'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'

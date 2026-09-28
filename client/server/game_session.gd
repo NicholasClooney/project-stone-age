@@ -7,6 +7,7 @@ const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
 const Progression = preload("res://server/progression.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
+const MusicLibrary = preload("res://scripts/music_library.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
 	"blue_dragon":{"name":"扬奇洛斯","alias":"蓝人龙","category":"人龙","sprite":100288,"speed":20},
@@ -33,7 +34,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{}}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
@@ -527,6 +528,84 @@ func set_automation_settings(patch: Variant) -> bool:
 	_profile.automation_settings = reply.overrides
 	return true
 
+# ---- radio library (scripts/music_library.gd) ------------------------------
+# Allowed during battles: the radio keeps playing through them.
+
+func _music() -> Dictionary:
+	if not _profile.get("music") is Dictionary:_profile.music = MusicLibrary.empty()
+	return _profile.music
+
+func set_music_favorite(track: String, favorite: bool) -> bool:
+	last_error=""
+	if not MusicLibrary.valid_track(track):last_error="没有这首曲子。";return false
+	var favorites: Array = _music().favorites
+	if favorite and not favorites.has(track):
+		if favorites.size() >= MusicLibrary.MAX_TRACKS:last_error="收藏已满。";return false
+		favorites.append(track)
+	elif not favorite:favorites.erase(track)
+	return true
+
+func create_music_playlist(name: String) -> bool:
+	last_error=""
+	var clean := MusicLibrary.clean_name(name)
+	if clean.is_empty():last_error="请输入歌单名称。";return false
+	if MusicLibrary.find(_music(),clean) >= 0:last_error="已有同名歌单。";return false
+	if _music().playlists.size() >= MusicLibrary.MAX_PLAYLISTS:last_error="歌单数量已满。";return false
+	_music().playlists.append({"name":clean,"tracks":[]})
+	return true
+
+func rename_music_playlist(name: String, new_name: String) -> bool:
+	last_error=""
+	var index := MusicLibrary.find(_music(),name)
+	var clean := MusicLibrary.clean_name(new_name)
+	if index < 0:last_error="找不到这个歌单。";return false
+	if clean.is_empty():last_error="请输入歌单名称。";return false
+	if clean!=name and MusicLibrary.find(_music(),clean) >= 0:last_error="已有同名歌单。";return false
+	_music().playlists[index].name = clean
+	return true
+
+func delete_music_playlist(name: String) -> bool:
+	last_error=""
+	var index := MusicLibrary.find(_music(),name)
+	if index < 0:last_error="找不到这个歌单。";return false
+	_music().playlists.remove_at(index)
+	return true
+
+## Appends a track (a playlist may hold a track more than once).
+func add_music_to_playlist(name: String, track: String) -> bool:
+	last_error=""
+	var index := MusicLibrary.find(_music(),name)
+	if index < 0:last_error="找不到这个歌单。";return false
+	if not MusicLibrary.valid_track(track):last_error="没有这首曲子。";return false
+	var tracks: Array = _music().playlists[index].tracks
+	if tracks.size() >= MusicLibrary.MAX_TRACKS:last_error="歌单已满。";return false
+	tracks.append(track)
+	return true
+
+## Removes the entry at position, which must still hold track (so a device
+## showing an older list cannot remove a different entry).
+func remove_music_from_playlist(name: String, position: int, track: String) -> bool:
+	last_error=""
+	var index := MusicLibrary.find(_music(),name)
+	if index < 0:last_error="找不到这个歌单。";return false
+	var tracks: Array = _music().playlists[index].tracks
+	if position < 0 or position >= tracks.size() or tracks[position]!=track:last_error="歌单已在别处改动，请再试一次。";return false
+	tracks.remove_at(position)
+	return true
+
+## Moves the entry at position one step up (-1) or down (+1).
+func move_music_in_playlist(name: String, position: int, track: String, step: int) -> bool:
+	last_error=""
+	var index := MusicLibrary.find(_music(),name)
+	if index < 0:last_error="找不到这个歌单。";return false
+	var tracks: Array = _music().playlists[index].tracks
+	var target := position+signi(step)
+	if position < 0 or position >= tracks.size() or tracks[position]!=track:last_error="歌单已在别处改动，请再试一次。";return false
+	if target < 0 or target >= tracks.size():return true
+	tracks[position] = tracks[target]
+	tracks[target] = track
+	return true
+
 func set_location(map_id: int, x: int, y: int) -> bool:
 	if not _pending.is_empty() or not _location_valid({"map_id":map_id,"x":x,"y":y}):
 		return false
@@ -575,6 +654,8 @@ func load_game(path: String) -> bool:
 				_profile.travel_pass = false
 			# Saves before automation settings get the defaults; invalid parts are dropped.
 			_profile.automation_settings = AutomationSettings.sanitize(_profile.get("automation_settings",{}))
+			# Saves before the radio get an empty library; malformed parts are dropped.
+			_profile.music = MusicLibrary.sanitize(_profile.get("music"))
 			# Earlier prototype saves predate speed; migrate only this optional field.
 			if not _profile.player.has("speed"):
 				_profile.player.speed = 10 + _profile.player.level - 1
