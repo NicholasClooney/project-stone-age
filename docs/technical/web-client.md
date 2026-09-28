@@ -46,7 +46,7 @@ A measured build: 1,117 packs, 302 MB in total. First load transfers roughly 30 
 | Start | Help | Help |
 | Back / View | Navigate the HUD and DEV buttons (Back or B returns) | |
 
-A click is a real mouse click at the control's centre, so battle commands, targets, pet rows and dialogue choices work unchanged; disabled controls are skipped and nothing depends on hover. `tests/gamepad_test.gd` plays walking, menus, paging, dialogue and a battle turn with simulated controller events only.
+A minimized 自动练级 / 自动抓极品 bar is not a menu: its 展开 button is reached with Back (HUD mode), and B / Esc leave the automation running. A click is a real mouse click at the control's centre, so battle commands, targets, pet rows and dialogue choices work unchanged; disabled controls are skipped and nothing depends on hover. `tests/gamepad_test.gd` plays walking, menus, paging, dialogue and a battle turn with simulated controller events only.
 
 ## Secure context and Vision Pro
 

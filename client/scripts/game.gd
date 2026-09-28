@@ -69,6 +69,9 @@ var _download_label: Label
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 var _ui_stale := false
+## Redraws while automation runs are spaced out so a panel's buttons survive a click.
+const UI_REFRESH_MSEC := 400
+var _ui_refreshed_msec := -100000
 var _companion_key: Array = []
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
@@ -262,7 +265,7 @@ func _ready() -> void:
 	report_position()
 	# A remote backend may already be mid-battle (another device, or a reload).
 	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
-	else:resume_automation_view()
+	resume_automation_view()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -362,7 +365,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	target_cell = destination
 	logical_position = Vector2(destination)
 	moving = false
-	paused_input = _panel_open()
+	paused_input = _panel_open() or automation_minimized()
 	marker_cell = Vector2i(-1,-1)
 	field_steps = 0
 	build_world()
@@ -490,6 +493,8 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	classic_hud.map_panel.hide()
 	if is_instance_valid(training_helper) and training_helper.compact_active:
 		return true
+	# Pets or storage opened beside minimized automation give way to its battle.
+	if adventure_menu.visible:adventure_menu.hide()
 	battle_view.open_battle(battle_state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
@@ -525,7 +530,7 @@ func return_from_battle() -> void:
 func present_battle_close(outcome: String) -> void:
 	battle_view.close_battle()
 	clear_input()
-	paused_input = false
+	paused_input = automation_minimized()
 	field_steps = 0
 	if outcome!="defeat":set_music(exploration_music())
 	play_ui_sound(203)
@@ -687,7 +692,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_mute()
 	elif event.is_action_pressed("help") or event.is_action_pressed("ui_cancel"):
 		help.visible = not help.visible if event.is_action_pressed("help") else false
-		paused_input = help.visible
+		paused_input = help.visible or automation_minimized()
 		clear_input()
 	elif event.is_action_pressed("reset"):
 		reset_player()
@@ -729,9 +734,9 @@ func _physics_process(delta: float) -> void:
 	if area_transition_busy:return
 	if data.is_empty():
 		return
-	if _ui_stale:
-		_ui_stale = false
-		refresh_open_panels()
+	if _ui_stale and not _ui_refresh_held():
+		_ui_refreshed_msec = Time.get_ticks_msec()
+		_ui_stale = refresh_open_panels()
 	if moving:
 		var d := target_cell-from_cell
 		var distance_scale := sqrt(2.0) if d.x != 0 and d.y != 0 else 1.0
@@ -1122,7 +1127,7 @@ func build_ui() -> void:
 	var help_button := button("Help [H]",func():
 		if not dialogue.visible:
 			help.visible = not help.visible
-			paused_input = help.visible
+			paused_input = help.visible or automation_minimized()
 			clear_input())
 	help_button.name = "DevHelp"
 	dev.add_child(help_button)
@@ -1144,7 +1149,7 @@ func build_ui() -> void:
 	slider.value = volume
 	slider.value_changed.connect(func(value: float): volume = value; music.volume_db = -80 if muted else linear_to_db(maxf(volume,0.0001)))
 	content.add_child(slider)
-	content.add_child(button("Back to the village",func(): help.hide(); paused_input = false; clear_input()))
+	content.add_child(button("Back to the village",func(): help.hide(); paused_input = automation_minimized(); clear_input()))
 	help.hide()
 	build_dialogue(root)
 	adventure_menu = AdventureMenu.new()
@@ -1217,6 +1222,8 @@ func refresh_map_ui() -> void:
 	if is_instance_valid(classic_hud) and classic_hud.is_node_ready():classic_hud.refresh_map()
 
 ## Whether a panel that stops walking is open; a map change keeps panels open.
+## A minimized automation window is hidden, so it does not count; see
+## automation_minimized() for how it still holds the character in place.
 func _panel_open() -> bool:
 	for node in [leveling_destinations,training_helper,pet_hunt_menu,changelog_menu,character_selection,dev_gm_menu,dev_map_overview,pet_training,adventure_menu,help]:
 		if is_instance_valid(node) and node.visible:return true
@@ -1399,13 +1406,43 @@ func restore_location() -> void:
 
 ## After a reload, reopens the window of a hunt or find-pet workflow that kept
 ## running on the backend. (The auto-battle window reopens itself on status.)
+## A window this device had minimized comes back as its progress bar.
 func resume_automation_view() -> void:
 	var automation: Dictionary = state.automation
+	if is_instance_valid(training_helper) and training_helper.running and not training_helper.minimized and not (is_instance_valid(pet_workflow) and pet_workflow.active()) and bool(viewer_pref("training_minimized")):
+		training_helper.minimize()
 	var hunting := bool(automation.get("hunt",{}).get("running",false))
 	var flow := str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
-	if (hunting or flow) and is_instance_valid(pet_hunt_menu) and not pet_hunt_menu.visible:
+	if (hunting or flow) and is_instance_valid(pet_hunt_menu) and not pet_hunt_menu.visible and not pet_hunt_menu.minimized:
 		pet_hunt_menu.open_menu()
 		if hunting:pet_hunt_menu.on_status(automation)
+		if bool(viewer_pref("hunt_minimized")):pet_hunt_menu.minimize()
+
+## Per-device view choices (not game state, so not in the save or backend):
+## which automation windows this device keeps minimized, so a reload comes
+## back the same way. Tests run without persistence and never touch the file.
+const VIEWER_PREFS := "user://viewer.cfg"
+var viewer_prefs_path := ""
+
+func _viewer_prefs_file() -> String:
+	if not viewer_prefs_path.is_empty():return viewer_prefs_path
+	return VIEWER_PREFS if profile_persistence else ""
+
+func viewer_pref(key: String, fallback: Variant = false) -> Variant:
+	var file := _viewer_prefs_file()
+	if file.is_empty():return fallback
+	var config := ConfigFile.new()
+	if config.load(file)!=OK:return fallback
+	return config.get_value("view",key,fallback)
+
+func set_viewer_pref(key: String, value: Variant) -> void:
+	var file := _viewer_prefs_file()
+	if file.is_empty():return
+	var config := ConfigFile.new()
+	config.load(file)
+	if config.has_section_key("view",key) and config.get_value("view",key)==value:return
+	config.set_value("view",key,value)
+	config.save(file)
 
 # Copies the on-disk save beside itself before an irreversible change; returns
 # the backup path or "" when there is no save file.
@@ -1498,7 +1535,7 @@ func show_adventure_menu(kind: String) -> void:
 
 func close_adventure_menu() -> void:
 	adventure_menu.hide()
-	paused_input = battle_view.visible
+	release_input()
 	clear_input()
 	refresh_companion()
 	checkpoint()
@@ -1724,10 +1761,15 @@ func _show_startup_error(text_value: String) -> void:
 
 ## Profile updates can arrive after the action that caused them (always over a
 ## network link, or from automation). Redraw whatever is open, once per frame.
-func refresh_open_panels() -> void:
+## Returns true when a panel kept its old contents because the player is
+## typing in it; the caller redraws it once they stop.
+func refresh_open_panels() -> bool:
+	var deferred := false
 	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:dev_gm_menu._refresh_actor()
 	for panel in [adventure_menu,pet_training]:
-		if is_instance_valid(panel) and panel.visible and not _typing_in(panel):rebuild_keeping_scroll(panel)
+		if not is_instance_valid(panel) or not panel.visible:continue
+		if _typing_in(panel):deferred = true
+		else:rebuild_keeping_scroll(panel)
 	var profile_now: Dictionary = state.profile
 	var active := int(profile_now.get("active_pet",-1))
 	var pets: Array = profile_now.get("pets",[])
@@ -1736,6 +1778,35 @@ func refresh_open_panels() -> void:
 	if companion_key!=_companion_key:
 		_companion_key = companion_key
 		refresh_companion()
+	return deferred
+
+## One redraw path for both links. A remote client learns of every profile
+## change late, its own actions included. In-process, panels redraw themselves
+## after the player's actions, so only automation running behind a minimized
+## window changes the profile under an open panel.
+func _mark_ui_stale() -> void:
+	if not link.is_local() or automation_minimized():_ui_stale = true
+
+## While automation runs, open panels redraw at most every UI_REFRESH_MSEC and
+## never under a held mouse button, so a click lands on the button it pressed.
+func _ui_refresh_held() -> bool:
+	if not _automation_running():return false
+	return Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Time.get_ticks_msec()-_ui_refreshed_msec < UI_REFRESH_MSEC
+
+func _automation_running() -> bool:
+	var automation: Dictionary = state.automation
+	return bool(automation.get("running",false)) or bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+
+## True while a minimized automation window (自动练级 / 自动抓极品) runs. Its
+## progress bar then stands in for the window: nothing is modal, but the
+## character stays in place so the stationary run is not cancelled by a stray click.
+func automation_minimized() -> bool:
+	return (is_instance_valid(training_helper) and training_helper.minimized) or (is_instance_valid(pet_hunt_menu) and pet_hunt_menu.minimized)
+
+## Lifts the field-input lock unless a battle, the adventure menu or minimized
+## automation still needs it.
+func release_input() -> void:
+	paused_input = battle_view.visible or adventure_menu.visible or automation_minimized()
 
 ## Rebuilds a panel for new data without moving the player's place in its
 ## lists: scroll areas are matched by order and restored once laid out.
@@ -1900,9 +1971,9 @@ func _on_backend_message(event: Dictionary) -> void:
 		"battle_closed":present_battle_close(str(event.outcome))
 		"profile":
 			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
-			_ui_stale = not link.is_local()
+			_mark_ui_stale()
 		"pet_storage":
-			_ui_stale = not link.is_local()
+			_mark_ui_stale()
 		"auto_status":
 			for node in [training_helper,pet_hunt_menu,pet_workflow]:
 				if is_instance_valid(node):node.on_status(event.status)
