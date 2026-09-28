@@ -322,7 +322,7 @@ func build_stat_page()->void:
 		var keep:=number(Vector2(360+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=100;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
 		check.toggled.connect(func(_on):save_stat_settings());input.value_changed.connect(func(_value):save_stat_settings());keep.value_changed.connect(func(_value):save_stat_settings())
 	var stop_label:Label=world.text("找到",17);stop_label.position=Vector2(24,348);stat_page.add_child(stop_label)
-	stat_stop_after=number(Vector2(80,338),0,100000,10);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
+	stat_stop_after=number(Vector2(80,338),0,100000,0);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
 	stat_stop_after.value_changed.connect(func(_value):save_stat_settings())
 	var stop_note:Label=world.text("只达标宠物后停止（0＝不停止，1＝找到即停并比较）",17);stop_note.position=Vector2(230,348);stat_page.add_child(stop_note)
 	var note:Label=world.text("仅在「抓到后直接升至120级」时生效；每个品种独立设置，本次游戏内保留。\n预测不达标：直接跳过不抓。达标：抓到、升至120并存仓，数量到上限停止并打开比较。\n未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。",16);note.position=Vector2(24,395);stat_page.add_child(note)

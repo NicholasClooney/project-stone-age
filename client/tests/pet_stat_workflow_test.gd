@@ -84,7 +84,8 @@ func run()->void:
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not (str(pet.pet_id).begins_with("pet-hunt-") or str(pet.pet_id) in ["pet-manual-low","pet-fav-low","pet-earlier-low"]))
 	var keeper:Dictionary=source.duplicate(true);keeper.pet_id="pet-keep-0";keeper.species="original_92";keeper.template_id=92;keeper.level=120;keeper.attack=288;keeper.defence=184;keeper.speed=152;keeper.erase("gm_modified")
 	var keep_ids:=[]
-	flow.kept_count=0;flow.collected_count=0;flow.target_stat_filter=Filter.defaults(92)
+	var ten:=Filter.defaults(92);ten.stop_after=10
+	flow.kept_count=0;flow.collected_count=0;flow.target_stat_filter=ten
 	for turn in range(10):
 		var found:Dictionary=keeper.duplicate(true);found.pet_id="pet-keep-%d"%turn;keep_ids.append(found.pet_id)
 		if turn==1:found.attack=293;found.defence=170;found.speed=150
@@ -110,10 +111,10 @@ func run()->void:
 	check(flow.collected_count==12 and flow.phase=="idle" and flow.collect_target_text()=="不限","stop_after 0 keeps storing matches without stopping")
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not str(pet.pet_id) in endless_ids)
 	hunt.show_stat_settings();hunt.stat_species.select(hunt.stat_species.get_item_index(92));hunt.load_stat_settings()
-	check(hunt.stat_stop_after.value==10,"attribute tab shows blue dragon default stop after 10")
-	hunt.stat_stop_after.get_line_edit().grab_focus();hunt.stat_stop_after.get_line_edit().text="0";hunt.commit_stat_settings()
-	check(int(game.pet_stat_filters[92].stop_after)==0,"typed stop-after 0 commits to the species filter")
-	hunt.stat_stop_after.get_line_edit().release_focus();hunt.stat_stop_after.value=10;hunt.save_stat_settings();hunt.hide();game.paused_input=false
+	check(hunt.stat_stop_after.value==0 and hunt.stat_keeps.sum.value==15 and hunt.stat_keeps.attack.value==10,"attribute tab shows blue dragon defaults: never stop, keep 15 by sum and 10 by attack")
+	hunt.stat_stop_after.get_line_edit().grab_focus();hunt.stat_stop_after.get_line_edit().text="7";hunt.commit_stat_settings()
+	check(int(game.pet_stat_filters[92].stop_after)==7,"typed stop-after commits to the species filter")
+	hunt.stat_stop_after.get_line_edit().release_focus();hunt.stat_stop_after.value=0;hunt.save_stat_settings();hunt.hide();game.paused_input=false
 	flow.phase="idle"
 	var good:Dictionary=source.duplicate(true);good.pet_id="pet-filter-good";good.level=120;good.attack=292;good.defence=181;good.speed=151
 	game.session._profile.pets.append(good);game.session._profile.active_pet=game.session._profile.pets.size()-1
