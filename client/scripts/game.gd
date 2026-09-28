@@ -5,6 +5,18 @@ const Backend = preload("res://server/backend.gd")
 const LocalLink = preload("res://network/local_link.gd")
 const WsLink = preload("res://network/ws_link.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
+const AssetPacks = preload("res://scripts/asset_packs.gd")
+const TroopArt = preload("res://server/troop_art.gd")
+
+## Resolves when AssetPacks finishes one ensure() call.
+class PackWaiter extends RefCounted:
+	signal done
+	var finished := false
+	var ok := false
+	func finish(result: bool) -> void:
+		ok = result
+		finished = true
+		done.emit()
 const ClientState = preload("res://network/client_state.gd")
 const SessionClient = preload("res://network/session_client.gd")
 const BattleClient = preload("res://network/battle_client.gd")
@@ -35,6 +47,9 @@ var remote_url := ""
 var _offline_profile: Dictionary = {}
 var _offline_battles := 0
 var _connection_label: Label
+var asset_packs: Node
+var _download_layer: CanvasLayer
+var _download_label: Label
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
@@ -150,7 +165,7 @@ func _init() -> void:
 	link.message.connect(_on_backend_message)
 
 ## Remote backend address: an explicit override, then --server=ws://host:port,
-## then on the web the page's ?server= parameter or the page host's port 8765.
+## then on the web the page's ?server= parameter or the page host's port 8781.
 func _server_url() -> String:
 	if not server_url_override.is_empty():return server_url_override
 	for argument in OS.get_cmdline_user_args():
@@ -160,7 +175,7 @@ func _server_url() -> String:
 		if chosen is String and not chosen.is_empty():return chosen
 		var host = JavaScriptBridge.eval("window.location.hostname",true)
 		var secure = JavaScriptBridge.eval("window.location.protocol==='https:'",true)
-		return "%s://%s:8765" % ["wss" if secure else "ws",str(host) if host is String and not str(host).is_empty() else "localhost"]
+		return "%s://%s:8781" % ["wss" if secure else "ws",str(host) if host is String and not str(host).is_empty() else "localhost"]
 	return ""
 
 func _sync_persistence() -> void:
@@ -179,6 +194,15 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
 	if "--script" in OS.get_cmdline_args():profile_persistence = false
+	asset_packs = AssetPacks.new()
+	add_child(asset_packs)
+	var pack_url := _asset_pack_url()
+	if not pack_url.is_empty():
+		asset_packs.configure(pack_url)
+		_build_download_label()
+		if not await _download_core():
+			_show_startup_error("素材索引或核心包下载失败，请检查与 MacBook 的连接后刷新页面。")
+			return
 	if FileAccess.file_exists("res://assets/legacy/mvp/manifest.json"):
 		mvp_manifest = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json"))
 	if link.is_local() and profile_persistence and (FileAccess.file_exists(save_path) or FileAccess.file_exists(save_path+".bak")):
@@ -192,6 +216,9 @@ func _ready() -> void:
 		return
 	if not link.is_local():
 		await _connect_remote()
+	if asset_packs.enabled and not await _download_start_area():
+		_show_startup_error("起始地图素材下载失败，请检查与 MacBook 的连接后刷新页面。")
+		return
 	data = JSON.parse_string(FileAccess.get_file_as_string(world_catalog.file(1000)))
 	build_world()
 	setup_audio()
@@ -208,6 +235,8 @@ func _ready() -> void:
 			message.text = "伙伴已加入：蓝人龙、金虎、红暴龙。打开宠物菜单查看。"
 	refresh_companion()
 	report_position()
+	# A remote backend may already be mid-battle (another device, or a reload).
+	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -272,6 +301,10 @@ func switch_area(wilderness: bool, destination: Vector2i) -> bool:
 	return load_area_id(100 if wilderness else 1000,destination+Vector2i(592,448) if wilderness and world_catalog.maps.has("100") else destination)
 
 func load_area_id(map_id: int, destination: Vector2i) -> bool:
+	var needed := area_packs(map_id)
+	if not asset_packs.is_ready(needed):
+		_load_area_after_download(map_id,destination,needed)
+		return true
 	var file := world_catalog.file(map_id)
 	if not FileAccess.file_exists(file):
 		message.text = "Import the wilderness assets first; see README.md."
@@ -314,7 +347,23 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	queue_redraw()
 	refresh_companion()
 	checkpoint()
+	for link_info in world_catalog.links(map_id).values():asset_packs.prefetch(area_packs(int(link_info.to_map)))
 	return true
+
+## Packs a map needs: its data, tiles, residents and music.
+func area_packs(map_id: int) -> Array:
+	var packs: Array = asset_packs.map_packs(map_id).duplicate()
+	var music_path := str(world_catalog.info(map_id).get("music",""))
+	if not music_path.is_empty():packs.append(asset_packs.file_pack("res://assets/legacy/"+music_path))
+	return packs
+
+func _load_area_after_download(map_id: int, destination: Vector2i, needed: Array) -> void:
+	clear_input()
+	paused_input = true
+	var ok := await await_packs(needed,"地图 %s" % str(world_catalog.info(map_id).get("name",map_id)))
+	paused_input = false
+	if ok:load_area_id(map_id,destination)
+	elif is_instance_valid(message):message.text = "地图素材下载失败，请稍后再试。"
 
 func transition_area(map_id: int, destination: Vector2i) -> bool:
 	if area_transition_busy:return false
@@ -395,6 +444,16 @@ func open_battle_config(config: Dictionary) -> bool:
 
 ## Presentation for a battle the backend has just opened.
 func present_battle_start(battle_state: Dictionary) -> bool:
+	if asset_packs.enabled and not (is_instance_valid(training_helper) and training_helper.compact_active):
+		var needed := battle_packs(battle_state)
+		if not asset_packs.is_ready(needed):
+			clear_input()
+			paused_input = true
+			var battle_id := str(battle_state.get("battle_id",""))
+			asset_packs.ensure(needed,func(ok: bool):
+				if ok and state.battle_open and str(state.battle.get("battle_id",""))==battle_id and not battle_view.visible:present_battle_start(state.battle)
+				elif not ok and is_instance_valid(message):message.text = "战斗素材下载失败，战斗仍在进行；稍后重试。","战斗素材")
+			return true
 	if is_instance_valid(travel_router):travel_router.cancel("战斗中断了自动寻路，请重新选择目的地。")
 	clear_input()
 	paused_input = true
@@ -763,6 +822,9 @@ func change_character(id: String = "") -> void:
 	if battle_view.visible or area_transition_busy:return
 	if id.is_empty():
 		character_selection.open_menu()
+		return
+	if not asset_packs.is_ready([asset_packs.character_pack(id)]):
+		asset_packs.ensure([asset_packs.character_pack(id)],func(ok: bool):if ok:change_character(id),"角色")
 		return
 	if not data.characters.has(id) or not session.set_character(id):return
 	player.character_id = id
@@ -1276,6 +1338,12 @@ func checkpoint() -> bool:
 	return bool(reply.ok) or bool(reply.get("pending",false))
 
 func refresh_companion() -> void:
+	var profile_now: Dictionary = session.snapshot()
+	var wanted: Array = []
+	if int(profile_now.active_pet)>=0 and int(profile_now.active_pet)<profile_now.pets.size():wanted.append(asset_packs.sprite_pack(profile_now.pets[int(profile_now.active_pet)].sprite))
+	if not asset_packs.is_ready(wanted):
+		asset_packs.ensure(wanted,func(ok: bool):if ok and is_instance_valid(player):refresh_companion())
+		return
 	refresh_riding()
 	if is_instance_valid(pet_follower):
 		pet_follower.queue_free()
@@ -1319,6 +1387,11 @@ func show_adventure_menu(kind: String) -> void:
 		return
 	if moving or dialogue.visible or help.visible:return
 	if kind=="shop" and (int(data.map_id)!=1002 or not in_talk_range(cell)):return
+	if kind=="pets":
+		var portraits := pet_packs()
+		if not asset_packs.is_ready(portraits):
+			asset_packs.ensure(portraits,func(ok: bool):if ok:show_adventure_menu(kind),"宠物图像")
+			return
 	if kind=="quest" and (int(data.map_id)!=1000 or not in_talk_range(cell)):return
 	clear_input()
 	paused_input = true
@@ -1395,6 +1468,9 @@ func refresh_riding() -> void:
 	var composite := -1
 	if index >= 0 and index < profile.pets.size():
 		composite = preload("res://scripts/riding.gd").composite(str(profile.get("character_id","100000")),int(profile.pets[index].sprite))
+	if composite >= 0 and not asset_packs.is_ready([asset_packs.riding_pack(composite)]):
+		asset_packs.ensure([asset_packs.riding_pack(composite)],func(ok: bool):if ok:refresh_riding())
+		return
 	player.mounted_character_id = str(composite) if composite >= 0 else ""
 
 func dev_toggle_riding() -> void:
@@ -1431,6 +1507,124 @@ func set_clone_squad_enabled(enabled:bool)->void:
 	session.clone_squad_enabled=enabled
 	if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(session.clone_squad_enabled)
 
+## Battle art packs for one battle state; also fixes its background choice.
+func battle_packs(battle_state: Dictionary) -> Array:
+	var art: Dictionary = battle_view.required_art(battle_state)
+	var packs: Array = []
+	for ident in art.sprites:packs.append(asset_packs.sprite_pack(ident))
+	for ident in art.riding:packs.append(asset_packs.riding_pack(ident))
+	for path in art.files:packs.append(asset_packs.file_pack(path))
+	return packs
+
+## Sprite packs for every carried and stored pet, for portraits and previews.
+func pet_packs() -> Array:
+	var packs: Array = []
+	var profile_now: Dictionary = session.snapshot()
+	for pet in profile_now.pets+profile_now.get("pet_storage",[]):
+		var pack: String = asset_packs.sprite_pack(pet.get("sprite",""))
+		if not packs.has(pack):packs.append(pack)
+	return packs
+
+func await_packs(packs: Array, label: String) -> bool:
+	var waiter := PackWaiter.new()
+	asset_packs.ensure(packs,waiter.finish,label)
+	if not waiter.finished:await waiter.done
+	return waiter.ok
+
+## Pack base URL: --asset-packs=URL, the page's ?packs= parameter, or the
+## packs/ folder next to a web build's page. Empty when assets ship locally.
+func _asset_pack_url() -> String:
+	for argument in OS.get_cmdline_user_args():
+		if argument.begins_with("--asset-packs="):return argument.trim_prefix("--asset-packs=")
+	if not OS.has_feature("web"):return ""
+	var chosen = JavaScriptBridge.eval("new URLSearchParams(window.location.search).get('packs') || ''",true)
+	if chosen is String and not chosen.is_empty():return chosen
+	var page = JavaScriptBridge.eval("window.location.href.split('?')[0].replace(/[^/]*$/,'')",true)
+	return str(page)+"packs/"
+
+func _download_core() -> bool:
+	var waiter := PackWaiter.new()
+	_download_label.text = "正在读取素材索引…"
+	asset_packs.load_index(waiter.finish)
+	if not waiter.finished:await waiter.done
+	if not waiter.ok:return false
+	if not await await_packs(["core","music-sabgm_t0"],"核心素材"):return false
+	# setup_audio() loads every track the MVP manifest names at startup.
+	var startup_music: Array = []
+	var mvp = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json"))
+	if mvp is Dictionary:
+		for track in mvp.get("audio",{}).values():startup_music.append(asset_packs.file_pack("res://assets/legacy/mvp/"+str(track)))
+	if not await await_packs(startup_music,"音乐"):return false
+	# Catalogs read at construction must see the mounted core pack.
+	world_catalog = WorldCatalog.new()
+	TroopArt.pack_index = asset_packs.index.get("sprites",{})
+	return true
+
+func _download_start_area() -> bool:
+	var profile_now: Dictionary = session.snapshot()
+	var packs: Array = area_packs(1000)
+	for pack in area_packs(int(profile_now.get("location",{}).get("map_id",1000))):
+		if not packs.has(pack):packs.append(pack)
+	packs.append(asset_packs.character_pack(profile_now.get("character_id","100000")))
+	return await await_packs(packs,"起始地图")
+
+## Web only: window.stoneAge mirrors map, cell, connection and pack state
+## once a second, for Safari's Web Inspector on another device.
+func _publish_web_status() -> void:
+	var status := {"map":int(data.get("map_id",-1)),"cell":[cell.x,cell.y],"online":bool(link.get("online")) if not link.is_local() else true,
+		"battle":bool(is_instance_valid(battle_view) and battle_view.visible),"mounted":asset_packs._mounted.size(),"pending":asset_packs._queued.size()+asset_packs._active.size(),"downloading":asset_packs._active.values(),"queued":asset_packs._queued,"waiters":asset_packs._waiters.size(),
+		"message":str(message.text) if is_instance_valid(message) else ""}
+	JavaScriptBridge.eval("window.stoneAge = %s" % JSON.stringify(status))
+
+var _dev_callback: JavaScriptObject
+
+## Web only: window.stoneAgeDev(name) runs the same actions as the on-screen DEV
+## buttons, so a browser session can be driven from the console.
+func _install_web_dev_hook() -> void:
+	_dev_callback = JavaScriptBridge.create_callback(_on_web_dev)
+	JavaScriptBridge.get_interface("window").stoneAgeDev = _dev_callback
+
+func _on_web_dev(arguments: Array) -> void:
+	var action: String = str(arguments[0]) if not arguments.is_empty() else ""
+	match action:
+		"explore":dev_go_adventure()
+		"encounter":dev_encounter()
+		"village":load_area_id(1000,SPAWN)
+		"escape":battle_action("developer_escape")
+		"return":return_from_battle()
+		"pets":show_adventure_menu("pets")
+
+func _build_download_label() -> void:
+	if OS.has_feature("web"):
+		_install_web_dev_hook()
+		var status_timer := Timer.new()
+		status_timer.wait_time = 1.0
+		status_timer.autostart = true
+		status_timer.timeout.connect(_publish_web_status)
+		add_child(status_timer)
+	_download_layer = CanvasLayer.new()
+	_download_layer.layer = 200
+	add_child(_download_layer)
+	_download_label = Label.new()
+	_download_label.position = Vector2(24,24)
+	_download_label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	_download_label.add_theme_font_size_override("font_size",20)
+	_download_label.add_theme_color_override("font_shadow_color",Color.BLACK)
+	_download_label.add_theme_constant_override("shadow_offset_x",1)
+	_download_label.add_theme_constant_override("shadow_offset_y",1)
+	_download_layer.add_child(_download_label)
+	asset_packs.progress.connect(func(label: String, done: int, total: int):
+		_download_label.text = "正在下载%s  %.1f / %.1f MB" % [label,done/1048576.0,total/1048576.0]
+		_download_label.show())
+	get_tree().process_frame.connect(func():
+		if is_instance_valid(_download_label) and not data.is_empty() and asset_packs._waiters.is_empty():_download_label.hide())
+
+func _show_startup_error(text_value: String) -> void:
+	var label := text(text_value,20)
+	if is_instance_valid(_download_label):_download_label.hide()
+	label.position = Vector2(50,100)
+	add_child(label)
+
 func report_position() -> void:
 	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y]})
 
@@ -1442,8 +1636,7 @@ func _on_map_reported(reply: Dictionary) -> void:
 
 ## Remote start: wait for the backend's first snapshot before building the map.
 func _connect_remote() -> void:
-	_connection_label = Label.new()
-	_connection_label.text = "正在连接 MacBook 上的服务器 %s …" % remote_url
+	_connection_label = text("正在连接 MacBook 上的服务器 %s …" % remote_url,20)
 	_connection_label.position = Vector2(50,100)
 	add_child(_connection_label)
 	link.connected.connect(_on_link_connected)

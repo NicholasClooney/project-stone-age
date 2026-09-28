@@ -17,11 +17,13 @@ The project-local Godot runtime is already installed under `.tools/`. You can al
 The game's rules, automation and saves run in a backend. The desktop game hosts one in-process; it can also run on its own so automation keeps going with no window open:
 
 ```sh
-./scripts/serve.sh                     # headless backend on ws://*:8765, same save as the desktop game
-./scripts/run.sh -- --server=ws://127.0.0.1:8765
+./scripts/serve.sh                     # headless backend on ws://*:8781, same save as the desktop game
+./scripts/run.sh -- --server=ws://127.0.0.1:8781
 ```
 
-Quit the desktop game before starting `serve.sh`; both would write the same save. A client reconnects by itself and shows what happened while it was away. See [backend interface](docs/technical/backend-interface.md).
+Quit the desktop game before starting `serve.sh`; both would write the same save.
+
+For the browser version (Vision Pro Safari or any device on the same Wi-Fi), run `./scripts/build-web.sh` once, then `./scripts/serve.sh` and open the printed `http://<MacBook>:8780/` address. The page downloads original assets on demand and caches them. See [web client](docs/technical/web-client.md). A client reconnects by itself and shows what happened while it was away. See [backend interface](docs/technical/backend-interface.md).
 
 | Control | Action |
 | --- | --- |

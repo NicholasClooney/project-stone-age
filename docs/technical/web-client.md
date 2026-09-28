@@ -1,0 +1,47 @@
+# Web client
+
+The browser build (Godot 4.6 Web export, Compatibility renderer, single-threaded) is a remote client of the backend on the MacBook: it holds no rules or saves and downloads original assets only when it needs them. See [backend interface](backend-interface.md) for the protocol.
+
+## Build and serve
+
+```sh
+./scripts/build-web.sh      # needs imported assets and the 4.6 web export templates
+./scripts/serve.sh          # backend on :8781 and the page on :8780, same save as the desktop game
+```
+
+Open `http://<MacBook address>:8780/` on any device on the same network; `serve.sh` prints the address. The page connects to `ws://<page host>:8781`. Override with `?server=ws://host:port` or `?packs=<url>`. Quit the desktop game first; both would write the same save.
+
+Export templates live in `~/Library/Application Support/Godot/export_templates/4.6.stable/`; only the `web_*` archives are needed.
+
+## Asset packs
+
+`tools/plan_web_packs.py` assigns every file under `client/assets/legacy` to exactly one pack, and `client/tools/build_web_packs.gd` writes each pack from the imported resources (the `.import` remap plus the converted file), so `load()` works unchanged once a pack is mounted.
+
+| Pack | Contents | Needed when |
+| --- | --- | --- |
+| `core` | Catalogs, UI, battle manifest/UI/audio, shared effects | Startup |
+| `map-<id>` | One map's data, tiles and residents used nowhere else | Entering that map |
+| `tiles-<hash>` | Tiles shared by several maps, grouped by the exact set that uses them | Entering any of those maps |
+| `char-<id>` | One player character's walking art (villages that draw it depend on it too) | Startup, character change, those villages |
+| `sprite-<id>`, `riding-<id>`, `bg-<n>` | Battle sprite, mounted composite, battlefield | Opening a battle that shows them; pet menus; companions |
+| `music-<name>` | One track | Startup tracks, entering a map with it |
+
+A measured build: 1,117 packs, 302 MB in total. First load transfers roughly 30 MB compressed (engine 9 MB, base pack with the Chinese font 14 MB, core 6 MB, starting map and character); a new wilderness area about 3 MB including prefetched neighbours; a battle about 3 MB the first time.
+
+`client/scripts/asset_packs.gd` fetches `packs.json`, downloads up to four packs at once into `user://packs/` (IndexedDB in a browser) under content-hashed names, mounts them with `ProjectSettings.load_resource_pack`, retries each download three times with backoff, and removes cached packs the index no longer names. After entering a map it prefetches the packs of every map linked from it. The desktop game ships all assets locally, so every `ensure()` completes immediately. On the web, troop art availability comes from the pack index rather than local files.
+
+`tools/serve_web.py` gzips the engine, scripts, JSON and packs (the core pack shrinks from 29 MB to 6 MB), marks hashed packs immutable and revalidates the rest. Gzipped responses omit `Content-Length`: Godot's web `HTTPRequest` counts the decoded body the browser hands it against that header and would otherwise never complete.
+
+## Secure context and Vision Pro
+
+Plain `http://` on the local network works in desktop Chrome. Some browser features, gamepad input among them in some browsers, require a secure context. To serve both the page and the WebSocket over TLS:
+
+```sh
+STONE_AGE_TLS_CERT=cert.pem STONE_AGE_TLS_KEY=key.pem ./scripts/serve.sh
+```
+
+The certificate must be trusted by the viewing device (for example a local CA installed as a profile on Vision Pro). Vision Pro Safari has not been tested yet; check loading, WebSocket connection, audio unlock and gamepad input there first.
+
+## Debugging
+
+The web build sets `window.stoneAge` once a second (map, cell, connection, mounted and pending packs) and `window.stoneAgeDev(name)` runs DEV actions (`explore`, `encounter`, `escape`, `return`, `village`, `pets`), both usable from Safari's Web Inspector. Chrome pauses `requestAnimationFrame` in hidden or fully covered windows, which freezes a Godot page; an automated browser tab must be visible to run it.

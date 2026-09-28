@@ -102,6 +102,10 @@ func close_map() -> void:
 	world.clear_input()
 
 func browse_map(map_id: int) -> void:
+	var needed: Array=world.asset_packs.map_packs(map_id)
+	if map_id!=int(world.data.map_id) and not world.asset_packs.is_ready(needed):
+		world.asset_packs.ensure(needed,func(ok: bool):if ok and visible:browse_map(map_id),"地图")
+		return
 	current_map=map_id
 	source_data=world.data if map_id==int(world.data.map_id) else JSON.parse_string(FileAccess.get_file_as_string(world.world_catalog.file(map_id)))
 	selector.select(selector.get_item_index(map_id))

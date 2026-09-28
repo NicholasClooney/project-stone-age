@@ -5,6 +5,10 @@ extends RefCounted
 const ART_ROOT := "res://assets/legacy/battle/"
 static var _manifest: Dictionary = {}
 static var _validation: Dictionary = {}
+## Set by a client that downloads art on demand: sprite id -> pack. A sprite
+## then counts as renderable when its animations are complete and a pack
+## exists, since the frames arrive before the battle is shown.
+static var pack_index: Dictionary = {}
 
 static func manifest() -> Dictionary:
 	if _manifest.is_empty() and FileAccess.file_exists(ART_ROOT+"manifest.json"):
@@ -23,6 +27,8 @@ static func can_render(enemies: Array) -> bool:
 static func _valid(ident: String) -> bool:
 	var data := manifest()
 	var valid: bool = data.get("characters",{}).has(ident)
+	var downloadable := not pack_index.is_empty()
+	if downloadable and not pack_index.has(ident):return false
 	var animations: Dictionary = data.get("characters",{}).get(ident,{})
 	for action in [0,1,2,3,4,10]:
 		for direction in range(8):
@@ -30,5 +36,5 @@ static func _valid(ident: String) -> bool:
 			if frames.is_empty():valid = false
 			for frame in frames:
 				var bitmap := str(int(frame.image))
-				if not data.get("images",{}).has(bitmap) or not ResourceLoader.exists(ART_ROOT+"images/%s.png" % bitmap):valid = false
+				if not data.get("images",{}).has(bitmap) or (not downloadable and not ResourceLoader.exists(ART_ROOT+"images/%s.png" % bitmap)):valid = false
 	return valid
