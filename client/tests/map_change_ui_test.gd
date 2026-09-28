@@ -50,7 +50,8 @@ func run() -> void:
 	check(overlays(game)==baseline,"repeated map changes leave one travel dialogue")
 
 	game.process_mode = Node.PROCESS_MODE_DISABLED
-	game.music.stop();game.effect.stop();game.queue_free()
-	await process_frame
+	game.music.stop();game.effect.stop();game.music.stream = null;game.effect.stream = null;game.queue_free()
+	# The audio thread releases stopped playbacks a moment later; quitting sooner leaks them.
+	await create_timer(0.3).timeout
 	print("MAP CHANGE UI: %d failures" % failures)
 	quit(1 if failures else 0)
