@@ -17,7 +17,18 @@ static func quality(pet:Dictionary)->Dictionary:
 static func warning(pet:Dictionary)->bool:
  return bool(pet.get("gm_modified",false)) or pet.get("legacy_stat_offset",{}).values().any(func(v):return float(v)!=0)
 static var _increment_cache:Dictionary={}
+static var _exact_cache:Dictionary={}
+# Exact Lv.120 stats from the pet's own growth seed (same grow_pet sequence as
+# real levelling); falls back to the average estimate when growth data is missing.
 static func expected(pet:Dictionary)->Dictionary:
+ if int(pet.get("level",1))<120:
+  var key:=str(pet.get("pet_id",""))+"|"+str(pet.get("level"))+"|"+str(pet.get("growth_seed"))+"|"+str(pet.get("base_stats"))+"|"+str(pet.get("legacy_stat_offset",{}))
+  if not _exact_cache.has(key):
+   var projected:=Rules.project_pet(pet,120)
+   _exact_cache[key]={} if projected.is_empty() else {"max_hp":int(projected.max_hp),"attack":int(projected.attack),"defence":int(projected.defence),"speed":int(projected.speed)}
+  if not _exact_cache[key].is_empty():return _exact_cache[key]
+ return average(pet)
+static func average(pet:Dictionary)->Dictionary:
  var base:Dictionary=pet.get("base_stats",{}).duplicate(true)
  if base.is_empty() or pet.get("growth_weights",[]).size()!=4:return pet
  var steps:=maxi(0,120-int(pet.level));var rank:=int(pet.get("growth_rank",0))

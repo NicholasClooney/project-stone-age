@@ -513,21 +513,23 @@ func pet_growth_panel(pet: Dictionary, origin: Vector2) -> void:
 		label("缺少原始成长资料",origin,340,14)
 		return
 	var at_target:=int(pet.level)>=120
+	# Growth is seeded per pet and level, so the Lv.120 result is exact, not a range.
+	var final:Dictionary=pet if at_target else PetComparison.expected(pet)
 	label("ID %s" % str(pet.get("pet_id","?")),origin+Vector2(0,2),350,11).name="PetGrowthIdentity"
-	label(("%s · Lv.%d 当前能力" % [pet.name,pet.level]) if at_target else "%s · Lv.%d → %d 预估" % [pet.name,pet.level,forecast.target_level],origin+Vector2(0,20),350,15).name="PetGrowthHeading"
+	label(("%s · Lv.%d 当前能力" % [pet.name,pet.level]) if at_target else "%s · Lv.%d → %d 精确推算" % [pet.name,pet.level,forecast.target_level],origin+Vector2(0,20),350,15).name="PetGrowthHeading"
 	var average:Dictionary=forecast.species_average
-	for column in [["属性",0],["当前" if at_target else "预估",66],["较均值" if at_target else "约90%范围",128],["同种均值",257]]:
+	for column in [["属性",0],["当前" if at_target else "120级",66],["较均值",128],["同种均值",257]]:
 		label(column[0],origin+Vector2(column[1],54),85,14)
 	var keys: Array = ["max_hp","attack","defence","speed"]
 	var names: Array = ["体力","攻击","防御","敏捷"]
 	for i in range(4):
 		var key:String=keys[i]
-		var value:=int(forecast.expected[key])
+		var value:=int(final.get(key,forecast.expected[key]))
 		var typical:=int(average.get(key,0))
 		var y:=86+i*25
 		label(names[i],origin+Vector2(0,y),50,14)
 		label(str(value),origin+Vector2(66,y),60,14)
-		label(("%+d" % (value-typical)) if at_target else "%d–%d" % forecast.likely[key],origin+Vector2(128,y),125,13)
+		label("%+d" % (value-typical),origin+Vector2(128,y),125,13)
 		var comparison:=label(str(typical) if not average.is_empty() else "—",origin+Vector2(257,y),90,14)
 		comparison.mouse_filter=Control.MOUSE_FILTER_PASS
 		comparison.tooltip_text="同种普通出生、从 Lv.1 培养的平均值。理论单项上限 %s；各项极限不能同时达到，不能作为正常品质标准。" % str(forecast.species_maximum.get(key,"未知"))
@@ -592,9 +594,9 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	var keys:=["stat_total","max_hp","attack","defence","speed"]
 	for caption in ["三围合降序","体力降序","攻击降序","防御降序","敏捷降序"]:sort.add_item(caption)
 	sort.select(keys.find(pet_compare_sort));sort.item_selected.connect(func(i):pet_compare_sort=keys[i];rebuild());overlay.add_child(sort)
-	var predicted:=CheckButton.new();predicted.text="按120级预期排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
+	var predicted:=CheckButton.new();predicted.text="按120级属性排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
 	var filter_result_height:=0
-	var info:Label=world.text(feedback if not feedback.is_empty() else "跨等级比120预期；非出生快照／百分位。",12);info.name="PetComparisonInfo";info.position=Vector2(14,89);overlay.add_child(info)
+	var info:Label=world.text(feedback if not feedback.is_empty() else "未满级宠物按成长种子精确推算120级属性，可跨等级比较。",12);info.name="PetComparisonInfo";info.position=Vector2(14,89);overlay.add_child(info)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,196);scroll.size=Vector2(736,396);overlay.add_child(scroll)
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id","")):
 		info.text=world.pet_workflow.reason;info.tooltip_text=info.text;info.clip_text=true;info.size=Vector2(730,60);info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -624,7 +626,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		var pet:Dictionary=row.pet;var estimate:Dictionary=row.forecast.get("expected",pet);var q:Dictionary=row.quality
 		var identifier:=str(pet.get("pet_id",str(row.location)+"#"+str(row.index+1)))
 		var stats_line:="当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [pet.max_hp,pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)]
-		if int(pet.level)<120:stats_line+="\n120预期 血%d 攻%d 防%d 敏%d · 三围合%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,int(estimate.attack)+int(estimate.defence)+int(estimate.speed)]
+		if int(pet.level)<120:stats_line+="\n120级 血%d 攻%d 防%d 敏%d · 三围合%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,int(estimate.attack)+int(estimate.defence)+int(estimate.speed)]
 		var content:="%s · Lv.%d · %s · ID %s\n%s\n先天 %s%s" % [pet.name,pet.level,"携带" if row.location=="pets" else "仓库",identifier,stats_line,"未知" if q.is_empty() else str(q.offsets)+" 总%+d"%q.total+(" 满档" if q.full else "")," · GM／旧档，不作天然品质判断" if PetComparison.warning(pet) else ""]
 		var text:Label=world.text(content,13);text.name="CompareRow_"+str(row.location)+"_"+str(row.index);text.custom_minimum_size=Vector2(700,100 if int(pet.level)<120 else 85);text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		if identifier==focus_id:text.modulate=Color("ffe680");text.text="▶ 当前选中 · "+text.text

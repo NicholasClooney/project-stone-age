@@ -31,7 +31,7 @@ func run():
  var forecast_sum:=Compare.rows(sum_profile,source,"stat_total",true)
  check(forecast_sum[0].pet.pet_id=="pet-901","projected sum orders by actual forecast rather than current stats")
  check(forecast_sum[3].pet.pet_id=="pet-904" and forecast_sum[4].pet.pet_id=="pet-905","projected sum preserves warehouse favorite grouping")
- check(Compare.expected(source)==preload("res://scripts/pet_growth.gd").forecast(source).expected,"lightweight projection matches full forecast exactly")
+ check(Compare.average(source)==preload("res://scripts/pet_growth.gd").forecast(source).expected,"average fallback matches full forecast exactly")
  var large:=profile.duplicate(true);large.pet_storage=[]
  for i in range(300):
   var clone:=twin.duplicate(true);clone.pet_id="pet-%d"%(1000+i);large.pet_storage.append(clone)
@@ -58,9 +58,12 @@ func run():
  var row_label=overlay.find_child("CompareRow_pet_storage_0",true,false)
  var expected:Dictionary=Compare.expected(twin)
  check(row_label.text.contains("三围合%d"%total),"comparison row displays current three-stat sum")
- var expected_line:="120预期 血%d 攻%d 防%d 敏%d · 三围合%d"%[expected.max_hp,expected.attack,expected.defence,expected.speed,int(expected.attack)+int(expected.defence)+int(expected.speed)]
+ var expected_line:="120级 血%d 攻%d 防%d 敏%d · 三围合%d"%[expected.max_hp,expected.attack,expected.defence,expected.speed,int(expected.attack)+int(expected.defence)+int(expected.speed)]
  check(row_label.text.contains(expected_line),"below120 forecast sums projected attack defence speed")
- check(row_label.text.contains("\n120预期") and row_label.autowrap_mode!=TextServer.AUTOWRAP_OFF,"forecast has separate wrapped line to avoid horizontal overflow")
+ var leveled:Dictionary=twin.duplicate(true);leveled.pet_id="pet-exact-check";game.session._profile.pets.append(leveled)
+ game.session.level_pet_to("pet-exact-check",120);leveled=game.session._profile.pets.pop_back()
+ check(expected.attack==int(leveled.attack) and expected.defence==int(leveled.defence) and expected.speed==int(leveled.speed) and expected.max_hp==int(leveled.max_hp),"shown Lv.120 stats equal the pet's real result after levelling")
+ check(row_label.text.contains("\n120级 血") and row_label.autowrap_mode!=TextServer.AUTOWRAP_OFF,"forecast has separate wrapped line to avoid horizontal overflow")
  check(not menu.continue_comparison_hunt(twin),"continue hunt rejects unavailable same species without wildcard fallback")
  overlay=menu.panel.get_node("PetComparisonPanel")
  check(overlay.find_children("CompareTransfer_*","Button",true,false).size()==2,"each row exposes location action")
