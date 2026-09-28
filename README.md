@@ -1,170 +1,100 @@
 # Project Stone Age
 
-A playable **Godot 4.6 single-player MVP** around **萨姆吉尔村 / Samgir**, using original maps, sprites, menus, animations, music and sound effects.
+A restoration of the classic MMORPG **石器时代 (StoneAge)** as a Godot 4.6 game, built around 萨姆吉尔村 / Samgir and the surrounding islands. It uses the original maps, sprites, menus, animations, music and sound effects, and follows the original server rules where the source is known.
+
+Play it on a Mac, in a browser, on Vision Pro, or on several devices at once against one backend running on your Mac. See the [feature guide](docs/development/feature-guide.md) for what is restored.
+
+## Setup: one command
+
+The original game data is not in this repository. One script downloads and imports everything:
+
+```sh
+./scripts/setup-original-data.sh
+```
+
+It downloads, verifies and imports, skipping whatever is already done:
+
+| What | From |
+| --- | --- |
+| Godot 4.6 (macOS; on Linux install it yourself as `godot`) | [godotengine/godot releases](https://github.com/godotengine/godot/releases/tag/4.6-stable) |
+| The StoneAge 2.5 client (about 550 MB, checked against a recorded SHA-256) | [99ds.com](https://99ds.com/) → `downloads/windows/Stoneage2.5-Windows.rar` |
+| The original server data and client source the importers read | [chenmingbiao/stone-age](https://github.com/chenmingbiao/stone-age) and [anson1788/stoneage](https://github.com/anson1788/stoneage), at the revisions pinned in [local-references.json](docs/reverse-engineering/local-references.json) |
+| Python tools (Pillow) | `tools/requirements.txt`, into `.tools/asset-venv` |
+
+Options:
+
+- `--web` also installs the Godot web export templates, needed to build the browser version.
+- `--with-8.0` also fetches the StoneAge 8.0 client data (1.2 GB) from the same site, which has graphics the 2.5 client lacks.
+- `--import-only` re-runs the importers, for example after an importer changes.
+
+The first run takes a while: roughly 15 minutes of importing on top of the downloads. Needs `curl`, `python3`, `git` and `bsdtar` (built into macOS; `libarchive-tools` on Linux). Downloaded executables are never extracted or run. Details, checksums and manual steps: [original data setup](docs/development/original-data-setup.md).
+
+The client data is community-distributed proprietary game data of unverified lineage. Keep it local: imported assets are gitignored, and none of it may go into a public release without resolving its distribution status.
 
 ## Play
 
-On this Mac, double-click **Play Stone Age.command**, or run from the repository root:
+### On this Mac
 
 ```sh
 ./scripts/run.sh
 ```
 
-The project-local Godot runtime is already installed under `.tools/`. You can also open `client/project.godot` in Godot 4.6 and press F6/F5 as appropriate. For another installation, set `GODOT_BIN` to the Godot executable.
+Or double-click **Play Stone Age.command**, or open `client/project.godot` in Godot 4.6. The game keeps its own rules and save.
 
-### Play against a backend on this Mac
+### With a backend: browser, Vision Pro, several devices
 
-The game's rules, automation and saves run in a backend. The desktop game hosts one in-process; it can also run on its own so automation keeps going with no window open:
+The game's rules, automation and save can run in a headless backend on your Mac, so auto-battles and pet hunts keep running with no window open, and any number of devices can play the same character at once.
 
 ```sh
-./scripts/serve.sh                     # headless backend on ws://*:8781, same save as the desktop game
-./scripts/run.sh -- --server=ws://127.0.0.1:8781
+./scripts/build-web.sh     # once, and after code changes (about 30 s)
+./scripts/serve.sh         # backend on :8781, web page on :8780
 ```
 
-Quit the desktop game before starting `serve.sh`; both would write the same save.
+- **Browser:** open the address `serve.sh` prints. The page downloads original assets as it needs them and caches them.
+- **Desktop client:** `./scripts/run.sh -- --server=wss://127.0.0.1:8781` (or `ws://` without a certificate).
+- **Vision Pro and other devices** need HTTPS: run `./scripts/make-cert.sh` once and install its certificate on the device ([steps](docs/technical/web-client.md#secure-context-and-vision-pro)).
+- **Over Tailscale:** `./scripts/relaunch.sh` rebuilds, restarts the server and forwards it to `https://<your Mac>.<tailnet>.ts.net:8780/`; Ctrl-C stops it all.
 
-For the browser version (Vision Pro Safari or any device on the same Wi-Fi), run `./scripts/build-web.sh` once, then `./scripts/serve.sh` and open the printed `http://<MacBook>:8780/` address. The page downloads original assets on demand and caches them. See [web client](docs/technical/web-client.md). A client reconnects by itself and shows what happened while it was away. See [backend interface](docs/technical/backend-interface.md).
+Quit the standalone desktop game before starting `serve.sh`; both would write the same save. More: [web client](docs/technical/web-client.md), [backend interface](docs/technical/backend-interface.md).
+
+### Controls
 
 | Control | Action |
 | --- | --- |
-| Left click | Walk to a reachable tile; click the villager to approach and talk |
-| Villager button | Walk to the resident at (93, 72) and talk |
-| Enter / Escape during dialogue | Close the conversation |
-| WASD / arrows | Walk in screen directions; combine keys for eight directions |
-| E | Original waving animation |
-| X | Sit / stand |
-| Tab / DEV → 角色 | Choose an original character with animated previews |
-| Mouse wheel / + / − | Zoom from 40% to 200%, in shared 10% steps |
-| Max out (DEV controls) | Set the same zoom to its 40% minimum; keep following the player |
-| Hover bottom edge | Reveal the original seven menu tabs |
-| Map tab / Ctrl+M | Toggle the original map window; drag its title to move it |
-| 村外探险 / 返回村庄 | Walk to the original west exit / return portal |
-| Battle icons | Choose a command, then its target; choose your pet command next |
-| Right click / Esc in battle | Cancel targeting or command selection |
-| 道具店 | Walk to the original shop doorway; click the merchant across the counter |
-| 状态 / 宠物 / 道具 / 系统 tabs | Stats, pet naming/selection, items/equipment, save and music |
-| M | Mute / unmute |
-| H / Escape | Open / close help; music volume is in help |
+| Left click | Walk to a tile; click a villager to walk over and talk |
+| WASD / arrow keys | Walk (combine for eight directions) |
+| Mouse wheel, + / − | Zoom |
+| Hover the bottom edge | Original menu tabs: status, pets, items, map, system |
+| Ctrl+M | Map window |
+| Battle icons | Choose a command, then its target, then your pet's command; right click or Esc cancels |
+| E / X | Wave / sit or stand |
+| Tab | Choose a character |
+| M | Mute |
+| H / Esc | Help (music volume is there) |
 | R | Return to the village square |
+| Game controller | Supported everywhere, including menus and battles ([layout](docs/technical/web-client.md#game-controller)) |
 
-Normal play stays open until you close the window. `client/tests/capture.gd` is an automated screenshot test that exits; it is **not** the player launcher.
+### First steps
 
-## What works
+Click the villager, choose **村外的伙伴 / 休息** and accept the quest. Head out through **村外探险**, weaken a wild pet and capture it, win three battles, then use **DEV → 挑战强敌** in the wilderness for the finale and return for your reward. 蓝人龙、金虎 and 红暴龙 join you on first launch; ride one from the pet window.
 
-- Original 160 × 160 Samgir map, 482 scenery objects, original isometric projection and depth sorting.
-- Original eight-direction idle/walk frames, sit and wave; the optional [character pack](docs/development/character-selection.md) adds 41 validated animated appearances and matching club battle sprites.
-- Original map/ADRN collision footprints, keyboard movement, and click-to-walk with corner checks.
-- Original `sabgm_t0.wav` village BGM, loop and volume controls, and a legacy UI sound.
-- One original village resident at (93, 72), with the recorded sprite and first dialogue line, original stone-frame art, confirmation button, and open/close sound effects.
-- Original stone top controls, wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker.
-- Camera follow, consistent zoom across maps, held-key release on focus loss while click paths continue, and safe defeat recovery.
-- Original 30×30 shop interior and merchant, with functional native shop, inventory, status and pet frames.
-- Pure GDScript local battle/progression authority, profile-bound saves and backup recovery.
+The **DEV** bar has map travel, automation (**自动练级**, **自动抓极品**), GM tools and the in-game changelog. See the [feature guide](docs/development/feature-guide.md).
 
-The single-player loop now includes experience, leveling, currency, source-backed wild species, a paginated 30-pet collection, one active companion, three trainable original pet skills, healing items, a club, the original shop interior, one quest and a stronger finale. The native original battle panel supports independent targets across one to ten enemies, pet switching/withdrawal, learned skills, original miss/critical/counter effects, and player→pet command selection. Progress autosaves and resumes locally. Player and pet stats use original fixed-point formulas and species growth. Existing saves retain earned stats. Player levels grant three points: spend them with UP buttons in the status window. DEV 瞬移模式 lets world clicks move you instantly; destination shortcuts are always instant; 立即遇敌 starts a normal encounter.
-
-Visit the original 超级饲育员 in Samgir’s pet shop (1003, 18,13) to teach 破除防御, 连续攻击 or 背水之战其之１ at their source prices. All four villages share the original `sabgm_t0` theme; wilderness follows its original map music markers. See [restored slices and limits](docs/development/m006-progression-and-battle.md).
-
-**Start your adventure:** click the villager, choose **村外的伙伴 / 休息**, and accept the quest. Explore outside, weaken an enemy and capture it. When you already have a pet, tell it to **defend while weakening a capture target**. Win three battles, then use **DEV → 挑战强敌** in the wilderness for the existing MVP finale. Return to the villager for recovery and the quest reward. Use the original bottom pet tab to rename/select your companion and the item tab to use/equip purchases.
-
-**World restoration:** the four starting villages, both complete islands, linked village interiors and the original undersea route are now visitable. Use **DEV → 地图导航** to browse maps, zoom/pan, and click terrain or POIs; this replaces the separate teleport menu. Choose **步行** for real portal-based travel or **DEV 传送** for instant visits; disable **野外随机遇敌** there for exploration. The normal island crossing retains its original reusable pass requirement. See [world scope and remaining services](docs/development/m005-four-villages.md).
-
-Original assets and menu layouts are retained. Fixed-point growth, supported physical combat and mounted experience now follow inspected source branches. Capture probability, this short quest, shop stock and ordinary encounter composition/timing still include explicit MVP rules; broader elemental/special skill behavior is incomplete. Multiplayer, parties, families, mail and the broader game remain deferred. See [MVP scope, fidelity and verification](docs/development/m004-single-player-mvp.md).
-
-The rejected geometric placeholder demo is not the default or part of the tracked game. It was moved into an ignored local research folder.
-
-## New player tools
-
-On your next normal launch, **蓝人龙、金虎 and one 红暴龙** join once; existing pets and progress stay intact. Ride a pet from the pet window (**骑乘 · 名字**, beside the list); each appearance rides the two species the original table gives it plus 左迪洛斯 and 红暴龙 (巴朵兰恩, drawn with the character's family-leader mounted art), and a disabled button says why. **DEV → 骑乘** toggles the first rideable pet, or switches to rider 100010 for the gold tiger. You can deploy a different pet for combat. Original mounted art, separate HP, damage sharing and source-based mounted experience are implemented.
-
-The pet window has five original rows per page, family filters, separate riding/battle states, and a growth comparison: your pet's projected level-120 stats versus its species' theoretical ceiling. These are estimates; the displayed maxima are independently optimal attributes, not a single jointly attainable perfect pet.
-
-**GM 调试** supports level increases through 120, setting/adding base stats, extra allocation points, recovery and reward-free instant escape. **更新日志** shows readable committed changes and the `v0.MINOR.PATCH` beta version derived from feature/fix history. See [agent changelog workflow](AGENTS.md), [riding evidence](docs/reverse-engineering/original-riding.md), [pet tools](docs/development/pet-collection-growth.md), and [GM controls](docs/development/gm-controls.md).
-
-## Original resources
-
-The imported resources are present locally in `client/assets/legacy/` and deliberately excluded from Git. The importer and provenance documentation are tracked. A fresh clone needs a compatible local resource import before playing; the game explains this if assets are absent.
-
-The current input is the community-distributed **SA2.5-20260823** client from [99ds.com](https://99ds.com/), with Samgir geometry from [chenmingbiao/stone-age](https://github.com/chenmingbiao/stone-age/tree/master/gmsv/data/map/sainasu/samugiru). This preserves the original village layout instead of later decorative additions in that client cache. The exact official release lineage is unverified.
+## Development
 
 ```sh
-python3 -m venv .tools/asset-venv
-.tools/asset-venv/bin/pip install -r tools/requirements.txt
-.tools/asset-venv/bin/python tools/import_legacy.py /path/to/stoneage2.5 \
-  --server-map /path/to/samugiru
-.tools/asset-venv/bin/python tools/import_ui.py /path/to/stoneage2.5
-./scripts/run.sh --headless --editor --import --quit
-./scripts/run.sh
-```
-
-The client directory must contain `data/adrn_15.bin`, `real_15.bin`, `spradrn_5.bin`, `spr_4.bin`, `pal/Palet_1.sap`, the audio files, and `map/1000.DAT`. The optional `--server-map` reads a matching `LS2MAP` Samgir file. Without it, the client DAT is used and unresolved decorations are recorded, not silently replaced with invented art.
-
-To import the resident, obtain `poru/samugiru01.create` and `poru/samugiru02` from the [pinned legacy NPC source](https://github.com/chenmingbiao/stone-age/tree/0c58fb6683a49a178a8ad845a8c296c2cb83bd81/gmsv/data/npc) into a local directory, preserving `poru/`, then run:
-
-```sh
-.tools/asset-venv/bin/python tools/import_npc.py /path/to/stoneage2.5 /path/to/npc
-```
-
-For the full MVP, use the [local server reference](docs/reverse-engineering/local-references.md) and import the original wilderness and battle resources:
-
-```sh
-.tools/asset-venv/bin/python tools/import_wilderness.py /path/to/stoneage2.5 \
-  --server-map references/chenmingbiao-stone-age/gmsv/data/map/sainasu/sainasu
-.tools/asset-venv/bin/python tools/import_battle.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_battle_backgrounds.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_mvp.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_world.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_pet_training.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_characters.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_pets.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_loading.py /path/to/stoneage2.5   # web waiting screen
-.tools/asset-venv/bin/python tools/import_riding.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_grid_cursor.py /path/to/stoneage2.5
-.tools/asset-venv/bin/python tools/import_cursor.py \
-  'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'
-./scripts/run.sh --headless --editor --import --quit
-```
-
-The importer reads the original position, fixed graphic, name, and first comma-separated dialogue entry without rewriting the Chinese. Generated files remain ignored. Missing NPC content leaves exploration available and the Villager button explains the missing import. See [the NPC slice](docs/development/m001-village-npc.md) for evidence and limitations.
-
-See [resource evidence](docs/reverse-engineering/samgir-import.md) for hashes, format decisions, and limitations. Do not add imported client archives or assets to a public release without resolving their distribution status. The bundled Noto Sans SC font is distributed under its included OFL license.
-
-## Local reference sources
-
-Full upstream checkouts and offline Git bundles are preserved in ignored `references/`. See [local reference archives](docs/reverse-engineering/local-references.md) for paths, checksums, and recovery instructions.
-
-## Verify
-
-Scripted and headless runs through `scripts/run.sh` use Godot’s silent audio driver, including visual test scripts. Normal game launches keep audio enabled. Use `--audio-driver Dummy` for any direct engine test launch.
-
-```sh
-./scripts/test.sh          # stops at the first failing suite
-./scripts/test-all.sh      # every suite in parallel, one PASS/FAIL line each
+./scripts/test-all.sh      # every Godot suite in parallel (about a minute)
 .tools/asset-venv/bin/python -m unittest discover -s tools -p 'test_*.py'
 ```
 
-The MVP suites cover the complete quest journey, shop and portals, capture/pet growth, original battle-menu input, speed-based turns, and save/reload including corrupt-save recovery. See [MVP acceptance](docs/development/m004-single-player-mvp.md).
+Tests run headless and muted and need the imported assets. Read [AGENTS.md](AGENTS.md) before contributing (commit style, changelog and versioning, landing branches). Design notes and evidence live in [docs/](docs/README.md).
 
-The UI suite checks menu hover, click isolation, map toggles/live coordinates, shared zoom limits, and original open/close UI sounds. See [classic UI evidence](docs/development/m002-classic-ui.md). The NPC suite checks approach, collision, cancellation, dialogue input, closing, and resumed exploration. The Godot movement suite exercises actual movement, original direction mapping, collision, pathfinding, 200 repeated movement steps, animation, character switching, and audio looping. It needs imported assets. [Verification notes](docs/development/m000-status.md) distinguish automated checks from visual inspection.
+| Path | Contents |
+| --- | --- |
+| `client/` | The Godot project: game, backend (`client/server/`), network layer and tests |
+| `tools/` | Importers for the original data and their tests |
+| `scripts/` | Setup, run, test, build and serve helpers |
+| `docs/` | Design, reverse-engineering evidence and development notes |
+| `references/`, `.tools/` | Ignored: upstream source checkouts, engine, original client data |
 
-## Layout
-
-- `client/` — Godot scene, local simulation, renderer, and tests.
-- `tools/import_legacy.py` — bounded binary decoder and deterministic conversion.
-- `scripts/` — launch and test helpers.
-- `docs/` — [design specification](docs/README.md) and implementation notes.
-- `.tools/`, `artifacts/` — ignored local engine, source references, and verification output.
-
-**Ordinary encounter restoration:** walking now uses original regional probabilities, mixed groups, level ranges and wild stats. Captured animals retain their actual level and growth rolls. Map coverage is 147 imported maps: the original 103, 35 training areas, and Giru’s 福尔德村 (5000), 达那村 (5100) and seven ordinary interiors. Giru now links to both villages and their interiors through original portals; reaching Giru itself still needs DEV travel; new interiors do not imply restored NPC services. Special missions, dungeons, bosses and full special skills remain deferred. One required enemy sprite (100298) has corrupt original resources: a troop needing it is skipped with a message, never replaced or rerolled.
-
-After world import, run `python3 tools/import_encounters.py`, then `.tools/asset-venv/bin/python tools/import_encounter_art.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5`, then `./scripts/run.sh --headless --editor --import --quit`. See [source evidence and remaining limits](docs/reverse-engineering/ordinary-encounters.md).
-
-**Travel helpers:** DEV「地图导航」provides the shared map selector and NPC/entrance destinations; building interiors are excluded from its dropdown.「瞬移模式」turns world clicks into safe instant moves.「刷怪传送」offers verified ordinary encounter spots for requested levels1–120 alongside classic-guide caveats. See [travel and training areas](docs/development/travel-and-leveling-assists.md). After updating imports, regenerate destinations with `python3 tools/build_training_spots.py`.
-
-**Giru villages:** choose 福尔德村 or 达那村 in **DEV → 地图导航**, then walk through their original doors and island exits. Enter buildings through their original doors. These restored interiors include scenery and doors. Dana also restores 20 ordinary scene actors, including residents with original dialogue; additional NPC services and quests remain deferred. See [travel coverage](docs/development/travel-and-leveling-assists.md).
-
-**Navigation categories:** 地图导航 separates **地点 / 练级点 / Lv.1宠物**. Training and level-one pet lists offer current-map or all-map scope; use the existing walk / DEV teleport choice to visit. Pet locations come from eligible original encounter records, not guaranteed spawns. After imports, regenerate both `tools/build_training_spots.py` and `tools/build_level_one_spots.py`.
-
-**怎样判断极品宠物？** See [宠物品质与成长窗口解读](docs/game-systems/pet-quality.md) for innate rolls versus actual growth, the project’s +6 preset and default full-grade filter, forecast ranges, and GM/legacy comparison limits.
-
-**宠物培养与镜之精灵：** 道具店可购买主动反射饰品；宠物窗口提供独立仓库、同种比较与找宠／捕获／练到120级的单轮辅助流程。比较后由玩家决定，不自动放生。见[镜之精灵](docs/development/mirror-accessory.md)、[宠物品质与比较](docs/game-systems/pet-quality.md)及[自动战斗](docs/development/training-helper.md)。
+The bundled Noto Sans SC font is distributed under its included OFL license.
