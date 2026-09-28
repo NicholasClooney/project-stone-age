@@ -137,11 +137,18 @@ func run() -> void:
 	game = load("res://scenes/main.tscn").instantiate()
 	game.profile_persistence = false
 	game.save_path = SAVE
+	# Login luck rerolls when the 5400-second native day changes; pin the clock
+	# so a real day boundary between save and reload cannot alter the profile.
+	var saved_luck_time:int=int(expected.player.get("last_luck_time",0))
+	game.session.login_clock=func():return saved_luck_time
 	check(game.session.load_game(SAVE),"new app session loads saved adventure")
 	root.add_child(game);await frames()
 	game.restore_location()
 	await frames()
-	check(game.session.snapshot()==expected,"all saved progression remains identical on world restore")
+	var restored: Dictionary = game.session.snapshot()
+	for key in expected:
+		if restored.get(key)!=expected[key]:print("RESTORE DIFF %s: saved=%s restored=%s"%[key,str(expected[key]).left(300),str(restored.get(key)).left(300)])
+	check(restored==expected,"all saved progression remains identical on world restore")
 	check(int(game.data.map_id)==1002 and game.cell==Vector2i(16,15),"reload restores safe interior position")
 	check(is_instance_valid(game.pet_follower),"reload restores companion")
 	game.music.stop();game.effect.stop();await create_timer(0.2).timeout
