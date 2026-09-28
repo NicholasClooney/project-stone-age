@@ -50,13 +50,15 @@ A click is a real mouse click at the control's centre, so battle commands, targe
 
 ## Secure context and Vision Pro
 
-Plain `http://` on the local network works in desktop Chrome. Some browser features, gamepad input among them in some browsers, require a secure context. To serve both the page and the WebSocket over TLS:
+Plain `http://` on the local network works in desktop Chrome. Some browser features, gamepad input among them in some browsers, require a secure context. For HTTPS:
 
 ```sh
-STONE_AGE_TLS_CERT=cert.pem STONE_AGE_TLS_KEY=key.pem ./scripts/serve.sh
+brew install mkcert
+./scripts/make-cert.sh     # project-only CA + certificate for <name>.local, the LAN address and localhost
+./scripts/serve.sh         # now https://<name>.local:8780/ and wss://…:8781 automatically
 ```
 
-The certificate must be trusted by the viewing device (for example a local CA installed as a profile on Vision Pro). Vision Pro Safari has not been tested yet; check loading, WebSocket connection, audio unlock and gamepad input there first.
+Everything lives in the ignored `.tools/tls/`; nothing is added to the Mac's trust store. Install the CA on Vision Pro once: AirDrop `.tools/tls/StoneAge-Local-CA.crt`, install it under Settings > General > VPN & Device Management, then enable it under Settings > General > About > Certificate Trust Settings. Prefer the `.local` name; rerun `make-cert.sh` if you use the IP and it changes. Keep `.tools/tls/ca/rootCA-key.pem` private: anyone with it can mint certificates this device trusts. Explicit `STONE_AGE_TLS_CERT` / `STONE_AGE_TLS_KEY` override the generated pair. Vision Pro Safari has not been tested yet; check loading, WebSocket connection, audio unlock and gamepad input there first.
 
 ## Debugging
 

@@ -19,6 +19,11 @@ else
 fi
 tls=""
 web_tls=""
+# Certificates from scripts/make-cert.sh are used automatically.
+if [ -z "${STONE_AGE_TLS_CERT:-}" ] && [ -f .tools/tls/cert.pem ] && [ -f .tools/tls/key.pem ]; then
+  STONE_AGE_TLS_CERT="$PWD/.tools/tls/cert.pem"
+  STONE_AGE_TLS_KEY="$PWD/.tools/tls/key.pem"
+fi
 if [ -n "${STONE_AGE_TLS_CERT:-}" ] && [ -n "${STONE_AGE_TLS_KEY:-}" ]; then
   tls="--tls-cert=$STONE_AGE_TLS_CERT --tls-key=$STONE_AGE_TLS_KEY"
   web_tls="--cert $STONE_AGE_TLS_CERT --key $STONE_AGE_TLS_KEY"
