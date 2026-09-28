@@ -8,9 +8,18 @@ static var _default_colors: Dictionary = {}
 ## Colour per image id for this map; maps reuse a few hundred ids across up to
 ## a million cells, so each id is resolved once.
 var _color_by_ident: Dictionary = {}
+## The map data these colours were computed from.
+var built_for: Dictionary = {}
 
 func _ready() -> void:
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	rebuild()
+
+## Recomputes the colours for the world's current map.
+func rebuild() -> void:
+	_color_by_ident.clear()
+	built_for = world.data
+	last_cell = Vector2i(-999,-999)
 	if _default_colors.is_empty():
 		var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/ui/manifest.json"))
 		_default_colors = manifest.map_colors

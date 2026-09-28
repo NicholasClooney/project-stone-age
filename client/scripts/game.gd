@@ -53,6 +53,11 @@ var _link_status: Label
 ## another device's walk arrives as a position event and is mirrored here
 ## without rerunning arrival rules (encounters, map links), which the walking
 ## device already ran.
+## Persistent UI: the root control and DEV bar, and the DEV buttons that only
+## exist on some maps (replaced by refresh_map_ui on every map change).
+var ui_root: Control
+var dev_bar: HFlowContainer
+var _map_buttons: Array[Control] = []
 var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]
 var _follow: Array = []
 var _following_step := false
@@ -337,7 +342,10 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 		return false
 	var previous_zoom: Vector2 = camera.zoom
 	clear_input()
-	for node in [terrain,actors,ui_layer]:
+	# Residents and their dialogue belong to the old map.
+	if dialogue.visible:close_dialogue()
+	if is_instance_valid(world_travel) and is_instance_valid(world_travel.overlay):world_travel.overlay.queue_free()
+	for node in [terrain,actors]:
 		remove_child(node)
 		node.queue_free()
 	data = next_data
@@ -353,12 +361,12 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	target_cell = destination
 	logical_position = Vector2(destination)
 	moving = false
-	paused_input = false
+	paused_input = _panel_open()
 	marker_cell = Vector2i(-1,-1)
 	field_steps = 0
 	build_world()
 	camera.zoom = previous_zoom
-	build_ui()
+	refresh_map_ui()
 	if [int(data.map_id),cell]!=_followed:link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true,"client":_client_id},_on_map_reported)
 	camera.reset_smoothing()
 	area_music = exploration_music()
@@ -994,10 +1002,13 @@ func button(value: String, callback: Callable) -> Button:
 	b.pressed.connect(callback)
 	return b
 
+## Built once. A map change keeps every panel (and what it shows) and only
+## refreshes the parts that belong to the map: see refresh_map_ui().
 func build_ui() -> void:
 	ui_layer = CanvasLayer.new()
 	add_child(ui_layer)
 	var root := Control.new()
+	ui_root = root
 	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	var ui_theme := Theme.new()
@@ -1019,6 +1030,7 @@ func build_ui() -> void:
 	root.add_child(classic_hud)
 	boss_button = null
 	var dev := HFlowContainer.new()
+	dev_bar = dev
 	dev.size.x = get_viewport_rect().size.x-24
 	dev.position = Vector2(12,85)
 	dev.add_theme_constant_override("separation",5)
@@ -1097,18 +1109,6 @@ func build_ui() -> void:
 	var hunt := button("自动抓极品",pet_hunt_menu.open_menu)
 	hunt.name = "DevPetHunt"
 	dev.add_child(hunt)
-	if int(data.map_id)==1000:
-		dev.add_child(button("Villager",dev_go_villager))
-	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",dev_go_adventure)
-	exit_button.name = "ExploreOutside"
-	dev.add_child(exit_button)
-	if int(data.map_id)==1000:
-		dev.add_child(button("道具店",dev_go_shop))
-	if int(data.map_id)==100:
-		boss_button = button("挑战强敌",func():
-			if session.can_fight_boss():begin_battle(true))
-		boss_button.tooltip_text = "接受委托、战胜三个对手并捕获伙伴后开放"
-		dev.add_child(boss_button)
 	mute_button = button("Music: on  [M]",toggle_mute)
 	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
 	dev.add_child(mute_button)
@@ -1179,12 +1179,47 @@ func build_ui() -> void:
 	battle_view.pet_command_requested.connect(func(command: String):
 		if command == "skill": battle_session.set_pet_skill(int(battle_view.get("selected_pet_skill")))
 		else: battle_session.set_pet_command(command))
+	refresh_map_ui()
+
+## The map-specific parts of the UI: DEV shortcuts that exist only on some
+## maps, the residents with their travel dialogue, and the HUD's map window.
+func refresh_map_ui() -> void:
+	for node in _map_buttons:
+		if is_instance_valid(node):
+			dev_bar.remove_child(node)
+			node.queue_free()
+	_map_buttons.clear()
+	boss_button = null
+	var after: int = dev_bar.get_node("DevPetHunt").get_index()
+	if int(data.map_id)==1000:
+		_map_buttons.append(button("Villager",dev_go_villager))
+	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",dev_go_adventure)
+	exit_button.name = "ExploreOutside"
+	_map_buttons.append(exit_button)
+	if int(data.map_id)==1000:
+		_map_buttons.append(button("道具店",dev_go_shop))
+	if int(data.map_id)==100:
+		boss_button = button("挑战强敌",func():
+			if session.can_fight_boss():begin_battle(true))
+		boss_button.tooltip_text = "接受委托、战胜三个对手并捕获伙伴后开放"
+		_map_buttons.append(boss_button)
+	for node in _map_buttons:
+		after += 1
+		dev_bar.add_child(node)
+		dev_bar.move_child(node,after)
 	world_travel = preload("res://scripts/world_travel.gd").new()
 	actors.add_child(world_travel)
 	var residents: Array = []
 	for entry in world_catalog.residents:
 		if int(entry.map_id)==int(data.map_id) and Vector2i(entry.cell[0],entry.cell[1])!=npc_cell:residents.append(entry)
-	world_travel.setup(self,root,residents)
+	world_travel.setup(self,ui_root,residents)
+	if is_instance_valid(classic_hud) and classic_hud.is_node_ready():classic_hud.refresh_map()
+
+## Whether a panel that stops walking is open; a map change keeps panels open.
+func _panel_open() -> bool:
+	for node in [leveling_destinations,training_helper,pet_hunt_menu,changelog_menu,character_selection,dev_gm_menu,dev_map_overview,pet_training,adventure_menu,help]:
+		if is_instance_valid(node) and node.visible:return true
+	return false
 
 
 func setup_npc() -> void:

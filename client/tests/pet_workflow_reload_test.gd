@@ -17,7 +17,7 @@ func run() -> void:
 	game.battle_session.set_capture_assist(true)
 	check(game.load_area_id(100,Vector2i(637,493)),"validated map reload succeeds")
 	check(old_flow.phase=="paused" and not old_hunt.running,"old workflow and hunt quiesced before UI disposal")
-	check(game.pet_workflow!=old_flow and game.pet_workflow.phase=="paused" and not game.battle_session.capture_assist,"new UI retains pause and clears capture assist")
+	check(game.pet_workflow==old_flow and game.pet_workflow.phase=="paused" and not game.battle_session.capture_assist,"map change keeps the workflow panel, paused, and clears capture assist")
 	check(game.last_adventure_message.contains("地图发生变化") and game.message.text==game.last_adventure_message,"map pause reason remains visible")
 	await process_frame
 	game.session._profile.player.hp=1
@@ -32,7 +32,7 @@ func run() -> void:
 	check(game.battle_session.snapshot().outcome=="defeat","real authority battle reaches defeat fixture")
 	for frame in range(100):game.battle_view._process(0.2)
 	game.return_from_battle()
-	check(game.pet_workflow!=flow and game.pet_workflow.phase=="paused","defeat return rebuilds UI once without recursive helper settlement")
+	check(game.pet_workflow==flow and game.pet_workflow.phase=="paused","defeat return pauses the workflow without recursive helper settlement")
 	check(not helper.running and not game.training_helper.running and not game.battle_session.capture_assist,"defeat disables old and new automation and capture assist")
 	check(not game.session.clone_squad_enabled and not game.clone_button.button_pressed,"defeat return restores clone setting and rebuilt DEV toggle")
 	check(game.last_adventure_message.contains("战斗失败") and game.pet_workflow.reason.contains("战斗失败"),"defeat-specific pause reason survives rebuild")

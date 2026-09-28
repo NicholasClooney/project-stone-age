@@ -13,6 +13,8 @@ var bar: TextureRect
 var reveal := 0.0
 var task_buttons: Array[TextureButton] = []
 var right_panel: Control
+var map_name: Label
+var map_view: Control
 var dragging := false
 var drag_offset := Vector2.ZERO
 var pointer_position := Vector2.ZERO
@@ -136,6 +138,11 @@ func toggle_map() -> void:
 	task_buttons[0].texture_hover = task_buttons[0].texture_normal
 	world.play_ui_sound(202 if map_panel.visible else 203)
 
+## The HUD outlives map changes; only the map window's title and picture change.
+func refresh_map() -> void:
+	map_name.text = world.area_name()
+	if not is_same(map_view.built_for,world.data):map_view.rebuild()
+
 func build_map() -> void:
 	map_panel = Control.new()
 	map_panel.size = Vector2(248,240)
@@ -144,13 +151,14 @@ func build_map() -> void:
 	add_child(map_panel)
 	picture(map_panel,26081,Vector2.ZERO)
 	var name_label: Label = world.text(world.area_name(),13)
+	map_name = name_label
 	name_label.position = Vector2(22,30)
 	name_label.add_theme_color_override("font_color",Color.WHITE)
 	name_label.add_theme_color_override("font_outline_color",Color.BLACK)
 	name_label.add_theme_constant_override("outline_size",1)
 	name_label.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	map_panel.add_child(name_label)
-	var map_view := preload("res://scripts/classic_map.gd").new()
+	map_view = preload("res://scripts/classic_map.gd").new()
 	map_view.world = world
 	map_panel.add_child(map_view)
 	# The original frame has two separate 20px direction plaques and number slots.
