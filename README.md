@@ -27,7 +27,7 @@ Options:
 - `--with-8.0` also fetches the StoneAge 8.0 client data (1.2 GB) from the same site, which has graphics the 2.5 client lacks.
 - `--import-only` re-runs the importers, for example after an importer changes.
 
-The first run takes a while: roughly 15 minutes of importing on top of the downloads. Needs `curl`, `python3`, `git` and `bsdtar` (built into macOS; `libarchive-tools` on Linux). Downloaded executables are never extracted or run. Details, checksums and manual steps: [original data setup](docs/development/original-data-setup.md).
+The first run takes about 40 minutes on a recent Mac (most of it Godot's first asset import), plus the downloads. Needs `curl`, `python3`, `git` and `bsdtar` (built into macOS; `libarchive-tools` on Linux). Downloaded executables are never extracted or run. Details, checksums and manual steps: [original data setup](docs/development/original-data-setup.md).
 
 The client data is community-distributed proprietary game data of unverified lineage. Keep it local: imported assets are gitignored, and none of it may go into a public release without resolving its distribution status.
 

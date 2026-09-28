@@ -208,7 +208,7 @@ run "$PY" tools/import_cursor.py "$CLIENT_SOURCE/石器时代8.5客户端最新�
 run python3 tools/import_encounters.py
 run "$PY" tools/import_encounter_art.py "$CLIENT25"
 
-step "Godot asset import (the first run takes 10 minutes or more)"
+step "Godot asset import (the first run takes about half an hour)"
 ./scripts/run.sh --headless --editor --import --quit >/dev/null 2>&1
 
 step "Done"
