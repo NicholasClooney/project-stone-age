@@ -1,9 +1,18 @@
 {
-  "version": "v0.52.2",
-  "count": 59,
+  "version": "v0.52.3",
+  "count": 60,
   "feature_count": 36,
-  "fix_count": 23,
+  "fix_count": 24,
   "entries": [
+    {
+      "version": "v0.52.3",
+      "date": "2026-09-28",
+      "kind": "fix",
+      "title": "刷新时保持列表滚动位置",
+      "details": [
+        "自动抓宠或练级运行时，打开的宠物仓库等长列表不再每次数据更新都跳回顶部。"
+      ]
+    },
     {
       "version": "v0.52.2",
       "date": "2026-09-28",

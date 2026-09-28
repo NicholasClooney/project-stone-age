@@ -1727,7 +1727,7 @@ func _show_startup_error(text_value: String) -> void:
 func refresh_open_panels() -> void:
 	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:dev_gm_menu._refresh_actor()
 	for panel in [adventure_menu,pet_training]:
-		if is_instance_valid(panel) and panel.visible and not _typing_in(panel):panel.rebuild()
+		if is_instance_valid(panel) and panel.visible and not _typing_in(panel):rebuild_keeping_scroll(panel)
 	var profile_now: Dictionary = state.profile
 	var active := int(profile_now.get("active_pet",-1))
 	var pets: Array = profile_now.get("pets",[])
@@ -1736,6 +1736,36 @@ func refresh_open_panels() -> void:
 	if companion_key!=_companion_key:
 		_companion_key = companion_key
 		refresh_companion()
+
+## Rebuilds a panel for new data without moving the player's place in its
+## lists: scroll areas are matched by order and restored once laid out.
+func rebuild_keeping_scroll(panel: Control) -> void:
+	var before: Array[Vector2i] = []
+	for scroll in _scroll_areas(panel):before.append(Vector2i(scroll.scroll_horizontal,scroll.scroll_vertical))
+	panel.rebuild()
+	if before.is_empty() or before.all(func(position: Vector2i):return position==Vector2i.ZERO):return
+	var after := _scroll_areas(panel)
+	for i in range(mini(before.size(),after.size())):
+		var scroll: ScrollContainer = after[i]
+		var position: Vector2i = before[i]
+		var restore := func():
+			if is_instance_valid(scroll):
+				scroll.scroll_horizontal = position.x
+				scroll.scroll_vertical = position.y
+		# The new content has no size yet: apply after this frame's layout, and
+		# again next frame in case its content sorted later.
+		restore.call_deferred()
+		get_tree().process_frame.connect(restore,CONNECT_ONE_SHOT)
+
+func _scroll_areas(root: Node) -> Array[ScrollContainer]:
+	var found: Array[ScrollContainer] = []
+	var pending: Array[Node] = [root]
+	while not pending.is_empty():
+		var node: Node = pending.pop_front()
+		if node.is_queued_for_deletion():continue
+		if node is ScrollContainer:found.append(node)
+		pending.append_array(node.get_children())
+	return found
 
 ## A rebuild would discard text the player is typing (a pet name, a filter).
 func _typing_in(panel: Control) -> bool:
