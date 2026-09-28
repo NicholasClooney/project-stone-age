@@ -64,6 +64,9 @@ var _download_label: Label
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 var _ui_stale := false
+## Redraws while automation runs are spaced out so a panel's buttons survive a click.
+const UI_REFRESH_MSEC := 400
+var _ui_refreshed_msec := -100000
 var _companion_key: Array = []
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
@@ -478,6 +481,8 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	classic_hud.map_panel.hide()
 	if is_instance_valid(training_helper) and training_helper.compact_active:
 		return true
+	# Pets or storage opened beside minimized automation give way to its battle.
+	if adventure_menu.visible:adventure_menu.hide()
 	battle_view.open_battle(battle_state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
@@ -668,7 +673,7 @@ func _unhandled_input(event: InputEvent) -> void:
 		toggle_mute()
 	elif event.is_action_pressed("help") or event.is_action_pressed("ui_cancel"):
 		help.visible = not help.visible if event.is_action_pressed("help") else false
-		paused_input = help.visible
+		paused_input = help.visible or automation_minimized()
 		clear_input()
 	elif event.is_action_pressed("reset"):
 		reset_player()
@@ -710,8 +715,9 @@ func _physics_process(delta: float) -> void:
 	if area_transition_busy:return
 	if data.is_empty():
 		return
-	if _ui_stale:
+	if _ui_stale and not _ui_refresh_held():
 		_ui_stale = false
+		_ui_refreshed_msec = Time.get_ticks_msec()
 		refresh_open_panels()
 	if moving:
 		var d := target_cell-from_cell
@@ -1111,7 +1117,7 @@ func build_ui() -> void:
 	var help_button := button("Help [H]",func():
 		if not dialogue.visible:
 			help.visible = not help.visible
-			paused_input = help.visible
+			paused_input = help.visible or automation_minimized()
 			clear_input())
 	help_button.name = "DevHelp"
 	dev.add_child(help_button)
@@ -1432,7 +1438,7 @@ func show_adventure_menu(kind: String) -> void:
 
 func close_adventure_menu() -> void:
 	adventure_menu.hide()
-	paused_input = battle_view.visible
+	release_input()
 	clear_input()
 	refresh_companion()
 	checkpoint()
@@ -1671,6 +1677,27 @@ func refresh_open_panels() -> void:
 		_companion_key = companion_key
 		refresh_companion()
 
+## While automation runs, open panels redraw at most every UI_REFRESH_MSEC and
+## never under a held mouse button, so a click lands on the button it pressed.
+func _ui_refresh_held() -> bool:
+	if not _automation_running():return false
+	return Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Time.get_ticks_msec()-_ui_refreshed_msec < UI_REFRESH_MSEC
+
+func _automation_running() -> bool:
+	var automation: Dictionary = state.automation
+	return bool(automation.get("running",false)) or bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+
+## True while a minimized automation window (自动练级 / 自动抓极品) runs. Its
+## progress bar then stands in for the window: nothing is modal, but the
+## character stays in place so the stationary run is not cancelled by a stray click.
+func automation_minimized() -> bool:
+	return (is_instance_valid(training_helper) and training_helper.minimized) or (is_instance_valid(pet_hunt_menu) and pet_hunt_menu.minimized)
+
+## Lifts the field-input lock unless a battle, the adventure menu or minimized
+## automation still needs it.
+func release_input() -> void:
+	paused_input = battle_view.visible or adventure_menu.visible or automation_minimized()
+
 ## A rebuild would discard text the player is typing (a pet name, a filter).
 func _typing_in(panel: Control) -> bool:
 	var focused := get_viewport().gui_get_focus_owner()
@@ -1804,9 +1831,9 @@ func _on_backend_message(event: Dictionary) -> void:
 		"battle_closed":present_battle_close(str(event.outcome))
 		"profile":
 			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
-			_ui_stale = not link.is_local()
+			_ui_stale = _ui_stale or not link.is_local() or automation_minimized()
 		"pet_storage":
-			_ui_stale = not link.is_local()
+			_ui_stale = _ui_stale or not link.is_local() or automation_minimized()
 		"auto_status":
 			for node in [training_helper,pet_hunt_menu,pet_workflow]:
 				if is_instance_valid(node):node.on_status(event.status)

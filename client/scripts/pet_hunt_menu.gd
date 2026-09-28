@@ -31,6 +31,11 @@ var location_label: Label
 var explanation: Label
 var start_button: Button
 var stop_button: Button
+var minimize_button: Button
+## Collapsed to a progress bar while the scan or find-pet cycle continues.
+var minimized := false
+var minimized_flow := false
+var chip: Panel
 var controls: Array[Control] = []
 var candidates: Array = []
 var applying := false
@@ -110,6 +115,8 @@ func _ready() -> void:
 	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
 	stop_button=world.button("停止",func():stop_hunt("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,560);panel.add_child(close)
+	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizePetHunt";minimize_button.position=Vector2(760,560);minimize_button.disabled=true
+	minimize_button.tooltip_text="收起为右下角进度条；筛选或找宠流程继续，可同时整理宠物与仓库";panel.add_child(minimize_button)
 	for child in panel.get_children():
 		if child is Control and child.position.y>=129 and child.position.y<=460:filter_nodes.append(child)
 	capture_page=Control.new();capture_page.name="CaptureSettingsPage";capture_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(capture_page)
@@ -174,6 +181,7 @@ func refresh_candidates() -> void:
 	location_label.text="当前位置：%s (%d, %d) · 只使用此处原版敌群，不改种类、等级或成长随机值。" % [world.data.name,world.cell.x,world.cell.y]
 	status.text="这里没有可用的目标。可到萨姆吉尔西门外筛选 Lv.1 昆依，或关闭 Lv.1 限制。" if start_button.disabled else ready_description()
 func open_menu() -> void:
+	if minimized:restore();return
 	if visible:close_menu();return
 	if world.paused_input or world.area_transition_busy or world.battle_view.visible:return
 	if is_instance_valid(world.travel_router):world.travel_router.cancel("已打开极品筛选，停止自动寻路。")
@@ -187,13 +195,14 @@ func open_menu() -> void:
 func close_menu() -> void:
 	if not visible:return
 	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
-	set_controls(false);hide();world.paused_input=false;world.clear_input()
+	set_controls(false);hide();world.release_input();world.clear_input()
 func set_controls(locked: bool) -> void:
 	for control in controls:
 		if control is SpinBox:control.editable=not locked
 		elif control is BaseButton:control.disabled=locked
 	start_button.disabled=locked
 	stop_button.disabled=not locked
+	minimize_button.disabled=not locked
 ## Validated hunt filter from these controls, or {} with the reason shown.
 func build_filter(for_workflow: bool = false) -> Dictionary:
 	for control in controls:
@@ -240,7 +249,8 @@ func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组
 func update_status() -> void:status.text=summary()+"\n筛选中；停止或 Esc 可随时结束。"
 func _process(delta: float) -> void:
 	if not running:return
-	if not visible or not world.paused_input or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell:
+	# Minimized, the scan keeps going while other panels come and go.
+	if not (visible or minimized) or (visible and not world.paused_input) or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell:
 		stop_hunt("场景状态变化，筛选已停止。");return
 	# In-process, this frame drives the backend scan with the same budget.
 	if world.link.is_local():world.link.request({"type":"auto","name":"hunt_process","delta":delta})
@@ -250,6 +260,13 @@ func scan_once() -> void:
 	world.link.request({"type":"auto","name":"hunt_scan"})
 
 func on_status(automation: Dictionary) -> void:
+	if minimized:
+		if _automation_active(automation):_update_chip()
+		else:
+			_end_minimized()
+			var reason: String=str(automation.get("flow",{}).get("reason","")) if minimized_flow else str(automation.get("hunt",{}).get("status",""))
+			world.message.text="自动抓极品已结束："+reason.replace("\n"," ")
+			world.release_input()
 	if visible and bool(automation.get("hunt",{}).get("running",false)):
 		set_controls(true);update_status()
 
@@ -362,3 +379,50 @@ func commit_stat_settings()->void:
 	for input in stat_numbers.values()+stat_keeps.values()+[stat_stop_after]:
 		if input.get_line_edit().has_focus():input.apply()
 	save_stat_settings()
+
+static func _automation_active(automation: Dictionary) -> bool:
+	return bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+
+## Collapses the window into a small progress bar. The scan or find-pet cycle
+## continues and the world, HUD and other panels (pets, warehouse) stay usable.
+func minimize() -> void:
+	if minimized or not _automation_active(world.state.automation):return
+	minimized=true
+	minimized_flow=world.pet_workflow.active()
+	hide();world.clear_input()
+	_chip().pop_up();_update_chip()
+	world.release_input()
+
+## Brings the full window back with the backend's current progress.
+func restore() -> void:
+	if not minimized:return
+	_end_minimized()
+	if world.adventure_menu.visible:world.close_adventure_menu()
+	world.clear_input();world.paused_input=true
+	get_parent().move_child(self,get_parent().get_child_count()-1)
+	show()
+	var active:=_automation_active(world.state.automation)
+	set_controls(active)
+	if active:update_status()
+
+func _end_minimized() -> void:
+	if not minimized:return
+	minimized=false
+	if is_instance_valid(chip):chip.hide()
+
+func _chip() -> Panel:
+	if not is_instance_valid(chip):
+		chip=preload("res://scripts/automation_chip.gd").new()
+		chip.name="PetHuntChip"
+		chip.setup(world,"自动抓极品",0,restore)
+		get_parent().add_child(chip)
+	return chip
+
+func _update_chip() -> void:
+	if not is_instance_valid(chip):return
+	var flow=world.pet_workflow
+	if flow.active():
+		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
+		chip.present("自动抓极品 · 找宠流程 · "+step,"达标 %d/%s · 未达标 %d · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),flow.stored_count,rolls,flow.elapsed_text()])
+	else:
+		chip.present("自动抓极品 · 筛选中","遇敌 %d 组 · 检查 %d 只 · 最好总档 %s"%[rolls,inspected,"暂无" if best< -8 else "%+d"%best])

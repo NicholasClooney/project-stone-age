@@ -147,6 +147,8 @@ func on_status(_automation: Dictionary) -> void:
 func on_event(detail: Dictionary) -> void:
 	match str(detail.kind):
 		"flow_hunt":
+			# Minimized, each new round keeps going behind whatever the player has open.
+			if world.pet_hunt_menu.minimized:return
 			world.adventure_menu.hide();world.paused_input=false
 			if not world.pet_hunt_menu.visible:world.pet_hunt_menu.open_menu()
 			world.clear_input();world.paused_input=true

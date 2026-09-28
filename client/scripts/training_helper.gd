@@ -28,6 +28,10 @@ var capture_target: int:
 var start_button: Button
 var target_note: Label
 var stop_button: Button
+var minimize_button: Button
+## Collapsed to a progress bar while the run continues (see automation_chip.gd).
+var minimized := false
+var chip: Panel
 
 func _status() -> Dictionary:
 	return world.state.automation if is_instance_valid(world) else {}
@@ -92,6 +96,8 @@ func _ready() -> void:
 	status=label_at(progress,"",Vector2(18,12),18);status.size=Vector2(840,42);status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	result=label_at(progress,"",Vector2(18,60),16);result.size=Vector2(840,76);result.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	stop_button=world.button("停止 / 接手",func():stop_training("已手动停止"));stop_button.position=Vector2(900,20);progress.add_child(stop_button)
+	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizeTraining";minimize_button.tooltip_text="收起为右下角进度条；自动战斗继续，可同时查看宠物与仓库"
+	minimize_button.position=Vector2(900,80);progress.add_child(minimize_button)
 	# Fresh UI defaults are opt-in; only Apply / Start changes live multipliers.
 	settings.merge(world.training_settings,true)
 	level_explicit=bool(world.training_settings.get("level_explicit",world.training_settings.has("level") and int(world.training_settings.level)!=120))
@@ -139,6 +145,7 @@ func _refresh_pet_choices() -> void:
 		selected=capture_pet.item_count-1
 	capture_pet.select(selected)
 func open_battle_menu() -> void:
+	if minimized:restore();return
 	if visible or not world.battle_view.visible or world.battle_view.is_animating() or not world.battle_session.snapshot().active:return
 	capture_target=int(world.battle_view.player_target)
 	start_button.text="本场自动战斗"
@@ -153,6 +160,7 @@ func start_capture_battle(target: int, finish_battle: bool = false) -> void:
 	apply_settings()
 	world.link.request({"type":"auto_start","kind":"capture_battle","target":target,"finish_battle":finish_battle,"settings":settings,"map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
 func open_menu() -> void:
+	if minimized:restore();return
 	if visible:return
 	if world.paused_input or world.moving or world.area_transition_busy:return
 	_sync_default_level()
@@ -165,7 +173,7 @@ func open_menu() -> void:
 	show();panel.show();progress.hide()
 func close_menu() -> void:
 	if running:stop_training("已手动停止");return
-	hide();world.paused_input=world.battle_view.visible;world.clear_input()
+	hide();world.release_input();world.clear_input()
 func apply_settings() -> void:
 	for input in [capture_hp,capture_pet_max_level,hp_floor,target_level,battle_limit]:
 		if input.get_line_edit().has_focus():input.apply()
@@ -209,9 +217,14 @@ func update_status() -> void:
 
 ## Backend status: show progress while running and mirror the active settings.
 func on_status(automation: Dictionary) -> void:
-	if not bool(automation.get("running",false)):return
+	if not bool(automation.get("running",false)):
+		if minimized:_end_minimized();world.release_input()
+		return
 	settings=automation.get("settings",settings).duplicate(true)
 	world.battle_view.playback_speed=float(settings.get("speed",1.0))
+	if minimized:_update_chip();return
+	# A find-pet cycle minimized from 自动抓极品 keeps its capture battles out of sight too.
+	if world.pet_hunt_menu.minimized:return
 	if not visible:
 		get_parent().move_child(self,get_parent().get_child_count()-1)
 		show()
@@ -225,11 +238,13 @@ func on_event(detail: Dictionary) -> void:
 		if reason.begins_with("带宠升级"):close_menu()
 		else:panel.hide();progress.show();result.text=reason
 		return
+	_end_minimized()
 	if bool(detail.get("takeover",false)) and world.battle_session.snapshot().active:
+		if world.adventure_menu.visible:world.adventure_menu.hide()
 		world.battle_view.open_battle(world.battle_session.snapshot())
 		world.set_music(load("res://assets/legacy/battle/audio/sabgm_b0.wav"))
-	world.paused_input=world.battle_view.visible
 	world.clear_input();hide()
+	world.release_input()
 	world.last_adventure_message="自动练级：%s · 已完成 %d 场。"%[reason,int(detail.get("battles",battles))]
 	world.message.text=world.last_adventure_message
 	if world.battle_view.visible and world.battle_session.snapshot().active:
@@ -270,3 +285,46 @@ func acquire_clone_override()->void:
 
 func release_clone_override()->void:
 	world.link.request({"type":"auto","name":"release_clone"})
+
+## Collapses the running window into a small progress bar. The run continues and
+## the world, HUD and other panels (pets, warehouse, status) stay usable.
+func minimize() -> void:
+	if not running or minimized:return
+	minimized=true
+	hide();world.clear_input()
+	_chip().pop_up();_update_chip()
+	world.release_input()
+
+## Brings the full window back with the backend's current progress.
+func restore() -> void:
+	if not minimized:return
+	_end_minimized()
+	if world.adventure_menu.visible:world.close_adventure_menu()
+	if not running:
+		world.release_input();open_menu();return
+	world.clear_input();world.paused_input=true
+	get_parent().move_child(self,get_parent().get_child_count()-1)
+	show();panel.hide();progress.show()
+	update_status()
+
+func _end_minimized() -> void:
+	if not minimized:return
+	minimized=false
+	if is_instance_valid(chip):chip.hide()
+
+func _chip() -> Panel:
+	if not is_instance_valid(chip):
+		chip=preload("res://scripts/automation_chip.gd").new()
+		chip.name="TrainingHelperChip"
+		chip.setup(world,"自动练级",0,restore)
+		get_parent().add_child(chip)
+	return chip
+
+func _update_chip() -> void:
+	if not is_instance_valid(chip):return
+	var automation:=_status()
+	var used: Dictionary=automation.get("settings",settings)
+	var mode: String={"attack":"普通攻击","capture":"抓宠","train_pet":"带宠升级"}.get(str(used.get("preset","attack")),"自动战斗")
+	var level:=int(world.session.snapshot().player.level)
+	chip.present("自动练级 · %s · %s"%[mode,"战斗中" if world.state.battle_open else "遇敌中"],
+		"%d 场 · Lv.%d → %d · 经验 +%d"%[battles,int(automation.get("initial_level",level)),level,earned_xp])

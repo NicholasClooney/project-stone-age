@@ -134,7 +134,7 @@ func _input(event: InputEvent) -> void:
 		JOY_BUTTON_START:
 			if root==null or root==world.help:
 				world.help.visible = not world.help.visible
-				world.paused_input = world.help.visible
+				world.paused_input = world.help.visible or world.automation_minimized()
 				world.clear_input()
 				get_viewport().set_input_as_handled()
 		JOY_BUTTON_BACK:
