@@ -9,6 +9,12 @@ func capture(path:String)->void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(path)
+## The portrait shows the shared clock's frame (allowing one frame of lag).
+func shows_clock(portrait,animation:Dictionary)->bool:
+	var now:=Time.get_ticks_msec()
+	for lag in [0,20,40,60]:
+		if int(portrait.frame_at(animation,now-lag).image)==portrait.current_image:return true
+	return false
 func run()->void:
 	var world=load("res://scenes/main.tscn").instantiate()
 	world.profile_persistence=false
@@ -36,6 +42,30 @@ func run()->void:
 	root.push_input(click,true)
 	check(menu.pet_view=="detail" and menu.panel.size==Vector2(272,332),"row opens originalstatuswindow")
 	check(menu.panel.get_node_or_null("PetPortrait")!=null,"nativepetportrait displayed")
+	var portrait=menu.panel.get_node("PetPortrait")
+	var standing:Dictionary=portrait.animation_for("100250",3,1)
+	check(portrait.facing==1 and portrait.action==3 and standing.frames.size()>1,"portrait loops the standing animation at original facing 1")
+	# process_frame fires before nodes process: let one full frame run.
+	await process_frame
+	await process_frame
+	check(shows_clock(portrait,standing),"portrait frame follows the shared clock")
+	var first:int=portrait.current_image
+	var deadline:=Time.get_ticks_msec()+3000
+	while portrait.current_image==first and Time.get_ticks_msec()<deadline:await process_frame
+	check(portrait.current_image!=first,"portrait advances frames over time")
+	var turn:=InputEventMouseButton.new()
+	turn.button_index=MOUSE_BUTTON_LEFT
+	turn.pressed=true
+	portrait._gui_input(turn)
+	check(portrait.facing==2 and menu.pet_portrait_facing==2,"clicking the portrait turns it one facing")
+	menu.rebuild()
+	var rebuilt=menu.panel.get_node("PetPortrait")
+	var turned:Dictionary=rebuilt.animation_for("100250",3,2)
+	check(rebuilt.facing==2 and shows_clock(rebuilt,turned),"rebuilt portrait keeps its facing and clock position")
+	var shown:int=rebuilt.current_image
+	deadline=Time.get_ticks_msec()+3000
+	while rebuilt.current_image==shown and Time.get_ticks_msec()<deadline:await process_frame
+	check(rebuilt.current_image!=shown,"portrait keeps animating after a menu rebuild")
 	await capture("/tmp/pet-window-detail.png")
 	menu.pet_switch_view("skills")
 	check(menu.panel.size==Vector2(272,348),"originalskillwindowdimensions")

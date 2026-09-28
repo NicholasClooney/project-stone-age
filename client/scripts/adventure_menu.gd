@@ -32,6 +32,9 @@ var pet_release_below := 620
 const RELEASE_METRICS := ["stat_total","attack","defence","speed"]
 const PetComparison=preload("res://scripts/pet_comparison.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
+const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
+## Facing of the pet window's portrait; the original starts at 1 each time it opens.
+var pet_portrait_facing := 1
 var name_edit: LineEdit
 var art: Dictionary = {}
 var selected_item := "potion"
@@ -63,6 +66,7 @@ func open_menu(next_kind: String) -> void:
 	kind = next_kind
 	pet_view = "list"
 	pet_rename = false
+	pet_portrait_facing = 1
 	feedback = ""
 	selected_pet = maxi(0,int(world.session.snapshot().active_pet))
 	show()
@@ -227,9 +231,7 @@ func art_button(ident: int, point: Vector2, action: String, value: Variant = nul
 	return button
 
 func portrait(sprite: int, point: Vector2, bounds: Vector2) -> void:
-	var path := "res://assets/legacy/battle/manifest.json"
-	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
-	var frames: Array = manifest.characters[str(sprite)]["3_0"].frames
+	var frames: Array = AnimatedPortrait.manifest().characters[str(sprite)]["3_0"].frames
 	var view := TextureRect.new()
 	view.texture = load("res://assets/legacy/battle/images/%d.png" % int(frames[0].image))
 	view.position = point
@@ -439,15 +441,15 @@ func pet_panel(profile: Dictionary) -> void:
 	for i in range(4):
 		var value:=str([pet.attack,pet.defence,pet.speed,pet.get("loyalty","—")][i])
 		label(value,Vector2(70,178+i*24),45,13)
-	var manifest: Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
-	var frame: Dictionary=manifest.characters[str(int(pet.sprite))]["3_0"].frames[0]
-	var metadata: Dictionary=manifest.images[str(int(frame.image))]
-	var portrait_view:=TextureRect.new()
+	# menu.cpp:12777 MakeAnimDisp(x+200,y+144,graNo,ANIM_DISP_PET): the standing
+	# loop, first facing 1 (menu.cpp:1881); a click turns it (menu.cpp:1177).
+	var portrait_view:=AnimatedPortrait.new()
 	portrait_view.name="PetPortrait"
-	portrait_view.texture=load("res://assets/legacy/battle/images/%d.png" % int(frame.image))
-	portrait_view.position=Vector2(200+metadata.x+frame.x,144+metadata.y+frame.y)
-	portrait_view.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	portrait_view.position=Vector2(200,144)
 	panel.add_child(portrait_view)
+	portrait_view.setup(str(int(pet.sprite)),pet_portrait_facing,func(facing:int):
+		pet_portrait_facing=facing
+		world.play_battle_sound(217))
 	pet_native_button(26046,Vector2(198,286),func(): pet_switch_view("skills"),"宠物技能")
 	pet_native_button(26043,Vector2(190,317),func(): pet_switch_view("list"))
 	pet_navigation(pets.size(),317)
