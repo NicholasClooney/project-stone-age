@@ -4,7 +4,7 @@ Read-only audit of the pinned local reference, 2026-09-27. This records differen
 
 ## Sprite 100298
 
-`gmsv/data/enemybase.txt:114` defines ordinary template114 **凯比特**; line469 defines special template668 **卡比特** (also called 风凯比特 in enemy records). Both use sprite100298. The ordinary template is capturable; the special one is not. The definition exists. Local asset extraction reports `RLE overrun` in `encounters/art-coverage.json`: this is an unresolved resource-decoding failure, not proof that the upstream definition is absent. Distinguish damaged bytes from an unsupported decoder variant before claiming a root cause. Runtime currently skips troops requiring this unavailable animation, with no substitute or reroll.
+`gmsv/data/enemybase.txt:114` defines ordinary template114 **凯比特**; line469 defines special template668 **卡比特** (also called 风凯比特 in enemy records). Both use sprite100298. The ordinary template is capturable; the special one is not. **Resolved:** its bitmaps (for example 109890) end with a run one pixel longer than the image. The original client (`unpack.cpp` `decoder()`) writes runs without a bound and keeps the first width × height bytes, so the importer now clips the same way and the animation imports intact. Troops that need it are no longer skipped.
 
 ## Missing probability weights
 

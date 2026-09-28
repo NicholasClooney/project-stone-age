@@ -39,6 +39,10 @@ func picture(name: String):
  await RenderingServer.frame_post_draw
  root.get_texture().get_image().save_png("res://../artifacts/"+name+".png")
 func run():
+ # 凯比特 (100298) stands in for original art that cannot be shown. Its
+ # bitmaps decode now that overrunning runs are clipped like the original
+ # client, so the skip-without-substitute path marks it missing here.
+ preload("res://server/troop_art.gd")._validation["100298"] = false
  view=load("res://scripts/battle_view.gd").new()
  root.add_child(view)
  await process_frame

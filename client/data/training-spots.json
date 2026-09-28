@@ -4,6 +4,95 @@
   "spots": [
     {
       "map_id": 100,
+      "area_id": 21,
+      "name": "萨伊那斯",
+      "cell": [
+        682,
+        479
+      ],
+      "level_min": 1,
+      "level_max": 3,
+      "mean_level": 1.25,
+      "monsters": [
+        "凯比特",
+        "昆伊"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 22,
+      "name": "萨伊那斯",
+      "cell": [
+        638,
+        623
+      ],
+      "level_min": 1,
+      "level_max": 3,
+      "mean_level": 1.81,
+      "monsters": [
+        "凯比特",
+        "昆伊"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 23,
+      "name": "萨伊那斯",
+      "cell": [
+        508,
+        670
+      ],
+      "level_min": 2,
+      "level_max": 5,
+      "mean_level": 3.5,
+      "monsters": [
+        "凯比特",
+        "昆伊"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 24,
+      "name": "萨伊那斯",
+      "cell": [
+        566,
+        464
+      ],
+      "level_min": 1,
+      "level_max": 4,
+      "mean_level": 2.97,
+      "monsters": [
+        "凯比特",
+        "昆伊",
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 25,
+      "name": "萨伊那斯",
+      "cell": [
+        510,
+        456
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "凯比特",
+        "昆伊",
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
       "area_id": 26,
       "name": "萨伊那斯",
       "cell": [
@@ -14,6 +103,25 @@
       "level_max": 6,
       "mean_level": 5.0,
       "monsters": [
+        "绿龟",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 27,
+      "name": "萨伊那斯",
+      "cell": [
+        464,
+        353
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "凯比特",
+        "昆伊",
         "绿龟",
         "龟之盾"
       ],
@@ -126,6 +234,25 @@
       "monsters": [
         "多利凯拉",
         "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 34,
+      "name": "萨伊那斯",
+      "cell": [
+        469,
+        307
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "凯比特",
+        "昆伊",
+        "绿龟",
+        "龟之盾"
       ],
       "dev_only": false
     },
@@ -393,6 +520,24 @@
     },
     {
       "map_id": 100,
+      "area_id": 58,
+      "name": "萨伊那斯",
+      "cell": [
+        313,
+        324
+      ],
+      "level_min": 1,
+      "level_max": 20,
+      "mean_level": 16.71,
+      "monsters": [
+        "凯比特",
+        "卡比特",
+        "昆伊"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
       "area_id": 64,
       "name": "萨伊那斯",
       "cell": [
@@ -407,6 +552,40 @@
         "乌力斯坦",
         "多利凯拉",
         "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 65,
+      "name": "萨伊那斯",
+      "cell": [
+        595,
+        561
+      ],
+      "level_min": 2,
+      "level_max": 3,
+      "mean_level": 2.5,
+      "monsters": [
+        "凯比特",
+        "昆伊"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 67,
+      "name": "萨伊那斯",
+      "cell": [
+        439,
+        311
+      ],
+      "level_min": 1,
+      "level_max": 3,
+      "mean_level": 1.81,
+      "monsters": [
+        "凯比特",
+        "昆伊"
       ],
       "dev_only": false
     },
@@ -464,6 +643,25 @@
         "盗贼",
         "盗贼鲁尼帖斯",
         "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 265,
+      "name": "萨伊那斯",
+      "cell": [
+        472,
+        296
+      ],
+      "level_min": 3,
+      "level_max": 6,
+      "mean_level": 4.5,
+      "monsters": [
+        "凯比特",
+        "昆伊",
+        "绿龟",
+        "龟之盾"
       ],
       "dev_only": false
     },
@@ -2460,6 +2658,73 @@
     },
     {
       "map_id": 300,
+      "area_id": 305,
+      "name": "吉鲁岛",
+      "cell": [
+        205,
+        294
+      ],
+      "level_min": 40,
+      "level_max": 42,
+      "mean_level": 41.0,
+      "monsters": [
+        "格尔顿",
+        "格鲁西斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 306,
+      "name": "吉鲁岛",
+      "cell": [
+        258,
+        424
+      ],
+      "level_min": 40,
+      "level_max": 42,
+      "mean_level": 41.0,
+      "monsters": [
+        "格尔顿",
+        "格鲁西斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 307,
+      "name": "吉鲁岛",
+      "cell": [
+        285,
+        329
+      ],
+      "level_min": 40,
+      "level_max": 42,
+      "mean_level": 41.0,
+      "monsters": [
+        "格尔顿",
+        "格鲁西斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 308,
+      "name": "吉鲁岛",
+      "cell": [
+        234,
+        361
+      ],
+      "level_min": 1,
+      "level_max": 42,
+      "mean_level": 40.51,
+      "monsters": [
+        "格鲁西斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
       "area_id": 309,
       "name": "吉鲁岛",
       "cell": [
@@ -3657,6 +3922,96 @@
         "可利多洛斯",
         "多萨金格",
         "格洛格鲁"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32016,
+      "area_id": 626,
+      "name": "漆黑的洞窟 地下16楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 93,
+      "level_max": 95,
+      "mean_level": 94.0,
+      "monsters": [
+        "布林帖斯",
+        "拉可拉斯",
+        "邦浦洛斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32017,
+      "area_id": 627,
+      "name": "漆黑的洞窟 地下17楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 93,
+      "level_max": 95,
+      "mean_level": 94.0,
+      "monsters": [
+        "布林帖斯",
+        "拉可拉斯",
+        "邦浦洛斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32018,
+      "area_id": 628,
+      "name": "漆黑的洞窟 地下18楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 95,
+      "mean_level": 93.54,
+      "monsters": [
+        "布林帖斯",
+        "拉可拉斯",
+        "邦浦洛斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32019,
+      "area_id": 629,
+      "name": "漆黑的洞窟 地下19楼",
+      "cell": [
+        28,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 95,
+      "mean_level": 93.54,
+      "monsters": [
+        "布林帖斯",
+        "拉可拉斯",
+        "邦浦洛斯"
+      ],
+      "dev_only": true
+    },
+    {
+      "map_id": 32020,
+      "area_id": 630,
+      "name": "漆黑的洞窟 地下20楼",
+      "cell": [
+        47,
+        51
+      ],
+      "level_min": 93,
+      "level_max": 95,
+      "mean_level": 94.0,
+      "monsters": [
+        "布林帖斯",
+        "拉可拉斯",
+        "邦浦洛斯"
       ],
       "dev_only": true
     }

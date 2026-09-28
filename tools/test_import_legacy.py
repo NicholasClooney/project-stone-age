@@ -27,8 +27,12 @@ class RLETests(unittest.TestCase):
     def test_truncated_count(self):
         with self.assertRaises(ValueError):decode_rle(bytes([0xd1]),1)
 
-    def test_overrun(self):
-        with self.assertRaises(ValueError):decode_rle(bytes([0xc3]),2)
+    def test_overrun_is_clipped_like_the_original(self):
+        # unpack.cpp writes runs unbounded and keeps width*height bytes.
+        self.assertEqual(decode_rle(bytes([0x83,7]),2),bytearray([7,7]))
+        self.assertEqual(decode_rle(bytes([0xc3]),2),bytearray([0,0]))
+        self.assertEqual(decode_rle(bytes([0x03,1,2,3]),2),bytearray([1,2]))
+        with self.assertRaises(ValueError):decode_rle(bytes([0x03,1]),1)
 
     def test_incomplete(self):
         with self.assertRaises(ValueError):decode_rle(bytes([0xc1]),2)

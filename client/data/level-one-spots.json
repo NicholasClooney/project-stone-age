@@ -4,6 +4,96 @@
   "spots": [
     {
       "map_id": 100,
+      "area_id": 21,
+      "cell": [
+        682,
+        479
+      ],
+      "map_name": "萨伊那斯",
+      "name": "昆伊",
+      "enemy_id": 119,
+      "template_id": 113,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 21,
+      "cell": [
+        682,
+        479
+      ],
+      "map_name": "萨伊那斯",
+      "name": "凯比特",
+      "enemy_id": 122,
+      "template_id": 114,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 22,
+      "cell": [
+        638,
+        623
+      ],
+      "map_name": "萨伊那斯",
+      "name": "昆伊",
+      "enemy_id": 119,
+      "template_id": 113,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 22,
+      "cell": [
+        638,
+        623
+      ],
+      "map_name": "萨伊那斯",
+      "name": "凯比特",
+      "enemy_id": 122,
+      "template_id": 114,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 24,
+      "cell": [
+        566,
+        464
+      ],
+      "map_name": "萨伊那斯",
+      "name": "龟之盾",
+      "enemy_id": 125,
+      "template_id": 51,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 24,
+      "cell": [
+        566,
+        464
+      ],
+      "map_name": "萨伊那斯",
+      "name": "绿龟",
+      "enemy_id": 128,
+      "template_id": 52,
+      "level_min": 1,
+      "level_max": 2,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
       "area_id": 28,
       "cell": [
         81,
@@ -193,6 +283,51 @@
       "name": "达克尔",
       "enemy_id": 178,
       "template_id": 64,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 58,
+      "cell": [
+        313,
+        324
+      ],
+      "map_name": "萨伊那斯",
+      "name": "卡比特",
+      "enemy_id": 257,
+      "template_id": 111,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 67,
+      "cell": [
+        439,
+        311
+      ],
+      "map_name": "萨伊那斯",
+      "name": "昆伊",
+      "enemy_id": 119,
+      "template_id": 113,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 100,
+      "area_id": 67,
+      "cell": [
+        439,
+        311
+      ],
+      "map_name": "萨伊那斯",
+      "name": "凯比特",
+      "enemy_id": 122,
+      "template_id": 114,
       "level_min": 1,
       "level_max": 1,
       "dev_only": false
@@ -484,6 +619,21 @@
     },
     {
       "map_id": 300,
+      "area_id": 308,
+      "cell": [
+        234,
+        361
+      ],
+      "map_name": "吉鲁岛",
+      "name": "格鲁西斯",
+      "enemy_id": 973,
+      "template_id": 193,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 300,
       "area_id": 309,
       "cell": [
         176,
@@ -673,6 +823,36 @@
       "name": "格洛格鲁",
       "enemy_id": 1390,
       "template_id": 87,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 32018,
+      "area_id": 628,
+      "cell": [
+        29,
+        29
+      ],
+      "map_name": "漆黑的洞窟 地下18楼",
+      "name": "布林帖斯",
+      "enemy_id": 1397,
+      "template_id": 252,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true
+    },
+    {
+      "map_id": 32019,
+      "area_id": 629,
+      "cell": [
+        28,
+        29
+      ],
+      "map_name": "漆黑的洞窟 地下19楼",
+      "name": "拉可拉斯",
+      "enemy_id": 1395,
+      "template_id": 325,
       "level_min": 1,
       "level_max": 1,
       "dev_only": true

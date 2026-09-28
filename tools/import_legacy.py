@@ -91,11 +91,15 @@ def decode_rle(data,expected):
         extra=kind%4
         if at+extra>len(data):raise ValueError('Truncated RLE count')
         for _ in range(extra):count=count*256+data[at];at+=1
-        if len(out)+count>expected:raise ValueError('RLE overrun')
-        if repeated or transparent:out.extend(bytes([color])*count)
+        # The original decoder (unpack.cpp decoder(), RLE branch) has no bound:
+        # it writes every run in full and the image is the first width*height
+        # bytes, so a run past the end is clipped. Some original bitmaps' last
+        # run is one pixel too long (for example 34589, 215729, 109890).
+        keep=min(count,expected-len(out))
+        if repeated or transparent:out.extend(bytes([color])*keep)
         else:
             if at+count>len(data):raise ValueError('Truncated RLE literal')
-            out.extend(data[at:at+count]);at+=count
+            out.extend(data[at:at+keep]);at+=count
     if len(out)!=expected:raise ValueError(f'Incomplete RLE: {len(out)}/{expected}')
     return out
 

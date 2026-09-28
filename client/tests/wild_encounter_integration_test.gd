@@ -5,6 +5,10 @@ func check(ok: bool, label: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+label)
 	if not ok:failures+=1
 func run() -> void:
+	# 凯比特 (100298) stands in for original art that cannot be shown. Its
+	# bitmaps decode now that overrunning runs are clipped like the original
+	# client, so the skip-without-substitute path marks it missing here.
+	preload("res://server/troop_art.gd")._validation["100298"] = false
 	var game = load("res://scenes/main.tscn").instantiate()
 	game.profile_persistence=false
 	root.add_child(game)
