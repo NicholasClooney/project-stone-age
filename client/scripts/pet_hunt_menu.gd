@@ -249,8 +249,11 @@ func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组
 func update_status() -> void:status.text=summary()+"\n筛选中；停止或 Esc 可随时结束。"
 func _process(delta: float) -> void:
 	if not running:return
-	# Minimized, the scan keeps going while other panels come and go.
-	if not (visible or minimized) or (visible and not world.paused_input) or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell:
+	# Minimized, the scan keeps going while other panels come and go. Over a
+	# network the backend stops the hunt itself when the character moves or a
+	# battle opens; several devices share the run, so one device's window or
+	# map load must not stop it.
+	if world.link.is_local() and (not (visible or minimized) or (visible and not world.paused_input) or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell):
 		stop_hunt("场景状态变化，筛选已停止。");return
 	# In-process, this frame drives the backend scan with the same budget.
 	if world.link.is_local():world.link.request({"type":"auto","name":"hunt_process","delta":delta})

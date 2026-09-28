@@ -116,9 +116,10 @@ func stop_cycle(message: String="已手动停止") -> void:
 	world.link.request({"type":"auto","name":"stop_flow","reason":message})
 
 func _process(_delta: float) -> void:
-	# In-process, this frame drives the backend cycle.
+	# In-process, this frame drives the backend cycle. Over a network the
+	# backend checks the reported position itself, and other devices (still
+	# following, or loading the map) must not stop a shared run.
 	if world.link.is_local():advance()
-	elif active() and _moved():stop_cycle("位置发生变化；请在当前位置重新开始。")
 
 ## One backend workflow step, after checking this client's own position.
 func advance() -> void:

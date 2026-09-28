@@ -251,7 +251,9 @@ func on_event(detail: Dictionary) -> void:
 		world.battle_view.report.text="自动抓宠／战斗已暂停："+reason+"；可手动接手。"
 func _process(delta: float) -> void:
 	if not running:return
-	if _moved():stop_training("位置发生变化");return
+	# Over a network the backend stops the run from position reports itself;
+	# another device following the character must not stop a shared run.
+	if world.link.is_local() and _moved():stop_training("位置发生变化");return
 	# In-process, this frame drives the backend runner at the chosen speed.
 	if world.link.is_local():world.link.request({"type":"auto","name":"tick_battle","delta":delta})
 

@@ -71,6 +71,19 @@ func run() -> void:
 	check(int(second.data.map_id)==MAP and second.cell==CELL,"the reloaded page starts where the character is")
 	check(second.pet_hunt_menu.visible and second.pet_hunt_menu.running,"the hunt window reopens showing the running hunt")
 
+	# Another device joins without opening the hunt window: it shares the run
+	# and must not stop it (the backend guards position and battles itself).
+	var third = await connect_client(port)
+	# Joining mid-hunt reopens the window; a device that was already connected
+	# when the hunt started never showed it. Hide it without closing (closing
+	# the window is how a player stops the hunt).
+	third.pet_hunt_menu.hide()
+	check(not third.data.is_empty() and not third.pet_hunt_menu.visible,"a second device has the hunt window closed")
+	var rolls_before: int = backend.automation.hunt_rolls
+	for i in range(60):await physics_frame
+	check(backend.automation.hunt_running and backend.automation.hunt_rolls>=rolls_before,"a device without the hunt window does not stop the shared hunt")
+	await close_client(third)
+
 	backend.handle({"type":"auto","name":"stop_hunt","reason":"test"})
 	await close_client(second)
 	server.stop()
