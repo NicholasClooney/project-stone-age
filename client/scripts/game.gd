@@ -212,10 +212,12 @@ var ui_sounds: Dictionary = {}
 var last_ui_sound := -1
 var ui_sound_count := 0
 ## Device settings (viewer.cfg, see restore_device_settings): muted is the
-## music switch (M), effects_on the sound effects, volume the music volume.
+## music switch (M), effects_on the sound effects, volume the music volume,
+## effects_volume the sound effects' volume.
 var muted := false
 var volume := 0.55
 var effects_on := true
+var effects_volume := 1.0
 ## Sound settings changed (M, 设置, the 音乐 window): open controls follow.
 signal sound_changed
 ## Saved only once restore_device_settings ran, so a test that presses M or
@@ -477,6 +479,7 @@ func play_ui_sound(ident: int) -> void:_audio.play_ui_sound(ident)
 func toggle_mute() -> void:_audio.toggle_mute()
 func set_music_volume(value: float) -> void:_audio.set_music_volume(value)
 func set_effects_on(on: bool) -> void:_audio.set_effects_on(on)
+func set_effects_volume(value: float) -> void:_audio.set_effects_volume(value)
 func apply_sound() -> void:_audio.apply_sound()
 func toggle_radio() -> void:_audio.toggle_radio()
 

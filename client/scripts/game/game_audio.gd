@@ -128,7 +128,13 @@ func set_effects_on(on: bool) -> void:
 	game._save_device("effects_on",on)
 	apply_sound()
 
+func set_effects_volume(value: float) -> void:
+	game.effects_volume = clampf(value,0.0,1.0)
+	game._save_device("effects_volume",game.effects_volume)
+	apply_sound()
+
+## Full effects volume is the original's -10 dB below the music player.
 func apply_sound() -> void:
 	if is_instance_valid(game.music):game.music.volume_db = -80 if game.muted else linear_to_db(maxf(game.volume,0.0001))
-	if is_instance_valid(game.effect):game.effect.volume_db = -10 if game.effects_on else -80
+	if is_instance_valid(game.effect):game.effect.volume_db = -10+linear_to_db(maxf(game.effects_volume,0.0001)) if game.effects_on else -80
 	game.sound_changed.emit()

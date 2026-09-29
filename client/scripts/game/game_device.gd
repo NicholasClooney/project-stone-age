@@ -39,6 +39,7 @@ func restore_device_settings() -> void:
 	game.volume = clampf(float(viewer_pref("volume",game.volume)),0.0,1.0)
 	game.muted = not bool(viewer_pref("music_on",not game.muted))
 	game.effects_on = bool(viewer_pref("effects_on",game.effects_on))
+	game.effects_volume = clampf(float(viewer_pref("effects_volume",game.effects_volume)),0.0,1.0)
 	game.dev_blink_mode = bool(viewer_pref("blink_mode",game.dev_blink_mode))
 	var zoom = viewer_pref("zoom",0.0)
 	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))

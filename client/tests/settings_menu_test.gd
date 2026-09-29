@@ -61,7 +61,7 @@ func run() -> void:
 	await process_frame
 	var menu = game.settings_menu
 	check(menu.visible and game.paused_input and game.help==menu,"Esc with nothing open opens 设置 and pauses walking")
-	for control in ["SettingsZoom","SettingsZoomValue","SettingsSound","SettingsEffects","SettingsVolume","SettingsRadio","SettingsHelper","SettingsCharacter","SettingsBlinkMode","SettingsSave","Changelog","SettingsHelp","SettingsKeys","SettingsDeveloper"]:
+	for control in ["SettingsZoom","SettingsZoomValue","SettingsSound","SettingsEffects","SettingsVolume","SettingsEffectsVolume","SettingsRadio","SettingsHelper","SettingsCharacter","SettingsBlinkMode","SettingsSave","Changelog","SettingsHelp","SettingsKeys","SettingsDeveloper"]:
 		check(menu.find_child(control,true,false)!=null,"设置 has %s" % control)
 	check(menu.find_child("SettingsGM",true,false)==null,"开发者 starts collapsed")
 	(menu.find_child("SettingsDeveloper",true,false) as Button).pressed.emit()
@@ -79,6 +79,8 @@ func run() -> void:
 	menu.open_menu()
 	await process_frame
 	(menu.find_child("SettingsVolume",true,false) as HSlider).value = 0.3
+	(menu.find_child("SettingsEffectsVolume",true,false) as HSlider).value = 0.5
+	check(is_equal_approx(game.effects_volume,0.5) and is_equal_approx(game.effect.volume_db,-10.0+linear_to_db(0.5)) and _saved("effects_volume"),"音效音量 sets the effects player and is saved on this device")
 	(menu.find_child("SettingsEffects",true,false) as CheckBox).button_pressed = false
 	(menu.find_child("SettingsBlinkMode",true,false) as CheckBox).button_pressed = true
 	(menu.find_child("SettingsSound",true,false) as CheckBox).button_pressed = false
@@ -217,6 +219,7 @@ func run() -> void:
 	var again = await make_game()
 	check(is_equal_approx(again.volume,0.55) and again.effects_on and not again.dev_blink_mode and again.shortcuts.map[0]==KEY_M and is_equal_approx(again.camera.zoom.x,1.0),"a test game keeps the defaults (100% zoom) until it restores")
 	again.restore_device_settings()
+	check(is_equal_approx(again.effects_volume,0.5),"restoring brings back the effects volume")
 	check(is_equal_approx(again.volume,0.8) and not again.muted and not again.effects_on and again.dev_blink_mode and is_equal_approx(again.camera.zoom.x,zoom),"restoring brings back volume, music, effects, 瞬移 and zoom")
 	check(again.shortcuts.map[0]==KEY_G and again.shortcuts.helper[0]==KEY_K and again.shortcuts.radio[0]==KEY_F6 and again.shortcuts.wave[0]==0,"and the keys")
 	check(InputMap.action_get_events("helper").any(func(e): return e is InputEventKey and e.physical_keycode==KEY_K),"applied to the InputMap at startup")

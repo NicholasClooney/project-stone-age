@@ -1,9 +1,18 @@
 {
-  "version": "v0.81.0",
-  "count": 100,
-  "feature_count": 65,
+  "version": "v0.82.0",
+  "count": 101,
+  "feature_count": 66,
   "fix_count": 35,
   "entries": [
+    {
+      "version": "v0.82.0",
+      "date": "2026-09-29",
+      "kind": "feat",
+      "title": "音效音量",
+      "details": [
+        "设置的「声音」里新增「音效音量」滑条，和音乐音量分开调；每台设备各自记住。"
+      ]
+    },
     {
       "version": "v0.81.0",
       "date": "2026-09-29",

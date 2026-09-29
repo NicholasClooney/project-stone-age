@@ -136,6 +136,18 @@ func _main_page() -> void:
 	slider.value = world.volume
 	slider.value_changed.connect(world.set_music_volume)
 	volume_row.add_child(slider)
+	var effects_row := _section("")
+	effects_row.add_child(world.text("音效音量",14))
+	var effects_slider := HSlider.new()
+	effects_slider.name = "SettingsEffectsVolume"
+	effects_slider.min_value = 0
+	effects_slider.max_value = 1
+	effects_slider.step = 0.05
+	effects_slider.custom_minimum_size = Vector2(240,24)
+	effects_slider.focus_mode = Control.FOCUS_NONE
+	effects_slider.value = world.effects_volume
+	effects_slider.value_changed.connect(world.set_effects_volume)
+	effects_row.add_child(effects_slider)
 	var radio: Button = world.button("电台",func(): close_menu();world.toggle_radio())
 	radio.name = "SettingsRadio"
 	radio.tooltip_text = "原版配乐电台、收藏、歌单、随机和单曲循环"
@@ -280,6 +292,8 @@ func _sync_sound() -> void:
 	if effects:effects.set_pressed_no_signal(world.effects_on)
 	var slider := find_child("SettingsVolume",true,false) as HSlider
 	if slider:slider.set_value_no_signal(world.volume)
+	var effects_slider := find_child("SettingsEffectsVolume",true,false) as HSlider
+	if effects_slider:effects_slider.set_value_no_signal(world.effects_volume)
 
 const HELP := """移动
   点击地面寻路，或用 WASD / 方向键行走。
