@@ -550,7 +550,14 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 		rebuild(),"StarterPets")
 	label(feedback,origin+Vector2(16,436),230,12)
 	pet_tool_button("宠物记录",origin+Vector2(16,362),func():open_pet_records("caught",-1),"PetRecords")
-	pet_tool_button("自动抓极品",origin+Vector2(16,398),func():world.close_adventure_menu();world.pet_hunt_menu.open_menu(),"PetHunt")
+	pet_tool_button("自动抓极品",origin+Vector2(16,398),func():world.close_adventure_menu();world.pet_hunt_menu.open_menu(),"PetHunt").custom_minimum_size.x=108
+	# 宠物大全, on the selected pet's species when there is one.
+	pet_tool_button("宠物大全",origin+Vector2(128,398),func():
+		var template:=-1
+		if not filtered.is_empty() and selected_pet<profile.pets.size():
+			var key:=PetComparison.species_key(profile.pets[selected_pet]).trim_prefix("original_")
+			if key.is_valid_int():template=int(key)
+		world.close_adventure_menu();world.pet_encyclopedia.open_menu(template),"PetEncyclopedia").custom_minimum_size.x=108
 	pet_tool_button("宠物仓库",origin+Vector2(16,326),func():pet_storage_target_id=str(profile.pets[selected_pet].get("pet_id","")) if not profile.pets.is_empty() else "";pet_storage_open=true;pet_compare_open=false;rebuild(),"PetStorage")
 	if not filtered.is_empty():
 		pet_tool_button("同种比较",origin+Vector2(16,290),func():pet_compare_subject=profile.pets[selected_pet].duplicate(true);pet_compare_open=true;rebuild(),"PetCompare")

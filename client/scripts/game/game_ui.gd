@@ -112,6 +112,9 @@ func build_ui() -> void:
 	game.radio_panel = preload("res://scripts/radio_panel.gd").new()
 	root.add_child(game.radio_panel)
 	game.radio_panel.configure(game,game.radio)
+	game.pet_encyclopedia = preload("res://scripts/pet_encyclopedia_menu.gd").new()
+	game.pet_encyclopedia.configure(game)
+	root.add_child(game.pet_encyclopedia)
 	game.changelog_menu = preload("res://scripts/changelog_menu.gd").new()
 	game.changelog_menu.configure(game)
 	root.add_child(game.changelog_menu)
@@ -181,7 +184,7 @@ func refresh_map_ui() -> void:
 ## A minimized automation window is hidden, so it does not count; see
 ## automation_minimized() for how it still holds the character in place.
 func _panel_open() -> bool:
-	for node in [game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help,game.helper_menu]:
+	for node in [game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help,game.helper_menu,game.pet_encyclopedia]:
 		if is_instance_valid(node) and node.visible:return true
 	return false
 
