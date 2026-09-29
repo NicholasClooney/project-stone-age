@@ -39,6 +39,12 @@ func button(value: String, callback: Callable) -> Button:
 	b.add_theme_font_size_override("font_size",13)
 	b.add_theme_stylebox_override("normal",box(Color("574431"),Color("9d8354")))
 	b.add_theme_stylebox_override("hover",box(Color("775b3c"),Color("e6c284")))
+	# Every state keeps box()'s margins, so a button never changes size: the
+	# engine's own disabled look is smaller and nearly invisible on these panels.
+	b.add_theme_stylebox_override("pressed",box(Color("4a3826"),Color("e6c284")))
+	b.add_theme_stylebox_override("hover_pressed",box(Color("5e4630"),Color("e6c284")))
+	b.add_theme_stylebox_override("disabled",box(Color("2b3131"),Color("5b5d55")))
+	b.add_theme_color_override("font_disabled_color",Color("9a927e"))
 	b.pressed.connect(callback)
 	return b
 
