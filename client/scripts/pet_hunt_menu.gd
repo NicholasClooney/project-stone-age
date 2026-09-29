@@ -21,7 +21,12 @@ var stat_page: Control
 var stat_species: OptionButton
 var stat_mode: OptionButton
 var stat_checks: Dictionary = {}
+## Each condition is 三围合 ≥ 最高 N − [x] = T: stat_numbers are the x
+## (minus), stat_results show T (or 摸底 without a pet of the species).
 var stat_numbers: Dictionary = {}
+var stat_results: Dictionary = {}
+var _thresholds_key := ""
+var _thresholds_msec := -100000
 var stat_stop_after: SpinBox
 var stat_keeps: Dictionary = {}
 ## 保留规则 (scripts/keep_rule.gd): tiers, pets per tier, the tier order
@@ -257,7 +262,7 @@ func settings_patch() -> Dictionary:
 	if _stat_species_shown>=0:
 		var conditions:={}
 		for metric in StatFilter.METRICS:
-			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"value":int(stat_numbers[metric].value),"keep":int(stat_keeps[metric].value)}
+			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"minus":int(stat_numbers[metric].value),"keep":int(stat_keeps[metric].value)}
 		var chosen_stats:=KeepRule.STATS.filter(func(stat):return rule_stats[stat].button_pressed)
 		var keep_rule:={"tiers":int(rule_tiers.value),"per_tier":int(rule_per_tier.value),"order":rank_choice(),"champions":int(rule_champions.value),"champion_stats":chosen_stats,"auto":rule_auto.button_pressed}
 		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","stop_after":int(stat_stop_after.value),"keep_rule":keep_rule,"conditions":conditions}
@@ -459,6 +464,7 @@ func queue_text(prefix: String = "") -> String:
 	var size:=int(world.state.automation.get("flow",{}).get("queue_size",0)) if is_instance_valid(world) else 0
 	return prefix+"后台已找到 %d 只在排队" % size if size>0 else ""
 func _process(delta: float) -> void:
+	if visible and is_instance_valid(stat_page) and stat_page.visible:refresh_stat_thresholds()
 	if not running:return
 	# Minimized, the scan keeps going while other panels come and go. Over a
 	# network the backend stops the hunt itself when the character moves or a
@@ -562,7 +568,20 @@ func workflow_summary()->String:
 	var skipped:=""
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.skipped_count>0:
 		skipped="已跳过 %d 只 · 最近 %s\n" % [world.pet_workflow.skipped_count,world.pet_workflow.skip_note]
-	return skipped+_workflow_counts()
+	var line:=threshold_line()
+	return skipped+(line+"\n" if not line.is_empty() else "")+_workflow_counts()
+
+## The cycle's 摸底 (remaining time, candidates) while it runs, else the
+## thresholds it hunts with now (the first species), else "".
+func threshold_line()->String:
+	var flow:Dictionary=world.state.automation.get("flow",{}) if is_instance_valid(world) else {}
+	if not world.pet_workflow.active():return ""
+	var survey:Dictionary=flow.get("survey",{})
+	if bool(survey.get("active",false)):
+		return "摸底中（%s）：剩 %s · 候选 %d 只 · 不设门槛，结束后按保留规则挑选" % ["、".join(survey.get("names",[])),duration_text(float(survey.get("remaining",0))),int(survey.get("candidates",0))]
+	var text:=str(flow.get("thresholds","")).get_slice("\n",0)
+	if int(survey.get("pending",0))>0:text="摸底选中 %d 只待抓 · %s" % [int(survey.pending),text]
+	return "门槛 "+text if not text.is_empty() else ""
 
 func _workflow_counts()->String:
 	if is_instance_valid(world.pet_workflow) and (world.pet_workflow.predicted_rejects>0 or world.pet_workflow.kept_count>0):
@@ -579,7 +598,9 @@ func _workflow_counts()->String:
 func build_stat_page()->void:
 	stat_page=Control.new();stat_page.name="PetStatConditionsPage";stat_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(stat_page)
 	var tab:Button=world.button("属性条件",show_stat_settings);tab.position=Vector2(895,18);panel.add_child(tab)
-	var heading:Label=world.text("120级属性筛选 · 找宠时按成长种子精确计算",19);heading.position=Vector2(24,130);stat_page.add_child(heading)
+	var heading:Label=world.text("120级属性筛选 · 门槛＝同种现有最高 − x，随更好的宠物提高",19);heading.position=Vector2(24,130);stat_page.add_child(heading)
+	heading.mouse_filter=Control.MOUSE_FILTER_PASS
+	heading.tooltip_text="最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新，正在进行的找宠立即改用新门槛。\n还没有这个品种时先摸底%d秒：不设门槛找，按保留规则挑出最好的几只抓来，之后按新的最高继续。" % AutomationSettings.SURVEY_SECONDS
 	stat_species=OptionButton.new();stat_species.name="StatFilterSpecies";stat_species.position=Vector2(24,170);stat_species.size=Vector2(370,38);stat_page.add_child(stat_species);controls.append(stat_species)
 	stat_species.item_selected.connect(func(_i):
 		# Changes to the species shown until now are saved before switching.
@@ -589,18 +610,19 @@ func build_stat_page()->void:
 	stat_mode.add_item("全部满足（AND）");stat_mode.add_item("任一满足（OR）");stat_page.add_child(stat_mode);controls.append(stat_mode);stat_mode.item_selected.connect(func(_i):save_stat_settings(true))
 	for i in range(4):
 		var metric:String=StatFilter.METRICS[i]
-		var check:=CheckBox.new();check.name="StatEnabled_"+metric;check.text=["三围合 ≥","攻击 >","防御 >","敏捷 >"][i];check.position=Vector2(24+(i%2)*470,228+(i/2)*55);stat_page.add_child(check);controls.append(check);stat_checks[metric]=check
-		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),0,1000000,0);input.name="StatMinimum_"+metric;input.size.x=110;input.reparent(stat_page);stat_numbers[metric]=input
-		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(318+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
-		var keep:=number(Vector2(360+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=100;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
-		check.toggled.connect(func(_on):save_stat_settings(true));input.value_changed.connect(func(_value):save_stat_settings());keep.value_changed.connect(func(_value):save_stat_settings())
+		var check:=CheckBox.new();check.name="StatEnabled_"+metric;check.text=StatFilter.METRIC_NAMES[metric]+" ≥ 最高 −";check.position=Vector2(24+(i%2)*470,228+(i/2)*55);stat_page.add_child(check);controls.append(check);stat_checks[metric]=check
+		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),0,1000,1);input.name="StatMinus_"+metric;input.size.x=80;input.reparent(stat_page);stat_numbers[metric]=input
+		var result:Label=world.text("",16);result.name="StatThreshold_"+metric;result.position=Vector2(284+(i%2)*470,238+(i/2)*55);result.mouse_filter=Control.MOUSE_FILTER_PASS;stat_page.add_child(result);stat_results[metric]=result
+		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(344+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
+		var keep:=number(Vector2(384+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=84;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
+		check.toggled.connect(func(_on):save_stat_settings(true));input.value_changed.connect(func(_value):save_stat_settings();refresh_stat_thresholds(true));keep.value_changed.connect(func(_value):save_stat_settings())
 	var stop_label:Label=world.text("找到",17);stop_label.position=Vector2(24,348);stat_page.add_child(stop_label)
 	stat_stop_after=number(Vector2(80,338),0,100000,0);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
 	stat_stop_after.value_changed.connect(func(_value):save_stat_settings())
 	var stop_note:Label=world.text("只达标宠物后停止（0＝不停止，1＝找到即停并比较）",17);stop_note.position=Vector2(230,348);stat_page.add_child(stop_note)
 	# The shared status line starts at y 478, so the page ends above it; the notes are tooltips.
 	stop_note.mouse_filter=Control.MOUSE_FILTER_PASS
-	stop_note.tooltip_text="仅在「抓到后直接升至120级」时生效；每个品种独立设置，随角色保存。预测不达标直接跳过；达标则抓到、升至120并存仓，数量到上限停止并打开比较。未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。"
+	stop_note.tooltip_text="仅在「抓到后直接升至120级」时生效；每个品种独立设置，随角色保存。预测不达标直接跳过；达标则抓到、升至120并存仓，数量到上限停止并打开比较。摸底选中的也算达标。未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。"
 	build_keep_rule(385)
 	refresh_stat_species()
 
@@ -665,13 +687,13 @@ func load_stat_settings()->void:
 	var flat:={"mode":str(settings.mode),"stop_after":int(settings.stop_after),"tiers":int(rule.get("tiers",2)),"per_tier":int(rule.get("per_tier",3)),"champions":int(rule.get("champions",2)),
 		"rank":rule.get("order",["attack","speed","max_hp"]).duplicate(),"champion_stats":rule.get("champion_stats",KeepRule.STATS).duplicate(),"auto":bool(rule.get("auto",false))}
 	for metric in StatFilter.METRICS:
-		for field in ["enabled","value","keep"]:flat[metric+"."+field]=settings.conditions[metric][field]
+		for field in ["enabled","minus","keep"]:flat[metric+"."+field]=settings.conditions[metric][field]
 	var old:Dictionary={} if switching else _stat_loaded
 	var shown:=flat.duplicate()
 	if _changed(old,flat,"mode"):stat_mode.select(1 if flat.mode=="any" else 0)
 	for metric in StatFilter.METRICS:
 		if _changed(old,flat,metric+".enabled"):stat_checks[metric].set_pressed_no_signal(bool(flat[metric+".enabled"]))
-		for entry in [[stat_numbers[metric],metric+".value"],[stat_keeps[metric],metric+".keep"]]:
+		for entry in [[stat_numbers[metric],metric+".minus"],[stat_keeps[metric],metric+".keep"]]:
 			if not _sync_spin(entry[0],old.get(entry[1]),flat[entry[1]],switching):shown[entry[1]]=old[entry[1]]
 	if not _sync_spin(stat_stop_after,old.get("stop_after"),flat.stop_after,switching):shown.stop_after=old.stop_after
 	for entry in [[rule_tiers,"tiers"],[rule_per_tier,"per_tier"],[rule_champions,"champions"]]:
@@ -682,6 +704,29 @@ func load_stat_settings()->void:
 	if _changed(old,flat,"auto"):rule_auto.set_pressed_no_signal(flat.auto)
 	_stat_loaded=shown
 	loading_stat_settings=false
+	refresh_stat_thresholds(true)
+
+## Shows each condition's threshold for the species shown: the check reads
+## 「三围合 ≥ 最高627 −」, the number is x and the label 「= 626」 (摸底 with
+## no pet of the species). Recomputed when the pets change (at most once a
+## second unless `now`), since pets under Lv120 are projected.
+func refresh_stat_thresholds(now: bool = false) -> void:
+	if _stat_species_shown<0 or stat_results.is_empty():return
+	if not now and Time.get_ticks_msec()-_thresholds_msec<1000:return
+	_thresholds_msec=Time.get_ticks_msec()
+	var profile:Dictionary=world.state.profile
+	var pets:Array=KeepRule.species_pets(profile,_stat_species_shown)
+	var key:="%d|%s|%s" % [_stat_species_shown,",".join(pets.map(func(pet):return "%s:%d" % [str(pet.get("pet_id","")),int(pet.get("level",0))])),",".join(StatFilter.METRICS.map(func(metric):return str(int(stat_numbers[metric].value))))]
+	if key==_thresholds_key and not now:return
+	_thresholds_key=key
+	var best:=StatFilter.maxima(pets.map(KeepRule.stats_of))
+	for metric in StatFilter.METRICS:
+		var condition:={"enabled":true,"minus":int(stat_numbers[metric].value)}
+		var name:String=StatFilter.METRIC_NAMES[metric]
+		stat_checks[metric].text="%s ≥ 最高%s −" % [name,str(best[metric]) if best.has(metric) else ""]
+		stat_results[metric].text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "摸底"
+		var sentence:=StatFilter.describe_condition(metric,condition,best)
+		stat_checks[metric].tooltip_text=sentence;stat_results[metric].tooltip_text=sentence
 
 ## The ranking order the three selectors show: 第一, then 第二 and 第三 unless
 ## 无 or already chosen.
@@ -765,6 +810,8 @@ func _update_chip() -> void:
 	var flow=world.pet_workflow
 	if flow.active():
 		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
+		var survey:Dictionary=world.state.automation.get("flow",{}).get("survey",{})
+		if bool(survey.get("active",false)):step="摸底中 剩%s · 候选%d只" % [duration_text(float(survey.get("remaining",0))),int(survey.get("candidates",0))]
 		var kept:String=" · 同种%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
 		var waiting:=int(world.state.automation.get("flow",{}).get("queue_size",0))
 		var total: float=flow.elapsed_seconds()

@@ -8,7 +8,11 @@ extends RefCounted
 ##   training     {xp, compact, hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue}
-##   stat_filters {"<template id>": {mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
+##   stat_filters {"<template id>": {mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, keep}}}}
+##     A condition asks for 最高 − minus: the best Lv120 value of that metric
+##     among the player's own pets of the species, less `minus`
+##     (pet_stat_filter.gd resolve). The former fixed thresholds (value,
+##     strict) are dropped when a save is read.
 ##     keep_rule: 保留规则 (scripts/keep_rule.gd) {tiers, per_tier, order,
 ##     champions, champion_stats, auto}: order is 1 to 5 distinct keys of sum,
 ##     attack, defence, speed, max_hp (pet_stat_filter.gd RANK_KEYS);
@@ -21,8 +25,11 @@ const PATH := "res://data/automation_defaults.json"
 ## watching the capture and 自动练级. The one place the name is written; the
 ## switch, the info block and the server's lines use it.
 const SHOWCASE_NAME := "后台搜宠"
+## 摸底: how long the find-pet cycle scans a species with no pet of its own
+## (so no 最高 to count from) before choosing what to catch, in seconds.
+const SURVEY_SECONDS := 120
 const METRICS := ["sum","attack","defence","speed"]
-const CONDITION_SPEC := {"enabled":["bool"],"value":["int",0,1000000],"strict":["bool"],"keep":["int",0,1000]}
+const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",0,1000],"keep":["int",0,1000]}
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
 const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}

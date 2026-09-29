@@ -6,6 +6,10 @@ func check(ok:bool,note:String)->void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures+=1
 func _initialize()->void:call_deferred("run")
+## The blue dragon default resolved against owned bests that give the former
+## fixed thresholds: 三围合 ≥ 625−1 = 624, 攻击 ≥ 294−1 = 293 (and so on).
+func blue_filter()->Dictionary:
+	return Filter.resolve(Filter.defaults(92),{"sum":625,"attack":294,"defence":180,"speed":152})
 func run()->void:
 	var game=load("res://scenes/main.tscn").instantiate();game.profile_persistence=false;root.add_child(game);await process_frame
 	game.session.grant_starter_pets();game.load_area_id(300,Vector2i(509,90));game.session.gm_heal()
@@ -14,25 +18,31 @@ func run()->void:
 	var hunt=game.pet_hunt_menu;hunt.set_process(false)
 	var flow=game.pet_workflow;flow.set_process(false);flow.timer_clock=func():return fake_msec
 	game.training_helper.set_process(false);game.training_helper.capture_hp.value=100
-	check(Filter.enabled(Filter.defaults(92)) and Filter.defaults(92).conditions.sum.value==624,"blue dragon defaults to minimum actual sum 624")
+	check(Filter.enabled(Filter.defaults(92)) and int(Filter.defaults(92).conditions.sum.minus)==1 and int(blue_filter().conditions.sum.value)==624,"blue dragon defaults to 三围合 ≥ 最高 − 1")
 	check(not Filter.enabled(Filter.defaults(194)),"blue default does not leak to other species")
 	hunt.open_menu();hunt.show_stat_settings()
 	check(hunt.stat_page.visible and not hunt.capture_page.visible and not hunt.species.visible,"attribute tab exclusively displays its own controls")
-	hunt.stat_numbers.sum.get_line_edit().grab_focus();hunt.stat_numbers.sum.get_line_edit().text="625";hunt.commit_stat_settings()
-	check(game.stat_filter(92).conditions.sum.value==625,"typed minimum commits to the profile on first start/apply")
-	hunt.stat_numbers.sum.get_line_edit().release_focus();hunt.stat_numbers.sum.value=620;hunt.save_stat_settings()
+	var shown_best:=Filter.maxima(preload("res://scripts/keep_rule.gd").species_pets(game.state.profile,92).map(preload("res://scripts/keep_rule.gd").stats_of))
+	var sum_check:CheckBox=hunt.stat_checks.sum
+	check(sum_check.text=="三围合 ≥ 最高%d −" % int(shown_best.sum) and hunt.stat_results.sum.text=="= %d" % (int(shown_best.sum)-1) and hunt.stat_results.sum.tooltip_text=="三围合 ≥ 最高 %d − 1 = %d" % [int(shown_best.sum),int(shown_best.sum)-1],"the page reads %s [1] %s" % [sum_check.text,hunt.stat_results.sum.text])
+	for metric in Filter.METRICS:
+		var row_check:CheckBox=hunt.stat_checks[metric]
+		check(row_check.position.x+row_check.get_combined_minimum_size().x<=hunt.stat_numbers[metric].position.x and hunt.stat_results[metric].position.x+hunt.stat_results[metric].get_combined_minimum_size().x<=hunt.stat_keeps[metric].position.x-40,"the %s row fits: check, x, result, 留前" % metric)
+	hunt.stat_numbers.sum.get_line_edit().grab_focus();hunt.stat_numbers.sum.get_line_edit().text="3";hunt.commit_stat_settings()
+	check(int(game.stat_filter(92).conditions.sum.minus)==3,"typed x commits to the profile on first start/apply")
+	hunt.stat_numbers.sum.get_line_edit().release_focus();hunt.stat_numbers.sum.value=5;hunt.save_stat_settings()
 	check(flow.start_cycle(),"workflow starts with current per-species filter settings")
-	check(flow.stat_filter_snapshot[92].conditions.sum.value==620,"loop snapshots current configuration")
+	check(int(flow.stat_filter_snapshot[92].conditions.sum.minus)==5,"loop snapshots current configuration")
 	fake_msec=31000
 	check(flow.elapsed_seconds()==30.0 and hunt.summary().contains("流程总用时 30秒"),"workflow displays elapsed wall time separately from round duration")
-	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"conditions":{"sum":{"value":999}}}}}})
-	check(game.stat_filter(92).conditions.sum.value==999 and flow.stat_filter_snapshot[92].conditions.sum.value==620,"a later settings change cannot change the running loop threshold")
+	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"conditions":{"sum":{"minus":9}}}}}})
+	check(int(game.stat_filter(92).conditions.sum.minus)==9 and int(flow.stat_filter_snapshot[92].conditions.sum.minus)==5,"a later settings change cannot change the running loop threshold")
 	hunt.stop_hunt("test boundary");hunt.hide();game.paused_input=false
 	var source:Dictionary=game.session.snapshot().pets[0].duplicate(true)
 	var previous_storage:int=game.session.snapshot().pet_storage.size()
 	var wild:Dictionary=source.duplicate(true);wild.template_id=92;wild.level=1;wild.erase("gm_modified")
-	flow.stat_filter_snapshot={92:Filter.defaults(92)};flow.predicted_rejects=0;flow.best_predicted={}
-	flow.stat_filter_snapshot[92].conditions.sum.value=99999
+	flow.stat_filter_snapshot={92:blue_filter()};flow.predicted_rejects=0;flow.best_predicted={}
+	flow.stat_filter_snapshot[92].conditions.sum.value=99999;flow.stat_filter_snapshot[92].conditions.attack.value=99999
 	check(not flow.accepts_prediction(wild) and flow.predicted_rejects==1 and int(flow.best_predicted.sum)>0,"impossible predicted Lv.120 stats are skipped before capture")
 	flow.stat_filter_snapshot[92].conditions.sum.value=0;flow.stat_filter_snapshot[92].conditions.attack.value=0
 	check(flow.accepts_prediction(wild) and flow.predicted_rejects==1,"predicted qualifying pet proceeds to capture")
@@ -50,7 +60,7 @@ func run()->void:
 	for turn in range(2):
 		var pet:Dictionary=source.duplicate(true);pet.pet_id="pet-filter-%d"%turn;pet.level=120;pet.attack=290;pet.defence=178;pet.speed=151
 		game.session._profile.pets.append(pet);game.session._profile.active_pet=game.session._profile.pets.size()-1
-		flow.pet_id=pet.pet_id;flow.phase="train";flow.target_stat_filter=Filter.defaults(92)
+		flow.pet_id=pet.pet_id;flow.phase="train";flow.target_stat_filter=blue_filter()
 		fake_msec+=60000
 		flow.complete_trained_pet(pet)
 		check(flow.phase=="restart" and flow.stored_count==turn+1 and game.session.snapshot().pet_storage.back().pet_id==pet.pet_id,"unmet actual stats store exact trained individual, round %d"%turn)
@@ -86,7 +96,7 @@ func run()->void:
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not (str(pet.pet_id).begins_with("pet-hunt-") or str(pet.pet_id) in ["pet-manual-low","pet-fav-low","pet-earlier-low"]))
 	var keeper:Dictionary=source.duplicate(true);keeper.pet_id="pet-keep-0";keeper.species="original_92";keeper.template_id=92;keeper.level=120;keeper.attack=288;keeper.defence=184;keeper.speed=152;keeper.erase("gm_modified")
 	var keep_ids:=[]
-	var ten:=Filter.defaults(92);ten.stop_after=10
+	var ten:=blue_filter();ten.stop_after=10
 	flow.kept_count=0;flow.collected_count=0;flow.target_stat_filter=ten
 	for turn in range(10):
 		var found:Dictionary=keeper.duplicate(true);found.pet_id="pet-keep-%d"%turn;keep_ids.append(found.pet_id)
@@ -101,7 +111,7 @@ func run()->void:
 	game.adventure_menu.hide();game.paused_input=false
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not str(pet.pet_id) in keep_ids)
 	flow.phase="idle"
-	var endless:=Filter.defaults(92);endless.stop_after=0
+	var endless:=blue_filter();endless.stop_after=0
 	flow.collected_count=0;flow.target_stat_filter=endless
 	var endless_ids:=[]
 	for turn in range(12):
@@ -121,13 +131,13 @@ func run()->void:
 	var good:Dictionary=source.duplicate(true);good.pet_id="pet-filter-good";good.level=120;good.attack=292;good.defence=181;good.speed=151
 	game.session._profile.pets.append(good);game.session._profile.active_pet=game.session._profile.pets.size()-1
 	var storage_before_good:int=game.session.snapshot().pet_storage.size()
-	var single:=Filter.defaults(92);single.stop_after=1
+	var single:=blue_filter();single.stop_after=1
 	flow.pet_id=good.pet_id;flow.phase="train";flow.target_stat_filter=single;flow.complete_trained_pet(good)
 	fake_msec+=5000
 	check(flow.elapsed_seconds()==150.0,"successful comparison freezes whole workflow elapsed time")
 	check(flow.phase=="compare" and flow.reason.contains("已达标") and game.adventure_menu.pet_compare_id==good.pet_id,"stop_after 1: actual sum 624 stops loop and opens correct comparison")
 	check(game.session.snapshot().pet_storage.size()==storage_before_good and not hunt.running,"qualified pet remains carried and no new hunt starts")
-	var all_conditions:=Filter.defaults(92)
+	var all_conditions:=blue_filter()
 	for condition in all_conditions.conditions.values():condition.enabled=true
 	flow.reason="已达标 · pet-long-identifier · "+Filter.describe(good,all_conditions)
 	game.adventure_menu.rebuild();await process_frame

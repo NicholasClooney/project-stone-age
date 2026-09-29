@@ -91,9 +91,9 @@ func run() -> void:
 
 	# Stat conditions per species follow as well.
 	hunt_a.show_stat_settings();hunt_b.show_stat_settings()
-	hunt_a.stat_numbers.sum.value = 640
-	check(await until(func():return int(backend.session.automation_settings().get("stat_filters",{}).get("92",{}).get("conditions",{}).get("sum",{}).get("value",0))==640),"a stat condition reaches the profile")
-	check(await until(func():return int(hunt_b.stat_numbers.sum.value)==640),"device B's attribute tab shows the new condition")
+	hunt_a.stat_numbers.sum.value = 4
+	check(await until(func():return int(backend.session.automation_settings().get("stat_filters",{}).get("92",{}).get("conditions",{}).get("sum",{}).get("minus",0))==4),"a stat condition reaches the profile")
+	check(await until(func():return int(hunt_b.stat_numbers.sum.value)==4),"device B's attribute tab shows the new condition")
 	# 保留规则 follows too.
 	hunt_a.rule_per_tier.value = 4
 	hunt_a.stat_rank[1].select(hunt_a.stat_rank[1].get_item_index(5)) # 体力
@@ -124,7 +124,7 @@ func run() -> void:
 	hunt_c.open_menu()
 	check(int(hunt_c.rate.value)==40 and int(hunt_c.limit.value)==500 and int(hunt_c.total.value)==6 and not hunt_c.level_one.button_pressed and hunt_c.preset.selected==4,"a reloaded page shows the saved hunt settings")
 	hunt_c.show_stat_settings()
-	check(int(hunt_c.stat_numbers.sum.value)==640,"and the saved stat conditions")
+	check(int(hunt_c.stat_numbers.sum.value)==4,"and the saved stat conditions")
 	check(int(c.training_helper.hp_floor.value)==33 and not c.training_helper.compact.button_pressed and c.training_helper.speed.selected==3,"and the saved training settings, with this device's own speed")
 	hunt_c.close_menu()
 

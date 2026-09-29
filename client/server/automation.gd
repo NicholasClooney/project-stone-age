@@ -161,6 +161,32 @@ var flow_skipped_count := 0
 var flow_skip_note := ""
 var _stopping_cycle := false
 var flow_best_predicted: Dictionary = {}
+## 最高 − x thresholds (pet_stat_filter.gd resolve): per species, the best Lv120
+## values among the player's own pets, recomputed when pet_signature changes;
+## pets a survey picked and the cycle is about to catch count as well.
+var _owned_maxima: Dictionary = {}
+var _pets_key := ""
+## The resolved thresholds the native helper was launched with; a change (a
+## better pet arrived) restarts it with the new ones.
+var _fast_thresholds := ""
+## 摸底: a species with enabled conditions and no pet of its own has no 最高 to
+## count from. The cycle then scans that species with no threshold for
+## survey_seconds of wall time, collecting candidates (pool kept by the
+## species' 保留规则, as the helper does), replays them, and catches what the
+## keep rule would keep of them. After that the thresholds roll as usual.
+var survey_seconds: int = AutomationSettings.SURVEY_SECONDS
+var survey_clock: Callable = Time.get_ticks_msec
+## {} or {templates: [ids], started: msec, candidates: key -> candidate,
+## runs: [run seeds in order]}; a candidate is {run_seed, index, slot,
+## template_id, prediction, serial}.
+var survey: Dictionary = {}
+## Survey picks waiting for their capture when 后台搜宠 is off (with it on
+## they wait in showcase_queue, marked survey).
+var survey_picks: Array = []
+## The last survey's result for the status: {candidates, picked, text}.
+var survey_last: Dictionary = {}
+## The pet the cycle is catching was picked by a survey: it counts as found.
+var flow_target_survey := false
 var timer_clock: Callable = Time.get_ticks_msec
 var timer_started_msec := 0
 var timer_frozen_seconds := 0.0
@@ -582,6 +608,12 @@ func _hunt_process(delta: float) -> void:
 	if (backend.battle_open and not background) or position_map!=hunt_map or position_cell!=hunt_cell:
 		stop_hunt("场景状态变化，筛选已停止。");return
 	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
+	if _predicting():
+		refresh_maxima()
+		_survey_process()
+		if not hunt_running:return
+		if not flow_showcase and not survey_picks.is_empty():
+			_take_survey_pick();return
 	# Discard old backlog after a stall; never catch up with an unbounded burst.
 	# A rate of 0 or less is unlimited: scan for the whole frame budget.
 	if _fast_process():
@@ -623,15 +655,22 @@ func _scan_index(index: int, expected := -1) -> void:
 		return
 	if expected>=0 and i!=expected:
 		stop_hunt(_fast_mismatch(index));return
-	var filter := hunt_filter
 	var actor: Dictionary = troop.enemies[i]
 	var quality: Dictionary = HuntRules.quality(actor,backend.encounter_catalog.data)
-	hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
-	var found := "找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset]
 	if flow_showcase and flow_active():
+		hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
 		# 展示模式: queue the hit and keep searching; flow_step takes it in turn.
 		if TroopArt.can_render(troop.enemies):_showcase_enqueue(index,i,troop,quality)
 		return
+	_open_hit(troop,i,quality)
+
+## A hit (or a survey pick) becomes a battle: the hunt stops, the battle opens
+## and a find-pet cycle catches the pet (or 自动捕捉 does, if on).
+func _open_hit(troop: Dictionary, i: int, quality: Dictionary) -> void:
+	var filter := hunt_filter
+	var actor: Dictionary = troop.enemies[i]
+	hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
+	var found := "找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset]
 	if not TroopArt.can_render(troop.enemies):
 		stop_hunt(found+"\n敌群原版素材不可用，保留本次结果并停止，未进入战斗。");return
 	var config: Dictionary = backend.session.start_wild_battle_config(troop)
@@ -669,6 +708,12 @@ func first_match(troop: Dictionary) -> int:
 		var quality: Dictionary = HuntRules.quality(actor,backend.encounter_catalog.data)
 		if quality.valid:hunt_best = maxi(hunt_best,int(quality.total_offset))
 		if HuntRules.matches(actor,int(filter.template),bool(filter.level_one),int(filter.total),filter.offsets,backend.encounter_catalog.data):
+			if _predicting() and surveying(int(actor.template_id)):
+				# 摸底: a candidate, not a hit (the helper does the same).
+				var projected: Dictionary = Progression.project_pet(actor,120)
+				_note_best(projected)
+				survey_add(hunt_run_seed,hunt_rolls-1,i,int(actor.template_id),_prediction(projected))
+				continue
 			if _predicting() and not accepts_prediction(actor):continue
 			return i
 	return -1
@@ -684,15 +729,25 @@ func _fast_process() -> bool:
 		if fast_hunt.running():fast_hunt.stop()
 		return false
 	if not hunt_catalog is EncounterCatalog:return false
+	# A better pet arrived (or a survey began or ended): the helper starts
+	# again from the rolls already committed, with the new thresholds.
+	if fast_hunt.running() and _predicting() and threshold_key()!=_fast_thresholds:
+		_survey_merge(fast_hunt.peek().get("candidates",[]))
+		fast_hunt.stop()
 	if not fast_hunt.running():
 		_fast_base = {"inspected":hunt_inspected,"best":hunt_best,"rejects":flow_predicted_rejects,"start":hunt_rolls}
 		var area: Dictionary = hunt_catalog.area_at(hunt_map,hunt_cell)
-		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,fast_threads):
+		_fast_thresholds = threshold_key() if _predicting() else ""
+		var rules := {}
+		if _predicting():
+			for id in survey.get("templates",[]):rules[int(id)] = raw_filter_for(int(id)).get("keep_rule",{})
+		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,fast_threads,rules):
 			hunt_fast_note = "本机辅助程序无法启动，已改用普通筛选。"
 			return false
 		return true
 	var report: Dictionary = fast_hunt.poll()
 	if report.is_empty():return true
+	_survey_merge(report.get("candidates",[]))
 	if str(report.kind)=="exited":
 		hunt_fast_note = "本机辅助程序意外结束，已改用普通筛选。"
 		return false
@@ -747,9 +802,15 @@ func collect_target_text() -> String:
 	var stop_after := int(flow_target_filter.get("stop_after",1))
 	return "不限" if stop_after<=0 else str(stop_after)
 
-func filter_for(template_id: int) -> Dictionary:
+## The cycle's stat filter for a species as saved (最高 − x, unresolved).
+func raw_filter_for(template_id: int) -> Dictionary:
 	if flow_stat_filters.has(template_id):return flow_stat_filters[template_id]
 	return AutomationSettings.stat_filter(flow_settings_overrides,template_id)
+
+## The filter the hunt applies now: 最高 − x resolved against the species'
+## best pets (species_maxima).
+func filter_for(template_id: int) -> Dictionary:
+	return StatFilter.resolve(raw_filter_for(template_id),species_maxima(template_id))
 
 ## Hunt-time gate: compute the exact Lv.120 stats from the wild pet's own seed and
 ## only let pets that will meet the conditions through to capture.
@@ -757,12 +818,211 @@ func accepts_prediction(actor: Dictionary) -> bool:
 	var chosen := filter_for(int(actor.get("template_id",-1)))
 	if not StatFilter.enabled(chosen):return true
 	var projected: Dictionary = Progression.project_pet(actor,120)
-	var total := int(projected.attack)+int(projected.defence)+int(projected.speed)
-	if flow_best_predicted.is_empty() or total>int(flow_best_predicted.sum) or (total==int(flow_best_predicted.sum) and int(projected.attack)>int(flow_best_predicted.attack)):
-		flow_best_predicted = {"sum":total,"attack":int(projected.attack)}
+	_note_best(projected)
 	if StatFilter.evaluate(projected,chosen):return true
 	flow_predicted_rejects += 1
 	return false
+
+func _note_best(projected: Dictionary) -> void:
+	var total := int(projected.attack)+int(projected.defence)+int(projected.speed)
+	if flow_best_predicted.is_empty() or total>int(flow_best_predicted.sum) or (total==int(flow_best_predicted.sum) and int(projected.attack)>int(flow_best_predicted.attack)):
+		flow_best_predicted = {"sum":total,"attack":int(projected.attack)}
+
+static func _prediction(projected: Dictionary) -> Dictionary:
+	return {"attack":int(projected.attack),"defence":int(projected.defence),"speed":int(projected.speed),"max_hp":int(projected.max_hp)}
+
+# ---- 最高 − x and 摸底 -------------------------------------------------------
+
+## Clears the cached maxima when the player's pets changed.
+func refresh_maxima() -> void:
+	var key: String = backend.session.pet_signature()
+	if key==_pets_key:return
+	_pets_key = key
+	_owned_maxima = {}
+	_pets_profile = {}
+
+var _pets_profile: Dictionary = {}
+
+## The best Lv120 values among the player's own pets of a species (carried
+## and warehouse, under Lv120 by exact projection), {} when there are none.
+func owned_maxima(template_id: int) -> Dictionary:
+	if not _owned_maxima.has(template_id):
+		if _pets_profile.is_empty():_pets_profile = backend.session.snapshot()
+		_owned_maxima[template_id] = StatFilter.maxima(KeepRule.species_pets(_pets_profile,template_id).map(KeepRule.stats_of))
+	return _owned_maxima[template_id]
+
+## owned_maxima raised by the survey picks the cycle is about to catch.
+func species_maxima(template_id: int) -> Dictionary:
+	var pending: Array = []
+	for entry in _pending_picks():
+		if int(entry.actor.get("template_id",-1))==template_id:pending.append(entry.prediction)
+	return StatFilter.maxima(pending,owned_maxima(template_id))
+
+func _pending_picks() -> Array:
+	var result: Array = survey_picks.duplicate()
+	for entry in showcase_queue:
+		if bool(entry.get("survey",false)):result.append(entry)
+	if bool(showcase_current.get("survey",false)) and flow_phase=="capture":result.append(showcase_current)
+	return result
+
+## The species this hunt may take: its usable ones, or the one chosen.
+func _hunt_templates() -> Array:
+	var result: Array = []
+	for id in hunt_filter.get("usable",[]):
+		if int(hunt_filter.get("template",-1))<0 or int(id)==int(hunt_filter.template):result.append(int(id))
+	return result
+
+## The resolved thresholds of every species the hunt may take, and which are
+## being surveyed: when this changes the native helper restarts.
+func threshold_key() -> String:
+	var parts: Array = []
+	for id in _hunt_templates():
+		var chosen := filter_for(id)
+		parts.append([id,surveying(id),chosen.get("mode",""),chosen.get("conditions",{}).values().map(func(c):return [c.get("enabled",false),c.get("value",null)])])
+	return JSON.stringify(parts)
+
+func surveying(template_id: int) -> bool:
+	return not survey.is_empty() and survey.templates.has(template_id)
+
+## Species of this hunt whose enabled 最高 − x conditions have nothing to
+## count from (no pet of theirs, and no survey pick on the way).
+func _survey_wanted() -> Array:
+	var result: Array = []
+	for id in _hunt_templates():
+		if StatFilter.needs_survey(raw_filter_for(id),species_maxima(id)):result.append(id)
+	return result
+
+func survey_remaining() -> float:
+	if survey.is_empty():return 0.0
+	return maxf(0.0,float(survey_seconds)-(int(survey_clock.call())-int(survey.started))/1000.0)
+
+func _template_name(template_id: int) -> String:
+	return str(backend.encounter_catalog.data.get("templates",{}).get(str(template_id),{}).get("name","#%d" % template_id))
+
+## Starts a survey when a species needs one; ends it when its time is up.
+func _survey_process() -> void:
+	if survey.is_empty():
+		var wanted := _survey_wanted()
+		if wanted.is_empty():return
+		survey = {"templates":wanted,"started":int(survey_clock.call()),"candidates":{},"runs":[]}
+		var names: Array = wanted.map(_template_name)
+		_showcase_line("survey","摸底：还没有%s，先不设门槛找%s，再按保留规则挑最好的抓。" % ["、".join(names),_duration(survey_seconds)])
+		_emit_status()
+	elif survey_remaining()<=0.0:
+		_finish_survey()
+
+static func _duration(seconds: float) -> String:
+	var s := int(seconds)
+	return "%d分钟" % (s/60) if s>=60 and s%60==0 else ("%d分%02d秒" % [s/60,s%60] if s>=60 else "%d秒" % s)
+
+## One survey candidate (from the GDScript scan or the helper's pool).
+func survey_add(run_seed: int, index: int, slot: int, template_id: int, prediction: Dictionary) -> void:
+	if not surveying(template_id):return
+	var key := "%d:%d:%d" % [run_seed,index,slot]
+	if survey.candidates.has(key):return
+	if not survey.runs.has(run_seed):survey.runs.append(run_seed)
+	# Ties resolve to the earlier roll, as the helper's pool (and 保留规则's
+	# older pet id) does.
+	var serial: int = (survey.runs.find(run_seed) << 40) | (index*16+slot)
+	survey.candidates[key] = {"run_seed":run_seed,"index":index,"slot":slot,"template_id":template_id,"prediction":prediction.duplicate(),"serial":serial}
+	if survey.candidates.size()>512:
+		var kept := {}
+		for pick in survey_choose(survey.candidates.values()):kept["%d:%d:%d" % [int(pick.run_seed),int(pick.index),int(pick.slot)]] = true
+		for k in survey.candidates.keys():
+			if not kept.has(k):survey.candidates.erase(k)
+
+func _survey_merge(candidates: Array) -> void:
+	for c in candidates:survey_add(hunt_run_seed,int(c.index),int(c.slot),int(c.template_id),c.prediction)
+
+## What each species' 保留规则 would keep of these candidates (the functional
+## core of the survey): the top tiers of 三围合, the best per tier by the
+## rule's order, and the single-stat champions. Best first.
+func survey_choose(candidates: Array) -> Array:
+	var by_template := {}
+	for c in candidates:
+		if not by_template.has(int(c.template_id)):by_template[int(c.template_id)] = []
+		by_template[int(c.template_id)].append(c)
+	var result: Array = []
+	for id in by_template:
+		var rule: Dictionary = raw_filter_for(int(id)).get("keep_rule",{})
+		result.append_array(choose_by_rule(by_template[id],rule))
+	return result
+
+## choose_by_rule on plain candidates {serial, prediction, ...}, best first.
+static func choose_by_rule(candidates: Array, rule: Dictionary) -> Array:
+	var pets: Array = []
+	var by_id := {}
+	for c in candidates:
+		var p: Dictionary = c.prediction
+		var id := "pet-%d" % int(c.serial)
+		by_id[id] = c
+		pets.append({"pet_id":id,"level":120,"attack":int(p.attack),"defence":int(p.defence),"speed":int(p.speed),"max_hp":int(p.max_hp)})
+	var verdict: Dictionary = KeepRule.evaluate(pets,rule)
+	var kept: Array = pets.filter(func(pet):return not verdict.reasons[str(pet.pet_id)].is_empty())
+	kept = StatFilter.ranked(kept,["sum"]+Array(rule.get("order",["attack","speed","max_hp"])))
+	return kept.map(func(pet):
+		var c: Dictionary = by_id[str(pet.pet_id)].duplicate()
+		c.reasons = verdict.reasons[str(pet.pet_id)]
+		return c)
+
+## Time is up: take the helper's last pool, replay every candidate from its
+## own seed (a mismatch is left out), choose by the keep rule and queue the
+## picks for capture. Picks count toward 最高 until caught, so the hunt goes
+## on with thresholds at once.
+func _finish_survey() -> void:
+	if fast_hunt.running():
+		_survey_merge(fast_hunt.peek().get("candidates",[]))
+		fast_hunt.stop()
+	var finished := survey
+	survey = {}
+	var verified: Array = []
+	var mismatched := 0
+	for c in finished.candidates.values():
+		var entry := _replay_candidate(c)
+		if entry.is_empty():mismatched += 1
+		else:verified.append(entry)
+	var picks := survey_choose(verified)
+	var names: Array = finished.templates.map(_template_name)
+	var text := "摸底结束（%s）：候选 %d 只%s，按保留规则选中 %d 只" % ["、".join(names),verified.size(),"（复核不一致 %d 只，已略过）" % mismatched if mismatched>0 else "",picks.size()]
+	var shown: Array = picks.slice(0,3).map(func(p):return "第%d组 %s（%s）" % [int(p.index)+1,_stat_text(p.prediction),"、".join(p.reasons)])
+	if not shown.is_empty():text += "：" + "；".join(shown) + ("……" if picks.size()>3 else "")
+	if picks.is_empty():text += "，重新摸底。"
+	survey_last = {"candidates":verified.size(),"picked":picks.size(),"text":text}
+	_showcase_line("survey",text)
+	print("[找宠流程] "+text)
+	for p in picks:
+		p.survey = true
+		if flow_showcase:_showcase_add(p)
+		else:survey_picks.append(p)
+	_emit_status()
+
+## A candidate replayed from its own seed: the queue entry {index, slot,
+## run_seed, actor, troop, quality, prediction}, or {} when it differs.
+func _replay_candidate(c: Dictionary) -> Dictionary:
+	if hunt_catalog==null:return {}
+	var rng := RandomNumberGenerator.new()
+	rng.seed = FastHunt.roll_seed(int(c.run_seed),int(c.index))
+	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,rng)
+	var enemies: Array = troop.get("enemies",[])
+	if int(c.slot)<0 or int(c.slot)>=enemies.size():return {}
+	var actor: Dictionary = enemies[int(c.slot)]
+	if int(actor.get("template_id",-1))!=int(c.template_id) or not actor.get("can_capture",false):return {}
+	if not HuntRules.matches(actor,int(hunt_filter.template),bool(hunt_filter.level_one),int(hunt_filter.total),hunt_filter.offsets,backend.encounter_catalog.data):return {}
+	var prediction := _prediction(Progression.project_pet(actor,120))
+	if prediction!=c.prediction or not TroopArt.can_render(enemies):return {}
+	return {"index":int(c.index),"slot":int(c.slot),"run_seed":int(c.run_seed),"serial":int(c.serial),"template_id":int(c.template_id),"actor":actor.duplicate(true),
+		"troop":troop.duplicate(true),"quality":HuntRules.quality(actor,backend.encounter_catalog.data),"prediction":prediction}
+
+## 后台搜宠 off: the next survey pick is caught like a hit (replayed again
+## from its seed first; a different troop is skipped).
+func _take_survey_pick() -> void:
+	var entry: Dictionary = survey_picks.pop_front()
+	var replayed := _replay_candidate(entry)
+	if replayed.is_empty() or JSON.stringify(replayed.troop)!=JSON.stringify(entry.troop):
+		_showcase_line("skipped","摸底选中的第 %d 组复核不一致，已略过。" % (int(entry.index)+1))
+		return
+	_open_hit(replayed.troop,int(replayed.slot),replayed.quality)
+	if flow_phase=="capture":flow_target_survey = true
 
 func start_cycle(continuing: bool) -> bool:
 	if flow_active():return false
@@ -776,6 +1036,7 @@ func start_cycle(continuing: bool) -> bool:
 	if not continuing:
 		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_released_count = 0;flow_held_count = 0
 		flow_skip_kind = "";flow_skip_streak = 0;flow_skipped_count = 0;flow_skip_note = ""
+		survey = {};survey_picks = [];survey_last = {};flow_target_survey = false;_pets_key = ""
 		start_timer()
 	flow_map = position_map
 	flow_cell = position_cell
@@ -793,6 +1054,8 @@ func start_cycle(continuing: bool) -> bool:
 
 func matched(index: int, actor: Dictionary) -> void:
 	if flow_phase!="hunt":return
+	refresh_maxima()
+	flow_target_survey = false
 	flow_target_filter = filter_for(int(actor.get("template_id",-1))).duplicate(true)
 	flow_matched_index = index
 	flow_matched_actor = actor.duplicate(true)
@@ -808,7 +1071,10 @@ func stop_cycle(message: String = "已手动停止") -> void:
 	if not showcase_queue.is_empty():
 		_showcase_line("dropped","排队的 %d 只已放弃：%s" % [showcase_queue.size(),message])
 		message += "（排队的 %d 只已放弃）" % showcase_queue.size()
+	if not survey_picks.is_empty():_showcase_line("dropped","摸底选中的 %d 只未捕获：%s" % [survey_picks.size(),message])
 	showcase_queue = []
+	survey = {}
+	survey_picks = []
 	_showcase_restore()
 	freeze_timer()
 	flow_phase = "paused"
@@ -882,8 +1148,9 @@ func complete_trained_pet(found: Dictionary) -> void:
 	if str(found.get("pet_id",""))!=flow_pet_id or int(found.get("level",0))<120:
 		stop_cycle("目标宠物未达到120级，请手动检查。");return
 	var filtered := StatFilter.enabled(flow_target_filter)
-	var passed := StatFilter.evaluate(found,flow_target_filter)
-	flow_last_result = "%s · %s" % [flow_pet_id,StatFilter.describe(found,flow_target_filter)] if filtered else "新伙伴已达到120级"
+	# A survey pick is what the survey found best: it counts as found.
+	var passed := flow_target_survey or StatFilter.evaluate(found,flow_target_filter)
+	flow_last_result = "%s · %s" % [flow_pet_id,"摸底选中" if flow_target_survey else StatFilter.describe(found,flow_target_filter)] if filtered else "新伙伴已达到120级"
 	if filtered and not passed:
 		if not _store_hunt_pet(flow_pet_id,true):
 			stop_cycle("未达标但无法存仓："+str(backend.session.last_error));return
@@ -1075,8 +1342,12 @@ func queue_limit() -> int:
 func _showcase_enqueue(index: int, slot: int, troop: Dictionary, quality: Dictionary) -> void:
 	var actor: Dictionary = troop.enemies[slot]
 	var projected: Dictionary = Progression.project_pet(actor,120)
-	showcase_queue.append({"index":index,"slot":slot,"run_seed":hunt_run_seed,"actor":actor.duplicate(true),"troop":troop.duplicate(true),"quality":quality.duplicate(true),
-		"prediction":{"attack":int(projected.attack),"defence":int(projected.defence),"speed":int(projected.speed),"max_hp":int(projected.max_hp)}})
+	_showcase_add({"index":index,"slot":slot,"run_seed":hunt_run_seed,"actor":actor.duplicate(true),"troop":troop.duplicate(true),"quality":quality.duplicate(true),
+		"prediction":_prediction(projected)})
+
+## Queues an entry (a hit, or a survey pick marked survey) best first.
+func _showcase_add(entry: Dictionary) -> void:
+	showcase_queue.append(entry)
 	showcase_queue.sort_custom(_showcase_better)
 	while showcase_queue.size()>queue_limit():_drop_queued(showcase_queue.pop_back())
 	_emit_status()
@@ -1151,14 +1422,22 @@ func _showcase_step() -> void:
 ## Takes the best queued hit, replays its roll from its own seed, checks it is
 ## the same troop, and opens its capture battle, presented like any capture.
 func _showcase_capture() -> void:
+	refresh_maxima()
 	showcase_current = showcase_queue.pop_front()
 	var entry := showcase_current
 	var actor: Dictionary = entry.actor
+	flow_target_survey = bool(entry.get("survey",false))
 	flow_target_filter = filter_for(int(actor.get("template_id",-1))).duplicate(true)
 	var p: Dictionary = entry.prediction
+	# The thresholds may have risen since this hit was queued (a better pet
+	# arrived): one no longer good enough is let go. Survey picks are caught.
+	if not flow_target_survey and StatFilter.enabled(flow_target_filter) and not StatFilter.evaluate(p,flow_target_filter):
+		_showcase_line("dropped","门槛已提高（%s），放弃第%d组 %s（预测%s）" % [StatFilter.describe_thresholds(raw_filter_for(int(actor.get("template_id",-1))),species_maxima(int(actor.get("template_id",-1)))),int(entry.index)+1,str(actor.get("name","")),_stat_text(p)])
+		showcase_current = {}
+		return
 	var full := int(entry.quality.get("total_offset",0))==8
 	var rarity: Array = Rarity.describe(int(actor.get("template_id",-1)),p,full)
-	_showcase_line("found","找到%s%s · 预测120级 %s%s · 排队%d" % ["满档" if full else "",str(actor.get("name","")),_stat_text(p),"（"+str(rarity[0]).get_slice("：",1)+"）" if full and rarity.size()>0 and str(rarity[0]).contains("1/") else "",showcase_queue.size()])
+	_showcase_line("found","%s%s%s · 预测120级 %s%s · 排队%d" % ["摸底选中" if flow_target_survey else "找到","满档" if full else "",str(actor.get("name","")),_stat_text(p),"（"+str(rarity[0]).get_slice("：",1)+"）" if full and rarity.size()>0 and str(rarity[0]).contains("1/") else "",showcase_queue.size()])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FastHunt.roll_seed(int(entry.run_seed),int(entry.index))
 	var troop: Dictionary = hunt_catalog.roll(flow_map,flow_cell,rng) if hunt_catalog!=null else {}
@@ -1285,8 +1564,27 @@ func status() -> Dictionary:
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),
+			"survey":survey_status(),"thresholds":thresholds_text(),
 			"log":showcase_log.duplicate(true),"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
+
+## 摸底 for the hunt window and the minimized bar: {active, remaining,
+## seconds, candidates, names, pending (picks not yet caught), last}.
+func survey_status() -> Dictionary:
+	return {"active":not survey.is_empty(),"remaining":survey_remaining(),"seconds":survey_seconds,"candidates":survey.get("candidates",{}).size(),
+		"names":survey.get("templates",[]).map(_template_name),"pending":_pending_picks().size(),"last":str(survey_last.get("text",""))}
+
+## The cycle's thresholds as the player reads them, one species per line:
+## 「扬奇洛斯：三围合 ≥ 最高 627 − 1 = 626，或 攻击 ≥ 最高 301 − 1 = 300」.
+func thresholds_text() -> String:
+	if not flow_active() or hunt_filter.is_empty():return ""
+	var lines: PackedStringArray = []
+	for id in _hunt_templates():
+		var chosen := raw_filter_for(id)
+		if not StatFilter.enabled(chosen):continue
+		lines.append("%s：%s" % [_template_name(id),StatFilter.describe_thresholds(chosen,species_maxima(id))])
+		if lines.size()>=3:break
+	return "\n".join(lines)
 
 func _emit_status() -> void:
 	backend.emit_event({"type":"auto_status","status":status()})

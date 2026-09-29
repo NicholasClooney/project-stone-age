@@ -29,19 +29,20 @@
     "queue": 10
   },
   "stat_filter": {
+    "comment": "Each condition is 最高 − minus: at least the best Lv120 value of that metric among the player's own pets of the species, minus `minus`. With none of the species yet the find-pet cycle surveys first (摸底).",
     "mode": "any",
     "stop_after": 1,
     "keep_rule": {"tiers": 2, "per_tier": 3, "order": ["attack", "speed", "max_hp"], "champions": 2, "champion_stats": ["attack", "defence", "speed", "max_hp"], "auto": false},
     "conditions": {
-      "sum": {"enabled": false, "value": 624, "strict": false, "keep": 0},
-      "attack": {"enabled": false, "value": 292, "strict": true, "keep": 0},
-      "defence": {"enabled": false, "value": 178, "strict": true, "keep": 0},
-      "speed": {"enabled": false, "value": 150, "strict": true, "keep": 0}
+      "sum": {"enabled": false, "minus": 1, "keep": 0},
+      "attack": {"enabled": false, "minus": 1, "keep": 0},
+      "defence": {"enabled": false, "minus": 1, "keep": 0},
+      "speed": {"enabled": false, "minus": 1, "keep": 0}
     }
   },
   "species": {
     "92": {
-      "comment": "扬奇洛斯（蓝人龙）: keep collecting; total >=624 OR attack >292.",
+      "comment": "扬奇洛斯（蓝人龙）: keep collecting; 三围合 ≥ 最高 − 1 OR 攻击 ≥ 最高 − 1.",
       "stat_filter": {
         "stop_after": 0,
         "conditions": {

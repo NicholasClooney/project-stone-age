@@ -45,7 +45,8 @@ The helper reimplements, for one roll:
 - the area's candidate groups, in the order and with the weights `roll()` uses;
 - their enemies and templates;
 - the hunt filter;
-- whether predictions apply, and each usable template's stat filter.
+- whether predictions apply, and each usable template's stat filter (already resolved, see below);
+- optionally, the species being surveyed and their keep rules.
 
 It then starts `build/fast_hunt INPUT STATUS` with `OS.create_process`.
 
@@ -91,9 +92,20 @@ With `hunt.showcase` on (the default; the player-facing name is `AutomationSetti
 
 The status `flow.log` holds the info block's lines (`{id, kind, text}`, at most `SHOWCASE_LOG_MAX`), shown by `scripts/showcase_ticker.gd`. Clients hold battle music for the whole run (`game_audio.gd` `begin/end_showcase_music`), suspending the radio, which resumes the same track and position afterwards.
 
+## Rolling thresholds (最高 − x) and the survey (摸底)
+
+Saved stat conditions are relative, `{enabled, minus, keep}` (no fixed value; older saves lose `value`/`strict` in `AutomationSettings.sanitize`). The helper never sees them: `automation.filter_for` passes `StatFilter.resolve(raw, species_maxima)`, i.e. `value = best − minus` with `≥`, where the best comes from the player's own pets of the species (party and warehouse, `KeepRule.stats_of`, cached until `GameSession.pet_signature()` changes) raised by survey picks still waiting for capture. `threshold_key()` is compared every tick; when a better pet arrives the helper is stopped and relaunched from the committed roll with the new values, as with a 线程数 change. At capture time `_showcase_capture` checks a queued hit against the current thresholds and lets it go (info block line 门槛已提高) if they have risen past it.
+
+A species with enabled conditions and no pet of its own (`StatFilter.needs_survey`) is surveyed first:
+
+- **Input.** An optional last section, `survey N` then per species `TEMPLATE TIERS PER_TIER CHAMPIONS NORDER KEY... NCHAMP STAT...` (the species' `keep_rule`; keys index `sum attack defence speed max_hp`).
+- **Helper.** A surveyed species' grade-matching pets are candidates, not hits: the scan never stops for them. A shared pool (mutex) keeps what `keep_rule.gd` would keep of all candidates so far (top `TIERS` distinct sums × best `PER_TIER` by the order, plus the best `CHAMPIONS` per chosen stat, ties to the earlier roll). The rule is monotone (more candidates never bring a dropped one back), so pruning as it grows is exact. Every STATUS write appends the pool as `cand INDEX SLOT TEMPLATE SUM ATTACK DEFENCE SPEED MAX_HP` lines; `project()` now also returns max_hp.
+- **Backend.** `survey_clock`/`survey_seconds` (`AutomationSettings.SURVEY_SECONDS`, 120) own the wall-time window, so the helper needs no timer and tests fake the clock. Candidates from each report (and from the GDScript scan's `first_match`) merge into `survey.candidates` keyed by run seed, roll and slot. When time is up `_finish_survey` peeks the last pool, stops the helper, replays every candidate from its own seed (a mismatch is left out), and `choose_by_rule` applies `KeepRule.evaluate` to the verified ones. Picks go to `showcase_queue` marked `survey` (后台搜宠) or `survey_picks` (caught one by one through `_open_hit`); a survey pick counts as found in `complete_trained_pet`. No candidates: the survey starts again.
+
 ## Tests
 
 - `fast_hunt_test`: C and GDScript agree roll by roll.
+- `stat_survey_test`: the survey's keep-rule pick, the helper's pool on a bounded 20,000-roll run equal to the keep rule over every candidate the GDScript scan sees, and the cycle with a fake clock and a stand-in helper: survey start and status, picks queued, thresholds from the picks, a better pet raising them, a queued hit dropped, the helper relaunched with the new threshold, picks without 后台搜宠.
 - `fast_hunt_flow_test`, on a backend:
   - Both modes hit the same roll, slot and pet with the same counters.
   - A find-pet cycle's prediction hands off to capture.

@@ -130,7 +130,8 @@ func run()->void:
 			results.append(flow.last_result)
 			flow.phase="idle"
 		return results
-	var target:=Settings.default_stat_filter(92);target.stop_after=0
+	# 三围合 ≥ 625−1 or 攻击 ≥ 294−1, as the cycle resolves 最高 − 1.
+	var target:=Filter.resolve(Settings.default_stat_filter(92),{"sum":625,"attack":294});target.stop_after=0
 	cycle.call(target,700)
 	var stored:Array=session._profile.pet_storage.filter(func(p):return str(p.pet_id).begins_with("pet-7"))
 	check(stored.size()==7 and flow.released_count==0 and not flow.keep_auto,"auto tidy off (the default): every qualifier is stored")

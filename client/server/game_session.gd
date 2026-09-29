@@ -75,6 +75,15 @@ func snapshot() -> Dictionary:
 	_sync_stat_points()
 	return _profile.duplicate(true)
 
+## Which pets the player has (carried and warehouse) and their levels, without
+## copying the profile: changes whenever a pet is caught, stored, withdrawn,
+## released or levelled. The find-pet cycle's 最高 − x thresholds follow it.
+func pet_signature() -> String:
+	var parts: PackedStringArray = []
+	for pet in _profile.get("pets",[])+_profile.get("pet_storage",[]):
+		parts.append("%s:%d:%d" % [str(pet.get("pet_id","")),int(pet.get("level",0)),int(pet.get("template_id",-1))])
+	return ",".join(parts)
+
 func start_battle_config(species: String = "wooli", boss: bool = false, enemy_count: int = 1) -> Dictionary:
 	if not SPECIES.has(species) or not _pending.is_empty() or (boss and not can_fight_boss()):
 		return {}

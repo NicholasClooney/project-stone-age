@@ -1,8 +1,16 @@
 extends RefCounted
 ## Pure numerical filter. Callers explicitly supply current or projected stats.
-## Disabled conditions pass; defaults (blue dragons: total >=624 OR attack >292)
-## live in res://data/automation_defaults.json.
+## Disabled conditions pass; defaults live in res://data/automation_defaults.json.
+##
+## A saved condition is relative, 最高 − x: {enabled, minus, keep}. Its
+## threshold is the best Lv120 value of that metric among the player's own pets
+## of the species (carried and warehouse; pets under Lv120 by their exact Lv120
+## projection) minus x, so it rolls upward as better pets arrive. resolve()
+## turns saved conditions into resolved ones ({value, strict}) that evaluate()
+## and the native helper read. With no pet of the species there is no maximum:
+## the find-pet cycle surveys first (摸底, needs_survey()).
 const METRICS := ["sum", "attack", "defence", "speed"]
+const METRIC_NAMES := {"sum":"三围合", "attack":"攻击", "defence":"防御", "speed":"敏捷"}
 ## Keys a player can rank qualifying pets by (达标只保留前 N 只), in the fixed
 ## order that breaks ties after the player's own order.
 const RANK_KEYS := ["sum", "attack", "defence", "speed", "max_hp"]
@@ -22,11 +30,65 @@ static func evaluate(stats: Dictionary, settings: Dictionary) -> bool:
 		if metric == "sum":
 			available = stats.has("attack") and stats.has("defence") and stats.has("speed")
 			value = float(stats.get("attack", 0)) + float(stats.get("defence", 0)) + float(stats.get("speed", 0))
-		var minimum := float(condition.get("value", 0))
+		# A relative condition that was never resolved cannot pass.
+		var minimum := float(condition.get("value", INF))
 		var passes := available and (value > minimum if bool(condition.get("strict", false)) else value >= minimum)
 		any_match = any_match or passes
 		all_match = all_match and passes
 	return count == 0 or (any_match if settings.get("mode", "all") == "any" else all_match)
+
+## The best value of each metric (sum, attack, defence, speed) among `stats`
+## (the Lv120 stats of the species' pets), {} when there are none; `base` is an
+## earlier result to raise.
+static func maxima(stats: Array, base: Dictionary = {}) -> Dictionary:
+	var result := base.duplicate()
+	for item in stats:
+		for metric in METRICS:
+			var value := rank_value(item, metric)
+			if not result.has(metric) or value > int(result[metric]):result[metric] = value
+	return result
+
+## Whether a condition is 最高 − x (saved form) rather than already resolved.
+static func relative(condition: Dictionary) -> bool:
+	return condition.has("minus") and not condition.has("value")
+
+## The filter with every relative condition resolved against `best` (maxima()):
+## value = best − x, compared with ≥. Without a maximum a condition stays
+## unresolved and fails; the cycle surveys first (needs_survey).
+static func resolve(settings: Dictionary, best: Dictionary) -> Dictionary:
+	var result := settings.duplicate(true)
+	var conditions: Dictionary = result.get("conditions", {})
+	for metric in conditions:
+		var condition: Dictionary = conditions[metric]
+		if not relative(condition) or not best.has(metric):continue
+		condition.value = int(best[metric]) - int(condition.minus)
+		condition.strict = false
+	return result
+
+## True when an enabled relative condition has no maximum to count from (the
+## player has no pet of the species): the cycle surveys (摸底) first.
+static func needs_survey(settings: Dictionary, best: Dictionary) -> bool:
+	for metric in METRICS:
+		var condition: Dictionary = settings.get("conditions", {}).get(metric, {})
+		if bool(condition.get("enabled", false)) and relative(condition) and not best.has(metric):return true
+	return false
+
+## One condition as the player reads it: 「三围合 ≥ 最高 627 − 1 = 626」, or
+## 「三围合 ≥ 最高 − 1（还没有同种，先摸底）」 without a maximum.
+static func describe_condition(metric: String, condition: Dictionary, best: Dictionary) -> String:
+	var name: String = METRIC_NAMES.get(metric, metric)
+	if not relative(condition):return "%s %s %d" % [name, ">" if bool(condition.get("strict", false)) else "≥", int(condition.get("value", 0))]
+	var minus := int(condition.get("minus", 0))
+	if not best.has(metric):return "%s ≥ 最高 − %d（还没有同种，先摸底）" % [name, minus]
+	return "%s ≥ 最高 %d − %d = %d" % [name, int(best[metric]), minus, int(best[metric]) - minus]
+
+## Every enabled condition, joined by 或 / 且 as the mode says; "" when none.
+static func describe_thresholds(settings: Dictionary, best: Dictionary) -> String:
+	var parts: PackedStringArray = []
+	for metric in METRICS:
+		var condition: Dictionary = settings.get("conditions", {}).get(metric, {})
+		if bool(condition.get("enabled", false)):parts.append(describe_condition(metric, condition, best))
+	return ("，或 " if settings.get("mode", "all") == "any" else "，且 ").join(parts)
 
 static func defaults(template_id: int) -> Dictionary:
 	# stop_after: matches to keep before the loop stops; 0 never stops, 1 is the classic single stop.
@@ -82,7 +144,7 @@ static func describe(stats: Dictionary, settings: Dictionary) -> String:
 	var parts: PackedStringArray = []
 	for metric in METRICS:
 		var condition: Dictionary = settings.get("conditions", {}).get(metric, {})
-		if not condition.get("enabled", false):continue
+		if not condition.get("enabled", false) or not condition.has("value"):continue
 		var value := int(stats.get(metric, 0))
 		if metric == "sum":value = int(stats.get("attack",0)) + int(stats.get("defence",0)) + int(stats.get("speed",0))
 		var passes:bool=value>int(condition.value) if condition.get("strict",false) else value>=int(condition.value)

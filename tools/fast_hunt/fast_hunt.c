@@ -23,7 +23,18 @@
  *     stop   roll INDEX gives an empty troop (the backend's replay stops the hunt)
  *     limit  the roll limit INDEX was reached
  *   The counters always cover rolls [START, INDEX).
+ *   During a survey (摸底) further lines follow, one per candidate kept so far:
+ *     cand INDEX SLOT TEMPLATE SUM ATTACK DEFENCE SPEED MAX_HP
  *   With --roll N it prints roll N (troop and projections) and exits: used by tests.
+ *
+ * Survey (the optional last input section): for the listed species the scan
+ * has no Lv120 threshold. Every pet of theirs that passes the grade filter is
+ * a candidate instead of a hit, and the scan goes on until the backend stops
+ * it. The pool keeps what the species' 保留规则 (client/scripts/keep_rule.gd)
+ * would keep of all candidates so far: in each of the top TIERS distinct sums
+ * the best PER_TIER by the rule's order, and the best CHAMPIONS per chosen
+ * stat. Adding candidates never brings back one the rule dropped, so pruning
+ * the pool as it grows keeps exactly that set.
  *
  * Build: cc -O2 -pthread -o build/fast_hunt tools/fast_hunt/fast_hunt.c
  */
@@ -74,6 +85,13 @@ static uint64_t run_seed; static int64_t start_index, limit_index; static int th
 static int ngroups, nenemies, ntemplates; static Group *groups; static Enemy *enemies; static Template *templates;
 static int f_template, f_level_one, f_total, f_offsets[4], f_has_offsets, nusable, *usable, flow;
 static int nstat; static int *stat_template; static StatFilter *stat_filters;
+
+/* Survey: per species the keep rule; keys index {sum, attack, defence, speed, max_hp}. */
+typedef struct { int template_id, tiers, per_tier, champions, norder, order[5], champion[4]; } SurveyRule;
+typedef struct { int64_t index; int slot, template_id, st[5]; } Candidate;
+static int nsurvey; static SurveyRule *survey_rules;
+static Candidate *pool; static int pool_size, pool_capacity;
+static pthread_mutex_t pool_lock = PTHREAD_MUTEX_INITIALIZER;
 
 static int find_enemy(int id) { for (int i = 0; i < nenemies; i++) if (enemies[i].id == id) return i; return -1; }
 static int find_template(int id) { for (int i = 0; i < ntemplates; i++) if (templates[i].id == id) return i; return -1; }
@@ -132,6 +150,24 @@ static void load(const char *path) {
     need(f, "stat_filters"); nstat = (int)num(f);
     stat_template = calloc(nstat + 1, sizeof *stat_template); stat_filters = calloc(nstat + 1, sizeof *stat_filters);
     for (int i = 0; i < nstat; i++) { stat_template[i] = (int)num(f); read_stat(f, &stat_filters[i]); }
+    /* Optional: survey N, then per species
+     *   TEMPLATE TIERS PER_TIER CHAMPIONS NORDER KEY... NCHAMP STAT...
+     * KEY 0..4 = sum attack defence speed max_hp (the full comparison order);
+     * STAT 1..4 = attack defence speed max_hp. */
+    char word[64];
+    if (fscanf(f, "%63s", word) == 1) {
+        if (strcmp(word, "survey")) { fprintf(stderr, "input: expected survey\n"); exit(2); }
+        nsurvey = (int)num(f); survey_rules = calloc(nsurvey + 1, sizeof *survey_rules);
+        for (int i = 0; i < nsurvey; i++) {
+            SurveyRule *s = &survey_rules[i];
+            s->template_id = (int)num(f); s->tiers = (int)num(f); s->per_tier = (int)num(f); s->champions = (int)num(f);
+            s->norder = (int)num(f);
+            if (s->norder < 0 || s->norder > 5) { fprintf(stderr, "input: survey order\n"); exit(2); }
+            for (int k = 0; k < s->norder; k++) s->order[k] = (int)num(f);
+            int nchamp = (int)num(f);
+            for (int k = 0; k < nchamp; k++) { int stat = (int)num(f); if (stat >= 1 && stat <= 4) s->champion[stat - 1] = 1; }
+        }
+    }
     fclose(f);
 }
 
@@ -207,8 +243,8 @@ static int roll(Rng *r, Troop *troop) {
     return 0;
 }
 
-/* Progression.project_pet(actor, 120) then derived(): attack, defence, speed. */
-static void project(const Actor *a, const Template *t, int out[3]) {
+/* Progression.project_pet(actor, 120) then derived(): attack, defence, speed, max_hp. */
+static void project(const Actor *a, const Template *t, int out[4]) {
     int64_t base[4] = {a->base[0], a->base[1], a->base[2], a->base[3]};
     int low = 450 + t->rank * 20;
     for (int level = a->level + 1; level <= 120; level++) {
@@ -220,14 +256,96 @@ static void project(const Actor *a, const Template *t, int out[3]) {
     }
     int64_t v = base[0], s = base[1], tg = base[2], d = base[3];
     int64_t attack = (20 * s + 2 * tg + 2 * v + d) / 2000, defence = (20 * tg + 2 * s + 2 * v + d) / 2000, speed = d / 100;
+    int64_t hp = (4 * v + s + tg + d) / 100;
     out[0] = (int)(attack < 1 ? 1 : attack); out[1] = (int)(defence < 0 ? 0 : defence); out[2] = (int)(speed < 1 ? 1 : speed);
+    out[3] = (int)(hp < 1 ? 1 : hp);
+}
+
+/* ---- survey pool ---------------------------------------------------------- */
+static const SurveyRule *survey_for(int template_id) {
+    for (int i = 0; i < nsurvey; i++) if (survey_rules[i].template_id == template_id) return &survey_rules[i];
+    return NULL;
+}
+static const SurveyRule *sort_rule; static int sort_stat;
+static int64_t cand_id(const Candidate *c) { return c->index * 16 + c->slot; }
+/* keep_rule.gd `better`: the rule's full order descending, then the earlier roll. */
+static int better_cmp(const Candidate *a, const Candidate *b) {
+    for (int k = 0; k < sort_rule->norder; k++) {
+        int key = sort_rule->order[k];
+        if (a->st[key] != b->st[key]) return a->st[key] > b->st[key] ? -1 : 1;
+    }
+    int64_t ia = cand_id(a), ib = cand_id(b);
+    return ia < ib ? -1 : (ia > ib);
+}
+static int tier_cmp(const void *x, const void *y) {
+    const Candidate *a = x, *b = y;
+    if (a->st[0] != b->st[0]) return a->st[0] > b->st[0] ? -1 : 1;
+    return better_cmp(a, b);
+}
+/* Champions of one stat: that stat, then 三围合, then `better`. */
+static int champion_cmp(const void *x, const void *y) {
+    const Candidate *a = x, *b = y;
+    if (a->st[sort_stat] != b->st[sort_stat]) return a->st[sort_stat] > b->st[sort_stat] ? -1 : 1;
+    if (a->st[0] != b->st[0]) return a->st[0] > b->st[0] ? -1 : 1;
+    return better_cmp(a, b);
+}
+/* Drops every candidate the keep rule would release. Caller holds pool_lock. */
+static void pool_prune(void) {
+    Candidate *kept = calloc(pool_size + 1, sizeof *kept), *group = calloc(pool_size + 1, sizeof *group);
+    char *mark = calloc(pool_size + 1, 1);
+    int nkept = 0;
+    for (int r = 0; r < nsurvey; r++) {
+        const SurveyRule *rule = &survey_rules[r];
+        int n = 0;
+        for (int i = 0; i < pool_size; i++) if (pool[i].template_id == rule->template_id) group[n++] = pool[i];
+        memset(mark, 0, n);
+        sort_rule = rule;
+        qsort(group, n, sizeof *group, tier_cmp);
+        int tiers = 0, place = 0;
+        for (int i = 0; i < n; i++) {
+            if (i == 0 || group[i].st[0] != group[i - 1].st[0]) { tiers++; place = 0; }
+            if (tiers > rule->tiers) break;
+            if (place++ < rule->per_tier) mark[i] = 1;
+        }
+        Candidate *keep_now = calloc(n + 1, sizeof *keep_now); int nk = 0;
+        for (int i = 0; i < n; i++) if (mark[i]) keep_now[nk++] = group[i];
+        for (int stat = 1; stat <= 4 && rule->champions > 0; stat++) {
+            if (!rule->champion[stat - 1]) continue;
+            sort_stat = stat;
+            qsort(group, n, sizeof *group, champion_cmp);
+            for (int i = 0; i < n && i < rule->champions; i++) {
+                int have = 0;
+                for (int j = 0; j < nk; j++) if (keep_now[j].index == group[i].index && keep_now[j].slot == group[i].slot) have = 1;
+                if (!have) keep_now[nk++] = group[i];
+            }
+        }
+        for (int i = 0; i < nk; i++) kept[nkept++] = keep_now[i];
+        free(keep_now);
+    }
+    memcpy(pool, kept, nkept * sizeof *pool);
+    pool_size = nkept;
+    free(kept); free(group); free(mark);
+}
+static void pool_add(int64_t index, int slot, int template_id, const int st[4]) {
+    pthread_mutex_lock(&pool_lock);
+    if (pool_size >= pool_capacity) {
+        pool_prune();
+        if (pool_size * 2 >= pool_capacity) {
+            pool_capacity = pool_capacity ? pool_capacity * 2 : 256;
+            pool = realloc(pool, pool_capacity * sizeof *pool);
+        }
+    }
+    Candidate *c = &pool[pool_size++];
+    c->index = index; c->slot = slot; c->template_id = template_id;
+    c->st[0] = st[0] + st[1] + st[2]; c->st[1] = st[0]; c->st[2] = st[1]; c->st[3] = st[2]; c->st[4] = st[3];
+    pthread_mutex_unlock(&pool_lock);
 }
 
 static const StatFilter *stat_for(int template_id) {
     for (int i = 0; i < nstat; i++) if (stat_template[i] == template_id) return &stat_filters[i];
     return NULL;
 }
-static int evaluate(const StatFilter *s, const int st[3]) {
+static int evaluate(const StatFilter *s, const int st[4]) {
     int any = 0, all = 1, count = 0;
     double values[4] = {st[0] + st[1] + st[2], st[0], st[1], st[2]};
     for (int m = 0; m < 4; m++) {
@@ -262,10 +380,18 @@ static int scan(uint64_t index, Tally *tally) {
         int ok = 1;
         if (f_has_offsets) for (int k = 0; k < 4; k++) if (offsets[k] < f_offsets[k]) ok = 0;
         if (!ok) continue;
+        if (flow && survey_for(t->id)) {
+            /* 摸底: a candidate, not a hit; the scan goes on. */
+            int st[4]; project(a, t, st);
+            int sum = st[0] + st[1] + st[2];
+            if (sum > tally->best_sum || (sum == tally->best_sum && st[0] > tally->best_attack)) { tally->best_sum = sum; tally->best_attack = st[0]; }
+            pool_add((int64_t)index, i, t->id, st);
+            continue;
+        }
         if (flow) {
             const StatFilter *s = stat_for(t->id);
             if (s && s->enabled) {
-                int st[3]; project(a, t, st);
+                int st[4]; project(a, t, st);
                 int sum = st[0] + st[1] + st[2];
                 if (sum > tally->best_sum || (sum == tally->best_sum && st[0] > tally->best_attack)) { tally->best_sum = sum; tally->best_attack = st[0]; }
                 if (!evaluate(s, st)) { tally->pred_rejects++; continue; }
@@ -324,6 +450,15 @@ static void write_status(const char *kind, int64_t index, int slot, const Tally 
     FILE *f = fopen(tmp, "w");
     if (!f) return;
     fprintf(f, "%s %lld %d %llu %d %llu %d %d\n", kind, (long long)index, slot, (unsigned long long)t->inspected, t->best, (unsigned long long)t->pred_rejects, t->best_sum, t->best_attack);
+    if (nsurvey > 0) {
+        pthread_mutex_lock(&pool_lock);
+        pool_prune();
+        for (int i = 0; i < pool_size; i++) {
+            const Candidate *c = &pool[i];
+            fprintf(f, "cand %lld %d %d %d %d %d %d %d\n", (long long)c->index, c->slot, c->template_id, c->st[0], c->st[1], c->st[2], c->st[3], c->st[4]);
+        }
+        pthread_mutex_unlock(&pool_lock);
+    }
     fclose(f);
     rename(tmp, status_path);
 }
@@ -339,10 +474,10 @@ static int print_roll(int64_t index) {
     for (int i = 0; i < troop.count; i++) {
         const Actor *a = &troop.a[i];
         const Template *t = &templates[enemies[find_enemy(a->enemy)].t];
-        int st[3]; project(a, t, st);
-        printf("enemy %d level %d weights %d %d %d %d seed %u base %lld %lld %lld %lld lv120 %d %d %d\n", a->enemy, a->level,
+        int st[4]; project(a, t, st);
+        printf("enemy %d level %d weights %d %d %d %d seed %u base %lld %lld %lld %lld lv120 %d %d %d hp %d\n", a->enemy, a->level,
                a->weights[0], a->weights[1], a->weights[2], a->weights[3], a->growth_seed,
-               (long long)a->base[0], (long long)a->base[1], (long long)a->base[2], (long long)a->base[3], st[0], st[1], st[2]);
+               (long long)a->base[0], (long long)a->base[1], (long long)a->base[2], (long long)a->base[3], st[0], st[1], st[2], st[3]);
     }
     Tally t = {0, 0, -9, -1, -1};
     printf("scan %d\n", scan((uint64_t)index, &t));

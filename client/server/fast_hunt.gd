@@ -62,7 +62,10 @@ func running() -> bool:
 
 ## Writes the area, filter and stat conditions and starts the helper at roll
 ## `start`. False when it could not start (the caller scans in GDScript).
-func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0) -> bool:
+## `stat_filter_for` returns resolved filters (pet_stat_filter.gd resolve).
+## `survey` maps template id -> 保留规则 for species being surveyed (摸底):
+## their pets are candidates the helper collects, not hits.
+func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}) -> bool:
 	stop()
 	var folder := "user://fast-hunt"
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -71,7 +74,7 @@ func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 	status_path = ProjectSettings.globalize_path(folder.path_join(tag+".status"))
 	var file := FileAccess.open(input_path,FileAccess.WRITE)
 	if file == null:return false
-	file.store_string(_input(catalog,area,filter,flow,stat_filter_for,run_seed,start,thread_count))
+	file.store_string(_input(catalog,area,filter,flow,stat_filter_for,run_seed,start,thread_count,survey))
 	file.close()
 	pid = OS.create_process(helper_path(),[input_path,status_path])
 	_polled_msec = 0
@@ -83,7 +86,8 @@ func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 
 ## The helper's latest report, {} when there is nothing new to read yet.
 ## kind is progress, hit, stop or limit; "exited" when the helper ended
-## without a final report.
+## without a final report. During a survey `candidates` lists the pool so far:
+## {index, slot, template_id, prediction: {attack, defence, speed, max_hp}}.
 func poll(force := false) -> Dictionary:
 	if not running():return {}
 	var now := Time.get_ticks_msec()
@@ -102,6 +106,10 @@ func poll(force := false) -> Dictionary:
 		_remove_files()
 	return report
 
+## The latest report without acting on it (the survey's pool before a stop).
+func peek() -> Dictionary:
+	return _read() if running() else {}
+
 func stop() -> void:
 	if pid > 0 and OS.is_process_running(pid):OS.kill(pid)
 	pid = -1
@@ -109,10 +117,22 @@ func stop() -> void:
 
 func _read() -> Dictionary:
 	if status_path.is_empty() or not FileAccess.file_exists(status_path):return {}
-	var parts := FileAccess.get_file_as_string(status_path).strip_edges().split(" ",false)
+	return parse_status(FileAccess.get_file_as_string(status_path))
+
+## A status file's report (see tools/fast_hunt/fast_hunt.c), {} when incomplete.
+static func parse_status(text: String) -> Dictionary:
+	var lines := text.strip_edges().split("\n",false)
+	if lines.is_empty():return {}
+	var parts := lines[0].strip_edges().split(" ",false)
 	if parts.size() < 8:return {}
+	var candidates: Array = []
+	for i in range(1,lines.size()):
+		var c := lines[i].strip_edges().split(" ",false)
+		if c.size() < 9 or c[0]!="cand":continue
+		candidates.append({"index":int(c[1]),"slot":int(c[2]),"template_id":int(c[3]),
+			"prediction":{"attack":int(c[5]),"defence":int(c[6]),"speed":int(c[7]),"max_hp":int(c[8])}})
 	return {"kind":parts[0],"index":int(parts[1]),"slot":int(parts[2]),"inspected":int(parts[3]),"best":int(parts[4]),
-		"predicted_rejects":int(parts[5]),"best_sum":int(parts[6]),"best_attack":int(parts[7])}
+		"predicted_rejects":int(parts[5]),"best_sum":int(parts[6]),"best_attack":int(parts[7]),"candidates":candidates}
 
 func _remove_files() -> void:
 	for path in [input_path,status_path,status_path+".tmp"]:
@@ -120,7 +140,7 @@ func _remove_files() -> void:
 
 ## The helper's input: see tools/fast_hunt/fast_hunt.c. Only the candidate
 ## groups roll() chooses among, in the same order and with the same weights.
-func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0) -> String:
+func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}) -> String:
 	var lines: PackedStringArray = ["fasthunt 1","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % effective_threads(thread_count),"max_enemies %d" % int(area.get("max_enemies",1))]
 	var groups: Array = []
 	var enemy_ids := {}
@@ -167,6 +187,14 @@ func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 		var parts: PackedStringArray = ["%d %d %d" % [int(id),1 if StatFilter.enabled(chosen) else 0,1 if chosen.get("mode","all")=="any" else 0]]
 		for metric in METRICS:
 			var condition: Dictionary = conditions.get(metric,{})
-			parts.append("%d %s %d" % [1 if bool(condition.get("enabled",false)) else 0,str(float(condition.get("value",0))),1 if bool(condition.get("strict",false)) else 0])
+			# An unresolved condition cannot pass (StatFilter.evaluate).
+			parts.append("%d %s %d" % [1 if bool(condition.get("enabled",false)) else 0,str(float(condition.get("value",1e18))),1 if bool(condition.get("strict",false)) else 0])
 		lines.append(" ".join(parts))
+	if not survey.is_empty():
+		lines.append("survey %d" % survey.size())
+		for id in survey:
+			var rule: Dictionary = survey[id]
+			var order: Array = StatFilter.rank_order(rule.get("order",["attack","speed","max_hp"])).map(func(key):return str(StatFilter.RANK_KEYS.find(key)))
+			var champions: Array = rule.get("champion_stats",["attack","defence","speed","max_hp"]).map(func(key):return str(StatFilter.RANK_KEYS.find(key)))
+			lines.append("%d %d %d %d %d %s %d %s" % [int(id),int(rule.get("tiers",2)),int(rule.get("per_tier",3)),int(rule.get("champions",2)),order.size()," ".join(order),champions.size()," ".join(champions)])
 	return "\n".join(lines)+"\n"

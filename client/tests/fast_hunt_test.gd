@@ -61,8 +61,8 @@ func compare(automation, from_helper: String, first: int, count: int) -> Diction
 				var stats := Progression.project_pet(actor,120)
 				var expected := [int(actor.source_enemy_id),int(actor.level),int(actor.growth_weights[0]),int(actor.growth_weights[1]),int(actor.growth_weights[2]),int(actor.growth_weights[3]),
 					int(actor.growth_seed),int(actor.base_stats.vitality),int(actor.base_stats.strength),int(actor.base_stats.toughness),int(actor.base_stats.dexterity),
-					int(stats.attack),int(stats.defence),int(stats.speed)]
-				var got := [int(parts[1]),int(parts[3]),int(parts[5]),int(parts[6]),int(parts[7]),int(parts[8]),int(parts[10]),int(parts[12]),int(parts[13]),int(parts[14]),int(parts[15]),int(parts[17]),int(parts[18]),int(parts[19])]
+					int(stats.attack),int(stats.defence),int(stats.speed),int(stats.max_hp)]
+				var got := [int(parts[1]),int(parts[3]),int(parts[5]),int(parts[6]),int(parts[7]),int(parts[8]),int(parts[10]),int(parts[12]),int(parts[13]),int(parts[14]),int(parts[15]),int(parts[17]),int(parts[18]),int(parts[19]),int(parts[21])]
 				if expected!=got:
 					mismatch = true
 					if different < 3:print("  roll %d slot %d: GDScript %s, helper %s" % [index,slot,expected,got])

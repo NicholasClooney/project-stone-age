@@ -87,7 +87,7 @@ func run() -> void:
 	var target := int(fixture.troop.enemies[0].template_id)
 	# Qualifiers of this species are stored and the cycle goes on (stop_after 0);
 	# auto tidy with a rule that keeps nothing releases each one after Lv120.
-	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{str(target):{"stop_after":0,"conditions":{"sum":{"enabled":true,"value":1,"strict":false}},"keep_rule":{"tiers":0,"champions":0,"auto":true}}}}})
+	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{str(target):{"stop_after":0,"conditions":{"sum":{"enabled":true}},"keep_rule":{"tiers":0,"champions":0,"auto":true}}}}})
 	hunt.apply_preset(0)
 	# The radio plays before the run; the watched battles set it aside.
 	var radio = game.radio
@@ -98,6 +98,8 @@ func run() -> void:
 	var radio_track: String = radio.current
 	var clone_before: bool = game.backend.session.clone_squad_enabled
 	check(flow.start_cycle(),"a find-pet cycle starts with %s" % AutomationSettings.SHOWCASE_NAME)
+	# A resolved threshold every hit meets (最高 − x and 摸底 are covered by survey_test).
+	automation.flow_stat_filters[target].conditions.sum.value = 1
 	check(bool(game.state.automation.flow.showcase),"the status says so")
 
 	# Queue: over the limit the worst hit (by the keep rule's order) is dropped
@@ -243,6 +245,7 @@ func run() -> void:
 	hunt.close_menu()
 	game.session.gm_heal()
 	check(flow.start_cycle(),"a full-speed cycle starts")
+	automation.flow_stat_filters[target].conditions.sum.value = 1
 	check(not bool(game.state.automation.flow.showcase),"with %s off" % AutomationSettings.SHOWCASE_NAME)
 	hunt.hunt_catalog = fixture;hunt.scan_once()
 	check(flow.phase=="capture" and bool(game.state.automation.compact) and not automation.hunt_running,"a hit goes straight to the compact capture and the search stops")
