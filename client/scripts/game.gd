@@ -11,6 +11,10 @@ const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 ## Behaviour split out of this script (see docs/technical/game-scripts.md);
 ## each helper is created first in _init and reaches the state through `game.`.
+const GameMenus = preload("res://scripts/game/game_menus.gd")
+var _menus
+const GameUi = preload("res://scripts/game/game_ui.gd")
+var _ui
 const GameStartup = preload("res://scripts/game/game_startup.gd")
 var _startup
 const GameBattle = preload("res://scripts/game/game_battle.gd")
@@ -213,6 +217,8 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_menus = GameMenus.new(self)
+	_ui = GameUi.new(self)
 	_startup = GameStartup.new(self)
 	_battle = GameBattle.new(self)
 	_panels = GamePanels.new(self)
@@ -847,217 +853,6 @@ func _exit_tree() -> void:
 	if is_instance_valid(music): music.stop()
 	if is_instance_valid(effect): effect.stop()
 
-func box(color: Color, border: Color) -> StyleBoxFlat:
-	var result := StyleBoxFlat.new()
-	result.bg_color = color
-	result.border_color = border
-	result.set_border_width_all(2)
-	result.set_corner_radius_all(3)
-	result.content_margin_left = 12
-	result.content_margin_right = 12
-	result.content_margin_top = 7
-	result.content_margin_bottom = 7
-	return result
-
-func text(value: String, size: int = 15) -> Label:
-	var label := Label.new()
-	label.text = value
-	label.add_theme_font_size_override("font_size",size)
-	label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	label.add_theme_color_override("font_color",Color("f8edc7"))
-	return label
-
-func button(value: String, callback: Callable) -> Button:
-	var b := Button.new()
-	b.text = value
-	b.focus_mode = Control.FOCUS_NONE
-	b.add_theme_font_size_override("font_size",13)
-	b.add_theme_stylebox_override("normal",box(Color("574431"),Color("9d8354")))
-	b.add_theme_stylebox_override("hover",box(Color("775b3c"),Color("e6c284")))
-	b.pressed.connect(callback)
-	return b
-
-## Built once. A map change keeps every panel (and what it shows) and only
-## refreshes the parts that belong to the map: see refresh_map_ui().
-func build_ui() -> void:
-	ui_layer = CanvasLayer.new()
-	add_child(ui_layer)
-	var root := Control.new()
-	ui_root = root
-	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	var ui_theme := Theme.new()
-	var font: Font = load("res://assets/fonts/NotoSansSC.ttf")
-	var readable_font := FontVariation.new()
-	readable_font.base_font = font
-	readable_font.variation_opentype = {2003265652:450.0} # OpenType wght axis tag.
-	ui_theme.default_font = readable_font
-	root.theme = ui_theme
-	ui_layer.add_child(root)
-	coordinates = text("")
-	message = text("")
-	root.add_child(coordinates)
-	root.add_child(message)
-	coordinates.hide()
-	message.hide()
-	classic_hud = preload("res://scripts/classic_hud.gd").new()
-	classic_hud.world = self
-	root.add_child(classic_hud)
-	var dev := HFlowContainer.new()
-	dev_bar = dev
-	dev.size.x = get_viewport_rect().size.x-24
-	dev.position = Vector2(12,85)
-	dev.add_theme_constant_override("separation",5)
-	root.add_child(dev)
-	character_selection = preload("res://scripts/character_selection.gd").new()
-	character_selection.configure(self)
-	root.add_child(character_selection)
-	travel_landing=preload("res://scripts/travel_landing.gd").new()
-	travel_landing.configure(self)
-	leveling_destinations=preload("res://scripts/leveling_destinations.gd").new()
-	leveling_destinations.configure(self);root.add_child(leveling_destinations)
-	var overview_button := button("地图导航",func(): dev_map_overview.open_map())
-	overview_button.name = "DevMapOverview"
-	overview_button.tooltip_text = "按地图查看和传送"
-	dev.add_child(overview_button)
-	var training_travel:=button("刷怪传送",leveling_destinations.open_menu)
-	training_travel.name="DevTrainingTravel";training_travel.tooltip_text="按练级点传送到原版刷怪位置";dev.add_child(training_travel)
-	pet_hunt_menu = preload("res://scripts/pet_hunt_menu.gd").new()
-	pet_hunt_menu.configure(self)
-	root.add_child(pet_hunt_menu)
-	training_helper = preload("res://scripts/training_helper.gd").new()
-	training_helper.configure(self)
-	root.add_child(training_helper)
-	# 五人镜像队 lives in the 自动练级 window beside its other battle options.
-	clone_button=CheckBox.new()
-	clone_button.name="CloneSquadToggle";clone_button.text="五人镜像队"
-	clone_button.focus_mode=Control.FOCUS_NONE
-	clone_button.position=Vector2(560,164)
-	clone_button.button_pressed=session.clone_squad_enabled
-	clone_button.tooltip_text="复制当前出战宠与骑乘状态，本体优先，四组人宠自动跟随目标；经验仍归本体和真实宠物。下一场生效。"
-	clone_button.toggled.connect(func(enabled):
-		if not battle_session.snapshot().active and not area_transition_busy:set_clone_squad_enabled(enabled)
-		else:clone_button.set_pressed_no_signal(session.clone_squad_enabled))
-	training_helper.panel.add_child(clone_button)
-	pet_workflow = preload("res://scripts/pet_workflow.gd").new()
-	pet_workflow.configure(self)
-	root.add_child(pet_workflow)
-	var training := button("自动练级",training_helper.open_menu)
-	training.name="DevTraining"
-	dev.add_child(training)
-	var hunt := button("自动抓极品",pet_hunt_menu.open_menu)
-	hunt.name = "DevPetHunt"
-	dev.add_child(hunt)
-	radio = preload("res://scripts/radio.gd").new()
-	radio.name = "Radio"
-	add_child(radio)
-	radio.configure(self)
-	web_audio = preload("res://scripts/web_audio.gd").new()
-	web_audio.name = "WebAudio"
-	add_child(web_audio)
-	web_audio.configure(self)
-	radio_panel = preload("res://scripts/radio_panel.gd").new()
-	root.add_child(radio_panel)
-	radio_panel.configure(self,radio)
-	var music_button := button("音乐",func():
-		if radio_panel.visible:radio_panel.close_panel()
-		else:radio_panel.open_panel())
-	music_button.name = "DevMusic"
-	music_button.tooltip_text = "原版配乐电台、收藏和歌单，声音开关和音乐音量"
-	dev.add_child(music_button)
-	changelog_menu = preload("res://scripts/changelog_menu.gd").new()
-	changelog_menu.configure(self)
-	root.add_child(changelog_menu)
-	settings_menu = preload("res://scripts/settings_menu.gd").new()
-	root.add_child(settings_menu)
-	settings_menu.configure(self)
-	help = settings_menu
-	var settings_button := button("设置",func():
-		if settings_menu.visible:settings_menu.close_menu()
-		elif not dialogue.visible:settings_menu.open_menu())
-	settings_button.name = "DevSettings"
-	settings_button.tooltip_text = "画面、声音、角色、瞬移、存档、更新日志和操作说明"
-	dev.add_child(settings_button)
-	build_dialogue(root)
-	adventure_menu = AdventureMenu.new()
-	adventure_menu.configure(self)
-	root.add_child(adventure_menu)
-	pet_training = preload("res://scripts/pet_training.gd").new()
-	pet_training.configure(self)
-	root.add_child(pet_training)
-	dev_map_overview = preload("res://scripts/dev_map_overview.gd").new()
-	dev_map_overview.configure(self)
-	root.add_child(dev_map_overview)
-	dev_gm_menu=preload("res://scripts/dev_gm_menu.gd").new()
-	dev_gm_menu.configure(self)
-	root.add_child(dev_gm_menu)
-	adventure_hint = text("",14)
-	adventure_hint.position = Vector2(18,132)
-	dev.resized.connect(func():
-		if is_instance_valid(adventure_hint):adventure_hint.position.y=dev.position.y+dev.size.y+8)
-	adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
-	adventure_hint.add_theme_constant_override("shadow_offset_x",1)
-	adventure_hint.add_theme_constant_override("shadow_offset_y",1)
-	adventure_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	root.add_child(adventure_hint)
-	battle_view = BattleView.new()
-	root.add_child(battle_view)
-	battle_view.configure(self)
-	battle_view.playback_speed=playback_speed()
-	battle_view.action_requested.connect(battle_action)
-	battle_view.return_requested.connect(return_from_battle)
-	battle_view.sound_requested.connect(play_battle_sound)
-	battle_view.capture_music_requested.connect(func(celebrating: bool):
-		set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
-	battle_view.pet_command_requested.connect(func(command: String):
-		if command == "skill": battle_session.set_pet_skill(int(battle_view.get("selected_pet_skill")))
-		else: battle_session.set_pet_command(command))
-	refresh_map_ui()
-
-## The map-specific parts of the UI: the residents with their travel
-## dialogue, and the HUD's map window.
-func refresh_map_ui() -> void:
-	world_travel = preload("res://scripts/world_travel.gd").new()
-	actors.add_child(world_travel)
-	var residents: Array = []
-	for entry in world_catalog.residents:
-		if int(entry.map_id)==int(data.map_id) and Vector2i(entry.cell[0],entry.cell[1])!=npc_cell:residents.append(entry)
-	world_travel.setup(self,ui_root,residents)
-	if is_instance_valid(classic_hud) and classic_hud.is_node_ready():classic_hud.refresh_map()
-
-## Whether a panel that stops walking is open; a map change keeps panels open.
-## A minimized automation window is hidden, so it does not count; see
-## automation_minimized() for how it still holds the character in place.
-func _panel_open() -> bool:
-	for node in [leveling_destinations,training_helper,pet_hunt_menu,changelog_menu,character_selection,dev_gm_menu,dev_map_overview,pet_training,adventure_menu,help]:
-		if is_instance_valid(node) and node.visible:return true
-	return false
-
-func setup_npc() -> void:
-	if int(data.map_id)==1002 and not mvp_manifest.is_empty():
-		npc_data = mvp_manifest.merchant.duplicate(true)
-	elif not FileAccess.file_exists("res://assets/legacy/samgir-npc.json"):
-		return
-	else:
-		npc_data = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir-npc.json"))
-	npc_cell = Vector2i(npc_data.cell[0],npc_data.cell[1])
-	navigation.set_point_solid(npc_cell,true)
-	npc = Node2D.new()
-	npc.position = project(Vector2(npc_cell))
-	actors.add_child(npc)
-	npc_sprite = Sprite2D.new()
-	npc_sprite.texture = load("res://assets/legacy/mvp/"+str(npc_data.path)) if int(data.map_id)==1002 else load("res://assets/legacy/samgir-villager.png")
-	npc_sprite.centered = false
-	npc_sprite.position = Vector2(npc_data.offset[0],npc_data.offset[1])
-	npc.add_child(npc_sprite)
-	var label := text(npc_data.name,14)
-	label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	label.add_theme_color_override("font_shadow_color",Color.BLACK)
-	label.add_theme_constant_override("shadow_offset_x",1)
-	label.add_theme_constant_override("shadow_offset_y",1)
-	label.position = Vector2(-28,-94)
-	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	npc.add_child(label)
 
 func handle_world_click(point: Vector2) -> void:
 	if paused_input:
@@ -1092,10 +887,6 @@ func walk_toward(destination: Vector2i) -> void:
 	marker_cell = cursor if not path.is_empty() else Vector2i(-1,-1)
 	queue_redraw()
 
-func in_talk_range(point: Vector2i) -> bool:
-	var delta := (point-npc_cell).abs()
-	# Cardinal neighbours avoid talking diagonally through blocked corners.
-	return (point==Vector2i(16,15)) if int(data.map_id)==1002 else delta.x+delta.y == 1
 
 func approach_npc() -> void:
 	if paused_input:
@@ -1122,72 +913,6 @@ func approach_npc() -> void:
 	pending_talk = true
 	message.text = "正在走向 %s…" % str(npc_data.name)
 
-func open_dialogue() -> void:
-	if moving or not in_talk_range(cell):
-		return
-	if int(data.map_id)==1002:
-		show_adventure_menu("shop")
-		return
-	clear_input()
-	paused_input = true
-	player.set_action(3)
-	player.facing = (SCREEN_DIRECTIONS.find(npc_cell-cell)+4)%8
-	dialogue_name.text = npc_data.name
-	dialogue_text.text = npc_data.text
-	dialogue.show()
-	play_ui_sound(202)
-
-func close_dialogue() -> void:
-	if not dialogue.visible:
-		return
-	play_ui_sound(203)
-	dialogue.hide()
-	paused_input = help.visible
-	clear_input()
-	message.text = "Click the villager to talk again, or keep exploring."
-
-func build_dialogue(root: Control) -> void:
-	dialogue = Control.new()
-	dialogue.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	dialogue.mouse_filter = Control.MOUSE_FILTER_STOP
-	root.add_child(dialogue)
-	var panel := Control.new()
-	panel.name = "OriginalDialogue"
-	panel.size = Vector2(384,192)
-	panel.scale = Vector2.ONE*classic_hud.SCALE
-	panel.position = Vector2((1280-384*classic_hud.SCALE)/2,450)
-	dialogue.add_child(panel)
-	# WindowDisp composes a stone frame from the original 64×48 tiles.
-	for y in range(4):
-		for x in range(6):
-			var row := 0 if y==0 else (2 if y==3 else 1)
-			var column := 0 if x==0 else (2 if x==5 else 1)
-			classic_hud.picture(panel,26001+row*3+column,Vector2(x*64,y*48))
-	dialogue_name = text("",15)
-	dialogue_name.position = Vector2(18,15)
-	dialogue_name.add_theme_color_override("font_color",Color.YELLOW)
-	dialogue_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(dialogue_name)
-	dialogue_text = text("",15)
-	dialogue_text.position = Vector2(18,45)
-	dialogue_text.size = Vector2(348,90)
-	dialogue_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	dialogue_text.add_theme_color_override("font_color",Color.WHITE)
-	dialogue_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(dialogue_text)
-	var button_art: Texture2D = classic_hud.art[26091]
-	var close_button: TextureButton = classic_hud.icon(panel,26091,26091,Vector2((384-button_art.get_width())/2.0,156),"确定 · Enter / Esc")
-	close_button.name = "ConfirmDialogue"
-	close_button.pressed.connect(close_dialogue)
-	var quest_choice := Button.new()
-	quest_choice.text = "村外的伙伴 / 休息"
-	quest_choice.position = Vector2(105,112)
-	quest_choice.size = Vector2(190,30)
-	quest_choice.add_theme_stylebox_override("normal",StyleBoxEmpty.new())
-	quest_choice.add_theme_stylebox_override("hover",StyleBoxEmpty.new())
-	quest_choice.pressed.connect(func(): close_dialogue(); show_adventure_menu("quest"))
-	panel.add_child(quest_choice)
-	dialogue.hide()
 
 ## Places the character at startup: where a running backend already has it
 ## (another device or automation may have moved it since the last save),
@@ -1260,102 +985,6 @@ func refresh_companion() -> void:
 	actors.add_child(pet_follower)
 	pet_follower.select_pet(str(int(pet.sprite)),str(pet.name))
 
-func update_adventure_hint() -> void:
-	if not is_instance_valid(adventure_hint):return
-	adventure_hint.visible = not battle_view.visible and not adventure_menu.visible and not dialogue.visible
-	var profile: Dictionary = session.snapshot()
-	var q: Dictionary = profile.quest
-	var objective := "找村民聊聊，准备你的第一次冒险。"
-	if q.claimed:objective = "委托完成！继续培养与收集你的伙伴。"
-	elif session.can_fight_boss():objective = "准备好后，在村外点击 DEV「挑战强敌」。"
-	elif q.boss_defeated:objective = "回到村民身边领取报酬。"
-	elif q.accepted:objective = "村外的伙伴：胜利 %d/3 · 捕获伙伴 %d/1" % [mini(3,int(q.wins)),mini(1,profile.pets.size())]
-	adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d   %s" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold,objective]
-	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
-
-func show_adventure_menu(kind: String) -> void:
-	# The old 系统 page is 设置 now (settings_menu.gd).
-	if kind=="system":
-		if settings_menu.visible:settings_menu.close_menu()
-		else:settings_menu.open_menu()
-		return
-	if is_instance_valid(character_selection) and character_selection.visible:return
-	if is_instance_valid(changelog_menu) and changelog_menu.visible:return
-	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:return
-	if is_instance_valid(dev_map_overview) and dev_map_overview.visible:return
-	if is_instance_valid(pet_training) and pet_training.visible:return
-	if is_instance_valid(world_travel) and world_travel.overlay.visible:return
-	if adventure_menu.visible and adventure_menu.kind == kind:
-		close_adventure_menu()
-		return
-	if battle_view.visible:
-		play_battle_sound(220)
-		return
-	if moving or dialogue.visible or help.visible:return
-	if kind=="shop" and (int(data.map_id)!=1002 or not in_talk_range(cell)):return
-	if kind=="pets":
-		var portraits := pet_packs()
-		if not asset_packs.is_ready(portraits):
-			asset_packs.ensure(portraits,func(ok: bool):if ok:show_adventure_menu(kind),"宠物图像")
-			return
-	if kind=="quest" and (int(data.map_id)!=1000 or not in_talk_range(cell)):return
-	clear_input()
-	paused_input = true
-	classic_hud.map_panel.hide()
-	adventure_menu.open_menu(kind)
-	play_ui_sound(202)
-
-func close_adventure_menu() -> void:
-	adventure_menu.hide()
-	release_input()
-	clear_input()
-	refresh_companion()
-	checkpoint()
-	play_ui_sound(203)
-
-func perform_adventure_action(action: String, value: Variant = null) -> void:
-	if not adventure_menu.visible or (battle_view.visible and action!="mute"):return
-	var success := false
-	var note := ""
-	var at_shop := int(data.map_id)==1002 and in_talk_range(cell)
-	var at_villager := int(data.map_id)==1000 and in_talk_range(cell)
-	match action:
-		"pet_preview":
-			adventure_menu.selected_pet = int(value)
-			adventure_menu.refresh()
-			return
-		"buy_potion":success = at_shop and session.buy_item("potion")
-		"buy_club":success = at_shop and session.buy_item("club")
-		"buy_mirror_charm":success = at_shop and session.buy_item("mirror_charm")
-		"sell_potion":success = at_shop and session.sell_item("potion")
-		"sell_club":success = at_shop and session.sell_item("club")
-		"sell_mirror_charm":success = at_shop and session.sell_item("mirror_charm")
-		"use_potion":success = session.use_item("potion")
-		"equip":success = session.equip_item("club")
-		"heal_pets":success = session.heal_carried_pets()
-		"equip_mirror":success = session.equip_item("mirror_charm")
-		"allocate_stat":success = session.allocate_stat(str(value),adventure_menu.allocation_amount)
-		"distribute_stats":
-			var selected: Array=[]
-			for key in ["vitality","strength","toughness","dexterity"]:
-				if key in adventure_menu.allocation_stats:selected.append(key)
-			success=session.distribute_stats(selected)
-		"select_pet":success = session.select_pet(int(value))
-		"rename_pet":success = session.rename_pet(int(value),adventure_menu.name_edit.text)
-		"accept_quest":success = at_villager and session.accept_quest()
-		"claim_quest":success = at_villager and session.claim_quest()
-		"heal":success = at_villager and session.heal()
-		"save":success = checkpoint()
-		"mute":toggle_mute(); success = true
-	if success:
-		checkpoint()
-		note = "已完成。"
-		if action=="claim_quest":note = "委托完成！获得石币、经验与回复药。"
-		elif action=="heal":note = "你与伙伴恢复了体力。"
-		elif action=="accept_quest":note = "委托已接受，出发去村外吧！"
-	else:note = "现在无法这样做，请检查条件、石币或数量。"
-	adventure_menu.refresh(note)
-	play_ui_sound(201)
 
 func load_profile() -> bool:
 	if not link.is_local():return true
@@ -1500,3 +1129,21 @@ func _download_core() -> bool:return await _startup._download_core()
 func _download_start_area() -> bool:return await _startup._download_start_area()
 func _build_waiting_screen() -> void:_startup._build_waiting_screen()
 func _show_startup_error(text_value: String) -> void:_startup._show_startup_error(text_value)
+
+# ---- building the interface (scripts/game/game_ui.gd) ----
+func box(color: Color, border: Color) -> StyleBoxFlat:return _ui.box(color,border)
+func text(value: String, size: int = 15) -> Label:return _ui.text(value,size)
+func button(value: String, callback: Callable) -> Button:return _ui.button(value,callback)
+func build_ui() -> void:_ui.build_ui()
+func refresh_map_ui() -> void:_ui.refresh_map_ui()
+func _panel_open() -> bool:return _ui._panel_open()
+func update_adventure_hint() -> void:_ui.update_adventure_hint()
+
+# ---- NPC and adventure menus (scripts/game/game_menus.gd) ----
+func setup_npc() -> void:_menus.setup_npc()
+func in_talk_range(point: Vector2i) -> bool:return _menus.in_talk_range(point)
+func open_dialogue() -> void:_menus.open_dialogue()
+func close_dialogue() -> void:_menus.close_dialogue()
+func show_adventure_menu(kind: String) -> void:_menus.show_adventure_menu(kind)
+func close_adventure_menu() -> void:_menus.close_adventure_menu()
+func perform_adventure_action(action: String, value: Variant = null) -> void:_menus.perform_adventure_action(action,value)

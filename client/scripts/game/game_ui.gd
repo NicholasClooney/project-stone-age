@@ -1,0 +1,254 @@
+extends RefCounted
+## Building the interface of the game scene (scripts/game.gd): the UI layer,
+## toolbar and windows (built once), the map-specific parts refreshed on every
+## map change, the dialogue box, the adventure hint and the shared text,
+## button and panel-style helpers every window uses (world.text() and so on).
+## The controls stay on the game; see docs/technical/game-scripts.md.
+const AdventureMenu = preload("res://scripts/adventure_menu.gd")
+const BattleView = preload("res://scripts/battle_view.gd")
+var game: GameScene
+
+func _init(owner: GameScene) -> void:
+	game = owner
+
+func box(color: Color, border: Color) -> StyleBoxFlat:
+	var result := StyleBoxFlat.new()
+	result.bg_color = color
+	result.border_color = border
+	result.set_border_width_all(2)
+	result.set_corner_radius_all(3)
+	result.content_margin_left = 12
+	result.content_margin_right = 12
+	result.content_margin_top = 7
+	result.content_margin_bottom = 7
+	return result
+
+func text(value: String, size: int = 15) -> Label:
+	var label := Label.new()
+	label.text = value
+	label.add_theme_font_size_override("font_size",size)
+	label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	label.add_theme_color_override("font_color",Color("f8edc7"))
+	return label
+
+func button(value: String, callback: Callable) -> Button:
+	var b := Button.new()
+	b.text = value
+	b.focus_mode = Control.FOCUS_NONE
+	b.add_theme_font_size_override("font_size",13)
+	b.add_theme_stylebox_override("normal",box(Color("574431"),Color("9d8354")))
+	b.add_theme_stylebox_override("hover",box(Color("775b3c"),Color("e6c284")))
+	b.pressed.connect(callback)
+	return b
+
+## Built once. A map change keeps every panel (and what it shows) and only
+## refreshes the parts that belong to the map: see refresh_map_ui().
+func build_ui() -> void:
+	game.ui_layer = CanvasLayer.new()
+	game.add_child(game.ui_layer)
+	var root := Control.new()
+	game.ui_root = root
+	root.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	root.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	var ui_theme := Theme.new()
+	var font: Font = load("res://assets/fonts/NotoSansSC.ttf")
+	var readable_font := FontVariation.new()
+	readable_font.base_font = font
+	readable_font.variation_opentype = {2003265652:450.0} # OpenType wght axis tag.
+	ui_theme.default_font = readable_font
+	root.theme = ui_theme
+	game.ui_layer.add_child(root)
+	game.coordinates = text("")
+	game.message = text("")
+	root.add_child(game.coordinates)
+	root.add_child(game.message)
+	game.coordinates.hide()
+	game.message.hide()
+	game.classic_hud = preload("res://scripts/classic_hud.gd").new()
+	game.classic_hud.world = game
+	root.add_child(game.classic_hud)
+	var dev := HFlowContainer.new()
+	game.dev_bar = dev
+	dev.size.x = game.get_viewport_rect().size.x-24
+	dev.position = Vector2(12,85)
+	dev.add_theme_constant_override("separation",5)
+	root.add_child(dev)
+	game.character_selection = preload("res://scripts/character_selection.gd").new()
+	game.character_selection.configure(game)
+	root.add_child(game.character_selection)
+	game.travel_landing=preload("res://scripts/travel_landing.gd").new()
+	game.travel_landing.configure(game)
+	game.leveling_destinations=preload("res://scripts/leveling_destinations.gd").new()
+	game.leveling_destinations.configure(game);root.add_child(game.leveling_destinations)
+	var overview_button := button("地图导航",func(): game.dev_map_overview.open_map())
+	overview_button.name = "DevMapOverview"
+	overview_button.tooltip_text = "按地图查看和传送"
+	dev.add_child(overview_button)
+	var training_travel:=button("刷怪传送",game.leveling_destinations.open_menu)
+	training_travel.name="DevTrainingTravel";training_travel.tooltip_text="按练级点传送到原版刷怪位置";dev.add_child(training_travel)
+	game.pet_hunt_menu = preload("res://scripts/pet_hunt_menu.gd").new()
+	game.pet_hunt_menu.configure(game)
+	root.add_child(game.pet_hunt_menu)
+	game.training_helper = preload("res://scripts/training_helper.gd").new()
+	game.training_helper.configure(game)
+	root.add_child(game.training_helper)
+	# 五人镜像队 lives in the 自动练级 window beside its other battle options.
+	game.clone_button=CheckBox.new()
+	game.clone_button.name="CloneSquadToggle";game.clone_button.text="五人镜像队"
+	game.clone_button.focus_mode=Control.FOCUS_NONE
+	game.clone_button.position=Vector2(560,164)
+	game.clone_button.button_pressed=game.session.clone_squad_enabled
+	game.clone_button.tooltip_text="复制当前出战宠与骑乘状态，本体优先，四组人宠自动跟随目标；经验仍归本体和真实宠物。下一场生效。"
+	game.clone_button.toggled.connect(func(enabled):
+		if not game.battle_session.snapshot().active and not game.area_transition_busy:game.set_clone_squad_enabled(enabled)
+		else:game.clone_button.set_pressed_no_signal(game.session.clone_squad_enabled))
+	game.training_helper.panel.add_child(game.clone_button)
+	game.pet_workflow = preload("res://scripts/pet_workflow.gd").new()
+	game.pet_workflow.configure(game)
+	root.add_child(game.pet_workflow)
+	var training := button("自动练级",game.training_helper.open_menu)
+	training.name="DevTraining"
+	dev.add_child(training)
+	var hunt := button("自动抓极品",game.pet_hunt_menu.open_menu)
+	hunt.name = "DevPetHunt"
+	dev.add_child(hunt)
+	game.radio = preload("res://scripts/radio.gd").new()
+	game.radio.name = "Radio"
+	game.add_child(game.radio)
+	game.radio.configure(game)
+	game.web_audio = preload("res://scripts/web_audio.gd").new()
+	game.web_audio.name = "WebAudio"
+	game.add_child(game.web_audio)
+	game.web_audio.configure(game)
+	game.radio_panel = preload("res://scripts/radio_panel.gd").new()
+	root.add_child(game.radio_panel)
+	game.radio_panel.configure(game,game.radio)
+	var music_button := button("音乐",func():
+		if game.radio_panel.visible:game.radio_panel.close_panel()
+		else:game.radio_panel.open_panel())
+	music_button.name = "DevMusic"
+	music_button.tooltip_text = "原版配乐电台、收藏和歌单，声音开关和音乐音量"
+	dev.add_child(music_button)
+	game.changelog_menu = preload("res://scripts/changelog_menu.gd").new()
+	game.changelog_menu.configure(game)
+	root.add_child(game.changelog_menu)
+	game.settings_menu = preload("res://scripts/settings_menu.gd").new()
+	root.add_child(game.settings_menu)
+	game.settings_menu.configure(game)
+	game.help = game.settings_menu
+	var settings_button := button("设置",func():
+		if game.settings_menu.visible:game.settings_menu.close_menu()
+		elif not game.dialogue.visible:game.settings_menu.open_menu())
+	settings_button.name = "DevSettings"
+	settings_button.tooltip_text = "画面、声音、角色、瞬移、存档、更新日志和操作说明"
+	dev.add_child(settings_button)
+	build_dialogue(root)
+	game.adventure_menu = AdventureMenu.new()
+	game.adventure_menu.configure(game)
+	root.add_child(game.adventure_menu)
+	game.pet_training = preload("res://scripts/pet_training.gd").new()
+	game.pet_training.configure(game)
+	root.add_child(game.pet_training)
+	game.dev_map_overview = preload("res://scripts/dev_map_overview.gd").new()
+	game.dev_map_overview.configure(game)
+	root.add_child(game.dev_map_overview)
+	game.dev_gm_menu=preload("res://scripts/dev_gm_menu.gd").new()
+	game.dev_gm_menu.configure(game)
+	root.add_child(game.dev_gm_menu)
+	game.adventure_hint = text("",14)
+	game.adventure_hint.position = Vector2(18,132)
+	dev.resized.connect(func():
+		if is_instance_valid(game.adventure_hint):game.adventure_hint.position.y=dev.position.y+dev.size.y+8)
+	game.adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
+	game.adventure_hint.add_theme_constant_override("shadow_offset_x",1)
+	game.adventure_hint.add_theme_constant_override("shadow_offset_y",1)
+	game.adventure_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	root.add_child(game.adventure_hint)
+	game.battle_view = BattleView.new()
+	root.add_child(game.battle_view)
+	game.battle_view.configure(game)
+	game.battle_view.playback_speed=game.playback_speed()
+	game.battle_view.action_requested.connect(game.battle_action)
+	game.battle_view.return_requested.connect(game.return_from_battle)
+	game.battle_view.sound_requested.connect(game.play_battle_sound)
+	game.battle_view.capture_music_requested.connect(func(celebrating: bool):
+		game.set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
+	game.battle_view.pet_command_requested.connect(func(command: String):
+		if command == "skill": game.battle_session.set_pet_skill(int(game.battle_view.get("selected_pet_skill")))
+		else: game.battle_session.set_pet_command(command))
+	refresh_map_ui()
+
+## The map-specific parts of the UI: the residents with their travel
+## dialogue, and the HUD's map window.
+func refresh_map_ui() -> void:
+	game.world_travel = preload("res://scripts/world_travel.gd").new()
+	game.actors.add_child(game.world_travel)
+	var residents: Array = []
+	for entry in game.world_catalog.residents:
+		if int(entry.map_id)==int(game.data.map_id) and Vector2i(entry.cell[0],entry.cell[1])!=game.npc_cell:residents.append(entry)
+	game.world_travel.setup(game,game.ui_root,residents)
+	if is_instance_valid(game.classic_hud) and game.classic_hud.is_node_ready():game.classic_hud.refresh_map()
+
+## Whether a panel that stops walking is open; a map change keeps panels open.
+## A minimized automation window is hidden, so it does not count; see
+## automation_minimized() for how it still holds the character in place.
+func _panel_open() -> bool:
+	for node in [game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help]:
+		if is_instance_valid(node) and node.visible:return true
+	return false
+
+func update_adventure_hint() -> void:
+	if not is_instance_valid(game.adventure_hint):return
+	game.adventure_hint.visible = not game.battle_view.visible and not game.adventure_menu.visible and not game.dialogue.visible
+	var profile: Dictionary = game.session.snapshot()
+	var q: Dictionary = profile.quest
+	var objective := "找村民聊聊，准备你的第一次冒险。"
+	if q.claimed:objective = "委托完成！继续培养与收集你的伙伴。"
+	elif game.session.can_fight_boss():objective = "准备好后，在村外点击 DEV「挑战强敌」。"
+	elif q.boss_defeated:objective = "回到村民身边领取报酬。"
+	elif q.accepted:objective = "村外的伙伴：胜利 %d/3 · 捕获伙伴 %d/1" % [mini(3,int(q.wins)),mini(1,profile.pets.size())]
+	game.adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d   %s" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold,objective]
+	if not game.last_adventure_message.is_empty():game.adventure_hint.text += "\n"+game.last_adventure_message
+
+func build_dialogue(root: Control) -> void:
+	game.dialogue = Control.new()
+	game.dialogue.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	game.dialogue.mouse_filter = Control.MOUSE_FILTER_STOP
+	root.add_child(game.dialogue)
+	var panel := Control.new()
+	panel.name = "OriginalDialogue"
+	panel.size = Vector2(384,192)
+	panel.scale = Vector2.ONE*game.classic_hud.SCALE
+	panel.position = Vector2((1280-384*game.classic_hud.SCALE)/2,450)
+	game.dialogue.add_child(panel)
+	# WindowDisp composes a stone frame from the original 64×48 tiles.
+	for y in range(4):
+		for x in range(6):
+			var row := 0 if y==0 else (2 if y==3 else 1)
+			var column := 0 if x==0 else (2 if x==5 else 1)
+			game.classic_hud.picture(panel,26001+row*3+column,Vector2(x*64,y*48))
+	game.dialogue_name = text("",15)
+	game.dialogue_name.position = Vector2(18,15)
+	game.dialogue_name.add_theme_color_override("font_color",Color.YELLOW)
+	game.dialogue_name.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(game.dialogue_name)
+	game.dialogue_text = text("",15)
+	game.dialogue_text.position = Vector2(18,45)
+	game.dialogue_text.size = Vector2(348,90)
+	game.dialogue_text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	game.dialogue_text.add_theme_color_override("font_color",Color.WHITE)
+	game.dialogue_text.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	panel.add_child(game.dialogue_text)
+	var button_art: Texture2D = game.classic_hud.art[26091]
+	var close_button: TextureButton = game.classic_hud.icon(panel,26091,26091,Vector2((384-button_art.get_width())/2.0,156),"确定 · Enter / Esc")
+	close_button.name = "ConfirmDialogue"
+	close_button.pressed.connect(game.close_dialogue)
+	var quest_choice := Button.new()
+	quest_choice.text = "村外的伙伴 / 休息"
+	quest_choice.position = Vector2(105,112)
+	quest_choice.size = Vector2(190,30)
+	quest_choice.add_theme_stylebox_override("normal",StyleBoxEmpty.new())
+	quest_choice.add_theme_stylebox_override("hover",StyleBoxEmpty.new())
+	quest_choice.pressed.connect(func(): game.close_dialogue(); game.show_adventure_menu("quest"))
+	panel.add_child(quest_choice)
+	game.dialogue.hide()
