@@ -52,7 +52,9 @@ def build(catalog, numbers):
     result = []
     for page in sorted(families):
         members = families[page]
-        name = '其他' if page == OTHER else NAMES.get(page, members[0]['name'] + '系')
+        # Named after the page's first pet, skipping numbered names (变色龙2).
+        first = next((t['name'] for t in members if not re.search(r'\d', t['name'])), members[0]['name'])
+        name = '其他' if page == OTHER else NAMES.get(page, first + '系')
         result.append(dict(id=page, name=name, templates=[t['id'] for t in members]))
     return result
 

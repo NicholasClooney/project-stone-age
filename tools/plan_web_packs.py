@@ -141,6 +141,21 @@ def plan() -> dict:
         for image in sorted(images):
             assign(pack, LEGACY / f"battle/images/{image}.png")
         lookups["sprites"][ident] = pack
+    # Pet sprites kept in their own file (import_encounter_art.py): the file
+    # travels with its sheets, so only the manifest's small list is in core.
+    for ident, name in battle.get("extra_sprites", {}).items():
+        pack = f"sprite-{ident}"
+        path = LEGACY / "battle" / name
+        if not path.exists():
+            continue
+        extra = json.loads(path.read_text())
+        assign(pack, path)
+        for sheet in extra.get("sheets", {}).values():
+            for file in sheet["files"]:
+                assign(pack, LEGACY / "battle" / file)
+        for image in sorted(sprite_images(extra.get("characters", {})).get(ident, set())):
+            assign(pack, LEGACY / f"battle/images/{image}.png")
+        lookups["sprites"][ident] = pack
     riding_manifest = LEGACY / "riding/manifest.json"
     if riding_manifest.exists():
         riding = json.loads(riding_manifest.read_text())

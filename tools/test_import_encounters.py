@@ -1,6 +1,8 @@
+import json
+import tempfile
 import unittest
 from pathlib import Path
-from import_encounters import atoi, build, choices
+from import_encounters import ALBUM_PETS, add_album_pets, atoi, build, choices
 
 ROOT = Path('references/chenmingbiao-stone-age/gmsv/data')
 
@@ -31,5 +33,24 @@ class EncounterImportTests(unittest.TestCase):
         self.assertTrue(data['groups']['125']['invalid_weights'])
         self.assertTrue(data['groups']['141']['invalid_weights'])
         self.assertFalse(data['groups']['88']['invalid_weights'])
+
+    def test_album_pets_are_stat_less_templates_that_never_spawn(self):
+        data={'templates':{'1':{'id':1,'name':'乌力','sprite':100250}},'provenance':{}}
+        with tempfile.TemporaryDirectory() as folder:
+            pets=Path(folder)/'pets.json';album=Path(folder)/'petName.h'
+            pets.write_text(json.dumps({'pets':[{'album':417,'name':'巴雅','face':28542,'sprite':101869}]},ensure_ascii=False))
+            album.write_text('{ 0,\t"乌力" /*"x"*/,\t28001\t},\n//{ 417, "旧名", 1},\n{ 417,    "巴雅",    28542}, //\n',encoding='utf-8')
+            add_album_pets(data,pets,album)
+            self.assertEqual(data['templates']['10417'],{'id':10417,'name':'巴雅','sprite':101869,'pet_flag':1,'source':'8.0','stats_known':False,'album':417,'face':28542})
+            self.assertEqual(data['provenance']['album_pets']['count'],1)
+            album.write_text('{ 417, "别的", 28542},\n',encoding='utf-8')
+            with self.assertRaises(ValueError):add_album_pets({'templates':{},'provenance':{}},pets,album)
+            with self.assertRaises(ValueError):add_album_pets({'templates':{'9':{'name':'巴雅'}},'provenance':{}},pets,Path(folder)/'missing.h')
+
+    def test_shipped_album_pets_have_unique_albums_and_sprites(self):
+        pets=json.loads(ALBUM_PETS.read_text())['pets']
+        self.assertEqual(len({p['album'] for p in pets}),len(pets))
+        self.assertEqual(len({p['sprite'] for p in pets}),len(pets))
+        self.assertTrue(all(100000<p['sprite']<110000 and 28000<p['face']<29000 for p in pets))
 
 if __name__=='__main__':unittest.main()

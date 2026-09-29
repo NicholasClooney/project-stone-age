@@ -24,7 +24,24 @@ Recorded checksums (SHA-256). A mismatch is reported as a warning: the upload ch
 
 Both archives also contain Windows executables and libraries. The script excludes them when extracting and never runs anything it downloads. Do not run them.
 
-The 8.0 data contains graphics the 2.5 client lacks (for example the per-character mounted sprites of the later certificate ride pets, 101305 to 101400 and 1019xx, and map graphic 22413). With `--with-8.0` the riding import reads it for those mounts (`--extra-source`, below); every other importer reads the 2.5 files. `--import-only --with-8.0` re-imports with the 8.0 data already extracted. See [original riding](../reverse-engineering/original-riding.md#certificate-mounts).
+The 8.0 data contains graphics the 2.5 client lacks (for example the per-character mounted sprites of the later certificate ride pets, 101305 to 101400 and 1019xx, map graphic 22413, and 313 pet battle sprites). With `--with-8.0` the riding import and the pet battle art import read it (`--extra-source`, below); every other importer reads the 2.5 files. `--import-only --with-8.0` re-imports with the 8.0 data already extracted. See [original riding](../reverse-engineering/original-riding.md#certificate-mounts) and [8.0 pets](../reverse-engineering/pets-8.0.md).
+
+## Pet battle art
+
+`import_encounter_art.py` imports the battle sprite of every pet template, not only the monsters of imported maps, so 宠物大全 shows (nearly) every species. The world's sprites and the GM special pets stay in `battle/manifest.json`; the other pets (458) each get `battle/pets/<sprite>.json`, merged in on first use (`client/scripts/battle_art.gd`) and shipped in their own web pack. Without the 8.0 data, 313 sprites are reported unavailable in `encounters/art-coverage.json` and those species show 无图. `import_encounters.py` also adds 131 later album pets with art but no stats (`docs/reverse-engineering/pets-8.0.json`).
+
+The pet art adds about 280 MB of sheets under `client/assets/legacy/battle/` (350 MB in all), about 300 MB to Godot's import cache, and 370 MB of `sprite-<id>` web packs; the web core pack grows by 0.2 MB.
+
+To bring an existing checkout up to date without a full re-import (8.0 data extracted):
+
+```sh
+PY=.tools/asset-venv/bin/python
+python3 tools/import_encounters.py
+$PY tools/import_encounter_art.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --extra-source .tools/legacy/extracted/SA8.0-20260803
+$PY tools/import_battle_sounds.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+$PY tools/pack_frame_sheets.py battle
+./scripts/run.sh --headless --editor --import --quit
+```
 
 ## Timing
 
@@ -58,7 +75,7 @@ $PY tools/import_riding.py "$CLIENT"         # after characters: riders are chec
 $PY tools/import_grid_cursor.py "$CLIENT"
 $PY tools/import_cursor.py 'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'
 python3 tools/import_encounters.py
-$PY tools/import_encounter_art.py "$CLIENT"
+$PY tools/import_encounter_art.py "$CLIENT"   # every pet's battle sprite; add --extra-source <8.0 data> for the 8.0-only ones
 $PY tools/import_battle_sounds.py "$CLIENT"   # after the sprite importers: every frame's original SE and hit sound
 $PY tools/pack_frame_sheets.py                # last: per-frame PNGs into sprite sheets
 ./scripts/build-fast-hunt.sh                  # optional: the pet hunt's 本机极速模式 helper (needs a C compiler)

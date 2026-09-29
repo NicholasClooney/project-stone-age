@@ -61,7 +61,7 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	# above it; the battle waits for commands until they close.
 	game.battle_view.open_battle(battle_state)
 	refresh_pet_window()
-	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+	var manifest: Dictionary = preload("res://scripts/battle_art.gd").data()
 	if game.showcase_music_active():game.begin_showcase_music()
 	game.set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	game.play_battle_sound(215)

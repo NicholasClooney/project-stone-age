@@ -256,14 +256,19 @@ func _grid_cell(entry: Dictionary) -> Button:
 	stack.add_child(caption)
 	var mine: Dictionary = owned.get(int(entry.id),{})
 	var count := int(mine.get("carried",0))+int(mine.get("stored",0))
-	var note := PetTable.text(("已有%d" % count) if count > 0 else (str(entry.alias) if not str(entry.alias).is_empty() else str(entry.tag)),"meta",PetTable.GOOD if count > 0 else null)
+	var note := PetTable.text(("已有%d" % count) if count > 0 else (str(entry.alias) if not str(entry.alias).is_empty() else (str(entry.tag) if not str(entry.tag).is_empty() else _source_tag(entry))),"meta",PetTable.GOOD if count > 0 else null)
 	note.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	note.add_theme_font_size_override("font_size",11)
 	stack.add_child(note)
 	return cell
 
+## "8.0" for the later pets that have art but no original stats.
+static func _source_tag(entry: Dictionary) -> String:
+	return str(entry.get("source","")) if not bool(entry.get("stats_known",true)) else ""
+
 func _tooltip(entry: Dictionary) -> String:
 	var lines := ["%s%s%s · %s" % [entry.name," "+str(entry.tag) if not str(entry.tag).is_empty() else "","（%s）" % entry.alias if not str(entry.alias).is_empty() else "",entry.family_name]]
+	if not bool(entry.get("stats_known",true)):lines.append("%s 新宠 · 没有原版数值" % entry.get("source",""))
 	var potential: Dictionary = entry.get("potential",{})
 	if not potential.is_empty():lines.append("满档Lv.1练到120：三围合均值 %.1f，前0.1%% %d" % [float(potential.mean_sum),int(potential.top01)])
 	lines.append(Encyclopedia.where_text(entry))
@@ -443,7 +448,7 @@ func _list_row(entry: Dictionary, index: int) -> PanelContainer:
 			"attack","defence","speed","hp":
 				var value = potential.get("mean_"+key,null)
 				row.add_child(PetTable.cell(roundi(float(value)) if value != null else "—",width))
-			"rank":row.add_child(PetTable.cell("%d级" % int(entry.rank),width))
+			"rank":row.add_child(PetTable.cell("%d级" % int(entry.rank) if int(entry.rank) >= 0 else "—",width))
 			"catchable":row.add_child(PetTable.cell("可" if entry.catchable else "否",width,false,PetTable.GOOD if entry.catchable else PetTable.MUTED))
 			"where":
 				var where := PetTable.text(Encyclopedia.where_text(entry),"meta",PetTable.TEXT if entry.catchable else PetTable.MUTED)
@@ -489,7 +494,9 @@ func _build_detail() -> void:
 	top.add_child(heading)
 	if not str(entry.alias).is_empty():top.add_child(PetTable.text(str(entry.alias),"section"))
 	var same: Array = entry.ids.filter(func(id):return int(id) != int(entry.id))
-	top.add_child(PetTable.text("%s · 原表 #%d%s" % [entry.family_name,int(entry.id),"（同值 #%s）" % "、#".join(same.map(func(id):return str(id))) if not same.is_empty() else ""],"meta"))
+	if bool(entry.get("stats_known",true)):
+		top.add_child(PetTable.text("%s · 原表 #%d%s" % [entry.family_name,int(entry.id),"（同值 #%s）" % "、#".join(same.map(func(id):return str(id))) if not same.is_empty() else ""],"meta"))
+	else:top.add_child(PetTable.text("%s · %s 新宠 · 相簿 #%d（无原表）" % [entry.family_name,entry.source,int(entry.album)],"meta"))
 	var columns := HBoxContainer.new()
 	columns.add_theme_constant_override("separation",12)
 	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
@@ -610,6 +617,17 @@ func _detail_stats(entry: Dictionary) -> VBoxContainer:
 	facts.add_theme_constant_override("separation",3)
 	card.add_child(facts)
 	facts.add_child(PetTable.text("原表资料","section"))
+	if not bool(entry.get("stats_known",true)):
+		facts.name = "SpeciesUnknown"
+		for line in ["没有原版数值：参考服的宠物表（enemybase）里没有这只宠物。",
+				"名字来自 8.5 客户端的宠物相簿，战斗图来自 %s 客户端资料。" % entry.source,
+				"初始系数、成长、权重、属性和捕获都不知道，所以不预测 120 级，也不能发放。"]:
+			var text := PetTable.text(line,"body")
+			text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			text.custom_minimum_size = Vector2(390,0)
+			facts.add_child(text)
+		column.add_child(_owned_card(entry))
+		return column
 	var low := 450+20*int(entry.rank)
 	facts.add_child(_fact("初始系数",str(entry.initial)))
 	facts.add_child(_fact("野生成长",("%s（原表按 %d 计算）" % [entry.raw_growth,int(entry.wild_growth)]) if str(entry.raw_growth) != str(entry.wild_growth) else str(entry.wild_growth)))
@@ -709,7 +727,7 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 		var none := PetTable.text("无野外出现","name")
 		none.name = "NoWildSpawn"
 		column.add_child(none)
-		var note := PetTable.text("普通遇敌表里没有它。可能要靠任务、活动、蛋或更高版本才能得到；开发调试可用 GM 调试发放。","meta")
+		var note := PetTable.text("普通遇敌表里没有它。可能要靠任务、活动、蛋或更高版本才能得到；"+("开发调试可用 GM 调试发放。" if bool(entry.get("stats_known",true)) else "没有原版数值，GM 调试也不能发放。"),"meta")
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		note.custom_minimum_size = Vector2(400,0)
 		column.add_child(note)

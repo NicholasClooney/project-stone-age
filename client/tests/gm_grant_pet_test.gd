@@ -54,7 +54,13 @@ func rules() -> void:
 			break
 	if missing > 0:
 		check(not game.gm_grant_pet(missing) and game.last_error.contains("战斗图未导入"),"a template without imported battle art is refused (%d)" % missing)
+	check(not game.gm_grant_pet(10417) and game.last_error.contains("没有原版数值"),"a later album pet with art but no original stats (巴雅, 10417) is refused")
 	check(game.snapshot()==before,"a refusal changes nothing")
+	# A pet no map spawns, whose art lives in its own file (BattleArt extra sprite).
+	var extra_template := 1177
+	check(preload("res://scripts/battle_art.gd").is_extra(int(templates[str(extra_template)].sprite)),"布里萨尔's sprite is kept in its own file")
+	check(game.gm_grant_pet(extra_template) and game.snapshot().pets[-1].name=="布里萨尔","and it can be granted like the special pets")
+	game._profile.pets.pop_back()
 	for entry in SpecialPets.LIST:
 		check(SpecialPets.unavailable_reason(int(entry[0])).is_empty(),"%s can be granted" % entry[1])
 	# Rideable like any owned pet once the rules allow it.

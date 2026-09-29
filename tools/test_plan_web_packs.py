@@ -74,6 +74,24 @@ class PlanWebPacksTest(unittest.TestCase):
                 for frame in animation["frames"]:
                     self.assertIn(str(int(frame["image"])), sheet["frames"], ident)
 
+    def test_every_extra_pet_sprite_pack_holds_its_file_and_sheet(self):
+        import json
+        battle = json.loads((LEGACY / "battle/manifest.json").read_text())
+        if not battle.get("extra_sprites"):
+            self.skipTest("no pet sprites kept in their own files")
+        core = set(self.plan["packs"]["core"])
+        for ident, name in battle["extra_sprites"].items():
+            extra = json.loads((LEGACY / "battle" / name).read_text())
+            contents = set(self.plan["packs"][self.plan["sprites"][ident]])
+            self.assertIn(f"{plan_web_packs.RES}battle/{name}", contents, ident)
+            self.assertNotIn(f"{plan_web_packs.RES}battle/{name}", core, ident)
+            sheet = extra["sheets"][ident]
+            for file in sheet["files"]:
+                self.assertIn(f"{plan_web_packs.RES}battle/{file}", contents, ident)
+            for animation in extra["characters"][ident].values():
+                for frame in animation["frames"]:
+                    self.assertIn(str(int(frame["image"])), sheet["frames"], ident)
+
     def test_every_character_pack_holds_its_sheet(self):
         import json
         catalog = json.loads((LEGACY / "characters/catalog.json").read_text())

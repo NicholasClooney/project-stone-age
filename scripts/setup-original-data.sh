@@ -5,7 +5,8 @@
 #   ./scripts/setup-original-data.sh            # everything needed to play on desktop
 #   ./scripts/setup-original-data.sh --web      # also the Godot web export templates
 #   ./scripts/setup-original-data.sh --with-8.0 # also the 8.0 client data (1.2 GB download),
-#                                               # used for the certificate ride mounts
+#                                               # used for the certificate ride mounts and
+#                                               # about 300 pet battle sprites
 #   ./scripts/setup-original-data.sh --import-only   # re-run the importers only
 #                                                    # (add --with-8.0 to keep the 8.0 mounts)
 #
@@ -47,7 +48,7 @@ for argument in "$@"; do
     --web) web=1 ;;
     --with-8.0) with80=1 ;;
     --import-only) import_only=1 ;;
-    -h|--help) sed -n '2,26p' "$0"; exit 0 ;;
+    -h|--help) sed -n '2,24p' "$0"; exit 0 ;;
     *) echo "Unknown option: $argument (see --help)" >&2; exit 2 ;;
   esac
 done
@@ -217,7 +218,7 @@ run "$PY" tools/import_riding.py "$CLIENT25" $riding_extra
 run "$PY" tools/import_grid_cursor.py "$CLIENT25"
 run "$PY" tools/import_cursor.py "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/123.cur"
 run python3 tools/import_encounters.py
-# With --with-8.0 the special pets only 8.0 has (机豹, 黑乌力王) get battle art too.
+# Every pet template's battle sprite; with --with-8.0 also the 313 only 8.0 has (机豹, 黑乌力王, the album pets).
 # shellcheck disable=SC2086
 run "$PY" tools/import_encounter_art.py "$CLIENT25" $riding_extra
 # After every sprite importer: each frame's original sound effect and hit sound.

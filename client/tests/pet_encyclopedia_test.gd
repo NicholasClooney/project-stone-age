@@ -6,6 +6,7 @@ const Encyclopedia = preload("res://scripts/pet_encyclopedia.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
 const Rules = preload("res://server/progression.gd")
 const Shortcuts = preload("res://scripts/shortcuts.gd")
+const BattleArt = preload("res://scripts/battle_art.gd")
 var failures := 0
 func _initialize():call_deferred("run")
 func check(ok: bool, note: String) -> void:
@@ -59,7 +60,19 @@ func core() -> void:
 	var reverse: Array = Encyclopedia.ranked(book.species,book.order,"sum",true)
 	check(reverse[0] == ranked[-1] or float(book.species[reverse[0]].potential.get("mean_sum",-1)) == float(book.species[ranked[-1]].potential.get("mean_sum",-1)),"reverse ranking starts at the lowest")
 	var by_rank: Array = Encyclopedia.ranked(book.species,book.order,"rank")
-	check(int(book.species[by_rank[0]].rank) == 0 and int(book.species[by_rank[-1]].rank) >= int(book.species[by_rank[0]].rank),"成长级 sorts 0 first")
+	check(int(book.species[by_rank[0]].rank) == 0 and int(book.species[by_rank[-1]].rank) == -1,"成长级 sorts 0 first, unknown (8.0 pets) last")
+	# Every pet's battle sprite is imported (tools/import_encounter_art.py);
+	# only two 8.0 sprites point at a missing bitmap in the original data.
+	var pictured: Array = book.order.filter(func(id):return Thumbs.has_art(int(book.species[id].sprite)))
+	var missing: Array = book.order.filter(func(id):return not Thumbs.has_art(int(book.species[id].sprite))).map(func(id):return str(book.species[id].name))
+	check(book.order.size() >= 570 and missing.size() <= 2,"%d of %d species have battle art; without: %s" % [pictured.size(),book.order.size(),"、".join(missing)])
+	# The later pets from the 8.5 album: art from the 8.0 data, no original stats.
+	var baya: Dictionary = book.entry_for(10417)
+	check(baya.name == "巴雅" and not baya.stats_known and baya.source == "8.0" and baya.potential.is_empty() and baya.locations.is_empty() and int(baya.rank) == -1,"巴雅 (album 417): an 8.0 pet with no stats, no prediction, no wild spawn")
+	check(BattleArt.is_extra(int(baya.sprite)) and Thumbs.has_art(int(baya.sprite)) and not AnimatedPortraitFrames(int(baya.sprite)).is_empty(),"its sprite (%d) lives in its own file and loads on demand" % int(baya.sprite))
+	check(book.species[book.families.filter(func(f):return f.species.has(10417))[0].species[0]].family_name == "沃斯姆系","and it joins its album page's family")
+	var unknown: Array = book.order.filter(func(id):return not book.species[id].stats_known)
+	check(unknown.size() == 131 and unknown.all(func(id):return int(id) >= 10000),"131 stat-less 8.0 species, template 10000 + album number")
 	check(book.filtered("人龙").has(92) and not book.filtered("",true).has(304) and book.filtered("",true).has(113),"search by family name; 只看野外可抓 drops 机暴")
 	# The shipped JSON against the project's own GDScript rules: 200 full-grade
 	# blue dragons caught at Lv.1 and grown to 120.
@@ -80,6 +93,9 @@ func core() -> void:
 	var best: Dictionary = book.owned_best(profile,blue)
 	var projected := Rules.project_pet(own,120)
 	check(best.count == 2 and best.best_sum >= int(projected.attack)+int(projected.defence)+int(projected.speed),"best owned Lv.120 三围合 uses the exact projection (%d)" % best.best_sum)
+
+static func AnimatedPortraitFrames(sprite: int) -> Array:
+	return preload("res://scripts/animated_portrait.gd").animation_for(str(sprite),3,1).get("frames",[])
 
 func window() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
@@ -108,6 +124,9 @@ func window() -> void:
 	menu.show_species(304)
 	await process_frame
 	check(menu.body.find_child("NoWildSpawn",true,false) != null,"机暴's page says 无野外出现")
+	menu.show_species(10417)
+	await process_frame
+	check(menu.body.find_child("SpeciesUnknown",true,false) != null and menu.body.find_child("PotentialLv1",true,false) == null and menu.body.find_child("SpeciesPortrait",true,false) != null,"巴雅's page shows its sprite and says it has no original stats")
 	# 瞬移去抓 rules with a fake teleport: refused in battle, nothing moves.
 	var moves: Array = []
 	menu.travel = func(plan: Dictionary) -> bool:
