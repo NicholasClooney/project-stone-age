@@ -1,6 +1,7 @@
 extends RefCounted
-## Neutral-element, unmounted physical combat from gmsv/battle/battle_event.c.
-## DuckCheck:667; DamageCalc:1041; CriticalCheck:1136; CounterCalc:1205.
+## Physical combat from gmsv/battle/battle_event.c, 属性相克 included.
+## DuckCheck:667; DamageCalc:1041; AttrAdjust:946; CriticalCheck:1136; CounterCalc:1205.
+const Elements = preload("res://server/elements.gd")
 static func odds(a: Dictionary, d: Dictionary, mode: String) -> float:
 	var attack := float(a.get("dex",a.get("speed",10)))
 	var defence := float(d.get("dex",d.get("speed",7)))
@@ -46,6 +47,9 @@ static func resolve(a: Dictionary, d: Dictionary, rng: RandomNumberGenerator, gu
 	if defence > attack: damage = rng.randi_range(0,1)
 	elif attack < defence*8.0/7.0: damage = rng.randi_range(0,int(attack/16.0))
 	else: damage = int((attack-defence)*2.0 + rng.randi_range(0,int(attack/8.0))-attack/16.0)
+	# BATTLE_DamageCalc:1117 applies 属性 to the base damage, before the
+	# critical bonus (CriDamageCalc:1267) and the guard roll.
+	damage = Elements.adjust(Elements.battle_power(a),Elements.battle_power(d),damage)
 	if critical: damage += int(float(d.get("critical_defence",d.get("defence",0)))*float(a.get("level",1))/maxf(1,float(d.get("level",1)))*0.5)
 	if guard:
 		# BATTLE_GuardAdjust:1013: weighted retention of 0/10/20/30/40/50%.

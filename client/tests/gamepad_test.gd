@@ -43,7 +43,9 @@ func run() -> void:
 	await press(JOY_BUTTON_X)
 	check(game.adventure_menu.visible and game.adventure_menu.kind=="status","X opens the status menu")
 	await frames()
-	check(pad.candidates(game.adventure_menu).is_empty() and pad.target==null,"disabled allocation arrows are never highlighted")
+	# The 属性 bars (PlayerElements) are the status window's only live control.
+	var status_controls: Array = pad.candidates(game.adventure_menu).map(func(control): return str(control.name))
+	check(status_controls==["PlayerElements"],"disabled allocation arrows are never highlighted")
 	await press(JOY_BUTTON_B)
 	check(not game.adventure_menu.visible,"B closes the menu")
 

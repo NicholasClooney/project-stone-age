@@ -60,6 +60,12 @@ const PetStatFilter=preload("res://scripts/pet_stat_filter.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const Riding = preload("res://scripts/riding.gd")
+const Elements = preload("res://server/elements.gd")
+const ElementBars = preload("res://scripts/element_bars.gd")
+## 属性 editor on the status window: open, and the draft in creation points
+## (0..10 per element, login.cpp's nowSelCharAttr).
+var element_editor_open := false
+var element_draft: Array = []
 ## Facing of the pet window's portrait; the original starts at 1 each time it opens.
 var pet_portrait_facing := 1
 var name_edit: LineEdit
@@ -95,6 +101,7 @@ func open_menu(next_kind: String) -> void:
 	# 宠物记录 opens on purpose only (open_pet_records sets it after this).
 	pet_records_open = false
 	pet_rename = false
+	element_editor_open = false
 	pet_portrait_facing = 1
 	feedback = ""
 	selected_pet = maxi(0,int(world.session.snapshot().active_pet))
@@ -279,6 +286,22 @@ func status_panel(profile: Dictionary) -> void:
 	var base_keys := ["vitality","strength","toughness","dexterity"]
 	for i in range(base_keys.size()):label(str(int(int(p.base_stats[base_keys[i]])/100)),base_positions[i],28,13)
 	label("石币 %d" % p.gold,Vector2(18,331),248,13)
+	var elements: Array = Elements.of(p) if p.has("elements") else Elements.PLAYER_DEFAULT
+	ElementBars.add(panel,elements,Vector2(178,179),20)
+	# The whole bar column opens the 属性 editor (character creation is deferred).
+	var element_button := Button.new()
+	element_button.name = "PlayerElements"
+	element_button.position = Vector2(176,176)
+	element_button.size = Vector2(86,76)
+	element_button.focus_mode = Control.FOCUS_NONE
+	for style in ["normal","hover","pressed","focus"]:element_button.add_theme_stylebox_override(style,StyleBoxEmpty.new())
+	element_button.tooltip_text = "属性：%s（点击调整）" % Elements.text(elements)
+	element_button.pressed.connect(func():
+		element_editor_open = not element_editor_open
+		element_draft = elements.map(func(v):return int(v)/10)
+		rebuild())
+	panel.add_child(element_button)
+	if element_editor_open:element_editor(elements,48 if int(p.get("stat_points",0))<=0 else 296)
 	# Classic menu.cpp11801-11808: center(136,180) plus original
 	# ADRN offsets: LEVEL UP POINT(-71,88), UP(-26,109).
 	if int(p.get("stat_points",0))>0:
@@ -319,6 +342,48 @@ func status_panel(profile: Dictionary) -> void:
 		var distribute:=choice("剩余点均分到勾选项",Vector2(289,201),"distribute_stats")
 		distribute.name="DistributeStats"
 		label("只分配剩余点；余数按体腕耐速分配。",Vector2(294,244),225,12)
+
+## The creation screen's 属性 choice: 10 points over at most two neighbouring
+## elements, with the original buttons' rules (Elements.creation_step).
+func element_editor(current: Array, top: float) -> void:
+	if element_draft.size()!=4:element_draft = current.map(func(v):return int(v)/10)
+	stone(Rect2(280,top,256,192))
+	label("属性",Vector2(294,top+10),220,17)
+	var left := 10
+	for value in element_draft:left -= int(value)
+	label("剩余 %d 点 · 相克：地→水→火→风→地" % left,Vector2(294,top+36),230,12)
+	for i in range(4):
+		var y := top+62+i*26
+		label("%s属性" % Elements.NAMES[i],Vector2(298,y),60,14).add_theme_color_override("font_color",ElementBars.COLORS[i])
+		label(str(int(element_draft[i])*10),Vector2(360,y),40,14)
+		for plus in [false,true]:
+			var step := Button.new()
+			step.name = "Element%s%d" % ["Plus" if plus else "Minus",i]
+			step.text = "+" if plus else "−"
+			step.position = Vector2(410 if not plus else 450,y-2)
+			step.size = Vector2(32,24)
+			step.focus_mode = Control.FOCUS_NONE
+			var index := i
+			step.pressed.connect(func():
+				element_draft = Elements.creation_step(element_draft,index,plus)
+				rebuild())
+			panel.add_child(step)
+	var chosen: Array = element_draft.map(func(v):return int(v)*10)
+	var confirm: Button = world.button("确定",func():
+		if world.session.set_player_elements(chosen):
+			element_editor_open = false
+			refresh("属性已改为 %s。" % Elements.text(chosen))
+		else:refresh("属性需分配满 10 点，且最多两种相邻属性。"))
+	confirm.name = "ElementConfirm"
+	confirm.position = Vector2(300,top+170-16)
+	confirm.disabled = not Elements.valid_player(chosen) or chosen==current
+	panel.add_child(confirm)
+	var cancel: Button = world.button("取消",func():
+		element_editor_open = false
+		rebuild())
+	cancel.name = "ElementCancel"
+	cancel.position = Vector2(420,top+170-16)
+	panel.add_child(cancel)
 
 func item_name(key: String) -> String:
 	return {"potion":"耐久力回复药","club":"小棍棒","healing_charm":"恢复护符（辅助）","mirror_charm":"美丽尼亚护身符1"}.get(key,key)
@@ -469,6 +534,15 @@ func pet_panel(profile: Dictionary) -> void:
 	for i in range(4):
 		var value:=str([pet.attack,pet.defence,pet.speed,pet.get("loyalty","—")][i])
 		label(value,Vector2(70,178+i*24),45,13)
+	# menu.cpp:15215: 属性 bars beside the four stat rows (x+159, y+5).
+	var pet_elements := Elements.of(pet)
+	ElementBars.add(panel,pet_elements,Vector2(179,183),24)
+	var element_hint := Control.new()
+	element_hint.name = "PetElements"
+	element_hint.position = Vector2(178,180)
+	element_hint.size = Vector2(84,88)
+	element_hint.tooltip_text = "属性：%s" % Elements.text(pet_elements)
+	panel.add_child(element_hint)
 	# menu.cpp:12777 MakeAnimDisp(x+200,y+144,graNo,ANIM_DISP_PET): the standing
 	# loop, first facing 1 (menu.cpp:1881); a click turns it (menu.cpp:1177).
 	var portrait_view:=AnimatedPortrait.new()

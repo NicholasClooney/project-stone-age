@@ -39,6 +39,7 @@ const PROFILE_COMMANDS := {
 	"set_pet_favorite":["set_pet_favorite",["pet_id","favorite"]],
 	"allocate_stat":["allocate_stat",["stat","amount"]],
 	"distribute_stats":["distribute_stats",["stats"]],
+	"set_player_elements":["set_player_elements",["elements"]],
 	"learn_pet_skill":["learn_pet_skill",["index","skill_id"]],
 	"set_character":["set_character",["id"]],
 	"accept_quest":["accept_quest",[]],

@@ -9,7 +9,8 @@ Reference: `references/chenmingbiao-stone-age/gmsv/`.
 | Behavior | Source | Restoration |
 |---|---|---|
 | Dodge | `battle/battle_event.c:667` | Agility/type scaling, square-root probability, luck, 75% cap; guarding cannot dodge. |
-| Physical damage | `battle/battle_event.c:1041` | Piecewise damage and original 1/16 attack variance. Neutral elements, no riding. |
+| Physical damage | `battle/battle_event.c:1041` | Piecewise damage and original 1/16 attack variance. |
+| 属性相克 | `battle/battle_event.c:946`, `:1117` | Applied to the base damage before the critical bonus; see [elements](elements.md). |
 | Critical hit | `battle/battle_event.c:1136`, `:1267` | Original probability; bonus is target defence × attacker level / target level × 0.5. |
 | Guard | `battle/battle_event.c:1013`, `:1470` | Weighted retention of 0/10/20/30/40/50% damage; tiny damage resolves to 0 or 1. |
 | Counter | `battle/battle_event.c:1205`, `:2770`, `:2911` | Agility/weapon probability, attack-command eligibility and 75% damage. |
@@ -33,7 +34,7 @@ Reference: `references/chenmingbiao-stone-age/gmsv/`.
 
 `classic_combat_test.gd` exercises indexed capture, roster capacity, switch/withdraw/return, independent targets, two-strike frames, original probability calculations, and seeded misses/criticals/counters. `battle_rules_test.gd` retains deterministic replay, terminal-state, guard and actor-order checks.
 
-Elemental adjustments, riding, ranged weapons, status effects and the rest of the original skill catalogue are outside this physical-combat subset. Capture chance and escape escalation remain the explicitly documented early-game rules. Enemy encounter composition and formation size are a playable subset, not a complete reproduction of historical encounter tables. Classic and reference profiles currently share neutral elemental treatment.
+Riding, ranged weapons, status effects and the rest of the original skill catalogue are outside this physical-combat subset. Capture chance and escape escalation remain the explicitly documented early-game rules. Enemy encounter composition and formation size are a playable subset, not a complete reproduction of historical encounter tables. 属性相克 is applied inside the damage step; see [elements](elements.md).
 
 ## Native formation and hit timing
 

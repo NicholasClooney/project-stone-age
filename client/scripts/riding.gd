@@ -1,6 +1,7 @@
 extends RefCounted
 ## Native composite lookup. No rider sprite is painted on top of a pet.
 const PATH := "res://assets/legacy/riding/manifest.json"
+const Elements = preload("res://server/elements.gd")
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
 static var _manifest: Dictionary = {}
 
@@ -79,6 +80,9 @@ static func adjusted_stats(player: Dictionary, pet: Dictionary, combat_profile: 
 	result["critical_defence"] = float(player.get("defence",0))
 	result.attack = 0.8*(float(player.get("attack",0))+float(pet.get("attack",0)))
 	result.defence = 0.7*(float(player.get("defence",0))+float(pet.get("defence",0)))
+	# BATTLE_GetAttr (battle_event.c:840): the rider fights with the averaged
+	# 属性 of rider and mount, unless the profile enables _BATTLE_NEWPOWER.
+	result["attr_pow"] = Elements.mounted_power(Elements.of(player),Elements.of(pet),combat_profile)
 	if defending:
 		result.speed = 0.1*float(player.get("speed",0))+0.9*float(pet.get("speed",0))
 	elif combat_profile == "reference":

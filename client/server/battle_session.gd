@@ -63,6 +63,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["turn_order"] = initial_order
 	_state["turn_frames"] = []
 	_state["player_level"] = int(config.get("player_level",1))
+	_state["player_elements"] = config.get("player_elements",[0,0,0,0]).duplicate()
 	_state["last_pet_command"] = "attack"
 	_state["enemy_target"] = ""
 	_state["can_capture"] = bool(config.get("can_capture",true)) and not bool(config.get("boss",false))
@@ -274,7 +275,7 @@ func _pet_action(command: String) -> void:
 	_attack_enemy(stats,str(stats.get("name","伙伴")))
 
 func _player_stats(defending: bool = false) -> Dictionary:
-	var stats := {"kind":"player","attack":_config.get("player_attack",10),"defence":_config.get("player_defence",0),"speed":_config.get("player_speed",10),"level":_config.get("player_level",1),"vital":_config.get("player_vital",0),"luck":_config.get("player_luck",0),"weapon":_config.get("player_weapon","")}
+	var stats := {"kind":"player","attack":_config.get("player_attack",10),"defence":_config.get("player_defence",0),"speed":_config.get("player_speed",10),"level":_config.get("player_level",1),"vital":_config.get("player_vital",0),"luck":_config.get("player_luck",0),"weapon":_config.get("player_weapon",""),"elements":_config.get("player_elements",[0,0,0,0])}
 
 	stats["dex"] = float(_config.get("player_speed",10))
 	var index := int(_state.get("ride_pet",-1))

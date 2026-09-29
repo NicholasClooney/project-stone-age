@@ -111,6 +111,7 @@ func rename_pet(index: int, pet_name: String) -> bool:return request({"type":"re
 func set_pet_favorite(pet_id: String, favorite: bool) -> bool:return request({"type":"set_pet_favorite","pet_id":pet_id,"favorite":favorite})
 func allocate_stat(stat: String, amount: int = 1) -> bool:return request({"type":"allocate_stat","stat":stat,"amount":amount})
 func distribute_stats(stats: Array) -> bool:return request({"type":"distribute_stats","stats":stats})
+func set_player_elements(elements: Array) -> bool:return request({"type":"set_player_elements","elements":elements})
 func learn_pet_skill(index: int, skill_id: int) -> bool:return request({"type":"learn_pet_skill","index":index,"skill_id":skill_id})
 func set_character(id: String) -> bool:return request({"type":"set_character","id":id})
 func accept_quest() -> bool:return request({"type":"accept_quest"})

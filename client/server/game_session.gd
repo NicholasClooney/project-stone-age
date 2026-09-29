@@ -6,6 +6,7 @@ const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
 const Progression = preload("res://server/progression.gd")
+const Elements = preload("res://server/elements.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
@@ -52,7 +53,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0}},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
@@ -112,11 +113,12 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.player_luck = int(player.get("luck",0))
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "club" if _profile.equipped else ""
+	config.player_elements = player_elements()
 	config.allies = []
 	config.ally_pets = []
 	if clone_squad_enabled:
 		for i in range(4):
-			config.allies.append({"name":"分身 %d" % (i+1),"character_id":str(_profile.character_id),"kind":"player","weapon":config.player_weapon,"hp":player.hp,"max_hp":player.max_hp,"attack":config.player_attack,"defence":player.defence,"speed":player.speed,"level":player.level,"vital":config.player_vital,"luck":0})
+			config.allies.append({"name":"分身 %d" % (i+1),"character_id":str(_profile.character_id),"kind":"player","weapon":config.player_weapon,"hp":player.hp,"max_hp":player.max_hp,"attack":config.player_attack,"defence":player.defence,"speed":player.speed,"level":player.level,"vital":config.player_vital,"luck":0,"elements":config.player_elements.duplicate()})
 			var mirror: Dictionary = config.allies.back()
 			mirror.mount = config.ride_pet.duplicate(true)
 			mirror.mounted_sprite = config.mounted_sprite
@@ -849,6 +851,9 @@ func load_game(path: String) -> bool:
 				# Preserve existing prototype gains, credit missed allocation once.
 				_profile.player.allocated_stats = {"vitality":0,"strength":0,"toughness":0,"dexterity":0}
 			Progression.migrate_player(_profile.player)
+			# Saves before 属性 (or with an illegal choice) get the default.
+			if not Elements.valid_player(_profile.player.get("elements")):_profile.player.elements = Elements.PLAYER_DEFAULT.duplicate()
+			else:_profile.player.elements = _profile.player.elements.map(func(v):return int(v))
 			var all_pets: Array=_profile.pets+_profile.pet_storage
 			for i in range(all_pets.size()):
 				var pet: Dictionary=all_pets[i]
@@ -1022,6 +1027,18 @@ func distribute_stats(stats: Array) -> bool:
 	for i in range(unique.size()):
 		var amount:=each+(1 if i<remainder else 0)
 		if amount>0:allocate_stat(unique[i],amount)
+	return true
+
+## The player's 属性 [地,水,火,风] in stored points.
+func player_elements() -> Array:
+	var value: Variant = _profile.player.get("elements")
+	return value.map(func(v):return int(v)) if Elements.valid_player(value) else Elements.PLAYER_DEFAULT.duplicate()
+
+## The creation-screen 属性 choice (char.c:110-128). Character creation is
+## deferred, so the choice stays open outside battle.
+func set_player_elements(elements: Variant) -> bool:
+	if not _pending.is_empty() or not Elements.valid_player(elements):return false
+	_profile.player.elements = elements.map(func(v):return int(v))
 	return true
 
 func effective_player_stats() -> Dictionary:

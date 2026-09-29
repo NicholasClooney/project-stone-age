@@ -6,6 +6,7 @@ signal return_requested
 signal sound_requested(ident: int)
 signal capture_music_requested(celebrating: bool)
 
+const Elements = preload("res://server/elements.gd")
 const PetSkills = preload("res://scripts/pet_skills.gd")
 const BattleEffects = preload("res://scripts/battle_effects.gd")
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
@@ -1197,6 +1198,8 @@ func hover_actor_text(index: int) -> String:
 	elif index>=12: level=int(state.get("allies",[])[index-12].get("level",0))
 	elif enemy_index(index)>=0: level=int(enemies_of(state)[enemy_index(index)].get("level",state.get("enemy_level",0)))
 	var text := "%s%s  体力 %d/%d" % [actor_name,"  Lv.%d" % level if level>0 else "",maxi(0,displayed_hp[index]),maximum]
+	var elements := hover_elements(index)
+	if elements.size()==4:text += "  属性 %s" % Elements.text(elements)
 	# mouse.cpp:690-746 exposes friendly HP; enemy HP is _STONDEBUG_ only
 	# at797-818. Exposing it here is an intentional single-player convenience.
 	if index==0 and not displayed_mount.is_empty():
@@ -1205,6 +1208,22 @@ func hover_actor_text(index: int) -> String:
 		var mount: Dictionary = displayed_ally_mounts[index-12]
 		if not mount.is_empty(): text += "  骑宠 %s  体力 %d/%d" % [mount.get("name",""),mount.get("hp",0),mount.get("max_hp",0)]
 	return text
+
+## The hovered fighter's stored 属性, or [] when the slot has no fighter.
+func hover_elements(index: int) -> Array:
+	var actor: Dictionary = {}
+	if index==0:return state.get("player_elements",[])
+	elif index==2:actor = state.get("pet",{})
+	elif index>=16:
+		var pets: Array = state.get("ally_pets",[])
+		if index-16<pets.size():actor = pets[index-16]
+	elif index>=12:
+		var allies: Array = state.get("allies",[])
+		if index-12<allies.size():actor = allies[index-12]
+	elif enemy_index(index)>=0:
+		var foes: Array = enemies_of(state)
+		if enemy_index(index)<foes.size():actor = foes[enemy_index(index)]
+	return [] if actor.is_empty() else Elements.of(actor)
 
 func update_hover_info(point: Vector2) -> void:
 	# Reset the normal report before applying this frame's transient hover.
