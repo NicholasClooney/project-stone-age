@@ -17,6 +17,8 @@ Use the simplest supported tile or sprite composition for available assets. A re
 
 Keep logical coordinates separate from screen projection. Store actor foot position for collision and depth sorting. Let map geometry determine projection; do not assume a square screen grid matches the source world.
 
+The current scene script and its helpers are described in [where things live in the game scene](game-scripts.md).
+
 ## After server integration
 
 Input creates movement/interaction intents. The connection delivers authoritative snapshots or events. Scene nodes display these values; UI never writes directly into inventory, quest, or battle authority.

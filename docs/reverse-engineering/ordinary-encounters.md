@@ -45,7 +45,7 @@ Checks include original IDs/weights/levels, inclusive boundaries and overlap pre
 
 ## Integrated gameplay scope
 
-`game.gd` checks source encounter pressure after a completed non-portal wilderness step. DEV forced encounters use the current ordinary region, moving to Samgir wilderness only from a safe map. The original MVP boss stays an explicit separate challenge. Missing animation troops are rejected before creating pending authority state; no replacement or reroll changes the source distribution.
+The game scene checks source encounter pressure after a completed non-portal wilderness step (`handle_arrival` in `client/scripts/game/game_areas.gd`). DEV forced encounters use the current ordinary region, moving to Samgir wilderness only from a safe map. The original MVP boss stays an explicit separate challenge. Missing animation troops are rejected before creating pending authority state; no replacement or reroll changes the source distribution.
 
 `GameSession.start_wild_battle_config` preserves source actors. Capture eligibility is checked both during commands and settlement; captures retain wild level, base stats, growth rolls and source template identity. Saves validate the template and sprite, and captured companions can use the existing pet collection, growth forecast and battle flow. Ten-enemy display uses the two original rows and per-enemy targeting. Source raw enemy XP is connected to the existing MVP reward distribution; this is not a claim of full original team/level-dependent XP settlement. Captures currently restore full HP on acquisition, matching the existing MVP convention; original capture-health behavior has not been audited.
 
