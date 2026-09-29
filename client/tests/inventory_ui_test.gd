@@ -62,6 +62,9 @@ func run() -> void:
 	check(menu.panel.get_node("Allocate_vitality").visible,"Remaining point shows UP buttons")
 	check(menu.panel.get_node("Allocate_vitality").position==Vector2(110,289),"Original UP position includes ADRN offsets")
 	check(menu.panel.get_node("Allocate_dexterity").position==Vector2(230,309),"Original second row advances exactly20 pixels")
+	# menu.cpp:11754: the face at (209,118) less its ADRN offset (-32,-36).
+	var face: TextureRect=menu.panel.get_node("StatusFace")
+	check(face.position==Vector2(177,82) and face.texture!=null and face.texture.get_size()==Vector2(64,72),"Status window shows the original character face")
 	await click(menu.panel.get_node("Allocate_vitality"))
 	await process_frame
 	check(not menu.panel.get_node("Allocate_vitality").visible,"Spending final earned point hides UP buttons")

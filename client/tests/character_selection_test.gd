@@ -50,6 +50,16 @@ func run() -> void:
 	game.character_selection.buttons[chosen].pressed.emit()
 	await frames()
 	check(game.player.character_id == chosen and game.session.snapshot().character_id == chosen,"preview button selects and persists exact original appearance")
+	# 人物面部: the chosen appearance's original face, eye and mouth arrows.
+	var faces = preload("res://scripts/faces.gd")
+	var chooser = game.character_selection
+	check(chooser.face_view.texture != null and chooser.face_view.texture == faces.texture(chosen,0),"chooser shows the appearance's original face")
+	check(faces.number("100000",0)==30000 and faces.number("100235",24)==31199 and faces.number("100025",7)==30132,"face number: 30000 + family*100 + colour*25 + eye*5 + mouth")
+	chooser.find_child("Face_眼睛_next",true,false).pressed.emit()
+	chooser.find_child("Face_嘴巴_prev",true,false).pressed.emit()
+	await frames()
+	check(int(game.session.snapshot().face)==9 and chooser.face_view.texture == faces.texture(chosen,9),"eye +1 and mouth -1 (wrapping) change the saved face")
+	check(not game.session.set_face(25) and not game.session.set_face(-1),"faces outside 0..24 are refused")
 	var actor = game.character_selection.buttons[chosen].get_child(0)
 	var old_elapsed: float = actor.elapsed
 	await create_timer(0.15).timeout
@@ -65,7 +75,7 @@ func run() -> void:
 	var path := "user://character-selection-test.json"
 	check(game.session.save_game(path),"selected appearance saves")
 	var restored = preload("res://server/game_session.gd").new()
-	check(restored.load_game(path) and restored.snapshot().character_id == chosen,"selected appearance restores")
+	check(restored.load_game(path) and restored.snapshot().character_id == chosen and int(restored.snapshot().face)==9,"selected appearance and face restore")
 	check(not restored.set_character("100001") and not restored.set_character("999999"),"weapon-only and invalid appearance IDs rejected")
 	var old := restored.snapshot()
 	old.erase("character_id")

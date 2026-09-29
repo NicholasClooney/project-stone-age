@@ -873,6 +873,7 @@ func _valid_profile(value: Variant) -> bool:
 	if value is Dictionary and value.has("gm_modified") and not value.gm_modified is bool:return false
 	if value is Dictionary and value.has("gm_bonus_points") and not _integer(value.gm_bonus_points,0,100000):return false
 	if value is Dictionary and value.has("character_id") and not _valid_character(value.character_id):return false
+	if value is Dictionary and value.has("face") and not _integer(value.face,0,24):return false
 	if value is Dictionary and value.has("travel_pass") and not value.travel_pass is bool:
 		return false
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
@@ -1081,6 +1082,14 @@ func _valid_character(id: Variant) -> bool:
 	if FileAccess.file_exists(path):
 		var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
 		return catalog.get("characters",{}).has(id)
+	return true
+
+## 人物面部: which of the appearance's 25 original faces (eye * 5 + mouth,
+## client login.cpp:3401) the status window shows. It keeps its eye and mouth
+## when the appearance changes.
+func set_face(face: int) -> bool:
+	if not _pending.is_empty() or face < 0 or face > 24:return false
+	_profile.face = face
 	return true
 
 func set_character(id: String) -> bool:

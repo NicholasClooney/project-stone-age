@@ -114,6 +114,7 @@ func distribute_stats(stats: Array) -> bool:return request({"type":"distribute_s
 func set_player_elements(elements: Array) -> bool:return request({"type":"set_player_elements","elements":elements})
 func learn_pet_skill(index: int, skill_id: int) -> bool:return request({"type":"learn_pet_skill","index":index,"skill_id":skill_id})
 func set_character(id: String) -> bool:return request({"type":"set_character","id":id})
+func set_face(face: int) -> bool:return request({"type":"set_face","face":face})
 func accept_quest() -> bool:return request({"type":"accept_quest"})
 func claim_quest() -> bool:return request({"type":"claim_quest"})
 func grant_starter_pets() -> bool:return request({"type":"grant_starter_pets"})

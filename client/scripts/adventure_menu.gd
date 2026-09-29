@@ -66,6 +66,7 @@ const ElementBars = preload("res://scripts/element_bars.gd")
 ## (0..10 per element, login.cpp's nowSelCharAttr).
 var element_editor_open := false
 var element_draft: Array = []
+const Faces = preload("res://scripts/faces.gd")
 ## Facing of the pet window's portrait; the original starts at 1 each time it opens.
 var pet_portrait_facing := 1
 var name_edit: LineEdit
@@ -279,7 +280,20 @@ func status_panel(profile: Dictionary) -> void:
 	var effective: Dictionary = world.session.effective_player_stats()
 	image(26073,Vector2.ZERO)
 	label("旅行者",Vector2(22,43),140,14)
-	portrait(int(profile.get("character_id","100000")),Vector2(177,84),Vector2(64,68))
+	# menu.cpp:11754 StockDispBuffer(x+209, y+118, pc.faceGraNo): the
+	# original face, centred by its ADRN offset. Without imported faces the
+	# battle portrait stands in.
+	var character := str(profile.get("character_id","100000"))
+	var face_texture := Faces.texture(character,int(profile.get("face",0)))
+	if face_texture!=null:
+		var face_view := TextureRect.new()
+		face_view.name = "StatusFace"
+		face_view.texture = face_texture
+		face_view.position = Vector2(209,118)+Faces.offset(character,int(profile.get("face",0)))
+		face_view.mouse_filter = Control.MOUSE_FILTER_IGNORE
+		panel.add_child(face_view)
+	else:
+		portrait(int(character),Vector2(177,84),Vector2(64,68))
 	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(effective.attack),str(effective.defence),str(effective.speed),"—"]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
 	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]

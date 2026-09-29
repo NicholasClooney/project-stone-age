@@ -4,6 +4,8 @@ Open **设置 → 换角色** or press **Tab**. The developer chooser displays o
 
 This is a developer convenience panel, not a reconstruction of the historical character-creation screen. The selected character changes appearance only; it does not reroll progression or equipment.
 
+Above the grid the chooser shows the appearance's original face (人物面部) with the creation screen's 眼睛 and 嘴巴 arrows (five of each). The chosen face is saved in the profile (`face`), keeps its eye and mouth when the appearance changes, and appears in the status window. See [character faces](../reverse-engineering/character-faces.md); import with `tools/import_faces.py` after `tools/import_characters.py`.
+
 ## Import and evidence
 
 Run after `tools/import_battle.py`:

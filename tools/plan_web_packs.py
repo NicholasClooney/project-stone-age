@@ -89,6 +89,13 @@ def plan() -> dict:
         for image in sorted(images):
             assign(pack, LEGACY / f"images/{image}.png")
         lookups["characters"][ident] = pack
+    # The status window's face (tools/import_faces.py) travels with the character.
+    faces_manifest = LEGACY / "faces/manifest.json"
+    if faces_manifest.exists():
+        for ident, sheet in json.loads(faces_manifest.read_text()).get("sheets", {}).items():
+            if ident in lookups["characters"]:
+                for name in sheet.get("files", []):
+                    assign(lookups["characters"][ident], LEGACY / "faces" / name)
 
     signatures = collections.defaultdict(set)
     for image, count in use.items():

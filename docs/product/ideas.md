@@ -24,6 +24,12 @@
 - 讨论：战斗中可开宠物（含仓库、同种比较、宠物记录）、宠物大全、设置、游戏助手和电台，快捷键照常，战斗在后面继续。正在战斗的宠物（出战宠、骑宠、打着的削血宠）由服务器拒绝放生、存仓、换出战和下骑，按钮变灰写明原因；五人镜像队是复制品，不算。手动战斗开着窗口时指令不响应，关掉再操作。
 - 去向：`feat(client): open pets and other windows during battles`（`docs/technical/game-scripts.md`「Windows over a battle」、`docs/technical/backend-interface.md`）
 
+## 2026-09-29 · 人物面部 · ✅
+
+- 想法：状态窗口和角色选择像原版一样显示人物的脸。
+- 结论：从原版资源导入全部 48 个造型各 25 张脸（眼睛×嘴巴各 5 种，编号 30000 + 造型×100 + 颜色×25 + 眼×5 + 嘴），状态窗口按原位置显示；换角色窗口可像原版创建角色时那样选眼睛和嘴巴，换造型时保留。
+- 去向：`feat/face-charm-loyalty`（`docs/reverse-engineering/character-faces.md`，导入 `tools/import_faces.py`）
+
 ## 2026-09-29 · 想法记录文档 · ✅
 
 - 想法：把玩家提过的想法、讨论结论和去向集中记下来，不散落在对话里；以前聊过的想法也要从聊天记录里补回来。

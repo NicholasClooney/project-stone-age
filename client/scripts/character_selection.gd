@@ -4,6 +4,11 @@ var world: Node2D
 var shell: PanelContainer
 var previous_pause := false
 var buttons: Dictionary = {}
+const Faces = preload("res://scripts/faces.gd")
+## 人物面部: the chosen appearance's face with the original creation screen's
+## eye and mouth choices (login.cpp:3545-3592, five of each, wrapping).
+var face_view: TextureRect
+var face_label: Label
 func configure(owner: Node2D) -> void:world = owner
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -62,6 +67,31 @@ func _build() -> void:
 	close.text = "关闭 [Esc]"
 	close.pressed.connect(close_menu)
 	heading.add_child(close)
+	var face_row := HBoxContainer.new()
+	face_row.add_theme_constant_override("separation",8)
+	content.add_child(face_row)
+	face_view = TextureRect.new()
+	face_view.name = "FacePreview"
+	face_view.custom_minimum_size = Vector2(64,72)
+	face_view.stretch_mode = TextureRect.STRETCH_KEEP_CENTERED
+	face_row.add_child(face_view)
+	var face_controls := VBoxContainer.new()
+	face_row.add_child(face_controls)
+	face_label = Label.new()
+	face_controls.add_child(face_label)
+	for part in [["眼睛",5],["嘴巴",1]]:
+		var row := HBoxContainer.new()
+		face_controls.add_child(row)
+		var caption := Label.new()
+		caption.text = str(part[0])
+		row.add_child(caption)
+		for step in [-1,1]:
+			var arrow := Button.new()
+			arrow.text = "◀" if step < 0 else "▶"
+			arrow.name = "Face_%s_%s" % [part[0],"prev" if step < 0 else "next"]
+			var unit: int = part[1]
+			arrow.pressed.connect(func(): change_face(unit,step))
+			row.add_child(arrow)
 	var scroll := ScrollContainer.new()
 	scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
 	content.add_child(scroll)
@@ -106,10 +136,26 @@ func character_packs() -> Array:
 		if not pack.is_empty() and not pack in packs:packs.append(pack)
 	return packs
 
+## Eye (unit 5) or mouth (unit 1) one step on, wrapping within 0..4.
+func change_face(unit: int, step: int) -> void:
+	var face := int(world.session.snapshot().get("face",0))
+	var eye := int(face/5)
+	var mouth := face%5
+	if unit == 5:eye = (eye+step+5)%5
+	else:mouth = (mouth+step+5)%5
+	if world.session.set_face(eye*5+mouth):
+		world.play_click()
+	_refresh()
+
 func _refresh() -> void:
-	var current: String = world.session.snapshot().get("character_id","100000")
+	var profile: Dictionary = world.session.snapshot()
+	var current: String = profile.get("character_id","100000")
 	for id in buttons:
 		buttons[id].modulate = Color("f8d678") if id == current else Color.WHITE
+	if face_view != null:
+		var face := int(profile.get("face",0))
+		face_view.texture = Faces.texture(current,face)
+		face_label.text = "人物面部 · 眼睛 %d · 嘴巴 %d" % [int(face/5)+1,face%5+1] if face_view.texture != null else "人物面部未导入（tools/import_faces.py）"
 func _layout() -> void:
 	if shell == null:return
 	shell.position = Vector2(maxf(8,(size.x-858)/2),maxf(8,(size.y-690)/2))
