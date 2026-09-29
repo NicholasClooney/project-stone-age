@@ -1,4 +1,5 @@
 extends Node2D
+class_name GameScene
 
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const Backend = preload("res://server/backend.gd")
@@ -8,6 +9,10 @@ const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const AssetPacks = preload("res://scripts/asset_packs.gd")
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
+## Behaviour split out of this script (see docs/technical/game-scripts.md);
+## each helper is created first in _init and reaches the state through `game.`.
+const GameRemote = preload("res://scripts/game/game_remote.gd")
+var _remote
 
 ## Resolves when AssetPacks finishes one ensure() call.
 class PackWaiter extends RefCounted:
@@ -196,6 +201,7 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_remote = GameRemote.new(self)
 	remote_url = _server_url()
 	state = ClientState.new()
 	if remote_url.is_empty():
@@ -214,19 +220,6 @@ func _init() -> void:
 	if link.is_local():state.apply(link.request({"type":"hello","protocol":Backend.PROTOCOL}).snapshot)
 	link.message.connect(_on_backend_message)
 
-## Remote backend address: an explicit override, then --server=ws://host:port,
-## then on the web the page's ?server= parameter or the page host's port 8781.
-func _server_url() -> String:
-	if not server_url_override.is_empty():return server_url_override
-	for argument in OS.get_cmdline_user_args():
-		if argument.begins_with("--server="):return argument.trim_prefix("--server=")
-	if OS.has_feature("web"):
-		var chosen = JavaScriptBridge.eval("new URLSearchParams(window.location.search).get('server') || ''",true)
-		if chosen is String and not chosen.is_empty():return chosen
-		var host = JavaScriptBridge.eval("window.location.hostname",true)
-		var secure = JavaScriptBridge.eval("window.location.protocol==='https:'",true)
-		return "%s://%s:8781" % ["wss" if secure else "ws",str(host) if host is String and not str(host).is_empty() else "localhost"]
-	return ""
 
 func _sync_persistence() -> void:
 	if backend!=null:backend.save_path = save_path if profile_persistence else ""
@@ -1942,177 +1935,13 @@ func _typing_in(panel: Control) -> bool:
 	var focused := get_viewport().gui_get_focus_owner()
 	return focused is LineEdit and panel.is_ancestor_of(focused) and Time.get_ticks_msec()-_last_typing_msec < TYPING_GRACE_MSEC
 
-func report_position() -> void:
-	link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"client":_client_id})
-
-## Walks (one cell) or jumps to where another device put the character, and
-## loads its map when that differs. Returns true while a mirrored move runs.
-func _step_follow() -> bool:
-	if _follow.is_empty() or area_transition_busy or battle_view.visible:return false
-	var map_id: int = _follow[0]
-	var target: Vector2i = _follow[1]
-	_followed = [map_id,target]
-	if map_id!=int(data.map_id):
-		_follow = []
-		load_area_id(map_id,target)
-		return true
-	if target==cell:
-		_follow = []
-		return false
-	var d := target-cell
-	if maxi(absi(d.x),absi(d.y))==1:
-		player.facing = (SCREEN_DIRECTIONS.find(d)+4)%8
-		from_cell = cell
-		target_cell = target
-		step_progress = 0
-		moving = true
-		_following_step = true
-		player.set_action(4)
-	else:
-		_follow = []
-		cell = target;from_cell = target;target_cell = target;logical_position = Vector2(target)
-		player.position = project(logical_position);player.set_action(3)
-		camera.reset_smoothing();refresh_companion();queue_redraw()
-	return true
-
-func _on_map_reported(reply: Dictionary) -> void:
-	var workflow_pause := str(reply.get("paused",""))
-	if workflow_pause.is_empty():return
-	last_adventure_message="找宠流程暂停："+workflow_pause
-	if is_instance_valid(message):message.text=last_adventure_message
-
-## Remote start: wait for the backend's first snapshot before building the map.
-func _connect_remote() -> void:
-	_build_link_overlay()
-	link.connected.connect(_on_link_connected)
-	link.disconnected.connect(_on_link_disconnected)
-	link.connect_now()
-	await link.connected
-
-func _build_link_overlay() -> void:
-	var layer := CanvasLayer.new()
-	layer.layer = 150
-	add_child(layer)
-	# Before the first snapshot the notice sits on the waiting screen's art,
-	# dimmed like the rest of the overlay, on every build that has it.
-	if ResourceLoader.exists(WaitingScreen.IMAGE):
-		_link_backdrop = ColorRect.new()
-		_link_backdrop.color = WaitingScreen.BACKDROP
-		_link_backdrop.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		_link_backdrop.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		var art := TextureRect.new()
-		art.texture = load(WaitingScreen.IMAGE)
-		art.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-		art.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		art.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_CENTERED
-		art.mouse_filter = Control.MOUSE_FILTER_IGNORE
-		_link_backdrop.add_child(art)
-		layer.add_child(_link_backdrop)
-	link_overlay = ColorRect.new()
-	link_overlay.color = Color(0,0,0,0.72)
-	link_overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
-	link_overlay.mouse_filter = Control.MOUSE_FILTER_STOP
-	layer.add_child(link_overlay)
-	var column := VBoxContainer.new()
-	column.set_anchors_and_offsets_preset(Control.PRESET_CENTER)
-	column.grow_horizontal = Control.GROW_DIRECTION_BOTH
-	column.grow_vertical = Control.GROW_DIRECTION_BOTH
-	column.alignment = BoxContainer.ALIGNMENT_CENTER
-	column.add_theme_constant_override("separation",16)
-	link_overlay.add_child(column)
-	_link_status = text("",20)
-	_link_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
-	column.add_child(_link_status)
-	_update_link_overlay()
-
-## True while the backend is unreachable; the overlay then owns all input.
-func link_blocked() -> bool:
-	return is_instance_valid(link_overlay) and link_overlay.visible
-
-func _update_link_overlay() -> void:
-	if not is_instance_valid(link_overlay):return
-	var blocked: bool = not link.online
-	if blocked!=link_overlay.visible:
-		link_overlay.visible = blocked
-		if blocked:
-			clear_input()
-			path.clear()
-	if is_instance_valid(_link_backdrop):
-		_link_backdrop.visible = blocked and data.is_empty()
-		link_overlay.color.a = 0.45 if _link_backdrop.visible else 0.72
-	if not blocked:return
-	if data.is_empty():
-		_link_status.text = "正在连接 MacBook 上的服务器\n%s …" % remote_url
-	else:
-		var retry: int = link.retry_seconds()
-		_link_status.text = "与 MacBook 上的服务器断开连接\n%s\n自动战斗和找宠会在服务器上继续。" % ("%d 秒后重试…" % retry if retry > 0 else "正在重连…")
-
-func _on_link_connected() -> void:
-	if data.is_empty() or not is_instance_valid(battle_view):return
-	_on_automation_settings()
-	# Resync presentation to the backend's current battle and progress.
-	if state.battle_open and not battle_view.visible and not training_helper.compact_active:present_battle_start(state.battle)
-	elif not state.battle_open and battle_view.visible:present_battle_close(str(state.battle.get("outcome","")))
-	report_position()
-	message.text = _offline_summary()
-
-func _on_link_disconnected() -> void:
-	_offline_profile = state.full_profile()
-	_offline_battles = int(state.automation.get("battles",0))
-	if is_instance_valid(message):message.text = "与服务器的连接中断，正在重连…"
-
-func _offline_summary() -> String:
-	if _offline_profile.is_empty():return "已重新连接服务器。"
-	var now: Dictionary = state.full_profile()
-	var parts: PackedStringArray = ["已重新连接"]
-	var battles := int(state.automation.get("battles",0))-_offline_battles
-	if battles > 0:parts.append("离线期间自动战斗 %d 场" % battles)
-	if int(now.player.level)!=int(_offline_profile.player.level):parts.append("等级 %d → %d" % [_offline_profile.player.level,now.player.level])
-	var caught: int = now.pets.size()+now.get("pet_storage",[]).size()-_offline_profile.pets.size()-_offline_profile.get("pet_storage",[]).size()
-	if caught > 0:parts.append("新伙伴 %d 只" % caught)
-	_offline_profile = {}
-	return " · ".join(parts)
-
-## Paced automation waits until this client has finished animating a turn.
-func acknowledge_presentation() -> void:
-	if not bool(state.automation.get("running",false)) or not is_instance_valid(battle_view) or not battle_view.visible or battle_view.is_animating():return
-	var key := "%s:%d" % [str(state.battle.get("battle_id","")),int(state.battle.get("turn",0))]
-	if key==_presented_key:return
-	_presented_key = key
-	link.request({"type":"presented","battle_id":str(state.battle.get("battle_id","")),"turn":int(state.battle.get("turn",0))})
-
-func _on_backend_message(event: Dictionary) -> void:
-	if not is_inside_tree() or data.is_empty() or not is_instance_valid(battle_view):return
-	match str(event.type):
-		"battle_started":present_battle_start(event.state)
-		"battle_turn":present_battle_turn(event.state)
-		"battle_closed":present_battle_close(str(event.outcome))
-		"profile":
-			if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(bool(state.options.get("clone_squad",false)))
-			_mark_ui_stale()
-			_on_automation_settings()
-			if is_instance_valid(radio):radio.on_profile()
-		"pet_storage":
-			_mark_ui_stale()
-		"auto_status":
-			for node in [training_helper,pet_hunt_menu,pet_workflow]:
-				if is_instance_valid(node):node.on_status(event.status)
-		"auto_event":_on_auto_event(event.detail)
-		"rejected":
-			var reason := str(event.get("reason",""))
-			if not reason.is_empty():message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
-		"position":
-			if str(event.get("client",""))!=_client_id:
-				_follow = [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
-				pending_talk = false
-				path.clear()
-				if is_instance_valid(travel_router) and travel_router.active:travel_router.cancel("另一台设备移动了角色。")
-
-func _on_auto_event(detail: Dictionary) -> void:
-	match str(detail.kind):
-		"battle_stopped","battle_refused":
-			if is_instance_valid(training_helper):training_helper.on_event(detail)
-		"hunt_stopped","hunt_refused","hunt_hit":
-			if is_instance_valid(pet_hunt_menu):pet_hunt_menu.on_event(detail)
-		"flow_hunt","flow_paused","flow_stored","flow_compare":
-			if is_instance_valid(pet_workflow):pet_workflow.on_event(detail)
+# ---- remote play and backend events (scripts/game/game_remote.gd) ----
+func _server_url() -> String:return _remote._server_url()
+func report_position() -> void:_remote.report_position()
+func _step_follow() -> bool:return _remote._step_follow()
+func _on_map_reported(reply: Dictionary) -> void:_remote._on_map_reported(reply)
+func _connect_remote() -> void:await _remote._connect_remote()
+func link_blocked() -> bool:return _remote.link_blocked()
+func _update_link_overlay() -> void:_remote._update_link_overlay()
+func acknowledge_presentation() -> void:_remote.acknowledge_presentation()
+func _on_backend_message(event: Dictionary) -> void:_remote._on_backend_message(event)
