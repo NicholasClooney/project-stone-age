@@ -46,6 +46,7 @@ const PROFILE_COMMANDS := {
 	"gm_grant_points":["gm_grant_points",["amount"]],
 	"gm_heal":["gm_heal",["index"]],
 	"gm_clear_modified":["gm_clear_modified",["index"]],
+	"gm_grant_pet":["gm_grant_pet",["template","full_grade"]],
 	"set_music_favorite":["set_music_favorite",["track","favorite"]],
 	"create_music_playlist":["create_music_playlist",["name"]],
 	"rename_music_playlist":["rename_music_playlist",["name","new_name"]],

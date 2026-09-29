@@ -48,13 +48,17 @@ static func _preserve(actor: Dictionary) -> void:
 	var result := derived(actor.base_stats)
 	actor.legacy_stat_offset = {}
 	for key in DERIVED:actor.legacy_stat_offset[key] = int(actor[key])-int(result[key])
-static func species_actor(species: String, level: int, seed_value: int) -> Dictionary:
+## offsets fixes the four birth grades (-2..+2 each; [2,2,2,2] is 满档)
+## instead of rolling them; everything else is rolled as usual.
+static func species_actor(species: String, level: int, seed_value: int, offsets: Array = []) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
 	var data: Dictionary = species_definition(species)
 	if data.is_empty():return {}
 	var weights: Array = data.weights.duplicate()
-	for i in range(4):weights[i] += rng.randi_range(-2,2)
+	for i in range(4):
+		var roll := rng.randi_range(-2,2)
+		weights[i] = int(weights[i])+(int(offsets[i]) if offsets.size()==4 else roll)
 	var initial: Array = weights.duplicate()
 	for i in range(10):initial[rng.randi_range(0,3)] += 1
 	var actor := {"base_stats":{},"growth_weights":weights,"growth_rank":5,"growth_seed":seed_value,"hp":1,"learned_skills":[]}

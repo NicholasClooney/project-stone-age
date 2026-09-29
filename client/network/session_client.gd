@@ -96,6 +96,7 @@ func gm_set_base_stat(index: int, stat: String, value: Variant, additive: bool =
 func gm_grant_points(amount: Variant) -> bool:return request({"type":"gm_grant_points","amount":amount})
 func gm_heal(index: int = -2) -> bool:return request({"type":"gm_heal","index":index})
 func gm_clear_modified(index: int = -2) -> bool:return request({"type":"gm_clear_modified","index":index})
+func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:return request({"type":"gm_grant_pet","template":template,"full_grade":full_grade})
 
 ## Developer and test fixtures: the backend issues the config it will accept.
 func start_battle_config(species: String = "wooli", boss: bool = false, enemy_count: int = 1) -> Dictionary:

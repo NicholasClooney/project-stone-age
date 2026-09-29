@@ -6,6 +6,7 @@ const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
 const Progression = preload("res://server/progression.gd")
+const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const MusicLibrary = preload("res://scripts/music_library.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
@@ -994,6 +995,30 @@ func gm_set_base_stat(index: int, stat: String, value: Variant, additive: bool =
 	Progression.refresh(planned)
 	actor.merge(planned,true)
 	_gm_mark(actor)
+	return true
+
+## Developer convenience: a Lv1 pet of any original template whose battle art
+## is imported (special pets no imported map spawns, see
+## docs/reverse-engineering/special-pets.md). Born by the same rules as a
+## caught Lv1 pet; full_grade fixes all four birth grades at +2 (满档). Goes to
+## the party, or the warehouse when the party is full. Not marked
+## gm_modified: the pet is an ordinary birth, not an edited one.
+func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能发放宠物。")
+	if not _integer(template,1,99999):return _gm_error("原表编号须为1至99999的整数。")
+	var species := "original_%d" % int(template)
+	var data: Dictionary = Progression.species_definition(species)
+	if data.is_empty():return _gm_error("没有原表 %d。" % int(template))
+	if not TroopArt.can_render([{"sprite":int(data.sprite)}]):return _gm_error("原表 %d（%s）的战斗图未导入，不能发放。" % [int(template),data.name])
+	_ensure_pet_ids()
+	var pet := Progression.species_actor(species,1,randi(),[2,2,2,2] if full_grade else [])
+	pet.merge({"species":species,"template_id":int(template),"name":str(data.name),"sprite":int(data.sprite),"level":1,"xp":0,"skill_unlocked":false,"elements":data.get("elements",[0,0,0,0]).duplicate(),"size":int(data.get("size",1))})
+	_assign_pet_id(pet)
+	if _profile.pets.size() < PET_CAPACITY:
+		_profile.pets.append(pet)
+		if _profile.pets.size()==1:_profile.active_pet = 0
+	else:_profile.pet_storage.append(pet)
 	return true
 
 func gm_grant_points(amount: Variant) -> bool:
