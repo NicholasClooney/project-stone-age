@@ -17,6 +17,7 @@ const ACTIONS := [
 	["zoom_out","缩小",[KEY_MINUS,KEY_KP_SUBTRACT]],
 	["map","地图",[KEY_M]],
 	["helper","游戏助手",[KEY_G]],
+	["encyclopedia","宠物大全",[KEY_B]],
 	["settings","设置（Esc 固定可用）",[]],
 	["help","操作说明",[KEY_H]],
 	["radio","电台",[]],

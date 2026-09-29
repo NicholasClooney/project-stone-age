@@ -159,6 +159,8 @@ var _automation_settings_json := ""
 var training_helper: Control
 var pet_workflow: Node
 var pet_hunt_menu: Control
+## 宠物大全 (scripts/pet_encyclopedia_menu.gd): species grid, ranking and 瞬移去抓.
+var pet_encyclopedia: Control
 var dev_gm_menu: Control
 var dev_map_overview: Control
 var pet_training: Control

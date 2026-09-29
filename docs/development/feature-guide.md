@@ -24,6 +24,7 @@ What the restored game offers today, with pointers to the detailed notes. The [R
 
 - On first launch **蓝人龙、金虎 and 红暴龙** join once; existing pets and progress stay intact.
 - The pet window has five original rows per page, family filters, separate riding and battle states, an animated portrait (click it to turn the pet), a warehouse, same-species comparison, and a growth forecast against the species' theoretical ceiling (independently optimal attributes, not one attainable perfect pet). See [pet tools](pet-collection-growth.md) and [pet window](../reverse-engineering/pet-window.md).
+- **宠物大全** (游戏助手, **B**, or the pet window): every pet species grouped by family (系) with its original battle sprite; a 列表 ranking by full-grade Lv.120 三围合; species pages with template stats, Lv.120 predictions, your own best pet and wild locations, each with **瞬移去抓** (teleport there and open 自动抓极品 on it). See [宠物大全](pet-encyclopedia.md).
 - **怎样判断极品宠物？** See [宠物品质与成长窗口解读](../game-systems/pet-quality.md) for innate rolls versus actual growth, the +6 preset and default full-grade filter, forecast ranges and comparison limits.
 - Ride from the pet window (**骑乘 · 名字**). Each appearance rides the two species the original table gives it, plus 左迪洛斯 and 红暴龙 (巴朵兰恩, drawn with the character's family-leader mounted art); a disabled button says why a pet cannot be ridden. Mounted art, separate mount HP, damage sharing and mounted experience follow the source. See [riding](../reverse-engineering/riding.md) and [riding evidence](../reverse-engineering/original-riding.md).
 - The item shop sells the mirror accessory (镜之精灵). See [mirror accessory](mirror-accessory.md).
@@ -34,7 +35,7 @@ What the restored game offers today, with pointers to the detailed notes. The [R
 
 ## Toolbar and 设置
 
-- The only button of this project on the game screen is **游戏助手 [G]**, below the classic top-left icons (hidden in battles). **游戏助手** (G) lists this project's windows: 自动练级, 自动抓极品, 宠物 · 同种比较, 电台, 地图导航, 刷怪传送 and, under 开发者, GM 调试. The map window (M) also shows 地图导航 and 刷怪传送 below it.
+- The only button of this project on the game screen is **游戏助手 [G]**, below the classic top-left icons (hidden in battles). **游戏助手** (G) lists this project's windows: 自动练级, 自动抓极品, 宠物 · 同种比较, 宠物大全 (B), 宠物记录, 电台, 地图导航, 刷怪传送 and, under 开发者, GM 调试. The map window (M) also shows 地图导航 and 刷怪传送 below it.
 - **地图导航**: map browser with 地点 / 练级点 / Lv.1宠物 destinations; choose 步行 for portal travel or DEV 传送 for instant visits, and toggle 野外随机遇敌 there. **刷怪传送** offers verified encounter spots for levels 1–120.
 - **音乐** opens the 电台 window, which also has the music switch (M) and the music volume.
 - **设置** (Esc with no window open, the classic taskbar's 系统; H opens its 操作说明): 画面 zoom slider (10% to 200%; a new device starts at 100%), 声音 (music, sound effects, music volume, 电台), 游戏助手, 快捷键 (every shortcut rebindable: click a key slot and press a key, Esc cancels, Backspace clears, a key in use offers 交换, 恢复默认; Esc itself is fixed), 换角色, 瞬移模式 (world clicks become safe instant moves), 保存旅程, **更新日志** with the `v0.MINOR.PATCH` beta version ([versioning](../versioning/version-system.md)) and 操作说明. Volume, the music and effects switches, zoom, 瞬移模式 and the shortcuts are remembered per device (`viewer.cfg`).
@@ -42,4 +43,4 @@ What the restored game offers today, with pointers to the detailed notes. The [R
 - The **五人镜像队** switch is in the 自动练级 window.
 - Removed: the 骑乘 dropdown (ride from the pet window), 立即遇敌, and the Samgir shortcuts 村外探险 / 返回村庄, Villager, 道具店 and 挑战强敌. Without 挑战强敌 the MVP quest's finale can no longer be started.
 
-After re-importing maps or encounters, regenerate the tracked spot indexes with `python3 tools/build_training_spots.py` and `python3 tools/build_level_one_spots.py`.
+After re-importing maps or encounters, regenerate the tracked spot indexes with `python3 tools/build_training_spots.py` and `python3 tools/build_level_one_spots.py`, and 宠物大全's data with `python3 tools/build_pet_families.py` and `python3 tools/build_species_potential.py` ([species potential](../technical/species-potential.md)).

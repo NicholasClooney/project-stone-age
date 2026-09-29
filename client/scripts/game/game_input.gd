@@ -84,6 +84,10 @@ func on_unhandled_input(event: InputEvent) -> void:
 		return
 	if game.data.is_empty():
 		return
+	if is_instance_valid(game.pet_encyclopedia) and game.pet_encyclopedia.visible:
+		if event.is_action_pressed("encyclopedia"):game.pet_encyclopedia.close_menu()
+		game.get_viewport().set_input_as_handled()
+		return
 	if is_instance_valid(game.changelog_menu) and game.changelog_menu.visible:
 		if event.is_action_pressed("ui_cancel"):game.changelog_menu.close_menu()
 		game.get_viewport().set_input_as_handled()
@@ -149,6 +153,8 @@ func on_unhandled_input(event: InputEvent) -> void:
 		if not game.settings_menu.visible:game.helper_menu.open_menu()
 	elif event.is_action_pressed("radio"):
 		game.toggle_radio()
+	elif event.is_action_pressed("encyclopedia"):
+		if not game.settings_menu.visible:game.pet_encyclopedia.open_menu()
 	elif event.is_action_pressed("zoom_in") and not game.paused_input:
 		game.zoom_by(GameScene.ZOOM_STEP)
 	elif event.is_action_pressed("zoom_out") and not game.paused_input:

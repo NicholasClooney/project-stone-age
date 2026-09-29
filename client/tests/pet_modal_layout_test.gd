@@ -9,7 +9,7 @@ func run():
  game.session.grant_starter_pets()
  var menu=game.adventure_menu;menu.open_menu("pets");await process_frame
  var frame:=Rect2(288,0,256,480)
- for name in ["PetCompare","PetStorage","PetGrowthToggle","PetMount","StarterPets","PetRecords","PetHunt"]:
+ for name in ["PetCompare","PetStorage","PetGrowthToggle","PetMount","StarterPets","PetRecords","PetHunt","PetEncyclopedia"]:
   check(frame.encloses(menu.panel.get_node(name).get_rect()),"collection frame contains "+name)
  menu.pet_category="人龙";menu.pet_page=999;menu.pet_view="list";menu.rebuild();await process_frame
  check(menu.pet_page==0,"stale category page clamps before rows")
