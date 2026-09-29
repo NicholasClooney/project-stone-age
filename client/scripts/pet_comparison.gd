@@ -39,18 +39,22 @@ static func average(pet:Dictionary)->Dictionary:
  var result:=Rules.derived(base)
  for key in Rules.DERIVED:result[key]=maxi(0 if key=="defence" else 1,int(result[key])+int(pet.get("legacy_stat_offset",{}).get(key,0)))
  return result
-## Sort keys in their fixed tie-break order, and the comparison's default order.
-const SORT_KEYS:=["stat_total","attack","speed","max_hp","defence"]
+## Stat keys in their fixed tie-break order, the keys a picker offers (the
+## stats, then 抓捕顺序: the pet id number grows with every new pet, so
+## caught_new is newest first and caught_old oldest first), and the default.
+const STAT_KEYS:=["stat_total","attack","speed","max_hp","defence"]
+const SORT_KEYS:=["stat_total","attack","speed","max_hp","defence","caught_new","caught_old"]
 const DEFAULT_ORDER:=["stat_total","attack","speed","max_hp"]
-const SORT_NAMES:={"stat_total":"三围合","attack":"攻击","speed":"敏捷","max_hp":"体力","defence":"防御"}
+const SORT_NAMES:={"stat_total":"三围合","attack":"攻击","speed":"敏捷","max_hp":"体力","defence":"防御","caught_new":"最新抓到","caught_old":"最早抓到"}
 
-## The player's keys (unknown and repeated ones dropped), then every other key
-## in SORT_KEYS order, so any two pets with different stats compare the same way.
+## The player's keys (unknown and repeated ones dropped), then every stat key
+## in STAT_KEYS order, so any two pets with different stats compare the same
+## way. A capture-order key decides every pair by itself (ids are unique).
 static func full_order(order:Variant)->Array:
  var result:=[]
  for key in ([order] if order is String else order if order is Array else []):
   if SORT_KEYS.has(key) and not result.has(key):result.append(key)
- for key in SORT_KEYS:
+ for key in STAT_KEYS:
   if not result.has(key):result.append(key)
  return result
 
@@ -78,18 +82,24 @@ static func rows(profile:Dictionary,selected:Dictionary,order:Variant=DEFAULT_OR
   var av:Dictionary=a.forecast.get("expected",a.pet) if projected else a.pet
   var bv:Dictionary=b.forecast.get("expected",b.pet) if projected else b.pet
   for key in keys:
+   if key=="caught_new" or key=="caught_old":
+    if _id_number(a.pet)!=_id_number(b.pet):return (_id_number(a.pet)>_id_number(b.pet))==(key=="caught_new")
+    continue
    var x:=sort_value(av,key);var y:=sort_value(bv,key)
    if x!=y:return x>y
   if _id_number(a.pet)!=_id_number(b.pet):return _id_number(a.pet)<_id_number(b.pet)
   return str(a.pet.get("pet_id",a.location+str(a.index)))<str(b.pet.get("pet_id",b.location+str(b.index))))
  return result
 
-static func storage_rows(profile:Dictionary)->Array:
+## 宠物仓库 order: favourites first when favorites_first, then order: "" the
+## warehouse's own order, caught_new newest first, caught_old oldest first.
+static func storage_rows(profile:Dictionary,order:String="",favorites_first:bool=true)->Array:
  var result:=[]
  var pets:Array=profile.get("pet_storage",[])
  for index in range(pets.size()):result.append({"pet":pets[index],"index":index})
  result.sort_custom(func(a,b):
-  if bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
+  if favorites_first and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
+  if order in ["caught_new","caught_old"] and _id_number(a.pet)!=_id_number(b.pet):return (_id_number(a.pet)>_id_number(b.pet))==(order=="caught_new")
   return int(a.index)<int(b.index))
  return result
 

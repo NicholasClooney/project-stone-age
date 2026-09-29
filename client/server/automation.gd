@@ -121,6 +121,10 @@ var flow_run_reject_ids: Array = []
 var flow_released_count := 0
 var flow_held_count := 0
 var flow_predicted_rejects := 0
+## 抓宠记录 groups captures by find-pet run: set when a new (not continuing)
+## cycle starts and kept across its restarts.
+var flow_run_id := ""
+var _flow_run_serial := 0
 var flow_best_predicted: Dictionary = {}
 var timer_clock: Callable = Time.get_ticks_msec
 var timer_started_msec := 0
@@ -714,6 +718,9 @@ func start_cycle(continuing: bool) -> bool:
 		flow_reason = "请先结束战斗或移动，再开始一轮找宠。";return false
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		flow_reason = "宠物栏已满，请自行存放伙伴后再开始。";return false
+	if not continuing or flow_run_id.is_empty():
+		_flow_run_serial += 1
+		flow_run_id = "%d-%d" % [int(Time.get_unix_time_from_system()),_flow_run_serial]
 	if not continuing:
 		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_released_count = 0;flow_held_count = 0
 		start_timer()

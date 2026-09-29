@@ -12,6 +12,8 @@ const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const Automation = preload("res://server/automation.gd")
 const KeepRule = preload("res://scripts/keep_rule.gd")
+const ReleaseLog = preload("res://server/release_log.gd")
+const Progression = preload("res://server/progression.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const VILLAGE := {"map_id":1000,"x":80,"y":90}
 const DEBUG_SPECIES := ["wooli","wooli_wooli","woolistan"]
@@ -73,6 +75,10 @@ var save_path := ""
 ## release_log_path; without either the log stays in memory.
 var release_log = preload("res://server/release_log.gd").new()
 var release_log_path := ""
+## 抓宠记录: the same kind of log in <save>.capture-log.jsonl (capture_log_path for tests).
+var capture_log = preload("res://server/release_log.gd").new()
+var capture_log_path := ""
+static var _map_names: Dictionary = {}
 var last_saved_payload := ""
 var rev := 0
 var _storage_json := ""
@@ -108,15 +114,38 @@ func handle(command: Dictionary) -> Dictionary:
 	_flush()
 	return reply
 
-## Appends the pets released by the last command or tick to 放生记录.
+## Appends the pets released or caught by the last command or tick to
+## 放生记录 and 抓宠记录.
 func _record_releases() -> void:
-	if session.release_events.is_empty():return
 	_release_log_file()
-	release_log.append(session.take_release_events())
+	if not session.release_events.is_empty():release_log.append(session.take_release_events())
+	if not session.capture_events.is_empty():capture_log.append(session.take_capture_events().map(_capture_entry))
 
-## The log's file follows the save: <save>.release-log.jsonl, or tests' path.
+## The logs' files follow the save: <save>.release-log.jsonl and
+## <save>.capture-log.jsonl, or tests' paths.
 func _release_log_file() -> void:
 	release_log.path = release_log_path if not release_log_path.is_empty() else (save_path.get_basename()+".release-log.jsonl" if not save_path.is_empty() else "")
+	capture_log.path = capture_log_path if not capture_log_path.is_empty() else (save_path.get_basename()+".capture-log.jsonl" if not save_path.is_empty() else "")
+
+## Where a capture came from: the find-pet cycle (with its run), the hunt's
+## automatic capture battle, or a battle the player fought; GM grants say so.
+func _capture_entry(event: Dictionary) -> Dictionary:
+	var pet: Dictionary = event.pet
+	var source := str(event.get("source",""))
+	if source.is_empty():
+		if automation.flow_active():source = "找宠流程"
+		elif automation.running and str(automation.settings.get("preset",""))=="capture":source = "自动抓宠"
+		else:source = "手动捕获"
+	var lv120: Dictionary = Progression.project_pet(pet,120) if int(pet.get("level",1))<120 else {}
+	return ReleaseLog.capture_entry(pet,lv120,automation.position_map,map_name(automation.position_map),automation.position_cell,source,automation.flow_run_id if source=="找宠流程" else "")
+
+## The map's name from the imported world catalog ("" when unknown).
+static func map_name(map_id: int) -> String:
+	if _map_names.is_empty() and FileAccess.file_exists("res://assets/legacy/world/manifest.json"):
+		var parsed = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/world/manifest.json"))
+		if parsed is Dictionary:
+			for id in parsed.get("maps",{}):_map_names[int(id)] = str(parsed.maps[id].get("name",""))
+	return str(_map_names.get(map_id,""))
 
 ## Battle commands that name the turn they answer. Several devices can drive
 ## one battle; a command for a turn that has already been resolved (another
@@ -214,12 +243,41 @@ func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
 	_publish()
 	return {"ok":true}
 
-## One page of 放生记录, newest first: page (from 0), page_size (1..100,
-## default 20), template_id (-1 for every species).
+## One page of 放生记录 (see _cmd_pet_log).
 func _cmd_release_log(command: Dictionary) -> Dictionary:
+	var asked := command.duplicate()
+	asked.kind = "released"
+	return _cmd_pet_log(asked)
+
+## One page of a pet log, newest first. kind: caught (抓宠记录) or released
+## (放生记录); page (from 0), page_size (1..100, default 20), template_id (-1
+## for every species), run ("" for all, "latest" for the current or most
+## recent find-pet run, or a run id; caught only). Entries are cross-linked:
+## a caught pet later released carries `released` {time, reason, source}, a
+## released pet whose capture is logged carries `caught` {time, map_name,
+## cell, source, run}. The reply's latest_run names the run "latest" means.
+func _cmd_pet_log(command: Dictionary) -> Dictionary:
 	_record_releases()
-	_release_log_file()
-	return {"ok":true,"log":release_log.page(int(command.get("page",0)),int(command.get("page_size",20)),int(command.get("template_id",-1)))}
+	var caught := str(command.get("kind","released"))=="caught"
+	var log = capture_log if caught else release_log
+	var run := str(command.get("run","")) if caught else ""
+	# "latest": the running cycle's run, else the newest run in the log.
+	var latest: String = automation.flow_run_id
+	if latest.is_empty():
+		for item in capture_log.page(0,1).get("runs",[]).slice(0,1):latest = str(item.run)
+	if run=="latest":run = latest if not latest.is_empty() else "none"
+	var page: Dictionary = log.page(int(command.get("page",0)),int(command.get("page_size",20)),int(command.get("template_id",-1)),run)
+	var other: Array = release_log.entries() if caught else capture_log.entries()
+	var by_id := {}
+	for item in other:by_id[str(item.get("pet_id",""))] = item
+	for item in page.entries:
+		var match_item: Dictionary = by_id.get(str(item.get("pet_id","")),{})
+		if match_item.is_empty():continue
+		if caught:item.released = {"time":int(match_item.get("time",0)),"reason":str(match_item.get("reason","")),"source":str(match_item.get("source",""))}
+		else:item.caught = {"time":int(match_item.get("time",0)),"map_name":str(match_item.get("map_name","")),"cell":match_item.get("cell",[]),"source":str(match_item.get("source","")),"run":str(match_item.get("run",""))}
+	page.latest_run = latest
+	page.kind = "caught" if caught else "released"
+	return {"ok":true,"log":page}
 
 ## Drops the listed hunt-stored pets beyond the per-metric keep counts; replies with how many.
 func _cmd_prune_hunt_pets(command: Dictionary) -> Dictionary:

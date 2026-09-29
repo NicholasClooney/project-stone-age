@@ -43,7 +43,7 @@ func run()->void:
 	var overlay=menu.panel.get_node("PetStoragePanel")
 	var first=overlay.find_child("StorageRow_pet-121",true,false)
 	check(first!=null and first.get_index()==0,"star from second page moves to first visible row")
-	check(first.get_combined_minimum_size().x<=overlay.find_children("*","ScrollContainer",true,false)[0].size.x,"warehouse row and all actions fit scroll width")
+	check(first.get_combined_minimum_size().x<=overlay.get_node("StorageScroll").size.x,"warehouse row and all actions fit scroll width")
 	var stats=first.find_child("StorageStats_pet-121",true,false)
 	var stat_line:="攻%d 防%d 敏%d · 三围合%d"%[source.attack,source.defence,source.speed,int(source.attack)+int(source.defence)+int(source.speed)]
 	check(first.tooltip_text.contains("\n"+stat_line),"warehouse description lists attack defence speed and their sum excluding HP")

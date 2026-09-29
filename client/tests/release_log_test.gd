@@ -146,7 +146,7 @@ func remote() -> void:
 	check(await until(func():return not got.is_empty()) and got.entries.size()==1 and got.entries[0].pet_id=="pet-6","a remote device reads the log over the WebSocket")
 	var menu = game.adventure_menu
 	menu.open_release_log(92)
-	check(await until(func():return menu.panel.find_child("ReleaseLogRow_0",true,false)!=null),"放生记录 opens in the pet window and lists the entry")
+	check(await until(func():return menu.panel.find_child("ReleaseLogRow_0",true,false)!=null),"宠物记录 opens on 放生 in the pet window and lists the entry")
 	var row = menu.panel.find_child("ReleaseLogRow_0",true,false)
 	check(row.tooltip_text.contains("pet-6") and row.find_children("*","Label",true,false).any(func(label):return label.text=="手动放生"),"the row shows the pet and why it went")
 	# A 按保留规则选中 release from this device is logged with the rule's reasons.
@@ -157,7 +157,7 @@ func remote() -> void:
 	check(await until(func():return backend.release_log.entries().size()==1+chosen.size()),"the remote release reaches the log")
 	check(backend.release_log.entries().slice(1).all(func(item):return item.source=="保留规则" and chosen.has(item.pet_id)),"and is logged as 保留规则 with the rule's reasons")
 	menu.open_release_log(-1)
-	check(await until(func():return menu.panel.find_child("ReleaseLogSpecies",true,false)!=null and menu.release_log_data.get("total",0)==1+chosen.size()),"the log view refreshes with the new entries")
+	check(await until(func():return menu.panel.find_child("RecordsSpecies",true,false)!=null and menu.records_data.get("total",0)==1+chosen.size()),"the log view refreshes with the new entries")
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.link.close()
 	game.music.stop();game.effect.stop();game.queue_free()

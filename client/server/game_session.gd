@@ -14,6 +14,10 @@ const ReleaseLog = preload("res://server/release_log.gd")
 ## 放生记录 entries for pets released since the backend last took them
 ## (take_release_events); the backend appends them to the log file.
 var release_events: Array = []
+## 抓宠记录 events for pets that joined since the backend last took them
+## ({pet, source}; source is "" for a battle capture, whose source the backend
+## knows, or GM发放).
+var capture_events: Array = []
 const MusicLibrary = preload("res://scripts/music_library.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
@@ -253,6 +257,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 			captured.merge(native)
 		_assign_pet_id(captured)
 		_profile.pets.append(captured)
+		capture_events.append({"pet":captured.duplicate(true),"source":""})
 		if _profile.pets.size() == 1:_profile.active_pet = 0
 	if outcome == "defeat":
 		_recover()
@@ -488,6 +493,12 @@ static func keep_rule_notes(pets: Array, verdict: Dictionary) -> Dictionary:
 func take_release_events() -> Array:
 	var result:=release_events
 	release_events=[]
+	return result
+
+## The 抓宠记录 events collected since the last call.
+func take_capture_events() -> Array:
+	var result:=capture_events
+	capture_events=[]
 	return result
 
 static func _hunt_metric(pet: Dictionary, metric: String) -> int:
@@ -1086,6 +1097,7 @@ func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:
 		_profile.pets.append(pet)
 		if _profile.pets.size()==1:_profile.active_pet = 0
 	else:_profile.pet_storage.append(pet)
+	capture_events.append({"pet":pet.duplicate(true),"source":"GM发放"})
 	return true
 
 func gm_grant_points(amount: Variant) -> bool:

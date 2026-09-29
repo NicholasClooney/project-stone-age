@@ -86,7 +86,11 @@ func release_pets(ids: Array) -> Dictionary:
 ## One page of 放生记录 (newest first); done receives the page dictionary
 ## (entries, total, page, pages, species), or {} when the backend refused.
 func release_log(page: int, page_size: int, template_id: int, done: Callable) -> void:
-	link.request({"type":"release_log","page":page,"page_size":page_size,"template_id":template_id},func(reply: Dictionary):
+	pet_log("released",page,page_size,template_id,"",done)
+## One page of a pet log: kind caught (抓宠记录) or released (放生记录); run
+## "" for all, "latest" for the current or last find-pet run (caught only).
+func pet_log(kind: String, page: int, page_size: int, template_id: int, run: String, done: Callable) -> void:
+	link.request({"type":"pet_log","kind":kind,"page":page,"page_size":page_size,"template_id":template_id,"run":run},func(reply: Dictionary):
 		done.call(reply.get("log",{}) if reply.get("ok",false) else {}))
 func store_pet(index: int, auto_hunt: bool = false) -> bool:return request({"type":"store_pet","index":index,"auto_hunt":auto_hunt})
 func retrieve_pet(index: int) -> bool:return request({"type":"retrieve_pet","index":index})

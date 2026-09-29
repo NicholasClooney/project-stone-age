@@ -1,6 +1,8 @@
 extends RefCounted
-## 放生记录: one JSON line per released pet, newest last, in its own file next
-## to the save (<save>.release-log.jsonl) so loading the save never reads it.
+## A pet log file: one JSON line per entry, newest last, in its own file next
+## to the save so loading the save never reads it. The backend keeps two:
+## 放生记录 (<save>.release-log.jsonl, entry below) and 抓宠记录
+## (<save>.capture-log.jsonl, capture_entry).
 ## The backend appends after each command or tick that released pets; the
 ## file is only read to answer the release_log command or to count its lines
 ## once before the first append. Over CAP + SLACK lines it is rewritten with
@@ -38,6 +40,18 @@ static func entry(pet: Dictionary, where: String, source: String, reason: String
 	if int(result.template_id) < 0 and str(result.species).trim_prefix("original_").is_valid_int():result.template_id = int(str(result.species).trim_prefix("original_"))
 	if int(result.level) < 120 and not judged.is_empty():
 		result.lv120 = {"attack":int(judged.get("attack", 0)), "defence":int(judged.get("defence", 0)), "speed":int(judged.get("speed", 0)), "max_hp":int(judged.get("max_hp", 0))}
+	return result
+
+## One 抓宠记录 entry: the pet as it joined (level and stats at capture),
+## its exact Lv120 stats (lv120), where (map id and name, cell), the source
+## (找宠流程, 自动抓宠, 手动捕获, GM发放) and, for the find-pet cycle, its run id.
+static func capture_entry(pet: Dictionary, lv120: Dictionary, map_id: int, map_name: String, cell: Vector2i, source: String, run: String) -> Dictionary:
+	var result := entry(pet, "", source, "", [], lv120)
+	result.erase("where")
+	result.erase("reason")
+	result.erase("beaten_by")
+	if int(result.level) >= 120:result.erase("lv120")
+	result.merge({"map_id":map_id, "map_name":map_name, "cell":[cell.x, cell.y], "run":run}, true)
 	return result
 
 ## A beater as the log shows it: id, name and the stats it was compared on.
@@ -88,18 +102,30 @@ func entries() -> Array:
 		if parsed is Dictionary:result.append(parsed)
 	return result
 
-## One page, newest first, optionally one species (template id; -1 for all),
-## with the species that appear in the log and their counts.
-func page(number: int, size: int, template_id: int = -1) -> Dictionary:
+## One page, newest first, optionally one species (template id; -1 for all)
+## and one find-pet run (run id; "" for all), with the species in the log and
+## their counts, and the runs newest first (up to 20) with their counts.
+func page(number: int, size: int, template_id: int = -1, run: String = "") -> Dictionary:
 	var all := entries()
 	all.reverse()
+	var runs := []
+	var run_index := {}
+	for item in all:
+		var id := str(item.get("run", ""))
+		if id.is_empty():continue
+		if not run_index.has(id):
+			run_index[id] = runs.size()
+			runs.append({"run":id, "count":0, "time":int(item.get("time", 0))})
+		runs[run_index[id]].count += 1
+		runs[run_index[id]].time = int(item.get("time", 0))
 	var species := {}
 	for item in all:
 		var key := str(int(item.get("template_id", -1)))
 		if not species.has(key):species[key] = {"template_id":int(item.get("template_id", -1)), "name":str(item.get("name", "")), "count":0}
 		species[key].count += 1
 	var chosen := all if template_id < 0 else all.filter(func(item):return int(item.get("template_id", -1)) == template_id)
+	if not run.is_empty():chosen = chosen.filter(func(item):return str(item.get("run", "")) == run)
 	size = clampi(size, 1, MAX_PAGE)
 	var pages := maxi(1, ceili(chosen.size() / float(size)))
 	number = clampi(number, 0, pages - 1)
-	return {"entries":chosen.slice(number * size, (number + 1) * size), "total":chosen.size(), "page":number, "pages":pages, "species":species.values()}
+	return {"entries":chosen.slice(number * size, (number + 1) * size), "total":chosen.size(), "page":number, "pages":pages, "species":species.values(), "runs":runs.slice(0, 20)}
