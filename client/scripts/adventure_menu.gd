@@ -34,8 +34,13 @@ var pet_release_species := ""
 var pet_release_confirm := false
 var pet_release_metric := 0
 var pet_release_below := 620
+## 保留规则 preview: pet_id -> reasons it stays (empty: released), shown on rows.
+var pet_rule_reasons: Dictionary = {}
+var feedback_tooltip := ""
 const RELEASE_METRICS := ["stat_total","attack","defence","speed"]
 const PetComparison=preload("res://scripts/pet_comparison.gd")
+const KeepRule=preload("res://scripts/keep_rule.gd")
+const PetStatFilter=preload("res://scripts/pet_stat_filter.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const Riding = preload("res://scripts/riding.gd")
@@ -631,6 +636,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	compare_sort_controls(overlay)
 	var filter_result_height:=0
 	var info:Label=world.text(feedback if not feedback.is_empty() else "未满级宠物按成长种子精确推算120级属性，可跨等级比较。",12);info.name="PetComparisonInfo";info.position=Vector2(14,89);overlay.add_child(info)
+	# Clear of the page arrows at the right; the whole text is the tooltip.
+	info.clip_text=true;info.size.x=525;info.mouse_filter=Control.MOUSE_FILTER_PASS;info.tooltip_text=info.text+("\n"+feedback_tooltip if not feedback_tooltip.is_empty() else "")
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,196);scroll.size=Vector2(736,396);overlay.add_child(scroll)
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id","")):
 		info.text=world.pet_workflow.reason;info.tooltip_text=info.text;info.clip_text=true;info.size=Vector2(730,60);info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
@@ -663,6 +670,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		var identifier:=str(pet.get("pet_id",str(row.location)+"#"+str(row.index+1)))
 		var stats_line:="当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [pet.max_hp,pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)]
 		if int(pet.level)<120:stats_line+="\n120级 血%d 攻%d 防%d 敏%d · 三围合%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,int(estimate.attack)+int(estimate.defence)+int(estimate.speed)]
+		if pet_rule_reasons.has(identifier):stats_line+="\n"+KeepRule.describe(pet_rule_reasons[identifier])+("（按120级推算）" if int(pet.level)<120 else "")
 		var content:="%s · Lv.%d · %s · ID %s\n%s\n先天 %s%s" % [pet.name,pet.level,"携带" if row.location=="pets" else "仓库",identifier,stats_line,"未知" if q.is_empty() else str(q.offsets)+" 总%+d"%q.total+(" 满档" if q.full else "")," · GM／旧档，不作天然品质判断" if PetComparison.warning(pet) else ""]
 		var text:Label=world.text(content,13);text.name="CompareRow_"+str(row.location)+"_"+str(row.index);text.custom_minimum_size=Vector2(700,100 if int(pet.level)<120 else 85);text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 		if identifier==focus_id:text.modulate=Color("ffe680");text.text="▶ 当前选中 · "+text.text
@@ -751,7 +759,7 @@ func compare_sort_controls(overlay:Control)->void:
 	carried.button_pressed=pet_compare_carried_first;carried.toggled.connect(set_compare_carried_first);overlay.add_child(carried)
 
 func clear_release_selection()->void:
-	pet_release_selected.clear();pet_release_confirm=false
+	pet_release_selected.clear();pet_release_confirm=false;pet_rule_reasons.clear();feedback_tooltip=""
 
 func release_metric_value(pet:Dictionary,metric:String)->int:
 	if metric=="stat_total":return int(pet.attack)+int(pet.defence)+int(pet.speed)
@@ -785,6 +793,33 @@ func release_controls(overlay:Control,profile:Dictionary,rows:Array,top:float)->
 		pet_release_below=int(below.value)
 		var added:=select_release_below(profile,rows,RELEASE_METRICS[pet_release_metric],pet_release_below)
 		feedback="已按条件新增选择 %d 只。"%added;pet_release_confirm=false;rebuild());apply.name="CompareThresholdSelect";picker.add_child(apply)
+	var by_rule:Button=world.button("按保留规则选中",func():select_by_keep_rule(profile);rebuild());by_rule.name="CompareKeepRuleSelect"
+	by_rule.tooltip_text="按自动抓极品「属性条件」里这个品种的保留规则，选中规则外的宠物（只选中，确认后才放生）。收藏、出战、骑乘的不选。";picker.add_child(by_rule)
+
+## 保留规则 preview: selects exactly the pets the species' keep rule would
+## release and remembers why each other pet stays (shown on its row). Nothing
+## is released until the player confirms 放生所选.
+func select_by_keep_rule(profile:Dictionary)->void:
+	var key:=pet_release_species if not pet_release_species.is_empty() else ""
+	if not key.begins_with("original_") or not key.trim_prefix("original_").is_valid_int():
+		feedback="这个品种没有原版编号，不能按保留规则选择。";return
+	var template:=int(key.trim_prefix("original_"))
+	var rule:Dictionary=world.stat_filter(template).get("keep_rule",{})
+	var protected:=KeepRule.always_kept(profile)
+	protected.merge(KeepRule.capture_helpers(profile,world.automation_settings().get("capture",{})))
+	var verdict:=KeepRule.evaluate(KeepRule.species_pets(profile,template),rule,protected)
+	pet_release_selected.clear();pet_release_confirm=false
+	for id in verdict.release:pet_release_selected[str(id)]=true
+	pet_rule_reasons=verdict.reasons
+	var kept:int=verdict.reasons.size()-verdict.release.size()
+	feedback="按保留规则：保留 %d 只，选中放生 %d 只。确认前可取消勾选。"%[kept,verdict.release.size()]
+	feedback_tooltip="保留规则："+describe_keep_rule(rule)+"。收藏、出战、骑乘和削血宠不选。"
+
+static func describe_keep_rule(rule:Dictionary)->String:
+	var stats:Array=rule.get("champion_stats",KeepRule.STATS).map(func(stat):return KeepRule.STAT_NAMES[stat])
+	var text:="最高%d档各留%d只，按%s排" % [int(rule.get("tiers",2)),int(rule.get("per_tier",3)),PetStatFilter.describe_order(rule.get("order",["attack","speed","max_hp"]))]
+	if int(rule.get("champions",2))>0 and not stats.is_empty():text+="；%s各留前%d" % ["、".join(stats),int(rule.get("champions",2))]
+	return text
 
 func select_release_below(profile:Dictionary,rows:Array,metric:String,limit:int)->int:
 	var added:=0

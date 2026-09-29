@@ -8,15 +8,19 @@ extends RefCounted
 ##   training     {xp, compact, hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast}
-##   stat_filters {"<template id>": {mode, stop_after, keep_qualified, rank, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
-##     keep_qualified: 达标只保留前 N 只 (0 keeps every qualifying pet); rank:
-##     the order they are compared in, 1 to 5 distinct keys of sum, attack,
-##     defence, speed, max_hp (pet_stat_filter.gd RANK_KEYS).
+##   stat_filters {"<template id>": {mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
+##     keep_rule: 保留规则 (scripts/keep_rule.gd) {tiers, per_tier, order,
+##     champions, champion_stats, auto}: order is 1 to 5 distinct keys of sum,
+##     attack, defence, speed, max_hp (pet_stat_filter.gd RANK_KEYS);
+##     champion_stats any of attack, defence, speed, max_hp; auto tidies the
+##     whole species after each pet the find-pet cycle stores. It replaced
+##     keep_qualified/rank (达标只保留前 N 只); a stored rank becomes the order.
 ## Per-device choices (battle playback speed, minimized windows) are not here.
 const PATH := "res://data/automation_defaults.json"
 const METRICS := ["sum","attack","defence","speed"]
 const CONDITION_SPEC := {"enabled":["bool"],"value":["int",0,1000000],"strict":["bool"],"keep":["int",0,1000]}
-const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],"keep_qualified":["int",0,1000],"rank":["rank"],
+const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
+const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
@@ -130,10 +134,25 @@ static func sanitize(stored: Variant) -> Dictionary:
 	var filters := {}
 	for id in _dict(stored.get("stat_filters",{})):
 		if not str(id).is_valid_int() or int(str(id))<0:continue
-		var kept := _valid_part(stored.stat_filters[id],FILTER_SPEC)
+		var kept := _valid_part(_migrate_filter(stored.stat_filters[id]),FILTER_SPEC)
 		if not kept.is_empty():filters[str(int(str(id)))] = kept
 	if not filters.is_empty():result.stat_filters = filters
 	return prune(result)
+
+## 达标只保留前 N 只 (keep_qualified, rank) became keep_rule: a rank the player
+## chose becomes the tier order (三围合 is what tiers group by, so it is dropped).
+static func _migrate_filter(value: Variant) -> Variant:
+	if not value is Dictionary or not value.has("rank"):return value
+	var result: Dictionary = value.duplicate(true)
+	var order := []
+	var checked := _leaf(["rank"],result.rank)
+	if not checked.is_empty():
+		for key in checked[0]:
+			if key!="sum":order.append(key)
+	var rule := _dict(result.get("keep_rule",{})).duplicate(true)
+	if not order.is_empty() and not rule.has("order"):rule.order = order
+	if not rule.is_empty():result.keep_rule = rule
+	return result
 
 static func _valid_part(value: Variant, spec: Dictionary) -> Dictionary:
 	var result := {}
@@ -204,6 +223,13 @@ static func _leaf(spec: Array, value: Variant) -> Array:
 				if not item is String or not item in ["sum","attack","defence","speed","max_hp"] or item in keys:return []
 				keys.append(item)
 			return [keys]
+		"stats":
+			if not value is Array or value.size()>4:return []
+			var chosen := []
+			for item in value:
+				if not item is String or not item in ["attack","defence","speed","max_hp"] or item in chosen:return []
+				chosen.append(item)
+			return [chosen]
 		"offsets":
 			if not value is Array or value.size()!=4:return []
 			var result := []

@@ -9,6 +9,7 @@ const Policy = preload("res://scripts/battle_auto_policy.gd")
 const Progression = preload("res://server/progression.gd")
 const HuntRules = preload("res://scripts/pet_hunt_rules.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
+const KeepRule = preload("res://scripts/keep_rule.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
@@ -115,11 +116,9 @@ var flow_collected_count := 0
 var flow_pruned_count := 0
 # Rejects stored by this run; rolling keep only ever prunes among these.
 var flow_run_reject_ids: Array = []
-# Qualifiers this run stored and still holds; 达标只保留前 N 只 (the filter's
-# keep_qualified) releases only among these.
-var flow_run_kept_ids: Array = []
+# 保留规则 with 找宠时自动整理 (the filter's keep_rule.auto): pets it released
+# this run, and how many of the species remain after the last tidy.
 var flow_released_count := 0
-## Of those, how many still count toward the keep (not favourited since).
 var flow_held_count := 0
 var flow_predicted_rejects := 0
 var flow_best_predicted: Dictionary = {}
@@ -716,7 +715,7 @@ func start_cycle(continuing: bool) -> bool:
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		flow_reason = "宠物栏已满，请自行存放伙伴后再开始。";return false
 	if not continuing:
-		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_run_kept_ids = [];flow_released_count = 0;flow_held_count = 0
+		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_released_count = 0;flow_held_count = 0
 		start_timer()
 	flow_map = position_map
 	flow_cell = position_cell
@@ -823,6 +822,7 @@ func complete_trained_pet(found: Dictionary) -> void:
 		flow_last_stored_total = int(found.attack)+int(found.defence)+int(found.speed)
 		flow_last_result = "未达标已存仓 · "+flow_last_result
 		flow_pruned_count += backend.session.prune_hunt_pets(int(found.get("template_id",-1)),StatFilter.keep_counts(flow_target_filter),flow_run_reject_ids)
+		if _tidy_species(found).has(flow_pet_id):flow_last_result = "未达标已存仓，按保留规则放生 · "+flow_last_result.trim_prefix("未达标已存仓 · ")
 		backend.save()
 		backend.publish()
 		# A separate step leaves cancellation/reload a boundary before restarting.
@@ -838,16 +838,10 @@ func complete_trained_pet(found: Dictionary) -> void:
 			stop_cycle("达标但无法存仓："+str(backend.session.last_error));return
 		flow_kept_count += 1
 		flow_collected_count += 1
-		flow_run_kept_ids.append(flow_pet_id)
-		# 达标只保留前 N 只: only the best N of this run's qualifiers stay.
-		var keep_best := int(flow_target_filter.get("keep_qualified",0))
-		var released: Array = backend.session.release_unranked_qualified(int(found.get("template_id",-1)),keep_best,flow_target_filter.get("rank",["sum","attack"]),flow_run_kept_ids)
-		for id in released:flow_run_kept_ids.erase(id)
-		flow_released_count += released.size()
-		flow_held_count = backend.session.qualified_candidates(int(found.get("template_id",-1)),flow_run_kept_ids).size()
+		var released := _tidy_species(found)
 		backend.save()
 		backend.publish()
-		if released.has(flow_pet_id):flow_last_result = "达标但未进前%d，已放生 · %s" % [keep_best,flow_last_result]
+		if released.has(flow_pet_id):flow_last_result = "达标但不在保留规则内，已放生 · "+flow_last_result
 		else:flow_last_result = "达标已存仓 · "+flow_last_result
 		if stop_after>0 and flow_collected_count>=stop_after:
 			freeze_timer()
@@ -866,6 +860,24 @@ func complete_trained_pet(found: Dictionary) -> void:
 	flow_reason = ("已达标 · "+flow_last_result) if filtered else "新伙伴已达到120级，请对比后自行决定去留。"
 	_emit_status()
 	_emit_event({"kind":"flow_compare","pet_id":flow_pet_id,"reason":flow_reason})
+
+## 保留规则 with 找宠时自动整理 on: after a stored pet, the whole species
+## (carried and warehouse) is tidied; favourites, the active pet, the mount and
+## the capture helper stay. Returns the released ids.
+func _tidy_species(found: Dictionary) -> Array:
+	var rule: Dictionary = flow_target_filter.get("keep_rule",{})
+	if not bool(rule.get("auto",false)):return []
+	var template := int(found.get("template_id",-1))
+	var released: Array = backend.session.apply_keep_rule(template,rule,capture_helpers())
+	flow_released_count += released.size()
+	flow_held_count = KeepRule.species_pets(backend.session.snapshot(),template).size()
+	return released
+
+## Carried pets the capture step may use (the chosen helper, or with automatic
+## choice every one at or under the level cap): the tidy never releases them.
+func capture_helpers() -> Dictionary:
+	var capture: Dictionary = AutomationSettings.effective(backend.session.automation_settings()).get("capture",{})
+	return KeepRule.capture_helpers(backend.session.snapshot(),capture)
 
 static func same_capture(pet: Dictionary, actor: Dictionary) -> bool:
 	for key in ["template_id","species","level","growth_weights","growth_seed","growth_rank","base_stats"]:
@@ -889,7 +901,7 @@ func status() -> Dictionary:
 			"threads":fast_threads,"threads_used":threads_used(fast_threads),"cores":ServerSettings.cores()},
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
-			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_best":int(flow_target_filter.get("keep_qualified",0)),"predicted_rejects":flow_predicted_rejects,
+			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
 

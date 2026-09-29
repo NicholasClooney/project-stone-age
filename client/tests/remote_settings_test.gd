@@ -94,14 +94,15 @@ func run() -> void:
 	hunt_a.stat_numbers.sum.value = 640
 	check(await until(func():return int(backend.session.automation_settings().get("stat_filters",{}).get("92",{}).get("conditions",{}).get("sum",{}).get("value",0))==640),"a stat condition reaches the profile")
 	check(await until(func():return int(hunt_b.stat_numbers.sum.value)==640),"device B's attribute tab shows the new condition")
-	# 达标只保留前 N 只 and its order follow too.
-	hunt_a.stat_keep_best.value = 4
+	# 保留规则 follows too.
+	hunt_a.rule_per_tier.value = 4
 	hunt_a.stat_rank[1].select(hunt_a.stat_rank[1].get_item_index(5)) # 体力
+	hunt_a.rule_auto.button_pressed = true
 	hunt_a.save_stat_settings(true)
 	check(await until(func():
-		var chosen: Dictionary = backend.session.automation_settings().get("stat_filters",{}).get("92",{})
-		return int(chosen.get("keep_qualified",0))==4 and chosen.get("rank",[])==["sum","max_hp"]),"the keep count and order reach the profile")
-	check(await until(func():return int(hunt_b.stat_keep_best.value)==4 and hunt_b.rank_choice()==["sum","max_hp"]),"device B's attribute tab shows them")
+		var rule: Dictionary = backend.session.automation_settings().get("stat_filters",{}).get("92",{}).get("keep_rule",{})
+		return int(rule.get("per_tier",0))==4 and rule.get("order",[])==["attack","max_hp"] and bool(rule.get("auto",false))),"the keep rule reaches the profile")
+	check(await until(func():return int(hunt_b.rule_per_tier.value)==4 and hunt_b.rank_choice()==["attack","max_hp"] and hunt_b.rule_auto.button_pressed),"device B's attribute tab shows it")
 
 	# Training settings: per character, except the playback speed.
 	var helper_a = a.training_helper

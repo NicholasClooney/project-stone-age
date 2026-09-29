@@ -9,6 +9,7 @@ const Progression = preload("res://server/progression.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
+const KeepRule = preload("res://scripts/keep_rule.gd")
 const MusicLibrary = preload("res://scripts/music_library.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
@@ -371,7 +372,7 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 	return not profile.has("next_pet_id") or _integer(profile.next_pet_id,largest+1,9007199254740991)
 
 ## auto_hunt marks a stored reject the rolling keep may prune; qualified marks a
-## qualifying pet the find-pet cycle stored (达标只保留前 N 只 may release it).
+## qualifying pet the find-pet cycle stored (shown as 达标; cleared on retrieval).
 func store_pet(index: int, auto_hunt: bool=false, qualified: bool=false) -> bool:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return false
@@ -435,31 +436,22 @@ func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 	_profile.pet_storage=_profile.pet_storage.filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
 	return doomed.size()
 
-# 达标只保留前 N 只: ranks the qualifying pets this find-pet run stored (ids;
-# still in the warehouse with auto_qualified, same template, not favourite) by
-# StatFilter.ranked(order) and releases those beyond keep. Pets from earlier
-# runs, retrieved or favourite pets, and party pets (active, mount) are never
-# candidates. keep 0 releases nothing. Returns the released pet ids.
-func release_unranked_qualified(template_id: int, keep: int, order: Array, ids: Array) -> Array:
+# 保留规则 (scripts/keep_rule.gd), the find-pet cycle's optional tidy: releases
+# the pets of this species, carried or stored, that the rule does not keep.
+# Favourites, the active pet, the mount and `protected` (pet_id -> reason, e.g.
+# the capture helper) always stay. Returns the released pet ids.
+func apply_keep_rule(template_id: int, rule: Dictionary, protected: Dictionary = {}) -> Array:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return []
-	if keep<=0:return []
-	var candidates:=qualified_candidates(template_id,ids)
-	if candidates.size()<=keep:return []
-	var released:=[]
-	for pet in StatFilter.ranked(candidates,order).slice(keep):released.append(str(pet.pet_id))
-	_profile.pet_storage=_profile.pet_storage.filter(func(pet):return not released.has(str(pet.get("pet_id",""))))
-	return released
-
-## The pets release_unranked_qualified ranks: listed, in the warehouse, still
-## marked auto_qualified, not favourite, of this template.
-func qualified_candidates(template_id: int, ids: Array) -> Array:
-	var allowed:={}
-	for id in ids:allowed[str(id)]=true
-	var candidates:=[]
-	for pet in _profile.get("pet_storage",[]):
-		if allowed.has(str(pet.get("pet_id",""))) and pet.get("auto_qualified",false) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
-	return candidates
+	_ensure_pet_ids()
+	var kept:=KeepRule.always_kept(_profile)
+	kept.merge(protected,true)
+	var verdict:=KeepRule.evaluate(KeepRule.species_pets(_profile,template_id),rule,kept)
+	if verdict.release.is_empty():return []
+	var summary:=release_pets(verdict.release)
+	var skipped:={}
+	for entry in summary.get("skipped",[]):skipped[str(entry.id)]=true
+	return verdict.release.filter(func(id):return not skipped.has(str(id)))
 
 static func _hunt_metric(pet: Dictionary, metric: String) -> int:
 	if metric=="sum":return int(pet.attack)+int(pet.defence)+int(pet.speed)
