@@ -1,13 +1,16 @@
 extends SceneTree
-## 展示模式 of the find-pet cycle (server/automation.gd): hits found while busy
-## wait in a queue of at most 10, best first; a queued hit is replayed from its
-## own roll seed before its capture; the reveal card, the capture battle and
-## the shown training battles (10x experience, 五人镜像队 with the best other
-## pets) are presented on this device at 1x; milestone and final cards; the
-## player's settings come back afterwards; the next queued pet starts at once;
-## moving drops the queue.
+## 后台搜宠 (hunt.showcase, AutomationSettings.SHOWCASE_NAME) in the find-pet
+## cycle (server/automation.gd): hits found while the player watches wait in a
+## queue (hunt.queue long, best first; the worst over the limit is written to
+## 放生记录 as 未捕获·排队已满); a queued hit is replayed from its own roll seed
+## and captured in a normal, animated capture battle; then 自动练级 trains it to
+## Lv120 with the player's own 经验倍率, every battle played in full; battle
+## music takes the music player from the radio and loops until the run ends;
+## the top-left info block tells what was found, caught and kept or released.
 const Progression = preload("res://server/progression.gd")
 const Automation = preload("res://server/automation.gd")
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
+const PREFS := "user://showcase-test.cfg"
 var failures := 0
 var clock := 1000
 
@@ -26,19 +29,25 @@ func stats(pet: Dictionary) -> Dictionary:
 
 ## Drives in-process frames: presentation, battle runner and workflow.
 func drive(game, until: Callable, steps: int = 4000) -> bool:
-	var helper = game.training_helper
-	var flow = game.pet_workflow
 	for i in range(steps):
 		if until.call():return true
-		game.battle_view._process(0.25)
-		game.acknowledge_presentation()
-		helper.advance()
-		flow.advance()
-		clock += 250
+		step(game)
 	return bool(until.call())
 
+func step(game) -> void:
+	game.battle_view._process(0.25)
+	game.acknowledge_presentation()
+	game.training_helper.advance()
+	game.pet_workflow.advance()
+	game.pet_workflow.on_status(game.state.automation)
+	clock += 250
+
+func log_kinds(game) -> Array:
+	return game.state.automation.flow.get("log",[]).map(func(line):return str(line.kind))
+
 func run() -> void:
-	var game = load("res://scenes/main.tscn").instantiate();game.profile_persistence = false;root.add_child(game)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
+	var game = load("res://scenes/main.tscn").instantiate();game.profile_persistence = false;game.viewer_prefs_path = PREFS;root.add_child(game)
 	await process_frame
 	game.session.grant_starter_pets()
 	game.load_area_id(100,Vector2i(637,493))
@@ -48,7 +57,21 @@ func run() -> void:
 	var hunt = game.pet_hunt_menu;hunt.set_process(false)
 	var helper = game.training_helper;helper.set_process(false)
 	flow.timer_clock = func():return clock
-	check(bool(game.automation_settings().hunt.showcase) and hunt.showcase.button_pressed,"展示模式 is on by default")
+	check(bool(game.automation_settings().hunt.showcase) and int(game.automation_settings().hunt.queue)==10,"%s is on by default with a queue of 10" % AutomationSettings.SHOWCASE_NAME)
+	check(hunt.showcase.text==AutomationSettings.SHOWCASE_NAME and hunt.capture_page.is_ancestor_of(hunt.showcase) and hunt.capture_page.is_ancestor_of(hunt.showcase_xp) and hunt.capture_page.is_ancestor_of(hunt.showcase_speed) and hunt.capture_page.is_ancestor_of(hunt.queue_size),"the switch, 排队上限, 经验倍率 and 战斗速度 are on 抓宠设置")
+
+	# 经验倍率 and 战斗速度 are 自动练级's own settings, not copies.
+	hunt.open_menu()
+	hunt.showcase_xp.select(3);hunt.showcase_xp.item_selected.emit(3)
+	game.flush_automation_settings()
+	check(int(game.automation_settings().training.xp)==100,"经验倍率 here is 自动练级's training.xp (100×)")
+	hunt.showcase_speed.select(3);hunt.showcase_speed.item_selected.emit(3)
+	check(is_equal_approx(game.playback_speed(),8.0) and is_equal_approx(float(game.viewer_pref("battle_speed",0.0)),8.0),"战斗速度 here is this device's battle speed (8×)")
+	helper.open_menu()
+	check(helper.multiplier.selected==3 and helper.speed.selected==3,"自动练级 shows the same 经验倍率 and 战斗速度")
+	helper.close_menu()
+	# 排队上限: validated like the other hunt settings.
+	check(not bool(game.link.request({"type":"set_automation_settings","settings":{"hunt":{"queue":0}}}).get("ok",false)) and not bool(game.link.request({"type":"set_automation_settings","settings":{"hunt":{"queue":51}}}).get("ok",false)),"排队上限 outside 1 to 50 is refused")
 
 	# A real local newborn, ready to capture, as the fixed troop every roll returns.
 	var fixture := FixedTroop.new()
@@ -63,17 +86,25 @@ func run() -> void:
 	check(not fixture.troop.is_empty(),"a real local newborn is the fixture")
 	var target := int(fixture.troop.enemies[0].template_id)
 	# Qualifiers of this species are stored and the cycle goes on (stop_after 0);
-	# auto tidy with a rule that keeps nothing releases each one after its showcase.
+	# auto tidy with a rule that keeps nothing releases each one after Lv120.
 	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{str(target):{"stop_after":0,"conditions":{"sum":{"enabled":true,"value":1,"strict":false}},"keep_rule":{"tiers":0,"champions":0,"auto":true}}}}})
-	hunt.open_menu();hunt.apply_preset(0)
-	var xp_before: int = game.backend.session.experience_multiplier
+	hunt.apply_preset(0)
+	# The radio plays before the run; the watched battles set it aside.
+	var radio = game.radio
+	var radio_ok: bool = radio.available()
+	if radio_ok:
+		radio.turn_on()
+		await process_frame
+	var radio_track: String = radio.current
 	var clone_before: bool = game.backend.session.clone_squad_enabled
-	check(flow.start_cycle(),"a find-pet cycle starts in 展示模式")
-	check(bool(game.state.automation.flow.showcase),"the status says 展示模式")
+	check(flow.start_cycle(),"a find-pet cycle starts with %s" % AutomationSettings.SHOWCASE_NAME)
+	check(bool(game.state.automation.flow.showcase),"the status says so")
 
-	# Queue: at most 10, the best kept, found while the flow is idle or busy.
+	# Queue: over the limit the worst hit (by the keep rule's order) is dropped
+	# and written to 放生记录 as 未捕获·排队已满.
 	hunt.hunt_catalog = fixture
 	var variants: Array = []
+	game.backend.session.release_events.clear()
 	for i in range(11):
 		var actor: Dictionary = fixture.troop.enemies[0].duplicate(true)
 		actor.growth_seed = 7000+i*37
@@ -84,100 +115,139 @@ func run() -> void:
 	var sorted_sums := sums.duplicate();sorted_sums.sort();sorted_sums.reverse()
 	check(automation.showcase_queue.size()==10,"the queue keeps at most 10")
 	check(kept_sums==sorted_sums.slice(0,10),"best first by predicted 三围合; the lowest is dropped (%s)" % str(kept_sums))
+	var dropped: Array = game.backend.session.release_events.filter(func(e):return str(e.get("source",""))=="排队已满")
+	check(dropped.size()==1 and bool(dropped[0].get("uncaught",false)) and str(dropped[0].where)=="未捕获","the dropped hit goes to 放生记录 as 未捕获·排队已满")
+	check(dropped.size()==1 and str(dropped[0].reason)=="排队已满（上限10），排在第11" and not dropped[0].beaten_by.is_empty() and int(dropped[0].lv120.attack)>0,"with its reason, the hits that beat it and its predicted Lv120 stats")
+	check(log_kinds(game).has("dropped"),"and a line in the info block")
+	# A smaller limit applies to the next run and drops the worst at once.
+	hunt.showcase_xp.select(3)
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"queue":3}}})
+	check(int(game.automation_settings().hunt.queue)==3 and int(hunt.queue_size.value)==3,"排队上限 is saved with the character and shown")
+	automation.flow_hunt_request.queue = 3
+	automation._showcase_enqueue(200,0,{"enemies":[variants[0].duplicate(true)]},{"offsets":[0,0,0,0],"total_offset":0})
+	check(automation.showcase_queue.size()==3,"a limit of 3 keeps the best 3")
 	automation.showcase_queue.clear()
+	game.backend.session.release_events.clear()
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"queue":10}}})
+	automation.flow_hunt_request.queue = 10
 
-	# Real scans while idle: hits queue and the search keeps running.
+	# Real scans: hits queue and the search keeps running.
 	for i in range(3):hunt.scan_once()
 	check(automation.showcase_queue.size()==3 and automation.hunt_running and flow.phase=="hunt","three hits queue while the search keeps running")
-	check(hunt.queue_text()=="后台已找到 3 只在排队","the hunt window shows the queue")
 
-	# Reveal: the best queued hit and its exact Lv120 prediction.
+	# Capture: the best queued hit, replayed from its roll seed, in a normal
+	# capture battle with the capture animation.
 	flow.advance()
-	var card: Dictionary = game.state.automation.flow.card
 	var predicted: Dictionary = Progression.project_pet(fixture.troop.enemies[0],120)
-	check(flow.phase=="reveal" and str(card.kind)=="reveal","the next step reveals the best queued hit")
-	check(card.prediction==stats(predicted) and int(card.sum)==int(predicted.attack)+int(predicted.defence)+int(predicted.speed),"the reveal card carries the exact Lv120 prediction")
-	check(card.rarity is Array and not card.rarity.is_empty() and int(card.queue)==2,"with rarity lines and the queue behind it")
-	check(game.showcase_cards.visible and game.showcase_cards.find_child("ShowcaseTitle",true,false).text.begins_with(str(card.name)),"this device shows the reveal card")
+	check(flow.phase=="capture" and game.battle_view.visible and not game.state.automation.compact,"the capture battle opens right away and is presented")
 	check(not hunt.visible and hunt.minimized,"the hunt window folds to its progress bar")
-	flow.advance()
-	check(flow.phase=="reveal","the card stays for its time")
-
-	# Capture: replayed from its roll seed, then shown at 1x.
-	clock += Automation.REVEAL_MSEC
-	flow.advance()
-	check(flow.phase=="capture" and game.battle_view.visible and not game.state.automation.compact,"the capture battle opens uncompacted and is presented")
-	check(bool(game.state.automation.flow.show_battle) and is_equal_approx(game.battle_view.playback_speed,1.0),"shown battles play at 1x on this device")
-	check(not game.showcase_cards.visible,"the card gives way to the battle")
+	var lines: Array = game.state.automation.flow.log
+	check(str(lines.back().kind)=="found" and str(lines.back().text).contains("三围合%d" % (int(predicted.attack)+int(predicted.defence)+int(predicted.speed))) and str(lines.back().text).contains("排队2"),"the info block says what was found, its Lv120 prediction and the queue (%s)" % str(lines.back().text))
+	flow.on_status(game.state.automation)
+	check(game.showcase_ticker.visible and game.showcase_ticker.find_child("Line_found",true,false)!=null,"this device shows the info block")
+	check(is_equal_approx(game.battle_view.playback_speed,8.0),"the battle plays at this device's 战斗速度")
+	var bgm: String = str(JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json")).audio.bgm)
+	if radio_ok:check(radio.suspended and radio.current==radio_track and game.music.stream.resource_path.ends_with(bgm.get_file()),"battle music takes over from the radio, which keeps its track")
 	for i in range(2):hunt.scan_once()
 	check(automation.hunt_running and automation.showcase_queue.size()==4,"the search goes on during the capture battle (queue 4)")
+	var captures_before: int = game.battle_view.captures_presented
 	check(drive(game,func():return flow.phase!="capture"),"the capture battle finishes")
+	check(game.battle_view.captures_presented>captures_before,"the automated capture plays the character's capture animation (the resolved command drives it)")
 	var pets: Array = game.session.snapshot().pets
 	var caught: Dictionary = pets[game.session.snapshot().active_pet]
 	check(flow.phase=="train" and caught.pet_id==flow.pet_id,"the captured pet is active for its training")
+	check(log_kinds(game).has("captured"),"the info block says it was caught")
 
-	# Training: 10x, 五人镜像队 with the best other pets, shown battles.
-	check(automation.running and not bool(automation.settings.compact) and int(game.backend.session.experience_multiplier)==10 and int(automation.settings.hp)==-1,"training battles run shown, at 10x experience, without an HP stop line for the Lv1 pet")
+	# Training: 自动练级 with the player's 经验倍率, the 五人镜像队 of the best
+	# other pets, every battle shown in full.
+	check(automation.running and not bool(automation.settings.compact) and int(game.backend.session.experience_multiplier)==100 and int(automation.settings.hp)==-1,"自动练级 runs shown, at the player's 100× 经验倍率, without an HP stop line for the Lv1 pet")
 	check(game.backend.session.clone_squad_enabled and game.backend.session.clone_best_others,"with the 五人镜像队 of best other pets")
 	check(drive(game,func():return game.battle_view.visible or not automation.running),"a training battle opens")
 	var allies: Array = game.battle_session.snapshot().get("ally_pets",[])
 	var best_ids: Array = game.backend.session.best_other_pets(4).map(func(pet):return str(pet.pet_id))
 	var ally_ids: Array = allies.map(func(pet):return str(pet.get("pet_id","")))
 	check(ally_ids.slice(0,best_ids.size())==best_ids and not ally_ids.has(str(flow.pet_id)) and not ally_ids.has("clone-of-"+str(flow.pet_id)),"the clones bring the best other pets, not the trained one (%s)" % str(ally_ids))
+	# Growth is fixed per level by the pet's seed, so levelling most of the way
+	# at once keeps this suite short; the last levels are still shown battles.
+	# (Between two battles: a battle in progress keeps the pet as it is.)
+	var levelled := false
 	var shown := 0
-	var milestones: Array = []
+	var cut_short := 0
 	var last_battle := ""
-	var final_card: Dictionary = {}
-	for i in range(20000):
-		var f: Dictionary = game.state.automation.flow
+	var last_state: Dictionary = {}
+	var music_ok := true
+	for i in range(40000):
 		var battle_id := str(game.state.battle.get("battle_id",""))
 		if game.battle_view.visible and battle_id!=last_battle:
+			# A battle may only start once the one before it was over.
+			if not last_state.is_empty() and bool(last_state.get("active",false)):cut_short += 1
 			last_battle = battle_id
 			shown += 1
-			check(is_equal_approx(game.battle_view.playback_speed,1.0),"shown training battle %d plays at 1x" % shown)
-		var c: Dictionary = f.get("card",{})
-		if str(c.get("kind",""))=="milestone" and not milestones.has(int(c.level)):
-			milestones.append(int(c.level))
-			check(game.showcase_cards.visible and game.showcase_cards.find_child("ShowcaseMilestone",true,false)!=null,"the Lv%d milestone toast shows" % int(c.level))
-		if str(c.get("kind",""))=="final" and final_card.is_empty():
-			final_card = c.duplicate(true)
-			check(game.showcase_cards.visible and game.showcase_cards.find_child("ShowcaseRank",true,false)!=null,"the final card shows")
-			check(int(game.backend.session.experience_multiplier)==xp_before and game.backend.session.clone_squad_enabled==clone_before and not game.backend.session.clone_best_others,"experience multiplier and 五人镜像队 are restored")
+		if game.state.battle_open:last_state = game.state.battle.duplicate()
+		if radio_ok and flow.phase=="train" and not game.battle_view.visible and not game.music.stream.resource_path.contains("battle/"):music_ok = false
 		if flow.phase!="train":break
-		game.battle_view._process(0.25);game.acknowledge_presentation();helper.advance();flow.advance()
-		clock += 250
-	check(shown==7,"3 training battles and one at Lv30, 60, 90 and 120 are shown (%d)" % shown)
-	check(milestones==[30,60,90],"milestone toasts at Lv30, 60 and 90 (%s)" % str(milestones))
-	check(int(final_card.get("actual",{}).get("attack",0))>0 and final_card.get("actual",{})==stats(Progression.project_pet(fixture.troop.enemies[0],120)),"the final card shows the Lv120 pet's actual stats")
-	check(bool(final_card.get("matches",false)) and final_card.prediction==stats(predicted),"which match the prediction")
-	check(int(final_card.get("rank",0))>=1 and int(final_card.get("of",0))>=1,"and its rank in the species (%d of %d)" % [int(final_card.get("rank",0)),int(final_card.get("of",0))])
-	var released: Array = game.backend.release_log.entries().filter(func(e):return str(e.get("pet_id",""))==str(final_card.get("pet_id","")))
-	check(bool(final_card.get("released",false)) and str(final_card.get("outcome","")).begins_with("按保留规则放生：") and not released.is_empty() and str(final_card.outcome).ends_with(str(released[0].reason)),"a pet the keep rule releases still gets its full showcase, and the final card says why (%s)" % str(final_card.get("outcome","")))
+		if not levelled and shown>=2:levelled = game.backend.session.level_pet_to(str(flow.pet_id),117)
+		step(game)
+	check(levelled,"the trainee was levelled close to 120 for this test")
+	check(shown>=3,"several training battles are shown (%d)" % shown)
+	check(cut_short==0,"no battle ends early: each is over before the next one starts (%d cut short)" % cut_short)
+	if radio_ok:check(music_ok,"between training battles the battle music keeps playing")
+	var found_pet: Dictionary = game.backend.release_log.entries().filter(func(e):return str(e.get("source",""))!="排队已满").back() if not game.backend.release_log.entries().is_empty() else {}
+	lines = game.state.automation.flow.log
+	var level_lines: Array = lines.filter(func(line):return str(line.kind)=="level")
+	check(not level_lines.is_empty() and str(level_lines.back().text).contains("三围合%d" % (int(predicted.attack)+int(predicted.defence)+int(predicted.speed))) and str(level_lines.back().text).contains("与预测一致"),"the info block gives the Lv120 stats, matching the prediction")
+	var released_lines: Array = lines.filter(func(line):return str(line.kind)=="released")
+	check(not released_lines.is_empty() and not found_pet.is_empty() and str(released_lines.back().text).ends_with("放生：%s" % str(found_pet.reason)),"a pet the keep rule releases is still captured and trained on screen; the block says why (%s)" % (str(released_lines.back().text) if not released_lines.is_empty() else ""))
+	check(game.backend.session.clone_squad_enabled==clone_before and not game.backend.session.clone_best_others,"五人镜像队 and its composition are restored")
 
 	# The next queued pet starts at once.
-	check(drive(game,func():return flow.phase=="reveal",40),"the next queued pet is revealed right away")
+	check(drive(game,func():return flow.phase=="capture",40),"the next queued pet's capture starts right away")
 	check(automation.showcase_queue.size()==3,"and the queue shrinks (3 left)")
 	var capture_log: Array = game.backend.capture_log.entries()
-	check(capture_log.any(func(e):return str(e.get("pet_id",""))==str(final_card.get("pet_id","")) and str(e.get("source",""))=="找宠流程" and not str(e.get("run","")).is_empty()),"the showcase capture is logged as 找宠流程 with its run")
+	check(capture_log.any(func(e):return str(e.get("source",""))=="找宠流程" and not str(e.get("run","")).is_empty()),"the capture is logged as 找宠流程 with its run")
+	# The block gives way to a menu over the top left.
+	game.adventure_menu.show()
+	game.showcase_ticker._process(0.0)
+	check(not game.showcase_ticker.visible,"the info block gives way to the pet window")
+	game.adventure_menu.hide()
+	game.showcase_ticker._process(0.0)
+	check(game.showcase_ticker.visible,"and comes back when it closes")
 
-	# Moving drops the queue with a note.
+	# Moving drops the queue with a note; the radio plays on where it was.
+	check(drive(game,func():return flow.phase!="capture"),"that capture finishes")
+	var resume_at: float = radio._resume_at
 	game.cell += Vector2i.ONE
 	flow.advance()
-	check(flow.phase=="paused" and automation.showcase_queue.is_empty() and str(game.state.automation.flow.reason).contains("排队的 3 只已放弃"),"moving pauses the cycle and drops the queue with a note")
-	check(not game.showcase_cards.visible,"no card is left on screen")
+	flow.on_status(game.state.automation)
+	check(flow.phase=="paused" and automation.showcase_queue.is_empty() and str(game.state.automation.flow.reason).contains("排队的"),"moving pauses the cycle and drops the queue with a note")
+	if radio_ok:check(not radio.suspended and radio.on and radio.current==radio_track and game.music.stream==radio._stream and game.music.get_playback_position()>=resume_at-0.1,"the radio plays on with the same track where it was")
 	game.cell -= Vector2i.ONE
+	if game.state.battle_open:game.link.request({"type":"battle_close"})
 
-	# 展示模式 off: a hit goes straight into the compact capture, as before.
+	# The runner waits for a shown turn to finish playing; it does not give up
+	# after the 5 s it allows an unwatched turn.
+	automation.client_attached = true
+	automation._presented_key = ""
+	automation._shown_key = "b:1"
+	automation._shown_msec = Time.get_ticks_msec()-6000
+	automation.showcase_show_battle = true
+	check(not automation._presentation_done({"battle_id":"b","turn":1}),"a watched turn is waited for past 5 s")
+	automation.showcase_show_battle = false
+	check(automation._presentation_done({"battle_id":"b","turn":1}),"an unwatched turn is not")
+
+	# Off: a hit goes straight into the compact capture, as before.
 	hunt.showcase.button_pressed = false
 	game.flush_automation_settings()
 	hunt.close_menu()
 	game.session.gm_heal()
 	check(flow.start_cycle(),"a full-speed cycle starts")
-	check(not bool(game.state.automation.flow.showcase),"with 展示模式 off")
+	check(not bool(game.state.automation.flow.showcase),"with %s off" % AutomationSettings.SHOWCASE_NAME)
 	hunt.hunt_catalog = fixture;hunt.scan_once()
 	check(flow.phase=="capture" and bool(game.state.automation.compact) and not automation.hunt_running,"a hit goes straight to the compact capture and the search stops")
 	flow.stop_cycle();flow.advance()
 
+	if radio_ok:radio.turn_off()
 	game.process_mode = Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
 	print("SHOWCASE: %d failures" % failures);quit(1 if failures else 0)

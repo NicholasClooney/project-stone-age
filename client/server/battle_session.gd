@@ -139,6 +139,9 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 	_state.last_pet_command = pet_command
 	_player_guard = action == "defend"
 	_player_command = action
+	# Every device presents the turn from this, not from its own last choice:
+	# an automated capture or another device's command plays its animation too.
+	_state.last_player_command = action
 	_pet_guard = pet_command == "defend"
 	var actors: Array[Dictionary] = [
 		{"actor":"player","speed":int(_player_stats().speed),"tie":0},

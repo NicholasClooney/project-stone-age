@@ -18,7 +18,7 @@ func exploration_music() -> AudioStream:
 
 func set_music(stream: AudioStream) -> void:
 	# The radio replaces map and battle music; remember what the scene wants.
-	if is_instance_valid(game.radio) and game.radio.on:
+	if is_instance_valid(game.radio) and game.radio.on and not game.radio.suspended:
 		game.radio.scene_stream = stream
 		return
 	if game.music.stream==stream and game.music.playing:return
@@ -29,6 +29,26 @@ func set_music(stream: AudioStream) -> void:
 		stream.loop_end = int(stream.get_length()*stream.mix_rate)
 		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	game.music.play()
+
+## 后台搜宠 (hunt.showcase) is running on the backend: its capture and training
+## battles are watched with battle music first.
+func showcase_music_active() -> bool:
+	var flow: Dictionary = game.state.automation.get("flow",{})
+	return bool(flow.get("showcase",false)) and str(flow.get("phase","idle")) in ["hunt","capture","train","restart"]
+
+## A watched battle starts: the radio steps aside (keeping its place) and the
+## battle music loops across battles until the run ends.
+func begin_showcase_music() -> void:
+	game.showcase_music = true
+	if is_instance_valid(game.radio):game.radio.suspend()
+
+## The run ended or 后台搜宠 was switched off: the radio plays on where it
+## was, or the map music returns.
+func end_showcase_music() -> void:
+	if not game.showcase_music:return
+	game.showcase_music = false
+	if is_instance_valid(game.radio) and game.radio.suspended:game.radio.resume()
+	elif not game.battle_view.visible:set_music(exploration_music())
 
 func setup_audio() -> void:
 	game.music = AudioStreamPlayer.new()

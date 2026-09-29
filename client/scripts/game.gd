@@ -97,8 +97,11 @@ var ui_root: Control
 var helper_menu: PanelContainer
 ## The 游戏助手 button on the field (the only button of ours there).
 var helper_button: Button
-## 展示模式's cards over the field and battles (scripts/showcase_cards.gd).
-var showcase_cards: Control
+## 后台搜宠's info block at the top left (scripts/showcase_ticker.gd).
+var showcase_ticker: Control
+## Battle music holds the music player through 后台搜宠's watched battles
+## (scripts/game/game_audio.gd begin/end_showcase_music).
+var showcase_music := false
 ## This device's keys, action -> [key, key] (scripts/shortcuts.gd).
 var shortcuts: Dictionary = {}
 var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]
@@ -464,6 +467,9 @@ func _on_backend_message(event: Dictionary) -> void:_remote._on_backend_message(
 # ---- sound (scripts/game/game_audio.gd) ----
 func exploration_music() -> AudioStream:return _audio.exploration_music()
 func set_music(stream: AudioStream) -> void:_audio.set_music(stream)
+func showcase_music_active() -> bool:return _audio.showcase_music_active()
+func begin_showcase_music() -> void:_audio.begin_showcase_music()
+func end_showcase_music() -> void:_audio.end_showcase_music()
 func setup_audio() -> void:_audio.setup_audio()
 func play_battle_sound(ident: int) -> void:_audio.play_battle_sound(ident)
 func play_click() -> void:_audio.play_click()

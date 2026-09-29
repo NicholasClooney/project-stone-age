@@ -542,6 +542,9 @@ func show_state(next_state: Dictionary) -> void:
 	if previous.is_empty():
 		for i in range(displayed_hp.size()): displayed_hp[i] = health_of(state,i)
 	if actors.size() >= 2 and not previous.is_empty() and int(state.get("turn",0)) != int(previous.get("turn",0)):
+		# The command the backend resolved: an automated capture (自动抓宠,
+		# 后台搜宠) or another device's choice animates like this device's own.
+		if state.has("last_player_command"):pending_action = str(state.last_player_command)
 		queue_turn_animation(previous)
 	pending_action = ""
 	if not built:
@@ -652,7 +655,11 @@ func queue_strike(index: int, target: int, at: float) -> Dictionary:
 
 # oft.cpp states35–46: contact, hit-marker capture, 60-tick pause,
 # slow return with a spinning follower, then anger/break-away or happy255.
+## Capture animations queued so far (tests check automated captures play one).
+var captures_presented := 0
+
 func queue_capture(at: float, success: bool, target: int = 1) -> Dictionary:
+	captures_presented += 1
 	var home: Vector2 = actors[0].home
 	var enemy: Vector2 = actors[target].home
 	var contact := enemy+(home-enemy).normalized()*64.0

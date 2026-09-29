@@ -45,9 +45,15 @@ var auto_capture: CheckBox
 ## 本机极速模式 (hunt.fast): the backend scans with the native helper on every
 ## CPU core; the same rolls as the ordinary scan, which runs when it cannot.
 var fast: CheckBox
-## 展示模式 (hunt.showcase): found pets are revealed, captured on screen and
-## trained with a few shown battles while the search goes on (server/automation.gd).
+## 后台搜宠 (hunt.showcase; the name is AutomationSettings.SHOWCASE_NAME): the
+## search goes on in the background while the player watches each found pet's
+## capture and 自动练级 to 120 (server/automation.gd). On 抓宠设置 with its
+## 排队上限 (hunt.queue) and the 自动练级 settings it uses: 经验倍率 (the
+## character's training.xp) and 战斗速度 (this device's battle speed).
 var showcase: CheckBox
+var queue_size: SpinBox
+var showcase_xp: OptionButton
+var showcase_speed: OptionButton
 ## 线程数 of the server's helper (0 = auto): the computer's setting, not the
 ## character's, so it is sent as its own command and stays editable mid-hunt.
 var thread_count: SpinBox
@@ -151,10 +157,6 @@ func _ready() -> void:
 	fast.tooltip_text="服务器所在电脑用全部 CPU 核心筛选，遇到的敌群和结果与普通筛选完全相同，只是快得多；「每秒遇敌」填了限速时按限速用普通筛选；无法使用时也自动改用普通筛选。"
 	panel.add_child(fast);controls.append(fast)
 	fast.toggled.connect(func(_value):_settings_changed(true))
-	showcase=CheckBox.new();showcase.name="ShowcaseMode";showcase.text="展示模式";showcase.button_pressed=true;showcase.position=Vector2(860,506)
-	showcase.tooltip_text="找宠流程找到一只就先亮出预测的120级属性，再以正常速度播放捕获战斗和几场练级战斗；同时后台继续找下一只，最多排队10只。关掉则像以前一样全速捕获、瞬间练满。"
-	panel.add_child(showcase);controls.append(showcase)
-	showcase.toggled.connect(func(_value):_settings_changed(true))
 	label("线程数",Vector2(852,470),15)
 	thread_count=SpinBox.new();thread_count.name="FastHuntThreads";thread_count.position=Vector2(905,462);thread_count.size=Vector2(100,34)
 	thread_count.min_value=0;thread_count.max_value=64;thread_count.step=1;thread_count.value=0
@@ -174,6 +176,7 @@ func _ready() -> void:
 	capture_page=Control.new();capture_page.name="CaptureSettingsPage";capture_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(capture_page)
 	var filters_tab:Button=world.button("筛选条件",func():show_capture_settings(false));filters_tab.name="HuntFilterTab";filters_tab.position=Vector2(585,18);panel.add_child(filters_tab)
 	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(740,18);panel.add_child(capture_tab)
+	showcase_controls()
 	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级 · 按属性条件留存 · 无动画抓宠";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。有属性条件：达标则停止比较，未达标存仓并继续；无条件则升完一只停止。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
 	train_after_capture.toggled.connect(func(enabled):
 		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
@@ -244,11 +247,13 @@ func commit_settings() -> void:
 func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
-		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed}
+		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value)}
 	# 任何 shown only because the saved species is not found here keeps the saved one.
 	if species.item_count>0 and (_commit_template or not _template_fallback):wanted.template=species.get_selected_id()
 	var hunt:=AutomationSettings.diff(world.automation_settings().hunt,wanted)
 	if not hunt.is_empty():patch.hunt=hunt
+	var training:=AutomationSettings.diff(world.automation_settings().training,{"xp":[1,2,10,100][maxi(0,showcase_xp.selected)]})
+	if not training.is_empty():patch.training=training
 	if _stat_species_shown>=0:
 		var conditions:={}
 		for metric in StatFilter.METRICS:
@@ -272,6 +277,9 @@ func load_settings() -> void:
 	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
 	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
 	if _changed(old,hunt,"showcase"):showcase.set_pressed_no_signal(bool(hunt.showcase))
+	if not queue_size.get_line_edit().has_focus():queue_size.set_value_no_signal(int(hunt.queue))
+	showcase_xp.select(maxi(0,[1,2,10,100].find(int(world.automation_settings().training.xp))))
+	showcase_speed.select(maxi(0,[1.0,2.0,4.0,8.0].find(world.playback_speed())))
 	start_button.text="开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"
 	var shown:=hunt.duplicate(true)
 	var numbers:={"total":total,"rate":rate,"limit":limit}
@@ -458,7 +466,7 @@ func _process(delta: float) -> void:
 	# network the backend stops the hunt itself when the character moves or a
 	# battle opens; several devices share the run, so one device's window or
 	# map load must not stop it.
-	# 展示模式 searches on behind its own cards and shown battles.
+	# 后台搜宠 searches on behind the battles the player watches.
 	var showcase: bool = bool(world.state.automation.get("flow",{}).get("showcase",false)) and world.pet_workflow.active()
 	var screen_changed: bool = not showcase and (not (visible or minimized) or (visible and not world.paused_input) or world.battle_view.visible)
 	if world.link.is_local() and (screen_changed or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell):
@@ -506,6 +514,32 @@ func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->vo
 	max_level.position=Vector2(230,279);max_level.size=Vector2(150,38);max_level.name="CapturePetMaxLevel"
 	for entry in [["抓宠血量线 %",Vector2(24,149)],["削血宠物",Vector2(24,219)],["削血宠等级上限",Vector2(24,289)],["自动选择最低等级存活宠，且等级不高于目标；手选宠受等级上限限制。",Vector2(24,349)],["默认100%时即可尝试捕捉，满血不保证成功；低于100%才需要削血宠。两种抓宠流程共用设置。",Vector2(24,389)]]:
 		var caption:Label=world.text(str(entry[0]),16);caption.position=entry[1];capture_page.add_child(caption)
+
+## 抓宠设置's right column: the 后台搜宠 switch, 排队上限, and the 自动练级
+## 经验倍率 / 战斗速度 its training uses (the same values as 自动练级's own).
+func showcase_controls()->void:
+	var name_text:=AutomationSettings.SHOWCASE_NAME
+	showcase=CheckBox.new();showcase.name="ShowcaseMode";showcase.text=name_text;showcase.button_pressed=true;showcase.position=Vector2(760,139)
+	showcase.tooltip_text="找宠流程一边在后台继续找，一边正常播放找到的宠物的捕获战斗和自动练级到120的每一场战斗；找到的先排队。关掉则像以前一样全速捕获、瞬间练满。"
+	capture_page.add_child(showcase);controls.append(showcase)
+	showcase.toggled.connect(func(_value):_settings_changed(true))
+	var queue_label:Label=world.text("排队上限",16);queue_label.position=Vector2(760,199);capture_page.add_child(queue_label)
+	queue_size=SpinBox.new();queue_size.name="ShowcaseQueue";queue_size.min_value=1;queue_size.max_value=50;queue_size.step=1;queue_size.value=10
+	queue_size.position=Vector2(880,189);queue_size.size=Vector2(130,38);queue_size.tooltip_text="排满后新找到的和排队的一起比较，按保留规则的排序放弃最差的一只，记入放生记录（未捕获·排队已满）。"
+	queue_size.value_changed.connect(func(_value):_settings_changed(false))
+	capture_page.add_child(queue_size);controls.append(queue_size)
+	var xp_label:Label=world.text("经验倍率",16);xp_label.position=Vector2(760,259);capture_page.add_child(xp_label)
+	showcase_xp=OptionButton.new();showcase_xp.name="ShowcaseXp";showcase_xp.position=Vector2(880,249);showcase_xp.size=Vector2(130,38)
+	for title in ["1×","2×","10×","100×"]:showcase_xp.add_item(title)
+	showcase_xp.tooltip_text="与自动练级的经验倍率是同一个设置。"
+	showcase_xp.item_selected.connect(func(_index):_settings_changed(true))
+	capture_page.add_child(showcase_xp)
+	var speed_label:Label=world.text("战斗速度",16);speed_label.position=Vector2(760,319);capture_page.add_child(speed_label)
+	showcase_speed=OptionButton.new();showcase_speed.name="ShowcaseSpeed";showcase_speed.position=Vector2(880,309);showcase_speed.size=Vector2(130,38)
+	for title in ["1×","2×","4×","8×"]:showcase_speed.add_item(title)
+	showcase_speed.tooltip_text="与自动练级的战斗速度是同一个设置，由这台设备记住。"
+	showcase_speed.item_selected.connect(func(index):world.set_battle_speed([1.0,2.0,4.0,8.0][index]))
+	capture_page.add_child(showcase_speed)
 
 func show_capture_settings(enabled:bool)->void:
 	if is_instance_valid(stat_page):stat_page.hide()
@@ -676,7 +710,7 @@ func commit_stat_settings()->void:
 	world.flush_automation_settings()
 
 static func _automation_active(automation: Dictionary) -> bool:
-	return bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","reveal","capture","train","restart"]
+	return bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
 
 ## Collapses the window into a small progress bar. The scan or find-pet cycle
 ## continues and the world, HUD and other panels (pets, warehouse) stay usable.
@@ -719,7 +753,7 @@ func _update_chip() -> void:
 	if not is_instance_valid(chip):return
 	var flow=world.pet_workflow
 	if flow.active():
-		var step: String={"hunt":"筛选中","reveal":"亮相","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
+		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
 		var kept:String=" · 同种%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
 		var waiting:=int(world.state.automation.get("flow",{}).get("queue_size",0))
 		var skipped:=" · 跳过 %d" % flow.skipped_count if flow.skipped_count>0 else ""

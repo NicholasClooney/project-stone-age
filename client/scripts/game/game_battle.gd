@@ -62,6 +62,7 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	if game.adventure_menu.visible:game.adventure_menu.hide()
 	game.battle_view.open_battle(battle_state)
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+	if game.showcase_music_active():game.begin_showcase_music()
 	game.set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	game.play_battle_sound(215)
 	return true
@@ -97,7 +98,8 @@ func present_battle_close(outcome: String) -> void:
 	game.clear_input()
 	game.paused_input = game.automation_minimized()
 	game.field_steps = 0
-	if outcome!="defeat":game.set_music(game.exploration_music())
+	# 后台搜宠 keeps its battle music between battles (game_audio.gd).
+	if outcome!="defeat" and not game.showcase_music:game.set_music(game.exploration_music())
 	game.play_ui_sound(203)
 	if outcome=="defeat":
 		game.switch_area(false,GameScene.SPAWN)

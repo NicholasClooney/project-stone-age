@@ -7,7 +7,7 @@ extends RefCounted
 ## Overrides shape (every part optional):
 ##   training     {xp, compact, hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
-##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase}
+##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue}
 ##   stat_filters {"<template id>": {mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
 ##     keep_rule: 保留规则 (scripts/keep_rule.gd) {tiers, per_tier, order,
 ##     champions, champion_stats, auto}: order is 1 to 5 distinct keys of sum,
@@ -17,6 +17,10 @@ extends RefCounted
 ##     keep_qualified/rank (达标只保留前 N 只); a stored rank becomes the order.
 ## Per-device choices (battle playback speed, minimized windows) are not here.
 const PATH := "res://data/automation_defaults.json"
+## What players call hunt.showcase: keep searching in the background while
+## watching the capture and 自动练级. The one place the name is written; the
+## switch, the info block and the server's lines use it.
+const SHOWCASE_NAME := "后台搜宠"
 const METRICS := ["sum","attack","defence","speed"]
 const CONDITION_SPEC := {"enabled":["bool"],"value":["int",0,1000000],"strict":["bool"],"keep":["int",0,1000]}
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
@@ -25,7 +29,7 @@ const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120]},
-	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"]},
+	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50]},
 }
 static var _defaults: Dictionary = {}
 
@@ -75,7 +79,7 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 static func hunt_filter(overrides: Dictionary) -> Dictionary:
 	var hunt: Dictionary = effective(overrides).hunt
 	return {"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
-		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase)}
+		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"queue":int(hunt.queue)}
 
 static func device_default(key: String, fallback: Variant) -> Variant:
 	return defaults().get("device",{}).get(key,fallback)

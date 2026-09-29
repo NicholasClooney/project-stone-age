@@ -6,8 +6,6 @@ extends Node
 const StatFilter=preload("res://scripts/pet_stat_filter.gd")
 const Automation=preload("res://server/automation.gd")
 var world: Node
-## A 展示模式 battle is playing at 1x on this device.
-var _showing := false
 
 func configure(owner: Node) -> void:world=owner
 
@@ -102,7 +100,7 @@ var target_stat_filter: Dictionary:
 var stat_filter_snapshot: Dictionary:
 	get:return world.backend.automation.flow_stat_filters
 
-func active() -> bool:return phase in ["hunt","reveal","capture","train","restart"]
+func active() -> bool:return phase in ["hunt","capture","train","restart"]
 
 func start_cycle(species_key: String="") -> bool:
 	if active():return false
@@ -162,15 +160,11 @@ func prepare_scene_reload() -> String:
 static func same_capture(pet: Dictionary, actor: Dictionary) -> bool:
 	return Automation.same_capture(pet,actor)
 
-## 展示模式: the card for the flow's step and shown battles at 1x on this device.
+## 后台搜宠: the info block, and the music back to the radio or the map once
+## the run ends. Watched battles play at this device's own 战斗速度.
 func on_status(automation: Dictionary) -> void:
-	var flow: Dictionary = automation.get("flow",{})
-	if is_instance_valid(world.showcase_cards):world.showcase_cards.on_status(automation)
-	# Only on a change: the device's own speed is loaded lazily elsewhere.
-	var shown:=bool(flow.get("show_battle",false))
-	if shown!=_showing and is_instance_valid(world.battle_view):
-		_showing = shown
-		world.battle_view.playback_speed = 1.0 if shown else world.playback_speed()
+	if is_instance_valid(world.showcase_ticker):world.showcase_ticker.on_status(automation)
+	if world.showcase_music and not world.showcase_music_active():world.end_showcase_music()
 
 func on_event(detail: Dictionary) -> void:
 	match str(detail.kind):
@@ -181,7 +175,7 @@ func on_event(detail: Dictionary) -> void:
 			if not world.pet_hunt_menu.visible:world.pet_hunt_menu.open_menu()
 			world.clear_input();world.paused_input=true
 		"flow_reveal":
-			# 展示模式 clears the stage: the hunt window folds to its progress bar
+			# 后台搜宠 clears the stage: the hunt window folds to its progress bar
 			# (展开 brings it back) and the pet window gives way.
 			if world.pet_hunt_menu.visible and not world.pet_hunt_menu.minimized:world.pet_hunt_menu.minimize()
 			if world.adventure_menu.visible:world.close_adventure_menu()

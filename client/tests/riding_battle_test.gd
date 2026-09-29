@@ -26,6 +26,16 @@ func run() -> void:
 	for i in range(150):
 		view._process(1.0/60.0)
 		view.battle_effects._process(1.0/60.0)
+	# An automated capture (自动抓宠, 后台搜宠) while riding: this view did not
+	# choose the command; the resolved one still plays the mounted capture.
+	var capture_state: Dictionary = authority.start_battle({"player_hp":100,"player_max_hp":100,"player_attack":10,"player_defence":10,"player_speed":10,"enemy_max_hp":1000,"enemy_attack":1,"pets":[mount],"active_pet":-1,"ride_pet_index":0,"ride_pet":mount,"mounted_sprite":101006})
+	view.open_battle(capture_state)
+	for i in range(240): view._process(1.0/60.0)
+	var captures_before: int = view.captures_presented
+	view.pending_action = ""
+	var captured: Dictionary = authority.submit_action("capture")
+	view.show_state(captured)
+	check(str(captured.get("last_player_command",""))=="capture" and view.captures_presented==captures_before+1,"a capture resolved elsewhere plays the mounted capture animation")
 	if DisplayServer.get_name() != "headless":
 		await process_frame
 		await RenderingServer.frame_post_draw

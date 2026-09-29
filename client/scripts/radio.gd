@@ -41,6 +41,10 @@ var current := ""
 var entry := -1
 ## What the map or battle last asked for, played again when the radio stops.
 var scene_stream: AudioStream
+## 后台搜宠's watched battles take the music player (battle music first): the
+## radio keeps its station, track and position and plays on from there after.
+var suspended := false
+var _resume_at := 0.0
 var status := ""
 ## The note interrupt() showed; cleared when 播放 resumes.
 var interrupted_note := ""
@@ -217,6 +221,25 @@ func toggle_pause() -> void:
 	if not paused and status==interrupted_note:status = ""
 	changed.emit()
 
+func suspend() -> void:
+	if suspended or not on:return
+	suspended = true
+	_resume_at = world.music.get_playback_position() if _stream!=null and world.music.stream==_stream else 0.0
+	world.music.stream_paused = false
+	world.music.stop()
+	changed.emit()
+
+func resume() -> void:
+	if not suspended:return
+	suspended = false
+	if on and _stream!=null:
+		world.music.stop()
+		world.music.stream = _stream
+		world.music.play(_resume_at)
+		world.music.stream_paused = paused
+		_last_position = _resume_at
+	changed.emit()
+
 ## The system took the sound away (web_audio.gd): show the radio as paused with
 ## a note, so 播放 resumes it. Does nothing when the radio is off or already paused.
 func interrupt(note: String) -> void:
@@ -271,6 +294,11 @@ func _start(stream: AudioStream) -> void:
 	_loops = 0
 	_last_position = 0.0
 	status = ""
+	if suspended:
+		# Set aside for 后台搜宠's battles: this track starts when they end.
+		_resume_at = 0.0
+		changed.emit()
+		return
 	world.music.stop()
 	world.music.stream_paused = false
 	world.music.stream = stream
@@ -348,7 +376,7 @@ func loops_for(track: String) -> int:
 	return maxi(1,ceili(MIN_SECONDS/maxf(seconds,1.0)))
 
 func _process(_delta: float) -> void:
-	if not on or paused or _stream==null or world.music.stream!=_stream or not world.music.playing:return
+	if not on or paused or suspended or _stream==null or world.music.stream!=_stream or not world.music.playing:return
 	var at: float = world.music.get_playback_position()
 	# The stream loops by itself; nothing to count, fetch or change.
 	if repeat_one:

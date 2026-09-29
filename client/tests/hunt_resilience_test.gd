@@ -174,38 +174,35 @@ func run() -> void:
 	check(automation.flow_phase=="paused" and automation.flow_reason=="捕捉战斗状态已改变。" and game.backend.battle_open,"a different battle still open is left to the player")
 	game.backend.abandon_battle()
 
-	# 展示模式: a queued roll that no longer verifies is skipped.
+	# 后台搜宠: a queued roll that no longer verifies is skipped.
 	automation.flow_showcase = true
-	automation.flow_phase = "reveal"
+	automation.flow_phase = "hunt"
 	automation.flow_skip_kind = "";automation.flow_skip_streak = 0
 	automation.hunt_catalog = fixture
 	var other: Dictionary = fixture.troop.duplicate(true)
 	other.enemies[0].growth_seed = int(other.enemies[0].growth_seed)+1
-	automation.showcase_current = {"index":41,"slot":0,"run_seed":5,"actor":other.enemies[0],"troop":other,"quality":{},"prediction":{"attack":1,"defence":1,"speed":1,"max_hp":1}}
+	automation.showcase_queue = [{"index":41,"slot":0,"run_seed":5,"actor":other.enemies[0],"troop":other,"quality":{},"prediction":{"attack":1,"defence":1,"speed":1,"max_hp":1}}]
 	automation._showcase_capture()
 	check(automation.flow_phase=="restart" and last_stop(game).get("outcome")=="已跳过" and str(last_stop(game).reason).contains("第 42 组复核不一致") and not game.backend.battle_open,"a queued hit that no longer verifies is skipped without a battle")
-	check(automation.showcase_note.contains("复核不一致"),"展示模式 shows the skip note")
+	check(automation.showcase_log.any(func(line):return str(line.kind)=="skipped" and str(line.text).contains("复核不一致")),"后台搜宠's info block shows the skip note")
 
-	# 展示模式: a shown training battle that ends early is retried once, then levelled.
+	# 后台搜宠: a training battle that ends early is fought again; the same
+	# failure SKIP_LIMIT times in a row stops the cycle.
 	var trainee: Dictionary = game.session.snapshot().pets[0]
 	automation.flow_pet_id = str(trainee.pet_id)
 	automation.showcase_current = {"prediction":{},"quality":{},"actor":trainee}
 	automation.flow_phase = "train"
-	automation.showcase_segment = "battles"
-	automation.showcase_retried = false
-	automation.showcase_plan = [{"level":60},{"final":true}]
-	automation.showcase_wait_until = 0
+	automation.flow_skip_kind = "";automation.flow_skip_streak = 0
 	automation.running = false
 	automation.stop_reason = "战斗未获胜"
 	automation._showcase_step()
-	check(automation.showcase_retried and last_stop(game).get("outcome")=="已重试" and automation.flow_phase=="train","a shown training battle that ends early is retried once")
-	check(automation.showcase_segment=="battles" and automation.running,"the retried battle is under way")
-	automation.running = false
-	automation.stop_reason = "单场超过200回合，请手动处理"
-	automation.showcase_plan = [{"battles":1},{"level":60},{"final":true}]
-	automation._showcase_step()
-	check(last_stop(game).get("outcome")=="已跳过" and str(last_stop(game).reason).contains("改为直接升级"),"failing again levels instantly instead")
-	check(not automation.showcase_plan.any(func(segment): return segment.has("battles")),"no shown battles are left for this pet")
+	check(last_stop(game).get("outcome")=="已重试" and automation.flow_phase=="train" and automation.running,"a training battle that ends early is fought again")
+	check(automation.showcase_log.back().kind=="retry","and the info block says so")
+	for i in range(Automation.SKIP_LIMIT-1):
+		automation.running = false
+		automation.stop_reason = "战斗未获胜"
+		automation._showcase_step()
+	check(automation.flow_phase=="paused" and str(automation.flow_reason).contains("连续%d次" % Automation.SKIP_LIMIT),"the same failure %d times in a row stops the cycle (%s)" % [Automation.SKIP_LIMIT,automation.flow_reason])
 	automation.stop_cycle("测试结束")
 	game.backend.abandon_battle()
 

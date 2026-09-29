@@ -25,7 +25,8 @@
     "rate": 0,
     "limit": 0,
     "fast": true,
-    "showcase": true
+    "showcase": true,
+    "queue": 10
   },
   "stat_filter": {
     "mode": "any",

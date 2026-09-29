@@ -16,6 +16,7 @@ const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const FastHunt = preload("res://server/fast_hunt.gd")
 const ServerSettings = preload("res://server/server_settings.gd")
 const Rarity = preload("res://scripts/showcase_rarity.gd")
+const ReleaseLog = preload("res://server/release_log.gd")
 ## A presenting client may slow automation to its animation, never stall it.
 const PRESENT_TIMEOUT_MSEC := 5000
 const HUNT_FRAME_BUDGET_USEC := 12000
@@ -125,35 +126,25 @@ var flow_predicted_rejects := 0
 ## 抓宠记录 groups captures by find-pet run: set when a new (not continuing)
 ## cycle starts and kept across its restarts.
 var flow_run_id := ""
-## 展示模式 (hunt.showcase, default on): the find-pet cycle keeps searching while
-## a found pet is revealed, captured on screen and trained with a few shown
-## battles; hits wait in `showcase_queue`. Off, the cycle runs as before.
+## 后台搜宠 (hunt.showcase, default on; the name players see is
+## AutomationSettings.SHOWCASE_NAME): the find-pet cycle keeps searching while
+## the player watches a found pet's capture and 自动练级 to Lv.120; hits wait in
+## `showcase_queue` (hunt.queue long). Off, the cycle runs as before.
 const SHOWCASE_QUEUE_MAX := 10
-const REVEAL_MSEC := 4000
-const MILESTONE_MSEC := 2500
-const FINAL_MSEC := 6000
-## Training after a showcase capture: shown battles (at 10x experience with the
-## best-other-pets 五人镜像队) and instant levels to each milestone between
-## them, with the per-level growth instant levelling always uses.
-const SHOWCASE_PLAN := [{"battles":3},{"level":30},{"battles":1},{"level":60},{"battles":1},{"level":90},{"battles":1},{"level":120},{"battles":1},{"final":true}]
+const SHOWCASE_LOG_MAX := 8
+## A watching device plays a shown battle at its own speed; the runner waits
+## for its turn to finish playing up to this long (a 1x group turn is long).
+const SHOWN_PRESENT_TIMEOUT_MSEC := 60000
 var flow_showcase := false
 ## Found hits waiting for their turn: {index, slot, run_seed, actor, troop,
 ## prediction, quality}, best first by the species' ranking.
 var showcase_queue: Array = []
 var showcase_current: Dictionary = {}
-var showcase_plan: Array = []
-var showcase_wait_until := 0
-## The card every watching device shows: {id, kind: reveal|milestone|final, ...}.
-var showcase_card: Dictionary = {}
-var showcase_card_serial := 0
-## The battle now open is one the showcase shows (devices play it at 1x).
+## The battle now open is one the player watches (not compact).
 var showcase_show_battle := false
-var showcase_note := ""
-var showcase_previous_xp := -1
-var showcase_segment := ""
-## Where the cycle goes after the final card (restart or compare): the pet is
-## stored and tidied before the card, so it can say what happened to it.
-var showcase_after_phase := ""
+## The info block's lines: {id, kind, text}, newest last.
+var showcase_log: Array = []
+var _showcase_log_serial := 0
 var _flow_run_serial := 0
 ## 停止记录: every stop, pause and skip of the hunt and the find-pet cycle,
 ## drained by the backend into <save>.stop-log.jsonl (server/release_log.gd).
@@ -168,8 +159,6 @@ var flow_skip_kind := ""
 var flow_skip_streak := 0
 var flow_skipped_count := 0
 var flow_skip_note := ""
-## A shown training segment already retried once for this pet.
-var showcase_retried := false
 var _stopping_cycle := false
 var flow_best_predicted: Dictionary = {}
 var timer_clock: Callable = Time.get_ticks_msec
@@ -418,7 +407,7 @@ func _presentation_done(state: Dictionary) -> bool:
 	if key!=_shown_key:
 		_shown_key = key
 		_shown_msec = Time.get_ticks_msec()
-	return Time.get_ticks_msec()-_shown_msec >= PRESENT_TIMEOUT_MSEC
+	return Time.get_ticks_msec()-_shown_msec >= (SHOWN_PRESENT_TIMEOUT_MSEC if showcase_show_battle else PRESENT_TIMEOUT_MSEC)
 
 func _close_battle() -> void:
 	compact_active = false
@@ -793,7 +782,7 @@ func start_cycle(continuing: bool) -> bool:
 	flow_phase = "hunt"
 	if not continuing:
 		flow_showcase = bool(flow_hunt_request.get("showcase",false))
-		showcase_queue = [];showcase_current = {};showcase_plan = [];showcase_note = "";showcase_card = {}
+		showcase_queue = [];showcase_current = {};showcase_log = []
 	_emit_event({"kind":"flow_hunt"})
 	if not start_hunt(flow_hunt_request):
 		stop_cycle(hunt_status);return false
@@ -815,7 +804,7 @@ func stop_cycle(message: String = "已手动停止") -> void:
 	if flow_active():_record_stop("flow","停止",message,_involved_pet())
 	_stopping_cycle = true
 	if not showcase_queue.is_empty():
-		showcase_note = "排队的 %d 只已放弃：%s" % [showcase_queue.size(),message]
+		_showcase_line("dropped","排队的 %d 只已放弃：%s" % [showcase_queue.size(),message])
 		message += "（排队的 %d 只已放弃）" % showcase_queue.size()
 	showcase_queue = []
 	_showcase_restore()
@@ -1052,38 +1041,21 @@ func _skip_hit(kind: String, reason: String) -> void:
 	_record_stop("flow","已跳过",reason,pet)
 	if flow_showcase:
 		_showcase_restore()
-		showcase_note = flow_skip_note
+		_showcase_line("skipped","已跳过：%s" % flow_skip_note)
 	else:flow_reason = flow_skip_note
 	flow_phase = "restart"
 	_emit_status()
 	_emit_event({"kind":"flow_skipped","reason":reason,"note":"已跳过一只 · "+flow_skip_note})
 
-## A shown training segment stopped early (lost or overlong): shown once more,
-## then the rest is levelled instantly, milestones and final card kept. False
-## when the stop needs the player (the pet left the party, no encounters here).
-func _retry_shown_battles() -> bool:
-	if not skippable_battle_stop(stop_reason):return false
-	var reason := stop_reason
-	running = false
-	compact_active = false
-	backend.abandon_battle()
-	if not showcase_retried:
-		showcase_retried = true
-		showcase_plan.push_front({"battles":1})
-		flow_skip_note = "练级战斗没打完，已重试 · %s" % reason
-		_record_stop("flow","已重试",reason,_involved_pet())
-	else:
-		showcase_plan = showcase_plan.filter(func(segment): return not segment.has("battles"))
-		flow_skip_note = "练级战斗又没打完，改为直接升级 · %s" % reason
-		_record_stop("flow","已跳过",reason+"（改为直接升级）",_involved_pet())
-	showcase_note = flow_skip_note
-	_showcase_next()
-	return true
+# ---- 后台搜宠 (showcase) ---------------------------------------------------
+# The cycle keeps searching with the native helper while the player watches
+# the normal game: a found pet's capture battle as any capture is shown, then
+# 自动练级 to Lv.120 with the player's own 经验倍率 and 战斗速度, every battle
+# played in full. Hits found meanwhile wait in showcase_queue. The name the
+# player sees is AutomationSettings.SHOWCASE_NAME.
 
-# ---- 展示模式 --------------------------------------------------------------
-
-## Queued hits best first: 三围合, then the species' 保留规则 order, then the
-## earlier roll.
+## Queued hits best first, as the keep rule ranks pets: 三围合, then the
+## species' 保留规则 order, then the earlier roll.
 func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
 	var rule: Dictionary = filter_for(int(a.actor.get("template_id",-1))).get("keep_rule",{})
 	for key in StatFilter.rank_order(["sum"]+Array(rule.get("order",["attack","speed","max_hp"]))):
@@ -1092,16 +1064,37 @@ func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
 		if va!=vb:return va>vb
 	return int(a.index)<int(b.index)
 
-## A hit found while the showcase is busy (or idle): keep at most
-## SHOWCASE_QUEUE_MAX, dropping the lowest ranked.
+func queue_limit() -> int:
+	return clampi(int(flow_hunt_request.get("queue",SHOWCASE_QUEUE_MAX)),1,50)
+
+## A hit found while the player watches (or idle). When the queue is over
+## its limit the lowest ranked hit, possibly this one, is dropped and written
+## to 放生记录 as 未捕获·排队已满.
 func _showcase_enqueue(index: int, slot: int, troop: Dictionary, quality: Dictionary) -> void:
 	var actor: Dictionary = troop.enemies[slot]
 	var projected: Dictionary = Progression.project_pet(actor,120)
 	showcase_queue.append({"index":index,"slot":slot,"run_seed":hunt_run_seed,"actor":actor.duplicate(true),"troop":troop.duplicate(true),"quality":quality.duplicate(true),
 		"prediction":{"attack":int(projected.attack),"defence":int(projected.defence),"speed":int(projected.speed),"max_hp":int(projected.max_hp)}})
 	showcase_queue.sort_custom(_showcase_better)
-	if showcase_queue.size()>SHOWCASE_QUEUE_MAX:showcase_queue.resize(SHOWCASE_QUEUE_MAX)
+	while showcase_queue.size()>queue_limit():_drop_queued(showcase_queue.pop_back())
 	_emit_status()
+
+func _drop_queued(entry: Dictionary) -> void:
+	var limit := queue_limit()
+	var p: Dictionary = entry.prediction
+	var pet: Dictionary = entry.actor.duplicate(true)
+	pet.pet_id = "第%d组" % (int(entry.index)+1)
+	var beaters: Array = []
+	# The hits just above it in the queue.
+	for i in range(maxi(0,showcase_queue.size()-3),showcase_queue.size()):
+		var above: Dictionary = showcase_queue[i]
+		beaters.push_front(ReleaseLog.beater({"pet_id":"第%d组" % (int(above.index)+1),"name":str(above.actor.get("name",""))},above.prediction))
+	var reason := "排队已满（上限%d），排在第%d" % [limit,limit+1]
+	var logged := ReleaseLog.entry(pet,"未捕获","排队已满",reason,beaters,p)
+	logged.uncaught = true
+	logged.roll = int(entry.index)+1
+	backend.session.release_events.append(logged)
+	_showcase_line("dropped","排队已满：放弃第%d组 %s（预测三围合%d），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),int(p.attack)+int(p.defence)+int(p.speed),reason])
 
 func _queue_summary() -> Array:
 	var result: Array = []
@@ -1110,67 +1103,60 @@ func _queue_summary() -> Array:
 		result.append({"roll":int(entry.index)+1,"name":str(entry.actor.get("name","")),"sum":int(p.attack)+int(p.defence)+int(p.speed),"attack":int(p.attack),"defence":int(p.defence),"speed":int(p.speed),"max_hp":int(p.max_hp)})
 	return result
 
-func _now() -> int:
-	return int(timer_clock.call())
-
-func _showcase_card(kind: String, fields: Dictionary) -> void:
-	showcase_card_serial += 1
-	showcase_card = {"id":showcase_card_serial,"kind":kind}
-	showcase_card.merge(fields,true)
+## One line of the scrolling info block every watching device shows at the top
+## left: found, captured, Lv.120, 留下 / 放生, skips and queue drops.
+func _showcase_line(kind: String, text: String) -> void:
+	_showcase_log_serial += 1
+	showcase_log.append({"id":_showcase_log_serial,"kind":kind,"text":text})
+	while showcase_log.size()>SHOWCASE_LOG_MAX:showcase_log.pop_front()
+	_emit_status()
 
 func _flow_pet() -> Dictionary:
 	for pet in backend.session.snapshot().pets:
 		if str(pet.get("pet_id",""))==flow_pet_id:return pet
 	return {}
 
-## One find-pet step in 展示模式. The hunt keeps running behind every phase.
+static func _stat_text(stats: Dictionary) -> String:
+	return "攻%d 防%d 敏%d 血%d · 三围合%d" % [int(stats.attack),int(stats.defence),int(stats.speed),int(stats.max_hp),int(stats.attack)+int(stats.defence)+int(stats.speed)]
+
+## One find-pet step while searching in the background.
 func _showcase_step() -> void:
 	match flow_phase:
 		"hunt":
-			if not showcase_queue.is_empty():_showcase_reveal()
+			if not showcase_queue.is_empty():_showcase_capture()
 			elif not hunt_running:stop_cycle(hunt_status if not hunt_status.is_empty() else "筛选已停止。")
-		"reveal":
-			if _now()>=showcase_wait_until:_showcase_capture()
 		"capture":
 			if not running:_showcase_captured()
 		"train":
-			if running or _now()<showcase_wait_until:return
-			if showcase_segment=="battles" and stop_reason!="已达到战斗场次上限":
-				if not _retry_shown_battles():stop_cycle(stop_reason)
+			if running:return
+			if stop_reason=="目标宠物已达到等级目标":_showcase_finished();return
+			# A lost or overlong training battle: fight on (the pet keeps its
+			# levels); the same failure SKIP_LIMIT times in a row stops the cycle.
+			if skippable_battle_stop(stop_reason):
+				if stop_reason==flow_skip_kind:flow_skip_streak += 1
+				else:
+					flow_skip_kind = stop_reason
+					flow_skip_streak = 1
+				if flow_skip_streak>=SKIP_LIMIT:stop_cycle("连续%d次%s，已停止。" % [SKIP_LIMIT,stop_reason]);return
+				_record_stop("flow","已重试",stop_reason,_involved_pet())
+				_showcase_line("retry","练级战斗没打完（%s），继续练级。" % stop_reason)
+				backend.abandon_battle()
+				_showcase_train()
 				return
-			if showcase_plan.is_empty():
-				showcase_segment = ""
-				flow_phase = showcase_after_phase
-				if flow_phase=="compare":
-					if hunt_running:stop_hunt(flow_reason)
-					if not showcase_queue.is_empty():showcase_note = "收集完成，排队的 %d 只已放弃。" % showcase_queue.size()
-					showcase_queue = []
-					_emit_status()
-				return
-			_showcase_next()
+			stop_cycle(stop_reason)
 		"restart":_showcase_resume()
 
-## Takes the best queued hit and shows what it will become.
-func _showcase_reveal() -> void:
-	showcase_current = showcase_queue.pop_front()
-	var actor: Dictionary = showcase_current.actor
-	var template := int(actor.get("template_id",-1))
-	flow_target_filter = filter_for(template).duplicate(true)
-	var p: Dictionary = showcase_current.prediction
-	var quality: Dictionary = showcase_current.quality
-	var full := int(quality.get("total_offset",0))==8
-	_showcase_card("reveal",{"name":str(actor.get("name","")),"template_id":template,"sprite":int(actor.get("sprite",-1)),"offsets":quality.get("offsets",[]).duplicate(),
-		"full":full,"prediction":p.duplicate(),"sum":int(p.attack)+int(p.defence)+int(p.speed),
-		"rarity":Rarity.describe(template,p,full),"roll":int(showcase_current.index)+1,"queue":showcase_queue.size()})
-	flow_phase = "reveal"
-	showcase_wait_until = _now()+REVEAL_MSEC
-	_emit_status()
-	_emit_event({"kind":"flow_reveal","card":showcase_card.duplicate(true)})
-
-## Replays the queued roll from its own seed, checks it is the same troop, and
-## opens its capture battle, shown at 1x.
+## Takes the best queued hit, replays its roll from its own seed, checks it is
+## the same troop, and opens its capture battle, presented like any capture.
 func _showcase_capture() -> void:
+	showcase_current = showcase_queue.pop_front()
 	var entry := showcase_current
+	var actor: Dictionary = entry.actor
+	flow_target_filter = filter_for(int(actor.get("template_id",-1))).duplicate(true)
+	var p: Dictionary = entry.prediction
+	var full := int(entry.quality.get("total_offset",0))==8
+	var rarity: Array = Rarity.describe(int(actor.get("template_id",-1)),p,full)
+	_showcase_line("found","找到%s%s · 预测120级 %s%s · 排队%d" % ["满档" if full else "",str(actor.get("name","")),_stat_text(p),"（"+str(rarity[0]).get_slice("：",1)+"）" if full and rarity.size()>0 and str(rarity[0]).contains("1/") else "",showcase_queue.size()])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FastHunt.roll_seed(int(entry.run_seed),int(entry.index))
 	var troop: Dictionary = hunt_catalog.roll(flow_map,flow_cell,rng) if hunt_catalog!=null else {}
@@ -1183,20 +1169,20 @@ func _showcase_capture() -> void:
 	flow_known_ids.clear()
 	for pet in backend.session.snapshot().pets:flow_known_ids[str(pet.pet_id)] = true
 	flow_matched_index = int(entry.slot)
-	flow_matched_actor = entry.actor.duplicate(true)
+	flow_matched_actor = actor.duplicate(true)
 	compact_active = false
 	showcase_show_battle = true
-	# Any runner start sets the multiplier; keep the player's own to restore.
-	showcase_previous_xp = int(backend.session.experience_multiplier)
 	backend.open_battle(config)
 	flow_capture_battle_id = str(backend.battle.snapshot().get("battle_id",""))
 	flow_phase = "capture"
 	start_capture_battle(flow_matched_index,true)
 	if not running:stop_cycle("无法开始自动捕捉，请手动处理当前战斗。");return
 	_emit_status()
+	# Devices clear the stage for the battle (the hunt window folds away).
+	_emit_event({"kind":"flow_reveal"})
 
-## After the capture battle: the same checks as the full-speed cycle, then the
-## training plan with its shown battles.
+## After the capture battle: the same checks as the full-speed cycle, then
+## 自动练级 to Lv.120.
 func _showcase_captured() -> void:
 	showcase_show_battle = false
 	if _capture_failed():return
@@ -1211,90 +1197,66 @@ func _showcase_captured() -> void:
 	if not backend.session.select_pet(int(fresh[0])):stop_cycle("新伙伴无法出战。");return
 	backend.save()
 	backend.publish()
-	showcase_retried = false
-	showcase_plan = SHOWCASE_PLAN.duplicate(true)
+	_showcase_line("captured","捕获成功：%s %s，开始练到120级。" % [str(pets[fresh[0]].get("name","")),flow_pet_id])
 	flow_phase = "train"
-	_showcase_next()
+	_showcase_train()
 
-## The next training segment: shown battles, an instant level with its
-## milestone card, or the final card.
-func _showcase_next() -> void:
-	var pet := _flow_pet()
-	if pet.is_empty():stop_cycle("目标宠物不在随身队伍");return
-	var segment: Dictionary = showcase_plan.pop_front()
-	if segment.has("battles"):
-		showcase_segment = "battles"
-		if not start_pet_training(flow_pet_id,120,{}):stop_cycle("无法开始展示练级："+stop_reason);return
-		# Shown battles: presented at 1x; the pet may train past its level goal.
-		# A Lv1 pet is easily hurt: no HP stop line (carried pets are healed
-		# between battles; a defeat still stops the cycle).
-		settings.compact = false
-		settings.hp = -1
-		settings.limit = int(segment.battles)
-		training_pet_level = 1000
-		backend.session.clone_best_others = true
-		showcase_show_battle = true
-	elif segment.has("level"):
-		showcase_segment = "level"
-		showcase_show_battle = false
-		var level := int(segment.level)
-		if int(pet.level)<level:
-			backend.session.last_error = ""
-			if not backend.session.level_pet_to(flow_pet_id,level):stop_cycle("无法升至%d级：%s" % [level,backend.session.last_error]);return
-			backend.save()
-			backend.publish()
-		if level<120:
-			var now_pet := _flow_pet()
-			_showcase_card("milestone",{"name":str(now_pet.get("name","")),"milestone":level,"level":int(now_pet.level),"stats":{"attack":int(now_pet.attack),"defence":int(now_pet.defence),"speed":int(now_pet.speed),"max_hp":int(now_pet.max_hp)}})
-			showcase_wait_until = _now()+MILESTONE_MSEC
-			_emit_event({"kind":"flow_milestone","card":showcase_card.duplicate(true)})
-	elif segment.has("final"):
-		showcase_segment = "final"
-		_showcase_restore()
-		var found := _flow_pet()
-		var template := int(found.get("template_id",-1))
-		var p: Dictionary = showcase_current.get("prediction",{})
-		var actual := {"attack":int(found.attack),"defence":int(found.defence),"speed":int(found.speed),"max_hp":int(found.max_hp)}
-		var species: Array = KeepRule.species_pets(backend.session.snapshot(),template)
-		var rule: Dictionary = flow_target_filter.get("keep_rule",{})
-		var ranked: Array = StatFilter.ranked(species,["sum"]+Array(rule.get("order",["attack","speed","max_hp"])))
-		var rank := 0
-		for i in range(ranked.size()):
-			if str(ranked[i].get("pet_id",""))==flow_pet_id:rank = i+1
-		var full := int(showcase_current.get("quality",{}).get("total_offset",0))==8
-		var pet_id := flow_pet_id
-		# Stored (and tidied) now; the card then says what became of it.
-		complete_trained_pet(found)
-		showcase_after_phase = flow_phase
-		var outcome := "达标，已存入仓库" if flow_last_result.begins_with("达标已存仓") else ("未达标，已存入仓库" if flow_last_result.begins_with("未达标已存仓") else ("已达标，请在同种比较中查看" if showcase_after_phase=="compare" else ""))
-		var released := false
-		for event in backend.session.release_events:
-			if str(event.get("pet_id",""))==pet_id:
-				released = true
-				outcome = "按保留规则放生：%s" % str(event.get("reason",""))
-		if showcase_after_phase not in ["restart","compare"]:return
-		flow_phase = "train"
-		_showcase_card("final",{"name":str(found.get("name","")),"pet_id":pet_id,"template_id":template,"actual":actual,"prediction":p.duplicate(),
-			"sum":int(actual.attack)+int(actual.defence)+int(actual.speed),"matches":actual==p,"rank":rank,"of":ranked.size(),
-			"rarity":Rarity.describe(template,actual,full),"outcome":outcome,"released":released})
-		showcase_wait_until = _now()+FINAL_MSEC
-		_emit_event({"kind":"flow_final","card":showcase_card.duplicate(true)})
+## 自动练级 for the caught pet: the player's own 经验倍率 (training.xp), every
+## battle shown at this device's 战斗速度, the pet active and the 五人镜像队 made
+## of the player's other best pets. The runner stops only between battles,
+## once the pet reaches Lv.120.
+func _showcase_train() -> void:
+	if _flow_pet().is_empty():stop_cycle("目标宠物不在随身队伍");return
+	if not start_pet_training(flow_pet_id,120,{}):stop_cycle("无法开始练级："+stop_reason);return
+	settings.xp = int(profile_settings().xp)
+	backend.session.experience_multiplier = int(settings.xp)
+	settings.compact = false
+	# A Lv1 pet is easily hurt: no HP stop line (carried pets are healed
+	# between battles; a defeat is fought again, see _showcase_step).
+	settings.hp = -1
+	settings.limit = 1000000
+	backend.session.clone_best_others = true
+	showcase_show_battle = true
 	_emit_status()
 
-## Settings the showcase changed for its training go back: experience
-## multiplier, 五人镜像队 and its composition.
+## Lv.120 reached: store and tidy as the full-speed cycle does, then say what
+## became of the pet.
+func _showcase_finished() -> void:
+	showcase_show_battle = false
+	backend.session.clone_best_others = false
+	release_clone_override()
+	var found := _flow_pet()
+	if found.is_empty() or int(found.level)<120:stop_cycle("目标宠物未达到120级，请手动检查。");return
+	var pet_id := flow_pet_id
+	var template := int(found.get("template_id",-1))
+	var actual := {"attack":int(found.attack),"defence":int(found.defence),"speed":int(found.speed),"max_hp":int(found.max_hp)}
+	var predicted: Dictionary = showcase_current.get("prediction",{})
+	_showcase_line("level","%s %s 练到120级：%s%s" % [str(found.get("name","")),pet_id,_stat_text(actual)," · 与预测一致" if actual==predicted else ""])
+	complete_trained_pet(found)
+	var outcome := ""
+	for event in backend.session.release_events:
+		if str(event.get("pet_id",""))==pet_id:outcome = "放生：%s" % str(event.get("reason",""))
+	if outcome.is_empty():
+		var reasons: Array = KeepRule.evaluate(KeepRule.species_pets(backend.session.snapshot(),template),flow_target_filter.get("keep_rule",{}),KeepRule.always_kept(backend.session.snapshot())).get("reasons",{}).get(pet_id,[])
+		outcome = "留下：%s" % ("、".join(reasons) if not reasons.is_empty() else "已存入仓库")
+		if flow_last_result.begins_with("未达标"):outcome = "未达标，"+outcome
+	_showcase_line("released" if outcome.begins_with("放生") else "kept","%s %s %s" % [str(found.get("name","")),pet_id,outcome])
+	if flow_phase=="compare":
+		if hunt_running:stop_hunt(flow_reason)
+		if not showcase_queue.is_empty():_showcase_line("dropped","收集完成，排队的 %d 只已放弃。" % showcase_queue.size())
+		showcase_queue = []
+		_emit_status()
+
+## Settings the run changed for its training go back: 五人镜像队 and its
+## composition.
 func _showcase_restore() -> void:
 	showcase_show_battle = false
-	if showcase_previous_xp>=0:
-		backend.session.experience_multiplier = showcase_previous_xp
-		showcase_previous_xp = -1
 	backend.session.clone_best_others = false
 	release_clone_override()
 
 ## Back to searching: the next queued hit is taken on the following step.
 func _showcase_resume() -> void:
 	showcase_current = {}
-	showcase_segment = ""
 	flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_capture_battle_id = ""
 	flow_phase = "hunt"
 	flow_reason = ""
@@ -1321,7 +1283,7 @@ func status() -> Dictionary:
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),
-			"card":showcase_card.duplicate(true),"show_battle":showcase_show_battle and backend.battle_open,"showcase_note":showcase_note,"segment":showcase_segment,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
+			"log":showcase_log.duplicate(true),"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
 
 func _emit_status() -> void:

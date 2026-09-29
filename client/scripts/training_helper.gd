@@ -323,9 +323,10 @@ func on_event(detail: Dictionary) -> void:
 		if reason.begins_with("带宠升级"):close_menu()
 		else:panel.hide();progress.show();result.text=reason
 		return
-	# 展示模式 runs its shown battles in short segments; its cards report them.
+	# 后台搜宠 hands its capture and training runs on itself; its info block
+	# reports them.
 	var flow: Dictionary=world.state.automation.get("flow",{})
-	if bool(flow.get("showcase",false)) and str(flow.get("phase","")) in ["capture","train"] and str(detail.get("reason","")) in ["已达到战斗场次上限","本场自动战斗已完成"]:return
+	if bool(flow.get("showcase",false)) and str(flow.get("phase","")) in ["capture","train"] and str(detail.get("reason","")) in ["本场自动战斗已完成","目标宠物已达到等级目标"]:return
 	_end_minimized()
 	if bool(detail.get("takeover",false)) and world.battle_session.snapshot().active:
 		if world.adventure_menu.visible:world.adventure_menu.hide()
