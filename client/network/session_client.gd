@@ -47,6 +47,16 @@ func gm_pending() -> bool:
 	_fresh()
 	return bool(state.derived.get("gm_pending",false))
 
+## The open battle's participants, pet_id -> reason (出战中, 骑乘中, 削血宠);
+## the backend refuses to release, store, deploy or dismount them until it ends.
+func battle_pets() -> Dictionary:
+	_fresh()
+	return state.derived.get("battle_pets",{}).duplicate()
+
+## Whether a battle is in progress (not yet settled).
+func in_battle() -> bool:
+	return gm_pending()
+
 var clone_squad_enabled: bool:
 	get:
 		_fresh()

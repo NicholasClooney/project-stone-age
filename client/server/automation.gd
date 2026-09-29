@@ -1080,7 +1080,8 @@ func start_cycle(continuing: bool) -> bool:
 	flow_map = position_map
 	flow_cell = position_cell
 	flow_known_ids.clear();flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_capture_battle_id = "";flow_reason = ""
-	for pet in backend.session.snapshot().pets:flow_known_ids[str(pet.pet_id)] = true
+	# Warehouse pets too: one withdrawn during the capture battle is not new.
+	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
 	flow_phase = "hunt"
 	if not continuing:
 		flow_showcase = bool(flow_hunt_request.get("showcase",false))
@@ -1550,7 +1551,8 @@ func _showcase_capture() -> void:
 	var config: Dictionary = backend.session.start_wild_battle_config(troop)
 	if config.is_empty():stop_cycle("战斗校验未通过，已停止。");return
 	flow_known_ids.clear()
-	for pet in backend.session.snapshot().pets:flow_known_ids[str(pet.pet_id)] = true
+	# Warehouse pets too: one withdrawn during the capture battle is not new.
+	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
 	flow_matched_index = int(entry.slot)
 	flow_matched_actor = actor.duplicate(true)
 	compact_active = false

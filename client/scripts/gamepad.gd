@@ -66,7 +66,9 @@ func panel() -> Control:
 	for node in [world.leveling_destinations,world.training_helper,world.pet_hunt_menu,world.changelog_menu,world.character_selection,world.dev_gm_menu,world.dev_map_overview,world.pet_training,world.get("helper_menu")]:
 		if is_instance_valid(node) and node.visible:return node
 	if is_instance_valid(world.world_travel) and world.world_travel.overlay.visible:return world.world_travel.overlay
-	for node in [world.adventure_menu,world.battle_view,world.dialogue,world.help]:
+	# Windows opened over a battle take the controller before the battle.
+	var over_battle: Array = [world.get("pet_encyclopedia"),world.help,world.get("radio_panel")] if is_instance_valid(world.battle_view) and world.battle_view.visible else []
+	for node in [world.adventure_menu]+over_battle+[world.battle_view,world.dialogue,world.help]:
 		if is_instance_valid(node) and node.visible:return node
 	if hud_mode and is_instance_valid(world.ui_layer):return world.ui_layer.get_child(0)
 	return null
@@ -130,9 +132,9 @@ func _input(event: InputEvent) -> void:
 		JOY_BUTTON_X:
 			if root==null or root==world.adventure_menu:world.show_adventure_menu("status");get_viewport().set_input_as_handled()
 		JOY_BUTTON_Y:
-			if root==null or root==world.adventure_menu:world.show_adventure_menu("pets");get_viewport().set_input_as_handled()
+			if root==null or root==world.adventure_menu or root==world.battle_view:world.show_adventure_menu("pets");get_viewport().set_input_as_handled()
 		JOY_BUTTON_START:
-			if root==null or root==world.help:
+			if root==null or root==world.help or root==world.battle_view:
 				if world.settings_menu.visible:world.settings_menu.close_menu()
 				else:world.settings_menu.open_menu()
 				get_viewport().set_input_as_handled()

@@ -30,9 +30,10 @@ func run()->void:
 	var carried:Array=ids(session._profile.pets)
 	check(carried==["pet-501","pet-502","pet-504","pet-505"] and not "pet-510" in ids(session._profile.pet_storage),"released pets leave party and warehouse")
 	check(session._profile.pets[session._profile.active_pet].pet_id=="pet-502" and session._profile.pets[session._profile.ride_pet].pet_id=="pet-504","active and mount indices follow their pets after removal")
-	session._pending={"battle":"x"}
+	# During a battle only its own pets are kept back (menus_in_battle_test.gd covers the rest).
+	session._pending={"battle_id":"x","pets":session._profile.pets.duplicate(true),"active_pet":3}
 	var refused:Dictionary=session.release_pets(["pet-505"])
-	check(int(refused.released)==0 and not session.last_error.is_empty() and "pet-505" in ids(session._profile.pets),"release is refused entirely during a battle")
+	check(int(refused.released)==0 and refused.skipped[0].reason=="战斗中" and "pet-505" in ids(session._profile.pets),"release skips the pet fighting in a battle")
 	session._pending={}
 	# Backup through the game layer with a temporary save path.
 	game.save_path=TEMP_SAVE;game.profile_persistence=true;game.checkpoint()

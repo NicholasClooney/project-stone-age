@@ -536,6 +536,7 @@ func present_battle_turn(battle_state: Dictionary) -> void:_battle.present_battl
 func return_from_battle() -> void:_battle.return_from_battle()
 func present_battle_close(outcome: String) -> void:_battle.present_battle_close(outcome)
 func dev_encounter() -> void:_battle.dev_encounter()
+func battle_window_open() -> bool:return _battle.battle_window_open()
 
 # ---- startup and web downloads (scripts/game/game_startup.gd) ----
 func await_packs(packs: Array, label: String) -> bool:return await _startup.await_packs(packs,label)

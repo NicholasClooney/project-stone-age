@@ -55,8 +55,9 @@ func _initialize():
  while session._profile.pets.size()<Session.PET_CAPACITY:
   var copy:Dictionary=original.duplicate(true);session._assign_pet_id(copy);session._profile.pets.append(copy)
  check(not session.retrieve_pet(0) and session.snapshot().pet_storage.size()==1,"full carried roster prevents retrieval without losing stored pet")
- session.start_battle_config()
- check(not session.store_pet(0) and not session.retrieve_pet(0),"battle locks both storage directions")
+ session.select_pet(0);session.start_battle_config()
+ check(not session.store_pet(0) and not session.retrieve_pet(0),"a battle locks storing its fighting pet, and a full party still cannot withdraw")
+ check(session.store_pet(1) and session.snapshot().pets.size()==Session.PET_CAPACITY-1,"a pet outside the battle can still be stored")
  for name in [path,path+".bak",legacy]:
   if FileAccess.file_exists(name):DirAccess.remove_absolute(name)
  print("PET STORAGE: %d failures"%failures)

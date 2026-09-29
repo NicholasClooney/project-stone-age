@@ -291,7 +291,7 @@ func _ready() -> void:
 	return_button.add_theme_color_override("font_outline_color",Color.BLACK)
 	return_button.add_theme_constant_override("outline_size",2)
 	return_button.pressed.connect(func():
-		if not is_animating():
+		if not is_animating() and not world_modal_open():
 			return_requested.emit())
 	result_panel.add_child(return_button)
 	var auto_button:=Button.new()
@@ -983,8 +983,13 @@ func cancel_selection() -> void:
 	command_panel.show()
 	hint.text = "请选择指令；攻击或捕捉后点击目标。"
 
+func nothing_to_cancel() -> bool:
+	return not bool(state.get("active",false)) or (command_phase=="player" and selected_action.is_empty() and queued_player_action.is_empty())
+
 func world_modal_open() -> bool:
 	if not is_instance_valid(world): return false
+	# Windows opened over the battle (宠物, 设置, 电台, 宠物大全…): commands wait.
+	if world.has_method("battle_window_open"): return world.battle_window_open()
 	var panel = world.get("adventure_menu")
 	var helper = world.get("training_helper")
 	if is_instance_valid(helper) and helper.visible:return true
@@ -999,6 +1004,9 @@ func _input(event: InputEvent) -> void:
 		get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("ui_cancel") or (event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_RIGHT):
+		# With no command to back out of (an automatic battle, or the top
+		# menu) Esc goes on to open 设置 like on the field (game_input.gd).
+		if event.is_action_pressed("ui_cancel") and nothing_to_cancel(): return
 		cancel_selection()
 		get_viewport().set_input_as_handled()
 
@@ -1320,6 +1328,11 @@ func queue_group_turn(previous: Dictionary) -> void:
 
 # Classic asset26040 has three rows. Page a five-pet roster using original
 # arrow buttons; the later source's five-row126230 asset is absent in2.5.
+## Whether the player still carries this pet (true without an id or a world).
+func carried_pet(pet_id: String) -> bool:
+	if pet_id.is_empty() or not is_instance_valid(world) or world.get("session")==null: return true
+	return world.session.snapshot().get("pets",[]).any(func(pet): return str(pet.get("pet_id",""))==pet_id)
+
 func show_pet_roster(page: int) -> void:
 	clear_choices()
 	ui_picture(26040,Vector2(650,280),choice_panel)
@@ -1331,7 +1344,7 @@ func show_pet_roster(page: int) -> void:
 		var origin := Vector2(522,120+row*87)
 		var active := index==int(state.get("active_pet",-1))
 		var button := choice(str(companion.get("name","宠物")),origin+Vector2(14,24),func():
-			if is_animating(): return
+			if is_animating() or world_modal_open(): return
 			switch_pet_index = index
 			complete_player_command("switch"))
 		button.name = "RosterPet%d" % index
@@ -1342,6 +1355,10 @@ func show_pet_roster(page: int) -> void:
 		button.add_theme_color_override("font_color",color)
 		button.add_theme_color_override("font_disabled_color",color)
 		button.disabled = active or int(companion.get("hp",0))<=0
+		# Stored or released from the pet window during this battle.
+		if not active and not carried_pet(str(companion.get("pet_id",""))):
+			button.disabled = true
+			button.tooltip_text = "已存入仓库或放生，不能换上场。"
 		for field in [[str(companion.get("level",1)),Vector2(43,59)],[str(companion.get("hp",0)),Vector2(130,59)],[str(companion.get("max_hp",0)),Vector2(183,59)],[str(companion.get("loyalty","—")),Vector2(64,81)]]:
 			var value := label(field[0],12,origin+field[1],Vector2(48,18))
 			value.add_theme_color_override("font_color",color)

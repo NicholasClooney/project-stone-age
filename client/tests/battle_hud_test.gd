@@ -45,9 +45,13 @@ func run():
  await create_timer(0.3).timeout
  check(hud.taskbar.visible,"bottom menu reveals over battle")
  var turn=game.battle_session.snapshot().turn
- for i in [0,1,2,3]:
+ for i in [0,1,3]:
   await click(hud.task_buttons[i])
   check(not hud.map_panel.visible and not game.adventure_menu.visible,"field tab stays unavailable in battle")
+ # 宠物 opens over the battle (menus_in_battle_test.gd); the battle waits.
+ await click(hud.task_buttons[2])
+ check(game.adventure_menu.visible and game.adventure_menu.kind=="pets" and game.battle_session.snapshot().turn==turn,"pets tab opens the pet window over the battle")
+ game.close_adventure_menu()
  await click(hud.task_buttons[6])
  check(game.settings_menu.visible,"system tab opens 设置 during battle")
  view._request_action("defend")

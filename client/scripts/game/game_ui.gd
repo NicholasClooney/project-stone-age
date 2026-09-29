@@ -154,6 +154,10 @@ func build_ui() -> void:
 	root.add_child(game.helper_button)
 	game.battle_view = BattleView.new()
 	root.add_child(game.battle_view)
+	# Just above the classic HUD: the windows a battle allows (宠物, 设置,
+	# 游戏助手, 电台, 宠物大全) come later in the tree, so they take clicks
+	# before the battle; their z_index already draws them above it.
+	root.move_child(game.battle_view,game.classic_hud.get_index()+1)
 	game.battle_view.configure(game)
 	game.battle_view.playback_speed=game.playback_speed()
 	game.battle_view.action_requested.connect(game.battle_action)

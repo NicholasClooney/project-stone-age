@@ -54,18 +54,30 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	game.clear_input()
 	game.paused_input = true
 	game.player.set_action(3)
-	game.help.hide()
 	game.classic_hud.map_panel.hide()
 	if is_instance_valid(game.training_helper) and game.training_helper.compact_active:
 		return true
-	# Pets or storage opened beside minimized automation give way to its battle.
-	if game.adventure_menu.visible:game.adventure_menu.hide()
+	# Windows a battle allows (宠物, 设置, 游戏助手, 电台, 宠物大全) stay open
+	# above it; the battle waits for commands until they close.
 	game.battle_view.open_battle(battle_state)
+	refresh_pet_window()
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
 	if game.showcase_music_active():game.begin_showcase_music()
 	game.set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	game.play_battle_sound(215)
 	return true
+
+## The pet window open over a battle greys its participants (出战中, 骑乘中,
+## 削血宠); it redraws when the battle starts and ends so the locks follow.
+func refresh_pet_window() -> void:
+	if game.adventure_menu.visible and not game._typing_in(game.adventure_menu):game.rebuild_keeping_scroll(game.adventure_menu)
+
+## Whether a window a battle allows is open over it (宠物, 设置, 游戏助手,
+## 电台, 宠物大全, the automation windows): battle commands wait meanwhile.
+func battle_window_open() -> bool:
+	for node in [game.adventure_menu,game.settings_menu,game.helper_menu,game.radio_panel,game.pet_encyclopedia,game.training_helper,game.pet_hunt_menu,game.dev_gm_menu]:
+		if is_instance_valid(node) and node.visible:return true
+	return false
 
 func battle_action(action: String) -> void:
 	if not game.battle_view.visible and not (is_instance_valid(game.training_helper) and game.training_helper.compact_active):
@@ -80,7 +92,9 @@ func battle_action(action: String) -> void:
 
 ## Presentation for one resolved turn, from the player or a backend runner.
 func present_battle_turn(battle_state: Dictionary) -> void:
-	if battle_state.get("settled",false):game.checkpoint()
+	if battle_state.get("settled",false):
+		game.checkpoint()
+		refresh_pet_window()
 	if is_instance_valid(game.training_helper) and game.training_helper.compact_active:return
 	if not is_instance_valid(game.battle_view) or not game.battle_view.visible:return
 	game.battle_view.show_state(battle_state)
@@ -96,7 +110,8 @@ func return_from_battle() -> void:
 func present_battle_close(outcome: String) -> void:
 	game.battle_view.close_battle()
 	game.clear_input()
-	game.paused_input = game.automation_minimized()
+	# A window opened during the battle keeps the field paused.
+	game.paused_input = game.automation_minimized() or game._panel_open()
 	game.field_steps = 0
 	# 后台搜宠 keeps its battle music between battles (game_audio.gd).
 	if outcome!="defeat" and not game.showcase_music:game.set_music(game.exploration_music())
@@ -105,6 +120,8 @@ func present_battle_close(outcome: String) -> void:
 		game.switch_area(false,GameScene.SPAWN)
 	game.refresh_companion()
 	game.checkpoint()
+	# The battle's pets are free again: the pet window drops their locks.
+	refresh_pet_window()
 	# A running automation keeps the map locked between its battles.
 	if bool(game.state.automation.get("running",false)):game.paused_input = true
 

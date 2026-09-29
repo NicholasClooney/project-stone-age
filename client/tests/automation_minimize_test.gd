@@ -77,6 +77,8 @@ func training(game) -> void:
 	# Esc no longer reaches the helper: with nothing open it only toggles help off.
 	await key(KEY_ESCAPE)
 	check(helper.running and helper.minimized,"Esc does not stop minimized automation")
+	# Esc opened 设置; battles no longer close it, so close it here.
+	if game.settings_menu.visible:game.settings_menu.close_menu()
 	var shown: String=chip.detail.text
 	for i in range(60):
 		if helper.battles>=2:break

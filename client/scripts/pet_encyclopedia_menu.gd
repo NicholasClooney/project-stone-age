@@ -124,7 +124,8 @@ func encyclopedia():
 
 ## Opens on the grid, or on one species' page when template_id is a pet.
 func open_menu(template_id: int = -1) -> void:
-	if world.battle_view.visible or world.area_transition_busy:return
+	# Opens over a battle too (the battle waits); 瞬移去抓 says why it cannot run.
+	if world.area_transition_busy:return
 	encyclopedia()
 	owned = book.owned_counts(world.session.snapshot())
 	feedback = ""

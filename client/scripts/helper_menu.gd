@@ -22,7 +22,8 @@ func configure(owner: Node) -> void:
 	hide()
 
 func open_menu() -> void:
-	if world.dialogue.visible or world.battle_view.visible:return
+	# Opens over a battle too; entries the battle does not allow are greyed.
+	if world.dialogue.visible:return
 	if visible:rebuild()
 	get_parent().move_child(self,get_parent().get_child_count()-1)
 	show()
@@ -78,6 +79,15 @@ func rebuild() -> void:
 	_entry(["HelperGM","GM 调试","调整等级、属性和体力，发放特殊宠物。","",func(): world.dev_gm_menu.open_menu()])
 	reset_size()
 
+## Entries usable while a battle is on screen: the pet windows, 电台, GM (its
+## 立即脱战) and a minimized automation window coming back.
+func _allowed_in_battle(entry_name: String) -> bool:
+	match entry_name:
+		"HelperPets","HelperEncyclopedia","HelperPetRecords","HelperRadio","HelperGM":return true
+		"HelperTraining":return world.training_helper.minimized
+		"HelperPetHunt":return world.pet_hunt_menu.minimized
+	return false
+
 func _entry(entry: Array) -> void:
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",10)
@@ -91,6 +101,9 @@ func _entry(entry: Array) -> void:
 		entry[4].call())
 	open.name = entry[0]
 	open.custom_minimum_size = Vector2(150,34)
+	if world.battle_view.visible and not _allowed_in_battle(str(entry[0])):
+		open.disabled = true
+		open.tooltip_text = "战斗结束后才能打开。"
 	row.add_child(open)
 	var about: Label = world.text(str(entry[2]),13)
 	about.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART

@@ -182,9 +182,9 @@ func on_event(detail: Dictionary) -> void:
 			world.clear_input();world.paused_input=true
 		"flow_reveal":
 			# 后台搜宠 clears the stage: the hunt window folds to its progress bar
-			# (展开 brings it back) and the pet window gives way.
+			# (展开 brings it back). A pet window the player opened stays: it
+			# works over the capture and training battles.
 			if world.pet_hunt_menu.visible and not world.pet_hunt_menu.minimized:world.pet_hunt_menu.minimize()
-			if world.adventure_menu.visible:world.close_adventure_menu()
 		"flow_paused":
 			world.message.text="找宠流程暂停："+str(detail.reason)
 		"flow_skipped":

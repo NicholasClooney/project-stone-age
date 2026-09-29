@@ -96,6 +96,24 @@ var _queue: Array[Dictionary] = []
 
 func _init() -> void:
 	encounter_rng.randomize()
+	session.battle_pets_hook = _live_battle_pets
+
+## The open battle's live participants (pet_id -> reason) beyond its start
+## roster: the pet fighting now, any pet that has already defeated an enemy
+## (its experience is still owed) and, in an automatic capture battle, the
+## capture helpers it may switch to. GameSession.battle_pets() adds these.
+func _live_battle_pets() -> Dictionary:
+	var busy := {}
+	if not battle_open or session._pending.is_empty():return busy
+	var live: Dictionary = battle.snapshot()
+	if str(live.get("battle_id",""))!=str(session._pending.get("battle_id","")):return busy
+	var pets: Array = live.get("pets",[])
+	var slots := [int(live.get("active_pet",-1))]
+	for enemy in live.get("enemies",[]):slots.append(int(enemy.get("defeated_by_pet_index",-1)))
+	for slot in slots:
+		if slot>=0 and slot<pets.size():busy[str(pets[slot].get("pet_id",""))] = "出战中"
+	if battle.capture_assist:busy.merge(automation.capture_helpers(),false)
+	return busy
 
 func _process(delta: float) -> void:
 	_depth += 1
@@ -324,6 +342,7 @@ func _cmd_release_pets(command: Dictionary) -> Dictionary:
 		var profile: Dictionary = session.snapshot()
 		var protected: Dictionary = KeepRule.always_kept(profile)
 		protected.merge(automation.capture_helpers(),true)
+		protected.merge(session.battle_pets(),false)
 		var rule: Dictionary = AutomationSettings.stat_filter(session.automation_settings(),template).get("keep_rule",{})
 		var pets: Array = KeepRule.species_pets(profile,template)
 		notes = session.keep_rule_notes(pets,KeepRule.evaluate(pets,rule,protected))
@@ -394,6 +413,7 @@ func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
 	return {"ok":true,"state":state,"troop":troop}
 
 func open_battle(config: Dictionary) -> Dictionary:
+	session.battle_pets_hook = _live_battle_pets
 	encounter_serial += 1
 	battle = SquadBattleSession.new() if not config.get("allies",[]).is_empty() else BattleSession.new()
 	battle.rng_seed = 42+encounter_serial
@@ -425,6 +445,13 @@ func set_capture_assist(enabled: bool) -> void:
 
 func _cmd_battle_command(command: Dictionary) -> Dictionary:
 	if not battle_open:return _stale("no open battle")
+	# A pet stored or released during this battle can no longer be sent in.
+	if str(command.get("action",""))=="switch" and int(command.get("switch_pet",-2))>=0:
+		var roster: Array = battle.snapshot().get("pets",[])
+		var slot := int(command.switch_pet)
+		var carried: Array = session.snapshot().pets.map(func(pet):return str(pet.get("pet_id","")))
+		var ident: String = str(roster[slot].get("pet_id","")) if slot<roster.size() else ""
+		if not ident.is_empty() and not ident in carried:return _reject("这只宠物已存入仓库或放生，不能换上场。")
 	return {"ok":true,"state":battle_command(command)}
 
 func battle_command(command: Dictionary) -> Dictionary:
@@ -474,6 +501,7 @@ func _after_turn(state: Dictionary) -> Dictionary:
 		save()
 		_publish()
 	state.capture_assist = battle.capture_assist
+	_publish_battle_pets()
 	battle_state = state
 	_emit({"type":"battle_turn","state":state.duplicate(true)})
 	return state.duplicate(true)
@@ -488,12 +516,20 @@ func close_battle() -> String:
 	if outcome=="defeat":session.set_location(VILLAGE.map_id,VILLAGE.x,VILLAGE.y)
 	battle_open = false
 	save()
+	_publish_battle_pets()
 	_emit({"type":"battle_closed","battle_id":str(battle_state.get("battle_id","")),"outcome":outcome})
 	return outcome
 
 func _refresh_battle_state() -> void:
 	battle_state = _live_battle_state()
+	_publish_battle_pets()
 	_emit({"type":"battle_state","state":battle_state.duplicate(true)})
+
+## Clients grey out the battle's participants from the profile's derived
+## battle_pets; a turn or a capture-assist change can alter them.
+var _published_battle_pets: Dictionary = {}
+func _publish_battle_pets() -> void:
+	if session.battle_pets()!=_published_battle_pets:_publish()
 
 ## Current authority state plus the settlement fields only this host adds.
 func _live_battle_state() -> Dictionary:
@@ -576,7 +612,10 @@ func _flush() -> void:
 		event.emit(_queue.pop_front())
 
 func _derived() -> Dictionary:
-	return {"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
+	# battle_pets: pet_id -> reason for the open battle's participants, which
+	# release, store, deploy and ride refuse until it ends.
+	_published_battle_pets = session.battle_pets()
+	return {"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
 	return {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier}

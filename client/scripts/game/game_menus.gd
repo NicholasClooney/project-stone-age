@@ -78,7 +78,8 @@ func show_adventure_menu(kind: String) -> void:
 	if game.adventure_menu.visible and game.adventure_menu.kind == kind:
 		close_adventure_menu()
 		return
-	if game.battle_view.visible:
+	# In a battle only the pet window (宠物, 仓库, 同种比较, 宠物记录) opens.
+	if game.battle_view.visible and kind!="pets":
 		game.play_battle_sound(220)
 		return
 	if game.moving or game.dialogue.visible or game.help.visible:return
@@ -104,7 +105,9 @@ func close_adventure_menu() -> void:
 	game.play_ui_sound(203)
 
 func perform_adventure_action(action: String, value: Variant = null) -> void:
-	if not game.adventure_menu.visible or (game.battle_view.visible and action!="mute"):return
+	# During a battle the pet window may browse and deploy (the backend explains
+	# why deploying waits); nothing else acts until the battle ends.
+	if not game.adventure_menu.visible or (game.battle_view.visible and action not in ["mute","pet_preview","select_pet"]):return
 	var success := false
 	var note := ""
 	var at_shop := int(game.data.map_id)==1002 and in_talk_range(game.cell)
@@ -143,6 +146,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 		if action=="claim_quest":note = "委托完成！获得石币、经验与回复药。"
 		elif action=="heal":note = "你与伙伴恢复了体力。"
 		elif action=="accept_quest":note = "委托已接受，出发去村外吧！"
+	elif action=="select_pet" and not game.session.last_error.is_empty():note = game.session.last_error
 	else:note = "现在无法这样做，请检查条件、石币或数量。"
 	game.adventure_menu.refresh(note)
 	game.play_ui_sound(201)

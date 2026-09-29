@@ -434,6 +434,8 @@ func pet_panel(profile: Dictionary) -> void:
 			Highlight.attach(row,Rect2(Vector2(-1,1),Vector2(minf(name_width+5,190),22)))
 			var state:=pet_native_button(26053 if active else 26052,Vector2(39,y+10),func(): world.perform_adventure_action("select_pet",-1 if active else i),"休息" if active else "出战")
 			state.name="PetState%d" % i
+			if world.session.in_battle():
+				state.disabled=true;state.modulate=Color(1,1,1,0.5);state.tooltip_text=DEPLOY_IN_BATTLE
 		if filtered.is_empty():
 			label("没有此类宠物",Vector2(76,31),160,14)
 			pet_native_button(26042,Vector2(136,299),world.close_adventure_menu)
@@ -488,6 +490,15 @@ func pet_navigation(_count: int, y: float) -> void:
 	pet_native_button(26180,Vector2(60,y),func(): selected_pet=int(indices[(position+indices.size()-1)%indices.size()]); rebuild(),"上一只")
 	pet_native_button(26182,Vector2(104,y),func(): selected_pet=int(indices[(position+1)%indices.size()]); rebuild(),"下一只")
 
+const DEPLOY_IN_BATTLE:="战斗中不能更换出战宠物，请用战斗里的「宠物」指令。"
+
+## During a battle: why this pet cannot be released, stored or withdrawn
+## ("" when it can). The backend (GameSession.battle_pets) decides; this only
+## greys the buttons and explains. what: 放生 or 存入仓库.
+func battle_lock(pet_id: String, what: String) -> String:
+	var reason:=str(world.session.battle_pets().get(pet_id,""))
+	return "" if reason.is_empty() else "正在战斗中（%s），战斗结束后才能%s。" % [reason,what]
+
 func filtered_pet_indices(profile: Dictionary) -> Array:
 	var result := []
 	for i in range(profile.pets.size()):
@@ -508,6 +519,7 @@ func pet_mount_button(profile: Dictionary, at: Vector2) -> Button:
 	var pet: Dictionary = profile.pets[selected_pet]
 	var riding:=int(profile.get("ride_pet",-1))==selected_pet
 	var reason:="" if riding else Riding.can_mount(profile,selected_pet)
+	if world.session.in_battle():reason="战斗中不能骑乘或下骑。"
 	var control:=pet_tool_button(("下骑 · " if riding else "骑乘 · ")+str(pet.name),at,func():
 		if world.session.mount_pet(-1 if riding else selected_pet):
 			world.refresh_companion();world.checkpoint();feedback=""
@@ -550,7 +562,8 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 		rebuild(),"StarterPets")
 	label(feedback,origin+Vector2(16,436),230,12)
 	pet_tool_button("宠物记录",origin+Vector2(16,362),func():open_pet_records("caught",-1),"PetRecords")
-	pet_tool_button("自动抓极品",origin+Vector2(16,398),func():world.close_adventure_menu();world.pet_hunt_menu.open_menu(),"PetHunt").custom_minimum_size.x=108
+	var hunt:=pet_tool_button("自动抓极品",origin+Vector2(16,398),func():world.close_adventure_menu();world.pet_hunt_menu.open_menu(),"PetHunt");hunt.custom_minimum_size.x=108
+	if world.battle_view.visible:hunt.disabled=true;hunt.tooltip_text="战斗结束后才能打开。"
 	# 宠物大全, on the selected pet's species when there is one.
 	pet_tool_button("宠物大全",origin+Vector2(128,398),func():
 		var template:=-1
@@ -751,6 +764,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		list.add_child(holder)
 		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);holder.add_child(line)
 		var pick:=CheckBox.new();pick.name="CompareSelect_"+identifier;pick.focus_mode=Control.FOCUS_NONE;pick.button_pressed=pet_release_selected.has(identifier);pick.tooltip_text="选中（放生用）";pick.custom_minimum_size.x=24
+		var fighting:=battle_lock(identifier,"放生")
+		if not fighting.is_empty():pick.disabled=true;pick.tooltip_text=fighting
 		pick.toggled.connect(func(on):
 			if on:pet_release_selected[identifier]=true
 			else:pet_release_selected.erase(identifier)
@@ -762,6 +777,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		if row.location=="pets" and int(row.index)==int(profile.active_pet):where+=" · 出战"
 		if row.location=="pets" and int(row.index)==int(profile.get("ride_pet",-1)):where+=" · 骑乘"
 		if PetComparison.warning(pet):where+=" · GM"
+		if not fighting.is_empty():where+=" · 战斗中"
 		var meta:=PetTable.text(where,"meta");meta.clip_text=true;meta.custom_minimum_size.x=COMPARE_NAME;who.add_child(meta)
 		if not rule_line.is_empty():
 			var verdict:=PetTable.text(rule_line,"meta",PetTable.GOOD if not pet_rule_reasons[identifier].is_empty() else PetTable.BAD);verdict.clip_text=true;verdict.custom_minimum_size.x=COMPARE_NAME;verdict.tooltip_text=rule_line;verdict.mouse_filter=Control.MOUSE_FILTER_PASS;who.add_child(verdict)
@@ -774,14 +790,18 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 			if ok:world.refresh_companion();world.checkpoint();feedback="已更新宠物位置。"
 			else:feedback=world.session.last_error
 			rebuild());transfer.name="CompareTransfer_"+identifier;transfer.disabled=(row.location=="pets" and int(row.index)==int(profile.get("ride_pet",-1))) or (row.location!="pets" and profile.pets.size()>=world.session.PET_CAPACITY);transfer.set_meta("compact",true);actions.add_child(transfer)
+		if row.location=="pets" and not fighting.is_empty():transfer.disabled=true;transfer.tooltip_text=battle_lock(identifier,"存入仓库")
 		if row.location=="pets":
 			var deploy:Button=world.button("撤回" if int(row.index)==int(profile.active_pet) else "出战",func():
 				if world.session.select_pet(-1 if int(row.index)==int(profile.active_pet) else int(row.index)):world.refresh_companion();world.checkpoint()
+				else:feedback=world.session.last_error
 				rebuild());deploy.name="CompareDeploy_"+identifier;deploy.set_meta("compact",true);actions.add_child(deploy)
+			if world.session.in_battle():deploy.disabled=true;deploy.tooltip_text=DEPLOY_IN_BATTLE
 			if int(row.index)==int(profile.get("ride_pet",-1)):
 				var dismount:Button=world.button("下骑",func():
 					if world.session.mount_pet(-1):world.refresh_companion();world.checkpoint()
 					rebuild());dismount.name="CompareDismount_"+identifier;dismount.set_meta("compact",true);actions.add_child(dismount)
+				if world.session.in_battle():dismount.disabled=true;dismount.tooltip_text="战斗中不能骑乘或下骑。"
 
 	style_pet_modal(overlay)
 
@@ -895,6 +915,8 @@ func select_by_keep_rule(profile:Dictionary)->void:
 	var rule:Dictionary=world.stat_filter(template).get("keep_rule",{})
 	var protected:=KeepRule.always_kept(profile)
 	protected.merge(KeepRule.capture_helpers(profile,world.automation_settings().get("capture",{})))
+	# During a battle its participants stay too (the backend would skip them).
+	protected.merge(world.session.battle_pets())
 	var verdict:=KeepRule.evaluate(KeepRule.species_pets(profile,template),rule,protected)
 	pet_release_selected.clear();pet_release_confirm=false
 	for id in verdict.release:pet_release_selected[str(id)]=true
@@ -913,7 +935,7 @@ func select_release_below(profile:Dictionary,rows:Array,metric:String,limit:int)
 	var added:=0
 	for row in rows:
 		var pet:Dictionary=row.pet;var identifier:=str(pet.get("pet_id",""))
-		if identifier.is_empty() or pet.get("favorite",false) or pet_release_selected.has(identifier):continue
+		if identifier.is_empty() or pet.get("favorite",false) or pet_release_selected.has(identifier) or not battle_lock(identifier,"放生").is_empty():continue
 		if row.location=="pets" and (int(row.index)==int(profile.active_pet) or int(row.index)==int(profile.get("ride_pet",-1))):continue
 		if release_metric_value(pet,metric)<limit:pet_release_selected[identifier]=true;added+=1
 	return added
@@ -931,7 +953,7 @@ func perform_release()->void:
 	clear_release_selection();rebuild()
 
 func open_pet_comparison(pet_id:String)->bool:
-	if world.battle_view.visible or world.area_transition_busy:return false
+	if world.area_transition_busy:return false
 	var profile:Dictionary=world.session.snapshot()
 	for location in ["pets","pet_storage"]:
 		for pet in profile.get(location,[]):
@@ -955,6 +977,8 @@ func pet_storage_panel(profile:Dictionary)->void:
 		if world.session.store_pet(store_index):world.refresh_companion();world.checkpoint();feedback="已存入仓库。"
 		else:feedback=world.session.last_error
 		rebuild());store.name="StoreSelectedPet";store.position=Vector2(14,46);store.disabled=store_index<0 or store_index==int(profile.get("ride_pet",-1));overlay.add_child(store)
+	var store_lock:=battle_lock(pet_storage_target_id,"存入仓库") if store_index>=0 else ""
+	if not store_lock.is_empty():store.disabled=true;store.tooltip_text=store_lock
 	load_compare_prefs()
 	var sort:=OptionButton.new();sort.name="StorageSort";sort.position=Vector2(250,46);sort.focus_mode=Control.FOCUS_NONE;sort.tooltip_text="仓库排序（这台设备记住）"
 	var orders:=["","caught_new","caught_old"]

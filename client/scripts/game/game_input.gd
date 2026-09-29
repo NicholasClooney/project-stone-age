@@ -118,7 +118,9 @@ func on_unhandled_input(event: InputEvent) -> void:
 	if is_instance_valid(game.battle_view) and game.battle_view.visible:
 		if event.is_action_pressed("mute"):
 			game.toggle_mute()
-		elif event.is_action_pressed("ui_accept") and not game.battle_session.snapshot().active:
+		elif battle_window_key(event):
+			pass
+		elif event.is_action_pressed("ui_accept") and not game.battle_session.snapshot().active and not game.battle_window_open():
 			game.return_from_battle()
 		game.get_viewport().set_input_as_handled()
 		return
@@ -174,6 +176,30 @@ func on_unhandled_input(event: InputEvent) -> void:
 			game.zoom_by(GameScene.ZOOM_STEP)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
 			game.zoom_by(-GameScene.ZOOM_STEP)
+
+## The window shortcuts a battle allows (设置, 操作说明, 游戏助手, 电台,
+## 宠物大全). Esc closes 设置 or the radio, else opens 设置; it only gets
+## here when the battle has no command to cancel (battle_view.gd
+## nothing_to_cancel). Returns whether the key was used.
+func battle_window_key(event: InputEvent) -> bool:
+	if event.is_action_pressed("ui_cancel"):
+		if game.settings_menu.visible:game.settings_menu.close_menu()
+		elif is_instance_valid(game.radio_panel) and game.radio_panel.visible:game.radio_panel.close_panel()
+		else:game.settings_menu.open_menu()
+	elif event.is_action_pressed("settings"):
+		if game.settings_menu.visible:game.settings_menu.close_menu()
+		else:game.settings_menu.open_menu()
+	elif event.is_action_pressed("help"):
+		if game.settings_menu.visible and game.settings_menu.page=="help":game.settings_menu.close_menu()
+		else:game.settings_menu.open_menu("help")
+	elif event.is_action_pressed("helper"):
+		if not game.settings_menu.visible:game.helper_menu.open_menu()
+	elif event.is_action_pressed("radio"):
+		game.toggle_radio()
+	elif event.is_action_pressed("encyclopedia"):
+		if not game.settings_menu.visible:game.pet_encyclopedia.open_menu()
+	else:return false
+	return true
 
 func handle_world_click(point: Vector2) -> void:
 	if game.paused_input:

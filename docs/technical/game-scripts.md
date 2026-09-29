@@ -30,6 +30,10 @@
 
 What stays in `game.gd`: the state declarations, `_init` and `_ready` (the startup order), saving (`checkpoint`, `backup_save`, `release_pets`, `load_profile`, `sync_state`), closing and screenshots, the hot per-cell functions above, and the forwarders.
 
+## Windows over a battle
+
+The battle view sits just above the classic HUD in the UI tree, so every window added after it takes clicks first and draws above it by `z_index`. During a battle 宠物 (with 仓库, 同种比较, 宠物记录), 设置, 游戏助手 (only its allowed entries), 电台 and 宠物大全 open; `game_battle.gd` `battle_window_open()` lists them and `battle_view.gd` `world_modal_open()` holds the battle's commands, targets and 继续探索 while one is open. `game_input.gd` `battle_window_key` routes their shortcuts in battle; Esc there opens 设置 only when the battle has no chosen command to back out of. Automatic battles keep running behind the windows. The pet window greys the battle's participants from the profile's `derived.battle_pets`; the backend enforces it (see [backend interface](backend-interface.md)).
+
 ## Adding code
 
 Put new behaviour in the helper for its area and new state on the game. Add a forwarder only when something outside the helper calls the function by name. A new helper follows the same shape and is preloaded and created at the top of `_init`.

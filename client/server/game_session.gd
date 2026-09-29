@@ -30,6 +30,10 @@ const SPECIES := {
 }
 var _profile: Dictionary
 var _pending: Dictionary = {}
+## Pets the open battle's live state adds to battle_pets() (pet_id -> reason):
+## one switched in, one that already has kill credit, the capture helpers.
+## The backend sets it; without it only the battle's start roster counts.
+var battle_pets_hook: Callable
 var last_error := ""
 # Injectable login clock/randomness; unrelated to combat and encounter RNG.
 var login_clock: Callable
@@ -207,6 +211,11 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var captures: Array = result.get("captured_species_list",[])
 	var enemies: Array = result.get("enemies",[])
 	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>PET_CAPACITY:return false
+	# The result's pet indices are slots of the battle's start roster. Pets that
+	# are not in the battle can be stored, withdrawn or released meanwhile, so
+	# each slot is matched to the party by pet id (-1: no longer carried).
+	var roster: Array = _pending.get("pets",_profile.pets)
+	var slots := _battle_slots()
 	var verified_captures := []
 	var captured_actors := []
 	var earned_xp := 0
@@ -214,7 +223,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var earned_gold := 0
 	var remaining := 0
 	var pet_rewards: Array = []
-	pet_rewards.resize(_profile.pets.size())
+	pet_rewards.resize(roster.size())
 	pet_rewards.fill(0)
 	for i in range(enemies.size()):
 		var foe: Dictionary = enemies[i]
@@ -229,13 +238,13 @@ func apply_battle_result(result: Dictionary) -> bool:
 			earned_xp += enemy_xp
 			earned_gold += int(original.reward_gold)
 			var recipient = foe.get("defeated_by_pet_index",-1)
-			if not _integer(recipient,-1,_profile.pets.size()-1):return false
+			if not _integer(recipient,-1,roster.size()-1):return false
 			if int(recipient)>=0:pet_rewards[int(recipient)] += enemy_xp
 			var ridden = foe.get("defeated_with_ride_index",-1)
-			if not _integer(ridden,-1,_profile.pets.size()-1):return false
+			if not _integer(ridden,-1,roster.size()-1):return false
 			if int(ridden)>=0:
 				if int(ridden) != int(_pending.get("ride_pet_index",-1)):return false
-				pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(enemy_xp,int(_profile.pets[int(ridden)].level),int(original.get("level",1)))
+				pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(enemy_xp,int(roster[int(ridden)].level),int(original.get("level",1)))
 		else:remaining += 1
 	var sorted_captures := captures.duplicate()
 	sorted_captures.sort()
@@ -245,19 +254,28 @@ func apply_battle_result(result: Dictionary) -> bool:
 	if outcome == "captured" and captures.is_empty():return false
 	if (outcome == "defeat" and hp != 0) or (outcome != "defeat" and hp == 0):return false
 	var battle_pets: Array = result.get("pets",[])
-	if battle_pets.size() != _profile.pets.size():return false
+	if battle_pets.size() != roster.size():return false
 	for i in range(battle_pets.size()):
-		if not _integer(battle_pets[i].get("hp"),0,_profile.pets[i].max_hp):return false
-	if not _integer(result.get("active_pet",-1),-1,_profile.pets.size()-1):return false
-	var ride_index = result.get("ride_pet",int(_profile.get("ride_pet",-1)))
-	if not _integer(ride_index,-1,_profile.pets.size()-1):return false
-	if int(ride_index) not in [-1,int(_profile.get("ride_pet",-1))]:return false
+		if not _integer(battle_pets[i].get("hp"),0,roster[i].max_hp):return false
+	if not _integer(result.get("active_pet",-1),-1,roster.size()-1):return false
+	var start_ride := int(_pending.get("ride_pet_index",_profile.get("ride_pet",-1)))
+	var ride_index = result.get("ride_pet",start_ride)
+	if not _integer(ride_index,-1,roster.size()-1):return false
+	if int(ride_index) not in [-1,start_ride]:return false
 	if int(ride_index)>=0 and (int(result.get("active_pet",-1)) == int(ride_index) or int(battle_pets[int(ride_index)].hp)<=0):return false
-	_profile.ride_pet = int(ride_index)
+	_profile.ride_pet = int(slots[int(ride_index)]) if int(ride_index)>=0 else -1
 	_profile.player.hp = hp
 	_profile.inventory.potion = potions
-	for i in range(battle_pets.size()):_profile.pets[i].hp = int(battle_pets[i].hp)
-	_profile.active_pet = int(result.get("active_pet",-1))
+	for i in range(battle_pets.size()):
+		if int(slots[i])>=0:_profile.pets[int(slots[i])].hp = int(battle_pets[i].hp)
+	_profile.active_pet = int(slots[int(result.active_pet)]) if int(result.get("active_pet",-1))>=0 else -1
+	# Rewards per party slot from here on (the result summary reads them so).
+	var party_rewards: Array = []
+	party_rewards.resize(_profile.pets.size())
+	party_rewards.fill(0)
+	for i in range(roster.size()):
+		if int(slots[i])>=0:party_rewards[int(slots[i])] += int(pet_rewards[i])
+	pet_rewards = party_rewards
 	if outcome in ["win","captured"]:
 		earned_gold += int(_pending.get("battle_gold",0))
 		earned_gold = mini(earned_gold,1000000000-int(_profile.player.gold))
@@ -420,12 +438,50 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 		seen[pet.pet_id]=true;largest=maxi(largest,int(suffix))
 	return not profile.has("next_pet_id") or _integer(profile.next_pet_id,largest+1,9007199254740991)
 
+## Pets taking part in the open battle, pet_id -> reason: the start roster's
+## active pet (出战中) and mount (骑乘中), plus what battle_pets_hook adds.
+## Empty when no battle is pending. Every other pet can be released, stored or
+## withdrawn during the battle (clone squads are copies and never count).
+func battle_pets() -> Dictionary:
+	if _pending.is_empty():return {}
+	var busy := {}
+	var roster: Array = _pending.get("pets",[])
+	for pair in [[int(_pending.get("active_pet",-1)),"出战中"],[int(_pending.get("ride_pet_index",-1)),"骑乘中"]]:
+		if int(pair[0])>=0 and int(pair[0])<roster.size():busy[str(roster[int(pair[0])].get("pet_id",""))] = pair[1]
+	if battle_pets_hook.is_valid():busy.merge(battle_pets_hook.call(),false)
+	busy.erase("")
+	return busy
+
+## Why this pet cannot be changed now ("" when it can): it takes part in the
+## open battle. what: the refused action, e.g. 放生 or 存入仓库.
+func battle_refusal(pet_id: String, what: String) -> String:
+	var reason := str(battle_pets().get(pet_id,""))
+	return "" if reason.is_empty() else "这只宠物正在战斗中（%s），战斗结束后才能%s。" % [reason,what]
+
+## Party slots the open battle may still fill with captures (0 without one).
+func _capture_room() -> int:
+	if _pending.is_empty() or bool(_pending.get("boss",false)) or not bool(_pending.get("can_capture",true)):return 0
+	return mini(int(_pending.get("capture_slots",0)),_pending.get("enemies",[]).size())
+
+## The party index of each slot of the battle's start roster (-1 when that pet
+## was stored or released during the battle).
+func _battle_slots() -> Array:
+	var slots: Array = []
+	if not _pending.has("pets"):
+		for i in range(_profile.pets.size()):slots.append(i)
+		return slots
+	var where := {}
+	for i in range(_profile.pets.size()):where[str(_profile.pets[i].get("pet_id",""))] = i
+	for pet in _pending.pets:slots.append(int(where.get(str(pet.get("pet_id","")),-1)))
+	return slots
+
 ## auto_hunt marks a stored reject the rolling keep may prune; qualified marks a
 ## qualifying pet the find-pet cycle stored (shown as 达标; cleared on retrieval).
 func store_pet(index: int, auto_hunt: bool=false, qualified: bool=false) -> bool:
 	last_error=""
-	if not _pending.is_empty():last_error="请先结束战斗。";return false
 	if index<0 or index>=_profile.pets.size():last_error="请选择随身宠物。";return false
+	last_error=battle_refusal(str(_profile.pets[index].get("pet_id","")),"存入仓库")
+	if not last_error.is_empty():return false
 	if index==int(_profile.get("ride_pet",-1)):
 		last_error="请先取消这只宠物的骑乘状态。";return false
 	_ensure_pet_ids()
@@ -440,9 +496,10 @@ func store_pet(index: int, auto_hunt: bool=false, qualified: bool=false) -> bool
 
 func retrieve_pet(index: int) -> bool:
 	last_error=""
-	if not _pending.is_empty():last_error="请先结束战斗。";return false
 	if index<0 or index>=_profile.get("pet_storage",[]).size():last_error="请选择仓库宠物。";return false
 	if _profile.pets.size()>=PET_CAPACITY:last_error="随身宠物栏已满，请先存入其他宠物。";return false
+	# The open battle may still catch pets into the party: keep room for them.
+	if _profile.pets.size()+1+_capture_room()>PET_CAPACITY:last_error="战斗中要为捕捉留出宠物栏空位，战斗结束后再取出。";return false
 	_ensure_pet_ids()
 	# A retrieved pet belongs to the player again and is never auto-pruned.
 	for flag in ["auto_reject","auto_hunt","auto_qualified"]:_profile.pet_storage[index].erase(flag)
@@ -504,10 +561,11 @@ func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 # the capture helper) always stay. Returns the released pet ids.
 func apply_keep_rule(template_id: int, rule: Dictionary, protected: Dictionary = {}, source: String = "自动整理") -> Array:
 	last_error=""
-	if not _pending.is_empty():last_error="请先结束战斗。";return []
 	_ensure_pet_ids()
 	var kept:=KeepRule.always_kept(_profile)
 	kept.merge(protected,true)
+	# During a battle its participants stay as well.
+	kept.merge(battle_pets(),false)
 	var pets:=KeepRule.species_pets(_profile,template_id)
 	var verdict:=KeepRule.evaluate(pets,rule,kept)
 	if verdict.release.is_empty():return []
@@ -547,7 +605,7 @@ static func _hunt_metric(pet: Dictionary, metric: String) -> int:
 
 func set_pet_favorite(pet_id: String, favorite: bool) -> bool:
 	last_error=""
-	if not _pending.is_empty():last_error="请先结束战斗。";return false
+	# A battle never reads or writes favourites, so this works during one too.
 	for pet in _profile.pets+_profile.get("pet_storage",[]):
 		if str(pet.get("pet_id",""))==pet_id:
 			pet.favorite=favorite;return true
@@ -560,7 +618,8 @@ func set_pet_favorite(pet_id: String, favorite: bool) -> bool:
 func release_pets(ids: Array, source: String = "手动", notes: Dictionary = {}) -> Dictionary:
 	last_error=""
 	var result:={"released":0,"skipped":[]}
-	if not _pending.is_empty():last_error="请先结束战斗。";return result
+	# During a battle only its participants are kept back (skipped as 战斗中).
+	var busy:=battle_pets()
 	var wanted:={}
 	for id in ids:wanted[str(id)]=true
 	var active_id:=""
@@ -574,6 +633,7 @@ func release_pets(ids: Array, source: String = "手动", notes: Dictionary = {})
 		if not wanted.has(identifier):continue
 		found[identifier]=true
 		if pet.get("favorite",false):result.skipped.append({"id":identifier,"reason":"收藏"})
+		elif busy.has(identifier):result.skipped.append({"id":identifier,"reason":"战斗中"})
 		elif identifier==ride_id:result.skipped.append({"id":identifier,"reason":"骑乘中"})
 		elif identifier==active_id:result.skipped.append({"id":identifier,"reason":"出战中"})
 		else:doomed[identifier]=true
@@ -603,7 +663,11 @@ func retrieve_pet_by_id(pet_id: String) -> bool:
 	last_error="这只宠物已不在仓库。";return false
 
 func select_pet(index: int) -> bool:
-	if not _pending.is_empty() or index < -1 or index >= _profile.pets.size():
+	last_error = ""
+	if not _pending.is_empty():
+		last_error = "战斗中不能更换出战宠物，请用战斗里的「宠物」指令。"
+		return false
+	if index < -1 or index >= _profile.pets.size():
 		return false
 	if index >= 0 and index == int(_profile.get("ride_pet",-1)):return false
 	_profile.active_pet = index
