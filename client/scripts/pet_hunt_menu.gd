@@ -170,7 +170,7 @@ func _ready() -> void:
 	cores_label=label("",Vector2(1012,470),14)
 	status=label("",Vector2(24,478),14);status.size=Vector2(830,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
-	stop_button=world.button("停止",func():stop_hunt("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
+	stop_button=world.button("停止",func():stop_all("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,560);panel.add_child(close)
 	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizePetHunt";minimize_button.position=Vector2(760,560);minimize_button.disabled=true
 	minimize_button.tooltip_text="收起为右下角进度条；筛选或找宠流程继续，可同时整理宠物与仓库";panel.add_child(minimize_button)
@@ -355,7 +355,8 @@ func open_menu() -> void:
 func close_menu() -> void:
 	if not visible:return
 	world.flush_automation_settings()
-	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
+	if world.pet_workflow.active():world.pet_workflow.stop_cycle("已关闭筛选。")
+	elif running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
 	set_controls(false);hide();world.release_input();world.clear_input()
 ## 宠物记录 on 抓到 (本轮找宠 while a cycle runs). A running scan or cycle
 ## keeps going with this window folded to its progress bar; otherwise it closes.
@@ -440,6 +441,14 @@ func start_hunt() -> void:
 		if not str(reply.reason).is_empty():status.text=str(reply.reason)
 		return
 	set_controls(true);update_status()
+## 停止 and closing: the whole find-pet cycle when one runs (with 后台搜宠 the
+## scan runs beside the capture and training, so stopping only the scan would
+## leave them going), otherwise the scan. A battle in progress stays open for
+## the player to finish by hand.
+func stop_all(reason: String) -> void:
+	if world.pet_workflow.active():world.pet_workflow.stop_cycle(reason)
+	else:stop_hunt(reason)
+
 func stop_hunt(reason: String) -> void:
 	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":reason})
 	else:on_event({"kind":"hunt_stopped","reason":reason})
