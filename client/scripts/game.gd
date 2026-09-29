@@ -1,5 +1,10 @@
 extends Node2D
 class_name GameScene
+## The game scene: owns every piece of client state (map, character, windows,
+## sound, link to the backend) and wires them together. The behaviour lives in
+## helpers under scripts/game/, one per area, which reach this state through
+## `game.`; the forwarders at the end keep every function other scripts and
+## tests call by name. See docs/technical/game-scripts.md.
 
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const Backend = preload("res://server/backend.gd")
@@ -11,6 +16,8 @@ const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 ## Behaviour split out of this script (see docs/technical/game-scripts.md);
 ## each helper is created first in _init and reaches the state through `game.`.
+const GameCharacter = preload("res://scripts/game/game_character.gd")
+var _character
 const GameMovement = preload("res://scripts/game/game_movement.gd")
 var _movement
 const GameInput = preload("res://scripts/game/game_input.gd")
@@ -95,6 +102,8 @@ var asset_packs: Node
 var gamepad: Node
 ## Web build: full-screen waiting room while blocking packs download.
 var waiting_screen: CanvasLayer
+## Web only: window.stoneAgeDev, kept so the browser callback stays alive.
+var _dev_callback: JavaScriptObject
 var arrival_lock := Vector2i(-1,-1)
 var _presented_key := ""
 var _ui_stale := false
@@ -198,6 +207,14 @@ var volume := 0.55
 var effects_on := true
 ## Sound settings changed (M, 设置, the 音乐 window): open controls follow.
 signal sound_changed
+## Saved only once restore_device_settings ran, so a test that presses M or
+## zooms never writes this device's real viewer.cfg.
+var _device_settings_live := false
+## Per-device view choices (not game state, so not in the save or backend):
+## which automation windows this device keeps minimized, so a reload comes
+## back the same way. Tests run without persistence and never touch the file.
+const VIEWER_PREFS := "user://viewer.cfg"
+var viewer_prefs_path := ""
 var coordinates: Label
 var message: Label
 ## 设置 (scripts/settings_menu.gd); help points at it for the gamepad and
@@ -223,6 +240,7 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_character = GameCharacter.new(self)
 	_movement = GameMovement.new(self)
 	_input_events = GameInput.new(self)
 	_areas = GameAreas.new(self)
@@ -330,7 +348,6 @@ func _ready() -> void:
 	if "--capture-once" in OS.get_cmdline_user_args():
 		capture_frame()
 
-
 func capture_frame() -> void:
 	await get_tree().create_timer(1.0).timeout
 	await RenderingServer.frame_post_draw
@@ -346,7 +363,6 @@ func close_game() -> void:
 	effect.stop()
 	await get_tree().create_timer(0.15).timeout
 	get_tree().quit()
-
 
 func project(grid: Vector2) -> Vector2:
 	return Vector2((grid.x+grid.y)*32,(grid.y-grid.x)*24)
@@ -384,39 +400,10 @@ func can_step(origin: Vector2i, destination: Vector2i) -> bool:
 		return is_walkable(origin+Vector2i(d.x,0)) and is_walkable(origin+Vector2i(0,d.y))
 	return true
 
-
-func change_character(id: String = "") -> void:
-	if battle_view.visible or area_transition_busy:return
-	if id.is_empty():
-		character_selection.open_menu()
-		return
-	if not asset_packs.is_ready([asset_packs.character_pack(id)]):
-		asset_packs.ensure([asset_packs.character_pack(id)],func(ok: bool):if ok:change_character(id),"角色")
-		return
-	if not data.characters.has(id) or not session.set_character(id):return
-	player.character_id = id
-	refresh_riding()
-	player.current_image = -1
-	player.elapsed = 0.0
-	message.text = "Original character %s" % id
-	play_click()
-	checkpoint()
-
-## Saved only once restore_device_settings ran, so a test that presses M or
-## zooms never writes this device's real viewer.cfg.
-var _device_settings_live := false
-
 func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
 	if is_instance_valid(music): music.stop()
 	if is_instance_valid(effect): effect.stop()
-
-
-## Per-device view choices (not game state, so not in the save or backend):
-## which automation windows this device keeps minimized, so a reload comes
-## back the same way. Tests run without persistence and never touch the file.
-const VIEWER_PREFS := "user://viewer.cfg"
-var viewer_prefs_path := ""
 
 # Copies the on-disk save beside itself before an irreversible change; returns
 # the backup path or "" when there is no save file.
@@ -445,28 +432,6 @@ func checkpoint() -> bool:
 		if str(result.get("reason",""))=="save_failed":last_adventure_message = "保存失败，请检查存储空间。")
 	return bool(reply.ok) or bool(reply.get("pending",false))
 
-func refresh_companion() -> void:
-	var profile_now: Dictionary = session.snapshot()
-	var wanted: Array = []
-	if int(profile_now.active_pet)>=0 and int(profile_now.active_pet)<profile_now.pets.size():wanted.append(asset_packs.sprite_pack(profile_now.pets[int(profile_now.active_pet)].sprite))
-	if not asset_packs.is_ready(wanted):
-		asset_packs.ensure(wanted,func(ok: bool):if ok and is_instance_valid(player):refresh_companion())
-		return
-	refresh_riding()
-	if is_instance_valid(pet_follower):
-		pet_follower.queue_free()
-	pet_follower = null
-	var profile: Dictionary = session.snapshot()
-	if int(profile.active_pet)<0 or not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):return
-	var pet: Dictionary = profile.pets[int(profile.active_pet)]
-	if int(pet.hp)<=0:return
-	pet_follower = PetFollower.new()
-	pet_follower.world = self
-	pet_follower.position = player.position
-	actors.add_child(pet_follower)
-	pet_follower.select_pet(str(int(pet.sprite)),str(pet.name))
-
-
 func load_profile() -> bool:
 	if not link.is_local():return true
 	if backend.load_profile(save_path):
@@ -476,60 +441,6 @@ func load_profile() -> bool:
 	profile_persistence = false
 	last_adventure_message = "存档未能读取；现以临时旅程运行，原文件保留。"
 	return false
-
-func refresh_riding() -> void:
-	if not is_instance_valid(player): return
-	var profile: Dictionary = session.snapshot()
-	var index := int(profile.get("ride_pet",-1))
-	var composite := -1
-	if index >= 0 and index < profile.pets.size():
-		composite = preload("res://scripts/riding.gd").composite(str(profile.get("character_id","100000")),int(profile.pets[index].sprite))
-	if composite >= 0 and not asset_packs.is_ready([asset_packs.riding_pack(composite)]):
-		asset_packs.ensure([asset_packs.riding_pack(composite)],func(ok: bool):if ok:refresh_riding())
-		return
-	player.mounted_character_id = str(composite) if composite >= 0 else ""
-
-## DEV: dismount, or ride the pet selected in the pet window, else the first
-## carried pet this character can ride (a battling pet goes to standby first).
-func dev_toggle_riding() -> void:
-	if paused_input or moving or area_transition_busy or not session.has_method("mount_pet"): return
-	var profile: Dictionary = session.snapshot()
-	if int(profile.get("ride_pet",-1)) >= 0:
-		session.mount_pet(-1)
-		message.text = "下骑。"
-	else:
-		var order: Array = []
-		if is_instance_valid(adventure_menu) and adventure_menu.selected_pet >= 0 and adventure_menu.selected_pet < profile.pets.size():
-			order.append(adventure_menu.selected_pet)
-		for i in range(profile.pets.size()):
-			if not order.has(i):order.append(i)
-		var index := -1
-		var first_reason := ""
-		for i in order:
-			var candidate: Dictionary = profile.duplicate(true)
-			if int(candidate.active_pet) == i: candidate.active_pet = -1
-			var reason: String = Riding.can_mount(candidate,i)
-			if reason.is_empty():
-				index = i
-				break
-			if first_reason.is_empty() and Riding.composite(str(profile.get("character_id","100000")),int(profile.pets[i].sprite)) >= 0:
-				first_reason = str(profile.pets[i].name)+"："+reason
-		if index < 0:
-			message.text = first_reason if not first_reason.is_empty() else "没有此造型可骑乘的伙伴。可骑乘：%s。" % "、".join(PackedStringArray(Riding.rideable_pets(str(profile.get("character_id","100000"))).map(func(sprite): return Riding.pet_name(sprite))))
-			refresh_companion()
-			return
-		if int(profile.active_pet) == index: session.select_pet(-1)
-		if not session.mount_pet(index):
-			message.text = session.last_error
-			return
-		message.text = "骑乘%s。" % str(profile.pets[index].name)
-	refresh_companion()
-	play_click()
-	checkpoint()
-
-
-var _dev_callback: JavaScriptObject
-
 
 # ---- remote play and backend events (scripts/game/game_remote.gd) ----
 func _server_url() -> String:return _remote._server_url()
@@ -660,3 +571,8 @@ func approach_npc() -> void:_movement.approach_npc()
 func blink_to(destination: Vector2i) -> bool:return _movement.blink_to(destination)
 func reset_player() -> void:_movement.reset_player()
 func _physics_process(delta: float) -> void:_movement.step_frame(delta)
+
+# ---- the character and companions (scripts/game/game_character.gd) ----
+func change_character(id: String = "") -> void:_character.change_character(id)
+func refresh_companion() -> void:_character.refresh_companion()
+func dev_toggle_riding() -> void:_character.dev_toggle_riding()
