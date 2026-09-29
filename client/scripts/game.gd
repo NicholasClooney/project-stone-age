@@ -11,6 +11,10 @@ const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 ## Behaviour split out of this script (see docs/technical/game-scripts.md);
 ## each helper is created first in _init and reaches the state through `game.`.
+const GameDevice = preload("res://scripts/game/game_device.gd")
+var _device
+const GameAudio = preload("res://scripts/game/game_audio.gd")
+var _audio
 const GameRemote = preload("res://scripts/game/game_remote.gd")
 var _remote
 
@@ -201,6 +205,8 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_device = GameDevice.new(self)
+	_audio = GameAudio.new(self)
 	_remote = GameRemote.new(self)
 	remote_url = _server_url()
 	state = ClientState.new()
@@ -930,139 +936,11 @@ func change_character(id: String = "") -> void:
 	play_click()
 	checkpoint()
 
-func set_zoom(value: float) -> void:
-	camera.zoom = Vector2.ONE*clampf(value,MIN_ZOOM,MAX_ZOOM)
-
-func maximum_zoom_out() -> void:
-	set_zoom(MIN_ZOOM)
-
-func exploration_music() -> AudioStream:
-	var info: Dictionary = world_catalog.info(int(data.map_id))
-	if info.get("music") is String and not str(info.music).is_empty():
-		var path := "res://assets/legacy/"+str(info.music)
-		if ResourceLoader.exists(path):return load(path)
-	if str(info.get("kind",""))=="interior" and area_music!=null:return area_music
-	return wilderness_music if int(data.map_id)==100 and wilderness_music!=null else village_music
-
-func set_music(stream: AudioStream) -> void:
-	# The radio replaces map and battle music; remember what the scene wants.
-	if is_instance_valid(radio) and radio.on:
-		radio.scene_stream = stream
-		return
-	if music.stream==stream and music.playing:return
-	music.stop()
-	music.stream = stream
-	if stream is AudioStreamWAV:
-		stream.loop_begin = 0
-		stream.loop_end = int(stream.get_length()*stream.mix_rate)
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	music.play()
-
-func setup_audio() -> void:
-	music = AudioStreamPlayer.new()
-	music.stream = load("res://assets/legacy/sabgm_t0.wav")
-	music.stream.loop_begin = 0
-	music.stream.loop_end = int(music.stream.get_length()*music.stream.mix_rate)
-	music.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	village_music = music.stream
-	if mvp_manifest.get("audio",{}).has("wilderness"):
-		wilderness_music = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.wilderness))
-	music.volume_db = linear_to_db(volume)
-	add_child(music)
-	music.play()
-	effect = AudioStreamPlayer.new()
-	for entry in [[201,"sas_01.wav"],[202,"sas_02.wav"],[203,"sas_03.wav"]]:
-		ui_sounds[entry[0]] = load("res://assets/legacy/"+entry[1])
-	if FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
-		var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
-		for ident in manifest.get("frame_sounds",{}):
-			battle_sounds[int(ident)] = load("res://assets/legacy/battle/"+str(manifest.frame_sounds[ident]))
-		if manifest.audio.has("battle_cancel"):
-			ui_sounds[217] = load("res://assets/legacy/battle/"+str(manifest.audio.battle_cancel))
-	if ui_sounds.has(217):battle_sounds[217] = ui_sounds[217]
-	if mvp_manifest.get("audio",{}).has("menu_denied"):
-		battle_sounds[220] = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.menu_denied))
-	if mvp_manifest.get("audio",{}).has("battle_enter"):
-		battle_sounds[215] = load("res://assets/legacy/mvp/"+str(mvp_manifest.audio.battle_enter))
-	effect.stream = ui_sounds[201]
-	effect.volume_db = -10
-	add_child(effect)
-
-func play_battle_sound(ident: int) -> void:
-	if not battle_sounds.has(ident):
-		var path := str(preload("res://scripts/riding.gd").manifest().get("frame_sounds",{}).get(str(ident),""))
-		if not path.is_empty(): battle_sounds[ident] = load("res://assets/legacy/riding/"+path)
-	if ui_sounds.has(ident):
-		play_ui_sound(ident)
-		return
-	if not effects_on or not battle_sounds.has(ident):
-		return
-	effect.stream = battle_sounds[ident]
-	effect.play()
-
-func play_click() -> void:
-	play_ui_sound(201)
-
-func play_ui_sound(ident: int) -> void:
-	if not effects_on:
-		return
-	last_ui_sound = ident
-	ui_sound_count += 1
-	effect.stream = ui_sounds[ident]
-	effect.play()
-
-## M and the 音乐 switches: music on or off on this device.
-func toggle_mute() -> void:
-	muted = not muted
-	_save_device("music_on",not muted)
-	apply_sound()
-
-func set_music_volume(value: float) -> void:
-	volume = clampf(value,0.0,1.0)
-	_save_device("volume",volume)
-	apply_sound()
-
-func set_effects_on(on: bool) -> void:
-	effects_on = on
-	_save_device("effects_on",on)
-	apply_sound()
-
-func set_blink_mode(on: bool) -> void:
-	dev_blink_mode = on
-	_save_device("blink_mode",on)
-
-## Zoom the player chose (wheel, keys, 设置, gamepad), remembered on this device.
-func zoom_by(step: float) -> void:
-	set_zoom(camera.zoom.x+step)
-	_save_device("zoom",camera.zoom.x)
 
 ## Saved only once restore_device_settings ran, so a test that presses M or
 ## zooms never writes this device's real viewer.cfg.
 var _device_settings_live := false
-func _save_device(key: String, value: Variant) -> void:
-	if _device_settings_live:set_viewer_pref(key,value)
 
-## Zoom to the farthest view and remember it (设置's 拉到最远).
-func zoom_farthest() -> void:
-	maximum_zoom_out()
-	_save_device("zoom",camera.zoom.x)
-
-func apply_sound() -> void:
-	if is_instance_valid(music):music.volume_db = -80 if muted else linear_to_db(maxf(volume,0.0001))
-	if is_instance_valid(effect):effect.volume_db = -10 if effects_on else -80
-	sound_changed.emit()
-
-## This device's sound, zoom and 瞬移 choices (viewer.cfg). Restored for real
-## play (a save or a remote backend); tests keep the defaults unless they call it.
-func restore_device_settings() -> void:
-	_device_settings_live = true
-	volume = clampf(float(viewer_pref("volume",volume)),0.0,1.0)
-	muted = not bool(viewer_pref("music_on",not muted))
-	effects_on = bool(viewer_pref("effects_on",effects_on))
-	dev_blink_mode = bool(viewer_pref("blink_mode",dev_blink_mode))
-	var zoom = viewer_pref("zoom",0.0)
-	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))
-	apply_sound()
 
 func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
@@ -1483,15 +1361,6 @@ func _on_automation_settings() -> void:
 	for window in [training_helper,pet_hunt_menu]:
 		if is_instance_valid(window) and window.is_node_ready():window.load_settings()
 
-## Battle playback speed chosen on this device (1× until one is applied).
-func playback_speed() -> float:
-	if battle_speed<0:battle_speed = float(viewer_pref("battle_speed",0.0))
-	return battle_speed if battle_speed>0 else 1.0
-
-func set_battle_speed(value: float) -> void:
-	battle_speed = value
-	if is_instance_valid(battle_view):battle_view.playback_speed = value
-	set_viewer_pref("battle_speed",value)
 
 ## Per-device view choices (not game state, so not in the save or backend):
 ## which automation windows this device keeps minimized, so a reload comes
@@ -1499,25 +1368,6 @@ func set_battle_speed(value: float) -> void:
 const VIEWER_PREFS := "user://viewer.cfg"
 var viewer_prefs_path := ""
 
-func _viewer_prefs_file() -> String:
-	if not viewer_prefs_path.is_empty():return viewer_prefs_path
-	return VIEWER_PREFS if profile_persistence else ""
-
-func viewer_pref(key: String, fallback: Variant = false) -> Variant:
-	var file := _viewer_prefs_file()
-	if file.is_empty():return fallback
-	var config := ConfigFile.new()
-	if config.load(file)!=OK:return fallback
-	return config.get_value("view",key,fallback)
-
-func set_viewer_pref(key: String, value: Variant) -> void:
-	var file := _viewer_prefs_file()
-	if file.is_empty():return
-	var config := ConfigFile.new()
-	config.load(file)
-	if config.has_section_key("view",key) and config.get_value("view",key)==value:return
-	config.set_value("view",key,value)
-	config.save(file)
 
 # Copies the on-disk save beside itself before an irreversible change; returns
 # the backup path or "" when there is no save file.
@@ -1945,3 +1795,28 @@ func link_blocked() -> bool:return _remote.link_blocked()
 func _update_link_overlay() -> void:_remote._update_link_overlay()
 func acknowledge_presentation() -> void:_remote.acknowledge_presentation()
 func _on_backend_message(event: Dictionary) -> void:_remote._on_backend_message(event)
+
+# ---- sound (scripts/game/game_audio.gd) ----
+func exploration_music() -> AudioStream:return _audio.exploration_music()
+func set_music(stream: AudioStream) -> void:_audio.set_music(stream)
+func setup_audio() -> void:_audio.setup_audio()
+func play_battle_sound(ident: int) -> void:_audio.play_battle_sound(ident)
+func play_click() -> void:_audio.play_click()
+func play_ui_sound(ident: int) -> void:_audio.play_ui_sound(ident)
+func toggle_mute() -> void:_audio.toggle_mute()
+func set_music_volume(value: float) -> void:_audio.set_music_volume(value)
+func set_effects_on(on: bool) -> void:_audio.set_effects_on(on)
+func apply_sound() -> void:_audio.apply_sound()
+
+# ---- this device's settings (scripts/game/game_device.gd) ----
+func set_zoom(value: float) -> void:_device.set_zoom(value)
+func maximum_zoom_out() -> void:_device.maximum_zoom_out()
+func set_blink_mode(on: bool) -> void:_device.set_blink_mode(on)
+func zoom_by(step: float) -> void:_device.zoom_by(step)
+func _save_device(key: String, value: Variant) -> void:_device._save_device(key,value)
+func zoom_farthest() -> void:_device.zoom_farthest()
+func restore_device_settings() -> void:_device.restore_device_settings()
+func playback_speed() -> float:return _device.playback_speed()
+func set_battle_speed(value: float) -> void:_device.set_battle_speed(value)
+func viewer_pref(key: String, fallback: Variant = false) -> Variant:return _device.viewer_pref(key,fallback)
+func set_viewer_pref(key: String, value: Variant) -> void:_device.set_viewer_pref(key,value)
