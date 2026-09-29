@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/version="v0.78.1"
+config/version="v0.79.0"
 
 config/name="Stone Age — 萨姆吉尔村"
 config/description="Original StoneAge resources rendered in Godot. Local Samgir exploration."

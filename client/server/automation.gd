@@ -155,6 +155,22 @@ var showcase_segment := ""
 ## stored and tidied before the card, so it can say what happened to it.
 var showcase_after_phase := ""
 var _flow_run_serial := 0
+## 停止记录: every stop, pause and skip of the hunt and the find-pet cycle,
+## drained by the backend into <save>.stop-log.jsonl (server/release_log.gd).
+var stop_events: Array = []
+## A failure the cycle can step past (see _skip_hit) skips the current hit;
+## the same kind SKIP_LIMIT times in a row stops the cycle instead.
+const SKIP_LIMIT := 3
+## Why a capture battle ended without its pet when the cycle may simply try
+## the next hit; any other runner stop needs the player.
+const SKIPPABLE_BATTLE_STOPS := ["捕捉目标已倒下，已停止；不会改抓其他敌人","当前战斗不可继续捕捉，可能已达捕获数量上限","战斗未获胜","单场超过200回合，请手动处理","找不到可攻击目标"]
+var flow_skip_kind := ""
+var flow_skip_streak := 0
+var flow_skipped_count := 0
+var flow_skip_note := ""
+## A shown training segment already retried once for this pet.
+var showcase_retried := false
+var _stopping_cycle := false
 var flow_best_predicted: Dictionary = {}
 var timer_clock: Callable = Time.get_ticks_msec
 var timer_started_msec := 0
@@ -277,9 +293,11 @@ func position_changed(map_id: int, cell: Vector2i, map_changed: bool = false) ->
 	var pause := ""
 	if flow_active():
 		pause = "战斗失败，流程已暂停。" if str(backend.battle.snapshot().get("outcome",""))=="defeat" else "地图发生变化，流程已暂停。"
+		_record_stop("flow","暂停",pause,_involved_pet())
 		freeze_timer()
 		flow_phase = "paused"
 		flow_reason = pause
+	if hunt_running and pause.is_empty():_record_stop("hunt","停止","地图发生变化，筛选已停止。")
 	hunt_running = false
 	release_clone_override()
 	running = false
@@ -560,6 +578,9 @@ func start_hunt(filter: Dictionary) -> bool:
 
 func stop_hunt(reason: String) -> void:
 	fast_hunt.stop()
+	# The find-pet cycle records its own stops; a hit it goes on to capture is none.
+	if hunt_running and not flow_active() and not _stopping_cycle:
+		_record_stop("hunt","找到" if reason.begins_with("找到达标个体") else "停止",reason)
 	hunt_running = false
 	hunt_status = reason
 	_emit_status()
@@ -763,6 +784,7 @@ func start_cycle(continuing: bool) -> bool:
 		flow_run_id = "%d-%d" % [int(Time.get_unix_time_from_system()),_flow_run_serial]
 	if not continuing:
 		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_released_count = 0;flow_held_count = 0
+		flow_skip_kind = "";flow_skip_streak = 0;flow_skipped_count = 0;flow_skip_note = ""
 		start_timer()
 	flow_map = position_map
 	flow_cell = position_cell
@@ -789,6 +811,9 @@ func matched(index: int, actor: Dictionary) -> void:
 	if not running:stop_cycle("无法开始自动捕捉，请手动处理当前战斗。")
 
 func stop_cycle(message: String = "已手动停止") -> void:
+	if message.is_empty():message = "找宠流程已停止（没有写明原因）。"
+	if flow_active():_record_stop("flow","停止",message,_involved_pet())
+	_stopping_cycle = true
 	if not showcase_queue.is_empty():
 		showcase_note = "排队的 %d 只已放弃：%s" % [showcase_queue.size(),message]
 		message += "（排队的 %d 只已放弃）" % showcase_queue.size()
@@ -799,6 +824,7 @@ func stop_cycle(message: String = "已手动停止") -> void:
 	flow_reason = message
 	if hunt_running:stop_hunt(message)
 	if running:stop(message)
+	_stopping_cycle = false
 	_emit_status()
 	_emit_event({"kind":"flow_paused","reason":message})
 
@@ -818,14 +844,9 @@ func flow_step() -> void:
 		return
 	if running:return
 	if flow_phase=="capture":
-		# Only the normal single-battle completion permits continuation; Stop is final.
-		if stop_reason!="本场自动战斗已完成":stop_cycle(stop_reason);return
-		var battle: Dictionary = backend.battle.snapshot()
-		if battle.get("active",false) or str(battle.get("battle_id",""))!=flow_capture_battle_id:
-			stop_cycle("捕捉战斗状态已改变。");return
-		var enemies: Array = battle.get("enemies",[])
-		if flow_matched_index<0 or flow_matched_index>=enemies.size() or not enemies[flow_matched_index].get("captured",false):
-			stop_cycle("目标未捕获；未改抓其他敌人。");return
+		# Only the normal single-battle completion continues with this pet; a
+		# failed capture skips it (_capture_failed), a manual Stop is final.
+		if _capture_failed():return
 		var fresh: Array = []
 		var pets: Array = backend.session.snapshot().pets
 		for i in range(pets.size()):
@@ -833,6 +854,7 @@ func flow_step() -> void:
 		if fresh.size()!=1 or not same_capture(pets[fresh[0]],flow_matched_actor):
 			stop_cycle("无法唯一确认新捕获伙伴，请手动检查宠物栏。");return
 		flow_pet_id = str(pets[fresh[0]].pet_id)
+		_capture_succeeded()
 		if not backend.session.select_pet(int(fresh[0])):stop_cycle("新伙伴无法出战。");return
 		backend.save()
 		backend.publish()
@@ -903,6 +925,7 @@ func complete_trained_pet(found: Dictionary) -> void:
 		else:flow_last_result = "达标已存仓 · "+flow_last_result
 		if stop_after>0 and flow_collected_count>=stop_after:
 			freeze_timer()
+			_record_stop("flow","完成","收集完成：本轮找到%d只达标宠物" % flow_collected_count,_involved_pet())
 			flow_phase = "compare"
 			flow_reason = "收集完成：本轮找到%d只达标宠物 · %s" % [flow_collected_count,flow_last_result]
 			_emit_status()
@@ -914,6 +937,7 @@ func complete_trained_pet(found: Dictionary) -> void:
 		_emit_event({"kind":"flow_stored","result":flow_last_result})
 		return
 	freeze_timer()
+	_record_stop("flow","完成","已达标，停下来比较" if filtered else "新伙伴已达到120级，停下来比较",_involved_pet())
 	flow_phase = "compare"
 	flow_reason = ("已达标 · "+flow_last_result) if filtered else "新伙伴已达到120级，请对比后自行决定去留。"
 	_emit_status()
@@ -940,6 +964,120 @@ func capture_helpers() -> Dictionary:
 static func same_capture(pet: Dictionary, actor: Dictionary) -> bool:
 	for key in ["template_id","species","level","growth_weights","growth_seed","growth_rank","base_stats"]:
 		if actor.has(key) and pet.get(key)!=actor[key]:return false
+	return true
+
+# ---- stops and skips (停止记录) --------------------------------------------
+
+## One 停止记录 entry and a line on the server's output. scope: hunt (a scan on
+## its own) or flow (the find-pet cycle); outcome: 停止, 暂停, 已跳过, 已重试,
+## 完成 or 找到 (a scan on its own found its pet). Counts are the run's so far.
+func _record_stop(scope: String, outcome: String, reason: String, pet: Dictionary = {}) -> void:
+	var entry := {"time":int(Time.get_unix_time_from_system()),"scope":scope,"outcome":outcome,"reason":reason,
+		"phase":flow_phase if scope=="flow" else "hunt","run":flow_run_id if scope=="flow" else "",
+		"rolls":hunt_rolls,"collected":flow_collected_count,"stored":flow_stored_count,"skipped":flow_skipped_count,"released":flow_released_count,
+		"map_id":position_map,"map_name":backend.map_name(position_map) if position_map>=0 else "","cell":[position_cell.x,position_cell.y],"pet_id":str(pet.get("pet_id","")),"name":str(pet.get("name",""))}
+	stop_events.append(entry)
+	var who := ""
+	if not str(entry.name).is_empty():who = " · %s%s" % [entry.name," "+str(entry.pet_id) if not str(entry.pet_id).is_empty() else ""]
+	print("[%s] %s：%s%s · 已遇敌 %d 组 · 达标 %d · 存仓 %d · 跳过 %d" % ["找宠流程" if scope=="flow" else "自动抓极品",outcome,reason.replace("\n"," "),who,hunt_rolls,flow_collected_count,flow_stored_count,flow_skipped_count])
+
+func take_stop_events() -> Array:
+	var result := stop_events
+	stop_events = []
+	return result
+
+## The server is shutting down (a restart or quit) while a hunt or cycle runs.
+func record_shutdown() -> void:
+	var reason := "服务器关闭（重启或退出），自动抓极品中断；重新打开后需要再次开始。"
+	if flow_active():_record_stop("flow","停止",reason,_involved_pet())
+	elif hunt_running:_record_stop("hunt","停止",reason)
+
+## The pet the cycle is working on, for the log: the captured pet once there
+## is one, else the matched or revealed wild pet (name only).
+func _involved_pet() -> Dictionary:
+	if not flow_pet_id.is_empty():
+		var pet := _flow_pet()
+		return {"pet_id":flow_pet_id,"name":str(pet.get("name",flow_matched_actor.get("name","")))}
+	if not flow_matched_actor.is_empty():return {"name":str(flow_matched_actor.get("name",""))}
+	if not showcase_current.is_empty():return {"name":str(showcase_current.get("actor",{}).get("name",""))}
+	return {}
+
+static func skippable_battle_stop(reason: String) -> bool:
+	return reason in SKIPPABLE_BATTLE_STOPS or reason.ends_with("体力达到停机线")
+
+## After the capture battle: true (and the hit skipped or the cycle stopped)
+## when it ended without the matched pet. A manual stop, a full party or
+## anything else that needs the player stops; the target going down, a lost or
+## overlong battle, or a closed battle without the pet skip it.
+func _capture_failed() -> bool:
+	if stop_reason!="本场自动战斗已完成":
+		if skippable_battle_stop(stop_reason):_skip_hit("捕捉失败",stop_reason)
+		else:stop_cycle(stop_reason)
+		return true
+	var battle: Dictionary = backend.battle.snapshot()
+	if battle.get("active",false) or str(battle.get("battle_id",""))!=flow_capture_battle_id:
+		# Another battle is open (say, from another device): leave it to the player.
+		if backend.battle_open:stop_cycle("捕捉战斗状态已改变。")
+		else:_skip_hit("捕捉失败","捕捉战斗状态已改变。")
+		return true
+	var enemies: Array = battle.get("enemies",[])
+	if flow_matched_index<0 or flow_matched_index>=enemies.size() or not enemies[flow_matched_index].get("captured",false):
+		_skip_hit("捕捉失败","目标未捕获；未改抓其他敌人。")
+		return true
+	return false
+
+func _capture_succeeded() -> void:
+	flow_skip_kind = ""
+	flow_skip_streak = 0
+
+## Steps past a hit the cycle cannot finish: logs 已跳过, ends a capture battle
+## still open (no rewards), and goes back to searching (展示模式: the next
+## queued hit). The same kind SKIP_LIMIT times in a row stops the cycle.
+func _skip_hit(kind: String, reason: String) -> void:
+	if kind==flow_skip_kind:flow_skip_streak += 1
+	else:
+		flow_skip_kind = kind
+		flow_skip_streak = 1
+	if flow_skip_streak>=SKIP_LIMIT:
+		stop_cycle("连续%d次%s，已停止：%s" % [SKIP_LIMIT,kind,reason]);return
+	var pet := _involved_pet()
+	if running:
+		release_clone_override()
+		running = false
+	compact_active = false
+	backend.set_capture_assist(false)
+	backend.abandon_battle()
+	flow_skipped_count += 1
+	flow_skip_note = "%s · %s" % [kind,reason]
+	_record_stop("flow","已跳过",reason,pet)
+	if flow_showcase:
+		_showcase_restore()
+		showcase_note = flow_skip_note
+	else:flow_reason = flow_skip_note
+	flow_phase = "restart"
+	_emit_status()
+	_emit_event({"kind":"flow_skipped","reason":reason,"note":"已跳过一只 · "+flow_skip_note})
+
+## A shown training segment stopped early (lost or overlong): shown once more,
+## then the rest is levelled instantly, milestones and final card kept. False
+## when the stop needs the player (the pet left the party, no encounters here).
+func _retry_shown_battles() -> bool:
+	if not skippable_battle_stop(stop_reason):return false
+	var reason := stop_reason
+	running = false
+	compact_active = false
+	backend.abandon_battle()
+	if not showcase_retried:
+		showcase_retried = true
+		showcase_plan.push_front({"battles":1})
+		flow_skip_note = "练级战斗没打完，已重试 · %s" % reason
+		_record_stop("flow","已重试",reason,_involved_pet())
+	else:
+		showcase_plan = showcase_plan.filter(func(segment): return not segment.has("battles"))
+		flow_skip_note = "练级战斗又没打完，改为直接升级 · %s" % reason
+		_record_stop("flow","已跳过",reason+"（改为直接升级）",_involved_pet())
+	showcase_note = flow_skip_note
+	_showcase_next()
 	return true
 
 # ---- 展示模式 --------------------------------------------------------------
@@ -998,7 +1136,8 @@ func _showcase_step() -> void:
 		"train":
 			if running or _now()<showcase_wait_until:return
 			if showcase_segment=="battles" and stop_reason!="已达到战斗场次上限":
-				stop_cycle(stop_reason);return
+				if not _retry_shown_battles():stop_cycle(stop_reason)
+				return
 			if showcase_plan.is_empty():
 				showcase_segment = ""
 				flow_phase = showcase_after_phase
@@ -1036,7 +1175,7 @@ func _showcase_capture() -> void:
 	rng.seed = FastHunt.roll_seed(int(entry.run_seed),int(entry.index))
 	var troop: Dictionary = hunt_catalog.roll(flow_map,flow_cell,rng) if hunt_catalog!=null else {}
 	if troop.is_empty() or JSON.stringify(troop)!=JSON.stringify(entry.troop):
-		stop_cycle("排队的第 %d 组复核不一致，已停止，没有进入战斗。" % (int(entry.index)+1));return
+		_skip_hit("复核不一致","排队的第 %d 组复核不一致，没有进入战斗。" % (int(entry.index)+1));return
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		stop_cycle("宠物栏已满，请自行存放伙伴后再开始。");return
 	var config: Dictionary = backend.session.start_wild_battle_config(troop)
@@ -1060,13 +1199,7 @@ func _showcase_capture() -> void:
 ## training plan with its shown battles.
 func _showcase_captured() -> void:
 	showcase_show_battle = false
-	if stop_reason!="本场自动战斗已完成":stop_cycle(stop_reason);return
-	var battle: Dictionary = backend.battle.snapshot()
-	if battle.get("active",false) or str(battle.get("battle_id",""))!=flow_capture_battle_id:
-		stop_cycle("捕捉战斗状态已改变。");return
-	var enemies: Array = battle.get("enemies",[])
-	if flow_matched_index<0 or flow_matched_index>=enemies.size() or not enemies[flow_matched_index].get("captured",false):
-		stop_cycle("目标未捕获；未改抓其他敌人。");return
+	if _capture_failed():return
 	var fresh: Array = []
 	var pets: Array = backend.session.snapshot().pets
 	for i in range(pets.size()):
@@ -1074,9 +1207,11 @@ func _showcase_captured() -> void:
 	if fresh.size()!=1 or not same_capture(pets[fresh[0]],flow_matched_actor):
 		stop_cycle("无法唯一确认新捕获伙伴，请手动检查宠物栏。");return
 	flow_pet_id = str(pets[fresh[0]].pet_id)
+	_capture_succeeded()
 	if not backend.session.select_pet(int(fresh[0])):stop_cycle("新伙伴无法出战。");return
 	backend.save()
 	backend.publish()
+	showcase_retried = false
 	showcase_plan = SHOWCASE_PLAN.duplicate(true)
 	flow_phase = "train"
 	_showcase_next()
@@ -1185,7 +1320,7 @@ func status() -> Dictionary:
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
-			"best_predicted":flow_best_predicted.duplicate(),"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),
+			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),
 			"card":showcase_card.duplicate(true),"show_battle":showcase_show_battle and backend.battle_open,"showcase_note":showcase_note,"segment":showcase_segment,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
 

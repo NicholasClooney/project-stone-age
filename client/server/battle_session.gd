@@ -454,6 +454,15 @@ func _apply_player_damage(damage: int) -> void:
 	_state.player_hp -= _last_damage
 
 func developer_escape() -> Dictionary:
+	return _end_without_rewards(true,"DEV：立即脱战，不获得经验、石币或捕获奖励。")
+
+## The find-pet cycle gives up a capture battle it cannot finish (the target
+## went down or can no longer be caught): the battle ends like an escape, with
+## no experience, coins or capture, and without developer_escape's GM mark.
+func abandon() -> Dictionary:
+	return _end_without_rewards(false,"放弃这场捕捉战斗，不获得经验、石币或捕获奖励。")
+
+func _end_without_rewards(developer: bool, note: String) -> Dictionary:
 	if not bool(_state.get("active",false)):return snapshot()
 	_state.turn+=1
 	_state.events=[]
@@ -465,12 +474,12 @@ func developer_escape() -> Dictionary:
 	for enemy in _state.enemies:enemy.captured=false
 	_state.xp=0
 	_state.gold=0
-	_state.gm_escape=true
+	if developer:_state.gm_escape=true
 	_last_outcome="escape"
 	_last_damage=0
 	_last_ride_damage=0
 	_acting_enemy=-1
 	_target=maxi(0,int(_state.get("selected_target",0)))
-	_finish("escaped","DEV：立即脱战，不获得经验、石币或捕获奖励。")
+	_finish("escaped",note)
 	_record_frame("player")
 	return snapshot()

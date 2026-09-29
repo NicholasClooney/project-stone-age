@@ -64,6 +64,12 @@ var keep_auto: bool:
 	get:
 		if world.link.is_local():return bool(world.backend.automation.flow_target_filter.get("keep_rule",{}).get("auto",false))
 		return bool(_flow().get("keep_auto",false))
+## Hits the cycle stepped past (capture failed, a queued roll no longer
+## verified) and the latest such note; see 停止记录 in 宠物记录.
+var skipped_count: int:
+	get:return int(_live("flow_skipped_count","skipped_count"))
+var skip_note: String:
+	get:return str(_live("flow_skip_note","skip_note"))
 var predicted_rejects: int:
 	get:return int(_live("flow_predicted_rejects","predicted_rejects"))
 	set(value):_seam({"flow_predicted_rejects":value})
@@ -181,6 +187,9 @@ func on_event(detail: Dictionary) -> void:
 			if world.adventure_menu.visible:world.close_adventure_menu()
 		"flow_paused":
 			world.message.text="找宠流程暂停："+str(detail.reason)
+		"flow_skipped":
+			world.refresh_companion()
+			world.message.text=str(detail.get("note",detail.reason))
 		"flow_stored":
 			world.refresh_companion()
 			world.message.text=str(detail.result)

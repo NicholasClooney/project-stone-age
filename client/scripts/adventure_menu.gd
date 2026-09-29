@@ -1002,13 +1002,13 @@ func pet_storage_panel(profile:Dictionary)->void:
 
 # ---- 宠物记录: 抓到 (抓宠记录) and 放生 (放生记录), server/release_log.gd ------
 
-## Opens 宠物记录 on a tab (caught or released), filtered to one species
+## Opens 宠物记录 on a tab (caught, released or stops), filtered to one species
 ## (template id, -1 for all). The pet tools, 宠物仓库 and 同种比较 open it; the
 ## planned 游戏助手 menu can call this too. 抓到 starts on 本轮 (the current or
 ## most recent find-pet run).
 func open_pet_records(tab:String="caught",template_id:int=-1)->void:
 	if not visible or kind!="pets":open_menu("pets")
-	records_tab=tab if tab in ["caught","released"] else "caught"
+	records_tab=tab if tab in ["caught","released","stops"] else "caught"
 	records_template=template_id
 	records_page=0
 	records_run="latest" if records_tab=="caught" else ""
@@ -1044,13 +1044,17 @@ static func log_place(item:Dictionary)->String:
 func pet_records_panel()->void:
 	var data:=records_data
 	var caught:=records_tab=="caught"
-	var overlay:=pet_overlay("PetRecordsPanel","宠物记录","%s共%d条 · 各保留最近%d条"%["抓到" if caught else "放生",int(data.get("total",0)),ReleaseLog.CAP],Vector2(900,650))
+	var overlay:=pet_overlay("PetRecordsPanel","宠物记录","%s共%d条 · 各保留最近%d条"%[{"caught":"抓到","released":"放生","stops":"停止"}.get(records_tab,""),int(data.get("total",0)),ReleaseLog.CAP],Vector2(900,650))
 	overlay_button(overlay,"关闭",832,func():pet_records_open=false;rebuild())
-	for tab in [["caught","抓到","RecordsTabCaught"],["released","放生","RecordsTabReleased"]]:
+	for tab in [["caught","抓到","RecordsTabCaught",566],["released","放生","RecordsTabReleased",626],["stops","停止","RecordsTabStops",686]]:
 		var button:Button=world.button(tab[1],func():
 			if records_tab!=tab[0]:open_pet_records(tab[0],records_template))
-		button.name=tab[2];button.position=Vector2(626 if tab[0]=="caught" else 686,10);button.toggle_mode=true;button.button_pressed=records_tab==tab[0];overlay.add_child(button)
+		button.name=tab[2];button.position=Vector2(tab[3],10);button.toggle_mode=true;button.button_pressed=records_tab==tab[0];overlay.add_child(button)
 		if records_tab==tab[0]:button.add_theme_color_override("font_color",PetTable.GOLD);button.add_theme_color_override("font_pressed_color",PetTable.GOLD)
+	if records_tab=="stops":
+		stop_records(overlay,data)
+		style_pet_modal(overlay)
+		return
 	var filter:=OptionButton.new();filter.name="RecordsSpecies";filter.position=Vector2(14,46);filter.focus_mode=Control.FOCUS_NONE;filter.custom_minimum_size.x=180
 	var choices:=[-1]
 	filter.add_item("全部品种")
@@ -1123,6 +1127,48 @@ func pet_records_panel()->void:
 		if not origin.is_empty():
 			var from:=PetTable.text("抓到：%s · %s · %s"%[log_time(int(origin.get("time",0))),log_place(origin),origin.get("source","")],"meta");from.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;from.custom_minimum_size.x=840;stack.add_child(from)
 	style_pet_modal(overlay)
+
+## 停止记录: why 自动抓极品 or the find-pet cycle stopped, paused, skipped a
+## hit or finished (automation.gd _record_stop), newest first.
+const STOP_COLORS:={"停止":PetTable.BAD,"暂停":PetTable.GOLD,"已跳过":PetTable.MUTED,"已重试":PetTable.MUTED,"完成":PetTable.GOOD,"找到":PetTable.GOOD}
+func stop_records(overlay:Control,data:Dictionary)->void:
+	var pages:=int(data.get("pages",1))
+	var previous:Button=world.button("◀",func():records_page=maxi(0,records_page-1);fetch_records());previous.position=Vector2(700,46);previous.disabled=records_page<=0;overlay.add_child(previous)
+	var page:=PetTable.text("%d / %d 页"%[records_page+1,pages],"meta");page.position=Vector2(742,52);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
+	var next:Button=world.button("▶",func():records_page=mini(pages-1,records_page+1);fetch_records());next.position=Vector2(852,46);next.disabled=records_page>=pages-1;overlay.add_child(next)
+	var hint:="新的在前。停止：要你处理；暂停：换了地图或战败；已跳过、已重试：流程自己继续了；完成：收集够了或停下比较。"
+	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,46);note.custom_minimum_size=Vector2(670,0);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;overlay.add_child(note)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,96);scroll.size=Vector2(876,540);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
+	var entries:Array=data.get("entries",[])
+	if entries.is_empty() and not records_loading:list.add_child(PetTable.text("还没有记录。自动抓极品每次停下、暂停或跳过一只都会记在这里。","body"))
+	for i in range(entries.size()):
+		var item:Dictionary=entries[i]
+		var holder:=PetTable.row_panel(i);holder.name="StopRow_%d"%i;holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		holder.tooltip_text=stop_description(item)
+		list.add_child(holder)
+		var stack:=VBoxContainer.new();stack.add_theme_constant_override("separation",0);holder.add_child(stack)
+		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",8);stack.add_child(line)
+		var when:=PetTable.text(log_time(int(item.get("time",0))),"meta");when.custom_minimum_size.x=66;line.add_child(when)
+		var outcome:=str(item.get("outcome",""))
+		var state:=PetTable.badge(outcome,STOP_COLORS.get(outcome,PetTable.MUTED));state.size_flags_vertical=Control.SIZE_SHRINK_CENTER;line.add_child(state)
+		var reason:=PetTable.text(str(item.get("reason","")).replace("\n"," "),"body",PetTable.BAD if outcome=="停止" else PetTable.TEXT);reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;reason.custom_minimum_size.x=720;line.add_child(reason)
+		var details:=PetTable.text(stop_details(item),"meta");details.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;details.custom_minimum_size.x=840;stack.add_child(details)
+
+const STOP_PHASES:={"hunt":"筛选中","reveal":"亮出预测","capture":"捕捉中","train":"练级中","restart":"准备下一只","compare":"比较","paused":"已暂停","idle":""}
+static func stop_details(item:Dictionary)->String:
+	var parts:=["找宠流程" if str(item.get("scope",""))=="flow" else "自动抓极品"]
+	var phase:=str(STOP_PHASES.get(str(item.get("phase","")),item.get("phase","")))
+	if not phase.is_empty():parts.append(phase)
+	if not str(item.get("name","")).is_empty():parts.append(str(item.name)+(" "+str(item.pet_id) if not str(item.get("pet_id","")).is_empty() else ""))
+	parts.append("已遇敌 %d 组"%int(item.get("rolls",0)))
+	if str(item.get("scope",""))=="flow":parts.append("达标 %d · 存仓 %d · 跳过 %d · 放生 %d"%[int(item.get("collected",0)),int(item.get("stored",0)),int(item.get("skipped",0)),int(item.get("released",0))])
+	var place:=log_place(item)
+	if not place.strip_edges().is_empty():parts.append(place)
+	return " · ".join(parts)
+
+static func stop_description(item:Dictionary)->String:
+	return "%s %s\n%s\n%s"%[log_time(int(item.get("time",0))),item.get("outcome",""),str(item.get("reason","")),stop_details(item)]
 
 static func caught_description(item:Dictionary)->String:
 	var text:="%s %s · Lv.%d · %s · %s\n血%d 攻%d 防%d 敏%d · 三围合%d" % [item.get("name",""),item.get("pet_id","?"),int(item.get("level",1)),log_place(item),item.get("source",""),int(item.get("max_hp",0)),int(item.get("attack",0)),int(item.get("defence",0)),int(item.get("speed",0)),int(item.get("sum",0))]

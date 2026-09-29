@@ -78,6 +78,10 @@ var release_log_path := ""
 ## 抓宠记录: the same kind of log in <save>.capture-log.jsonl (capture_log_path for tests).
 var capture_log = preload("res://server/release_log.gd").new()
 var capture_log_path := ""
+## 停止记录: why the hunt or the find-pet cycle stopped, paused or skipped a
+## hit, in <save>.stop-log.jsonl (stop_log_path for tests).
+var stop_log = preload("res://server/release_log.gd").new()
+var stop_log_path := ""
 static var _map_names: Dictionary = {}
 var last_saved_payload := ""
 var rev := 0
@@ -120,12 +124,19 @@ func _record_releases() -> void:
 	_release_log_file()
 	if not session.release_events.is_empty():release_log.append(session.take_release_events())
 	if not session.capture_events.is_empty():capture_log.append(session.take_capture_events().map(_capture_entry))
+	if not automation.stop_events.is_empty():stop_log.append(automation.take_stop_events())
 
 ## The logs' files follow the save: <save>.release-log.jsonl and
 ## <save>.capture-log.jsonl, or tests' paths.
 func _release_log_file() -> void:
 	release_log.path = release_log_path if not release_log_path.is_empty() else (save_path.get_basename()+".release-log.jsonl" if not save_path.is_empty() else "")
 	capture_log.path = capture_log_path if not capture_log_path.is_empty() else (save_path.get_basename()+".capture-log.jsonl" if not save_path.is_empty() else "")
+	stop_log.path = stop_log_path if not stop_log_path.is_empty() else (save_path.get_basename()+".stop-log.jsonl" if not save_path.is_empty() else "")
+
+## The server is quitting: a running hunt or cycle is recorded as stopped.
+func record_shutdown() -> void:
+	automation.record_shutdown()
+	_record_releases()
 
 ## Where a capture came from: the find-pet cycle (with its run), the hunt's
 ## automatic capture battle, or a battle the player fought; GM grants say so.
@@ -249,8 +260,8 @@ func _cmd_release_log(command: Dictionary) -> Dictionary:
 	asked.kind = "released"
 	return _cmd_pet_log(asked)
 
-## One page of a pet log, newest first. kind: caught (抓宠记录) or released
-## (放生记录); page (from 0), page_size (1..100, default 20), template_id (-1
+## One page of a pet log, newest first. kind: caught (抓宠记录), released
+## (放生记录) or stops (停止记录: automation.gd _record_stop); page (from 0), page_size (1..100, default 20), template_id (-1
 ## for every species), run ("" for all, "latest" for the current or most
 ## recent find-pet run, or a run id; caught only). Entries are cross-linked:
 ## a caught pet later released carries `released` {time, reason, source}, a
@@ -258,6 +269,11 @@ func _cmd_release_log(command: Dictionary) -> Dictionary:
 ## cell, source, run}. The reply's latest_run names the run "latest" means.
 func _cmd_pet_log(command: Dictionary) -> Dictionary:
 	_record_releases()
+	if str(command.get("kind",""))=="stops":
+		var stops: Dictionary = stop_log.page(int(command.get("page",0)),int(command.get("page_size",20)),-1,str(command.get("run","")))
+		stops.kind = "stops"
+		stops.latest_run = automation.flow_run_id
+		return {"ok":true,"log":stops}
 	var caught := str(command.get("kind","released"))=="caught"
 	var log = capture_log if caught else release_log
 	var run := str(command.get("run","")) if caught else ""
@@ -409,6 +425,13 @@ func battle_command(command: Dictionary) -> Dictionary:
 	if skill_id > 0 and battle.snapshot().pet_command == "skill":battle.set_pet_skill(skill_id)
 	var state: Dictionary = battle.submit_action(str(command.get("action","")),int(command.get("target",-1)),int(command.get("switch_pet",-2)))
 	return _after_turn(state)
+
+## Ends the open battle with no rewards and closes it: the find-pet cycle
+## giving up a capture battle (BattleSession.abandon, no GM mark).
+func abandon_battle() -> void:
+	if not battle_open:return
+	if bool(battle.snapshot().get("active",false)):_after_turn(battle.abandon())
+	close_battle()
 
 func _cmd_battle_escape_dev(_command: Dictionary) -> Dictionary:
 	if not battle_open:return _stale("no open battle")

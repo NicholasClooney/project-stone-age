@@ -1,8 +1,9 @@
 extends RefCounted
 ## A pet log file: one JSON line per entry, newest last, in its own file next
-## to the save so loading the save never reads it. The backend keeps two:
-## 放生记录 (<save>.release-log.jsonl, entry below) and 抓宠记录
-## (<save>.capture-log.jsonl, capture_entry).
+## to the save so loading the save never reads it. The backend keeps three:
+## 放生记录 (<save>.release-log.jsonl, entry below), 抓宠记录
+## (<save>.capture-log.jsonl, capture_entry) and 停止记录
+## (<save>.stop-log.jsonl, entries from automation.gd _record_stop).
 ## The backend appends after each command or tick that released pets; the
 ## file is only read to answer the release_log command or to count its lines
 ## once before the first append. Over CAP + SLACK lines it is rewritten with

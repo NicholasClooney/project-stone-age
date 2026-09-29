@@ -167,6 +167,8 @@ func _ready() -> void:
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,560);panel.add_child(close)
 	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizePetHunt";minimize_button.position=Vector2(760,560);minimize_button.disabled=true
 	minimize_button.tooltip_text="收起为右下角进度条；筛选或找宠流程继续，可同时整理宠物与仓库";panel.add_child(minimize_button)
+	var records: Button=world.button("宠物记录",open_records);records.name="PetHuntRecords";records.position=Vector2(600,560)
+	records.tooltip_text="抓到、放生和停止记录。筛选或找宠流程进行中会先收起本窗口，流程继续。";panel.add_child(records)
 	for child in panel.get_children():
 		if child is Control and child.position.y>=129 and child.position.y<=460:filter_nodes.append(child)
 	capture_page=Control.new();capture_page.name="CaptureSettingsPage";capture_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(capture_page)
@@ -342,6 +344,13 @@ func close_menu() -> void:
 	world.flush_automation_settings()
 	if running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
 	set_controls(false);hide();world.release_input();world.clear_input()
+## 宠物记录 on 抓到 (本轮找宠 while a cycle runs). A running scan or cycle
+## keeps going with this window folded to its progress bar; otherwise it closes.
+func open_records() -> void:
+	if running or _automation_active(world.state.automation):minimize()
+	else:close_menu()
+	world.adventure_menu.open_pet_records("caught",-1)
+
 func set_controls(locked: bool) -> void:
 	for control in controls:
 		if control is SpinBox:control.editable=not locked
@@ -516,6 +525,12 @@ func refresh_ready_status()->void:
 	if not running and not start_button.disabled:status.text=ready_description()
 
 func workflow_summary()->String:
+	var skipped:=""
+	if is_instance_valid(world.pet_workflow) and world.pet_workflow.skipped_count>0:
+		skipped="已跳过 %d 只 · 最近 %s\n" % [world.pet_workflow.skipped_count,world.pet_workflow.skip_note]
+	return skipped+_workflow_counts()
+
+func _workflow_counts()->String:
 	if is_instance_valid(world.pet_workflow) and (world.pet_workflow.predicted_rejects>0 or world.pet_workflow.kept_count>0):
 		var flow=world.pet_workflow
 		var best_seen:Dictionary=flow.best_predicted
@@ -707,6 +722,8 @@ func _update_chip() -> void:
 		var step: String={"hunt":"筛选中","reveal":"亮相","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
 		var kept:String=" · 同种%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
 		var waiting:=int(world.state.automation.get("flow",{}).get("queue_size",0))
-		chip.present("自动抓极品 · 找宠流程 · "+step,("排队 %d 只 · " % waiting if waiting>0 else "")+"达标 %d/%s%s · 未达标 %d · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,rolls,flow.elapsed_text()])
+		var skipped:=" · 跳过 %d" % flow.skipped_count if flow.skipped_count>0 else ""
+		chip.present("自动抓极品 · 找宠流程 · "+step,("排队 %d 只 · " % waiting if waiting>0 else "")+"达标 %d/%s%s · 未达标 %d%s · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,skipped,rolls,flow.elapsed_text()])
+		if flow.skipped_count>0:chip.tooltip_text=flow.skip_note
 	else:
 		chip.present("自动抓极品 · 筛选中","遇敌 %d 组 · 检查 %d 只 · 最好总档 %s"%[rolls,inspected,"暂无" if best< -8 else "%+d"%best])

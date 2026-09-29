@@ -43,4 +43,6 @@ func _initialize() -> void:
 	print("StoneAge backend listening on %s://%s:%s, save %s" % ["wss" if server.tls_options!=null else "ws",options.bind,options.port,ProjectSettings.globalize_path(path)])
 
 func _finalize() -> void:
-	if backend!=null:backend.save()
+	if backend==null:return
+	backend.record_shutdown()
+	backend.save()
