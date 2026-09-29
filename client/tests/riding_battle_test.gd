@@ -17,7 +17,7 @@ func run() -> void:
 	for i in range(240): view._process(1.0/60.0)
 	check(str(view.actors[0].character_id) == "101006","battle loads original combined tiger rider")
 	check(view.riding_hp_bar.visible and view.riding_hp_bar.position == Vector2(20,25),"native mount health bar offsets match original")
-	check(view.mounted_impact_sound(0) == 254,"native claw marker selects original sound254")
+	check(view.impact_sound(0) == 254,"native claw marker selects original sound254")
 	check(view.actors[0].animations.has("0_3"),"mounted actor has original attack animation")
 	check(not view.actors[2].enabled,"riding pet does not appear twice as battle companion")
 	view.pending_action = "attack"

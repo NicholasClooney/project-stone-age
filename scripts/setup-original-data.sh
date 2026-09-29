@@ -220,6 +220,8 @@ run python3 tools/import_encounters.py
 # With --with-8.0 the special pets only 8.0 has (机豹, 黑乌力王) get battle art too.
 # shellcheck disable=SC2086
 run "$PY" tools/import_encounter_art.py "$CLIENT25" $riding_extra
+# After every sprite importer: each frame's original sound effect and hit sound.
+run "$PY" tools/import_battle_sounds.py "$CLIENT25" --table "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/systeminc/sndcnf.h"
 # Last: packs the per-frame PNGs the importers above wrote into sprite sheets.
 run "$PY" tools/pack_frame_sheets.py
 
