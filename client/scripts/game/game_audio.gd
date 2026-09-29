@@ -83,7 +83,13 @@ func play_ui_sound(ident: int) -> void:
 	game.effect.stream = game.ui_sounds[ident]
 	game.effect.play()
 
-## M and the 音乐 switches: music on or off on this device.
+## Opens or closes the 电台 window (设置, 游戏助手, its shortcut).
+func toggle_radio() -> void:
+	if not is_instance_valid(game.radio_panel):return
+	if game.radio_panel.visible:game.radio_panel.close_panel()
+	else:game.radio_panel.open_panel()
+
+## The 音乐 switches (设置, the 电台 window, the 音乐开关 shortcut): music on or off on this device.
 func toggle_mute() -> void:
 	game.muted = not game.muted
 	game._save_device("music_on",not game.muted)

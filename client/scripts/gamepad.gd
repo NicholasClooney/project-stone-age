@@ -63,7 +63,7 @@ static func bind_movement() -> void:
 ## The panel whose controls the highlight moves between, or null in the world.
 func panel() -> Control:
 	if world.has_method("link_blocked") and world.link_blocked():return world.link_overlay
-	for node in [world.leveling_destinations,world.training_helper,world.pet_hunt_menu,world.changelog_menu,world.character_selection,world.dev_gm_menu,world.dev_map_overview,world.pet_training]:
+	for node in [world.leveling_destinations,world.training_helper,world.pet_hunt_menu,world.changelog_menu,world.character_selection,world.dev_gm_menu,world.dev_map_overview,world.pet_training,world.get("helper_menu")]:
 		if is_instance_valid(node) and node.visible:return node
 	if is_instance_valid(world.world_travel) and world.world_travel.overlay.visible:return world.world_travel.overlay
 	for node in [world.adventure_menu,world.battle_view,world.dialogue,world.help]:
@@ -79,7 +79,7 @@ func candidates(root: Control) -> Array[Control]:
 		var node: Node = pending.pop_back()
 		if node is CanvasItem and not node.is_visible_in_tree():continue
 		# In HUD mode, skip modal panels that happen to live under the HUD root.
-		if hud_mode and node!=root and node in [world.adventure_menu,world.battle_view,world.dialogue,world.help,world.training_helper,world.pet_hunt_menu]:continue
+		if hud_mode and node!=root and node in [world.adventure_menu,world.battle_view,world.dialogue,world.help,world.training_helper,world.pet_hunt_menu,world.get("helper_menu")]:continue
 		if node is BaseButton and not node.disabled and node.mouse_filter!=Control.MOUSE_FILTER_IGNORE:
 			var rect := _screen_rect(node)
 			if rect.size.x>2 and rect.size.y>2 and viewport_rect.intersects(rect):found.append(node)

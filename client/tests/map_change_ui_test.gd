@@ -25,12 +25,8 @@ func run() -> void:
 	var hud = game.classic_hud
 	var menu = game.adventure_menu
 	var baseline := overlays(game)
-	var toolbar := func() -> Array:
-		var names: Array = []
-		for node in game.dev_bar.get_children():names.append(str(node.name))
-		return names
-	var toolbar_before: Array = toolbar.call()
-	check(toolbar_before==["DevMapOverview","DevTrainingTravel","DevTraining","DevPetHunt","DevMusic","DevSettings"],"the toolbar holds the six general windows, no map shortcuts")
+	var helper = game.helper_menu
+	check(game.get("dev_bar")==null and game.find_child("DevSettings",true,false)==null,"there is no toolbar")
 
 	game.show_adventure_menu("pets")
 	check(game.paused_input,"an open panel pauses walking")
@@ -40,7 +36,7 @@ func run() -> void:
 	check(game.paused_input,"walking stays paused while that panel is open")
 	check(game.classic_hud==hud,"the HUD is kept")
 	check(hud.map_name.text==game.area_name() and is_same(hud.map_view.built_for,game.data),"the map window shows the new map")
-	check(toolbar.call()==toolbar_before,"the toolbar is the same on every map")
+	check(game.helper_menu==helper and hud.find_child("MapTravelMenu",true,false)!=null,"游戏助手 and the map window's travel menu are kept on every map")
 	check(overlays(game)==baseline,"the old map's travel dialogue is removed")
 	game.close_adventure_menu()
 	check(not game.paused_input,"closing the panel lets the player walk")
@@ -48,7 +44,7 @@ func run() -> void:
 	game.load_area_id(1000,Vector2i(85,95))
 	await process_frame
 	check(not game.paused_input,"a map change with nothing open leaves walking enabled")
-	check(toolbar.call()==toolbar_before,"returning keeps the same toolbar, nothing duplicated")
+	check(game.helper_menu==helper and hud.map_panel.find_children("MapTravelMenu","",true,false).size()==1,"returning keeps one 游戏助手 and one travel menu, nothing duplicated")
 	check(overlays(game)==baseline,"repeated map changes leave one travel dialogue")
 
 	game.process_mode = Node.PROCESS_MODE_DISABLED

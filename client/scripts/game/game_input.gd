@@ -4,20 +4,49 @@ extends RefCounted
 ## wheel on the field. The game keeps its _input and _unhandled_input
 ## callbacks (so Godot's event order is unchanged) and hands each event here;
 ## see docs/technical/game-scripts.md.
+const Shortcuts = preload("res://scripts/shortcuts.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
 	game = owner
 
+## The default keys (scripts/shortcuts.gd); a device's own choice replaces
+## them once restore_device_settings runs (load_shortcuts).
 func configure_input() -> void:
-	var bindings := {"north":[KEY_W,KEY_UP],"south":[KEY_S,KEY_DOWN],"west":[KEY_A,KEY_LEFT],"east":[KEY_D,KEY_RIGHT],"mute":[KEY_M],"reset":[KEY_R],"character":[KEY_TAB],"sit":[KEY_X],"wave":[KEY_E],"help":[KEY_H]}
-	for action in bindings:
-		if not InputMap.has_action(action):
-			InputMap.add_action(action)
-		for code in bindings[action]:
-			var event := InputEventKey.new()
-			event.physical_keycode = code
-			InputMap.action_add_event(action,event)
+	game.shortcuts = Shortcuts.defaults()
+	Shortcuts.apply(game.shortcuts)
+
+## This device's keys from viewer.cfg (设置 → 快捷键).
+func load_shortcuts() -> void:
+	game.shortcuts = Shortcuts.merged(game.viewer_pref("shortcuts",{}))
+	Shortcuts.apply(game.shortcuts)
+
+## Puts key in the action's slot (0 clears it). A key another action uses is
+## refused and that action returned, unless swap: then the other action takes
+## this slot's previous key. Returns "" when the binding changed.
+func bind_shortcut(action: String, slot: int, key: int, swap: bool = false) -> String:
+	if not game.shortcuts.has(action) or slot<0 or slot>=Shortcuts.SLOTS or key==KEY_ESCAPE:return action
+	var previous: int = int(game.shortcuts[action][slot])
+	var holder := Shortcuts.owner_of(game.shortcuts,key,action)
+	if not holder.is_empty():
+		if not swap:return holder
+		var keys: Array = game.shortcuts[holder]
+		keys[keys.find(key)] = previous
+	# The same key twice on one action keeps only this slot.
+	var own: Array = game.shortcuts[action]
+	for i in range(own.size()):
+		if i!=slot and key!=0 and int(own[i])==key:own[i] = 0
+	own[slot] = key
+	_save_shortcuts()
+	return ""
+
+func reset_shortcuts() -> void:
+	game.shortcuts = Shortcuts.defaults()
+	_save_shortcuts()
+
+func _save_shortcuts() -> void:
+	Shortcuts.apply(game.shortcuts)
+	if game._device_settings_live:game.set_viewer_pref("shortcuts",Shortcuts.overrides(game.shortcuts))
 
 func on_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and game.get_viewport().gui_get_focus_owner() is LineEdit:
@@ -40,7 +69,7 @@ func on_input(event: InputEvent) -> void:
 			game.held.erase(action)
 
 func on_unhandled_input(event: InputEvent) -> void:
-	for modal in [game.leveling_destinations]:
+	for modal in [game.leveling_destinations,game.helper_menu]:
 		if is_instance_valid(modal) and modal.visible:
 			if event.is_action_pressed("ui_cancel"):modal.close_menu()
 			game.get_viewport().set_input_as_handled()
@@ -94,20 +123,36 @@ func on_unhandled_input(event: InputEvent) -> void:
 			game.close_dialogue()
 		game.get_viewport().set_input_as_handled()
 		return
-	if event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed and event.keycode==KEY_M:
+	# M (Ctrl+M too) opens the classic map window.
+	if event.is_action_pressed("map") or (event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed and event.keycode==KEY_M):
 		game.classic_hud.toggle_map()
 		game.get_viewport().set_input_as_handled()
 		return
+	# Esc closes the top window first: the map, then the radio, then 设置.
 	if event.is_action_pressed("ui_cancel") and game.classic_hud.map_panel.visible:
 		game.classic_hud.toggle_map()
+		return
+	if event.is_action_pressed("ui_cancel") and is_instance_valid(game.radio_panel) and game.radio_panel.visible and not game.settings_menu.visible:
+		game.radio_panel.close_panel()
+		game.get_viewport().set_input_as_handled()
 		return
 	if event.is_action_pressed("mute"):
 		game.toggle_mute()
 	elif event.is_action_pressed("help"):
 		if game.settings_menu.visible and game.settings_menu.page=="help":game.settings_menu.close_menu()
 		elif not game.dialogue.visible:game.settings_menu.open_menu("help")
-	elif event.is_action_pressed("ui_cancel"):
-		game.settings_menu.close_menu()
+	elif event.is_action_pressed("ui_cancel") or event.is_action_pressed("settings"):
+		# With no window open Esc opens 设置 (the classic 系统 menu).
+		if game.settings_menu.visible:game.settings_menu.close_menu()
+		elif not game.dialogue.visible:game.settings_menu.open_menu()
+	elif event.is_action_pressed("helper"):
+		if not game.settings_menu.visible:game.helper_menu.open_menu()
+	elif event.is_action_pressed("radio"):
+		game.toggle_radio()
+	elif event.is_action_pressed("zoom_in") and not game.paused_input:
+		game.zoom_by(GameScene.ZOOM_STEP)
+	elif event.is_action_pressed("zoom_out") and not game.paused_input:
+		game.zoom_by(-GameScene.ZOOM_STEP)
 	elif event.is_action_pressed("reset"):
 		game.reset_player()
 	elif event.is_action_pressed("character"):

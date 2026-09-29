@@ -27,9 +27,9 @@ func zoom_by(step: float) -> void:
 func _save_device(key: String, value: Variant) -> void:
 	if game._device_settings_live:set_viewer_pref(key,value)
 
-## Zoom to the farthest view and remember it (设置's 拉到最远).
-func zoom_farthest() -> void:
-	maximum_zoom_out()
+## The 设置 → 画面 slider (10 to 200), remembered on this device.
+func set_zoom_percent(percent: float) -> void:
+	set_zoom(percent/100.0)
 	_save_device("zoom",game.camera.zoom.x)
 
 ## This device's sound, zoom and 瞬移 choices (viewer.cfg). Restored for real
@@ -42,6 +42,7 @@ func restore_device_settings() -> void:
 	game.dev_blink_mode = bool(viewer_pref("blink_mode",game.dev_blink_mode))
 	var zoom = viewer_pref("zoom",0.0)
 	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))
+	game.load_shortcuts()
 	game.apply_sound()
 
 ## Battle playback speed chosen on this device (1× until one is applied).

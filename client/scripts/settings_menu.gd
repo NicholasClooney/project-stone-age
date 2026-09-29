@@ -1,15 +1,21 @@
 extends PanelContainer
-## 设置: zoom, sound, character, 瞬移, saving, 更新日志 and 操作说明, plus a
-## collapsed 开发者 section with GM 调试. Opened by the toolbar's 设置, the
-## classic taskbar's 系统 and H (on 操作说明); Esc closes it. It pauses the
+## 设置 (the classic 系统 menu): zoom, sound and 电台, 游戏助手, character,
+## 瞬移, saving, 快捷键, 更新日志 and 操作说明, plus a collapsed 开发者
+## section with GM 调试. Opened by Esc with no other window open, the classic
+## taskbar's 系统 and H (on 操作说明); Esc closes it. It pauses the
 ## field like the old Help panel it replaces, so it is game.help too (the
 ## gamepad's Start and panel lookup use that). Every choice here is this
 ## device's own (viewer.cfg), see game.gd's device settings.
 const WIDTH := 560.0
+const Shortcuts = preload("res://scripts/shortcuts.gd")
 var world: Node
+## "main", "help" (操作说明) or "keys" (快捷键).
 var page := "main"
 var developer_open := false
 var body: VBoxContainer
+## 快捷键: the [action, slot] waiting for a key, and a refused key's conflict.
+var capturing: Array = []
+var conflict: Dictionary = {}
 
 func configure(owner: Node) -> void:
 	world = owner
@@ -25,9 +31,11 @@ func configure(owner: Node) -> void:
 	world.sound_changed.connect(_sync_sound)
 	hide()
 
-## Shows the window on page "main" or "help" (操作说明).
+## Shows the window on page "main", "help" (操作说明) or "keys" (快捷键).
 func open_menu(start_page: String = "main") -> void:
 	page = start_page
+	capturing = []
+	conflict = {}
 	if visible:rebuild()
 	get_parent().move_child(self,get_parent().get_child_count()-1)
 	show()
@@ -36,6 +44,8 @@ func open_menu(start_page: String = "main") -> void:
 
 func close_menu() -> void:
 	if not visible:return
+	capturing = []
+	conflict = {}
 	hide()
 	# A battle keeps the field paused; so does a minimized automation window.
 	world.paused_input = world.battle_view.visible or world.automation_minimized()
@@ -55,10 +65,10 @@ func rebuild() -> void:
 	add_child(body)
 	var header := HBoxContainer.new()
 	body.add_child(header)
-	var title: Label = world.text("操作说明" if page=="help" else "设置",20)
+	var title: Label = world.text({"help":"操作说明","keys":"快捷键"}.get(page,"设置"),20)
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	header.add_child(title)
-	if page=="help":
+	if page!="main":
 		var back: Button = world.button("返回设置",func(): page = "main";rebuild();_center())
 		back.name = "SettingsBack"
 		header.add_child(back)
@@ -66,6 +76,7 @@ func rebuild() -> void:
 	close.name = "SettingsClose"
 	header.add_child(close)
 	if page=="help":_help_page()
+	elif page=="keys":_keys_page()
 	else:_main_page()
 	reset_size()
 
@@ -90,18 +101,27 @@ func _check(caption: String, node_name: String, pressed: bool, toggled: Callable
 	return box
 
 func _main_page() -> void:
-	# 画面
+	# 画面: 10% to 200%, a new device starts at 100%.
 	var view := _section("画面")
-	for entry in [["−","ZoomMinus",func(): world.zoom_by(-world.ZOOM_STEP)],["+","ZoomPlus",func(): world.zoom_by(world.ZOOM_STEP)],["拉到最远","MaxOut",world.zoom_farthest]]:
-		var control: Button = world.button(entry[0],func(): entry[2].call();_sync_zoom())
-		control.name = entry[1]
-		view.add_child(control)
+	view.add_child(world.text("缩放",14))
+	var zoom := HSlider.new()
+	zoom.name = "SettingsZoom"
+	zoom.min_value = world.MIN_ZOOM*100
+	zoom.max_value = world.MAX_ZOOM*100
+	zoom.step = 5
+	zoom.custom_minimum_size = Vector2(260,24)
+	zoom.focus_mode = Control.FOCUS_NONE
+	zoom.value = world.camera.zoom.x*100
+	zoom.value_changed.connect(func(value: float):
+		world.set_zoom_percent(value)
+		_sync_zoom())
+	view.add_child(zoom)
 	var zoom_label: Label = world.text("",14)
 	zoom_label.name = "SettingsZoomValue"
 	view.add_child(zoom_label)
 	# 声音
 	var sound := _section("声音")
-	sound.add_child(_check("音乐 [M]","SettingsSound",not world.muted,func(on: bool):
+	sound.add_child(_check("音乐","SettingsSound",not world.muted,func(on: bool):
 		if on==world.muted:world.toggle_mute()))
 	sound.add_child(_check("音效","SettingsEffects",world.effects_on,world.set_effects_on))
 	var volume_row := _section("")
@@ -116,9 +136,19 @@ func _main_page() -> void:
 	slider.value = world.volume
 	slider.value_changed.connect(world.set_music_volume)
 	volume_row.add_child(slider)
+	var radio: Button = world.button("电台",func(): close_menu();world.toggle_radio())
+	radio.name = "SettingsRadio"
+	radio.tooltip_text = "原版配乐电台、收藏、歌单、随机和单曲循环"
+	volume_row.add_child(radio)
+	# 游戏助手: the windows this project added.
+	var helper := _section("助手")
+	var helper_open: Button = world.button("游戏助手 [%s]" % _key_of("helper"),func(): close_menu();world.helper_menu.open_menu())
+	helper_open.name = "SettingsHelper"
+	helper_open.tooltip_text = "自动练级、自动抓极品、电台、地图导航、刷怪传送等"
+	helper.add_child(helper_open)
 	# 角色 and 移动
 	var character := _section("角色")
-	var choose: Button = world.button("换角色 [Tab]",func(): close_menu();world.change_character())
+	var choose: Button = world.button("换角色 [%s]" % _key_of("character"),func(): close_menu();world.change_character())
 	choose.name = "SettingsCharacter"
 	character.add_child(choose)
 	var movement := _section("移动")
@@ -139,9 +169,12 @@ func _main_page() -> void:
 	var changes: Button = world.button("更新日志 "+str(world.changelog_menu.history.get("version","v0.0.0")),func(): close_menu();world.changelog_menu.open_menu())
 	changes.name = "Changelog"
 	about.add_child(changes)
-	var help: Button = world.button("操作说明 [H]",func(): page = "help";rebuild();_center())
+	var help: Button = world.button("操作说明 [%s]" % _key_of("help"),func(): page = "help";rebuild();_center())
 	help.name = "SettingsHelp"
 	about.add_child(help)
+	var keys: Button = world.button("快捷键",func(): page = "keys";capturing = [];conflict = {};rebuild();_center())
+	keys.name = "SettingsKeys"
+	about.add_child(keys)
 	# 开发者 (collapsed)
 	var developer := _section("")
 	var fold: Button = world.button(("▼ " if developer_open else "▶ ")+"开发者",func(): developer_open = not developer_open;rebuild();_center())
@@ -158,6 +191,85 @@ func _main_page() -> void:
 func _sync_zoom() -> void:
 	var label := find_child("SettingsZoomValue",true,false)
 	if label:label.text = "%d%%" % roundi(world.camera.zoom.x*100)
+	var slider := find_child("SettingsZoom",true,false) as HSlider
+	if slider:slider.set_value_no_signal(world.camera.zoom.x*100)
+
+## The first key of an action, for button captions.
+func _key_of(action: String) -> String:
+	for code in world.shortcuts.get(action,[]):
+		if int(code)!=0:return Shortcuts.key_name(int(code))
+	return "无"
+
+# ---- 快捷键 ----------------------------------------------------------------
+
+## Every action with its two key slots. Click a slot, then press a key: Esc
+## cancels, Backspace clears the slot. A key another action uses asks to swap.
+func _keys_page() -> void:
+	var note: Label = world.text("点一个按键格再按新键；Esc 取消，退格键清空。Esc 始终关闭窗口并打开设置，不能改。",12)
+	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size.x = WIDTH-24
+	note.add_theme_color_override("font_color",Color("b6aa8a"))
+	body.add_child(note)
+	if not conflict.is_empty():
+		var row := HBoxContainer.new()
+		row.name = "ShortcutConflict"
+		row.add_theme_constant_override("separation",8)
+		body.add_child(row)
+		var text: Label = world.text("%s 已用于「%s」。" % [Shortcuts.key_name(int(conflict.key)),Shortcuts.caption(str(conflict.holder))],14)
+		text.add_theme_color_override("font_color",Color("ffd98a"))
+		row.add_child(text)
+		var swap: Button = world.button("交换",func():
+			world.bind_shortcut(str(conflict.action),int(conflict.slot),int(conflict.key),true)
+			conflict = {};rebuild())
+		swap.name = "ShortcutSwap"
+		row.add_child(swap)
+		var cancel: Button = world.button("取消",func(): conflict = {};rebuild())
+		cancel.name = "ShortcutCancel"
+		row.add_child(cancel)
+	var scroll := ScrollContainer.new()
+	scroll.custom_minimum_size = Vector2(WIDTH-24,380)
+	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
+	body.add_child(scroll)
+	var list := VBoxContainer.new()
+	list.add_theme_constant_override("separation",4)
+	scroll.add_child(list)
+	for entry in Shortcuts.ACTIONS:
+		var action: String = entry[0]
+		var row := HBoxContainer.new()
+		row.add_theme_constant_override("separation",8)
+		list.add_child(row)
+		var caption: Label = world.text(entry[1],14)
+		caption.custom_minimum_size.x = 200
+		row.add_child(caption)
+		for slot in range(Shortcuts.SLOTS):
+			var waiting: bool = capturing==[action,slot]
+			var code: int = int(world.shortcuts.get(action,[0,0])[slot])
+			var key: Button = world.button("按下新键…" if waiting else Shortcuts.key_name(code),func():
+				capturing = [action,slot];conflict = {};rebuild())
+			key.name = "Shortcut_%s_%d" % [action,slot]
+			key.custom_minimum_size.x = 130
+			if waiting:key.add_theme_color_override("font_color",Color("ffd98a"))
+			row.add_child(key)
+	var reset: Button = world.button("恢复默认",func():
+		world.reset_shortcuts();capturing = [];conflict = {};rebuild())
+	reset.name = "ShortcutReset"
+	body.add_child(reset)
+
+## While a slot waits for a key, every key goes here first (before movement,
+## M, Esc and the rest), so the game does not act on it.
+func _input(event: InputEvent) -> void:
+	if not visible or capturing.is_empty() or not event is InputEventKey or not event.pressed or event.echo:return
+	get_viewport().set_input_as_handled()
+	var action: String = capturing[0]
+	var slot: int = capturing[1]
+	capturing = []
+	var code: int = event.physical_keycode if event.physical_keycode!=0 else event.keycode
+	if code==KEY_ESCAPE:
+		rebuild();return
+	if code==KEY_BACKSPACE:code = 0
+	var holder: String = world.bind_shortcut(action,slot,code)
+	if not holder.is_empty():conflict = {"action":action,"slot":slot,"key":code,"holder":holder}
+	rebuild()
 
 ## Follows sound changes made elsewhere (M, the 音乐 window, another page).
 func _sync_sound() -> void:
@@ -171,24 +283,30 @@ func _sync_sound() -> void:
 
 const HELP := """移动
   点击地面寻路，或用 WASD / 方向键行走。
-  鼠标滚轮或「设置 → 画面」缩放。R 回到村中广场，E 挥手，X 坐下 / 站起。
+  鼠标滚轮、+ / − 或「设置 → 画面」的滑杆缩放（10% 到 200%）。
+  R 回到村中广场，E 挥手，X 坐下 / 站起。
 
-快捷键
-  M 音乐开关　Ctrl+M 地图窗口　Tab 换角色　H 操作说明　Esc 关闭窗口
+快捷键（默认，可在「设置 → 快捷键」修改）
+  M 地图窗口　G 游戏助手　Tab 换角色　H 操作说明
+  Esc 关闭最上面的窗口；没有窗口时打开设置
 
-工具栏
+游戏助手（G，或「设置 → 助手」）
+  自动练级：原地连续遇敌、抓宠或带宠升级；五人镜像队也在这里。
+  自动抓极品：按先天档位和120级属性找宠，本机极速模式用所有 CPU 核心扫描；可自动捕获、练级、存仓，按保留规则整理。
+  宠物 · 同种比较：同种比较、仓库、收藏和放生。
+  电台：原版配乐、收藏、歌单、随机和单曲循环。
   地图导航：按地图查看和传送。
   刷怪传送：按练级点传送到原版刷怪位置。
-  自动练级：原地连续遇敌、抓宠或带宠升级；五人镜像队也在这里。
-  自动抓极品：按先天档位和120级属性找宠，本机极速模式用所有 CPU 核心扫描；可自动捕获、练级、存仓。
-  音乐：原版配乐电台、收藏和歌单，以及音乐开关和音量。
-  设置：画面、声音（音乐、音效、音量）、角色、瞬移、存档、更新日志和本说明；开发者区有 GM 调试。
+  开发者：GM 调试（等级、属性、体力、发放特殊宠物）。
+
+地图窗口（M）
+  下方有「地图导航」和「刷怪传送」。
 
 底部菜单（鼠标移到屏幕底部出现）
-  状态、宠物（同种比较、仓库、放生）、道具、系统（打开设置）。
+  地图、状态、宠物（同种比较、仓库、放生）、道具、系统（打开设置）。
 
 其他
-  旅程自动保存。音量、音乐开关、音效、缩放和瞬移模式由每台设备各自记住。"""
+  旅程自动保存。音量、音乐开关、音效、缩放、瞬移模式和快捷键由每台设备各自记住。"""
 
 func _help_page() -> void:
 	var scroll := ScrollContainer.new()

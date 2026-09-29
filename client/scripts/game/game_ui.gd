@@ -1,6 +1,7 @@
 extends RefCounted
-## Building the interface of the game scene (scripts/game.gd): the UI layer,
-## toolbar and windows (built once), the map-specific parts refreshed on every
+## Building the interface of the game scene (scripts/game.gd): the UI layer
+## and windows (built once; there is no toolbar, the windows open from
+## 游戏助手, 设置, the map window and shortcuts), the map-specific parts refreshed on every
 ## map change, the dialogue box, the adventure hint and the shared text,
 ## button and panel-style helpers every window uses (world.text() and so on).
 ## The controls stay on the game; see docs/technical/game-scripts.md.
@@ -67,12 +68,6 @@ func build_ui() -> void:
 	game.classic_hud = preload("res://scripts/classic_hud.gd").new()
 	game.classic_hud.world = game
 	root.add_child(game.classic_hud)
-	var dev := HFlowContainer.new()
-	game.dev_bar = dev
-	dev.size.x = game.get_viewport_rect().size.x-24
-	dev.position = Vector2(12,85)
-	dev.add_theme_constant_override("separation",5)
-	root.add_child(dev)
 	game.character_selection = preload("res://scripts/character_selection.gd").new()
 	game.character_selection.configure(game)
 	root.add_child(game.character_selection)
@@ -80,12 +75,6 @@ func build_ui() -> void:
 	game.travel_landing.configure(game)
 	game.leveling_destinations=preload("res://scripts/leveling_destinations.gd").new()
 	game.leveling_destinations.configure(game);root.add_child(game.leveling_destinations)
-	var overview_button := button("地图导航",func(): game.dev_map_overview.open_map())
-	overview_button.name = "DevMapOverview"
-	overview_button.tooltip_text = "按地图查看和传送"
-	dev.add_child(overview_button)
-	var training_travel:=button("刷怪传送",game.leveling_destinations.open_menu)
-	training_travel.name="DevTrainingTravel";training_travel.tooltip_text="按练级点传送到原版刷怪位置";dev.add_child(training_travel)
 	game.pet_hunt_menu = preload("res://scripts/pet_hunt_menu.gd").new()
 	game.pet_hunt_menu.configure(game)
 	root.add_child(game.pet_hunt_menu)
@@ -106,12 +95,6 @@ func build_ui() -> void:
 	game.pet_workflow = preload("res://scripts/pet_workflow.gd").new()
 	game.pet_workflow.configure(game)
 	root.add_child(game.pet_workflow)
-	var training := button("自动练级",game.training_helper.open_menu)
-	training.name="DevTraining"
-	dev.add_child(training)
-	var hunt := button("自动抓极品",game.pet_hunt_menu.open_menu)
-	hunt.name = "DevPetHunt"
-	dev.add_child(hunt)
 	game.radio = preload("res://scripts/radio.gd").new()
 	game.radio.name = "Radio"
 	game.add_child(game.radio)
@@ -123,12 +106,6 @@ func build_ui() -> void:
 	game.radio_panel = preload("res://scripts/radio_panel.gd").new()
 	root.add_child(game.radio_panel)
 	game.radio_panel.configure(game,game.radio)
-	var music_button := button("音乐",func():
-		if game.radio_panel.visible:game.radio_panel.close_panel()
-		else:game.radio_panel.open_panel())
-	music_button.name = "DevMusic"
-	music_button.tooltip_text = "原版配乐电台、收藏和歌单，声音开关和音乐音量"
-	dev.add_child(music_button)
 	game.changelog_menu = preload("res://scripts/changelog_menu.gd").new()
 	game.changelog_menu.configure(game)
 	root.add_child(game.changelog_menu)
@@ -136,12 +113,9 @@ func build_ui() -> void:
 	root.add_child(game.settings_menu)
 	game.settings_menu.configure(game)
 	game.help = game.settings_menu
-	var settings_button := button("设置",func():
-		if game.settings_menu.visible:game.settings_menu.close_menu()
-		elif not game.dialogue.visible:game.settings_menu.open_menu())
-	settings_button.name = "DevSettings"
-	settings_button.tooltip_text = "画面、声音、角色、瞬移、存档、更新日志和操作说明"
-	dev.add_child(settings_button)
+	game.helper_menu = preload("res://scripts/helper_menu.gd").new()
+	root.add_child(game.helper_menu)
+	game.helper_menu.configure(game)
 	build_dialogue(root)
 	game.adventure_menu = AdventureMenu.new()
 	game.adventure_menu.configure(game)
@@ -156,9 +130,8 @@ func build_ui() -> void:
 	game.dev_gm_menu.configure(game)
 	root.add_child(game.dev_gm_menu)
 	game.adventure_hint = text("",14)
-	game.adventure_hint.position = Vector2(18,132)
-	dev.resized.connect(func():
-		if is_instance_valid(game.adventure_hint):game.adventure_hint.position.y=dev.position.y+dev.size.y+8)
+	# Below the classic top-left icons, where the toolbar used to be.
+	game.adventure_hint.position = Vector2(18,88)
 	game.adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
 	game.adventure_hint.add_theme_constant_override("shadow_offset_x",1)
 	game.adventure_hint.add_theme_constant_override("shadow_offset_y",1)
@@ -193,7 +166,7 @@ func refresh_map_ui() -> void:
 ## A minimized automation window is hidden, so it does not count; see
 ## automation_minimized() for how it still holds the character in place.
 func _panel_open() -> bool:
-	for node in [game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help]:
+	for node in [game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help,game.helper_menu]:
 		if is_instance_valid(node) and node.visible:return true
 	return false
 
@@ -201,13 +174,8 @@ func update_adventure_hint() -> void:
 	if not is_instance_valid(game.adventure_hint):return
 	game.adventure_hint.visible = not game.battle_view.visible and not game.adventure_menu.visible and not game.dialogue.visible
 	var profile: Dictionary = game.session.snapshot()
-	var q: Dictionary = profile.quest
-	var objective := "找村民聊聊，准备你的第一次冒险。"
-	if q.claimed:objective = "委托完成！继续培养与收集你的伙伴。"
-	elif game.session.can_fight_boss():objective = "准备好后，在村外点击 DEV「挑战强敌」。"
-	elif q.boss_defeated:objective = "回到村民身边领取报酬。"
-	elif q.accepted:objective = "村外的伙伴：胜利 %d/3 · 捕获伙伴 %d/1" % [mini(3,int(q.wins)),mini(1,profile.pets.size())]
-	game.adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d   %s" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold,objective]
+	# Only the status: the early quest's goals (村外的伙伴) no longer lead anywhere.
+	game.adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold]
 	if not game.last_adventure_message.is_empty():game.adventure_hint.text += "\n"+game.last_adventure_message
 
 func build_dialogue(root: Control) -> void:

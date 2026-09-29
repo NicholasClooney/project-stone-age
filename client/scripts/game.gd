@@ -90,10 +90,13 @@ var _link_status: Label
 ## another device's walk arrives as a position event and is mirrored here
 ## without rerunning arrival rules (encounters, map links), which the walking
 ## device already ran.
-## Persistent UI: the root control and DEV bar, and the DEV buttons that only
-## exist on some maps (replaced by refresh_map_ui on every map change).
+## Persistent UI: the root control every window hangs from. There is no
+## toolbar: our own windows open from 游戏助手, 设置 and shortcuts.
 var ui_root: Control
-var dev_bar: HFlowContainer
+## 游戏助手 (scripts/helper_menu.gd): the list of the windows this project added.
+var helper_menu: PanelContainer
+## This device's keys, action -> [key, key] (scripts/shortcuts.gd).
+var shortcuts: Dictionary = {}
 var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]
 var _follow: Array = []
 var _following_step := false
@@ -117,7 +120,8 @@ var _companion_key: Array = []
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const SPAWN := Vector2i(80,90)
 const STEP_TIME := 0.19
-const MIN_ZOOM := 0.4
+## 10% to 200%; a new device starts at 100% (the camera's own default).
+const MIN_ZOOM := 0.1
 const MAX_ZOOM := 2.0
 const ZOOM_STEP := 0.1
 const SCREEN_DIRECTIONS := [Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1),Vector2i(0,-1)]
@@ -464,6 +468,7 @@ func toggle_mute() -> void:_audio.toggle_mute()
 func set_music_volume(value: float) -> void:_audio.set_music_volume(value)
 func set_effects_on(on: bool) -> void:_audio.set_effects_on(on)
 func apply_sound() -> void:_audio.apply_sound()
+func toggle_radio() -> void:_audio.toggle_radio()
 
 # ---- this device's settings (scripts/game/game_device.gd) ----
 func set_zoom(value: float) -> void:_device.set_zoom(value)
@@ -471,7 +476,7 @@ func maximum_zoom_out() -> void:_device.maximum_zoom_out()
 func set_blink_mode(on: bool) -> void:_device.set_blink_mode(on)
 func zoom_by(step: float) -> void:_device.zoom_by(step)
 func _save_device(key: String, value: Variant) -> void:_device._save_device(key,value)
-func zoom_farthest() -> void:_device.zoom_farthest()
+func set_zoom_percent(percent: float) -> void:_device.set_zoom_percent(percent)
 func restore_device_settings() -> void:_device.restore_device_settings()
 func playback_speed() -> float:return _device.playback_speed()
 func set_battle_speed(value: float) -> void:_device.set_battle_speed(value)
@@ -557,6 +562,9 @@ func dev_go_shop() -> void:_areas.dev_go_shop()
 
 # ---- input (scripts/game/game_input.gd) ----
 func configure_input() -> void:_input_events.configure_input()
+func load_shortcuts() -> void:_input_events.load_shortcuts()
+func bind_shortcut(action: String, slot: int, key: int, swap: bool = false) -> String:return _input_events.bind_shortcut(action,slot,key,swap)
+func reset_shortcuts() -> void:_input_events.reset_shortcuts()
 func _input(event: InputEvent) -> void:_input_events.on_input(event)
 func _unhandled_input(event: InputEvent) -> void:_input_events.on_unhandled_input(event)
 func handle_world_click(point: Vector2) -> void:_input_events.handle_world_click(point)

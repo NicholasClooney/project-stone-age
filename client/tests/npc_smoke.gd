@@ -74,9 +74,10 @@ func run() -> void:
 	click_at(game.npc_sprite.get_global_transform_with_canvas()*Vector2(20,40))
 	await ticks(3)
 	check(game.dialogue.visible,"actual mouse click reopens adjacent conversation")
-	click_at(game.find_child("DevSettings",true,false).get_global_rect().get_center())
+	key(KEY_G,true)
+	key(KEY_G,false)
 	await ticks(2)
-	check(game.dialogue.visible and not game.settings_menu.visible,"modal overlay prevents underlying 设置 button clicks")
+	check(game.dialogue.visible and not game.helper_menu.visible and not game.settings_menu.visible,"the dialogue keeps the 游戏助手 shortcut from opening windows")
 	if "--capture" in OS.get_cmdline_user_args():
 		await create_timer(0.5).timeout
 		await RenderingServer.frame_post_draw

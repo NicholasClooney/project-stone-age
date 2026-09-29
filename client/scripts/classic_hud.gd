@@ -61,7 +61,7 @@ func _ready() -> void:
 	taskbar.scale = Vector2.ONE*SCALE
 	taskbar.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(taskbar)
-	var labels := ["地图  Ctrl+M","状态","宠物","道具","邮件","相簿","系统"]
+	var labels := ["地图  M","状态","宠物","道具","邮件","相簿","系统"]
 	for i in range(7):
 		var item := icon(taskbar,26150+i*2,26151+i*2,Vector2(i*92,0),labels[i])
 		task_buttons.append(item)
@@ -188,7 +188,25 @@ func build_map() -> void:
 			dragging = event.pressed
 			drag_offset = pointer_position-map_panel.position)
 	map_panel.add_child(title)
+	_travel_menu()
 	map_panel.hide()
+
+## Below the map window: this project's travel windows (also in 游戏助手).
+func _travel_menu() -> void:
+	var strip := HBoxContainer.new()
+	strip.name = "MapTravelMenu"
+	strip.position = Vector2(4,244)
+	strip.add_theme_constant_override("separation",4)
+	map_panel.add_child(strip)
+	for entry in [["MapOverviewButton","地图导航","按地图查看和传送",func(): world.dev_map_overview.open_map()],["MapTravelButton","刷怪传送","按练级点传送到原版刷怪位置",func(): world.leveling_destinations.open_menu()]]:
+		var open: Button = world.button(entry[1],func():
+			if map_panel.visible:toggle_map()
+			entry[3].call())
+		open.name = entry[0]
+		open.tooltip_text = entry[2]
+		open.add_theme_font_size_override("font_size",11)
+		open.custom_minimum_size = Vector2(118,26)
+		strip.add_child(open)
 
 func _input(event: InputEvent) -> void:
 	if event is InputEventMouse:

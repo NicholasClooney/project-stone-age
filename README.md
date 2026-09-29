@@ -63,14 +63,15 @@ Quit the standalone desktop game before starting `serve.sh`; both would write th
 | --- | --- |
 | Left click | Walk to a tile; click a villager to walk over and talk |
 | WASD / arrow keys | Walk (combine for eight directions) |
-| Mouse wheel | Zoom (also **设置 → 画面**; remembered per device) |
+| Mouse wheel, + / − | Zoom 10% to 200% (also the slider in **设置 → 画面**; remembered per device, a new device starts at 100%) |
 | Hover the bottom edge | Original menu tabs: status, pets, items, map; 系统 opens **设置** |
-| Ctrl+M | Map window |
+| M | Map window, with **地图导航** and **刷怪传送** below it (Ctrl+M works too) |
+| G | **游戏助手**: 自动练级, 自动抓极品, 宠物 · 同种比较, 电台, 地图导航, 刷怪传送, GM 调试 |
+| Esc | Closes the top window; with none open, opens **设置** |
 | Battle icons | Choose a command, then its target, then your pet's command; right click or Esc cancels |
 | E / X | Wave / sit or stand |
 | Tab | Choose a character |
-| M | Music on or off (sound effects are a separate switch in 设置) |
-| H | 操作说明 in **设置**; Esc closes windows |
+| H | 操作说明 in **设置** |
 | R | Return to the village square |
 | Game controller | Supported everywhere, including menus and battles ([layout](docs/technical/web-client.md#game-controller)) |
 
@@ -78,7 +79,7 @@ Quit the standalone desktop game before starting `serve.sh`; both would write th
 
 Walk out through the village's west exit (or use **地图导航**), weaken a wild pet and capture it, and win some battles. 蓝人龙、金虎 and 红暴龙 join you on first launch; ride one from the pet window.
 
-The toolbar has **地图导航**, **刷怪传送**, **自动练级**, **自动抓极品**, **音乐** (radio, music switch and volume) and **设置** (zoom, sound, character, 瞬移, saving, changelog, 操作说明, and GM tools under 开发者). See the [feature guide](docs/development/feature-guide.md).
+There are no extra buttons on the game screen. This project's windows open from **游戏助手** (G) and **设置** (Esc): zoom, sound and 电台, character, 瞬移, saving, 快捷键 (every shortcut can be rebound per device), changelog, 操作说明, and GM tools under 开发者. See the [feature guide](docs/development/feature-guide.md).
 
 ## Development
 
