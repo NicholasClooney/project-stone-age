@@ -7,6 +7,6 @@ The menu-bar pet window uses **mutually exclusive screens**, not a list and deta
 - Skills: (4,4),272×348, art26130. Slot overlays26131+ use ADRN offsets relative towindowcenter(136,174), **not (0,0)**. Basic and learned skill names occupy25pixel rows. Return/navigationY330.
 - Rename: original26049window immediately below detail atglobal(4,340), with original confirm26093/cancel26050 controls.
 
-Source sections: list12300–12745; detail12750and15150–15335; skills15350–15710. Reference builds contain conditional later-version additions; riding, mail, pet dropping, album registration and unavailable elemental/loyalty data are not fabricated. Current state button toggles the implemented active pet/rest behavior.
+Source sections: list12300–12745; detail12750and15150–15335; skills15350–15710. Reference builds contain conditional later-version additions; riding, mail, pet dropping, album registration and unavailable elemental data are not fabricated. The loyalty row shows the original computed loyalty ([charm and loyalty](charm-and-loyalty.md)). Current state button toggles the implemented active pet/rest behavior.
 
 `tools/import_mvp.py` now extracts all required rename, navigation and skill-row sprites. `pet_window_test.gd` verifies five-pet geometry, screen replacement, the native portrait animating, turning and continuing across rebuilds, rename, active selection and withdrawal. Muted rendered checks produce `/tmp/pet-window-list.png`, `/tmp/pet-window-detail.png`, `/tmp/pet-window-skills.png` with `-- --capture`.

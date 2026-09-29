@@ -5,6 +5,10 @@ const ENEMY_MAX_HP := 32
 var capture_assist := false
 func set_capture_assist(enabled: bool) -> void:
 	capture_assist=enabled
+## Set by the backend's automation runner (自动练级, 带宠升级, 后台搜宠): a
+## disobeying pet then only loses its action, so a run is never ended by a
+## pet attacking its owner or leaving (docs/reverse-engineering/charm-and-loyalty.md).
+var automated := false
 
 var rng_seed := 42
 var _rng := RandomNumberGenerator.new()
@@ -14,6 +18,7 @@ var _escape_attempts := 0
 var _skill_used := false
 const CaptureRules = preload("res://server/capture_rules.gd")
 const CombatRules = preload("res://server/classic_combat_rules.gd")
+const Loyalty = preload("res://server/loyalty.gd")
 var _acting_enemy := 0
 var _target := 0
 var _pet_choice := -2
@@ -26,6 +31,8 @@ var _player_guard := false
 var _player_command := "attack"
 var _pet_guard := false
 var _last_ride_damage := 0
+## The pet's loyalty check this action ("" when it obeyed), for the frame.
+var _pet_disobey := ""
 
 # Optional authority extensions. Defaults retain the original solo scheduler.
 func _extend_actors(_actors: Array[Dictionary], _action: String) -> void:
@@ -83,6 +90,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["selected_target"] = 0
 	_state["captured_species_list"] = []
 	_state["capture_success"] = false
+	_state["pet_escapes"] = 0
 	_sync_pet()
 	_sync_enemy(0)
 	return snapshot()
@@ -171,6 +179,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 		_last_outcome = action if actor.actor == "player" else pet_command if actor.actor == "pet" else "attack"
 		_last_damage = 0
 		_last_ride_damage = 0
+		_pet_disobey = ""
 		_pending_counter = {}
 		_state.turn_order.append(actor.actor)
 		match actor.actor:
@@ -256,18 +265,97 @@ func _pet_action(command: String) -> void:
 	if command == "standby":
 		# petskill.txt ID0 / PETSKILL_None: remain in place, consume the action.
 		return
+	# battle.c:6099: every other command first passes the loyalty check. The
+	# roll is drawn only below 80, where it can matter.
+	var loyalty := int(_state.pet.get("loyalty",100))
+	if loyalty < Loyalty.OBEDIENT and _disobeys(command,Loyalty.check(loyalty,_rng.randi_range(1,100))):return
 	if command == "defend":
 		return
-	if _enemy_alive(_pet_target): _target = _pet_target
+	_pet_perform(command,_chosen_skill,_pet_target)
+
+## battle.c:5734 BATTLE_PetLoyalCheck: the original shows "No!" (BX,
+## CG_ICON_NO) over the pet, then runs the changed command. Returns whether
+## the pet's action is used up.
+func _disobeys(command: String, mode: String) -> bool:
+	if mode == "normal": return false
+	_pet_disobey = mode
+	var pet_name := str(_state.pet_name)
+	if automated:
+		_state.events.append("%s不听指挥，这回合没有行动。" % pet_name)
+		_last_outcome = "standby"
+		return true
+	match mode:
+		"random_target":
+			# A guard (or a command at itself) becomes nothing (type 1).
+			if command == "defend":
+				_state.events.append("%s不听指挥，没有防御。" % pet_name)
+				_last_outcome = "standby"
+			else:
+				_state.events.append("%s不听指挥，攻击了别的目标。" % pet_name)
+				_pet_perform(command,_chosen_skill,_random_enemy())
+		"random_action":
+			# BATTLE_PetRandomSkill: a random one of the seven skill slots
+			# (待机, 攻击, 防御, then learned skills) at a random enemy.
+			var slots: Array = ["standby","attack","defend"]
+			for skill in _state.pet.get("learned_skills",[]):slots.append(int(skill))
+			var slot := _rng.randi_range(0,6)
+			var chosen: Variant = slots[slot] if slot < slots.size() else "standby"
+			_state.events.append("%s不听指挥，胡乱行动。" % pet_name)
+			if chosen is int:_pet_perform("skill",int(chosen),_random_enemy())
+			elif chosen == "attack":_pet_perform("attack",0,_random_enemy())
+			else:_last_outcome = "standby"
+		"attack_owner":
+			_pet_attack_owner()
+		"attack_enemy":
+			_state.events.append("%s不听指挥，自己冲向敌人。" % pet_name)
+			_pet_perform("attack",0,_random_enemy())
+		"escape":
+			_pet_escape()
+	return true
+
+func _random_enemy() -> int:
+	var alive: Array[int] = []
+	for index in range(_state.enemies.size()):
+		if _enemy_alive(index):alive.append(index)
+	return alive[_rng.randi_range(0,alive.size()-1)] if not alive.is_empty() else -1
+
+## PETAI_MODE_OWNERATTACK: an ordinary attack on its owner.
+func _pet_attack_owner() -> void:
 	var stats: Dictionary = _state.pet.duplicate(true)
 	stats["kind"] = "pet"
-	if command == "skill" and _chosen_skill in [3,10,50]:
-		if _chosen_skill == 50:
+	var owner := _player_stats(true)
+	owner["kind"] = "player"
+	var result: Dictionary = CombatRules.resolve(stats,owner,_rng,_player_guard,str(_config.get("combat_profile","classic")))
+	_last_outcome = result.outcome
+	_state.enemy_target = "player"
+	_apply_player_damage(int(result.damage))
+	_state.events.append("%s不听指挥，攻击了主人：%s %d。" % [str(_state.pet_name),_last_outcome,_last_damage])
+	if _state.player_hp == 0:
+		_finish("defeat","你被自己的宠物打倒了，回村恢复体力。")
+
+## PETAI_MODE_ESCAPE / BATTLE_LostEscape (battle_event.c:4703): the pet
+## leaves the battle and is no longer the battle pet; the owner loses 1 charm
+## when the battle settles (pet_escapes). The pet itself stays owned.
+func _pet_escape() -> void:
+	var index := int(_state.active_pet)
+	_state.pets[index] = _state.pet.duplicate(true)
+	_state.events.append("%s不听指挥，离开了战斗。" % str(_state.pet_name))
+	_state.active_pet = -1
+	_sync_pet()
+	_state.pet_escapes = int(_state.get("pet_escapes",0))+1
+	_last_outcome = "switch"
+
+func _pet_perform(command: String, skill_id: int, target: int) -> void:
+	if _enemy_alive(target): _target = target
+	var stats: Dictionary = _state.pet.duplicate(true)
+	stats["kind"] = "pet"
+	if command == "skill" and skill_id in [3,10,50]:
+		if skill_id == 50:
 			stats.attack = int(stats.get("attack",4)) + int(int(stats.get("attack",4))*0.25)
-		if _chosen_skill == 3: stats["guard_break"] = true
-		if _chosen_skill == 10: stats["damage_divisor"] = 2
+		if skill_id == 3: stats["guard_break"] = true
+		if skill_id == 10: stats["damage_divisor"] = 2
 		_attack_enemy(stats,str(stats.get("name","伙伴")))
-		if _chosen_skill == 10 and _state.active and _enemy_alive(_target):
+		if skill_id == 10 and _state.active and _enemy_alive(_target):
 			_record_frame("pet")
 			_state.turn_order.append("pet")
 			_attack_enemy(stats,str(stats.get("name","伙伴")))
@@ -391,7 +479,7 @@ func _finish(outcome: String, message: String) -> void:
 	_state.events.append(message)
 
 func _record_frame(actor: String) -> void:
-	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"ride_pet":int(_state.get("ride_pet",-1)),"mounted_sprite":int(_state.get("mounted_sprite",-1)),"ride_damage":_last_ride_damage,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and not _last_outcome.begins_with("counter") else 0})
+	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"ride_pet":int(_state.get("ride_pet",-1)),"mounted_sprite":int(_state.get("mounted_sprite",-1)),"ride_damage":_last_ride_damage,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and _pet_disobey.is_empty() and not _last_outcome.begins_with("counter") else 0,"disobey":_pet_disobey if actor == "pet" else ""})
 
 func _resolve_counter() -> void:
 	_last_ride_damage = 0

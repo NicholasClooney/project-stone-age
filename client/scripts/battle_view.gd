@@ -1282,6 +1282,15 @@ func queue_group_turn(previous: Dictionary) -> void:
 		var index := enemy_actor(int(frame.get("enemy_index",0))) if who=="enemy" else ally_pet_actor(int(frame.get("ally_index",0))) if who=="ally_pet" else ally_actor(int(frame.get("ally_index",0))) if who=="ally" else 2 if who=="pet" else 0
 		var target := (ally_pet_actor(int(frame.get("ally_index",0))) if str(frame.get("enemy_target",""))=="ally_pet" else ally_actor(int(frame.get("ally_index",0))) if str(frame.get("enemy_target",""))=="ally" else 2 if str(frame.get("enemy_target",""))=="pet" else 0) if who=="enemy" else enemy_actor(int(frame.get("target_index",0)))
 		var outcome := str(frame.get("outcome","hit"))
+		# A disobeying pet (battle.c BX): "No!" (CG_ICON_NO 26509) over it
+		# first; one attacking its owner strikes the player, one leaving
+		# shows "Leave!" (CG_ICON_LEAVE 26513) as it walks off.
+		var disobey := str(frame.get("disobey","")) if who=="pet" else ""
+		if not disobey.is_empty():
+			word_cues.append({"at":at,"index":2,"id":26509})
+			at += 0.6
+			if disobey=="attack_owner": target = 0
+			if disobey=="escape": word_cues.append({"at":at,"index":2,"id":26513})
 		var timing := {"hit":at+0.25,"end":at+0.5}
 		if outcome=="mirror_cast":
 			queue_pose(0,10,at,1.5)

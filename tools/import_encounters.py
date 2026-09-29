@@ -57,7 +57,7 @@ def build(root):
     for line,r in rows(root/'enemybase.txt'):
         if len(r)<39:continue
         ident=value(r,6)
-        data['templates'].setdefault(str(ident),dict(id=ident,name=r[0],initial=value(r,7),wild_growth=value(r,8),raw_growth=r[8],weights=[value(r,i) for i in range(9,13)],sprite=value(r,36),pet_flag=value(r,37),size=value(r,38),capture_resistance=value(r,14),rare=value(r,32),critical=value(r,33),counter=value(r,34),resistances=[value(r,i,0) for i in range(19,25)],elements=[value(r,i) for i in range(15,19)],source_line=line))
+        data['templates'].setdefault(str(ident),dict(id=ident,name=r[0],initial=value(r,7),wild_growth=value(r,8),raw_growth=r[8],weights=[value(r,i) for i in range(9,13)],sprite=value(r,36),pet_flag=value(r,37),size=value(r,38),capture_resistance=value(r,14),modai=value(r,13,0),rare=value(r,32),critical=value(r,33),counter=value(r,34),resistances=[value(r,i,0) for i in range(19,25)],elements=[value(r,i) for i in range(15,19)],source_line=line))
     exp_source=(root.parent/'include/enemyexptbl.h').read_text(errors='replace')
     data['experience_table']=[int(x) for x in re.findall(r'\d+',exp_source.split('{',1)[1].split('}',1)[0])]
     data['provenance'] = dict(schema=1, tables={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['encount.txt','group.txt','enemy.txt','enemybase.txt']},

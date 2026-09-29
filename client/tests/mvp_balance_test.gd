@@ -33,6 +33,9 @@ func _initialize() -> void:
 	var game = Game.new()
 	check(game.accept_quest(),"accept quest")
 	check(encounter(game,"wooli",true).outcome == "captured","capture first companion")
+	# A fresh catch has the original loyalty (44 here) and may ignore 防御
+	# (loyalty_test.gd covers that); this balance check wants an obedient pet.
+	game._profile.pets[0].variable_ai = 10000
 	for species in ["wooli","wooli_wooli","woolistan"]:
 		check(game.heal(),"village recovery")
 		check(encounter(game,species).outcome == "win","win species encounter")

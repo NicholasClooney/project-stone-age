@@ -52,7 +52,7 @@ def run(source, output):
         archive.image(bitmap).save(output / 'images' / f'{bitmap}.png')
         images[str(bitmap)] = {k: archive.entries[bitmap][k] for k in ('x', 'y', 'w', 'h')}
     ui = {}
-    for number in list(range(25100, 25118)) + list(range(25140, 25144)) + list(range(25500,25508)) + [26018, 26504, 26507, 26505, 26506, 26510, 26511, 26512, 26014, 26019, 26020, 26040, 26041, 26042, 26184, 26185, 26186, 26187, 26130, 26072, 26061, 26070]:
+    for number in list(range(25100, 25118)) + list(range(25140, 25144)) + list(range(25500,25508)) + [26018, 26504, 26507, 26505, 26506, 26509, 26510, 26511, 26512, 26513, 26014, 26019, 26020, 26040, 26041, 26042, 26184, 26185, 26186, 26187, 26130, 26072, 26061, 26070]:
         bitmap = logical[number]
         archive.image(bitmap).save(output / 'ui' / f'{number}.png')
         ui[str(number)] = dict(bitmap=bitmap, width=archive.entries[bitmap]['w'], height=archive.entries[bitmap]['h'], x=archive.entries[bitmap]['x'], y=archive.entries[bitmap]['y'])

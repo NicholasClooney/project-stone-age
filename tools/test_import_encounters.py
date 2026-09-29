@@ -23,6 +23,9 @@ class EncounterImportTests(unittest.TestCase):
         self.assertEqual(data['templates']['1']['sprite'],100250)
         self.assertEqual(data['templates']['1']['wild_growth'],4)
         self.assertEqual(data['templates']['1']['raw_growth'],'4.50')
+        # enemybase column 13 E_T_MODAI: 乌力 150, 乌力乌力 100 (charm-and-loyalty.md).
+        self.assertEqual(data['templates']['1']['modai'],150)
+        self.assertEqual(data['templates']['2']['modai'],100)
         self.assertEqual(data['enemies']['119']['level_min'],1)
         self.assertEqual(data['enemies']['119']['level_max'],1)
         self.assertGreater(len(data['areas']),600)

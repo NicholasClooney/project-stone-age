@@ -48,6 +48,8 @@ func run() -> void:
 	setup_battle._config.capture_bonus=100
 	var captured: Dictionary = setup_battle.submit_action("capture")
 	check(captured.outcome=="captured" and game.session.apply_battle_result(captured),"companion obtained through authority capture flow")
+	# A fresh catch may disobey (loyalty_test.gd); these clicks need it to obey.
+	for pet in game.session._profile.pets:pet.variable_ai = 10000
 	game.session.heal()
 	game.switch_area(true,Vector2i(45,45))
 	await tick()

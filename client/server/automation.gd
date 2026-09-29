@@ -388,6 +388,8 @@ func step() -> void:
 		var decision: Dictionary = Policy.decide(state,settings,capture_target)
 		if decision.has("stop"):stop(str(decision.stop));return
 		backend.set_capture_assist(str(settings.preset)=="capture")
+		# A disobeying pet only skips its action in a run (battle_session.gd).
+		backend.battle.automated = true
 		backend.battle.set_pet_command(str(decision.pet))
 		var next: Dictionary = backend.battle_command({"action":str(decision.action),"target":int(decision.target),"pet_target":int(decision.target),"switch_pet":int(decision.get("switch",-2))})
 		turns += 1
@@ -527,6 +529,8 @@ func stop(reason: String) -> void:
 	running = false
 	stop_reason = reason
 	backend.set_capture_assist(false)
+	# A battle the player takes over obeys the full loyalty rules again.
+	backend.battle.automated = false
 	var takeover := false
 	if compact_active and not backend.battle.snapshot().active:
 		battles += 1

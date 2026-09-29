@@ -294,7 +294,8 @@ func status_panel(profile: Dictionary) -> void:
 		panel.add_child(face_view)
 	else:
 		portrait(int(character),Vector2(177,84),Vector2(64,68))
-	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(effective.attack),str(effective.defence),str(effective.speed),"—"]
+	# menu.cpp:11680: the ninth row is 魅力 (pc.charm).
+	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(effective.attack),str(effective.defence),str(effective.speed),str(int(p.get("charm",60)))]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
 	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]
 	var base_keys := ["vitality","strength","toughness","dexterity"]

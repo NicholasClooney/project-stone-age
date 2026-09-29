@@ -5,6 +5,7 @@ const SAVE_VERSION := 3
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
+const Loyalty = preload("res://server/loyalty.gd")
 const Progression = preload("res://server/progression.gd")
 const Elements = preload("res://server/elements.gd")
 const TroopArt = preload("res://server/troop_art.gd")
@@ -58,6 +59,9 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
 	_profile.player.hp = _profile.player.max_hp
+	# A new character starts at charm 60 under the charm rules (loyalty.gd).
+	_profile.player.charm = Loyalty.CHARM_START
+	_profile.player.charm_rules = 1
 	_refresh_login_luck()
 
 func _refresh_login_luck() -> void:
@@ -78,6 +82,7 @@ func has_travel_pass() -> bool:
 func snapshot() -> Dictionary:
 	_ensure_pet_ids()
 	_sync_stat_points()
+	_refresh_loyalty()
 	return _profile.duplicate(true)
 
 ## Which pets the player has (carried and warehouse) and their levels, without
@@ -93,6 +98,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	if not SPECIES.has(species) or not _pending.is_empty() or (boss and not can_fight_boss()):
 		return {}
 	_ensure_pet_ids()
+	_refresh_loyalty()
 	var enemy: Dictionary = SPECIES[species].duplicate()
 	var native := Progression.species_actor(species,3 if boss else 1,int(_profile.next_battle)*7919)
 	for key in native:enemy[key] = native[key]
@@ -260,6 +266,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 	for i in range(battle_pets.size()):
 		if not _integer(battle_pets[i].get("hp"),0,roster[i].max_hp):return false
 	if not _integer(result.get("active_pet",-1),-1,roster.size()-1):return false
+	if not _integer(result.get("pet_escapes",0),0,10):return false
 	var start_ride := int(_pending.get("ride_pet_index",_profile.get("ride_pet",-1)))
 	var ride_index = result.get("ride_pet",start_ride)
 	if not _integer(ride_index,-1,roster.size()-1):return false
@@ -271,6 +278,10 @@ func apply_battle_result(result: Dictionary) -> bool:
 	for i in range(battle_pets.size()):
 		if int(slots[i])>=0:_profile.pets[int(slots[i])].hp = int(battle_pets[i].hp)
 	_profile.active_pet = int(slots[int(result.active_pet)]) if int(result.get("active_pet",-1))>=0 else -1
+	# The owner a pet caught this battle judged its loyalty by (battle_event.c:3435).
+	var owner_level := int(_profile.player.level)
+	var owner_charm := int(_profile.player.get("charm",Loyalty.CHARM_START))
+	_battle_loyalty(result,enemies,battle_pets,outcome,roster,slots)
 	# Rewards per party slot from here on (the result summary reads them so).
 	var party_rewards: Array = []
 	party_rewards.resize(_profile.pets.size())
@@ -282,7 +293,10 @@ func apply_battle_result(result: Dictionary) -> bool:
 		earned_gold += int(_pending.get("battle_gold",0))
 		earned_gold = mini(earned_gold,1000000000-int(_profile.player.gold))
 		_profile.player.gold += earned_gold
+		var level_before := int(_profile.player.level)
 		_gain_xp(_profile.player,earned_xp)
+		# battle.c:3175: +2 charm once for a battle that levels the player up.
+		if int(_profile.player.level)>level_before:Loyalty.add_charm(_profile.player,Loyalty.CHARM_PLAYER_LEVEL_UP)
 		for i in range(_profile.pets.size()):
 			if _profile.pets[i].hp>0:_gain_xp(_profile.pets[i],int(pet_rewards[i]))
 			else:pet_rewards[i] = 0
@@ -316,6 +330,8 @@ func apply_battle_result(result: Dictionary) -> bool:
 			var native := Progression.species_actor(species,1,int(_profile.next_battle)*7919+_profile.pets.size()*97)
 			captured.merge(native)
 		_assign_pet_id(captured)
+		Loyalty.stamp_modai(captured)
+		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured))
 		_profile.pets.append(captured)
 		capture_events.append({"pet":captured.duplicate(true),"source":""})
 		if _profile.pets.size() == 1:_profile.active_pet = 0
@@ -328,7 +344,43 @@ func apply_battle_result(result: Dictionary) -> bool:
 	if _profile.completed_battles.size() > 128:
 		_profile.completed_battles.pop_front()
 	_pending.clear()
+	_refresh_loyalty()
 	return true
+
+## Charm and loyalty the battle changed, before experience and level-ups
+## (docs/reverse-engineering/charm-and-loyalty.md): every kill while a pet is
+## out (+0.01, +0.2 for a higher-level enemy, battle.c:4795), a pet that fell
+## (-5, battle.c:4405), the owner falling (charm -2 and the out pet -1,
+## battle.c:4379) and a pet that left in disobedience (charm -1,
+## battle_event.c:4729). Death penalties halve at owner level 10 or less.
+## Roster indices are battle slots; slots maps them to the party (-1: gone).
+func _battle_loyalty(result: Dictionary, enemies: Array, battle_pets: Array, outcome: String, roster: Array, slots: Array) -> void:
+	var player: Dictionary = _profile.player
+	var level := int(player.level)
+	for i in range(enemies.size()):
+		var foe: Dictionary = enemies[i]
+		if foe.get("captured",false) or int(foe.hp)!=0:continue
+		var index := int(foe.get("defeated_by_pet_index",-1))
+		if index<0 or int(slots[index])<0:continue
+		var pet: Dictionary = _profile.pets[int(slots[index])]
+		Loyalty.add_variable(pet,Loyalty.AI_PET_GOLD_WIN if int(_pending.enemies[i].get("level",1))>int(pet.level) else Loyalty.AI_PET_WIN)
+	for i in range(mini(battle_pets.size(),roster.size())):
+		# A mount is not a battle entry: its fall is no pet death (battle.c:4389).
+		if i==int(_pending.get("ride_pet_index",-1)) or int(slots[i])<0:continue
+		if int(roster[i].get("hp",0))>0 and int(battle_pets[i].hp)==0:
+			Loyalty.add_variable(_profile.pets[int(slots[i])],Loyalty.death_penalty(Loyalty.AI_PET_DEAD,level))
+	if outcome=="defeat":
+		Loyalty.add_charm(player,Loyalty.death_penalty(Loyalty.CHARM_PLAYER_DEAD,level))
+		if int(_profile.active_pet)>=0:
+			Loyalty.add_variable(_profile.pets[int(_profile.active_pet)],Loyalty.death_penalty(Loyalty.AI_PLAYER_DEAD,level))
+	Loyalty.add_charm(player,Loyalty.CHARM_PET_ESCAPE*int(result.get("pet_escapes",0)))
+
+## Every pet's loyalty follows its owner's current level and charm
+## (char.c:2918). Pets without variable_ai predate the rules and are migrated
+## when the save loads; until then they keep obeying as before.
+func _refresh_loyalty() -> void:
+	for pet in _profile.pets+_profile.get("pet_storage",[]):
+		if pet.has("variable_ai"):Loyalty.refresh(pet,_profile.player)
 
 func _gain_xp(actor: Dictionary, amount: int) -> void:
 	actor.xp += amount
@@ -339,6 +391,8 @@ func _gain_xp(actor: Dictionary, amount: int) -> void:
 			Progression.migrate_pet(actor,int(actor.sprite))
 			Progression.grow_pet(actor,int(actor.level))
 			actor.skill_unlocked = not actor.get("learned_skills",[]).is_empty()
+			# battle.c:3224 AI_FIX_PETLEVELUP: +5 loyalty per level.
+			if actor.has("variable_ai"):Loyalty.add_variable(actor,Loyalty.AI_PET_LEVEL_UP)
 		else:
 			# battle.c:3173 defaults to 3 skill-up points per level.
 			actor.stat_points += 3
@@ -800,6 +854,7 @@ func set_location(map_id: int, x: int, y: int) -> bool:
 func save_game(path: String) -> bool:
 	_ensure_pet_ids()
 	_sync_stat_points()
+	_refresh_loyalty()
 	last_error = ""
 	if not _pending.is_empty():
 		last_error = "Finish the battle before saving."
@@ -862,6 +917,10 @@ func load_game(path: String) -> bool:
 				pet.skill_unlocked = not pet.learned_skills.is_empty()
 			Progression.refresh(_profile.player)
 			for pet in _profile.pets+_profile.pet_storage:Progression.refresh(pet)
+			# Saves before charm and loyalty rules (loyalty.gd migrate_*).
+			Loyalty.migrate_charm(_profile.player)
+			for pet in _profile.pets+_profile.pet_storage:Loyalty.migrate_pet(pet,_profile.player)
+			_refresh_loyalty()
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true
@@ -890,6 +949,7 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	for field in ["charm","luck","last_luck_time"]:
 		if value.player.has(field) and not _integer(value.player[field],1 if field=="luck" else 0,4102444800 if field=="last_luck_time" else (100 if field=="charm" else 5)):return false
+	if value.player.has("charm_rules") and not _integer(value.player.charm_rules,1,1):return false
 	if value.player.has("stat_points") and not _integer(value.player.stat_points,0,1000000000):
 		return false
 	if value.player.has("allocated_stats"):
@@ -935,6 +995,9 @@ func _valid_profile(value: Variant) -> bool:
 		var definition: Dictionary = SPECIES.get(pet.species,Progression.species_definition(pet.species))
 		if pet.get("sprite") != definition.get("sprite",-1):
 			return false
+		if pet.has("variable_ai") and not _integer(pet.variable_ai,Loyalty.VARIABLE_MIN,Loyalty.VARIABLE_MAX):return false
+		if pet.has("modai") and not _integer(pet.modai,0,1000000000):return false
+		if pet.has("loyalty") and not _integer(pet.loyalty,0,100):return false
 	return true
 
 func _actor_valid(actor: Dictionary) -> bool:
@@ -1113,7 +1176,9 @@ func grant_starter_pets() -> bool:
 	for species in missing:
 		var data: Dictionary = SPECIES[species]
 		var pet := Progression.species_actor(species,1,int(data.sprite))
-		pet.merge({"species":species,"name":data.name,"sprite":data.sprite,"level":1,"xp":0,"skill_unlocked":false,"loyalty":100})
+		# A developer grant, like the GM petmake (chatmagic.c:1487): loyalty 100.
+		pet.merge({"species":species,"name":data.name,"sprite":data.sprite,"level":1,"xp":0,"skill_unlocked":false,"loyalty":100,"variable_ai":Loyalty.AI_GM_PET})
+		Loyalty.stamp_modai(pet)
 		_assign_pet_id(pet)
 		_profile.pets.append(pet)
 	return true
@@ -1222,6 +1287,9 @@ func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:
 	_ensure_pet_ids()
 	var pet := Progression.species_actor(species,1,randi(),[2,2,2,2] if full_grade else [])
 	pet.merge({"species":species,"template_id":int(template),"name":str(data.name),"sprite":int(data.sprite),"level":1,"xp":0,"skill_unlocked":false,"elements":data.get("elements",[0,0,0,0]).duplicate(),"size":int(data.get("size",1))})
+	# GM petmake (chatmagic.c:1487) gives the pet CHAR_VARIABLEAI 10000: loyalty 100.
+	pet.variable_ai = Loyalty.AI_GM_PET
+	Loyalty.stamp_modai(pet)
 	_assign_pet_id(pet)
 	if _profile.pets.size() < PET_CAPACITY:
 		_profile.pets.append(pet)
