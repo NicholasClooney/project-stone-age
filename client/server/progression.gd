@@ -72,6 +72,9 @@ static func species_actor(species: String, level: int, seed_value: int, offsets:
 	refresh(actor)
 	actor.hp = actor.max_hp
 	return actor
+## Integer arithmetic on purpose: gmsv CHAR_PetLevelUp uses float32 and reads
+## 1 lower in about 0.24% of draws. Kept exact by decision, see
+## docs/reverse-engineering/pet-birth-audit.md.
 static func grow_pet(actor: Dictionary, level: int) -> void:
 	var rng := RandomNumberGenerator.new()
 	# Stable per-pet/per-level draws survive saving without rerolls.
