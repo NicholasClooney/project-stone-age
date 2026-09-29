@@ -648,12 +648,16 @@ func _scan_index(index: int, expected := -1) -> void:
 	if expected==-2:
 		stop_hunt(_fast_mismatch(index));return
 	var i := first_match(troop)
+	# The helper judged with the thresholds it was started with; a hit queued
+	# since may have raised them, so a report the replay now rejects is not a
+	# mismatch (the helper restarts with the new thresholds next frame).
+	var raised := expected>=0 and not _fast_thresholds.is_empty() and threshold_key()!=_fast_thresholds
 	if i<0:
-		if expected>=0:
+		if expected>=0 and not raised:
 			stop_hunt(_fast_mismatch(index));return
 		if int(hunt_filter.limit)>0 and hunt_rolls>=int(hunt_filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
 		return
-	if expected>=0 and i!=expected:
+	if expected>=0 and i!=expected and not raised:
 		stop_hunt(_fast_mismatch(index));return
 	var actor: Dictionary = troop.enemies[i]
 	var quality: Dictionary = HuntRules.quality(actor,backend.encounter_catalog.data)
@@ -851,12 +855,19 @@ func owned_maxima(template_id: int) -> Dictionary:
 		_owned_maxima[template_id] = StatFilter.maxima(KeepRule.species_pets(_pets_profile,template_id).map(KeepRule.stats_of))
 	return _owned_maxima[template_id]
 
-## owned_maxima raised by the survey picks the cycle is about to catch.
+## owned_maxima raised by the pets the cycle is about to catch: survey picks
+## and, with 后台搜宠, the queued hits and the one being caught. A hit is only
+## worth queueing if it could beat what is already waiting.
 func species_maxima(template_id: int) -> Dictionary:
 	var pending: Array = []
-	for entry in _pending_picks():
+	for entry in _pending_picks()+_queued_hits():
 		if int(entry.actor.get("template_id",-1))==template_id:pending.append(entry.prediction)
 	return StatFilter.maxima(pending,owned_maxima(template_id))
+
+func _queued_hits() -> Array:
+	var result: Array = showcase_queue.filter(func(entry):return not bool(entry.get("survey",false)))
+	if not showcase_current.is_empty() and not bool(showcase_current.get("survey",false)) and flow_phase=="capture":result.append(showcase_current)
+	return result
 
 func _pending_picks() -> Array:
 	var result: Array = survey_picks.duplicate()
@@ -1349,8 +1360,26 @@ func _showcase_enqueue(index: int, slot: int, troop: Dictionary, quality: Dictio
 func _showcase_add(entry: Dictionary) -> void:
 	showcase_queue.append(entry)
 	showcase_queue.sort_custom(_showcase_better)
+	_prune_below_threshold()
 	while showcase_queue.size()>queue_limit():_drop_queued(showcase_queue.pop_back())
 	_emit_status()
+
+## Queued hits a better one (queued or owned) has put below the thresholds are
+## let go at once, in one line, instead of each when its turn comes.
+func _prune_below_threshold() -> void:
+	var dropped := 0
+	var kept: Array = []
+	var described := ""
+	for entry in showcase_queue:
+		var id := int(entry.actor.get("template_id",-1))
+		var chosen := filter_for(id)
+		if bool(entry.get("survey",false)) or not StatFilter.enabled(chosen) or StatFilter.evaluate(entry.prediction,chosen):
+			kept.append(entry);continue
+		dropped += 1
+		described = "%s：%s" % [_template_name(id),StatFilter.describe_thresholds(raw_filter_for(id),species_maxima(id))]
+	if dropped==0:return
+	showcase_queue = kept
+	_showcase_line("dropped","门槛已提高（%s），排队中 %d 只不再够格，已放弃" % [described,dropped])
 
 func _drop_queued(entry: Dictionary) -> void:
 	var limit := queue_limit()

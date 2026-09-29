@@ -203,6 +203,23 @@ func cycle() -> void:
 	DirAccess.remove_absolute(FastHunt.helper_override)
 	FastHunt.helper_override = ""
 
+	# Queued hits count as 最高 too: a better hit raises the thresholds at once
+	# and the queued ones it leaves below them are let go in one line.
+	automation.showcase_queue = []
+	automation.refresh_maxima()
+	var actor92: Dictionary = better.duplicate(true)
+	actor92.erase("pet_id")
+	var ok_hit := {"attack":int(best.attack),"defence":int(best.defence),"speed":int(best.speed)+1,"max_hp":1}
+	automation._showcase_add({"index":1,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":ok_hit})
+	check(automation.showcase_queue.size()==1,"a hit above the owned best queues")
+	var top_hit := {"attack":int(best.attack)+10,"defence":int(best.defence),"speed":int(best.speed)+10,"max_hp":1}
+	automation._showcase_add({"index":2,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":top_hit})
+	var top_sum: int = int(top_hit.attack)+int(top_hit.defence)+int(top_hit.speed)
+	check(int(automation.species_maxima(92).sum)==top_sum and int(automation.filter_for(92).conditions.sum.value)==top_sum-1,"the queued best counts as 最高: need 三围合 ≥ %d" % (top_sum-1))
+	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==top_hit,"the queued hit it outclasses is let go at once")
+	check(str(automation.showcase_log.back().text).contains("排队中 1 只不再够格"),"in one line: %s" % automation.showcase_log.back().text)
+	automation.showcase_queue = []
+
 	# Without 后台搜宠 the picks wait for the ordinary capture instead.
 	automation.hunt_fast_wanted = false
 	session._profile.pet_storage = session._profile.pet_storage.filter(func(pet):return KeepRule.species_pets({"pets":[pet]},92).is_empty())
