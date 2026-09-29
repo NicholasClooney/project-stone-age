@@ -11,6 +11,8 @@ const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 ## Behaviour split out of this script (see docs/technical/game-scripts.md);
 ## each helper is created first in _init and reaches the state through `game.`.
+const GameAreas = preload("res://scripts/game/game_areas.gd")
+var _areas
 const GameMenus = preload("res://scripts/game/game_menus.gd")
 var _menus
 const GameUi = preload("res://scripts/game/game_ui.gd")
@@ -217,6 +219,7 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_areas = GameAreas.new(self)
 	_menus = GameMenus.new(self)
 	_ui = GameUi.new(self)
 	_startup = GameStartup.new(self)
@@ -320,176 +323,6 @@ func _ready() -> void:
 	get_window().close_requested.connect(close_game)
 	if "--capture-once" in OS.get_cmdline_user_args():
 		capture_frame()
-
-func area_name() -> String:
-	return str(data.get("name","萨姆吉尔村"))
-
-func display_cell() -> Vector2i:
-	var origin: Array = data.get("origin",[0,0])
-	return cell+Vector2i(int(origin[0]),int(origin[1]))
-
-func build_world() -> void:
-	if character_catalog.is_empty() and FileAccess.file_exists("res://assets/legacy/characters/catalog.json"):
-		character_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/characters/catalog.json"))
-	if not character_catalog.is_empty():
-		data.characters.merge(character_catalog.characters,true)
-		data.images.merge(character_catalog.images,true)
-	terrain = LegacyGround.new()
-	terrain.world = self
-	terrain.fill(data.ground,int(data.width),int(data.height))
-	add_child(terrain)
-	actors = Node2D.new()
-	actors.y_sort_enabled = true
-	actors.z_index = 1
-	add_child(actors)
-	player = LegacyActor.new()
-	player.world = self
-	player.character_id = str(session.snapshot().get("character_id","100000"))
-	if not data.characters.has(player.character_id):player.character_id = "100000"
-	player.position = project(logical_position)
-	actors.add_child(player)
-	camera = Camera2D.new()
-	camera.position = Vector2(0,-25)
-	camera.position_smoothing_enabled = true
-	camera.position_smoothing_speed = 10
-	player.add_child(camera)
-	navigation.clear()
-	navigation.region = Rect2i(0,0,int(data.width),int(data.height))
-	navigation.diagonal_mode = AStarGrid2D.DIAGONAL_MODE_ONLY_IF_NO_OBSTACLES
-	navigation.default_compute_heuristic = AStarGrid2D.HEURISTIC_OCTILE
-	navigation.default_estimate_heuristic = AStarGrid2D.HEURISTIC_OCTILE
-	navigation.update()
-	# While the map is built nothing else blocks a cell (the resident and the
-	# travel overlay are placed afterwards), so only the map's own flags count.
-	var width := int(data.width)
-	var blocked: Array = data.blocked
-	for index in range(blocked.size()):
-		if blocked[index]!=0:navigation.set_point_solid(Vector2i(index%width,index/width))
-	props = preload("res://scripts/legacy_props.gd").new()
-	props.world = self
-	actors.add_child(props)
-	if int(data.map_id) in [1000,1002]:
-		setup_npc()
-	pet_trail.assign([cell,cell])
-	pet_follower = null
-
-func switch_area(wilderness: bool, destination: Vector2i) -> bool:
-	return load_area_id(100 if wilderness else 1000,destination+Vector2i(592,448) if wilderness and world_catalog.maps.has("100") else destination)
-
-func load_area_id(map_id: int, destination: Vector2i) -> bool:
-	var needed := area_packs(map_id)
-	if not asset_packs.is_ready(needed):
-		_load_area_after_download(map_id,destination,needed)
-		return true
-	var file := world_catalog.file(map_id)
-	if not FileAccess.file_exists(file):
-		message.text = "Import the wilderness assets first; see README.md."
-		return false
-	var next_data: Variant = JSON.parse_string(FileAccess.get_file_as_string(file))
-	if not next_data is Dictionary:
-		return false
-	var width := int(next_data.width)
-	var height := int(next_data.height)
-	if destination.x<0 or destination.y<0 or destination.x>=width or destination.y>=height or int(next_data.blocked[destination.y*width+destination.x])!=0:
-		return false
-	var previous_zoom: Vector2 = camera.zoom
-	clear_input()
-	# Residents and their dialogue belong to the old map.
-	if dialogue.visible:close_dialogue()
-	if is_instance_valid(world_travel) and is_instance_valid(world_travel.overlay):world_travel.overlay.queue_free()
-	for node in [terrain,actors]:
-		remove_child(node)
-		node.queue_free()
-	data = next_data
-	if textures.size() > TEXTURE_CACHE_LIMIT:textures.clear()
-	world_travel = null
-	npc_data.clear()
-	npc_cell = Vector2i(-1,-1)
-	npc = null
-	npc_sprite = null
-	cell = destination
-	arrival_lock = destination
-	from_cell = destination
-	target_cell = destination
-	logical_position = Vector2(destination)
-	moving = false
-	paused_input = _panel_open() or automation_minimized()
-	marker_cell = Vector2i(-1,-1)
-	field_steps = 0
-	build_world()
-	camera.zoom = previous_zoom
-	refresh_map_ui()
-	if [int(data.map_id),cell]!=_followed:link.request({"type":"report_position","map_id":int(data.map_id),"cell":[cell.x,cell.y],"map_changed":true,"client":_client_id},_on_map_reported)
-	camera.reset_smoothing()
-	area_music = exploration_music()
-	set_music(area_music)
-	queue_redraw()
-	refresh_companion()
-	checkpoint()
-	for link_info in world_catalog.links(map_id).values():asset_packs.prefetch(area_packs(int(link_info.to_map)))
-	return true
-
-## Packs a map needs: its data, tiles, residents and music.
-func area_packs(map_id: int) -> Array:
-	var packs: Array = asset_packs.map_packs(map_id).duplicate()
-	var music_path := str(world_catalog.info(map_id).get("music",""))
-	if not music_path.is_empty():packs.append(asset_packs.file_pack("res://assets/legacy/"+music_path))
-	return packs
-
-func _load_area_after_download(map_id: int, destination: Vector2i, needed: Array) -> void:
-	clear_input()
-	paused_input = true
-	var ok := await await_packs(needed,"地图 %s" % str(world_catalog.info(map_id).get("name",map_id)))
-	paused_input = false
-	if ok:load_area_id(map_id,destination)
-	elif is_instance_valid(message):message.text = "地图素材下载失败，请稍后再试。"
-
-func transition_area(map_id: int, destination: Vector2i) -> bool:
-	if area_transition_busy:return false
-	area_transition_busy = true
-	paused_input = true
-	clear_input()
-	_run_area_transition(map_id,destination)
-	return true
-
-func _run_area_transition(map_id: int, destination: Vector2i) -> void:
-	await map_transition.transition(func():
-		var changed := load_area_id(map_id,destination)
-		paused_input = true
-		return changed)
-	area_transition_busy = false
-	paused_input = false
-	clear_input()
-
-func walk_to_exit() -> void:
-	if paused_input:
-		return
-	var links: Dictionary = world_catalog.links(int(data.map_id))
-	var closest := Vector2i(-1,-1)
-	var distance := INF
-	for point in links:
-		var link: Dictionary = links[point]
-		if int(data.map_id) in [1000,2000,3000,4000] and not world_catalog.field(int(link.to_map)):continue
-		if cell.distance_squared_to(point)<distance:
-			closest=point;distance=cell.distance_squared_to(point)
-	if closest.x>=0:walk_to(closest)
-
-func handle_arrival() -> bool:
-	report_position()
-	pet_trail.append(cell)
-	while pet_trail.size()>3:pet_trail.pop_front()
-	if cell==arrival_lock:return false
-	arrival_lock = Vector2i(-1,-1)
-	var links: Dictionary = world_catalog.links(int(data.map_id))
-	if links.has(cell):
-		var link: Dictionary = links[cell]
-		return transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
-	if world_catalog.field(int(data.map_id)) and random_encounters:
-		field_steps += 1
-		var can_battle := not moving and not paused_input and not area_transition_busy and is_instance_valid(battle_view) and not battle_view.visible
-		last_encounter_error=""
-		return bool(link.request({"type":"field_step","map_id":int(data.map_id),"cell":[cell.x,cell.y],"encounter":can_battle},_on_encounter_reply).get("battle",false))
-	return false
 
 
 func capture_frame() -> void:
@@ -756,26 +589,6 @@ func release_keyboard_input() -> void:
 	# Focus changes release held keys; an intentional click route keeps running.
 	held.clear()
 
-func dev_visit(id: int) -> bool:
-	if is_instance_valid(travel_router):travel_router.cancel("开发传送取消了自动寻路。")
-	if paused_input or area_transition_busy or battle_view.visible:return false
-	var info: Dictionary = world_catalog.info(id)
-	if info.is_empty():return false
-	var spawn: Array = info.spawn
-	return load_area_id(id,Vector2i(int(spawn[0]),int(spawn[1])))
-
-func dev_go_villager() -> void:
-	if paused_input or area_transition_busy:return
-	if load_area_id(1000,Vector2i(92,72)):approach_npc()
-
-func dev_go_adventure() -> void:
-	if paused_input or area_transition_busy:return
-	if int(data.map_id)==1000:switch_area(true,Vector2i(45,45))
-	else:load_area_id(1000,SPAWN)
-
-func dev_go_shop() -> void:
-	if paused_input or area_transition_busy:return
-	if load_area_id(1002,Vector2i(16,15)):approach_npc()
 
 func blink_to(destination: Vector2i) -> bool:
 	if paused_input or area_transition_busy or battle_session.snapshot().active:return false
@@ -913,23 +726,6 @@ func approach_npc() -> void:
 	pending_talk = true
 	message.text = "正在走向 %s…" % str(npc_data.name)
 
-
-## Places the character at startup: where a running backend already has it
-## (another device or automation may have moved it since the last save),
-## else the saved location. Arriving there is not travel, so it is not
-## reported as a map change, which would stop running automation.
-func restore_location() -> void:
-	var location: Dictionary = session.snapshot().location
-	var map_id := int(location.map_id)
-	var point := Vector2i(int(location.x),int(location.y))
-	if map_id==100 and not world_catalog.maps.has("100"):point -= Vector2i(592,448)
-	var live: Dictionary = state.automation.get("position",{})
-	if not link.is_local() and int(live.get("map_id",-1))>=0:
-		map_id = int(live.map_id)
-		point = Vector2i(int(live.cell[0]),int(live.cell[1]))
-	_followed = [map_id,point]
-	if not load_area_id(map_id,point):
-		load_area_id(1000,SPAWN)
 
 ## Per-device view choices (not game state, so not in the save or backend):
 ## which automation windows this device keeps minimized, so a reload comes
@@ -1147,3 +943,18 @@ func close_dialogue() -> void:_menus.close_dialogue()
 func show_adventure_menu(kind: String) -> void:_menus.show_adventure_menu(kind)
 func close_adventure_menu() -> void:_menus.close_adventure_menu()
 func perform_adventure_action(action: String, value: Variant = null) -> void:_menus.perform_adventure_action(action,value)
+
+# ---- maps (scripts/game/game_areas.gd) ----
+func area_name() -> String:return _areas.area_name()
+func display_cell() -> Vector2i:return _areas.display_cell()
+func build_world() -> void:_areas.build_world()
+func switch_area(wilderness: bool, destination: Vector2i) -> bool:return _areas.switch_area(wilderness,destination)
+func load_area_id(map_id: int, destination: Vector2i) -> bool:return _areas.load_area_id(map_id,destination)
+func area_packs(map_id: int) -> Array:return _areas.area_packs(map_id)
+func walk_to_exit() -> void:_areas.walk_to_exit()
+func handle_arrival() -> bool:return _areas.handle_arrival()
+func restore_location() -> void:_areas.restore_location()
+func dev_visit(id: int) -> bool:return _areas.dev_visit(id)
+func dev_go_villager() -> void:_areas.dev_go_villager()
+func dev_go_adventure() -> void:_areas.dev_go_adventure()
+func dev_go_shop() -> void:_areas.dev_go_shop()
