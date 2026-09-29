@@ -308,8 +308,12 @@ func on_status(automation: Dictionary) -> void:
 		if minimized:_end_minimized();world.release_input()
 		return
 	if minimized:_update_chip();return
-	# A find-pet cycle minimized from 自动抓极品 keeps its capture battles out of sight too.
-	if world.pet_hunt_menu.minimized:return
+	# A find-pet cycle minimized from 自动抓极品 keeps its capture battles out of
+	# sight too, and 后台搜宠 shows its battles with the info block instead:
+	# a progress window already up gives way.
+	if world.pet_hunt_menu.minimized or bool(automation.get("flow",{}).get("showcase",false)):
+		if visible:hide()
+		return
 	if not visible:
 		get_parent().move_child(self,get_parent().get_child_count()-1)
 		show()

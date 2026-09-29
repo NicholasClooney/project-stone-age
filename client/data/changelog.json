@@ -1,9 +1,18 @@
 {
-  "version": "v0.80.2",
-  "count": 98,
+  "version": "v0.80.3",
+  "count": 99,
   "feature_count": 64,
-  "fix_count": 34,
+  "fix_count": 35,
   "entries": [
+    {
+      "version": "v0.80.3",
+      "date": "2026-09-29",
+      "kind": "fix",
+      "title": "后台搜宠不再被练级面板挡住",
+      "details": [
+        "后台搜宠抓宠和练级时，自动练级的进度面板不再弹出来挡住战斗画面；进度看左上角的信息框。"
+      ]
+    },
     {
       "version": "v0.80.2",
       "date": "2026-09-29",

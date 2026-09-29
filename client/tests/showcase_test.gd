@@ -140,6 +140,7 @@ func run() -> void:
 	flow.advance()
 	var predicted: Dictionary = Progression.project_pet(fixture.troop.enemies[0],120)
 	check(flow.phase=="capture" and game.battle_view.visible and not game.state.automation.compact,"the capture battle opens right away and is presented")
+	check(not game.training_helper.visible,"no 自动练级 progress window over the capture battle")
 	check(not hunt.visible and hunt.minimized,"the hunt window folds to its progress bar")
 	var lines: Array = game.state.automation.flow.log
 	check(str(lines.back().kind)=="found" and str(lines.back().text).contains("三围合%d" % (int(predicted.attack)+int(predicted.defence)+int(predicted.speed))) and str(lines.back().text).contains("排队2"),"the info block says what was found, its Lv120 prediction and the queue (%s)" % str(lines.back().text))
@@ -163,6 +164,7 @@ func run() -> void:
 	check(automation.running and not bool(automation.settings.compact) and int(game.backend.session.experience_multiplier)==100 and int(automation.settings.hp)==-1,"自动练级 runs shown, at the player's 100× 经验倍率, without an HP stop line for the Lv1 pet")
 	check(game.backend.session.clone_squad_enabled and game.backend.session.clone_best_others,"with the 五人镜像队 of best other pets")
 	check(drive(game,func():return game.battle_view.visible or not automation.running) and game.battle_view.visible and not automation.compact_active,"the first training battle opens shown, not compact (at 100× it may be the only one)")
+	check(not game.training_helper.visible,"no 自动练级 progress window over the training battle")
 	var allies: Array = game.battle_session.snapshot().get("ally_pets",[])
 	var best_ids: Array = game.backend.session.best_other_pets(4).map(func(pet):return str(pet.pet_id))
 	var ally_ids: Array = allies.map(func(pet):return str(pet.get("pet_id","")))
