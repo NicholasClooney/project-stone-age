@@ -29,7 +29,7 @@ const SHOWCASE_NAME := "后台搜宠"
 ## (so no 最高 to count from) before choosing what to catch, in seconds.
 const SURVEY_SECONDS := 120
 const METRICS := ["sum","attack","defence","speed"]
-const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",0,1000],"keep":["int",0,1000]}
+const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",-100,1000],"keep":["int",0,1000]}
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
 const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}

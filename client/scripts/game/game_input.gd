@@ -52,7 +52,7 @@ func on_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and game.get_viewport().gui_get_focus_owner() is LineEdit:
 		game._last_typing_msec = Time.get_ticks_msec()
 	if event.is_action_pressed("ui_cancel") and is_instance_valid(game.pet_workflow) and game.pet_workflow.phase=="restart":
-		game.pet_workflow.stop_cycle("已手动停止");game.get_viewport().set_input_as_handled();return
+		game.pet_workflow.stop_cycle("已手动停止",not game.pet_workflow.stop_pending().is_empty());game.get_viewport().set_input_as_handled();return
 	if game.data.is_empty():
 		return
 	if game.link_blocked():

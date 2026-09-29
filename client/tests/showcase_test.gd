@@ -250,8 +250,22 @@ func run() -> void:
 	flow.advance()
 	check(flow.phase=="capture" and game.battle_view.visible and game.battle_session.snapshot().active and automation.hunt_running,"its capture battle is shown while the search goes on")
 	hunt.restore()
+	# First 停止: this pet is still caught (and would be trained); the search
+	# and the queue stop now, and the button offers 立即停止.
 	hunt.stop_button.pressed.emit()
-	check(flow.phase=="paused" and not automation.running and not automation.hunt_running and automation.showcase_queue.is_empty(),"停止 stops the whole cycle: capture, search and queue")
+	check(flow.phase=="capture" and automation.running and not automation.hunt_running and automation.showcase_queue.is_empty() and not flow.stop_pending().is_empty(),"停止 lets this pet finish; the search and queue stop now")
+	check(hunt.stop_button.text=="立即停止","the button then offers 立即停止")
+	# Where the next pet would start, the waiting stop ends the cycle.
+	var saved_phase: String = automation.flow_phase
+	automation.flow_phase = "restart"
+	automation.flow_step()
+	check(automation.flow_phase=="paused" and str(automation.flow_reason).begins_with("本只练完，已停止"),"once the pet is done the cycle stops (%s)" % automation.flow_reason)
+	# Back to the running capture for 立即停止.
+	automation.flow_phase = saved_phase
+	automation.flow_stop_pending = "已停止，可调整条件后重新开始。"
+	automation._emit_status()
+	hunt.stop_button.pressed.emit()
+	check(flow.phase=="paused" and not automation.running and not automation.hunt_running and automation.showcase_queue.is_empty(),"立即停止 stops the whole cycle: capture, search and queue")
 	check(game.battle_session.snapshot().active and game.battle_view.visible,"the battle stays open for the player")
 	hunt.close_menu()
 	var stop_turn := int(game.battle_session.snapshot().turn)

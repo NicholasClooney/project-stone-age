@@ -55,7 +55,9 @@ func run() -> void:
 	var effective: Dictionary = Settings.stat_filter(stored,92)
 	check(int(effective.conditions.sum.minus)==3 and int(effective.conditions.sum.keep)==15 and int(effective.stop_after)==0,"a stat override merges over the species defaults")
 	check(stored.stat_filters.keys()==["92"] and stored.stat_filters["92"]=={"conditions":{"sum":{"minus":3}}},"stat filters are keyed by template id")
-	check(not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"value":630}}}}}).get("ok",true)) and not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":1001}}}}}).get("ok",true)),"fixed thresholds are gone; x is 0 to 1000")
+	check(not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"value":630}}}}}).get("ok",true)) and not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":1001}}}}}).get("ok",true)),"fixed thresholds are gone; x is at most 1000")
+	check(bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":-5}}}}}).get("ok",false)) and not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":-101}}}}}).get("ok",true)),"a negative x (最高 + n) is allowed down to −100")
+	check(StatFilter.describe_condition("sum",{"enabled":true,"minus":-2},{"sum":627})=="三围合 ≥ 最高 627 + 2 = 629" and StatFilter.describe_condition("sum",{"enabled":true,"minus":1},{"sum":627})=="三围合 ≥ 最高 627 − 1 = 626","a negative x reads as 最高 + n")
 	reply = set_settings(backend,{"training":{"hp":10}})
 	check(reply.ok and not overrides(backend).training.has("hp"),"setting a value back to its default drops the override")
 

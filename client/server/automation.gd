@@ -169,6 +169,8 @@ var _pets_key := ""
 ## The resolved thresholds the native helper was launched with; a change (a
 ## better pet arrived) restarts it with the new ones.
 var _fast_thresholds := ""
+## Set by request_stop_cycle: the cycle stops once this pet is trained.
+var flow_stop_pending := ""
 ## 摸底: a species with enabled conditions and no pet of its own has no 最高 to
 ## count from. The cycle then scans that species with no threshold for
 ## survey_seconds of wall time, collecting candidates (pool kept by the
@@ -282,7 +284,8 @@ func command(name: String, arguments: Dictionary) -> Dictionary:
 		"stop_hunt":
 			if hunt_running:stop_hunt(str(arguments.get("reason","已停止")))
 		"stop_flow":
-			stop_cycle(str(arguments.get("reason","已手动停止")))
+			if bool(arguments.get("now",false)):stop_cycle(str(arguments.get("reason","已手动停止")))
+			else:request_stop_cycle(str(arguments.get("reason","已手动停止")))
 		"acquire_clone":acquire_clone_override()
 		"release_clone":release_clone_override()
 		"flow_step":flow_step()
@@ -1075,7 +1078,25 @@ func matched(index: int, actor: Dictionary) -> void:
 	start_capture_battle(index,true)
 	if not running:stop_cycle("无法开始自动捕捉，请手动处理当前战斗。")
 
+## 停止 from the player: a pet being caught or trained is finished first (the
+## search stops and the queue is let go now); the cycle then stops where it
+## would start the next one. Asked again while waiting, it stops at once.
+func request_stop_cycle(message: String) -> void:
+	if not flow_active() or flow_phase not in ["capture","train"] or not flow_stop_pending.is_empty():
+		stop_cycle(message);return
+	flow_stop_pending = message
+	if not showcase_queue.is_empty():
+		_showcase_line("dropped","停止：排队的 %d 只已放弃，本只练完后停止" % showcase_queue.size())
+		showcase_queue = []
+	else:_showcase_line("dropped","停止：本只练完后停止（再按一次立即停止）")
+	if hunt_running:
+		_stopping_cycle = true
+		stop_hunt(message)
+		_stopping_cycle = false
+	_emit_status()
+
 func stop_cycle(message: String = "已手动停止") -> void:
+	flow_stop_pending = ""
 	if message.is_empty():message = "找宠流程已停止（没有写明原因）。"
 	if flow_active():_record_stop("flow","停止",message,_involved_pet())
 	_stopping_cycle = true
@@ -1103,6 +1124,8 @@ func flow_step() -> void:
 	if flow_showcase:
 		_showcase_step()
 		return
+	if not flow_stop_pending.is_empty() and flow_phase in ["restart","hunt"]:
+		stop_cycle("本只练完，已停止：%s" % flow_stop_pending);return
 	if flow_phase=="restart":
 		flow_phase = "idle"
 		if not start_cycle(true):stop_cycle(flow_reason)
@@ -1423,6 +1446,8 @@ static func _stat_text(stats: Dictionary) -> String:
 
 ## One find-pet step while searching in the background.
 func _showcase_step() -> void:
+	if not flow_stop_pending.is_empty() and flow_phase in ["restart","hunt"]:
+		stop_cycle("本只练完，已停止：%s" % flow_stop_pending);return
 	match flow_phase:
 		"hunt":
 			if not showcase_queue.is_empty():_showcase_capture()
@@ -1566,6 +1591,8 @@ func _showcase_restore() -> void:
 
 ## Back to searching: the next queued hit is taken on the following step.
 func _showcase_resume() -> void:
+	if not flow_stop_pending.is_empty():
+		stop_cycle("本只练完，已停止：%s" % flow_stop_pending);return
 	showcase_current = {}
 	flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_capture_battle_id = ""
 	flow_phase = "hunt"
@@ -1594,7 +1621,7 @@ func status() -> Dictionary:
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),
 			"survey":survey_status(),"thresholds":thresholds_text(),
-			"log":showcase_log.duplicate(true),"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
+			"log":showcase_log.duplicate(true),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
 
 ## 摸底 for the hunt window and the minimized bar: {active, remaining,

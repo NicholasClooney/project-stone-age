@@ -78,9 +78,11 @@ static func needs_survey(settings: Dictionary, best: Dictionary) -> bool:
 static func describe_condition(metric: String, condition: Dictionary, best: Dictionary) -> String:
 	var name: String = METRIC_NAMES.get(metric, metric)
 	if not relative(condition):return "%s %s %d" % [name, ">" if bool(condition.get("strict", false)) else "≥", int(condition.get("value", 0))]
+	# A negative x asks for more than the best: 最高 + n.
 	var minus := int(condition.get("minus", 0))
-	if not best.has(metric):return "%s ≥ 最高 − %d（还没有同种，先摸底）" % [name, minus]
-	return "%s ≥ 最高 %d − %d = %d" % [name, int(best[metric]), minus, int(best[metric]) - minus]
+	var offset := ("− %d" % minus) if minus >= 0 else ("+ %d" % -minus)
+	if not best.has(metric):return "%s ≥ 最高 %s（还没有同种，先摸底）" % [name, offset]
+	return "%s ≥ 最高 %d %s = %d" % [name, int(best[metric]), offset, int(best[metric]) - minus]
 
 ## Every enabled condition, joined by 或 / 且 as the mode says; "" when none.
 static func describe_thresholds(settings: Dictionary, best: Dictionary) -> String:

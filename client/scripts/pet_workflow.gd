@@ -130,8 +130,14 @@ func start_cycle(species_key: String="") -> bool:
 	world.pet_hunt_menu.set_controls(true);world.pet_hunt_menu.update_status()
 	return true
 
-func stop_cycle(message: String="已手动停止") -> void:
-	world.link.request({"type":"auto","name":"stop_flow","reason":message})
+## Stops the cycle at once, or with `now` false (the player's 停止) after
+## the pet being caught or trained is finished.
+func stop_cycle(message: String="已手动停止", now: bool = true) -> void:
+	world.link.request({"type":"auto","name":"stop_flow","reason":message,"now":now})
+
+## A stop waits for the pet being caught or trained ("" when none).
+func stop_pending() -> String:
+	return str(world.state.automation.get("flow",{}).get("stop_pending",""))
 
 func _process(_delta: float) -> void:
 	# In-process, this frame drives the backend cycle. Over a network the

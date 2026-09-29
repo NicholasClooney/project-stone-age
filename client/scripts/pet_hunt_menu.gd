@@ -355,7 +355,7 @@ func open_menu() -> void:
 func close_menu() -> void:
 	if not visible:return
 	world.flush_automation_settings()
-	if world.pet_workflow.active():world.pet_workflow.stop_cycle("已关闭筛选。")
+	if world.pet_workflow.active() and world.pet_workflow.stop_pending().is_empty():world.pet_workflow.stop_cycle("已关闭筛选。",false)
 	elif running:world.link.request({"type":"auto","name":"stop_hunt","reason":"已关闭筛选。"})
 	set_controls(false);hide();world.release_input();world.clear_input()
 ## 宠物记录 on 抓到 (本轮找宠 while a cycle runs). A running scan or cycle
@@ -446,7 +446,7 @@ func start_hunt() -> void:
 ## leave them going), otherwise the scan. A battle in progress stays open for
 ## the player to finish by hand.
 func stop_all(reason: String) -> void:
-	if world.pet_workflow.active():world.pet_workflow.stop_cycle(reason)
+	if world.pet_workflow.active():world.pet_workflow.stop_cycle(reason,not world.pet_workflow.stop_pending().is_empty())
 	else:stop_hunt(reason)
 
 func stop_hunt(reason: String) -> void:
@@ -494,6 +494,10 @@ func scan_once() -> void:
 	world.link.request({"type":"auto","name":"hunt_scan"})
 
 func on_status(automation: Dictionary) -> void:
+	if is_instance_valid(stop_button):
+		var pending:=str(automation.get("flow",{}).get("stop_pending",""))
+		stop_button.text="立即停止" if not pending.is_empty() else "停止"
+		stop_button.tooltip_text="本只练完后会停止；再按立即停止，正在打的战斗交给你手动完成" if not pending.is_empty() else "正在抓或练的这一只练完后停止"
 	if visible:_show_threads(automation)
 	if minimized:
 		if _automation_active(automation):_update_chip()
@@ -620,7 +624,7 @@ func build_stat_page()->void:
 	for i in range(4):
 		var metric:String=StatFilter.METRICS[i]
 		var check:=CheckBox.new();check.name="StatEnabled_"+metric;check.text=StatFilter.METRIC_NAMES[metric]+" ≥ 最高 −";check.position=Vector2(24+(i%2)*470,228+(i/2)*55);stat_page.add_child(check);controls.append(check);stat_checks[metric]=check
-		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),0,1000,1);input.name="StatMinus_"+metric;input.size.x=80;input.reparent(stat_page);stat_numbers[metric]=input
+		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),-100,1000,1);input.name="StatMinus_"+metric;input.size.x=80;input.reparent(stat_page);stat_numbers[metric]=input
 		var result:Label=world.text("",16);result.name="StatThreshold_"+metric;result.position=Vector2(284+(i%2)*470,238+(i/2)*55);result.mouse_filter=Control.MOUSE_FILTER_PASS;stat_page.add_child(result);stat_results[metric]=result
 		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(344+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
 		var keep:=number(Vector2(384+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=84;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
@@ -723,7 +727,8 @@ func refresh_stat_thresholds(now: bool = false) -> void:
 	if _stat_species_shown<0 or stat_results.is_empty():return
 	if not now and Time.get_ticks_msec()-_thresholds_msec<1000:return
 	_thresholds_msec=Time.get_ticks_msec()
-	var profile:Dictionary=world.state.profile
+	# The warehouse arrives apart from the profile (client_state.pet_storage).
+	var profile:Dictionary={"pets":world.state.profile.get("pets",[]),"pet_storage":world.state.pet_storage}
 	var pets:Array=KeepRule.species_pets(profile,_stat_species_shown)
 	var key:="%d|%s|%s" % [_stat_species_shown,",".join(pets.map(func(pet):return "%s:%d" % [str(pet.get("pet_id","")),int(pet.get("level",0))])),",".join(StatFilter.METRICS.map(func(metric):return str(int(stat_numbers[metric].value))))]
 	if key==_thresholds_key and not now:return
