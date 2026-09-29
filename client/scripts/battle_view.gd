@@ -677,7 +677,8 @@ func queue_capture(at: float, success: bool, target: int = 1) -> Dictionary:
 	actors[target].spin_start = hit
 	actors[target].spin_end = arrival+(4.25 if success else 0.0)
 	word_cues.append({"at":hit,"index":0,"id":26512})
-	sound_cues.append({"at":hit,"id":mounted_impact_sound(0)})
+	var impact := impact_sound(0)
+	if impact >= 0: sound_cues.append({"at":hit,"id":impact})
 	word_cues.append({"at":arrival,"index":0,"id":26506 if success else 26505})
 	var end := arrival+(4.25 if success else 100.0/60.0)
 	actors[0].cues.append({"at":arrival,"action":7 if success else 8,"seconds":end-arrival,"facing":3})
@@ -897,7 +898,12 @@ func select_target(index: int) -> void:
 	elif index == 0 and selected_action == "item_target":
 		complete_player_command("item")
 
+## Every command the original sends plays SE 203 (battlemenu.cpp
+## BattleTargetSelect:3207, BattleButtonGuard:1253, pet skills:2715): once
+## for the character's command here and once for the pet's in
+## finish_pet_command, the two confirmation beeps of a turn.
 func complete_player_command(action: String) -> void:
+	sound_requested.emit(203)
 	queued_player_action = action
 	selected_action = ""
 	var pet: Dictionary = state.get("pet",{})
@@ -943,6 +949,7 @@ func show_pet_choices() -> void:
 	hint.text = "宠物：请选择敌人，或点击其他指令；右键 / Esc 取消。" if selected_action.begins_with("pet_") else "请选择宠物指令；右键 / Esc 返回人物指令。"
 
 func finish_pet_command(command: String) -> void:
+	sound_requested.emit(203)
 	last_pet_command = command if command in ["attack","skill"] else "attack"
 	pet_command_requested.emit(command)
 	submit_command()
@@ -1274,8 +1281,8 @@ func queue_group_turn(previous: Dictionary) -> void:
 			if outcome.ends_with("miss"):
 				word_cues.append({"at":float(timing.hit),"index":target,"id":26504})
 			elif int(frame.get("damage",0))>0:
-				if str(actors[index].get("character_id","")).begins_with("101"):
-					sound_cues.append({"at":float(timing.hit),"id":mounted_impact_sound(index)})
+				var impact := impact_sound(index)
+				if impact >= 0: sound_cues.append({"at":float(timing.hit),"id":impact})
 				var dead := health_of(frame,target)<=0
 				var guarding := (target==0 and pending_action=="defend") or (target==2 and str(state.get("last_pet_command",""))=="defend") or clone_guarded(frame,target)
 				queue_pose(target,2 if dead else 10 if guarding else 1,float(timing.hit),60.0 if dead else 0.35)
@@ -1318,7 +1325,6 @@ func show_pet_roster(page: int) -> void:
 		var active := index==int(state.get("active_pet",-1))
 		var button := choice(str(companion.get("name","宠物")),origin+Vector2(14,24),func():
 			if is_animating(): return
-			sound_requested.emit(203)
 			switch_pet_index = index
 			complete_player_command("switch"))
 		button.name = "RosterPet%d" % index
@@ -1335,7 +1341,6 @@ func show_pet_roster(page: int) -> void:
 			value.reparent(choice_panel,false)
 	var withdraw := original_choice(26041,Vector2(576,423),func():
 		if is_animating(): return
-		sound_requested.emit(203)
 		switch_pet_index = -1
 		complete_player_command("switch"))
 	withdraw.name = "WithdrawPet"
@@ -1373,14 +1378,18 @@ func ensure_riding_art(ident: String) -> bool:
 				textures[bitmap] = preload("res://scripts/riding.gd").frame_texture(ident,int(bitmap))
 	return true
 
-func mounted_impact_sound(index: int) -> int:
+## The hit sound of an attacker's strike: oft.cpp play_damage() maps the hit
+## marker (a frame sound >= 10000, pattern.cpp:219-224) of the attack clip to
+## an SE, for every attacker that deals damage (oft.cpp:6986-6996), mounted
+## or not. 10005/10006 (bow, thrown axe) play nothing: -1.
+func impact_sound(index: int) -> int:
 	var facing := 7 if enemy_index(index)>=0 else 3
 	var clip: Dictionary = actors[index].animations.get("0_%d" % facing,{})
 	for frame in clip.get("frames",[]):
 		var marker := int(frame.get("sound",0))
 		if marker >= 10100: marker -= 100
 		if marker >= 10000:
-			return {10000:250,10001:254,10002:251,10003:251,10004:252,10007:254}.get(marker,250)
+			return {10000:250,10001:254,10002:251,10003:251,10004:252,10005:-1,10006:-1,10007:254}.get(marker,250)
 	return 250
 
 func update_riding_health(health: Dictionary) -> void:

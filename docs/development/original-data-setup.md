@@ -59,6 +59,7 @@ $PY tools/import_grid_cursor.py "$CLIENT"
 $PY tools/import_cursor.py 'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'
 python3 tools/import_encounters.py
 $PY tools/import_encounter_art.py "$CLIENT"
+$PY tools/import_battle_sounds.py "$CLIENT"   # after the sprite importers: every frame's original SE and hit sound
 $PY tools/pack_frame_sheets.py                # last: per-frame PNGs into sprite sheets
 ./scripts/build-fast-hunt.sh                  # optional: the pet hunt's 本机极速模式 helper (needs a C compiler)
 ./scripts/run.sh --headless --editor --import --quit
