@@ -11,6 +11,10 @@ const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 ## Behaviour split out of this script (see docs/technical/game-scripts.md);
 ## each helper is created first in _init and reaches the state through `game.`.
+const GamePanels = preload("res://scripts/game/game_panels.gd")
+var _panels
+const GameAutomation = preload("res://scripts/game/game_automation.gd")
+var _automation
 const GameDevice = preload("res://scripts/game/game_device.gd")
 var _device
 const GameAudio = preload("res://scripts/game/game_audio.gd")
@@ -205,6 +209,8 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_panels = GamePanels.new(self)
+	_automation = GameAutomation.new(self)
 	_device = GameDevice.new(self)
 	_audio = GameAudio.new(self)
 	_remote = GameRemote.new(self)
@@ -225,7 +231,6 @@ func _init() -> void:
 	battle_session = BattleClient.new(link,state)
 	if link.is_local():state.apply(link.request({"type":"hello","protocol":Backend.PROTOCOL}).snapshot)
 	link.message.connect(_on_backend_message)
-
 
 func _sync_persistence() -> void:
 	if backend!=null:backend.save_path = save_path if profile_persistence else ""
@@ -303,7 +308,6 @@ func _ready() -> void:
 	get_window().close_requested.connect(close_game)
 	if "--capture-once" in OS.get_cmdline_user_args():
 		capture_frame()
-
 
 func area_name() -> String:
 	return str(data.get("name","萨姆吉尔村"))
@@ -936,11 +940,9 @@ func change_character(id: String = "") -> void:
 	play_click()
 	checkpoint()
 
-
 ## Saved only once restore_device_settings ran, so a test that presses M or
 ## zooms never writes this device's real viewer.cfg.
 var _device_settings_live := false
-
 
 func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
@@ -1133,7 +1135,6 @@ func _panel_open() -> bool:
 		if is_instance_valid(node) and node.visible:return true
 	return false
 
-
 func setup_npc() -> void:
 	if int(data.map_id)==1002 and not mvp_manifest.is_empty():
 		npc_data = mvp_manifest.merchant.duplicate(true)
@@ -1290,7 +1291,6 @@ func build_dialogue(root: Control) -> void:
 	panel.add_child(quest_choice)
 	dialogue.hide()
 
-
 ## Places the character at startup: where a running backend already has it
 ## (another device or automation may have moved it since the last save),
 ## else the saved location. Arriving there is not travel, so it is not
@@ -1308,66 +1308,11 @@ func restore_location() -> void:
 	if not load_area_id(map_id,point):
 		load_area_id(1000,SPAWN)
 
-## After a reload, reopens the window of a hunt or find-pet workflow that kept
-## running on the backend. (The auto-battle window reopens itself on status.)
-## A window this device had minimized comes back as its progress bar.
-func resume_automation_view() -> void:
-	var automation: Dictionary = state.automation
-	if is_instance_valid(training_helper) and training_helper.running and not training_helper.minimized and not (is_instance_valid(pet_workflow) and pet_workflow.active()) and bool(viewer_pref("training_minimized")):
-		training_helper.minimize()
-	var hunting := bool(automation.get("hunt",{}).get("running",false))
-	var flow := str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
-	if (hunting or flow) and is_instance_valid(pet_hunt_menu) and not pet_hunt_menu.visible and not pet_hunt_menu.minimized:
-		pet_hunt_menu.open_menu()
-		if hunting:pet_hunt_menu.on_status(automation)
-		if bool(viewer_pref("hunt_minimized")):pet_hunt_menu.minimize()
-
-# ---- automation settings ---------------------------------------------------
-
-## The player's overrides from the profile; effective values add the defaults.
-func automation_overrides() -> Dictionary:
-	var overrides = state.profile.get("automation_settings",{})
-	return overrides if overrides is Dictionary else {}
-
-## Effective training, capture and hunt settings of this character.
-func automation_settings() -> Dictionary:
-	return AutomationSettings.effective(automation_overrides())
-
-## Effective Lv.120 stat filter for one species.
-func stat_filter(template_id: int) -> Dictionary:
-	return AutomationSettings.stat_filter(automation_overrides(),template_id)
-
-## A window changed a settings control. Its patch is sent once the player
-## pauses (SETTINGS_SEND_MSEC), so spinbox ticks do not each reach the backend.
-func mark_settings_dirty(window: Node) -> void:
-	if not window in _settings_dirty:_settings_dirty.append(window)
-	_settings_dirty_msec = Time.get_ticks_msec()
-
-## Sends every pending window's changes now (on Apply / Start / Close).
-func flush_automation_settings() -> void:
-	var patch := {}
-	var windows := _settings_dirty.duplicate()
-	_settings_dirty.clear()
-	for window in windows:
-		if is_instance_valid(window):patch = AutomationSettings.merged(patch,window.settings_patch())
-	if not patch.is_empty():link.request({"type":"set_automation_settings","settings":patch})
-
-## The profile's automation settings changed (this or another device): open
-## windows show the new values, leaving a control being typed in alone.
-func _on_automation_settings() -> void:
-	var json := JSON.stringify(automation_overrides())
-	if json==_automation_settings_json:return
-	_automation_settings_json = json
-	for window in [training_helper,pet_hunt_menu]:
-		if is_instance_valid(window) and window.is_node_ready():window.load_settings()
-
-
 ## Per-device view choices (not game state, so not in the save or backend):
 ## which automation windows this device keeps minimized, so a reload comes
 ## back the same way. Tests run without persistence and never touch the file.
 const VIEWER_PREFS := "user://viewer.cfg"
 var viewer_prefs_path := ""
-
 
 # Copies the on-disk save beside itself before an irreversible change; returns
 # the backup path or "" when there is no save file.
@@ -1574,10 +1519,6 @@ func dev_toggle_riding() -> void:
 	play_click()
 	checkpoint()
 
-func set_clone_squad_enabled(enabled:bool)->void:
-	session.clone_squad_enabled=enabled
-	if is_instance_valid(clone_button):clone_button.set_pressed_no_signal(session.clone_squad_enabled)
-
 ## Battle art packs for one battle state; also fixes its background choice.
 func battle_packs(battle_state: Dictionary) -> Array:
 	var art: Dictionary = battle_view.required_art(battle_state)
@@ -1689,102 +1630,6 @@ func _show_startup_error(text_value: String) -> void:
 	label.position = Vector2(50,100)
 	add_child(label)
 
-## Profile updates can arrive after the action that caused them (always over a
-## network link, or from automation). Redraw whatever is open, once per frame.
-## Returns true when a panel kept its old contents because the player is
-## typing in it; the caller redraws it once they stop.
-func refresh_open_panels() -> bool:
-	var deferred := false
-	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:dev_gm_menu._refresh_actor()
-	for panel in [adventure_menu,pet_training]:
-		if not is_instance_valid(panel) or not panel.visible:continue
-		if _typing_in(panel):deferred = true
-		else:rebuild_keeping_scroll(panel)
-	var profile_now: Dictionary = state.profile
-	var active := int(profile_now.get("active_pet",-1))
-	var pets: Array = profile_now.get("pets",[])
-	var companion_key := [active,int(profile_now.get("ride_pet",-1)),str(profile_now.get("character_id","")),
-		pets[active].get("sprite",-1) if active>=0 and active<pets.size() else -1,int(pets[active].get("hp",0))>0 if active>=0 and active<pets.size() else false]
-	if companion_key!=_companion_key:
-		_companion_key = companion_key
-		refresh_companion()
-	return deferred
-
-## One redraw path for both links. A remote client learns of every profile
-## change late, its own actions included. In-process, panels redraw themselves
-## after the player's actions, so only automation running behind a minimized
-## window changes the profile under an open panel.
-func _mark_ui_stale() -> void:
-	if not link.is_local() or automation_minimized():_ui_stale = true
-
-## While automation runs, open panels redraw at most every UI_REFRESH_MSEC and
-## never under a held mouse button, so a click lands on the button it pressed.
-func _ui_refresh_held() -> bool:
-	if not _automation_running():return false
-	return Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Time.get_ticks_msec()-_ui_refreshed_msec < UI_REFRESH_MSEC
-
-func _automation_running() -> bool:
-	var automation: Dictionary = state.automation
-	return bool(automation.get("running",false)) or bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
-
-## True while a minimized automation window (自动练级 / 自动抓极品) runs. Its
-## progress bar then stands in for the window: nothing is modal, but the
-## character stays in place so the stationary run is not cancelled by a stray click.
-func automation_minimized() -> bool:
-	return (is_instance_valid(training_helper) and training_helper.minimized) or (is_instance_valid(pet_hunt_menu) and pet_hunt_menu.minimized)
-
-## Lifts the field-input lock unless a battle, the adventure menu or minimized
-## automation still needs it.
-func release_input() -> void:
-	paused_input = battle_view.visible or adventure_menu.visible or automation_minimized()
-
-## Rebuilds a panel for new data without moving the player's place in its
-## lists: scroll areas are matched by order and restored once laid out.
-func rebuild_keeping_scroll(panel: Control) -> void:
-	var before := capture_scroll(panel)
-	panel.rebuild()
-	restore_scroll(panel,before)
-
-## Scroll positions of every scroll area under root, in tree order.
-func capture_scroll(root: Node) -> Array[Vector2i]:
-	var before: Array[Vector2i] = []
-	for scroll in _scroll_areas(root):before.append(Vector2i(scroll.scroll_horizontal,scroll.scroll_vertical))
-	return before
-
-## Puts positions from capture_scroll back on root's rebuilt scroll areas.
-func restore_scroll(root: Node, before: Array[Vector2i]) -> void:
-	if before.is_empty() or before.all(func(position: Vector2i):return position==Vector2i.ZERO):return
-	var after := _scroll_areas(root)
-	for i in range(mini(before.size(),after.size())):
-		var scroll: ScrollContainer = after[i]
-		var position: Vector2i = before[i]
-		var restore := func():
-			if is_instance_valid(scroll):
-				scroll.scroll_horizontal = position.x
-				scroll.scroll_vertical = position.y
-		# The new content has no size yet: apply after this frame's layout, and
-		# again next frame in case its content sorted later.
-		restore.call_deferred()
-		get_tree().process_frame.connect(restore,CONNECT_ONE_SHOT)
-
-func _scroll_areas(root: Node) -> Array[ScrollContainer]:
-	var found: Array[ScrollContainer] = []
-	var pending: Array[Node] = [root]
-	while not pending.is_empty():
-		var node: Node = pending.pop_front()
-		if node.is_queued_for_deletion():continue
-		if node is ScrollContainer:found.append(node)
-		pending.append_array(node.get_children())
-	return found
-
-## A rebuild would discard text the player is typing (a pet name, a filter).
-## Focus alone is not typing: a number box keeps focus after a click on it or
-## its arrows, and treating that as typing froze the panel (for example the
-## 同种比较 list missing a newly caught pet) until focus moved elsewhere.
-func _typing_in(panel: Control) -> bool:
-	var focused := get_viewport().gui_get_focus_owner()
-	return focused is LineEdit and panel.is_ancestor_of(focused) and Time.get_ticks_msec()-_last_typing_msec < TYPING_GRACE_MSEC
-
 # ---- remote play and backend events (scripts/game/game_remote.gd) ----
 func _server_url() -> String:return _remote._server_url()
 func report_position() -> void:_remote.report_position()
@@ -1820,3 +1665,26 @@ func playback_speed() -> float:return _device.playback_speed()
 func set_battle_speed(value: float) -> void:_device.set_battle_speed(value)
 func viewer_pref(key: String, fallback: Variant = false) -> Variant:return _device.viewer_pref(key,fallback)
 func set_viewer_pref(key: String, value: Variant) -> void:_device.set_viewer_pref(key,value)
+
+# ---- automation windows (scripts/game/game_automation.gd) ----
+func resume_automation_view() -> void:_automation.resume_automation_view()
+func automation_overrides() -> Dictionary:return _automation.automation_overrides()
+func automation_settings() -> Dictionary:return _automation.automation_settings()
+func stat_filter(template_id: int) -> Dictionary:return _automation.stat_filter(template_id)
+func mark_settings_dirty(window: Node) -> void:_automation.mark_settings_dirty(window)
+func flush_automation_settings() -> void:_automation.flush_automation_settings()
+func _on_automation_settings() -> void:_automation._on_automation_settings()
+func _automation_running() -> bool:return _automation._automation_running()
+func automation_minimized() -> bool:return _automation.automation_minimized()
+func set_clone_squad_enabled(enabled:bool)->void:_automation.set_clone_squad_enabled(enabled)
+
+# ---- panel redraws (scripts/game/game_panels.gd) ----
+func refresh_open_panels() -> bool:return _panels.refresh_open_panels()
+func _mark_ui_stale() -> void:_panels._mark_ui_stale()
+func _ui_refresh_held() -> bool:return _panels._ui_refresh_held()
+func release_input() -> void:_panels.release_input()
+func rebuild_keeping_scroll(panel: Control) -> void:_panels.rebuild_keeping_scroll(panel)
+func capture_scroll(root: Node) -> Array[Vector2i]:return _panels.capture_scroll(root)
+func restore_scroll(root: Node, before: Array[Vector2i]) -> void:_panels.restore_scroll(root,before)
+func _scroll_areas(root: Node) -> Array[ScrollContainer]:return _panels._scroll_areas(root)
+func _typing_in(panel: Control) -> bool:return _panels._typing_in(panel)
