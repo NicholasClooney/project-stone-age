@@ -120,6 +120,7 @@ func run() -> void:
 	var dropped: Array = game.backend.session.release_events.filter(func(e):return str(e.get("source",""))=="排队已满")
 	check(dropped.size()==1 and bool(dropped[0].get("uncaught",false)) and str(dropped[0].where)=="未捕获","the dropped hit goes to 放生记录 as 未捕获·排队已满")
 	check(dropped.size()==1 and str(dropped[0].reason)=="排队已满（上限10），排在第11" and not dropped[0].beaten_by.is_empty() and int(dropped[0].lv120.attack)>0,"with its reason, the hits that beat it and its predicted Lv120 stats")
+	check(dropped.size()==1 and str(dropped[0].run_seed)==str(automation.hunt_run_seed) and dropped[0].has("slot"),"with its run seed and slot, to replay it later")
 	check(log_kinds(game).has("dropped"),"and a line in the info block")
 	# A smaller limit applies to the next run and drops the worst at once.
 	hunt.showcase_xp.select(3)

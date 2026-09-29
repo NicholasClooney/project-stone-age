@@ -862,10 +862,35 @@ func owned_maxima(template_id: int) -> Dictionary:
 ## and, with 后台搜宠, the queued hits and the one being caught. A hit is only
 ## worth queueing if it could beat what is already waiting.
 func species_maxima(template_id: int) -> Dictionary:
+	return _maxima_with(template_id,_pending_picks()+_queued_hits())
+
+## owned_maxima raised by the given pending entries of the species.
+func _maxima_with(template_id: int, entries: Array) -> Dictionary:
 	var pending: Array = []
-	for entry in _pending_picks()+_queued_hits():
+	for entry in entries:
 		if int(entry.actor.get("template_id",-1))==template_id:pending.append(entry.prediction)
 	return StatFilter.maxima(pending,owned_maxima(template_id))
+
+## What an already pending hit is judged against: never itself. With
+## 最高 + n (a negative x) the best hit could never beat its own value, so it
+## would be let go the moment it raised 最高. It counts owned pets, survey
+## picks (always caught), the hit being caught, and the queued hits ranked
+## above it by _showcase_better that are themselves kept (`kept_above`). Hits
+## ranked below it never raise its threshold, so of two equal best hits with
+## 最高 + 1 the earlier roll stays and the other goes, never both.
+func entry_maxima(entry: Dictionary, kept_above: Array) -> Dictionary:
+	return _maxima_with(int(entry.actor.get("template_id",-1)),_entry_others(entry,kept_above))
+
+## The pending entries entry_maxima counts for `entry`, of every species.
+func _entry_others(entry: Dictionary, kept_above: Array) -> Array:
+	var others: Array = _pending_picks().filter(func(e):return not is_same(e,entry))
+	if flow_phase=="capture" and not showcase_current.is_empty() and not bool(showcase_current.get("survey",false)) and not is_same(showcase_current,entry):
+		others.append(showcase_current)
+	return kept_above+others
+
+## The filter a pending hit must still pass (entry_maxima).
+func filter_excluding(entry: Dictionary, kept_above: Array) -> Dictionary:
+	return StatFilter.resolve(raw_filter_for(int(entry.actor.get("template_id",-1))),entry_maxima(entry,kept_above))
 
 func _queued_hits() -> Array:
 	var result: Array = showcase_queue.filter(func(entry):return not bool(entry.get("survey",false)))
@@ -1360,7 +1385,7 @@ func _skip_hit(kind: String, reason: String) -> void:
 ## Queued hits best first, as the keep rule ranks pets: 三围合, then the
 ## species' 保留规则 order, then the earlier roll.
 func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
-	var rule: Dictionary = filter_for(int(a.actor.get("template_id",-1))).get("keep_rule",{})
+	var rule: Dictionary = raw_filter_for(int(a.actor.get("template_id",-1))).get("keep_rule",{})
 	for key in StatFilter.rank_order(["sum"]+Array(rule.get("order",["attack","speed","max_hp"]))):
 		var va := StatFilter.rank_value(a.prediction,key)
 		var vb := StatFilter.rank_value(b.prediction,key)
@@ -1388,38 +1413,57 @@ func _showcase_add(entry: Dictionary) -> void:
 	_emit_status()
 
 ## Queued hits a better one (queued or owned) has put below the thresholds are
-## let go at once, in one line, instead of each when its turn comes.
+## let go at once, instead of each when its turn comes. The queue is best
+## first, so each hit is judged against owned pets, picks, the hit being
+## caught and the kept hits ranked above it (entry_maxima), never itself: the
+## best hit always survives. Each one let go is written to 放生记录.
 func _prune_below_threshold() -> void:
-	var dropped := 0
 	var kept: Array = []
-	var described := ""
+	var kept_hits: Array = []
+	var dropped: Array = []
 	for entry in showcase_queue:
-		var id := int(entry.actor.get("template_id",-1))
-		var chosen := filter_for(id)
-		if bool(entry.get("survey",false)) or not StatFilter.enabled(chosen) or StatFilter.evaluate(entry.prediction,chosen):
+		if bool(entry.get("survey",false)):
 			kept.append(entry);continue
-		dropped += 1
-		described = "%s：%s" % [_template_name(id),StatFilter.describe_thresholds(raw_filter_for(id),species_maxima(id))]
-	if dropped==0:return
+		var id := int(entry.actor.get("template_id",-1))
+		var best := entry_maxima(entry,kept_hits)
+		var chosen := StatFilter.resolve(raw_filter_for(id),best)
+		if not StatFilter.enabled(chosen) or StatFilter.evaluate(entry.prediction,chosen):
+			kept.append(entry);kept_hits.append(entry);continue
+		dropped.append(entry)
+		_log_uncaught(entry,"门槛已提高","门槛已提高（%s）" % StatFilter.describe_thresholds(raw_filter_for(id),best),_same_species(_entry_others(entry,kept_hits),id))
+	if dropped.is_empty():return
 	showcase_queue = kept
-	_showcase_line("dropped","门槛已提高（%s），排队中 %d 只不再够格，已放弃" % [described,dropped])
+	var names: Array = dropped.map(func(e):return "第%d组 %s（预测%s）" % [int(e.index)+1,str(e.actor.get("name","")),_stat_text(e.prediction)])
+	var id0 := int(dropped[0].actor.get("template_id",-1))
+	_showcase_line("dropped","门槛已提高（%s），排队中的%s不再够格，已放弃" % [_template_name(id0)+"："+StatFilter.describe_thresholds(raw_filter_for(id0),species_maxima(id0)),"、".join(names)])
 
 func _drop_queued(entry: Dictionary) -> void:
 	var limit := queue_limit()
 	var p: Dictionary = entry.prediction
+	# The hits just above it in the queue, closest first.
+	var above: Array = showcase_queue.slice(maxi(0,showcase_queue.size()-3))
+	above.reverse()
+	var reason := "排队已满（上限%d），排在第%d" % [limit,limit+1]
+	_log_uncaught(entry,"排队已满",reason,above)
+	_showcase_line("dropped","排队已满：放弃第%d组 %s（预测三围合%d），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),int(p.attack)+int(p.defence)+int(p.speed),reason])
+
+## The first three pending entries of a species (the ones that beat a hit).
+static func _same_species(entries: Array, template_id: int) -> Array:
+	return entries.filter(func(e):return int(e.actor.get("template_id",-1))==template_id).slice(0,3)
+
+## A found hit let go before its capture, in 放生记录 as 未捕获, with its roll,
+## run seed and slot so the pet can be replayed later (FastHunt.roll_seed).
+## The seed is kept as text: it is 64-bit and JSON numbers are doubles.
+func _log_uncaught(entry: Dictionary, source: String, reason: String, beaten_by: Array) -> void:
 	var pet: Dictionary = entry.actor.duplicate(true)
 	pet.pet_id = "第%d组" % (int(entry.index)+1)
-	var beaters: Array = []
-	# The hits just above it in the queue.
-	for i in range(maxi(0,showcase_queue.size()-3),showcase_queue.size()):
-		var above: Dictionary = showcase_queue[i]
-		beaters.push_front(ReleaseLog.beater({"pet_id":"第%d组" % (int(above.index)+1),"name":str(above.actor.get("name",""))},above.prediction))
-	var reason := "排队已满（上限%d），排在第%d" % [limit,limit+1]
-	var logged := ReleaseLog.entry(pet,"未捕获","排队已满",reason,beaters,p)
+	var beaters: Array = beaten_by.map(func(e):return ReleaseLog.beater({"pet_id":"第%d组" % (int(e.index)+1),"name":str(e.actor.get("name",""))},e.prediction))
+	var logged := ReleaseLog.entry(pet,"未捕获",source,reason,beaters,entry.prediction)
 	logged.uncaught = true
 	logged.roll = int(entry.index)+1
+	logged.run_seed = str(int(entry.get("run_seed",hunt_run_seed)))
+	logged.slot = int(entry.slot)
 	backend.session.release_events.append(logged)
-	_showcase_line("dropped","排队已满：放弃第%d组 %s（预测三围合%d），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),int(p.attack)+int(p.defence)+int(p.speed),reason])
 
 func _queue_summary() -> Array:
 	var result: Array = []
@@ -1481,12 +1525,16 @@ func _showcase_capture() -> void:
 	var entry := showcase_current
 	var actor: Dictionary = entry.actor
 	flow_target_survey = bool(entry.get("survey",false))
-	flow_target_filter = filter_for(int(actor.get("template_id",-1))).duplicate(true)
+	# Judged without itself: it is the best queued hit, so only owned pets and
+	# picks count (entry_maxima).
+	flow_target_filter = filter_excluding(entry,[]).duplicate(true)
 	var p: Dictionary = entry.prediction
 	# The thresholds may have risen since this hit was queued (a better pet
 	# arrived): one no longer good enough is let go. Survey picks are caught.
 	if not flow_target_survey and StatFilter.enabled(flow_target_filter) and not StatFilter.evaluate(p,flow_target_filter):
-		_showcase_line("dropped","门槛已提高（%s），放弃第%d组 %s（预测%s）" % [StatFilter.describe_thresholds(raw_filter_for(int(actor.get("template_id",-1))),species_maxima(int(actor.get("template_id",-1)))),int(entry.index)+1,str(actor.get("name","")),_stat_text(p)])
+		var thresholds := StatFilter.describe_thresholds(raw_filter_for(int(actor.get("template_id",-1))),entry_maxima(entry,[]))
+		_log_uncaught(entry,"门槛已提高","门槛已提高（%s）" % thresholds,_same_species(_entry_others(entry,[]),int(actor.get("template_id",-1))))
+		_showcase_line("dropped","门槛已提高（%s），放弃第%d组 %s（预测%s）" % [thresholds,int(entry.index)+1,str(actor.get("name","")),_stat_text(p)])
 		showcase_current = {}
 		return
 	var full := int(entry.quality.get("total_offset",0))==8

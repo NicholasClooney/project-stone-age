@@ -131,6 +131,53 @@ func input_threshold(automation, metric_index: int) -> String:
 		elif in_filters and line.begins_with("92 "):return line.split(" ")[3+metric_index*3+1]
 	return ""
 
+func uncaught(session, roll: int) -> Array:
+	return session.release_events.filter(func(e):return bool(e.get("uncaught",false)) and int(e.roll)==roll and str(e.source)=="门槛已提高")
+
+## 最高 + 1 on 攻击 (x = −1), or 三围合 ≥ 最高: a queued hit is judged against
+## owned pets and the other pending hits ranked above it, never itself.
+func plus_n(automation, session, actor92: Dictionary) -> void:
+	var saved: Dictionary = automation.raw_filter_for(92).duplicate(true)
+	var plus_one: Dictionary = saved.duplicate(true)
+	plus_one.mode = "any"
+	for metric in StatFilter.METRICS:plus_one.conditions[metric] = {"enabled":false,"minus":0}
+	plus_one.conditions.attack = {"enabled":true,"minus":-1}
+	plus_one.conditions.sum = {"enabled":true,"minus":0}
+	automation.flow_stat_filters[92] = plus_one
+	automation.refresh_maxima()
+	var owned: Dictionary = automation.owned_maxima(92)
+	var edge := {"attack":int(owned.attack)+1,"defence":1,"speed":1,"max_hp":1}
+	automation._showcase_add({"index":10,"slot":2,"run_seed":1234567890123456789,"actor":actor92,"troop":{},"quality":{},"prediction":edge})
+	check(automation.showcase_queue.size()==1 and uncaught(session,11).is_empty(),"a hit beating the owned best 攻击 by 1 stays queued though it is the new 最高 (三围合 below)")
+	check(int(automation.filter_for(92).conditions.attack.value)==int(owned.attack)+2,"new hits now need 攻击 ≥ %d" % (int(owned.attack)+2))
+	var edge2 := {"attack":int(owned.attack)+2,"defence":1,"speed":1,"max_hp":1}
+	automation._showcase_add({"index":11,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":edge2})
+	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==edge2,"a better one drops the first (it no longer beats the best by 1) and stays itself")
+	var logged := uncaught(session,11)
+	check(logged.size()==1 and str(logged[0].where)=="未捕获" and str(logged[0].run_seed)=="1234567890123456789" and int(logged[0].slot)==2 and str(logged[0].reason).begins_with("门槛已提高（") and logged[0].beaten_by.size()==1 and str(logged[0].beaten_by[0].pet_id)=="第12组","the dropped hit is in 放生记录 with its seed and slot: %s" % str(logged))
+	check(str(automation.showcase_log.back().text).contains("第11组"),"the info line names it: %s" % automation.showcase_log.back().text)
+	# Two equal best hits: the earlier roll stays, never both dropped.
+	automation._showcase_add({"index":12,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":edge2.duplicate()})
+	check(automation.showcase_queue.size()==1 and int(automation.showcase_queue[0].index)==11 and uncaught(session,13).size()==1,"of two equal best hits the earlier one stays")
+	# At its turn the best queued hit is judged without itself (and without
+	# the kept hits ranked below it): A leads by 三围合 but B, below it, has the
+	# higher 攻击; A still beats the owned best by 1 and is not let go.
+	automation.showcase_queue = []
+	var low_sum := int(owned.sum)-20
+	var a := {"attack":int(owned.attack)+1,"defence":low_sum-int(owned.attack)-2,"speed":1,"max_hp":1}
+	var b := {"attack":int(owned.attack)+5,"defence":low_sum-int(owned.attack)-10,"speed":1,"max_hp":1}
+	automation._showcase_add({"index":20,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":a})
+	automation._showcase_add({"index":21,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":b})
+	check(automation.showcase_queue.size()==2 and automation.showcase_queue[0].prediction==a,"both queue, the higher 三围合 first")
+	automation.flow_phase = "hunt"
+	automation._showcase_capture()
+	check(uncaught(session,21).is_empty() and int(automation.flow_target_filter.conditions.attack.value)==int(owned.attack)+1,"at its turn the best is judged against owned pets only: 攻击 ≥ %s" % str(automation.flow_target_filter.conditions.attack.get("value")))
+	check(not str(automation.showcase_log.back().text).begins_with("门槛已提高"),"and not let go: %s" % automation.showcase_log.back().text)
+	automation.showcase_current = {}
+	automation.showcase_queue = []
+	automation.flow_stat_filters[92] = saved
+	automation.flow_phase = "hunt"
+
 ## The find-pet cycle: cold start, survey, picks, then rolling thresholds.
 func cycle() -> void:
 	var backend = new_backend()
@@ -217,8 +264,9 @@ func cycle() -> void:
 	var top_sum: int = int(top_hit.attack)+int(top_hit.defence)+int(top_hit.speed)
 	check(int(automation.species_maxima(92).sum)==top_sum and int(automation.filter_for(92).conditions.sum.value)==top_sum-1,"the queued best counts as 最高: need 三围合 ≥ %d" % (top_sum-1))
 	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==top_hit,"the queued hit it outclasses is let go at once")
-	check(str(automation.showcase_log.back().text).contains("排队中 1 只不再够格"),"in one line: %s" % automation.showcase_log.back().text)
+	check(str(automation.showcase_log.back().text).contains("排队中的第2组") and str(automation.showcase_log.back().text).contains("不再够格"),"in one line naming the roll: %s" % automation.showcase_log.back().text)
 	automation.showcase_queue = []
+	plus_n(automation,session,actor92)
 
 	# Without 后台搜宠 the picks wait for the ordinary capture instead.
 	automation.hunt_fast_wanted = false
