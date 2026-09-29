@@ -82,6 +82,10 @@ def plan() -> dict:
     lookups = {"maps": {}, "sprites": {}, "riding": {}, "characters": {}, "files": {}}
     for ident, images in sprite_images(characters.get("characters", {})).items():
         pack = f"char-{ident}"
+        # The character's sprite sheet (tools/pack_frame_sheets.py), plus frame
+        # PNGs still present: ones maps also draw, or an import not packed yet.
+        for name in characters.get("sheets", {}).get(ident, {}).get("files", []):
+            assign(pack, LEGACY / "characters" / name)
         for image in sorted(images):
             assign(pack, LEGACY / f"images/{image}.png")
         lookups["characters"][ident] = pack

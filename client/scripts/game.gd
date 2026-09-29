@@ -174,6 +174,7 @@ var marker: Node2D
 var marker_cell := Vector2i(-1,-1)
 var character_index := 0
 var character_catalog: Dictionary = {}
+const SheetFrames = preload("res://scripts/sheet_frames.gd")
 var character_selection: Control
 var paused_input := false
 var load_error := ""
@@ -602,6 +603,16 @@ func texture(ident: String) -> Texture2D:
 		cached = load("res://assets/legacy/images/"+ident+".png")
 		textures[ident] = cached
 	return cached
+
+## A walking frame: player characters' frames come from their sprite sheet
+## (characters/sheets, docs/technical/sprite-sheets.md); map residents and
+## anything not packed are single PNGs.
+func character_frame(character: String, ident: int) -> Texture2D:
+	var sheets: Dictionary = character_catalog.get("sheets",{})
+	if sheets.get(character,{}).get("frames",{}).has(str(ident)):
+		var frame: Texture2D = SheetFrames.texture("res://assets/legacy/characters/",sheets,character,ident)
+		if frame != null or not ResourceLoader.exists("res://assets/legacy/images/%d.png" % ident):return frame
+	return texture(str(ident))
 
 func is_walkable(point: Vector2i) -> bool:
 	if point.x<0 or point.y<0 or point.x>=int(data.width) or point.y>=int(data.height):

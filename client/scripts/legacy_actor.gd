@@ -45,6 +45,8 @@ func _process(delta: float) -> void:
 		current_image = ident
 		if mounted:
 			sprite.texture = preload("res://scripts/riding.gd").frame_texture(rendered_id,ident)
+		elif world.has_method("character_frame"):
+			sprite.texture = world.character_frame(rendered_id,ident)
 		else:
 			if not world.textures.has(str(ident)):
 				world.textures[str(ident)] = load("res://assets/legacy/images/"+str(ident)+".png")

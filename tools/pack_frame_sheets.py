@@ -4,14 +4,18 @@ Several importers write frames one PNG per bitmap into a shared folder and
 register them in a manifest with `characters` (animations by sprite id) and
 `images` (draw offsets by bitmap):
 
-  battle   client/assets/legacy/battle/manifest.json, battle/images
-           (import_battle, import_characters, import_pets, import_mirror,
-           import_encounter_art)
+  battle      client/assets/legacy/battle/manifest.json, battle/images
+              (import_battle, import_characters, import_pets, import_mirror,
+              import_encounter_art)
+  characters  client/assets/legacy/characters/catalog.json, images
+              (import_characters: the player characters' walking art; the
+              folder is shared with map tiles and props)
 
 Run this once they are done (scripts/setup-original-data.sh does). Each
 sprite's frames go into <folder>/sheets/<sprite>.png (tools/sprite_sheets.py),
-the manifest gets `sheets`, and the per-frame PNGs are deleted, so Godot
-imports a few hundred files instead of tens of thousands. See
+the manifest gets `sheets`, and the packed per-frame PNGs are deleted, so
+Godot imports a few hundred files instead of tens of thousands. A PNG a map
+still names (a villager drawn in a player character's frames) is kept. See
 docs/technical/sprite-sheets.md.
 
 Re-running is safe: a frame whose PNG is gone is cut back out of the sheet
@@ -28,7 +32,23 @@ from PIL import Image
 from sprite_sheets import save_sheets
 
 LEGACY = Path(__file__).resolve().parents[1] / 'client/assets/legacy'
-TARGETS = {'battle': ('battle/manifest.json', 'battle/images')}
+# target: (manifest, frame folder, globs of manifests whose `images` also draw from the folder)
+TARGETS = {'battle': ('battle/manifest.json', 'battle/images', []),
+           'characters': ('characters/catalog.json', 'images', ['*.json', 'world/*.json'])}
+
+
+def referenced(legacy, patterns):
+    """Bitmaps other manifests (maps) name in their `images`; their PNGs stay."""
+    kept = set()
+    for pattern in patterns:
+        for path in legacy.glob(pattern):
+            try:
+                data = json.loads(path.read_text())
+            except (ValueError, UnicodeDecodeError):
+                continue
+            if isinstance(data, dict) and isinstance(data.get('images'), dict):
+                kept |= {str(k) for k in data['images']}
+    return kept
 
 
 def groups(manifest):
@@ -62,7 +82,7 @@ def frame_source(folder, images, manifest):
     return load
 
 
-def pack(manifest_path, images):
+def pack(manifest_path, images, keep=frozenset()):
     manifest_path, images = Path(manifest_path), Path(images)
     folder = manifest_path.parent
     manifest = json.loads(manifest_path.read_text())
@@ -84,9 +104,19 @@ def pack(manifest_path, images):
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')))
     frames = sum(len(s['frames']) for s in sheets.values())
     files = sum(len(s['files']) for s in sheets.values())
-    shutil.rmtree(images, ignore_errors=True)
+    removed = 0
+    for sheet in sheets.values():
+        for bitmap in sheet['frames']:
+            png = images / f'{bitmap}.png'
+            if bitmap not in keep and png.exists():
+                png.unlink()
+                Path(str(png) + '.import').unlink(missing_ok=True)
+                removed += 1
+    if images.is_dir() and not any(images.iterdir()):
+        images.rmdir()
     size = sum(p.stat().st_size for p in (folder / 'sheets').glob('*.png'))
-    print(f'Packed {frames} frames of {len(sheets)} sprites into {files} sheets ({size // (1 << 20)} MB) in {folder / "sheets"}')
+    print(f'Packed {frames} frames of {len(sheets)} sprites into {files} sheets ({size // (1 << 20)} MB) in {folder / "sheets"}; '
+          f'removed {removed} frame PNGs' + (f', kept {len(keep & {b for s in sheets.values() for b in s["frames"]})} that maps also draw' if keep else ''))
 
 
 if __name__ == '__main__':
@@ -94,5 +124,5 @@ if __name__ == '__main__':
     parser.add_argument('targets', nargs='*', default=list(TARGETS), choices=list(TARGETS))
     args = parser.parse_args()
     for target in args.targets:
-        manifest, images = TARGETS[target]
-        pack(LEGACY / manifest, LEGACY / images)
+        manifest, images, others = TARGETS[target]
+        pack(LEGACY / manifest, LEGACY / images, referenced(LEGACY, others))

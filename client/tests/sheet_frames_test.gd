@@ -41,5 +41,28 @@ func run() -> void:
 	check_frames("battle","res://assets/legacy/battle/",battle,["100000","100250"])
 	check(SheetFrames.texture("res://assets/legacy/battle/",battle.sheets,"100000",-1)==null,"a frame no sheet holds draws nothing")
 	check(not DirAccess.dir_exists_absolute("res://assets/legacy/battle/images"),"no per-frame battle PNGs are left for Godot to import")
+	var characters := manifest("res://assets/legacy/characters/catalog.json")
+	check_frames("characters","res://assets/legacy/characters/",characters,["100000","100010"])
+	# A frame only the sheet holds has no PNG left; one a map also draws keeps it.
+	var only_sheet := 0
+	var total := 0
+	for character in characters.sheets:
+		for bitmap in characters.sheets[character].frames:
+			total += 1
+			if not ResourceLoader.exists("res://assets/legacy/images/%s.png" % bitmap):only_sheet += 1
+	check(only_sheet > total*0.9,"most packed walking frames no longer exist as single PNGs (%d of %d)" % [only_sheet,total])
+	# The field draws player characters from the sheet.
+	var game = load("res://scenes/main.tscn").instantiate()
+	game.profile_persistence = false
+	root.add_child(game)
+	await process_frame
+	await process_frame
+	var bitmap := int(characters.characters["100000"].values()[0].frames[0].image)
+	check(game.character_frame("100000",bitmap) is AtlasTexture,"the field draws a player character's frame from its sheet")
+	check(game.player.sprite.texture!=null,"the player is drawn")
+	game.process_mode = Node.PROCESS_MODE_DISABLED
+	game.music.stop();game.effect.stop();game.queue_free()
+	await process_frame
+	await process_frame
 	print("SHEET FRAMES: %d failures" % failures)
 	quit(1 if failures else 0)

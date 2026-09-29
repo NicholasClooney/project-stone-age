@@ -74,6 +74,16 @@ class PlanWebPacksTest(unittest.TestCase):
                 for frame in animation["frames"]:
                     self.assertIn(str(int(frame["image"])), sheet["frames"], ident)
 
+    def test_every_character_pack_holds_its_sheet(self):
+        import json
+        catalog = json.loads((LEGACY / "characters/catalog.json").read_text())
+        if "sheets" not in catalog:
+            self.skipTest("character frames not packed into sheets")
+        for ident in catalog["characters"]:
+            contents = set(self.plan["packs"][self.plan["characters"][ident]])
+            for name in catalog["sheets"][ident]["files"]:
+                self.assertIn(f"{plan_web_packs.RES}characters/{name}", contents, ident)
+
     def test_villages_depend_on_character_art_they_draw(self):
         self.assertTrue(any(name.startswith("char-") for name in self.plan["maps"]["1000"]))
 
