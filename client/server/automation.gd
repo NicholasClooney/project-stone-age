@@ -456,7 +456,8 @@ func start_capture_battle(target: int, finish_battle: bool = false, extra: Dicti
 	_emit_status()
 	return running
 
-func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Dictionary = {}) -> bool:
+## `overrides` replace the preset's defaults before the first battle opens.
+func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Dictionary = {}, overrides: Dictionary = {}) -> bool:
 	if running or backend.battle.snapshot().active:return false
 	var profile: Dictionary = backend.session.snapshot()
 	var chosen := -1
@@ -468,6 +469,7 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 	backend.publish()
 	_load_settings({"settings":extra})
 	settings.merge({"preset":"train_pet","speed":8.0,"xp":10,"compact":true,"level":0,"level_explicit":true},true)
+	settings.merge(overrides,true)
 	start_training()
 	if not running:return false
 	training_pet_id = pet_id
@@ -1207,16 +1209,16 @@ func _showcase_captured() -> void:
 ## once the pet reaches Lv.120.
 func _showcase_train() -> void:
 	if _flow_pet().is_empty():stop_cycle("目标宠物不在随身队伍");return
-	if not start_pet_training(flow_pet_id,120,{}):stop_cycle("无法开始练级："+stop_reason);return
-	settings.xp = int(profile_settings().xp)
-	backend.session.experience_multiplier = int(settings.xp)
-	settings.compact = false
+	# Set before the first battle opens: with a high 经验倍率 that battle may
+	# be the only one, and it must be shown, not resolved compactly.
 	# A Lv1 pet is easily hurt: no HP stop line (carried pets are healed
 	# between battles; a defeat is fought again, see _showcase_step).
-	settings.hp = -1
-	settings.limit = 1000000
 	backend.session.clone_best_others = true
 	showcase_show_battle = true
+	if not start_pet_training(flow_pet_id,120,{},{"xp":int(profile_settings().xp),"compact":false,"hp":-1,"limit":1000000}):
+		showcase_show_battle = false
+		backend.session.clone_best_others = false
+		stop_cycle("无法开始练级："+stop_reason);return
 	_emit_status()
 
 ## Lv.120 reached: store and tidy as the full-speed cycle does, then say what

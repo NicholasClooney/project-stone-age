@@ -30,11 +30,14 @@ func set_music(stream: AudioStream) -> void:
 		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
 	game.music.play()
 
-## 后台搜宠 (hunt.showcase) is running on the backend: its capture and training
-## battles are watched with battle music first.
+## 后台搜宠 (hunt.showcase) is capturing or training a pet on screen, or has
+## the next one queued: its battles are watched with battle music first. While
+## it only searches, the radio or the map music plays.
 func showcase_music_active() -> bool:
 	var flow: Dictionary = game.state.automation.get("flow",{})
-	return bool(flow.get("showcase",false)) and str(flow.get("phase","idle")) in ["hunt","capture","train","restart"]
+	if not bool(flow.get("showcase",false)):return false
+	var phase := str(flow.get("phase","idle"))
+	return phase in ["capture","train"] or (phase in ["hunt","restart"] and int(flow.get("queue_size",0))>0)
 
 ## A watched battle starts: the radio steps aside (keeping its place) and the
 ## battle music loops across battles until the run ends.

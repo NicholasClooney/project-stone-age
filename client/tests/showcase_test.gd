@@ -162,7 +162,7 @@ func run() -> void:
 	# other pets, every battle shown in full.
 	check(automation.running and not bool(automation.settings.compact) and int(game.backend.session.experience_multiplier)==100 and int(automation.settings.hp)==-1,"自动练级 runs shown, at the player's 100× 经验倍率, without an HP stop line for the Lv1 pet")
 	check(game.backend.session.clone_squad_enabled and game.backend.session.clone_best_others,"with the 五人镜像队 of best other pets")
-	check(drive(game,func():return game.battle_view.visible or not automation.running),"a training battle opens")
+	check(drive(game,func():return game.battle_view.visible or not automation.running) and game.battle_view.visible and not automation.compact_active,"the first training battle opens shown, not compact (at 100× it may be the only one)")
 	var allies: Array = game.battle_session.snapshot().get("ally_pets",[])
 	var best_ids: Array = game.backend.session.best_other_pets(4).map(func(pet):return str(pet.pet_id))
 	var ally_ids: Array = allies.map(func(pet):return str(pet.get("pet_id","")))
@@ -245,6 +245,16 @@ func run() -> void:
 	hunt.hunt_catalog = fixture;hunt.scan_once()
 	check(flow.phase=="capture" and bool(game.state.automation.compact) and not automation.hunt_running,"a hit goes straight to the compact capture and the search stops")
 	flow.stop_cycle();flow.advance()
+
+	# Battle music only while a pet is caught or trained on screen, or the next
+	# one waits; a search alone gives the music back to the radio or the map.
+	var saved_automation: Dictionary = game.state.automation
+	var music_for := func(phase: String, queued: int) -> bool:
+		game.state.automation = {"flow":{"showcase":true,"phase":phase,"queue_size":queued}}
+		return game.showcase_music_active()
+	check(music_for.call("capture",0) and music_for.call("train",0) and music_for.call("hunt",2),"battle music while capturing, training or with a pet queued")
+	check(not music_for.call("hunt",0) and not music_for.call("restart",0),"searching alone plays the radio or map music again")
+	game.state.automation = saved_automation
 
 	if radio_ok:radio.turn_off()
 	game.process_mode = Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();game.queue_free()
