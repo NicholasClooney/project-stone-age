@@ -29,6 +29,8 @@
   "stat_filter": {
     "mode": "any",
     "stop_after": 1,
+    "keep_qualified": 0,
+    "rank": ["sum", "attack"],
     "conditions": {
       "sum": {"enabled": false, "value": 624, "strict": false, "keep": 0},
       "attack": {"enabled": false, "value": 292, "strict": true, "keep": 0},

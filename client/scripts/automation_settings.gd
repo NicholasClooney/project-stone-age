@@ -8,12 +8,15 @@ extends RefCounted
 ##   training     {xp, compact, hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast}
-##   stat_filters {"<template id>": {mode, stop_after, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
+##   stat_filters {"<template id>": {mode, stop_after, keep_qualified, rank, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
+##     keep_qualified: 达标只保留前 N 只 (0 keeps every qualifying pet); rank:
+##     the order they are compared in, 1 to 5 distinct keys of sum, attack,
+##     defence, speed, max_hp (pet_stat_filter.gd RANK_KEYS).
 ## Per-device choices (battle playback speed, minimized windows) are not here.
 const PATH := "res://data/automation_defaults.json"
 const METRICS := ["sum","attack","defence","speed"]
 const CONDITION_SPEC := {"enabled":["bool"],"value":["int",0,1000000],"strict":["bool"],"keep":["int",0,1000]}
-const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],
+const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],"keep_qualified":["int",0,1000],"rank":["rank"],
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
@@ -194,6 +197,13 @@ static func _leaf(spec: Array, value: Variant) -> Array:
 			var number = _int(value)
 			if number!=null and number in spec[1]:return [number]
 			return [value] if value is String and value in spec[1] else []
+		"rank":
+			if not value is Array or value.is_empty() or value.size()>5:return []
+			var keys := []
+			for item in value:
+				if not item is String or not item in ["sum","attack","defence","speed","max_hp"] or item in keys:return []
+				keys.append(item)
+			return [keys]
 		"offsets":
 			if not value is Array or value.size()!=4:return []
 			var result := []

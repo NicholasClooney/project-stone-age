@@ -8,6 +8,7 @@ const ClassicLuck = preload("res://server/classic_luck.gd")
 const Progression = preload("res://server/progression.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
+const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const MusicLibrary = preload("res://scripts/music_library.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
@@ -357,7 +358,7 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 	for pet in profile.pets+profile.get("pet_storage",[]):
 		if not pet is Dictionary:return false
 		if pet.has("favorite") and not pet.favorite is bool:return false
-		for flag in ["auto_reject","auto_hunt"]:
+		for flag in ["auto_reject","auto_hunt","auto_qualified"]:
 			if pet.has(flag) and not pet[flag] is bool:return false
 		if not pet.has("pet_id"):
 			if modern:return false
@@ -369,7 +370,9 @@ func _valid_pet_ids(profile: Dictionary) -> bool:
 		seen[pet.pet_id]=true;largest=maxi(largest,int(suffix))
 	return not profile.has("next_pet_id") or _integer(profile.next_pet_id,largest+1,9007199254740991)
 
-func store_pet(index: int, auto_hunt: bool=false) -> bool:
+## auto_hunt marks a stored reject the rolling keep may prune; qualified marks a
+## qualifying pet the find-pet cycle stored (达标只保留前 N 只 may release it).
+func store_pet(index: int, auto_hunt: bool=false, qualified: bool=false) -> bool:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return false
 	if index<0 or index>=_profile.pets.size():last_error="请选择随身宠物。";return false
@@ -377,6 +380,7 @@ func store_pet(index: int, auto_hunt: bool=false) -> bool:
 		last_error="请先取消这只宠物的骑乘状态。";return false
 	_ensure_pet_ids()
 	if auto_hunt:_profile.pets[index].auto_hunt=true
+	if qualified:_profile.pets[index].auto_qualified=true
 	_profile.pet_storage.append(_profile.pets[index])
 	if index==int(_profile.active_pet):_profile.active_pet=-1
 	_profile.pets.remove_at(index)
@@ -391,7 +395,7 @@ func retrieve_pet(index: int) -> bool:
 	if _profile.pets.size()>=PET_CAPACITY:last_error="随身宠物栏已满，请先存入其他宠物。";return false
 	_ensure_pet_ids()
 	# A retrieved pet belongs to the player again and is never auto-pruned.
-	_profile.pet_storage[index].erase("auto_reject");_profile.pet_storage[index].erase("auto_hunt")
+	for flag in ["auto_reject","auto_hunt","auto_qualified"]:_profile.pet_storage[index].erase(flag)
 	_profile.pets.append(_profile.pet_storage[index])
 	_profile.pet_storage.remove_at(index)
 	return true
@@ -430,6 +434,32 @@ func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 		if not kept.has(str(pet.pet_id)):doomed[str(pet.pet_id)]=true
 	_profile.pet_storage=_profile.pet_storage.filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
 	return doomed.size()
+
+# 达标只保留前 N 只: ranks the qualifying pets this find-pet run stored (ids;
+# still in the warehouse with auto_qualified, same template, not favourite) by
+# StatFilter.ranked(order) and releases those beyond keep. Pets from earlier
+# runs, retrieved or favourite pets, and party pets (active, mount) are never
+# candidates. keep 0 releases nothing. Returns the released pet ids.
+func release_unranked_qualified(template_id: int, keep: int, order: Array, ids: Array) -> Array:
+	last_error=""
+	if not _pending.is_empty():last_error="请先结束战斗。";return []
+	if keep<=0:return []
+	var candidates:=qualified_candidates(template_id,ids)
+	if candidates.size()<=keep:return []
+	var released:=[]
+	for pet in StatFilter.ranked(candidates,order).slice(keep):released.append(str(pet.pet_id))
+	_profile.pet_storage=_profile.pet_storage.filter(func(pet):return not released.has(str(pet.get("pet_id",""))))
+	return released
+
+## The pets release_unranked_qualified ranks: listed, in the warehouse, still
+## marked auto_qualified, not favourite, of this template.
+func qualified_candidates(template_id: int, ids: Array) -> Array:
+	var allowed:={}
+	for id in ids:allowed[str(id)]=true
+	var candidates:=[]
+	for pet in _profile.get("pet_storage",[]):
+		if allowed.has(str(pet.get("pet_id",""))) and pet.get("auto_qualified",false) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
+	return candidates
 
 static func _hunt_metric(pet: Dictionary, metric: String) -> int:
 	if metric=="sum":return int(pet.attack)+int(pet.defence)+int(pet.speed)

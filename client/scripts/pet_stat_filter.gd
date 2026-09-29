@@ -3,6 +3,10 @@ extends RefCounted
 ## Disabled conditions pass; defaults (blue dragons: total >=624 OR attack >292)
 ## live in res://data/automation_defaults.json.
 const METRICS := ["sum", "attack", "defence", "speed"]
+## Keys a player can rank qualifying pets by (达标只保留前 N 只), in the fixed
+## order that breaks ties after the player's own order.
+const RANK_KEYS := ["sum", "attack", "defence", "speed", "max_hp"]
+const RANK_NAMES := {"sum":"三围合", "attack":"攻击", "defence":"防御", "speed":"敏捷", "max_hp":"体力"}
 
 static func evaluate(stats: Dictionary, settings: Dictionary) -> bool:
 	var conditions: Dictionary = settings.get("conditions", {})
@@ -34,6 +38,40 @@ static func keep_counts(settings: Dictionary) -> Dictionary:
 	var result := {}
 	for metric in METRICS:result[metric] = int(settings.get("conditions", {}).get(metric, {}).get("keep", 0))
 	return result
+
+static func rank_value(pet: Dictionary, key: String) -> int:
+	if key == "sum":return int(pet.get("attack", 0)) + int(pet.get("defence", 0)) + int(pet.get("speed", 0))
+	return int(pet.get(key, 0))
+
+## The full comparison order: the player's keys, then the remaining RANK_KEYS.
+static func rank_order(order: Array) -> Array:
+	var result: Array = []
+	for key in order + RANK_KEYS:
+		if str(key) in RANK_KEYS and not result.has(str(key)):result.append(str(key))
+	return result
+
+## Pets best first: each key descending in rank_order(order), then the older
+## pet (smaller pet id number) first, so the result never depends on list order.
+static func ranked(pets: Array, order: Array) -> Array:
+	var keys := rank_order(order)
+	var result := pets.duplicate()
+	result.sort_custom(func(a, b):
+		for key in keys:
+			var va := rank_value(a, key)
+			var vb := rank_value(b, key)
+			if va != vb:return va > vb
+		return _id_number(a) < _id_number(b))
+	return result
+
+static func _id_number(pet: Dictionary) -> int:
+	var suffix := str(pet.get("pet_id", "")).trim_prefix("pet-")
+	return int(suffix) if suffix.is_valid_int() else 0
+
+static func describe_order(order: Array) -> String:
+	var names: PackedStringArray = []
+	for key in order:
+		if RANK_NAMES.has(str(key)):names.append(RANK_NAMES[str(key)])
+	return " → ".join(names)
 
 static func enabled(settings: Dictionary) -> bool:
 	for condition in settings.get("conditions", {}).values():

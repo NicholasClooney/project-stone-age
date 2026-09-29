@@ -23,6 +23,9 @@ var stat_checks: Dictionary = {}
 var stat_numbers: Dictionary = {}
 var stat_stop_after: SpinBox
 var stat_keeps: Dictionary = {}
+## 达标只保留前 N 只 and the ranking order (第一/第二/第三 排序).
+var stat_keep_best: SpinBox
+var stat_rank: Array[OptionButton] = []
 var loading_stat_settings := false
 const CapturePolicy=preload("res://scripts/battle_auto_policy.gd")
 const Rules = preload("res://scripts/pet_hunt_rules.gd")
@@ -225,7 +228,7 @@ func settings_patch() -> Dictionary:
 		var conditions:={}
 		for metric in StatFilter.METRICS:
 			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"value":int(stat_numbers[metric].value),"keep":int(stat_keeps[metric].value)}
-		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","stop_after":int(stat_stop_after.value),"conditions":conditions}
+		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","stop_after":int(stat_stop_after.value),"keep_qualified":int(stat_keep_best.value),"rank":rank_choice(),"conditions":conditions}
 		var changed:=AutomationSettings.diff(world.stat_filter(_stat_species_shown),wanted_filter)
 		if not changed.is_empty():patch.stat_filters={str(_stat_species_shown):changed}
 	return patch
@@ -467,7 +470,8 @@ func workflow_summary()->String:
 		var flow=world.pet_workflow
 		var best_seen:Dictionary=flow.best_predicted
 		var best_text:String="暂无" if best_seen.is_empty() else "三围合%d 攻%d"%[int(best_seen.sum),int(best_seen.attack)]
-		return "本轮达标存仓 %d/%s 只 · 滚动淘汰 %d 只 · 预测未达标跳过 %d 只 · 最好预测 %s\n" % [flow.collected_count,flow.collect_target_text(),flow.pruned_count,flow.predicted_rejects,best_text]
+		var kept:String="（只留最好%d只：现留%d只，已放生%d只）"%[flow.keep_best,flow.held_count,flow.released_count] if flow.keep_best>0 else ""
+		return "本轮达标存仓 %d/%s 只%s · 滚动淘汰 %d 只 · 预测未达标跳过 %d 只 · 最好预测 %s\n" % [flow.collected_count,flow.collect_target_text(),kept,flow.pruned_count,flow.predicted_rejects,best_text]
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.stored_count>0:
 		status.tooltip_text=world.pet_workflow.last_result
 		return "未达标 %d 只（滚动淘汰 %d 只）· 最近 %s 三围合%d，继续找宠\n" % [world.pet_workflow.stored_count,world.pet_workflow.pruned_count,world.pet_workflow.last_stored_id,world.pet_workflow.last_stored_total]
@@ -495,7 +499,20 @@ func build_stat_page()->void:
 	stat_stop_after=number(Vector2(80,338),0,100000,0);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
 	stat_stop_after.value_changed.connect(func(_value):save_stat_settings())
 	var stop_note:Label=world.text("只达标宠物后停止（0＝不停止，1＝找到即停并比较）",17);stop_note.position=Vector2(230,348);stat_page.add_child(stop_note)
-	var note:Label=world.text("仅在「抓到后直接升至120级」时生效；每个品种独立设置，随角色保存。\n预测不达标：直接跳过不抓。达标：抓到、升至120并存仓，数量到上限停止并打开比较。\n未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。",16);note.position=Vector2(24,395);stat_page.add_child(note)
+	var best_label:Label=world.text("达标只保留前",17);best_label.position=Vector2(24,395);stat_page.add_child(best_label)
+	stat_keep_best=number(Vector2(130,385),0,1000,0);stat_keep_best.name="StatKeepBest";stat_keep_best.size.x=110;stat_keep_best.reparent(stat_page)
+	stat_keep_best.tooltip_text="本轮找到的达标宠物按右边的排序比较，只留最好的N只，其余放生。收藏的、以前几轮的和取出仓库的宠物不动。0＝全部保留。"
+	stat_keep_best.value_changed.connect(func(_value):save_stat_settings())
+	var rank_label:Label=world.text("只（0＝全部保留）排序",17);rank_label.position=Vector2(250,395);stat_page.add_child(rank_label)
+	for i in range(3):
+		var pick:=OptionButton.new();pick.name="StatRank%d"%(i+1);pick.position=Vector2(440+i*205,385);pick.size=Vector2(190,38)
+		pick.tooltip_text=["第一排序","第二排序（同分时比较）","第三排序（同分时比较）"][i]
+		if i>0:pick.add_item(["","第二：无","第三：无"][i],0)
+		for key in StatFilter.RANK_KEYS:pick.add_item(["第一","第二","第三"][i]+"："+StatFilter.RANK_NAMES[key],StatFilter.RANK_KEYS.find(key)+1)
+		stat_page.add_child(pick);controls.append(pick);stat_rank.append(pick)
+		pick.item_selected.connect(func(_i):save_stat_settings(true))
+	var note:Label=world.text("仅在「抓到后直接升至120级」时生效；每个品种独立设置，随角色保存。预测不达标直接跳过；达标则抓到、升至120并存仓。\n达标数量到上限停止并打开比较；只留前N只时建议设「找到0只后停止」一直找，其余同分再按剩下的属性比较。",16);note.position=Vector2(24,432);stat_page.add_child(note)
+	note.tooltip_text="未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。"
 	refresh_stat_species()
 
 func refresh_stat_species()->void:
@@ -518,7 +535,7 @@ func load_stat_settings()->void:
 	var switching:=template_id!=_stat_species_shown
 	_stat_species_shown=template_id
 	var settings:Dictionary=world.stat_filter(template_id)
-	var flat:={"mode":str(settings.mode),"stop_after":int(settings.stop_after)}
+	var flat:={"mode":str(settings.mode),"stop_after":int(settings.stop_after),"keep_qualified":int(settings.get("keep_qualified",0)),"rank":settings.get("rank",["sum","attack"]).duplicate()}
 	for metric in StatFilter.METRICS:
 		for field in ["enabled","value","keep"]:flat[metric+"."+field]=settings.conditions[metric][field]
 	var old:Dictionary={} if switching else _stat_loaded
@@ -529,8 +546,24 @@ func load_stat_settings()->void:
 		for entry in [[stat_numbers[metric],metric+".value"],[stat_keeps[metric],metric+".keep"]]:
 			if not _sync_spin(entry[0],old.get(entry[1]),flat[entry[1]],switching):shown[entry[1]]=old[entry[1]]
 	if not _sync_spin(stat_stop_after,old.get("stop_after"),flat.stop_after,switching):shown.stop_after=old.stop_after
+	if not _sync_spin(stat_keep_best,old.get("keep_qualified"),flat.keep_qualified,switching):shown.keep_qualified=old.keep_qualified
+	if switching or not AutomationSettings._same(old.get("rank"),flat.rank):_show_rank(flat.rank)
 	_stat_loaded=shown
 	loading_stat_settings=false
+
+## The ranking order the three selectors show: 第一, then 第二 and 第三 unless
+## 无 or already chosen.
+func rank_choice()->Array:
+	var order:=[]
+	for pick in stat_rank:
+		var id:=pick.get_selected_id()
+		if id>=1 and not order.has(StatFilter.RANK_KEYS[id-1]):order.append(StatFilter.RANK_KEYS[id-1])
+	return order
+
+func _show_rank(order: Array)->void:
+	for i in range(stat_rank.size()):
+		var key:String=str(order[i]) if i<order.size() else ""
+		stat_rank[i].select(stat_rank[i].get_item_index(StatFilter.RANK_KEYS.find(key)+1 if key in StatFilter.RANK_KEYS else 0))
 
 ## A condition changed: saved to the profile once the player pauses.
 func save_stat_settings(now: bool = false)->void:
@@ -539,7 +572,7 @@ func save_stat_settings(now: bool = false)->void:
 
 ## Saves typed numbers and pending changes now (before a find-pet cycle).
 func commit_stat_settings()->void:
-	for input in stat_numbers.values()+stat_keeps.values()+[stat_stop_after]:
+	for input in stat_numbers.values()+stat_keeps.values()+[stat_stop_after,stat_keep_best]:
 		if input.get_line_edit().has_focus():input.apply()
 	world.mark_settings_dirty(self)
 	world.flush_automation_settings()
@@ -589,6 +622,7 @@ func _update_chip() -> void:
 	var flow=world.pet_workflow
 	if flow.active():
 		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
-		chip.present("自动抓极品 · 找宠流程 · "+step,"达标 %d/%s · 未达标 %d · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),flow.stored_count,rolls,flow.elapsed_text()])
+		var kept:String=" · 留%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_best>0 else ""
+		chip.present("自动抓极品 · 找宠流程 · "+step,"达标 %d/%s%s · 未达标 %d · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,rolls,flow.elapsed_text()])
 	else:
 		chip.present("自动抓极品 · 筛选中","遇敌 %d 组 · 检查 %d 只 · 最好总档 %s"%[rolls,inspected,"暂无" if best< -8 else "%+d"%best])

@@ -48,7 +48,7 @@ def main():
     print(f"{'ID':<10} {'位置':<4} {'Lv':>3} {'三围合':>5} {'攻':>4} {'防':>4} {'敏':>4} {'血':>5}  标记")
     ranked = sorted(found, key=lambda item: (-stat_sum(item[1]), -int(item[1]["attack"]), str(item[1].get("pet_id"))))
     for where, pet in ranked[:args.top]:
-        flags = [name for name, on in (("自动", pet.get("auto_hunt") or pet.get("auto_reject")), ("收藏", pet.get("favorite")), ("GM", pet.get("gm_modified"))) if on]
+        flags = [name for name, on in (("自动", pet.get("auto_hunt") or pet.get("auto_reject")), ("达标", pet.get("auto_qualified")), ("收藏", pet.get("favorite")), ("GM", pet.get("gm_modified"))) if on]
         print(f"{str(pet.get('pet_id')):<10} {where:<4} {int(pet['level']):>3} {stat_sum(pet):>5} {int(pet['attack']):>4} {int(pet['defence']):>4} {int(pet['speed']):>4} {int(pet['max_hp']):>5}  {' '.join(flags)}")
 
 

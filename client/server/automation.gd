@@ -112,6 +112,12 @@ var flow_collected_count := 0
 var flow_pruned_count := 0
 # Rejects stored by this run; rolling keep only ever prunes among these.
 var flow_run_reject_ids: Array = []
+# Qualifiers this run stored and still holds; 达标只保留前 N 只 (the filter's
+# keep_qualified) releases only among these.
+var flow_run_kept_ids: Array = []
+var flow_released_count := 0
+## Of those, how many still count toward the keep (not favourited since).
+var flow_held_count := 0
 var flow_predicted_rejects := 0
 var flow_best_predicted: Dictionary = {}
 var timer_clock: Callable = Time.get_ticks_msec
@@ -690,7 +696,7 @@ func start_cycle(continuing: bool) -> bool:
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		flow_reason = "宠物栏已满，请自行存放伙伴后再开始。";return false
 	if not continuing:
-		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = []
+		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_run_kept_ids = [];flow_released_count = 0;flow_held_count = 0
 		start_timer()
 	flow_map = position_map
 	flow_cell = position_cell
@@ -772,13 +778,13 @@ func flow_step() -> void:
 		if found.is_empty() or int(found.level)<120:stop_cycle("目标宠物未达到120级，请手动检查。");return
 		complete_trained_pet(found)
 
-func _store_hunt_pet(pet_id: String, prunable: bool) -> bool:
+func _store_hunt_pet(pet_id: String, prunable: bool, qualified: bool = false) -> bool:
 	var index := -1
 	var pets: Array = backend.session.snapshot().pets
 	for i in range(pets.size()):
 		if str(pets[i].get("pet_id",""))==pet_id:index = i;break
 	backend.session.last_error = ""
-	return index>=0 and backend.session.store_pet(index,prunable)
+	return index>=0 and backend.session.store_pet(index,prunable,qualified)
 
 func complete_trained_pet(found: Dictionary) -> void:
 	if flow_phase!="train":return
@@ -807,14 +813,22 @@ func complete_trained_pet(found: Dictionary) -> void:
 		return
 	var stop_after := int(flow_target_filter.get("stop_after",1))
 	if filtered and stop_after!=1:
-		# Keep the qualifier in the warehouse (never flagged for pruning) and continue.
-		if not _store_hunt_pet(flow_pet_id,false):
+		# Keep the qualifier in the warehouse (never pruned as a reject) and continue.
+		if not _store_hunt_pet(flow_pet_id,false,true):
 			stop_cycle("达标但无法存仓："+str(backend.session.last_error));return
 		flow_kept_count += 1
 		flow_collected_count += 1
+		flow_run_kept_ids.append(flow_pet_id)
+		# 达标只保留前 N 只: only the best N of this run's qualifiers stay.
+		var keep_best := int(flow_target_filter.get("keep_qualified",0))
+		var released: Array = backend.session.release_unranked_qualified(int(found.get("template_id",-1)),keep_best,flow_target_filter.get("rank",["sum","attack"]),flow_run_kept_ids)
+		for id in released:flow_run_kept_ids.erase(id)
+		flow_released_count += released.size()
+		flow_held_count = backend.session.qualified_candidates(int(found.get("template_id",-1)),flow_run_kept_ids).size()
 		backend.save()
 		backend.publish()
-		flow_last_result = "达标已存仓 · "+flow_last_result
+		if released.has(flow_pet_id):flow_last_result = "达标但未进前%d，已放生 · %s" % [keep_best,flow_last_result]
+		else:flow_last_result = "达标已存仓 · "+flow_last_result
 		if stop_after>0 and flow_collected_count>=stop_after:
 			freeze_timer()
 			flow_phase = "compare"
@@ -854,7 +868,7 @@ func status() -> Dictionary:
 			"fast":fast_hunt.running(),"fast_wanted":hunt_fast_wanted,"fast_note":hunt_fast_note,"fast_unavailable":fast_unavailable},
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
-			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"predicted_rejects":flow_predicted_rejects,
+			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_best":int(flow_target_filter.get("keep_qualified",0)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
 

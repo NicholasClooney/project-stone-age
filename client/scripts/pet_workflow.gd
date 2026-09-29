@@ -51,6 +51,17 @@ var collected_count: int:
 var pruned_count: int:
 	get:return int(_live("flow_pruned_count","pruned_count"))
 	set(value):_seam({"flow_pruned_count":value})
+## 达标只保留前 N 只: qualifiers this run released, and those it still holds.
+var released_count: int:
+	get:return int(_live("flow_released_count","released_count"))
+	set(value):_seam({"flow_released_count":value})
+var held_count: int:
+	get:
+		return int(_live("flow_held_count","held_count"))
+var keep_best: int:
+	get:
+		if world.link.is_local():return int(world.backend.automation.flow_target_filter.get("keep_qualified",0))
+		return int(_flow().get("keep_best",0))
 var predicted_rejects: int:
 	get:return int(_live("flow_predicted_rejects","predicted_rejects"))
 	set(value):_seam({"flow_predicted_rejects":value})
