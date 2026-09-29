@@ -88,7 +88,7 @@ func _row(caption: String, point: Vector2, callback: Callable) -> Button:
 
 func _select_skill(ident: int) -> void:
 	if world.session.snapshot().player.gold < Catalog.SKILLS[ident].cost:
-		world.play_ui_sound(220)
+		world.play_battle_sound(220)
 		feedback = "石币不足。"
 		_description()
 		return
@@ -103,7 +103,7 @@ func _confirm() -> void:
 		world.checkpoint()
 		close_training()
 	else:
-		world.play_ui_sound(220)
+		world.play_battle_sound(220)
 		feedback="无法学习：请检查石币、宠物与饲育员的位置。"
 		rebuild()
 

@@ -2,7 +2,7 @@ extends Node
 ## Game controller support on top of the original mouse-driven UI.
 ##
 ## World: left stick / D-pad walk, A talks to whoever is near, B cancels,
-## X status, Y pets, LB/RB zoom, Start help, Back switches to HUD buttons.
+## X status, Y pets, LB/RB zoom, Start 设置, Back switches to HUD buttons.
 ## Menus, battles and dialogue: stick / D-pad move a visible highlight between
 ## the clickable controls of the top panel, A clicks it (a real mouse click at
 ## its centre, so every existing control works unchanged), B cancels, LB/RB
@@ -125,7 +125,7 @@ func _input(event: InputEvent) -> void:
 		JOY_BUTTON_LEFT_SHOULDER,JOY_BUTTON_RIGHT_SHOULDER:
 			var forward: bool = event.button_index==JOY_BUTTON_RIGHT_SHOULDER
 			if root!=null:page(root,forward)
-			else:world.set_zoom(world.camera.zoom.x+(world.ZOOM_STEP if forward else -world.ZOOM_STEP))
+			else:world.zoom_by(world.ZOOM_STEP if forward else -world.ZOOM_STEP)
 			get_viewport().set_input_as_handled()
 		JOY_BUTTON_X:
 			if root==null or root==world.adventure_menu:world.show_adventure_menu("status");get_viewport().set_input_as_handled()
@@ -133,9 +133,8 @@ func _input(event: InputEvent) -> void:
 			if root==null or root==world.adventure_menu:world.show_adventure_menu("pets");get_viewport().set_input_as_handled()
 		JOY_BUTTON_START:
 			if root==null or root==world.help:
-				world.help.visible = not world.help.visible
-				world.paused_input = world.help.visible or world.automation_minimized()
-				world.clear_input()
+				if world.settings_menu.visible:world.settings_menu.close_menu()
+				else:world.settings_menu.open_menu()
 				get_viewport().set_input_as_handled()
 		JOY_BUTTON_BACK:
 			if root!=null and not hud_mode:return

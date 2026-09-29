@@ -25,7 +25,12 @@ func run() -> void:
 	var hud = game.classic_hud
 	var menu = game.adventure_menu
 	var baseline := overlays(game)
-	check(game.dev_bar.has_node("ExploreOutside") and game.dev_bar.get_node("ExploreOutside").text=="村外探险","Samgir shows its own DEV shortcuts")
+	var toolbar := func() -> Array:
+		var names: Array = []
+		for node in game.dev_bar.get_children():names.append(str(node.name))
+		return names
+	var toolbar_before: Array = toolbar.call()
+	check(toolbar_before==["DevMapOverview","DevTrainingTravel","DevTraining","DevPetHunt","DevMusic","DevSettings"],"the toolbar holds the six general windows, no map shortcuts")
 
 	game.show_adventure_menu("pets")
 	check(game.paused_input,"an open panel pauses walking")
@@ -35,7 +40,7 @@ func run() -> void:
 	check(game.paused_input,"walking stays paused while that panel is open")
 	check(game.classic_hud==hud,"the HUD is kept")
 	check(hud.map_name.text==game.area_name() and is_same(hud.map_view.built_for,game.data),"the map window shows the new map")
-	check(game.dev_bar.get_node("ExploreOutside").text=="返回村庄" and is_instance_valid(game.boss_button),"DEV shortcuts follow the new map")
+	check(toolbar.call()==toolbar_before,"the toolbar is the same on every map")
 	check(overlays(game)==baseline,"the old map's travel dialogue is removed")
 	game.close_adventure_menu()
 	check(not game.paused_input,"closing the panel lets the player walk")
@@ -43,10 +48,7 @@ func run() -> void:
 	game.load_area_id(1000,Vector2i(85,95))
 	await process_frame
 	check(not game.paused_input,"a map change with nothing open leaves walking enabled")
-	check(game.boss_button==null and game.dev_bar.get_node("ExploreOutside").text=="村外探险","returning restores the village shortcuts")
-	var names: Array = []
-	for node in game.dev_bar.get_children():names.append(str(node.name))
-	check(names.count("ExploreOutside")==1,"map shortcuts are replaced, not duplicated")
+	check(toolbar.call()==toolbar_before,"returning keeps the same toolbar, nothing duplicated")
 	check(overlays(game)==baseline,"repeated map changes leave one travel dialogue")
 
 	game.process_mode = Node.PROCESS_MODE_DISABLED

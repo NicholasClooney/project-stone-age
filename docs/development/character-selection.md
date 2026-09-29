@@ -1,6 +1,6 @@
 # Original character selection
 
-Open **DEV → 角色** or press **Tab**. The developer chooser displays original animated appearances. Click a preview to change character; close the chooser to resume movement. Selection survives map changes and saving/reloading. Both UI and local authority reject changes during combat.
+Open **设置 → 换角色** or press **Tab**. The developer chooser displays original animated appearances. Click a preview to change character; close the chooser to resume movement. Selection survives map changes and saving/reloading. Both UI and local authority reject changes during combat.
 
 This is a developer convenience panel, not a reconstruction of the historical character-creation screen. The selected character changes appearance only; it does not reroll progression or equipment.
 

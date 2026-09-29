@@ -67,8 +67,13 @@ func _ready() -> void:
 		task_buttons.append(item)
 		if i==0:
 			item.pressed.connect(toggle_map)
-		elif i in [1,2,3,6]:
-			var kind: String = {1:"status",2:"pets",3:"inventory",6:"system"}[i]
+		elif i==6:
+			# 系统 opens 设置 (zoom, sound, character, saving, 操作说明).
+			item.pressed.connect(func():
+				if world.settings_menu.visible:world.settings_menu.close_menu()
+				else:world.settings_menu.open_menu())
+		elif i in [1,2,3]:
+			var kind: String = {1:"status",2:"pets",3:"inventory"}[i]
 			item.pressed.connect(func(): world.show_adventure_menu(kind))
 	# Original bottom bar remains above battle presentation; top field HUD does not.
 	var bottom_layer := CanvasLayer.new()

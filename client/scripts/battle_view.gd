@@ -975,6 +975,8 @@ func world_modal_open() -> bool:
 	var helper = world.get("training_helper")
 	if is_instance_valid(helper) and helper.visible:return true
 	var gm_panel = world.get("dev_gm_menu")
+	var settings = world.get("settings_menu")
+	if is_instance_valid(settings) and settings.visible:return true
 	return (is_instance_valid(panel) and panel.visible) or (is_instance_valid(gm_panel) and gm_panel.visible)
 
 func _input(event: InputEvent) -> void:

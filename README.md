@@ -63,22 +63,22 @@ Quit the standalone desktop game before starting `serve.sh`; both would write th
 | --- | --- |
 | Left click | Walk to a tile; click a villager to walk over and talk |
 | WASD / arrow keys | Walk (combine for eight directions) |
-| Mouse wheel, + / − | Zoom |
-| Hover the bottom edge | Original menu tabs: status, pets, items, map, system |
+| Mouse wheel | Zoom (also **设置 → 画面**; remembered per device) |
+| Hover the bottom edge | Original menu tabs: status, pets, items, map; 系统 opens **设置** |
 | Ctrl+M | Map window |
 | Battle icons | Choose a command, then its target, then your pet's command; right click or Esc cancels |
 | E / X | Wave / sit or stand |
 | Tab | Choose a character |
-| M | Mute |
-| H / Esc | Help (music volume is there) |
+| M | Music on or off (sound effects are a separate switch in 设置) |
+| H | 操作说明 in **设置**; Esc closes windows |
 | R | Return to the village square |
 | Game controller | Supported everywhere, including menus and battles ([layout](docs/technical/web-client.md#game-controller)) |
 
 ### First steps
 
-Click the villager, choose **村外的伙伴 / 休息** and accept the quest. Head out through **村外探险**, weaken a wild pet and capture it, win three battles, then use **DEV → 挑战强敌** in the wilderness for the finale and return for your reward. 蓝人龙、金虎 and 红暴龙 join you on first launch; ride one from the pet window.
+Walk out through the village's west exit (or use **地图导航**), weaken a wild pet and capture it, and win some battles. 蓝人龙、金虎 and 红暴龙 join you on first launch; ride one from the pet window.
 
-The **DEV** bar has map travel, automation (**自动练级**, **自动抓极品**), GM tools and the in-game changelog. See the [feature guide](docs/development/feature-guide.md).
+The toolbar has **地图导航**, **刷怪传送**, **自动练级**, **自动抓极品**, **音乐** (radio, music switch and volume) and **设置** (zoom, sound, character, 瞬移, saving, changelog, 操作说明, and GM tools under 开发者). See the [feature guide](docs/development/feature-guide.md).
 
 ## Development
 

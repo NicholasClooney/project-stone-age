@@ -5,9 +5,9 @@ What the restored game offers today, with pointers to the detailed notes. The [R
 ## Samgir and the world
 
 - Original 160 × 160 Samgir map with 482 scenery objects, the original isometric projection and depth sorting, map/ADRN collision footprints, keyboard movement and click-to-walk with corner checks.
-- Original eight-direction idle and walk frames, sit and wave. Character selection (**Tab** or **DEV → 角色**) offers 47 original appearances with animated previews and matching club battle sprites. See [character selection](character-selection.md).
+- Original eight-direction idle and walk frames, sit and wave. Character selection (**Tab** or **设置 → 换角色**) offers 47 original appearances with animated previews and matching club battle sprites. See [character selection](character-selection.md).
 - Original `sabgm_t0.wav` village music with loop and volume controls; all four villages share it, and the wilderness follows its original map music markers.
-- 电台 (DEV bar): a radio of the whole original soundtrack (26 tracks from the 8.0 client, titled from the original `bgm_tbl`). Stations are 全部曲目, 收藏 and your own playlists; ☆ favourites a track, ＋ adds it to a playlist, and ↑ ↓ × edit a playlist. Each track loops until it has played for about 100 seconds, then the next one starts; 随机 shuffles. About 10 seconds before the change the next track is chosen and downloaded in the background, so on the web only the very first track waits for a download. The radio plays through battles and map changes; 关闭电台 brings back the original scene music. Favourites and playlists belong to the character, so every device shares them; whether the radio is on, the station and the track are per device. The window does not pause the game and can be dragged, folded to a player bar or closed while the music continues.
+- **音乐** (toolbar), the 电台: a radio of the whole original soundtrack (26 tracks from the 8.0 client, titled from the original `bgm_tbl`). Stations are 全部曲目, 收藏 and your own playlists; ☆ favourites a track, ＋ adds it to a playlist, and ↑ ↓ × edit a playlist. Each track loops until it has played for about 100 seconds, then the next one starts; 随机 shuffles. About 10 seconds before the change the next track is chosen and downloaded in the background, so on the web only the very first track waits for a download. The radio plays through battles and map changes; 关闭电台 brings back the original scene music. Favourites and playlists belong to the character, so every device shares them; whether the radio is on, the station and the track are per device. The window does not pause the game and can be dragged, folded to a player bar or closed while the music continues.
 - The four starting villages, both complete islands, linked village interiors and the original undersea route are visitable. The island crossing keeps its original reusable pass requirement. See [world scope and remaining services](m005-four-villages.md).
 - 147 imported maps: the original 103, 35 training areas, and Giru's 福尔德村 (5000), 达那村 (5100) and seven ordinary interiors. Giru links to both villages and their interiors through original portals; reaching Giru itself still needs DEV travel. Dana restores 20 ordinary scene actors, including residents with original dialogue; other NPC services and quests are deferred. See [travel coverage](travel-and-leveling-assists.md).
 - Original stone top controls, the wooden hover-reveal bottom menus, and a working original map window with live coordinates and player marker. See [classic UI evidence](m002-classic-ui.md).
@@ -32,11 +32,14 @@ What the restored game offers today, with pointers to the detailed notes. The [R
 
 - **自动练级** runs battles in place; **自动抓极品** scans encounters for high-quality pets and can run a find → capture → train cycle. Both run on the backend, keep going with no window open, can be minimized to a bar while you use other menus, and their settings are saved with the character. See [auto battle](training-helper.md) and [pet hunting](pet-hunt-helper.md).
 
-## Developer tools (DEV bar)
+## Toolbar and 设置
 
-- **地图导航**: map browser with 地点 / 练级点 / Lv.1宠物 destinations; choose 步行 for portal travel or DEV 传送 for instant visits, and toggle 野外随机遇敌 there.
-- **瞬移模式** turns world clicks into safe instant moves; **刷怪传送** offers verified encounter spots for levels 1–120; **立即遇敌** starts a normal encounter; **挑战强敌** (wilderness) starts the MVP finale.
-- **GM 调试**: raise levels to 120, set or add base stats, grant allocation points, recover, escape battles without rewards. See [GM controls](gm-controls.md).
-- **更新日志** shows the in-game changelog and the `v0.MINOR.PATCH` beta version. See [versioning](../versioning/version-system.md).
+- The toolbar holds **地图导航**, **刷怪传送**, **自动练级**, **自动抓极品**, **音乐** and **设置**; it is the same on every map.
+- **地图导航**: map browser with 地点 / 练级点 / Lv.1宠物 destinations; choose 步行 for portal travel or DEV 传送 for instant visits, and toggle 野外随机遇敌 there. **刷怪传送** offers verified encounter spots for levels 1–120.
+- **音乐** opens the 电台 window, which also has the music switch (M) and the music volume.
+- **设置** (also the classic taskbar's 系统; H opens its 操作说明): 画面 zoom (−, +, 拉到最远), 声音 (music, sound effects, music volume), 换角色, 瞬移模式 (world clicks become safe instant moves), 保存旅程, **更新日志** with the `v0.MINOR.PATCH` beta version ([versioning](../versioning/version-system.md)) and 操作说明. Volume, the music and effects switches, zoom and 瞬移模式 are remembered per device (`viewer.cfg`).
+- 设置's collapsed **开发者** section holds **GM 调试**: raise levels to 120, set or add base stats, grant allocation points and special pets, recover, escape battles without rewards. See [GM controls](gm-controls.md).
+- The **五人镜像队** switch is in the 自动练级 window.
+- Removed: the 骑乘 dropdown (ride from the pet window), 立即遇敌, and the Samgir shortcuts 村外探险 / 返回村庄, Villager, 道具店 and 挑战强敌. Without 挑战强敌 the MVP quest's finale can no longer be started.
 
 After re-importing maps or encounters, regenerate the tracked spot indexes with `python3 tools/build_training_spots.py` and `python3 tools/build_level_one_spots.py`.
