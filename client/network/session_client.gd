@@ -72,10 +72,22 @@ func grant_pet_care_items() -> bool:return request({"type":"grant_pet_care_items
 func level_pet_to(pet_id: String, target: int) -> bool:return request({"type":"level_pet_to","pet_id":pet_id,"target":target})
 func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 	return int(link.request({"type":"prune_hunt_pets","template_id":template_id,"keep":keep,"ids":ids}).get("pruned",0))
+## 放生记录 source of the next release_pets: 保留规则 with its template id when
+## the selection came from 同种比较's 按保留规则选中; reset after each release.
+var release_source := "手动"
+var release_template := -1
 func release_pets(ids: Array) -> Dictionary:
-	var reply: Dictionary = link.request({"type":"release_pets","ids":ids})
+	var command := {"type":"release_pets","ids":ids,"source":release_source,"template_id":release_template}
+	release_source = "手动"
+	release_template = -1
+	var reply: Dictionary = link.request(command)
 	last_error = str(reply.get("error",""))
 	return reply.get("result",{"released":0})
+## One page of 放生记录 (newest first); done receives the page dictionary
+## (entries, total, page, pages, species), or {} when the backend refused.
+func release_log(page: int, page_size: int, template_id: int, done: Callable) -> void:
+	link.request({"type":"release_log","page":page,"page_size":page_size,"template_id":template_id},func(reply: Dictionary):
+		done.call(reply.get("log",{}) if reply.get("ok",false) else {}))
 func store_pet(index: int, auto_hunt: bool = false) -> bool:return request({"type":"store_pet","index":index,"auto_hunt":auto_hunt})
 func retrieve_pet(index: int) -> bool:return request({"type":"retrieve_pet","index":index})
 func retrieve_pet_by_id(pet_id: String) -> bool:return request({"type":"retrieve_pet_by_id","pet_id":pet_id})

@@ -10,6 +10,10 @@ const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const KeepRule = preload("res://scripts/keep_rule.gd")
+const ReleaseLog = preload("res://server/release_log.gd")
+## 放生记录 entries for pets released since the backend last took them
+## (take_release_events); the backend appends them to the log file.
+var release_events: Array = []
 const MusicLibrary = preload("res://scripts/music_library.gd")
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
 const SPECIES := {
@@ -433,6 +437,19 @@ func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 	var doomed:={}
 	for pet in candidates:
 		if not kept.has(str(pet.pet_id)):doomed[str(pet.pet_id)]=true
+	# 放生记录: which quotas it missed, beaten by the last pet each quota kept.
+	var names:={"sum":"三围合","attack":"攻击","defence":"防御","speed":"敏捷"}
+	var missed:=[];var holders:=[]
+	for metric in ["sum","attack","defence","speed"]:
+		var quota:=maxi(0,int(keep.get(metric,0)))
+		if quota==0:continue
+		missed.append("%s未进前%d"%[names[metric],quota])
+		var last:Dictionary={}
+		for pet in candidates:
+			if kept.has(str(pet.pet_id)) and (last.is_empty() or _hunt_metric(pet,metric)<_hunt_metric(last,metric)):last=pet
+		if not last.is_empty() and not holders.any(func(item):return item.pet_id==str(last.pet_id)):holders.append(ReleaseLog.beater(last))
+	for pet in candidates:
+		if doomed.has(str(pet.pet_id)):release_events.append(ReleaseLog.entry(pet,"仓库","未达标整理","未达标，"+"、".join(missed),holders))
 	_profile.pet_storage=_profile.pet_storage.filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
 	return doomed.size()
 
@@ -440,18 +457,38 @@ func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 # the pets of this species, carried or stored, that the rule does not keep.
 # Favourites, the active pet, the mount and `protected` (pet_id -> reason, e.g.
 # the capture helper) always stay. Returns the released pet ids.
-func apply_keep_rule(template_id: int, rule: Dictionary, protected: Dictionary = {}) -> Array:
+func apply_keep_rule(template_id: int, rule: Dictionary, protected: Dictionary = {}, source: String = "自动整理") -> Array:
 	last_error=""
 	if not _pending.is_empty():last_error="请先结束战斗。";return []
 	_ensure_pet_ids()
 	var kept:=KeepRule.always_kept(_profile)
 	kept.merge(protected,true)
-	var verdict:=KeepRule.evaluate(KeepRule.species_pets(_profile,template_id),rule,kept)
+	var pets:=KeepRule.species_pets(_profile,template_id)
+	var verdict:=KeepRule.evaluate(pets,rule,kept)
 	if verdict.release.is_empty():return []
-	var summary:=release_pets(verdict.release)
+	var summary:=release_pets(verdict.release,source,keep_rule_notes(pets,verdict))
 	var skipped:={}
 	for entry in summary.get("skipped",[]):skipped[str(entry.id)]=true
 	return verdict.release.filter(func(id):return not skipped.has(str(id)))
+
+## 放生记录 notes for a KeepRule verdict: pet_id -> {reason, beaten_by, judged}.
+static func keep_rule_notes(pets: Array, verdict: Dictionary) -> Dictionary:
+	var by_id:={}
+	for pet in pets:by_id[str(pet.get("pet_id",""))]=pet
+	var notes:={}
+	for id in verdict.release:
+		var why:Dictionary=verdict.why.get(id,{})
+		var beaten:=[]
+		for other in why.get("beaten_by",[]):
+			if by_id.has(other):beaten.append(ReleaseLog.beater(by_id[other],verdict.stats[other]))
+		notes[id]={"reason":str(why.get("reason","按保留规则放生")),"beaten_by":beaten,"judged":verdict.stats[id]}
+	return notes
+
+## The 放生记录 entries collected since the last call.
+func take_release_events() -> Array:
+	var result:=release_events
+	release_events=[]
+	return result
 
 static func _hunt_metric(pet: Dictionary, metric: String) -> int:
 	if metric=="sum":return int(pet.attack)+int(pet.defence)+int(pet.speed)
@@ -467,7 +504,9 @@ func set_pet_favorite(pet_id: String, favorite: bool) -> bool:
 
 # Permanently removes pets by stable ID from the party and warehouse. Favorites,
 # the active pet and the mount are skipped; carried indices are re-pointed.
-func release_pets(ids: Array) -> Dictionary:
+# Each released pet gets a 放生记录 entry: source (手动, 保留规则, 自动整理) and
+# notes (pet_id -> {reason, beaten_by, judged}; without one the reason is 手动放生).
+func release_pets(ids: Array, source: String = "手动", notes: Dictionary = {}) -> Dictionary:
 	last_error=""
 	var result:={"released":0,"skipped":[]}
 	if not _pending.is_empty():last_error="请先结束战斗。";return result
@@ -490,6 +529,12 @@ func release_pets(ids: Array) -> Dictionary:
 	for identifier in wanted:
 		if not found.has(identifier):result.skipped.append({"id":identifier,"reason":"找不到"})
 	if doomed.is_empty():return result
+	for location in ["pets","pet_storage"]:
+		for pet in _profile.get(location,[]):
+			var identifier:=str(pet.get("pet_id",""))
+			if not doomed.has(identifier):continue
+			var note:Dictionary=notes.get(identifier,{})
+			release_events.append(ReleaseLog.entry(pet,"随身" if location=="pets" else "仓库",source,str(note.get("reason","手动放生")),note.get("beaten_by",[]),note.get("judged",{})))
 	_profile.pets=_profile.pets.filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
 	_profile.pet_storage=_profile.get("pet_storage",[]).filter(func(pet):return not doomed.has(str(pet.get("pet_id",""))))
 	_profile.active_pet=-1

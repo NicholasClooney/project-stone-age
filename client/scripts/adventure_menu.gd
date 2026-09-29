@@ -41,6 +41,14 @@ const RELEASE_METRICS := ["stat_total","attack","defence","speed"]
 const PetComparison=preload("res://scripts/pet_comparison.gd")
 const KeepRule=preload("res://scripts/keep_rule.gd")
 const PetTable=preload("res://scripts/pet_table.gd")
+const ReleaseLog=preload("res://server/release_log.gd")
+## 放生记录 view: open, filter (template id, -1 all), page, the last page
+## the backend sent and whether one is on its way.
+var pet_release_log_open := false
+var release_log_template := -1
+var release_log_page := 0
+var release_log_data: Dictionary = {}
+var release_log_loading := false
 const PetStatFilter=preload("res://scripts/pet_stat_filter.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
@@ -149,7 +157,7 @@ func choice(caption: String, point: Vector2, action: String, value: Variant = nu
 ## player left them, as long as the same view and page stay on screen.
 func rebuild() -> void:
 	if world==null or not visible:return
-	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page]
+	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_release_log_open,release_log_page,release_log_template]
 	var before: Array[Vector2i] = world.capture_scroll(self) if view==_built_view else ([] as Array[Vector2i])
 	_rebuild_panel()
 	_built_view = view
@@ -180,7 +188,8 @@ func _rebuild_panel() -> void:
 		"inventory":
 			inventory_panel(profile)
 		"pets":
-			if pet_compare_open and not pet_compare_subject.is_empty():pet_comparison_panel(profile,pet_compare_subject)
+			if pet_release_log_open:pet_release_log_panel()
+			elif pet_compare_open and not pet_compare_subject.is_empty():pet_comparison_panel(profile,pet_compare_subject)
 			elif pet_storage_open:pet_storage_panel(profile)
 			else:pet_panel(profile)
 		"shop":
@@ -530,7 +539,8 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 			world.refresh_companion();world.checkpoint();feedback="起始伙伴已加入（重复领取不增加）。"
 		else:feedback="空间不足或当前不能领取。"
 		rebuild(),"StarterPets")
-	label(feedback,origin+Vector2(16,370),230,12)
+	label(feedback,origin+Vector2(16,400),230,12)
+	pet_tool_button("放生记录",origin+Vector2(16,362),func():open_release_log(-1),"PetReleaseLog")
 	pet_tool_button("宠物仓库",origin+Vector2(16,326),func():pet_storage_target_id=str(profile.pets[selected_pet].get("pet_id","")) if not profile.pets.is_empty() else "";pet_storage_open=true;pet_compare_open=false;rebuild(),"PetStorage")
 	if not filtered.is_empty():
 		pet_tool_button("同种比较",origin+Vector2(16,290),func():pet_compare_subject=profile.pets[selected_pet].duplicate(true);pet_compare_open=true;rebuild(),"PetCompare")
@@ -662,6 +672,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	if PetComparison.species_key(selected)!=pet_release_species:
 		clear_release_selection();pet_release_species=PetComparison.species_key(selected)
 	overlay_button(overlay,"自动抓极品",722,func():continue_comparison_hunt(selected),"CompareContinueHunt")
+	var species_key:=PetComparison.species_key(selected)
+	overlay_button(overlay,"放生记录",626,func():open_release_log(int(species_key.trim_prefix("original_")) if species_key.trim_prefix("original_").is_valid_int() else -1),"CompareReleaseLog")
 	load_compare_prefs()
 	compare_sort_controls(overlay)
 	var workflow_note:bool=is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id",""))
@@ -835,7 +847,7 @@ func release_controls(overlay:Control,profile:Dictionary,rows:Array,top:float)->
 	else:
 		var release:Button=world.button("放生所选 (%d)"%pet_release_selected.size(),func():
 			if not pet_release_selected.is_empty():pet_release_confirm=true
-			rebuild());release.name="CompareRelease";release.disabled=pet_release_selected.is_empty();release.tooltip_text="永久删除所选宠物；收藏、出战、骑乘的宠物会跳过。放生前自动备份存档。";bar.add_child(release)
+			rebuild());release.name="CompareRelease";release.disabled=pet_release_selected.is_empty();release.tooltip_text="永久删除所选宠物；收藏、出战、骑乘的宠物会跳过。放生前自动备份存档，并记入放生记录。";bar.add_child(release)
 	var picker:=HBoxContainer.new();picker.name="CompareThresholdBar";picker.position=Vector2(14,top+40);picker.add_theme_constant_override("separation",8);overlay.add_child(picker)
 	var pick_label:=PetTable.text("选中","body");pick_label.size_flags_vertical=Control.SIZE_SHRINK_CENTER;picker.add_child(pick_label)
 	var metric:=OptionButton.new();metric.name="CompareThresholdMetric";metric.focus_mode=Control.FOCUS_NONE
@@ -887,6 +899,9 @@ func select_release_below(profile:Dictionary,rows:Array,metric:String,limit:int)
 	return added
 
 func perform_release()->void:
+	# A selection made by 按保留规则选中 is logged with the rule's reasons.
+	if not pet_rule_reasons.is_empty() and pet_release_species.trim_prefix("original_").is_valid_int():
+		world.session.release_source="保留规则";world.session.release_template=int(pet_release_species.trim_prefix("original_"))
 	var result:Dictionary=world.release_pets(pet_release_selected.keys())
 	if not world.session.last_error.is_empty():feedback=world.session.last_error;pet_release_confirm=false;rebuild();return
 	var skipped:Array=result.get("skipped",[])
@@ -912,6 +927,7 @@ func pet_storage_panel(profile:Dictionary)->void:
 	var storage:Array=profile.get("pet_storage",[])
 	var overlay:=pet_overlay("PetStoragePanel","宠物仓库","%d只 · 携带%d/%d" % [storage.size(),profile.pets.size(),world.session.PET_CAPACITY],Vector2(820,mini(650,190+maxi(1,mini(20,storage.size()))*44)))
 	overlay_button(overlay,"关闭",752,func():pet_storage_open=false;pet_view="list";rebuild())
+	overlay_button(overlay,"放生记录",656,func():open_release_log(-1),"StorageReleaseLog")
 	var store_index:=-1
 	for i in range(profile.pets.size()):
 		if str(profile.pets[i].get("pet_id",""))==pet_storage_target_id:store_index=i
@@ -959,6 +975,96 @@ func pet_storage_panel(profile:Dictionary)->void:
 			pet_compare_subject=pet.duplicate(true);pet_compare_open=true;rebuild());compare.set_meta("compact",true);actions.add_child(compare)
 
 	style_pet_modal(overlay)
+
+# ---- 放生记录 (server/release_log.gd) -----------------------------------------
+
+## Opens 放生记录 in the pet window, filtered to one species (template id, -1
+## for all). Reachable from 宠物仓库, 同种比较 and the pet tools; the planned
+## 游戏助手 menu can call this too.
+func open_release_log(template_id:int=-1)->void:
+	if not visible or kind!="pets":open_menu("pets")
+	release_log_template=template_id
+	release_log_page=0
+	pet_release_log_open=true
+	fetch_release_log()
+
+func fetch_release_log()->void:
+	release_log_loading=true
+	var asked:=[release_log_page,release_log_template]
+	world.session.release_log(release_log_page,20,release_log_template,func(data:Dictionary):
+		if asked!=[release_log_page,release_log_template]:return
+		release_log_data=data
+		release_log_loading=false
+		if visible and pet_release_log_open:rebuild())
+	if release_log_loading:rebuild()
+
+const LOG_LEAD:=256.0 # time 66 + name 184 + one separator
+const LOG_NAME:=184.0
+
+func pet_release_log_panel()->void:
+	var data:=release_log_data
+	var overlay:=pet_overlay("PetReleaseLogPanel","放生记录","共%d条 · 最多保留%d条最近的记录"%[int(data.get("total",0)),ReleaseLog.CAP],Vector2(900,650))
+	overlay_button(overlay,"关闭",832,func():pet_release_log_open=false;rebuild())
+	var filter:=OptionButton.new();filter.name="ReleaseLogSpecies";filter.position=Vector2(14,46);filter.focus_mode=Control.FOCUS_NONE;filter.custom_minimum_size.x=180
+	var choices:=[-1]
+	filter.add_item("全部品种")
+	for item in data.get("species",[]):
+		choices.append(int(item.template_id))
+		filter.add_item("%s（%d）"%[item.name,int(item.count)])
+	if not choices.has(release_log_template):
+		choices.append(release_log_template);filter.add_item("原表 %d"%release_log_template)
+	filter.select(choices.find(release_log_template))
+	filter.item_selected.connect(func(index:int):release_log_template=int(choices[index]);release_log_page=0;fetch_release_log())
+	overlay.add_child(filter)
+	var pages:=int(data.get("pages",1))
+	var previous:Button=world.button("◀",func():release_log_page=maxi(0,release_log_page-1);fetch_release_log());previous.position=Vector2(700,46);previous.disabled=release_log_page<=0;overlay.add_child(previous)
+	var page:=PetTable.text("%d / %d 页"%[release_log_page+1,pages],"meta");page.position=Vector2(742,52);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
+	var next:Button=world.button("▶",func():release_log_page=mini(pages-1,release_log_page+1);fetch_release_log());next.position=Vector2(852,46);next.disabled=release_log_page>=pages-1;overlay.add_child(next)
+	var note:=PetTable.text("载入中…" if release_log_loading else "新的在前。金色：它比所有比下它的宠物都高的一项。","meta");note.position=Vector2(14,84);overlay.add_child(note)
+	var header:=PetTable.header(LOG_LEAD);header.position=Vector2(18,108);overlay.add_child(header)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
+	var entries:Array=data.get("entries",[])
+	if entries.is_empty() and not release_log_loading:list.add_child(PetTable.text("还没有放生记录。","body"))
+	for i in range(entries.size()):
+		var item:Dictionary=entries[i]
+		var holder:=PetTable.row_panel(i);holder.name="ReleaseLogRow_%d"%i;holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		holder.tooltip_text=release_log_description(item)
+		list.add_child(holder)
+		var stack:=VBoxContainer.new();stack.add_theme_constant_override("separation",0);holder.add_child(stack)
+		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);stack.add_child(line)
+		var when:=PetTable.text(Time.get_datetime_string_from_unix_time(int(item.get("time",0))+local_offset_seconds(),true).substr(5,11),"meta");when.custom_minimum_size.x=66;line.add_child(when)
+		var who:=VBoxContainer.new();who.custom_minimum_size.x=LOG_NAME;who.add_theme_constant_override("separation",-2);line.add_child(who)
+		var title:=PetTable.text(str(item.get("name","")),"name");title.clip_text=true;title.custom_minimum_size.x=LOG_NAME;who.add_child(title)
+		who.add_child(PetTable.text("%s · %s · %s"%[item.get("pet_id","?"),item.get("where",""),item.get("source","")],"meta"))
+		var judged:Dictionary=item.get("lv120",{})
+		var own_best:={}
+		# Gold: a stat where it beat every pet that took its place (it still lost).
+		var beaten:Array=item.get("beaten_by",[])
+		if not beaten.is_empty():
+			for key in ["max_hp","attack","defence","speed"]:
+				var mine:=PetTable.value_of(judged if not judged.is_empty() else item,key)
+				if beaten.all(func(other):return mine>PetTable.value_of(other,key)):own_best[key]=mine
+		PetTable.stat_cells(line,item,own_best,judged)
+		var offsets:Array=item.get("offsets",[])
+		var total:=0
+		for value in offsets:total+=int(value)
+		line.add_child(PetTable.grade({} if offsets.size()!=4 else {"offsets":offsets,"total":total,"full":bool(item.get("full",false))}))
+		var reason:=PetTable.text(str(item.get("reason","")),"body",PetTable.BAD);reason.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;reason.custom_minimum_size.x=840;stack.add_child(reason)
+		if not beaten.is_empty():
+			var names:=beaten.map(func(other):return "%s（%d · 攻%d 防%d 敏%d 血%d）"%[other.get("pet_id","?"),int(other.get("sum",0)),int(other.get("attack",0)),int(other.get("defence",0)),int(other.get("speed",0)),int(other.get("max_hp",0))])
+			var by:=PetTable.text("被比下去："+"、".join(names),"meta");by.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;by.custom_minimum_size.x=840;stack.add_child(by)
+	style_pet_modal(overlay)
+
+static func release_log_description(item:Dictionary)->String:
+	var text:="%s %s · Lv.%d · %s · %s\n血%d 攻%d 防%d 敏%d · 三围合%d\n%s" % [item.get("name",""),item.get("pet_id","?"),int(item.get("level",1)),item.get("where",""),item.get("source",""),int(item.get("max_hp",0)),int(item.get("attack",0)),int(item.get("defence",0)),int(item.get("speed",0)),int(item.get("sum",0)),item.get("reason","")]
+	var beaten:Array=item.get("beaten_by",[])
+	if not beaten.is_empty():text+="\n被比下去："+"、".join(beaten.map(func(other):return str(other.get("pet_id","?"))))
+	return text
+
+## The local timezone offset for log times (the log stores UTC seconds).
+static func local_offset_seconds()->int:
+	return int(Time.get_time_zone_from_system().get("bias",0))*60
 
 func continue_comparison_hunt(selected:Dictionary)->bool:
 	var key:=PetComparison.species_key(selected)

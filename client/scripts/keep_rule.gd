@@ -34,8 +34,9 @@ static func _id_number(pet: Dictionary) -> int:
 
 ## pets: one species. protected: pet_id -> reason for pets that must stay
 ## (出战中, 骑乘中, 削血宠); favourites are always kept.
-## Returns {reasons: pet_id -> [text], release: [pet_id], stats: pet_id -> stats}
-## where every pet with no reason is released.
+## Returns {reasons: pet_id -> [text], release: [pet_id], stats: pet_id -> stats,
+## why: pet_id -> {reason, beaten_by: [pet_id]}} where every pet with no reason
+## is released and `why` explains each release (see _explain) for 放生记录.
 static func evaluate(pets: Array, rule: Dictionary, protected: Dictionary = {}) -> Dictionary:
 	var stats := {}
 	var reasons := {}
@@ -56,11 +57,17 @@ static func evaluate(pets: Array, rule: Dictionary, protected: Dictionary = {}) 
 		if not sums.has(sum_of.call(pet)):sums.append(sum_of.call(pet))
 	sums.sort()
 	sums.reverse()
-	for total in sums.slice(0, maxi(0, int(rule.get("tiers", 2)))):
+	var top_sums: Array = sums.slice(0, maxi(0, int(rule.get("tiers", 2))))
+	var per_tier := maxi(0, int(rule.get("per_tier", 3)))
+	## pet_id -> [tier sum, place in the tier, the ids holding the tier's quota]
+	var placing := {}
+	for total in top_sums:
 		var group := pets.filter(func(pet):return sum_of.call(pet) == total)
 		group.sort_custom(better)
-		for i in range(mini(group.size(), maxi(0, int(rule.get("per_tier", 3))))):
-			reasons[str(group[i].pet_id)].append("%d档第%d" % [total, i + 1])
+		var holders: Array = group.slice(0, per_tier).map(func(pet):return str(pet.pet_id))
+		for i in range(group.size()):
+			placing[str(group[i].pet_id)] = [total, i + 1, holders]
+			if i < per_tier:reasons[str(group[i].pet_id)].append("%d档第%d" % [total, i + 1])
 	var champions := maxi(0, int(rule.get("champions", 2)))
 	var chosen: Array = rule.get("champion_stats", STATS)
 	for stat in STATS:
@@ -81,7 +88,52 @@ static func evaluate(pets: Array, rule: Dictionary, protected: Dictionary = {}) 
 	var release := []
 	for pet in pets:
 		if reasons[str(pet.pet_id)].is_empty():release.append(str(pet.pet_id))
-	return {"reasons":reasons, "release":release, "stats":stats}
+	var why := {}
+	var kept := pets.filter(func(pet):return not reasons[str(pet.pet_id)].is_empty())
+	kept.sort_custom(better)
+	var champion_note := "单项未进前%d" % champions if champions > 0 and not chosen.is_empty() else ""
+	for pet in pets:
+		var id := str(pet.pet_id)
+		if reasons[id].is_empty():why[id] = _explain(pet, kept, stats, placing, top_sums, per_tier, champion_note)
+	return {"reasons":reasons, "release":release, "stats":stats, "why":why}
+
+## Why a released pet goes and who beat it, first match wins:
+##   a kept pet with identical stats (duplicates resolve to the older id);
+##   its place in one of the top tiers beyond the per-tier quota (beaten by
+##   the quota holders); or a 三围合 below the top tiers (beaten by the best
+##   kept pet at least as good in every stat, if there is one).
+## `champion_note` (单项未进前M) is added when single-stat champions are on.
+static func _explain(pet: Dictionary, kept: Array, stats: Dictionary, placing: Dictionary, top_sums: Array, per_tier: int, champion_note: String) -> Dictionary:
+	var id := str(pet.pet_id)
+	var own: Dictionary = stats[id]
+	var same := func(other: Dictionary) -> bool:
+		for key in STATS:
+			if int(stats[str(other.pet_id)][key]) != int(own[key]):return false
+		return true
+	var at_least := func(other: Dictionary) -> bool:
+		for key in STATS:
+			if int(stats[str(other.pet_id)][key]) < int(own[key]):return false
+		return true
+	var parts := []
+	var beaten := []
+	for other in kept:
+		if same.call(other):
+			parts.append("与 %s 属性完全相同，保留%s" % [str(other.pet_id), "较早的" if _id_number(other) < _id_number(pet) else "排名靠前的"])
+			beaten = [str(other.pet_id)]
+			break
+	if parts.is_empty() and placing.has(id):
+		var place: Array = placing[id]
+		parts.append("%d档第%d名，每档只留%d只" % [int(place[0]), int(place[1]), per_tier])
+		beaten = place[2].duplicate()
+	elif parts.is_empty():
+		var total := int(own.attack) + int(own.defence) + int(own.speed)
+		parts.append("三围合%d，不在最高%d档（%s）" % [total, top_sums.size(), "、".join(top_sums.map(func(value):return str(value)))] if not top_sums.is_empty() else "三围合%d" % total)
+		for other in kept:
+			if at_least.call(other):
+				beaten = [str(other.pet_id)]
+				break
+	if not champion_note.is_empty():parts.append(champion_note)
+	return {"reason":"；".join(parts), "beaten_by":beaten}
 
 ## The pets of this species in a profile (party and warehouse), by the same
 ## species grouping as 同种比较 (the starter 蓝人龙 is original 92).

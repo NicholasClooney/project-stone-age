@@ -11,6 +11,8 @@ const SquadBattleSession = preload("res://server/squad_battle_session.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const Automation = preload("res://server/automation.gd")
+const KeepRule = preload("res://scripts/keep_rule.gd")
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const VILLAGE := {"map_id":1000,"x":80,"y":90}
 const DEBUG_SPECIES := ["wooli","wooli_wooli","woolistan"]
 
@@ -66,6 +68,11 @@ var encounter_catalog = EncounterCatalog.new()
 var encounter_rng := RandomNumberGenerator.new()
 var encounter_serial := 0
 var save_path := ""
+## 放生记录 (server/release_log.gd): its own file next to the save,
+## <save>.release-log.jsonl, never read when the save loads. Tests set
+## release_log_path; without either the log stays in memory.
+var release_log = preload("res://server/release_log.gd").new()
+var release_log_path := ""
 var last_saved_payload := ""
 var rev := 0
 var _storage_json := ""
@@ -82,6 +89,7 @@ func _process(delta: float) -> void:
 	_depth += 1
 	automation.tick(delta)
 	_depth -= 1
+	_record_releases()
 	_flush()
 
 ## Loads an existing save. Returns false for unreadable files; the caller then
@@ -96,8 +104,19 @@ func handle(command: Dictionary) -> Dictionary:
 	_depth += 1
 	var reply := _handle(command)
 	_depth -= 1
+	_record_releases()
 	_flush()
 	return reply
+
+## Appends the pets released by the last command or tick to 放生记录.
+func _record_releases() -> void:
+	if session.release_events.is_empty():return
+	_release_log_file()
+	release_log.append(session.take_release_events())
+
+## The log's file follows the save: <save>.release-log.jsonl, or tests' path.
+func _release_log_file() -> void:
+	release_log.path = release_log_path if not release_log_path.is_empty() else (save_path.get_basename()+".release-log.jsonl" if not save_path.is_empty() else "")
 
 ## Battle commands that name the turn they answer. Several devices can drive
 ## one battle; a command for a turn that has already been resolved (another
@@ -195,6 +214,13 @@ func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
 	_publish()
 	return {"ok":true}
 
+## One page of 放生记录, newest first: page (from 0), page_size (1..100,
+## default 20), template_id (-1 for every species).
+func _cmd_release_log(command: Dictionary) -> Dictionary:
+	_record_releases()
+	_release_log_file()
+	return {"ok":true,"log":release_log.page(int(command.get("page",0)),int(command.get("page_size",20)),int(command.get("template_id",-1)))}
+
 ## Drops the listed hunt-stored pets beyond the per-metric keep counts; replies with how many.
 func _cmd_prune_hunt_pets(command: Dictionary) -> Dictionary:
 	var pruned: int = session.prune_hunt_pets(int(command.get("template_id",-1)),command.get("keep",{}),command.get("ids",[]))
@@ -204,9 +230,22 @@ func _cmd_prune_hunt_pets(command: Dictionary) -> Dictionary:
 	return {"ok":true,"pruned":pruned}
 
 ## Permanently releases pets by stable ID; replies with GameSession's summary.
+## `source` 保留规则 with `template_id` (the selection came from 同种比较's
+## 按保留规则选中): the backend re-evaluates the rule so 放生记录 shows why each
+## went and who beat it; other pets in the selection are logged as 手动放生.
 func _cmd_release_pets(command: Dictionary) -> Dictionary:
 	session.last_error = ""
-	var result: Dictionary = session.release_pets(command.get("ids",[]))
+	var source := str(command.get("source","手动"))
+	var notes := {}
+	if source=="保留规则" and int(command.get("template_id",-1))>=0:
+		var template := int(command.template_id)
+		var profile: Dictionary = session.snapshot()
+		var protected: Dictionary = KeepRule.always_kept(profile)
+		protected.merge(automation.capture_helpers(),true)
+		var rule: Dictionary = AutomationSettings.stat_filter(session.automation_settings(),template).get("keep_rule",{})
+		var pets: Array = KeepRule.species_pets(profile,template)
+		notes = session.keep_rule_notes(pets,KeepRule.evaluate(pets,rule,protected))
+	var result: Dictionary = session.release_pets(command.get("ids",[]),source if source in ["手动","保留规则"] else "手动",notes)
 	if int(result.get("released",0)) > 0:
 		save()
 		_publish()
