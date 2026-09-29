@@ -45,7 +45,7 @@ These English Markdown documents capture the supplied design conversation. They 
 The latest explicit user decisions take precedence over this specification. Record subsequent architectural changes close to the affected document. Do not let documentation become a prerequisite for showing working gameplay.
 
 - [M005: four villages and the connecting world](development/m005-four-villages.md).
-- [Character selection](development/character-selection.md), [map navigation](development/dev-map-overview.md), [riding](reverse-engineering/original-riding.md), [special pets](reverse-engineering/special-pets.md), [pet collection and growth comparison](development/pet-collection-growth.md), [GM controls](development/gm-controls.md).
+- [Character selection](development/character-selection.md), [map navigation](development/dev-map-overview.md), [riding](reverse-engineering/original-riding.md), [special pets](reverse-engineering/special-pets.md) (and the [pet birth and growth audit](reverse-engineering/pet-birth-audit.md)), [pet collection and growth comparison](development/pet-collection-growth.md), [GM controls](development/gm-controls.md).
 - [In-game changelog and version workflow](../AGENTS.md).
 
 - [Current restoration checklist and remaining gaps](development/restoration-status.md).
