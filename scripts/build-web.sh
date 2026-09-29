@@ -29,6 +29,9 @@ python3 tools/plan_web_packs.py
 rm -rf build/web-export
 mkdir -p build/web-export
 "$engine" --headless --path client --export-release Web ../build/web-export/index.html
+# Loaded in <head> before the engine (export preset html/head_include): keeps
+# sound alive across system audio interruptions, see web/audio_session.js.
+cp web/audio_session.js build/web-export/
 # Packs are built beside the served set and swapped in only when complete, so
 # a failed or interrupted build never leaves a page without packs.json. The new
 # set starts as a copy-on-write clone of the served one; unchanged packs stay.

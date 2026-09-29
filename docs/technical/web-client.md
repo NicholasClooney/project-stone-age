@@ -76,6 +76,30 @@ brew install mkcert
 
 Everything lives in the ignored `.tools/tls/`; nothing is added to the Mac's trust store. That folder exists only in the checkout where `make-cert.sh` ran: copy it into other checkouts and worktrees (`cp -c -R <checkout>/.tools/tls .tools/tls`) rather than rerunning the script there, which would create a new CA that devices must install again. Without it `serve.sh` warns and serves plain HTTP / WS, and `https://` pages or `wss://` clients cannot connect. Install the CA on Vision Pro once: AirDrop `.tools/tls/StoneAge-Local-CA.crt`, install it under Settings > General > VPN & Device Management, then enable it under Settings > General > About > Certificate Trust Settings. Prefer the `.local` name; rerun `make-cert.sh` if you use the IP and it changes. Keep `.tools/tls/ca/rootCA-key.pem` private: anyone with it can mint certificates this device trusts. Explicit `STONE_AGE_TLS_CERT` / `STONE_AGE_TLS_KEY` override the generated pair. Vision Pro Safari has not been tested yet; check loading, WebSocket connection, audio unlock and gamepad input there first.
 
+## Audio interruptions
+
+Symptom (Vision Pro, reported): after stepping out of the environment, which makes visionOS pause media, the page stays silent until it is reloaded.
+
+Likely cause (from the evidence below; not reproduced on a Vision Pro):
+- WebKit moves a page's AudioContext to `suspended`, or the non-standard `interrupted`, when the system takes the audio session. It does not always come back on its own, and `resume()` only works from a user gesture and can be rejected.
+- Godot 4.6's web audio (`GodotAudio.init` in the exported `index.js`) only knows `suspended`, `running` and `closed`: `interrupted` falls to `default` and is reported as suspended. `_godot_audio_resume()` calls `ctx.resume()` once, ignores a rejection, and does nothing when the context claims `running`. A rejected resume, or a context that reports running but lost its output, therefore stays silent.
+- The page cannot reach Godot's context from outside the engine.
+
+Fix: `web/audio_session.js`, copied next to `index.html` by `scripts/build-web.sh` and loaded in `<head>` before the engine (export preset `html/head_include`):
+- wraps the `AudioContext` constructor to keep a reference to the engine's context, and reports every state change and page hide/show to the game;
+- on every tap, click or key press while the context is not running: plays a short silent media element (reactivates the page's audio session in WebKit), calls `resume()` and plays a one-sample buffer; a failed resume is retried on the next gesture;
+- after the page was hidden, the first gesture also plays the one-sample buffer, for a context that reports running but went silent;
+- Media Session: system play/pause controls pause and resume the radio, and Now Playing shows the track as `石器时代 电台`.
+
+`client/scripts/web_audio.gd` makes the decisions: once the sound has run, any state other than `running` counts as an interruption and pauses the radio (`radio.interrupt`) with the note 系统暂停了声音，按播放继续。 播放 (a gesture) resumes the context and the radio. With the radio off, scene music simply continues once the context runs. It does nothing off the web.
+
+Verified:
+- `web_audio_test`: the decisions, with simulated states.
+- `tools/test_audio_session.py`: the page script under Node with fake browser objects.
+- Desktop Chrome against Godot's real engine context: the script wraps it, a script-side `suspend()` is reported, and the next tap brings it back to `running`.
+
+Not verified: a real Vision Pro or iPhone interruption (Chrome never reports `interrupted`).
+
 ## Debugging
 
 The web build sets `window.stoneAge` once a second (map, cell, connection, mounted and pending packs) and `window.stoneAgeDev(name)` runs DEV actions (`explore`, `encounter`, `escape`, `return`, `village`, `pets`), both usable from Safari's Web Inspector. Chrome pauses `requestAnimationFrame` in hidden or fully covered windows, which freezes a Godot page; an automated browser tab must be visible to run it.
