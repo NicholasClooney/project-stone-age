@@ -28,6 +28,11 @@ func run():
  game.effect.stop()
  view._request_action("attack")
  check(game.effect.playing and game.effect.stream==game.ui_sounds[217],"combat selection plays original menu sound")
+ # A new sound does not cut the one still playing: it finishes on a spare voice.
+ game.play_ui_sound(201)
+ check(game.effect.stream==game.ui_sounds[201] and game.effect_voices.any(func(v):return v.playing and v.stream==game.ui_sounds[217]),"the next sound leaves the previous one playing to its end")
+ game.effect.stop()
+ for voice in game.effect_voices:voice.stop()
  game.set_effects_on(false)
  game.effect.stop()
  view._request_action("attack")

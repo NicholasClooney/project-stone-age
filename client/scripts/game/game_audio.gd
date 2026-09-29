@@ -92,8 +92,7 @@ func play_battle_sound(ident: int) -> void:
 		return
 	if not game.effects_on or not game.battle_sounds.has(ident):
 		return
-	game.effect.stream = game.battle_sounds[ident]
-	game.effect.play()
+	play_effect(game.battle_sounds[ident])
 
 func play_click() -> void:
 	play_ui_sound(201)
@@ -103,8 +102,35 @@ func play_ui_sound(ident: int) -> void:
 		return
 	game.last_ui_sound = ident
 	game.ui_sound_count += 1
-	game.effect.stream = game.ui_sounds[ident]
+	play_effect(game.ui_sounds[ident])
+
+const EFFECT_VOICES := 6
+
+## Plays a sound effect on game.effect (always the newest sound). A different
+## sound still playing there moves to a spare voice and finishes from where it
+## was, so a capture or hit is not cut off by the next click or battle sound.
+func play_effect(stream: AudioStream) -> void:
+	if game.effect.playing and game.effect.stream!=stream:
+		var voice := _spare_voice()
+		voice.stream = game.effect.stream
+		voice.volume_db = game.effect.volume_db
+		voice.play(game.effect.get_playback_position())
+	game.effect.stream = stream
 	game.effect.play()
+
+func _spare_voice() -> AudioStreamPlayer:
+	for voice in game.effect_voices:
+		if not voice.playing:return voice
+	if game.effect_voices.size()<EFFECT_VOICES:
+		var voice := AudioStreamPlayer.new()
+		game.add_child(voice)
+		game.effect_voices.append(voice)
+		return voice
+	# All busy: the one closest to its end gives way.
+	var best: AudioStreamPlayer = game.effect_voices[0]
+	for voice in game.effect_voices:
+		if voice.get_playback_position()>best.get_playback_position():best = voice
+	return best
 
 ## Opens or closes the 电台 window (设置, 游戏助手, its shortcut).
 func toggle_radio() -> void:
@@ -137,4 +163,6 @@ func set_effects_volume(value: float) -> void:
 func apply_sound() -> void:
 	if is_instance_valid(game.music):game.music.volume_db = -80 if game.muted else linear_to_db(maxf(game.volume,0.0001))
 	if is_instance_valid(game.effect):game.effect.volume_db = -10+linear_to_db(maxf(game.effects_volume,0.0001)) if game.effects_on else -80
+	for voice in game.effect_voices:
+		if is_instance_valid(voice):voice.volume_db = game.effect.volume_db
 	game.sound_changed.emit()

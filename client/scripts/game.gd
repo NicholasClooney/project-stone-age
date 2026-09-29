@@ -218,6 +218,9 @@ var muted := false
 var volume := 0.55
 var effects_on := true
 var effects_volume := 1.0
+## Extra players that finish a sound the next one would cut off
+## (scripts/game/game_audio.gd play_effect).
+var effect_voices: Array[AudioStreamPlayer] = []
 ## Sound settings changed (M, 设置, the 音乐 window): open controls follow.
 signal sound_changed
 ## Saved only once restore_device_settings ran, so a test that presses M or
@@ -374,6 +377,7 @@ func close_game() -> void:
 	paused_input = true
 	music.stop()
 	effect.stop()
+	for voice in effect_voices:voice.stop()
 	await get_tree().create_timer(0.15).timeout
 	get_tree().quit()
 
