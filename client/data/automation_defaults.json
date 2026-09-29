@@ -23,7 +23,8 @@
     "total": 8,
     "offsets": [2, 2, 2, 2],
     "rate": 0,
-    "limit": 0
+    "limit": 0,
+    "fast": true
   },
   "stat_filter": {
     "mode": "any",

@@ -12,6 +12,7 @@ const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
+const FastHunt = preload("res://server/fast_hunt.gd")
 ## A presenting client may slow automation to its animation, never stall it.
 const PRESENT_TIMEOUT_MSEC := 5000
 const HUNT_FRAME_BUDGET_USEC := 12000
@@ -72,6 +73,18 @@ var hunt_credit := 0.0
 var hunt_started_usec := 0
 var hunt_last_hit: Dictionary = {}
 var hunt_status := ""
+## Every roll of a run has its own seed (FastHunt.roll_seed(hunt_run_seed, i)),
+## so the native helper can scan rolls in parallel and a roll can be replayed.
+var hunt_run_seed := 0
+var hunt_rng := RandomNumberGenerator.new()
+## 本机极速模式: wanted by the hunt settings (hunt.fast), and whether the helper
+## is scanning now. hunt_fast_note says why it is not, when wanted.
+var fast_hunt := FastHunt.new()
+var hunt_fast_wanted := false
+var hunt_fast_note := ""
+var _fast_base: Dictionary = {}
+## Why this backend cannot run the helper ("" when it can), for the hunt window.
+var fast_unavailable := FastHunt.unavailable_reason()
 
 # ---- find-pet workflow -----------------------------------------------------
 var flow_phase := "idle"
@@ -491,6 +504,11 @@ func start_hunt(filter: Dictionary) -> bool:
 	hunt_data.areas = [backend.encounter_catalog.area_at(hunt_map,hunt_cell)]
 	hunt_catalog = EncounterCatalog.new(hunt_data)
 	hunt_rolls = 0;hunt_inspected = 0;hunt_best = -9;hunt_elapsed = 0;hunt_credit = 0;hunt_last_hit = {}
+	# Two draws from the walking encounter stream seed this run's rolls.
+	hunt_run_seed = (backend.encounter_rng.randi() << 32) | backend.encounter_rng.randi()
+	hunt_fast_wanted = bool(filter.get("fast",false))
+	fast_unavailable = FastHunt.unavailable_reason()
+	hunt_fast_note = fast_unavailable if hunt_fast_wanted else ""
 	hunt_started_usec = Time.get_ticks_usec()
 	hunt_running = true
 	hunt_status = ""
@@ -498,6 +516,7 @@ func start_hunt(filter: Dictionary) -> bool:
 	return true
 
 func stop_hunt(reason: String) -> void:
+	fast_hunt.stop()
 	hunt_running = false
 	hunt_status = reason
 	_emit_status()
@@ -509,6 +528,10 @@ func _hunt_process(delta: float) -> void:
 	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
 	# Discard old backlog after a stall; never catch up with an unbounded burst.
 	# A rate of 0 or less is unlimited: scan for the whole frame budget.
+	if _fast_process():
+		hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
+		if hunt_running:_emit_status()
+		return
 	var unlimited := int(hunt_filter.rate)<=0
 	if not unlimited:hunt_credit = minf(hunt_credit+delta*float(hunt_filter.rate),maxf(1.0,float(hunt_filter.rate)*HUNT_MAX_BACKLOG_SECONDS))
 	var until := Time.get_ticks_usec()+HUNT_FRAME_BUDGET_USEC
@@ -518,12 +541,63 @@ func _hunt_process(delta: float) -> void:
 	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
 	if hunt_running:_emit_status()
 
+## One GDScript scan step: the next roll of this run.
 func scan_once() -> void:
 	if not hunt_running:return
-	hunt_rolls += 1
-	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,backend.encounter_rng)
+	# A direct step (tests, or after the helper) continues from the counters.
+	if fast_hunt.running():fast_hunt.stop()
+	_scan_index(hunt_rolls)
+
+## Scans roll `index` of this run. `expected` is what the native helper
+## reported for it: -1 when called by the GDScript scan, else the enemy slot of
+## its hit, or -2 for an empty troop. The helper only searches; this replay
+## decides, and a different outcome stops the hunt.
+func _scan_index(index: int, expected := -1) -> void:
+	hunt_rolls = index+1
+	var troop := roll_at(index)
 	if troop.is_empty():
 		stop_hunt("原版遇敌数据或条件不完整，已停止；没有替换敌群。");return
+	if expected==-2:
+		stop_hunt(_fast_mismatch(index));return
+	var i := first_match(troop)
+	if i<0:
+		if expected>=0:
+			stop_hunt(_fast_mismatch(index));return
+		if int(hunt_filter.limit)>0 and hunt_rolls>=int(hunt_filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
+		return
+	if expected>=0 and i!=expected:
+		stop_hunt(_fast_mismatch(index));return
+	var filter := hunt_filter
+	var actor: Dictionary = troop.enemies[i]
+	var quality: Dictionary = HuntRules.quality(actor,backend.encounter_catalog.data)
+	hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
+	var found := "找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset]
+	if not TroopArt.can_render(troop.enemies):
+		stop_hunt(found+"\n敌群原版素材不可用，保留本次结果并停止，未进入战斗。");return
+	var config: Dictionary = backend.session.start_wild_battle_config(troop)
+	if config.is_empty():
+		stop_hunt(found+"\n战斗校验未通过，已停止。");return
+	stop_hunt(found)
+	# The workflow resolves its capture fight without animation, like compact training.
+	var workflow_capture := flow_phase=="hunt"
+	if workflow_capture:
+		compact_active = true
+		_emit_status()
+	backend.open_battle(config)
+	var automatic: bool = workflow_capture or bool(filter.get("auto_capture",false))
+	_emit_event({"kind":"hunt_hit","index":i,"actor":actor.duplicate(true),"quality":quality,"rolls":hunt_rolls,"automatic":automatic,"workflow":workflow_capture})
+	if flow_phase=="hunt":matched(i,actor)
+	elif bool(filter.get("auto_capture",false)):start_capture_battle(i)
+
+## Roll `index` of this run, from its own seed (FastHunt.roll_seed).
+func roll_at(index: int) -> Dictionary:
+	hunt_rng.seed = FastHunt.roll_seed(hunt_run_seed,index)
+	return hunt_catalog.roll(hunt_map,hunt_cell,hunt_rng)
+
+## The first enemy slot of a rolled troop the hunt takes, or -1. Counts what it
+## inspects (hunt_inspected, hunt_best, and during a find-pet cycle the
+## predictions); the native helper implements the same rules.
+func first_match(troop: Dictionary) -> int:
 	var filter := hunt_filter
 	for i in range(troop.enemies.size()):
 		var actor: Dictionary = troop.enemies[i]
@@ -536,26 +610,43 @@ func scan_once() -> void:
 		if quality.valid:hunt_best = maxi(hunt_best,int(quality.total_offset))
 		if HuntRules.matches(actor,int(filter.template),bool(filter.level_one),int(filter.total),filter.offsets,backend.encounter_catalog.data):
 			if flow_phase=="hunt" and not accepts_prediction(actor):continue
-			hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
-			var found := "找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset]
-			if not TroopArt.can_render(troop.enemies):
-				stop_hunt(found+"\n敌群原版素材不可用，保留本次结果并停止，未进入战斗。");return
-			var config: Dictionary = backend.session.start_wild_battle_config(troop)
-			if config.is_empty():
-				stop_hunt(found+"\n战斗校验未通过，已停止。");return
-			stop_hunt(found)
-			# The workflow resolves its capture fight without animation, like compact training.
-			var workflow_capture := flow_phase=="hunt"
-			if workflow_capture:
-				compact_active = true
-				_emit_status()
-			backend.open_battle(config)
-			var automatic: bool = workflow_capture or bool(filter.get("auto_capture",false))
-			_emit_event({"kind":"hunt_hit","index":i,"actor":actor.duplicate(true),"quality":quality,"rolls":hunt_rolls,"automatic":automatic,"workflow":workflow_capture})
-			if flow_phase=="hunt":matched(i,actor)
-			elif bool(filter.get("auto_capture",false)):start_capture_battle(i)
-			return
-	if int(filter.limit)>0 and hunt_rolls>=int(filter.limit):stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
+			return i
+	return -1
+
+func _fast_mismatch(index: int) -> String:
+	return "本机极速模式的结果与游戏复核不一致（第 %d 组），已停止，没有进入战斗。请关闭本机极速模式后再试，并报告这个问题。" % (index+1)
+
+## 本机极速模式 for this frame: starts the helper when wanted and possible,
+## and applies its reports. False when the GDScript scan should run instead:
+## also while a 每秒遇敌 rate is set, since that asks for a throttled scan.
+func _fast_process() -> bool:
+	if not hunt_fast_wanted or not hunt_fast_note.is_empty() or int(hunt_filter.get("rate",0))>0:
+		if fast_hunt.running():fast_hunt.stop()
+		return false
+	if not hunt_catalog is EncounterCatalog:return false
+	if not fast_hunt.running():
+		_fast_base = {"inspected":hunt_inspected,"best":hunt_best,"rejects":flow_predicted_rejects,"start":hunt_rolls}
+		var area: Dictionary = hunt_catalog.area_at(hunt_map,hunt_cell)
+		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,flow_phase=="hunt",filter_for,hunt_run_seed,hunt_rolls):
+			hunt_fast_note = "本机辅助程序无法启动，已改用普通筛选。"
+			return false
+		return true
+	var report: Dictionary = fast_hunt.poll()
+	if report.is_empty():return true
+	if str(report.kind)=="exited":
+		hunt_fast_note = "本机辅助程序意外结束，已改用普通筛选。"
+		return false
+	hunt_rolls = int(report.index)
+	hunt_inspected = int(_fast_base.inspected)+int(report.inspected)
+	hunt_best = maxi(int(_fast_base.best),int(report.best))
+	flow_predicted_rejects = int(_fast_base.rejects)+int(report.predicted_rejects)
+	if int(report.best_sum)>=0 and (flow_best_predicted.is_empty() or int(report.best_sum)>int(flow_best_predicted.sum) or (int(report.best_sum)==int(flow_best_predicted.sum) and int(report.best_attack)>int(flow_best_predicted.attack))):
+		flow_best_predicted = {"sum":int(report.best_sum),"attack":int(report.best_attack)}
+	match str(report.kind):
+		"hit":_scan_index(int(report.index),int(report.slot))
+		"stop":_scan_index(int(report.index),-2)
+		"limit":stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
+	return true
 
 # ---- find-pet workflow -----------------------------------------------------
 
@@ -759,7 +850,8 @@ func status() -> Dictionary:
 		# Where the character is now (map -1 until a client has reported it).
 		"position":{"map_id":position_map,"cell":[position_cell.x,position_cell.y]},
 		"hunt":{"running":hunt_running,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"elapsed":hunt_elapsed,
-			"filter":hunt_filter.duplicate(true),"status":hunt_status,"credit":hunt_credit,"last_hit":hunt_last_hit.duplicate(true),"map_id":hunt_map,"cell":[hunt_cell.x,hunt_cell.y]},
+			"filter":hunt_filter.duplicate(true),"status":hunt_status,"credit":hunt_credit,"last_hit":hunt_last_hit.duplicate(true),"map_id":hunt_map,"cell":[hunt_cell.x,hunt_cell.y],
+			"fast":fast_hunt.running(),"fast_wanted":hunt_fast_wanted,"fast_note":hunt_fast_note,"fast_unavailable":fast_unavailable},
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"predicted_rejects":flow_predicted_rejects,

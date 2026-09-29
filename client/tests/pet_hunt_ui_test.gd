@@ -34,6 +34,22 @@ func run() -> void:
 	check(game.session.snapshot()==before,"skipping a troop grants nothing and starts no battle")
 	menu.close_menu()
 	check(not menu.running and not game.paused_input and menu.total.editable,"closing cancels and unlocks settings")
+	# 本机极速模式: on by default, saved with the character, greyed where the helper cannot run.
+	var FastHunt=load("res://server/fast_hunt.gd")
+	menu.open_menu()
+	check(menu.fast.button_pressed and bool(game.automation_settings().hunt.fast),"本机极速模式 is on by default")
+	menu.fast.button_pressed=false
+	check(not bool(game.automation_settings().hunt.fast),"turning it off is saved with the character")
+	menu.fast.button_pressed=true
+	FastHunt.helper_override="/nonexistent/fast_hunt"
+	game.backend.automation.fast_unavailable=FastHunt.unavailable_reason()
+	game.backend.automation._emit_status()
+	menu.close_menu();menu.open_menu()
+	check(menu.fast.disabled and menu.fast.text.contains("不可用") and menu.fast.tooltip_text.contains("未编译"),"without the helper the option is greyed with the reason")
+	FastHunt.helper_override=""
+	game.backend.automation.fast_unavailable=""
+	game.backend.automation._emit_status()
+	menu.close_menu()
 	menu.open_menu();menu.auto_capture.button_pressed=false
 	menu.start_hunt()
 	for i in range(20000):

@@ -33,6 +33,9 @@ var world: Node
 var panel: Panel
 var species: OptionButton
 var auto_capture: CheckBox
+## 本机极速模式 (hunt.fast): the backend scans with the native helper on every
+## CPU core; the same rolls as the ordinary scan, which runs when it cannot.
+var fast: CheckBox
 var level_one: CheckBox
 var preset: OptionButton
 var total: SpinBox
@@ -125,9 +128,13 @@ func _ready() -> void:
 		input.value_changed.connect(filters_changed);offsets.append(input)
 	explanation=label("",Vector2(24,351),15);explanation.size=Vector2(1040,67);explanation.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	label("每秒遇敌",Vector2(24,433),17);rate=number(Vector2(140,423),0,100000,0);rate.value_changed.connect(func(_value):_settings_changed(false))
-	rate.tooltip_text="0为不限速：每帧用满约12毫秒工作预算。填正数则按该目标限速。"
+	rate.tooltip_text="0为不限速：每帧用满约12毫秒工作预算。填正数则按该目标限速。填了限速时不使用本机极速模式。"
 	label("本轮上限",Vector2(340,433),17);limit=number(Vector2(460,423),0,1000000,0);limit.value_changed.connect(func(_value):_settings_changed(false))
 	label("组；0为不限，到上限暂停。",Vector2(610,433),16)
+	fast=CheckBox.new();fast.name="FastHunt";fast.text="本机极速模式";fast.button_pressed=true;fast.position=Vector2(860,428)
+	fast.tooltip_text="服务器所在电脑用全部 CPU 核心筛选，遇到的敌群和结果与普通筛选完全相同，只是快得多；「每秒遇敌」填了限速时按限速用普通筛选；无法使用时也自动改用普通筛选。"
+	panel.add_child(fast);controls.append(fast)
+	fast.toggled.connect(func(_value):_settings_changed(true))
 	status=label("",Vector2(24,478),14);status.size=Vector2(1040,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
 	stop_button=world.button("停止",func():stop_hunt("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
@@ -209,7 +216,7 @@ func commit_settings() -> void:
 func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
-		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value)}
+		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed}
 	# 任何 shown only because the saved species is not found here keeps the saved one.
 	if species.item_count>0 and (_commit_template or not _template_fallback):wanted.template=species.get_selected_id()
 	var hunt:=AutomationSettings.diff(world.automation_settings().hunt,wanted)
@@ -233,6 +240,7 @@ func load_settings() -> void:
 	if _changed(old,hunt,"level_one"):level_one.set_pressed_no_signal(bool(hunt.level_one));refresh=true
 	if _changed(old,hunt,"auto_capture"):auto_capture.set_pressed_no_signal(bool(hunt.auto_capture))
 	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
+	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
 	start_button.text="开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"
 	var shown:=hunt.duplicate(true)
 	var numbers:={"total":total,"rate":rate,"limit":limit}
@@ -299,7 +307,7 @@ func open_menu() -> void:
 	world.player.set_action(3)
 	world.paused_input=true
 	get_parent().move_child(self,get_parent().get_child_count()-1)
-	show();refresh_candidates();refresh_stat_species();world.training_helper._refresh_pet_choices();stop_button.disabled=true
+	show();refresh_candidates();refresh_stat_species();world.training_helper._refresh_pet_choices();stop_button.disabled=true;_show_fast_availability()
 func close_menu() -> void:
 	if not visible:return
 	world.flush_automation_settings()
@@ -312,6 +320,21 @@ func set_controls(locked: bool) -> void:
 	start_button.disabled=locked
 	stop_button.disabled=not locked
 	minimize_button.disabled=not locked
+	_show_fast_availability()
+
+## Greys 本机极速模式 with the reason when the backend's computer cannot run the
+## helper (the hunt then scans the ordinary way).
+func _show_fast_availability() -> void:
+	var reason:=fast_unavailable()
+	if reason.is_empty():
+		fast.text="本机极速模式"
+		return
+	fast.disabled=true
+	fast.text="本机极速模式（不可用）"
+	fast.tooltip_text=reason+"\n将使用普通筛选。"
+
+func fast_unavailable() -> String:
+	return str(world.state.automation.get("hunt",{}).get("fast_unavailable","")) if is_instance_valid(world) else ""
 ## Validated hunt filter from these controls, or {} with the reason shown.
 func build_filter(for_workflow: bool = false) -> Dictionary:
 	for control in controls:
@@ -355,7 +378,20 @@ func stop_hunt(reason: String) -> void:
 	else:on_event({"kind":"hunt_stopped","reason":reason})
 func summary() -> String:
 	var actual:=rolls / maxf(elapsed,0.001)
-	return workflow_summary()+"已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · 本轮 %.1f 秒\n目标 %s · 实际 %.0f 组/秒 · 流程总用时 %s" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,rate_text(int(filter.get("rate",rate.value))),actual,world.pet_workflow.elapsed_text()]
+	return workflow_summary()+"已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · 本轮 %.1f 秒\n%s · 实际 %s · 流程总用时 %s" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,speed_text(),rolls_text(actual),world.pet_workflow.elapsed_text()]
+## How this run scans: the helper, the ordinary scan and why, or its target rate.
+func speed_text() -> String:
+	var hunt: Dictionary=_hunt()
+	if bool(hunt.get("fast",false)):return "本机极速模式"
+	var note:=str(hunt.get("fast_note",""))
+	var target:=int(filter.get("rate",rate.value))
+	if bool(hunt.get("fast_wanted",false)) and not note.is_empty():return "普通筛选（%s）· 目标 %s" % [note.trim_suffix("。"),rate_text(target)]
+	if bool(hunt.get("fast_wanted",false)) and target>0:return "目标 %s（已限速，使用普通筛选）" % rate_text(target)
+	return "目标 "+rate_text(target)
+static func rolls_text(per_second: float) -> String:
+	if per_second>=100000000:return "%.1f 亿组/秒" % (per_second/100000000.0)
+	if per_second>=10000:return "%.0f 万组/秒" % (per_second/10000.0)
+	return "%.0f 组/秒" % per_second
 func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组/秒"%value
 func update_status() -> void:status.text=summary()+"\n筛选中；停止或 Esc 可随时结束。"
 func _process(delta: float) -> void:

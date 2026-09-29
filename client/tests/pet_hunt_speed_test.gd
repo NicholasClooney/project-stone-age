@@ -12,6 +12,8 @@ func run():
  game.switch_area(true,Vector2i(45,45))
  var menu=game.pet_hunt_menu
  menu.open_menu();menu.auto_capture.button_pressed=false
+ # This suite measures the ordinary GDScript scan; fast_hunt_flow_test covers 本机极速模式.
+ menu.fast.button_pressed=false
  check(menu.rate.max_value>=5000 and menu.rate.value==0,"default is unlimited with explicit rates still supported")
  menu.rate.value=2000;menu.start_hunt()
  check(menu.running and menu.filter.rate==2000,"2000/s target starts")

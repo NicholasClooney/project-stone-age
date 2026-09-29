@@ -7,7 +7,7 @@ extends RefCounted
 ## Overrides shape (every part optional):
 ##   training     {xp, compact, hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
-##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit}
+##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast}
 ##   stat_filters {"<template id>": {mode, stop_after, conditions: {sum|attack|defence|speed: {enabled, value, strict, keep}}}}
 ## Per-device choices (battle playback speed, minimized windows) are not here.
 const PATH := "res://data/automation_defaults.json"
@@ -18,7 +18,7 @@ const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120]},
-	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000]},
+	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"]},
 }
 static var _defaults: Dictionary = {}
 
@@ -68,7 +68,7 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 static func hunt_filter(overrides: Dictionary) -> Dictionary:
 	var hunt: Dictionary = effective(overrides).hunt
 	return {"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
-		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture)}
+		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast)}
 
 static func device_default(key: String, fallback: Variant) -> Variant:
 	return defaults().get("device",{}).get(key,fallback)

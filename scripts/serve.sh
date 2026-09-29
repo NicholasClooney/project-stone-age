@@ -17,6 +17,8 @@ else
   echo 'Install Godot 4.6, or set GODOT_BIN to its executable.' >&2
   exit 1
 fi
+# The pet hunt's 本机极速模式 helper; without a compiler the hunt scans in GDScript.
+./scripts/build-fast-hunt.sh --quiet || true
 tls=""
 web_tls=""
 # Certificates from scripts/make-cert.sh are used automatically.

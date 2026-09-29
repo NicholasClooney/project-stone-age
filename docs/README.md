@@ -29,7 +29,7 @@ These English Markdown documents capture the supplied design conversation. They 
 | Folder | Read for |
 | --- | --- |
 | [product](product/vision-and-scope.md) | Scope, historical targets, and [roadmap](product/roadmap.md) |
-| [technical](technical/architecture-overview.md) | [Godot](technical/client.md), [Godot authority](technical/server.md), [networking](technical/networking.md), [local mode](technical/local-server.md), [saves](technical/persistence.md), [platforms](technical/platforms.md), [sprite sheets](technical/sprite-sheets.md) |
+| [technical](technical/architecture-overview.md) | [Godot](technical/client.md), [Godot authority](technical/server.md), [networking](technical/networking.md), [local mode](technical/local-server.md), [saves](technical/persistence.md), [platforms](technical/platforms.md), [sprite sheets](technical/sprite-sheets.md), [fast hunt](technical/fast-hunt.md) |
 | [game-systems](game-systems/world-and-movement.md) | World, movement, [characters and pets](game-systems/characters-and-pets.md), [宠物极品与成长解读](game-systems/pet-quality.md), [battle](game-systems/battle.md), [NPCs, quests, and items](game-systems/npcs-quests-items.md) |
 | [versioning](versioning/version-system.md) | Profiles, [flags](versioning/feature-flags.md), [packs](versioning/content-packs.md), [example manifests](versioning/example-manifests.md) |
 | [ui-ux](ui-ux/presentation-modes.md) | Presentation modes, [controls](ui-ux/controls-and-layout.md), [seamless transitions](ui-ux/seamless-transitions.md) |

@@ -60,6 +60,7 @@ $PY tools/import_cursor.py 'references/anson1788-stoneage/石器时代8.5客户�
 python3 tools/import_encounters.py
 $PY tools/import_encounter_art.py "$CLIENT"
 $PY tools/pack_frame_sheets.py                # last: per-frame PNGs into sprite sheets
+./scripts/build-fast-hunt.sh                  # optional: the pet hunt's 本机极速模式 helper (needs a C compiler)
 ./scripts/run.sh --headless --editor --import --quit
 ```
 

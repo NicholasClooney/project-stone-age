@@ -223,6 +223,9 @@ run "$PY" tools/import_encounter_art.py "$CLIENT25" $riding_extra
 # Last: packs the per-frame PNGs the importers above wrote into sprite sheets.
 run "$PY" tools/pack_frame_sheets.py
 
+step "本机极速模式 helper for the pet hunt"
+./scripts/build-fast-hunt.sh
+
 step "Godot asset import (the first run takes about half an hour)"
 ./scripts/run.sh --headless --editor --import --quit >/dev/null 2>&1
 
