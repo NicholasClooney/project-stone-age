@@ -39,7 +39,30 @@ static func average(pet:Dictionary)->Dictionary:
  var result:=Rules.derived(base)
  for key in Rules.DERIVED:result[key]=maxi(0 if key=="defence" else 1,int(result[key])+int(pet.get("legacy_stat_offset",{}).get(key,0)))
  return result
-static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="stat_total",projected:bool=false)->Array:
+## Sort keys in their fixed tie-break order, and the comparison's default order.
+const SORT_KEYS:=["stat_total","attack","speed","max_hp","defence"]
+const DEFAULT_ORDER:=["stat_total","attack","speed","max_hp"]
+const SORT_NAMES:={"stat_total":"三围合","attack":"攻击","speed":"敏捷","max_hp":"体力","defence":"防御"}
+
+## The player's keys (unknown and repeated ones dropped), then every other key
+## in SORT_KEYS order, so any two pets with different stats compare the same way.
+static func full_order(order:Variant)->Array:
+ var result:=[]
+ for key in ([order] if order is String else order if order is Array else []):
+  if SORT_KEYS.has(key) and not result.has(key):result.append(key)
+ for key in SORT_KEYS:
+  if not result.has(key):result.append(key)
+ return result
+
+static func _id_number(pet:Dictionary)->int:
+ var id:=str(pet.get("pet_id",""))
+ return int(id.trim_prefix("pet-")) if id.trim_prefix("pet-").is_valid_int() else 1<<62
+
+## Carried pets before warehouse pets; within each group favourites first when
+## favorites_first, then each key of order highest first (see full_order), then
+## the older pet id. order is an Array of SORT_KEYS or one key as a String.
+static func rows(profile:Dictionary,selected:Dictionary,order:Variant=DEFAULT_ORDER,projected:bool=false,favorites_first:bool=true)->Array:
+ var keys:=full_order(order)
  var result:=[]
  for location in ["pets","pet_storage"]:
   var pets:Array=profile.get(location,[])
@@ -50,11 +73,13 @@ static func rows(profile:Dictionary,selected:Dictionary,sort_key:String="stat_to
    result.append({"pet":pet,"location":location,"index":index,"forecast":forecast,"quality":quality(pet)})
  result.sort_custom(func(a,b):
   if a.location!=b.location:return a.location=="pets"
-  if a.location=="pet_storage" and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
+  if favorites_first and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
   var av:Dictionary=a.forecast.get("expected",a.pet) if projected else a.pet
   var bv:Dictionary=b.forecast.get("expected",b.pet) if projected else b.pet
-  var x:=sort_value(av,sort_key);var y:=sort_value(bv,sort_key)
-  if x!=y:return x>y
+  for key in keys:
+   var x:=sort_value(av,key);var y:=sort_value(bv,key)
+   if x!=y:return x>y
+  if _id_number(a.pet)!=_id_number(b.pet):return _id_number(a.pet)<_id_number(b.pet)
   return str(a.pet.get("pet_id",a.location+str(a.index)))<str(b.pet.get("pet_id",b.location+str(b.index))))
  return result
 

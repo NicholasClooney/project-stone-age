@@ -21,7 +21,11 @@ var pet_compare_page := 0
 var pet_storage_page := 0
 ## The view and page the panel was last built for; scroll is kept within one.
 var _built_view: Array = []
-var pet_compare_sort := "stat_total"
+## 同种比较 order (PetComparison.SORT_KEYS, first key first) and whether
+## favourites lead each group; this device's choice (viewer.cfg), loaded on first use.
+var pet_compare_order: Array = []
+var pet_compare_favorites_first := true
+var _compare_prefs_loaded := false
 var pet_compare_projected := false
 # 放生 selection for the comparison overlay: stable pet_id -> true, per species.
 var pet_release_selected: Dictionary = {}
@@ -622,11 +626,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	if PetComparison.species_key(selected)!=pet_release_species:
 		clear_release_selection();pet_release_species=PetComparison.species_key(selected)
 	var hunt:Button=world.button("自动抓极品",func():continue_comparison_hunt(selected));hunt.position=Vector2(490,8);hunt.name="CompareContinueHunt";overlay.add_child(hunt)
-	var sort:=OptionButton.new();sort.name="PetCompareSort";sort.position=Vector2(14,48)
-	var keys:=["stat_total","max_hp","attack","defence","speed"]
-	for caption in ["三围合降序","体力降序","攻击降序","防御降序","敏捷降序"]:sort.add_item(caption)
-	sort.select(keys.find(pet_compare_sort));sort.item_selected.connect(func(i):pet_compare_sort=keys[i];rebuild());overlay.add_child(sort)
-	var predicted:=CheckButton.new();predicted.text="按120级属性排序";predicted.position=Vector2(180,45);predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
+	load_compare_prefs()
+	compare_sort_controls(overlay)
 	var filter_result_height:=0
 	var info:Label=world.text(feedback if not feedback.is_empty() else "未满级宠物按成长种子精确推算120级属性，可跨等级比较。",12);info.name="PetComparisonInfo";info.position=Vector2(14,89);overlay.add_child(info)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,196);scroll.size=Vector2(736,396);overlay.add_child(scroll)
@@ -635,7 +636,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		filter_result_height=44;scroll.position.y+=44;scroll.size.y-=44
 	scroll.size.y-=88
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
-	var rows:=PetComparison.rows(profile,selected,pet_compare_sort,pet_compare_projected)
+	var rows:=PetComparison.rows(profile,selected,pet_compare_order,pet_compare_projected,pet_compare_favorites_first)
 	release_controls(overlay,profile,rows,scroll.position.y+scroll.size.y+6)
 	var focus_id:=str(selected.get("pet_id",""))
 	var focus:Dictionary=selected
@@ -647,9 +648,9 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		var summary:Label=world.text("%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [entry[0],actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)],13)
 		summary.position=Vector2(14,int(entry[2])+filter_result_height);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
 	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
-	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(470,46);overlay.add_child(previous)
-	var next:Button=world.button("▶",func():pet_compare_page=mini(pages-1,pet_compare_page+1);rebuild());next.position=Vector2(640,46);overlay.add_child(next)
-	var page:Label=world.text("%d/%d · %d只"%[pet_compare_page+1,pages,rows.size()],13);page.position=Vector2(530,53);overlay.add_child(page)
+	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(548,82);overlay.add_child(previous)
+	var next:Button=world.button("▶",func():pet_compare_page=mini(pages-1,pet_compare_page+1);rebuild());next.position=Vector2(700,82);overlay.add_child(next)
+	var page:Label=world.text("%d/%d · %d只"%[pet_compare_page+1,pages,rows.size()],13);page.position=Vector2(592,89);overlay.add_child(page)
 	var last_group:=""
 	for row in rows.slice(pet_compare_page*20,(pet_compare_page+1)*20):
 		if str(row.location)!=last_group:
@@ -685,6 +686,57 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 					rebuild());dismount.name="CompareDismount_"+identifier;actions.add_child(dismount)
 
 	style_pet_modal(overlay)
+
+func load_compare_prefs()->void:
+	if _compare_prefs_loaded:return
+	_compare_prefs_loaded=true
+	var saved=world.viewer_pref("compare_order",PetComparison.DEFAULT_ORDER)
+	pet_compare_order=(saved as Array).filter(func(key):return PetComparison.SORT_KEYS.has(key)) if saved is Array else []
+	if pet_compare_order.is_empty():pet_compare_order=PetComparison.DEFAULT_ORDER.duplicate()
+	pet_compare_favorites_first=bool(world.viewer_pref("compare_favorites_first",true))
+
+## Sets the 同种比较 order (repeats dropped, at least one key) and remembers it on this device.
+func set_compare_order(order:Array)->void:
+	var cleaned:=[]
+	for key in order:
+		if PetComparison.SORT_KEYS.has(key) and not cleaned.has(key):cleaned.append(key)
+	if cleaned.is_empty():cleaned=PetComparison.DEFAULT_ORDER.duplicate()
+	pet_compare_order=cleaned
+	world.set_viewer_pref("compare_order",cleaned)
+	rebuild()
+
+func set_compare_favorites_first(on:bool)->void:
+	pet_compare_favorites_first=on
+	world.set_viewer_pref("compare_favorites_first",on)
+	rebuild()
+
+## 排序 第一..第四 (later ones may be 无), 收藏优先 and 按120级属性排序.
+## Keys left out still break ties in PetComparison.SORT_KEYS order.
+func compare_sort_controls(overlay:Control)->void:
+	var label_sort:Label=world.text("排序",13);label_sort.position=Vector2(14,53);overlay.add_child(label_sort)
+	var keys:Array=PetComparison.SORT_KEYS
+	for slot in range(4):
+		var pick:=OptionButton.new();pick.name="PetCompareSort%d"%(slot+1);pick.position=Vector2(50+slot*92,46);pick.custom_minimum_size.x=88;pick.focus_mode=Control.FOCUS_NONE
+		pick.tooltip_text="第%s排序" % ["一","二","三","四"][slot]
+		if slot>0:pick.add_item("无")
+		for key in keys:pick.add_item(PetComparison.SORT_NAMES[key])
+		var current:String=str(pet_compare_order[slot]) if slot<pet_compare_order.size() else ""
+		pick.select(keys.find(current)+(1 if slot>0 else 0) if not current.is_empty() else 0)
+		pick.item_selected.connect(func(index:int):
+			var order:=pet_compare_order.duplicate()
+			var chosen:String="" if slot>0 and index==0 else str(keys[index-(1 if slot>0 else 0)])
+			while order.size()<=slot:order.append("")
+			order[slot]=chosen
+			# 无 ends the list: later picks are dropped with it.
+			if chosen.is_empty():order.resize(slot)
+			set_compare_order(order.filter(func(key):return not str(key).is_empty())))
+		overlay.add_child(pick)
+	var favorites:=CheckBox.new();favorites.name="PetCompareFavoritesFirst";favorites.text="收藏优先";favorites.position=Vector2(422,48);favorites.focus_mode=Control.FOCUS_NONE
+	favorites.tooltip_text="每组里收藏的宠物排在前面"
+	favorites.button_pressed=pet_compare_favorites_first;favorites.toggled.connect(set_compare_favorites_first);overlay.add_child(favorites)
+	var predicted:=CheckBox.new();predicted.name="PetCompareProjected";predicted.text="按120级属性";predicted.position=Vector2(536,48);predicted.focus_mode=Control.FOCUS_NONE
+	predicted.tooltip_text="按120级属性排序（未满级宠物按成长种子精确推算）"
+	predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
 
 func clear_release_selection()->void:
 	pet_release_selected.clear();pet_release_confirm=false

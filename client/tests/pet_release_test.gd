@@ -55,7 +55,7 @@ func run()->void:
 	menu.pet_compare_page=1;menu.rebuild();await process_frame
 	overlay=menu.panel.get_node("PetComparisonPanel")
 	check(menu.pet_release_selected.size()==20 and overlay.find_child("CompareSelectedCount",true,false).text.contains("20"),"selection persists across pages and is counted")
-	menu.pet_compare_sort="speed";menu.rebuild();await process_frame
+	menu.pet_compare_order=["speed"];menu.rebuild();await process_frame
 	check(menu.pet_release_selected.size()==20,"selection survives re-sorting")
 	overlay=menu.panel.get_node("PetComparisonPanel")
 	overlay.find_child("CompareClearSelection",true,false).pressed.emit();await process_frame
