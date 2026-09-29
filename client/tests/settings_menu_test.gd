@@ -111,7 +111,7 @@ func run() -> void:
 	key(KEY_G)
 	await process_frame
 	check(helper.visible and game.paused_input,"G opens 游戏助手")
-	var opened := {"HelperTraining":func():return game.training_helper.visible,"HelperPetHunt":func():return game.pet_hunt_menu.visible,"HelperPets":func():return game.adventure_menu.visible,"HelperRadio":func():return game.radio_panel.visible,"HelperMapOverview":func():return game.dev_map_overview.visible,"HelperTravel":func():return game.leveling_destinations.visible,"HelperGM":func():return game.dev_gm_menu.visible}
+	var opened := {"HelperTraining":func():return game.training_helper.visible,"HelperPetHunt":func():return game.pet_hunt_menu.visible,"HelperPets":func():return game.adventure_menu.visible,"HelperPetRecords":func():return game.adventure_menu.visible and game.adventure_menu.pet_records_open,"HelperRadio":func():return game.radio_panel.visible,"HelperMapOverview":func():return game.dev_map_overview.visible,"HelperTravel":func():return game.leveling_destinations.visible,"HelperGM":func():return game.dev_gm_menu.visible}
 	for entry in opened:
 		helper.open_menu()
 		await process_frame

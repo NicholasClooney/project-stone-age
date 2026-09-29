@@ -92,6 +92,8 @@ func _has_point(point: Vector2) -> bool:
 func open_menu(next_kind: String) -> void:
 	kind = next_kind
 	pet_view = "list"
+	# 宠物记录 opens on purpose only (open_pet_records sets it after this).
+	pet_records_open = false
 	pet_rename = false
 	pet_portrait_facing = 1
 	feedback = ""
@@ -521,7 +523,7 @@ func pet_mount_button(profile: Dictionary, at: Vector2) -> Button:
 
 func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 	var origin:=Vector2(288,0)
-	stone(Rect2(origin,Vector2(256,432)))
+	stone(Rect2(origin,Vector2(256,480)))
 	label("宠物收藏 · %d / %d" % [profile.pets.size(),world.session.PET_CAPACITY],origin+Vector2(16,14),235,16)
 	var categories := ["全部","人龙","老虎","暴龙","乌力","其他"]
 	var selector:=OptionButton.new()
@@ -546,8 +548,9 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 			world.refresh_companion();world.checkpoint();feedback="起始伙伴已加入（重复领取不增加）。"
 		else:feedback="空间不足或当前不能领取。"
 		rebuild(),"StarterPets")
-	label(feedback,origin+Vector2(16,400),230,12)
+	label(feedback,origin+Vector2(16,436),230,12)
 	pet_tool_button("宠物记录",origin+Vector2(16,362),func():open_pet_records("caught",-1),"PetRecords")
+	pet_tool_button("自动抓极品",origin+Vector2(16,398),func():world.close_adventure_menu();world.pet_hunt_menu.open_menu(),"PetHunt")
 	pet_tool_button("宠物仓库",origin+Vector2(16,326),func():pet_storage_target_id=str(profile.pets[selected_pet].get("pet_id","")) if not profile.pets.is_empty() else "";pet_storage_open=true;pet_compare_open=false;rebuild(),"PetStorage")
 	if not filtered.is_empty():
 		pet_tool_button("同种比较",origin+Vector2(16,290),func():pet_compare_subject=profile.pets[selected_pet].duplicate(true);pet_compare_open=true;rebuild(),"PetCompare")
