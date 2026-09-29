@@ -10,11 +10,11 @@
 - 结论：就是本文件；以后玩家提的想法都记在这里。
 - 去向：`docs/product/ideas.md`
 
-## 2026-09-29 · 宠物大全 · 🔨
+## 2026-09-29 · 宠物大全 · ✅
 
 - 想法：按系网格看宠物的样子和数据；列表视图按满档 Lv1 练到 120 的平均三围合排名（另列前 0.1%）；每个出现地点可「瞬移去抓」，直接开自动抓极品；入口在游戏助手和宠物窗口。
 - 讨论：种族数据用离线 C 工具预先算好，存成 `species_potential.json`。
-- 去向：分支 `feat/pet-encyclopedia`（另一个代理在做）
+- 去向：ad15ca1（`docs/development/pet-encyclopedia.md`、`docs/technical/species-potential.md`）
 
 ## 2026-09-29 · 属性条件「最高 − x」滚动门槛 + 新品种先摸底 · ✅
 
