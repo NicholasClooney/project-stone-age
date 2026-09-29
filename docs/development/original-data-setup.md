@@ -28,7 +28,7 @@ The 8.0 data contains graphics the 2.5 client lacks (for example the per-charact
 
 ## Timing
 
-Downloads are about 550 MB (1.8 GB with `--with-8.0`). The importers take a few minutes (the riding import about two more with the 8.0 data; it packs each rider and mount composite's frames, about 70,000 with 8.0, into one palette sprite sheet, 241 files and 234 MB, which Godot imports in under a minute); Godot's first asset import of the roughly 100,000 extracted images takes most of the time. A test from a fresh clone (Godot, references and imports, the 2.5 archive already present) took 37 minutes on an M-series Mac, after which all test suites passed. Later runs skip finished steps; `--import-only` re-runs just the importers and Godot import.
+Downloads are about 550 MB (1.8 GB with `--with-8.0`). The importers take a few minutes (the riding import about two more with the 8.0 data). Riding composites, battle sprites and player walking art are packed into [sprite sheets](../technical/sprite-sheets.md), so Godot's first asset import now handles about 5,200 files instead of about 123,000. A test from a fresh clone (Godot, references and imports, the 2.5 archive already present) took 37 minutes on an M-series Mac before the sheets, most of it that import, after which all test suites passed. Later runs skip finished steps; `--import-only` re-runs just the importers and Godot import.
 
 ## Doing it by hand
 
