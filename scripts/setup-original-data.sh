@@ -217,7 +217,9 @@ run "$PY" tools/import_riding.py "$CLIENT25" $riding_extra
 run "$PY" tools/import_grid_cursor.py "$CLIENT25"
 run "$PY" tools/import_cursor.py "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/123.cur"
 run python3 tools/import_encounters.py
-run "$PY" tools/import_encounter_art.py "$CLIENT25"
+# With --with-8.0 the special pets only 8.0 has (机豹, 黑乌力王) get battle art too.
+# shellcheck disable=SC2086
+run "$PY" tools/import_encounter_art.py "$CLIENT25" $riding_extra
 # Last: packs the per-frame PNGs the importers above wrote into sprite sheets.
 run "$PY" tools/pack_frame_sheets.py
 

@@ -121,8 +121,12 @@ def pack(manifest_path, images, keep=frozenset()):
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('targets', nargs='*', default=list(TARGETS), choices=list(TARGETS))
+    # Checked by hand: Python 3.9's argparse matches an empty or default list against choices and fails.
+    parser.add_argument('targets', nargs='*', help='any of %s (default: all)' % ', '.join(TARGETS))
     args = parser.parse_args()
-    for target in args.targets:
+    unknown = [t for t in args.targets if t not in TARGETS]
+    if unknown:
+        parser.error('unknown target: ' + ', '.join(unknown))
+    for target in args.targets or list(TARGETS):
         manifest, images, others = TARGETS[target]
         pack(LEGACY / manifest, LEGACY / images, referenced(LEGACY, others))
