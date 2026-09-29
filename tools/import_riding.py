@@ -15,8 +15,8 @@ import json
 import re
 import shutil
 from pathlib import Path
-from PIL import Image
 from import_legacy import Archive
+from sprite_sheets import save_sheets
 from import_battle import animations
 
 # RPlistMode (char_base.c:549): the classic player appearances are 100000..100235.
@@ -191,72 +191,6 @@ def find_composite(archives, sprite):
     return None, reason
 
 
-SHEET_LIMIT = 4096
-PADDING = 1
-
-
-def pack_sheets(frames, limit=SHEET_LIMIT, padding=PADDING):
-    """Shelf-packs frame images into as few sheets as fit within limit x limit.
-
-    frames maps a bitmap id to its image. Returns (sheets, placements): the
-    sheet images and, per id, [sheet, x, y, w, h]. Frames are padded with
-    transparent pixels so neighbours never bleed into a scaled frame.
-    """
-    order = sorted(frames, key=lambda i: (-frames[i].height, -frames[i].width, i))
-    area = sum((frames[i].width + padding) * (frames[i].height + padding) for i in order)
-    widest = max((frames[i].width + padding for i in order), default=1)
-    width = min(limit, max(widest, 1 << max(0, int((area ** 0.5) * 1.1) - 1).bit_length()))
-    layouts, placements = [[]], {}
-    x = y = shelf = 0
-    for ident in order:
-        w, h = frames[ident].size
-        if w + padding > limit or h + padding > limit:
-            raise ValueError(f'Frame {ident} ({w}x{h}) is larger than a {limit}px sheet')
-        if x + w + padding > width:
-            x, y, shelf = 0, y + shelf, 0
-        if y + h + padding > limit:
-            layouts.append([])
-            x = y = shelf = 0
-        layouts[-1].append((ident, x, y))
-        placements[ident] = [len(layouts) - 1, x, y, w, h]
-        x += w + padding
-        shelf = max(shelf, h + padding)
-    sheets = []
-    for layout in layouts:
-        right = max(x + frames[i].width for i, x, _ in layout)
-        bottom = max(y + frames[i].height for i, _, y in layout)
-        sheet = Image.new('RGBA', (right, bottom), (0, 0, 0, 0))
-        for ident, x, y in layout:
-            sheet.paste(frames[ident].convert('RGBA'), (x, y))
-        sheets.append(sheet)
-    return sheets, placements
-
-
-def to_palette(sheet):
-    """The sheet as an 8-bit palette image when that is lossless.
-
-    The original art is 256-colour with on/off transparency, so a sheet
-    almost always fits: index 0 is transparent and the rest are its colours.
-    Anything else (partial alpha, too many colours) stays RGBA.
-    """
-    colors = sheet.getcolors(257)
-    if colors is None or any(c[3] not in (0, 255) for _, c in colors):
-        return sheet
-    opaque = sorted({c[:3] for _, c in colors if c[3] == 255})
-    if not opaque or len(opaque) > 255:
-        return sheet
-    key = next(c for c in [(255, 0, 255), (0, 255, 255), (1, 2, 3)] + [(i, 7, 11) for i in range(256)] if c not in opaque)
-    rgb = Image.new('RGB', sheet.size, key)
-    rgb.paste(sheet.convert('RGB'), mask=sheet.getchannel('A'))
-    entries = [key] + opaque
-    entries += [opaque[0]] * (256 - len(entries))
-    palette = Image.new('P', (1, 1))
-    palette.putpalette([v for c in entries for v in c])
-    result = rgb.quantize(palette=palette, dither=Image.Dither.NONE)
-    result.info['transparency'] = 0
-    return result
-
-
 def write_sheets(output, composites, decoded):
     """One sprite sheet (rarely two) per rider+mount composite in output/sheets.
 
@@ -270,14 +204,9 @@ def write_sheets(output, composites, decoded):
     result = {}
     for sprite in sorted(composites, key=int):
         used = sorted({f['image'] for a in composites[sprite].values() for f in a['frames']})
-        sheets, placements = pack_sheets({ident: decoded[ident][0] for ident in used})
-        files = []
-        for index, sheet in enumerate(sheets):
-            name = f'{sprite}.png' if len(sheets) == 1 else f'{sprite}-{index}.png'
-            sheet = to_palette(sheet)
-            sheet.save(folder / name, optimize=True, **({'transparency': 0} if sheet.mode == 'P' else {}))
-            files.append(f'sheets/{name}')
-        result[str(sprite)] = dict(files=files, frames={str(i): p for i, p in placements.items()})
+        entry = save_sheets({ident: decoded[ident][0] for ident in used}, folder, str(sprite))
+        entry['files'] = ['sheets/' + name for name in entry['files']]
+        result[str(sprite)] = entry
     return result
 
 
