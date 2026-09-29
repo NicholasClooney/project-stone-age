@@ -239,6 +239,31 @@ func run() -> void:
 	automation.showcase_show_battle = false
 	check(automation._presentation_done({"battle_id":"b","turn":1}),"an unwatched turn is not")
 
+	# 停止 in the hunt window during a shown capture battle stops the whole
+	# cycle (the scan runs beside it, so stopping only the scan left the capture,
+	# training and queue going) and leaves the battle to the player.
+	game.session.gm_heal()
+	check(flow.start_cycle(),"a new cycle starts for 停止")
+	automation.flow_stat_filters[target].conditions.sum.value = 1
+	hunt.hunt_catalog = fixture
+	for i in range(2):hunt.scan_once()
+	flow.advance()
+	check(flow.phase=="capture" and game.battle_view.visible and game.battle_session.snapshot().active and automation.hunt_running,"its capture battle is shown while the search goes on")
+	hunt.restore()
+	hunt.stop_button.pressed.emit()
+	check(flow.phase=="paused" and not automation.running and not automation.hunt_running and automation.showcase_queue.is_empty(),"停止 stops the whole cycle: capture, search and queue")
+	check(game.battle_session.snapshot().active and game.battle_view.visible,"the battle stays open for the player")
+	hunt.close_menu()
+	var stop_turn := int(game.battle_session.snapshot().turn)
+	game.battle_action("attack")
+	check(int(game.battle_session.snapshot().turn)>stop_turn or not game.battle_session.snapshot().active,"and the player can fight it by hand")
+	# Close that battle before the next part.
+	if game.battle_session.snapshot().active:game.battle_action("developer_escape")
+	for i in range(60):await process_frame
+	game.battle_view._process(game.battle_view.feedback_until+30.0)
+	game.return_from_battle()
+	await process_frame
+
 	# Off: a hit goes straight into the compact capture, as before.
 	hunt.showcase.button_pressed = false
 	game.flush_automation_settings()
