@@ -33,6 +33,9 @@ var on := false
 var paused := false
 var station := ALL
 var shuffle := false
+## 单曲循环: the current track loops and the radio never moves on by itself;
+## 上一首, 下一首 and picking a track still change it. This device's own.
+var repeat_one := false
 ## Track id playing (or loading) and its entry in the station's list.
 var current := ""
 var entry := -1
@@ -61,6 +64,7 @@ func configure(owner: Node) -> void:
 	for track in tracks:by_id[str(track.id)] = track
 	station = str(world.viewer_pref("radio_station",ALL))
 	shuffle = bool(world.viewer_pref("radio_shuffle",false))
+	repeat_one = bool(world.viewer_pref("radio_repeat_one",false))
 	_library_json = JSON.stringify(library())
 
 func available() -> bool:
@@ -152,6 +156,12 @@ func choose_station(key: String) -> void:
 			_stop_playback("「%s」还没有曲子。" % station_title())
 		else:
 			play_at(randi() % list.size() if shuffle else 0)
+	changed.emit()
+
+func set_repeat_one(enabled: bool) -> void:
+	repeat_one = enabled
+	_forget_upcoming()
+	world.set_viewer_pref("radio_repeat_one",repeat_one)
 	changed.emit()
 
 func set_shuffle(enabled: bool) -> void:
@@ -340,6 +350,10 @@ func loops_for(track: String) -> int:
 func _process(_delta: float) -> void:
 	if not on or paused or _stream==null or world.music.stream!=_stream or not world.music.playing:return
 	var at: float = world.music.get_playback_position()
+	# The stream loops by itself; nothing to count, fetch or change.
+	if repeat_one:
+		_last_position = at
+		return
 	var length: float = _stream.get_length()
 	var remaining: float = (loops_for(current)-_loops-1)*length+(length-at)
 	if remaining <= PREFETCH_SECONDS:prepare_next()

@@ -117,6 +117,23 @@ func run() -> void:
 	radio_a.play(all[0])
 	check(await until(func():return radio_a.current==all[0]),"a chosen track plays at once")
 
+	# 单曲循环: the track loops past its quota and nothing is fetched ahead.
+	(a.radio_panel.find_child("RadioRepeatOne",true,false) as CheckBox).button_pressed = true
+	check(radio_a.repeat_one and bool(a.viewer_pref("radio_repeat_one",false)),"单曲循环 switches on and is remembered on this device")
+	radio_a._loops = loops-1
+	radio_a._last_position = 9999.0
+	a.music.seek(float(radio_a.by_id[all[0]].seconds)-6.0)
+	for i in range(20):await process_frame
+	radio_a._process(0.0)
+	check(radio_a.current==all[0] and radio_a.upcoming==-1,"with 单曲循环 the track keeps looping and nothing is fetched ahead")
+	radio_a.next()
+	check(await until(func():return radio_a.current==all[1]),"下一首 still changes the track")
+	check(radio_a.repeat_one,"and the new track loops in turn")
+	(a.radio_panel.find_child("RadioRepeatOne",true,false) as CheckBox).button_pressed = false
+	check(not radio_a.repeat_one,"单曲循环 switches off")
+	radio_a.play(all[0])
+	check(await until(func():return radio_a.current==all[0]),"back to the first track")
+
 	# Favourites belong to the character: both devices see them.
 	(a.radio_panel.find_child("RadioFavoriteCurrent",true,false) as Button).pressed.emit()
 	check(await until(func():return backend.session.snapshot().music.favorites==[all[0]]),"★ saves the favourite in the character's profile")

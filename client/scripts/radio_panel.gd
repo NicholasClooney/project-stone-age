@@ -211,6 +211,15 @@ func _station_row() -> void:
 	shuffle.button_pressed = radio.shuffle
 	shuffle.toggled.connect(radio.set_shuffle)
 	row.add_child(shuffle)
+	var repeat := CheckBox.new()
+	repeat.name = "RadioRepeatOne"
+	repeat.text = "单曲循环"
+	repeat.tooltip_text = "一直循环当前这首；上一首、下一首和点曲子照样可以换"
+	repeat.focus_mode = Control.FOCUS_NONE
+	repeat.add_theme_font_size_override("font_size",13)
+	repeat.button_pressed = radio.repeat_one
+	repeat.toggled.connect(radio.set_repeat_one)
+	row.add_child(repeat)
 	var manage := HBoxContainer.new()
 	manage.add_theme_constant_override("separation",4)
 	body.add_child(manage)
