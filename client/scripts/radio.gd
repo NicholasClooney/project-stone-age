@@ -39,6 +39,8 @@ var entry := -1
 ## What the map or battle last asked for, played again when the radio stops.
 var scene_stream: AudioStream
 var status := ""
+## The note interrupt() showed; cleared when 播放 resumes.
+var interrupted_note := ""
 ## A station to tune to once the library has it (a playlist just created or renamed).
 var station_pending := ""
 var _stream: AudioStream
@@ -192,6 +194,8 @@ func turn_off() -> void:
 	changed.emit()
 
 func toggle_pause() -> void:
+	# 播放 is a user gesture: the web page may resume a system-paused AudioContext.
+	if is_instance_valid(world.get("web_audio")):world.web_audio.resume_context()
 	if not on:
 		turn_on(str(world.viewer_pref("radio_track","")))
 		return
@@ -200,6 +204,17 @@ func toggle_pause() -> void:
 		return
 	paused = not paused
 	world.music.stream_paused = paused
+	if not paused and status==interrupted_note:status = ""
+	changed.emit()
+
+## The system took the sound away (web_audio.gd): show the radio as paused with
+## a note, so 播放 resumes it. Does nothing when the radio is off or already paused.
+func interrupt(note: String) -> void:
+	if not on or paused or current.is_empty():return
+	paused = true
+	world.music.stream_paused = true
+	interrupted_note = note
+	status = note
 	changed.emit()
 
 ## Plays the station's entry at index (a playlist may list a track twice).

@@ -119,6 +119,8 @@ var pet_training: Control
 ## 电台 (scripts/radio.gd) and its window; the radio plays through `music`.
 var radio: Node
 var radio_panel: Control
+## Web only: keeps sound alive across system audio interruptions (web_audio.gd).
+var web_audio: Node
 var adventure_menu: Control
 var profile_persistence := true:
 	set(value):
@@ -1163,6 +1165,10 @@ func build_ui() -> void:
 	radio.name = "Radio"
 	add_child(radio)
 	radio.configure(self)
+	web_audio = preload("res://scripts/web_audio.gd").new()
+	web_audio.name = "WebAudio"
+	add_child(web_audio)
+	web_audio.configure(self)
 	radio_panel = preload("res://scripts/radio_panel.gd").new()
 	root.add_child(radio_panel)
 	radio_panel.configure(self,radio)
