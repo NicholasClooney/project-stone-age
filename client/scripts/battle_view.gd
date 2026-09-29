@@ -156,7 +156,7 @@ func _ready() -> void:
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stage)
 	if FileAccess.file_exists(ART_ROOT+"manifest.json"):
-		manifest = JSON.parse_string(FileAccess.get_file_as_string(ART_ROOT+"manifest.json"))
+		manifest = preload("res://scripts/battle_art.gd").data()
 		battlefield = picture("background.png",Vector2.ZERO)
 		battlefield.z_index = -1000
 		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
@@ -329,6 +329,7 @@ func picture(path: String, point: Vector2) -> TextureRect:
 	return result
 
 func add_actor(ident: String, point: Vector2, facing: int) -> void:
+	preload("res://scripts/battle_art.gd").ensure(ident)
 	var characters: Dictionary = manifest.get("characters",{})
 	if not characters.has(ident):
 		return
@@ -527,6 +528,7 @@ func capture_transition() -> void:
 		transition_tiles.append({"node":tile,"origin":tile.position,"release":float(release)/60.0})
 
 func set_actor_art(index: int, ident: String) -> void:
+	preload("res://scripts/battle_art.gd").ensure(ident)
 	if index >= actors.size() or not manifest.get("characters",{}).has(ident): return
 	actors[index]["character_id"] = ident
 	if index==0 and not preload("res://scripts/riding.gd").manifest().get("characters",{}).has(ident):unmounted_player_art=ident

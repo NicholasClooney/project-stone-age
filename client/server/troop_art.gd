@@ -3,7 +3,7 @@ extends RefCounted
 ## cannot present on any client, so the decision must not depend on what one
 ## client has downloaded; it reads the full asset set next to the backend.
 const ART_ROOT := "res://assets/legacy/battle/"
-static var _manifest: Dictionary = {}
+const BattleArt = preload("res://scripts/battle_art.gd")
 static var _validation: Dictionary = {}
 ## Set by a client that downloads art on demand: sprite id -> pack. A sprite
 ## then counts as renderable when its animations are complete and a pack
@@ -11,10 +11,7 @@ static var _validation: Dictionary = {}
 static var pack_index: Dictionary = {}
 
 static func manifest() -> Dictionary:
-	if _manifest.is_empty() and FileAccess.file_exists(ART_ROOT+"manifest.json"):
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string(ART_ROOT+"manifest.json"))
-		if parsed is Dictionary:_manifest = parsed
-	return _manifest
+	return BattleArt.data()
 
 static func can_render(enemies: Array) -> bool:
 	if enemies.is_empty() or enemies.size()>10:return false
@@ -26,9 +23,12 @@ static func can_render(enemies: Array) -> bool:
 
 static func _valid(ident: String) -> bool:
 	var data := manifest()
-	var valid: bool = data.get("characters",{}).has(ident)
 	var downloadable := not pack_index.is_empty()
 	if downloadable and not pack_index.has(ident):return false
+	# A pet sprite kept in its own file (BattleArt) was checked complete by
+	# the importer; on the web its file arrives with the sprite's pack.
+	if not BattleArt.ensure(ident) and BattleArt.is_extra(ident):return downloadable
+	var valid: bool = data.get("characters",{}).has(ident)
 	var animations: Dictionary = data.get("characters",{}).get(ident,{})
 	for action in [0,1,2,3,4,10]:
 		for direction in range(8):

@@ -21,13 +21,14 @@ func _ready() -> void:
 	name_label.add_theme_constant_override("shadow_offset_y",1)
 	name_label.position = Vector2(-30,-58)
 	add_child(name_label)
-	manifest = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+	manifest = preload("res://scripts/battle_art.gd").data()
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 func select_pet(ident: String, caption: String) -> void:
 	pet_name = caption
 	name_label.text = caption
 	if sprite_id==ident:return
-	sprite_id = ident
+	# A pet sprite in its own file whose web pack is not here yet: retry on the next call.
+	sprite_id = ident if preload("res://scripts/battle_art.gd").ensure(ident) else ""
 	animations = manifest.characters.get(ident,{})
 	textures.clear()
 	for animation in animations.values():

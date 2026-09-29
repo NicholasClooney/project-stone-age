@@ -63,7 +63,11 @@ def fill(manifest_path, table, se_folder):
     sounds = dict(manifest.get('frame_sounds', {}))
     (path.parent / 'audio').mkdir(exist_ok=True)
     missing = []
-    for ident in sorted(used_sounds(manifest)):
+    used = used_sounds(manifest)
+    # Pet sprites kept in their own files (battle/pets, import_encounter_art.py).
+    for name in manifest.get('extra_sprites', {}).values():
+        used |= used_sounds(json.loads((path.parent / name).read_text()))
+    for ident in sorted(used):
         name = table.get(ident)
         if name is None or not (se_folder / name).exists():
             missing.append(ident)

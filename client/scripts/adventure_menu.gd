@@ -265,7 +265,7 @@ func art_button(ident: int, point: Vector2, action: String, value: Variant = nul
 	return button
 
 func portrait(sprite: int, point: Vector2, bounds: Vector2) -> void:
-	var frames: Array = AnimatedPortrait.manifest().characters[str(sprite)]["3_0"].frames
+	var frames: Array = AnimatedPortrait.animation_for(str(sprite),3,0).frames
 	var view := TextureRect.new()
 	view.texture = preload("res://scripts/sheet_frames.gd").texture("res://assets/legacy/battle/",AnimatedPortrait.manifest().get("sheets",{}),str(sprite),int(frames[0].image))
 	view.position = point

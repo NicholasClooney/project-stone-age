@@ -69,7 +69,7 @@ func setup_audio() -> void:
 	for entry in [[201,"sas_01.wav"],[202,"sas_02.wav"],[203,"sas_03.wav"]]:
 		game.ui_sounds[entry[0]] = load("res://assets/legacy/"+entry[1])
 	if FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
-		var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json"))
+		var manifest: Dictionary = preload("res://scripts/battle_art.gd").data()
 		for ident in manifest.get("frame_sounds",{}):
 			game.battle_sounds[int(ident)] = load("res://assets/legacy/battle/"+str(manifest.frame_sounds[ident]))
 		if manifest.audio.has("battle_cancel"):

@@ -48,7 +48,8 @@ def species_rows(catalog):
     lowest = wild_catch_levels(catalog)
     rows = []
     for template in sorted(catalog['templates'].values(), key=lambda t: t['id']):
-        if not template.get('pet_flag'):
+        # Later album pets (tools/import_encounters.py) have no original stats to simulate.
+        if not template.get('pet_flag') or not template.get('stats_known', True):
             continue
         wild = lowest.get(template['id'], 0)
         rows.append((template['id'], int(template['initial']), int(template.get('wild_growth', 4)),

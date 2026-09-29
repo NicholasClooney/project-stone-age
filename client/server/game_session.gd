@@ -1283,6 +1283,8 @@ func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:
 	var species := "original_%d" % int(template)
 	var data: Dictionary = Progression.species_definition(species)
 	if data.is_empty():return _gm_error("没有原表 %d。" % int(template))
+	# Later pets from the album (tools/import_encounters.py) have art but no stats to be born with.
+	if not bool(data.get("stats_known",true)):return _gm_error("%s（%d）是 %s 新宠，没有原版数值，不能发放。" % [data.name,int(template),str(data.get("source",""))])
 	if not TroopArt.can_render([{"sprite":int(data.sprite)}]):return _gm_error("原表 %d（%s）的战斗图未导入，不能发放。" % [int(template),data.name])
 	_ensure_pet_ids()
 	var pet := Progression.species_actor(species,1,randi(),[2,2,2,2] if full_grade else [])

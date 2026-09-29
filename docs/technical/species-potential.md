@@ -9,7 +9,7 @@ python3 tools/build_species_potential.py            # 1,000,000 pets per species
 python3 tools/build_species_potential.py --pets 20000 --output build/test.json   # quick check
 ```
 
-It compiles `tools/species_potential.c` to `build/species_potential`, feeds it the pet templates of `client/assets/legacy/encounters/catalog.json` and writes the JSON (one species per line). A full run took about 4 minutes on 14 cores (2026-09-29, busy machine). Rerun after re-importing encounters; commit the result.
+It compiles `tools/species_potential.c` to `build/species_potential`, feeds it the pet templates of `client/assets/legacy/encounters/catalog.json` and writes the JSON (one species per line). The later album pets have no original stats (`stats_known` false, [8.0 pets](../reverse-engineering/pets-8.0.md)) and are skipped, so the file still has 459 species. Pass `--jobs 6` on a machine that is also running the game. A full run took about 4 minutes on 14 cores (2026-09-29, busy machine). Rerun after re-importing encounters; commit the result.
 
 ## Rules
 

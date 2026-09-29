@@ -4,9 +4,8 @@ extends Control
 ## at its bitmap and frame offsets. Frames follow a global clock, so a rebuilt
 ## window keeps the loop where it was instead of restarting at frame 0.
 ## Clicking turns the sprite one facing, like AnimDisp ANIM_DISP_PET (menu.cpp:1177).
-const MANIFEST := "res://assets/legacy/battle/manifest.json"
+const BattleArt = preload("res://scripts/battle_art.gd")
 const STAND := 3
-static var _manifest: Dictionary = {}
 static var _textures: Dictionary = {}
 
 var sprite := ""
@@ -18,11 +17,10 @@ var _offset := Vector2.ZERO
 var _texture: Texture2D
 
 static func manifest() -> Dictionary:
-	if _manifest.is_empty() and FileAccess.file_exists(MANIFEST):
-		_manifest = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
-	return _manifest
+	return BattleArt.data()
 
 static func animation_for(ident: String, action_id: int, direction: int) -> Dictionary:
+	BattleArt.ensure(ident)
 	var animations: Dictionary = manifest().get("characters",{}).get(ident,{})
 	return animations.get("%d_%d" % [action_id,direction],animations.get("%d_0" % action_id,{}))
 

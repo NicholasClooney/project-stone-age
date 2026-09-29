@@ -29,15 +29,18 @@ static func texture(folder: String, sheets: Dictionary, key: String, bitmap: int
 	return frame
 
 static var _owners: Dictionary = {}
+static var _owner_counts: Dictionary = {}
 
 ## The frame for a caller that knows only the bitmap: each bitmap belongs to
 ## one sheet key per folder (the importers check this), found through an
-## index built once per folder.
+## index built per folder and rebuilt when sheets were added (a pet sprite
+## BattleArt merged in on first use).
 static func bitmap_texture(folder: String, sheets: Dictionary, bitmap: int) -> Texture2D:
 	return texture(folder,sheets,owner(folder,sheets,bitmap),bitmap)
 
 static func owner(folder: String, sheets: Dictionary, bitmap: int) -> String:
-	if not _owners.has(folder):
+	if not _owners.has(folder) or int(_owner_counts.get(folder,-1)) != sheets.size():
+		_owner_counts[folder] = sheets.size()
 		var index := {}
 		for key in sheets:
 			for id in sheets[key].get("frames",{}):index[id] = key

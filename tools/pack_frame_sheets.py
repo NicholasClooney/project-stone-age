@@ -18,6 +18,10 @@ Godot imports a few hundred files instead of tens of thousands. A PNG a map
 still names (a villager drawn in a player character's frames) is kept. See
 docs/technical/sprite-sheets.md.
 
+The battle manifest's `extra_sprites` (pet sprites import_encounter_art.py
+keeps in battle/pets/<sprite>.json) are packed the same way; each file gets
+its own `sheets`.
+
 Re-running is safe: a frame whose PNG is gone is cut back out of the sheet
 that holds it (the sheets are lossless), so running one importer again and
 then this tool repacks everything.
@@ -60,9 +64,17 @@ def groups(manifest):
     return result
 
 
-def frame_source(folder, images, manifest):
+def extra_manifests(folder, manifest):
+    """(path, data) of each extra sprite file the manifest lists."""
+    return [(folder / name, json.loads((folder / name).read_text())) for name in manifest.get('extra_sprites', {}).values()]
+
+
+def frame_source(folder, images, manifest, extras=()):
     """Loads a bitmap from its PNG, or from the existing sheet holding it."""
-    owners = {b: key for key, sheet in manifest.get('sheets', {}).items() for b in sheet.get('frames', {})}
+    sheets = dict(manifest.get('sheets', {}))
+    for _path, data in extras:
+        sheets.update(data.get('sheets', {}))
+    owners = {b: key for key, sheet in sheets.items() for b in sheet.get('frames', {})}
     opened = {}
 
     def load(bitmap):
@@ -73,8 +85,8 @@ def frame_source(folder, images, manifest):
         key = owners.get(str(bitmap))
         if key is None:
             raise FileNotFoundError(f'Bitmap {bitmap} has neither a PNG nor a sheet')
-        sheet_index, x, y, w, h = manifest['sheets'][key]['frames'][str(bitmap)]
-        name = manifest['sheets'][key]['files'][sheet_index]
+        sheet_index, x, y, w, h = sheets[key]['frames'][str(bitmap)]
+        name = sheets[key]['files'][sheet_index]
         if name not in opened:
             with Image.open(folder / name) as image:
                 opened[name] = image.convert('RGBA')
@@ -86,26 +98,36 @@ def pack(manifest_path, images, keep=frozenset()):
     manifest_path, images = Path(manifest_path), Path(images)
     folder = manifest_path.parent
     manifest = json.loads(manifest_path.read_text())
-    load = frame_source(folder, images, manifest)
+    extras = extra_manifests(folder, manifest)
+    load = frame_source(folder, images, manifest, extras)
     staging = folder / 'sheets.new'
     shutil.rmtree(staging, ignore_errors=True)
     staging.mkdir()
-    sheets = {}
-    for sprite, bitmaps in groups(manifest).items():
-        if not bitmaps:
-            continue
-        entry = save_sheets({b: load(b) for b in bitmaps}, staging, sprite)
-        entry['files'] = ['sheets/' + name for name in entry['files']]
-        sheets[sprite] = entry
+
+    def pack_all(data):
+        result = {}
+        for sprite, bitmaps in groups(data).items():
+            if not bitmaps:
+                continue
+            entry = save_sheets({b: load(b) for b in bitmaps}, staging, sprite)
+            entry['files'] = ['sheets/' + name for name in entry['files']]
+            result[sprite] = entry
+        return result
+    sheets = pack_all(manifest)
+    extra_sheets = [pack_all(data) for _path, data in extras]
     # Swap in the new sheets only once every frame was read from the old ones.
     shutil.rmtree(folder / 'sheets', ignore_errors=True)
     staging.rename(folder / 'sheets')
     manifest['sheets'] = sheets
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')))
-    frames = sum(len(s['frames']) for s in sheets.values())
-    files = sum(len(s['files']) for s in sheets.values())
+    for (path, data), packed in zip(extras, extra_sheets):
+        data['sheets'] = packed
+        path.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':')))
+    everything = [sheets] + extra_sheets
+    frames = sum(len(s['frames']) for group in everything for s in group.values())
+    files = sum(len(s['files']) for group in everything for s in group.values())
     removed = 0
-    for sheet in sheets.values():
+    for sheet in [s for group in everything for s in group.values()]:
         for bitmap in sheet['frames']:
             png = images / f'{bitmap}.png'
             if bitmap not in keep and png.exists():
@@ -115,8 +137,8 @@ def pack(manifest_path, images, keep=frozenset()):
     if images.is_dir() and not any(images.iterdir()):
         images.rmdir()
     size = sum(p.stat().st_size for p in (folder / 'sheets').glob('*.png'))
-    print(f'Packed {frames} frames of {len(sheets)} sprites into {files} sheets ({size // (1 << 20)} MB) in {folder / "sheets"}; '
-          f'removed {removed} frame PNGs' + (f', kept {len(keep & {b for s in sheets.values() for b in s["frames"]})} that maps also draw' if keep else ''))
+    print(f'Packed {frames} frames of {len(sheets)} sprites and {len(extras)} extra sprites into {files} sheets ({size // (1 << 20)} MB) in {folder / "sheets"}; '
+          f'removed {removed} frame PNGs' + (f', kept {len(keep & {b for group in everything for s in group.values() for b in s["frames"]})} that maps also draw' if keep else ''))
 
 
 if __name__ == '__main__':

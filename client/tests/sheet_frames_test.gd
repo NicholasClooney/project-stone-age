@@ -36,11 +36,39 @@ func check_frames(label: String, folder: String, data: Dictionary, sprites: Arra
 		sampled += 1
 	check(ok,"%s: the first frame of all %d sprites is found by bitmap alone" % [label,sampled])
 
+## Pet sprites kept in battle/pets/<sprite>.json (BattleArt): merged into the
+## shared manifest on first use, after a battle already indexed the sheets,
+## every frame is still found by bitmap alone (the battle view's lookup).
+func extra_sprites() -> void:
+	const BattleArt = preload("res://scripts/battle_art.gd")
+	var data: Dictionary = BattleArt.data()
+	var folder := "res://assets/legacy/battle/"
+	check(data.get("extra_sprites",{}).size() > 300 and not data.characters.has("101869"),"most pet sprites live in their own files, not the manifest (%d)" % data.get("extra_sprites",{}).size())
+	SheetFrames.bitmap_texture(folder,data.sheets,int(data.characters["100250"]["3_1"].frames[0].image))
+	check(BattleArt.ensure(101869) and data.characters.has("101869") and data.sheets.has("101869"),"巴雅's sprite (101869, 8.0) merges in on first use")
+	var complete := true
+	var renumbered := 0
+	for animation in data.characters["101869"].values():
+		for frame in animation.frames:
+			var bitmap := int(frame.image)
+			if bitmap >= 1000000000:renumbered += 1
+			var texture := SheetFrames.bitmap_texture(folder,data.sheets,bitmap)
+			var info: Dictionary = data.images[str(bitmap)]
+			if texture==null or texture.get_size()!=Vector2(float(info.w),float(info.h)):complete = false
+	check(complete,"every frame of it is found by bitmap after the merge")
+	check(renumbered == 0,"its bitmaps keep their numbers: 2.5 has the same pictures or none under them")
+	# 机豹 (101423, 8.0 only): 2.5 uses its bitmap numbers for other pictures.
+	for animation in data.characters["101423"].values():
+		for frame in animation.frames:
+			if int(frame.image) >= 1000000000:renumbered += 1
+	check(renumbered > 0,"8.0 bitmaps whose numbers 2.5 uses for other pictures are renumbered (机豹: %d frames)" % renumbered)
+
 func run() -> void:
 	var battle := manifest("res://assets/legacy/battle/manifest.json")
 	check_frames("battle","res://assets/legacy/battle/",battle,["100000","100250"])
 	check(SheetFrames.texture("res://assets/legacy/battle/",battle.sheets,"100000",-1)==null,"a frame no sheet holds draws nothing")
 	check(not DirAccess.dir_exists_absolute("res://assets/legacy/battle/images"),"no per-frame battle PNGs are left for Godot to import")
+	extra_sprites()
 	var characters := manifest("res://assets/legacy/characters/catalog.json")
 	check_frames("characters","res://assets/legacy/characters/",characters,["100000","100010"])
 	# A frame only the sheet holds has no PNG left; one a map also draws keeps it.

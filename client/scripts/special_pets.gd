@@ -22,5 +22,6 @@ const LIST := [
 static func unavailable_reason(template: int) -> String:
 	var data: Dictionary = preload("res://server/progression.gd").species_definition("original_%d" % template)
 	if data.is_empty():return "没有这个原表"
+	if not bool(data.get("stats_known",true)):return "没有原版数值（%s 新宠）" % data.get("source","")
 	if not preload("res://server/troop_art.gd").can_render([{"sprite":int(data.sprite)}]):return "战斗图未导入（需要 --with-8.0 的导入）"
 	return ""

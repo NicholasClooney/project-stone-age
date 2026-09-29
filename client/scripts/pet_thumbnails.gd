@@ -8,8 +8,13 @@ extends RefCounted
 ## texture(sprite) returns the cached picture, or null while there is none:
 ## the art is missing, its web pack is not downloaded yet (asset_packs
 ## sprite_pack names it), or the renderer cannot read textures back (headless).
+## Most pets' animations live in their own files (BattleArt extra sprites);
+## has_art() answers from the manifest's list without reading them, and a
+## picture reads the file without merging it, so browsing the grid does not
+## keep hundreds of animation sets in memory.
 const FOLDER := "res://assets/legacy/battle/"
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
+const BattleArt = preload("res://scripts/battle_art.gd")
 const STAND := 3
 const FACING := 1
 const LIMIT := 128
@@ -19,6 +24,7 @@ static var _made: Dictionary = {}
 
 ## Whether the manifest has standing art for the sprite at all.
 static func has_art(sprite: int) -> bool:
+	if BattleArt.is_extra(sprite):return true
 	return not AnimatedPortrait.animation_for(str(sprite),STAND,FACING).get("frames",[]).is_empty()
 
 static func cached(sprite: int) -> Texture2D:
@@ -29,14 +35,24 @@ static func cached(sprite: int) -> Texture2D:
 static func possible(sprite: int) -> bool:
 	return not (_made.get(sprite) is bool) and has_art(sprite)
 
+## [sheet file, x, y, w, h] of the standing frame, or [] (no art, or an
+## extra sprite whose web pack is not here yet).
+static func _spot(sprite: int) -> Array:
+	var key := str(sprite)
+	var data: Dictionary = AnimatedPortrait.manifest()
+	if not data.get("characters",{}).has(key) and BattleArt.is_extra(key):data = BattleArt.read_extra(key)
+	var animations: Dictionary = data.get("characters",{}).get(key,{})
+	var frames: Array = animations.get("%d_%d" % [STAND,FACING],animations.get("%d_0" % STAND,{})).get("frames",[])
+	if frames.is_empty():return []
+	var sheet: Dictionary = data.get("sheets",{}).get(key,{})
+	var spot: Array = sheet.get("frames",{}).get(str(int(frames[0].image)),[])
+	if spot.size() < 5:return []
+	return [FOLDER+str(sheet.files[int(spot[0])]),int(spot[1]),int(spot[2]),int(spot[3]),int(spot[4])]
+
 ## The sheet file the picture comes from, or "".
 static func sheet_path(sprite: int) -> String:
-	var frames: Array = AnimatedPortrait.animation_for(str(sprite),STAND,FACING).get("frames",[])
-	if frames.is_empty():return ""
-	var sheet: Dictionary = AnimatedPortrait.manifest().get("sheets",{}).get(str(sprite),{})
-	var spot: Array = sheet.get("frames",{}).get(str(int(frames[0].image)),[])
-	if spot.size() < 5:return ""
-	return FOLDER+str(sheet.files[int(spot[0])])
+	var spot := _spot(sprite)
+	return str(spot[0]) if not spot.is_empty() else ""
 
 ## Makes (or returns) the picture. Null when the sheet is not available yet;
 ## call again later (a web pack may still arrive).
@@ -45,13 +61,14 @@ static func texture(sprite: int) -> Texture2D:
 	if not has_art(sprite):
 		_made[sprite] = false
 		return null
-	var path := sheet_path(sprite)
-	if path.is_empty():
+	var spot := _spot(sprite)
+	if spot.is_empty():
+		# An extra sprite's file comes with its web pack: not yet, not never.
+		if BattleArt.is_extra(sprite) and BattleArt.read_extra(sprite).is_empty():return null
 		_made[sprite] = false
 		return null
+	var path: String = spot[0]
 	if not ResourceLoader.exists(path):return null
-	var frames: Array = AnimatedPortrait.animation_for(str(sprite),STAND,FACING).frames
-	var spot: Array = AnimatedPortrait.manifest().sheets[str(sprite)].frames[str(int(frames[0].image))]
 	var sheet: Texture2D = load(path)
 	var image: Image = sheet.get_image() if sheet != null else null
 	if image == null or image.is_empty():

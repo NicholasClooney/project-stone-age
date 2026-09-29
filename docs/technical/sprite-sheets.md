@@ -48,7 +48,9 @@ Several importers write battle frames (`import_battle`, `import_characters`, `im
 
 Importers that add battle frames recreate `battle/images` when needed, since the packer removes it once it is empty.
 
-No battle frame is drawn by two sprites, so each bitmap has exactly one sheet. Callers that know only the bitmap (battles) use `SheetFrames.bitmap_texture`, which builds a bitmap to sheet index once per folder.
+Pet sprites kept in `battle/pets/<sprite>.json` (the manifest's `extra_sprites`, see [8.0 pets](../reverse-engineering/pets-8.0.md)) are packed into the same `battle/sheets/` and their file gets its own `sheets`.
+
+A battle bitmap number names one picture: 8.0 bitmaps whose number 2.5 uses for another picture are renumbered by the importer. Callers that know only the bitmap (battles) use `SheetFrames.bitmap_texture`, which builds a bitmap to sheet index per folder and rebuilds it when sheets were added (an extra sprite merged in by `BattleArt.ensure`).
 
 ## Manifest
 

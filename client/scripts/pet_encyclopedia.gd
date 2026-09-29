@@ -8,6 +8,10 @@ extends RefCounted
 ## client's pet album), data/species_potential.json
 ## (tools/build_species_potential.py), data/training-spots.json (verified
 ## landing cells) and the encounter catalog. See docs/development/pet-encyclopedia.md.
+##
+## The catalog also holds later pets with no original stats (tools/
+## import_encounters.py, template 10000 + album number, `stats_known` false):
+## their entries have stats_known false, source "8.0", rank -1 and no potential.
 const FAMILIES_PATH := "res://data/pet_families.json"
 const POTENTIAL_PATH := "res://data/species_potential.json"
 const SPOTS_PATH := "res://data/training-spots.json"
@@ -70,7 +74,7 @@ func _init(catalog: Dictionary, family_data: Dictionary = {}, potential: Diction
 		for raw in group.get("templates",[]):
 			var template: Dictionary = templates.get(str(int(raw)),{})
 			if template.is_empty() or int(template.get("pet_flag",0)) == 0 or by_template.has(int(raw)):continue
-			var signature := "%s|%s|%s|%s|%s" % [template.name,template.sprite,template.initial,template.weights,template.get("wild_growth",4)]
+			var signature := "%s|%s|%s|%s|%s" % [template.name,template.sprite,template.get("initial",""),template.get("weights",[]),template.get("wild_growth",4)]
 			if signatures.has(signature):
 				species[signatures[signature]].ids.append(int(raw))
 				continue
@@ -99,6 +103,10 @@ func _init(catalog: Dictionary, family_data: Dictionary = {}, potential: Diction
 	for id in order:species[id].tag = "#%d" % int(id) if int(named[species[id].name]) > 1 else ""
 
 func _entry(template: Dictionary, family: Dictionary) -> Dictionary:
+	if not bool(template.get("stats_known",true)):
+		return {"id":int(template.id),"ids":[int(template.id)],"name":str(template.name),"sprite":int(template.sprite),"family":family.id,"family_name":family.name,
+			"stats_known":false,"source":str(template.get("source","")),"album":int(template.get("album",-1)),
+			"initial":0,"raw_growth":"","wild_growth":0,"weights":[],"weight_sum":0,"rank":-1,"elements":[0,0,0,0],"capture_resistance":0,"alias":""}
 	var weights: Array = template.get("weights",[0,0,0,0]).map(func(value):return int(value))
 	var total := 0
 	for weight in weights:total += int(weight)
@@ -110,7 +118,7 @@ func _entry(template: Dictionary, family: Dictionary) -> Dictionary:
 	return {"id":int(template.id),"ids":[int(template.id)],"name":str(template.name),"sprite":int(template.sprite),"family":family.id,"family_name":family.name,
 		"initial":int(template.initial),"raw_growth":str(template.get("raw_growth",template.get("wild_growth",4))),"wild_growth":int(template.get("wild_growth",4)),
 		"weights":weights,"weight_sum":total,"rank":rank,"elements":template.get("elements",[0,0,0,0]).map(func(value):return int(value)),
-		"capture_resistance":int(template.get("capture_resistance",0)),"alias":""}
+		"capture_resistance":int(template.get("capture_resistance",0)),"alias":"","stats_known":true,"source":str(template.get("source",""))}
 
 ## Locations, catchability and potential once all merged templates are known.
 ## The representative is the merged template seen most in the wild (then the
@@ -246,7 +254,7 @@ static func sort_value(entry: Dictionary, key: String) -> Variant:
 		"defence":return float(potential.get("mean_defence",-1.0))
 		"speed":return float(potential.get("mean_speed",-1.0))
 		"hp":return float(potential.get("mean_hp",-1.0))
-		"rank":return -int(entry.rank)
+		"rank":return -int(entry.rank) if int(entry.rank) >= 0 else -100
 		"catchable":return 1 if entry.catchable else 0
 		"where":return -int(entry.wild_lowest) if int(entry.wild_lowest) > 0 else -100000
 	return 0
@@ -322,6 +330,7 @@ static func where_text(entry: Dictionary) -> String:
 	return "%s · %s" % [head,"、".join(maps.keys().slice(0,2))+("等%d处" % maps.size() if maps.size() > 2 else "")]
 
 static func rank_text(rank: int) -> String:
+	if rank < 0:return "未知"
 	return "%d级（权重和≥%d）" % [rank,int(RANK_LIMITS[clampi(rank,0,5)])] if rank < 5 else "5级（权重和<80）"
 
 ## What 瞬移去抓 does for a location: the cell and the hunt target, or an error.
