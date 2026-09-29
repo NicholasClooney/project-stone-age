@@ -1254,13 +1254,13 @@ func pet_records_panel()->void:
 
 ## 停止记录: why 自动抓极品 or the find-pet cycle stopped, paused, skipped a
 ## hit or finished (automation.gd _record_stop), newest first.
-const STOP_COLORS:={"停止":PetTable.BAD,"暂停":PetTable.GOLD,"已跳过":PetTable.MUTED,"已重试":PetTable.MUTED,"完成":PetTable.GOOD,"找到":PetTable.GOOD}
+const STOP_COLORS:={"停止":PetTable.BAD,"暂停":PetTable.GOLD,"已跳过":PetTable.MUTED,"已重试":PetTable.MUTED,"已恢复":PetTable.GOOD,"完成":PetTable.GOOD,"找到":PetTable.GOOD}
 func stop_records(overlay:Control,data:Dictionary)->void:
 	var pages:=int(data.get("pages",1))
 	var previous:Button=world.button("◀",func():records_page=maxi(0,records_page-1);fetch_records());previous.position=Vector2(700,46);previous.disabled=records_page<=0;overlay.add_child(previous)
 	var page:=PetTable.text("%d / %d 页"%[records_page+1,pages],"meta");page.position=Vector2(742,52);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
 	var next:Button=world.button("▶",func():records_page=mini(pages-1,records_page+1);fetch_records());next.position=Vector2(852,46);next.disabled=records_page>=pages-1;overlay.add_child(next)
-	var hint:="新的在前。停止：要你处理；暂停：换了地图或战败；已跳过、已重试：流程自己继续了；完成：收集够了或停下比较。"
+	var hint:="新的在前。停止：要你处理；暂停：换了地图、战败或服务器重启；已恢复：服务器重启后自动接着运行；已跳过、已重试：流程自己继续了；完成：收集够了或停下比较。"
 	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,46);note.custom_minimum_size=Vector2(670,0);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;overlay.add_child(note)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,96);scroll.size=Vector2(876,540);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)

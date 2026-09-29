@@ -135,6 +135,11 @@ func _on_link_connected() -> void:
 	if game.state.battle_open and not game.battle_view.visible and not game.training_helper.compact_active:game.present_battle_start(game.state.battle)
 	elif not game.state.battle_open and game.battle_view.visible:game.present_battle_close(str(game.state.battle.get("outcome","")))
 	report_position()
+	# Windows show the backend's automation as it is now: after a server
+	# restart a resumed run (重启后自动恢复) is running again.
+	for node in [game.training_helper,game.pet_hunt_menu,game.pet_workflow]:
+		if is_instance_valid(node):node.on_status(game.state.automation)
+	game.resume_automation_view()
 	game.message.text = _offline_summary()
 
 func _on_link_disconnected() -> void:

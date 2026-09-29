@@ -113,10 +113,8 @@ func start_cycle(species_key: String="") -> bool:
 	if not world.pet_hunt_menu.visible:world.pet_hunt_menu.open_menu()
 	if not species_key.is_empty():
 		var template_id:=92 if species_key=="blue" else int(species_key.trim_prefix("original_"))
-		var choice: int=world.pet_hunt_menu.species.get_item_index(template_id)
-		if choice<0 or world.pet_hunt_menu.species.is_item_disabled(choice):
+		if not world.pet_hunt_menu.choose_target(template_id):
 			stop_cycle("当前地点和等级条件没有此品种；请自行前往合适地点或调整找宠条件。");return false
-		world.pet_hunt_menu.species.select(choice)
 	# Starting from the already-open hunt panel must retain its modal lock.
 	world.clear_input();world.paused_input=true
 	var filter: Dictionary=world.pet_hunt_menu.build_filter(true)
@@ -124,7 +122,9 @@ func start_cycle(species_key: String="") -> bool:
 		stop_cycle(world.pet_hunt_menu.status.text);return false
 	# The backend runs with the profile's hunt, capture and stat settings.
 	world.pet_hunt_menu.commit_settings()
-	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"find_pet","map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	var command:={"type":"auto_start","kind":"find_pet","map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}
+	if not world.pet_hunt_menu.start_filter().is_empty():command.filter=world.pet_hunt_menu.start_filter()
+	var reply: Dictionary=world.link.request(command)
 	if not reply.ok and not reply.get("pending",false):
 		world.message.text="找宠流程暂停："+str(reply.reason);return false
 	world.pet_hunt_menu.set_controls(true);world.pet_hunt_menu.update_status()

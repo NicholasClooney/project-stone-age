@@ -85,6 +85,9 @@ var stop_log = preload("res://server/release_log.gd").new()
 var stop_log_path := ""
 ## Counts appends to the three logs (_record_releases).
 var pet_log_revision := 0
+## 重启后自动恢复: <save>.resume.json (resume_path for tests), written at
+## shutdown and read once at startup.
+var resume_path := ""
 static var _map_names: Dictionary = {}
 var last_saved_payload := ""
 var rev := 0
@@ -160,10 +163,41 @@ func _release_log_file() -> void:
 	capture_log.path = capture_log_path if not capture_log_path.is_empty() else (save_path.get_basename()+".capture-log.jsonl" if not save_path.is_empty() else "")
 	stop_log.path = stop_log_path if not stop_log_path.is_empty() else (save_path.get_basename()+".stop-log.jsonl" if not save_path.is_empty() else "")
 
-## The server is quitting: a running hunt or cycle is recorded as stopped.
+## The server is quitting: a running hunt or cycle is recorded in 停止记录,
+## and with 重启后自动恢复 on what it needs to go on is written to the resume
+## file (automation.gd record_shutdown). Call save() after this.
 func record_shutdown() -> void:
-	automation.record_shutdown()
+	var state: Dictionary = automation.record_shutdown()
 	_record_releases()
+	var path := _resume_file()
+	if path.is_empty():return
+	if state.is_empty():
+		if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		return
+	var file := FileAccess.open(path,FileAccess.WRITE)
+	if file==null:
+		printerr("Could not write %s; the automation will not resume." % path)
+		return
+	# Native JSON keeps ints, int keys and nested types exactly, so queued
+	# troops compare equal when replayed.
+	file.store_string(JSON.stringify(JSON.from_native(state)))
+	file.close()
+
+## After load_profile: a run written down at the last shutdown goes on once
+## the character stands where it ran (automation.gd try_resume). The file is
+## used once.
+func load_resume() -> void:
+	var path := _resume_file()
+	if path.is_empty() or not FileAccess.file_exists(path):return
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+	var state = JSON.to_native(parsed) if parsed!=null else null
+	if state is Dictionary:automation.load_resume(state)
+
+## 重启后自动恢复's file: <save>.resume.json, or tests' resume_path.
+func _resume_file() -> String:
+	if not resume_path.is_empty():return resume_path
+	return save_path.get_basename()+".resume.json" if not save_path.is_empty() else ""
 
 ## Where a capture came from: the find-pet cycle (with its run), the hunt's
 ## automatic capture battle, or a battle the player fought; GM grants say so.

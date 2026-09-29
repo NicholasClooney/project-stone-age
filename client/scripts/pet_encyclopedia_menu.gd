@@ -802,7 +802,7 @@ func _travel(plan: Dictionary) -> bool:
 ## the target and the Lv.1 limit are saved to the character's hunt settings
 ## first, so the window shows them however it is opened.
 func _open_hunt(plan: Dictionary) -> void:
-	world.link.request({"type":"set_automation_settings","settings":{"hunt":{"template":int(plan.template_id),"level_one":bool(plan.level_one)}}})
+	world.link.request({"type":"set_automation_settings","settings":{"hunt":{"template":int(plan.template_id),"level_one":bool(plan.level_one),"stat_species":int(plan.template_id)}}})
 	var menu: Control = world.pet_hunt_menu
 	if menu.visible:menu.refresh_candidates()
 	else:menu.open_menu()

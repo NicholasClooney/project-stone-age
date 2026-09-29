@@ -101,6 +101,9 @@ var flow_cell := Vector2i.ZERO
 var flow_known_ids: Dictionary = {}
 var flow_matched_actor: Dictionary = {}
 var flow_matched_index := -1
+## Where the matched pet came from ({run_seed, index, slot}), so a capture cut
+## short by a server restart can roll the same troop again.
+var flow_matched_roll: Dictionary = {}
 var flow_capture_battle_id := ""
 var flow_stat_filters: Dictionary = {}
 ## Profile overrides when the cycle started, for species not in flow_stat_filters.
@@ -330,6 +333,7 @@ func position_changed(map_id: int, cell: Vector2i, map_changed: bool = false) ->
 ## from its frame loop instead (tick_battle, hunt_process, flow_step).
 func tick(delta: float) -> void:
 	if not auto_tick:return
+	try_resume()
 	tick_battle(delta)
 	if hunt_running:_hunt_process(delta)
 	if flow_active():flow_step()
@@ -576,14 +580,7 @@ func start_hunt(filter: Dictionary) -> bool:
 	var usable: Array = filter.get("usable",[])
 	if usable.is_empty() or (int(filter.get("template",-1))>=0 and not int(filter.template) in usable):
 		hunt_status = "当前没有素材齐全的目标宠物。";return false
-	hunt_filter = filter.duplicate(true)
-	hunt_map = position_map
-	hunt_cell = position_cell
-	# Freeze the validated location for this run. Only trim the spatial lookup;
-	# retain original groups/enemies/templates and all roll checks/RNG calls.
-	var hunt_data: Dictionary = backend.encounter_catalog.data.duplicate()
-	hunt_data.areas = [backend.encounter_catalog.area_at(hunt_map,hunt_cell)]
-	hunt_catalog = EncounterCatalog.new(hunt_data)
+	_prepare_catalog(filter)
 	hunt_rolls = 0;hunt_inspected = 0;hunt_best = -9;hunt_elapsed = 0;hunt_credit = 0;hunt_last_hit = {}
 	# Two draws from the walking encounter stream seed this run's rolls.
 	hunt_run_seed = (backend.encounter_rng.randi() << 32) | backend.encounter_rng.randi()
@@ -595,6 +592,17 @@ func start_hunt(filter: Dictionary) -> bool:
 	hunt_status = ""
 	_emit_status()
 	return true
+
+## The run's filter, place and encounter source at the reported position.
+func _prepare_catalog(filter: Dictionary) -> void:
+	hunt_filter = filter.duplicate(true)
+	hunt_map = position_map
+	hunt_cell = position_cell
+	# Freeze the validated location for this run. Only trim the spatial lookup;
+	# retain original groups/enemies/templates and all roll checks/RNG calls.
+	var hunt_data: Dictionary = backend.encounter_catalog.data.duplicate()
+	hunt_data.areas = [backend.encounter_catalog.area_at(hunt_map,hunt_cell)]
+	hunt_catalog = EncounterCatalog.new(hunt_data)
 
 func stop_hunt(reason: String) -> void:
 	fast_hunt.stop()
@@ -669,11 +677,11 @@ func _scan_index(index: int, expected := -1) -> void:
 		# 展示模式: queue the hit and keep searching; flow_step takes it in turn.
 		if TroopArt.can_render(troop.enemies):_showcase_enqueue(index,i,troop,quality)
 		return
-	_open_hit(troop,i,quality)
+	_open_hit(troop,i,quality,{"run_seed":hunt_run_seed,"index":index,"slot":i})
 
 ## A hit (or a survey pick) becomes a battle: the hunt stops, the battle opens
 ## and a find-pet cycle catches the pet (or 自动捕捉 does, if on).
-func _open_hit(troop: Dictionary, i: int, quality: Dictionary) -> void:
+func _open_hit(troop: Dictionary, i: int, quality: Dictionary, roll: Dictionary = {}) -> void:
 	var filter := hunt_filter
 	var actor: Dictionary = troop.enemies[i]
 	hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
@@ -692,7 +700,9 @@ func _open_hit(troop: Dictionary, i: int, quality: Dictionary) -> void:
 	backend.open_battle(config)
 	var automatic: bool = workflow_capture or bool(filter.get("auto_capture",false))
 	_emit_event({"kind":"hunt_hit","index":i,"actor":actor.duplicate(true),"quality":quality,"rolls":hunt_rolls,"automatic":automatic,"workflow":workflow_capture})
-	if flow_phase=="hunt":matched(i,actor)
+	if flow_phase=="hunt":
+		matched(i,actor)
+		flow_matched_roll = roll.duplicate()
 	elif bool(filter.get("auto_capture",false)):start_capture_battle(i)
 
 ## Roll `index` of this run, from its own seed (FastHunt.roll_seed).
@@ -1060,7 +1070,7 @@ func _take_survey_pick() -> void:
 	if replayed.is_empty() or JSON.stringify(replayed.troop)!=JSON.stringify(entry.troop):
 		_showcase_line("skipped","摸底选中的第 %d 组复核不一致，已略过。" % (int(entry.index)+1))
 		return
-	_open_hit(replayed.troop,int(replayed.slot),replayed.quality)
+	_open_hit(replayed.troop,int(replayed.slot),replayed.quality,{"run_seed":int(entry.run_seed),"index":int(entry.index),"slot":int(entry.slot)})
 	if flow_phase=="capture":flow_target_survey = true
 
 func start_cycle(continuing: bool) -> bool:
@@ -1079,7 +1089,7 @@ func start_cycle(continuing: bool) -> bool:
 		start_timer()
 	flow_map = position_map
 	flow_cell = position_cell
-	flow_known_ids.clear();flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_capture_battle_id = "";flow_reason = ""
+	flow_known_ids.clear();flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_matched_roll = {};flow_capture_battle_id = "";flow_reason = ""
 	# Warehouse pets too: one withdrawn during the capture battle is not new.
 	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
 	flow_phase = "hunt"
@@ -1175,16 +1185,7 @@ func flow_step() -> void:
 		if not backend.session.select_pet(int(fresh[0])):stop_cycle("新伙伴无法出战。");return
 		backend.save()
 		backend.publish()
-		flow_phase = "train"
-		# Growth is seeded per pet and level, so instant levelling equals battle training.
-		backend.session.last_error = ""
-		if not backend.session.level_pet_to(flow_pet_id,120):stop_cycle("无法升至120级："+str(backend.session.last_error));return
-		backend.save()
-		backend.publish()
-		var leveled: Dictionary = {}
-		for pet in backend.session.snapshot().pets:
-			if str(pet.get("pet_id",""))==flow_pet_id:leveled = pet
-		complete_trained_pet(leveled)
+		_level_to_120()
 		return
 	if flow_phase=="train":
 		if stop_reason!="目标宠物已达到等级目标":stop_cycle(stop_reason);return
@@ -1193,6 +1194,16 @@ func flow_step() -> void:
 			if str(pet.get("pet_id",""))==flow_pet_id:found = pet
 		if found.is_empty() or int(found.level)<120:stop_cycle("目标宠物未达到120级，请手动检查。");return
 		complete_trained_pet(found)
+
+## The full-speed cycle's training: straight to Lv.120, then compared.
+## Growth is seeded per pet and level, so instant levelling equals battle training.
+func _level_to_120() -> void:
+	flow_phase = "train"
+	backend.session.last_error = ""
+	if not backend.session.level_pet_to(flow_pet_id,120):stop_cycle("无法升至120级："+str(backend.session.last_error));return
+	backend.save()
+	backend.publish()
+	complete_trained_pet(_flow_pet())
 
 func _store_hunt_pet(pet_id: String, prunable: bool, qualified: bool = false) -> bool:
 	var index := -1
@@ -1304,11 +1315,264 @@ func take_stop_events() -> Array:
 	stop_events = []
 	return result
 
-## The server is shutting down (a restart or quit) while a hunt or cycle runs.
-func record_shutdown() -> void:
-	var reason := "服务器关闭（重启或退出），自动抓极品中断；重新打开后需要再次开始。"
-	if flow_active():_record_stop("flow","停止",reason,_involved_pet())
-	elif hunt_running:_record_stop("hunt","停止",reason)
+## The server is shutting down (a restart or quit) while a hunt, cycle or
+## 自动练级 runs. With 重启后自动恢复 on, returns what try_resume needs to go
+## on after the restart (backend.record_shutdown keeps it next to the save);
+## {} otherwise. A battle the automation has open is given up (no rewards, as
+## a skipped capture) so the save goes through; the restart fights it again.
+func record_shutdown() -> Dictionary:
+	var state := resume_state() if resume_wanted() else {}
+	var reason := "服务器关闭（重启或退出）；已记下进度，重启后在原地自动恢复。" if not state.is_empty() else "服务器关闭（重启或退出），自动抓极品中断；重新打开后需要再次开始。"
+	if flow_active():_record_stop("flow","暂停" if not state.is_empty() else "停止",reason,_involved_pet())
+	elif hunt_running:_record_stop("hunt","暂停" if not state.is_empty() else "停止",reason)
+	elif str(state.get("kind",""))=="training":print("[自动练级] 服务器关闭；重启后在原地自动恢复。")
+	if backend.battle_open and (running or flow_active()):
+		release_clone_override()
+		backend.abandon_battle()
+	# The save puts the character where the run was, so a page loaded after the
+	# restart stands there too.
+	if not state.is_empty():backend.session.set_location(int(state.map_id),int(state.cell[0]),int(state.cell[1]))
+	return state
+
+# ---- 重启后自动恢复 ---------------------------------------------------------
+# A running find-pet cycle, hunt or 自动练级 is written down when the server
+# shuts down (record_shutdown) and goes on after it starts again, once the
+# character stands where it ran and no battle is open. The file lives next to
+# the save (backend.gd resume file). The cycle keeps its run, counters, settings
+# snapshot and 后台搜宠 queue (each hit with its roll seed, replayed and
+# checked again before its capture); the hunt goes on from the same roll of the
+# same run. A 摸底 in progress starts again. A capture battle cut short is
+# fought again from the pet's own roll (or, if the pet was already caught, its
+# training goes on); a training battle cut short is fought again.
+
+const RESUME_VERSION := 1
+const RESUME_KINDS := ["flow","hunt","training"]
+## Find-pet cycle fields kept over a restart (restored with set()).
+const RESUME_FLOW_FIELDS := ["flow_phase","flow_reason","flow_pet_id","flow_known_ids","flow_matched_actor","flow_matched_index","flow_matched_roll",
+	"flow_stat_filters","flow_settings_overrides","flow_target_filter","flow_hunt_request","flow_stored_count","flow_last_result","flow_last_stored_id",
+	"flow_last_stored_total","flow_kept_count","flow_collected_count","flow_pruned_count","flow_run_reject_ids","flow_released_count","flow_held_count",
+	"flow_predicted_rejects","flow_run_id","flow_showcase","showcase_queue","showcase_current","showcase_log","_showcase_log_serial","flow_skip_kind",
+	"flow_skip_streak","flow_skipped_count","flow_skip_note","flow_best_predicted","survey_picks","survey_last","flow_target_survey"]
+const RESUMED := "服务器重启后已恢复"
+## Read back at startup (load_resume) and applied by try_resume.
+var pending_resume: Dictionary = {}
+
+## 重启后自动恢复 (hunt.resume, default on).
+func resume_wanted() -> bool:
+	return bool(AutomationSettings.effective(backend.session.automation_settings()).hunt.get("resume",true))
+
+## What must be kept for try_resume, or {} when nothing runs that can go on:
+## a single manual battle's 自动战斗 or capture, and a cycle asked to stop, end here.
+func resume_state() -> Dictionary:
+	var kind := ""
+	var at := Vector2i(-1,-1)
+	var map := -1
+	if flow_active() and flow_stop_pending.is_empty():
+		kind = "flow";map = flow_map;at = flow_cell
+	elif hunt_running and not flow_active():
+		kind = "hunt";map = hunt_map;at = hunt_cell
+	elif running and not flow_active() and not single_battle and str(settings.get("preset",""))!="capture":
+		kind = "training";map = origin_map;at = origin_cell
+	elif not pending_resume.is_empty() and not (running or hunt_running or flow_active()):
+		# Restarted again before it could resume: keep what was waiting.
+		return pending_resume.duplicate(true)
+	if kind.is_empty() or map<0:return {}
+	var state := {"version":RESUME_VERSION,"kind":kind,"time":int(Time.get_unix_time_from_system()),"map_id":map,"cell":[at.x,at.y],"settings":settings.duplicate(true)}
+	if hunt_running:
+		state.hunt = {"filter":hunt_filter.duplicate(true),"run_seed":hunt_run_seed,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"elapsed":hunt_elapsed}
+	if kind=="flow":
+		var flow := {"elapsed":elapsed_seconds(),"survey":not survey.is_empty()}
+		for field in RESUME_FLOW_FIELDS:
+			var value = get(field)
+			flow[field] = value.duplicate(true) if value is Dictionary or value is Array else value
+		state.flow = flow
+	elif kind=="training":
+		state.training = {"pet_id":training_pet_id,"level":training_pet_level,"battles":battles,"skipped":skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,"initial_level":initial_level}
+	return state
+
+## A state written by record_shutdown, read at startup. The character is taken
+## to be where the run was until a client says otherwise.
+func load_resume(state: Dictionary) -> void:
+	if int(state.get("version",0))!=RESUME_VERSION or not str(state.get("kind","")) in RESUME_KINDS:return
+	if not state.get("cell") is Array or state.cell.size()!=2:return
+	pending_resume = state.duplicate(true)
+	if position_map<0:
+		position_map = int(state.map_id)
+		position_cell = Vector2i(int(state.cell[0]),int(state.cell[1]))
+
+## Goes on with the pending run once it is safe: the character stands where it
+## ran and no battle is open. Standing elsewhere drops it (and says so).
+func try_resume() -> void:
+	if pending_resume.is_empty():return
+	if running or hunt_running or flow_active():
+		pending_resume = {};return
+	var state := pending_resume
+	var at := Vector2i(int(state.cell[0]),int(state.cell[1]))
+	if position_map!=int(state.map_id) or position_cell!=at:
+		pending_resume = {}
+		var why := "服务器重启后没有恢复：角色已不在原来的位置（%s (%d, %d)）。" % [backend.map_name(int(state.map_id)),at.x,at.y]
+		if str(state.kind)!="training":_record_stop("flow" if str(state.kind)=="flow" else "hunt","停止",why)
+		print("[重启后自动恢复] "+why)
+		return
+	if backend.battle_open or bool(backend.battle.snapshot().get("active",false)):return
+	pending_resume = {}
+	settings = state.get("settings",{}).duplicate(true)
+	if not settings.has("speed"):settings.speed = DEFAULT_SPEED
+	match str(state.kind):
+		"flow":_resume_flow(state)
+		"hunt":_resume_hunt(state)
+		"training":_resume_training(state)
+
+## Starts the hunt with the saved filter and continues the same run from the
+## same roll (every roll has its own seed, so nothing is skipped or repeated).
+func _restore_hunt(saved: Dictionary) -> bool:
+	if not start_hunt(saved.get("filter",{})):return false
+	hunt_run_seed = int(saved.run_seed)
+	hunt_rolls = int(saved.rolls)
+	hunt_inspected = int(saved.inspected)
+	hunt_best = int(saved.best)
+	hunt_started_usec = Time.get_ticks_usec()-int(float(saved.get("elapsed",0.0))*1000000.0)
+	_emit_status()
+	return true
+
+func _resume_hunt(state: Dictionary) -> void:
+	if not _restore_hunt(state.get("hunt",{})):
+		_record_stop("hunt","停止","服务器重启后无法恢复筛选：%s" % hunt_status)
+		return
+	_record_stop("hunt","已恢复","%s：从第 %d 组接着筛选。" % [RESUMED,hunt_rolls+1])
+	print("[自动抓极品] %s" % RESUMED)
+
+func _resume_training(state: Dictionary) -> void:
+	var saved: Dictionary = state.get("training",{})
+	var pet_id := str(saved.get("pet_id",""))
+	if not pet_id.is_empty():start_pet_training(pet_id,int(saved.get("level",120)),{},settings.duplicate(true))
+	else:
+		var kept := settings.duplicate(true)
+		start_training()
+		settings = kept
+	if not running:
+		print("[自动练级] 服务器重启后无法恢复：%s" % stop_reason);return
+	battles = int(saved.get("battles",0));skipped = int(saved.get("skipped",0))
+	earned_xp = int(saved.get("earned_xp",0));earned_pet_xp = int(saved.get("earned_pet_xp",0));initial_level = int(saved.get("initial_level",initial_level))
+	turn_text = RESUMED
+	print("[自动练级] %s（已打 %d 场）" % [RESUMED,battles])
+	_emit_status()
+
+func _resume_flow(state: Dictionary) -> void:
+	var saved: Dictionary = state.get("flow",{})
+	for field in RESUME_FLOW_FIELDS:
+		if saved.has(field):set(field,saved[field])
+	flow_map = int(state.map_id)
+	flow_cell = Vector2i(int(state.cell[0]),int(state.cell[1]))
+	flow_stat_filters = _int_keys(flow_stat_filters)
+	flow_stop_pending = ""
+	survey = {}
+	_pets_key = ""
+	timer_started_msec = int(timer_clock.call())-int(float(saved.get("elapsed",0.0))*1000.0)
+	timer_running = true
+	var phase := flow_phase
+	var notes: PackedStringArray = []
+	# start_hunt checks the capture helper as the cycle's hunt does.
+	flow_phase = "hunt"
+	if state.has("hunt") and (flow_showcase or phase=="hunt"):
+		if not _restore_hunt(state.hunt):
+			stop_cycle("服务器重启后无法恢复筛选：%s" % hunt_status);return
+		notes.append("从第 %d 组接着筛选" % (hunt_rolls+1))
+	else:
+		# Queued hits and survey picks replay from this place's encounters.
+		_prepare_catalog(flow_hunt_request)
+		if phase=="hunt" and not flow_showcase:phase = "restart"
+	if bool(saved.get("survey",false)):notes.append("摸底进度没有保存，重新摸底")
+	match phase:
+		"hunt":pass
+		"capture":
+			var note := _resume_capture()
+			if flow_phase=="paused":return
+			notes.append(note)
+		"train":
+			var note := _resume_train()
+			if flow_phase=="paused":return
+			notes.append(note)
+		_:flow_phase = "restart"
+	if not showcase_queue.is_empty():notes.append("排队 %d 只" % showcase_queue.size())
+	var text := RESUMED+("：" + "，".join(notes) if not notes.is_empty() else "")+"。"
+	_record_stop("flow","已恢复",text,_involved_pet())
+	_showcase_line("resumed",text)
+	if not flow_showcase:flow_reason = text
+	_emit_status()
+	_emit_event({"kind":"flow_hunt"})
+
+## The index in the party of the pet the interrupted capture caught (new
+## since the capture began and the same individual), or -1.
+func _caught_index() -> int:
+	if flow_matched_actor.is_empty():return -1
+	var pets: Array = backend.session.snapshot().pets
+	for i in range(pets.size()):
+		if not flow_known_ids.has(str(pets[i].get("pet_id",""))) and same_capture(pets[i],flow_matched_actor):return i
+	return -1
+
+## The capture was cut short. Caught already (settled before the restart):
+## the training goes on. Otherwise the same pet is fought for again: with
+## 后台搜宠 its queued hit goes back to the front of the queue (replayed and
+## checked before the battle), else its roll is replayed here.
+func _resume_capture() -> String:
+	var caught := _caught_index()
+	var name := str(flow_matched_actor.get("name",""))
+	if caught>=0:
+		flow_pet_id = str(backend.session.snapshot().pets[caught].pet_id)
+		_capture_succeeded()
+		if not backend.session.select_pet(caught):stop_cycle("新伙伴无法出战。");return ""
+		if flow_showcase:
+			flow_phase = "train"
+			_showcase_train()
+		else:_level_to_120()
+		return "%s 已在重启前抓到，接着练到120级" % name
+	if flow_showcase:
+		if not showcase_current.is_empty():
+			showcase_queue.push_front(showcase_current)
+			showcase_queue.sort_custom(_showcase_better)
+		showcase_current = {}
+		flow_matched_actor = {};flow_matched_index = -1;flow_matched_roll = {}
+		flow_phase = "hunt"
+		return "重启时正在抓的 %s 放回排队，按原种子复核后重新开战" % name
+	var roll := flow_matched_roll
+	var survey_pick := flow_target_survey
+	flow_phase = "hunt"
+	if roll.is_empty() or not start_hunt(flow_hunt_request):
+		flow_phase = "restart"
+		return "重启时正在抓的 %s 无法重新开战，已跳过" % name
+	var rng := RandomNumberGenerator.new()
+	rng.seed = FastHunt.roll_seed(int(roll.run_seed),int(roll.index))
+	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,rng)
+	var slot := int(roll.slot)
+	var enemies: Array = troop.get("enemies",[])
+	if slot<0 or slot>=enemies.size() or not same_capture(enemies[slot],flow_matched_actor):
+		_stopping_cycle = true
+		stop_hunt("重启后复核不一致。")
+		_stopping_cycle = false
+		flow_phase = "restart"
+		return "重启时正在抓的 %s 按原种子复核不一致，已跳过" % name
+	_open_hit(troop,slot,HuntRules.quality(enemies[slot],backend.encounter_catalog.data),roll)
+	if flow_phase=="capture":flow_target_survey = survey_pick
+	return "按原种子重新开战抓 %s" % name
+
+## The training was cut short: it goes on from the level the pet has.
+func _resume_train() -> String:
+	var pets: Array = backend.session.snapshot().pets
+	var index := -1
+	for i in range(pets.size()):
+		if str(pets[i].get("pet_id",""))==flow_pet_id:index = i
+	if index<0:
+		stop_cycle("服务器重启后找不到正在练级的宠物 %s，请手动检查。" % flow_pet_id);return ""
+	var pet: Dictionary = pets[index]
+	flow_phase = "train"
+	if flow_showcase:
+		if int(pet.level)>=120:_showcase_finished()
+		else:
+			backend.session.select_pet(index)
+			_showcase_train()
+	else:_level_to_120()
+	return "%s %s 从 %d 级接着练" % [str(pet.get("name","")),flow_pet_id,int(pet.level)]
 
 ## The pet the cycle is working on, for the log: the captured pet once there
 ## is one, else the matched or revealed wild pet (name only).

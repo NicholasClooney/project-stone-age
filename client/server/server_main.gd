@@ -25,7 +25,9 @@ func _initialize() -> void:
 			quit(1)
 			return
 	backend.save_path = path
-	server = WsServer.new(backend,int(options.port),str(options.bind))
+	# A hunt, find-pet cycle or 自动练级 running at the last shutdown goes on.
+	backend.load_resume()
+	server =WsServer.new(backend,int(options.port),str(options.bind))
 	if options.has("tls-cert") and options.has("tls-key"):
 		var key := CryptoKey.new()
 		var certificate := X509Certificate.new()

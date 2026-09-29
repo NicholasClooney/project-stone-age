@@ -8,7 +8,7 @@ const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const SHOWN := 5
 const WIDTH := 560.0
 const COLORS := {"found":Color("ffd98a"), "captured":Color("f8edc7"), "level":Color("f8edc7"), "kept":Color("9fe39a"),
-	"released":Color("f0a08a"), "survey":Color("9fd0e3"), "dropped":Color("b6aa8a"), "skipped":Color("b6aa8a"), "retry":Color("b6aa8a")}
+	"released":Color("f0a08a"), "survey":Color("9fd0e3"), "dropped":Color("b6aa8a"), "skipped":Color("b6aa8a"), "retry":Color("b6aa8a"), "resumed":Color("9fe39a")}
 var world: Node
 var lines: VBoxContainer
 var _shown_key := ""

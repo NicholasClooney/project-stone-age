@@ -153,7 +153,7 @@ func window() -> void:
 	var hunt = game.pet_hunt_menu
 	check(int(game.data.map_id) == int(place.map_id) and game.cell == Vector2i(place.cell[0],place.cell[1]),"teleported to the verified cell")
 	check(hunt.visible and hunt.species.get_selected_id() == 113 and int(game.automation_settings().hunt.template) == 113 and bool(game.automation_settings().hunt.level_one),"自动抓极品 opens with 昆伊 and the Lv.1 limit")
-	check(hunt.stat_species.get_selected_id() == 113,"its 属性条件 page shows 昆伊")
+	check(hunt.stat_species.get_selected_id() == 113 and int(game.automation_settings().hunt.stat_species) == 113,"its 属性条件 page shows 昆伊, remembered with the character")
 	hunt.close_menu()
 	# The pet window's entry opens on the selected pet's species.
 	game.session.grant_starter_pets()

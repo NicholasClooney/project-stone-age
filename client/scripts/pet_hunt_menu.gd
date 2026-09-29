@@ -12,10 +12,14 @@ var _loaded: Dictionary = {}
 var _loading := false
 ## The saved target species is not available here, so the list shows 任何.
 var _template_fallback := false
-## The next settings patch also stores the shown species (Start does this).
-var _commit_template := false
 ## Species whose stat conditions the 属性条件 page shows.
 var _stat_species_shown := -1
+## The saved 属性条件 species (hunt.stat_species) is not in the list here.
+var _stat_species_fallback := false
+## Which page the window shows (筛选条件 / 抓宠设置 / 属性条件), remembered on
+## this device (viewer pref hunt_page).
+var page := "filters"
+var _built := false
 var _stat_loaded: Dictionary = {}
 var stat_page: Control
 var stat_species: OptionButton
@@ -59,6 +63,9 @@ var showcase: CheckBox
 var queue_size: SpinBox
 var showcase_xp: OptionButton
 var showcase_speed: OptionButton
+## 重启后自动恢复 (hunt.resume): a run the server was doing when it shut down
+## goes on after the restart (server/automation.gd try_resume).
+var resume_after_restart: CheckBox
 ## 线程数 of the server's helper (0 = auto): the computer's setting, not the
 ## character's, so it is sent as its own command and stays editable mid-hunt.
 var thread_count: SpinBox
@@ -194,11 +201,13 @@ func _ready() -> void:
 		_settings_changed(true))
 	species.item_selected.connect(func(_index):
 		_template_fallback=false
+		_follow_target(species.get_selected_id())
 		_settings_changed(true))
 	build_stat_page()
 	show_capture_settings(false)
 	load_settings()
 	hide()
+	_built=true
 
 func label(text: String, at: Vector2, size: int) -> Label:
 	var result: Label=world.text(text,size)
@@ -239,22 +248,49 @@ func _settings_changed(now: bool) -> void:
 	world.mark_settings_dirty(self)
 	if now:world.flush_automation_settings()
 
-## Saves the controls, including the shown species, before a run starts.
+## Saves the controls before a run starts.
 func commit_settings() -> void:
 	for control in controls:
 		if control is SpinBox and control.get_line_edit().has_focus():control.apply()
-	_commit_template=true
 	world.mark_settings_dirty(self)
 	world.flush_automation_settings()
-	_commit_template=false
+
+## Run-only filter fields a start command carries: 任何 shown only because the
+## saved species does not live here hunts any species now, while the profile
+## keeps the species the player last chose for next time.
+func start_filter() -> Dictionary:
+	return {"template":-1} if _template_fallback else {}
+
+## Picks the target species (瞬移去抓, a comparison's 找这种): it is saved, and
+## 属性条件 shows the same species. False when it is not available here.
+func choose_target(template_id: int) -> bool:
+	var index:=species.get_item_index(template_id)
+	if index<0 or species.is_item_disabled(index):return false
+	species.select(index)
+	_template_fallback=false
+	_follow_target(template_id)
+	return true
+
+## 属性条件 shows the target species when the player picks one.
+func _follow_target(template_id: int) -> void:
+	if template_id<0 or not is_instance_valid(stat_species):return
+	var index:=stat_species.get_item_index(template_id)
+	if index<0 or stat_species.get_selected_id()==template_id:return
+	world.flush_automation_settings()
+	stat_species.select(index)
+	_stat_species_fallback=false
+	load_stat_settings()
 
 ## What these controls change in the profile (see game.flush_automation_settings).
 func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
-		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value)}
+		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value),
+		"resume":resume_after_restart.button_pressed}
 	# 任何 shown only because the saved species is not found here keeps the saved one.
-	if species.item_count>0 and (_commit_template or not _template_fallback):wanted.template=species.get_selected_id()
+	if species.item_count>0 and not _template_fallback:wanted.template=species.get_selected_id()
+	# Likewise 属性条件's species: a fallback shown here keeps the saved choice.
+	if is_instance_valid(stat_species) and stat_species.item_count>0 and not _stat_species_fallback:wanted.stat_species=stat_species.get_selected_id()
 	var hunt:=AutomationSettings.diff(world.automation_settings().hunt,wanted)
 	if not hunt.is_empty():patch.hunt=hunt
 	var training:=AutomationSettings.diff(world.automation_settings().training,{"xp":[1,2,10,100][maxi(0,showcase_xp.selected)]})
@@ -282,6 +318,7 @@ func load_settings() -> void:
 	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
 	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
 	if _changed(old,hunt,"showcase"):showcase.set_pressed_no_signal(bool(hunt.showcase))
+	if _changed(old,hunt,"resume"):resume_after_restart.set_pressed_no_signal(bool(hunt.resume))
 	if not queue_size.get_line_edit().has_focus():queue_size.set_value_no_signal(int(hunt.queue))
 	showcase_xp.select(maxi(0,[1,2,10,100].find(int(world.automation_settings().training.xp))))
 	showcase_speed.select(maxi(0,[1.0,2.0,4.0,8.0].find(world.playback_speed())))
@@ -299,7 +336,10 @@ func load_settings() -> void:
 	if refresh and visible:refresh_candidates()
 	applying=false;_loading=false
 	update_explanation()
-	if is_instance_valid(stat_species) and stat_species.item_count>0:load_stat_settings()
+	if is_instance_valid(stat_species) and stat_species.item_count>0:
+		# Another device chose a different 属性条件 species: show it here too.
+		if _changed(old,hunt,"stat_species") and old.has("stat_species"):_select_stat_species()
+		else:load_stat_settings()
 	if visible:refresh_ready_status()
 
 static func _changed(old: Dictionary, now: Dictionary, key: String) -> bool:
@@ -352,6 +392,7 @@ func open_menu() -> void:
 	world.paused_input=true
 	get_parent().move_child(self,get_parent().get_child_count()-1)
 	show();refresh_candidates();refresh_stat_species();world.training_helper._refresh_pet_choices();stop_button.disabled=true;_show_fast_availability()
+	show_page(str(world.viewer_pref("hunt_page",page)))
 func close_menu() -> void:
 	if not visible:return
 	world.flush_automation_settings()
@@ -436,7 +477,9 @@ func start_hunt() -> void:
 	if chosen.is_empty():return
 	# The backend hunts with the profile's settings; save these controls first.
 	commit_settings()
-	var reply: Dictionary=world.link.request({"type":"auto_start","kind":"hunt","map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]})
+	var command:={"type":"auto_start","kind":"hunt","map_id":int(world.data.map_id),"cell":[world.cell.x,world.cell.y]}
+	if not start_filter().is_empty():command.filter=start_filter()
+	var reply: Dictionary=world.link.request(command)
 	if not reply.ok and not reply.get("pending",false):
 		if not str(reply.reason).is_empty():status.text=str(reply.reason)
 		return
@@ -559,11 +602,27 @@ func showcase_controls()->void:
 	showcase_speed.tooltip_text="与自动练级的战斗速度是同一个设置，由这台设备记住。"
 	showcase_speed.item_selected.connect(func(index):world.set_battle_speed([1.0,2.0,4.0,8.0][index]))
 	capture_page.add_child(showcase_speed)
+	resume_after_restart=CheckBox.new();resume_after_restart.name="ResumeAfterRestart";resume_after_restart.text="重启后自动恢复";resume_after_restart.button_pressed=true;resume_after_restart.position=Vector2(760,369)
+	resume_after_restart.tooltip_text="服务器重启时记下正在运行的找宠流程、筛选或自动练级（设置、排队的宠物、已遇敌组数和本轮计数），重启后角色还在原地就自动接着运行，停止记录和信息框写「服务器重启后已恢复」。重启时正在打的捕获或练级战斗按逃跑结束，重启后按原种子重新抓或接着练。摸底要重新开始。"
+	capture_page.add_child(resume_after_restart);controls.append(resume_after_restart)
+	resume_after_restart.toggled.connect(func(_value):_settings_changed(true))
 
 func show_capture_settings(enabled:bool)->void:
 	if is_instance_valid(stat_page):stat_page.hide()
 	for node in filter_nodes:node.visible=not enabled
 	capture_page.visible=enabled
+	_remember_page("capture" if enabled else "filters")
+
+## The page shown is remembered on this device and shown again on opening.
+func _remember_page(which: String)->void:
+	page=which
+	if _built and is_instance_valid(world):world.set_viewer_pref("hunt_page",which)
+
+func show_page(which: String)->void:
+	match which:
+		"capture":show_capture_settings(true)
+		"stats":show_stat_settings()
+		_:show_capture_settings(false)
 
 func start_requested()->void:
 	if train_after_capture.button_pressed:world.pet_workflow.start_cycle()
@@ -618,7 +677,9 @@ func build_stat_page()->void:
 	stat_species.item_selected.connect(func(_i):
 		# Changes to the species shown until now are saved before switching.
 		world.flush_automation_settings()
-		load_stat_settings())
+		_stat_species_fallback=false
+		load_stat_settings()
+		_settings_changed(true))
 	stat_mode=OptionButton.new();stat_mode.name="StatFilterMode";stat_mode.position=Vector2(430,170)
 	stat_mode.add_item("全部满足（AND）");stat_mode.add_item("任一满足（OR）");stat_page.add_child(stat_mode);controls.append(stat_mode);stat_mode.item_selected.connect(func(_i):save_stat_settings(true))
 	for i in range(4):
@@ -677,16 +738,28 @@ func build_keep_rule(top: float)->void:
 	for input in [rule_tiers,rule_per_tier,rule_champions]:input.value_changed.connect(func(_value):save_stat_settings())
 
 func refresh_stat_species()->void:
-	var selected:int=stat_species.get_selected_id() if stat_species.item_count else 92
 	stat_species.clear();stat_species.add_item("扬奇洛斯（蓝人龙）",92)
 	for item in candidates:
 		if int(item.id)!=92:stat_species.add_item(str(item.name),int(item.id))
-	var index:=stat_species.get_item_index(selected);stat_species.select(maxi(0,index));load_stat_settings()
+	_select_stat_species()
+
+## Shows the saved 属性条件 species (hunt.stat_species), else the target
+## species, else 蓝人龙. A saved species that does not live here is kept for
+## later (_stat_species_fallback) while the page shows the next choice.
+func _select_stat_species()->void:
+	var hunt:Dictionary=world.automation_settings().hunt
+	var saved:=int(hunt.get("stat_species",-1))
+	var index:=stat_species.get_item_index(saved) if saved>=0 else -1
+	_stat_species_fallback=saved>=0 and index<0
+	if index<0 and int(hunt.template)>=0:index=stat_species.get_item_index(int(hunt.template))
+	stat_species.select(maxi(0,index))
+	load_stat_settings()
 
 func show_stat_settings()->void:
 	show_capture_settings(false)
 	for node in filter_nodes:node.hide()
 	stat_page.show()
+	_remember_page("stats")
 
 ## Shows the selected species' conditions from the profile. Switching species
 ## rewrites every control; a profile update skips the number being typed.
