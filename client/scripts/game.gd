@@ -60,7 +60,6 @@ var _link_status: Label
 ## exist on some maps (replaced by refresh_map_ui on every map change).
 var ui_root: Control
 var dev_bar: HFlowContainer
-var _map_buttons: Array[Control] = []
 var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]
 var _follow: Array = []
 var _following_step := false
@@ -140,7 +139,6 @@ var adventure_hint: Label
 var save_elapsed := 0.0
 var mvp_manifest: Dictionary = {}
 var last_adventure_message := ""
-var boss_button: Button
 var data: Dictionary
 ## Map art by image id, loaded when first drawn and kept across map changes
 ## (maps share most tiles). Cleared on a map change once it grows past
@@ -164,11 +162,18 @@ var effect: AudioStreamPlayer
 var ui_sounds: Dictionary = {}
 var last_ui_sound := -1
 var ui_sound_count := 0
+## Device settings (viewer.cfg, see restore_device_settings): muted is the
+## music switch (M), effects_on the sound effects, volume the music volume.
 var muted := false
 var volume := 0.55
+var effects_on := true
+## Sound settings changed (M, 设置, the 音乐 window): open controls follow.
+signal sound_changed
 var coordinates: Label
 var message: Label
-var mute_button: Button
+## 设置 (scripts/settings_menu.gd); help points at it for the gamepad and
+## callers that pause the field while it is open.
+var settings_menu: PanelContainer
 var help: PanelContainer
 var marker: Node2D
 var marker_cell := Vector2i(-1,-1)
@@ -286,7 +291,9 @@ func _ready() -> void:
 	if state.battle_open and not bool(state.automation.get("compact",false)):present_battle_start(state.battle)
 	resume_automation_view()
 	# This device's radio, if it was left on (tests without a save keep scene music).
-	if profile_persistence or not link.is_local():radio.restore()
+	if profile_persistence or not link.is_local():
+		radio.restore()
+		restore_device_settings()
 	if is_instance_valid(waiting_screen):
 		waiting_screen.release()
 		waiting_screen.enter_game()
@@ -726,10 +733,11 @@ func _unhandled_input(event: InputEvent) -> void:
 		return
 	if event.is_action_pressed("mute"):
 		toggle_mute()
-	elif event.is_action_pressed("help") or event.is_action_pressed("ui_cancel"):
-		help.visible = not help.visible if event.is_action_pressed("help") else false
-		paused_input = help.visible or automation_minimized()
-		clear_input()
+	elif event.is_action_pressed("help"):
+		if settings_menu.visible and settings_menu.page=="help":settings_menu.close_menu()
+		elif not dialogue.visible:settings_menu.open_menu("help")
+	elif event.is_action_pressed("ui_cancel"):
+		settings_menu.close_menu()
 	elif event.is_action_pressed("reset"):
 		reset_player()
 	elif event.is_action_pressed("character"):
@@ -742,9 +750,9 @@ func _unhandled_input(event: InputEvent) -> void:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			handle_world_click(get_global_transform_with_canvas().affine_inverse()*event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			set_zoom(camera.zoom.x+ZOOM_STEP)
+			zoom_by(ZOOM_STEP)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			set_zoom(camera.zoom.x-ZOOM_STEP)
+			zoom_by(-ZOOM_STEP)
 
 func walk_to(destination: Vector2i) -> void:
 	if is_instance_valid(travel_router):travel_router.cancel("新的移动目标取消了跨地图路线。")
@@ -992,7 +1000,7 @@ func play_battle_sound(ident: int) -> void:
 	if ui_sounds.has(ident):
 		play_ui_sound(ident)
 		return
-	if muted or not battle_sounds.has(ident):
+	if not effects_on or not battle_sounds.has(ident):
 		return
 	effect.stream = battle_sounds[ident]
 	effect.play()
@@ -1001,18 +1009,65 @@ func play_click() -> void:
 	play_ui_sound(201)
 
 func play_ui_sound(ident: int) -> void:
-	if muted:
+	if not effects_on:
 		return
 	last_ui_sound = ident
 	ui_sound_count += 1
 	effect.stream = ui_sounds[ident]
 	effect.play()
 
+## M and the 音乐 switches: music on or off on this device.
 func toggle_mute() -> void:
 	muted = not muted
-	music.volume_db = -80 if muted else linear_to_db(maxf(volume,0.0001))
-	effect.volume_db = -80 if muted else -10
-	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
+	_save_device("music_on",not muted)
+	apply_sound()
+
+func set_music_volume(value: float) -> void:
+	volume = clampf(value,0.0,1.0)
+	_save_device("volume",volume)
+	apply_sound()
+
+func set_effects_on(on: bool) -> void:
+	effects_on = on
+	_save_device("effects_on",on)
+	apply_sound()
+
+func set_blink_mode(on: bool) -> void:
+	dev_blink_mode = on
+	_save_device("blink_mode",on)
+
+## Zoom the player chose (wheel, keys, 设置, gamepad), remembered on this device.
+func zoom_by(step: float) -> void:
+	set_zoom(camera.zoom.x+step)
+	_save_device("zoom",camera.zoom.x)
+
+## Saved only once restore_device_settings ran, so a test that presses M or
+## zooms never writes this device's real viewer.cfg.
+var _device_settings_live := false
+func _save_device(key: String, value: Variant) -> void:
+	if _device_settings_live:set_viewer_pref(key,value)
+
+## Zoom to the farthest view and remember it (设置's 拉到最远).
+func zoom_farthest() -> void:
+	maximum_zoom_out()
+	_save_device("zoom",camera.zoom.x)
+
+func apply_sound() -> void:
+	if is_instance_valid(music):music.volume_db = -80 if muted else linear_to_db(maxf(volume,0.0001))
+	if is_instance_valid(effect):effect.volume_db = -10 if effects_on else -80
+	sound_changed.emit()
+
+## This device's sound, zoom and 瞬移 choices (viewer.cfg). Restored for real
+## play (a save or a remote backend); tests keep the defaults unless they call it.
+func restore_device_settings() -> void:
+	_device_settings_live = true
+	volume = clampf(float(viewer_pref("volume",volume)),0.0,1.0)
+	muted = not bool(viewer_pref("music_on",not muted))
+	effects_on = bool(viewer_pref("effects_on",effects_on))
+	dev_blink_mode = bool(viewer_pref("blink_mode",dev_blink_mode))
+	var zoom = viewer_pref("zoom",0.0)
+	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))
+	apply_sound()
 
 func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
@@ -1075,78 +1130,42 @@ func build_ui() -> void:
 	classic_hud = preload("res://scripts/classic_hud.gd").new()
 	classic_hud.world = self
 	root.add_child(classic_hud)
-	boss_button = null
 	var dev := HFlowContainer.new()
 	dev_bar = dev
 	dev.size.x = get_viewport_rect().size.x-24
 	dev.position = Vector2(12,85)
 	dev.add_theme_constant_override("separation",5)
 	root.add_child(dev)
-	dev.add_child(text("DEV",12))
-	var zoom_minus := button("−",func(): set_zoom(camera.zoom.x-ZOOM_STEP))
-	zoom_minus.name = "ZoomMinus"
-	dev.add_child(zoom_minus)
-	var zoom_plus := button("+",func(): set_zoom(camera.zoom.x+ZOOM_STEP))
-	zoom_plus.name = "ZoomPlus"
-	dev.add_child(zoom_plus)
-	var max_out := button("Max out",maximum_zoom_out)
-	max_out.name = "MaxOut"
-	dev.add_child(max_out)
 	character_selection = preload("res://scripts/character_selection.gd").new()
 	character_selection.configure(self)
 	root.add_child(character_selection)
-	var choose_character := button("角色",change_character)
-	choose_character.name = "DevCharacter"
-	dev.add_child(choose_character)
-	var riding_menu := MenuButton.new()
-	riding_menu.name = "DevRiding"
-	riding_menu.text = "骑乘 ▾"
-	riding_menu.flat = false
-	riding_menu.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	riding_menu.get_popup().add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	riding_menu.get_popup().add_item("骑乘选中或首只可骑伙伴 / 下骑",0)
-	riding_menu.get_popup().add_item("选择金虎骑手造型（100010）",1)
-	riding_menu.get_popup().id_pressed.connect(func(id: int):
-		if id == 0: dev_toggle_riding()
-		elif not paused_input and not moving: change_character("100010"))
-	dev.add_child(riding_menu)
 	travel_landing=preload("res://scripts/travel_landing.gd").new()
 	travel_landing.configure(self)
 	leveling_destinations=preload("res://scripts/leveling_destinations.gd").new()
 	leveling_destinations.configure(self);root.add_child(leveling_destinations)
-	var training_travel:=button("刷怪传送",leveling_destinations.open_menu)
-	training_travel.name="DevTrainingTravel";dev.add_child(training_travel)
 	var overview_button := button("地图导航",func(): dev_map_overview.open_map())
 	overview_button.name = "DevMapOverview"
+	overview_button.tooltip_text = "按地图查看和传送"
 	dev.add_child(overview_button)
-	var gm_button := button("GM 调试",func(): dev_gm_menu.open_menu())
-	gm_button.name="DevGM"
-	gm_button.z_index=190
-	dev.add_child(gm_button)
-	var teleport := button("瞬移模式",func(): pass)
-	teleport.name = "DevBlinkMode"
-	teleport.toggle_mode = true
-	teleport.button_pressed = dev_blink_mode
-	teleport.toggled.connect(func(enabled: bool): dev_blink_mode=enabled)
-	teleport.tooltip_text = "开启后点击当前地图即可瞬移；障碍旁寻找可站立位置，关闭后恢复点击寻路"
-	dev.add_child(teleport)
-	clone_button=button("五人镜像队",func():pass)
-	clone_button.name="DevCloneSquad";clone_button.toggle_mode=true
-	clone_button.button_pressed=session.clone_squad_enabled
-	clone_button.tooltip_text="复制当前出战宠与骑乘状态，本体优先，四组人宠自动跟随目标；经验仍归本体和真实宠物。下一场生效。"
-	clone_button.toggled.connect(func(enabled):
-		if not paused_input and not battle_session.snapshot().active:set_clone_squad_enabled(enabled)
-		else:clone_button.set_pressed_no_signal(session.clone_squad_enabled))
-	dev.add_child(clone_button)
-	var encounter := button("立即遇敌",dev_encounter)
-	encounter.name = "DevEncounter"
-	dev.add_child(encounter)
+	var training_travel:=button("刷怪传送",leveling_destinations.open_menu)
+	training_travel.name="DevTrainingTravel";training_travel.tooltip_text="按练级点传送到原版刷怪位置";dev.add_child(training_travel)
 	pet_hunt_menu = preload("res://scripts/pet_hunt_menu.gd").new()
 	pet_hunt_menu.configure(self)
 	root.add_child(pet_hunt_menu)
 	training_helper = preload("res://scripts/training_helper.gd").new()
 	training_helper.configure(self)
 	root.add_child(training_helper)
+	# 五人镜像队 lives in the 自动练级 window beside its other battle options.
+	clone_button=CheckBox.new()
+	clone_button.name="CloneSquadToggle";clone_button.text="五人镜像队"
+	clone_button.focus_mode=Control.FOCUS_NONE
+	clone_button.position=Vector2(560,164)
+	clone_button.button_pressed=session.clone_squad_enabled
+	clone_button.tooltip_text="复制当前出战宠与骑乘状态，本体优先，四组人宠自动跟随目标；经验仍归本体和真实宠物。下一场生效。"
+	clone_button.toggled.connect(func(enabled):
+		if not battle_session.snapshot().active and not area_transition_busy:set_clone_squad_enabled(enabled)
+		else:clone_button.set_pressed_no_signal(session.clone_squad_enabled))
+	training_helper.panel.add_child(clone_button)
 	pet_workflow = preload("res://scripts/pet_workflow.gd").new()
 	pet_workflow.configure(self)
 	root.add_child(pet_workflow)
@@ -1156,9 +1175,6 @@ func build_ui() -> void:
 	var hunt := button("自动抓极品",pet_hunt_menu.open_menu)
 	hunt.name = "DevPetHunt"
 	dev.add_child(hunt)
-	mute_button = button("Music: on  [M]",toggle_mute)
-	mute_button.text = "Music: off  [M]" if muted else "Music: on  [M]"
-	dev.add_child(mute_button)
 	radio = preload("res://scripts/radio.gd").new()
 	radio.name = "Radio"
 	add_child(radio)
@@ -1166,45 +1182,25 @@ func build_ui() -> void:
 	radio_panel = preload("res://scripts/radio_panel.gd").new()
 	root.add_child(radio_panel)
 	radio_panel.configure(self,radio)
-	var radio_button := button("电台",func():
+	var music_button := button("音乐",func():
 		if radio_panel.visible:radio_panel.close_panel()
 		else:radio_panel.open_panel())
-	radio_button.name = "DevRadio"
-	radio_button.tooltip_text = "原版配乐电台：全部曲目、收藏和自己的歌单"
-	dev.add_child(radio_button)
+	music_button.name = "DevMusic"
+	music_button.tooltip_text = "原版配乐电台、收藏和歌单，声音开关和音乐音量"
+	dev.add_child(music_button)
 	changelog_menu = preload("res://scripts/changelog_menu.gd").new()
 	changelog_menu.configure(self)
 	root.add_child(changelog_menu)
-	var changes := button("更新日志 "+str(changelog_menu.history.get("version","v0.0.0")),changelog_menu.open_menu)
-	changes.name = "Changelog"
-	dev.add_child(changes)
-	var help_button := button("Help [H]",func():
-		if not dialogue.visible:
-			help.visible = not help.visible
-			paused_input = help.visible or automation_minimized()
-			clear_input())
-	help_button.name = "DevHelp"
-	dev.add_child(help_button)
-	help = PanelContainer.new()
-	help.position = Vector2(310,200)
-	help.size = Vector2(660,330)
-	help.add_theme_stylebox_override("panel",box(Color("303b2e"),Color("c3a26d")))
-	root.add_child(help)
-	var content := VBoxContainer.new()
-	content.add_theme_constant_override("separation",14)
-	help.add_child(content)
-	content.add_child(text("Welcome back to 萨姆吉尔",25))
-	content.add_child(text("Click a walkable tile to find a path, or use WASD / arrow keys.\nE: wave   X: sit / stand   Tab: choose original character\nMouse wheel or + / −: zoom   M: mute   R: return to square\n\nOriginal 2.5-era map and client assets, rendered in Godot.\nClick 村外探险 to leave through the west exit.\nWild encounters follow original regional enemy and level tables.\nClick the villager to approach and talk. Enter / Esc closes dialogue.",17))
-	content.add_child(text("Music volume",14))
-	var slider := HSlider.new()
-	slider.min_value = 0
-	slider.max_value = 1
-	slider.step = 0.05
-	slider.value = volume
-	slider.value_changed.connect(func(value: float): volume = value; music.volume_db = -80 if muted else linear_to_db(maxf(volume,0.0001)))
-	content.add_child(slider)
-	content.add_child(button("Back to the village",func(): help.hide(); paused_input = automation_minimized(); clear_input()))
-	help.hide()
+	settings_menu = preload("res://scripts/settings_menu.gd").new()
+	root.add_child(settings_menu)
+	settings_menu.configure(self)
+	help = settings_menu
+	var settings_button := button("设置",func():
+		if settings_menu.visible:settings_menu.close_menu()
+		elif not dialogue.visible:settings_menu.open_menu())
+	settings_button.name = "DevSettings"
+	settings_button.tooltip_text = "画面、声音、角色、瞬移、存档、更新日志和操作说明"
+	dev.add_child(settings_button)
 	build_dialogue(root)
 	adventure_menu = AdventureMenu.new()
 	adventure_menu.configure(self)
@@ -1241,32 +1237,9 @@ func build_ui() -> void:
 		else: battle_session.set_pet_command(command))
 	refresh_map_ui()
 
-## The map-specific parts of the UI: DEV shortcuts that exist only on some
-## maps, the residents with their travel dialogue, and the HUD's map window.
+## The map-specific parts of the UI: the residents with their travel
+## dialogue, and the HUD's map window.
 func refresh_map_ui() -> void:
-	for node in _map_buttons:
-		if is_instance_valid(node):
-			dev_bar.remove_child(node)
-			node.queue_free()
-	_map_buttons.clear()
-	boss_button = null
-	var after: int = dev_bar.get_node("DevPetHunt").get_index()
-	if int(data.map_id)==1000:
-		_map_buttons.append(button("Villager",dev_go_villager))
-	var exit_button := button("村外探险" if int(data.map_id)==1000 else "返回村庄",dev_go_adventure)
-	exit_button.name = "ExploreOutside"
-	_map_buttons.append(exit_button)
-	if int(data.map_id)==1000:
-		_map_buttons.append(button("道具店",dev_go_shop))
-	if int(data.map_id)==100:
-		boss_button = button("挑战强敌",func():
-			if session.can_fight_boss():begin_battle(true))
-		boss_button.tooltip_text = "接受委托、战胜三个对手并捕获伙伴后开放"
-		_map_buttons.append(boss_button)
-	for node in _map_buttons:
-		after += 1
-		dev_bar.add_child(node)
-		dev_bar.move_child(node,after)
 	world_travel = preload("res://scripts/world_travel.gd").new()
 	actors.add_child(world_travel)
 	var residents: Array = []
@@ -1600,7 +1573,6 @@ func update_adventure_hint() -> void:
 	adventure_hint.visible = not battle_view.visible and not adventure_menu.visible and not dialogue.visible
 	var profile: Dictionary = session.snapshot()
 	var q: Dictionary = profile.quest
-	if is_instance_valid(boss_button):boss_button.disabled = not session.can_fight_boss()
 	var objective := "找村民聊聊，准备你的第一次冒险。"
 	if q.claimed:objective = "委托完成！继续培养与收集你的伙伴。"
 	elif session.can_fight_boss():objective = "准备好后，在村外点击 DEV「挑战强敌」。"
@@ -1610,6 +1582,11 @@ func update_adventure_hint() -> void:
 	if not last_adventure_message.is_empty():adventure_hint.text += "\n"+last_adventure_message
 
 func show_adventure_menu(kind: String) -> void:
+	# The old 系统 page is 设置 now (settings_menu.gd).
+	if kind=="system":
+		if settings_menu.visible:settings_menu.close_menu()
+		else:settings_menu.open_menu()
+		return
 	if is_instance_valid(character_selection) and character_selection.visible:return
 	if is_instance_valid(changelog_menu) and changelog_menu.visible:return
 	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:return
@@ -1619,7 +1596,7 @@ func show_adventure_menu(kind: String) -> void:
 	if adventure_menu.visible and adventure_menu.kind == kind:
 		close_adventure_menu()
 		return
-	if battle_view.visible and kind!="system":
+	if battle_view.visible:
 		play_battle_sound(220)
 		return
 	if moving or dialogue.visible or help.visible:return

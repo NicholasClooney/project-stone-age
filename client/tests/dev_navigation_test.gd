@@ -25,8 +25,11 @@ func run():
  check(game.path==route and not route.is_empty() and game.held.is_empty(),"focus loss keeps click route but releases keyboard")
  for i in range(100):game._physics_process(0.5)
  check(game.cell==Vector2i(85,95),"route finishes after losing focus")
- await click(game.find_child("DevBlinkMode",true,false))
- check(game.dev_blink_mode,"dev toggle enables click blink mode")
+ game.settings_menu.open_menu()
+ await process_frame
+ await click(game.settings_menu.find_child("SettingsBlinkMode",true,false))
+ check(game.dev_blink_mode,"设置's 瞬移模式 enables click blink mode")
+ game.settings_menu.close_menu()
  game.dev_go_villager()
  await physics_frame
  await physics_frame
@@ -41,11 +44,9 @@ func run():
  await physics_frame
  check(int(game.data.map_id)==1002 and game.adventure_menu.visible,"shop shortcut teleports to reachable merchant")
  game.close_adventure_menu()
- # The shop hid this newly built toolbar before its first layout. Wait for
- # the visible frame a user would see before computing the button hit point.
- await process_frame
  game.encounter_rng.seed=0
- await click(game.find_child("DevEncounter",true,false))
+ game.dev_encounter()
+ await process_frame
  check(game.battle_view.visible and game.battle_session.snapshot().active and int(game.data.map_id)==100,"dev encounter enters regular battle from interior")
  var id=game.battle_session.snapshot().get("battle_id","")
  game.dev_encounter()

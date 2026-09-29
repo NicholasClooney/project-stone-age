@@ -170,9 +170,9 @@ func _rebuild_panel() -> void:
 	add_child(panel)
 	var profile: Dictionary = world.session.snapshot()
 	var p: Dictionary = profile.player
-	if kind in ["quest","system"]:
+	if kind=="quest":
 		stone(Rect2(0,0,704,432))
-		label("村外的伙伴" if kind=="quest" else "系统",Vector2(24,16),600,21)
+		label("村外的伙伴",Vector2(24,16),600,21)
 	match kind:
 		"status":
 			status_panel(profile)
@@ -193,10 +193,6 @@ func _rebuild_panel() -> void:
 			choice("接受委托",Vector2(420,205),"accept_quest",null,not q.accepted and not q.claimed)
 			choice("领取报酬",Vector2(420,249),"claim_quest",null,q.accepted and q.boss_defeated and not q.claimed)
 			choice("休息 / 恢复体力",Vector2(420,305),"heal")
-		"system":
-			label("旅程会自动保存。\n继续探索，进度不会丢失。" if world.profile_persistence else "临时旅程：存档未启用。",Vector2(30,78),360,18)
-			choice("保存旅程",Vector2(420,90),"save",null,world.profile_persistence and not world.battle_view.visible)
-			choice("音乐开关",Vector2(420,145),"mute")
 	if kind in ["status","inventory","pets"]:
 		return
 	var close := TextureButton.new()
@@ -215,7 +211,7 @@ func layout_panel() -> void:
 	# in 640px; higher resolutions add their extra width to right windows.
 	if kind == "inventory":
 		panel.position = Vector2(maxf(4,size.x-275),4)
-	elif kind in ["status","pets","system"]:
+	elif kind in ["status","pets"]:
 		panel.position = Vector2(4,4)
 	else:
 		panel.position = (size-panel.size)/2

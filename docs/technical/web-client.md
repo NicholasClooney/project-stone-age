@@ -59,7 +59,7 @@ A measured build (before all riding pairs were imported): 1,117 packs, 302 MB in
 | B | Cancel | Close / back (same as Esc) |
 | X / Y | Status / pets | Switch to status / pets |
 | LB / RB | Zoom out / in | Previous / next page |
-| Start | Help | Help |
+| Start | 设置 | 设置 |
 | Back / View | Navigate the HUD and DEV buttons (Back or B returns) | |
 
 A minimized 自动练级 / 自动抓极品 bar is not a menu: its 展开 button is reached with Back (HUD mode), and B / Esc leave the automation running. A click is a real mouse click at the control's centre, so battle commands, targets, pet rows and dialogue choices work unchanged; disabled controls are skipped and nothing depends on hover. `tests/gamepad_test.gd` plays walking, menus, paging, dialogue and a battle turn with simulated controller events only.

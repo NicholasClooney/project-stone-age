@@ -28,11 +28,11 @@ func run():
  game.effect.stop()
  view._request_action("attack")
  check(game.effect.playing and game.effect.stream==game.ui_sounds[217],"combat selection plays original menu sound")
- game.toggle_mute()
+ game.set_effects_on(false)
  game.effect.stop()
  view._request_action("attack")
- check(not game.effect.playing,"muting suppresses combat menu sounds")
- game.toggle_mute()
+ check(not game.effect.playing,"switching sound effects off suppresses combat menu sounds")
+ game.set_effects_on(true)
  var hud=game.classic_hud
  var move=InputEventMouseMotion.new()
  move.position=Vector2(650,790)
@@ -44,11 +44,11 @@ func run():
   await click(hud.task_buttons[i])
   check(not hud.map_panel.visible and not game.adventure_menu.visible,"field tab stays unavailable in battle")
  await click(hud.task_buttons[6])
- check(game.adventure_menu.visible and game.adventure_menu.kind=="system","system tab works during battle")
+ check(game.settings_menu.visible,"system tab opens 设置 during battle")
  view._request_action("defend")
- check(game.battle_session.snapshot().turn==turn,"system overlay blocks combat commands")
+ check(game.battle_session.snapshot().turn==turn,"设置 blocks combat commands")
  await click(hud.task_buttons[6])
- check(not game.adventure_menu.visible and game.paused_input,"system toggle closes without unpausing world")
+ check(not game.settings_menu.visible and game.paused_input,"system toggle closes 设置 without unpausing world")
  # Finish a real losing battle, then let the deferred automatic return run.
  for i in range(60):
   if not game.battle_session.snapshot().active:break

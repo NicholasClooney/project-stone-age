@@ -2,7 +2,9 @@ extends PanelContainer
 ## The 电台 window (playback is radio.gd). It floats above the field without
 ## pausing it, so the player can walk, fight and use other panels while
 ## choosing music; the header drags it and 收起 folds it to the player bar.
-## Open with the DEV bar's 电台 button. Folded or not is this device's own.
+## Open with the toolbar's 音乐 button; it also holds this device's music
+## switch and volume (the same settings as 设置 → 声音). Folded or not is
+## this device's own.
 const WIDTH := 400.0
 const LIST_HEIGHT := 250.0
 const KIND_NAMES := {"town":"村镇","field":"原野","dungeon":"洞窟","battle":"战斗","theme":"主题","jingle":"短曲"}
@@ -25,13 +27,10 @@ func configure(owner: Node, player: Node) -> void:
 	folded = bool(world.viewer_pref("radio_folded",false))
 	radio.changed.connect(_refresh)
 	radio.library_changed.connect(_refresh)
+	world.sound_changed.connect(_sync_sound)
 	hide()
 
 func open_panel() -> void:
-	if not radio.available():
-		world.message.text = "没有电台曲目：请先运行 tools/import_music.py（见 docs/development/original-data-setup.md）。"
-		world.message.show()
-		return
 	rebuild()
 	get_parent().move_child(self,get_parent().get_child_count()-1)
 	show()
@@ -59,6 +58,15 @@ func rebuild() -> void:
 	body.add_theme_constant_override("separation",6)
 	add_child(body)
 	_header()
+	_sound_row()
+	if not radio.available():
+		var missing: Label = world.text("没有电台曲目：请先运行 tools/import_music.py（见 docs/development/original-data-setup.md）。",12)
+		missing.name = "RadioMissing"
+		missing.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		missing.custom_minimum_size.x = WIDTH-24
+		body.add_child(missing)
+		reset_size()
+		return
 	_now_playing()
 	if not folded:
 		_station_row()
@@ -68,7 +76,7 @@ func rebuild() -> void:
 func _header() -> void:
 	var row := HBoxContainer.new()
 	body.add_child(row)
-	var heading: Label = world.text("电台 ♪",16)
+	var heading: Label = world.text("音乐 ♪ 电台",16)
 	heading.name = "RadioHeading"
 	heading.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.mouse_filter = Control.MOUSE_FILTER_STOP
@@ -99,6 +107,41 @@ func _drag(event: InputEvent) -> void:
 		var screen: Vector2 = world.get_viewport_rect().size
 		position = (position+event.relative).clamp(Vector2.ZERO,(screen-size).max(Vector2.ZERO))
 		accept_event()
+
+## The music switch (M) and music volume, saved on this device.
+func _sound_row() -> void:
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation",6)
+	body.add_child(row)
+	var music_on := CheckBox.new()
+	music_on.name = "RadioMusicOn"
+	music_on.text = "音乐 [M]"
+	music_on.focus_mode = Control.FOCUS_NONE
+	music_on.add_theme_font_size_override("font_size",13)
+	music_on.button_pressed = not world.muted
+	music_on.toggled.connect(func(on: bool):
+		if on==world.muted:world.toggle_mute())
+	row.add_child(music_on)
+	row.add_child(world.text("音量",13))
+	var slider := HSlider.new()
+	slider.name = "RadioVolume"
+	slider.min_value = 0
+	slider.max_value = 1
+	slider.step = 0.05
+	slider.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	slider.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	slider.focus_mode = Control.FOCUS_NONE
+	slider.value = world.volume
+	slider.value_changed.connect(world.set_music_volume)
+	row.add_child(slider)
+
+## Follows M, 设置 and other windows without rebuilding (a drag keeps going).
+func _sync_sound() -> void:
+	if not visible:return
+	var music_on := find_child("RadioMusicOn",true,false) as CheckBox
+	if music_on:music_on.set_pressed_no_signal(not world.muted)
+	var slider := find_child("RadioVolume",true,false) as HSlider
+	if slider and not is_equal_approx(slider.value,world.volume):slider.set_value_no_signal(world.volume)
 
 func _now_playing() -> void:
 	var line: Label = world.text("",14)

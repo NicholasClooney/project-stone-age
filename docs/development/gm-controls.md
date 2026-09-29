@@ -1,6 +1,6 @@
 # GM developer controls
 
-Open **DEV → GM 调试** in the field or battle. Opening the panel never changes the profile. Changes affect the current save and set `gm_modified` on the profile and affected actor; this broad marker can also reflect ordinary GM leveling or healing, not just edited stats.
+Open **设置 → 开发者 → GM 调试** in the field or battle. Opening the panel never changes the profile. Changes affect the current save and set `gm_modified` on the profile and affected actor; this broad marker can also reflect ordinary GM leveling or healing, not just edited stats.
 
 - Select the player or an owned pet, then **升至等级** (1–120). Only increases are accepted. Each intervening level uses normal growth, including the saved deterministic pet growth seed. Repeating the same level does not reroll growth.
 - Set or add vitality / strength / toughness / dexterity **base** values. One displayed unit is 100 original fixed-point units. Derived HP, attack, defence and speed are recalculated; these inputs are not direct combat-stat overrides. Resulting base values must stay within 0–10,000 displayed units.
