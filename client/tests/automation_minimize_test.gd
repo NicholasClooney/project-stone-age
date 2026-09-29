@@ -148,6 +148,9 @@ func training(game) -> void:
 func hunting(game) -> void:
 	check(game.switch_area(true,Vector2i(45,45)),"enter original wilderness for hunting")
 	var hunt=game.pet_hunt_menu
+	hunt.refresh_msec=0
+	check(hunt.cn_count(9999)=="9999" and hunt.cn_count(583593)=="58.36万" and hunt.cn_count(29542342431)=="295.42亿" and hunt.cn_count(1.5e12)=="1.50万亿","big counts read in Chinese units")
+	check(hunt.duration_text(115.4)=="1分55秒" and hunt.duration_text(7380)=="2小时03分" and hunt.duration_text(4.25)=="4.2秒","durations read as 分/秒")
 	hunt.set_process(false)
 	hunt.open_menu();hunt.auto_capture.button_pressed=false;hunt.train_after_capture.button_pressed=false
 	check(hunt.minimize_button.disabled,"最小化 needs a running scan")

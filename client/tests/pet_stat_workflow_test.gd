@@ -24,7 +24,7 @@ func run()->void:
 	check(flow.start_cycle(),"workflow starts with current per-species filter settings")
 	check(flow.stat_filter_snapshot[92].conditions.sum.value==620,"loop snapshots current configuration")
 	fake_msec=31000
-	check(flow.elapsed_seconds()==30.0 and hunt.summary().contains("流程总用时 00:00:30"),"workflow displays elapsed wall time separately from round duration")
+	check(flow.elapsed_seconds()==30.0 and hunt.summary().contains("流程总用时 30秒"),"workflow displays elapsed wall time separately from round duration")
 	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"conditions":{"sum":{"value":999}}}}}})
 	check(game.stat_filter(92).conditions.sum.value==999 and flow.stat_filter_snapshot[92].conditions.sum.value==620,"a later settings change cannot change the running loop threshold")
 	hunt.stop_hunt("test boundary");hunt.hide();game.paused_input=false

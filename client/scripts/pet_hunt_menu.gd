@@ -440,7 +440,7 @@ func stop_hunt(reason: String) -> void:
 	else:on_event({"kind":"hunt_stopped","reason":reason})
 func summary() -> String:
 	var actual:=rolls / maxf(elapsed,0.001)
-	return workflow_summary()+"已遇敌 %d 组 · 检查目标 %d 只 · 最好总档 %s · 本轮 %.1f 秒\n%s · 实际 %s · 流程总用时 %s" % [rolls,inspected,"暂无" if best< -8 else "%+d" % best,elapsed,speed_text(),rolls_text(actual),world.pet_workflow.elapsed_text()]
+	return workflow_summary()+"已遇敌 %s 组 · 检查目标 %s 只 · 最好总档 %s · 本轮 %s\n%s · 实际 %s · 流程总用时 %s" % [cn_count(rolls),cn_count(inspected),"暂无" if best< -8 else "%+d" % best,duration_text(elapsed),speed_text(),rolls_text(actual),duration_text(world.pet_workflow.elapsed_seconds())]
 ## How this run scans: the helper, the ordinary scan and why, or its target rate.
 func speed_text() -> String:
 	var hunt: Dictionary=_hunt()
@@ -451,9 +451,7 @@ func speed_text() -> String:
 	if bool(hunt.get("fast_wanted",false)) and target>0:return "目标 %s（已限速，使用普通筛选）" % rate_text(target)
 	return "目标 "+rate_text(target)
 static func rolls_text(per_second: float) -> String:
-	if per_second>=100000000:return "%.1f 亿组/秒" % (per_second/100000000.0)
-	if per_second>=10000:return "%.0f 万组/秒" % (per_second/10000.0)
-	return "%.0f 组/秒" % per_second
+	return cn_count(per_second)+" 组/秒"
 func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组/秒"%value
 func update_status() -> void:status.text=summary()+queue_text("\n")+"\n筛选中；停止或 Esc 可随时结束。"
 ## 展示模式's waiting hits, or "" when none.
@@ -473,7 +471,9 @@ func _process(delta: float) -> void:
 		stop_hunt("场景状态变化，筛选已停止。");return
 	# In-process, this frame drives the backend scan with the same budget.
 	if world.link.is_local():world.link.request({"type":"auto","name":"hunt_process","delta":delta})
-	if running:update_status()
+	if running and Time.get_ticks_msec()-_status_shown_msec>=refresh_msec:
+		_status_shown_msec=Time.get_ticks_msec();update_status()
+	if _chip_dirty and minimized:_update_chip()
 ## Test seam: one backend scan now.
 func scan_once() -> void:
 	world.link.request({"type":"auto","name":"hunt_scan"})
@@ -570,7 +570,7 @@ func _workflow_counts()->String:
 		var best_seen:Dictionary=flow.best_predicted
 		var best_text:String="暂无" if best_seen.is_empty() else "三围合%d 攻%d"%[int(best_seen.sum),int(best_seen.attack)]
 		var kept:String="（保留规则自动整理：同种现有%d只，已放生%d只）"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
-		return "本轮达标存仓 %d/%s 只%s · 滚动淘汰 %d 只 · 预测未达标跳过 %d 只 · 最好预测 %s\n" % [flow.collected_count,flow.collect_target_text(),kept,flow.pruned_count,flow.predicted_rejects,best_text]
+		return "本轮达标存仓 %d/%s 只%s · 滚动淘汰 %d 只 · 预测未达标跳过 %s 只 · 最好预测 %s\n" % [flow.collected_count,flow.collect_target_text(),kept,flow.pruned_count,cn_count(flow.predicted_rejects),best_text]
 	if is_instance_valid(world.pet_workflow) and world.pet_workflow.stored_count>0:
 		status.tooltip_text=world.pet_workflow.last_result
 		return "未达标 %d 只（滚动淘汰 %d 只）· 最近 %s 三围合%d，继续找宠\n" % [world.pet_workflow.stored_count,world.pet_workflow.pruned_count,world.pet_workflow.last_stored_id,world.pet_workflow.last_stored_total]
@@ -745,19 +745,47 @@ func _chip() -> Panel:
 	if not is_instance_valid(chip):
 		chip=preload("res://scripts/automation_chip.gd").new()
 		chip.name="PetHuntChip"
-		chip.setup(world,"自动抓极品",0,restore)
+		chip.setup(world,"自动抓极品",0,restore,3,560.0)
 		get_parent().add_child(chip)
 	return chip
 
+## Readouts refresh at most this often (10 per second); 0 refreshes at once.
+var refresh_msec := 100
+var _chip_shown_msec := -100000
+var _chip_dirty := false
+var _status_shown_msec := -100000
+
 func _update_chip() -> void:
 	if not is_instance_valid(chip):return
+	var now := Time.get_ticks_msec()
+	if now-_chip_shown_msec<refresh_msec:
+		_chip_dirty=true;return
+	_chip_shown_msec=now;_chip_dirty=false
+	var counts:="遇敌 %s 组 · 检查 %s 只 · %s · 本轮 %s" % [cn_count(rolls),cn_count(inspected),rolls_text(rolls/maxf(elapsed,0.001)),duration_text(elapsed)]
 	var flow=world.pet_workflow
 	if flow.active():
 		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
 		var kept:String=" · 同种%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
 		var waiting:=int(world.state.automation.get("flow",{}).get("queue_size",0))
-		var skipped:=" · 跳过 %d" % flow.skipped_count if flow.skipped_count>0 else ""
-		chip.present("自动抓极品 · 找宠流程 · "+step,("排队 %d 只 · " % waiting if waiting>0 else "")+"达标 %d/%s%s · 未达标 %d%s · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,skipped,rolls,flow.elapsed_text()])
+		var total: float=flow.elapsed_seconds()
+		var found:=int(flow.collected_count)+int(flow.stored_count)
+		var average:="平均 %s/只" % duration_text(total/found) if found>0 else "平均 —"
+		chip.present("自动抓极品 · 找宠流程 · "+step,
+			"%s\n达标 %d/%s%s · 未达标 %d · 跳过 %d · 预测跳过 %s%s\n总用时 %s · %s" % [counts,flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,flow.skipped_count,cn_count(flow.predicted_rejects),(" · 排队 %d" % waiting if waiting>0 else ""),duration_text(total),average])
 		if flow.skipped_count>0:chip.tooltip_text=flow.skip_note
 	else:
-		chip.present("自动抓极品 · 筛选中","遇敌 %d 组 · 检查 %d 只 · 最好总档 %s"%[rolls,inspected,"暂无" if best< -8 else "%+d"%best])
+		chip.present("自动抓极品 · 筛选中",counts+"\n最好总档 %s" % ("暂无" if best< -8 else "%+d"%best))
+
+## A count in Chinese units: 9999, 1.23万, 4.56亿, 7.89万亿.
+static func cn_count(value: float) -> String:
+	if absf(value)>=1e12:return "%.2f万亿" % (value/1e12)
+	if absf(value)>=1e8:return "%.2f亿" % (value/1e8)
+	if absf(value)>=1e4:return "%.2f万" % (value/1e4)
+	return str(int(value))
+
+## 45秒, 3分05秒, 2小时03分.
+static func duration_text(seconds: float) -> String:
+	var s:=int(seconds)
+	if s<60:return "%.1f秒" % seconds if seconds<10 else "%d秒" % s
+	if s<3600:return "%d分%02d秒" % [s/60,s%60]
+	return "%d小时%02d分" % [s/3600,(s/60)%60]

@@ -10,12 +10,14 @@ var title: Label
 var detail: Label
 var restore_button: Button
 
-## `slot` stacks several bars upward from the bottom-right corner.
-func setup(owner: Node, caption: String, slot: int, on_restore: Callable) -> void:
+## `slot` stacks several bars upward from the bottom-right corner; `lines`
+## and `width` size a bar with more to show.
+func setup(owner: Node, caption: String, slot: int, on_restore: Callable, lines: int = 1, width: float = WIDTH) -> void:
 	world = owner
+	var height := HEIGHT+18.0*(lines-1)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	z_index = 60
-	size = Vector2(WIDTH,HEIGHT)
+	size = Vector2(width,height)
 	add_theme_stylebox_override("panel",world.box(Color("20292f",0.94),Color("b29b65")))
 	title = world.text(caption,14)
 	title.position = Vector2(10,4)
@@ -23,19 +25,19 @@ func setup(owner: Node, caption: String, slot: int, on_restore: Callable) -> voi
 	add_child(title)
 	detail = world.text("",12)
 	detail.position = Vector2(10,30)
-	detail.size = Vector2(WIDTH-94,22)
+	detail.size = Vector2(width-94,22+18.0*(lines-1))
 	detail.clip_text = true
 	detail.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(detail)
 	restore_button = world.button("展开",on_restore)
 	restore_button.name = "RestoreAutomation"
 	restore_button.tooltip_text = "展开完整窗口"
-	restore_button.position = Vector2(WIDTH-72,12)
+	restore_button.position = Vector2(width-72,(height-34)/2)
 	restore_button.size = Vector2(62,34)
 	add_child(restore_button)
 	var screen: Vector2 = world.get_viewport_rect().size
 	# Above the classic bottom bar, clear of the left-anchored pet windows.
-	position = Vector2(screen.x-WIDTH-12,screen.y-44-(HEIGHT+6)*(slot+1))
+	position = Vector2(screen.x-width-12,screen.y-44-(height+6)-(HEIGHT+6)*slot)
 	hide()
 
 func present(heading: String, line: String) -> void:
