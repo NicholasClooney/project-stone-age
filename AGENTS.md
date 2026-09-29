@@ -4,7 +4,17 @@
 - Run all tests in the background without opening windows or taking focus. `scripts/run.sh --script …` defaults to headless and muted. Do not launch a graphical test unless the user explicitly requests it; only then use `STONE_AGE_FOREGROUND_TEST=1 ./scripts/run.sh --script …` (still muted). Headless tests cannot validate rendered pixels.
 - Use conventional commits. Do not commit imported original assets, reference archives or verification screenshots.
 - Gameplay authority lives in `client/server/backend.gd` and `client/server/automation.gd`. UI code reads `world.state` / `world.session.snapshot()` and changes anything only through `world.session`, `world.battle_session` or `world.link.request`; never mutate `world.backend` from UI. A remote client has no backend at all. See [backend interface](docs/technical/backend-interface.md).
-- `scripts/test-all.sh` reports every suite; `scripts/test.sh` stops at the first failure.
+- `scripts/test-all.sh` reports every suite; `scripts/test.sh` stops at the first failure. `scripts/test.sh` ignores its arguments and runs every suite one by one; run a single suite with `./scripts/run.sh --headless --script res://tests/<name>.gd`.
+
+## Working in the main checkout (the session the user talks to, not subagents)
+
+The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a fix or feature there is ready:
+
+1. **Relaunch first so the user can test.** Back up the save (`single-player.json.before-<name>-<stamp>`), stop the previous relaunch, run `./scripts/relaunch.sh` in the background and wait for `Ready:`. Tell the user it is up.
+2. **Then run the tests** while the user plays: the changed suites, then `STONE_AGE_TEST_LOGS=<private dir> ./scripts/test-all.sh`. Don't make the user wait on tests before they can try the change.
+3. Commit, refresh the changelog and fast-forward `main` once the tests pass. If they fail, fix and relaunch again.
+
+Subagents working in their own worktrees don't relaunch; they test and commit, and the main session merges and relaunches.
 
 ## Required in-game changelog
 
