@@ -58,10 +58,11 @@ static func _id_number(pet:Dictionary)->int:
  var id:=str(pet.get("pet_id",""))
  return int(id.trim_prefix("pet-")) if id.trim_prefix("pet-").is_valid_int() else 1<<62
 
-## Carried pets before warehouse pets; within each group favourites first when
-## favorites_first, then each key of order highest first (see full_order), then
-## the older pet id. order is an Array of SORT_KEYS or one key as a String.
-static func rows(profile:Dictionary,selected:Dictionary,order:Variant=DEFAULT_ORDER,projected:bool=false,favorites_first:bool=true)->Array:
+## Carried pets before warehouse pets when carried_first (otherwise one ranking
+## of both); then favourites first when favorites_first, then each key of order
+## highest first (see full_order), then the older pet id. order is an Array of
+## SORT_KEYS or one key as a String.
+static func rows(profile:Dictionary,selected:Dictionary,order:Variant=DEFAULT_ORDER,projected:bool=false,favorites_first:bool=true,carried_first:bool=true)->Array:
  var keys:=full_order(order)
  var result:=[]
  for location in ["pets","pet_storage"]:
@@ -72,7 +73,7 @@ static func rows(profile:Dictionary,selected:Dictionary,order:Variant=DEFAULT_OR
    var forecast:={"expected":expected(pet)}
    result.append({"pet":pet,"location":location,"index":index,"forecast":forecast,"quality":quality(pet)})
  result.sort_custom(func(a,b):
-  if a.location!=b.location:return a.location=="pets"
+  if carried_first and a.location!=b.location:return a.location=="pets"
   if favorites_first and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
   var av:Dictionary=a.forecast.get("expected",a.pet) if projected else a.pet
   var bv:Dictionary=b.forecast.get("expected",b.pet) if projected else b.pet

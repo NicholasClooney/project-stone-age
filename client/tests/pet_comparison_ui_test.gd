@@ -19,6 +19,11 @@ func multi_sort()->void:
  check(ids.call(Compare.rows(profile,selected,["speed","max_hp"],false,false))==["pet-9","pet-13","pet-12","pet-11","pet-10","pet-14"] and Compare.full_order(["speed","max_hp"])==["speed","max_hp","stat_total","attack","defence"],"a custom order leads, remaining keys break ties in the fixed order")
  check(ids.call(Compare.rows(profile,selected,["defence"],false,false))[0]=="pet-10","a single key sorts by that stat first")
  check(Compare.full_order(["attack","attack","bogus"])==["attack","stat_total","speed","max_hp","defence"],"repeated and unknown keys are dropped")
+ # The screenshot case: a carried 625 above a stored 626 only while grouped.
+ var mixed:={"pets":[make.call(165,294,180,151,1315,true)],"pet_storage":[make.call(219,292,181,153,1311,false)]}
+ check(ids.call(Compare.rows(mixed,selected,Compare.DEFAULT_ORDER,false,true,true))==["pet-165","pet-219"],"随身在前 keeps the carried 625 above the stored 626")
+ check(ids.call(Compare.rows(mixed,selected,Compare.DEFAULT_ORDER,false,false,false))==["pet-219","pet-165"],"switched off, carried and stored pets share one ranking")
+ check(ids.call(Compare.rows(mixed,selected,Compare.DEFAULT_ORDER,false,true,false))==["pet-165","pet-219"],"收藏优先 still applies across one ranking")
 
 func run():
  multi_sort()
@@ -74,7 +79,13 @@ func run():
  overlay=menu.panel.get_node("PetComparisonPanel")
  check(not menu.pet_compare_favorites_first and not overlay.get_node("PetCompareFavoritesFirst").button_pressed,"收藏优先 can be switched off")
  check(game.viewer_pref("compare_order",[])==["speed"] and game.viewer_pref("compare_favorites_first",true)==false,"the order and toggle are remembered on this device")
- menu.set_compare_order(["stat_total","attack","speed","max_hp"]);menu.set_compare_favorites_first(true)
+ check(overlay.get_node("PetCompareCarriedFirst").button_pressed and overlay.find_child("CompareGroup_pets",true,false)!=null,"随身在前 is on by default, with group headings")
+ overlay.get_node("PetCompareCarriedFirst").button_pressed=false
+ overlay=menu.panel.get_node("PetComparisonPanel")
+ check(not menu.pet_compare_carried_first and overlay.find_child("CompareGroup_pets",true,false)==null and overlay.find_child("CompareGroup_pet_storage",true,false)==null,"switching 随身在前 off drops the group headings")
+ check(overlay.get_node("ComparePinned_当前分组首位").text.begins_with("当前首位"),"the pinned leader is 当前首位 without groups")
+ check(game.viewer_pref("compare_carried_first",true)==false,"随身在前 is remembered on this device")
+ menu.set_compare_order(["stat_total","attack","speed","max_hp"]);menu.set_compare_favorites_first(true);menu.set_compare_carried_first(true)
  overlay=menu.panel.get_node("PetComparisonPanel")
  check(overlay.get_node("ComparePinned_选中").text.contains("pet-999"),"selected stable ID remains pinned independent of page")
  check(overlay.has_node("ComparePinned_当前分组首位"),"sorted leader has pinned comparison summary")

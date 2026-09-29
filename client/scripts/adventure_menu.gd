@@ -25,6 +25,7 @@ var _built_view: Array = []
 ## favourites lead each group; this device's choice (viewer.cfg), loaded on first use.
 var pet_compare_order: Array = []
 var pet_compare_favorites_first := true
+var pet_compare_carried_first := true
 var _compare_prefs_loaded := false
 var pet_compare_projected := false
 # 放生 selection for the comparison overlay: stable pet_id -> true, per species.
@@ -636,7 +637,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		filter_result_height=44;scroll.position.y+=44;scroll.size.y-=44
 	scroll.size.y-=88
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
-	var rows:=PetComparison.rows(profile,selected,pet_compare_order,pet_compare_projected,pet_compare_favorites_first)
+	var rows:=PetComparison.rows(profile,selected,pet_compare_order,pet_compare_projected,pet_compare_favorites_first,pet_compare_carried_first)
 	release_controls(overlay,profile,rows,scroll.position.y+scroll.size.y+6)
 	var focus_id:=str(selected.get("pet_id",""))
 	var focus:Dictionary=selected
@@ -645,7 +646,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	var leader:Dictionary=rows[0].pet if not rows.is_empty() else focus
 	for entry in [["选中",focus,108],["当前分组首位",leader,150]]:
 		var actor:Dictionary=entry[1]
-		var summary:Label=world.text("%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [entry[0],actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)],13)
+		var caption:String="当前首位" if entry[0]=="当前分组首位" and not pet_compare_carried_first else str(entry[0])
+		var summary:Label=world.text("%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [caption,actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)],13)
 		summary.position=Vector2(14,int(entry[2])+filter_result_height);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
 	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
 	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(548,82);overlay.add_child(previous)
@@ -653,7 +655,8 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 	var page:Label=world.text("%d/%d · %d只"%[pet_compare_page+1,pages,rows.size()],13);page.position=Vector2(592,89);overlay.add_child(page)
 	var last_group:=""
 	for row in rows.slice(pet_compare_page*20,(pet_compare_page+1)*20):
-		if str(row.location)!=last_group:
+		# One ranking of both places has no group headings; each row says 携带 or 仓库.
+		if pet_compare_carried_first and str(row.location)!=last_group:
 			last_group=str(row.location)
 			var heading:Label=world.text("随身宠物" if last_group=="pets" else "仓库宠物",16);heading.name="CompareGroup_"+last_group;list.add_child(heading)
 		var pet:Dictionary=row.pet;var estimate:Dictionary=row.forecast.get("expected",pet);var q:Dictionary=row.quality
@@ -694,6 +697,7 @@ func load_compare_prefs()->void:
 	pet_compare_order=(saved as Array).filter(func(key):return PetComparison.SORT_KEYS.has(key)) if saved is Array else []
 	if pet_compare_order.is_empty():pet_compare_order=PetComparison.DEFAULT_ORDER.duplicate()
 	pet_compare_favorites_first=bool(world.viewer_pref("compare_favorites_first",true))
+	pet_compare_carried_first=bool(world.viewer_pref("compare_carried_first",true))
 
 ## Sets the 同种比较 order (repeats dropped, at least one key) and remembers it on this device.
 func set_compare_order(order:Array)->void:
@@ -703,6 +707,11 @@ func set_compare_order(order:Array)->void:
 	if cleaned.is_empty():cleaned=PetComparison.DEFAULT_ORDER.duplicate()
 	pet_compare_order=cleaned
 	world.set_viewer_pref("compare_order",cleaned)
+	rebuild()
+
+func set_compare_carried_first(on:bool)->void:
+	pet_compare_carried_first=on
+	world.set_viewer_pref("compare_carried_first",on)
 	rebuild()
 
 func set_compare_favorites_first(on:bool)->void:
@@ -737,6 +746,9 @@ func compare_sort_controls(overlay:Control)->void:
 	var predicted:=CheckBox.new();predicted.name="PetCompareProjected";predicted.text="按120级属性";predicted.position=Vector2(536,48);predicted.focus_mode=Control.FOCUS_NONE
 	predicted.tooltip_text="按120级属性排序（未满级宠物按成长种子精确推算）"
 	predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
+	var carried:=CheckBox.new();carried.name="PetCompareCarriedFirst";carried.text="随身在前";carried.position=Vector2(652,48);carried.focus_mode=Control.FOCUS_NONE
+	carried.tooltip_text="随身宠物单独排在仓库宠物前面；关掉后两处一起排名"
+	carried.button_pressed=pet_compare_carried_first;carried.toggled.connect(set_compare_carried_first);overlay.add_child(carried)
 
 func clear_release_selection()->void:
 	pet_release_selected.clear();pet_release_confirm=false
