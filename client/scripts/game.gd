@@ -95,6 +95,8 @@ var _link_status: Label
 var ui_root: Control
 ## 游戏助手 (scripts/helper_menu.gd): the list of the windows this project added.
 var helper_menu: PanelContainer
+## The 游戏助手 button on the field (the only button of ours there).
+var helper_button: Button
 ## This device's keys, action -> [key, key] (scripts/shortcuts.gd).
 var shortcuts: Dictionary = {}
 var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]

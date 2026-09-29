@@ -41,6 +41,14 @@ func run() -> void:
 	check(game.get("dev_bar")==null,"there is no toolbar")
 	for gone in ["DevMapOverview","DevTrainingTravel","DevTraining","DevPetHunt","DevMusic","DevSettings","DevRiding","DevGM","DevEncounter","DevBlinkMode","DevCloneSquad","DevHelp","DevCharacter","ExploreOutside","MaxOut","DevRadio"]:
 		check(game.find_child(gone,true,false)==null,"%s is not on the game screen" % gone)
+	# The one button of ours on the field: 游戏助手, below the classic icons.
+	var ours: Array = game.ui_root.get_children().filter(func(node): return node is Button and node.visible)
+	check(ours.size()==1 and ours[0]==game.helper_button and game.helper_button.text=="游戏助手 [G]","the only button of ours on the field is 游戏助手 [G]")
+	game.helper_button.pressed.emit()
+	await process_frame
+	check(game.helper_menu.visible,"the field button opens 游戏助手")
+	game.helper_menu.close_menu()
+	await process_frame
 
 	# Nothing is saved before the device settings are restored.
 	game.toggle_mute()

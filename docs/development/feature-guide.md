@@ -34,7 +34,7 @@ What the restored game offers today, with pointers to the detailed notes. The [R
 
 ## Toolbar and 设置
 
-- No extra buttons sit on the game screen. **游戏助手** (G) lists this project's windows: 自动练级, 自动抓极品, 宠物 · 同种比较, 电台, 地图导航, 刷怪传送 and, under 开发者, GM 调试. The map window (M) also shows 地图导航 and 刷怪传送 below it.
+- The only button of this project on the game screen is **游戏助手 [G]**, below the classic top-left icons (hidden in battles). **游戏助手** (G) lists this project's windows: 自动练级, 自动抓极品, 宠物 · 同种比较, 电台, 地图导航, 刷怪传送 and, under 开发者, GM 调试. The map window (M) also shows 地图导航 and 刷怪传送 below it.
 - **地图导航**: map browser with 地点 / 练级点 / Lv.1宠物 destinations; choose 步行 for portal travel or DEV 传送 for instant visits, and toggle 野外随机遇敌 there. **刷怪传送** offers verified encounter spots for levels 1–120.
 - **音乐** opens the 电台 window, which also has the music switch (M) and the music volume.
 - **设置** (Esc with no window open, the classic taskbar's 系统; H opens its 操作说明): 画面 zoom slider (10% to 200%; a new device starts at 100%), 声音 (music, sound effects, music volume, 电台), 游戏助手, 快捷键 (every shortcut rebindable: click a key slot and press a key, Esc cancels, Backspace clears, a key in use offers 交换, 恢复默认; Esc itself is fixed), 换角色, 瞬移模式 (world clicks become safe instant moves), 保存旅程, **更新日志** with the `v0.MINOR.PATCH` beta version ([versioning](../versioning/version-system.md)) and 操作说明. Volume, the music and effects switches, zoom, 瞬移模式 and the shortcuts are remembered per device (`viewer.cfg`).

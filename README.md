@@ -79,7 +79,7 @@ Quit the standalone desktop game before starting `serve.sh`; both would write th
 
 Walk out through the village's west exit (or use **地图导航**), weaken a wild pet and capture it, and win some battles. 蓝人龙、金虎 and 红暴龙 join you on first launch; ride one from the pet window.
 
-There are no extra buttons on the game screen. This project's windows open from **游戏助手** (G) and **设置** (Esc): zoom, sound and 电台, character, 瞬移, saving, 快捷键 (every shortcut can be rebound per device), changelog, 操作说明, and GM tools under 开发者. See the [feature guide](docs/development/feature-guide.md).
+The only button of this project on the game screen is **游戏助手 [G]** (top left). This project's windows open from it and from **设置** (Esc): zoom, sound and 电台, character, 瞬移, saving, 快捷键 (every shortcut can be rebound per device), changelog, 操作说明, and GM tools under 开发者. See the [feature guide](docs/development/feature-guide.md).
 
 ## Development
 

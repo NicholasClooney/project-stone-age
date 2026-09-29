@@ -130,13 +130,19 @@ func build_ui() -> void:
 	game.dev_gm_menu.configure(game)
 	root.add_child(game.dev_gm_menu)
 	game.adventure_hint = text("",14)
-	# Below the classic top-left icons, where the toolbar used to be.
-	game.adventure_hint.position = Vector2(18,88)
+	# Below the classic top-left icons and the 游戏助手 button.
+	game.adventure_hint.position = Vector2(18,126)
 	game.adventure_hint.add_theme_color_override("font_shadow_color",Color.BLACK)
 	game.adventure_hint.add_theme_constant_override("shadow_offset_x",1)
 	game.adventure_hint.add_theme_constant_override("shadow_offset_y",1)
 	game.adventure_hint.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	root.add_child(game.adventure_hint)
+	# The one button of this project on the field: everything else is in its list.
+	game.helper_button = button(helper_caption(),func(): game.helper_menu.open_menu())
+	game.helper_button.name = "HelperButton"
+	game.helper_button.tooltip_text = "本项目加入的功能：自动练级、自动抓极品、电台、地图导航、刷怪传送等"
+	game.helper_button.position = Vector2(14,88)
+	root.add_child(game.helper_button)
 	game.battle_view = BattleView.new()
 	root.add_child(game.battle_view)
 	game.battle_view.configure(game)
@@ -173,10 +179,21 @@ func _panel_open() -> bool:
 func update_adventure_hint() -> void:
 	if not is_instance_valid(game.adventure_hint):return
 	game.adventure_hint.visible = not game.battle_view.visible and not game.adventure_menu.visible and not game.dialogue.visible
+	if is_instance_valid(game.helper_button):
+		game.helper_button.visible = not game.battle_view.visible and not game.dialogue.visible
+		game.helper_button.text = helper_caption()
 	var profile: Dictionary = game.session.snapshot()
 	# Only the status: the early quest's goals (村外的伙伴) no longer lead anywhere.
 	game.adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold]
 	if not game.last_adventure_message.is_empty():game.adventure_hint.text += "\n"+game.last_adventure_message
+
+## 游戏助手 with its current key (快捷键 can rebind it).
+func helper_caption() -> String:
+	for event in InputMap.action_get_events("helper") if InputMap.has_action("helper") else []:
+		if event is InputEventKey:
+			var code: int = event.physical_keycode if event.physical_keycode!=0 else event.keycode
+			if code!=0:return "游戏助手 [%s]" % OS.get_keycode_string(code)
+	return "游戏助手"
 
 func build_dialogue(root: Control) -> void:
 	game.dialogue = Control.new()

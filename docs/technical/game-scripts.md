@@ -21,7 +21,7 @@
 | `game_panels.gd` | Redrawing open panels for new data: throttling while automation runs, keeping scroll places, not rebuilding under typed text |
 | `game_battle.gd` | Starting battles, presenting what the backend opened, resolved and closed, sending commands, the web packs a battle needs |
 | `game_startup.gd` | Web startup: waiting screen, index, core and start-area downloads, startup errors, `window.stoneAge` and `window.stoneAgeDev` |
-| `game_ui.gd` | Building the UI layer and windows (there is no toolbar; see 游戏助手 in `scripts/helper_menu.gd`), the per-map UI, dialogue box, adventure hint, and the shared `text`, `button`, `box` helpers |
+| `game_ui.gd` | Building the UI layer and windows (no toolbar: one 游戏助手 button opens `scripts/helper_menu.gd`), the per-map UI, dialogue box, adventure hint, and the shared `text`, `button`, `box` helpers |
 | `game_menus.gd` | The villager and merchant, dialogue, and the adventure menu's open, close and actions |
 | `game_areas.gd` | Building the world for a map, loading another map, the fade, exits and arrival rules (including field encounters), startup placement, developer map shortcuts |
 | `game_input.gd` | Key bindings and rebinding (`scripts/shortcuts.gd`), held movement keys, per-window Esc and keys, clicks and the wheel on the field |
