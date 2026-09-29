@@ -24,7 +24,8 @@
     "offsets": [2, 2, 2, 2],
     "rate": 0,
     "limit": 0,
-    "fast": true
+    "fast": true,
+    "showcase": true
   },
   "stat_filter": {
     "mode": "any",

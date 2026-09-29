@@ -36,6 +36,9 @@ var login_clock: Callable
 var login_rng: RandomNumberGenerator
 # Temporary solo-training companions; never duplicate persistent rewards or pets.
 var clone_squad_enabled := false
+## 展示模式 training (server/automation.gd): the four clones bring the player's
+## best other pets instead of copies of the active one. Off everywhere else.
+var clone_best_others := false
 # Optional single-player assist; each battle snapshots this before any rewards.
 var experience_multiplier: int = 1:
 	set(value):
@@ -106,6 +109,9 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 			mirror.mounted_sprite = config.mounted_sprite
 			mirror.base_stats = {"attack":mirror.attack,"defence":mirror.defence,"speed":mirror.speed}
 			config.ally_pets.append(pet.duplicate(true) if int(_profile.active_pet)!=int(config.ride_pet_index) else {})
+		if clone_best_others:
+			var others := best_other_pets(4)
+			for i in range(4):config.ally_pets[i] = others[i] if i < others.size() else {}
 	config.capture_slots = PET_CAPACITY-_profile.pets.size()
 	config.pets = _profile.pets.duplicate(true)
 	config.active_pet = _profile.active_pet
@@ -117,6 +123,31 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	_profile.next_battle += 1
 	_pending = config.duplicate(true)
 	return config
+
+## Virtual copies of the strongest pets besides the active and ridden ones, from
+## the party and the warehouse: level, then 三围合, then attack, then the older
+## pet. Copies carry a clone id so no reward or change reaches the real pet.
+func best_other_pets(count: int) -> Array:
+	_ensure_pet_ids()
+	var skip := {}
+	for index in [int(_profile.active_pet),int(_profile.get("ride_pet",-1))]:
+		if index>=0 and index<_profile.pets.size():skip[str(_profile.pets[index].get("pet_id",""))] = true
+	var pool: Array = []
+	for pet in _profile.pets+_profile.get("pet_storage",[]):
+		if not skip.has(str(pet.get("pet_id",""))) and int(pet.get("hp",0))>0:pool.append(pet)
+	pool.sort_custom(func(a, b):
+		if int(a.level)!=int(b.level):return int(a.level)>int(b.level)
+		var sa := int(a.attack)+int(a.defence)+int(a.speed)
+		var sb := int(b.attack)+int(b.defence)+int(b.speed)
+		if sa!=sb:return sa>sb
+		if int(a.attack)!=int(b.attack):return int(a.attack)>int(b.attack)
+		return str(a.pet_id).naturalnocasecmp_to(str(b.pet_id))<0)
+	var result: Array = []
+	for pet in pool.slice(0,count):
+		var copy: Dictionary = pet.duplicate(true)
+		copy.pet_id = "clone-of-"+str(pet.pet_id)
+		result.append(copy)
+	return result
 
 func start_wild_battle_config(troop: Dictionary) -> Dictionary:
 	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}

@@ -40,6 +40,7 @@ func cycle_capture(game, seed_value: int) -> bool:
 	var flow = game.pet_workflow
 	var hunt = game.pet_hunt_menu
 	var helper = game.training_helper
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false}}}) # 展示模式 off: this suite covers the full-speed find-pet cycle.
 	if not flow.start_cycle():return false
 	var fixture := newborn(game,seed_value)
 	hunt.hunt_catalog = fixture;hunt.scan_once()

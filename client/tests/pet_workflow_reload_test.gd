@@ -8,6 +8,8 @@ func run() -> void:
 	var game=load("res://scenes/main.tscn").instantiate();game.profile_persistence=false;root.add_child(game)
 	await process_frame
 	game.session.grant_starter_pets()
+	# 展示模式 off: this suite covers the full-speed find-pet cycle.
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false}}})
 	game.load_area_id(100,Vector2i(637,493))
 	check(game.pet_workflow.phase=="idle","ordinary travel does not invent workflow pause")
 	var old_flow=game.pet_workflow

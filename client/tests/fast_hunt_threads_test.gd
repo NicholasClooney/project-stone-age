@@ -68,7 +68,7 @@ func backend_commands() -> void:
 	var never := {"mode":"any","stop_after":1,"conditions":{"sum":{"enabled":true,"value":700,"strict":false,"keep":0}}}
 	backend.handle({"type":"set_fast_hunt_threads","threads":1})
 	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL,"stat_filters":{"92":never},
-		"filter":{"template":92,"level_one":true,"total":8,"offsets":[2,2,2,2],"auto_capture":false,"limit":0,"fast":true},"settings":{"capture_hp":100}})
+		"filter":{"template":92,"level_one":true,"total":8,"offsets":[2,2,2,2],"auto_capture":false,"limit":0,"fast":true,"showcase":false},"settings":{"capture_hp":100}})
 	check(reply.ok,"a fast find-pet cycle starts %s" % reply)
 	var ticked := func(condition: Callable, seconds: float) -> bool:
 		var deadline := Time.get_ticks_msec()+int(seconds*1000)

@@ -97,6 +97,8 @@ var ui_root: Control
 var helper_menu: PanelContainer
 ## The 游戏助手 button on the field (the only button of ours there).
 var helper_button: Button
+## 展示模式's cards over the field and battles (scripts/showcase_cards.gd).
+var showcase_cards: Control
 ## This device's keys, action -> [key, key] (scripts/shortcuts.gd).
 var shortcuts: Dictionary = {}
 var _client_id := "%x-%x" % [randi(),Time.get_ticks_usec()]

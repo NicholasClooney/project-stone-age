@@ -9,6 +9,8 @@ func _initialize()->void:call_deferred("run")
 func run()->void:
 	var game=load("res://scenes/main.tscn").instantiate();game.profile_persistence=false;root.add_child(game);await process_frame
 	game.session.grant_starter_pets();game.load_area_id(300,Vector2i(509,90));game.session.gm_heal()
+	# 展示模式 off: this suite covers the full-speed find-pet cycle.
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false}}})
 	var hunt=game.pet_hunt_menu;hunt.set_process(false)
 	var flow=game.pet_workflow;flow.set_process(false);flow.timer_clock=func():return fake_msec
 	game.training_helper.set_process(false);game.training_helper.capture_hp.value=100

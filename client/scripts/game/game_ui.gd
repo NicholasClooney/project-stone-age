@@ -152,6 +152,9 @@ func build_ui() -> void:
 	game.battle_view.sound_requested.connect(game.play_battle_sound)
 	game.battle_view.capture_music_requested.connect(func(celebrating: bool):
 		game.set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
+	game.showcase_cards = preload("res://scripts/showcase_cards.gd").new()
+	root.add_child(game.showcase_cards)
+	game.showcase_cards.configure(game)
 	game.battle_view.pet_command_requested.connect(func(command: String):
 		if command == "skill": game.battle_session.set_pet_skill(int(game.battle_view.get("selected_pet_skill")))
 		else: game.battle_session.set_pet_command(command))

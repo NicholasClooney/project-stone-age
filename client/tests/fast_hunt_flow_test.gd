@@ -69,7 +69,7 @@ func run() -> void:
 		flow.handle(command)
 	var strict := {"mode":"any","stop_after":1,"conditions":{"sum":{"enabled":true,"value":621,"strict":false,"keep":0}}}
 	var reply: Dictionary = flow.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL,"stat_filters":{"92":strict},
-		"filter":{"template":92,"level_one":true,"total":8,"offsets":[2,2,2,2],"auto_capture":false,"limit":0,"fast":true},"settings":{"capture_hp":100}})
+		"filter":{"template":92,"level_one":true,"total":8,"offsets":[2,2,2,2],"auto_capture":false,"limit":0,"fast":true,"showcase":false},"settings":{"capture_hp":100}})
 	check(reply.ok and flow.automation.flow_phase=="hunt","a find-pet cycle starts hunting")
 	var flow_run := await hunt_until_stopped(flow)
 	var matched: Dictionary = flow.automation.flow_matched_actor

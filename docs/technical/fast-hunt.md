@@ -83,6 +83,12 @@ The number of worker threads belongs to the server's computer, not to a characte
 - `stop_hunt` kills the helper. If the backend process itself goes away, the helper sees its parent change and exits.
 - The hunt window shows 本机极速模式 or the reason for the ordinary scan, and the rolls per second. The checkbox is greyed, with the reason, when the backend cannot run the helper.
 
+## 展示模式 (showcase)
+
+With `hunt.showcase` on (the default), a find-pet cycle does not stop the hunt on a hit. `_scan_index` hands the hit to `_showcase_enqueue` instead, which keeps at most 10 hits `{index, slot, run_seed, actor, troop, prediction}`, best first by predicted 三围合 and the species' keep-rule order. The hunt keeps ticking while a battle is open (`_hunt_process` skips its battle check in showcase), so the helper searches on during the reveal, capture and training.
+
+`flow_step` then takes the best entry (`reveal`, a card for `REVEAL_MSEC`), rolls it again from `FastHunt.roll_seed(run_seed, index)` and compares the whole troop with the queued one before opening its capture battle. Only the queue's own map and cell are valid; moving stops the cycle and drops the queue. Training follows `SHOWCASE_PLAN`: shown battles (not compact, 10x experience, `GameSession.clone_best_others` so the four clones bring the best other pets) and instant levels to Lv30, 60, 90 and 120 between them. The final card is built after the pet is stored and tidied, so it can report a keep-rule release. The card, queue size and `show_battle` (clients then play at 1x) are in the automation status under `flow`.
+
 ## Tests
 
 - `fast_hunt_test`: C and GDScript agree roll by roll.

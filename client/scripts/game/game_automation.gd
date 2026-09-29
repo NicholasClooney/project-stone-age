@@ -17,7 +17,7 @@ func resume_automation_view() -> void:
 	if is_instance_valid(game.training_helper) and game.training_helper.running and not game.training_helper.minimized and not (is_instance_valid(game.pet_workflow) and game.pet_workflow.active()) and bool(game.viewer_pref("training_minimized")):
 		game.training_helper.minimize()
 	var hunting := bool(automation.get("hunt",{}).get("running",false))
-	var flow := str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+	var flow := str(automation.get("flow",{}).get("phase","idle")) in ["hunt","reveal","capture","train","restart"]
 	if (hunting or flow) and is_instance_valid(game.pet_hunt_menu) and not game.pet_hunt_menu.visible and not game.pet_hunt_menu.minimized:
 		game.pet_hunt_menu.open_menu()
 		if hunting:game.pet_hunt_menu.on_status(automation)
@@ -62,7 +62,7 @@ func _on_automation_settings() -> void:
 
 func _automation_running() -> bool:
 	var automation: Dictionary = game.state.automation
-	return bool(automation.get("running",false)) or bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+	return bool(automation.get("running",false)) or bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","reveal","capture","train","restart"]
 
 ## True while a minimized automation window (自动练级 / 自动抓极品) runs. Its
 ## progress bar then stands in for the window: nothing is modal, but the

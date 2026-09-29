@@ -45,6 +45,9 @@ var auto_capture: CheckBox
 ## 本机极速模式 (hunt.fast): the backend scans with the native helper on every
 ## CPU core; the same rolls as the ordinary scan, which runs when it cannot.
 var fast: CheckBox
+## 展示模式 (hunt.showcase): found pets are revealed, captured on screen and
+## trained with a few shown battles while the search goes on (server/automation.gd).
+var showcase: CheckBox
 ## 线程数 of the server's helper (0 = auto): the computer's setting, not the
 ## character's, so it is sent as its own command and stays editable mid-hunt.
 var thread_count: SpinBox
@@ -148,6 +151,10 @@ func _ready() -> void:
 	fast.tooltip_text="服务器所在电脑用全部 CPU 核心筛选，遇到的敌群和结果与普通筛选完全相同，只是快得多；「每秒遇敌」填了限速时按限速用普通筛选；无法使用时也自动改用普通筛选。"
 	panel.add_child(fast);controls.append(fast)
 	fast.toggled.connect(func(_value):_settings_changed(true))
+	showcase=CheckBox.new();showcase.name="ShowcaseMode";showcase.text="展示模式";showcase.button_pressed=true;showcase.position=Vector2(860,506)
+	showcase.tooltip_text="找宠流程找到一只就先亮出预测的120级属性，再以正常速度播放捕获战斗和几场练级战斗；同时后台继续找下一只，最多排队10只。关掉则像以前一样全速捕获、瞬间练满。"
+	panel.add_child(showcase);controls.append(showcase)
+	showcase.toggled.connect(func(_value):_settings_changed(true))
 	label("线程数",Vector2(852,470),15)
 	thread_count=SpinBox.new();thread_count.name="FastHuntThreads";thread_count.position=Vector2(905,462);thread_count.size=Vector2(100,34)
 	thread_count.min_value=0;thread_count.max_value=64;thread_count.step=1;thread_count.value=0
@@ -235,7 +242,7 @@ func commit_settings() -> void:
 func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
-		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed}
+		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed}
 	# 任何 shown only because the saved species is not found here keeps the saved one.
 	if species.item_count>0 and (_commit_template or not _template_fallback):wanted.template=species.get_selected_id()
 	var hunt:=AutomationSettings.diff(world.automation_settings().hunt,wanted)
@@ -262,6 +269,7 @@ func load_settings() -> void:
 	if _changed(old,hunt,"auto_capture"):auto_capture.set_pressed_no_signal(bool(hunt.auto_capture))
 	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
 	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
+	if _changed(old,hunt,"showcase"):showcase.set_pressed_no_signal(bool(hunt.showcase))
 	start_button.text="开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"
 	var shown:=hunt.duplicate(true)
 	var numbers:={"total":total,"rate":rate,"limit":limit}
@@ -430,14 +438,21 @@ static func rolls_text(per_second: float) -> String:
 	if per_second>=10000:return "%.0f 万组/秒" % (per_second/10000.0)
 	return "%.0f 组/秒" % per_second
 func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组/秒"%value
-func update_status() -> void:status.text=summary()+"\n筛选中；停止或 Esc 可随时结束。"
+func update_status() -> void:status.text=summary()+queue_text("\n")+"\n筛选中；停止或 Esc 可随时结束。"
+## 展示模式's waiting hits, or "" when none.
+func queue_text(prefix: String = "") -> String:
+	var size:=int(world.state.automation.get("flow",{}).get("queue_size",0)) if is_instance_valid(world) else 0
+	return prefix+"后台已找到 %d 只在排队" % size if size>0 else ""
 func _process(delta: float) -> void:
 	if not running:return
 	# Minimized, the scan keeps going while other panels come and go. Over a
 	# network the backend stops the hunt itself when the character moves or a
 	# battle opens; several devices share the run, so one device's window or
 	# map load must not stop it.
-	if world.link.is_local() and (not (visible or minimized) or (visible and not world.paused_input) or world.battle_view.visible or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell):
+	# 展示模式 searches on behind its own cards and shown battles.
+	var showcase: bool = bool(world.state.automation.get("flow",{}).get("showcase",false)) and world.pet_workflow.active()
+	var screen_changed: bool = not showcase and (not (visible or minimized) or (visible and not world.paused_input) or world.battle_view.visible)
+	if world.link.is_local() and (screen_changed or world.area_transition_busy or int(world.data.map_id)!=region_map or world.cell!=region_cell):
 		stop_hunt("场景状态变化，筛选已停止。");return
 	# In-process, this frame drives the backend scan with the same budget.
 	if world.link.is_local():world.link.request({"type":"auto","name":"hunt_process","delta":delta})
@@ -646,7 +661,7 @@ func commit_stat_settings()->void:
 	world.flush_automation_settings()
 
 static func _automation_active(automation: Dictionary) -> bool:
-	return bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]
+	return bool(automation.get("hunt",{}).get("running",false)) or str(automation.get("flow",{}).get("phase","idle")) in ["hunt","reveal","capture","train","restart"]
 
 ## Collapses the window into a small progress bar. The scan or find-pet cycle
 ## continues and the world, HUD and other panels (pets, warehouse) stay usable.
@@ -689,8 +704,9 @@ func _update_chip() -> void:
 	if not is_instance_valid(chip):return
 	var flow=world.pet_workflow
 	if flow.active():
-		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
+		var step: String={"hunt":"筛选中","reveal":"亮相","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
 		var kept:String=" · 同种%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
-		chip.present("自动抓极品 · 找宠流程 · "+step,"达标 %d/%s%s · 未达标 %d · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,rolls,flow.elapsed_text()])
+		var waiting:=int(world.state.automation.get("flow",{}).get("queue_size",0))
+		chip.present("自动抓极品 · 找宠流程 · "+step,("排队 %d 只 · " % waiting if waiting>0 else "")+"达标 %d/%s%s · 未达标 %d · 遇敌 %d 组 · %s"%[flow.collected_count,flow.collect_target_text(),kept,flow.stored_count,rolls,flow.elapsed_text()])
 	else:
 		chip.present("自动抓极品 · 筛选中","遇敌 %d 组 · 检查 %d 只 · 最好总档 %s"%[rolls,inspected,"暂无" if best< -8 else "%+d"%best])

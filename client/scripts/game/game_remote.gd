@@ -195,5 +195,5 @@ func _on_auto_event(detail: Dictionary) -> void:
 			if is_instance_valid(game.training_helper):game.training_helper.on_event(detail)
 		"hunt_stopped","hunt_refused","hunt_hit":
 			if is_instance_valid(game.pet_hunt_menu):game.pet_hunt_menu.on_event(detail)
-		"flow_hunt","flow_paused","flow_stored","flow_compare":
+		"flow_hunt","flow_paused","flow_stored","flow_compare","flow_reveal":
 			if is_instance_valid(game.pet_workflow):game.pet_workflow.on_event(detail)
