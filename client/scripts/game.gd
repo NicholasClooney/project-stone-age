@@ -11,6 +11,10 @@ const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 ## Behaviour split out of this script (see docs/technical/game-scripts.md);
 ## each helper is created first in _init and reaches the state through `game.`.
+const GameMovement = preload("res://scripts/game/game_movement.gd")
+var _movement
+const GameInput = preload("res://scripts/game/game_input.gd")
+var _input_events
 const GameAreas = preload("res://scripts/game/game_areas.gd")
 var _areas
 const GameMenus = preload("res://scripts/game/game_menus.gd")
@@ -219,6 +223,8 @@ var dialogue_name: Label
 var dialogue_text: Label
 
 func _init() -> void:
+	_movement = GameMovement.new(self)
+	_input_events = GameInput.new(self)
 	_areas = GameAreas.new(self)
 	_menus = GameMenus.new(self)
 	_ui = GameUi.new(self)
@@ -341,15 +347,6 @@ func close_game() -> void:
 	await get_tree().create_timer(0.15).timeout
 	get_tree().quit()
 
-func configure_input() -> void:
-	var bindings := {"north":[KEY_W,KEY_UP],"south":[KEY_S,KEY_DOWN],"west":[KEY_A,KEY_LEFT],"east":[KEY_D,KEY_RIGHT],"mute":[KEY_M],"reset":[KEY_R],"character":[KEY_TAB],"sit":[KEY_X],"wave":[KEY_E],"help":[KEY_H]}
-	for action in bindings:
-		if not InputMap.has_action(action):
-			InputMap.add_action(action)
-		for code in bindings[action]:
-			var event := InputEventKey.new()
-			event.physical_keycode = code
-			InputMap.action_add_event(action,event)
 
 func project(grid: Vector2) -> Vector2:
 	return Vector2((grid.x+grid.y)*32,(grid.y-grid.x)*24)
@@ -387,258 +384,6 @@ func can_step(origin: Vector2i, destination: Vector2i) -> bool:
 		return is_walkable(origin+Vector2i(d.x,0)) and is_walkable(origin+Vector2i(0,d.y))
 	return true
 
-func request_step(destination: Vector2i) -> bool:
-	if moving or not can_step(cell,destination):
-		return false
-	var d := destination-cell
-	# Legacy moveAddTbl: direction 0 is south, 4 north; increments turn clockwise.
-	player.facing = (SCREEN_DIRECTIONS.find(d)+4)%8
-	from_cell = cell
-	target_cell = destination
-	step_progress = 0
-	moving = true
-	_followed = []
-	_follow = []
-	player.set_action(4)
-	return true
-
-func _input(event: InputEvent) -> void:
-	if event is InputEventKey and event.pressed and get_viewport().gui_get_focus_owner() is LineEdit:
-		_last_typing_msec = Time.get_ticks_msec()
-	if event.is_action_pressed("ui_cancel") and is_instance_valid(pet_workflow) and pet_workflow.phase=="restart":
-		pet_workflow.stop_cycle("已手动停止");get_viewport().set_input_as_handled();return
-	if data.is_empty():
-		return
-	if link_blocked():
-		if event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion:get_viewport().set_input_as_handled()
-		return
-	for action in ["north","south","west","east"]:
-		if event.is_action_pressed(action) and not event.is_echo() and not paused_input:
-			if is_instance_valid(travel_router):travel_router.cancel("手动移动取消了自动寻路。")
-			pending_talk = false
-			held.erase(action)
-			held.append(action)
-			path.clear()
-		elif event.is_action_released(action):
-			held.erase(action)
-
-func _unhandled_input(event: InputEvent) -> void:
-	for modal in [leveling_destinations]:
-		if is_instance_valid(modal) and modal.visible:
-			if event.is_action_pressed("ui_cancel"):modal.close_menu()
-			get_viewport().set_input_as_handled()
-			return
-	if is_instance_valid(training_helper) and training_helper.visible:
-		if event.is_action_pressed("ui_cancel"):training_helper.close_menu()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(pet_hunt_menu) and pet_hunt_menu.visible:
-		if event.is_action_pressed("ui_cancel"):pet_hunt_menu.close_menu()
-		get_viewport().set_input_as_handled()
-		return
-	if data.is_empty():
-		return
-	if is_instance_valid(changelog_menu) and changelog_menu.visible:
-		if event.is_action_pressed("ui_cancel"):changelog_menu.close_menu()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(character_selection) and character_selection.visible:
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(dev_gm_menu) and dev_gm_menu.visible:
-		if event.is_action_pressed("ui_cancel"):dev_gm_menu.close_menu()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(dev_map_overview) and dev_map_overview.visible:
-		if event.is_action_pressed("ui_cancel"):dev_map_overview.close_map()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(pet_training) and pet_training.visible:
-		if event.is_action_pressed("ui_cancel"):pet_training.close_training()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(world_travel) and world_travel.overlay.visible:
-		if event.is_action_pressed("ui_cancel"):world_travel._close()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(adventure_menu) and adventure_menu.visible:
-		if event.is_action_pressed("ui_cancel"):close_adventure_menu()
-		get_viewport().set_input_as_handled()
-		return
-	if is_instance_valid(battle_view) and battle_view.visible:
-		if event.is_action_pressed("mute"):
-			toggle_mute()
-		elif event.is_action_pressed("ui_accept") and not battle_session.snapshot().active:
-			return_from_battle()
-		get_viewport().set_input_as_handled()
-		return
-	if dialogue.visible:
-		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
-			close_dialogue()
-		get_viewport().set_input_as_handled()
-		return
-	if event is InputEventKey and event.pressed and not event.echo and event.ctrl_pressed and event.keycode==KEY_M:
-		classic_hud.toggle_map()
-		get_viewport().set_input_as_handled()
-		return
-	if event.is_action_pressed("ui_cancel") and classic_hud.map_panel.visible:
-		classic_hud.toggle_map()
-		return
-	if event.is_action_pressed("mute"):
-		toggle_mute()
-	elif event.is_action_pressed("help"):
-		if settings_menu.visible and settings_menu.page=="help":settings_menu.close_menu()
-		elif not dialogue.visible:settings_menu.open_menu("help")
-	elif event.is_action_pressed("ui_cancel"):
-		settings_menu.close_menu()
-	elif event.is_action_pressed("reset"):
-		reset_player()
-	elif event.is_action_pressed("character"):
-		change_character()
-	elif event.is_action_pressed("sit") and not moving:
-		player.set_action(3 if player.action==5 else 5)
-	elif event.is_action_pressed("wave") and not moving:
-		player.set_action(6)
-	elif event is InputEventMouseButton and event.pressed and not paused_input:
-		if event.button_index == MOUSE_BUTTON_LEFT:
-			handle_world_click(get_global_transform_with_canvas().affine_inverse()*event.position)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
-			zoom_by(ZOOM_STEP)
-		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
-			zoom_by(-ZOOM_STEP)
-
-func walk_to(destination: Vector2i) -> void:
-	if is_instance_valid(travel_router):travel_router.cancel("新的移动目标取消了跨地图路线。")
-	pending_talk = false
-	if not is_walkable(destination):
-		message.text = "That spot is blocked. Choose a path or clearing."
-		return
-	var start := target_cell if moving else cell
-	path = navigation.get_id_path(start,destination)
-	if not path.is_empty():
-		path.pop_front()
-		marker_cell = destination
-		message.text = "Walking to (%d, %d)" % [destination.x,destination.y]
-	else:
-		message.text = "No walkable route to that spot."
-	queue_redraw()
-
-func _physics_process(delta: float) -> void:
-	if not link.is_local():
-		link.poll(delta)
-		_update_link_overlay()
-		if link_blocked():return
-	if area_transition_busy:return
-	if data.is_empty():
-		return
-	if not _settings_dirty.is_empty() and Time.get_ticks_msec()-_settings_dirty_msec>=SETTINGS_SEND_MSEC:flush_automation_settings()
-	if _ui_stale and not _ui_refresh_held():
-		_ui_refreshed_msec = Time.get_ticks_msec()
-		_ui_stale = refresh_open_panels()
-	if moving:
-		var d := target_cell-from_cell
-		var distance_scale := sqrt(2.0) if d.x != 0 and d.y != 0 else 1.0
-		step_progress = minf(1,step_progress+delta/(STEP_TIME*distance_scale))
-		logical_position = Vector2(from_cell).lerp(Vector2(target_cell),step_progress)
-		player.position = project(logical_position)
-		if step_progress>=1:
-			cell = target_cell
-			moving = false
-			if _following_step:
-				_following_step = false
-				pet_trail.append(cell)
-				while pet_trail.size()>3:pet_trail.pop_front()
-			elif handle_arrival():
-				return
-	if not moving and not (held.is_empty() and path.is_empty() and _step_follow()):
-		var destination := cell
-		if not paused_input and not held.is_empty():
-			var d := Vector2i.ZERO
-			for action in held:
-				match action:
-					"north": d += Vector2i(1,-1)
-					"south": d += Vector2i(-1,1)
-					"east": d += Vector2i(1,1)
-					"west": d += Vector2i(-1,-1)
-			destination += Vector2i(signi(d.x),signi(d.y))
-		elif not paused_input and not path.is_empty():
-			destination = path.pop_front()
-		if destination != cell:
-			if not request_step(destination):
-				path.clear()
-				player.set_action(3)
-		elif player.action == 4:
-			player.set_action(3)
-			marker_cell = Vector2i(-1,-1)
-			queue_redraw()
-	if pending_talk and not moving and path.is_empty():
-		pending_talk = false
-		if in_talk_range(cell):
-			open_dialogue()
-	if player.action == 6 and player.elapsed>1.1:
-		player.set_action(3)
-	save_elapsed += delta
-	if profile_persistence and save_elapsed>=5.0 and not moving and not battle_session.snapshot().active:
-		checkpoint()
-	if is_instance_valid(clone_button):clone_button.disabled=paused_input or area_transition_busy
-	acknowledge_presentation()
-	update_adventure_hint()
-	coordinates.text = "%s  ·  %d, %d" % [area_name(),display_cell().x,display_cell().y]
-
-func release_keyboard_input() -> void:
-	# Focus changes release held keys; an intentional click route keeps running.
-	held.clear()
-
-
-func blink_to(destination: Vector2i) -> bool:
-	if paused_input or area_transition_busy or battle_session.snapshot().active:return false
-	if not Rect2i(0,0,int(data.width),int(data.height)).has_point(destination):return false
-	var landing:=Vector2i(-1,-1)
-	for radius in range(9):
-		for y in range(-radius,radius+1):
-			for x in range(-radius,radius+1):
-				if maxi(absi(x),absi(y))!=radius:continue
-				var candidate:=destination+Vector2i(x,y)
-				if is_walkable(candidate) and (radius==0 or not world_catalog.links(int(data.map_id)).has(candidate)):
-					landing=candidate;break
-			if landing.x>=0:break
-		if landing.x>=0:break
-	if landing.x<0:return false
-	if is_instance_valid(travel_router):travel_router.cancel("点击瞬移停止了自动寻路。")
-	clear_input();moving=false
-	cell=landing;from_cell=landing;target_cell=landing;logical_position=Vector2(landing);step_progress=0
-	report_position()
-	player.position=project(logical_position);player.set_action(3)
-	marker_cell=landing;camera.reset_smoothing();refresh_companion();checkpoint();queue_redraw()
-	if world_catalog.links(int(data.map_id)).has(landing):
-		arrival_lock=Vector2i(-1,-1);handle_arrival()
-	return true
-
-
-func clear_input() -> void:
-	if is_instance_valid(world_travel):world_travel.pending = -1
-	pending_talk = false
-	held.clear()
-	path.clear()
-
-func reset_player() -> void:
-	if is_instance_valid(battle_view) and battle_view.visible:
-		return
-	if int(data.map_id)!=1000:
-		switch_area(false,SPAWN)
-		return
-	if dialogue.visible:
-		close_dialogue()
-	clear_input()
-	moving = false
-	cell = SPAWN
-	report_position()
-	target_cell = SPAWN
-	logical_position = Vector2(SPAWN)
-	player.position = project(logical_position)
-	player.set_action(3)
-	camera.reset_smoothing()
-	message.text = "Back at the village square."
 
 func change_character(id: String = "") -> void:
 	if battle_view.visible or area_transition_busy:return
@@ -665,66 +410,6 @@ func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
 	if is_instance_valid(music): music.stop()
 	if is_instance_valid(effect): effect.stop()
-
-
-func handle_world_click(point: Vector2) -> void:
-	if paused_input:
-		return
-	if dev_blink_mode:
-		blink_to(Vector2i(unproject(point).round()));return
-	if is_instance_valid(travel_router):travel_router.cancel("手动点击取消了自动寻路。")
-	if is_instance_valid(world_travel) and world_travel.handle_click(point):return
-	if is_instance_valid(npc_sprite) and npc_sprite.get_rect().has_point(npc_sprite.to_local(point)):
-		approach_npc()
-	else:
-		var destination := Vector2i(unproject(point).round())
-		if is_walkable(destination):walk_to(destination)
-		else:walk_toward(destination)
-
-func walk_toward(destination: Vector2i) -> void:
-	# Original map.cpp getRouteMap advances toward even a blocked/outside click.
-	# Keep collision authoritative; walking across a doorway still triggers its warp.
-	pending_talk = false
-	path.clear()
-	var start := target_cell if moving else cell
-	var cursor := start
-	var direction := Vector2(destination-start)
-	var steps := maxi(absi(destination.x-start.x),absi(destination.y-start.y))
-	if steps==0:return
-	for i in range(1,mini(steps,int(data.width)+int(data.height))+1):
-		var next := start+Vector2i((direction*float(i)/float(steps)).round())
-		if next==cursor:continue
-		if not can_step(cursor,next):break
-		path.append(next)
-		cursor=next
-	marker_cell = cursor if not path.is_empty() else Vector2i(-1,-1)
-	queue_redraw()
-
-
-func approach_npc() -> void:
-	if paused_input:
-		return
-	if npc_data.is_empty():
-		message.text = "The villager has not been imported. See README.md."
-		return
-	clear_input()
-	var start := target_cell if moving else cell
-	var best: Array[Vector2i] = []
-	var approaches := [Vector2i(-2,0)] if int(data.map_id)==1002 else [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]
-	for offset in approaches:
-		var destination: Vector2i = npc_cell+offset
-		if not is_walkable(destination):
-			continue
-		var candidate := navigation.get_id_path(start,destination)
-		if not candidate.is_empty() and (best.is_empty() or candidate.size()<best.size()):
-			best = candidate
-	if best.is_empty():
-		message.text = "There is no clear path to the villager."
-		return
-	best.pop_front()
-	path = best
-	pending_talk = true
-	message.text = "正在走向 %s…" % str(npc_data.name)
 
 
 ## Per-device view choices (not game state, so not in the save or backend):
@@ -958,3 +643,20 @@ func dev_visit(id: int) -> bool:return _areas.dev_visit(id)
 func dev_go_villager() -> void:_areas.dev_go_villager()
 func dev_go_adventure() -> void:_areas.dev_go_adventure()
 func dev_go_shop() -> void:_areas.dev_go_shop()
+
+# ---- input (scripts/game/game_input.gd) ----
+func configure_input() -> void:_input_events.configure_input()
+func _input(event: InputEvent) -> void:_input_events.on_input(event)
+func _unhandled_input(event: InputEvent) -> void:_input_events.on_unhandled_input(event)
+func handle_world_click(point: Vector2) -> void:_input_events.handle_world_click(point)
+func release_keyboard_input() -> void:_input_events.release_keyboard_input()
+func clear_input() -> void:_input_events.clear_input()
+
+# ---- walking (scripts/game/game_movement.gd) ----
+func request_step(destination: Vector2i) -> bool:return _movement.request_step(destination)
+func walk_to(destination: Vector2i) -> void:_movement.walk_to(destination)
+func walk_toward(destination: Vector2i) -> void:_movement.walk_toward(destination)
+func approach_npc() -> void:_movement.approach_npc()
+func blink_to(destination: Vector2i) -> bool:return _movement.blink_to(destination)
+func reset_player() -> void:_movement.reset_player()
+func _physics_process(delta: float) -> void:_movement.step_frame(delta)
