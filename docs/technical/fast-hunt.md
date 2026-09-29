@@ -63,6 +63,15 @@ The counters always cover rolls before `INDEX`, so the backend's status shows th
 
 The backend polls STATUS every 100 ms from the hunt tick and never blocks a frame. On `hit` or `stop` it sets its counters and calls `_scan_index(INDEX, expected)`, which rolls that index again in GDScript. Only if the replay gives the same outcome does the hunt continue on the ordinary path (battle, capture, training, workflow). Any difference stops the hunt with 本机极速模式的结果与游戏复核不一致 and opens no battle; `fast_hunt_flow_test` checks this with a fake helper that lies.
 
+## Thread count (线程数)
+
+The number of worker threads belongs to the server's computer, not to a character, so it is not in the profile or a client's `viewer.cfg`:
+- **Stored** by the backend in `user://server-settings.cfg` (`client/server/server_settings.gd`, section `fast_hunt`, key `threads`). 0 means automatic: the helper uses all cores but one (one core on a machine with two or fewer).
+- **Changed** with the backend command `set_fast_hunt_threads` (`threads`: an integer from 0 to `OS.get_processor_count()`; a whole JSON number is accepted, anything else is rejected with a reason). It works over the WebSocket like every command.
+- **Published** in the automation status as `hunt.threads` (the setting), `hunt.threads_used` (what the helper runs with) and `hunt.cores`, so every device's 自动抓极品 window shows the same value and the server's core count (本机 N 核).
+- **Applied at once.** A change stops a running helper; the next hunt tick starts it again from the committed roll index with the new count. Rolls are committed in order and every roll has its own seed, so nothing is skipped or counted twice.
+- **Input.** The count reaches the helper as the `threads` line of INPUT. `FastHunt.threads` remains a cap for tests (suites running side by side keep it small); the game leaves it at 0.
+
 ## When it runs, and when not
 
 - It runs only when all of these hold:
@@ -83,4 +92,5 @@ The backend polls STATUS every 100 ms from the hunt tick and never blocks a fram
   - A missing helper falls back.
   - An unconfirmed hit stops the hunt.
 - `pet_hunt_ui_test`: the checkbox is on by default, is saved with the character, and is greyed without the helper.
+- `fast_hunt_threads_test`: 线程数 validation, the server-side file, the status fields, nothing stored with the character, a running helper restarting with the new count (read from its INPUT) without losing rolls, and two remote devices sharing the value, with an invalid value rejected.
 - Suites that measure the GDScript scan (`pet_hunt_speed_test`) turn fast mode off. Remote tests that need a slow hunt set a rate, which keeps them in GDScript.

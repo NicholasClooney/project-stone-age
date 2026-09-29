@@ -178,6 +178,14 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 ## Partial update of the profile's automation settings (see
 ## scripts/automation_settings.gd): deep-merged and validated; null resets a
 ## value or section to its default. Every client gets the profile event.
+## 本机极速模式 线程数 for this server (0 = auto, up to the core count). It
+## belongs to the computer, not the character: kept in server_settings.gd,
+## never the profile. Every client sees it in the automation status.
+func _cmd_set_fast_hunt_threads(command: Dictionary) -> Dictionary:
+	if not command.has("threads"):return _reject("missing threads")
+	var error: String = automation.set_fast_threads(command.threads)
+	return _reject(error) if not error.is_empty() else {"ok":true}
+
 func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
 	if not command.has("settings"):return _reject("missing settings")
 	session.last_error = ""

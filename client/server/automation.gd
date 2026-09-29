@@ -13,6 +13,7 @@ const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const FastHunt = preload("res://server/fast_hunt.gd")
+const ServerSettings = preload("res://server/server_settings.gd")
 ## A presenting client may slow automation to its animation, never stall it.
 const PRESENT_TIMEOUT_MSEC := 5000
 const HUNT_FRAME_BUDGET_USEC := 12000
@@ -85,6 +86,8 @@ var hunt_fast_note := ""
 var _fast_base: Dictionary = {}
 ## Why this backend cannot run the helper ("" when it can), for the hunt window.
 var fast_unavailable := FastHunt.unavailable_reason()
+## 线程数 for the helper, the server's own setting (server_settings.gd; 0 = auto).
+var fast_threads := ServerSettings.fast_hunt_threads()
 
 # ---- find-pet workflow -----------------------------------------------------
 var flow_phase := "idle"
@@ -633,7 +636,7 @@ func _fast_process() -> bool:
 	if not fast_hunt.running():
 		_fast_base = {"inspected":hunt_inspected,"best":hunt_best,"rejects":flow_predicted_rejects,"start":hunt_rolls}
 		var area: Dictionary = hunt_catalog.area_at(hunt_map,hunt_cell)
-		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,flow_phase=="hunt",filter_for,hunt_run_seed,hunt_rolls):
+		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,flow_phase=="hunt",filter_for,hunt_run_seed,hunt_rolls,fast_threads):
 			hunt_fast_note = "本机辅助程序无法启动，已改用普通筛选。"
 			return false
 		return true
@@ -653,6 +656,23 @@ func _fast_process() -> bool:
 		"stop":_scan_index(int(report.index),-2)
 		"limit":stop_hunt("达到本轮遇敌上限，已暂停；可以再次开始。")
 	return true
+
+## Sets 线程数 (0 = auto) on this server; "" or the refusal reason. A running
+## helper is stopped and the next frame starts it again from the rolls already
+## committed (the helper reports them in order), so the change applies at once
+## and no roll is skipped or repeated in the results.
+func set_fast_threads(value: Variant) -> String:
+	var error := ServerSettings.set_fast_hunt_threads(value)
+	if not error.is_empty():return error
+	fast_threads = int(value)
+	if fast_hunt.running():fast_hunt.stop()
+	_emit_status()
+	return ""
+
+## Threads the helper uses for a setting: all cores but one when automatic.
+static func threads_used(setting: int) -> int:
+	var cores := ServerSettings.cores()
+	return setting if setting > 0 else (cores-1 if cores > 2 else 1)
 
 # ---- find-pet workflow -----------------------------------------------------
 
@@ -865,7 +885,8 @@ func status() -> Dictionary:
 		"position":{"map_id":position_map,"cell":[position_cell.x,position_cell.y]},
 		"hunt":{"running":hunt_running,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"elapsed":hunt_elapsed,
 			"filter":hunt_filter.duplicate(true),"status":hunt_status,"credit":hunt_credit,"last_hit":hunt_last_hit.duplicate(true),"map_id":hunt_map,"cell":[hunt_cell.x,hunt_cell.y],
-			"fast":fast_hunt.running(),"fast_wanted":hunt_fast_wanted,"fast_note":hunt_fast_note,"fast_unavailable":fast_unavailable},
+			"fast":fast_hunt.running(),"fast_wanted":hunt_fast_wanted,"fast_note":hunt_fast_note,"fast_unavailable":fast_unavailable,
+			"threads":fast_threads,"threads_used":threads_used(fast_threads),"cores":ServerSettings.cores()},
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_best":int(flow_target_filter.get("keep_qualified",0)),"predicted_rejects":flow_predicted_rejects,

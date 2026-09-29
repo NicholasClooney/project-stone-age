@@ -18,8 +18,8 @@ const MIX_2 := -7723592293110705685 # 0x94D049BB133111EB
 
 ## Tests point this elsewhere (a missing path simulates no helper).
 static var helper_override := ""
-## Worker threads; 0 lets the helper use all cores but one. Tests keep it small
-## so suites running side by side are not starved.
+## A cap on worker threads for tests, so suites running side by side are not
+## starved; 0 (the game) leaves the server's 线程数 setting alone.
 static var threads := 0
 
 var pid := -1
@@ -49,12 +49,20 @@ static func unavailable_reason() -> String:
 static func available() -> bool:
 	return unavailable_reason().is_empty()
 
+## The thread count handed to the helper: the server's 线程数 setting
+## (server_settings.gd; 0 lets the helper use all cores but one), capped by
+## `threads` when a test sets it.
+static func effective_threads(chosen: int) -> int:
+	var count := maxi(0,chosen)
+	if threads > 0:count = threads if count==0 else mini(count,threads)
+	return count
+
 func running() -> bool:
 	return pid > 0
 
 ## Writes the area, filter and stat conditions and starts the helper at roll
 ## `start`. False when it could not start (the caller scans in GDScript).
-func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int) -> bool:
+func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0) -> bool:
 	stop()
 	var folder := "user://fast-hunt"
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -63,7 +71,7 @@ func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 	status_path = ProjectSettings.globalize_path(folder.path_join(tag+".status"))
 	var file := FileAccess.open(input_path,FileAccess.WRITE)
 	if file == null:return false
-	file.store_string(_input(catalog,area,filter,flow,stat_filter_for,run_seed,start))
+	file.store_string(_input(catalog,area,filter,flow,stat_filter_for,run_seed,start,thread_count))
 	file.close()
 	pid = OS.create_process(helper_path(),[input_path,status_path])
 	_polled_msec = 0
@@ -112,8 +120,8 @@ func _remove_files() -> void:
 
 ## The helper's input: see tools/fast_hunt/fast_hunt.c. Only the candidate
 ## groups roll() chooses among, in the same order and with the same weights.
-func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int) -> String:
-	var lines: PackedStringArray = ["fasthunt 1","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % threads,"max_enemies %d" % int(area.get("max_enemies",1))]
+func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0) -> String:
+	var lines: PackedStringArray = ["fasthunt 1","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % effective_threads(thread_count),"max_enemies %d" % int(area.get("max_enemies",1))]
 	var groups: Array = []
 	var enemy_ids := {}
 	for choice in area.get("groups",[]):

@@ -39,6 +39,10 @@ var auto_capture: CheckBox
 ## 本机极速模式 (hunt.fast): the backend scans with the native helper on every
 ## CPU core; the same rolls as the ordinary scan, which runs when it cannot.
 var fast: CheckBox
+## 线程数 of the server's helper (0 = auto): the computer's setting, not the
+## character's, so it is sent as its own command and stays editable mid-hunt.
+var thread_count: SpinBox
+var cores_label: Label
 var level_one: CheckBox
 var preset: OptionButton
 var total: SpinBox
@@ -138,7 +142,13 @@ func _ready() -> void:
 	fast.tooltip_text="服务器所在电脑用全部 CPU 核心筛选，遇到的敌群和结果与普通筛选完全相同，只是快得多；「每秒遇敌」填了限速时按限速用普通筛选；无法使用时也自动改用普通筛选。"
 	panel.add_child(fast);controls.append(fast)
 	fast.toggled.connect(func(_value):_settings_changed(true))
-	status=label("",Vector2(24,478),14);status.size=Vector2(1040,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	label("线程数",Vector2(852,470),15)
+	thread_count=SpinBox.new();thread_count.name="FastHuntThreads";thread_count.position=Vector2(905,462);thread_count.size=Vector2(100,34)
+	thread_count.min_value=0;thread_count.max_value=64;thread_count.step=1;thread_count.value=0
+	thread_count.value_changed.connect(func(value):world.link.request({"type":"set_fast_hunt_threads","threads":int(value)}))
+	panel.add_child(thread_count)
+	cores_label=label("",Vector2(1012,470),14)
+	status=label("",Vector2(24,478),14);status.size=Vector2(830,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
 	stop_button=world.button("停止",func():stop_hunt("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,560);panel.add_child(close)
@@ -328,6 +338,7 @@ func set_controls(locked: bool) -> void:
 ## Greys 本机极速模式 with the reason when the backend's computer cannot run the
 ## helper (the hunt then scans the ordinary way).
 func _show_fast_availability() -> void:
+	_show_threads(world.state.automation)
 	var reason:=fast_unavailable()
 	if reason.is_empty():
 		fast.text="本机极速模式"
@@ -335,6 +346,21 @@ func _show_fast_availability() -> void:
 	fast.disabled=true
 	fast.text="本机极速模式（不可用）"
 	fast.tooltip_text=reason+"\n将使用普通筛选。"
+
+## The server's 线程数 and core count from the automation status; the box is
+## left alone while the player is typing in it.
+func _show_threads(automation: Dictionary) -> void:
+	if not is_instance_valid(thread_count):return
+	var hunt: Dictionary = automation.get("hunt",{})
+	var cores := int(hunt.get("cores",0))
+	thread_count.visible = cores > 0
+	cores_label.visible = cores > 0
+	if cores <= 0:return
+	thread_count.max_value = cores
+	thread_count.editable = fast_unavailable().is_empty()
+	if not thread_count.get_line_edit().has_focus():thread_count.set_value_no_signal(int(hunt.get("threads",0)))
+	cores_label.text = "本机%d核" % cores
+	thread_count.tooltip_text = "本机极速模式同时用几个线程（服务器所在电脑的设置，所有设备共用）。0 为自动：用 %d 个（核心数减 1）。现在用 %d 个；修改后正在进行的筛选立即换用新值。调小可以给其他程序留出 CPU，速度会相应变慢。" % [cores-1 if cores > 2 else 1,int(hunt.get("threads_used",0))]
 
 func fast_unavailable() -> String:
 	return str(world.state.automation.get("hunt",{}).get("fast_unavailable","")) if is_instance_valid(world) else ""
@@ -413,6 +439,7 @@ func scan_once() -> void:
 	world.link.request({"type":"auto","name":"hunt_scan"})
 
 func on_status(automation: Dictionary) -> void:
+	if visible:_show_threads(automation)
 	if minimized:
 		if _automation_active(automation):_update_chip()
 		else:
