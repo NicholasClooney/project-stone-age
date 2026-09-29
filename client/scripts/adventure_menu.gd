@@ -40,6 +40,7 @@ var feedback_tooltip := ""
 const RELEASE_METRICS := ["stat_total","attack","defence","speed"]
 const PetComparison=preload("res://scripts/pet_comparison.gd")
 const KeepRule=preload("res://scripts/keep_rule.gd")
+const PetTable=preload("res://scripts/pet_table.gd")
 const PetStatFilter=preload("res://scripts/pet_stat_filter.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
@@ -618,79 +619,140 @@ func shop_panel(profile: Dictionary) -> void:
 func style_pet_modal(root_control:Control)->void:
 	if readable_font==null:
 		readable_font=FontVariation.new();readable_font.base_font=load("res://assets/fonts/NotoSansSC.ttf");readable_font.variation_opentype={2003265652:600.0}
-	root_control.add_theme_font_override("font",readable_font)
-	for node in root_control.find_children("*","Control",true,false):node.add_theme_font_override("font",readable_font)
+	# PetTable roles set their own fonts; only unstyled controls get the default.
+	for node in root_control.find_children("*","Control",true,false):
+		if node is CheckBox:PetTable.style_checkbox(node)
+		elif node is OptionButton:
+			node.add_theme_font_override("font",PetTable.font(500));node.add_theme_font_size_override("font_size",13)
+			node.get_popup().add_theme_font_override("font",PetTable.font(500))
+		elif node is Button:PetTable.style_button(node,node.has_meta("compact"))
+		elif not node.has_theme_font_override("font"):node.add_theme_font_override("font",readable_font)
+
+## A pet-table overlay: bordered panel with a title, a muted subtitle and the
+## header buttons, right to left from `right`.
+func pet_overlay(overlay_name:String,title:String,subtitle:String,panel_size:Vector2)->Panel:
+	var overlay:=Panel.new();overlay.name=overlay_name;overlay.position=Vector2.ZERO;overlay.z_index=10;overlay.mouse_filter=Control.MOUSE_FILTER_STOP;overlay.size=panel_size
+	overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),PetTable.EDGE));panel.add_child(overlay)
+	var heading:=HBoxContainer.new();heading.position=Vector2(14,10);heading.add_theme_constant_override("separation",10);overlay.add_child(heading)
+	heading.add_child(PetTable.text(title,"title"))
+	var sub:=PetTable.text(subtitle,"meta");sub.size_flags_vertical=Control.SIZE_SHRINK_END;heading.add_child(sub)
+	return overlay
+
+func overlay_button(overlay:Control,caption:String,x:float,callback:Callable,control_name:String="")->Button:
+	var control:Button=world.button(caption,callback);control.position=Vector2(x,10)
+	if not control_name.is_empty():control.name=control_name
+	overlay.add_child(control)
+	return control
+
+## The row's text as one description: the row tooltip (and what tests read).
+static func compare_description(pet:Dictionary,estimate:Dictionary,q:Dictionary,location:String,identifier:String,rule_line:String)->String:
+	var stats_line:="当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [pet.max_hp,pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)]
+	if int(pet.level)<120:stats_line+="\n120级 血%d 攻%d 防%d 敏%d · 三围合%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,int(estimate.attack)+int(estimate.defence)+int(estimate.speed)]
+	if not rule_line.is_empty():stats_line+="\n"+rule_line
+	return "%s · Lv.%d · %s · ID %s\n%s\n先天 %s%s" % [pet.name,pet.level,"携带" if location=="pets" else "仓库",identifier,stats_line,"未知" if q.is_empty() else str(q.offsets)+" 总%+d"%q.total+(" 满档" if q.full else "")," · GM／旧档，不作天然品质判断" if PetComparison.warning(pet) else ""]
+
+## Width before the first stat column in 同种比较 rows: 选, ★ and the name block.
+const COMPARE_LEAD:=234.0 # 选 24 + ★ 26 + name 172 + two separators
+const COMPARE_NAME:=172.0
 
 func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
-	var overlay:=Panel.new();overlay.name="PetComparisonPanel";overlay.position=Vector2.ZERO;overlay.z_index=10;overlay.mouse_filter=Control.MOUSE_FILTER_STOP;overlay.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"));overlay.size=Vector2(760,610);overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
-	var title:Label=world.text("同种比较 · "+str(selected.name)+" · 携带与仓库",18);title.position=Vector2(14,12);overlay.add_child(title)
-	var close:Button=world.button("关闭",func():pet_compare_open=false;pet_view="list";clear_release_selection();rebuild());close.position=Vector2(650,8);overlay.add_child(close)
+	var rows:=PetComparison.rows(profile,selected,pet_compare_order,pet_compare_projected,pet_compare_favorites_first,pet_compare_carried_first)
+	var overlay:=pet_overlay("PetComparisonPanel","同种比较 · "+str(selected.name),"携带与仓库 · %d只"%rows.size(),Vector2(900,650))
+	overlay_button(overlay,"关闭",832,func():pet_compare_open=false;pet_view="list";clear_release_selection();rebuild())
 	if PetComparison.species_key(selected)!=pet_release_species:
 		clear_release_selection();pet_release_species=PetComparison.species_key(selected)
-	var hunt:Button=world.button("自动抓极品",func():continue_comparison_hunt(selected));hunt.position=Vector2(490,8);hunt.name="CompareContinueHunt";overlay.add_child(hunt)
+	overlay_button(overlay,"自动抓极品",722,func():continue_comparison_hunt(selected),"CompareContinueHunt")
 	load_compare_prefs()
 	compare_sort_controls(overlay)
-	var filter_result_height:=0
-	var info:Label=world.text(feedback if not feedback.is_empty() else "未满级宠物按成长种子精确推算120级属性，可跨等级比较。",12);info.name="PetComparisonInfo";info.position=Vector2(14,89);overlay.add_child(info)
-	# Clear of the page arrows at the right; the whole text is the tooltip.
-	info.clip_text=true;info.size.x=525;info.mouse_filter=Control.MOUSE_FILTER_PASS;info.tooltip_text=info.text+("\n"+feedback_tooltip if not feedback_tooltip.is_empty() else "")
-	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,196);scroll.size=Vector2(736,396);overlay.add_child(scroll)
-	if is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id","")):
-		info.text=world.pet_workflow.reason;info.tooltip_text=info.text;info.clip_text=true;info.size=Vector2(730,60);info.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		filter_result_height=44;scroll.position.y+=44;scroll.size.y-=44
-	scroll.size.y-=88
-	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
-	var rows:=PetComparison.rows(profile,selected,pet_compare_order,pet_compare_projected,pet_compare_favorites_first,pet_compare_carried_first)
-	release_controls(overlay,profile,rows,scroll.position.y+scroll.size.y+6)
+	var workflow_note:bool=is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id",""))
+	var info:=PetTable.text(world.pet_workflow.reason if workflow_note else (feedback if not feedback.is_empty() else "未满级宠物按成长种子精确推算120级属性，可跨等级比较。"),"meta",PetTable.TEXT if workflow_note or not feedback.is_empty() else null)
+	info.name="PetComparisonInfo";info.position=Vector2(14,84);info.clip_text=true;info.mouse_filter=Control.MOUSE_FILTER_PASS
+	info.tooltip_text=info.text+("\n"+feedback_tooltip if not feedback_tooltip.is_empty() else "")
+	# A find-pet cycle's result can be long: up to three lines above the cards.
+	if workflow_note:info.text=PetTable.fit_lines(info.text,"meta",660,3)
+	overlay.add_child(info)
+	info.size=Vector2(670,52) if workflow_note else Vector2(640,20)
+	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
+	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(700,78);overlay.add_child(previous)
+	var page:=PetTable.text("%d / %d 页"%[pet_compare_page+1,pages],"meta");page.position=Vector2(742,84);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
+	var next:Button=world.button("▶",func():pet_compare_page=mini(pages-1,pet_compare_page+1);rebuild());next.position=Vector2(852,78);overlay.add_child(next)
+	var shown:=func(row:Dictionary)->Dictionary:return row.forecast.get("expected",row.pet) if pet_compare_projected else row.pet
+	var best:=PetTable.best_values(rows.map(shown))
+	# Pinned cards: the selected pet and the leader of the current order.
 	var focus_id:=str(selected.get("pet_id",""))
 	var focus:Dictionary=selected
 	for row in rows:
 		if str(row.pet.get("pet_id",""))==focus_id:focus=row.pet
 	var leader:Dictionary=rows[0].pet if not rows.is_empty() else focus
-	for entry in [["选中",focus,108],["当前分组首位",leader,150]]:
+	var top:=144.0 if workflow_note else 112.0
+	for entry in [["选中",focus],["当前分组首位",leader]]:
 		var actor:Dictionary=entry[1]
 		var caption:String="当前首位" if entry[0]=="当前分组首位" and not pet_compare_carried_first else str(entry[0])
-		var summary:Label=world.text("%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [caption,actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)],13)
-		summary.position=Vector2(14,int(entry[2])+filter_result_height);summary.name="ComparePinned_"+str(entry[0]);overlay.add_child(summary)
-	var pages:=maxi(1,ceili(rows.size()/20.0));pet_compare_page=clampi(pet_compare_page,0,pages-1)
-	var previous:Button=world.button("◀",func():pet_compare_page=maxi(0,pet_compare_page-1);rebuild());previous.position=Vector2(548,82);overlay.add_child(previous)
-	var next:Button=world.button("▶",func():pet_compare_page=mini(pages-1,pet_compare_page+1);rebuild());next.position=Vector2(700,82);overlay.add_child(next)
-	var page:Label=world.text("%d/%d · %d只"%[pet_compare_page+1,pages,rows.size()],13);page.position=Vector2(592,89);overlay.add_child(page)
+		var pinned:=PetTable.card();pinned.name="ComparePinned_"+str(entry[0]);pinned.position=Vector2(12,top);pinned.custom_minimum_size=Vector2(876,0);overlay.add_child(pinned)
+		pinned.tooltip_text="%s %s · %s Lv.%d\n当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [caption,actor.get("pet_id","?"),actor.name,actor.level,actor.max_hp,actor.attack,actor.defence,actor.speed,int(actor.attack)+int(actor.defence)+int(actor.speed)]
+		pinned.mouse_filter=Control.MOUSE_FILTER_PASS
+		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);pinned.add_child(line)
+		var tag:=PetTable.text(caption,"head",PetTable.GOLD);tag.custom_minimum_size.x=84;line.add_child(tag)
+		var who:=PetTable.text("%s  %s"%[actor.name,actor.get("pet_id","?")],"body");who.custom_minimum_size.x=COMPARE_LEAD-84-6;who.clip_text=true;line.add_child(who)
+		PetTable.stat_cells(line,actor,best)
+		line.add_child(PetTable.grade(PetComparison.quality(actor)))
+		top+=34
+	var header:=PetTable.header(COMPARE_LEAD,["操作"]);header.position=Vector2(18,top+2);overlay.add_child(header)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,top+24);scroll.size=Vector2(876,650-(top+24)-92);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
+	release_controls(overlay,profile,rows,scroll.position.y+scroll.size.y+8)
 	var last_group:=""
+	var shade:=0
 	for row in rows.slice(pet_compare_page*20,(pet_compare_page+1)*20):
 		# One ranking of both places has no group headings; each row says 携带 or 仓库.
 		if pet_compare_carried_first and str(row.location)!=last_group:
-			last_group=str(row.location)
-			var heading:Label=world.text("随身宠物" if last_group=="pets" else "仓库宠物",16);heading.name="CompareGroup_"+last_group;list.add_child(heading)
+			last_group=str(row.location);shade=0
+			if list.get_child_count()>0:
+				var gap:=Control.new();gap.custom_minimum_size.y=8;list.add_child(gap)
+			var heading:=PetTable.text("随身宠物" if last_group=="pets" else "仓库宠物","section");heading.name="CompareGroup_"+last_group;list.add_child(heading)
 		var pet:Dictionary=row.pet;var estimate:Dictionary=row.forecast.get("expected",pet);var q:Dictionary=row.quality
 		var identifier:=str(pet.get("pet_id",str(row.location)+"#"+str(row.index+1)))
-		var stats_line:="当前 血%d 攻%d 防%d 敏%d · 三围合%d" % [pet.max_hp,pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)]
-		if int(pet.level)<120:stats_line+="\n120级 血%d 攻%d 防%d 敏%d · 三围合%d" % [estimate.max_hp,estimate.attack,estimate.defence,estimate.speed,int(estimate.attack)+int(estimate.defence)+int(estimate.speed)]
-		if pet_rule_reasons.has(identifier):stats_line+="\n"+KeepRule.describe(pet_rule_reasons[identifier])+("（按120级推算）" if int(pet.level)<120 else "")
-		var content:="%s · Lv.%d · %s · ID %s\n%s\n先天 %s%s" % [pet.name,pet.level,"携带" if row.location=="pets" else "仓库",identifier,stats_line,"未知" if q.is_empty() else str(q.offsets)+" 总%+d"%q.total+(" 满档" if q.full else "")," · GM／旧档，不作天然品质判断" if PetComparison.warning(pet) else ""]
-		var text:Label=world.text(content,13);text.name="CompareRow_"+str(row.location)+"_"+str(row.index);text.custom_minimum_size=Vector2(700,100 if int(pet.level)<120 else 85);text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-		if identifier==focus_id:text.modulate=Color("ffe680");text.text="▶ 当前选中 · "+text.text
-		list.add_child(text)
-		var actions:=HBoxContainer.new();list.add_child(actions)
-		var pick:=CheckBox.new();pick.name="CompareSelect_"+identifier;pick.text="选";pick.focus_mode=Control.FOCUS_NONE;pick.button_pressed=pet_release_selected.has(identifier)
+		var rule_line:=""
+		if pet_rule_reasons.has(identifier):rule_line=KeepRule.describe(pet_rule_reasons[identifier])+("（按120级推算）" if int(pet.level)<120 else "")
+		var focused:=identifier==focus_id
+		var holder:=PetTable.row_panel(shade,focused);shade+=1
+		holder.name="CompareRow_"+str(row.location)+"_"+str(row.index)
+		holder.tooltip_text=("▶ 当前选中 · " if focused else "")+compare_description(pet,estimate,q,row.location,identifier,rule_line)
+		holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		list.add_child(holder)
+		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);holder.add_child(line)
+		var pick:=CheckBox.new();pick.name="CompareSelect_"+identifier;pick.focus_mode=Control.FOCUS_NONE;pick.button_pressed=pet_release_selected.has(identifier);pick.tooltip_text="选中（放生用）";pick.custom_minimum_size.x=24
 		pick.toggled.connect(func(on):
 			if on:pet_release_selected[identifier]=true
 			else:pet_release_selected.erase(identifier)
-			pet_release_confirm=false;rebuild());actions.add_child(pick)
-		add_pet_favorite_button(actions,pet,"CompareFavorite_")
+			pet_release_confirm=false;rebuild());line.add_child(pick)
+		add_pet_favorite_button(line,pet,"CompareFavorite_")
+		var who:=VBoxContainer.new();who.custom_minimum_size.x=COMPARE_NAME;who.add_theme_constant_override("separation",-2);line.add_child(who)
+		var title:=PetTable.text(("▶ " if focused else "")+str(pet.name),"name",PetTable.GOLD if focused else null);title.clip_text=true;title.custom_minimum_size.x=COMPARE_NAME;who.add_child(title)
+		var where:=identifier+" · "+("随身" if row.location=="pets" else "仓库")
+		if row.location=="pets" and int(row.index)==int(profile.active_pet):where+=" · 出战"
+		if row.location=="pets" and int(row.index)==int(profile.get("ride_pet",-1)):where+=" · 骑乘"
+		if PetComparison.warning(pet):where+=" · GM"
+		var meta:=PetTable.text(where,"meta");meta.clip_text=true;meta.custom_minimum_size.x=COMPARE_NAME;who.add_child(meta)
+		if not rule_line.is_empty():
+			var verdict:=PetTable.text(rule_line,"meta",PetTable.GOOD if not pet_rule_reasons[identifier].is_empty() else PetTable.BAD);verdict.clip_text=true;verdict.custom_minimum_size.x=COMPARE_NAME;verdict.tooltip_text=rule_line;verdict.mouse_filter=Control.MOUSE_FILTER_PASS;who.add_child(verdict)
+		var cells:Dictionary=estimate if pet_compare_projected else pet
+		PetTable.stat_cells(line,cells,best,estimate if int(pet.level)<120 and not pet_compare_projected else {})
+		line.add_child(PetTable.grade(q))
+		var actions:=HBoxContainer.new();actions.add_theme_constant_override("separation",4);actions.size_flags_vertical=Control.SIZE_SHRINK_CENTER;line.add_child(actions)
 		var transfer:Button=world.button("存入仓库" if row.location=="pets" else "取出",func():
 			var ok:bool=world.session.store_pet(int(row.index)) if row.location=="pets" else world.session.retrieve_pet_by_id(identifier)
 			if ok:world.refresh_companion();world.checkpoint();feedback="已更新宠物位置。"
 			else:feedback=world.session.last_error
-			rebuild());transfer.name="CompareTransfer_"+identifier;transfer.disabled=(row.location=="pets" and int(row.index)==int(profile.get("ride_pet",-1))) or (row.location!="pets" and profile.pets.size()>=world.session.PET_CAPACITY);actions.add_child(transfer)
+			rebuild());transfer.name="CompareTransfer_"+identifier;transfer.disabled=(row.location=="pets" and int(row.index)==int(profile.get("ride_pet",-1))) or (row.location!="pets" and profile.pets.size()>=world.session.PET_CAPACITY);transfer.set_meta("compact",true);actions.add_child(transfer)
 		if row.location=="pets":
 			var deploy:Button=world.button("撤回" if int(row.index)==int(profile.active_pet) else "出战",func():
 				if world.session.select_pet(-1 if int(row.index)==int(profile.active_pet) else int(row.index)):world.refresh_companion();world.checkpoint()
-				rebuild());deploy.name="CompareDeploy_"+identifier;actions.add_child(deploy)
+				rebuild());deploy.name="CompareDeploy_"+identifier;deploy.set_meta("compact",true);actions.add_child(deploy)
 			if int(row.index)==int(profile.get("ride_pet",-1)):
 				var dismount:Button=world.button("下骑",func():
 					if world.session.mount_pet(-1):world.refresh_companion();world.checkpoint()
-					rebuild());dismount.name="CompareDismount_"+identifier;actions.add_child(dismount)
+					rebuild());dismount.name="CompareDismount_"+identifier;dismount.set_meta("compact",true);actions.add_child(dismount)
 
 	style_pet_modal(overlay)
 
@@ -723,13 +785,13 @@ func set_compare_favorites_first(on:bool)->void:
 	world.set_viewer_pref("compare_favorites_first",on)
 	rebuild()
 
-## 排序 第一..第四 (later ones may be 无), 收藏优先 and 按120级属性排序.
+## 排序 第一..第四 (later ones may be 无), 收藏优先, 按120级属性 and 随身在前.
 ## Keys left out still break ties in PetComparison.SORT_KEYS order.
 func compare_sort_controls(overlay:Control)->void:
-	var label_sort:Label=world.text("排序",13);label_sort.position=Vector2(14,53);overlay.add_child(label_sort)
+	var label_sort:=PetTable.text("排序","head");label_sort.position=Vector2(14,52);overlay.add_child(label_sort)
 	var keys:Array=PetComparison.SORT_KEYS
 	for slot in range(4):
-		var pick:=OptionButton.new();pick.name="PetCompareSort%d"%(slot+1);pick.position=Vector2(50+slot*92,46);pick.custom_minimum_size.x=88;pick.focus_mode=Control.FOCUS_NONE
+		var pick:=OptionButton.new();pick.name="PetCompareSort%d"%(slot+1);pick.position=Vector2(50+slot*92,44);pick.custom_minimum_size.x=88;pick.focus_mode=Control.FOCUS_NONE
 		pick.tooltip_text="第%s排序" % ["一","二","三","四"][slot]
 		if slot>0:pick.add_item("无")
 		for key in keys:pick.add_item(PetComparison.SORT_NAMES[key])
@@ -744,15 +806,14 @@ func compare_sort_controls(overlay:Control)->void:
 			if chosen.is_empty():order.resize(slot)
 			set_compare_order(order.filter(func(key):return not str(key).is_empty())))
 		overlay.add_child(pick)
-	var favorites:=CheckBox.new();favorites.name="PetCompareFavoritesFirst";favorites.text="收藏优先";favorites.position=Vector2(422,48);favorites.focus_mode=Control.FOCUS_NONE
-	favorites.tooltip_text="每组里收藏的宠物排在前面"
-	favorites.button_pressed=pet_compare_favorites_first;favorites.toggled.connect(set_compare_favorites_first);overlay.add_child(favorites)
-	var predicted:=CheckBox.new();predicted.name="PetCompareProjected";predicted.text="按120级属性";predicted.position=Vector2(536,48);predicted.focus_mode=Control.FOCUS_NONE
-	predicted.tooltip_text="按120级属性排序（未满级宠物按成长种子精确推算）"
-	predicted.button_pressed=pet_compare_projected;predicted.toggled.connect(func(on):pet_compare_projected=on;rebuild());overlay.add_child(predicted)
-	var carried:=CheckBox.new();carried.name="PetCompareCarriedFirst";carried.text="随身在前";carried.position=Vector2(652,48);carried.focus_mode=Control.FOCUS_NONE
-	carried.tooltip_text="随身宠物单独排在仓库宠物前面；关掉后两处一起排名"
-	carried.button_pressed=pet_compare_carried_first;carried.toggled.connect(set_compare_carried_first);overlay.add_child(carried)
+	var toggles:=[["PetCompareFavoritesFirst","收藏优先","每组里收藏的宠物排在前面",pet_compare_favorites_first,set_compare_favorites_first],
+		["PetCompareProjected","按120级属性","按120级属性排序（未满级宠物按成长种子精确推算）",pet_compare_projected,func(on):pet_compare_projected=on;rebuild()],
+		["PetCompareCarriedFirst","随身在前","随身宠物单独排在仓库宠物前面；关掉后两处一起排名",pet_compare_carried_first,set_compare_carried_first]]
+	var x:=430.0
+	for toggle in toggles:
+		var box:=CheckBox.new();box.name=toggle[0];box.text=toggle[1];box.tooltip_text=toggle[2];box.position=Vector2(x,46);box.focus_mode=Control.FOCUS_NONE
+		box.button_pressed=toggle[3];box.toggled.connect(toggle[4]);overlay.add_child(box)
+		x+=34+toggle[1].length()*14
 
 func clear_release_selection()->void:
 	pet_release_selected.clear();pet_release_confirm=false;pet_rule_reasons.clear();feedback_tooltip=""
@@ -763,32 +824,31 @@ func release_metric_value(pet:Dictionary,metric:String)->int:
 
 func release_controls(overlay:Control,profile:Dictionary,rows:Array,top:float)->void:
 	var bar:=HBoxContainer.new();bar.name="CompareReleaseBar";bar.position=Vector2(14,top);bar.add_theme_constant_override("separation",8);overlay.add_child(bar)
-	var count:Label=world.text("已选 %d 只"%pet_release_selected.size(),14);count.name="CompareSelectedCount";bar.add_child(count)
+	var count:=PetTable.text("已选 %d 只"%pet_release_selected.size(),"body");count.name="CompareSelectedCount";count.custom_minimum_size.x=70;count.size_flags_vertical=Control.SIZE_SHRINK_CENTER;bar.add_child(count)
 	var page_all:Button=world.button("本页全选",func():
 		for row in rows.slice(pet_compare_page*20,(pet_compare_page+1)*20):pet_release_selected[str(row.pet.get("pet_id",""))]=true
 		pet_release_confirm=false;rebuild());page_all.name="CompareSelectPage";bar.add_child(page_all)
 	var clear:Button=world.button("清除选择",func():clear_release_selection();rebuild());clear.name="CompareClearSelection";bar.add_child(clear)
 	if pet_release_confirm:
-		var confirm:Button=world.button("确认放生 %d 只"%pet_release_selected.size(),func():perform_release());confirm.name="CompareReleaseConfirm";confirm.add_theme_color_override("font_color",Color("ff8a7a"));bar.add_child(confirm)
+		var confirm:Button=world.button("确认放生 %d 只"%pet_release_selected.size(),func():perform_release());confirm.name="CompareReleaseConfirm";bar.add_child(confirm)
 		var cancel:Button=world.button("取消",func():pet_release_confirm=false;rebuild());cancel.name="CompareReleaseCancel";bar.add_child(cancel)
 	else:
 		var release:Button=world.button("放生所选 (%d)"%pet_release_selected.size(),func():
 			if not pet_release_selected.is_empty():pet_release_confirm=true
 			rebuild());release.name="CompareRelease";release.disabled=pet_release_selected.is_empty();release.tooltip_text="永久删除所选宠物；收藏、出战、骑乘的宠物会跳过。放生前自动备份存档。";bar.add_child(release)
-	var picker:=HBoxContainer.new();picker.name="CompareThresholdBar";picker.position=Vector2(14,top+42);picker.add_theme_constant_override("separation",8);overlay.add_child(picker)
-	picker.add_child(world.text("选择",14))
+	var picker:=HBoxContainer.new();picker.name="CompareThresholdBar";picker.position=Vector2(14,top+40);picker.add_theme_constant_override("separation",8);overlay.add_child(picker)
+	var pick_label:=PetTable.text("选中","body");pick_label.size_flags_vertical=Control.SIZE_SHRINK_CENTER;picker.add_child(pick_label)
 	var metric:=OptionButton.new();metric.name="CompareThresholdMetric";metric.focus_mode=Control.FOCUS_NONE
 	for caption in ["三围合","攻击","防御","敏捷"]:metric.add_item(caption)
 	metric.select(pet_release_metric);metric.item_selected.connect(func(i):pet_release_metric=i);picker.add_child(metric)
-	picker.add_child(world.text("<",14))
-	var below:=SpinBox.new();below.name="CompareThresholdValue";below.min_value=0;below.max_value=100000;below.step=1;below.value=pet_release_below;below.custom_minimum_size=Vector2(110,0)
+	var less:=PetTable.text("低于","body");less.size_flags_vertical=Control.SIZE_SHRINK_CENTER;picker.add_child(less)
+	var below:=SpinBox.new();below.name="CompareThresholdValue";below.min_value=0;below.max_value=100000;below.step=1;below.value=pet_release_below;below.custom_minimum_size=Vector2(100,0)
 	below.value_changed.connect(func(value):pet_release_below=int(value));picker.add_child(below)
-	picker.add_child(world.text("的宠物（不含收藏／出战／骑乘）",14))
 	var apply:Button=world.button("选择",func():
 		if below.get_line_edit().has_focus():below.apply()
 		pet_release_below=int(below.value)
 		var added:=select_release_below(profile,rows,RELEASE_METRICS[pet_release_metric],pet_release_below)
-		feedback="已按条件新增选择 %d 只。"%added;pet_release_confirm=false;rebuild());apply.name="CompareThresholdSelect";picker.add_child(apply)
+		feedback="已按条件新增选择 %d 只。"%added;pet_release_confirm=false;rebuild());apply.name="CompareThresholdSelect";apply.tooltip_text="收藏、出战、骑乘的宠物不选";picker.add_child(apply)
 	var by_rule:Button=world.button("按保留规则选中",func():select_by_keep_rule(profile);rebuild());by_rule.name="CompareKeepRuleSelect"
 	by_rule.tooltip_text="按自动抓极品「属性条件」里这个品种的保留规则，选中规则外的宠物（只选中，确认后才放生）。收藏、出战、骑乘的不选。";picker.add_child(by_rule)
 
@@ -844,38 +904,59 @@ func open_pet_comparison(pet_id:String)->bool:
 				pet_compare_subject=pet.duplicate(true);pet_compare_id=pet_id;pet_compare_open=true;world.clear_input();world.paused_input=true;world.classic_hud.map_panel.hide();open_menu("pets");return true
 	return false
 
+## Width before the first stat column in 宠物仓库 rows: ★ and the name block.
+const STORAGE_LEAD:=204.0 # ★ 26 + name 172 + one separator
+const STORAGE_NAME:=172.0
+
 func pet_storage_panel(profile:Dictionary)->void:
-	var overlay:=Panel.new();overlay.name="PetStoragePanel";overlay.position=Vector2.ZERO;overlay.z_index=10;overlay.mouse_filter=Control.MOUSE_FILTER_STOP;overlay.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"));overlay.size=Vector2(680,mini(600,160+maxi(1,mini(20,profile.get("pet_storage",[]).size()))*60));overlay.add_theme_stylebox_override("panel",world.box(Color("182324"),Color("b8a47c")));panel.add_child(overlay)
-	var title:Label=world.text("宠物仓库 · %d只 · 携带%d/%d" % [profile.get("pet_storage",[]).size(),profile.pets.size(),world.session.PET_CAPACITY],18);title.position=Vector2(14,12);overlay.add_child(title)
-	var close:Button=world.button("关闭",func():pet_storage_open=false;pet_view="list";rebuild());close.position=Vector2(575,8);overlay.add_child(close)
+	var storage:Array=profile.get("pet_storage",[])
+	var overlay:=pet_overlay("PetStoragePanel","宠物仓库","%d只 · 携带%d/%d" % [storage.size(),profile.pets.size(),world.session.PET_CAPACITY],Vector2(820,mini(650,190+maxi(1,mini(20,storage.size()))*44)))
+	overlay_button(overlay,"关闭",752,func():pet_storage_open=false;pet_view="list";rebuild())
 	var store_index:=-1
 	for i in range(profile.pets.size()):
 		if str(profile.pets[i].get("pet_id",""))==pet_storage_target_id:store_index=i
 	var store:Button=world.button("存入 "+str(profile.pets[store_index].name) if store_index>=0 else "选中宠物已存入／未选择",func():
 		if world.session.store_pet(store_index):world.refresh_companion();world.checkpoint();feedback="已存入仓库。"
 		else:feedback=world.session.last_error
-		rebuild());store.name="StoreSelectedPet";store.position=Vector2(14,50);store.disabled=store_index<0 or store_index==int(profile.get("ride_pet",-1));overlay.add_child(store)
-	var note:Label=world.text("出战宠存入时自动撤回；骑乘宠须先下骑。存取保留属性；收藏优先。",13);note.position=Vector2(14,92);overlay.add_child(note)
-	var scroll:=ScrollContainer.new();scroll.position=Vector2(14,125);scroll.size=Vector2(650,maxf(40,overlay.size.y-140));overlay.add_child(scroll)
-	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(list)
-	var count:int=profile.get("pet_storage",[]).size();var pages:=maxi(1,ceili(count/20.0));pet_storage_page=clampi(pet_storage_page,0,pages-1)
-	var previous:Button=world.button("◀",func():pet_storage_page=maxi(0,pet_storage_page-1);rebuild());previous.position=Vector2(310,50);overlay.add_child(previous)
-	var next:Button=world.button("▶",func():pet_storage_page=mini(pages-1,pet_storage_page+1);rebuild());next.position=Vector2(500,50);overlay.add_child(next)
-	var page:Label=world.text("%d/%d"%[pet_storage_page+1,pages],14);page.position=Vector2(405,56);overlay.add_child(page)
-	var storage_rows:=PetComparison.storage_rows(profile)
-	for entry in storage_rows.slice(pet_storage_page*20,(pet_storage_page+1)*20):
+		rebuild());store.name="StoreSelectedPet";store.position=Vector2(14,46);store.disabled=store_index<0 or store_index==int(profile.get("ride_pet",-1));overlay.add_child(store)
+	var count:int=storage.size();var pages:=maxi(1,ceili(count/20.0));pet_storage_page=clampi(pet_storage_page,0,pages-1)
+	var previous:Button=world.button("◀",func():pet_storage_page=maxi(0,pet_storage_page-1);rebuild());previous.position=Vector2(620,46);overlay.add_child(previous)
+	var page:=PetTable.text("%d / %d 页"%[pet_storage_page+1,pages],"meta");page.position=Vector2(662,52);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
+	var next:Button=world.button("▶",func():pet_storage_page=mini(pages-1,pet_storage_page+1);rebuild());next.position=Vector2(772,46);overlay.add_child(next)
+	var note:=PetTable.text(feedback if not feedback.is_empty() else "出战宠存入时自动撤回；骑乘宠须先下骑。存取保留属性；收藏的排在前面。","meta",PetTable.TEXT if not feedback.is_empty() else null);note.position=Vector2(14,84);overlay.add_child(note)
+	var header:=PetTable.header(STORAGE_LEAD,["操作"]);header.position=Vector2(18,108);overlay.add_child(header)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(796,maxf(40,overlay.size.y-144));scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
+	# Gold marks the best of each column within the same species.
+	var by_species:={}
+	for pet in storage:
+		var key:=PetComparison.species_key(pet)
+		if not by_species.has(key):by_species[key]=[]
+		by_species[key].append(pet)
+	var best:={}
+	for key in by_species:best[key]=PetTable.best_values(by_species[key]) if by_species[key].size()>1 else {}
+	var shade:=0
+	for entry in PetComparison.storage_rows(profile).slice(pet_storage_page*20,(pet_storage_page+1)*20):
 		var index:int=entry.index
 		var pet:Dictionary=entry.pet
 		var identifier:=str(pet.pet_id)
-		var row:=HBoxContainer.new();row.name="StorageRow_"+identifier;list.add_child(row)
-		var text:Label=world.text("%s Lv.%d · %s\n攻%d 防%d 敏%d · 三围合%d" % [pet.name,pet.level,pet.get("pet_id","?"),pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)],14);text.name="StorageStats_"+identifier;text.custom_minimum_size=Vector2(270,56);text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;row.add_child(text)
-		add_pet_favorite_button(row,pet,"StorageFavorite_")
+		var holder:=PetTable.row_panel(shade);shade+=1;holder.name="StorageRow_"+identifier;holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		holder.tooltip_text="%s Lv.%d · %s\n攻%d 防%d 敏%d · 三围合%d" % [pet.name,pet.level,pet.get("pet_id","?"),pet.attack,pet.defence,pet.speed,int(pet.attack)+int(pet.defence)+int(pet.speed)]
+		list.add_child(holder)
+		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);holder.add_child(line)
+		add_pet_favorite_button(line,pet,"StorageFavorite_")
+		var who:=VBoxContainer.new();who.name="StorageStats_"+identifier;who.custom_minimum_size.x=STORAGE_NAME;who.add_theme_constant_override("separation",-2);line.add_child(who)
+		var title:=PetTable.text(str(pet.name),"name");title.clip_text=true;title.custom_minimum_size.x=STORAGE_NAME;who.add_child(title)
+		who.add_child(PetTable.text(identifier+(" · GM" if PetComparison.warning(pet) else ""),"meta"))
+		PetTable.stat_cells(line,pet,best.get(PetComparison.species_key(pet),{}))
+		line.add_child(PetTable.grade(PetComparison.quality(pet)))
+		var actions:=HBoxContainer.new();actions.add_theme_constant_override("separation",4);actions.size_flags_vertical=Control.SIZE_SHRINK_CENTER;line.add_child(actions)
 		var retrieve:Button=world.button("取出",func():
 			if world.session.retrieve_pet_by_id(identifier):world.refresh_companion();world.checkpoint();feedback="已取出。"
 			else:feedback=world.session.last_error
-			rebuild());retrieve.name="RetrievePet_"+str(index);retrieve.disabled=profile.pets.size()>=world.session.PET_CAPACITY;row.add_child(retrieve)
+			rebuild());retrieve.name="RetrievePet_"+str(index);retrieve.disabled=profile.pets.size()>=world.session.PET_CAPACITY;retrieve.set_meta("compact",true);actions.add_child(retrieve)
 		var compare:Button=world.button("同种比较",func():
-			pet_compare_subject=pet.duplicate(true);pet_compare_open=true;rebuild());row.add_child(compare)
+			pet_compare_subject=pet.duplicate(true);pet_compare_open=true;rebuild());compare.set_meta("compact",true);actions.add_child(compare)
 
 	style_pet_modal(overlay)
 
@@ -895,10 +976,13 @@ func continue_comparison_hunt(selected:Dictionary)->bool:
 func add_pet_favorite_button(parent:Control,pet:Dictionary,prefix:String)->void:
 	var identifier:=str(pet.get("pet_id",""))
 	var favorite:=bool(pet.get("favorite",false))
-	var toggle:Button=world.button("★ 已收藏" if favorite else "☆ 收藏",func():
+	var toggle:Button=world.button("★" if favorite else "☆",func():
 		if world.session.set_pet_favorite(identifier,not favorite):world.checkpoint();feedback="已取消收藏。" if favorite else "已收藏；仓库内优先显示。"
 		else:feedback=world.session.last_error
 		rebuild())
 	toggle.name=prefix+identifier
+	toggle.tooltip_text="取消收藏" if favorite else "收藏（收藏的不会被放生）"
+	toggle.set_meta("compact",true)
+	toggle.custom_minimum_size=Vector2(26,0)
 	if favorite:toggle.modulate=Color("ffe680")
 	parent.add_child(toggle)

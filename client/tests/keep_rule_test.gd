@@ -188,7 +188,7 @@ func run()->void:
 	check(session.snapshot().pet_storage.size()==before,"selecting releases nothing by itself")
 	var overlay=menu.panel.get_node("PetComparisonPanel")
 	var row=overlay.find_child("CompareRow_pet_storage_%d" % session.snapshot().pet_storage.map(func(p):return str(p.pet_id)).find("pet-268"),true,false)
-	check(row!=null and row.text.contains("保留：626档第1、攻击第1"),"a kept pet's row says why it stays")
+	check(row!=null and row.tooltip_text.contains("保留：626档第1、攻击第1") and row.find_children("*","Label",true,false).any(func(label):return label.text=="保留：626档第1、攻击第1"),"a kept pet's row says why it stays")
 	check(overlay.find_child("PetComparisonInfo",true,false).text.contains("按保留规则：保留"),"the panel summarises the rule and the counts")
 	menu.panel.find_child("CompareClearSelection",true,false).pressed.emit();await process_frame
 	check(menu.pet_release_selected.is_empty() and menu.pet_rule_reasons.is_empty(),"clearing the selection drops the rule preview")

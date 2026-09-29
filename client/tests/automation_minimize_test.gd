@@ -96,8 +96,9 @@ func training(game) -> void:
 	var profile: Dictionary=game.session.snapshot()
 	check(profile.pet_storage.size()==stored_before+1 and str(profile.pet_storage.back().pet_id)==pet_id,"storing a pet works beside running automation")
 	var retrieve: Button=null
+	var stored_row: Node=menu.panel.find_child("StorageRow_"+pet_id,true,false)
 	for node in menu.panel.find_children("RetrievePet_*","Button",true,false):
-		if node.get_parent().name=="StorageRow_"+pet_id:retrieve=node
+		if stored_row!=null and stored_row.is_ancestor_of(node):retrieve=node
 	check(retrieve!=null,"stored pet row offers 取出")
 	if retrieve!=null:
 		retrieve.pressed.emit();await process_frame

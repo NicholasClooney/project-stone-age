@@ -43,12 +43,13 @@ func run()->void:
 	var overlay=menu.panel.get_node("PetStoragePanel")
 	var first=overlay.find_child("StorageRow_pet-121",true,false)
 	check(first!=null and first.get_index()==0,"star from second page moves to first visible row")
-	check(first.get_combined_minimum_size().x<=650,"warehouse row and all actions fit scroll width")
-	var stats=first.get_node("StorageStats_pet-121")
+	check(first.get_combined_minimum_size().x<=overlay.find_children("*","ScrollContainer",true,false)[0].size.x,"warehouse row and all actions fit scroll width")
+	var stats=first.find_child("StorageStats_pet-121",true,false)
 	var stat_line:="攻%d 防%d 敏%d · 三围合%d"%[source.attack,source.defence,source.speed,int(source.attack)+int(source.defence)+int(source.speed)]
-	check(stats.text.contains("\n"+stat_line),"warehouse second line shows attack defence speed and their sum excluding HP")
-	check(first.size.y>=56 and stats.size.y>=56,"warehouse row reserves height for both name and stats")
-	check(stats.autowrap_mode!=TextServer.AUTOWRAP_OFF,"long warehouse labels wrap without pushing actions outside panel")
+	check(first.tooltip_text.contains("\n"+stat_line),"warehouse description lists attack defence speed and their sum excluding HP")
+	var cells:Array=first.find_children("*","Label",true,false).map(func(label):return label.text)
+	check(cells.has(str(source.attack)) and cells.has(str(int(source.attack)+int(source.defence)+int(source.speed))),"warehouse row shows the stats and their sum in columns")
+	check(stats.get_child_count()==2 and stats.get_child(0).clip_text,"name and id stack in the name column; a long name is clipped instead of pushing actions out")
 	var toggle=overlay.find_child("StorageFavorite_pet-121",true,false);toggle.pressed.emit();await process_frame
 	check(not game.session.snapshot().pet_storage[21].favorite,"warehouse unstar acts on correct sorted identity")
 	menu.pet_storage_page=1;menu.rebuild();await process_frame

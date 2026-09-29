@@ -36,7 +36,7 @@ func run():
  check(Rect2(Vector2.ZERO,menu.size).encloses(overlay.get_global_rect()),"comparison fits viewport")
  game.session._profile.pets[0].level=120;menu.rebuild();await process_frame
  var row=menu.panel.find_child("CompareRow_pets_0",true,false)
- check(row!=null and not row.text.contains("\n120级 血"),"max-level row does not duplicate current stats as forecast")
+ check(row!=null and not row.tooltip_text.contains("\n120级 血"),"max-level row does not duplicate current stats as forecast")
  menu.pet_compare_open=false;menu.pet_view="list";menu.rebuild();await process_frame
  check(menu.panel.find_children("PetRow*","Button",false,false).size()>0,"native pet rows return after helper closes")
  game.close_adventure_menu();game.music.stop();game.effect.stop();await create_timer(.3).timeout;game.queue_free();await process_frame;await process_frame;quit(1 if failures else 0)
