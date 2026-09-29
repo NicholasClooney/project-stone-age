@@ -175,6 +175,8 @@ func _on_backend_message(event: Dictionary) -> void:
 			if is_instance_valid(game.radio):game.radio.on_profile()
 		"pet_storage":
 			game._mark_ui_stale()
+		"pet_log_changed":
+			if is_instance_valid(game.adventure_menu):game.adventure_menu.pet_log_changed()
 		"auto_status":
 			for node in [game.training_helper,game.pet_hunt_menu,game.pet_workflow]:
 				if is_instance_valid(node):node.on_status(event.status)

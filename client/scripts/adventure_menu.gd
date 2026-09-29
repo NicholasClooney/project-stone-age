@@ -1026,8 +1026,11 @@ func open_pet_records(tab:String="caught",template_id:int=-1)->void:
 func open_release_log(template_id:int=-1)->void:
 	open_pet_records("released",template_id)
 
-func fetch_records()->void:
-	records_loading=true
+## quiet: a live refresh (pet_log_changed) keeps the page shown until the
+## new one arrives instead of showing it loading.
+func fetch_records(quiet:=false)->void:
+	records_loading=not quiet
+	_records_fetched_msec=Time.get_ticks_msec()
 	var asked:=[records_tab,records_page,records_template,records_run]
 	world.session.pet_log(records_tab,records_page,20,records_template,records_run,func(data:Dictionary):
 		if asked!=[records_tab,records_page,records_template,records_run]:return
@@ -1035,6 +1038,22 @@ func fetch_records()->void:
 		records_loading=false
 		if visible and pet_records_open:rebuild())
 	if records_loading:rebuild()
+
+const RECORDS_REFRESH_MSEC:=500
+var _records_fetched_msec:=-100000
+var _records_refresh_pending:=false
+
+## Pets were caught or released, or a stop logged (backend pet_log_changed):
+## an open 宠物记录 fetches its page again, at most every
+## RECORDS_REFRESH_MSEC; rebuild() keeps the scroll place on the same page.
+func pet_log_changed()->void:
+	if not visible or not pet_records_open or _records_refresh_pending:return
+	# Never inside the event itself: the fetch is a backend request.
+	var wait:=maxi(0,RECORDS_REFRESH_MSEC-(Time.get_ticks_msec()-_records_fetched_msec))
+	_records_refresh_pending=true
+	get_tree().create_timer(wait/1000.0).timeout.connect(func():
+		_records_refresh_pending=false
+		if visible and pet_records_open:fetch_records(true))
 
 const LOG_LEAD:=256.0 # time 66 + name 184 + one separator
 const LOG_NAME:=184.0

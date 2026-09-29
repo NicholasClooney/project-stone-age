@@ -64,6 +64,7 @@ Clients show effective settings from `ClientState.profile` and send changes: cho
 | `auto_status` | Runner counters, settings, origin, `hunt` and `flow` sub-status |
 | `auto_event` | `detail.kind`: `battle_stopped` (`takeover` hands a live battle to manual control), `battle_refused`, `hunt_stopped`, `hunt_refused`, `hunt_hit`, `flow_hunt`, `flow_paused`, `flow_stored`, `flow_compare` |
 | `position` | `map_id`, `cell`, `client`: the character moved; other clients mirror it |
+| `pet_log_changed` | `revision`: entries were appended to 抓宠记录, 放生记录 or 停止记录; an open 宠物记录 window fetches its page again (at most twice a second) |
 
 ## Automation and pacing
 

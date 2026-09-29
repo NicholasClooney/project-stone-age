@@ -118,6 +118,27 @@ func real_paths() -> void:
 	await process_frame
 	var release_row = menu.panel.find_child("ReleaseLogRow_0",true,false)
 	check(menu.records_tab=="released" and release_row!=null and release_row.find_children("*","Label",true,false).any(func(label):return label.text.begins_with("抓到：")),"the 放生 tab shows where each release was caught")
+	# Live: while the window is open, new releases and captures show up
+	# without reopening it (pet_log_changed, at most twice a second).
+	var released_before: int = int(menu.records_data.total)
+	check(game.session.gm_grant_pet(92),"a pet is granted while 放生 is open")
+	var granted_id := str(captures(game)[-1].pet_id)
+	game.session.release_pets([granted_id])
+	check(int(menu.records_data.total)==released_before,"the page is not fetched inside the event itself")
+	await create_timer(0.7).timeout
+	await process_frame
+	check(int(menu.records_data.total)==released_before+1 and str(menu.records_data.entries[0].pet_id)==granted_id and menu.panel.find_child("ReleaseLogRow_%d" % released_before,true,false)!=null,"the 放生 page shows the new release without reopening")
+	(menu.panel.find_child("RecordsTabCaught",true,false) as Button).pressed.emit()
+	await process_frame
+	run_pick = menu.panel.find_child("RecordsRun",true,false)
+	run_pick.select(1);run_pick.item_selected.emit(1)
+	await process_frame
+	var caught_before: int = int(menu.records_data.total)
+	game.session.gm_grant_pet(92)
+	game.session.gm_grant_pet(92)
+	await create_timer(0.7).timeout
+	await process_frame
+	check(int(menu.records_data.total)==caught_before+2 and menu.panel.find_child("CaughtRow_%d" % (caught_before+1),true,false)!=null,"the 抓到 page shows new captures without reopening (%d → %d)" % [caught_before,int(menu.records_data.total)])
 	menu.pet_records_open = false
 	game.close_adventure_menu()
 	game.process_mode = Node.PROCESS_MODE_DISABLED

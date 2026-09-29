@@ -1,9 +1,18 @@
 {
-  "version": "v0.85.1",
-  "count": 108,
+  "version": "v0.85.2",
+  "count": 109,
   "feature_count": 69,
-  "fix_count": 39,
+  "fix_count": 40,
   "entries": [
+    {
+      "version": "v0.85.2",
+      "date": "2026-09-29",
+      "kind": "fix",
+      "title": "宠物记录自动更新",
+      "details": [
+        "宠物记录窗口打开时会随抓到和放生自动更新。"
+      ]
+    },
     {
       "version": "v0.85.1",
       "date": "2026-09-29",

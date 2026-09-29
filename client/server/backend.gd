@@ -82,6 +82,8 @@ var capture_log_path := ""
 ## hit, in <save>.stop-log.jsonl (stop_log_path for tests).
 var stop_log = preload("res://server/release_log.gd").new()
 var stop_log_path := ""
+## Counts appends to the three logs (_record_releases).
+var pet_log_revision := 0
 static var _map_names: Dictionary = {}
 var last_saved_payload := ""
 var rev := 0
@@ -120,11 +122,17 @@ func handle(command: Dictionary) -> Dictionary:
 
 ## Appends the pets released or caught by the last command or tick to
 ## 放生记录 and 抓宠记录.
+## Anything appended raises pet_log_revision and emits pet_log_changed, so an
+## open 宠物记录 window fetches its page again.
 func _record_releases() -> void:
 	_release_log_file()
+	var appended: bool = not session.release_events.is_empty() or not session.capture_events.is_empty() or not automation.stop_events.is_empty()
 	if not session.release_events.is_empty():release_log.append(session.take_release_events())
 	if not session.capture_events.is_empty():capture_log.append(session.take_capture_events().map(_capture_entry))
 	if not automation.stop_events.is_empty():stop_log.append(automation.take_stop_events())
+	if appended:
+		pet_log_revision += 1
+		_emit({"type":"pet_log_changed","revision":pet_log_revision})
 
 ## The logs' files follow the save: <save>.release-log.jsonl and
 ## <save>.capture-log.jsonl, or tests' paths.
