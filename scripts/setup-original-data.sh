@@ -218,6 +218,8 @@ run "$PY" tools/import_grid_cursor.py "$CLIENT25"
 run "$PY" tools/import_cursor.py "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/123.cur"
 run python3 tools/import_encounters.py
 run "$PY" tools/import_encounter_art.py "$CLIENT25"
+# Last: packs the per-frame PNGs the importers above wrote into sprite sheets.
+run "$PY" tools/pack_frame_sheets.py
 
 step "Godot asset import (the first run takes about half an hour)"
 ./scripts/run.sh --headless --editor --import --quit >/dev/null 2>&1

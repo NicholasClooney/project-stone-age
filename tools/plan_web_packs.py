@@ -125,6 +125,13 @@ def plan() -> dict:
             lookups["maps"][ident].append(pack)
 
     battle = json.loads((LEGACY / "battle/manifest.json").read_text())
+    # One battle sprite's sheet(s) per pack (tools/pack_frame_sheets.py);
+    # per-frame PNGs from an import that was not packed yet still work.
+    for ident, sheet in battle.get("sheets", {}).items():
+        pack = f"sprite-{ident}"
+        for name in sheet["files"]:
+            assign(pack, LEGACY / "battle" / name)
+        lookups["sprites"][ident] = pack
     for ident, images in sprite_images(battle.get("characters", {})).items():
         pack = f"sprite-{ident}"
         for image in sorted(images):

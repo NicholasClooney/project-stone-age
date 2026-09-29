@@ -26,7 +26,7 @@ Export templates live in `~/Library/Application Support/Godot/export_templates/4
 | `map-<id>` | One map's data, tiles and residents used nowhere else | Entering that map |
 | `tiles-<hash>` | Tiles shared by several maps, grouped by the exact set that uses them | Entering any of those maps |
 | `char-<id>` | One player character's walking art (villages that draw it depend on it too) | Startup, character change, those villages |
-| `sprite-<id>`, `riding-<id>`, `bg-<n>` | Battle sprite, mounted composite, battlefield | Opening a battle that shows them; pet menus; companions |
+| `sprite-<id>`, `riding-<id>`, `bg-<n>` | Battle sprite and mounted composite (one sprite sheet each, see [sprite sheets](sprite-sheets.md)), battlefield | Opening a battle that shows them; pet menus; companions |
 | `music-<name>` | One track | Startup tracks, entering a map with it |
 
 Riding has one `riding-<id>` pack per imported composite, holding that composite's sprite sheet (241 with the 8.0 data, about 1 MB each; `tools/import_riding.py` packs a composite's frames into one lossless 256-colour sheet, split in two only past 4096 px); mounting and mounted battles wait for the ridden composite only. The riding manifest (3.5 MB JSON, about 0.3 MB gzipped) stays in core. Re-run `tools/import_riding.py` in a checkout before its next web build after the importer changes, since imported assets are not in Git.

@@ -64,6 +64,7 @@ def run(source, reference, output):
                 for frame in sequence['frames']:
                     bitmap = frame['image']
                     if str(bitmap) not in battle['images']:
+                        (output / 'battle/images').mkdir(parents=True, exist_ok=True)
                         archive.image(bitmap).save(output / 'battle/images' / f'{bitmap}.png')
                         battle['images'][str(bitmap)] = {k:archive.entries[bitmap][k] for k in ('x','y','w','h')}
     battle['equipment_variants']['club'].update({choice['id']: choice['club'] for choice in choices})

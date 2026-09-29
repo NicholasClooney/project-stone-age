@@ -52,12 +52,12 @@ func _update(msec: int) -> void:
 	var image := int(frame.image)
 	if image == current_image:return
 	var metadata: Dictionary = manifest().images.get(str(image),{})
-	var path := "res://assets/legacy/battle/images/%d.png" % image
 	if not _textures.has(image):
 		# A web client may not hold this sprite's pack yet; keep the last frame.
-		if not ResourceLoader.exists(path):return
+		var texture: Texture2D = preload("res://scripts/sheet_frames.gd").texture("res://assets/legacy/battle/",manifest().get("sheets",{}),str(sprite),image)
+		if texture==null:return
 		if _textures.size() >= 512:_textures.clear()
-		_textures[image] = load(path)
+		_textures[image] = texture
 	current_image = image
 	_texture = _textures[image]
 	_offset = Vector2(float(metadata.get("x",0))+float(frame.get("x",0)),float(metadata.get("y",0))+float(frame.get("y",0)))

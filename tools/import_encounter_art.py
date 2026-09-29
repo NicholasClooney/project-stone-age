@@ -39,6 +39,7 @@ def run(source, root):
                         raise ValueError(f'missing original action {action}_{direction}')
             used={f['image'] for a in actions.values() for f in a['frames']}
             for bitmap in used:archive.image(bitmap)
+            (root/'battle/images').mkdir(parents=True,exist_ok=True) # pack_frame_sheets.py removes it after packing
             for bitmap in used:
                 output=root/'battle/images'/f'{bitmap}.png'
                 if not output.exists():archive.image(bitmap).save(output)

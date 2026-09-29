@@ -36,5 +36,5 @@ static func _valid(ident: String) -> bool:
 			if frames.is_empty():valid = false
 			for frame in frames:
 				var bitmap := str(int(frame.image))
-				if not data.get("images",{}).has(bitmap) or (not downloadable and not ResourceLoader.exists(ART_ROOT+"images/%s.png" % bitmap)):valid = false
+				if not data.get("images",{}).has(bitmap) or (not downloadable and not preload("res://scripts/sheet_frames.gd").available(ART_ROOT,data.get("sheets",{}),ident,int(bitmap))):valid = false
 	return valid

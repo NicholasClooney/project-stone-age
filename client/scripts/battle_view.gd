@@ -8,6 +8,7 @@ signal capture_music_requested(celebrating: bool)
 
 const PetSkills = preload("res://scripts/pet_skills.gd")
 const BattleEffects = preload("res://scripts/battle_effects.gd")
+const SheetFrames = preload("res://scripts/sheet_frames.gd")
 const ART_ROOT := "res://assets/legacy/battle/"
 const STAGE_SIZE := Vector2(800,600)
 var world: Node
@@ -1141,8 +1142,9 @@ func _advance_playback(delta: float) -> void:
 		var ident := str(int(frame.image))
 		var metadata: Dictionary = manifest.images[ident]
 		var sprite: Sprite2D = actor.sprite
-		if not textures.has(ident): textures[ident] = load(ART_ROOT+"images/%s.png" % ident)
+		if textures.get(ident)==null: textures[ident] = SheetFrames.bitmap_texture(ART_ROOT,manifest.get("sheets",{}),int(ident))
 		sprite.texture = textures[ident]
+		if sprite.texture==null: continue
 		sprite.z_index = clampi(int(actor.point.y),0,599)-600
 		sprite.position = actor.point+Vector2(float(metadata.x)+float(frame.x),float(metadata.y)+float(frame.y))
 		var target: Button = target_buttons[actor_index]

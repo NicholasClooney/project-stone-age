@@ -33,7 +33,7 @@ func select_pet(ident: String, caption: String) -> void:
 	for animation in animations.values():
 		for frame in animation.frames:
 			var key := str(int(frame.image))
-			if not textures.has(key):textures[key] = load("res://assets/legacy/battle/images/%s.png" % key)
+			if not textures.has(key):textures[key] = preload("res://scripts/sheet_frames.gd").texture("res://assets/legacy/battle/",manifest.get("sheets",{}),ident,int(key))
 func _process(delta: float) -> void:
 	if animations.is_empty():return
 	elapsed += delta

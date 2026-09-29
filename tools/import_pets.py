@@ -36,6 +36,8 @@ def run(source, reference, output):
                     raise ValueError(f'{key} lacks {action}_{direction}')
         used = {f['image'] for a in actions.values() for f in a['frames']}
         for bitmap in used: archive.image(bitmap)
+        # pack_frame_sheets.py removes the folder once it has packed the frames.
+        (output/'battle/images').mkdir(parents=True, exist_ok=True)
         for bitmap in used:
             archive.image(bitmap).save(output/'battle/images'/f'{bitmap}.png')
             battle['images'][str(bitmap)] = {k:archive.entries[bitmap][k] for k in ('x','y','w','h')}

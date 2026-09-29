@@ -59,6 +59,7 @@ $PY tools/import_grid_cursor.py "$CLIENT"
 $PY tools/import_cursor.py 'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/123.cur'
 python3 tools/import_encounters.py
 $PY tools/import_encounter_art.py "$CLIENT"
+$PY tools/pack_frame_sheets.py                # last: per-frame PNGs into sprite sheets
 ./scripts/run.sh --headless --editor --import --quit
 ```
 

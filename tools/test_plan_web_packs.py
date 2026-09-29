@@ -60,6 +60,20 @@ class PlanWebPacksTest(unittest.TestCase):
                 for frame in animation["frames"]:
                     self.assertIn(str(int(frame["image"])), sheet["frames"], key)
 
+    def test_every_battle_sprite_pack_holds_its_sheet(self):
+        import json
+        battle = json.loads((LEGACY / "battle/manifest.json").read_text())
+        if "sheets" not in battle:
+            self.skipTest("battle frames not packed into sheets")
+        for ident, animations in battle["characters"].items():
+            sheet = battle["sheets"][ident]
+            contents = set(self.plan["packs"][self.plan["sprites"][ident]])
+            for name in sheet["files"]:
+                self.assertIn(f"{plan_web_packs.RES}battle/{name}", contents, ident)
+            for animation in animations.values():
+                for frame in animation["frames"]:
+                    self.assertIn(str(int(frame["image"])), sheet["frames"], ident)
+
     def test_villages_depend_on_character_art_they_draw(self):
         self.assertTrue(any(name.startswith("char-") for name in self.plan["maps"]["1000"]))
 
