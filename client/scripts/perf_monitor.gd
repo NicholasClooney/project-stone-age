@@ -29,6 +29,10 @@ func sample(world: Object = null) -> Dictionary:
 		var counters: Dictionary = link.stats() if link!=null and link.has_method("stats") else {}
 		result.network = rates(_previous_net,counters,seconds)
 		_previous_net = counters
+		var state = world.get("state")
+		var automation = state.get("automation") if state!=null else null
+		var hunt: Dictionary = automation.get("hunt",{}) if automation is Dictionary else {}
+		if bool(hunt.get("fast",false)):result.fast_hunt = {"threads":int(hunt.get("threads_used",0)),"budget":int(hunt.get("budget",0)),"hunters":int(hunt.get("hunters",1))}
 		var backend = world.get("backend")
 		if backend!=null and "tick_usec" in backend:
 			result.backend = {"tick_ms":snappedf(float(backend.tick_usec)/1000.0,0.001),"tick_avg_ms":snappedf(float(backend.tick_avg_usec)/1000.0,0.001)}
@@ -118,6 +122,9 @@ static func lines(data: Dictionary) -> PackedStringArray:
 	var backend: Dictionary = data.get("backend",{})
 	if not backend.is_empty():
 		out.append("后台 tick %.2f ms（平均 %.2f ms）" % [float(backend.tick_ms),float(backend.tick_avg_ms)])
+	var fast: Dictionary = data.get("fast_hunt",{})
+	if not fast.is_empty():
+		out.append("极速筛选 线程 %d/%d%s" % [int(fast.threads),int(fast.budget),"（%d 人共享）" % int(fast.hunters) if int(fast.hunters)>1 else ""])
 	return out
 
 ## The breakdown column: tracked textures, audio and manifests by owner.

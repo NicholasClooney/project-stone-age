@@ -508,12 +508,21 @@ func summary() -> String:
 ## How this run scans: the helper, the ordinary scan and why, or its target rate.
 func speed_text() -> String:
 	var hunt: Dictionary=_hunt()
-	if bool(hunt.get("fast",false)):return "本机极速模式"
+	if bool(hunt.get("fast",false)):return "本机极速模式"+share_text(hunt)
 	var note:=str(hunt.get("fast_note",""))
 	var target:=int(filter.get("rate",rate.value))
 	if bool(hunt.get("fast_wanted",false)) and not note.is_empty():return "普通筛选（%s）· 目标 %s" % [note.trim_suffix("。"),rate_text(target)]
 	if bool(hunt.get("fast_wanted",false)) and target>0:return "目标 %s（已限速，使用普通筛选）" % rate_text(target)
 	return "目标 "+rate_text(target)
+## 「（3 人共享）」 when several players' hunts share the computer's helper
+## threads (LAN profiles), else "".
+static func shared_text(hunters: int) -> String:
+	return "（%d 人共享）" % hunters if hunters>1 else ""
+## This hunt's share of the threads, 「 · 线程 4/14（3 人共享）」, when shared.
+static func share_text(hunt: Dictionary) -> String:
+	var hunters:=int(hunt.get("hunters",1))
+	if hunters<=1:return ""
+	return " · 线程 %d/%d%s" % [int(hunt.get("threads_used",0)),int(hunt.get("budget",0)),shared_text(hunters)]
 static func rolls_text(per_second: float) -> String:
 	return cn_count(per_second)+" 组/秒"
 func rate_text(value: int) -> String:return "不限速" if value<=0 else "%d 组/秒"%value
@@ -657,7 +666,7 @@ func threshold_line()->String:
 	if not world.pet_workflow.active():return ""
 	var survey:Dictionary=flow.get("survey",{})
 	if bool(survey.get("active",false)):
-		return "摸底中（%s）：剩 %s · 候选 %d 只 · 不设门槛，结束后按保留规则挑选" % ["、".join(survey.get("names",[])),duration_text(float(survey.get("remaining",0))),int(survey.get("candidates",0))]
+		return "摸底中（%s）：剩 %s%s · 候选 %d 只 · 不设门槛，结束后按保留规则挑选" % ["、".join(survey.get("names",[])),duration_text(float(survey.get("remaining",0))),shared_text(int(survey.get("hunters",1))),int(survey.get("candidates",0))]
 	var text:=str(flow.get("thresholds","")).get_slice("\n",0)
 	if int(survey.get("pending",0))>0:text="摸底选中 %d 只待抓 · %s" % [int(survey.pending),text]
 	return "门槛 "+text if not text.is_empty() else ""
@@ -952,7 +961,7 @@ func _update_chip() -> void:
 	if flow.active():
 		var step: String={"hunt":"筛选中","capture":"捕捉中","train":"升级中","restart":"准备下一轮"}.get(flow.phase,"")
 		var survey:Dictionary=world.state.automation.get("flow",{}).get("survey",{})
-		if bool(survey.get("active",false)):step="摸底中 剩%s · 候选%d只" % [duration_text(float(survey.get("remaining",0))),int(survey.get("candidates",0))]
+		if bool(survey.get("active",false)):step="摸底中 剩%s%s · 候选%d只" % [duration_text(float(survey.get("remaining",0))),shared_text(int(survey.get("hunters",1))),int(survey.get("candidates",0))]
 		var kept:String=" · 同种%d/放生%d"%[flow.held_count,flow.released_count] if flow.keep_auto else ""
 		var waiting:=int(world.state.automation.get("flow",{}).get("queue_size",0))
 		var total: float=flow.elapsed_seconds()

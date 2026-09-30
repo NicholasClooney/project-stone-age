@@ -5,7 +5,8 @@ extends SceneTree
 ## --fast-threads fixes this server's 本机极速模式 线程数 instead of the shared
 ## setting. Several servers can run side by side (one per LAN profile,
 ## scripts/profiles.sh); each holds `<save>.lock` so no two open the same save
-## (server/save_lock.gd), and releases it when it stops.
+## (server/save_lock.gd), and releases it when it stops. They share the
+## computer's helper threads (server/fast_hunt_share.gd).
 ## It loads the same save as the desktop game, ticks automation on its own and
 ## saves after settlements. Do not run the desktop game on the same save at the
 ## same time; both would write it.
@@ -18,6 +19,7 @@ const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const ShutdownRequest = preload("res://server/shutdown_request.gd")
 const SaveLock = preload("res://server/save_lock.gd")
+const FastHuntShare = preload("res://server/fast_hunt_share.gd")
 const ServerSettings = preload("res://server/server_settings.gd")
 
 var backend
@@ -43,6 +45,8 @@ func _initialize() -> void:
 		ServerSettings.threads_override = mini(int(options["fast-threads"]),ServerSettings.cores())
 	backend = Backend.new()
 	root.add_child(backend)
+	# Every server on this computer shares the helper threads.
+	backend.automation.fast_share = FastHuntShare.new()
 	if FileAccess.file_exists(path) or FileAccess.file_exists(path+".bak"):
 		if not backend.load_profile(path):
 			printerr("Save %s could not be read; refusing to start so it is not overwritten." % ProjectSettings.globalize_path(path))
@@ -81,11 +85,15 @@ func _process(_delta: float) -> bool:
 	return false
 
 ## Both ways out (a shutdown request, or _finalize): save, write the resume
-## file, then give up the save lock.
+## file, stop the helper and leave the thread share, then give up the save
+## lock.
 func _stop() -> void:
 	if _stopped:return
 	_stopped = true
-	if backend!=null:backend.shut_down()
+	if backend!=null:
+		backend.shut_down()
+		backend.automation.fast_hunt.stop()
+		backend.automation.fast_share.leave()
 	if not locked_path.is_empty():SaveLock.release(locked_path)
 
 func _finalize() -> void:

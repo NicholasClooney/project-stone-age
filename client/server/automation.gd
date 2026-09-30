@@ -15,6 +15,7 @@ const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const FastHunt = preload("res://server/fast_hunt.gd")
 const ServerSettings = preload("res://server/server_settings.gd")
+const FastHuntShare = preload("res://server/fast_hunt_share.gd")
 const Rarity = preload("res://scripts/showcase_rarity.gd")
 const ReleaseLog = preload("res://server/release_log.gd")
 ## A presenting client may slow automation to its animation, never stall it.
@@ -91,6 +92,13 @@ var _fast_base: Dictionary = {}
 var fast_unavailable := FastHunt.unavailable_reason()
 ## 线程数 for the helper, the server's own setting (server_settings.gd; 0 = auto).
 var fast_threads := ServerSettings.fast_hunt_threads()
+## The computer's shared thread budget (server/fast_hunt_share.gd): set by a
+## server (server_main.gd) or the desktop game; null keeps the helper on the
+## whole budget, as tests and a lone backend expect.
+var fast_share = null
+## The share the running helper was started with, and when (share clock).
+var _fast_launched_threads := 0
+var _fast_launched_at := 0.0
 
 # ---- find-pet workflow -----------------------------------------------------
 var flow_phase := "idle"
@@ -339,6 +347,7 @@ func command(name: String, arguments: Dictionary) -> Dictionary:
 		"scene_reload":return {"ok":true,"paused":position_changed(position_map,position_cell,true)}
 		"hunt_process":
 			if hunt_running:_hunt_process(float(arguments.get("delta",0.0)))
+			else:_share_idle()
 		"set":
 			for key in arguments.get("fields",{}):set(key,arguments.fields[key])
 			_emit_status()
@@ -361,6 +370,7 @@ func position_changed(map_id: int, cell: Vector2i, map_changed: bool = false) ->
 		flow_reason = pause
 	if hunt_running and pause.is_empty():_record_stop("hunt","停止","地图发生变化，筛选已停止。")
 	hunt_running = false
+	_share_idle()
 	release_clone_override()
 	running = false
 	compact_active = false
@@ -377,6 +387,7 @@ func tick(delta: float) -> void:
 	try_resume()
 	tick_battle(delta)
 	if hunt_running:_hunt_process(delta)
+	else:_share_idle()
 	if flow_active():flow_step()
 
 func tick_battle(delta: float) -> void:
@@ -651,6 +662,7 @@ func _prepare_catalog(filter: Dictionary) -> void:
 
 func stop_hunt(reason: String) -> void:
 	fast_hunt.stop()
+	_share_leave()
 	# The find-pet cycle records its own stops; a hit it goes on to capture is none.
 	if hunt_running and not flow_active() and not _stopping_cycle:
 		_record_stop("hunt","找到" if reason.begins_with("找到达标个体") else "停止",reason)
@@ -789,8 +801,10 @@ func _fast_mismatch(index: int) -> String:
 func _fast_process() -> bool:
 	if not hunt_fast_wanted or not hunt_fast_note.is_empty() or int(hunt_filter.get("rate",0))>0:
 		if fast_hunt.running():fast_hunt.stop()
+		_share_leave()
 		return false
 	if not hunt_catalog is EncounterCatalog:return false
+	_share_rebalance()
 	# A better pet arrived (or a survey began or ended): the helper starts
 	# again from the rolls already committed, with the new thresholds.
 	if fast_hunt.running() and _predicting() and threshold_key()!=_fast_thresholds:
@@ -803,8 +817,11 @@ func _fast_process() -> bool:
 		var rules := {}
 		if _predicting():
 			for id in survey.get("templates",[]):rules[int(id)] = raw_filter_for(int(id)).get("keep_rule",{})
-		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,fast_threads,rules):
+		_fast_launched_threads = fast_threads_now()
+		if fast_share!=null:_fast_launched_at = float(fast_share.clock.call())
+		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,_fast_launched_threads,rules):
 			hunt_fast_note = "本机辅助程序无法启动，已改用普通筛选。"
+			_share_leave()
 			return false
 		return true
 	var report: Dictionary = fast_hunt.poll()
@@ -812,6 +829,7 @@ func _fast_process() -> bool:
 	_survey_merge(report.get("candidates",[]))
 	if str(report.kind)=="exited":
 		hunt_fast_note = "本机辅助程序意外结束，已改用普通筛选。"
+		_share_leave()
 		return false
 	hunt_rolls = int(report.index)
 	hunt_inspected = int(_fast_base.inspected)+int(report.inspected)
@@ -832,10 +850,50 @@ func _fast_process() -> bool:
 func set_fast_threads(value: Variant) -> String:
 	var error := ServerSettings.set_fast_hunt_threads(value)
 	if not error.is_empty():return error
-	fast_threads = int(value)
-	if fast_hunt.running():fast_hunt.stop()
+	fast_threads = ServerSettings.fast_hunt_threads()
+	if fast_hunt.running():
+		_survey_merge(fast_hunt.peek().get("candidates",[]))
+		fast_hunt.stop()
 	_emit_status()
 	return ""
+
+## The thread count to start the helper with: this hunt's share of the
+## computer's budget when shared, else 线程数 itself (0 lets the helper pick).
+func fast_threads_now() -> int:
+	return int(fast_share.threads) if fast_share!=null and fast_share.joined() else fast_threads
+
+## The budget every hunt on this computer shares: 线程数, re-read so a change
+## made on another server applies here too, or all cores but one.
+func _share_budget() -> int:
+	fast_threads = ServerSettings.fast_hunt_threads()
+	return threads_used(fast_threads)
+
+## Registers this scanning hunt (once a second) and restarts a running helper
+## whose share changed, at most every REBALANCE_SECONDS. The restart merges
+## the survey pool first and goes on from the committed rolls, as a 线程数
+## change does, so results do not change.
+func _share_rebalance() -> void:
+	if fast_share==null:return
+	if fast_share.due():fast_share.beat(_share_budget())
+	if not fast_hunt.running() or int(fast_share.threads)==_fast_launched_threads:return
+	if float(fast_share.clock.call())-_fast_launched_at < FastHuntShare.REBALANCE_SECONDS:return
+	_survey_merge(fast_hunt.peek().get("candidates",[]))
+	fast_hunt.stop()
+
+## This hunt stopped scanning: its threads go to the others.
+func _share_leave() -> void:
+	if fast_share!=null and fast_share.joined():
+		fast_share.leave()
+
+## Nothing scans: no helper left running, no registration left behind.
+func _share_idle() -> void:
+	if fast_hunt.running():fast_hunt.stop()
+	_share_leave()
+
+## How many hunts share the computer's threads now (1 when alone, or when
+## this hunt does not use the helper).
+func fast_hunters() -> int:
+	return int(fast_share.hunters) if fast_share!=null and fast_share.joined() else 1
 
 ## Threads the helper uses for a setting: all cores but one when automatic.
 static func threads_used(setting: int) -> int:
@@ -986,9 +1044,25 @@ func _survey_wanted() -> Array:
 		if StatFilter.needs_survey(raw_filter_for(id),species_maxima(id)):result.append(id)
 	return result
 
+## Full-CPU seconds the survey still needs (摸底 lasts survey_seconds of the
+## whole computer: with N hunts sharing it, each wall second counts 1/N).
 func survey_remaining() -> float:
 	if survey.is_empty():return 0.0
-	return maxf(0.0,float(survey_seconds)-(int(survey_clock.call())-int(survey.started))/1000.0)
+	return maxf(0.0,float(survey_seconds)-_survey_credit())
+
+## Full-CPU seconds counted so far, including the time since the last update
+## at the current share.
+func _survey_credit() -> float:
+	return float(survey.credit)+(int(survey_clock.call())-int(survey.clock))/1000.0/float(fast_hunters())
+
+## Books the time since the last update at the share it ran with.
+func _survey_advance() -> void:
+	survey.credit = _survey_credit()
+	survey.clock = int(survey_clock.call())
+
+## Wall time the survey still takes at the current share.
+func survey_wall_remaining() -> float:
+	return survey_remaining()*fast_hunters()
 
 func _template_name(template_id: int) -> String:
 	return str(backend.encounter_catalog.data.get("templates",{}).get(str(template_id),{}).get("name","#%d" % template_id))
@@ -998,12 +1072,14 @@ func _survey_process() -> void:
 	if survey.is_empty():
 		var wanted := _survey_wanted()
 		if wanted.is_empty():return
-		survey = {"templates":wanted,"started":int(survey_clock.call()),"candidates":{},"runs":[]}
+		survey = {"templates":wanted,"started":int(survey_clock.call()),"clock":int(survey_clock.call()),"credit":0.0,"candidates":{},"runs":[]}
 		var names: Array = wanted.map(_template_name)
-		_showcase_line("survey","摸底：还没有%s，先不设门槛找%s，再按保留规则挑最好的抓。" % ["、".join(names),_duration(survey_seconds)])
+		var shared := "（%d 人共享本机，约%s）" % [fast_hunters(),_duration(survey_seconds*fast_hunters())] if fast_hunters()>1 else ""
+		_showcase_line("survey","摸底：还没有%s，先不设门槛找%s%s，再按保留规则挑最好的抓。" % ["、".join(names),_duration(survey_seconds),shared])
 		_emit_status()
-	elif survey_remaining()<=0.0:
-		_finish_survey()
+	else:
+		_survey_advance()
+		if survey_remaining()<=0.0:_finish_survey()
 
 static func _duration(seconds: float) -> String:
 	var s := int(seconds)
@@ -1986,7 +2062,8 @@ func status() -> Dictionary:
 		"hunt":{"running":hunt_running,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"elapsed":hunt_elapsed,
 			"filter":hunt_filter.duplicate(true),"status":hunt_status,"credit":hunt_credit,"last_hit":hunt_last_hit.duplicate(true),"map_id":hunt_map,"cell":[hunt_cell.x,hunt_cell.y],
 			"fast":fast_hunt.running(),"fast_wanted":hunt_fast_wanted,"fast_note":hunt_fast_note,"fast_unavailable":fast_unavailable,
-			"threads":fast_threads,"threads_used":threads_used(fast_threads),"cores":ServerSettings.cores()},
+			"threads":fast_threads,"threads_used":fast_threads_now() if fast_share!=null and fast_share.joined() else threads_used(fast_threads),"cores":ServerSettings.cores(),
+			"budget":threads_used(fast_threads),"hunters":fast_hunters()},
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
@@ -1998,7 +2075,7 @@ func status() -> Dictionary:
 ## 摸底 for the hunt window and the minimized bar: {active, remaining,
 ## seconds, candidates, names, pending (picks not yet caught), last}.
 func survey_status() -> Dictionary:
-	return {"active":not survey.is_empty(),"remaining":survey_remaining(),"seconds":survey_seconds,"candidates":survey.get("candidates",{}).size(),
+	return {"active":not survey.is_empty(),"remaining":survey_wall_remaining(),"seconds":survey_seconds,"hunters":fast_hunters(),"candidates":survey.get("candidates",{}).size(),
 		"names":survey.get("templates",[]).map(_template_name),"pending":_pending_picks().size(),"last":str(survey_last.get("text",""))}
 
 ## The cycle's thresholds as the player reads them, one species per line:

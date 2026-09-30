@@ -308,6 +308,9 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	configure_input()
 	if "--script" in OS.get_cmdline_args():profile_persistence = false
+	# The desktop game's 本机极速模式 shares the computer's threads with any
+	# LAN profile servers (server/fast_hunt_share.gd); tests stay alone.
+	if link.is_local() and profile_persistence:backend.automation.fast_share = preload("res://server/fast_hunt_share.gd").new()
 	gamepad = preload("res://scripts/gamepad.gd").new()
 	gamepad.configure(self)
 	add_child(gamepad)
@@ -427,6 +430,7 @@ func can_step(origin: Vector2i, destination: Vector2i) -> bool:
 
 func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
+	if backend!=null and backend.automation.fast_share!=null:backend.automation.fast_share.leave()
 	if is_instance_valid(music): music.stop()
 	if is_instance_valid(effect): effect.stop()
 
