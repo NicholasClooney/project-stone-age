@@ -2,7 +2,7 @@
 
 Status: research, 2026-09-30. No code changed. Question: can different people on one LAN (or tailnet) each play their own character against the one server, and can they group up (组队) and fight together? How much work would it take?
 
-Short answer: **separate characters are cheap**. Two players can do it today by running two server processes. A proper in-process multi-profile server with logins is 3–5 agent-days. **Seeing each other on maps** adds about 2–4 agent-days. **Real 组队 with shared battles** is the expensive, risky part at 8–12 agent-days, because the battle engine and settlement assume one player. Sharing the machine's CPU between several players' 本机极速模式 hunts is a 0.5–1 agent-day coordinator (§5). The 五人镜像队 (clone squad) already gives us the five-player battle layout and ally scheduling, so it is a good base.
+Short answer: **separate characters are cheap**. Two players can do it today by running two server processes. A proper in-process multi-profile server with logins is 3–5 agent-days. **Seeing each other on maps** adds about 2–4 agent-days. **Real 组队 with shared battles** is the expensive, risky part at 8–12 agent-days, because the battle engine and settlement assume one player. Sharing the machine's CPU between several players' 本机极速模式 hunts is a 0.5–1 agent-day coordinator (§5; decided: equal shares among the players hunting, and a survey lasts 2 min × the number of shares). The 五人镜像队 (clone squad) already gives us the five-player battle layout and ally scheduling, so it is a good base.
 
 Effort is in agent-days: one agent working one focused day, tests included, as in [ideas.md](ideas.md) estimates.
 
@@ -162,7 +162,7 @@ Idea: every player's 自动找宠 joins one fast hunt service with its own slot.
 
 - **Budget**: the server's 线程数 (`ServerSettings.fast_hunt_threads`), or all cores − 1 when it is 0 (`Automation.threads_used`).
 - **Active hunts**: backends whose `fast_hunt.running()` is true or about to start. Hunts that are in battle, training, paused or showing a catch do not count. A find-pet cycle leaves the scan phase often, and its threads go to the others meanwhile.
-- **Share**: `max(1, budget × weight / total weight)`, rounded so the shares add up to the budget. When the set of active hunts or the budget changes, every affected automation gets its new count and restarts its helper through the `set_fast_threads` path.
+- **Share**: equal shares, `max(1, budget / N)` for N scanning hunts (decided, see below), rounded so the shares add up to the budget. When the set of active hunts or the budget changes, every affected automation gets its new count and restarts its helper through the `set_fast_threads` path.
   - That path has to merge the survey pool with `peek()` first, as the threshold path does.
   - Rebalance at most every 2–3 s, so a cycle that flips between scanning and fighting does not thrash.
 - **A1 (one process)**: the coordinator is a small object in the hub that every `Automation` asks for its thread count. The status keeps publishing `hunt.threads_used`, so the hunt window can show "3 / 11 线程（2 人在找宠）".
@@ -185,7 +185,7 @@ Idea: every player's 自动找宠 joins one fast hunt service with its own slot.
 
 ### (c) Fairness policies
 
-- **Equal share** by default. It is easy to explain, and nobody's hunt starves.
+- **Equal share** (chosen, see the decision below). It is easy to explain, and nobody's hunt starves.
 - **Weights**: an optional per-profile weight in `profiles.cfg`, admin-set, for example so the machine's owner gets 2.
   - Do not weight by mode by default. 后台搜宠 (the showcase that watches each catch train to 120) spends most of its time in capture and training battles, and while it does not scan it already takes no threads.
   - A foreground/background priority can come later if it is actually wanted.
@@ -196,13 +196,17 @@ Idea: every player's 自动找宠 joins one fast hunt service with its own slot.
   Option 2 is fairer and does not hurt the others. The backend already owns the clock, so it is a small change in `_survey_process`.
 - **GDScript fallback scans** (a 每秒遇敌 rate set, or no helper) do not use helper threads. They use the backend's frame budget, which §2 shares separately.
 
-### Recommendation
+### Decision (2026-09-30)
 
-Build **(a)**: 0.5–1 agent-day.
+The player chose:
 
-- Do it first, even before A1: with the registry directory it also fixes today's oversubscription when two players run A0 processes and both leave 线程数 on automatic.
-- Add the survey window stretch from (c).
-- Keep (b) for later, if restart churn or oversubscription is actually measured with four or more concurrent hunters. The design of (a) leaves each player's verification where it is, so moving to (b) later changes only the transport.
+1. **Option (a)**: a coordinator divides the thread budget, one helper per player, 0.5–1 agent-day. (b) stays a later option, only if restart churn or oversubscription is measured with four or more concurrent hunters. Because each player's verification stays where it is in (a), moving to (b) later would change only the transport.
+2. **Equal shares among the players currently hunting.** No weights and no mode priority; the weights idea in (c) is not adopted. Each active hunt gets `budget / N` threads, where N is the number of hunts scanning now. Any remainder goes one thread each to the longest-running hunts, and every hunt gets at least one thread.
+3. **The survey (摸底) follows the same share rule, and its duration scales with the number of shares**: survey time = 2 minutes × N. Each survey therefore still gets the equivalent of the full CPU for 2 minutes. This is option 2 above, with equal shares.
+   - Implementation note: N can change during a survey. The backend should count "full-CPU seconds", adding `1/N` per wall-clock second (`survey_clock`), and end the survey at 120. With a constant N this is exactly 2 min × N.
+   - The status can show the stretched remaining time, for example "摸底 3:40（2 人在找宠）".
+
+Build it in Phase 0, before A1. With the registry directory it also fixes today's oversubscription when two players run A0 processes and both leave 线程数 on automatic.
 
 ## 6. Security and operations on a LAN
 
