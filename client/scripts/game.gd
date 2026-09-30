@@ -243,6 +243,10 @@ var effects_volume := 1.0
 var fixed_aspect := true
 var ui_scale := 100.0
 var taskbar_pinned := false
+## 帧率上限 (this device; phones 30, computers 60) and 切到后台时继续播放
+## (off: a hidden page pauses every sound so the browser can freeze it).
+var max_fps := 60
+var background_audio := false
 ## Extra players that finish a sound the next one would cut off
 ## (scripts/game/game_audio.gd play_effect).
 var effect_voices: Array[AudioStreamPlayer] = []
@@ -575,6 +579,9 @@ func set_fixed_aspect(on: bool) -> void:_device.set_fixed_aspect(on)
 func set_ui_scale(percent: float) -> void:_device.set_ui_scale(percent)
 func set_taskbar_pinned(on: bool) -> void:_device.set_taskbar_pinned(on)
 func touch_device() -> bool:return _device.touch_device()
+func set_max_fps(value: int) -> void:_device.set_max_fps(value)
+func set_background_audio(on: bool) -> void:_device.set_background_audio(on)
+func on_page_hidden(hidden: bool) -> void:_device.on_page_hidden(hidden)
 func viewer_pref(key: String, fallback: Variant = false) -> Variant:return _device.viewer_pref(key,fallback)
 func set_viewer_pref(key: String, value: Variant) -> void:_device.set_viewer_pref(key,value)
 

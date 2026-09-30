@@ -138,6 +138,24 @@ func _main_page() -> void:
 	ui_scale.drag_ended.connect(func(changed: bool):if changed:world.set_ui_scale(ui_scale.value))
 	scale_row.add_child(ui_scale)
 	scale_row.add_child(scale_label)
+	var fps_row := _section("")
+	fps_row.add_child(world.text("帧率上限",14))
+	var fps := HSlider.new()
+	fps.name = "SettingsMaxFps"
+	fps.min_value = 15
+	fps.max_value = 60
+	fps.step = 5
+	fps.custom_minimum_size = Vector2(260,24)
+	fps.focus_mode = Control.FOCUS_NONE
+	fps.value = world.max_fps
+	var fps_label: Label = world.text(_fps_text(world.max_fps),14)
+	fps_label.name = "SettingsMaxFpsValue"
+	fps.tooltip_text = "每秒最多画多少帧。手机默认 30，更省电；原版动画本来就是低帧率。"
+	fps.value_changed.connect(func(value: float):
+		fps_label.text = _fps_text(roundi(value))
+		world.set_max_fps(roundi(value)))
+	fps_row.add_child(fps)
+	fps_row.add_child(fps_label)
 	var layout_row := _section("")
 	var fixed := _check("固定横屏比例","SettingsFixedAspect",world.fixed_aspect,world.set_fixed_aspect)
 	fixed.tooltip_text = "开：保持原来的横屏画面比例（屏幕形状不同时两边或上下留黑边）。关：画面铺满整个屏幕，竖屏手机也能用满。"
@@ -174,6 +192,10 @@ func _main_page() -> void:
 	effects_slider.value = world.effects_volume
 	effects_slider.value_changed.connect(world.set_effects_volume)
 	effects_row.add_child(effects_slider)
+	var background_row := _section("")
+	var background := _check("切到后台时继续播放","SettingsBackgroundAudio",world.background_audio,world.set_background_audio)
+	background.tooltip_text = "关（默认）：网页切到后台、锁屏或切去别的 App 时暂停声音，浏览器才会让网页休眠，手机不发热。开：后台继续听，但浏览器会一直让网页运行，更耗电。"
+	background_row.add_child(background)
 	var radio: Button = world.button("电台",func(): close_menu();world.toggle_radio())
 	radio.name = "SettingsRadio"
 	radio.tooltip_text = "原版配乐电台、收藏、歌单、随机和单曲循环"
@@ -246,6 +268,9 @@ func _main_page() -> void:
 		perf.tooltip_text = "内存、帧率、网络和资源占用，可导出快照（开发者功能）"
 		tools.add_child(perf)
 	_sync_zoom()
+
+func _fps_text(value: int) -> String:
+	return "不限" if value>=60 else "%d 帧" % value
 
 func _sync_zoom() -> void:
 	var label := find_child("SettingsZoomValue",true,false)

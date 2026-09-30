@@ -45,7 +45,10 @@ func restore_device_settings() -> void:
 	game.fixed_aspect = bool(viewer_pref("fixed_aspect",not touch))
 	game.ui_scale = clampf(float(viewer_pref("ui_scale",200.0 if touch else 100.0)),UI_SCALE_MIN,UI_SCALE_MAX)
 	game.taskbar_pinned = bool(viewer_pref("taskbar_pinned",touch))
+	game.max_fps = clampi(int(viewer_pref("max_fps",30 if touch else 60)),FPS_MIN,FPS_MAX)
+	game.background_audio = bool(viewer_pref("background_audio",false))
 	apply_view()
+	watch_page_visibility()
 	var zoom = viewer_pref("zoom",0.0)
 	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))
 	game.load_shortcuts()
@@ -67,6 +70,7 @@ func apply_view() -> void:
 	if window==null:return
 	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP if game.fixed_aspect else Window.CONTENT_SCALE_ASPECT_EXPAND
 	window.content_scale_factor = game.ui_scale/100.0
+	if not _page_hidden:Engine.max_fps = engine_fps()
 
 func set_fixed_aspect(on: bool) -> void:
 	game.fixed_aspect = on
@@ -77,6 +81,56 @@ func set_ui_scale(percent: float) -> void:
 	game.ui_scale = clampf(percent,UI_SCALE_MIN,UI_SCALE_MAX)
 	_save_device("ui_scale",game.ui_scale)
 	apply_view()
+
+const FPS_MIN := 15
+const FPS_MAX := 60
+## Frames per second while the page is hidden but still running (its sound
+## plays on): nothing is seen, so drawing is only kept alive.
+const HIDDEN_FPS := 5
+
+## The engine's cap: 60 means no cap of ours (the display's refresh rules).
+func engine_fps() -> int:
+	return 0 if game.max_fps>=FPS_MAX else game.max_fps
+
+## 帧率上限: fewer frames, less battery; the original animates at far less.
+func set_max_fps(value: int) -> void:
+	game.max_fps = clampi(value,FPS_MIN,FPS_MAX)
+	_save_device("max_fps",game.max_fps)
+	apply_view()
+
+func set_background_audio(on: bool) -> void:
+	game.background_audio = on
+	_save_device("background_audio",on)
+
+var _page_hidden := false
+var _paused_players: Array = []
+var _visibility_callback: JavaScriptObject
+
+## On the web, follow the page's visibility (another tab, another app, the
+## screen locked). A page that plays sound is kept running by the browser, so
+## a hidden page pauses every sound unless 切到后台时继续播放 is on.
+func watch_page_visibility() -> void:
+	if not OS.has_feature("web") or _visibility_callback!=null:return
+	var document = JavaScriptBridge.get_interface("document")
+	if document==null:return
+	_visibility_callback = JavaScriptBridge.create_callback(func(_args):on_page_hidden(bool(document.hidden)))
+	document.addEventListener("visibilitychange",_visibility_callback)
+
+func on_page_hidden(hidden: bool) -> void:
+	if hidden==_page_hidden:return
+	_page_hidden = hidden
+	if hidden:
+		Engine.max_fps = HIDDEN_FPS
+		if not game.background_audio:
+			for player in game.get_tree().root.find_children("*","AudioStreamPlayer",true,false):
+				if player.playing and not player.stream_paused:
+					player.stream_paused = true
+					_paused_players.append(player)
+	else:
+		Engine.max_fps = engine_fps()
+		for player in _paused_players:
+			if is_instance_valid(player):player.stream_paused = false
+		_paused_players.clear()
 
 func set_taskbar_pinned(on: bool) -> void:
 	game.taskbar_pinned = on

@@ -107,6 +107,27 @@ func run() -> void:
 	ui_scale.value = 100
 	ui_scale.drag_ended.emit(true)
 	check(game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_KEEP and is_equal_approx(game.get_window().content_scale_factor,1.0),"and back to the desktop view")
+	# 帧率上限: a desktop is uncapped by default; 30 caps the engine.
+	check(game.max_fps==60 and Engine.max_fps==0,"a desktop has no frame cap by default")
+	(menu.find_child("SettingsMaxFps",true,false) as HSlider).value = 30
+	check(Engine.max_fps==30 and _saved("max_fps"),"帧率上限 30 caps the engine and is saved")
+	# A hidden page pauses the sound unless 切到后台时继续播放 is on.
+	var player := AudioStreamPlayer.new()
+	player.stream = AudioStreamGenerator.new()
+	game.add_child(player)
+	player.play()
+	game.on_page_hidden(true)
+	check(player.stream_paused and Engine.max_fps==5,"a hidden page pauses playing sounds and draws at 5 fps")
+	game.on_page_hidden(false)
+	check(not player.stream_paused and Engine.max_fps==30,"showing it again resumes them and the cap")
+	(menu.find_child("SettingsBackgroundAudio",true,false) as CheckBox).button_pressed = true
+	game.on_page_hidden(true)
+	check(not player.stream_paused and game.background_audio and _saved("background_audio"),"with 切到后台时继续播放 the sound plays on")
+	game.on_page_hidden(false)
+	(menu.find_child("SettingsBackgroundAudio",true,false) as CheckBox).button_pressed = false
+	(menu.find_child("SettingsMaxFps",true,false) as HSlider).value = 60
+	check(Engine.max_fps==0,"60 is no cap again")
+	player.queue_free()
 	menu.close_menu()
 
 	# M opens the map, not the music switch.
