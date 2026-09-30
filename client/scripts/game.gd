@@ -523,6 +523,9 @@ func switch_profile() -> void:_remote.switch_profile()
 ## and map loads are refused (the move the server sends is followed).
 func party_locked() -> bool:return is_instance_valid(party_panel) and party_panel.is_member()
 const PARTY_LOCKED_TEXT := "组队中由队长带路；想自己走请先离开队伍。"
+## A party member's 组队自动战斗 with 快速战斗 (LAN phase 4c): its party battle
+## shows as a status line, not the battle view, until it asks to watch.
+func party_compact() -> bool:return is_instance_valid(party_panel) and party_panel.compact_battle()
 ## GM and developer tools: always on alone or on a one-profile server; on a
 ## multi-profile server only for its admin profiles (the backend enforces it).
 func is_admin() -> bool:return bool(state.options.get("admin",true))

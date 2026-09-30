@@ -33,6 +33,11 @@ func _on_encounter_reply(reply: Dictionary) -> void:
 	elif skipped=="art":
 		game.message.text = "本次敌群的原版动画缺失或损坏，已跳过；未替换敌人。"
 
+## No battle view for this battle: compact 自动练级, or a party member's
+## 组队自动战斗 with 快速战斗 (LAN phase 4c, party_panel.gd compact_battle).
+func compact_view() -> bool:
+	return (is_instance_valid(game.training_helper) and game.training_helper.compact_active) or game.party_compact()
+
 func open_battle_config(config: Dictionary) -> bool:
 	if config.is_empty():return false
 	var reply: Dictionary = game.link.request({"type":"open_battle","config":config})
@@ -40,7 +45,7 @@ func open_battle_config(config: Dictionary) -> bool:
 
 ## Presentation for a battle the backend has just opened.
 func present_battle_start(battle_state: Dictionary) -> bool:
-	if game.asset_packs.enabled and not (is_instance_valid(game.training_helper) and game.training_helper.compact_active):
+	if game.asset_packs.enabled and not compact_view():
 		var needed := battle_packs(battle_state)
 		if not game.asset_packs.is_ready(needed):
 			game.clear_input()
@@ -55,7 +60,7 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	game.paused_input = true
 	game.player.set_action(3)
 	game.classic_hud.map_panel.hide()
-	if is_instance_valid(game.training_helper) and game.training_helper.compact_active:
+	if compact_view():
 		return true
 	# Windows a battle allows (宠物, 设置, 游戏助手, 电台, 宠物大全) stay open
 	# above it; the battle waits for commands until they close.
@@ -95,13 +100,13 @@ func present_battle_turn(battle_state: Dictionary) -> void:
 	if battle_state.get("settled",false):
 		game.checkpoint()
 		refresh_pet_window()
-	if is_instance_valid(game.training_helper) and game.training_helper.compact_active:return
+	if compact_view():return
 	if not is_instance_valid(game.battle_view) or not game.battle_view.visible:return
 	game.battle_view.show_state(battle_state)
 	game.play_ui_sound(217 if game.ui_sounds.has(217) else 201)
 
 func return_from_battle() -> void:
-	var compact_battle: bool=is_instance_valid(game.training_helper) and game.training_helper.compact_active
+	var compact_battle: bool=compact_view()
 	if (not game.battle_view.visible and not compact_battle) or game.battle_session.snapshot().active or (not compact_battle and game.battle_view.is_animating()):
 		return
 	game.link.request({"type":"battle_close"})

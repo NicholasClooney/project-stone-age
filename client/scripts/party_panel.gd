@@ -20,6 +20,14 @@ extends Control
 ##   tools/import_ui.py writes as ui/25600..25609), over the head where the
 ##   V.S. mark goes, hidden while fighting (character.cpp).
 ##
+## - LAN phase 4c: the leader may run 自动练级 (普通攻击) and the party fights
+##   every troop it meets. A member's 「自动战斗」 (组队自动战斗, the profile's
+##   automation_settings party.auto) lets the server command its slot from its
+##   own preset each turn; with 「快速战斗」 (party.compact) too, this device
+##   shows a status line (「组队战斗 · 自动」, the turn, hp, 回复药) instead of
+##   the battle view, with 查看战斗 to watch this battle, and closes finished
+##   battles itself.
+##
 ## Members cannot walk on their own: GameScene asks party_locked() before a
 ## step, a 瞬移 or a map load, and the server moves them after the leader.
 ## A game without a multi-profile server never gets a `party` event; the
@@ -34,6 +42,17 @@ var list_rows: VBoxContainer
 var banner: Label
 var _own_mark: Node2D
 var _list_key := ""
+## LAN phase 4c: the 快速战斗 status line, the member's switches in the list,
+## the battle this device chose to watch (查看战斗), the finished battle it
+## already closed, and whether the last frame was compact.
+var auto_line: PanelContainer
+var auto_text: Label
+var watch_button: Button
+var auto_box: CheckBox
+var compact_box: CheckBox
+var _watching := ""
+var _closed := ""
+var _was_compact := false
 
 func configure(owner: Node2D) -> void:
 	world = owner
@@ -62,6 +81,25 @@ func configure(owner: Node2D) -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.hide()
 	add_child(banner)
+	auto_line = PanelContainer.new()
+	auto_line.name = "PartyAutoBattle"
+	auto_line.add_theme_stylebox_override("panel",_style())
+	auto_line.set_anchors_and_offsets_preset(Control.PRESET_CENTER_TOP)
+	auto_line.offset_top = 128
+	auto_line.grow_horizontal = Control.GROW_DIRECTION_BOTH
+	auto_line.hide()
+	add_child(auto_line)
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation",10)
+	auto_line.add_child(row)
+	auto_text = world.text("",15)
+	auto_text.name = "PartyAutoText"
+	auto_text.add_theme_color_override("font_color",Color("ffe070"))
+	row.add_child(auto_text)
+	watch_button = world.button("查看战斗",watch)
+	watch_button.name = "PartyWatch"
+	watch_button.add_theme_font_size_override("font_size",12)
+	row.add_child(watch_button)
 	if not world.last_party_event.is_empty():on_event(world.last_party_event)
 
 # ---- state ------------------------------------------------------------------
@@ -104,6 +142,7 @@ func _process(_delta: float) -> void:
 	if shown:_place_list()
 	banner.visible = shown and bool(view.get("battle",false)) and not (is_instance_valid(world.battle_view) and world.battle_view.visible)
 	_own_leader_mark()
+	_auto_battle_frame()
 
 ## Below the top-left HUD (游戏助手 and the Lv / 体力 / 石币 line, which can
 ## grow a second line for the automation), never over it.
@@ -204,6 +243,10 @@ func _rebuild_list() -> void:
 	action.add_theme_font_size_override("font_size",11)
 	list_rows.add_child(action)
 	if is_member():
+		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；体力到停机线且有回复药时喝药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
+		compact_box = _switch("PartyCompact","快速战斗","配合自动战斗：不切换到战斗画面，只在上方显示战况，可随时「查看战斗」。",func(on):set_party_setting("compact",on))
+		list_rows.add_child(auto_box)
+		list_rows.add_child(compact_box)
 		var note: Label = world.text("跟着队长走；队长遇敌时一起战斗。",11)
 		note.add_theme_color_override("font_color",Color("c8bea0"))
 		list_rows.add_child(note)
@@ -229,11 +272,73 @@ func _share_row() -> Control:
 	note.add_theme_color_override("font_color",Color("c8bea0"))
 	return note
 
+func _switch(node_name: String, caption: String, tip: String, changed: Callable) -> CheckBox:
+	var box := CheckBox.new()
+	box.name = node_name
+	box.text = caption
+	box.tooltip_text = tip
+	box.add_theme_font_size_override("font_size",12)
+	box.toggled.connect(changed)
+	return box
+
 func shares_exp() -> bool:
 	return bool(view.get("share_exp",true))
 
 func set_share_exp(on: bool) -> void:
 	world.link.request({"type":"party_share_exp","on":on},_on_reply)
+
+# ---- 组队自动战斗 and 快速战斗 (LAN phase 4c) --------------------------------------
+
+## The character's party switch (automation_settings party.auto / compact).
+func party_setting(key: String) -> bool:
+	if world==null or world.get("state")==null:return false
+	var overrides = world.state.profile.get("automation_settings",{}) if world.state.profile is Dictionary else {}
+	var own = overrides.get("party",{}) if overrides is Dictionary else {}
+	return bool(own.get(key,false)) if own is Dictionary else false
+
+## Sends one switch; the profile event brings it back to every device.
+func set_party_setting(key: String, on: bool) -> void:
+	world.link.request({"type":"set_automation_settings","settings":{"party":{key:on}}},_on_reply)
+
+## This member's party battle is open and plays without the battle view:
+## 自动战斗 and 快速战斗 are on and this device has not asked to watch it.
+func compact_battle() -> bool:
+	if not is_member() or world.state==null or not world.state.battle_open:return false
+	var battle: Dictionary = world.state.battle
+	if int(battle.get("party_slot",0))<=0 or str(battle.get("battle_id",""))==_watching:return false
+	return party_setting("auto") and party_setting("compact")
+
+## 查看战斗: this battle opens in the battle view; the next one is compact again.
+func watch() -> void:
+	if not compact_battle():return
+	_watching = str(world.state.battle.get("battle_id",""))
+	_was_compact = false
+	auto_line.hide()
+	world.present_battle_start(world.state.battle)
+
+## Each frame: the status line, the switches in the list, closing a finished
+## compact battle, and the battle view when compact was just turned off.
+func _auto_battle_frame() -> void:
+	var compact := compact_battle()
+	if is_instance_valid(auto_box):
+		auto_box.set_pressed_no_signal(party_setting("auto"))
+		compact_box.set_pressed_no_signal(party_setting("compact"))
+		compact_box.disabled = not auto_box.button_pressed
+	auto_line.visible = compact
+	if compact:
+		var battle: Dictionary = world.state.battle
+		var id := str(battle.get("battle_id",""))
+		if bool(battle.get("active",false)):
+			auto_text.text = "组队战斗 · 自动 · 第 %d 回合 · 体力 %d/%d · 回复药 %d" % [int(battle.get("turn",0))+1,int(battle.get("player_hp",0)),int(battle.get("player_max_hp",0)),int(battle.get("potions",0))]
+		else:
+			auto_text.text = "组队战斗结束：%s" % {"win":"胜利","defeat":"全队倒下" if not bool(battle.get("party_fallen",false)) else "你倒下了，队友获胜","escaped":"已逃离"}.get(str(battle.get("outcome","")),"结束")
+			if _closed!=id:
+				_closed = id
+				world.link.request({"type":"battle_close","battle_id":id})
+	elif _was_compact and world.state.battle_open and bool(world.state.battle.get("active",false)) and is_instance_valid(world.battle_view) and not world.battle_view.visible:
+		# 自动战斗 or 快速战斗 was turned off mid-battle: command it by hand.
+		world.present_battle_start(world.state.battle)
+	_was_compact = compact
 
 # ---- the 组队 switch (设置 → 组队) ------------------------------------------------
 

@@ -178,7 +178,7 @@ func _on_link_connected() -> void:
 	if game.data.is_empty() or not is_instance_valid(game.battle_view):return
 	game._on_automation_settings()
 	# Resync presentation to the backend's current battle and progress.
-	if game.state.battle_open and not game.battle_view.visible and not game.training_helper.compact_active:game.present_battle_start(game.state.battle)
+	if game.state.battle_open and not game.battle_view.visible and not game.training_helper.compact_active and not game.party_compact():game.present_battle_start(game.state.battle)
 	elif not game.state.battle_open and game.battle_view.visible:game.present_battle_close(str(game.state.battle.get("outcome","")))
 	report_position()
 	# Windows show the backend's automation as it is now: after a server

@@ -641,8 +641,14 @@ func _apply_party_state() -> void:
 		if built:party_status.hide()
 		return
 	party_deadline_msec = Time.get_ticks_msec()+int(state.party.get("seconds",0))*1000
-	if bool(state.get("active",false)) and (bool(state.party.get("sent",false)) or bool(party_me().get("down",false))) and command_phase!="waiting":
+	var idle := bool(state.party.get("sent",false)) or bool(party_me().get("down",false)) or bool(party_me().get("auto",false))
+	if bool(state.get("active",false)) and idle and command_phase!="waiting":
 		_enter_party_wait()
+	elif bool(state.get("active",false)) and not idle and command_phase=="waiting" and hint.text=="自动战斗中…":
+		# 自动战斗 was switched off during the turn (LAN phase 4c): command by hand.
+		command_phase = "player"
+		command_panel.show()
+		hint.text = "请选择指令；攻击或捕捉后点击目标。"
 
 ## Sent (or fallen): no commands until the turn resolves.
 func _enter_party_wait() -> void:
@@ -651,7 +657,7 @@ func _enter_party_wait() -> void:
 	queued_player_action = ""
 	clear_choices()
 	command_panel.hide()
-	hint.text = "你已倒下，等待队友…" if bool(party_me().get("down",false)) else "等待队友…"
+	hint.text = "你已倒下，等待队友…" if bool(party_me().get("down",false)) else ("自动战斗中…" if bool(party_me().get("auto",false)) else "等待队友…")
 
 ## The status line: the turn timer, and who the turn still waits for.
 func _party_status_text() -> String:
