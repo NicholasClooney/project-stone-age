@@ -22,6 +22,7 @@ const Accounts = preload("res://server/accounts.gd")
 const SaveLock = preload("res://server/save_lock.gd")
 const SaveBackups = preload("res://server/save_backups.gd")
 const FastHuntShare = preload("res://server/fast_hunt_share.gd")
+const Presence = preload("res://server/presence.gd")
 
 var accounts
 ## id -> Backend, for every profile opened since the server started.
@@ -37,6 +38,10 @@ var backups := true
 var last_error := ""
 ## connection -> {id, token}
 var _connections: Dictionary = {}
+## LAN phase 2: who stands where, and 一般频道 chat (server/presence.gd).
+var presence = Presence.new()
+## Milliseconds for presence ticks and the chat rate limit (tests fake it).
+var presence_clock: Callable = Time.get_ticks_msec
 var _stopped := false
 
 func _init(accounts_path: String = "", fake_clock: Callable = Callable()) -> void:
@@ -115,6 +120,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 		"create_profile":reply = _create(connection,command)
 		"logout":reply = _logout(connection)
 		"profiles":reply = {"ok":true,"profiles":_listing(),"allow_create":accounts.allow_create()}
+		"say":reply = _say(connection,command)
 		_:
 			var backend = backend_of(connection)
 			if backend==null:reply = {"ok":false,"reason":"请先登录。","login_required":true}
@@ -128,6 +134,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 func disconnect_connection(connection: int) -> void:
 	var id := profile_of(connection)
 	_connections.erase(connection)
+	presence.forget(connection)
 	_attach(id)
 
 func _hello(connection: int, command: Dictionary) -> Dictionary:
@@ -178,6 +185,7 @@ func _enter(connection: int, entry: Dictionary, token: String) -> Dictionary:
 		backend.publish()
 	var previous := profile_of(connection)
 	_connections[connection] = {"id":id,"token":token}
+	presence.forget(connection)
 	if previous!=id:_attach(previous)
 	_attach(id)
 	return {"ok":true,"snapshot":backend.full_snapshot(),"account":{"name":str(entry.name),"admin":bool(entry.admin)},"token":token}
@@ -200,6 +208,37 @@ func _on_backend_event(message: Dictionary, id: String) -> void:
 ## automation frame budget is divided among the profiles using it now.
 func _process(_delta: float) -> void:
 	share_budget()
+	if tick:presence_tick()
+
+## Every open profile as server/presence.gd reads it.
+func presence_profiles() -> Array:
+	var result: Array = []
+	for id in backends:
+		var profile: Dictionary = backends[id].presence_state()
+		profile.id = id
+		profile.connections = connections_of(id)
+		result.append(profile)
+	return result
+
+## Sends each device what changed among the players on its map (at most every
+## Presence.TICK_MSEC; `force` for tests). Returns how many messages went out.
+func presence_tick(force: bool = false) -> int:
+	var news: Array = presence.tick(int(presence_clock.call()),presence_profiles(),force)
+	for item in news:outgoing.emit(item[0],item[1])
+	return news.size()
+
+## 一般频道: one line to every device on the speaker's map.
+func _say(connection: int, command: Dictionary) -> Dictionary:
+	var id := profile_of(connection)
+	if id.is_empty() or not backends.has(id):return {"ok":false,"reason":"请先登录。","login_required":true}
+	var profiles := presence_profiles()
+	var speaker: Dictionary = {}
+	for profile in profiles:
+		if str(profile.id)==id:speaker = profile
+	var said: Dictionary = presence.say(int(presence_clock.call()),speaker,profiles,str(command.get("text","")))
+	for item in said.deliveries:outgoing.emit(item[0],item[1])
+	if said.reply.ok:print("[%s] 一般频道：%s" % [speaker.name,said.reply.text])
+	return said.reply
 
 ## Every backend's budget_share: how many backends spend a frame budget now.
 func share_budget() -> int:

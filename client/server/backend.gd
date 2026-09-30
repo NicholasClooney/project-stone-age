@@ -687,6 +687,21 @@ func _cmd_report_position(command: Dictionary) -> Dictionary:
 	if moved:_emit({"type":"position","map_id":int(command.map_id),"cell":[cell.x,cell.y],"client":str(command.get("client",""))})
 	return {"ok":true,"paused":paused}
 
+## What other players on the map see of this character (LAN phase 2,
+## server/presence.gd): appearance, level, mount, and whether it is fighting
+## (a battle is open, or compact 自动练级 runs between its battles). Reads
+## the profile in place; nothing is copied.
+func presence_state() -> Dictionary:
+	var profile: Dictionary = session._profile
+	var ride := -1
+	var ride_name := ""
+	var index := int(profile.get("ride_pet",-1))
+	var pets: Array = profile.get("pets",[])
+	if index>=0 and index<pets.size():
+		ride = int(pets[index].get("sprite",-1))
+		ride_name = str(pets[index].get("name",""))
+	return {"name":account_name,"level":int(profile.get("player",{}).get("level",1)),"look":{"c":str(profile.get("character_id","100000")),"face":int(profile.get("face",0)),"ride":ride,"rn":ride_name},"map":automation.position_map,"cell":automation.position_cell,"battle":battle_open or (automation.running and automation.compact_active)}
+
 # ---- persistence and events ------------------------------------------------
 
 func save() -> bool:
