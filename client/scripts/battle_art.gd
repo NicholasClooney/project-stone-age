@@ -14,8 +14,10 @@ static var _data: Dictionary = {}
 
 static func data() -> Dictionary:
 	if _data.is_empty() and FileAccess.file_exists(MANIFEST):
-		var parsed = JSON.parse_string(FileAccess.get_file_as_string(MANIFEST))
+		var text := FileAccess.get_file_as_string(MANIFEST)
+		var parsed = JSON.parse_string(text)
 		if parsed is Dictionary:_data = parsed
+		preload("res://scripts/perf_registry.gd").track_manifest("battle",text.length())
 	return _data
 
 ## The sprite has art in this build: in the manifest or as an extra file

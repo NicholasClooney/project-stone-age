@@ -6,18 +6,28 @@ signal message(event: Dictionary)
 
 var backend
 var _seq := 0
+## Message counters for 开发者性能面板 (stats()); nothing is serialized here.
+var messages_in := 0
+var messages_out := 0
 
 func _init(target) -> void:
 	backend = target
-	backend.event.connect(func(event: Dictionary): message.emit(event.duplicate(true)))
+	backend.event.connect(func(event: Dictionary):
+		messages_in += 1
+		message.emit(event.duplicate(true)))
 
 func is_local() -> bool:
 	return true
+
+func stats() -> Dictionary:
+	return {"kind":"local","messages_in":messages_in,"messages_out":messages_out}
 
 ## Sends one command. The reply is returned and also passed to done, so callers
 ## written against done work unchanged over an asynchronous link.
 func request(command: Dictionary, done: Callable = Callable()) -> Dictionary:
 	_seq += 1
+	messages_out += 1
+	messages_in += 1
 	var sent: Dictionary = command.duplicate(true)
 	sent.seq = _seq
 	var reply: Dictionary = backend.handle(sent).duplicate(true)

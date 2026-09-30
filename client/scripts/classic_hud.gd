@@ -1,6 +1,7 @@
 extends Control
 const SCALE := 1.25
 const Highlight = preload("res://scripts/legacy_ui_highlight.gd")
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 var world: Node2D
 var art: Dictionary = {}
 var map_panel: Control
@@ -26,6 +27,7 @@ func _ready() -> void:
 	var manifest: Dictionary = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/ui/manifest.json"))
 	for ident in manifest.images:
 		art[int(ident)] = load("res://assets/legacy/ui/%s.png" % ident)
+		PerfRegistry.track_texture("ui",ident,art[int(ident)])
 	var left := Control.new()
 	left.scale = Vector2.ONE*SCALE
 	left.mouse_filter = Control.MOUSE_FILTER_IGNORE

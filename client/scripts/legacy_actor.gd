@@ -50,6 +50,7 @@ func _process(delta: float) -> void:
 		else:
 			if not world.textures.has(str(ident)):
 				world.textures[str(ident)] = load("res://assets/legacy/images/"+str(ident)+".png")
+				preload("res://scripts/perf_registry.gd").track_texture("map",ident,world.textures[str(ident)])
 			sprite.texture = world.textures[str(ident)]
 	var metadata: Dictionary = catalogue.images[str(ident)]
 	sprite.position = Vector2(metadata.x+frame.x,metadata.y+frame.y)

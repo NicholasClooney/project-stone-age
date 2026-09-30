@@ -15,6 +15,7 @@ extends RefCounted
 const FOLDER := "res://assets/legacy/battle/"
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const BattleArt = preload("res://scripts/battle_art.gd")
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 const STAND := 3
 const FACING := 1
 const LIMIT := 128
@@ -82,6 +83,7 @@ static func texture(sprite: int) -> Texture2D:
 		picture.resize(maxi(1,int(picture.get_width()*scale)),maxi(1,int(picture.get_height()*scale)),Image.INTERPOLATE_LANCZOS)
 	var result := ImageTexture.create_from_image(picture)
 	_made[sprite] = result
+	PerfRegistry.track_texture("thumbnails",sprite,result)
 	return result
 
 ## Lets a test supply pictures without a renderer.

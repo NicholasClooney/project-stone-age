@@ -51,6 +51,9 @@ func _save_shortcuts() -> void:
 func on_input(event: InputEvent) -> void:
 	if event is InputEventKey and event.pressed and game.get_viewport().gui_get_focus_owner() is LineEdit:
 		game._last_typing_msec = Time.get_ticks_msec()
+	# 开发者性能面板 works over every window and battle, and before the game loads.
+	if event.is_action_pressed("perf") and not event.is_echo() and not game.get_viewport().gui_get_focus_owner() is LineEdit:
+		game.toggle_perf_panel();game.get_viewport().set_input_as_handled();return
 	if event.is_action_pressed("ui_cancel") and is_instance_valid(game.pet_workflow) and game.pet_workflow.phase=="restart":
 		game.pet_workflow.stop_cycle("已手动停止",not game.pet_workflow.stop_pending().is_empty());game.get_viewport().set_input_as_handled();return
 	if game.data.is_empty():

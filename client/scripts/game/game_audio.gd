@@ -3,6 +3,7 @@ extends RefCounted
 ## map and battle music, UI and battle sounds, and the music and effect
 ## switches. The players and the settings stay on the game (game.music,
 ## game.muted and so on); see docs/technical/game-scripts.md.
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -24,6 +25,7 @@ func set_music(stream: AudioStream) -> void:
 	if game.music.stream==stream and game.music.playing:return
 	game.music.stop()
 	game.music.stream = stream
+	PerfRegistry.track_audio("music",stream.resource_path if stream!=null else "",stream)
 	if stream is AudioStreamWAV:
 		stream.loop_begin = 0
 		stream.loop_end = int(stream.get_length()*stream.mix_rate)
@@ -80,13 +82,18 @@ func setup_audio() -> void:
 	if game.mvp_manifest.get("audio",{}).has("battle_enter"):
 		game.battle_sounds[215] = load("res://assets/legacy/mvp/"+str(game.mvp_manifest.audio.battle_enter))
 	game.effect.stream = game.ui_sounds[201]
+	PerfRegistry.track_audio("music",game.village_music.resource_path,game.village_music)
+	for sounds in [game.ui_sounds,game.battle_sounds]:
+		for ident in sounds:PerfRegistry.track_audio("effects",ident,sounds[ident])
 	game.effect.volume_db = -10
 	game.add_child(game.effect)
 
 func play_battle_sound(ident: int) -> void:
 	if not game.battle_sounds.has(ident):
 		var path := str(preload("res://scripts/riding.gd").manifest().get("frame_sounds",{}).get(str(ident),""))
-		if not path.is_empty(): game.battle_sounds[ident] = load("res://assets/legacy/riding/"+path)
+		if not path.is_empty():
+			game.battle_sounds[ident] = load("res://assets/legacy/riding/"+path)
+			PerfRegistry.track_audio("effects",ident,game.battle_sounds[ident])
 	if game.ui_sounds.has(ident):
 		play_ui_sound(ident)
 		return
