@@ -112,6 +112,8 @@ func _member_entry(info: Dictionary, config: Dictionary) -> Dictionary:
 	var pets: Array = config.get("pets",[])
 	var ally := {"name":str(info.name),"character_id":str(info.character_id),"kind":"player","weapon":str(config.get("player_weapon","")),"hp":int(config.player_hp),"max_hp":int(config.player_max_hp),"attack":int(config.player_attack),"defence":int(config.player_defence),"speed":int(config.player_speed),"level":int(config.get("player_level",1)),"vital":float(config.get("player_vital",0)),"luck":int(config.get("player_luck",0)),"elements":config.get("player_elements",[0,0,0,0]).duplicate(),"potions":int(config.get("potions",0)),"active_pet":active,"ride_pet":ride,"mount":config.get("ride_pet",{}).duplicate(true),"mounted_sprite":int(config.get("mounted_sprite",-1))}
 	ally.base_stats = {"attack":ally.attack,"defence":ally.defence,"speed":ally.speed}
+	# The member's own 恢复护符 (PartyBattleSession.slot_healing).
+	ally.healing = bool(config.get("healing_available",false))
 	var pet: Dictionary = pets[active].duplicate(true) if active>=0 and active<pets.size() else {}
 	return {"ally":ally,"pet":pet,"pets":pets.duplicate(true)}
 

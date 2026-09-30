@@ -243,7 +243,7 @@ func _rebuild_list() -> void:
 	action.add_theme_font_size_override("font_size",11)
 	list_rows.add_child(action)
 	if is_member():
-		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；体力到停机线且有回复药时喝药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
+		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；宠物半血以下用恢复护符治疗；体力到停机线且有回复药时喝药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
 		compact_box = _switch("PartyCompact","快速战斗","配合自动战斗：不切换到战斗画面，只在上方显示战况，可随时「查看战斗」。",func(on):set_party_setting("compact",on))
 		list_rows.add_child(auto_box)
 		list_rows.add_child(compact_box)
@@ -294,7 +294,8 @@ func party_setting(key: String) -> bool:
 	if world==null or world.get("state")==null:return false
 	var overrides = world.state.profile.get("automation_settings",{}) if world.state.profile is Dictionary else {}
 	var own = overrides.get("party",{}) if overrides is Dictionary else {}
-	return bool(own.get(key,false)) if own is Dictionary else false
+	var fallback := bool(preload("res://scripts/automation_settings.gd").defaults().get("party",{}).get(key,false))
+	return bool(own.get(key,fallback)) if own is Dictionary else fallback
 
 ## Sends one switch; the profile event brings it back to every device.
 func set_party_setting(key: String, on: bool) -> void:

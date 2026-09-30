@@ -78,7 +78,9 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	super.start_battle(squad)
 	_state.can_capture = false
 	_state.mirror_available = false
-	_state.healing_available = false
+	# 恢复护符: each player heals its own pet with its own charm (the leader's
+	# here; members' in their ally entry).
+	_state.healing_available = bool(config.get("healing_available",false))
 	_state.party = true
 	slot_info = config.get("party_slots",[]).duplicate(true)
 	share_exp = bool(config.get("share_exp",true))
@@ -118,7 +120,13 @@ func submit_slot(slot: int, action: String, target: int = -1) -> String:
 	if not slot_in(slot):return "你已经离开这场战斗。"
 	if slot_hp(slot)<=0:return "你已倒下，等待队友结束战斗。"
 	if action in ["capture","switch"]:return "组队战斗暂不能捕捉或换宠（下一阶段开放）。"
-	if action in ["mirror_self","mirror_pet","heal_pet"]:return "组队战斗暂不能使用镜子的精灵或恢复护符。"
+	if action in ["mirror_self","mirror_pet"]:return "组队战斗暂不能使用镜子的精灵。"
+	if action=="heal_pet":
+		var pet := _slot_pet(slot)
+		if not slot_healing(slot):return "没有恢复护符。"
+		if pet.is_empty() or int(pet.get("hp",0))<=0 or int(pet.get("hp",0))>=int(pet.get("max_hp",0)):return "出战宠物已倒下或体力已满。"
+		_commands[slot] = {"action":action,"target":target}
+		return ""
 	if not action in ACTIONS:return "未知指令。"
 	if action=="item":
 		var potions := int(_state.potions) if slot==0 else int(_state.allies[slot-1].get("potions",0))
@@ -148,6 +156,11 @@ func set_slot_pet_target(slot: int, target: int) -> void:
 func _slot_pet(slot: int) -> Dictionary:
 	return _state.pet if slot==0 else _state.ally_pets[slot-1]
 
+## The slot's player carries a 恢复护符 (it is never used up).
+func slot_healing(slot: int) -> bool:
+	if slot==0:return bool(_state.get("healing_available",false))
+	return slot>0 and slot<slot_count() and bool(_state.allies[slot-1].get("healing",false))
+
 ## The automatic command source. Without a preset the clone AI attacks
 ## (squad allies attack the selected enemy). A member's 组队自动战斗 preset
 ## (LAN phase 4c) plays as 自动练级's 普通攻击 does (battle_auto_policy.gd):
@@ -155,6 +168,13 @@ func _slot_pet(slot: int) -> Dictionary:
 ## player's own 停机线, with a 回复药 left, it drinks one instead.
 func _auto_command(slot: int) -> Dictionary:
 	if not auto_policies.has(slot):return {"action":"attack","target":-1}
+	# As battle_auto_policy.gd: a pet at half its hp or less gets the 恢复护符.
+	var own_pet := _slot_pet(slot)
+	if slot_healing(slot) and not own_pet.is_empty() and int(own_pet.get("hp",0))>0 and int(own_pet.get("hp",0))*2<=int(own_pet.get("max_hp",0)):
+		var guard: Dictionary = _pet_orders.get(slot,{"command":"attack","skill":0,"target":-1})
+		guard.command = "defend"
+		_pet_orders[slot] = guard
+		return {"action":"heal_pet","target":-1,"auto":true}
 	var hp := slot_hp(slot)
 	var max_hp := int(_state.player_max_hp) if slot==0 else int(_state.allies[slot-1].max_hp)
 	var potions := int(_state.potions) if slot==0 else int(_state.allies[slot-1].get("potions",0))
@@ -244,6 +264,14 @@ func _extra_action(actor: Dictionary, _action: String) -> void:
 			member.hp = mini(int(member.max_hp),int(member.hp)+30)
 			_last_damage = int(member.hp)-before
 			_state.events.append("%s使用药草，恢复体力。" % name)
+		"heal_pet":
+			# 恢复护符: the member's own pet back to full (a fallen one stays down).
+			var pet: Dictionary = _state.ally_pets[index]
+			if pet.is_empty() or int(pet.get("hp",0))<=0:return
+			var before := int(pet.hp)
+			pet.hp = int(pet.max_hp)
+			_last_damage = int(pet.hp)-before
+			_state.events.append("恢复护符：%s为%s恢复体力，不消耗气力。" % [name,str(pet.get("name","宠物"))])
 		"escape":
 			_escape_tries[slot] = int(_escape_tries.get(slot,0))+1
 			if _rng.randi_range(1,100)<=mini(100,40+20*int(_escape_tries[slot])):
@@ -541,7 +569,7 @@ func view_for(slot: int) -> Dictionary:
 	view.party_slot = slot
 	view.can_capture = false
 	view.mirror_available = false
-	view.healing_available = false
+	view.healing_available = slot_healing(slot)
 	var order: Dictionary = _pet_orders.get(slot,{})
 	view.pet_command = str(order.get("command","attack"))
 	view.selected_skill = int(order.get("skill",0))

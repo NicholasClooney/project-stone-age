@@ -461,6 +461,18 @@ func step() -> void:
 			return
 		if party_waiting():return
 		var reason := health_reason(state)
+		if not reason.is_empty() and backend.party_battle():
+			# A party leader heals instead of stopping the whole party: a
+			# 回复药 for itself, the 恢复护符 for its pet (LAN phase 4c).
+			var heal := party_heal(state)
+			if not heal.is_empty():
+				backend.battle.set_pet_command("defend")
+				backend.battle_command({"action":heal,"target":-1})
+				turns += 1
+				turn_text = "第 %d 回合 · %s" % [turns,"喝回复药" if heal=="item" else "恢复护符治疗宠物"]
+				_emit_status()
+				return
+			reason += heal_note(reason,bool(state.get("healing_available",false)))
 		if not reason.is_empty():stop(reason);return
 		if turns >= 200:stop("单场超过200回合，请手动处理");return
 		if str(settings.preset)=="capture" and backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
@@ -492,13 +504,13 @@ func step() -> void:
 		if int(p.pets[selected].level)>=training_pet_level:stop("目标宠物已达到等级目标");return
 	if int(settings.level) > 0 and int(p.player.level)>=int(settings.level):stop("已达到目标等级");return
 	if battles>=int(settings.limit):stop("已达到战斗场次上限");return
+	# A party leader (LAN phase 4c): the leader and every member are healed
+	# (恢复护符, 回复药) and checked at their own 停机线 first.
+	if backend.party_guard.is_valid():
+		var why := str(backend.party_guard.call())
+		if not why.is_empty():stop(why);return
 	var reason := profile_health_reason()
 	if not reason.is_empty():stop(reason);return
-	# A party leader (LAN phase 4c): every member is checked at its own 停机线
-	# too, after 组队自动战斗 members drank what they need.
-	if backend.party_guard.is_valid():
-		reason = str(backend.party_guard.call())
-		if not reason.is_empty():stop(reason);return
 	compact_active = bool(settings.compact)
 	_emit_status()
 	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
@@ -609,6 +621,25 @@ func health_reason(state: Dictionary, line: int = -1) -> String:
 			var pet: Dictionary = state.pets[index]
 			if float(pet.hp)/maxf(1,float(pet.max_hp))*100<=floor_percent:return "%s 体力达到停机线" % str(pet.get("name","宠物"))
 	return ""
+
+## In a party battle, what heals this run's player at its 停机线: "item" (a
+## 回复药) for the player, "heal_pet" (the 恢复护符, never used up) for the
+## battle pet, or "" when nothing can (no potion left, no charm, the mount).
+func party_heal(state: Dictionary) -> String:
+	var line := int(settings.hp)
+	var hp := int(state.player_hp)
+	var max_hp := maxi(1,int(state.player_max_hp))
+	if hp*100<=max_hp*line:
+		return "item" if int(state.get("potions",0))>0 and hp<max_hp else ""
+	var pet_hp := int(state.get("pet_hp",0))
+	var pet_max := maxi(1,int(state.get("pet_max_hp",1)))
+	if pet_hp>0 and pet_hp*100<=pet_max*line and bool(state.get("healing_available",false)):return "heal_pet"
+	return ""
+
+## Why healing could not help, after a health_reason in a party.
+static func heal_note(reason: String, charm: bool) -> String:
+	if reason=="玩家体力达到停机线":return "，回复药已用完"
+	return "，恢复护符只能治疗出战宠物" if charm else "，没有恢复护符"
 
 func profile_health_reason(line: int = -1) -> String:
 	var p: Dictionary = backend.session._profile

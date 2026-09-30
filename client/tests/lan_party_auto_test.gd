@@ -229,21 +229,60 @@ func healing() -> void:
 	var made := party_hub()
 	var server = made[0]
 	server.handle(2,{"type":"set_automation_settings","settings":{"party":{"auto":true}}})
+	give_pet(server,"bob",true)
+	give_pet(server,"cid",false)
 	check(start_run(server).ok,"Alice starts 自动练级")
+	var alice = automation(server,"alice")
+	# Between troops: Bob (自动战斗) and Cid (by hand) got up with 1 HP.
 	var bob: Dictionary = server.backends.bob.session._profile
+	var cid: Dictionary = server.backends.cid.session._profile
 	bob.player.max_hp = 100
 	bob.player.hp = 1
 	bob.inventory.potion = 2
-	check(drive(server,func():return server.backends.alice.battle_open),"Bob at 1 HP drinks and the run meets a troop anyway")
-	check(int(bob.inventory.potion)==1 and int(bob.player.hp)==31,"before it Bob drank one 回复药 (1 → 31 HP, above his 10 %% line) out of battle")
-	check(drive(server,func():return not server.backends.alice.battle_open,[3]),"the battle ends and closes")
-	# Cid (by hand) got up with 1 HP: the whole party stops to heal.
-	bob.player.hp = 100
-	server.backends.cid.session._profile.player.hp = 1
-	var alice = automation(server,"alice")
+	bob.pets[0].hp = 1
+	cid.player.max_hp = 100
+	cid.player.hp = 1
+	cid.inventory.potion = 1
+	check(drive(server,func():return server.backends.alice.battle_open,[3]),"the party is healed and the run meets a troop anyway")
+	check(int(bob.inventory.potion)==1 and int(bob.player.hp)==31 and int(cid.inventory.potion)==0 and int(cid.player.hp)==31,"each drank one 回复药 out of battle (1 → 31 HP, above their 10 % line)")
+	check(int(bob.pets[0].hp)==int(bob.pets[0].max_hp) and int(bob.inventory.healing_charm)==1,"Bob's 恢复护符 healed his pet, and is not used up")
+	# In the battle: the 恢复护符 works for its owner; 镜子的精灵 stays refused.
+	var session = entry_of(server,"alice").session
+	var refused := send(server,3,"heal_pet")
+	check(not refused.ok and str(refused.reason)=="没有恢复护符。","Cid, without a 恢复护符, cannot use one: %s" % str(refused.get("reason","")))
+	var mirror := send(server,3,"mirror_self")
+	check(not mirror.ok and str(mirror.reason).contains("镜子的精灵"),"镜子的精灵 is still refused in a party battle")
+	session._state.ally_pets[0].hp = 100
+	check(bool(server.backends.bob.battle.snapshot().healing_available) and str(session._auto_command(1).action)=="heal_pet","Bob's pet at half hp or less: his preset uses the 恢复护符, as solo 自动练级 does")
+	# Cid has sent his command already; Alice, at her 停机线, is the last.
+	session._state.player_hp = 1
+	var potions := int(session._state.potions)
 	alice.step()
-	check(not alice.running and str(alice.stop_reason)=="队友Cid：玩家体力达到停机线","Cid at his line stops the run: %s" % str(alice.stop_reason))
+	check(alice.running and str(alice.turn_text).contains("喝回复药") and str(session._last_actions.get(0,""))=="item","Alice at her 停机线 in the battle drinks a 回复药 instead of stopping the party")
+	check(int(session._state.potions)==potions-1,"one 回复药 fewer")
+	var lines: Array = server.backends.bob.battle.snapshot().events
+	check(lines.any(func(line):return str(line).begins_with("恢复护符：你为")),"and Bob's charm healed his pet in that turn: %s" % str(lines))
+	session._state.player_hp = 5000
+	check(drive(server,func():return not server.backends.alice.battle_open,[3]),"the battle ends and closes")
+	# Cid got up with 1 HP again and has no 回复药 left: only then the run stops.
+	server.backends.alice.session._profile.player.hp = 5000
+	bob.player.hp = 100
+	cid.player.hp = 1
+	cid.inventory.potion = 0
+	alice.step()
+	check(not alice.running and str(alice.stop_reason)=="队友Cid：玩家体力达到停机线，回复药已用完","nothing heals Cid: the run stops and says why: %s" % str(alice.stop_reason))
 	await close(server)
+
+## A pet (the starter's first) as the battle pet, 500 hp, and a 恢复护符 or none.
+func give_pet(server, id: String, charm: bool) -> void:
+	var session = server.backends[id].session
+	session.grant_starter_pets()
+	session.select_pet(0)
+	var pet: Dictionary = session._profile.pets[0]
+	pet.hp = 500
+	pet.max_hp = 500
+	pet.attack = 50
+	session._profile.inventory.healing_charm = 1 if charm else 0
 
 ## The run stops when the leader stops it, a member leaves or is kicked, the
 ## party disbands, or the leader's last device disconnects.
@@ -379,11 +418,14 @@ func client() -> void:
 	check(await Wait.until(self,func():return panel.list.find_child("PartyAuto",true,false)!=null),"his party list has 自动战斗 and 快速战斗")
 	var auto_box: CheckBox = panel.list.find_child("PartyAuto",true,false)
 	var compact_box: CheckBox = panel.list.find_child("PartyCompact",true,false)
-	check(not auto_box.button_pressed and compact_box.disabled,"both off; 快速战斗 waits for 自动战斗")
+	check(not auto_box.button_pressed and compact_box.button_pressed and compact_box.disabled,"自动战斗 off; 快速战斗 on by default, waiting for 自动战斗")
 	auto_box.button_pressed = true
-	check(await Wait.until(self,func():return not server.party_auto("bob").is_empty() and not compact_box.disabled),"自动战斗 reaches his profile on the server")
+	check(await Wait.until(self,func():return not server.party_auto("bob").is_empty() and not compact_box.disabled and compact_box.button_pressed),"自动战斗 reaches his profile on the server, with 快速战斗 on")
+	var effective := func():return bool(preload("res://scripts/automation_settings.gd").effective(server.backends.bob.session._profile.automation_settings).party.compact)
+	compact_box.button_pressed = false
+	check(await Wait.until(self,func():return not panel.party_setting("compact") and not effective.call()),"he can turn 快速战斗 off")
 	compact_box.button_pressed = true
-	check(await Wait.until(self,func():return panel.party_setting("compact") and bool(server.backends.bob.session._profile.automation_settings.party.compact)),"and 快速战斗")
+	check(await Wait.until(self,func():return panel.party_setting("compact") and effective.call()),"and on again")
 	server.handle(900001,{"type":"begin_battle","enemy_count":2})
 	var view = game.battle_view
 	check(await Wait.until(self,func():return game.state.battle_open and panel.auto_line.visible),"Alice meets enemies: Bob sees the status line")

@@ -347,27 +347,30 @@ func party_auto(id: String) -> Dictionary:
 	var line := int(training.get("hp",AutomationSettings.defaults().training.hp)) if training is Dictionary else int(AutomationSettings.defaults().training.hp)
 	return {"hp":line}
 
-## Backend.party_guard of a party leader's 自动练级, before each new troop:
-## every member's 恢复护符 heals its carried pets (as the leader's run does),
-## a 组队自动战斗 member at or below its own 停机线 drinks 回复药 until it is
-## above (or has none left), and then any member still at its line stops the
-## run, as the leader's own line does: the party goes to heal together.
+## Backend.party_guard of a party leader's 自动练级, before each new troop,
+## for the leader and every member at their own 停机线 (the leader's run's,
+## each member's own): the 恢复护符 heals their carried pets (it is never
+## used up), and a player at the line drinks 回复药 until above it. The
+## party keeps going; only someone healing cannot lift (no 回复药 left, no
+## 恢复护符, a fallen pet) stops the run, saying who and why.
 func _party_guard(leader: String) -> String:
 	if not party.is_leader(leader):return ""
-	for id in party.members(leader).slice(1):
+	for id in party.members(leader):
 		var backend = backends.get(id)
 		if backend==null or not backend.session._pending.is_empty():continue
-		var changed: bool = backend.session.heal_carried_pets()
-		var preset := party_auto(id)
-		var line := int(preset.get("hp",-1)) if not preset.is_empty() else int(backend.automation.profile_settings().hp)
-		if not preset.is_empty():
-			var player: Dictionary = backend.session._profile.player
-			while int(player.hp)*100<=int(player.max_hp)*line and backend.session.use_item("potion"):changed = true
+		var session = backend.session
+		var changed: bool = session.heal_carried_pets()
+		var line := int(backend.automation.settings.hp) if id==leader else int(backend.automation.profile_settings().hp)
+		var player: Dictionary = session._profile.player
+		while int(player.hp)*100<=int(player.max_hp)*line and session.use_item("potion"):changed = true
 		if changed:
 			backend.save()
 			backend.publish()
-		var why: String = backend.automation.profile_health_reason(line)
-		if not why.is_empty():return "队友%s：%s" % [_name(id),why]
+		var why: String = backend.automation.profile_health_reason() if id==leader else backend.automation.profile_health_reason(line)
+		if why.is_empty():continue
+		if why=="玩家体力达到停机线":why += "，回复药已用完"
+		else:why += "，恢复护符不能救起倒下的宠物" if int(session._profile.inventory.get("healing_charm",0))>0 else "，没有恢复护符"
+		return why if id==leader else "队友%s：%s" % [_name(id),why]
 	return ""
 
 ## Stops the 自动练级 of `leader` (when it runs) because its party changed.

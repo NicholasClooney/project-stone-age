@@ -11,7 +11,7 @@
   },
   "party": {
     "auto": false,
-    "compact": false
+    "compact": true
   },
   "capture": {
     "hp": 100,
