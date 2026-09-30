@@ -34,6 +34,11 @@ var accept: Dictionary = {}
 var parties: Dictionary = {}
 ## member or leader id -> leader id.
 var _leader: Dictionary = {}
+## leader id -> false once that leader turns 「队伍共享经验」 off (LAN phase
+## 4a, not in the original: every defeated enemy's full experience goes to
+## every living member and their pets instead of only to whoever hit it).
+## It starts on; a disbanded party forgets it. Not in the save.
+var share: Dictionary = {}
 
 ## The cell in front of `cell` for a facing (0..7).
 static func front(cell: Vector2i, facing: int) -> Vector2i:
@@ -58,6 +63,17 @@ func is_member(id: String) -> bool:
 ## The party's ids, leader first; [] when `id` is in none.
 func members(id: String) -> Array:
 	return parties.get(leader_of(id),[]).duplicate()
+
+## 「队伍共享经验」 of `id`'s party (on outside a party too).
+func shares_exp(id: String) -> bool:
+	return bool(share.get(leader_of(id),true))
+
+## The leader switches 「队伍共享经验」.
+func set_share(leader_id: String, on: bool) -> Dictionary:
+	if not is_leader(leader_id):return _no("只有队长可以切换队伍共享经验。")
+	if on:share.erase(leader_id)
+	else:share[leader_id] = false
+	return {"ok":true,"share_exp":on}
 
 func set_accept(id: String, on: bool) -> void:
 	if on:accept.erase(id)
@@ -127,6 +143,7 @@ func leave(id: String) -> Dictionary:
 		# The original: a leader with nobody left is no leader any more.
 		parties.erase(leader_id)
 		_leader.erase(leader_id)
+		share.erase(leader_id)
 		return {"ok":true,"leader":leader_id,"left":[id,leader_id],"disbanded":true,"members":[]}
 	return {"ok":true,"leader":leader_id,"left":[id],"disbanded":false,"members":party.duplicate()}
 
@@ -140,6 +157,7 @@ func disband(leader_id: String) -> Dictionary:
 	if not is_leader(leader_id):return _no("只有队长可以解散队伍。")
 	var party: Array = parties[leader_id]
 	parties.erase(leader_id)
+	share.erase(leader_id)
 	for id in party:_leader.erase(id)
 	return {"ok":true,"leader":leader_id,"left":party.duplicate(),"disbanded":true,"members":[]}
 
@@ -173,12 +191,12 @@ func follow(leader_id: String, old_map: int, old_cell: Vector2i, new_map: int, n
 
 ## What one player's devices are told (the `party` event's fields).
 func view(id: String, by_id: Dictionary) -> Dictionary:
-	var result := {"accept":accepts(id),"leader":leader_of(id),"members":[],"battle":false}
+	var result := {"accept":accepts(id),"leader":leader_of(id),"members":[],"battle":false,"share_exp":shares_exp(id)}
 	for member in members(id):
 		var profile: Dictionary = by_id.get(member,{})
 		result.members.append({"id":member,"name":str(profile.get("name","")),"lv":int(profile.get("level",1))})
 	var leader: Dictionary = by_id.get(leader_of(id),{})
-	result.battle = bool(leader.get("battle",false)) and is_member(id)
+	result.battle = bool(leader.get("battle",false)) and is_member(id) and not bool(by_id.get(id,{}).get("battle",false))
 	return result
 
 static func _no(reason: String) -> Dictionary:

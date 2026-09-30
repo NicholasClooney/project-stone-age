@@ -317,7 +317,13 @@ static func admin_only(type: String) -> bool:
 
 func _current_turn(command: Dictionary) -> bool:
 	var live: Dictionary = battle.snapshot()
+	# A party battle's command names its slot too (LAN phase 4a).
+	if command.has("slot") and int(command.slot)!=int(live.get("party_slot",0)):return false
 	return battle_open and bool(live.get("active",false)) and str(live.get("battle_id",""))==str(command.get("battle_id","")) and int(live.get("turn",-1))==int(command.turn)
+
+## The open battle is a party battle (server/party_battles.gd SlotView).
+func party_battle() -> bool:
+	return battle.has_method("party_view")
 
 func full_snapshot() -> Dictionary:
 	var profile: Dictionary = session.snapshot()
@@ -530,6 +536,11 @@ func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
 func open_battle(config: Dictionary) -> Dictionary:
 	session.battle_pets_hook = _live_battle_pets
 	encounter_serial += 1
+	# A multi-profile server's party leader: the whole party fights it (LAN
+	# phase 4a, server/party_battles.gd), or the hook declines with null.
+	if party_battle_hook.is_valid():
+		var view = party_battle_hook.call(config,42+encounter_serial)
+		if view!=null:return open_party_battle(view)
 	battle = SquadBattleSession.new() if not config.get("allies",[]).is_empty() else BattleSession.new()
 	battle.rng_seed = 42+encounter_serial
 	battle_state = battle.start_battle(config)
@@ -538,6 +549,37 @@ func open_battle(config: Dictionary) -> Dictionary:
 	_publish()
 	_emit({"type":"battle_started","state":battle_state.duplicate(true)})
 	return battle_state.duplicate(true)
+
+## LAN phase 4a: set by the profile hub; (config, rng seed) -> the leader's
+## party battle view, or null for an ordinary battle.
+var party_battle_hook: Callable
+
+## This profile joins a party battle (its pending record is already set):
+## `view` is its window on it (server/party_battles.gd SlotView).
+func open_party_battle(view) -> Dictionary:
+	session.battle_pets_hook = _live_battle_pets
+	battle = view
+	battle_state = battle.snapshot()
+	battle_open = true
+	battle_state.capture_assist = false
+	_publish()
+	_emit({"type":"battle_started","state":battle_state.duplicate(true)})
+	return battle_state.duplicate(true)
+
+## A party battle turn resolved (or this player left it): present it, and
+## settle `slice` (PartyBattleSession.slice_for) when this player is out.
+func party_turn(state: Dictionary, slice: Dictionary) -> void:
+	_depth += 1
+	_after_turn(state,slice)
+	_depth -= 1
+	_flush()
+
+## A party member sent a command; the turn still waits for others.
+func party_status() -> void:
+	_depth += 1
+	_refresh_battle_state()
+	_depth -= 1
+	_flush()
 
 func _cmd_battle_pet_command(command: Dictionary) -> Dictionary:
 	if not battle.set_pet_command(str(command.get("command",""))):return _reject("pet command refused")
@@ -560,6 +602,13 @@ func set_capture_assist(enabled: bool) -> void:
 
 func _cmd_battle_command(command: Dictionary) -> Dictionary:
 	if not battle_open:return _stale("no open battle")
+	if party_battle():
+		# The turn resolves once every player has sent theirs (or on the
+		# timer); the host then presents it to every participant.
+		if command.has("pet_target"):battle.set_pet_target(int(command.pet_target))
+		var reason: String = battle.submit(str(command.get("action","")),int(command.get("target",-1)))
+		if not reason.is_empty():return _reject(reason)
+		return {"ok":true,"state":battle.snapshot()}
 	# A pet stored or released during this battle can no longer be sent in.
 	if str(command.get("action",""))=="switch" and int(command.get("switch_pet",-2))>=0:
 		var roster: Array = battle.snapshot().get("pets",[])
@@ -589,11 +638,16 @@ func _cmd_battle_escape_dev(_command: Dictionary) -> Dictionary:
 
 ## Settles a finished battle exactly once and appends the reward summary that
 ## clients display; the summary compares the profile before and after.
-func _after_turn(state: Dictionary) -> Dictionary:
+func _after_turn(state: Dictionary, settle: Dictionary = {}) -> Dictionary:
 	if not bool(state.active) and bool(battle_state.get("settled",false)) and str(battle_state.get("battle_id",""))==str(state.get("battle_id","")):
 		return battle_state.duplicate(true)
 	var before: Dictionary = session.snapshot()
-	if not bool(state.active) and session.apply_battle_result(state):
+	# A party battle settles this player's own slice (its own battle id and
+	# rewards); the state its devices see stays the shared battle.
+	var result: Dictionary = settle if not settle.is_empty() else state
+	if not bool(state.active) and session.apply_battle_result(result):
+		if not settle.is_empty():
+			for key in ["xp","gold","pet_reward_xp","experience_multiplier"]:state[key] = result.get(key,0)
 		state.settled = true
 		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])

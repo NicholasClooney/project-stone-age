@@ -219,17 +219,17 @@ func hub() -> void:
 	check(not auto.ok and str(auto.reason).contains("组队中"),"a member cannot start 自动练级: %s" % str(auto.get("reason","")))
 	check(not server.handle(1,{"type":"auto_start","kind":"hunt"}).ok and not server.backends.alice.automation.hunt_running,"nor can the leader start a hunt")
 	check(not server.handle(4,{"type":"auto_start","kind":"nothing"}).reason.contains("组队中"),"Dan, alone, is not refused for a party")
-	# The leader's battle is its own; members wait and see 队长战斗中.
+	# The leader's encounter is the whole party's battle (LAN phase 4a; see
+	# lan_party_battle_test). Only a member out of it sees 队长战斗中.
 	wire.messages.clear()
 	var fight: Dictionary = server.handle(1,{"type":"begin_battle"})
-	check(fight.ok and server.backends.alice.battle_open and not server.backends.bob.battle_open and not server.backends.cid.battle_open,"Alice's encounter is her own solo battle; Bob and Cid are not pulled in")
+	check(fight.ok and server.backends.alice.battle_open and server.backends.bob.battle_open and server.backends.cid.battle_open,"Alice's encounter pulls Bob and Cid into one party battle")
 	now += 1000
 	server.presence_tick()
-	check(bool(wire.last_party(2).get("battle",false)) and bool(wire.last_party(3).get("battle",false)),"the members' view says 队长战斗中")
+	check(not bool(wire.last_party(2).get("battle",false)),"Bob fights too, so his view shows no 队长战斗中")
 	server.backends.alice.abandon_battle()
-	now += 1000
-	server.presence_tick()
-	check(not bool(wire.last_party(2).get("battle",true)),"and clears when her battle closes")
+	for connection in [2,3]:server.handle(connection,{"type":"battle_close"})
+	check(not server.backends.bob.battle_open and not server.backends.cid.battle_open and not server.party_battles.in_battle("bob"),"it ends for everyone; the members' devices close it")
 	# A map change carries the members to the leader's destination.
 	wire.messages.clear()
 	report(server,1,100,Vector2i(600,500),true)
@@ -279,7 +279,7 @@ func hub() -> void:
 	await process_frame
 
 ## A real game client as a member: the 加入队伍 button, the party list, the
-## walking lock, following the leader and 队长战斗中.
+## walking lock, following the leader and being pulled into its battle.
 func client() -> void:
 	var accounts := dir.path_join("client-accounts.json")
 	var server = ProfileHub.new(accounts)
@@ -356,12 +356,13 @@ func client() -> void:
 	# Alice steps away: Bob follows onto her old cell.
 	report(server,900001,map_id,ahead+(ahead-game.cell))
 	check(await Wait.until(self,func():return game.cell==ahead and not game.moving),"Alice steps on; Bob's game walks after her (%s)" % str(game.cell))
-	# Alice fights: Bob waits.
+	# Alice meets enemies: Bob fights beside her (LAN phase 4a).
 	server.handle(900001,{"type":"begin_battle"})
-	check(await Wait.until(self,func():return game.party_panel.banner.visible),"Alice's battle shows 队长战斗中 on Bob's screen")
-	check(not game.battle_view.visible,"Bob is not pulled into the battle")
+	check(await Wait.until(self,func():return game.battle_view.visible),"Alice's battle pulls Bob in")
 	server.backends.alice.abandon_battle()
-	check(await Wait.until(self,func():return not game.party_panel.banner.visible),"it goes when her battle ends")
+	check(await Wait.until(self,func():
+		game.return_from_battle()
+		return not game.battle_view.visible),"it ends for him too and he returns to the map")
 	# 队伍频道 from the chat panel.
 	check(await Wait.until(self,func():return game.chat_panel.channel_button.visible),"the chat shows a 频道 button in a party")
 	game.chat_panel.toggle_channel()

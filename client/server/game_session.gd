@@ -203,6 +203,38 @@ func start_wild_battle_config(troop: Dictionary) -> Dictionary:
 	_pending = config.duplicate(true)
 	return config
 
+## LAN phase 4a (server/party_battle_session.gd): the open battle is a party
+## battle. `enemies` are the shared troop; without them (the leader) the
+## pending battle's own troop stays. A member gets its own pending record
+## (its own battle id, so its completed_battles never collide with another
+## player's), built from its own profile like a solo battle, so shops,
+## stores and saves are refused until its settlement. Captures are refused in
+## 4a. Returns the config ({} when a battle is already pending for a member).
+func start_party_config(party_battle_id: String, enemies: Array = [], battle_gold: bool = false) -> Dictionary:
+	var config: Dictionary
+	if enemies.is_empty():
+		if _pending.is_empty():return {}
+		config = _pending.duplicate(true)
+	else:
+		if not _pending.is_empty():return {}
+		config = start_battle_config()
+		if config.is_empty():return {}
+		config.enemies = enemies.duplicate(true)
+		var first: Dictionary = enemies[0]
+		config.enemy_species = str(first.get("species",config.enemy_species))
+		config.enemy_name = str(first.get("name",config.enemy_name))
+		config.enemy_sprite = int(first.get("sprite",config.enemy_sprite))
+		config.source_encounter = true
+		if battle_gold:config.battle_gold = int(_profile.player.level)*10
+	config.allies = []
+	config.ally_pets = []
+	config.can_capture = false
+	config.capture_slots = 0
+	config.party = true
+	config.party_battle_id = party_battle_id
+	_pending = config.duplicate(true)
+	return config
+
 func apply_battle_result(result: Dictionary) -> bool:
 	if _pending.is_empty() or result.get("active",true) or result.get("battle_id","") != _pending.battle_id:
 		return false
@@ -228,6 +260,10 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var captured_actors := []
 	var earned_xp := 0
 	var multiplier := int(_pending.get("experience_multiplier",1))
+	# A party battle's experience comes worked out per member (party_xp:
+	# 队伍共享经验 or the original's kill credit, level gap and multiplier
+	# already applied); the enemies still pay their gold as in a solo battle.
+	var party := bool(_pending.get("party",false))
 	var earned_gold := 0
 	var remaining := 0
 	var pet_rewards: Array = []
@@ -242,7 +278,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 			verified_captures.append(original.species)
 			captured_actors.append(original.duplicate(true))
 		elif foe.hp == 0:
-			var enemy_xp := int(original.reward_xp)*multiplier
+			var enemy_xp := 0 if party else int(original.reward_xp)*multiplier
 			earned_xp += enemy_xp
 			earned_gold += int(original.reward_gold)
 			var recipient = foe.get("defeated_by_pet_index",-1)
@@ -252,8 +288,17 @@ func apply_battle_result(result: Dictionary) -> bool:
 			if not _integer(ridden,-1,roster.size()-1):return false
 			if int(ridden)>=0:
 				if int(ridden) != int(_pending.get("ride_pet_index",-1)):return false
-				pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(enemy_xp,int(roster[int(ridden)].level),int(original.get("level",1)))
+				if not party:pet_rewards[int(ridden)] += preload("res://scripts/riding.gd").experience(enemy_xp,int(roster[int(ridden)].level),int(original.get("level",1)))
 		else:remaining += 1
+	if party:
+		var shares: Dictionary = result.get("party_xp",{})
+		if not _integer(shares.get("player",0),0,1000000000):return false
+		earned_xp = int(shares.get("player",0))
+		var pet_shares: Array = shares.get("pets",[])
+		if pet_shares.size()!=roster.size():return false
+		for i in range(pet_shares.size()):
+			if not _integer(pet_shares[i],0,1000000000):return false
+			pet_rewards[i] = int(pet_shares[i])
 	var sorted_captures := captures.duplicate()
 	sorted_captures.sort()
 	verified_captures.sort()
@@ -335,7 +380,14 @@ func apply_battle_result(result: Dictionary) -> bool:
 		_profile.pets.append(captured)
 		capture_events.append({"pet":captured.duplicate(true),"source":""})
 		if _profile.pets.size() == 1:_profile.active_pet = 0
-	if outcome == "defeat":
+	if outcome == "defeat" and party and bool(result.get("party_stay",false)):
+		# The party won without this fallen member: as battle.c BATTLE_Exit,
+		# it gets up with 1 HP where it stands (so do its fallen pets), keeps
+		# its place in the party, and earns nothing (BATTLE_GetExpGold).
+		_profile.player.hp = 1
+		for pet in _profile.pets:
+			if int(pet.hp)<=0:pet.hp = 1
+	elif outcome == "defeat":
 		_recover()
 		_profile.location = {"map_id":1000,"x":80,"y":90}
 	if result.get("gm_escape",false):_profile.gm_modified=true

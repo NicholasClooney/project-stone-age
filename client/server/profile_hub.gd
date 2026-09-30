@@ -24,6 +24,7 @@ const SaveBackups = preload("res://server/save_backups.gd")
 const FastHuntShare = preload("res://server/fast_hunt_share.gd")
 const Presence = preload("res://server/presence.gd")
 const Party = preload("res://server/party.gd")
+const PartyBattles = preload("res://server/party_battles.gd")
 
 var accounts
 ## id -> Backend, for every profile opened since the server started.
@@ -45,6 +46,10 @@ var presence = Presence.new()
 var presence_clock: Callable = Time.get_ticks_msec
 ## LAN phase 3: 组队 on the map (server/party.gd).
 var party = Party.new()
+## LAN phase 4a: the parties' shared battles (server/party_battles.gd), and
+## the milliseconds their turn timers run on (tests fake it).
+var party_battles = PartyBattles.new(self)
+var battle_clock: Callable = Time.get_ticks_msec
 ## connection -> the last `party` event it was sent (JSON), so only changes go out.
 var _party_sent: Dictionary = {}
 var _party_tick_msec := -100000
@@ -97,6 +102,7 @@ func open_profile(id: String) -> String:
 	backend.save()
 	backend.load_resume()
 	backend.event.connect(_on_backend_event.bind(id))
+	backend.party_battle_hook = party_battles.open.bind(id)
 	backends[id] = backend
 	return ""
 
@@ -128,7 +134,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 		"profiles":reply = {"ok":true,"profiles":_listing(),"allow_create":accounts.allow_create()}
 		"say":reply = _say(connection,command)
 		"turn":reply = _turn(connection,command)
-		"party_switch","party_join","party_leave","party_kick","party_disband":reply = _party_command(connection,type,command)
+		"party_switch","party_share_exp","party_join","party_leave","party_kick","party_disband":reply = _party_command(connection,type,command)
 		_:
 			var backend = backend_of(connection)
 			if backend==null:reply = {"ok":false,"reason":"请先登录。","login_required":true}
@@ -229,7 +235,9 @@ func _on_backend_event(message: Dictionary, id: String) -> void:
 ## automation frame budget is divided among the profiles using it now.
 func _process(_delta: float) -> void:
 	share_budget()
-	if tick:presence_tick()
+	if tick:
+		party_battles.tick()
+		presence_tick()
 
 ## Every open profile as server/presence.gd reads it.
 func presence_profiles() -> Array:
@@ -284,7 +292,10 @@ func party_tick(profiles: Array = []) -> int:
 func _party_refusal(connection: int, id: String, type: String, command: Dictionary) -> Dictionary:
 	if not party.in_party(id):return {}
 	if type=="auto_start":return {"ok":false,"reason":"组队中不能使用自动练级、自动抓宠和找宠，请先离开队伍。"}
-	if not party.is_member(id):return {}
+	# A leader who escaped from the party's battle waits for the others
+	# before walking on or meeting enemies (LAN phase 4a).
+	var waiting: bool = party.is_leader(id) and party_battles.party_busy(id) and not party_battles.in_battle(id)
+	if not party.is_member(id) and not waiting:return {}
 	match type:
 		"report_position":
 			var automation = backends[id].automation
@@ -294,7 +305,7 @@ func _party_refusal(connection: int, id: String, type: String, command: Dictiona
 				outgoing.emit(connection,{"type":"position","v":Backend.PROTOCOL,"map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y],"client":"party"})
 			return {"ok":true,"paused":"","party":true}
 		"field_step":return {"ok":true,"hit":false,"battle":false,"party":true}
-		"wild_encounter","begin_battle","open_battle":return {"ok":false,"reason":"组队时只有队长会遇敌；队员跟着队长走。"}
+		"wild_encounter","begin_battle","open_battle":return {"ok":false,"reason":"队友还在战斗中，请等他们结束。" if waiting else "组队时只有队长会遇敌；队员跟着队长走。"}
 	return {}
 
 ## The leader moved: every member steps after it, or goes where it warped.
@@ -314,6 +325,10 @@ func _party_command(connection: int, type: String, command: Dictionary) -> Dicti
 		"party_switch":
 			party.set_accept(id,bool(command.get("on",false)))
 			result = {"ok":true,"accept":party.accepts(id)}
+		"party_share_exp":
+			result = party.set_share(id,bool(command.get("on",true)))
+			if result.ok:
+				for member in party.members(id):_system(member,"队长%s了队伍共享经验。" % ("打开" if result.share_exp else "关闭"))
 		"party_join":
 			result = party.join(id,int(command.get("facing",4)),presence_profiles(),str(command.get("target","")))
 			if result.ok:
@@ -347,6 +362,8 @@ func _party_left(id: String, result: Dictionary, why: String) -> Dictionary:
 ## its party; a leader's party disbands (CHAR_DischargeParty at logout).
 func _party_gone(id: String) -> void:
 	if id.is_empty() or not party.in_party(id) or not connections_of(id).is_empty():return
+	# In a party battle it is auto-played, and leaves once the battle ends.
+	if party_battles.lost_devices(id):return
 	_party_left(id,party.leave(id),"")
 	party_tick()
 
