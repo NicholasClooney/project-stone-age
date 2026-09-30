@@ -1,0 +1,917 @@
+{
+  "schema": 1,
+  "title": "石器时代经典宠物",
+  "method": "当年（2000 到 2005 年，华义 1.0 到 8.0）玩家最熟悉的宠物。只收至少一个网上来源点名为经典、热门、PK 常用、十大骑宠或珍稀宠物的；原版获得方式按来源写，来源不一致的写在 note。名字用本作数据（参考服模板）的简体写法，template_id 是本作原表模板；本作没有的宠物 template_id 为 null。详见 docs/product/classic-pets.md。",
+  "categories": [
+    {
+      "id": "pk",
+      "name": "PK 与战宠"
+    },
+    {
+      "id": "mount",
+      "name": "经典骑宠"
+    },
+    {
+      "id": "rare",
+      "name": "稀有、任务和活动宠"
+    },
+    {
+      "id": "cute",
+      "name": "可爱与新手"
+    }
+  ],
+  "sources": {
+    "17173_common_2001": {
+      "title": "石器时代常用宠物推荐表",
+      "site": "17173 石器时代专区",
+      "date": "2001-09-11",
+      "url": "https://news.17173.com/z/stoneage/content/2001-9-11/n907_823387.html"
+    },
+    "17173_lv1_2001": {
+      "title": "所有 lv1 宠物的捕抓地点或取得法",
+      "site": "17173 石器时代专区",
+      "date": "2001-06-14",
+      "url": "https://news.17173.com/z/stoneage/content/2001-6-14/n182_98793.html"
+    },
+    "17173_top_mounts": {
+      "title": "十大骑宠（4.0）",
+      "site": "17173 石器时代专区",
+      "url": "https://news.17173.com/z/stoneage/up/jp5.htm"
+    },
+    "17173_rare": {
+      "title": "珍惜宠物",
+      "site": "17173 石器时代专区",
+      "url": "https://news.17173.com/z/stoneage/chongwu/pet10.htm"
+    },
+    "17173_mount_review_2003": {
+      "title": "骑宠心得（舞风）",
+      "site": "17173 石器时代专区",
+      "date": "2003-12-17",
+      "url": "https://news.17173.com/z/stoneage/content/2003-12-17/n544_460854.html"
+    },
+    "17173_nianshou": {
+      "title": "年兽X档案",
+      "site": "17173 石器时代专区",
+      "url": "https://news.17173.com/z/stoneage/chongwu/pet11.htm"
+    },
+    "17173_jibao": {
+      "title": "梦宠机豹：艾迪希洛",
+      "site": "17173 石器时代专区",
+      "url": "https://news.17173.com/z/stoneage/chongwu/pet12.htm"
+    },
+    "xiaomi_top10": {
+      "title": "盘点石器十大经典宠",
+      "site": "小米游戏中心（石器时代：觉醒官方资讯）",
+      "date": "2023",
+      "url": "https://game.xiaomi.com/viewpoint/1516842670_1688652073015_16"
+    },
+    "qq_classic": {
+      "title": "人龙暴龙小奇宝！石器时代经典宠物介绍",
+      "site": "腾讯新闻",
+      "date": "2023-11-04",
+      "url": "https://news.qq.com/rain/a/20231104A091O400"
+    },
+    "gameres_memory": {
+      "title": "《新石器时代》温情视频邀你回家，这些熟悉的宠物可曾还记得",
+      "site": "GameRes 游资网",
+      "url": "https://www.gameres.com/900316.html"
+    },
+    "netease_jinhu": {
+      "title": "话说《石器时代》金虎金格萨贝鲁",
+      "site": "网易游戏",
+      "url": "https://m.163.com/game/article/8KPCGG5P00314J6K.html"
+    },
+    "baha_ride": {
+      "title": "認識石器時代騎乘統合（轉貼）",
+      "site": "巴哈姆特 石器時代系列哈啦板",
+      "url": "https://forum.gamer.com.tw/C.php?bsn=1571&snA=76209"
+    },
+    "baha_rex": {
+      "title": "〔暴龍系〕整理相關",
+      "site": "巴哈姆特 石器時代系列哈啦板",
+      "url": "https://forum.gamer.com.tw/Co.php?bsn=01571&sn=155845"
+    },
+    "ptt_first": {
+      "title": "[閒聊] 石器時代初版",
+      "site": "PTT C_Chat",
+      "url": "https://www.ptt.best/bbs/C_Chat/M.1746451438.A.CE2.html"
+    },
+    "ptt_oldgames": {
+      "title": "[問題] 石器時代",
+      "site": "PTT Old-Games 精華區",
+      "url": "https://www.ptt.cc/man/Old-Games/D988/D99C/M.1319881008.A.9E1.html"
+    },
+    "shiqifabu_tiger": {
+      "title": "石器老虎和史卡鲁骑宠捕捉路线图",
+      "site": "石器时代发布网",
+      "url": "https://www.shiqifabu.cc/sq/126.htm"
+    },
+    "sina_quiz": {
+      "title": "如何搞定蓝暴任务",
+      "site": "新浪游戏",
+      "date": "2003-05-19",
+      "url": "http://games.sina.com.cn/zhqu/sta/article/2003-05-19/6771.shtml"
+    },
+    "jingyan_redrex": {
+      "title": "英雄岛前传（红暴）",
+      "site": "百度经验",
+      "url": "https://jingyan.baidu.com/article/6f2f55a1e06e8ef4b83e6c5f.html"
+    },
+    "jingyan_nianshou": {
+      "title": "珍奇的稀宠《石器时代》梦幻年兽一览",
+      "site": "百度经验",
+      "url": "https://jingyan.baidu.com/article/75ab0bcb807de5d6864db2ce.html"
+    },
+    "qq_gp": {
+      "title": "一文看懂 GP 系宠物",
+      "site": "腾讯新闻（石器时代：觉醒）",
+      "date": "2024-07-17",
+      "url": "https://news.qq.com/rain/a/20240717A01QO600"
+    },
+    "welovesa": {
+      "title": "We Love SA 寵物圖鑑（台服资料站，按宠物分页）",
+      "site": "welovesa.com",
+      "url": "https://welovesa.com/pet.php",
+      "page_url": "https://welovesa.com/pet.php?pet_type={type}&pet_id={id}"
+    },
+    "local_special_pets": {
+      "title": "特殊宠物（本项目，参考服 NPC 资料核对）",
+      "site": "本仓库",
+      "url": "docs/reverse-engineering/special-pets.md"
+    }
+  },
+  "pets": [
+    {
+      "name": "邦奇诺",
+      "alias": "红人龙",
+      "template_id": 94,
+      "family": "人龙系",
+      "category": "pk",
+      "reason": "火10纯属性，攻击最高的宠物，当年PK出场率最高",
+      "obtained": "野外捕捉：吉鲁岛达那村外；也是五兄弟任务奖励",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "17173_lv1_2001",
+        "xiaomi_top10",
+        "qq_classic",
+        "welovesa"
+      ],
+      "welovesa": "10/076"
+    },
+    {
+      "name": "扬奇洛斯",
+      "alias": "蓝人龙",
+      "template_id": 92,
+      "family": "人龙系",
+      "category": "pk",
+      "reason": "人称「PK之王」，攻高血厚；也是族长骑宠",
+      "obtained": "野外捕捉：吉鲁岛达那村一侧；五兄弟任务奖励",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "17173_lv1_2001",
+        "17173_top_mounts",
+        "xiaomi_top10",
+        "gameres_memory",
+        "ptt_first",
+        "welovesa"
+      ],
+      "welovesa": "10/074"
+    },
+    {
+      "name": "利则诺顿",
+      "alias": "绿人龙",
+      "template_id": 91,
+      "family": "人龙系",
+      "category": "pk",
+      "reason": "地属性里攻击最高，打水属性的特效药",
+      "obtained": "野外捕捉：南岛琉璃洞窟13楼；五兄弟任务奖励",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "17173_lv1_2001",
+        "qq_classic",
+        "welovesa"
+      ],
+      "welovesa": "10/073"
+    },
+    {
+      "name": "邦浦洛斯",
+      "alias": "灰人龙",
+      "template_id": 93,
+      "family": "人龙系",
+      "category": "pk",
+      "reason": "人龙五兄弟之一，初版的顶级战宠（火风各半）",
+      "obtained": "野外捕捉：吉鲁岛福尔德村上方；五兄弟任务奖励",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "ptt_first",
+        "welovesa"
+      ],
+      "welovesa": "10/075"
+    },
+    {
+      "name": "布鲁顿",
+      "alias": "黄人龙",
+      "template_id": 95,
+      "family": "人龙系",
+      "category": "pk",
+      "reason": "人龙五兄弟里偏敏捷的一只（火2风8）",
+      "obtained": "野外捕捉：吉鲁岛福尔德村上方；五兄弟任务奖励",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "ptt_first",
+        "welovesa"
+      ],
+      "welovesa": "10/077"
+    },
+    {
+      "name": "奥卡洛斯",
+      "alias": "绿暴",
+      "template_id": 301,
+      "family": "暴龙系",
+      "category": "pk",
+      "reason": "很多人的新手战宠，「双10绿暴」人人想要",
+      "obtained": "野外捕捉：吉鲁岛阿斯玛鲁矿山6楼（先解打矿任务）",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "baha_rex",
+        "welovesa"
+      ],
+      "welovesa": "25/193"
+    },
+    {
+      "name": "奇宝",
+      "alias": "红鸡",
+      "template_id": 294,
+      "family": "火鸡系",
+      "category": "pk",
+      "reason": "好抓、敏捷高，血敏玩家PK抢先手的首选",
+      "obtained": "野外捕捉：北岛霍特尔村周边",
+      "original_wild": true,
+      "sources": [
+        "17173_lv1_2001",
+        "xiaomi_top10",
+        "qq_classic",
+        "welovesa"
+      ],
+      "welovesa": "24/188"
+    },
+    {
+      "name": "克克洛斯",
+      "alias": "金鸡",
+      "template_id": 292,
+      "family": "火鸡系",
+      "category": "pk",
+      "reason": "风10，「高敏无敌」，金灿灿又可爱",
+      "obtained": "野外捕捉：南岛乌鲁力村北方海边",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "17173_lv1_2001",
+        "xiaomi_top10",
+        "welovesa"
+      ],
+      "welovesa": "24/186"
+    },
+    {
+      "name": "加格",
+      "alias": "白鲨",
+      "template_id": 223,
+      "family": "克邦凯斯系",
+      "category": "pk",
+      "reason": "高攻高血的纯水属性，有「小白虎」之称",
+      "obtained": "野外捕捉：科奥海底通道（南岛一侧）1楼",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "xiaomi_top10",
+        "welovesa"
+      ],
+      "welovesa": "18/139"
+    },
+    {
+      "name": "石龟",
+      "alias": "石龟",
+      "template_id": 54,
+      "family": "龟系",
+      "category": "pk",
+      "reason": "2001年常用宠物推荐表里的肉盾",
+      "obtained": "野外捕捉：北岛柯尔山小洞窟4楼",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "17173_lv1_2001"
+      ]
+    },
+    {
+      "name": "贝洛恩",
+      "alias": "贝洛恩",
+      "template_id": 41,
+      "family": "贝洛恩系",
+      "category": "pk",
+      "reason": "水属性里防御最好的一只（防2.15、血11）",
+      "obtained": "野外捕捉：北岛柯尔克信道1楼",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001"
+      ]
+    },
+    {
+      "name": "吉比",
+      "alias": "小GP",
+      "template_id": 910,
+      "family": "GP系",
+      "category": "pk",
+      "reason": "落马术能把骑宠打下马，PK从此多了变数",
+      "obtained": "点卡卡包（老鼠盒子包），不在野外",
+      "original_wild": false,
+      "sources": [
+        "qq_gp",
+        "welovesa"
+      ],
+      "welovesa": "38/229",
+      "note": "台服资料站称吉比是敏捷最高的骑宠；变身成吉比或鲁比可以骑另一只。"
+    },
+    {
+      "name": "鲁比",
+      "alias": "大GP",
+      "template_id": 965,
+      "family": "GP系",
+      "category": "pk",
+      "reason": "狂暴攻击连打，和小GP是PK场上的招牌组合",
+      "obtained": "点卡卡包（老鼠盒子包），不在野外",
+      "original_wild": false,
+      "sources": [
+        "qq_gp",
+        "welovesa"
+      ],
+      "welovesa": "38/237"
+    },
+    {
+      "name": "蒙奇",
+      "alias": "蒙奇",
+      "template_id": 969,
+      "family": "卡恩格登系",
+      "category": "pk",
+      "reason": "沉默是PK的重要战术，样子又可爱",
+      "obtained": "商城卡包（蒙奇的桃子包），不在野外",
+      "original_wild": false,
+      "sources": [
+        "welovesa"
+      ],
+      "welovesa": "38/238"
+    },
+    {
+      "name": "贝鲁卡",
+      "alias": "绿虎",
+      "template_id": 191,
+      "family": "虎系",
+      "category": "mount",
+      "reason": "普及率最高、最好获取的老虎骑宠",
+      "obtained": "野外捕捉：南岛琉璃洞窟外、龙洞后方",
+      "original_wild": true,
+      "sources": [
+        "xiaomi_top10",
+        "17173_lv1_2001",
+        "shiqifabu_tiger",
+        "ptt_first",
+        "welovesa"
+      ],
+      "welovesa": "16/121"
+    },
+    {
+      "name": "贝鲁伊卡",
+      "alias": "黄虎",
+      "template_id": 192,
+      "family": "虎系",
+      "category": "mount",
+      "reason": "敏捷在虎类里数一数二的骑宠",
+      "obtained": "野外捕捉：南岛琉璃洞窟外",
+      "original_wild": true,
+      "sources": [
+        "17173_lv1_2001",
+        "shiqifabu_tiger",
+        "ptt_oldgames",
+        "welovesa"
+      ],
+      "welovesa": "16/122"
+    },
+    {
+      "name": "格鲁西斯",
+      "alias": "红虎",
+      "template_id": 193,
+      "family": "虎系",
+      "category": "mount",
+      "reason": "火属性攻击型老虎，当年讨论最多的虎",
+      "obtained": "野外捕捉：吉鲁岛福尔德村下方",
+      "original_wild": true,
+      "sources": [
+        "17173_lv1_2001",
+        "shiqifabu_tiger",
+        "ptt_oldgames",
+        "welovesa"
+      ],
+      "welovesa": "16/123"
+    },
+    {
+      "name": "卡特利奴",
+      "alias": "卡虎",
+      "template_id": 524,
+      "family": "虎系",
+      "category": "mount",
+      "reason": "虎类里敏捷成长最高的变种红虎",
+      "obtained": "任务：南岛隐藏任务「走失的红虎」（带食物到奇喀喀村附近）",
+      "original_wild": false,
+      "sources": [
+        "welovesa"
+      ],
+      "welovesa": "16/1000"
+    },
+    {
+      "name": "邦恩多斯",
+      "alias": "黄雷龙",
+      "template_id": 255,
+      "family": "布洛多斯系",
+      "category": "mount",
+      "reason": "2.0版的雷龙骑宠，Lv.1在五十年前的波拉岛很难抓",
+      "obtained": "野外捕捉：五十年前的波拉岛",
+      "original_wild": true,
+      "sources": [
+        "17173_rare",
+        "xiaomi_top10",
+        "qq_classic",
+        "welovesa"
+      ],
+      "welovesa": "21/165"
+    },
+    {
+      "name": "布林帖斯",
+      "alias": "水雷",
+      "template_id": 252,
+      "family": "布洛多斯系",
+      "category": "mount",
+      "reason": "早期练功圣地的雷龙，血厚防高",
+      "obtained": "野外捕捉：漆黑洞窟地下18楼",
+      "original_wild": true,
+      "sources": [
+        "xiaomi_top10",
+        "welovesa"
+      ],
+      "welovesa": "21/162",
+      "note": "2001年推荐表写作「蓝雷龙」，这里按台服资料站的俗称。"
+    },
+    {
+      "name": "朵拉比斯",
+      "alias": "金飞",
+      "template_id": 274,
+      "family": "帖拉格恩系",
+      "category": "mount",
+      "reason": "骑宠里闪避最高，先手快，PK主流骑宠",
+      "obtained": "任务：北岛「卡坦的愿望」奖品",
+      "original_wild": false,
+      "sources": [
+        "17173_top_mounts",
+        "17173_mount_review_2003",
+        "ptt_oldgames",
+        "welovesa"
+      ],
+      "welovesa": "23/180"
+    },
+    {
+      "name": "卡达鲁卡斯",
+      "alias": "绿穿山甲",
+      "template_id": 81,
+      "family": "卡达鲁卡斯系",
+      "category": "mount",
+      "reason": "防御最高的骑宠，防人最爱的「滑板」",
+      "obtained": "野外捕捉：北岛柯尔克矿坑1楼",
+      "original_wild": true,
+      "sources": [
+        "17173_common_2001",
+        "17173_top_mounts",
+        "17173_mount_review_2003",
+        "17173_lv1_2001",
+        "welovesa"
+      ],
+      "welovesa": "9/065"
+    },
+    {
+      "name": "玛恩摩洛斯",
+      "alias": "白象",
+      "template_id": 264,
+      "family": "玛恩摩系",
+      "category": "mount",
+      "reason": "十大骑宠之一，庄园骑宠，血厚",
+      "obtained": "野外捕捉：吉鲁岛西北小象区",
+      "original_wild": true,
+      "sources": [
+        "17173_top_mounts",
+        "ptt_oldgames",
+        "welovesa"
+      ],
+      "welovesa": "22/172"
+    },
+    {
+      "name": "格尔格",
+      "alias": "红猩猩",
+      "template_id": 144,
+      "family": "格尔顿系",
+      "category": "mount",
+      "reason": "十大骑宠之一（骑红拳王），庄园骑宠",
+      "obtained": "野外捕捉：吉鲁岛没落的矿坑4楼；JOT B路线奖品",
+      "original_wild": true,
+      "sources": [
+        "17173_top_mounts",
+        "baha_ride",
+        "welovesa"
+      ],
+      "welovesa": "13/100"
+    },
+    {
+      "name": "卡卡金宝",
+      "alias": "红蛙",
+      "template_id": 234,
+      "family": "奇卡洛斯系",
+      "category": "mount",
+      "reason": "十大骑宠之一，村长任务骑宠",
+      "obtained": "野外捕捉：蛙洞；精灵少女任务",
+      "original_wild": true,
+      "sources": [
+        "17173_top_mounts",
+        "baha_ride",
+        "welovesa"
+      ],
+      "welovesa": "19/148"
+    },
+    {
+      "name": "拉奇鲁哥",
+      "alias": "红狗",
+      "template_id": 71,
+      "family": "拉奇鲁哥系",
+      "category": "mount",
+      "reason": "十大骑宠之一，攻防闪避都不错，女玩家最爱",
+      "obtained": "野外捕捉：吉鲁岛；骑乘要伊甸庄园家族或证书",
+      "original_wild": true,
+      "sources": [
+        "17173_top_mounts",
+        "17173_mount_review_2003",
+        "welovesa"
+      ],
+      "welovesa": "8/057"
+    },
+    {
+      "name": "巴朵兰恩",
+      "alias": "红暴",
+      "template_id": 303,
+      "family": "暴龙系",
+      "category": "rare",
+      "reason": "拿到红暴能激动得一晚睡不着，实力的标志",
+      "obtained": "任务：英雄岛（红暴之路：水坝洞窟龙王、迷失的小女孩）",
+      "original_wild": false,
+      "sources": [
+        "17173_rare",
+        "17173_top_mounts",
+        "17173_mount_review_2003",
+        "gameres_memory",
+        "qq_classic",
+        "jingyan_redrex",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "25/195",
+      "note": "台服后期改成萨姆吉尔任务奖励；本作开发用地图「五十年前波拉岛」有 Lv.90 以上的野生红暴。"
+    },
+    {
+      "name": "左迪洛斯",
+      "alias": "蓝暴",
+      "template_id": 302,
+      "family": "暴龙系",
+      "category": "rare",
+      "reason": "要连答猜谜三兄弟一大串题目才拿得到",
+      "obtained": "任务：猜谜三兄弟",
+      "original_wild": false,
+      "sources": [
+        "17173_rare",
+        "17173_top_mounts",
+        "sina_quiz",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "25/194",
+      "note": "2003年骑宠心得认为蓝暴成长差，是「没落贵族」。"
+    },
+    {
+      "name": "帖拉所伊朵",
+      "alias": "机暴",
+      "template_id": 304,
+      "family": "暴龙系",
+      "category": "rare",
+      "reason": "五转才送的机械暴龙，象征玩家身份",
+      "obtained": "五转赠送；向驯兽机暴领骑乘证",
+      "original_wild": false,
+      "sources": [
+        "gameres_memory",
+        "xiaomi_top10",
+        "17173_top_mounts",
+        "baha_rex",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "25/196",
+      "note": "漆黑洞窟有 Lv.120 的帖拉所伊朵头目，不能捕捉。"
+    },
+    {
+      "name": "斑尼迪克",
+      "alias": "金暴",
+      "template_id": 812,
+      "family": "暴龙系",
+      "category": "rare",
+      "reason": "金色暴龙，变装后才能骑的稀有骑宠",
+      "obtained": "后期商城、活动（台服：金暴包、魔法道馆）",
+      "original_wild": false,
+      "sources": [
+        "baha_ride",
+        "baha_rex",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "25/198"
+    },
+    {
+      "name": "金格萨贝鲁",
+      "alias": "金虎",
+      "template_id": 194,
+      "family": "虎系",
+      "category": "rare",
+      "reason": "骑金虎的玩家永远是最耀眼的风景",
+      "obtained": "任务：四圣石（先解完红暴任务）",
+      "original_wild": false,
+      "sources": [
+        "17173_rare",
+        "netease_jinhu",
+        "xiaomi_top10",
+        "welovesa"
+      ],
+      "welovesa": "16/124"
+    },
+    {
+      "name": "佩露夏",
+      "alias": "白虎",
+      "template_id": 777,
+      "family": "虎系",
+      "category": "rare",
+      "reason": "石器第一只圣兽，水10专克红人龙",
+      "obtained": "后期：六转奖励、商城积分兑换",
+      "original_wild": false,
+      "sources": [
+        "xiaomi_top10",
+        "gameres_memory",
+        "welovesa"
+      ],
+      "welovesa": "54/126"
+    },
+    {
+      "name": "普鲁夏",
+      "alias": "蓝虎",
+      "template_id": 776,
+      "family": "虎系",
+      "category": "rare",
+      "reason": "老虎家族最神秘的一只，变装后可骑",
+      "obtained": "后期：商城积分兑换、福袋",
+      "original_wild": false,
+      "sources": [
+        "baha_ride",
+        "netease_jinhu",
+        "welovesa"
+      ],
+      "welovesa": "16/125"
+    },
+    {
+      "name": "萨格鲁",
+      "alias": "黑虎",
+      "template_id": 778,
+      "family": "虎系",
+      "category": "rare",
+      "reason": "老虎家族最稀有的之一，一身黑毛",
+      "obtained": "伊甸大陆蒙达山野外；台服占卜婆婆签筒",
+      "original_wild": true,
+      "sources": [
+        "netease_jinhu",
+        "welovesa"
+      ],
+      "welovesa": "16/127",
+      "note": "8.5 客户端骑宠表的注释把它（精灵 100873）叫「蓝豹」，玩家资料叫「黑虎」。"
+    },
+    {
+      "name": "斯天多斯",
+      "alias": "绿雷龙",
+      "template_id": 254,
+      "family": "布洛多斯系",
+      "category": "rare",
+      "reason": "雷龙系防御成长最好的一只",
+      "obtained": "任务：英雄岛后传（从爱丽尔队获得）、四圣石",
+      "original_wild": false,
+      "sources": [
+        "17173_rare",
+        "welovesa"
+      ],
+      "welovesa": "21/164"
+    },
+    {
+      "name": "摩娜西普",
+      "alias": "金羊",
+      "template_id": 312,
+      "family": "布伊德系",
+      "category": "rare",
+      "reason": "黄金羚羊造型独特，很多人抓一只养着玩",
+      "obtained": "任务：黄金羚羊之谜",
+      "original_wild": false,
+      "sources": [
+        "qq_classic",
+        "xiaomi_top10",
+        "ptt_first",
+        "welovesa"
+      ],
+      "welovesa": "26/202"
+    },
+    {
+      "name": "邦达霍恩",
+      "alias": "黑羊",
+      "template_id": 315,
+      "family": "布伊德系",
+      "category": "rare",
+      "reason": "只能买「养羊得益包」拿到的珍惜宠物",
+      "obtained": "卡包（养羊得益包）；台服后期是黑暗精灵王任务",
+      "original_wild": false,
+      "sources": [
+        "17173_rare",
+        "welovesa"
+      ],
+      "welovesa": "26/205"
+    },
+    {
+      "name": "葛雷基欧",
+      "alias": "地年兽",
+      "template_id": 901,
+      "family": "年兽系",
+      "category": "rare",
+      "reason": "春节限定的梦幻年兽，防御高",
+      "obtained": "春节活动",
+      "original_wild": false,
+      "sources": [
+        "17173_nianshou",
+        "jingyan_nianshou",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "30/225",
+      "note": "台服资料站写作「勇闯怪物岛I任务奖励」，百度经验写后来能用荣誉值兑换。"
+    },
+    {
+      "name": "葛雷洛比",
+      "alias": "水年兽",
+      "template_id": 902,
+      "family": "年兽系",
+      "category": "rare",
+      "reason": "春节限定的梦幻年兽，克火属性",
+      "obtained": "春节活动",
+      "original_wild": false,
+      "sources": [
+        "17173_nianshou",
+        "jingyan_nianshou",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "30/226"
+    },
+    {
+      "name": "葛雷吉鲁",
+      "alias": "火年兽",
+      "template_id": 903,
+      "family": "年兽系",
+      "category": "rare",
+      "reason": "春节限定的梦幻年兽，攻击最凶",
+      "obtained": "春节活动",
+      "original_wild": false,
+      "sources": [
+        "17173_nianshou",
+        "jingyan_nianshou",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "30/227"
+    },
+    {
+      "name": "葛雷马恩",
+      "alias": "风年兽",
+      "template_id": 904,
+      "family": "年兽系",
+      "category": "rare",
+      "reason": "春节限定的梦幻年兽，敏捷成长最高",
+      "obtained": "春节活动",
+      "original_wild": false,
+      "sources": [
+        "17173_nianshou",
+        "jingyan_nianshou",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "30/228"
+    },
+    {
+      "name": "艾迪希洛",
+      "alias": "机豹",
+      "template_id": 968,
+      "family": "卡恩格登系",
+      "category": "rare",
+      "reason": "豹类宠物的首创，机械文明的梦宠",
+      "obtained": "后期商城积分兑换、转转乐",
+      "original_wild": false,
+      "sources": [
+        "17173_jibao",
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "44/240"
+    },
+    {
+      "name": "乌力",
+      "alias": "小猪",
+      "template_id": 1,
+      "family": "乌力系",
+      "category": "cute",
+      "reason": "石器最有代表性的小猪，新手的主力肉盾",
+      "obtained": "野外捕捉：北岛玛丽娜丝渔村周边",
+      "original_wild": true,
+      "sources": [
+        "gameres_memory",
+        "17173_lv1_2001",
+        "welovesa"
+      ],
+      "welovesa": "1/001"
+    },
+    {
+      "name": "乌力乌力",
+      "alias": "出生猪",
+      "template_id": 2,
+      "family": "乌力系",
+      "category": "cute",
+      "reason": "萨姆吉尔村送的出生宠，新手的第一个伙伴",
+      "obtained": "萨姆吉尔村出生宠；玛丽娜丝渔村外也有",
+      "original_wild": true,
+      "sources": [
+        "welovesa"
+      ],
+      "welovesa": "1/002"
+    },
+    {
+      "name": "黑乌力",
+      "alias": "黑猪",
+      "template_id": 5,
+      "family": "乌力系",
+      "category": "cute",
+      "reason": "黑色的乌力，赛事奖品，少见",
+      "obtained": "日本服 JSS 赛事奖品；后期一转后赠送",
+      "original_wild": false,
+      "sources": [
+        "local_special_pets",
+        "welovesa"
+      ],
+      "welovesa": "1/005",
+      "note": "俗称按颜色推断，获得方式只部分核实。"
+    },
+    {
+      "name": "乌力王",
+      "alias": "乌力王",
+      "template_id": 170,
+      "family": "弗丽雅系",
+      "category": "cute",
+      "reason": "乌力国的国王，纪念礼盒才有",
+      "obtained": "两周年纪念礼盒包",
+      "original_wild": false,
+      "sources": [
+        "welovesa"
+      ],
+      "welovesa": "1/399"
+    },
+    {
+      "name": "摩卡",
+      "alias": "小恐龙",
+      "template_id": null,
+      "family": "暴龙系（手游）",
+      "category": "cute",
+      "reason": "和乌力并称最经典可爱的小恐龙",
+      "obtained": "《石器时代M》里完成成人礼后赠送；原版资料里没有这个名字",
+      "original_wild": false,
+      "sources": [
+        "gameres_memory"
+      ],
+      "note": "只在重制手游的宣传里找到出处，原版宠物表和 8.5 客户端相簿都没有摩卡，所以本作没有它。"
+    }
+  ]
+}

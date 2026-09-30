@@ -4,7 +4,9 @@ extends Control
 ## animated battle sprite, template stats, Lv.120 prediction, the player's own
 ## pets of it and where it lives, each place with 瞬移去抓 (teleport there and
 ## open 自动抓极品 targeting it). Opened from 游戏助手, the pet window and its
-## shortcut (B by default). Data: scripts/pet_encyclopedia.gd.
+## shortcut (B by default). Filters: search, 只看野外可抓, 经典宠物 (the
+## classic list by category, data/classic-pets.json) and 全部/已拥有/未拥有.
+## Data: scripts/pet_encyclopedia.gd.
 ## See docs/development/pet-encyclopedia.md.
 const Encyclopedia = preload("res://scripts/pet_encyclopedia.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
@@ -15,6 +17,11 @@ const PANEL_SIZE := Vector2(1200,720)
 const PAGE_SIZE := 30
 ## List columns: key, caption, width. Keys in Encyclopedia.SORT_KEYS sort.
 const COLUMNS := [["thumb","",46],["name","名字",126],["family","系",88],["sum","三围合",62],["top01","前0.1%",56],["attack","攻",48],["defence","防",48],["speed","敏",48],["hp","血",56],["rank","成长级",50],["catchable","可抓",40],["where","出现",196],["go","",82]]
+## The list's columns in the 经典宠物 filter (data order, no sorting).
+const CLASSIC_COLUMNS := [["thumb","",46],["name","名字",112],["alias","俗称",80],["family","系",80],["reason","为什么经典",330],["where","这里能不能抓",250],["go","",82]]
+## 已拥有: the 出现 column becomes 我的 (count and best Lv.120).
+const MINE_COLUMN := ["mine","我的",196]
+const OWNERSHIP_NAMES := ["全部","已拥有","未拥有"]
 ## Thumbnails are cut from sheets for at most this long per frame.
 const THUMB_BUDGET_USEC := 8000
 
@@ -25,6 +32,8 @@ var body: VBoxContainer
 var feedback_label: Label
 var search: LineEdit
 var catchable_box: CheckBox
+var classic_box: CheckBox
+var ownership_picker: OptionButton
 var grid_button: Button
 var list_button: Button
 var scroll: ScrollContainer
@@ -92,10 +101,23 @@ func _ready() -> void:
 	catchable_box.text = "只看野外可抓"
 	catchable_box.focus_mode = Control.FOCUS_NONE
 	PetTable.style_checkbox(catchable_box)
-	catchable_box.toggled.connect(func(_on):
-		list_page = 0
-		rebuild())
+	catchable_box.toggled.connect(func(_on):_refilter())
 	top.add_child(catchable_box)
+	classic_box = CheckBox.new()
+	classic_box.name = "EncyclopediaClassic"
+	classic_box.text = "经典宠物"
+	classic_box.tooltip_text = "只看当年玩家最熟悉的宠物：俗称、为什么经典、这里能不能抓。"
+	classic_box.focus_mode = Control.FOCUS_NONE
+	PetTable.style_checkbox(classic_box)
+	classic_box.toggled.connect(func(_on):_refilter())
+	top.add_child(classic_box)
+	ownership_picker = OptionButton.new()
+	ownership_picker.name = "EncyclopediaOwnership"
+	ownership_picker.focus_mode = Control.FOCUS_NONE
+	ownership_picker.tooltip_text = "按随身和仓库里的宠物筛选。"
+	for i in range(OWNERSHIP_NAMES.size()):ownership_picker.add_item(OWNERSHIP_NAMES[i],i)
+	ownership_picker.item_selected.connect(func(_index):_refilter())
+	top.add_child(ownership_picker)
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
@@ -110,6 +132,19 @@ func _ready() -> void:
 	body.add_theme_constant_override("separation",6)
 	frame.add_child(body)
 	hide()
+
+func _refilter() -> void:
+	list_page = 0
+	if view == "detail":view = back_view
+	rebuild()
+
+## "all", "owned" or "unowned".
+func ownership() -> String:
+	return Encyclopedia.OWNERSHIP[clampi(ownership_picker.selected,0,2)] if is_instance_valid(ownership_picker) else "all"
+
+func set_ownership(value: String) -> void:
+	ownership_picker.select(maxi(0,Encyclopedia.OWNERSHIP.find(value)))
+	_refilter()
 
 func _toggle(caption: String, callback: Callable, control_name: String) -> Button:
 	var control: Button = world.button(caption,callback)
@@ -203,7 +238,10 @@ func rebuild() -> void:
 		_:_build_grid()
 
 func _visible_ids() -> Array:
-	return book.filtered(search.text,catchable_box.button_pressed)
+	return book.filtered(search.text,catchable_box.button_pressed,classic_box.button_pressed,ownership(),owned)
+
+func _visible_classic() -> Array:
+	return book.classic_filtered(search.text,catchable_box.button_pressed,ownership(),owned)
 
 # ---- 网格 ------------------------------------------------------------------
 
@@ -220,9 +258,12 @@ func _scroll_area() -> VBoxContainer:
 	return content
 
 func _build_grid() -> void:
+	if classic_box.button_pressed:
+		_build_classic_grid()
+		return
 	var shown := {}
 	for id in _visible_ids():shown[id] = true
-	var summary := PetTable.text("共 %d 种 · 按原版宠物相簿分系；点一种看资料、预测和出现地点。" % shown.size(),"meta")
+	var summary := PetTable.text("%s %d 种 · 按原版宠物相簿分系；点一种看资料、预测和出现地点。" % [_count_caption(),shown.size()],"meta")
 	body.add_child(summary)
 	var content := _scroll_area()
 	for family in book.families:
@@ -240,6 +281,67 @@ func _build_grid() -> void:
 		content.add_child(flow)
 		for id in ids:flow.add_child(_grid_cell(book.species[id]))
 	if shown.is_empty():content.add_child(PetTable.text("没有符合的宠物。","body"))
+
+func _count_caption() -> String:
+	return {"owned":"已拥有","unowned":"未拥有"}.get(ownership(),"共")
+
+## 经典宠物 on the grid: the list's categories in order, a cell per pet, and
+## the pets our data lacks as greyed cells.
+func _build_classic_grid() -> void:
+	var records := _visible_classic()
+	var summary := PetTable.text("经典宠物 · %s %d 种 · 当年玩家最熟悉的宠物；格子下方是俗称，悬停看为什么经典和原版怎么得到。" % [_count_caption(),records.size()],"meta")
+	body.add_child(summary)
+	var content := _scroll_area()
+	for category in book.classic_categories:
+		var members: Array = records.filter(func(record):return str(record.get("category","")) == str(category.id))
+		if members.is_empty():continue
+		var heading := HBoxContainer.new()
+		heading.add_theme_constant_override("separation",8)
+		heading.add_child(PetTable.text(str(category.name),"section"))
+		heading.add_child(PetTable.text("%d种" % members.size(),"meta"))
+		content.add_child(heading)
+		var flow := HFlowContainer.new()
+		flow.name = "Classic_%s" % category.id
+		flow.add_theme_constant_override("h_separation",6)
+		flow.add_theme_constant_override("v_separation",6)
+		content.add_child(flow)
+		for record in members:
+			flow.add_child(_grid_cell(book.species[int(record.entry_id)]) if int(record.entry_id) >= 0 else _missing_cell(record))
+	if records.is_empty():content.add_child(PetTable.text("没有符合的宠物。","body"))
+
+## A classic pet this project's data does not have: its names, no picture.
+func _missing_cell(record: Dictionary) -> Button:
+	var cell := Button.new()
+	cell.name = "Missing_%s" % record.name
+	cell.focus_mode = Control.FOCUS_NONE
+	cell.custom_minimum_size = Vector2(104,120)
+	PetTable.style_button(cell)
+	cell.disabled = true
+	cell.tooltip_text = _classic_tooltip(record,{})
+	var stack := VBoxContainer.new()
+	stack.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	stack.add_theme_constant_override("separation",0)
+	stack.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	cell.add_child(stack)
+	var holder := PetTable.text("资料里没有","meta",PetTable.MUTED)
+	holder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+	holder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
+	holder.custom_minimum_size = Vector2(104,86)
+	stack.add_child(holder)
+	for line in [[str(record.name),"name",13],[str(record.get("alias","")),"meta",11]]:
+		var label := PetTable.text(line[0],line[1],PetTable.MUTED)
+		label.add_theme_font_size_override("font_size",line[2])
+		label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
+		label.clip_text = true
+		label.custom_minimum_size = Vector2(100,0)
+		stack.add_child(label)
+	return cell
+
+func _classic_tooltip(record: Dictionary, entry: Dictionary) -> String:
+	var lines := ["%s（%s）· %s" % [record.name,record.get("alias",""),record.get("family","")],"为什么经典：%s" % record.get("reason",""),"原版获得：%s" % record.get("obtained","")]
+	lines.append("这里：%s" % Encyclopedia.classic_where_text(record,entry))
+	if not str(record.get("note","")).is_empty():lines.append(str(record.note))
+	return "\n".join(lines)
 
 func _grid_cell(entry: Dictionary) -> Button:
 	var cell := Button.new()
@@ -274,6 +376,7 @@ static func _source_tag(entry: Dictionary) -> String:
 	return str(entry.get("source","")) if not bool(entry.get("stats_known",true)) else ""
 
 func _tooltip(entry: Dictionary) -> String:
+	if entry.has("classic") and is_instance_valid(classic_box) and classic_box.button_pressed:return _classic_tooltip(entry.classic,entry)
 	var lines := ["%s%s%s · %s" % [entry.name," "+str(entry.tag) if not str(entry.tag).is_empty() else "","（%s）" % entry.alias if not str(entry.alias).is_empty() else "",entry.family_name]]
 	if not bool(entry.get("stats_known",true)):lines.append("%s 新宠 · 没有原版数值" % entry.get("source",""))
 	var potential: Dictionary = entry.get("potential",{})
@@ -346,18 +449,32 @@ func _process(_delta: float) -> void:
 
 # ---- 列表 ------------------------------------------------------------------
 
+## The list's columns: 已拥有 swaps 出现 for 我的.
+func _columns(classic_view: bool) -> Array:
+	var columns: Array = (CLASSIC_COLUMNS if classic_view else COLUMNS).duplicate()
+	if ownership() == "owned":
+		for i in range(columns.size()):
+			if columns[i][0] == "where":columns[i] = MINE_COLUMN
+	return columns
+
 func _build_list() -> void:
-	var ids: Array = Encyclopedia.ranked(book.species,_visible_ids(),sort_key,sort_reverse)
-	var pages := maxi(1,int(ceil(ids.size()/float(PAGE_SIZE))))
+	var classic_view := classic_box.button_pressed
+	var items: Array = _visible_classic() if classic_view else Encyclopedia.ranked(book.species,_visible_ids(),sort_key,sort_reverse)
+	var pages := maxi(1,int(ceil(items.size()/float(PAGE_SIZE))))
 	list_page = clampi(list_page,0,pages-1)
-	var note := PetTable.text("按满档（四项+2）Lv.1捕获练到120级的三围合均值排名（攻＋防＋敏，每种100万只模拟，固定种子）。前0.1%：一千只里最好那只的三围合。点列标题换排序。","meta")
+	var note := PetTable.text("经典宠物：当年玩家最熟悉的宠物，按类别排列。「这里能不能抓」是本作的野外出现地点；原版只能靠任务、活动或兑换得到的写「原版不能野外捕捉」。悬停一行看原版怎么得到。" if classic_view else "按满档（四项+2）Lv.1捕获练到120级的三围合均值排名（攻＋防＋敏，每种100万只模拟，固定种子）。前0.1%：一千只里最好那只的三围合。点列标题换排序。","meta")
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(note)
-	body.add_child(_list_header())
+	var columns := _columns(classic_view)
+	body.add_child(_list_header(columns))
 	var content := _scroll_area()
 	var start := list_page*PAGE_SIZE
-	for i in range(start,mini(ids.size(),start+PAGE_SIZE)):content.add_child(_list_row(book.species[ids[i]],i))
-	if ids.is_empty():content.add_child(PetTable.text("没有符合的宠物。","body"))
+	var profile: Dictionary = world.session.snapshot() if ownership() == "owned" else {}
+	for i in range(start,mini(items.size(),start+PAGE_SIZE)):
+		if not classic_view:content.add_child(_list_row(book.species[items[i]],i,columns,profile))
+		elif int(items[i].entry_id) >= 0:content.add_child(_list_row(book.species[int(items[i].entry_id)],i,columns,profile,items[i]))
+		else:content.add_child(_missing_row(items[i],i,columns))
+	if items.is_empty():content.add_child(PetTable.text("没有符合的宠物。","body"))
 	var pager := HBoxContainer.new()
 	pager.add_theme_constant_override("separation",10)
 	body.add_child(pager)
@@ -367,7 +484,7 @@ func _build_list() -> void:
 	previous.name = "EncyclopediaPrevious"
 	previous.disabled = list_page <= 0
 	pager.add_child(previous)
-	pager.add_child(PetTable.text("第 %d / %d 页 · %d 种" % [list_page+1,pages,ids.size()],"body"))
+	pager.add_child(PetTable.text("第 %d / %d 页 · %d 种" % [list_page+1,pages,items.size()],"body"))
 	var following: Button = world.button("下一页 ▶",func():
 		list_page += 1
 		rebuild())
@@ -375,18 +492,20 @@ func _build_list() -> void:
 	following.disabled = list_page >= pages-1
 	pager.add_child(following)
 
-func _list_header() -> HBoxContainer:
+func _list_header(columns: Array) -> HBoxContainer:
 	var row := HBoxContainer.new()
 	row.name = "EncyclopediaHeader"
 	row.add_theme_constant_override("separation",6)
 	var lead := Control.new()
 	lead.custom_minimum_size = Vector2(6,0)
 	row.add_child(lead)
-	for column in COLUMNS:
+	var sortable := not classic_box.button_pressed
+	for column in columns:
 		var key: String = column[0]
-		if not Encyclopedia.SORT_KEYS.has(key):
-			var gap := Control.new()
+		if not sortable or not Encyclopedia.SORT_KEYS.has(key):
+			var gap := PetTable.text(str(column[1]),"head")
 			gap.custom_minimum_size = Vector2(column[2],0)
+			gap.clip_text = true
 			row.add_child(gap)
 			continue
 		var arrow := ""
@@ -416,7 +535,9 @@ func sort_by(key: String) -> void:
 	list_page = 0
 	rebuild()
 
-func _list_row(entry: Dictionary, index: int) -> PanelContainer:
+## One species row; record is its classic record in the 经典宠物 list, and
+## profile the snapshot for the 我的 column.
+func _list_row(entry: Dictionary, index: int, columns: Array = COLUMNS, profile: Dictionary = {}, record: Dictionary = {}) -> PanelContainer:
 	var holder := PetTable.row_panel(index)
 	holder.name = "Row%d" % int(entry.id)
 	holder.tooltip_text = _tooltip(entry)
@@ -424,7 +545,7 @@ func _list_row(entry: Dictionary, index: int) -> PanelContainer:
 	row.add_theme_constant_override("separation",6)
 	holder.add_child(row)
 	var potential: Dictionary = entry.get("potential",{})
-	for column in COLUMNS:
+	for column in columns:
 		var key: String = column[0]
 		var width: float = column[2]
 		match key:
@@ -458,12 +579,53 @@ func _list_row(entry: Dictionary, index: int) -> PanelContainer:
 			"rank":row.add_child(PetTable.cell("%d级" % int(entry.rank) if int(entry.rank) >= 0 else "—",width))
 			"catchable":row.add_child(PetTable.cell("可" if entry.catchable else "否",width,false,PetTable.GOOD if entry.catchable else PetTable.MUTED))
 			"where":
-				var where := PetTable.text(Encyclopedia.where_text(entry),"meta",PetTable.TEXT if entry.catchable else PetTable.MUTED)
+				var where := PetTable.text(Encyclopedia.where_text(entry) if record.is_empty() else Encyclopedia.classic_where_text(record,entry),"meta",PetTable.TEXT if entry.catchable else PetTable.MUTED)
+				where.name = "Where%d" % int(entry.id)
 				where.custom_minimum_size = Vector2(width,0)
 				where.clip_text = true
 				if int(entry.wild_lowest) > 1:where.add_theme_color_override("font_color",Color("e6c284"))
 				row.add_child(where)
+			"alias":row.add_child(_clipped(str(record.get("alias",entry.alias)),width,PetTable.GOLD))
+			"reason":row.add_child(_clipped(str(record.get("reason","")),width,PetTable.TEXT))
+			"mine":row.add_child(_mine_cell(entry,profile,width))
 			"go":row.add_child(_go_button(entry,Encyclopedia.best_location(entry),"Go%d" % int(entry.id),width))
+	return holder
+
+func _clipped(value: String, width: float, color: Color) -> Label:
+	var label := PetTable.text(value,"meta",color)
+	label.custom_minimum_size = Vector2(width,0)
+	label.clip_text = true
+	return label
+
+## 我的: how many the player has and the best one's exact Lv.120 三围合.
+func _mine_cell(entry: Dictionary, profile: Dictionary, width: float) -> Label:
+	var mine: Dictionary = owned.get(int(entry.id),{})
+	var count := int(mine.get("carried",0))+int(mine.get("stored",0))
+	var text := "—"
+	if count > 0:
+		var best: Dictionary = book.owned_best(profile,entry)
+		text = "%d只 · 最佳120级三围合 %d" % [count,int(best.best_sum)] if int(best.best_sum) >= 0 else "%d只" % count
+	var label := _clipped(text,width,PetTable.GOOD if count > 0 else PetTable.MUTED)
+	label.name = "Mine%d" % int(entry.id)
+	return label
+
+## A classic pet our data lacks, in the 经典宠物 list.
+func _missing_row(record: Dictionary, index: int, columns: Array) -> PanelContainer:
+	var holder := PetTable.row_panel(index)
+	holder.name = "Missing_%s" % record.name
+	holder.tooltip_text = _classic_tooltip(record,{})
+	var row := HBoxContainer.new()
+	row.add_theme_constant_override("separation",6)
+	holder.add_child(row)
+	for column in columns:
+		var width: float = column[2]
+		var key := str(column[0])
+		var value := ""
+		match key:
+			"thumb":value = "无图"
+			"name","alias","family","reason":value = str(record.get(key,""))
+			"where","mine":value = "资料里没有这只宠物"
+		row.add_child(_clipped(value,width,PetTable.TEXT if key == "reason" else PetTable.MUTED))
 	return holder
 
 func _go_button(entry: Dictionary, place: Dictionary, control_name: String, width: float = 82) -> Button:
@@ -724,10 +886,27 @@ func _owned_card(entry: Dictionary) -> PanelContainer:
 	stack.add_child(PetTable.text("最佳120级攻击 %d · %s" % [int(best.best_attack),best.best_attack_pet],"body"))
 	return card
 
+## 经典宠物 on a species page: 俗称, why players remember it and how the
+## original gave it out.
+func _classic_card(record: Dictionary) -> PanelContainer:
+	var card := PetTable.card()
+	card.name = "SpeciesClassic"
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation",2)
+	card.add_child(stack)
+	stack.add_child(PetTable.text("经典宠物 · %s" % record.get("alias",""),"section"))
+	for line in ["为什么经典：%s" % record.get("reason",""),"原版获得：%s" % record.get("obtained","")]+([] if bool(record.get("original_wild",true)) else ["原版不能野外捕捉。"])+([str(record.note)] if not str(record.get("note","")).is_empty() else []):
+		var text := PetTable.text(line,"body")
+		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+		text.custom_minimum_size = Vector2(400,0)
+		stack.add_child(text)
+	return card
+
 func _detail_places(entry: Dictionary) -> VBoxContainer:
 	var column := _column(430)
 	column.name = "SpeciesPlaces"
 	column.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if entry.has("classic"):column.add_child(_classic_card(entry.classic))
 	column.add_child(PetTable.text("出现地点","section"))
 	var places: Array = entry.get("locations",[])
 	if places.is_empty():

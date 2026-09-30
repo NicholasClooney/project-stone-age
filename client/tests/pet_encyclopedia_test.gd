@@ -93,6 +93,51 @@ func core() -> void:
 	var best: Dictionary = book.owned_best(profile,blue)
 	var projected := Rules.project_pet(own,120)
 	check(best.count == 2 and best.best_sum >= int(projected.attack)+int(projected.defence)+int(projected.speed),"best owned Lv.120 三围合 uses the exact projection (%d)" % best.best_sum)
+	classic(book,catalog,profile)
+
+## 经典宠物: the data file's shape, and the classic and ownership filters.
+func classic(book, catalog: Dictionary, profile: Dictionary) -> void:
+	var data: Dictionary = Encyclopedia.read_json(Encyclopedia.CLASSIC_PATH)
+	var pets: Array = data.get("pets",[])
+	var categories: Array = data.get("categories",[]).map(func(category):return str(category.id))
+	var sources: Dictionary = data.get("sources",{})
+	var bad: Array = []
+	var templates := {}
+	for pet in pets:
+		var why := ""
+		for key in ["name","alias","family","reason","obtained","category"]:
+			if str(pet.get(key,"")).strip_edges().is_empty():why += " no "+key
+		if not categories.has(str(pet.get("category",""))):why += " unknown category"
+		if pet.get("sources",[]).is_empty():why += " no source"
+		for source in pet.get("sources",[]):
+			if not sources.has(source) or str(sources[source].get("url","")).is_empty():why += " unknown source "+str(source)
+		if not pet.has("original_wild"):why += " no original_wild"
+		var template = pet.get("template_id",null)
+		if template == null:
+			if str(pet.get("note","")).is_empty():why += " missing without a note"
+		else:
+			var row: Dictionary = catalog.templates.get(str(int(template)),{})
+			if row.is_empty() or int(row.pet_flag) == 0 or str(row.name) != str(pet.name):why += " template %d is not %s" % [int(template),pet.name]
+			if templates.has(int(template)):why += " listed twice"
+			templates[int(template)] = true
+		if not why.is_empty():bad.append(str(pet.get("name","?"))+why)
+	check(pets.size() >= 30 and bad.is_empty(),"classic-pets.json: %d pets, each with name, 俗称, reason, how it was got, category and resolvable sources; templates match their names or are marked missing%s" % [pets.size(),"" if bad.is_empty() else ": "+"；".join(bad)])
+	book.load_classic(data)
+	var missing: Array = book.classic.filter(func(record):return int(record.entry_id) < 0)
+	check(book.classic.size() == pets.size() and missing.map(func(record):return record.name) == ["摩卡"],"every classic pet but 摩卡 resolves to an encyclopedia entry")
+	check(book.entry_for(94).classic.alias == "红人龙" and book.entry_for(94).alias == "红人龙" and book.entry_for(303).alias == "红暴龙","红人龙 gets its 俗称; 红暴 keeps its starter name")
+	check(book.entry_for(105).has("classic") and book.filtered("金飞",false,true) == [274],"蓝暴 (302 merged under 105) is classic; searching a 俗称 finds 金飞")
+	var shown: Array = book.filtered("",false,true)
+	check(shown.size() == pets.size()-1 and shown.all(func(id):return book.species[id].has("classic")),"经典宠物 filter shows the %d classic species" % shown.size())
+	var wild: Dictionary = book.entry_for(94)
+	check(Encyclopedia.classic_where_text(book.entry_for(304).classic,book.entry_for(304)).begins_with("原版不能野外捕捉") and Encyclopedia.classic_where_text(missing[0],{}) == "资料里没有这只宠物" and Encyclopedia.classic_where_text(wild.classic,wild) == Encyclopedia.where_text(wild),"这里能不能抓: 红人龙 where it lives, 机暴 原版不能野外捕捉, 摩卡 not in the data")
+	# Ownership: 甲 (carried) and 乙 (stored) are 扬奇洛斯, 丙 (stored) 昆伊.
+	var owned: Dictionary = book.owned_counts(profile)
+	check(book.filtered("",false,false,"owned",owned) == [92,113] and book.filtered("",false,false,"unowned",owned).size() == book.order.size()-2,"已拥有 lists 扬奇洛斯 and 昆伊 (carried and stored), 未拥有 the other %d" % (book.order.size()-2))
+	var unowned: Array = book.filtered("",false,true,"unowned",owned)
+	check(book.filtered("",false,true,"owned",owned) == [92] and unowned.has(94) and not unowned.has(92) and not unowned.has(113),"经典 + 已拥有 is 蓝人龙 alone; 经典 + 未拥有 has 红人龙, not 蓝人龙")
+	check(book.classic_filtered("",false,"owned",owned).map(func(record):return record.name) == ["扬奇洛斯"] and book.classic_filtered("",false,"unowned",owned).size() == pets.size()-1,"the classic list agrees, and 未拥有 keeps 摩卡")
+	check(not book.classic_filtered("",true).any(func(record):return int(record.entry_id) < 0 or not book.species[int(record.entry_id)].catchable),"只看野外可抓 drops 摩卡 and the pets with no wild spawn")
 
 static func AnimatedPortraitFrames(sprite: int) -> PackedInt32Array:
 	return preload("res://scripts/animated_portrait.gd").animation_for(str(sprite),3,1).get("frames",PackedInt32Array())
@@ -158,6 +203,25 @@ func window() -> void:
 	check(go != null and go.disabled,"机暴's row cannot 瞬移去抓")
 	menu.search.text = ""
 	menu.search.text_changed.emit("")
+	# 经典宠物: the list in data order with 俗称 and 这里能不能抓, then the grid.
+	menu.classic_box.button_pressed = true
+	await process_frame
+	var first_classic: Dictionary = menu.book.classic[0]
+	var classic_rows: Array = menu.body.find_children("Row*","PanelContainer",true,false)
+	check(menu.view == "list" and classic_rows[0].name == "Row%d" % int(first_classic.entry_id) and menu.body.find_child("Sort_sum",true,false) == null,"经典宠物 list starts with %s in the file's order, without sorting" % first_classic.name)
+	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where304",true,false).text.begins_with("原版不能野外捕捉"),"红人龙 says where it lives here; 机暴 says 原版不能野外捕捉")
+	check(menu.body.find_child("Go94",true,false) != null and not menu.body.find_child("Go94",true,false).disabled and menu.body.find_child("Go304",true,false).disabled,"红人龙's row has 瞬移去抓, 机暴's does not")
+	menu.list_page = 1
+	menu.rebuild()
+	check(menu.body.find_child("Missing_摩卡",true,false) != null,"摩卡, not in the data, is listed as 资料里没有")
+	menu._switch("grid")
+	await process_frame
+	check(menu.body.find_child("Classic_pk",true,false) != null and menu.body.find_child("Species94",true,false) != null and menu.body.find_child("Missing_摩卡",true,false).disabled and menu.body.find_child("Species113",true,false) == null,"the grid groups the classic pets by category and greys out 摩卡")
+	menu.show_species(304)
+	await process_frame
+	check(menu.body.find_child("SpeciesClassic",true,false) != null,"a classic species' page shows its 经典宠物 card")
+	menu.view = "grid"
+	menu.classic_box.button_pressed = false
 	menu.close_menu()
 	# One real 瞬移去抓: teleport to 昆伊's Lv.1 area and open 自动抓极品 on it.
 	menu.travel = menu._travel
@@ -186,6 +250,18 @@ func window() -> void:
 	await process_frame
 	var expected: Dictionary = menu.book.entry_for_pet(selected)
 	check(menu.visible and not adventure.visible and menu.view == "detail" and menu.current == int(expected.id),"the pet window opens 宠物大全 on %s" % selected.name)
+	# 已拥有 in the list: the character's species, each with 我的 (count, best Lv.120).
+	var mine: Dictionary = menu.book.owned_counts(game.session.snapshot())
+	menu.view = "list"
+	menu.set_ownership("owned")
+	await process_frame
+	var owned_rows: Array = menu.body.find_children("Row*","PanelContainer",true,false)
+	var mine_label = menu.body.find_child("Mine%d" % int(expected.id),true,false)
+	check(owned_rows.size() == mine.size() and mine.has(int(expected.id)) and mine_label != null and mine_label.text.contains("只 · 最佳120级三围合"),"已拥有 lists the %d owned species with 我的: %s" % [mine.size(),mine_label.text if mine_label != null else "none"])
+	menu.set_ownership("unowned")
+	await process_frame
+	check(menu.body.find_child("Row%d" % int(expected.id),true,false) == null and menu.body.find_child("Mine%d" % int(expected.id),true,false) == null,"未拥有 hides it")
+	menu.set_ownership("all")
 	menu.close_menu()
 	Thumbs.clear()
 	game.process_mode = Node.PROCESS_MODE_DISABLED

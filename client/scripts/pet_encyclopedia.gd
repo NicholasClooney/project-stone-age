@@ -16,6 +16,10 @@ const FAMILIES_PATH := "res://data/pet_families.json"
 const POTENTIAL_PATH := "res://data/species_potential.json"
 const SPOTS_PATH := "res://data/training-spots.json"
 const PETS_PATH := "res://assets/legacy/pets/catalog.json"
+## The classic pets players remember (docs/product/classic-pets.md).
+const CLASSIC_PATH := "res://data/classic-pets.json"
+## 宠物大全's ownership filter values.
+const OWNERSHIP := ["all","owned","unowned"]
 const SpecialPets = preload("res://scripts/special_pets.gd")
 const PetComparison = preload("res://scripts/pet_comparison.gd")
 ## Growth rank from the template's weight sum (progression.gd species_actor):
@@ -34,6 +38,11 @@ var order: Array = []
 var families: Array = []
 ## Any template id of a pet -> its entry id.
 var by_template: Dictionary = {}
+## The classic list in its file's order: each record as in classic-pets.json
+## plus entry_id (-1 when our data has no such pet).
+var classic: Array = []
+## [{id, name}] classic categories in display order.
+var classic_categories: Array = []
 
 static var _shared = null
 
@@ -47,6 +56,7 @@ static func shared(catalog: Dictionary, maps: Dictionary):
 	if _shared == null:
 		var spots: Dictionary = read_json(SPOTS_PATH)
 		_shared = new(catalog,read_json(FAMILIES_PATH),read_json(POTENTIAL_PATH),spots.get("spots",[]),maps,read_json(PETS_PATH))
+		_shared.load_classic(read_json(CLASSIC_PATH))
 	return _shared
 
 ## catalog: the encounter catalog data; family_data / potential: the two data
@@ -188,6 +198,22 @@ static func _aliases(pets: Dictionary) -> Dictionary:
 		if pet is Dictionary and pet.has("template_id") and not str(pet.get("alias","")).is_empty():result[int(pet.template_id)] = str(pet.alias)
 	return result
 
+## Attaches the classic list (classic-pets.json): each found entry gets
+## `classic` (its record) and, when it has no player name yet, the record's
+## 俗称 as alias; records whose template is missing keep entry_id -1.
+func load_classic(data: Dictionary) -> void:
+	classic.clear()
+	classic_categories = data.get("categories",[]).duplicate(true)
+	for raw in data.get("pets",[]):
+		var record: Dictionary = raw.duplicate(true)
+		var template = record.get("template_id",null)
+		var entry: Dictionary = entry_for(int(template)) if template != null else {}
+		record.entry_id = int(entry.id) if not entry.is_empty() else -1
+		if not entry.is_empty() and not entry.has("classic"):
+			entry.classic = record
+			if str(entry.alias).is_empty():entry.alias = str(record.get("alias",""))
+		classic.append(record)
+
 ## Every ordinary wild row per template: the same areas and groups the hunt
 ## uses (pet_hunt_rules.gd candidates), capturable or not.
 static func _wild_rows(catalog: Dictionary) -> Dictionary:
@@ -231,15 +257,46 @@ func entry_for_pet(pet: Dictionary) -> Dictionary:
 	return entry_for(int(id)) if id.is_valid_int() else {}
 
 ## Entry ids whose name or alias contains text (all when empty), optionally
-## only species that can be caught in the wild, in album order.
-func filtered(text: String = "", catchable_only: bool = false) -> Array:
+## only species that can be caught in the wild, only classic ones, and only
+## ones the player owns ("owned") or not ("unowned"; owned is owned_counts),
+## in album order.
+func filtered(text: String = "", catchable_only: bool = false, classic_only: bool = false, ownership: String = "all", owned: Dictionary = {}) -> Array:
 	var wanted := text.strip_edges()
 	var result: Array = []
 	for id in order:
 		var entry: Dictionary = species[id]
 		if catchable_only and not entry.catchable:continue
-		if not wanted.is_empty() and not str(entry.name).contains(wanted) and not str(entry.alias).contains(wanted) and not str(entry.family_name).contains(wanted):continue
+		if classic_only and not entry.has("classic"):continue
+		if not _owned_matches(owned.has(id),ownership):continue
+		if not wanted.is_empty() and not _matches(entry,wanted):continue
 		result.append(id)
+	return result
+
+static func _owned_matches(has: bool, ownership: String) -> bool:
+	return ownership == "all" or (ownership == "owned") == has
+
+static func _matches(entry: Dictionary, wanted: String) -> bool:
+	for text in [entry.name,entry.alias,entry.family_name,entry.get("classic",{}).get("alias","")]:
+		if str(text).contains(wanted):return true
+	return false
+
+## The classic records to show, in the file's order, with the same filters as
+## filtered. A record our data lacks (entry_id -1) is never owned or
+## catchable, and is matched on its own name, 俗称 and family.
+func classic_filtered(text: String = "", catchable_only: bool = false, ownership: String = "all", owned: Dictionary = {}) -> Array:
+	var wanted := text.strip_edges()
+	var result: Array = []
+	for record in classic:
+		var id := int(record.entry_id)
+		if id < 0:
+			if catchable_only or ownership == "owned":continue
+			if not wanted.is_empty() and not [record.name,record.get("alias",""),record.get("family","")].any(func(value):return str(value).contains(wanted)):continue
+		else:
+			var entry: Dictionary = species[id]
+			if catchable_only and not entry.catchable:continue
+			if not _owned_matches(owned.has(id),ownership):continue
+			if not wanted.is_empty() and not _matches(entry,wanted) and not str(record.name).contains(wanted):continue
+		result.append(record)
 	return result
 
 ## The value a list column sorts by (bigger is better; see ranked).
@@ -328,6 +385,13 @@ static func where_text(entry: Dictionary) -> String:
 	var lowest := int(entry.wild_lowest)
 	var head := "Lv.1起" if lowest <= 1 else "野生最低 Lv.%d" % lowest
 	return "%s · %s" % [head,"、".join(maps.keys().slice(0,2))+("等%d处" % maps.size() if maps.size() > 2 else "")]
+
+## The classic list's line about catching it: where here, or why not.
+static func classic_where_text(record: Dictionary, entry: Dictionary) -> String:
+	if entry.is_empty():return "资料里没有这只宠物"
+	if entry.catchable:return where_text(entry)
+	if not bool(record.get("original_wild",true)):return "原版不能野外捕捉 · "+str(record.get("obtained",""))
+	return where_text(entry)+" · 原版可野外捕捉"
 
 static func rank_text(rank: int) -> String:
 	if rank < 0:return "未知"
