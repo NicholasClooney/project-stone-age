@@ -63,6 +63,17 @@ func run():
 	var bangino: Dictionary=find_label(menu,"pet","邦奇诺")
 	check(not bangino.is_empty() and str(bangino.node.text).ends_with(" Lv1") and bangino.node.visible,"吉鲁岛 shows 「邦奇诺 … Lv1」 without zooming")
 	check(texts(menu,"place").has("福尔德村") and texts(menu,"place").has("达那村"),"吉鲁岛 labels its village exits")
+	# Rare Lv.1 spots the project added (data/rare-encounters.json) get their
+	# own colour; the original Lv.1 邦恩多斯 in the 龙穴 stays green.
+	var lair: Array=book.level_one_areas(500).filter(func(area):return int(area.area_id)==652)
+	check(lair.size()==2 and not lair[0].added and lair[0].names.has("邦恩多斯") and lair[1].added and lair[1].names.has("斯天多斯") and not lair[1].names.has("邦恩多斯"),"the 龙穴 has an original Lv.1 entry and a separate added one")
+	menu.browse_map(500)
+	var original: Dictionary=find_label(menu,"pet","邦恩多斯")
+	var added: Dictionary=find_label(menu,"pet_added","斯天多斯")
+	check(not original.is_empty() and original.node.label_settings.font_color==menu.PET_COLOR,"original Lv.1 邦恩多斯 is labelled in the Lv.1 green")
+	check(not added.is_empty() and added.node.label_settings.font_color==menu.ADDED_PET_COLOR and menu.ADDED_PET_COLOR!=menu.PET_COLOR and added.node.visible,"added Lv.1 斯天多斯 is labelled in its own colour")
+	check(not menu.added_pet_rects.is_empty() and menu.legend.text.contains("补充/非原版") and menu.legend.text.contains(menu.ADDED_PET_COLOR.to_html(false)),"added areas are outlined and the legend explains the colour")
+	check(not texts(menu,"pet").any(func(text):return text.contains("斯天多斯") or text.contains("左迪洛斯")),"no added pet is labelled as original")
 	menu.close_map()
 	# Clicking a name travels to its marker (DEV teleport on the same map).
 	var spawn: Array=game.world_catalog.info(300).spawn

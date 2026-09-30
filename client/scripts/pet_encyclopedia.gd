@@ -274,11 +274,15 @@ func level_one_areas(map_id: int) -> Array:
 		for place in entry.get("locations",[]):
 			if int(place.map_id) != map_id or not place.capturable or int(place.level_min) > 1:continue
 			var area := int(place.area_id)
-			if not by_area.has(area):by_area[area] = {"area_id":area,"cell":place.cell.duplicate(),"names":[]}
+			# Rare Lv.1 rows data/rare-encounters.json added (补充 / 非原版)
+			# form their own entry, so the map can colour them apart.
+			var added := not str(place.get("origin","")).is_empty()
+			var key := "%d/%s" % [area,"added" if added else ""]
+			if not by_area.has(key):by_area[key] = {"area_id":area,"cell":place.cell.duplicate(),"names":[],"added":added}
 			var name := str(entry.name)
-			if not by_area[area].names.has(name):by_area[area].names.append(name)
+			if not by_area[key].names.has(name):by_area[key].names.append(name)
 	var result: Array = by_area.values()
-	result.sort_custom(func(a,b):return int(a.area_id) < int(b.area_id))
+	result.sort_custom(func(a,b):return int(a.area_id) < int(b.area_id) if int(a.area_id) != int(b.area_id) else not a.added and b.added)
 	return result
 
 func entry_for(template_id: int) -> Dictionary:

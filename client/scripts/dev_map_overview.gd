@@ -9,10 +9,12 @@ const PLACE_COLOR := Color.WHITE
 const CLOSED_COLOR := Color("aeb6bf")
 const NPC_COLOR := Color("ffe45c")
 const PET_COLOR := Color("6dff7c")
+## Lv.1 pet spots this project added (data/rare-encounters.json: 补充 / 非原版).
+const ADDED_PET_COLOR := Color("c58cff")
 const TRAINING_COLOR := Color.ORANGE
 ## Label order per marker kind: earlier kinds get the uncluttered spot when
 ## labels would overlap.
-const KIND_ORDER := ["place","pet","closed","training","npc"]
+const KIND_ORDER := ["place","pet","pet_added","closed","training","npc"]
 const LABEL_NAMES_MAX := 3
 ## Exits with the same name closer than this (cells) share one marker.
 const EXIT_MERGE := 12
@@ -48,6 +50,8 @@ var map_labels: Array = []
 var label_styles: Dictionary = {}
 ## Encounter rects (Rect2i, inclusive cells) of the Lv.1 pet areas shown.
 var pet_rects: Array = []
+## Areas with added (补充 / 非原版) Lv.1 pets, outlined in ADDED_PET_COLOR.
+var added_pet_rects: Array = []
 var legend: RichTextLabel
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:
@@ -115,7 +119,7 @@ func _ready() -> void:
 		var style:=LabelSettings.new()
 		style.font=font
 		style.font_size=12
-		style.font_color={"place":PLACE_COLOR,"closed":CLOSED_COLOR,"npc":NPC_COLOR,"pet":PET_COLOR,"training":TRAINING_COLOR}[kind]
+		style.font_color={"place":PLACE_COLOR,"closed":CLOSED_COLOR,"npc":NPC_COLOR,"pet":PET_COLOR,"pet_added":ADDED_PET_COLOR,"training":TRAINING_COLOR}[kind]
 		style.outline_size=4
 		style.outline_color=Color(0,0,0,0.9)
 		label_styles[kind]=style
@@ -135,7 +139,7 @@ func _ready() -> void:
 	legend.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	legend.add_theme_font_override("normal_font",font)
 	legend.add_theme_font_size_override("normal_font_size",12)
-	legend.text="[bgcolor=#000000b0] [color=#00ffff]●[/color][color=#ffffff] 地点/出入口[/color]  [color=#aeb6bf]● 未开放区域[/color]  [color=#6dff7c]◆ Lv.1 宠物[/color]  [color=#ffe45c]● NPC[/color]  [color=#ffa500]● 练级点[/color]  [color=#ffffff]◉ 自己[/color] [/bgcolor]"
+	legend.text="[bgcolor=#000000b0] [color=#00ffff]●[/color][color=#ffffff] 地点/出入口[/color]  [color=#aeb6bf]● 未开放区域[/color]  [color=#6dff7c]◆ Lv.1 宠物[/color]  [color=#c58cff]◆ 补充/非原版 Lv.1[/color]  [color=#ffe45c]● NPC[/color]  [color=#ffa500]● 练级点[/color]  [color=#ffffff]◉ 自己[/color] [/bgcolor]"
 	legend.position=view_rect.position+Vector2(6,view_rect.size.y-26)
 	legend.size=Vector2(view_rect.size.x-12,22)
 	add_child(legend)
@@ -201,6 +205,7 @@ func select_category(index: int) -> void:
 func _build_pois() -> void:
 	pois.clear()
 	pet_rects.clear()
+	added_pet_rects.clear()
 	scope_button.visible=category!=0
 	scope_button.text="全部地图" if all_maps else "当前地图"
 	if category==0:
@@ -244,7 +249,7 @@ func _build_pois() -> void:
 					label="练级 Lv.%d–%d"%[spot.level_min,spot.level_max]
 					tag=label
 				if all_maps:label+=" · "+str(world.world_catalog.info(ident).name)
-				pois.append({"name":label,"cell":Vector2i(spot.cell[0],spot.cell[1]),"color":PET_COLOR if category==2 else TRAINING_COLOR,"map_id":ident,"area_id":int(spot.area_id),"kind":"pet" if category==2 else "training","tag":tag})
+				pois.append({"name":label,"cell":Vector2i(spot.cell[0],spot.cell[1]),"color":(ADDED_PET_COLOR if spot.has("origin") else PET_COLOR) if category==2 else TRAINING_COLOR,"map_id":ident,"area_id":int(spot.area_id),"kind":("pet_added" if spot.has("origin") else "pet") if category==2 else "training","tag":tag})
 	for child in list.get_children():
 		list.remove_child(child)
 		child.queue_free()
@@ -279,9 +284,9 @@ func _add_level_one_areas() -> void:
 		var r: Array=rects.get(int(spot.area_id),[])
 		if r.size()!=4:continue
 		var rect:=Rect2i(int(r[0]),int(r[1]),int(r[2])-int(r[0])+1,int(r[3])-int(r[1])+1)
-		pet_rects.append(rect)
+		(added_pet_rects if spot.added else pet_rects).append(rect)
 		var names:=pet_names_text(spot.names)
-		var poi:={"name":"Lv.1 宠物：%s"%"、".join(spot.names),"color":PET_COLOR,"map_id":current_map,"kind":"pet","tag":names,"area_names":spot.names}
+		var poi:={"name":("Lv.1 宠物（补充/非原版）：%s" if spot.added else "Lv.1 宠物：%s")%"、".join(spot.names),"color":ADDED_PET_COLOR if spot.added else PET_COLOR,"map_id":current_map,"kind":"pet_added" if spot.added else "pet","tag":names,"area_names":spot.names}
 		if spot.cell.size()==2:
 			poi.cell=Vector2i(int(spot.cell[0]),int(spot.cell[1]))
 			poi.area_id=int(spot.area_id)
@@ -310,7 +315,7 @@ func _build_labels() -> void:
 	ordered.sort_custom(func(a,b):return KIND_ORDER.find(a.kind)<KIND_ORDER.find(b.kind))
 	for group in ordered:
 		var text: String
-		if group.kind=="pet":text=(str(group.tags[0]) if group.poi.has("area_names") else pet_names_text(group.tags))+" Lv1"
+		if group.kind in ["pet","pet_added"]:text=(str(group.tags[0]) if group.poi.has("area_names") else pet_names_text(group.tags))+" Lv1"
 		else:text="、".join(group.tags)
 		var label:=Label.new()
 		label.text=text
@@ -469,17 +474,18 @@ func _draw() -> void:
 	if visible_rect.has_area():
 		var texture_rect:=Rect2((visible_rect.position-map_rect.position)/map_rect.size*thumbnail.get_size(),visible_rect.size/map_rect.size*thumbnail.get_size())
 		draw_texture_rect_region(thumbnail,visible_rect,texture_rect)
-	for rect in pet_rects:
-		var corner:=map_rect.position+Vector2(rect.position)/Vector2(map_dimensions)*map_rect.size
-		var area:=Rect2(corner,Vector2(rect.size)/Vector2(map_dimensions)*map_rect.size).intersection(view_rect)
-		if area.has_area():
-			draw_rect(area,Color(PET_COLOR,0.08))
-			draw_rect(area,Color(PET_COLOR,0.35),false)
+	for rects in [[pet_rects,PET_COLOR],[added_pet_rects,ADDED_PET_COLOR]]:
+		for rect in rects[0]:
+			var corner:=map_rect.position+Vector2(rect.position)/Vector2(map_dimensions)*map_rect.size
+			var area:=Rect2(corner,Vector2(rect.size)/Vector2(map_dimensions)*map_rect.size).intersection(view_rect)
+			if area.has_area():
+				draw_rect(area,Color(rects[1],0.08))
+				draw_rect(area,Color(rects[1],0.35),false)
 	for poi in pois:
 		if int(poi.get("map_id",current_map))!=current_map:continue
 		var point:=cell_to_point(poi.cell)
 		if not view_rect.has_point(point):continue
-		if poi.get("kind","")=="pet":
+		if poi.get("kind","") in ["pet","pet_added"]:
 			var diamond:=PackedVector2Array([point+Vector2(0,-4),point+Vector2(4,0),point+Vector2(0,4),point+Vector2(-4,0)])
 			draw_colored_polygon(diamond,poi.color)
 			draw_polyline(diamond+PackedVector2Array([diamond[0]]),Color.BLACK,1)
