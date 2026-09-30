@@ -71,7 +71,8 @@ func run() -> void:
 	var helper = game.training_helper
 	helper.open_menu();helper.compact.button_pressed=true;helper.battle_limit.value=3;helper.hp_floor.value=1;helper.speed.select(3);helper.preset.select(0)
 	helper.start_training()
-	check(await until(func():return bool(game.state.automation.get("running",false))),"automation starts on the backend")
+	# Three compact battles can end before the client sees running=true.
+	check(await until(func():return bool(game.state.automation.get("running",false)) or backend.automation.battles>0),"automation starts on the backend")
 	for peer in server.clients():peer.close()
 	check(await until(func():return not game.link.online and not backend.automation.client_attached),"client disconnect is noticed on both sides")
 	check(game.link_blocked() and game._link_status.text.contains("断开连接"),"a lost connection covers the game with a notice")

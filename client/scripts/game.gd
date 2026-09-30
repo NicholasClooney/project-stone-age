@@ -407,11 +407,18 @@ func close_game() -> void:
 	checkpoint()
 	clear_input()
 	paused_input = true
-	music.stop()
-	effect.stop()
-	for voice in effect_voices:voice.stop()
+	stop_sounds()
 	await get_tree().create_timer(0.15).timeout
 	get_tree().quit()
+
+const EXIT_AUDIO_MSEC := 100
+
+## Stops the music, the effect and every spare voice still finishing a sound.
+func stop_sounds() -> void:
+	if is_instance_valid(music): music.stop()
+	if is_instance_valid(effect): effect.stop()
+	for voice in effect_voices:
+		if is_instance_valid(voice): voice.stop()
 
 func project(grid: Vector2) -> Vector2:
 	return Vector2((grid.x+grid.y)*32,(grid.y-grid.x)*24)
@@ -453,8 +460,13 @@ func can_step(origin: Vector2i, destination: Vector2i) -> bool:
 func _exit_tree() -> void:
 	preload("res://scripts/legacy_cursor.gd").uninstall()
 	if backend!=null and backend.automation.fast_share!=null:backend.automation.fast_share.leave()
-	if is_instance_valid(music): music.stop()
-	if is_instance_valid(effect): effect.stop()
+	stop_sounds()
+	# A stopped sound is released on the audio mixing thread. The game scene
+	# goes away when the program quits (or the remote client reloads it); a
+	# sound released after the engine's exit check is reported as a resource
+	# still in use, which failed test suites that quit right after stopping
+	# the music and freeing the game. A moment lets the mixer let go.
+	OS.delay_msec(EXIT_AUDIO_MSEC)
 
 # Copies the on-disk save beside itself before an irreversible change; returns
 # the backup path or "" when there is no save file.
