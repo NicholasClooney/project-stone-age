@@ -63,7 +63,7 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	refresh_pet_window()
 	var manifest: Dictionary = preload("res://scripts/battle_art.gd").data()
 	if game.showcase_music_active():game.begin_showcase_music()
-	game.set_music(load("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
+	game.set_music(game.music_track("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	game.play_battle_sound(215)
 	return true
 

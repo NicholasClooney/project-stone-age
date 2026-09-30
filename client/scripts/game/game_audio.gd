@@ -4,18 +4,29 @@ extends RefCounted
 ## switches. The players and the settings stay on the game (game.music,
 ## game.muted and so on); see docs/technical/game-scripts.md.
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
+const MusicTracks = preload("res://scripts/music_tracks.gd")
+## The village music, and the wilderness music the MVP manifest names.
+const VILLAGE_MUSIC := "res://assets/legacy/sabgm_t0.wav"
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
 	game = owner
 
+## The map's own music. Tracks load when a map asks for them and are freed
+## once nothing plays or remembers them (the previous map's music goes when
+## the next map's starts); only paths are kept for the village and wilderness.
 func exploration_music() -> AudioStream:
 	var info: Dictionary = game.world_catalog.info(int(game.data.map_id))
 	if info.get("music") is String and not str(info.music).is_empty():
-		var path := "res://assets/legacy/"+str(info.music)
-		if ResourceLoader.exists(path):return load(path)
+		var stream := MusicTracks.load_track("res://assets/legacy/"+str(info.music))
+		if stream!=null:return stream
 	if str(info.get("kind",""))=="interior" and game.area_music!=null:return game.area_music
-	return game.wilderness_music if int(game.data.map_id)==100 and game.wilderness_music!=null else game.village_music
+	var wilderness := MusicTracks.load_track(game.wilderness_music) if int(game.data.map_id)==100 and not game.wilderness_music.is_empty() else null
+	return wilderness if wilderness!=null else MusicTracks.load_track(game.village_music)
+
+## A music track by any of its paths (scripts/music_tracks.gd).
+func music_track(path: String) -> AudioStream:
+	return MusicTracks.load_track(path)
 
 func set_music(stream: AudioStream) -> void:
 	# The radio replaces map and battle music; remember what the scene wants.
@@ -26,10 +37,7 @@ func set_music(stream: AudioStream) -> void:
 	game.music.stop()
 	game.music.stream = stream
 	PerfRegistry.track_audio("music",stream.resource_path if stream!=null else "",stream)
-	if stream is AudioStreamWAV:
-		stream.loop_begin = 0
-		stream.loop_end = int(stream.get_length()*stream.mix_rate)
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
+	MusicTracks.prepare(stream)
 	game.music.play()
 
 ## 后台搜宠 (hunt.showcase) is capturing or training a pet on screen, or has
@@ -56,14 +64,11 @@ func end_showcase_music() -> void:
 	elif not game.battle_view.visible:set_music(exploration_music())
 
 func setup_audio() -> void:
-	game.music = AudioStreamPlayer.new()
-	game.music.stream = load("res://assets/legacy/sabgm_t0.wav")
-	game.music.stream.loop_begin = 0
-	game.music.stream.loop_end = int(game.music.stream.get_length()*game.music.stream.mix_rate)
-	game.music.stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	game.village_music = game.music.stream
+	game.music = MusicTracks.music_player()
+	game.village_music = VILLAGE_MUSIC
 	if game.mvp_manifest.get("audio",{}).has("wilderness"):
-		game.wilderness_music = load("res://assets/legacy/mvp/"+str(game.mvp_manifest.audio.wilderness))
+		game.wilderness_music = "res://assets/legacy/mvp/"+str(game.mvp_manifest.audio.wilderness)
+	game.music.stream = MusicTracks.load_track(game.village_music)
 	game.music.volume_db = linear_to_db(game.volume)
 	game.add_child(game.music)
 	game.music.play()
@@ -82,7 +87,7 @@ func setup_audio() -> void:
 	if game.mvp_manifest.get("audio",{}).has("battle_enter"):
 		game.battle_sounds[215] = load("res://assets/legacy/mvp/"+str(game.mvp_manifest.audio.battle_enter))
 	game.effect.stream = game.ui_sounds[201]
-	PerfRegistry.track_audio("music",game.village_music.resource_path,game.village_music)
+	if game.music.stream!=null:PerfRegistry.track_audio("music",game.music.stream.resource_path,game.music.stream)
 	for sounds in [game.ui_sounds,game.battle_sounds]:
 		for ident in sounds:PerfRegistry.track_audio("effects",ident,sounds[ident])
 	game.effect.volume_db = -10

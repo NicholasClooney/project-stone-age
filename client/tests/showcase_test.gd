@@ -150,7 +150,7 @@ func run() -> void:
 	check(game.showcase_ticker.visible and game.showcase_ticker.find_child("Line_found",true,false)!=null,"this device shows the info block")
 	check(is_equal_approx(game.battle_view.playback_speed,8.0),"the battle plays at this device's 战斗速度")
 	var bgm: String = str(JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/battle/manifest.json")).audio.bgm)
-	if radio_ok:check(radio.suspended and radio.current==radio_track and game.music.stream.resource_path.ends_with(bgm.get_file()),"battle music takes over from the radio, which keeps its track")
+	if radio_ok:check(radio.suspended and radio.current==radio_track and game.music.stream.resource_path.get_file().get_basename()==bgm.get_file().get_basename(),"battle music takes over from the radio, which keeps its track")
 	for i in range(2):hunt.scan_once()
 	check(automation.hunt_running and automation.showcase_queue.size()==4,"the search goes on during the capture battle (queue 4)")
 	var captures_before: int = game.battle_view.captures_presented
@@ -188,7 +188,7 @@ func run() -> void:
 			last_battle = battle_id
 			shown += 1
 		if game.state.battle_open:last_state = game.state.battle.duplicate()
-		if radio_ok and flow.phase=="train" and not game.battle_view.visible and not game.music.stream.resource_path.contains("battle/"):music_ok = false
+		if radio_ok and flow.phase=="train" and not game.battle_view.visible and game.music.stream.resource_path.get_file().get_basename()!=bgm.get_file().get_basename():music_ok = false
 		if flow.phase!="train":break
 		if not levelled and shown>=2:levelled = game.backend.session.level_pet_to(str(flow.pet_id),117)
 		step(game)

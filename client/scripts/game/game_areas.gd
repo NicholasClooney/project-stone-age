@@ -7,6 +7,7 @@ extends RefCounted
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
 const MapFile = preload("res://scripts/map_file.gd")
+const MusicTracks = preload("res://scripts/music_tracks.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -129,7 +130,9 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 func area_packs(map_id: int) -> Array:
 	var packs: Array = game.asset_packs.map_packs(map_id).duplicate()
 	var music_path := str(game.world_catalog.info(map_id).get("music",""))
-	if not music_path.is_empty():packs.append(game.asset_packs.file_pack("res://assets/legacy/"+music_path))
+	if not music_path.is_empty():
+		var pack: String = game.asset_packs.file_pack(MusicTracks.path("res://assets/legacy/"+music_path))
+		if not pack.is_empty() and not packs.has(pack):packs.append(pack)
 	return packs
 
 func _load_area_after_download(map_id: int, destination: Vector2i, needed: Array) -> void:

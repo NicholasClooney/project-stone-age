@@ -122,7 +122,8 @@ if [ "$import_only" = 0 ]; then
   step "Python tools"
   if [ ! -x "$PY" ]; then python3 -m venv .tools/asset-venv; fi
   "$PY" -m pip install --quiet -r tools/requirements.txt
-  command -v ffmpeg >/dev/null 2>&1 || echo "Note: ffmpeg not found; the web waiting music is kept as WAV (larger). Optional."
+  # Music is encoded to Ogg Vorbis with the soundfile package (tools/music_codec.py);
+  # ffmpeg is only a fallback, and without either the tracks stay WAV.
 
   step "Reference repositories"
   python3 - <<'EOF'

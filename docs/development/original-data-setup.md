@@ -68,8 +68,8 @@ $PY tools/import_pet_training.py "$CLIENT"
 $PY tools/import_characters.py "$CLIENT"
 $PY tools/import_pets.py "$CLIENT"
 $PY tools/import_mirror.py "$CLIENT"
-$PY tools/import_loading.py "$CLIENT"        # web waiting screen; uses ffmpeg if present
-$PY tools/import_music.py "$CLIENT"          # 电台 soundtrack; the 8.0 folder has 26 tracks, 2.5 has 24
+$PY tools/import_loading.py "$CLIENT"        # web waiting screen (Ogg Vorbis, tools/music_codec.py)
+$PY tools/import_music.py "$CLIENT"          # the music library: map, battle and 电台 music; the 8.0 folder has 26 tracks, 2.5 has 24
 $PY tools/import_riding.py "$CLIENT"         # after characters: riders are checked against them
 #   with the 8.0 data: add --extra-source .tools/legacy/extracted/SA8.0-20260803
 $PY tools/import_grid_cursor.py "$CLIENT"

@@ -10,15 +10,22 @@ extends Node
 ##
 ## The original tracks are loops of about a minute, so each one repeats until
 ## it has played for MIN_SECONDS and then the next starts at its loop point.
+## A track with an intro loops back to its original loop start
+## (scripts/music_tracks.gd), so later loops are shorter than the first pass.
 ## PREFETCH_SECONDS before that the next track is chosen (shuffle too) and
 ## fetched in the background, so on the web the change has no download gap.
 ## While the radio is on, game.set_music() only records what the map or battle
 ## wants, and turning the radio off plays that again.
+##
+## Only the playing track and the one fetched ahead stay loaded: a finished
+## track is freed when the next one starts, and turning the radio off drops
+## both. On the web they play as streams (scripts/music_tracks.gd).
 signal changed
 signal library_changed
 
 const MusicLibrary = preload("res://scripts/music_library.gd")
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
+const MusicTracks = preload("res://scripts/music_tracks.gd")
 const MANIFEST := "res://assets/legacy/music/manifest.json"
 const MIN_SECONDS := 100.0
 const PREFETCH_SECONDS := 10.0
@@ -182,6 +189,7 @@ func title(track: String) -> String:
 
 func turn_on(track: String = "") -> void:
 	if not available():return
+	if not on and world.music.stream!=null:scene_stream = world.music.stream
 	on = true
 	world.set_viewer_pref("radio_on",true)
 	var list := station_tracks()
@@ -200,11 +208,14 @@ func turn_off() -> void:
 	current = ""
 	entry = -1
 	_stream = null
+	_forget_upcoming()
 	status = ""
 	world.set_viewer_pref("radio_on",false)
 	world.music.stream_paused = false
 	world.music.stop()
 	var scene: AudioStream = scene_stream if scene_stream!=null else world.exploration_music()
+	# The player holds the scene's music from here; the radio keeps no copy.
+	scene_stream = null
 	world.set_music(scene)
 	changed.emit()
 
@@ -261,6 +272,8 @@ func play_at(index: int) -> void:
 func play(track: String, index: int = -1) -> void:
 	if not by_id.has(track):return
 	if not on:
+		# What the map or battle plays now, played again when the radio stops.
+		if world.music.stream!=null and world.music.stream!=_stream:scene_stream = world.music.stream
 		on = true
 		world.set_viewer_pref("radio_on",true)
 	if index < 0:index = station_tracks().find(track)
@@ -285,12 +298,7 @@ func play(track: String, index: int = -1) -> void:
 		_start(load(path)),"电台")
 
 func _start(stream: AudioStream) -> void:
-	if stream is AudioStreamWAV:
-		stream.loop_begin = 0
-		stream.loop_end = int(stream.get_length()*stream.mix_rate)
-		stream.loop_mode = AudioStreamWAV.LOOP_FORWARD
-	elif "loop" in stream:
-		stream.loop = true
+	MusicTracks.prepare(stream)
 	_stream = stream
 	PerfRegistry.track_audio("radio",stream.resource_path,stream)
 	_loops = 0
@@ -369,13 +377,16 @@ func _stop_playback(reason: String) -> void:
 	current = ""
 	entry = -1
 	_stream = null
+	_forget_upcoming()
 	status = reason
 	world.music.stop()
 
-## How many loops the track plays before the radio moves on.
+## How many times the track plays (the first pass, then loops from its loop
+## start) before the radio moves on: at least MIN_SECONDS in all.
 func loops_for(track: String) -> int:
 	var seconds := float(by_id.get(track,{}).get("seconds",MIN_SECONDS))
-	return maxi(1,ceili(MIN_SECONDS/maxf(seconds,1.0)))
+	var loop := maxf(seconds-float(by_id.get(track,{}).get("loop_start",0.0)),1.0)
+	return 1+maxi(0,ceili((MIN_SECONDS-seconds)/loop))
 
 func _process(_delta: float) -> void:
 	if not on or paused or suspended or _stream==null or world.music.stream!=_stream or not world.music.playing:return
@@ -385,7 +396,7 @@ func _process(_delta: float) -> void:
 		_last_position = at
 		return
 	var length: float = _stream.get_length()
-	var remaining: float = (loops_for(current)-_loops-1)*length+(length-at)
+	var remaining: float = (loops_for(current)-_loops-1)*(length-MusicTracks.loop_start(_stream))+(length-at)
 	if remaining <= PREFETCH_SECONDS:prepare_next()
 	if at+0.5 < _last_position:
 		_loops += 1

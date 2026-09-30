@@ -37,6 +37,9 @@ func run() -> void:
 	check(radio.paused and game.music.stream_paused and radio.status==audio.INTERRUPTED_NOTE,"the radio shows 暂停 with the note")
 	radio.toggle_pause()
 	check(not radio.paused and not game.music.stream_paused and radio.status.is_empty(),"播放 resumes the radio and clears the note")
+	# Music is mixed by the engine (stream playback, scripts/music_tracks.gd), so
+	# resuming the context resumes it; the player keeps its track throughout.
+	check(game.music.playback_type==AudioServer.PLAYBACK_TYPE_STREAM and game.music.stream==radio._stream,"the radio's track plays on as a stream through the same player")
 	audio.on_context_state("running")
 	check(not audio.interrupted,"the context running again ends the interruption")
 

@@ -74,7 +74,10 @@ def run(source, output):
     audio = {}
     for key, name in [('bgm', 'bgm/sabgm_b0.wav'), ('menu_open', 'se/sas_02.wav'), ('menu_close', 'se/sas_03.wav'), ('battle_cancel', 'se/sas_17.wav'), ('enemy_attack', 'se/sae_23.wav'), ('club_attack', 'se/sap_02.wav'), ('level_up', 'se/sas_11.wav'), ('capture_success', 'bgm/sabgm_s0.wav'), ('capture_hit', 'se/sad_01.wav'), ('capture_club_hit', 'se/sad_02.wav')]:
         origin = archive.data / name
-        shutil.copyfile(origin, output / 'audio' / origin.name)
+        # Music keeps its original name here but plays from the library
+        # tools/import_music.py writes (client/scripts/music_tracks.gd).
+        if not name.startswith('bgm/'):
+            shutil.copyfile(origin, output / 'audio' / origin.name)
         audio[key] = 'audio/' + origin.name
     evidence = {
         'client_revision': '1997fc20456dbda36d181b9680ae10bed2e9cdf9',

@@ -11,17 +11,22 @@ as Big5 and saved again; encoding them as Big5 and decoding as GBK recovers
 first twelve entries) are named after where the original plays the track
 (play_bgm callers, map object markers 40-46) instead.
 
-Tracks are transcoded to Ogg Vorbis (about a sixth of the WAV size) when
-ffmpeg is available, otherwise copied as WAV, into client/assets/legacy/music/
-with manifest.json. plan_web_packs.py gives each track its own web pack, so a
-browser downloads a track only when the radio plays it.
+Tracks are encoded to Ogg Vorbis (tools/music_codec.py: about q6, cut at the
+original loop end, with the loop start recorded as `loop_start` seconds) into
+client/assets/legacy/music/ with manifest.json; without an encoder the WAV is
+copied instead. This folder is the game's one music library: the map, battle
+and radio music all play from it (scripts/music_tracks.gd), and the web
+build streams it rather than decoding it (docs/technical/web-client.md).
+plan_web_packs.py gives each track its own web pack, so a browser downloads a
+track only when it plays; the battle music travels in the core pack.
+The original WAVs stay in the extracted client for a lossless option later.
 """
 import argparse
 import json
 import shutil
-import subprocess
-import wave
 from pathlib import Path
+
+import music_codec
 
 # id: (title, kind, where the original plays it). Order is the radio's order.
 TRACKS = {
@@ -54,25 +59,19 @@ TRACKS = {
 }
 
 
-def transcode(wav: Path, folder: Path) -> Path:
-    """Ogg Vorbis via ffmpeg's built-in encoder, or the original WAV."""
+def transcode(wav: Path, folder: Path) -> tuple:
+    """(file written, music_codec.layout): Ogg Vorbis, or the original WAV."""
     ogg = folder / f'{wav.stem}.ogg'
-    if shutil.which('ffmpeg'):
-        result = subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(wav), '-strict', '-2',
-                                 '-c:a', 'vorbis', '-q:a', '4', str(ogg)], capture_output=True, text=True)
-        if result.returncode == 0 and ogg.exists() and ogg.stat().st_size > 0:
-            (folder / wav.name).unlink(missing_ok=True)
-            return ogg
-        print(f'ffmpeg could not write Vorbis for {wav.name}; keeping the WAV:', result.stderr.strip())
+    try:
+        info = music_codec.encode(wav, ogg)
+        (folder / wav.name).unlink(missing_ok=True)
+        return ogg, info
+    except RuntimeError as error:
+        print(f'{error}; keeping the WAV')
     ogg.unlink(missing_ok=True)
     target = folder / wav.name
     shutil.copyfile(wav, target)
-    return target
-
-
-def seconds(wav: Path) -> float:
-    with wave.open(str(wav)) as audio:
-        return round(audio.getnframes() / audio.getframerate(), 2)
+    return target, music_codec.layout(wav)
 
 
 def run(source, output):
@@ -86,11 +85,14 @@ def run(source, output):
         wav = bgm / f'{ident}.wav'
         if not wav.exists():
             continue
-        file = transcode(wav, folder)
-        tracks.append(dict(id=ident, title=title, kind=kind, file=f'music/{file.name}', seconds=seconds(wav), source=note))
+        file, info = transcode(wav, folder)
+        # seconds: the stream's length (cut at the loop end); loop_start: where it loops back to.
+        tracks.append(dict(id=ident, title=title, kind=kind, file=f'music/{file.name}', seconds=info['seconds'],
+                           loop_start=info['loop_seconds'], source=note))
     unknown = sorted(p.stem for p in bgm.glob('sabgm_*.wav') if p.stem not in TRACKS)
     manifest = dict(tracks=tracks, provenance=dict(
         client=str(Path(source).name),
+        encoding=f'Ogg Vorbis q{music_codec.QUALITY}, cut at the smpl loop end; loop_start from the smpl loop start',
         titles='bgm_tbl comments in system/t_music.cpp (8.5 client source), Big5/GBK mojibake reversed; '
                'untitled entries named after their play_bgm callers and map music markers.',
         untitled_extra=unknown))

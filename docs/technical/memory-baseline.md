@@ -13,7 +13,7 @@ Where runtime memory goes, measured before any optimization (2026-09-30, `main` 
 Almost all of it is parsed JSON, not pictures. Textures are only about 110 MB after the tour. The biggest consumers, in order:
 
 1. **Parsed JSON as Variant dictionaries: 10 to 20 times the file size.** Battle manifest 141 MB (from startup), riding manifest 208 MB (from the first battle, never freed), the current map 7 to 196 MB (map 200: 196 MB).
-2. **Web only: every loaded sound decoded to float32 PCM** (Godot's web "sample" playback): 89 MB at startup, 228 MB alive after the tour, 574 MB created.
+2. **Web only: every loaded sound decoded to float32 PCM** (Godot's web "sample" playback; music no longer, see [after streamed audio](#after-streamed-audio-optimization-3)): 89 MB at startup, 228 MB alive after the tour, 574 MB created.
 3. **Web only: the wasm heap keeps its high-water mark.** Each map switch parses a new map while the old one is still held, and the pet encyclopedia's thumbnails read whole sheets back. The heap reached 805 MB within minutes and stays there.
 4. **Web only: every downloaded pack lives in MEMFS** (user:// is IDBFS). At startup IDBFS copies the whole IndexedDB cache into memory, including packs this session never mounts. All packs together are 974 MB.
 5. **Textures that are never freed:** every battle, pet and character sheet ever drawn (`SheetFrames`), up to 4,000 map tiles, and all pet thumbnails. That is small in a short tour (63 MB), but a sheet averages 10 MB as RGBA, so a long 后台搜宠 session across many species grows without bound.
@@ -58,12 +58,13 @@ node tools/web_memory_probe.mjs --modules /tmp/pw \
   --out build/memory-probe-web.json
 ```
 
-The save path is absolute, so the backend never touches the real `user://single-player.json`. The browser runs headless with SwiftShader WebGL, so GPU memory shows up in the GPU process as ordinary memory. The tour uses `window.stoneAgeDev` (explore, encounter, escape, return, pets, village) and the keyboard (B for 宠物大全, the mouse wheel to scroll, Esc), then reloads the page. It records:
+The save path is absolute, so the backend never touches the real `user://single-player.json`. The browser runs headless with SwiftShader WebGL, so GPU memory shows up in the GPU process as ordinary memory. The tour uses `window.stoneAgeDev` (explore, encounter, escape, return, pets, village, and since optimization 3 `radio_next` / `radio_off` for five radio tracks and back) and the keyboard (B for 宠物大全, the mouse wheel to scroll, Esc), then reloads the page. It records:
 
 - the wasm heap: the size of every `WebAssembly.Memory` the page made. This Emscripten build exports neither `FS` nor `HEAP8`, so an init script captures the memories;
 - `performance.memory` (JS heap, with `--enable-precise-memory-info`);
 - Web Audio buffers: an init script counts every `AudioBuffer` created, and after a forced GC how many are still alive;
 - footprint and resident size of the browser's processes by role (the page renderer is the largest renderer);
+- main-thread tasks over 50, 100 and 200 ms since the last step (`longtask`); streamed music is mixed on the main thread, so a task longer than the audio buffer is a gap. Under SwiftShader nearly every frame is over 200 ms, so these counts only mean something with a real GPU;
 - after the reload, the contents of IndexedDB's `/userfs` store: what IDBFS copied into MEMFS at startup. `navigator.storage.estimate()` lags by minutes, so it is not used for this.
 
 It does not measure Safari. Safari's Web Inspector (Timelines, Memory) shows the same split between JavaScript, page and layers. Use `window.stoneAgeDev` there to play the same tour.
@@ -150,6 +151,46 @@ Small. WAV imports are QOA-compressed and Ogg stays compressed; both are decoded
 
 This short tour reaches about 1.9 GB of browser memory. A long session adds more packs, more decoded radio tracks, more sheets and a heap sized by the worst map switch. That fits the 6 GB Safari tab, though Safari itself was not measured.
 
+## After streamed audio (optimization 3)
+
+Music and radio play from one Ogg Vorbis library as streams on the web (`client/scripts/music_tracks.gd`, [web client: Music](web-client.md#music)). Measured 2026-09-30 in the same checkout: "before" is `main` at b1783aa with the probe's radio steps added, "after streamed audio" is the branch; both on the same machine and build settings, with a new character each (the "after" runs happened to start on map 100 instead of the village, so compare from step 02).
+
+Web (MB; audio is Web Audio buffers alive after a GC, with those ever created in brackets):
+
+| Step | wasm heap | Audio alive (created) | Page renderer footprint | After streamed audio: wasm heap | Audio alive (created) | Page renderer footprint |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: |
+| 01 startup, first visit | 412 | 89 (178) | 804 | 591 (on map 100) | 0 (0) | 837 |
+| 02 map 100 | 709 | 146 (261) | 1,108 | 591 | 0 (0) | 847 |
+| 03 battle open | 709 | 140 (297) | 1,114 | 591 | 1 (1) | 874 |
+| 04 after the battle | 805 | 140 (298) | 1,247 | 783 | 1 (2) | 1,052 |
+| 05 after 3 more battles | 805 | 182 (453) | 1,282 | 783 | 1 (3) | 1,063 |
+| 07 宠物大全 grid scrolled | 805 | 182 (495) | 1,418 | 783 | 1 (3) | 1,227 |
+| 08 back in the village | 805 | 193 (547) | 1,527 | 783 | 1 (3) | 1,367 |
+| 08a radio, 5 tracks | 805 | 304 (837) | 1,916 | 783 | 1 (3) | 1,421 |
+| 08b radio off | 805 | 330 (893) | 1,931 | 783 | 1 (3) | 1,435 |
+| 09 reload, second visit | 412 | 158 (262) | 1,455 | 344 | 0 (0) | 606 |
+
+- **Decoded audio is gone:** 1 MB alive instead of 89 to 330 MB, 3 MB created in the whole tour instead of 893 MB. What is left are the sound effects actually played (samples, a few seconds each).
+- **The radio no longer grows memory.** Five tracks cost 111 MB of buffers before (and 26 MB more after turning it off); now nothing. The page renderer footprint across the radio steps rose 404 MB before, 68 MB after.
+- **The wasm heap is lower too:** sample playback first decodes the whole stream to PCM in the wasm heap and copies it out, which raised the heap's high-water mark. Startup on reload 412 to 344 MB; the peak after the tour 805 to 783 MB.
+- **Page renderer footprint** after the tour 1,931 to 1,435 MB; after a reload 1,455 to 606 MB.
+
+Desktop (`memory_probe.gd`, same tour): static memory is unchanged within 3 MB (the parsed JSON dominates). The audio streams held at startup are 52 streams, 1.15 MB, 105 seconds of audio (was 53 streams, 3.5 MB, about 220 seconds): the wilderness track is no longer kept loaded while the village plays. At most two music streams are held at any step (map and battle music, or the radio's current and next track); each map's music is freed when the next map's starts.
+
+Files (the music as imported and as shipped to the web):
+
+| | Before | After streamed audio |
+| --- | ---: | ---: |
+| Radio tracks, `music/` | 16.0 MB (26 Ogg Vorbis, ffmpeg's built-in encoder at q4) | 21.5 MB (26 Ogg Vorbis, libvorbis q6, cut at the loop end) |
+| Map and battle music copies (`sabgm_t0/t1.wav`, `world/audio`, `mvp/audio`, `battle/audio`) | 37.9 MB (10 WAV files, 7 tracks) | none: they play from `music/` |
+| Waiting screen `loading/sabgm_s1.ogg` | 0.26 MB | 0.35 MB |
+| Web packs for music | 28.1 MB (5 `music-` packs of WAV, 26 `radio-` packs) plus the battle WAVs in core | 22.0 MB (24 `music-` packs) plus 0.8 MB of battle music in core |
+| All web packs | 1,856 packs, 1,021.6 MB | 1,849 packs, 1,015.5 MB |
+
+The original WAVs (89 MB) stay in the extracted client folder.
+
+Streaming has one cost in this no-threads build: the engine mixes music on the main thread, so a stall longer than the audio buffer (raised to 150 ms, about 170 ms in practice) is a gap in the music. In headless Chrome with a real GPU (Metal), the playback position advanced exactly 3.0 s in 3 s; under SwiftShader, where every frame takes over 200 ms, it advanced only about 0.6 s in 3 s. Safari was not measured.
+
 ## What never gets freed
 
 | Held | Size in the tour | Grows with |
@@ -162,7 +203,7 @@ This short tour reaches about 1.9 GB of browser memory. A long session adds more
 | `PetThumbnails._made` | 384, 10.6 MB | At most about 580 species, about 16 MB |
 | Web: wasm heap | 805 MB | The worst moment so far |
 | Web: packs in MEMFS | 66 MB cached, 426 mounted | Every pack ever downloaded on this device |
-| Web: decoded audio | 228 MB | Every stream kept loaded (battle sounds, music, radio) |
+| Web: decoded audio | 228 MB (1 MB after optimization 3) | Every stream kept loaded (battle sounds, music, radio); since optimization 3 only sound effects |
 
 What does come back: map data when leaving a map (the same map 100 is 563 MB before and 572 MB after visiting two other maps), battle nodes (static is the same before and after closing a battle), window nodes, and radio tracks on desktop.
 
@@ -172,7 +213,7 @@ Estimates are from the measurements above. The web numbers matter most, since th
 
 1. **Done, see [after packed maps](#after-packed-maps-optimization-1). Store maps as packed arrays.** Convert `ground` and `blocked` to `PackedInt32Array` / `PackedByteArray` at import (or read `var_to_bytes` / a binary file instead of JSON). Map 100: 125 MB to about 5 MB; map 200: 196 MB to about 8 MB. Also removes most of the map-switch peak (currently +300 to 400 MB). **Saves about 150 to 200 MB held and 300 MB or more of peak, which on the web is the wasm heap size.**
 2. **Split the battle and riding manifests per sprite and load on demand**, like the 8.0 pets already are (`battle/pets/<sprite>.json`), and keep frames as packed arrays rather than dictionaries. A battle needs a handful of sprites (about 1 MB each parsed). **Saves about 330 MB static (141 + 208 today) and the web heap with it.** Turning `backgrounds.json` into packed lookups (a battle reads one ground, one battlefield list and one background) saves about 30 MB.
-3. **Web music as streams, not samples.** Set `playback_type = PLAYBACK_TYPE_STREAM` on the music and radio players (or `audio/general/default_playback_type.web`), keep samples for short effects. Music is decoded in small chunks by the audio worklet. **Saves about 200 MB after the tour and 50 to 60 MB per radio track**; startup 89 MB to about 12 MB. Drop `upcoming_stream` or keep it compressed. (Transcoding the remaining WAV music to Ogg Vorbis helps pack size and desktop memory only a little; streaming is what matters on the web.)
+3. **Done, see [after streamed audio](#after-streamed-audio-optimization-3). Web music as streams, not samples.** Set `playback_type = PLAYBACK_TYPE_STREAM` on the music and radio players (or `audio/general/default_playback_type.web`), keep samples for short effects. Music is decoded in small chunks by the audio worklet. **Saves about 200 MB after the tour and 50 to 60 MB per radio track**; startup 89 MB to about 12 MB. Drop `upcoming_stream` or keep it compressed. (Transcoding the remaining WAV music to Ogg Vorbis helps pack size and desktop memory only a little; streaming is what matters on the web.)
 4. **Keep packs out of MEMFS between sessions.** Store downloaded packs in the Cache API or OPFS from JavaScript and write only the packs this session mounts into a non-persistent MEMFS folder (for example `/tmp/packs`), so startup no longer copies the whole IndexedDB store into memory. **Saves up to the whole cache (up to about 970 MB on a well-travelled device, 66 MB after this tour) at every start.** Mounted packs still cost their size for the session; Godot cannot unmount a pack, so the remaining win is mounting fewer (thumbnails below prefetch whole sprite packs).
 5. **Texture budget (LRU) for sprite sheets.** Evict `SheetFrames` sheets (and the AtlasTextures in `battle_view.textures` and `AnimatedPortrait._textures` that keep them alive) beyond a byte budget, say 64 to 128 MB; clear `battle_view.textures` on `close_battle`. Budget `game.textures` by bytes rather than 4,000 entries. **Bounds a long 后台搜宠 session** (today about 10 MB per new species forever); little change in this short tour.
 6. **Palette (R8) textures plus a palette shader.** Import sheets as 1 byte a pixel (`Image.FORMAT_R8` or L8) with a 256 x 1 palette texture and a `canvas_item` shader that looks up the colour. **Cuts every sheet's GPU memory by 4** (battle sheets 6.5 GB to 1.6 GB in total; 63 MB to about 16 MB in this tour) and also the web packs (the build stores RGBA today). Needs changes in `SheetFrames`, the thumbnail cutter and every node that draws sheet frames.
@@ -229,5 +270,5 @@ The wasm heap after the first map switch drops by 214 MB; after the tour it is 6
 ## Re-running
 
 - Desktop: the command above; compare the step table (`static_mb`, `static_max_mb`, `texture_mb`, `footprint_mb`) and the JSON costs printed at the end.
-- Web: build, serve on your own ports, run the probe; compare `wasm_heap_mb`, `audio.alive_mb`, the page renderer's `largest_footprint_mb` and the reload row.
+- Web: build, serve on your own ports, run the probe; compare `wasm_heap_mb`, `audio.alive_mb`, the page renderer's `largest_footprint_mb` and the reload row. Start the backend with a new save each time, and compare from step 02: a new character does not always start in the village.
 - Results go to `build/` (ignored). Footprint numbers vary by 10 to 20% between runs (allocator caching, other processes); static memory and the wasm heap are exact.

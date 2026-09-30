@@ -36,7 +36,7 @@ func run():
     bridges_ok=bridges_ok and game.props.visible_props[index].z_index==-1
   check(bridges_ok,"map %d respects original bridge drawing priority" % id)
   check(game.props.visible_props.size()<3000,"map %d streams nearby scenery instead of entire island" % id)
-  check(game.music.stream.resource_path.ends_with(str(catalog.info(id).music)),"map %d uses source music" % id)
+  check(game.music.stream.resource_path.get_file().get_basename()==str(catalog.info(id).music).get_file().get_basename(),"map %d uses source music" % id)
   print("WORLD LOAD %d: %dms / %d visible props" % [id,Time.get_ticks_msec()-start,game.props.visible_props.size()])
   if DisplayServer.get_name()!="headless":
    await RenderingServer.frame_post_draw

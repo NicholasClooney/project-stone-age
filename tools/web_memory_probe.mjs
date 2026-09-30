@@ -54,6 +54,13 @@ const audioHook = () => {
     const native = WebAssembly[name];
     WebAssembly[name] = function (...a) { return native.apply(this, a).then(scan); };
   }
+  // Main-thread tasks over 50 ms: streamed music is mixed on the main thread in
+  // this no-threads build, so a task longer than the audio buffer is a gap.
+  const tasks = (window.__longTasks = []);
+  try {
+    new PerformanceObserver((list) => { for (const entry of list.getEntries()) tasks.push(entry.duration); })
+      .observe({ type: "longtask", buffered: true });
+  } catch (e) { /* not supported */ }
   const original = BaseAudioContext.prototype.createBuffer;
   BaseAudioContext.prototype.createBuffer = function (...a) { return note(original.apply(this, a)); };
   const Native = window.AudioBuffer;
@@ -83,6 +90,10 @@ const pageStats = async () => {
       if (buffer) { alive += 1; aliveBytes += buffer.length * buffer.numberOfChannels * 4; }
     }
     result.audio = { created: buffers.count, created_mb: buffers.bytes / 1048576, alive, alive_mb: aliveBytes / 1048576 };
+  }
+  if (window.__longTasks) {
+    const tasks = window.__longTasks.splice(0);
+    result.long_tasks = { over_50ms: tasks.length, over_100ms: tasks.filter((d) => d > 100).length, over_200ms: tasks.filter((d) => d > 200).length, longest_ms: Math.round(Math.max(0, ...tasks)) };
   }
   return result;
 };
@@ -121,7 +132,7 @@ async function sample(page, browserPid, step) {
   rows.push(row);
   const renderer = row.processes.renderer || {};
   const gpu = row.processes["gpu-process"] || {};
-  console.log(`[web] ${step} | wasm ${(row.wasm_heap_mb || 0).toFixed(0)} MB | idb ${(row.storage_mb || 0).toFixed(0)} MB | js ${(row.js_used_mb || 0).toFixed(0)} MB | audio alive ${row.audio ? row.audio.alive_mb.toFixed(0) : "?"} MB of ${row.audio ? row.audio.created_mb.toFixed(0) : "?"} | page renderer footprint ${(renderer.largest_footprint_mb || 0).toFixed(0)} MB (all renderers rss ${(renderer.rss_mb || 0).toFixed(0)}) | gpu rss ${(gpu.rss_mb || 0).toFixed(0)} fp ${(gpu.footprint_mb || 0).toFixed(0)} | mounted ${row.stoneAge ? row.stoneAge.mounted : "?"}`);
+  console.log(`[web] ${step} | wasm ${(row.wasm_heap_mb || 0).toFixed(0)} MB | idb ${(row.storage_mb || 0).toFixed(0)} MB | js ${(row.js_used_mb || 0).toFixed(0)} MB | audio alive ${row.audio ? row.audio.alive_mb.toFixed(0) : "?"} MB of ${row.audio ? row.audio.created_mb.toFixed(0) : "?"} | page renderer footprint ${(renderer.largest_footprint_mb || 0).toFixed(0)} MB (all renderers rss ${(renderer.rss_mb || 0).toFixed(0)}) | gpu rss ${(gpu.rss_mb || 0).toFixed(0)} fp ${(gpu.footprint_mb || 0).toFixed(0)} | mounted ${row.stoneAge ? row.stoneAge.mounted : "?"} | long tasks ${JSON.stringify(row.long_tasks || {})}`);
   console.log(`[web]    processes ${JSON.stringify(row.processes)}`);
 }
 
@@ -197,6 +208,17 @@ await dev(page, "village");
 await until(page, `window.stoneAge && window.stoneAge.map === 1000 && window.stoneAge.pending === 0`, 60000);
 await wait(3000);
 await sample(page, pid, "08 back in the village");
+// The radio through 5 tracks, then off: what its tracks cost and whether they go.
+for (let i = 0; i < 5; i++) {
+  const before = await page.evaluate(() => (window.stoneAge && window.stoneAge.radio) || "");
+  await dev(page, "radio_next");
+  await until(page, `window.stoneAge && window.stoneAge.radio && window.stoneAge.radio !== ${JSON.stringify(before)} && window.stoneAge.music.includes(window.stoneAge.radio)`, 60000);
+  await wait(3000);
+}
+await sample(page, pid, "08a radio, 5 tracks");
+await dev(page, "radio_off");
+await wait(4000);
+await sample(page, pid, "08b radio off");
 await page.reload();
 await until(page, settled, 240000);
 await wait(3000);

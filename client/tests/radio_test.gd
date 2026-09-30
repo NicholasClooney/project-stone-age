@@ -83,7 +83,7 @@ func run() -> void:
 	check(await until(func():return radio_a.on and radio_a.current==all[0] and a.music.playing and a.music.stream.resource_path.ends_with(all[0]+".ogg")),"开启电台 plays the first track")
 	check(a.music.stream.loop,"a track loops seamlessly until the radio moves on")
 	var village: AudioStream = a.exploration_music()
-	var battle_music: AudioStream = load("res://assets/legacy/battle/audio/sabgm_b0.wav")
+	var battle_music: AudioStream = a.music_track("res://assets/legacy/battle/audio/sabgm_b0.wav")
 	a.set_music(battle_music)
 	check(a.music.stream.resource_path.ends_with(all[0]+".ogg") and radio_a.scene_stream==battle_music,"a battle does not interrupt the radio; its music is remembered")
 	a.set_music(village)
@@ -91,7 +91,10 @@ func run() -> void:
 
 	# The track repeats until it has played long enough, then the next starts.
 	var loops: int = radio_a.loops_for(all[0])
-	check(loops==maxi(1,ceili(radio_a.MIN_SECONDS/float(radio_a.by_id[all[0]].seconds))),"a %d-second track plays %d times" % [roundi(float(radio_a.by_id[all[0]].seconds)),loops])
+	var first: Dictionary = radio_a.by_id[all[0]]
+	var played := float(first.seconds)+(loops-1)*(float(first.seconds)-float(first.get("loop_start",0.0)))
+	var one_less := played-(float(first.seconds)-float(first.get("loop_start",0.0)))
+	check(played >= radio_a.MIN_SECONDS and (loops==1 or one_less < radio_a.MIN_SECONDS),"a %d-second track (looping from %.1f s) plays %d times" % [roundi(float(first.seconds)),float(first.get("loop_start",0.0)),loops])
 	radio_a._loops = loops-1
 	radio_a._last_position = 9999.0
 	radio_a._process(0.0)

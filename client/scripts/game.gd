@@ -147,8 +147,9 @@ var session
 var battle_session
 var field_steps := 0
 var battle_sounds: Dictionary = {}
-var wilderness_music: AudioStream
-var village_music: AudioStream
+## Paths of the village and wilderness music (scripts/music_tracks.gd loads them when played).
+var wilderness_music := ""
+var village_music := ""
 var area_music: AudioStream
 var changelog_menu: Control
 ## Automation settings belong to the character profile (automation_settings,
@@ -500,6 +501,7 @@ func _on_backend_message(event: Dictionary) -> void:_remote._on_backend_message(
 # ---- sound (scripts/game/game_audio.gd) ----
 func exploration_music() -> AudioStream:return _audio.exploration_music()
 func set_music(stream: AudioStream) -> void:_audio.set_music(stream)
+func music_track(path: String) -> AudioStream:return _audio.music_track(path)
 func showcase_music_active() -> bool:return _audio.showcase_music_active()
 func begin_showcase_music() -> void:_audio.begin_showcase_music()
 func end_showcase_music() -> void:_audio.end_showcase_music()

@@ -196,7 +196,8 @@ def run(source,output,server_map=None):
         for x,y,ident in group:
             e=archive.entries[ident];preview.alpha_composite(archive.image(ident),(int((x+y)*32+e['x']+250),int((y-x)*24+w*24+e['y']+250)))
     preview.thumbnail((1800,1400));preview.convert('RGB').save(output/'map-preview.jpg')
-    for file in ['bgm/sabgm_t0.wav','bgm/sabgm_t1.wav','se/sas_01.wav','se/sas_02.wav']:
+    # Music (bgm/sabgm_t0.wav) plays from the library tools/import_music.py writes.
+    for file in ['se/sas_01.wav','se/sas_02.wav']:
         p=Path(source)/'data'/file
         if p.exists(): shutil.copyfile(p,output/p.name)
     report=dict(source='99ds.com StoneAge 2.5 client package SA2.5-20260823',map_source=map_source,map_sha256=hashlib.sha256(server if server_map else raw).hexdigest(),palette_sha256=hashlib.sha256(archive.palette_path.read_bytes()).hexdigest(),missing_graphics=missing,images=len(used),ground_cells=len(cells),objects=len(objects),walkable=sum(not v for v in blocked),sprite_ids=list(characters))

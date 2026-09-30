@@ -27,7 +27,7 @@ Export templates live in `~/Library/Application Support/Godot/export_templates/4
 | `tiles-<hash>` | Tiles shared by several maps, grouped by the exact set that uses them | Entering any of those maps |
 | `char-<id>` | One player character's walking art (villages that draw it depend on it too) | Startup, character change, those villages |
 | `sprite-<id>`, `riding-<id>`, `bg-<n>` | Battle sprite and mounted composite (one sprite sheet each, see [sprite sheets](sprite-sheets.md)), battlefield | Opening a battle that shows them; pet menus; companions |
-| `music-<name>` | One track | Startup tracks, entering a map with it |
+| `music-<name>` | One track of the music library (Ogg Vorbis) | Startup (village music), entering a map with it, the radio playing it |
 
 Riding has one `riding-<id>` pack per imported composite, holding that composite's sprite sheet (241 with the 8.0 data, about 1 MB each; `tools/import_riding.py` packs a composite's frames into one lossless 256-colour sheet, split in two only past 4096 px); mounting and mounted battles wait for the ridden composite only. The riding manifest (3.5 MB JSON, about 0.3 MB gzipped) stays in core. Re-run `tools/import_riding.py` in a checkout before its next web build after the importer changes, since imported assets are not in Git.
 
@@ -43,7 +43,7 @@ A measured build (before all riding pairs were imported): 1,117 packs, 302 MB in
 - The full screen (art and waiting music) is for startup only. While it is up the game's music is paused; it resumes when the wait ends. The waiting music follows the game's volume and mute.
 - Once the game has started (`enter_game()`), later waits show only a slim progress panel at the top centre over the running game: no art or backdrop, no waiting music, the area or battle music keeps playing, and clicks pass through.
 - Browsers refuse audio until a gesture. Godot's web audio driver resumes its context on the first click, tap or key, so the screen shows 点击任意处开启音乐 until `navigator.userActivation` reports one.
-- Both assets must exist before core, so they come from the `loading` pack, mounted first. Import them once with `.tools/asset-venv/bin/python tools/import_loading.py /path/to/stoneage2.5`; it writes `client/assets/legacy/loading/` (ignored like every original asset) and transcodes the track to Ogg Vorbis with ffmpeg's built-in encoder (1.3 MB WAV to about 260 KB), or copies the WAV (QOA, about 0.5 MB) without ffmpeg. Without the import the screen still works, with the backdrop colour and no music.
+- Both assets must exist before core, so they come from the `loading` pack, mounted first. Import them once with `.tools/asset-venv/bin/python tools/import_loading.py /path/to/stoneage2.5`; it writes `client/assets/legacy/loading/` (ignored like every original asset) and encodes the track to Ogg Vorbis like the music library below (1.3 MB WAV to about 360 KB), or copies the WAV (QOA, about 0.5 MB) without an encoder. It plays as a stream, and the screen lets go of it once the game has started. Without the import the screen still works, with the backdrop colour and no music.
 - Desktop and the in-process game ship assets locally and never create it. The remote startup notice (正在连接 MacBook 上的服务器…) sits on the same art, lightly dimmed, whenever the image is available; the disconnection notice in play is unchanged.
 
 `tools/serve_web.py` gzips the engine, scripts, JSON and packs (the core pack shrinks from 29 MB to 6 MB), marks hashed packs immutable and revalidates the rest. Gzipped responses omit `Content-Length`: Godot's web `HTTPRequest` counts the decoded body the browser hands it against that header and would otherwise never complete.
@@ -75,6 +75,27 @@ brew install mkcert
 ```
 
 Everything lives in the ignored `.tools/tls/`; nothing is added to the Mac's trust store. That folder exists only in the checkout where `make-cert.sh` ran: copy it into other checkouts and worktrees (`cp -c -R <checkout>/.tools/tls .tools/tls`) rather than rerunning the script there, which would create a new CA that devices must install again. Without it `serve.sh` warns and serves plain HTTP / WS, and `https://` pages or `wss://` clients cannot connect. Install the CA on Vision Pro once: AirDrop `.tools/tls/StoneAge-Local-CA.crt`, install it under Settings > General > VPN & Device Management, then enable it under Settings > General > About > Certificate Trust Settings. Prefer the `.local` name; rerun `make-cert.sh` if you use the IP and it changes. Keep `.tools/tls/ca/rootCA-key.pem` private: anyone with it can mint certificates this device trusts. Explicit `STONE_AGE_TLS_CERT` / `STONE_AGE_TLS_KEY` override the generated pair. Vision Pro Safari has not been tested yet; check loading, WebSocket connection, audio unlock and gamepad input there first.
+
+## Music
+
+Every original background track is imported once, into the music library `client/assets/legacy/music/` (`tools/import_music.py`, with `manifest.json`). Map music, battle music and the 电台 all play from it through `client/scripts/music_tracks.gd`; manifests elsewhere still name the original file (`world/audio/sabgm_f0.wav`, `battle/audio/sabgm_b0.wav`), which `MusicTracks.path()` maps to the library's copy by track id. Older imports' WAV copies are not shipped to the web (`plan_web_packs.py` lists them under `skipped`).
+
+- **Format.** Ogg Vorbis q6 via libsndfile (`tools/music_codec.py`; the `soundfile` package in `tools/requirements.txt`, with ffmpeg's built-in encoder as a fallback). The originals are 22 kHz, mostly 8-bit, so this is about 80 to 130 kbps: 21.5 MB for all 26 tracks instead of 89 MB of WAV. The original WAVs stay in the extracted client (`.tools/legacy/extracted/`) for a possible lossless option later.
+- **Loops.** The original WAVs carry a `smpl` loop, and `play_bgm` (`system/t_music.cpp`, `BGM_AUTO_LOOP`) ends the buffer at the loop end and jumps back to the loop start, so a track with an intro (sabgm_t0, t1, f0, f1, d2, b1, s1) plays the intro once. The encoder cuts each file at the loop end and records `loop_start` in the manifest; `MusicTracks.prepare()` sets `AudioStreamOggVorbis.loop` and `loop_offset` (or a WAV's loop points). The radio counts its minimum play time with the shorter later loops.
+- **Streamed on the web.** Godot 4.3+ plays audio on the web as "samples" by default: each stream is decoded whole into a Web Audio `AudioBuffer` of 32-bit floats (about 350 KB per second of stereo, whatever the file's compression) that lives as long as the stream. The music player and the waiting screen's player are made with `MusicTracks.music_player()`, which sets `playback_type = PLAYBACK_TYPE_STREAM`: the engine mixes the music itself in small chunks and sends them to its AudioWorklet. Sound effects stay samples (short, and they play without the worklet's latency).
+- **Held.** Only what plays or is about to: the map's music (the previous map's is freed when the next starts; the village and wilderness music are kept as paths), the radio's current track and the one it fetched ahead (both let go when the radio turns off), and the scene music the radio will hand back to.
+- **Trade-off.** This build has no thread support, so the stream path mixes on the main thread when the worklet asks for more. A main-thread stall longer than the worklet's buffer is a short gap in the music, where sample playback would have kept going. `client/project.godot` raises `audio/driver/output_latency.web` from Godot's 50 ms to 150 ms (Godot rounds the buffer to a power of two: 8,192 frames, about 170 ms at 48 kHz), so an ordinary hitch such as a window opening does not cut the music; a map's JSON parse still can. The only cost is that music starts and stops up to that much later. Effects are unaffected (samples do not go through the worklet).
+
+After changing the music importer, re-import in that checkout (imported assets are not in Git):
+
+```sh
+.tools/asset-venv/bin/python -m pip install -r tools/requirements.txt
+.tools/asset-venv/bin/python tools/import_music.py .tools/legacy/extracted/SA8.0-20260803
+.tools/asset-venv/bin/python tools/import_loading.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+.tools/Godot.app/Contents/MacOS/Godot --headless --path client --import
+```
+
+The old copies (`client/assets/legacy/sabgm_t0.wav`, `sabgm_t1.wav`, `world/audio/sabgm_*.wav`, `mvp/audio/sabgm_f0.wav`, `battle/audio/sabgm_b0.wav` and `sabgm_s0.wav`) are no longer used or shipped once the library has the track; delete them with their `.import` files if you like. The importers no longer write them.
 
 ## Audio interruptions
 

@@ -19,7 +19,8 @@ class PlanWebPacksTest(unittest.TestCase):
                 self.assertNotIn(path, seen, f"{path} in {seen.get(path)} and {name}")
                 seen[path] = name
         on_disk = {plan_web_packs.res(p) for p in LEGACY.rglob("*") if p.is_file() and p.suffix != ".import" and p.name != ".DS_Store"}
-        self.assertEqual(on_disk, set(seen))
+        self.assertEqual(on_disk - set(self.plan["skipped"]), set(seen))
+        self.assertFalse(set(self.plan["skipped"]) & set(seen))
 
     def test_lookups_name_real_packs(self):
         packs = set(self.plan["packs"])
@@ -104,6 +105,28 @@ class PlanWebPacksTest(unittest.TestCase):
 
     def test_villages_depend_on_character_art_they_draw(self):
         self.assertTrue(any(name.startswith("char-") for name in self.plan["maps"]["1000"]))
+
+    @unittest.skipUnless((LEGACY / "music/manifest.json").is_file(), "music library not imported")
+    def test_music_library_packs_one_track_each_and_battle_music_in_core(self):
+        import json
+        library = plan_web_packs.library_tracks()
+        self.assertGreaterEqual(len(library), 24)
+        battle = json.loads((LEGACY / "battle/manifest.json").read_text())
+        battle_music = {Path(name).stem for name in battle["audio"].values() if Path(name).name.startswith("sabgm_")}
+        self.assertIn("sabgm_b0", battle_music)
+        for ident, path in library.items():
+            where = plan_web_packs.res(path)
+            if ident in battle_music:
+                self.assertIn(where, self.plan["packs"]["core"], ident)
+            else:
+                self.assertEqual(self.plan["packs"][f"music-{ident}"], [where], ident)
+                self.assertEqual(self.plan["files"][where], f"music-{ident}")
+        # No older copy of a library track (world/audio/sabgm_t0.wav ...) is shipped.
+        for name, paths in self.plan["packs"].items():
+            for path in paths:
+                file = Path(path)
+                if file.name.startswith("sabgm_") and file.parent.name not in ("music", "loading"):
+                    self.fail(f"{path} in {name}: the library copy plays instead")
 
 
 if __name__ == "__main__":

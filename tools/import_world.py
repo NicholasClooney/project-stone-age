@@ -9,7 +9,6 @@ import hashlib
 import json
 from pathlib import Path
 import re
-import shutil
 import struct
 from import_legacy import Archive
 from map_file import save_map
@@ -206,7 +205,7 @@ def import_residents(archive, reference, root):
 
 def run(source, reference, output):
     reference=Path(reference); output=Path(output); root=output/'world'
-    root.mkdir(parents=True,exist_ok=True);(root/'audio').mkdir(exist_ok=True);(output/'images').mkdir(exist_ok=True)
+    root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
     maps={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
@@ -268,7 +267,8 @@ def run(source, reference, output):
         if ident in TOWNS and not all(v['reachable'] for v in exit_coverage.values()):raise ValueError(f'Village spawn cannot reach exits: {ident} {exit_coverage}')
         reports[str(ident)]=dict(reachable_cells=sum(reachable),exit_coverage=exit_coverage,source=str(maps[ident].relative_to(reference)),sha256=hashlib.sha256(parsed[-1]).hexdigest(),missing_graphics=missing,walkable=data['blocked'].count(0),images=len(used),objects=len(data['objects']))
         print(f'{ident} {data["name"]} {data["width"]}x{data["height"]} missing={len(missing)} spawn={spawn}',flush=True)
-    for name in set(MUSIC.values()):shutil.copyfile(archive.data/'bgm'/name,root/'audio'/name)
+    # music_markers keep the original file names; the tracks themselves play from
+    # the library tools/import_music.py writes (client/scripts/music_tracks.gd).
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')

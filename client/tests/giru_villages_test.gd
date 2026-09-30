@@ -22,7 +22,7 @@ func run():
   check(game.is_walkable(game.cell) and game.checkpoint(),"village has walkable persistent arrival")
   var saved: Dictionary=game.session.snapshot().location
   check(int(saved.map_id)==village and Vector2i(saved.x,saved.y)==game.cell,"checkpoint records village and arrival cell")
-  check(game.music.stream.resource_path.ends_with(str(catalog.info(village).music)),"village uses original music")
+  check(game.music.stream.resource_path.get_file().get_basename()==str(catalog.info(village).music).get_file().get_basename(),"village uses original music")
   var interior:=5001 if village==5000 else 5101
   for building in ([5001,5003,5005] if village==5000 else [5101,5103,5105,5106]):
    check(catalog.village_for(building)==village,"building ownership uses declared village %d"%building)

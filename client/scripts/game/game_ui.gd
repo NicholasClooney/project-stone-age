@@ -164,7 +164,7 @@ func build_ui() -> void:
 	game.battle_view.return_requested.connect(game.return_from_battle)
 	game.battle_view.sound_requested.connect(game.play_battle_sound)
 	game.battle_view.capture_music_requested.connect(func(celebrating: bool):
-		game.set_music(load("res://assets/legacy/battle/audio/sabgm_s0.wav") if celebrating else load("res://assets/legacy/battle/audio/sabgm_b0.wav")))
+		game.set_music(game.music_track("res://assets/legacy/battle/audio/sabgm_s0.wav" if celebrating else "res://assets/legacy/battle/audio/sabgm_b0.wav")))
 	game.showcase_ticker = preload("res://scripts/showcase_ticker.gd").new()
 	root.add_child(game.showcase_ticker)
 	game.showcase_ticker.configure(game)

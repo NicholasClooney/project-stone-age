@@ -6,7 +6,7 @@ art is never downloaded twice:
   loading         the waiting screen's image and music, fetched before
                   anything else so the screen can cover the core download
   core            small always-needed data: catalogs, UI, battle
-                  manifest/UI/audio, the map catalog
+                  manifest/UI/audio (the battle music too), the map catalog
   map-<id>        one map file (world/<id>.map) plus tiles and residents no other map uses
   char-<id>       one player character's walking art
   tiles-<hash>    tiles shared by several maps, grouped by the exact set of
@@ -14,8 +14,13 @@ art is never downloaded twice:
   sprite-<id>     one battle/pet sprite's frames
   riding-<id>     one mounted composite's frames
   bg-<name>       one battle background
-  music-<name>    one music track
-  radio-<name>    one radio (电台) track, fetched when the radio plays it
+  music-<name>    one track of the music library (tools/import_music.py),
+                  fetched when a map, or the radio (电台), plays it
+
+Copies of a music track outside the library (world/audio/sabgm_*.wav and
+the like, left by older imports) are not packed: the game plays the
+library's Ogg Vorbis instead (client/scripts/music_tracks.gd). They are
+listed under "skipped".
 
 Writes build/web-packs/plan.json: pack name -> res:// paths, plus the
 lookups the game needs (map -> packs, sprite -> pack, file -> pack).
@@ -49,8 +54,27 @@ def sprite_images(characters: dict) -> dict:
     return result
 
 
+def library_tracks() -> dict:
+    """Track id -> file of the music library (music/manifest.json)."""
+    manifest = LEGACY / "music/manifest.json"
+    if not manifest.exists():
+        return {}
+    tracks = json.loads(manifest.read_text()).get("tracks", [])
+    return {t["id"]: LEGACY / t["file"] for t in tracks if (LEGACY / t["file"]).exists()}
+
+
+def stale_music(path: Path, library: dict) -> bool:
+    """An older import's copy of a track the library has (not the waiting screen's)."""
+    parts = path.relative_to(LEGACY).parts
+    return (path.name.startswith("sabgm_") and path.suffix in (".wav", ".ogg") and parts[0] not in ("music", "loading")
+            and path.stem in library)
+
+
 def plan() -> dict:
+    library = library_tracks()
     files = [p for p in LEGACY.rglob("*") if p.is_file() and p.suffix != ".import" and p.name != ".DS_Store"]
+    skipped = sorted(res(p) for p in files if stale_music(p, library))
+    files = [p for p in files if not stale_music(p, library)]
     owner: dict = {}
     packs = collections.defaultdict(list)
 
@@ -180,20 +204,26 @@ def plan() -> dict:
             pack = f"bg-{path.stem}"
             assign(pack, path)
             lookups["files"][res(path)] = pack
-    music = [p for p in files if p.suffix == ".wav" and p.name.startswith("sabgm_") and "battle" not in p.parts]
-    for path in sorted(music):
-        pack = f"music-{path.stem}"
+    # Every battle plays its music at once, so the tracks the battle manifest
+    # names stay in core; the rest of the library is one pack per track.
+    battle_music = {Path(name).stem for name in battle.get("audio", {}).values() if Path(name).name.startswith("sabgm_")}
+    for ident, path in sorted(library.items()):
+        if ident in battle_music:
+            assign("core", path)
+            continue
+        pack = f"music-{ident}"
         assign(pack, path)
         lookups["files"][res(path)] = pack
-    for path in sorted((LEGACY / "music").glob("sabgm_*")):
-        if path.suffix != ".import":
-            pack = f"radio-{path.stem}"
+    # Without a library (an older import) each music file is its own pack.
+    for path in sorted(files):
+        if path.name.startswith("sabgm_") and path.suffix in (".wav", ".ogg") and "battle" not in path.parts and path not in owner:
+            pack = f"music-{path.stem}"
             assign(pack, path)
             lookups["files"][res(path)] = pack
 
     for path in sorted(files):
         assign("core", path)
-    return {"packs": {name: sorted(paths) for name, paths in packs.items()}, **lookups}
+    return {"packs": {name: sorted(paths) for name, paths in packs.items()}, **lookups, "skipped": skipped}
 
 
 def main() -> None:

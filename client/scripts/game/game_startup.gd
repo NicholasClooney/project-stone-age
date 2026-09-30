@@ -7,6 +7,8 @@ extends RefCounted
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
+const MusicTracks = preload("res://scripts/music_tracks.gd")
+const GameAudio = preload("res://scripts/game/game_audio.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -47,13 +49,14 @@ func _download_core() -> bool:
 	# The waiting screen's own image and music come first, in a tiny pack.
 	if await await_packs(["loading"],"等待画面"):game.waiting_screen.load_art()
 	game.waiting_screen.hold("正在准备素材…")
-	if not await await_packs(["core","music-sabgm_t0"],"核心素材"):return false
-	# setup_audio() loads every track the MVP manifest names at startup.
-	var startup_music: Array = []
+	if not await await_packs(["core"],"核心素材"):return false
+	# setup_audio() plays the village music and loads the sounds the MVP
+	# manifest names; music comes from the library (scripts/music_tracks.gd).
+	var startup_music: Array = [game.asset_packs.file_pack(MusicTracks.path(GameAudio.VILLAGE_MUSIC))]
 	var mvp = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/manifest.json"))
 	if mvp is Dictionary:
-		for track in mvp.get("audio",{}).values():startup_music.append(game.asset_packs.file_pack("res://assets/legacy/mvp/"+str(track)))
-	if not await await_packs(startup_music,"音乐"):return false
+		for track in mvp.get("audio",{}).values():startup_music.append(game.asset_packs.file_pack(MusicTracks.path("res://assets/legacy/mvp/"+str(track))))
+	if not await await_packs(startup_music.filter(func(pack): return not str(pack).is_empty()),"音乐"):return false
 	# Catalogs read at construction must see the mounted core pack.
 	game.world_catalog = WorldCatalog.new()
 	TroopArt.pack_index = game.asset_packs.index.get("sprites",{})
@@ -73,7 +76,9 @@ func _download_start_area() -> bool:
 func _publish_web_status() -> void:
 	var status := {"map":int(game.data.get("map_id",-1)),"cell":[game.cell.x,game.cell.y],"online":bool(game.link.get("online")) if not game.link.is_local() else true,
 		"battle":bool(is_instance_valid(game.battle_view) and game.battle_view.visible),"mounted":game.asset_packs._mounted.size(),"pending":game.asset_packs._queued.size()+game.asset_packs._active.size(),"downloading":game.asset_packs._active.values(),"queued":game.asset_packs._queued,"waiters":game.asset_packs._waiters.size(),"waiting_screen":is_instance_valid(game.waiting_screen) and game.waiting_screen.visible,
-		"message":str(game.message.text) if is_instance_valid(game.message) else ""}
+		"message":str(game.message.text) if is_instance_valid(game.message) else "",
+		"radio":str(game.radio.current) if is_instance_valid(game.radio) and game.radio.on else "","music":str(game.music.stream.resource_path) if is_instance_valid(game.music) and game.music.stream!=null else "",
+		"music_at":snappedf(game.music.get_playback_position(),0.01) if is_instance_valid(game.music) and game.music.playing else -1.0}
 	JavaScriptBridge.eval("window.stoneAge = %s" % JSON.stringify(status))
 
 ## Web only: window.stoneAgeDev(name) runs the same actions as the on-screen DEV
@@ -91,6 +96,11 @@ func _on_web_dev(arguments: Array) -> void:
 		"escape":game.battle_action("developer_escape")
 		"return":game.return_from_battle()
 		"pets":game.show_adventure_menu("pets")
+		# The radio: on (or the next track), then off again (tools/web_memory_probe.mjs).
+		"radio_next":
+			if game.radio.on:game.radio.next()
+			else:game.radio.turn_on()
+		"radio_off":game.radio.turn_off()
 
 func _build_waiting_screen() -> void:
 	if OS.has_feature("web"):

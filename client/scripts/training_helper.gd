@@ -335,7 +335,7 @@ func on_event(detail: Dictionary) -> void:
 	if bool(detail.get("takeover",false)) and world.battle_session.snapshot().active:
 		if world.adventure_menu.visible:world.adventure_menu.hide()
 		world.battle_view.open_battle(world.battle_session.snapshot())
-		world.set_music(load("res://assets/legacy/battle/audio/sabgm_b0.wav"))
+		world.set_music(world.music_track("res://assets/legacy/battle/audio/sabgm_b0.wav"))
 	world.clear_input();hide()
 	world.release_input()
 	world.last_adventure_message="自动练级：%s · 已完成 %d 场。"%[reason,int(detail.get("battles",battles))]

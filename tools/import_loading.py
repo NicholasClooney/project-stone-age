@@ -5,16 +5,16 @@
   music  data/bgm/sabgm_s1.wav, bgm_tbl entry 2, which login.cpp plays once
          the character list has downloaded (the original's own waiting room).
 
-The track is transcoded to Ogg Vorbis (about 260 KB instead of 1.3 MB) when
-ffmpeg is available, otherwise copied as WAV (Godot then stores it as QOA,
+The track is encoded to Ogg Vorbis (tools/music_codec.py, about 360 KB
+instead of 1.3 MB) when an encoder is available, otherwise copied as WAV (Godot then stores it as QOA,
 about 0.5 MB). Both land in client/assets/legacy/loading/, which
 plan_web_packs.py puts in the small `loading` pack the page fetches first.
 """
 import argparse
 import shutil
-import subprocess
 from pathlib import Path
 
+import music_codec
 from import_legacy import Archive
 
 IMAGE = 29019
@@ -22,15 +22,14 @@ TRACK = 'sabgm_s1'
 
 
 def transcode(wav: Path, folder: Path) -> Path:
-    """Ogg Vorbis via ffmpeg's built-in encoder, or the original WAV."""
+    """Ogg Vorbis (tools/music_codec.py, like the music library), or the original WAV."""
     ogg = folder / f'{TRACK}.ogg'
-    if shutil.which('ffmpeg'):
-        result = subprocess.run(['ffmpeg', '-loglevel', 'error', '-y', '-i', str(wav), '-strict', '-2',
-                                 '-c:a', 'vorbis', '-q:a', '4', str(ogg)], capture_output=True, text=True)
-        if result.returncode == 0 and ogg.exists() and ogg.stat().st_size > 0:
-            (folder / f'{TRACK}.wav').unlink(missing_ok=True)
-            return ogg
-        print('ffmpeg could not write Vorbis; keeping the WAV:', result.stderr.strip())
+    try:
+        music_codec.encode(wav, ogg)
+        (folder / f'{TRACK}.wav').unlink(missing_ok=True)
+        return ogg
+    except RuntimeError as error:
+        print(f'{error}; keeping the WAV')
     ogg.unlink(missing_ok=True)
     target = folder / f'{TRACK}.wav'
     shutil.copyfile(wav, target)

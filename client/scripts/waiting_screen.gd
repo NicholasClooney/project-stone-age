@@ -14,7 +14,10 @@ extends CanvasLayer
 ## on the first click, tap or key, and until then the screen asks for one.
 ## Once the game is running (enter_game), later waits (a new map, a battle's
 ## art) show only a slim progress panel over the game: no image, no waiting
-## music, the game's own music keeps playing and clicks go through.
+## music, the game's own music keeps playing and clicks go through, and the
+## waiting track is let go.
+## The track plays as a stream (scripts/music_tracks.gd), so the web does not
+## decode it whole into a Web Audio buffer.
 
 const IMAGE := "res://assets/legacy/loading/now-loading.png"
 const TRACKS := ["res://assets/legacy/loading/sabgm_s1.ogg","res://assets/legacy/loading/sabgm_s1.wav"]
@@ -63,7 +66,7 @@ func configure(asset_packs: Node, music_player: Callable = Callable(), volume: C
 ## Picks up the image and track once the loading pack is mounted.
 func load_art() -> void:
 	if art.texture==null and ResourceLoader.exists(IMAGE):art.texture = load(IMAGE)
-	if player.stream!=null:return
+	if player.stream!=null or in_game:return
 	for path in TRACKS:
 		if not ResourceLoader.exists(path):continue
 		var stream: AudioStream = load(path)
@@ -102,10 +105,12 @@ func enter_game() -> void:
 	in_game = true
 	_apply_mode()
 	if visible:
-		player.stop()
 		if is_instance_valid(_paused_music):_paused_music.stream_paused = false
 		_paused_music = null
 		_refresh()
+	# In play no wait has music: the waiting track is not needed again.
+	player.stop()
+	player.stream = null
 
 func blocking() -> bool:
 	return _held or (packs!=null and packs.blocking())
@@ -227,7 +232,7 @@ func _build() -> void:
 	hint.add_theme_color_override("font_color",Color("e6c284"))
 	hint.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(hint)
-	player = AudioStreamPlayer.new()
+	player = preload("res://scripts/music_tracks.gd").music_player()
 	add_child(player)
 	_apply_mode()
 

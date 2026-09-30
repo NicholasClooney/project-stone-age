@@ -38,7 +38,7 @@ func run() -> void:
 	root.push_input(key,true)
 	await tick()
 	check(game.cell==before and int(game.data.map_id)==100,"reset key cannot bypass battle")
-	check(game.music.stream.resource_path.ends_with("sabgm_b0.wav"),"original battle BGM selected")
+	check(game.music.stream.resource_path.get_file().get_basename()=="sabgm_b0","original battle BGM selected")
 	game.toggle_mute()
 	check(game.music.volume_db<=-80,"mute persists during battle")
 	game.toggle_mute()
