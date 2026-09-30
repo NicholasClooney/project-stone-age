@@ -134,6 +134,31 @@ class WorldImportTests(unittest.TestCase):
                 path.write_bytes(broken)
                 with self.assertRaises(ValueError):read_map(path)
 
+    def test_seimu_padding_rejects_unknown_bytes_even_with_matching_header(self):
+        with tempfile.TemporaryDirectory() as directory:
+            path = Path(directory)/'map'
+            raw = bytearray(1644)
+            raw[:6] = b'LS2MAP'
+            struct.pack_into('>H', raw, 6, 40)
+            struct.pack_into('>HH', raw, 40, 20, 20)
+            path.write_bytes(raw)
+            self.assertEqual(read_map(path)[:4], (40, '', 20, 20))
+            # Even the correct ID, dimensions and zero padding need the exact hash.
+            for broken in (raw+b'\0', raw+b'X', raw+b'\0\0', raw[:-1]):
+                path.write_bytes(broken)
+                with self.assertRaises(ValueError):
+                    read_map(path)
+
+    def test_seimu_island_expansion_keeps_unreviewed_destinations_out(self):
+        paths = {6000:Path('map/seimu/village/6000'),
+                 6005:Path('map/seimu/village/6005'),
+                 6012:Path('map/seimu/village/6012')}
+        selected = select_connected_maps(paths, [dict(from_map=400,to_map=6000),
+            dict(from_map=6000,to_map=6005),dict(from_map=6000,to_map=6012)])
+        self.assertTrue({400,6000,6005} <= selected)
+        self.assertNotIn(6012, selected)
+        self.assertIn(400, DEV_TRAINING_MAPS)
+
     def test_missing_art_stays_blocked_under_walkable_prop(self):
         data,used,missing=convert(FakeArchive(None),(1,'map',3,2,[100,999,100,100,100,100],[0,102,0,0,0,0],b''))
         self.assertEqual(missing,[[1,0,999]]);self.assertEqual(data['blocked'][1],1)

@@ -84,7 +84,12 @@ def read_map(path):
         raise ValueError(f'Invalid LS2MAP: {path}')
     ident = struct.unpack_from('>H', raw, 6)[0]
     w, h = struct.unpack_from('>HH', raw, 40)
-    if not w or not h or len(raw) != 44 + w*h*4:
+    # The original server reads exactly two 400-short layers for this source.
+    seimu_padding = (ident == 40 and (w, h) == (20, 20)
+                     and len(raw) == 1645 and raw[-1:] == b'\0'
+                     and hashlib.sha256(raw).hexdigest() ==
+                     '75eef0bbf69f257b7f3705a1fef98242a4cf2d375cb8838f87a5411297fd9727')
+    if not w or not h or (len(raw) != 44 + w*h*4 and not seimu_padding):
         raise ValueError(f'Invalid LS2MAP dimensions/length: {path}')
     name = raw[8:40].split(b'\0')[0].decode('gbk', errors='replace').split('|')[0]
     return ident, name, w, h, struct.unpack_from(f'>{w*h}H', raw, 44), struct.unpack_from(f'>{w*h}H', raw, 44+w*h*2), raw
@@ -115,7 +120,7 @@ def select_connected_maps(map_paths, portals):
     Only explicitly reviewed scenery gates bypass NPC checks; no general script traversal.
     Existing core (including its implemented permit gate) is preserved.
     """
-    selected = CORE | {300} | {p['to_map'] for p in portals if p['from_map'] in VILLAGES}
+    selected = CORE | {300, 400} | {p['to_map'] for p in portals if p['from_map'] in VILLAGES}
     while True:
         additions = {p['to_map'] for p in portals
                      if p['from_map'] in selected and p['to_map'] in map_paths
