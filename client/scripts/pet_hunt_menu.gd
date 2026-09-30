@@ -343,7 +343,7 @@ func load_settings() -> void:
 	update_explanation()
 	if is_instance_valid(stat_species) and stat_species.item_count>0:
 		# Another device chose a different 属性条件 species: show it here too.
-		if _changed(old,hunt,"stat_species") and old.has("stat_species"):_select_stat_species()
+		if _changed(old,hunt,"stat_species") and old.has("stat_species"):refresh_stat_species()
 		else:load_stat_settings()
 	if visible:refresh_ready_status()
 
@@ -758,23 +758,39 @@ func build_keep_rule(top: float)->void:
 	stat_page.add_child(rule_auto);controls.append(rule_auto);rule_auto.toggled.connect(func(_on):save_stat_settings(true))
 	for input in [rule_tiers,rule_per_tier,rule_champions]:input.value_changed.connect(func(_value):save_stat_settings())
 
-func refresh_stat_species()->void:
-	stat_species.clear();stat_species.add_item("扬奇洛斯（蓝人龙）",92)
+## 属性条件 lists the species that live here, and 蓝人龙 only when it lives
+## here, is the saved choice or nothing else does. `chosen` stands in for the
+## saved species while a new choice is on its way to the profile.
+func refresh_stat_species(chosen: int = -2)->void:
+	var saved:=chosen if chosen>=-1 else int(world.automation_settings().hunt.get("stat_species",-1))
+	stat_species.clear()
+	if saved==92 or candidates.is_empty() or candidates.any(func(item):return int(item.id)==92):stat_species.add_item("扬奇洛斯（蓝人龙）",92)
 	for item in candidates:
 		if int(item.id)!=92:stat_species.add_item(str(item.name),int(item.id))
-	_select_stat_species()
+	_select_stat_species(saved)
 
 ## Shows the saved 属性条件 species (hunt.stat_species), else the target
-## species, else 蓝人龙. A saved species that does not live here is kept for
-## later (_stat_species_fallback) while the page shows the next choice.
-func _select_stat_species()->void:
+## species, else the first. A saved species that does not live here is kept
+## for later (_stat_species_fallback) while the page shows the next choice.
+func _select_stat_species(saved: int = -2)->void:
 	var hunt:Dictionary=world.automation_settings().hunt
-	var saved:=int(hunt.get("stat_species",-1))
+	if saved<-1:saved=int(hunt.get("stat_species",-1))
 	var index:=stat_species.get_item_index(saved) if saved>=0 else -1
 	_stat_species_fallback=saved>=0 and index<0
 	if index<0 and int(hunt.template)>=0:index=stat_species.get_item_index(int(hunt.template))
 	stat_species.select(maxi(0,index))
 	load_stat_settings()
+
+## 瞬移去抓 saved this target, Lv.1 limit and 属性条件 species: show them now,
+## since a remote client gets the saved settings back only a round trip later.
+func show_target(template_id: int, level_one_only: bool) -> void:
+	level_one.set_pressed_no_signal(level_one_only)
+	refresh_candidates()
+	var index:=species.get_item_index(template_id)
+	if index>=0 and not species.is_item_disabled(index):
+		species.select(index)
+		_template_fallback=false
+	refresh_stat_species(template_id)
 
 func show_stat_settings()->void:
 	show_capture_settings(false)

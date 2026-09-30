@@ -69,13 +69,14 @@ func run() -> void:
 	check(int(hunt_settings(game).template)==target,"the target species is saved with the character")
 	check(menu.stat_species.get_selected_id()==target and int(hunt_settings(game).stat_species)==target,"属性条件 shows the target, remembered too")
 	# 属性条件 can show another species; that is remembered as well.
-	var other_index: int = menu.stat_species.get_item_index(92)
+	var other_index: int = 0 if menu.stat_species.get_item_id(0)!=target else 1
+	var other: int = menu.stat_species.get_item_id(other_index)
 	menu.stat_species.select(other_index);menu.stat_species.item_selected.emit(other_index)
-	check(int(hunt_settings(game).stat_species)==92,"a species picked on 属性条件 is remembered")
+	check(int(hunt_settings(game).stat_species)==other,"a species picked on 属性条件 is remembered")
 	menu.show_capture_settings(true)
 	check(str(game.viewer_pref("hunt_page","")) == "capture","the page shown is remembered on this device")
 	menu.close_menu();menu.open_menu()
-	check(menu.species.get_selected_id()==target and menu.stat_species.get_selected_id()==92 and menu.capture_page.visible,"reopened, the window shows the same target, 属性条件 species and page")
+	check(menu.species.get_selected_id()==target and menu.stat_species.get_selected_id()==other and menu.capture_page.visible,"reopened, the window shows the same target, 属性条件 species and page")
 	menu.close_menu()
 
 	# Elsewhere the target does not live: 任何 is shown, the choice kept.
@@ -84,7 +85,7 @@ func run() -> void:
 	check(menu.species.get_selected_id()==-1 and menu._template_fallback,"where the target does not live the window shows 任何")
 	menu.level_one.button_pressed = false;menu.level_one.button_pressed = true
 	game.flush_automation_settings()
-	check(int(hunt_settings(game).template)==target and int(hunt_settings(game).stat_species)==92,"other changes there keep the saved target")
+	check(int(hunt_settings(game).template)==target and int(hunt_settings(game).stat_species)==other,"other changes there keep the saved target")
 	menu.auto_capture.button_pressed = false
 	menu.train_after_capture.button_pressed = false
 	menu.start_hunt()
@@ -106,7 +107,7 @@ func run() -> void:
 	again.load_area_id(MAP,CELL)
 	var reopened = again.pet_hunt_menu
 	reopened.open_menu()
-	check(reopened.species.get_selected_id()==target and reopened.stat_species.get_selected_id()==92,"a new game with the character's settings shows the same target and 属性条件 species")
+	check(reopened.species.get_selected_id()==target and reopened.stat_species.get_selected_id()==other,"a new game with the character's settings shows the same target and 属性条件 species")
 	check(reopened.capture_page.visible,"and this device's last page")
 	reopened.show_stat_settings()
 	reopened.close_menu();reopened.open_menu()
