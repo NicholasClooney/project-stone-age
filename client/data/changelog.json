@@ -1,9 +1,18 @@
 {
-  "version": "v0.102.1",
-  "count": 133,
+  "version": "v0.102.2",
+  "count": 134,
   "feature_count": 86,
-  "fix_count": 47,
+  "fix_count": 48,
   "entries": [
+    {
+      "version": "v0.102.2",
+      "date": "2026-09-30",
+      "kind": "fix",
+      "title": "说话气泡大小正常",
+      "details": [
+        "一般频道的说话气泡不再变成又高又窄的竖条：短句一行显示，长句按气泡宽度折行。"
+      ]
+    },
     {
       "version": "v0.102.1",
       "date": "2026-09-30",

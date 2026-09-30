@@ -40,12 +40,41 @@ func run() -> void:
 	chat()
 	await hub()
 	model()
+	await bubble()
 	remove_tree(dir)
 	print("LAN PRESENCE: %d failures" % failures)
 	quit(1 if failures else 0)
 
 func profile(id: String, map_id: int, cell: Vector2i, connections: Array, battle := false) -> Dictionary:
 	return {"id":id,"name":id.capitalize(),"level":3,"look":{"c":"100020","face":2,"ride":-1,"rn":""},"map":map_id,"cell":cell,"battle":battle,"connections":connections}
+
+## A speech bubble fits its line: a short one is one line high (a fresh
+## autowrapped label once measured a letter per line), a long one wraps.
+func bubble() -> void:
+	var stub := Node2D.new()
+	var shell := GDScript.new()
+	shell.source_code = "extends Node2D\nfunc text(value: String, size: int = 15) -> Label:\n\tvar label := Label.new()\n\tlabel.text = value\n\tlabel.add_theme_font_size_override(\"font_size\",size)\n\tlabel.add_theme_font_override(\"font\",load(\"res://assets/fonts/NotoSansSC.ttf\"))\n\treturn label\n"
+	shell.reload()
+	stub.set_script(shell)
+	root.add_child(stub)
+	var players = preload("res://scripts/remote_players.gd").new()
+	players.world = stub
+	var short: PanelContainer = players.speech_bubble()
+	stub.add_child(short)
+	short.show()
+	players.say_into(short,"test")
+	await process_frame
+	check(short.size.y<40,"a short line's bubble is one line high (%d)" % int(short.size.y))
+	check(short.size.x>20 and short.size.x<80,"and as wide as the line (%d)" % int(short.size.x))
+	players.say_into(short,"这是一句很长很长的话，要在气泡里折成好几行才放得下，对吧对吧")
+	await process_frame
+	check(short.size.x<=players.BUBBLE_WIDTH+30 and short.size.y>=40 and short.size.y<120,"a long line wraps at the bubble width (%dx%d)" % [int(short.size.x),int(short.size.y)])
+	players.say_into(short,"hi")
+	await process_frame
+	check(short.size.y<40,"a short line after a long one shrinks back (%d)" % int(short.size.y))
+	players.free()
+	stub.queue_free()
+	await process_frame
 
 ## Messages for one connection out of a tick's [[connection, message]].
 static func to(news: Array, connection: int) -> Array:

@@ -196,10 +196,24 @@ func speech_bubble() -> PanelContainer:
 ## Puts a line into a bubble; long lines wrap at BUBBLE_WIDTH.
 func say_into(bubble: PanelContainer, line: String) -> void:
 	var label: Label = bubble.get_node("Text")
-	if label.text==line:return
-	label.text = line
-	var width: float = label.get_theme_font("font").get_string_size(line,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x
-	label.custom_minimum_size.x = minf(ceilf(width)+2,BUBBLE_WIDTH)
+	if label.get_meta("line","")==line:return
+	label.set_meta("line",line)
+	# Wrapped here, not by an autowrapped label: that one measures its height
+	# at its current width, and a fresh label is 0 wide (a letter per line),
+	# which made tall, narrow bubbles.
+	var font: Font = label.get_theme_font("font")
+	var rows: PackedStringArray = []
+	var row := ""
+	for letter in line:
+		if not row.is_empty() and font.get_string_size(row+letter,HORIZONTAL_ALIGNMENT_LEFT,-1,12).x>BUBBLE_WIDTH:
+			rows.append(row)
+			row = ""
+		row += letter
+	rows.append(row)
+	label.autowrap_mode = TextServer.AUTOWRAP_OFF
+	label.text = "\n".join(rows)
+	label.custom_minimum_size = Vector2.ZERO
+	label.size = Vector2.ZERO
 	bubble.reset_size()
 
 # ---- the card --------------------------------------------------------------
