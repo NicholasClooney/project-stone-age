@@ -1,6 +1,6 @@
 # LAN profiles and party play: feasibility study
 
-Status: research, 2026-09-30. No code changed. Question: can different people on one LAN (or tailnet) each play their own character against the one server, and can they group up (组队) and fight together? How much work would it take?
+Status: research, 2026-09-30. **Phase 0 built** (branch `feat/lan-phase0`): per-profile servers, save lock, lobby and the shared fast hunt coordinator. See [lan-profiles.md](../development/lan-profiles.md). Question: can different people on one LAN (or tailnet) each play their own character against the one server, and can they group up (组队) and fight together? How much work would it take?
 
 Short answer: **separate characters are cheap**. Two players can do it today by running two server processes. A proper in-process multi-profile server with logins is 3–5 agent-days. **Seeing each other on maps** adds about 2–4 agent-days. **Real 组队 with shared battles** is the expensive, risky part at 8–12 agent-days, because the battle engine and settlement assume one player. Sharing the machine's CPU between several players' 本机极速模式 hunts is a 0.5–1 agent-day coordinator (§5; decided: equal shares among the players hunting, and a survey lasts 2 min × the number of shares). The 五人镜像队 (clone squad) already gives us the five-player battle layout and ally scheduling, so it is a good base.
 
@@ -227,7 +227,7 @@ Build it in Phase 0, before A1. With the registry directory it also fixes today'
 
 | Phase | What | Agent-days | Value |
 | --- | --- | --- | --- |
-| 0 | A0 polish: per-profile processes, `--no-web`, save `.lock`, a lobby page with `?server=` links, plus the §5(a) fast hunt coordinator (registry directory) and survey stretch | 1–1.5 | Friends play their own characters **this week** |
+| 0 ✅ | A0 polish: per-profile processes, save `.lock`, a lobby page with `?server=` links, plus the §5(a) fast hunt coordinator (registry directory) and survey stretch. Built as `scripts/profiles.sh` + `profiles.json` (backends started without `serve.sh`, so no `--no-web` flag was needed), `server/save_lock.gd`, `/lobby` in `tools/serve_web.py`, `server/fast_hunt_share.gd` | 1–1.5 | Friends play their own characters **this week** |
 | 1 | A1: hub, per-connection profile routing, login/PIN + profile picker, create character, admin-only GM, shared frame budget, the fast hunt coordinator moved into the hub, per-profile backups | 3–4.5 | One address for everyone; the base for everything social |
 | 2 | B: presence (see each other walk, ride, fight marker) + simple chat | 2–4 | Feels like the original's village |
 | 3 | C-lite: 组队 and follow the leader on the map, leader-only encounters. Battles still per player, or members join as AI allies using the existing clone-squad path, with their real stats but no rewards | 2–3 | Walk together; cheap first taste of party battles |
