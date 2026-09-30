@@ -34,7 +34,7 @@ Events raised while the backend handles a command or ticks are queued and delive
 
 | Group | Types |
 | --- | --- |
-| Session | `hello` (protocol check, returns snapshot), `snapshot`, `ping` (heartbeat), `set_options` (`clone_squad`, `experience_multiplier`), `checkpoint` (`map_id`, `x`, `y`; saves) |
+| Session | `hello` (protocol check, returns snapshot; a multi-profile server may ask for a login first, see below), `snapshot`, `ping` (heartbeat), `set_options` (`clone_squad`, `experience_multiplier`), `checkpoint` (`map_id`, `x`, `y`; saves) |
 | Profile | `buy_item`, `sell_item`, `use_item`, `equip_item`, `buy_travel_pass`, `heal`, `store_pet`, `retrieve_pet`, `retrieve_pet_by_id`, `select_pet`, `mount_pet`, `rename_pet`, `set_pet_favorite`, `allocate_stat`, `distribute_stats`, `learn_pet_skill`, `set_character`, `set_automation_settings` (see below), `accept_quest`, `claim_quest`, `grant_starter_pets`, `claim_default_companions`, `gm_raise_level`, `gm_set_base_stat`, `gm_grant_points`, `gm_heal`, `gm_clear_modified`, and the radio library commands (see below). Pets: `release_pets` (`ids`; optional `source` `保留规则` with `template_id` when the selection came from 同种比较's 按保留规则选中, so the backend re-evaluates the rule and logs its reasons; otherwise `手动`), `prune_hunt_pets`, and `pet_log` (`kind` `caught` for 抓宠记录, `released` for 放生记录 or `stops` for 停止记录 (why the hunt or the find-pet cycle stopped, paused, skipped a hit or finished: {time, scope hunt|flow, outcome 停止|暂停|已跳过|已重试|完成|找到, reason, phase, run, rolls, collected, stored, skipped, released, map_id, map_name, cell, pet_id, name}; paged the same way, no species filter), `page` from 0, `page_size` 1 to 100, default 20, `template_id` or -1 for all, `run` "" for all, `latest` for the running or most recent find-pet run, or a run id, caught only; replies `log`: `entries` newest first, `total`, `page`, `pages`, `species` [{template_id, name, count}], `runs` [{run, count, time}] newest first, `latest_run`, `kind`; entries are cross-linked: a caught pet later released carries `released` {time, reason, source}, a released pet whose capture is logged carries `caught` {time, map_name, cell, source, run}). `release_log` is `pet_log` with `kind` `released`. Fields mirror the `GameSession` arguments (`PROFILE_COMMANDS` in `backend.gd`). |
 | World | `report_position` (`map_id`, `cell`, `map_changed`, `client`; reply `paused` names a workflow pause), `field_step` (`encounter`: open the wild battle on a hit), `wild_encounter`, `begin_battle` (`boss`, `enemy_count`) |
 | Battle | `battle_command` (`action`, `target`, `pet_target`, `switch_pet`, optional `pet_skill`), `battle_pet_command`, `battle_pet_skill`, `battle_escape_dev`, `battle_close`. Remote clients add `battle_id` and `turn`; a command for a turn already resolved is rejected as stale. |
@@ -42,6 +42,22 @@ Events raised while the backend handles a command or ticks are queued and delive
 | Automation | `auto_start` (`kind`: `battle`, `capture_battle`, `pet_train`, `hunt`, `find_pet`; `map_id`, `cell`, the device's playback `speed`; the run uses the profile's settings, and an optional `settings` / `filter` / `stat_filters` from older clients overrides them for that run only), `auto_update` (run-only `settings`, `stat_filters`), `auto_stop`, `presented` (`battle_id`, `turn`), `auto` (named: `stop_battle`, `stop_hunt`, `stop_flow`, `acquire_clone`, `release_clone`, and the in-process ticks `tick_battle`, `hunt_process`, `flow_step`) |
 
 Pets during a battle: until it settles, the battle's participants (`GameSession.battle_pets()`: the start roster's active pet and mount, the pet fighting now, any pet with kill credit, and in a capture-assist battle the capture helpers) cannot be released (skipped as `战斗中`), stored, or tidied by a keep rule; `select_pet` and `mount_pet` are refused for every pet. Other pets can be released, stored, withdrawn (while room for the battle's possible captures remains) and favourited. Clone squads are copies and never count. The settlement matches the result's roster slots to the party by pet id, and `battle_command` refuses to switch in a pet that left the party.
+
+## Login on a multi-profile server
+
+A server started with `--accounts=<file>` hosts several characters (`server/profile_hub.gd`, [LAN profiles](../development/lan-profiles.md)). A connection must log into one before any game command; afterwards every command goes to that character's `Backend` and only that character's events reach it. A lone server (no `--accounts`) and the desktop game never ask: `hello` returns the snapshot as before.
+
+| Command | Fields | Reply |
+| --- | --- | --- |
+| `hello` | `protocol`, optional `login` {`name`, `token`} | logged in: `snapshot`, `account` {`name`, `admin`}, `token`; otherwise `ok` with `login_required`, `profiles` [{`name`, `admin`, `online`}], `allow_create` and, for a token that no longer works, `reason` |
+| `login` | `name` (any case), `pin` | as a logged-in `hello`, with a new device `token`; or rejected with `reason` (and `locked` seconds after 5 wrong PINs in a row, for 300 s) |
+| `create_profile` | `name` (1 to 16 characters, unique), `pin` (4 to 8 digits) | as `login`, plus `created`; refused when the accounts file sets `allow_create` false. The first character (or any while there is no admin) is the admin |
+| `logout` | | forgets this device's token; the connection returns to the picker (`profiles`, `allow_create`) |
+| `profiles` | | `profiles`, `allow_create` |
+
+Before a login only these and `ping` are accepted; anything else is rejected with `login_required`. `WsLink` sends the remembered `login` with every `hello`, so reconnects skip the picker; it emits `login_needed` with the picker data otherwise, and `login()` sends `login` or `create_profile` (the game's `scripts/login_screen.gd`). The game keeps the name and token per server address in `viewer.cfg` (`logins`).
+
+Every snapshot and `profile` event carries `options.admin` (always true without accounts) and, on a multi-profile server, `options.account`. A backend with `admin` false refuses `Backend.ADMIN_COMMANDS` (`battle_escape_dev`, `start_battle_config`, `start_wild_battle_config`, `open_battle`, `begin_battle`, `set_fast_hunt_threads`) and every `gm_*` with 「只有管理员角色可以使用 GM 和开发者功能。」.
 
 ## Automation settings
 
@@ -94,7 +110,7 @@ Walking is mirrored: each client tags `report_position` with its id, the backend
 
 ## Test seams
 
-Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings; `radio_test` covers the radio library across two devices.
+Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings; `radio_test` covers the radio library across two devices. `profile_hub_test` and `remote_login_test` cover multi-profile servers (routing, logins, admin gating, per-profile saves and resume, the login screen).
 
 ## Decisions (2026-09-27)
 
