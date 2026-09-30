@@ -625,3 +625,9 @@
 - 想法：按原版地图恢复拉多拉、森林、哥亚、阿鲁姆、强恩族、龙巢、卡鲁它那、碧青、琉璃、水苍洞窟；任务入口暂时直接开放，保留原版遇敌，网页按到访下载。
 - 状态：已导入并连通 99 张地图；拉多拉山岭洞窟、部分旧山顶和琉璃十五楼共 22 张候选地图因缺少已核对原始入口暂缓。任务、Boss、NPC 服务尚未还原。
 - 去向：`tools/import_world.py`、`tools/verify_jyaruga_world.py`；`docs/reverse-engineering/ordinary-world-expansion.md` 的地图清单与限制。
+
+## 2026-09-30 · 萨伊那斯剩余风景地图 · 部分完成
+
+- 想法：补齐柯尔克村和萨伊那斯洞窟、矿坑与研究所，沿用原版传送和遇敌资料。
+- 状态：新增67张已连通地图；便利商店、柯奥/霍特尔洞窟及大坑道地下支线28张候选缺少原始进入路径，暂缓。已核对NPC/战斗入口直接开放，未恢复任务、Boss和商店服务。
+- 去向：`tools/world_regions/sainasu.json`；`docs/reverse-engineering/remaining-world-expansion.md`。

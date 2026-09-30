@@ -5,6 +5,7 @@ import struct
 import tempfile
 import unittest
 from test_import_wilderness import FakeArchive
+from world_review import read_reviewed_portals, merge_portals
 from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS, settlement_owner, JYARUGA_SCENIC_MAPS, read_scenic_gates, review_scenic_doors
 
 
@@ -40,6 +41,27 @@ class WorldImportTests(unittest.TestCase):
             self.assertEqual(gates[0]['target'],[61,46])
             self.assertEqual(gates[0]['to_map'],21201)
             self.assertIn('直接开放',gates[0]['convenience'])
+
+    def test_recursive_reviewed_gate_and_mapwarp_keep_original_direction(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            npc=root/'gmsv/data/npc'
+            (npc/'100').mkdir(parents=True)
+            maps=root/'gmsv/data/map';maps.mkdir()
+            (npc/'100/gate.create').write_text('{\nfloorid=11214\nborncenter=41,36,1,1\nenemy=sb_gate|file:100/gate.arg\n}')
+            (npc/'100/gate.arg').write_text('warpfl:11215\nwarpx:9\nwarpy:16\n')
+            (maps/'mapwarp.txt').write_text('NONE:NULL:11215,9,17:11214,41,37:NULL\nA:NULL:11215,1,1:999,2,2:NULL\n')
+            review={'sainasu':{'maps':[11214,11215],'gate_scripts':['100/gate.arg']}}
+            links=read_reviewed_portals(root,review)
+            self.assertEqual(len(links),2)
+            gate=next(p for p in links if 'gate_source' in p)
+            self.assertEqual((gate['cell'],gate['to_map'],gate['target']),([41,36],11215,[9,16]))
+            self.assertTrue(any(p['to_map']==11214 for p in links))
+            self.assertEqual(len(read_reviewed_portals(root,{'x':{'maps':[11214],'gate_scripts':[]}})),1)
+            duplicate=dict(gate);duplicate.pop('gate_source');duplicate.pop('convenience')
+            merged=merge_portals([duplicate,gate])
+            self.assertEqual(len(merged),1)
+            self.assertIn('gate_source',merged[0])
 
     def test_dev_training_maps_do_not_expand_ordinary_portals(self):
         self.assertEqual(len(DEV_TRAINING_MAPS), 35)

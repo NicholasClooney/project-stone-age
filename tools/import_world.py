@@ -12,9 +12,15 @@ import re
 import struct
 from import_legacy import Archive
 from map_file import save_map
+from world_review import load_reviews, read_reviewed_portals, merge_portals
+
+REGION_REVIEWS = load_reviews()
+REVIEWED_REGION_MAPS = {i for r in REGION_REVIEWS.values() for i in r["maps"]}
+REVIEWED_INTERIORS = {i for r in REGION_REVIEWS.values() for i in r.get("interiors",[])}
 
 VILLAGES = {1000, 2000, 3000, 4000}
 TOWNS = VILLAGES | {1100, 1300, 1400, 3100, 3200, 3300, 3400, 5000, 5100}
+TOWNS |= {i for r in REGION_REVIEWS.values() for i in r.get("towns",[])}
 # Reviewed ordinary Giru buildings only. The same north directory also contains
 # quest-controlled snake caves and room 5107, which must stay excluded.
 GIRU_SETTLEMENT_MAPS = {5000, 5001, 5003, 5005, 5100, 5101, 5103, 5105, 5106}
@@ -113,7 +119,8 @@ def select_connected_maps(map_paths, portals):
                      if p['from_map'] in selected and p['to_map'] in map_paths
                      and ('/'.join(map_paths[p['to_map']].parts[-3:-1]) in ORDINARY_DIRECTORIES
                           or p['to_map'] in GIRU_SETTLEMENT_MAPS
-                          or p['to_map'] in JYARUGA_SCENIC_MAPS)}
+                          or p['to_map'] in JYARUGA_SCENIC_MAPS
+                          or p['to_map'] in REVIEWED_REGION_MAPS)}
         if additions <= selected:
             return selected
         selected |= additions
@@ -123,7 +130,8 @@ def ordinary_portals(portals, ordinary):
     """Only selected ordinary/scenic maps get walking portals."""
     return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary
             and (300 not in (p['from_map'], p['to_map'])
-                 or (p['from_map'] in (5000, 5100) or p['to_map'] in (5000, 5100)))]
+                 or (p['from_map'] in (5000, 5100) or p['to_map'] in (5000, 5100))
+                 or p['from_map'] in REVIEWED_REGION_MAPS or p['to_map'] in REVIEWED_REGION_MAPS)]
 
 
 def settlement_owner(ident, map_paths):
@@ -157,8 +165,12 @@ SCENIC_DOOR_CHOICES = {
 
 
 def review_scenic_doors(portals):
+    choices=dict(SCENIC_DOOR_CHOICES)
+    for review in REGION_REVIEWS.values():
+        for record in review.get('door_choices',[]):
+            choices[tuple(record['from'])]=tuple(record['to'])
     for p in portals:
-        choice=SCENIC_DOOR_CHOICES.get((p['from_map'],*p['cell']))
+        choice=choices.get((p['from_map'],*p['cell']))
         if choice is None:
             continue
         if (p['to_map'],*p['target']) == choice:
@@ -275,6 +287,7 @@ def run(source, reference, output):
     root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
     all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
+    all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS))
     maps={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
         if path.is_file() and path.read_bytes()[:6]==b'LS2MAP':
@@ -312,7 +325,7 @@ def run(source, reference, output):
         arrival_region=reachable_cells(data,entrance)
         occupied=[npc['cell'] for npc in residents if npc['map_id']==ident]
         spawn=safe_spawn(data,preferred.get(ident,entrance),exits+occupied,arrival_region)
-        kind='dungeon' if ident in JYARUGA_SCENIC_MAPS else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
+        kind='village' if ident in TOWNS else 'interior' if ident in REVIEWED_INTERIORS else 'dungeon' if ident in (JYARUGA_SCENIC_MAPS | REVIEWED_REGION_MAPS) else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.map',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
