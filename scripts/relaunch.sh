@@ -7,7 +7,10 @@
 #   4. start scripts/serve.sh and wait until both ports answer
 #   5. forward https://<this Mac>.<tailnet>.ts.net:8780 and :8781 to it
 # Stays in the foreground: Ctrl-C stops the server and removes the forwards.
-# Any other arguments go to serve.sh (for example --save=user://try.json).
+# Any other arguments go to serve.sh. With neither --save= nor --accounts=
+# it hosts the LAN profiles (--accounts=user://lan/accounts.json, PIN logins,
+# see docs/development/lan-profiles.md); --single serves the single-player
+# save as before.
 set -eu
 cd "$(dirname "$0")/.."
 . scripts/common.sh
@@ -16,9 +19,11 @@ require_python
 web_port="${STONE_AGE_WEB_PORT:-8780}"
 backend_port=8781
 build=1
+single=0
 for argument in "$@"; do
   case "$argument" in
     --skip-build) build=0 ;;
+    --single) single=1 ;;
     --port=*) backend_port="${argument#--port=}" ;;
   esac
 done
@@ -78,7 +83,11 @@ echo "==> Stopping the running server"
 
 echo "==> Starting the server"
 # Arguments meant for this script are dropped; the rest go to the backend.
-set -- $(for argument in "$@"; do [ "$argument" = --skip-build ] || printf '%s\n' "$argument"; done)
+set -- $(for argument in "$@"; do case "$argument" in (--skip-build|--single) ;; (*) printf '%s\n' "$argument" ;; esac; done)
+case " $* " in
+  *" --save="*|*" --accounts="*) ;;
+  *) [ "$single" = 1 ] || set -- "$@" --accounts=user://lan/accounts.json ;;
+esac
 ./scripts/serve.sh "$@" &
 server=$!
 
