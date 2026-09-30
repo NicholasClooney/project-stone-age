@@ -17,6 +17,10 @@ config/description="Original StoneAge resources rendered in Godot. Local Samgir 
 run/main_scene="res://scenes/main.tscn"
 config/features=PackedStringArray("4.6", "GL Compatibility")
 
+[autoload]
+
+TestUserDir="res://scripts/test_user_dir.gd"
+
 [display]
 
 window/size/viewport_width=1280
