@@ -690,7 +690,8 @@ func _cmd_report_position(command: Dictionary) -> Dictionary:
 ## What other players on the map see of this character (LAN phase 2,
 ## server/presence.gd): appearance, level, mount, and whether it is fighting
 ## (a battle is open, or compact 自动练级 runs between its battles). Reads
-## the profile in place; nothing is copied.
+## the profile in place; nothing is copied. `auto` (any automation running)
+## is for 组队 (server/party.gd), not sent to other players.
 func presence_state() -> Dictionary:
 	var profile: Dictionary = session._profile
 	var ride := -1
@@ -700,7 +701,7 @@ func presence_state() -> Dictionary:
 	if index>=0 and index<pets.size():
 		ride = int(pets[index].get("sprite",-1))
 		ride_name = str(pets[index].get("name",""))
-	return {"name":account_name,"level":int(profile.get("player",{}).get("level",1)),"look":{"c":str(profile.get("character_id","100000")),"face":int(profile.get("face",0)),"ride":ride,"rn":ride_name},"map":automation.position_map,"cell":automation.position_cell,"battle":battle_open or (automation.running and automation.compact_active)}
+	return {"name":account_name,"level":int(profile.get("player",{}).get("level",1)),"look":{"c":str(profile.get("character_id","100000")),"face":int(profile.get("face",0)),"ride":ride,"rn":ride_name},"map":automation.position_map,"cell":automation.position_cell,"battle":battle_open or (automation.running and automation.compact_active),"auto":automation.running or automation.hunt_running or automation.flow_active()}
 
 # ---- persistence and events ------------------------------------------------
 

@@ -23,6 +23,7 @@ const SaveLock = preload("res://server/save_lock.gd")
 const SaveBackups = preload("res://server/save_backups.gd")
 const FastHuntShare = preload("res://server/fast_hunt_share.gd")
 const Presence = preload("res://server/presence.gd")
+const Party = preload("res://server/party.gd")
 
 var accounts
 ## id -> Backend, for every profile opened since the server started.
@@ -42,6 +43,11 @@ var _connections: Dictionary = {}
 var presence = Presence.new()
 ## Milliseconds for presence ticks and the chat rate limit (tests fake it).
 var presence_clock: Callable = Time.get_ticks_msec
+## LAN phase 3: 组队 on the map (server/party.gd).
+var party = Party.new()
+## connection -> the last `party` event it was sent (JSON), so only changes go out.
+var _party_sent: Dictionary = {}
+var _party_tick_msec := -100000
 var _stopped := false
 
 func _init(accounts_path: String = "", fake_clock: Callable = Callable()) -> void:
@@ -121,10 +127,19 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 		"logout":reply = _logout(connection)
 		"profiles":reply = {"ok":true,"profiles":_listing(),"allow_create":accounts.allow_create()}
 		"say":reply = _say(connection,command)
+		"party_switch","party_join","party_leave","party_kick","party_disband":reply = _party_command(connection,type,command)
 		_:
 			var backend = backend_of(connection)
 			if backend==null:reply = {"ok":false,"reason":"请先登录。","login_required":true}
-			else:return backend.handle(command)
+			else:
+				var id := profile_of(connection)
+				reply = _party_refusal(connection,id,type,command)
+				if reply.is_empty():
+					var leading: bool = type=="report_position" and party.is_leader(id)
+					var before := [backend.automation.position_map,backend.automation.position_cell]
+					var result: Dictionary = backend.handle(command)
+					if leading:_party_follow(id,before)
+					return result
 	reply.seq = command.get("seq",0)
 	reply.type = "ack" if reply.get("ok",false) else "rejected"
 	reply.v = Backend.PROTOCOL
@@ -135,7 +150,9 @@ func disconnect_connection(connection: int) -> void:
 	var id := profile_of(connection)
 	_connections.erase(connection)
 	presence.forget(connection)
+	_party_sent.erase(connection)
 	_attach(id)
+	_party_gone(id)
 
 func _hello(connection: int, command: Dictionary) -> Dictionary:
 	if int(command.get("protocol",Backend.PROTOCOL))!=Backend.PROTOCOL:return {"ok":false,"reason":"protocol %d required" % Backend.PROTOCOL}
@@ -186,7 +203,10 @@ func _enter(connection: int, entry: Dictionary, token: String) -> Dictionary:
 	var previous := profile_of(connection)
 	_connections[connection] = {"id":id,"token":token}
 	presence.forget(connection)
-	if previous!=id:_attach(previous)
+	_party_sent.erase(connection)
+	if previous!=id:
+		_attach(previous)
+		_party_gone(previous)
 	_attach(id)
 	return {"ok":true,"snapshot":backend.full_snapshot(),"account":{"name":str(entry.name),"admin":bool(entry.admin)},"token":token}
 
@@ -217,15 +237,123 @@ func presence_profiles() -> Array:
 		var profile: Dictionary = backends[id].presence_state()
 		profile.id = id
 		profile.connections = connections_of(id)
+		profile.party = party.leader_of(id)
 		result.append(profile)
 	return result
 
 ## Sends each device what changed among the players on its map (at most every
-## Presence.TICK_MSEC; `force` for tests). Returns how many messages went out.
+## Presence.TICK_MSEC; `force` for tests), and its party view when that
+## changed. Returns how many presence messages went out.
 func presence_tick(force: bool = false) -> int:
-	var news: Array = presence.tick(int(presence_clock.call()),presence_profiles(),force)
+	var profiles := presence_profiles()
+	var news: Array = presence.tick(int(presence_clock.call()),profiles,force)
 	for item in news:outgoing.emit(item[0],item[1])
+	var now := int(presence_clock.call())
+	if force or now-_party_tick_msec>=Presence.TICK_MSEC:
+		_party_tick_msec = now
+		party_tick(profiles)
 	return news.size()
+
+# ---- 组队 (LAN phase 3, server/party.gd) ------------------------------------
+
+## Each logged-in device's `party` event, sent when its view changed (the 组队
+## switch, the members, the leader's battle). Returns how many went out.
+func party_tick(profiles: Array = []) -> int:
+	if profiles.is_empty():profiles = presence_profiles()
+	var by_id := {}
+	for profile in profiles:by_id[str(profile.id)] = profile
+	var sent := 0
+	for connection in _connections:
+		var id := profile_of(connection)
+		var view: Dictionary = party.view(id,by_id)
+		var key := JSON.stringify(view)
+		if _party_sent.get(connection,"")==key:continue
+		_party_sent[connection] = key
+		view.type = "party"
+		view.v = 1
+		view.me = id
+		outgoing.emit(connection,view)
+		sent += 1
+	return sent
+
+## Commands a party refuses, or answers itself; {} lets the backend handle it.
+## Members follow the leader: their own walking reports are ignored (the
+## device is told where the server has them), they meet no enemies and start
+## no battles. Nobody in a party starts automation.
+func _party_refusal(connection: int, id: String, type: String, command: Dictionary) -> Dictionary:
+	if not party.in_party(id):return {}
+	if type=="auto_start":return {"ok":false,"reason":"组队中不能使用自动练级、自动抓宠和找宠，请先离开队伍。"}
+	if not party.is_member(id):return {}
+	match type:
+		"report_position":
+			var automation = backends[id].automation
+			var cell: Array = command.get("cell",[0,0])
+			var here := Vector2i(int(cell[0]),int(cell[1]))
+			if automation.position_map>=0 and (int(command.get("map_id",-1))!=automation.position_map or here!=automation.position_cell):
+				outgoing.emit(connection,{"type":"position","v":Backend.PROTOCOL,"map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y],"client":"party"})
+			return {"ok":true,"paused":"","party":true}
+		"field_step":return {"ok":true,"hit":false,"battle":false,"party":true}
+		"wild_encounter","begin_battle","open_battle":return {"ok":false,"reason":"组队时只有队长会遇敌；队员跟着队长走。"}
+	return {}
+
+## The leader moved: every member steps after it, or goes where it warped.
+func _party_follow(leader: String, before: Array) -> void:
+	var automation = backends[leader].automation
+	var positions := {}
+	for member in party.members(leader).slice(1):
+		if backends.has(member):positions[member] = [backends[member].automation.position_map,backends[member].automation.position_cell]
+	for move in party.follow(leader,int(before[0]),before[1],automation.position_map,automation.position_cell,positions):
+		if backends.has(move[0]):backends[move[0]].handle({"type":"report_position","map_id":move[1],"cell":[move[2].x,move[2].y],"map_changed":move[3],"client":"party"})
+
+func _party_command(connection: int, type: String, command: Dictionary) -> Dictionary:
+	var id := profile_of(connection)
+	if id.is_empty() or not backends.has(id):return {"ok":false,"reason":"请先登录。","login_required":true}
+	var result: Dictionary
+	match type:
+		"party_switch":
+			party.set_accept(id,bool(command.get("on",false)))
+			result = {"ok":true,"accept":party.accepts(id)}
+		"party_join":
+			result = party.join(id,int(command.get("facing",4)),presence_profiles(),str(command.get("target","")))
+			if result.ok:
+				var name := _name(id)
+				print("[%s] 加入 %s 的队伍。" % [name,_name(result.leader)])
+				for member in result.members:
+					_system(member,"加入团队！" if member==id else "%s 加入团队！" % name)
+		"party_leave":result = _party_left(id,party.leave(id),"")
+		"party_disband":result = _party_left(id,party.disband(id),"")
+		"party_kick":
+			var target := str(command.get("id",""))
+			result = _party_left(target,party.kick(id,target),"kick")
+	party_tick()
+	return result
+
+## Tells the players concerned, as the original's yellow system lines.
+func _party_left(id: String, result: Dictionary, why: String) -> Dictionary:
+	if not result.ok:return result
+	var name := _name(id)
+	if bool(result.disbanded) and str(result.leader)==id:
+		print("[%s] 解散了队伍。" % name)
+		for member in result.left:_system(member,"团队已解散！")
+		return result
+	print("[%s] %s队伍。" % [name,"被踢出" if why=="kick" else "离开"])
+	_system(id,"被队长踢出队伍。" if why=="kick" else "脱离团队！")
+	for member in result.members+(result.left.filter(func(other):return other!=id)):
+		_system(member,"%s %s" % [name,"被踢出队伍。" if why=="kick" else "脱离团队！"])
+	return result
+
+## A profile with no device left (disconnect, logout, another login) leaves
+## its party; a leader's party disbands (CHAR_DischargeParty at logout).
+func _party_gone(id: String) -> void:
+	if id.is_empty() or not party.in_party(id) or not connections_of(id).is_empty():return
+	_party_left(id,party.leave(id),"")
+	party_tick()
+
+func _system(id: String, text: String) -> void:
+	for connection in connections_of(id):outgoing.emit(connection,{"type":"chat","v":1,"channel":"系统","id":"","name":"","text":text,"mine":false})
+
+func _name(id: String) -> String:
+	return str(backends[id].account_name) if backends.has(id) else id
 
 ## 一般频道: one line to every device on the speaker's map.
 func _say(connection: int, command: Dictionary) -> Dictionary:
@@ -235,9 +363,11 @@ func _say(connection: int, command: Dictionary) -> Dictionary:
 	var speaker: Dictionary = {}
 	for profile in profiles:
 		if str(profile.id)==id:speaker = profile
-	var said: Dictionary = presence.say(int(presence_clock.call()),speaker,profiles,str(command.get("text","")))
+	var to_party := str(command.get("channel",""))=="队伍"
+	if to_party and not party.in_party(id):return {"ok":false,"reason":"还没有队伍，队伍频道没人听。"}
+	var said: Dictionary = presence.say(int(presence_clock.call()),speaker,profiles,str(command.get("text","")),party.members(id) if to_party else [])
 	for item in said.deliveries:outgoing.emit(item[0],item[1])
-	if said.reply.ok:print("[%s] 一般频道：%s" % [speaker.name,said.reply.text])
+	if said.reply.ok:print("[%s] %s：%s" % [speaker.name,"队伍频道" if to_party else "一般频道",said.reply.text])
 	return said.reply
 
 ## Every backend's budget_share: how many backends spend a frame budget now.
