@@ -9,11 +9,12 @@ extends RefCounted
 ##   capture      {hp, pet, pet_id, pet_max_level}
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue,
 ##                 resume (重启后自动恢复), stat_species (属性条件 shows it; -1 follows the target)}
-##   stat_filters {"<template id>": {mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, keep}}}}
-##     A condition asks for 最高 − minus: the best Lv120 value of that metric
-##     among the player's own pets of the species, less `minus`
-##     (pet_stat_filter.gd resolve). The former fixed thresholds (value,
-##     strict) are dropped when a save is read.
+##   stat_filters {"<template id>": {mode, threshold_mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
+##     threshold_mode "relative" (default): a condition asks for 最高 − minus,
+##     the best Lv120 value of that metric among the player's own pets of the
+##     species less `minus`; "absolute": at least `value`
+##     (pet_stat_filter.gd resolve). Both numbers are kept, so switching loses
+##     neither. An old fixed threshold saved with strict (>) becomes value + 1.
 ##     keep_rule: 保留规则 (scripts/keep_rule.gd) {tiers, per_tier, order,
 ##     champions, champion_stats, auto}: order is 1 to 5 distinct keys of sum,
 ##     attack, defence, speed, max_hp (pet_stat_filter.gd RANK_KEYS);
@@ -30,9 +31,9 @@ const SHOWCASE_NAME := "后台搜宠"
 ## (so no 最高 to count from) before choosing what to catch, in seconds.
 const SURVEY_SECONDS := 120
 const METRICS := ["sum","attack","defence","speed"]
-const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",-100,1000],"keep":["int",0,1000]}
+const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",-100,1000],"value":["int",0,3000],"keep":["int",0,1000]}
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
-const FILTER_SPEC := {"mode":["enum",["all","any"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
+const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
@@ -153,9 +154,17 @@ static func sanitize(stored: Variant) -> Dictionary:
 
 ## 达标只保留前 N 只 (keep_qualified, rank) became keep_rule: a rank the player
 ## chose becomes the tier order (三围合 is what tiers group by, so it is dropped).
+## An old fixed threshold saved with strict (>) becomes the same ≥ value + 1.
 static func _migrate_filter(value: Variant) -> Variant:
-	if not value is Dictionary or not value.has("rank"):return value
+	if not value is Dictionary:return value
 	var result: Dictionary = value.duplicate(true)
+	if result.get("conditions") is Dictionary:
+		for metric in result.conditions:
+			var condition = result.conditions[metric]
+			if not condition is Dictionary or not condition.has("strict"):continue
+			if condition.strict is bool and condition.strict and _int(condition.get("value"))!=null:condition.value = int(_int(condition.value))+1
+			condition.erase("strict")
+	if not result.has("rank"):return result
 	var order := []
 	var checked := _leaf(["rank"],result.rank)
 	if not checked.is_empty():

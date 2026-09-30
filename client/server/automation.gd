@@ -170,12 +170,13 @@ var flow_best_predicted: Dictionary = {}
 var _owned_maxima: Dictionary = {}
 var _pets_key := ""
 ## The resolved thresholds the native helper was launched with; a change (a
-## better pet arrived) restarts it with the new ones.
+## better pet arrived, or the player edited 属性条件) restarts it with the new ones.
 var _fast_thresholds := ""
 ## Set by request_stop_cycle: the cycle stops once this pet is trained.
 var flow_stop_pending := ""
-## 摸底: a species with enabled conditions and no pet of its own has no 最高 to
-## count from. The cycle then scans that species with no threshold for
+## 摸底: a species with enabled 最高 − x conditions (relative mode) and no pet
+## of its own has no 最高 to count from (fixed values, absolute mode, never
+## survey). The cycle then scans that species with no threshold for
 ## survey_seconds of wall time, collecting candidates (pool kept by the
 ## species' 保留规则, as the helper does), replays them, and catches what the
 ## keep rule would keep of them. After that the thresholds roll as usual.
@@ -218,8 +219,9 @@ func start(command: Dictionary) -> Dictionary:
 			return _reply(start_hunt(hunt_request(command)),hunt_status)
 		"find_pet":
 			if flow_active():return _reply(false,"找宠流程进行中")
-			# A cycle keeps the stat conditions it started with. Older clients may
-			# still send their own; the profile's are used otherwise.
+			# The cycle takes the profile's stat conditions (and follows the
+			# player's later edits: apply_stat_filters). Older clients may still
+			# send their own.
 			flow_settings_overrides = backend.session.automation_settings()
 			flow_stat_filters = AutomationSettings.stat_filters(flow_settings_overrides)
 			flow_stat_filters.merge(_int_keys(command.get("stat_filters",{})),true)
@@ -261,12 +263,51 @@ func usable_templates(level_one: bool) -> Array:
 	return usable
 
 ## The profile's automation settings changed: a running capture follows the
-## new capture settings at once (training settings apply from the next start).
+## new capture settings at once (training settings apply from the next start),
+## and a running find-pet cycle its new 属性条件 (apply_stat_filters).
 func profile_settings_changed() -> void:
 	if not (running or hunt_running or flow_active()):return
 	var fresh := profile_settings()
 	for key in ["capture_hp","capture_pet","capture_pet_id","capture_pet_max_level"]:settings[key] = fresh[key]
+	if flow_active():apply_stat_filters(backend.session.automation_settings())
 	_emit_status()
+
+## A running cycle takes the species' 属性条件 the player just changed
+## (threshold mode, x, fixed values, 任一/全部, 保留规则 …): the hunt judges
+## with them at once (the native helper restarts, since threshold_key
+## changes), queued hits now below them are let go, and a 摸底 of a species
+## that no longer needs one (switched to fixed values) ends without picks.
+## Species the player did not touch keep what the cycle has (an older
+## client's own filters too). The pet being caught or trained keeps the
+## filter it was found with.
+func apply_stat_filters(overrides: Dictionary) -> void:
+	var before := flow_settings_overrides
+	flow_settings_overrides = overrides.duplicate(true)
+	var ids := {}
+	for id in _dict_keys(before.get("stat_filters",{}))+_dict_keys(overrides.get("stat_filters",{})):ids[int(id)] = true
+	var changed: Array = []
+	for id in ids:
+		var now := AutomationSettings.stat_filter(overrides,id)
+		if JSON.stringify(now)==JSON.stringify(AutomationSettings.stat_filter(before,id)):continue
+		flow_stat_filters[id] = now
+		changed.append(id)
+	if changed.is_empty():return
+	refresh_maxima()
+	if not survey.is_empty():
+		var still: Array = survey.templates.filter(func(id):return StatFilter.needs_survey(raw_filter_for(int(id)),species_maxima(int(id))))
+		if still.is_empty():
+			survey = {}
+			_showcase_line("survey","摸底取消：属性条件改后不再需要摸底（固定数值或未启用条件），直接按门槛找。")
+		else:survey.templates = still
+	var lines: Array = []
+	for id in changed:
+		var raw := raw_filter_for(id)
+		lines.append("%s：%s" % [_template_name(id),StatFilter.describe_thresholds(raw,species_maxima(id)) if StatFilter.enabled(raw) else "未启用条件"])
+	_showcase_line("settings","属性条件已更新，正在进行的找宠立即改用（%s）" % "；".join(lines))
+	if not showcase_queue.is_empty():_prune_below_threshold()
+
+static func _dict_keys(value: Variant) -> Array:
+	return value.keys() if value is Dictionary else []
 
 func update(command: Dictionary) -> Dictionary:
 	if command.has("settings"):settings.merge(command.settings,true)
@@ -823,13 +864,13 @@ func collect_target_text() -> String:
 	var stop_after := int(flow_target_filter.get("stop_after",1))
 	return "不限" if stop_after<=0 else str(stop_after)
 
-## The cycle's stat filter for a species as saved (最高 − x, unresolved).
+## The cycle's stat filter for a species as saved (最高 − x or fixed values, unresolved).
 func raw_filter_for(template_id: int) -> Dictionary:
 	if flow_stat_filters.has(template_id):return flow_stat_filters[template_id]
 	return AutomationSettings.stat_filter(flow_settings_overrides,template_id)
 
 ## The filter the hunt applies now: 最高 − x resolved against the species'
-## best pets (species_maxima).
+## best pets (species_maxima), or the fixed values in absolute mode.
 func filter_for(template_id: int) -> Dictionary:
 	return StatFilter.resolve(raw_filter_for(template_id),species_maxima(template_id))
 
@@ -1685,7 +1726,9 @@ func _showcase_add(entry: Dictionary) -> void:
 ## let go at once, instead of each when its turn comes. The queue is best
 ## first, so each hit is judged against owned pets, picks, the hit being
 ## caught and the kept hits ranked above it (entry_maxima), never itself: the
-## best hit always survives. Each one let go is written to 放生记录.
+## best hit always survives. Each one let go is written to 放生记录. With fixed
+## values (absolute mode) better hits raise nothing: only the values count,
+## so this lets hits go only after the player raised them.
 func _prune_below_threshold() -> void:
 	var kept: Array = []
 	var kept_hits: Array = []

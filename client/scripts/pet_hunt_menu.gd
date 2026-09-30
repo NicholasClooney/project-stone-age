@@ -24,10 +24,15 @@ var _stat_loaded: Dictionary = {}
 var stat_page: Control
 var stat_species: OptionButton
 var stat_mode: OptionButton
+## 相对：最高 − x / 绝对：≥ 数值 (the species' threshold_mode).
+var stat_threshold_mode: OptionButton
+var stat_heading: Label
 var stat_checks: Dictionary = {}
-## Each condition is 三围合 ≥ 最高 N − [x] = T: stat_numbers are the x
-## (minus), stat_results show T (or 摸底 without a pet of the species).
+## Relative: 三围合 ≥ 最高 N − [x] = T: stat_numbers are the x (minus),
+## stat_results show T (or 摸底 without a pet of the species). Absolute:
+## 三围合 ≥ [v]（现有最高 N）: stat_values are v, stat_results the best.
 var stat_numbers: Dictionary = {}
+var stat_values: Dictionary = {}
 var stat_results: Dictionary = {}
 var _thresholds_key := ""
 var _thresholds_msec := -100000
@@ -298,10 +303,10 @@ func settings_patch() -> Dictionary:
 	if _stat_species_shown>=0:
 		var conditions:={}
 		for metric in StatFilter.METRICS:
-			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"minus":int(stat_numbers[metric].value),"keep":int(stat_keeps[metric].value)}
+			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value),"keep":int(stat_keeps[metric].value)}
 		var chosen_stats:=KeepRule.STATS.filter(func(stat):return rule_stats[stat].button_pressed)
 		var keep_rule:={"tiers":int(rule_tiers.value),"per_tier":int(rule_per_tier.value),"order":rank_choice(),"champions":int(rule_champions.value),"champion_stats":chosen_stats,"auto":rule_auto.button_pressed}
-		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","stop_after":int(stat_stop_after.value),"keep_rule":keep_rule,"conditions":conditions}
+		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","threshold_mode":_threshold_mode_shown(),"stop_after":int(stat_stop_after.value),"keep_rule":keep_rule,"conditions":conditions}
 		var changed:=AutomationSettings.diff(world.stat_filter(_stat_species_shown),wanted_filter)
 		if not changed.is_empty():patch.stat_filters={str(_stat_species_shown):changed}
 	return patch
@@ -408,8 +413,10 @@ func open_records() -> void:
 
 func set_controls(locked: bool) -> void:
 	for control in controls:
-		if control is SpinBox:control.editable=not locked
-		elif control is BaseButton:control.disabled=locked
+		# 属性条件 stays editable: a running cycle follows it at once.
+		var held:=locked and not (is_instance_valid(stat_page) and stat_page.is_ancestor_of(control))
+		if control is SpinBox:control.editable=not held
+		elif control is BaseButton:control.disabled=held
 	start_button.disabled=locked
 	stop_button.disabled=not locked
 	minimize_button.disabled=not locked
@@ -670,9 +677,8 @@ func _workflow_counts()->String:
 func build_stat_page()->void:
 	stat_page=Control.new();stat_page.name="PetStatConditionsPage";stat_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(stat_page)
 	var tab:Button=world.button("属性条件",show_stat_settings);tab.position=Vector2(895,18);panel.add_child(tab)
-	var heading:Label=world.text("120级属性筛选 · 门槛＝同种现有最高 − x，随更好的宠物提高",19);heading.position=Vector2(24,130);stat_page.add_child(heading)
-	heading.mouse_filter=Control.MOUSE_FILTER_PASS
-	heading.tooltip_text="最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新，正在进行的找宠立即改用新门槛。\n还没有这个品种时先摸底%d秒：不设门槛找，按保留规则挑出最好的几只抓来，之后按新的最高继续。" % AutomationSettings.SURVEY_SECONDS
+	stat_heading=world.text("",19);stat_heading.name="StatHeading";stat_heading.position=Vector2(24,130);stat_page.add_child(stat_heading)
+	stat_heading.mouse_filter=Control.MOUSE_FILTER_PASS
 	stat_species=OptionButton.new();stat_species.name="StatFilterSpecies";stat_species.position=Vector2(24,170);stat_species.size=Vector2(370,38);stat_page.add_child(stat_species);controls.append(stat_species)
 	stat_species.item_selected.connect(func(_i):
 		# Changes to the species shown until now are saved before switching.
@@ -682,10 +688,16 @@ func build_stat_page()->void:
 		_settings_changed(true))
 	stat_mode=OptionButton.new();stat_mode.name="StatFilterMode";stat_mode.position=Vector2(430,170)
 	stat_mode.add_item("全部满足（AND）");stat_mode.add_item("任一满足（OR）");stat_page.add_child(stat_mode);controls.append(stat_mode);stat_mode.item_selected.connect(func(_i):save_stat_settings(true))
+	stat_threshold_mode=OptionButton.new();stat_threshold_mode.name="StatThresholdMode";stat_threshold_mode.position=Vector2(640,170)
+	for mode in StatFilter.THRESHOLD_MODES:stat_threshold_mode.add_item(StatFilter.THRESHOLD_MODE_NAMES[mode])
+	stat_threshold_mode.tooltip_text="相对：门槛＝同种现有最高 − x，抓到更好的宠物后自动提高，适合前期。\n绝对：门槛是固定数值，不随宠物变化、不摸底，已有极品后可放宽。\n两种数值各自保存，来回切换不会丢；第一次切到绝对时按当前门槛填入。"
+	stat_page.add_child(stat_threshold_mode);controls.append(stat_threshold_mode);stat_threshold_mode.item_selected.connect(func(_i):switch_threshold_mode())
 	for i in range(4):
 		var metric:String=StatFilter.METRICS[i]
 		var check:=CheckBox.new();check.name="StatEnabled_"+metric;check.text=StatFilter.METRIC_NAMES[metric]+" ≥ 最高 −";check.position=Vector2(24+(i%2)*470,228+(i/2)*55);stat_page.add_child(check);controls.append(check);stat_checks[metric]=check
 		var input:=number(Vector2(200+(i%2)*470,228+(i/2)*55),-100,1000,1);input.name="StatMinus_"+metric;input.size.x=80;input.reparent(stat_page);stat_numbers[metric]=input
+		var fixed:=number(Vector2(140+(i%2)*470,228+(i/2)*55),0,3000,0);fixed.name="StatValue_"+metric;fixed.size.x=96;fixed.reparent(stat_page);fixed.hide();stat_values[metric]=fixed
+		fixed.value_changed.connect(func(_value):save_stat_settings();refresh_stat_thresholds(true))
 		var result:Label=world.text("",16);result.name="StatThreshold_"+metric;result.position=Vector2(284+(i%2)*470,238+(i/2)*55);result.mouse_filter=Control.MOUSE_FILTER_PASS;stat_page.add_child(result);stat_results[metric]=result
 		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(344+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
 		var keep:=number(Vector2(384+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=84;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
@@ -770,16 +782,17 @@ func load_stat_settings()->void:
 	_stat_species_shown=template_id
 	var settings:Dictionary=world.stat_filter(template_id)
 	var rule:Dictionary=settings.get("keep_rule",{})
-	var flat:={"mode":str(settings.mode),"stop_after":int(settings.stop_after),"tiers":int(rule.get("tiers",2)),"per_tier":int(rule.get("per_tier",3)),"champions":int(rule.get("champions",2)),
+	var flat:={"mode":str(settings.mode),"threshold_mode":str(settings.get("threshold_mode","relative")),"stop_after":int(settings.stop_after),"tiers":int(rule.get("tiers",2)),"per_tier":int(rule.get("per_tier",3)),"champions":int(rule.get("champions",2)),
 		"rank":rule.get("order",["attack","speed","max_hp"]).duplicate(),"champion_stats":rule.get("champion_stats",KeepRule.STATS).duplicate(),"auto":bool(rule.get("auto",false))}
 	for metric in StatFilter.METRICS:
-		for field in ["enabled","minus","keep"]:flat[metric+"."+field]=settings.conditions[metric][field]
+		for field in ["enabled","minus","value","keep"]:flat[metric+"."+field]=settings.conditions[metric].get(field,0)
 	var old:Dictionary={} if switching else _stat_loaded
 	var shown:=flat.duplicate()
 	if _changed(old,flat,"mode"):stat_mode.select(1 if flat.mode=="any" else 0)
+	if _changed(old,flat,"threshold_mode"):stat_threshold_mode.select(maxi(0,StatFilter.THRESHOLD_MODES.find(flat.threshold_mode)))
 	for metric in StatFilter.METRICS:
 		if _changed(old,flat,metric+".enabled"):stat_checks[metric].set_pressed_no_signal(bool(flat[metric+".enabled"]))
-		for entry in [[stat_numbers[metric],metric+".minus"],[stat_keeps[metric],metric+".keep"]]:
+		for entry in [[stat_numbers[metric],metric+".minus"],[stat_values[metric],metric+".value"],[stat_keeps[metric],metric+".keep"]]:
 			if not _sync_spin(entry[0],old.get(entry[1]),flat[entry[1]],switching):shown[entry[1]]=old[entry[1]]
 	if not _sync_spin(stat_stop_after,old.get("stop_after"),flat.stop_after,switching):shown.stop_after=old.stop_after
 	for entry in [[rule_tiers,"tiers"],[rule_per_tier,"per_tier"],[rule_champions,"champions"]]:
@@ -792,28 +805,69 @@ func load_stat_settings()->void:
 	loading_stat_settings=false
 	refresh_stat_thresholds(true)
 
-## Shows each condition's threshold for the species shown: the check reads
-## 「三围合 ≥ 最高627 −」, the number is x and the label 「= 626」 (摸底 with
-## no pet of the species). Recomputed when the pets change (at most once a
-## second unless `now`), since pets under Lv120 are projected.
+## Shows each condition's threshold for the species shown. Relative: the
+## check reads 「三围合 ≥ 最高627 −」, the number is x and the label 「= 626」
+## (摸底 with no pet of the species). Absolute: 「三围合 ≥」, the number is the
+## value and the label, faint, 「（现有最高627）」. Recomputed when the pets
+## change (at most once a second unless `now`), since pets under Lv120 are
+## projected.
 func refresh_stat_thresholds(now: bool = false) -> void:
 	if _stat_species_shown<0 or stat_results.is_empty():return
 	if not now and Time.get_ticks_msec()-_thresholds_msec<1000:return
 	_thresholds_msec=Time.get_ticks_msec()
-	# The warehouse arrives apart from the profile (client_state.pet_storage).
-	var profile:Dictionary={"pets":world.state.profile.get("pets",[]),"pet_storage":world.state.pet_storage}
-	var pets:Array=KeepRule.species_pets(profile,_stat_species_shown)
-	var key:="%d|%s|%s" % [_stat_species_shown,",".join(pets.map(func(pet):return "%s:%d" % [str(pet.get("pet_id","")),int(pet.get("level",0))])),",".join(StatFilter.METRICS.map(func(metric):return str(int(stat_numbers[metric].value))))]
+	var fixed:=_threshold_mode_shown()=="absolute"
+	var best:=shown_maxima()
+	var key:="%d|%s|%s|%s" % [_stat_species_shown,JSON.stringify(best),fixed,",".join(StatFilter.METRICS.map(func(metric):return "%d/%d" % [int(stat_numbers[metric].value),int(stat_values[metric].value)]))]
 	if key==_thresholds_key and not now:return
 	_thresholds_key=key
-	var best:=StatFilter.maxima(pets.map(KeepRule.stats_of))
-	for metric in StatFilter.METRICS:
-		var condition:={"enabled":true,"minus":int(stat_numbers[metric].value)}
+	stat_heading.text="120级属性筛选 · 门槛＝固定数值，不随宠物变化，不摸底" if fixed else "120级属性筛选 · 门槛＝同种现有最高 − x，随更好的宠物提高"
+	stat_heading.tooltip_text=("绝对：每项门槛是填写的固定数值（≥），抓到更好的宠物也不变，也不需要摸底；排队的宠物只按这些数值判断。已有极品后用它放宽门槛。" if fixed else "最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新。\n还没有这个品种时先摸底%d秒：不设门槛找，按保留规则挑出最好的几只抓来，之后按新的最高继续。" % AutomationSettings.SURVEY_SECONDS)+"\n改动立即用于正在进行的找宠（正在抓或练的这只除外）。"
+	for i in range(StatFilter.METRICS.size()):
+		var metric:String=StatFilter.METRICS[i]
+		var condition:={"enabled":true,"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value)}
 		var name:String=StatFilter.METRIC_NAMES[metric]
-		stat_checks[metric].text="%s ≥ 最高%s −" % [name,str(best[metric]) if best.has(metric) else ""]
-		stat_results[metric].text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "摸底"
-		var sentence:=StatFilter.describe_condition(metric,condition,best)
-		stat_checks[metric].tooltip_text=sentence;stat_results[metric].tooltip_text=sentence
+		var result:Label=stat_results[metric]
+		stat_numbers[metric].visible=not fixed;stat_values[metric].visible=fixed
+		if fixed:
+			stat_checks[metric].text="%s ≥" % name
+			result.position.x=240+(i%2)*470
+			result.text="（现有最高%d）" % int(best[metric]) if best.has(metric) else ""
+			result.modulate.a=0.55
+		else:
+			stat_checks[metric].text="%s ≥ 最高%s −" % [name,str(best[metric]) if best.has(metric) else ""]
+			result.position.x=284+(i%2)*470
+			result.text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "摸底"
+			result.modulate.a=1.0
+		var sentence:=StatFilter.describe_condition(metric,condition,best,fixed)
+		stat_checks[metric].tooltip_text=sentence;result.tooltip_text=sentence
+
+## The best Lv120 values of the species shown among the player's own pets
+## (carried and warehouse), as the backend counts them.
+func shown_maxima()->Dictionary:
+	# The warehouse arrives apart from the profile (client_state.pet_storage).
+	var profile:Dictionary={"pets":world.state.profile.get("pets",[]),"pet_storage":world.state.pet_storage}
+	return StatFilter.maxima(KeepRule.species_pets(profile,_stat_species_shown).map(KeepRule.stats_of))
+
+func _threshold_mode_shown()->String:
+	return StatFilter.THRESHOLD_MODES[clampi(stat_threshold_mode.selected,0,1)] if is_instance_valid(stat_threshold_mode) else "relative"
+
+## 相对 ↔ 绝对. The first switch to 绝对 fills each value with the threshold
+## hunted now (最高 − x, or the default without a pet of the species), so what
+## is hunted does not jump; a value the player saved is kept.
+func switch_threshold_mode()->void:
+	if loading_stat_settings:return
+	if _threshold_mode_shown()=="absolute":
+		var saved:Dictionary=world.automation_overrides().get("stat_filters",{}).get(str(_stat_species_shown),{}).get("conditions",{})
+		var own:=StatFilter.METRICS.filter(func(metric):return saved.get(metric,{}).has("value"))
+		# The x shown (maybe not saved yet) and the saved or default values.
+		var shown:={"conditions":{}}
+		for metric in StatFilter.METRICS:shown.conditions[metric]={"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value)}
+		var values:=StatFilter.absolute_values(shown,shown_maxima(),own)
+		loading_stat_settings=true
+		for metric in StatFilter.METRICS:stat_values[metric].value=values[metric]
+		loading_stat_settings=false
+	refresh_stat_thresholds(true)
+	save_stat_settings(true)
 
 ## The ranking order the three selectors show: 第一, then 第二 and 第三 unless
 ## 无 or already chosen.
@@ -836,7 +890,7 @@ func save_stat_settings(now: bool = false)->void:
 
 ## Saves typed numbers and pending changes now (before a find-pet cycle).
 func commit_stat_settings()->void:
-	for input in stat_numbers.values()+stat_keeps.values()+[stat_stop_after,rule_tiers,rule_per_tier,rule_champions]:
+	for input in stat_numbers.values()+stat_values.values()+stat_keeps.values()+[stat_stop_after,rule_tiers,rule_per_tier,rule_champions]:
 		if input.get_line_edit().has_focus():input.apply()
 	world.mark_settings_dirty(self)
 	world.flush_automation_settings()

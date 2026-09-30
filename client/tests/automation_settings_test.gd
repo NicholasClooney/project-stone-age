@@ -35,7 +35,7 @@ func run() -> void:
 	var blue := StatFilter.defaults(92)
 	check(blue.mode=="any" and int(blue.stop_after)==0 and blue.conditions.sum.enabled and int(blue.conditions.sum.keep)==15 and int(blue.conditions.attack.keep)==10 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1,"blue dragon keeps its per-species defaults")
 	var other := StatFilter.defaults(194)
-	check(int(other.stop_after)==1 and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and not other.conditions.sum.has("value"),"other species use the general stat filter")
+	check(int(other.stop_after)==1 and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (relative, fixed values kept for 绝对)")
 
 	var backend = Backend.new()
 	backend.set_process(false)
@@ -55,7 +55,14 @@ func run() -> void:
 	var effective: Dictionary = Settings.stat_filter(stored,92)
 	check(int(effective.conditions.sum.minus)==3 and int(effective.conditions.sum.keep)==15 and int(effective.stop_after)==0,"a stat override merges over the species defaults")
 	check(stored.stat_filters.keys()==["92"] and stored.stat_filters["92"]=={"conditions":{"sum":{"minus":3}}},"stat filters are keyed by template id")
-	check(not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"value":630}}}}}).get("ok",true)) and not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":1001}}}}}).get("ok",true)),"fixed thresholds are gone; x is at most 1000")
+	check(not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":1001}}}}}).get("ok",true)),"x is at most 1000")
+	reply = set_settings(backend,{"stat_filters":{"92":{"threshold_mode":"absolute","conditions":{"sum":{"value":630}}}}})
+	effective = Settings.stat_filter(overrides(backend),92)
+	check(reply.ok and StatFilter.absolute(effective) and int(effective.conditions.sum.value)==630 and int(effective.conditions.sum.minus)==3,"threshold_mode absolute with a fixed value; x stays saved beside it")
+	check(not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"value":3001}}}}}).get("ok",true)) and not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"value":-1}}}}}).get("ok",true)) and not bool(set_settings(backend,{"stat_filters":{"92":{"threshold_mode":"fixed"}}}).get("ok",true)),"a value is 0 to 3000; the mode is relative or absolute")
+	reply = set_settings(backend,{"stat_filters":{"92":{"threshold_mode":"relative"}}})
+	effective = Settings.stat_filter(overrides(backend),92)
+	check(reply.ok and not StatFilter.absolute(effective) and int(effective.conditions.sum.value)==630 and not overrides(backend).stat_filters["92"].has("threshold_mode"),"back to relative: the default mode is not stored, the value is kept")
 	check(bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":-5}}}}}).get("ok",false)) and not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":-101}}}}}).get("ok",true)),"a negative x (最高 + n) is allowed down to −100")
 	check(StatFilter.describe_condition("sum",{"enabled":true,"minus":-2},{"sum":627})=="三围合 ≥ 最高 627 + 2 = 629" and StatFilter.describe_condition("sum",{"enabled":true,"minus":1},{"sum":627})=="三围合 ≥ 最高 627 − 1 = 626","a negative x reads as 最高 + n")
 	reply = set_settings(backend,{"training":{"hp":10}})
@@ -100,10 +107,11 @@ func run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE+".bak"))
 	var session = GameSession.new()
 	check(session.load_game(SAVE) and session.snapshot().automation_settings=={} and int(Settings.effective(session.automation_settings()).training.hp)==10,"a save without automation settings loads with the defaults")
-	# Fixed thresholds from before 最高 − x are dropped; enabled and keep stay.
-	var fixed := Settings.sanitize({"stat_filters":{"92":{"conditions":{"sum":{"value":630,"strict":true,"keep":4},"attack":{"value":300}}},"194":{"conditions":{"defence":{"enabled":true,"value":180}}}}})
-	check(fixed=={"stat_filters":{"92":{"conditions":{"sum":{"keep":4}}},"194":{"conditions":{"defence":{"enabled":true}}}}},"old fixed values are dropped when a save is read (%s)" % JSON.stringify(fixed))
-	check(int(Settings.stat_filter(fixed,194).conditions.defence.minus)==1,"and the condition becomes 最高 − 1")
+	# Fixed thresholds from before 最高 − x stay as the 绝对 values (strict >
+	# becomes ≥ value + 1); the mode stays relative, so the hunt is unchanged.
+	var fixed := Settings.sanitize({"stat_filters":{"92":{"conditions":{"sum":{"value":630,"strict":true,"keep":4},"attack":{"value":300,"strict":false}}},"194":{"conditions":{"defence":{"enabled":true,"value":180}}}}})
+	check(fixed=={"stat_filters":{"92":{"conditions":{"sum":{"value":631,"keep":4},"attack":{"value":300}}},"194":{"conditions":{"defence":{"enabled":true,"value":180}}}}},"old fixed values are kept for 绝对, strict ones + 1 (%s)" % JSON.stringify(fixed))
+	check(int(Settings.stat_filter(fixed,194).conditions.defence.minus)==1 and not StatFilter.absolute(Settings.stat_filter(fixed,194)),"and the condition stays 最高 − 1")
 	old.automation_settings = {"training":{"hp":55,"xp":7},"hunt":"junk","stat_filters":{"92":{"mode":"any","stop_after":3},"x":{}},"extra":1}
 	file = FileAccess.open(SAVE,FileAccess.WRITE);file.store_string(JSON.stringify(old));file.close()
 	session = GameSession.new()
@@ -139,7 +147,9 @@ func run() -> void:
 	reply = runner.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL})
 	check(reply.ok and int(runner.automation.raw_filter_for(92).conditions.sum.minus)==7 and int(runner.automation.flow_hunt_request.rate)==321,"find-pet uses the profile's hunt and stat settings")
 	set_settings(runner,{"stat_filters":{"92":{"conditions":{"sum":{"minus":8}}}}})
-	check(int(runner.automation.raw_filter_for(92).conditions.sum.minus)==7,"a running cycle keeps the conditions it started with")
+	check(int(runner.automation.raw_filter_for(92).conditions.sum.minus)==8,"a running cycle follows the player's edits at once")
+	set_settings(runner,{"stat_filters":{"92":{"threshold_mode":"absolute","conditions":{"sum":{"value":640}}}}})
+	check(StatFilter.absolute(runner.automation.raw_filter_for(92)) and int(runner.automation.filter_for(92).conditions.sum.value)==640,"and switches to fixed values")
 	runner.handle({"type":"auto_stop"})
 
 	backend.queue_free();runner.queue_free()
