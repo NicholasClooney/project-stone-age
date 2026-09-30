@@ -184,6 +184,8 @@ func on_unhandled_input(event: InputEvent) -> void:
 	elif event is InputEventMouseButton and event.pressed and not game.paused_input:
 		if event.button_index == MOUSE_BUTTON_LEFT:
 			handle_world_click(game.get_global_transform_with_canvas().affine_inverse()*event.position)
+		elif event.button_index == MOUSE_BUTTON_RIGHT:
+			turn_toward(game.get_global_transform_with_canvas().affine_inverse()*event.position)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_UP:
 			game.zoom_by(GameScene.ZOOM_STEP)
 		elif event.button_index == MOUSE_BUTTON_WHEEL_DOWN:
@@ -226,6 +228,26 @@ func handle_world_click(point: Vector2) -> void:
 		var destination := Vector2i(game.unproject(point).round())
 		if game.is_walkable(destination):game.walk_to(destination)
 		else:game.walk_toward(destination)
+
+## 右键转向 (map.cpp turnAround): a right click turns the standing character
+## towards the pointer in one of the 8 directions, without walking; handy for
+## facing a player before 加入队伍. On a multi-profile server the others see it.
+func turn_toward(point: Vector2) -> void:
+	if game.paused_input or game.moving:return
+	var d: Vector2 = game.unproject(point)-Vector2(game.cell)
+	if d.length()<0.5:return
+	var best := -1
+	var best_dot := -INF
+	for i in range(GameScene.SCREEN_DIRECTIONS.size()):
+		var dot := d.normalized().dot(Vector2(GameScene.SCREEN_DIRECTIONS[i]).normalized())
+		if dot>best_dot:
+			best_dot = dot
+			best = i
+	var facing := (best+4)%8
+	if int(game.player.facing)==facing:return
+	game.player.facing = facing
+	if is_instance_valid(game.party_panel) and game.party_panel.available():
+		game.link.request({"type":"turn","facing":facing})
 
 func release_keyboard_input() -> void:
 	# Focus changes release held keys; an intentional click route keeps running.

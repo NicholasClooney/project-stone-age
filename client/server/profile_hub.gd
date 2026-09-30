@@ -127,6 +127,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 		"logout":reply = _logout(connection)
 		"profiles":reply = {"ok":true,"profiles":_listing(),"allow_create":accounts.allow_create()}
 		"say":reply = _say(connection,command)
+		"turn":reply = _turn(connection,command)
 		"party_switch","party_join","party_leave","party_kick","party_disband":reply = _party_command(connection,type,command)
 		_:
 			var backend = backend_of(connection)
@@ -356,6 +357,15 @@ func _name(id: String) -> String:
 	return str(backends[id].account_name) if backends.has(id) else id
 
 ## 一般频道: one line to every device on the speaker's map.
+## 右键转向: the character turns in place; presence shows it to the others.
+func _turn(connection: int, command: Dictionary) -> Dictionary:
+	var id := profile_of(connection)
+	if id.is_empty() or not backends.has(id):return {"ok":false,"reason":"请先登录。","login_required":true}
+	var facing := int(command.get("facing",-1))
+	if facing<0 or facing>7:return {"ok":false,"reason":"方向不对。"}
+	presence.turn(id,facing)
+	return {"ok":true}
+
 func _say(connection: int, command: Dictionary) -> Dictionary:
 	var id := profile_of(connection)
 	if id.is_empty() or not backends.has(id):return {"ok":false,"reason":"请先登录。","login_required":true}

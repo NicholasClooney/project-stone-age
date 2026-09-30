@@ -334,6 +334,15 @@ func client() -> void:
 	var map_id := int(game.data.map_id)
 	var ahead: Vector2i = game.cell+game.SCREEN_DIRECTIONS[(int(game.player.facing)+4)%8]
 	report(server,900001,map_id,ahead)
+	# 右键转向: a right click behind Bob turns him away, one on Alice back.
+	var facing_before := int(game.player.facing)
+	var standing: Vector2i = game.cell
+	var behind: Vector2i = game.cell-(ahead-game.cell)*3
+	game._input_events.turn_toward(game.project(Vector2(behind)))
+	check(int(game.player.facing)==(facing_before+4)%8 and not game.moving and game.cell==standing,"a right click behind turns Bob around without walking")
+	check(await Wait.until(self,func():return server.presence._facing.get("bob",-1)==(facing_before+4)%8),"and the server's presence has his new facing")
+	game._input_events.turn_toward(game.project(Vector2(ahead)))
+	check(int(game.player.facing)==facing_before,"a right click on Alice turns him back to her")
 	game.classic_hud.find_child("PartyButton",true,false).pressed.emit()
 	check(await Wait.until(self,func():return game.party_panel.is_member()),"pressing 加入队伍 joins Alice")
 	check(await Wait.until(self,func():return game.party_panel.list.visible and game.party_panel.list.find_child("LeaveParty",true,false)!=null),"the party list shows, with 离开队伍")

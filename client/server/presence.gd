@@ -47,6 +47,10 @@ static func step_facing(from: Vector2i, to: Vector2i) -> int:
 	var index := DIRECTIONS.find(d)
 	return -1 if index<0 else (index+4)%8
 
+## A turn in place (右键转向): others see the new facing on the next tick.
+func turn(id: String, facing: int) -> void:
+	if facing>=0 and facing<8:_facing[id] = facing
+
 ## What one player looks like to others.
 func entry(profile: Dictionary, now: int) -> Dictionary:
 	var id := str(profile.id)
