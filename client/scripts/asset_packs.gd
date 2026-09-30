@@ -12,6 +12,8 @@ signal progress(label: String, done_bytes: int, total_bytes: int)
 const CACHE := "user://packs/"
 const PARALLEL := 4
 const RETRIES := 3
+## Bytes HTTPRequest reads per frame.
+const DOWNLOAD_CHUNK := 4 * 1024 * 1024
 
 var enabled := false
 var base_url := ""
@@ -52,6 +54,9 @@ func _new_request() -> HTTPRequest:
 	var request := HTTPRequest.new()
 	# A browser already decodes gzip transfers; decoding again would fail.
 	request.accept_gzip = not OS.has_feature("web")
+	# The default 64 KiB is read once per frame (about 4 MB/s at 60 fps), so a
+	# 30 MB core pack took seconds even from localhost.
+	request.download_chunk_size = DOWNLOAD_CHUNK
 	return request
 
 ## True while a labelled request (one the player is waiting for) is pending.

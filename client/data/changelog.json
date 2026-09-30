@@ -1,9 +1,18 @@
 {
-  "version": "v0.92.0",
-  "count": 116,
+  "version": "v0.92.1",
+  "count": 117,
   "feature_count": 76,
-  "fix_count": 40,
+  "fix_count": 41,
   "entries": [
+    {
+      "version": "v0.92.1",
+      "date": "2026-09-30",
+      "kind": "fix",
+      "title": "网页素材下载加快",
+      "details": [
+        "网页版下载素材包时每帧读 4 MB（以前 64 KB），核心素材在本机或局域网里一两秒就能下完，不再要七八秒。"
+      ]
+    },
     {
       "version": "v0.92.0",
       "date": "2026-09-30",
