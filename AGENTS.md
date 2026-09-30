@@ -16,6 +16,17 @@ The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a 
 
 Subagents working in their own worktrees don't relaunch; they test and commit, and the main session merges and relaunches.
 
+## Testing budget (agents in worktrees)
+
+- While working, run only the suites your change touches (`./scripts/run.sh --headless --script res://tests/<name>.gd`). Run the full `./scripts/test-all.sh` **once**, at the end.
+- After rebasing onto a moved `main`, rerun the full suite only if the rebase touched code; a rebase whose only conflicts were `changelog-notes.json` / generated changelog files needs just `python3 tools/build_changelog.py --check` and your own suites. The main session runs the full suite after merging.
+- A known flaky suite that fails under load: rerun it alone once; don't rerun the whole suite for it.
+- Several agents often run at once while the user's fast hunt uses the CPU. Don't run more than one full suite at a time per agent, and prefer fewer jobs over more.
+
+## Assets in worktrees
+
+Imported original assets are gitignored, so a worktree gets them by copying from the main checkout with APFS copy-on-write (`cp -c -R client/assets/legacy .tools references client/.godot build/fast_hunt`), which is instant. The main session keeps the main checkout's assets current: after merging a change to an importer it re-runs the import there right away (or, if the live server must not be disturbed, in a separate assets worktree that agents copy from). An agent should re-run an importer only when its own branch changes that importer.
+
 ## Required in-game changelog
 
 Game versions are **v0.MINOR.PATCH** while the game is in beta; the `0` major means no save or protocol compatibility promise yet. Versions derive from conventional commits on first-parent history: up to v0.43.0 every `feat` or `fix` advanced MINOR, and after that a `feat` advances MINOR (resetting PATCH) while a `fix` advances PATCH. Documentation, chores and tests do not advance it. This project's scheme overrides unrelated dotfiles release instructions. Create annotated tags only for checkpoints the user asks for, not per commit. App version, `SAVE_VERSION` and the backend protocol revision are independent; see [version system](docs/versioning/version-system.md).
