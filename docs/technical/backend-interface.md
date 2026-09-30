@@ -66,11 +66,28 @@ LAN phase 2 (`server/presence.gd`, run by the hub; [LAN profiles](../development
 | Message | Fields | Notes |
 | --- | --- | --- |
 | `presence` event | `map_id`, `full`, `players` [entry], optional `left` [ids] | To each logged-in connection, about the *other* profiles on its own profile's map. `full`: the complete list (first tick after a login or reconnect, and whenever the viewer's map changes; an empty list clears). Otherwise `players` holds new players in full and, for known ones, `id` plus only the changed keys. At most one per connection every 150 ms (`Presence.TICK_MSEC`), and none when nothing changed. |
-| entry | `id` (profile id), `name` (account), `lv`, `c` (character id), `face`, `ride` (ridden pet's sprite, -1 none), `rn` (its name), `cell` [x, y], `f` (facing 0..7, from the last step), `b` (战斗中) | A profile is listed while one of its devices is connected and its map is known (from `report_position`). `b` is a battle open, or compact 自动练级 running, held 2 s after it ends. Walking is not sent: the client animates while it moves an actor towards `cell`. |
-| `say` command | `text` | 一般频道. Trimmed, line breaks become spaces; 1 to 60 characters; at most 3 lines per 5 s per character; needs a known map. Rejected with a Chinese `reason` otherwise. |
-| `chat` event | `channel` (`一般`), `map_id`, `id`, `name`, `text`, `mine` | To every device of every profile on the speaker's map, the speaker's own devices with `mine` true. |
+| entry | `id` (profile id), `name` (account), `lv`, `c` (character id), `face`, `ride` (ridden pet's sprite, -1 none), `rn` (its name), `cell` [x, y], `f` (facing 0..7, from the last step), `b` (战斗中), `pt` (组队: the leader's id, "" none) | A profile is listed while one of its devices is connected and its map is known (from `report_position`). `b` is a battle open, or compact 自动练级 running, held 2 s after it ends. Walking is not sent: the client animates while it moves an actor towards `cell`. |
+| `say` command | `text`, optional `channel` (`队伍`) | 一般频道. Trimmed, line breaks become spaces; 1 to 60 characters; at most 3 lines per 5 s per character (both channels together); needs a known map. With `channel` `队伍` (LAN phase 3) it goes to the speaker's party on any map, and is refused outside a party. Rejected with a Chinese `reason` otherwise. |
+| `chat` event | `channel` (`一般`, `队伍` or `系统`), `map_id`, `id`, `name`, `text`, `mine` | 一般: to every device of every profile on the speaker's map, the speaker's own devices with `mine` true. 队伍: to every device of the party. 系统: a 组队 notice for this device's character (`id` and `name` empty), such as 「加入团队！」 or 「团队已解散！」. |
 
 The same-profile `position` mirror (another device of *your* character walking) is unchanged and separate from `presence`.
+
+### 组队 (LAN phase 3)
+
+`server/party.gd`, run by the hub; behaviour in [LAN profiles](../development/lan-profiles.md#phase-3-组队-and-following-the-leader). Like `say`, only a hub accepts these; a lone backend rejects them as unknown commands.
+
+| Message | Fields | Notes |
+| --- | --- | --- |
+| `party_switch` command | `on` | This character's 组队 switch: whether others may join it. Reply `accept`. Kept while the server runs. |
+| `party_join` command | `facing` (0..7, the client's facing), optional `target` (a leader's profile id) | Joins the player on the cell in front (`Party.front`), or that player's leader if it is a member, when that leader is within one cell, not fighting, has its switch on, runs no automation and leads fewer than 5. The joiner must be on a map, out of a party, not fighting and running no automation. Reply `leader`, `members`, `created`; otherwise a Chinese `reason`. |
+| `party_leave` command | | Leaves; a leader leaving disbands the party. |
+| `party_kick` command | `id` | Leader only: removes that member. |
+| `party_disband` command | | Leader only. |
+| `party` event | `me`, `accept`, `leader` ("" out of a party), `members` [{`id`, `name`, `lv`}] (leader first), `battle` | To each logged-in device when its view changes (checked with the presence tick, and at once after a party command). `battle`: this device's character is a member and its leader has a battle open (the client shows 「队长战斗中」). |
+| `presence` entry `pt` | leader's profile id, "" out of a party | The leader's own entry names itself. |
+| `position` event, `client` `party` | `map_id`, `cell` | The server moved this member after its leader (a step in the line, or the leader's destination on a warp or map change). Every device of the member follows it like another device's walk. A member's own `report_position` is answered with `party` true and, when it differs, this event with the server's position. |
+
+While a character is a member, the hub answers `field_step` with no encounter (`party` true) and refuses `wild_encounter`, `begin_battle` and `open_battle`. Anyone in a party gets `auto_start` refused. A character whose last device disconnects, logs out or logs into another character leaves its party (a leader's party disbands).
 
 ## Automation settings
 
@@ -123,7 +140,7 @@ Walking is mirrored: each client tags `report_position` with its id, the backend
 
 ## Test seams
 
-Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings; `radio_test` covers the radio library across two devices. `profile_hub_test` and `remote_login_test` cover multi-profile servers (routing, logins, admin gating, per-profile saves and resume, the login screen); `lan_presence_test` covers the presence feed, chat and the client's presence model.
+Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings; `radio_test` covers the radio library across two devices. `profile_hub_test` and `remote_login_test` cover multi-profile servers (routing, logins, admin gating, per-profile saves and resume, the login screen); `lan_presence_test` covers the presence feed, chat and the client's presence model; `lan_party_test` covers 组队 (rules, following, leader-only encounters, automation gating, 队伍频道, disconnects and a game client as a member).
 
 ## Decisions (2026-09-27)
 
