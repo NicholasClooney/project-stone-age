@@ -7,7 +7,7 @@ art is never downloaded twice:
                   anything else so the screen can cover the core download
   core            small always-needed data: catalogs, UI, battle
                   manifest/UI/audio, the map catalog
-  map-<id>        one map's JSON plus tiles and residents no other map uses
+  map-<id>        one map file (world/<id>.map) plus tiles and residents no other map uses
   char-<id>       one player character's walking art
   tiles-<hash>    tiles shared by several maps, grouped by the exact set of
                   maps that use them
@@ -26,6 +26,8 @@ import collections
 import hashlib
 import json
 from pathlib import Path
+
+from map_file import load_map
 
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY = ROOT / "client/assets/legacy"
@@ -69,7 +71,7 @@ def plan() -> dict:
         path = LEGACY / info["path"]
         if not path.exists():
             continue
-        data = json.loads(path.read_text())
+        data = load_map(path, header_only=True)
         map_json[ident] = path
         maps_images[ident] = set(data.get("images", {}).keys())
     use = collections.Counter()

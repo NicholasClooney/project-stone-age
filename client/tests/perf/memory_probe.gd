@@ -15,6 +15,7 @@ const Riding = preload("res://scripts/riding.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const Faces = preload("res://scripts/faces.gd")
+const MapFile = preload("res://scripts/map_file.gd")
 const LEGACY := "res://assets/legacy/"
 const MB := 1048576.0
 
@@ -371,9 +372,10 @@ func cpu_copy_check() -> void:
 	rows.append(result)
 	sheet = null
 
-## What parsing each big JSON costs in memory (Variant dictionaries), against its file size.
+## What parsing each big JSON costs in memory (Variant dictionaries), against its
+## file size; for world/*.map, what the loaded packed map holds.
 func json_costs() -> void:
-	var files := ["battle/manifest.json","riding/manifest.json","battle/backgrounds.json","characters/catalog.json","encounters/catalog.json","world/manifest.json","world/200.json","world/100.json","world/300.json","world/1000.json","faces/manifest.json","ui/manifest.json","samgir.json"]
+	var files := ["battle/manifest.json","riding/manifest.json","battle/backgrounds.json","characters/catalog.json","encounters/catalog.json","world/manifest.json","world/200.map","world/100.map","world/300.map","world/1000.map","faces/manifest.json","ui/manifest.json","samgir.json"]
 	var results: Array = []
 	for name in files:
 		if FileAccess.file_exists(LEGACY+name):results.append(_parse_cost(name))
@@ -393,6 +395,11 @@ func json_costs() -> void:
 ## One file's parse, measured with its text already read; the temporaries go
 ## when the function returns, so files do not disturb each other.
 static func _parse_cost(name: String) -> Dictionary:
+	if name.ends_with(".map"):
+		var map_before := OS.get_static_memory_usage()
+		var map := MapFile.load_map(LEGACY+name)
+		var map_after := OS.get_static_memory_usage()
+		return {"file":name,"file_mb":MapFile.file_size(LEGACY+name)/MB,"parsed_mb":(map_after-map_before)/MB,"var_to_bytes_mb":var_to_bytes(map).size()/MB}
 	var text := FileAccess.get_file_as_string(LEGACY+name)
 	var before := OS.get_static_memory_usage()
 	var parsed = JSON.parse_string(text)

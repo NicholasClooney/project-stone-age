@@ -7,7 +7,7 @@ The original client stores every animation frame as its own bitmap. Importing th
 | Riding | rider and mount composite | `tools/import_riding.py` | `riding/manifest.json` | `riding/sheets/` |
 | Battle sprites | battle sprite (player, pet, enemy) | `tools/pack_frame_sheets.py battle` | `battle/manifest.json` | `battle/sheets/` |
 | Walking art | player character | `tools/pack_frame_sheets.py characters` | `characters/catalog.json` | `characters/sheets/` |
-| Map tiles and props | not packed, see below | | map JSON | `images/` |
+| Map tiles and props | not packed, see below | | map files (`world/<id>.map`) | `images/` |
 
 ## Why per-frame PNGs were slow
 
@@ -43,7 +43,7 @@ One byte per pixel instead of four cut the riding sheets from 795 MB (RGBA) to 2
 Several importers write battle frames (`import_battle`, `import_characters`, `import_pets`, `import_mirror`, `import_encounter_art`) and one writes walking frames (`import_characters`). They still write one PNG per frame and register it in their manifest's `characters` and `images`; `pack_frame_sheets.py` runs after them (last in `scripts/setup-original-data.sh`) and:
 
 - packs each sprite's frames into `<folder>/sheets/<sprite>.png` and writes the manifest's `sheets`;
-- deletes the packed PNGs and their `.import` files. The walking-art folder `images/` is shared with map tiles and props, so a frame a map JSON still names keeps its PNG (Samgir's villagers wear player character 100000's art: 336 frames stay);
+- deletes the packed PNGs and their `.import` files. The walking-art folder `images/` is shared with map tiles and props, so a frame a map file still names keeps its PNG (Samgir's villagers wear player character 100000's art: 336 frames stay);
 - is safe to re-run after a single importer: a frame whose PNG is gone is cut back out of the existing sheet (sheets are lossless), and new sheets are written to `sheets.new` and swapped in only once every frame was read.
 
 Importers that add battle frames recreate `battle/images` when needed, since the packer removes it once it is empty.

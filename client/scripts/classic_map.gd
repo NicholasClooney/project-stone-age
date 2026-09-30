@@ -1,6 +1,8 @@
 extends Control
 var world: Node2D
-var colors: Array[Color] = []
+## Image id whose colour each cell shows (y*width+x): the ground tile, or the
+## object drawn over it; 0 = black. Colours are looked up per drawn cell.
+var cells := PackedInt32Array()
 var last_cell := Vector2i(-999,-999)
 var last_flash := -1
 ## The UI manifest's default colours, parsed once per run rather than per map.
@@ -25,21 +27,20 @@ func rebuild() -> void:
 		_default_colors = manifest.map_colors
 	var width := int(world.data.width)
 	var height := int(world.data.height)
-	colors.resize(width*height)
-	colors.fill(Color.BLACK)
-	for entry in world.data.ground:
-		colors[int(entry[1])*width+int(entry[0])] = map_color(entry[2])
+	cells = (world.data.ground as PackedInt32Array).duplicate()
+	cells.resize(width*height)
 	var bounds := Rect2i(0,0,width,height)
-	for entry in world.data.objects:
-		var metadata: Dictionary = world.data.images[str(int(entry[2]))]
-		var color := map_color(entry[2])
+	var objects: PackedInt32Array = world.data.objects
+	for i in range(0,objects.size(),3):
+		var metadata: Dictionary = world.data.images[str(objects[i+2])]
 		for dy in range(maxi(1,int(metadata.ey)) if int(metadata.hit)==0 else 1):
 			for dx in range(maxi(1,int(metadata.ex)) if int(metadata.hit)==0 else 1):
-				var point := Vector2i(int(entry[0])+dx,int(entry[1])-dy)
+				var point := Vector2i(objects[i]+dx,objects[i+1]-dy)
 				if bounds.has_point(point):
-					colors[point.y*width+point.x] = color
+					cells[point.y*width+point.x] = objects[i+2]
 
-func map_color(ident: float) -> Color:
+func map_color(ident: int) -> Color:
+	if ident==0:return Color.BLACK
 	var cached = _color_by_ident.get(ident)
 	if cached!=null:return cached
 	var rgb: Array = world.data.get("map_colors",{}).get(str(int(ident)),_default_colors.get(str(int(ident)),[0,0,0]))
@@ -55,7 +56,7 @@ func _process(_delta: float) -> void:
 		queue_redraw()
 
 func _draw() -> void:
-	if colors.is_empty():
+	if cells.is_empty():
 		return
 	# Original DrawAutoMapping uses 54×54 cells and a 4×2 pixel diamond.
 	for y in range(54):
@@ -63,7 +64,7 @@ func _draw() -> void:
 			var cell: Vector2i = world.cell+Vector2i(x-27,y-27)
 			var color := Color.BLACK
 			if Rect2i(0,0,int(world.data.width),int(world.data.height)).has_point(cell):
-				color = colors[cell.y*int(world.data.width)+cell.x]
+				color = map_color(cells[cell.y*int(world.data.width)+cell.x])
 			pixel(Vector2(18+2*(x+y),118+y-x),color)
 	pixel(Vector2(126,118),Color.WHITE if last_flash else Color.BLACK)
 

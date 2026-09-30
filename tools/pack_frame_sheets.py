@@ -34,11 +34,12 @@ from pathlib import Path
 from PIL import Image
 
 from sprite_sheets import save_sheets
+from map_file import load_map
 
 LEGACY = Path(__file__).resolve().parents[1] / 'client/assets/legacy'
 # target: (manifest, frame folder, globs of manifests whose `images` also draw from the folder)
 TARGETS = {'battle': ('battle/manifest.json', 'battle/images', []),
-           'characters': ('characters/catalog.json', 'images', ['*.json', 'world/*.json'])}
+           'characters': ('characters/catalog.json', 'images', ['*.json', 'world/*.json', 'world/*.map'])}
 
 
 def referenced(legacy, patterns):
@@ -47,7 +48,7 @@ def referenced(legacy, patterns):
     for pattern in patterns:
         for path in legacy.glob(pattern):
             try:
-                data = json.loads(path.read_text())
+                data = load_map(path, header_only=True)
             except (ValueError, UnicodeDecodeError):
                 continue
             if isinstance(data, dict) and isinstance(data.get('images'), dict):

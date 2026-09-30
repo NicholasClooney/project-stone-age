@@ -31,7 +31,7 @@ class PlanWebPacksTest(unittest.TestCase):
 
     def test_core_excludes_bulk_art(self):
         core = self.plan["packs"]["core"]
-        for prefix in ("battle/backgrounds/", "world/1000.json"):
+        for prefix in ("battle/backgrounds/", "world/1000.map", "world/1000.json"):
             self.assertFalse(any(p.startswith(plan_web_packs.RES + prefix) for p in core), prefix)
         # Frames outside every sprite or rider animation are shared effects; keep them few.
         effects = [p for p in core if p.startswith((plan_web_packs.RES + "battle/images/", plan_web_packs.RES + "riding/sheets/"))]

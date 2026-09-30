@@ -86,6 +86,14 @@ The client folder must contain `data/adrn_<n>.bin`, `real_<n>.bin`, `spradrn_<n>
 
 After re-importing maps or encounters, regenerate the tracked spot indexes: `python3 tools/build_training_spots.py` and `python3 tools/build_level_one_spots.py`.
 
+`import_world.py` writes each map as `world/<id>.map`, a compact file the game reads into packed arrays (`tools/map_file.py`, `client/scripts/map_file.gd`). A checkout imported before that has `world/<id>.json` instead; convert it in place without re-importing (seconds, no original files needed; it checks every map reads back the same before deleting its JSON):
+
+```sh
+python3 tools/map_file.py
+```
+
+`samgir.json`, `shop.json` and `wilderness.json` stay JSON: later importers read them, and the game uses them only when the world manifest lacks those maps.
+
 ## Decoding notes
 
 Graphics use the original RLE format. Some original bitmaps' last run is one pixel longer than the image; the original client (`unpack.cpp`, `decoder()`) writes runs without a bound and keeps the first `width × height` bytes, so the importer clips the same way. This recovers six character appearances, the gold-tiger rider variant 101076 and the monster 凯比特 (100298). Appearance 100100 stays unavailable: its club sprite points at bitmap 4294967295 in every known client.

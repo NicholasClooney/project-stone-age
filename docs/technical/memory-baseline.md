@@ -170,7 +170,7 @@ What does come back: map data when leaving a map (the same map 100 is 563 MB bef
 
 Estimates are from the measurements above. The web numbers matter most, since there every peak stays in the wasm heap.
 
-1. **Store maps as packed arrays.** Convert `ground` and `blocked` to `PackedInt32Array` / `PackedByteArray` at import (or read `var_to_bytes` / a binary file instead of JSON). Map 100: 125 MB to about 5 MB; map 200: 196 MB to about 8 MB. Also removes most of the map-switch peak (currently +300 to 400 MB). **Saves about 150 to 200 MB held and 300 MB or more of peak, which on the web is the wasm heap size.**
+1. **Done, see [after packed maps](#after-packed-maps-optimization-1). Store maps as packed arrays.** Convert `ground` and `blocked` to `PackedInt32Array` / `PackedByteArray` at import (or read `var_to_bytes` / a binary file instead of JSON). Map 100: 125 MB to about 5 MB; map 200: 196 MB to about 8 MB. Also removes most of the map-switch peak (currently +300 to 400 MB). **Saves about 150 to 200 MB held and 300 MB or more of peak, which on the web is the wasm heap size.**
 2. **Split the battle and riding manifests per sprite and load on demand**, like the 8.0 pets already are (`battle/pets/<sprite>.json`), and keep frames as packed arrays rather than dictionaries. A battle needs a handful of sprites (about 1 MB each parsed). **Saves about 330 MB static (141 + 208 today) and the web heap with it.** Turning `backgrounds.json` into packed lookups (a battle reads one ground, one battlefield list and one background) saves about 30 MB.
 3. **Web music as streams, not samples.** Set `playback_type = PLAYBACK_TYPE_STREAM` on the music and radio players (or `audio/general/default_playback_type.web`), keep samples for short effects. Music is decoded in small chunks by the audio worklet. **Saves about 200 MB after the tour and 50 to 60 MB per radio track**; startup 89 MB to about 12 MB. Drop `upcoming_stream` or keep it compressed. (Transcoding the remaining WAV music to Ogg Vorbis helps pack size and desktop memory only a little; streaming is what matters on the web.)
 4. **Keep packs out of MEMFS between sessions.** Store downloaded packs in the Cache API or OPFS from JavaScript and write only the packs this session mounts into a non-persistent MEMFS folder (for example `/tmp/packs`), so startup no longer copies the whole IndexedDB store into memory. **Saves up to the whole cache (up to about 970 MB on a well-travelled device, 66 MB after this tour) at every start.** Mounted packs still cost their size for the session; Godot cannot unmount a pack, so the remaining win is mounting fewer (thumbnails below prefetch whole sprite packs).
@@ -179,6 +179,52 @@ Estimates are from the measurements above. The web numbers matter most, since th
 7. **Pre-cut thumbnails at import.** Write one small still per species (or one atlas) in `tools/import_encounter_art.py` so 宠物大全 never loads and reads back whole sheets. **Removes about 120 MB of static peak, about 250 MB of footprint churn and about 80 MB of driver memory per scroll**, and on the web avoids prefetching every sprite pack (this tour mounted 118 more packs, about 80 MB, during and after one scroll).
 
 Items 1 to 3 are cheap. By these measurements they would take startup from 360 MB to roughly 200 MB of static memory and keep the web heap under about 400 MB instead of 805 MB (an estimate; re-measure).
+
+## After packed maps (optimization 1)
+
+Maps are now `world/<id>.map` files ([original data setup](../development/original-data-setup.md)): the small fields stay JSON, and ground, walkability and objects load straight into `PackedInt32Array` / `PackedByteArray` grids (`client/scripts/map_file.gd`). The ground layer shares that grid instead of keeping a string per cell, and the map window keeps an image id per cell instead of a `Color`. Same machine, same tour, both runs on 2026-09-30 (before = `main` at b1783aa).
+
+### Desktop
+
+| Step | Map | Static before | Static after | Static max before | Static max after | Footprint before | Footprint after |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 01 startup: village | 1000 | 361 | 355 | 382 | 374 | 827 | 813 |
+| 04 Samgir wilderness | 100 | 564 | 406 | 605 | 408 | 1,117 | 850 |
+| 05 吉鲁岛 + walk | 300 | 478 | 386 | 667 | 412 | 1,064 | 868 |
+| 06 map 200 | 200 | 681 | 431 | 816 | 436 | 1,331 | 912 |
+| 07 back to map 100 | 100 | 573 | 408 | 871 | 441 | 1,161 | 913 |
+| 08 battle open | 100 | 787 | 621 | 871 | 662 | 1,422 | 1,242 |
+| 16 grid scrolled to the end | 100 | 861 | 696 | 989 | 823 | 2,068 | 1,812 |
+| 21 all closed, village | 1000 | 610 | 603 | 989 | 823 | 1,093 | 1,328 |
+| 22 3 more battles, village | 1000 | 610 | 603 | 997 | 823 | 1,326 | 1,370 |
+
+| Map | JSON on disk | Parsed JSON (static) | `.map` on disk | Loaded `.map` (static) |
+| --- | ---: | ---: | ---: | ---: |
+| `world/200` | 15.2 | 196 | 5.1 | 9.5 |
+| `world/100` | 9.4 | 125 | 3.3 | 7.2 |
+| `world/300` (吉鲁岛) | 5.1 | 68 | 2.0 | 4.5 |
+| `world/1000` | 0.5 | 7.3 | 0.2 | 2.2 |
+
+- On a map, static memory is now 48 MB (map 100) to 73 MB (map 200) above the village instead of 200 to 320 MB. Most of what is left is the `AStarGrid2D` navigation grid, about 62 bytes a cell: 40 MB for map 100, about 60 MB for map 200. It is the next map cost to cut (a byte grid and a hand-written A*, or a grid limited to the reachable region).
+- The map-switch peak is gone: the static maximum stays within 10 MB of the current value through all map changes (441 MB after visiting 200 and returning, was 871). The remaining peaks come from the riding manifest (first battle, +210) and the 宠物大全 thumbnails (+120).
+- Footprint numbers after the tour are noisy (malloc keeps freed blocks); compare static memory.
+- All 147 maps load the same ground, walkability and objects as their JSON (checked by hash once at conversion; `client/tests/map_file_test.gd` keeps checking maps 1000 and 1002 against `samgir.json` and `shop.json`, including paths).
+- The character catalog (16 MB) and `backgrounds.json` (36 MB) are unchanged; they belong with optimization 2.
+
+### Web
+
+Built with `./scripts/build-web.sh`, same probe, ports 8796/8797. Map packs are 35 MB in all instead of 63 MB.
+
+| Step | wasm heap before | wasm heap after | Page renderer footprint before | after |
+| --- | ---: | ---: | ---: | ---: |
+| 01 startup, first visit | 412 | 412 | 1,522 | 985 |
+| 02 map 100 | 709 | 495 | 1,634 | 1,026 |
+| 04 after the battle | 805 | 591 | 1,749 | 1,087 |
+| 07 宠物大全 grid scrolled | 805 | 689 | 1,433 | 1,259 |
+| 08 back in the village | 805 | 689 | 1,556 | 1,445 |
+| 09 reload, second visit | 412 | 412 | 1,084 | 1,248 |
+
+The wasm heap after the first map switch drops by 214 MB; after the tour it is 689 MB instead of 805, now set by the riding manifest and the thumbnails. Startup stays at 412 MB (the battle manifest). Renderer footprints vary a lot between headless runs.
 
 ## Re-running
 

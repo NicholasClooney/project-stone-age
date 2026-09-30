@@ -30,7 +30,7 @@ func run():
   check(game.session.set_location(id,game.cell.x,game.cell.y),"map %d location accepted by save authority" % id)
   var bridges_ok=true
   for index in game.props.visible_props:
-   var ident=str(int(game.data.objects[index][2]))
+   var ident=str(game.data.objects[index*3+2])
    var metadata: Dictionary=game.data.images[ident]
    if int(metadata.get("priority",0))==3 and int(metadata.hit)!=0:
     bridges_ok=bridges_ok and game.props.visible_props[index].z_index==-1

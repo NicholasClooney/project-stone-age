@@ -1,4 +1,5 @@
 extends Control
+const MapFile = preload("res://scripts/map_file.gd")
 ## Developer-only whole-map view. Colors come from original automap metadata.
 var world: Node
 var map_rect := Rect2(30,74,620,570)
@@ -107,7 +108,7 @@ func browse_map(map_id: int) -> void:
 		world.asset_packs.ensure(needed,func(ok: bool):if ok and visible:browse_map(map_id),"地图")
 		return
 	current_map=map_id
-	source_data=world.data if map_id==int(world.data.map_id) else JSON.parse_string(FileAccess.get_file_as_string(world.world_catalog.file(map_id)))
+	source_data=world.data if map_id==int(world.data.map_id) else MapFile.load_map(world.world_catalog.file(map_id))
 	selector.select(selector.get_item_index(map_id))
 	_build_map()
 	heading.text="DEV 地图导航 · %s (%d) · %d × %d" % [world.world_catalog.info(map_id).name,map_id,map_dimensions.x,map_dimensions.y]
@@ -130,10 +131,12 @@ func _build_map() -> void:
 	var img:=Image.create(width,height,false,Image.FORMAT_RGB8)
 	img.fill(Color.BLACK)
 	var colors: Dictionary=source_data.get("map_colors",{})
-	for entry in source_data.ground:
-		var x:=int(float(entry[0])*width/map_dimensions.x)
-		var y:=int(float(entry[1])*height/map_dimensions.y)
-		var rgb: Array=colors.get(str(int(entry[2])),[48,64,48])
+	var ground: PackedInt32Array=source_data.ground
+	for index in range(ground.size()):
+		if ground[index]==0:continue
+		var x:=int(float(index%map_dimensions.x)*width/map_dimensions.x)
+		var y:=int(float(index/map_dimensions.x)*height/map_dimensions.y)
+		var rgb: Array=colors.get(str(ground[index]),[48,64,48])
 		img.set_pixel(x,y,Color8(int(rgb[0]),int(rgb[1]),int(rgb[2])))
 	thumbnail=ImageTexture.create_from_image(img)
 	_build_pois()

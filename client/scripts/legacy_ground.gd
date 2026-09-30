@@ -1,18 +1,19 @@
 extends Node2D
 var world: Node2D
 var center := Vector2i(-999,-999)
-## Image id per cell (y*width+x), "" where the map has no ground tile.
-var ground := PackedStringArray()
+## Image id per cell (y*width+x), 0 where the map has no ground tile: the
+## map's own packed grid (scripts/map_file.gd), shared, not copied.
+var ground := PackedInt32Array()
 var radius := 28
 var last_zoom := -1.0
 
-func fill(entries: Array, width: int, height: int) -> void:
-	ground.resize(width*height)
-	for entry in entries:
-		ground[int(entry[1])*width+int(entry[0])] = str(int(entry[2]))
+func fill(grid: PackedInt32Array) -> void:
+	ground = grid
 
+## The ground image id at a cell index as a string key of `images`, "" for none.
 func ident_at(index: int) -> String:
-	return ground[index] if index>=0 and index<ground.size() else ""
+	var ident := ground[index] if index>=0 and index<ground.size() else 0
+	return str(ident) if ident!=0 else ""
 
 func _process(_delta: float) -> void:
 	if world == null:
@@ -33,8 +34,9 @@ func _draw() -> void:
 	# Cull by logical distance. The original isometric projection is 64 × 48.
 	for y in range(maxi(0,center.y-radius),mini(int(world.data.height),center.y+radius+1)):
 		for x in range(maxi(0,center.x-radius),mini(int(world.data.width),center.x+radius+1)):
-			var ident: String = ground[y*int(world.data.width)+x]
-			if ident.is_empty():
+			var id := ground[y*int(world.data.width)+x]
+			if id==0:
 				continue
+			var ident := str(id)
 			var metadata: Dictionary = world.data.images[ident]
 			draw_texture(world.texture(ident),world.project(Vector2(x,y))+Vector2(metadata.x,metadata.y))

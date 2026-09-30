@@ -6,6 +6,8 @@ import argparse
 import json
 from pathlib import Path
 
+from map_file import load_map
+
 
 def ordinary_enemies(area, catalog, available):
     if area.get('invalid_weights') or area['probability_max'] <= 0 or area.get('event_now', -1) > 0 or area.get('event_end', -1) > 0:
@@ -72,7 +74,7 @@ def build(root):
     for key, info in world['maps'].items():
         if int(key) not in (100, 200) and info['kind'] != 'training':
             continue
-        collision = json.loads((root/info['path']).read_text())
+        collision = load_map(root/info['path'])
         areas = [a for a in catalog['areas'] if a['map_id'] == int(key)]
         forbidden = {tuple(p['cell']) for p in world['portals'] if p['from_map'] == int(key)}
         forbidden |= {tuple(n['cell']) for n in world['residents'] if n['map_id'] == int(key)}

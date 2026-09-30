@@ -6,6 +6,7 @@ extends RefCounted
 ## actors stay on the game; see docs/technical/game-scripts.md.
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const LegacyGround = preload("res://scripts/legacy_ground.gd")
+const MapFile = preload("res://scripts/map_file.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -28,7 +29,7 @@ func build_world() -> void:
 		game.data.images.merge(game.character_catalog.images,true)
 	game.terrain = LegacyGround.new()
 	game.terrain.world = game
-	game.terrain.fill(game.data.ground,int(game.data.width),int(game.data.height))
+	game.terrain.fill(game.data.ground)
 	game.add_child(game.terrain)
 	game.actors = Node2D.new()
 	game.actors.y_sort_enabled = true
@@ -54,7 +55,7 @@ func build_world() -> void:
 	# While the map is built nothing else blocks a cell (the resident and the
 	# travel overlay are placed afterwards), so only the map's own flags count.
 	var width := int(game.data.width)
-	var blocked: Array = game.data.blocked
+	var blocked: PackedByteArray = game.data.blocked
 	for index in range(blocked.size()):
 		if blocked[index]!=0:game.navigation.set_point_solid(Vector2i(index%width,index/width))
 	game.props = preload("res://scripts/legacy_props.gd").new()
@@ -77,11 +78,12 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	if not FileAccess.file_exists(file):
 		game.message.text = "Import the wilderness assets first; see README.md."
 		return false
-	var map_text := FileAccess.get_file_as_string(file)
-	var next_data: Variant = JSON.parse_string(map_text)
-	preload("res://scripts/perf_registry.gd").track_manifest("当前地图",map_text.length())
-	if not next_data is Dictionary:
+	# The packed map is a few MB, so holding the old one while the new one is
+	# checked no longer doubles the peak (docs/technical/memory-baseline.md).
+	var next_data := MapFile.load_map(file)
+	if next_data.is_empty():
 		return false
+	preload("res://scripts/perf_registry.gd").track_manifest("当前地图",MapFile.file_size(file))
 	var width := int(next_data.width)
 	var height := int(next_data.height)
 	if destination.x<0 or destination.y<0 or destination.x>=width or destination.y>=height or int(next_data.blocked[destination.y*width+destination.x])!=0:

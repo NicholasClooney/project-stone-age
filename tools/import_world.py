@@ -12,6 +12,7 @@ import re
 import shutil
 import struct
 from import_legacy import Archive
+from map_file import save_map
 
 VILLAGES = {1000, 2000, 3000, 4000}
 TOWNS = VILLAGES | {1100, 1300, 1400, 3100, 3200, 3300, 3400, 5000, 5100}
@@ -246,7 +247,7 @@ def run(source, reference, output):
         kind='training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
-        metadata[str(ident)]=dict(path=f'world/{ident}.json',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
+        metadata[str(ident)]=dict(path=f'world/{ident}.map',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
         owner=settlement_owner(ident,maps)
         if owner:metadata[str(ident)]['village_id']=owner
         if ident in DEV_TRAINING_MAPS:metadata[str(ident)]['dev_only']=True
@@ -257,7 +258,7 @@ def run(source, reference, output):
             for field,(x,y) in points:
                 if not (0<=x<data['width'] and 0<=y<data['height']):raise ValueError(f'Warp outside map: {p}')
                 if data['blocked'][y*data['width']+x]:blocked_portals.append(dict(map_id=ident,field=field,portal=p))
-        (root/f'{ident}.json').write_text(json.dumps(data,ensure_ascii=False,separators=(',',':')))
+        save_map(root/f'{ident}.map',data);(root/f'{ident}.json').unlink(missing_ok=True)
         reachable=reachable_cells(data,spawn)
         exit_coverage={}
         for p in portals:

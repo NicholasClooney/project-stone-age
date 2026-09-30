@@ -6,8 +6,8 @@ func configure(owner: Node) -> void:world=owner
 func safe_destination(map_id: int, target: Vector2i) -> Vector2i:
  var filename: String=world.world_catalog.file(map_id)
  if not world.world_catalog.maps.has(str(map_id)) or not FileAccess.file_exists(filename):return Vector2i(-1,-1)
- var data: Variant=world.data if map_id==int(world.data.map_id) else JSON.parse_string(FileAccess.get_file_as_string(filename))
- if not data is Dictionary:return Vector2i(-1,-1)
+ var data: Dictionary=world.data if map_id==int(world.data.map_id) else preload("res://scripts/map_file.gd").load_map(filename)
+ if data.is_empty():return Vector2i(-1,-1)
  var occupied: Dictionary={}
  for resident in world.world_catalog.residents:
   if int(resident.map_id)==map_id:occupied[Vector2i(resident.cell[0],resident.cell[1])]=true

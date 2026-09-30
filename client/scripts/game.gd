@@ -59,6 +59,7 @@ const AdventureMenu = preload("res://scripts/adventure_menu.gd")
 const PetFollower = preload("res://scripts/pet_follower.gd")
 const BattleView = preload("res://scripts/battle_view.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
+const MapFile = preload("res://scripts/map_file.gd")
 const Riding = preload("res://scripts/riding.gd")
 var world_catalog = WorldCatalog.new()
 var travel_router: Node
@@ -340,9 +341,8 @@ func _ready() -> void:
 	if asset_packs.enabled and not await _download_start_area():
 		_show_startup_error("起始地图素材下载失败，请检查与 MacBook 的连接后刷新页面。")
 		return
-	var map_text := FileAccess.get_file_as_string(world_catalog.file(1000))
-	data = JSON.parse_string(map_text)
-	PerfRegistry.track_manifest("当前地图",map_text.length())
+	data = MapFile.load_map(world_catalog.file(1000))
+	PerfRegistry.track_manifest("当前地图",MapFile.file_size(world_catalog.file(1000)))
 	build_world()
 	setup_audio()
 	map_transition = preload("res://scripts/classic_map_transition.gd").new()
