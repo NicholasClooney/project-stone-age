@@ -36,52 +36,38 @@ Map 500 五十年前波拉岛 is reached with 地图导航 or 宠物大全's 瞬
 
 | Pet (template) | Map · area | Lv | Weight (share) | Per battle | Lv.1 row | Companion | Origin | Why here |
 |---|---|---|---|---|---|---|---|---|
-| 巴朵兰恩 红暴 (303) | 五十年前波拉岛 · 639 (whole island) | 1 | 1/118 (0.85%) | 0.69% | 352 | 1473 红暴 Lv90–95 | 补充 | original Lv90–95 red rex area |
-| 奥卡洛斯 绿暴 (301) | 五十年前波拉岛 · 652 (龙穴) | 1 | 1/111 (0.90%) | 0.76% | 1037 | 1474 绿暴 Lv90–95 | 补充 | original Lv90–95 green rex area |
-| 斯天多斯 绿雷龙 (254) | 五十年前波拉岛 · 652 | 1 | 1/111 (0.90%) | 0.70% | 1450 | 1471 | 补充 | original Lv90–95; 1450 is 1451's twin |
-| 布洛多斯 (251) | 五十年前波拉岛 · 638 | 1 | 1/97 (1.03%) | 0.81% | 1557 | 1465 | 补充 | original Lv80–90 thunder dragon area |
+| 巴朵兰恩 红暴 (303) | 五十年前波拉岛 · 639 (whole island) | 1 | 1/115 (0.87%) | 0.71% | 352 | 1473 红暴 Lv90–95 | 补充 | original Lv90–95 red rex area |
+| 奥卡洛斯 绿暴 (301) | 五十年前波拉岛 · 652 (龙穴) | 1 | 1/107 (0.93%) | 0.79% | 1037 | 1474 绿暴 Lv90–95 | 补充 | original Lv90–95 green rex area |
+| 斯天多斯 绿雷龙 (254) | 五十年前波拉岛 · 652 | 1 | 1/107 (0.93%) | 0.73% | 1450 | 1471 | 补充 | original Lv90–95; 1450 is 1451's twin |
+| 布洛多斯 (251) | 五十年前波拉岛 · 638 | 1 | 1/94 (1.06%) | 0.83% | 1557 | 1465 | 补充 | original Lv80–90 thunder dragon area |
 | 加宝格恩 (273) | 漆黑的洞窟 地下9楼 · 619 | 1 | 1/102 (0.98%) | 0.82% | 1368 | 1388 | 补充 | original Lv88–90 |
 | 卡特利奴 卡虎 (524) | 加鲁卡 · 143 | 1 | 1/93 (1.08%) | 0.84% | clone of 539 | 415 贝鲁卡 | 补充 | original quest encounter (走失的红虎, item-gated Lv15) is here |
-| 左迪洛斯 蓝暴 (302) | 五十年前波拉岛 · 639 | 1 | 1/118 (0.85%) | 0.69% | 351 | 1473 | 非原版 | dragons live on this island |
-| 巴朵兰恩 水5火5 (724) | 五十年前波拉岛 · 639 | 1 | 1/118 | 0.69% | 2572 | 1473 | 非原版 | with the red rex |
-| 斑尼迪克 金暴 (812) | 五十年前波拉岛 · 639 | 1 | 1/118 | 0.69% | clone of 1645 | 1473 | 非原版 | rex island |
-| 斑尼迪克 (1036) | 五十年前波拉岛 · 639 | 1 | 1/118 | 0.69% | clone of 2035 | 1473 | 非原版 | stronger 金暴, with it |
-| 阿米朵 (813) | 五十年前波拉岛 · 639 | 1 | 1/118 | 0.69% | clone of 1646 | 1474 | 非原版 | 8.0 rex |
-| 朵巴奈特 (811) | 五十年前波拉岛 · 652 | 1 | 1/111 | 0.73% | clone of 1644 | 1474 | 非原版 | 8.0 rex |
-| 朵巴奈特 (979) | 五十年前波拉岛 · 652 | 1 | 1/111 | 0.73% | 1973 | 1474 | 非原版 | 8.0 rex |
-| 布洛多多 (1042) | 五十年前波拉岛 · 652 | 1 | 1/111 | 0.73% | clone of 2048 | 1474 | 非原版 | 8.0 rex |
-| 邦司凉朵 (814) | 五十年前波拉岛 · 652 | 1 | 1/111 | 0.73% | clone of 1647 | 1473 | 非原版 | 8.0 rex |
-| 邦达霍恩 黑羊 (315) | 五十年前波拉岛 · 652 | 1 | 1/111 | 0.82% | 484 | 1463 卡伊霍恩 | 非原版 | its family (卡伊霍恩, 拉伊霍恩) lives only here |
-| 嘎吱拉 (796) | 五十年前波拉岛 · 638 | 1 | 1/97 | 0.81% | clone of 1629 | 1467 | 非原版 | 8.0 thunder dragon |
-| 哥斯哥斯 (797) | 五十年前波拉岛 · 638 | 1 | 1/97 | 0.80% | clone of 1630 | 1465 | 非原版 | 8.0 thunder dragon |
-| 蒙哥拉斯 (798) | 五十年前波拉岛 · 638 | 1 | 1/97 | 0.81% | clone of 1631 | 1468 | 非原版 | 8.0 thunder dragon |
-| 帖拉格恩 (271) | 漆黑的洞窟 地下6楼 · 616 | 1 | 1/100 | 0.88% | 338 | 1388 加宝格恩 | 非原版 | original wild only on 30701–30703 (not imported); its kin 加宝格恩 lives on 地下6–10楼 |
-| 布兰恩 (805) | 地下6楼 · 616 | 1 | 1/100 | 0.84% | clone of 1638 | 1388 | 非原版 | flying dragon floors |
-| 洛卡伦恩 (272) | 地下7楼 · 617 | 1 | 1/104 | 0.85% | 339 | 1388 | 非原版 | flying dragon floors |
-| 迪布恩 (806) | 地下7楼 · 617 | 1 | 1/104 | 0.81% | clone of 1639 | 1388 | 非原版 | flying dragon floors |
-| 朵拉比斯 金飞 (274) | 地下8楼 · 618 | 1 | 1/99 | 0.89% | 341 | 1388 | 非原版 | flying dragon floors |
-| 可可恩 (803) | 地下10楼 · 620 | 1 | 1/104 | 0.80% | clone of 1636 | 1388 | 非原版 | flying dragon floors |
-| 克洛恩 (804) | 地下10楼 · 620 | 1 | 1/104 | 0.81% | clone of 1637 | 1388 | 非原版 | flying dragon floors |
-| 艾迪希洛 机豹 (968) | 地下19楼 · 629 | 1 | 1/102 | 0.82% | clone of 1946 | 1396 拉可拉斯 | 非原版 | the machine pets go with 机暴's cave; this floor already has an original Lv.1 |
+| 左迪洛斯 蓝暴 (302) | 五十年前波拉岛 · 639 | 1 | 1/115 (0.87%) | 0.71% | 351 | 1473 | 非原版 | dragons live on this island |
+| 斑尼迪克 金暴 (812) | 五十年前波拉岛 · 639 | 1 | 1/115 | 0.70% | clone of 1645 | 1473 | 非原版 | rex island |
+| 邦达霍恩 黑羊 (315) | 五十年前波拉岛 · 652 | 1 | 1/107 | 0.84% | 484 | 1463 卡伊霍恩 | 非原版 | its family (卡伊霍恩, 拉伊霍恩) lives only here |
+| 帖拉格恩 (271) | 漆黑的洞窟 地下6楼 · 616 | 1 | 1/99 (1.01%) | 0.89% | 338 | 1388 加宝格恩 | 非原版 | original wild only on 30701–30703 (not imported); its kin 加宝格恩 lives on 地下6–10楼 |
+| 洛卡伦恩 (272) | 地下7楼 · 617 | 1 | 1/103 (0.97%) | 0.86% | 339 | 1388 | 非原版 | flying dragon floors |
+| 朵拉比斯 金飞 (274) | 地下8楼 · 618 | 1 | 1/99 (1.01%) | 0.89% | 341 | 1388 | 非原版 | flying dragon floors |
+| 艾迪希洛 机豹 (968) | 地下19楼 · 629 | 1 | 1/102 (0.98%) | 0.82% | clone of 1946 | 1396 拉可拉斯 | 非原版 | the machine pets go with 机暴's cave; this floor already has an original Lv.1 |
 | 帖拉所伊朵 机暴 (304) | 地下20楼 · 630 | 1 | 1/121 (0.83%) | 0.73% | 353 | 1398 布林帖斯 | 非原版 | the cave's guardian (bosses 1404 黑色帖拉所伊朵, 1942 钻石帖拉所依朵); deepest floor |
-| 金格萨贝鲁 金虎 (194) | 加鲁卡 · 152 | 1 | 1/78 (1.28%) | 1.12% | 310 | 417 贝鲁卡 Lv18–20 | 非原版 | the tigers' home outside 琉璃洞窟, highest tiger field |
-| 普鲁夏 蓝虎 (776) | 加鲁卡 · 152 | 1 | 1/78 | 1.07% | 1609 | 421 | 非原版 | tiger field |
-| 佩露夏 白虎 (777) | 加鲁卡 · 152 | 1 | 1/78 | 1.07% | 1610 | 421 | 非原版 | tiger field |
-| 萨格鲁 黑虎 (778) | 加鲁卡 · 151 | 1 | 1/92 (1.09%) | 0.88% | 1611 | 416 | 非原版 | original wild is 伊甸大陆 (not in our data) |
-| 玛斯贝卡 (779) | 加鲁卡 · 151 | 1 | 1/92 | 0.88% | 1612 | 420 | 非原版 | 8.0 tiger |
+| 金格萨贝鲁 金虎 (194) | 加鲁卡 · 152 | 1 | 1/78 (1.28%) | 1.13% | 310 | 417 贝鲁卡 Lv18–20 | 非原版 | the tigers' home outside 琉璃洞窟, highest tiger field |
+| 普鲁夏 蓝虎 (776) | 加鲁卡 · 152 | 1 | 1/78 | 1.08% | 1609 | 421 | 非原版 | tiger field |
+| 佩露夏 白虎 (777) | 加鲁卡 · 152 | 1 | 1/78 | 1.08% | 1610 | 421 | 非原版 | tiger field |
+| 萨格鲁 黑虎 (778) | 加鲁卡 · 151 | 1 | 1/91 (1.10%) | 0.89% | 1611 | 416 | 非原版 | original wild is 伊甸大陆 (not in our data) |
 | 葛雷基欧 地年兽 (901) | 萨伊那斯 · 38 | 1 | 1/127 (0.79%) | 0.79% | 1794 | — | 非原版 | festive: the field at 霍特尔村's gate (Lv1–15), which already has original weight-1 rare groups; not 萨姆吉尔's starter field, so its rolls stay as they were |
 | 葛雷洛比 水年兽 (902) | 萨伊那斯 · 38 | 1 | 1/127 | 0.79% | 1795 | — | 非原版 | same |
 | 葛雷吉鲁 火年兽 (903) | 萨伊那斯 · 38 | 1 | 1/127 | 0.79% | 1796 | — | 非原版 | same |
 | 葛雷马恩 风年兽 (904) | 萨伊那斯 · 38 | 1 | 1/127 | 0.79% | 1797 | — | 非原版 | same |
 | 黑乌力 黑猪 (5) | 萨伊那斯 · 56 | 1 | 1/97 (1.03%) | 0.93% | 475 | 255 乌力 Lv15–20 | 非原版 | the 乌力 field, Lv15–20 |
 
-Scaled areas: 500/639 ×2, 500/652 ×2, 500/638 ×3, 地下6楼 ×14, 地下7楼 ×17, 地下8楼 ×14, 地下10楼 ×17, 地下20楼 ×3, 萨伊那斯 56 ×8.
+Scaled areas: 500/639 ×2, 500/652 ×2, 500/638 ×3, 地下6楼 ×14, 地下7楼 ×17, 地下8楼 ×14, 地下20楼 ×3, 萨伊那斯 56 ×8.
 
 Already Lv.1 in the original, so nothing is added: 布林帖斯 (地下18楼), 邦恩多斯 (龙穴), 布拉奇多斯 (沙姆岛), 贝鲁卡 / 贝鲁伊卡 (加鲁卡), 格鲁西斯 (吉鲁岛).
 
 ## Left out, and later
 
-- **Later, when their maps are imported**, these become original Lv.1 spots on their own: 奥卡洛斯 on 31806 (阿斯玛鲁矿山, area 363), 加宝格恩 on 30702 (area 605), 布洛多斯 on 5507 (area 658). The 飞龙 home 30701–30703 (帖拉格恩, 加宝格恩, 迪布恩 Lv80–82) would suit 帖拉格恩 and the 8.0 飞龙 better than 漆黑的洞窟. 萨格鲁's original 伊甸大陆 (蒙达山) is not in the reference data at all.
+- **Later, when their maps are imported**, these become original Lv.1 spots on their own: 奥卡洛斯 on 31806 (阿斯玛鲁矿山, area 363), 加宝格恩 on 30702 (area 605), 布洛多斯 on 5507 (area 658). The 飞龙 home 30701–30703 (帖拉格恩, 加宝格恩, 迪布恩 Lv80–82) would suit 帖拉格恩 better than 漆黑的洞窟. 萨格鲁's original 伊甸大陆 (蒙达山) is not in the reference data at all.
+- **Later (8.0-era) variants are not added**: only the classic pets asked for are. Template numbers from about 700 up are later additions to `enemybase.txt` (the 2.5-era pets are 1–~600), and these have no Lv.1 spot here: 水5火5 巴朵兰恩 724, 斑尼迪克 1036 (暴龙队 variant), 朵巴奈特 811/979, 阿米朵 813, 布洛多多 1042, 邦司凉朵 814, 嘎吱拉 796, 哥斯哥斯 797, 蒙哥拉斯 798, 可可恩 803, 克洛恩 804, 布兰恩 805, 迪布恩 806, 玛斯贝卡 779. Exceptions asked for by name: 金暴 812, 蓝虎 776, 白虎 777, 黑虎 778, 机豹 968.
 - The 新手 tigers (161–164) are weaker starter gifts, so they are left out. 吉比 (910) and 凯恩 (918) share the 年兽 album page but are not 年兽.
 - Only 黑羊 was asked for in 布伊德系. 布伊德 (311) and 摩娜西普 金羊 (312) still have no wild spot, and 卡伊霍恩 / 拉伊霍恩 only Lv95–105.
 

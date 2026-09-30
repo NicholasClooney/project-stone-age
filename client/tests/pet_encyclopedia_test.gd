@@ -106,7 +106,7 @@ func rare_places(book) -> void:
 		var found: Array = entry.get("locations",[]).filter(func(place):return int(place.map_id) == int(item.map_id) and int(place.area_id) == int(item.area_id) and str(place.get("origin","")) == str(item.origin))
 		if found.size() != 1 or int(found[0].level_min) != 1 or int(found[0].level_max) != 1 or not found[0].capturable or not str(found[0].reason).is_empty() or found[0].cell.size() != 2:
 			bad.append("%s@%d/%d" % [item.name,int(item.map_id),int(item.area_id)])
-	check(data.get("encounters",[]).size() >= 30 and bad.is_empty(),"%d rare Lv.1 spots are reachable Lv.1 locations of their species%s" % [data.get("encounters",[]).size(),"" if bad.is_empty() else ": "+"、".join(bad)])
+	check(data.get("encounters",[]).size() >= 20 and bad.is_empty(),"%d rare Lv.1 spots are reachable Lv.1 locations of their species%s" % [data.get("encounters",[]).size(),"" if bad.is_empty() else ": "+"、".join(bad)])
 	var rex: Dictionary = book.entry_for(304)
 	var best: Dictionary = Encyclopedia.best_location(rex)
 	check(rex.catchable and int(best.map_id) == 32020 and best.origin == "added" and Encyclopedia.where_text(rex).ends_with("非原版") and Encyclopedia.origin_text(best.origin) == "原版无野外，非原版","机暴 (304): caught only at its added Lv.1 spot in 漆黑的洞窟 地下20楼, shown as 非原版")

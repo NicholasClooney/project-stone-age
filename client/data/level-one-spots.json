@@ -686,22 +686,6 @@
     },
     {
       "map_id": 200,
-      "area_id": 151,
-      "cell": [
-        422,
-        676
-      ],
-      "map_name": "加鲁卡",
-      "name": "玛斯贝卡",
-      "enemy_id": 1612,
-      "template_id": 779,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": false,
-      "origin": "added"
-    },
-    {
-      "map_id": 200,
       "area_id": 152,
       "cell": [
         288,
@@ -961,54 +945,6 @@
     },
     {
       "map_id": 500,
-      "area_id": 638,
-      "cell": [
-        255,
-        326
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "嘎吱拉",
-      "enemy_id": 90007,
-      "template_id": 796,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 638,
-      "cell": [
-        255,
-        326
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "哥斯哥斯",
-      "enemy_id": 90008,
-      "template_id": 797,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 638,
-      "cell": [
-        255,
-        326
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "蒙哥拉斯",
-      "enemy_id": 90009,
-      "template_id": 798,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
       "area_id": 639,
       "cell": [
         400,
@@ -1047,57 +983,9 @@
         400
       ],
       "map_name": "五十年前波拉岛",
-      "name": "巴朵兰恩",
-      "enemy_id": 2572,
-      "template_id": 724,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 639,
-      "cell": [
-        400,
-        400
-      ],
-      "map_name": "五十年前波拉岛",
       "name": "斑尼迪克",
       "enemy_id": 90001,
       "template_id": 812,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 639,
-      "cell": [
-        400,
-        400
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "斑尼迪克",
-      "enemy_id": 90002,
-      "template_id": 1036,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 639,
-      "cell": [
-        400,
-        400
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "阿米朵",
-      "enemy_id": 90003,
-      "template_id": 813,
       "level_min": 1,
       "level_max": 1,
       "dev_only": true,
@@ -1158,70 +1046,6 @@
         515
       ],
       "map_name": "五十年前波拉岛",
-      "name": "朵巴奈特",
-      "enemy_id": 90004,
-      "template_id": 811,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 652,
-      "cell": [
-        547,
-        515
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "朵巴奈特",
-      "enemy_id": 1973,
-      "template_id": 979,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 652,
-      "cell": [
-        547,
-        515
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "布洛多多",
-      "enemy_id": 90005,
-      "template_id": 1042,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 652,
-      "cell": [
-        547,
-        515
-      ],
-      "map_name": "五十年前波拉岛",
-      "name": "邦司凉朵",
-      "enemy_id": 90006,
-      "template_id": 814,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 500,
-      "area_id": 652,
-      "cell": [
-        547,
-        515
-      ],
-      "map_name": "五十年前波拉岛",
       "name": "邦达霍恩",
       "enemy_id": 484,
       "template_id": 315,
@@ -1262,22 +1086,6 @@
       "origin": "added"
     },
     {
-      "map_id": 32006,
-      "area_id": 616,
-      "cell": [
-        29,
-        29
-      ],
-      "map_name": "漆黑的洞窟 地下6楼",
-      "name": "布兰恩",
-      "enemy_id": 90010,
-      "template_id": 805,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
       "map_id": 32007,
       "area_id": 617,
       "cell": [
@@ -1288,22 +1096,6 @@
       "name": "洛卡伦恩",
       "enemy_id": 339,
       "template_id": 272,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 32007,
-      "area_id": 617,
-      "cell": [
-        28,
-        28
-      ],
-      "map_name": "漆黑的洞窟 地下7楼",
-      "name": "迪布恩",
-      "enemy_id": 90011,
-      "template_id": 806,
       "level_min": 1,
       "level_max": 1,
       "dev_only": true,
@@ -1355,38 +1147,6 @@
       "level_max": 1,
       "dev_only": true,
       "origin": "original_area"
-    },
-    {
-      "map_id": 32010,
-      "area_id": 620,
-      "cell": [
-        51,
-        47
-      ],
-      "map_name": "漆黑的洞窟 地下10楼",
-      "name": "可可恩",
-      "enemy_id": 90012,
-      "template_id": 803,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
-    },
-    {
-      "map_id": 32010,
-      "area_id": 620,
-      "cell": [
-        51,
-        47
-      ],
-      "map_name": "漆黑的洞窟 地下10楼",
-      "name": "克洛恩",
-      "enemy_id": 90013,
-      "template_id": 804,
-      "level_min": 1,
-      "level_max": 1,
-      "dev_only": true,
-      "origin": "added"
     },
     {
       "map_id": 32011,
