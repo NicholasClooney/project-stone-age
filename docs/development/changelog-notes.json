@@ -1061,5 +1061,11 @@
     "details": [
       "多人服务器：点「记录」看完聊天记录再关掉后，说话和记录按钮会回到左下角原位，不再停在半空。"
     ]
+  },
+  "fix(web): raise the phone keyboard when a text field is tapped": {
+    "title": "手机上点输入框会弹出键盘",
+    "details": [
+      "网页版：在手机上点 PIN、角色名、聊天等输入框，会弹出系统键盘。以前网页导出没有打开 Godot 的虚拟键盘支持（实验功能），手机上没法打字。"
+    ]
   }
 }

@@ -1,9 +1,18 @@
 {
-  "version": "v0.104.1",
-  "count": 138,
+  "version": "v0.104.2",
+  "count": 139,
   "feature_count": 88,
-  "fix_count": 50,
+  "fix_count": 51,
   "entries": [
+    {
+      "version": "v0.104.2",
+      "date": "2026-09-30",
+      "kind": "fix",
+      "title": "手机上点输入框会弹出键盘",
+      "details": [
+        "网页版：在手机上点 PIN、角色名、聊天等输入框，会弹出系统键盘。以前网页导出没有打开 Godot 的虚拟键盘支持（实验功能），手机上没法打字。"
+      ]
+    },
     {
       "version": "v0.104.1",
       "date": "2026-09-30",
