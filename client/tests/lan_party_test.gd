@@ -381,10 +381,21 @@ func client() -> void:
 	await process_frame
 	await process_frame
 	check(row.global_position.y==row_y,"and it stays after 记录 closes (%d, was %d)" % [int(row.global_position.y),int(row_y)])
-	# Leaving unlocks walking.
-	game.party_panel.list.find_child("LeaveParty",true,false).pressed.emit()
-	check(await Wait.until(self,func():return not game.party_panel.in_party()),"离开队伍 leaves")
-	check(not game.party_locked() and game.chat_panel.lines.any(func(line):return str(line.text)=="脱离团队！"),"Bob walks freely again and saw 脱离团队！")
+	# Alice walks into another map; Bob is carried along.
+	server.handle(900001,{"type":"report_position","map_id":1002,"cell":[16,15],"map_changed":true,"client":"alice-device"})
+	check(await Wait.until(self,func():return int(game.data.map_id)==1002 and not game.area_transition_busy),"Bob is carried into map 1002 after Alice")
+	await Wait.settle(self,game)
+	# The leader logs out: the party disbands and Bob stays where he stands.
+	var stood: Vector2i = game.cell
+	var stood_map := int(game.data.map_id)
+	server.disconnect_connection(900001)
+	check(await Wait.until(self,func():return not game.party_panel.in_party()),"the leader going offline disbands the party")
+	for i in range(30):await process_frame
+	check(game.cell==stood and int(game.data.map_id)==stood_map,"Bob stays where he stood (%s on %d, was %s on %d)" % [str(game.cell),int(game.data.map_id),str(stood),stood_map])
+	check(server.backends.bob.automation.position_cell==stood,"and the server keeps him there (%s)" % str(server.backends.bob.automation.position_cell))
+	var location: Dictionary = server.backends.bob.session.snapshot().location
+	check(int(location.map_id)==stood_map,"and his saved location is that map too (%s)" % str(location))
+	check(not game.party_locked() and game.chat_panel.lines.any(func(line):return str(line.text)=="团队已解散！"),"Bob walks freely again and saw 团队已解散！")
 	game.queue_free()
 	await process_frame
 	ws.stop()
