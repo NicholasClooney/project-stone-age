@@ -5,9 +5,10 @@ extends Control
 ## - The classic bar's 加入队伍 button (26105) joins the player in front of
 ##   you, or leaves the party when you are in one (field.cpp FIELD_FUNC_PARTY
 ##   sends PR 1 or PR 0). A leader leaving disbands the party.
-## - 游戏设定 (26101) opens the original's switch window with its 组队 row
-##   (「设定是否接受其他人加入你的队伍。」): only players with it on can be
-##   joined. 决斗, 名片, 聊天 and 交易 are not here.
+## - The 组队 switch (「接受其他人加入队伍」) starts on and lives in 设置 → 组队
+##   (settings_menu.gd): only players with it on can be joined. The original
+##   keeps it in MENU (26101)'s 其他设定 window (field.cpp etcSwitch, with
+##   决斗, 名片, 聊天 and 交易); here MENU opens 设置 instead.
 ## - The party list (top left) shows the members, the leader first with ★;
 ##   the leader can 踢出 a member or 解散队伍, a member can 离开队伍.
 ## - While the leader fights, members see 「队长战斗中」 and wait (party
@@ -28,8 +29,6 @@ var view: Dictionary = {}
 var list: PanelContainer
 var list_rows: VBoxContainer
 var banner: Label
-var settings: PanelContainer
-var switch_button: Button
 var _own_mark: Node2D
 var _list_key := ""
 
@@ -60,7 +59,6 @@ func configure(owner: Node2D) -> void:
 	banner.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	banner.hide()
 	add_child(banner)
-	_build_settings()
 	if not world.last_party_event.is_empty():on_event(world.last_party_event)
 
 # ---- state ------------------------------------------------------------------
@@ -92,7 +90,6 @@ func reset() -> void:
 	_refresh()
 
 func _refresh() -> void:
-	if switch_button!=null:switch_button.text = "ＹＥＳ" if bool(view.get("accept",false)) else "Ｎ  Ｏ"
 	var key := JSON.stringify([view.get("leader",""),view.get("members",[]),view.get("me","")])
 	if key!=_list_key:
 		_list_key = key
@@ -100,10 +97,8 @@ func _refresh() -> void:
 
 func _process(_delta: float) -> void:
 	var shown: bool = available() and in_party() and not world.data.is_empty()
-	# 游戏设定 opens in the same corner; the list steps aside meanwhile.
-	list.visible = shown and not settings.visible
+	list.visible = shown
 	banner.visible = shown and bool(view.get("battle",false)) and not (is_instance_valid(world.battle_view) and world.battle_view.visible)
-	if not available() and settings.visible:settings.hide()
 	_own_leader_mark()
 
 # ---- 加入队伍 ------------------------------------------------------------------
@@ -200,44 +195,11 @@ func _rebuild_list() -> void:
 		list_rows.add_child(note)
 	list.reset_size()
 
-# ---- 游戏设定: the 组队 switch -----------------------------------------------------
+# ---- the 组队 switch (设置 → 组队) ------------------------------------------------
 
-func toggle_settings() -> void:
-	if not available():
-		world.play_battle_sound(220)
-		_say("单人模式没有其他玩家，不能组队。")
-		return
-	settings.visible = not settings.visible
-	world.play_ui_sound(202 if settings.visible else 203)
-
-func _build_settings() -> void:
-	settings = PanelContainer.new()
-	settings.name = "PartySettings"
-	settings.position = Vector2(8,86)
-	settings.add_theme_stylebox_override("panel",_style())
-	settings.hide()
-	add_child(settings)
-	var column := VBoxContainer.new()
-	column.add_theme_constant_override("separation",6)
-	settings.add_child(column)
-	var title: Label = world.text("游戏设定",14)
-	title.add_theme_color_override("font_color",Color("ffe070"))
-	column.add_child(title)
-	var row := HBoxContainer.new()
-	row.add_theme_constant_override("separation",8)
-	column.add_child(row)
-	row.add_child(world.text("组    队：",14))
-	switch_button = world.button("Ｎ  Ｏ",func():set_accept(not bool(view.get("accept",false))))
-	switch_button.name = "PartySwitch"
-	switch_button.tooltip_text = "设定是否接受其他人加入你的队伍。"
-	switch_button.custom_minimum_size.x = 72
-	row.add_child(switch_button)
-	var hint: Label = world.text("设定是否接受其他人加入你的队伍。\n要加入别人：站到对方旁边、面向对方，按「加入队伍」。",11)
-	hint.add_theme_color_override("font_color",Color("c8bea0"))
-	column.add_child(hint)
-	var close: Button = world.button("关闭",toggle_settings)
-	close.add_theme_font_size_override("font_size",11)
-	column.add_child(close)
+## Whether others may join this player's party (the server's view; on by default).
+func accepting() -> bool:
+	return bool(view.get("accept",true))
 
 func _style() -> StyleBoxFlat:
 	var style := StyleBoxFlat.new()

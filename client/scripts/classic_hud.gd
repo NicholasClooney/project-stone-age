@@ -37,11 +37,13 @@ func _ready() -> void:
 	var ids := [26101,26103,26105,26234,26237]
 	for i in range(ids.size()):
 		var item := icon(left,ids[i],ids[i]+1,Vector2(3+i*33,3),names[i])
-		# LAN phase 3 (scripts/party_panel.gd): 游戏设定 holds the 组队 switch,
-		# 加入队伍 joins the player in front or leaves the party.
+		# MENU opens 设置 (the original's 其他设定 switches: 组队 is in 设置 →
+		# 组队); 加入队伍 joins the player in front or leaves the party.
 		if i==0:
 			item.name = "GameSettingsButton"
-			item.pressed.connect(func():if is_instance_valid(world.party_panel):world.party_panel.toggle_settings())
+			item.pressed.connect(func():
+				if world.settings_menu.visible:world.settings_menu.close_menu()
+				else:world.settings_menu.open_menu())
 		elif i==2:
 			item.name = "PartyButton"
 			item.pressed.connect(func():if is_instance_valid(world.party_panel):world.party_panel.press_party_button())

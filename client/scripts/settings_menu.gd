@@ -171,6 +171,13 @@ func _main_page() -> void:
 		switch.name = "SettingsSwitchProfile"
 		switch.tooltip_text = "退出这台设备上的登录，回到选择角色的画面；自动战斗和找宠在服务器上继续"
 		character.add_child(switch)
+	# 组队 (LAN phase 3): the original's 其他设定 switch, on by default here.
+	var party = world.get("party_panel")
+	if is_instance_valid(party) and party.available():
+		var grouping := _section("组队")
+		var accept := _check("接受其他人加入队伍","SettingsPartySwitch",party.accepting(),func(on: bool): party.set_accept(on))
+		accept.tooltip_text = "要加入别人：站到对方旁边、面向对方，按左上角「加入队伍」"
+		grouping.add_child(accept)
 	var movement := _section("移动")
 	var blink := _check("瞬移模式","SettingsBlinkMode",world.dev_blink_mode,world.set_blink_mode)
 	blink.tooltip_text = "开启后点击当前地图即可瞬移；障碍旁寻找可站立位置，关闭后恢复点击寻路"

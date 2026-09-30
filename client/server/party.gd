@@ -26,8 +26,9 @@ const MAX_MEMBERS := 5
 ## As server/presence.gd and the client's GameScene: facing = (index + 4) % 8.
 const DIRECTIONS := [Vector2i(1,-1),Vector2i(1,0),Vector2i(1,1),Vector2i(0,1),Vector2i(-1,1),Vector2i(-1,0),Vector2i(-1,-1),Vector2i(0,-1)]
 
-## id -> true while that player's 组队 switch is on (accepts joiners). Kept
-## for as long as the server runs; not in the save.
+## id -> false once that player turns the 组队 switch off. The switch starts
+## on (the original starts it off; here friends group without a detour
+## through 设置). Kept for as long as the server runs; not in the save.
 var accept: Dictionary = {}
 ## leader id -> [leader id, member id, ...] in joining order.
 var parties: Dictionary = {}
@@ -59,11 +60,11 @@ func members(id: String) -> Array:
 	return parties.get(leader_of(id),[]).duplicate()
 
 func set_accept(id: String, on: bool) -> void:
-	if on:accept[id] = true
-	else:accept.erase(id)
+	if on:accept.erase(id)
+	else:accept[id] = false
 
 func accepts(id: String) -> bool:
-	return bool(accept.get(id,false))
+	return bool(accept.get(id,true))
 
 ## `joiner` joins the player in front of it (facing 0..7). `target`, when
 ## given, picks among several eligible parties on that cell (the original

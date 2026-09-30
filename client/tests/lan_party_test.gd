@@ -61,6 +61,8 @@ func rules() -> void:
 	var a := profile("a",Vector2i(11,10))
 	var b := profile("b",Vector2i(10,10))
 	var all := [a,b]
+	check(party.accepts("a"),"the 组队 switch starts on")
+	party.set_accept("a",false)
 	var refused: Dictionary = party.join("b",EAST,all)
 	check(not refused.ok and refused.reason.contains("组队开关"),"A's 组队 switch is off: B cannot join (%s)" % refused.reason)
 	party.set_accept("a",true)
@@ -174,13 +176,14 @@ func hub() -> void:
 		check(server.handle(info[0],{"type":"create_profile","name":info[1],"pin":info[2]}).ok,"%s logs in" % info[1])
 	server.presence_tick(true)
 	var views: Dictionary = wire.last_party(1)
-	check(not views.is_empty() and views.me=="alice" and views.leader=="" and not views.accept,"after a login the next tick tells a device its party view: no party, switch off")
+	check(not views.is_empty() and views.me=="alice" and views.leader=="" and views.accept,"after a login the next tick tells a device its party view: no party, switch on")
 	report(server,1,1000,Vector2i(81,90))
 	report(server,2,1000,Vector2i(80,90))
 	report(server,3,1000,Vector2i(81,91))
 	report(server,4,2000,Vector2i(5,5))
+	check(server.handle(1,{"type":"party_switch","on":false}).ok and not bool(wire.last_party(1).accept),"Alice switches 组队 off; her devices see it")
 	var joined: Dictionary = server.handle(2,{"type":"party_join","facing":EAST,"seq":3})
-	check(not joined.ok and joined.type=="rejected" and joined.seq==3 and str(joined.reason).contains("组队开关"),"Bob cannot join Alice before she switches 组队 on")
+	check(not joined.ok and joined.type=="rejected" and joined.seq==3 and str(joined.reason).contains("组队开关"),"Bob cannot join Alice while her 组队 is off")
 	wire.messages.clear()
 	check(server.handle(1,{"type":"party_switch","on":true}).ok and bool(wire.last_party(1).accept),"Alice switches 组队 on; her devices see it")
 	joined = server.handle(2,{"type":"party_join","facing":EAST})
@@ -307,6 +310,15 @@ func client() -> void:
 	await Wait.settle(self,game)
 	check(is_instance_valid(game.party_panel) and game.party_panel.available() and not game.party_panel.in_party(),"the party panel knows Bob can party, and is in none")
 	check(game.classic_hud.find_child("PartyButton",true,false)!=null and game.party_panel.button_caption()=="加入队伍。","the bar's 加入队伍 button says 加入队伍。")
+	# MENU opens 设置, whose 组队 switch starts on and reaches the server.
+	game.classic_hud.find_child("GameSettingsButton",true,false).pressed.emit()
+	var switch: CheckBox = game.settings_menu.find_child("SettingsPartySwitch",true,false)
+	check(game.settings_menu.visible and switch!=null and switch.button_pressed,"MENU opens 设置 with 接受其他人加入队伍 on")
+	switch.button_pressed = false
+	check(await Wait.until(self,func():return not server.party.accepts("bob")),"unticking it turns Bob's 组队 switch off on the server")
+	switch.button_pressed = true
+	check(await Wait.until(self,func():return server.party.accepts("bob")),"and ticking it turns it back on")
+	game.settings_menu.close_menu()
 	# Alice stands right in front of Bob.
 	var map_id := int(game.data.map_id)
 	var ahead: Vector2i = game.cell+game.SCREEN_DIRECTIONS[(int(game.player.facing)+4)%8]

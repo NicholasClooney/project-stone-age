@@ -84,7 +84,7 @@ On a phase 1 server, players can form a party (组队) on the map and walk toget
 
 ### What a player sees
 
-- **组队 switch**: 游戏设定 (the first button of the top-left bar, 26101) opens the original switch window with its 组队 row, 「设定是否接受其他人加入你的队伍。」 (Ｎ Ｏ / ＹＥＳ). Only players with it on can be joined. It starts off, and the server keeps it per character until it stops (not in the save). The window's other original rows (决斗, 名片, 聊天, 交易) are not there.
+- **组队 switch**: 设置 → 组队 → 「接受其他人加入队伍」. Only players with it on can be joined. It **starts on** (the original starts it off), and the server keeps a player's choice until it stops (not in the save). The original keeps it in the 其他设定 window that MENU (the first button of the top-left bar, 26101; `field.cpp` `etcSwitch`) opens, with 决斗, 名片, 聊天 and 交易; here MENU opens 设置 instead, and those other rows are not built.
 - **Joining**: stand next to the other player, face them and press **加入队伍** (the third button, 26105). You join the player on the cell in front of you; if that player is a member, you join their leader, who must then be within one cell of you. Refused with a reason when: the switch is off (「对方没有打开组队开关，无法加入团队。」), they fight, they or you run automation, the party has 5 players (「对方的队伍已满（最多 5 人）。」), or nobody stands in front (「面前没有其他玩家。」). Convenience: when the cell in front is empty and exactly one player stands next to you, the button first turns you to face them.
 - Everyone in the party gets the original's yellow system lines in the chat: 「加入团队！」, 「名字 加入团队！」, 「名字 脱离团队！」, 「团队已解散！」, and 「被队长踢出队伍。」.
 - **Party list** (top left): 队伍（n/5）, the leader first with ★ and （队长）, you in light blue. The leader has 踢出 beside each member and 解散队伍; a member has 离开队伍. Pressing 加入队伍 again also leaves (the leader's press disbands, as the original's leader leaving does).
@@ -116,7 +116,7 @@ On a phase 1 server, players can form a party (组队) on the map and walk toget
 - The leader's `report_position` goes to its backend as before; the hub then moves each member's backend with a `report_position` of client `party`. Every device of that member receives the usual `position` event and walks after it (the same path another device of your own character uses), loading the new map on a map change.
 - A member's own `report_position` is ignored and its device is sent where the server has it; `field_step` answers with no encounter; `wild_encounter`, `begin_battle` and `open_battle` are refused. Anyone in a party gets `auto_start` refused.
 - Each device gets a `party` event with its view (switch, leader, members, and for members whether the leader fights) when it changes, checked with the presence tick. The presence entries carry `pt`, the leader's id. See [backend interface](../technical/backend-interface.md#presence-and-chat-on-a-multi-profile-server).
-- Client: `scripts/party_panel.gd` (the button, 游戏设定, the list, 队长战斗中, the leader flag), `GameScene.party_locked()` guarding `request_step`, `blink_to` and `load_area_id`, the 频道 button in `scripts/chat_panel.gd`, and the flag and card line in `scripts/remote_players.gd`.
+- Client: `scripts/party_panel.gd` (the button, the list, 队长战斗中, the leader flag), `GameScene.party_locked()` guarding `request_step`, `blink_to` and `load_area_id`, the 频道 button in `scripts/chat_panel.gd`, and the flag and card line in `scripts/remote_players.gd`.
 - The flag's 10 frames come from `tools/import_ui.py` (UI images 25600–25609 and `leader_mark` in `ui/manifest.json`). Without that import the flag is a small yellow 队长 badge.
 
 ### Differences from the original
