@@ -2,7 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from import_encounters import ALBUM_PETS, add_album_pets, atoi, build, choices
+from import_encounters import ALBUM_PETS, RARE, add_album_pets, add_rare_encounters, atoi, build, choices
 
 ROOT = Path('references/chenmingbiao-stone-age/gmsv/data')
 
@@ -49,6 +49,70 @@ class EncounterImportTests(unittest.TestCase):
             album.write_text('{ 417, "别的", 28542},\n',encoding='utf-8')
             with self.assertRaises(ValueError):add_album_pets({'templates':{},'provenance':{}},pets,album)
             with self.assertRaises(ValueError):add_album_pets({'templates':{'9':{'name':'巴雅'}},'provenance':{}},pets,Path(folder)/'missing.h')
+
+    def rare_fixture(self):
+        area = dict(id=5, map_id=9, groups=[dict(id=1, weight=3), dict(id=2, weight=1)])
+        other = dict(id=5, map_id=8, groups=[])
+        return dict(areas=[area, other], provenance={},
+            groups={'1': dict(id=1, requires_item=-1, excludes_item=-1, enemies=[dict(id=10, weight=1)]),
+                    '2': dict(id=2, requires_item=7, excludes_item=-1, enemies=[dict(id=11, weight=1)])},
+            enemies={'10': dict(id=10, template_id=100, level_min=90, level_max=95, max_count=5, min_count=1, pet_flag=1),
+                     '11': dict(id=11, template_id=100, level_min=90, level_max=95, max_count=5, min_count=1, pet_flag=1),
+                     '12': dict(id=12, template_id=101, level_min=1, level_max=1, max_count=3, min_count=1, pet_flag=1),
+                     '13': dict(id=13, template_id=102, level_min=1, level_max=1, max_count=1, min_count=1, pet_flag=0)},
+            templates={'100': dict(id=100, name='高'), '101': dict(id=101, name='稀'), '102': dict(id=102, name='克')})
+
+    def write_rare(self, folder, **spec):
+        path = Path(folder)/'rare.json'
+        path.write_text(json.dumps(dict(dict(areas=[], clones=[], encounters=[]), **spec), ensure_ascii=False))
+        return path
+
+    def test_rare_encounters_add_a_marked_lv1_group(self):
+        data = self.rare_fixture()
+        entry = dict(group_id=900, template_id=101, name='稀', enemy_id=12, companion_id=10, map_id=9, area_id=5, weight=1, origin='added', reason='r')
+        clone = dict(group_id=901, template_id=102, name='克', enemy_id=50, companion_id=None, map_id=9, area_id=5, weight=1, origin='original_area', reason='r')
+        with tempfile.TemporaryDirectory() as folder:
+            add_rare_encounters(data, self.write_rare(folder, areas=[dict(map_id=9, area_id=5, scale=4)],
+                clones=[dict(id=50, template_id=102, reason='r', **{'from': 13})], encounters=[entry, clone]))
+        area = data['areas'][0]
+        self.assertEqual(area['groups'], [dict(id=1, weight=12), dict(id=2, weight=4), dict(id=900, weight=1), dict(id=901, weight=1)])
+        self.assertEqual(area['weight_scale'], 4)
+        self.assertEqual(data['areas'][1]['groups'], [])
+        self.assertEqual(data['groups']['900']['enemies'], [dict(id=12, weight=1), dict(id=10, weight=1)])
+        self.assertEqual(data['groups']['900']['rare']['origin'], 'added')
+        self.assertEqual(data['groups']['901']['enemies'], [dict(id=50, weight=1)])
+        self.assertEqual({k: data['enemies']['50'][k] for k in ['template_id', 'level_min', 'level_max', 'max_count', 'pet_flag', 'clone_of']},
+                         dict(template_id=102, level_min=1, level_max=1, max_count=1, pet_flag=1, clone_of=13))
+        self.assertEqual(data['enemies']['13']['pet_flag'], 0)
+        self.assertEqual(data['provenance']['rare_encounters']['encounters'], 2)
+
+    def test_rare_encounters_refuse_bad_rows(self):
+        entry = dict(group_id=900, template_id=101, name='稀', enemy_id=12, companion_id=10, map_id=9, area_id=5, weight=1, origin='added', reason='r')
+        bad = [dict(entry, enemy_id=10, template_id=100, name='高'),  # not Lv1
+               dict(entry, enemy_id=13, template_id=102, name='克'),  # not capturable
+               dict(entry, name='别的'),                              # name does not match
+               dict(entry, companion_id=11),                          # companion only in a gated group
+               dict(entry, group_id=1),                               # group id taken
+               dict(entry, origin='original')]
+        with tempfile.TemporaryDirectory() as folder:
+            for row in bad:
+                with self.assertRaises(ValueError, msg=row):
+                    add_rare_encounters(self.rare_fixture(), self.write_rare(folder, encounters=[row]))
+            with self.assertRaises(ValueError):
+                add_rare_encounters(self.rare_fixture(), self.write_rare(folder, areas=[dict(map_id=7, area_id=5, scale=2)], encounters=[entry]))
+
+    def test_shipped_rare_encounters_are_level_one_near_one_percent(self):
+        spec = json.loads(RARE.read_text())
+        self.assertEqual(len({e['group_id'] for e in spec['encounters']}), len(spec['encounters']))
+        self.assertTrue(all(e['weight'] == 1 and e['origin'] in ('original_area', 'added') and e['reason'] for e in spec['encounters']))
+        if not ROOT.exists():
+            return
+        data = add_rare_encounters(build(ROOT), RARE)
+        for item in spec['encounters']:
+            area = next(a for a in data['areas'] if a['map_id'] == item['map_id'] and a['id'] == item['area_id'])
+            total = sum(c['weight'] for c in area['groups'] if str(c['id']) in data['groups']
+                        and data['groups'][str(c['id'])]['requires_item'] < 0 and data['groups'][str(c['id'])]['excludes_item'] < 0)
+            self.assertTrue(0.005 <= 1/total <= 0.015, f"{item['name']}: 1/{total}")
 
     def test_shipped_album_pets_have_unique_albums_and_sprites(self):
         pets=json.loads(ALBUM_PETS.read_text())['pets']

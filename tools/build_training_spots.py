@@ -38,6 +38,18 @@ def ordinary_enemies(area, catalog, available):
     return enemies
 
 
+def renderable_sprites(root):
+    """Sprites a battle can show: the encounter art import's report plus the
+    battle index (troop_art.gd reads the index, which also holds sprites other
+    importers added, such as 金格萨贝鲁's 100330 from the starter pets)."""
+    available = set(json.loads((root/'encounters/art-coverage.json').read_text())['available'])
+    index = root/'battle/index.json'
+    if index.exists():
+        data = json.loads(index.read_text())
+        available |= {int(k) for k in list(data.get('sprites', {}))+list(data.get('extra_sprites', {}))}
+    return available
+
+
 def effective_area(areas, x, y):
     chosen = None
     for a in areas:
@@ -69,7 +81,7 @@ def landing(area, areas, collision, forbidden):
 def build(root):
     world = json.loads((root/'world/manifest.json').read_text())
     catalog = json.loads((root/'encounters/catalog.json').read_text())
-    available = set(json.loads((root/'encounters/art-coverage.json').read_text())['available'])
+    available = renderable_sprites(root)
     spots = []
     for key, info in world['maps'].items():
         if int(key) not in (100, 200) and info['kind'] != 'training':

@@ -236,6 +236,10 @@ func _build_pois() -> void:
 				if category==2:
 					label="%s · 固定 Lv.1"%spot.name if int(spot.level_max)==1 else "%s · 可遇 Lv.1（1–%d）"%[spot.name,int(spot.level_max)]
 					tag=str(spot.name)
+					# Rows added by data/rare-encounters.json (tools/import_encounters.py).
+					match str(spot.get("origin","")):
+						"original_area":label+=" · 补充"
+						"added":label+=" · 非原版"
 				else:
 					label="练级 Lv.%d–%d"%[spot.level_min,spot.level_max]
 					tag=label

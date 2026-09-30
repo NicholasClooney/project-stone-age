@@ -23,7 +23,7 @@ A species book like the classic fan-site pet grids: every pet species of the imp
 
 ## Locations and 瞬移去抓
 
-Locations are the ordinary encounter areas the hunt uses (`pet_hunt_rules.gd` candidates: positive weights, no event or item gate), with the level range and whether that row can be captured. Species with none show **无野外出现** (special pets, event and quest pets, later-version designs; see [special pets](../reverse-engineering/special-pets.md)).
+Locations are the ordinary encounter areas the hunt uses (`pet_hunt_rules.gd` candidates: positive weights, no event or item gate), with the level range and whether that row can be captured. Species with none show **无野外出现** (special pets, event and quest pets, later-version designs; see [special pets](../reverse-engineering/special-pets.md)). Rare Lv.1 spots added from `client/data/rare-encounters.json` are separate locations tagged **补充 · 原版此区只有高等级的** (the pet lives in that area at a higher level in the original) or **原版无野外，非原版**; see [rare Lv.1 encounters](../reverse-engineering/rare-level-one-encounters.md).
 
 **瞬移去抓** uses the verified landing cell of that area from `client/data/training-spots.json` (the same cells as 刷怪传送), rechecks the area and the landing, teleports, and opens 自动抓极品 with the species as target and on its 属性条件 page. The Lv.1 limit is switched on when that area has Lv.1 rows and off otherwise. Areas on maps not imported yet, or whose groups lack battle art, show why they cannot be reached. It is refused during a battle, a map change, or while 自动练级 / 自动抓极品 runs.
 

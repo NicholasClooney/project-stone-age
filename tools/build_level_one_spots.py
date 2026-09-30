@@ -2,7 +2,7 @@
 import argparse
 import json
 from pathlib import Path
-from build_training_spots import build as build_training, ordinary_enemies
+from build_training_spots import build as build_training, ordinary_enemies, renderable_sprites
 
 
 def eligible_pets(area, catalog, available):
@@ -10,15 +10,29 @@ def eligible_pets(area, catalog, available):
             if enemy['level_min'] <= 1 <= enemy['level_max'] and enemy.get('pet_flag', 0) != 0]
 
 
+def rare_origins(catalog):
+    """(map, area, enemy) -> origin of the Lv1 rows tools/import_encounters.py
+    added from client/data/rare-encounters.json (original_area or added)."""
+    result = {}
+    for area in catalog['areas']:
+        for choice in area['groups']:
+            rare = catalog['groups'].get(str(choice['id']), {}).get('rare')
+            if rare:
+                result[(area['map_id'], area['id'], rare['enemy_id'])] = rare['origin']
+    return result
+
+
 def build(root):
     training = build_training(root)
     catalog = json.loads((root/'encounters/catalog.json').read_text())
-    available = set(json.loads((root/'encounters/art-coverage.json').read_text())['available'])
-    areas = {a['id']: a for a in catalog['areas']}
+    available = renderable_sprites(root)
+    # Area ids repeat across maps (639 is on 500 and 4030): key by both.
+    areas = {(a['map_id'], a['id']): a for a in catalog['areas']}
+    rare = rare_origins(catalog)
     spots = []
     for point in training['spots']:
         seen = set()
-        for enemy, template in eligible_pets(areas[point['area_id']], catalog, available):
+        for enemy, template in eligible_pets(areas[(point['map_id'], point['area_id'])], catalog, available):
             key = (enemy['id'], template['id'])
             if key in seen:
                 continue
@@ -27,7 +41,10 @@ def build(root):
                               map_name=point['name'], name=template['name'], enemy_id=enemy['id'],
                               template_id=template['id'], level_min=enemy['level_min'],
                               level_max=enemy['level_max'], dev_only=point['dev_only']))
-    return dict(schema=1, method='Positive ordinary encounter weights, capture flag, actual enemy row includes Lv.1; source-priority safe landing. Encounter chance is not guaranteed.', spots=spots)
+            origin = rare.get((point['map_id'], point['area_id'], enemy['id']))
+            if origin:
+                spots[-1]['origin'] = origin
+    return dict(schema=1, method='Positive ordinary encounter weights, capture flag, actual enemy row includes Lv.1; source-priority safe landing. Encounter chance is not guaranteed. origin marks rows added by client/data/rare-encounters.json (original_area: 补充 in an area the pet has at a higher level; added: 非原版).', spots=spots)
 
 
 if __name__ == '__main__':

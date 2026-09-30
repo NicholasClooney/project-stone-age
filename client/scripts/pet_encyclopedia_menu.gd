@@ -918,7 +918,7 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 		note.custom_minimum_size = Vector2(400,0)
 		column.add_child(note)
 		return column
-	var note := PetTable.text("原表普通遇敌区；随机遇敌不保证每场出现。瞬移去抓：传送到该区，打开自动抓极品并选中它。","meta")
+	var note := PetTable.text("原表普通遇敌区；标「补充」「非原版」的 Lv.1 是本作按原版稀有 Lv.1 的做法加的。随机遇敌不保证每场出现。瞬移去抓：传送到该区，打开自动抓极品并选中它。","meta")
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	note.custom_minimum_size = Vector2(400,0)
 	column.add_child(note)
@@ -933,7 +933,8 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 	for i in range(places.size()):
 		var place: Dictionary = places[i]
 		var holder := PetTable.row_panel(i)
-		holder.name = "Place%d_%d" % [int(place.map_id),int(place.area_id)]
+		var suffix := "" if str(place.get("origin","")).is_empty() else "_"+str(place.origin)
+		holder.name = "Place%d_%d%s" % [int(place.map_id),int(place.area_id),suffix]
 		rows.add_child(holder)
 		var row := HBoxContainer.new()
 		row.add_theme_constant_override("separation",8)
@@ -946,7 +947,12 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 		var level := "Lv.%d" % int(place.level_min) if int(place.level_min) == int(place.level_max) else "Lv.%d–%d" % [int(place.level_min),int(place.level_max)]
 		var extra := " · 可抓Lv.1" if place.capturable and int(place.level_min) <= 1 else ""
 		words.add_child(PetTable.text("%s%s · 区域 %d%s" % [level,extra,int(place.area_id)," · "+str(place.reason) if not place.reason.is_empty() else ""],"meta"))
-		row.add_child(_go_button(entry,place,"GoPlace%d_%d" % [int(place.map_id),int(place.area_id)]))
+		var origin := Encyclopedia.origin_text(str(place.get("origin","")))
+		if not origin.is_empty():
+			var tag := PetTable.text(origin,"meta",PetTable.MUTED if place.origin == "original_area" else PetTable.GOLD)
+			tag.name = "Origin"
+			words.add_child(tag)
+		row.add_child(_go_button(entry,place,"GoPlace%d_%d%s" % [int(place.map_id),int(place.area_id),suffix]))
 	return column
 
 # ---- 瞬移去抓 ----------------------------------------------------------------

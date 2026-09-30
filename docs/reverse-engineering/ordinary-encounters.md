@@ -9,7 +9,7 @@ python3 tools/import_encounters.py
 .tools/asset-venv/bin/python tools/import_encounter_art.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
 ```
 
-Outputs remain under ignored `client/assets/legacy/encounters/` and the existing ignored battle art directory. Catalog records preserve source IDs/line numbers; SHA-256 values identify the four input tables. `art-coverage.json` reports valid sprites and original resource failures. Never replace a missing species with a different animal or remove its weight from a regional distribution.
+`import_encounters.py` also merges the marked rare Lv.1 additions of `client/data/rare-encounters.json` ([rare Lv.1 encounters](rare-level-one-encounters.md)); pass `--rare ''` for the pure source tables. Outputs remain under ignored `client/assets/legacy/encounters/` and the existing ignored battle art directory. Catalog records preserve source IDs/line numbers; SHA-256 values identify the four input tables. `art-coverage.json` reports valid sprites and original resource failures. Never replace a missing species with a different animal or remove its weight from a regional distribution.
 
 ## Source rules
 

@@ -37,11 +37,12 @@ func core() -> void:
 	check(absf(float(blue.potential.mean_sum)-616.8) < 0.3 and int(blue.potential.top1) == 621 and int(blue.potential.top01) in [622,623],"92 full-grade Lv1→120 mean %.2f, top1%% %d, top0.1%% %d (pet-quality.md: 616.8, 621, 622–623)" % [float(blue.potential.mean_sum),int(blue.potential.top1),int(blue.potential.top01)])
 	check(book.entry_for(106).id == 303 and book.entry_for(303).alias == "红暴龙","identical 巴朵兰恩 templates 106 and 303 merge under 303 (红暴龙)")
 	check(book.entry_for(586).id == book.entry_for(3).id and book.entry_for(6).id != book.entry_for(3).id,"乌力斯坦 586 merges with 3; template 6 has other stats and stays separate")
-	var red: Dictionary = book.entry_for(303)
-	check(int(red.wild_lowest) == int(red.wild_potential.level) and int(red.wild_lowest) > 1,"红暴 is caught from Lv.%d in the wild and has that second prediction" % int(red.wild_lowest))
-	var rex: Dictionary = book.entry_for(304)
-	check(rex.locations.is_empty() and Encyclopedia.where_text(rex) == "无野外出现" and not rex.catchable and rex.alias == "机暴","机暴 (304): no wild spawn, shown as 无野外出现")
-	check(Encyclopedia.best_location(rex).is_empty(),"no 瞬移去抓 target without a wild spawn")
+	var ram: Dictionary = book.entry_for(313)
+	check(int(ram.wild_lowest) == int(ram.wild_potential.level) and int(ram.wild_lowest) > 1,"卡伊霍恩 is caught from Lv.%d in the wild and has that second prediction" % int(ram.wild_lowest))
+	var gold: Dictionary = book.entry_for(312)
+	check(gold.locations.is_empty() and Encyclopedia.where_text(gold) == "无野外出现" and not gold.catchable and gold.name == "摩娜西普","金羊 (312): no wild spawn, shown as 无野外出现")
+	check(Encyclopedia.best_location(gold).is_empty(),"no 瞬移去抓 target without a wild spawn")
+	rare_places(book)
 	var kuni: Dictionary = book.entry_for(113)
 	var first: Dictionary = Encyclopedia.best_location(kuni)
 	check(kuni.catchable and int(first.level_min) == 1 and first.reason.is_empty() and first.cell.size() == 2,"昆伊's best location is a verified Lv.1 landing")
@@ -73,7 +74,7 @@ func core() -> void:
 	check(book.species[book.families.filter(func(f):return f.species.has(10417))[0].species[0]].family_name == "沃斯姆系","and it joins its album page's family")
 	var unknown: Array = book.order.filter(func(id):return not book.species[id].stats_known)
 	check(unknown.size() == 131 and unknown.all(func(id):return int(id) >= 10000),"131 stat-less 8.0 species, template 10000 + album number")
-	check(book.filtered("人龙").has(92) and not book.filtered("",true).has(304) and book.filtered("",true).has(113),"search by family name; 只看野外可抓 drops 机暴")
+	check(book.filtered("人龙").has(92) and not book.filtered("",true).has(312) and book.filtered("",true).has(113),"search by family name; 只看野外可抓 drops 金羊")
 	# The shipped JSON against the project's own GDScript rules: 200 full-grade
 	# blue dragons caught at Lv.1 and grown to 120.
 	var total := 0.0
@@ -94,6 +95,26 @@ func core() -> void:
 	var projected := Rules.project_pet(own,120)
 	check(best.count == 2 and best.best_sum >= int(projected.attack)+int(projected.defence)+int(projected.speed),"best owned Lv.120 三围合 uses the exact projection (%d)" % best.best_sum)
 	classic(book,catalog,profile)
+
+## The rare Lv.1 spots of data/rare-encounters.json (tools/import_encounters.py):
+## every one is a 瞬移去抓 location of its species, marked by origin.
+func rare_places(book) -> void:
+	var data: Dictionary = Encyclopedia.read_json("res://data/rare-encounters.json")
+	var bad: Array = []
+	for item in data.get("encounters",[]):
+		var entry: Dictionary = book.entry_for(int(item.template_id))
+		var found: Array = entry.get("locations",[]).filter(func(place):return int(place.map_id) == int(item.map_id) and int(place.area_id) == int(item.area_id) and str(place.get("origin","")) == str(item.origin))
+		if found.size() != 1 or int(found[0].level_min) != 1 or int(found[0].level_max) != 1 or not found[0].capturable or not str(found[0].reason).is_empty() or found[0].cell.size() != 2:
+			bad.append("%s@%d/%d" % [item.name,int(item.map_id),int(item.area_id)])
+	check(data.get("encounters",[]).size() >= 30 and bad.is_empty(),"%d rare Lv.1 spots are reachable Lv.1 locations of their species%s" % [data.get("encounters",[]).size(),"" if bad.is_empty() else ": "+"、".join(bad)])
+	var rex: Dictionary = book.entry_for(304)
+	var best: Dictionary = Encyclopedia.best_location(rex)
+	check(rex.catchable and int(best.map_id) == 32020 and best.origin == "added" and Encyclopedia.where_text(rex).ends_with("非原版") and Encyclopedia.origin_text(best.origin) == "原版无野外，非原版","机暴 (304): caught only at its added Lv.1 spot in 漆黑的洞窟 地下20楼, shown as 非原版")
+	var red: Dictionary = book.entry_for(303)
+	var original: Array = red.locations.filter(func(place):return str(place.origin).is_empty() and int(place.map_id) == 500 and int(place.area_id) == 639)
+	check(original.size() == 1 and int(original[0].level_min) >= 90 and int(Encyclopedia.best_location(red).level_min) == 1 and Encyclopedia.best_location(red).origin == "original_area" and Encyclopedia.where_text(red).ends_with("Lv.1为补充"),"红暴 keeps its original Lv.90–95 place and gains a separate 补充 Lv.1 place")
+	var water: Dictionary = book.entry_for(252)
+	check(water.locations.any(func(place):return int(place.map_id) == 32018 and int(place.level_min) == 1 and str(place.origin).is_empty()),"布林帖斯's original Lv.1 in 地下18楼 stays unmarked")
 
 ## 经典宠物: the data file's shape, and the classic and ownership filters.
 func classic(book, catalog: Dictionary, profile: Dictionary) -> void:
@@ -130,7 +151,7 @@ func classic(book, catalog: Dictionary, profile: Dictionary) -> void:
 	var shown: Array = book.filtered("",false,true)
 	check(shown.size() == pets.size()-1 and shown.all(func(id):return book.species[id].has("classic")),"经典宠物 filter shows the %d classic species" % shown.size())
 	var wild: Dictionary = book.entry_for(94)
-	check(Encyclopedia.classic_where_text(book.entry_for(304).classic,book.entry_for(304)).begins_with("原版不能野外捕捉") and Encyclopedia.classic_where_text(missing[0],{}) == "资料里没有这只宠物" and Encyclopedia.classic_where_text(wild.classic,wild) == Encyclopedia.where_text(wild),"这里能不能抓: 红人龙 where it lives, 机暴 原版不能野外捕捉, 摩卡 not in the data")
+	check(Encyclopedia.classic_where_text(book.entry_for(312).classic,book.entry_for(312)).begins_with("原版不能野外捕捉") and Encyclopedia.classic_where_text(book.entry_for(304).classic,book.entry_for(304)).ends_with("非原版") and Encyclopedia.classic_where_text(missing[0],{}) == "资料里没有这只宠物" and Encyclopedia.classic_where_text(wild.classic,wild) == Encyclopedia.where_text(wild),"这里能不能抓: 红人龙 where it lives, 金羊 原版不能野外捕捉, 机暴 only at a 非原版 spot, 摩卡 not in the data")
 	# Ownership: 甲 (carried) and 乙 (stored) are 扬奇洛斯, 丙 (stored) 昆伊.
 	var owned: Dictionary = book.owned_counts(profile)
 	check(book.filtered("",false,false,"owned",owned) == [92,113] and book.filtered("",false,false,"unowned",owned).size() == book.order.size()-2,"已拥有 lists 扬奇洛斯 and 昆伊 (carried and stored), 未拥有 the other %d" % (book.order.size()-2))
@@ -166,9 +187,17 @@ func window() -> void:
 	await process_frame
 	check(menu.view == "detail" and menu.body.find_child("SpeciesName",true,false).text == "扬奇洛斯" and menu.body.find_child("PotentialLv1",true,false) != null,"clicking a cell opens its page with the Lv.120 prediction")
 	check(menu.body.find_child("SpeciesVariants",true,false).get_child_count() == menu.book.families.filter(func(f):return f.name == "人龙系")[0].species.size(),"the page lists the family's species")
+	menu.show_species(312)
+	await process_frame
+	check(menu.body.find_child("NoWildSpawn",true,false) != null,"金羊's page says 无野外出现")
 	menu.show_species(304)
 	await process_frame
-	check(menu.body.find_child("NoWildSpawn",true,false) != null,"机暴's page says 无野外出现")
+	var added = menu.body.find_child("Place32020_630_added",true,false)
+	check(added != null and added.find_child("Origin",true,false).text == "原版无野外，非原版" and menu.body.find_child("GoPlace32020_630_added",true,false) != null,"机暴's page lists 漆黑的洞窟 地下20楼 marked 原版无野外，非原版")
+	menu.show_species(303)
+	await process_frame
+	var extra = menu.body.find_child("Place500_639_original_area",true,false)
+	check(extra != null and extra.find_child("Origin",true,false).text.begins_with("补充") and menu.body.find_child("Place500_639",true,false).find_child("Origin",true,false) == null,"红暴's page shows the original Lv.90–95 place unmarked and the added Lv.1 one as 补充")
 	menu.show_species(10417)
 	await process_frame
 	check(menu.body.find_child("SpeciesUnknown",true,false) != null and menu.body.find_child("PotentialLv1",true,false) == null and menu.body.find_child("SpeciesPortrait",true,false) != null,"巴雅's page shows its sprite and says it has no original stats")
@@ -196,11 +225,11 @@ func window() -> void:
 	menu.body.find_child("Sort_name",true,false).pressed.emit()
 	await process_frame
 	check(menu.sort_key == "name" and menu.body.find_children("Row*","PanelContainer",true,false)[0].name == "Row%d" % int(Encyclopedia.ranked(menu.book.species,menu.book.order,"name")[0]),"a column header sorts by that column")
-	menu.search.text = "帖拉所伊朵"
+	menu.search.text = "摩娜西普"
 	menu.search.text_changed.emit(menu.search.text)
 	await process_frame
-	var go = menu.body.find_child("Go304",true,false)
-	check(go != null and go.disabled,"机暴's row cannot 瞬移去抓")
+	var go = menu.body.find_child("Go312",true,false)
+	check(go != null and go.disabled,"金羊's row cannot 瞬移去抓")
 	menu.search.text = ""
 	menu.search.text_changed.emit("")
 	# 经典宠物: the list in data order with 俗称 and 这里能不能抓, then the grid.
@@ -209,8 +238,8 @@ func window() -> void:
 	var first_classic: Dictionary = menu.book.classic[0]
 	var classic_rows: Array = menu.body.find_children("Row*","PanelContainer",true,false)
 	check(menu.view == "list" and classic_rows[0].name == "Row%d" % int(first_classic.entry_id) and menu.body.find_child("Sort_sum",true,false) == null,"经典宠物 list starts with %s in the file's order, without sorting" % first_classic.name)
-	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where304",true,false).text.begins_with("原版不能野外捕捉"),"红人龙 says where it lives here; 机暴 says 原版不能野外捕捉")
-	check(menu.body.find_child("Go94",true,false) != null and not menu.body.find_child("Go94",true,false).disabled and menu.body.find_child("Go304",true,false).disabled,"红人龙's row has 瞬移去抓, 机暴's does not")
+	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where910",true,false).text.begins_with("原版不能野外捕捉") and menu.body.find_child("Where304",true,false).text.ends_with("非原版"),"红人龙 says where it lives here; 吉比 says 原版不能野外捕捉; 机暴's spot is 非原版")
+	check(menu.body.find_child("Go94",true,false) != null and not menu.body.find_child("Go94",true,false).disabled and menu.body.find_child("Go910",true,false).disabled,"红人龙's row has 瞬移去抓, 吉比's does not")
 	menu.list_page = 1
 	menu.rebuild()
 	check(menu.body.find_child("Missing_摩卡",true,false) != null,"摩卡, not in the data, is listed as 资料里没有")

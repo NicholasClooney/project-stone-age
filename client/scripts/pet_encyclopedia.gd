@@ -12,6 +12,11 @@ extends RefCounted
 ## The catalog also holds later pets with no original stats (tools/
 ## import_encounters.py, template 10000 + album number, `stats_known` false):
 ## their entries have stats_known false, source "8.0", rank -1 and no potential.
+##
+## Rare Lv1 rows the importer added from data/rare-encounters.json are their
+## own locations with `origin` "original_area" (补充: the pet lives in that area
+## at a higher level in the original) or "added" (原版无野外，非原版); original
+## rows have origin "". See docs/reverse-engineering/rare-level-one-encounters.md.
 const FAMILIES_PATH := "res://data/pet_families.json"
 const POTENTIAL_PATH := "res://data/species_potential.json"
 const SPOTS_PATH := "res://data/training-spots.json"
@@ -143,12 +148,14 @@ func _finish(entry: Dictionary, rows: Dictionary, landing: Dictionary, maps: Dic
 	var by_area := {}
 	for id in entry.ids:
 		for row in rows.get(int(id),[]):
-			var key := "%d/%d" % [int(row.map_id),int(row.area_id)]
+			var area_key := "%d/%d" % [int(row.map_id),int(row.area_id)]
+			var origin := str(row.get("origin",""))
+			var key := area_key if origin.is_empty() else area_key+"/"+origin
 			if not by_area.has(key):
 				var info: Dictionary = maps.get(str(int(row.map_id)),{})
-				var cell: Array = landing.get(key,[])
+				var cell: Array = landing.get(area_key,[])
 				by_area[key] = {"map_id":int(row.map_id),"area_id":int(row.area_id),"map_name":str(info.get("name","")),"imported":not info.is_empty(),
-					"template_id":int(id),"level_min":int(row.level_min),"level_max":int(row.level_max),"capturable":bool(row.capturable),"cell":cell.duplicate()}
+					"template_id":int(id),"level_min":int(row.level_min),"level_max":int(row.level_max),"capturable":bool(row.capturable),"cell":cell.duplicate(),"origin":origin}
 			else:
 				var place: Dictionary = by_area[key]
 				place.level_min = mini(int(place.level_min),int(row.level_min))
@@ -179,6 +186,13 @@ func _finish(entry: Dictionary, rows: Dictionary, landing: Dictionary, maps: Dic
 		if aliases.has(int(id)):
 			entry.alias = aliases[int(id)]
 			break
+
+## The 宠物大全 tag of a location's origin ("" for original rows).
+static func origin_text(origin: String) -> String:
+	match origin:
+		"original_area":return "补充 · 原版此区只有高等级的"
+		"added":return "原版无野外，非原版"
+	return ""
 
 static func _travel_reason(place: Dictionary) -> String:
 	if not place.capturable:return "这里的不可捕获"
@@ -227,6 +241,7 @@ static func _wild_rows(catalog: Dictionary) -> Dictionary:
 		for choice in area.get("groups",[]):
 			if int(choice.get("weight",0)) <= 0:continue
 			var group: Dictionary = groups.get(str(int(choice.id)),{})
+			var rare: Dictionary = group.get("rare",{})
 			if group.is_empty() or group.get("invalid_weights",false):continue
 			if int(group.get("requires_item",-1)) >= 0 or int(group.get("excludes_item",-1)) >= 0:continue
 			var valid := true
@@ -241,7 +256,10 @@ static func _wild_rows(catalog: Dictionary) -> Dictionary:
 				if int(entry.get("weight",0)) <= 0 or int(enemy.get("max_count",0)) <= 0 or low < 1 or high < low:continue
 				var id := int(enemy.template_id)
 				if not result.has(id):result[id] = []
-				result[id].append({"map_id":int(area.map_id),"area_id":int(area.id),"level_min":low,"level_max":high,"capturable":int(enemy.get("pet_flag",0)) != 0})
+				# Only the added Lv1 row is marked: a rare group's companion is
+				# an enemy the area already has in its original groups.
+				var origin := str(rare.get("origin","")) if not rare.is_empty() and int(entry.id) == int(rare.get("enemy_id",-1)) else ""
+				result[id].append({"map_id":int(area.map_id),"area_id":int(area.id),"level_min":low,"level_max":high,"capturable":int(enemy.get("pet_flag",0)) != 0,"origin":origin})
 	return result
 
 # ---- queries -----------------------------------------------------------------
@@ -401,7 +419,11 @@ static func where_text(entry: Dictionary) -> String:
 		if place.capturable:maps[str(place.map_name) if not str(place.map_name).is_empty() else str(place.map_id)] = true
 	var lowest := int(entry.wild_lowest)
 	var head := "Lv.1起" if lowest <= 1 else "野生最低 Lv.%d" % lowest
-	return "%s · %s" % [head,"、".join(maps.keys().slice(0,2))+("等%d处" % maps.size() if maps.size() > 2 else "")]
+	var text := "%s · %s" % [head,"、".join(maps.keys().slice(0,2))+("等%d处" % maps.size() if maps.size() > 2 else "")]
+	var capturable := places.filter(func(place):return place.capturable)
+	if capturable.all(func(place):return str(place.get("origin","")) == "added"):return text+" · 非原版"
+	if lowest <= 1 and not capturable.any(func(place):return int(place.level_min) <= 1 and str(place.get("origin","")).is_empty()):return text+" · Lv.1为补充"
+	return text
 
 ## The classic list's line about catching it: where here, or why not.
 static func classic_where_text(record: Dictionary, entry: Dictionary) -> String:

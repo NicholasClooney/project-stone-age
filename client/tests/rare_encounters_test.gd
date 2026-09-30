@@ -1,0 +1,147 @@
+extends SceneTree
+## Rare Lv.1 encounters (data/rare-encounters.json, merged into the encounter
+## catalog by tools/import_encounters.py): every added pet is in its area's
+## troop table at Lv.1 with the documented weight, seeded rolls meet it, and a
+## seeded 自动抓宠 hunt finds one that the battle authority captures.
+## Real catalog, real rolls and battle; nothing is faked.
+## See docs/reverse-engineering/rare-level-one-encounters.md.
+const Backend = preload("res://server/backend.gd")
+const Catalog = preload("res://server/encounter_catalog.gd")
+const Session = preload("res://server/game_session.gd")
+const Battle = preload("res://server/battle_session.gd")
+var failures := 0
+
+func _initialize() -> void:call_deferred("run")
+
+func check(ok: bool, note: String) -> void:
+	print(("PASS: " if ok else "FAIL: ")+note)
+	if not ok:failures += 1
+
+func read_json(path: String) -> Dictionary:
+	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+	return parsed if parsed is Dictionary else {}
+
+## The weight roll() chooses groups by: existing groups without an item gate.
+func ordinary_total(catalog: Dictionary, area: Dictionary) -> int:
+	var total := 0
+	for choice in area.groups:
+		var group: Dictionary = catalog.groups.get(str(int(choice.id)),{})
+		if not group.is_empty() and int(group.requires_item) < 0 and int(group.excludes_item) < 0:total += int(choice.weight)
+	return total
+
+func run() -> void:
+	var spec := read_json("res://data/rare-encounters.json")
+	var catalog = Catalog.new()
+	var data: Dictionary = catalog.data
+	var landing := {}
+	for spot in read_json("res://data/training-spots.json").get("spots",[]):landing["%d/%d" % [int(spot.map_id),int(spot.area_id)]] = Vector2i(int(spot.cell[0]),int(spot.cell[1]))
+	check(data.get("provenance",{}).has("rare_encounters") and int(data.provenance.rare_encounters.encounters) == spec.encounters.size(),"the imported catalog carries the %d rare encounters" % spec.encounters.size())
+
+	# The reference: 漆黑的洞窟 地下18楼's original Lv.1 布林帖斯 group.
+	var reference: Dictionary = spec.reference
+	var b18: Dictionary = catalog.area_at(int(reference.map_id),landing["%d/%d" % [int(reference.map_id),int(reference.area_id)]])
+	var original: Array = b18.groups.filter(func(choice):return int(choice.id) == int(reference.group_id))
+	check(original.size() == 1 and int(original[0].weight) == 1 and ordinary_total(data,b18) == int(reference.area_weight_total) and not b18.has("weight_scale"),"reference: 地下18楼 group 751 (Lv.1 布林帖斯) is 1 of 101, untouched")
+
+	# Every addition: its area, weight, Lv.1 capturable enemy and companion.
+	var bad: Array = []
+	var lowest := 1.0
+	var highest := 0.0
+	for item in spec.encounters:
+		var key := "%d/%d" % [int(item.map_id),int(item.area_id)]
+		var why := ""
+		if not landing.has(key):why += " no landing cell"
+		var area: Dictionary = catalog.area_at(int(item.map_id),landing.get(key,Vector2i(-1,-1)))
+		if int(area.get("id",-1)) != int(item.area_id):
+			bad.append("%s: area %s" % [item.name,key])
+			continue
+		var choices: Array = area.groups.filter(func(choice):return int(choice.id) == int(item.group_id))
+		if choices.size() != 1 or int(choices[0].weight) != 1:why += " area weight"
+		var share := 1.0/ordinary_total(data,area)
+		lowest = minf(lowest,share)
+		highest = maxf(highest,share)
+		if share < 0.005 or share > 0.015:why += " share %.3f" % share
+		var group: Dictionary = data.groups.get(str(int(item.group_id)),{})
+		var members: Array = group.get("enemies",[])
+		if members.is_empty() or int(members[0].id) != int(item.enemy_id) or int(members[0].weight) != 1:why += " Lv.1 member"
+		if item.companion_id != null and (members.size() != 2 or int(members[1].id) != int(item.companion_id) or int(members[1].weight) != 1):why += " companion"
+		if str(group.get("rare",{}).get("origin","")) != str(item.origin):why += " origin"
+		var enemy: Dictionary = data.enemies.get(str(int(item.enemy_id)),{})
+		if int(enemy.get("template_id",-1)) != int(item.template_id) or int(enemy.get("level_min",0)) != 1 or int(enemy.get("level_max",0)) != 1 or int(enemy.get("pet_flag",0)) == 0:why += " enemy row"
+		var rng := RandomNumberGenerator.new()
+		rng.seed = int(item.group_id)
+		var actor: Dictionary = catalog.actor(int(item.enemy_id),rng)
+		var template: Dictionary = data.templates[str(int(item.template_id))]
+		if int(actor.level) != 1 or not actor.can_capture or int(actor.get("capture_parameter",-99)) != int(template.capture_resistance):why += " actor"
+		if not why.is_empty():bad.append(str(item.name)+why)
+	check(bad.is_empty(),"%d added pets: each in its area at Lv.1, capturable, area weight 1 (%.2f%%–%.2f%% of the area), companion 1:1, capture difficulty from the template%s" % [spec.encounters.size(),lowest*100,highest*100,"" if bad.is_empty() else ": "+"；".join(bad)])
+
+	# Scaled areas keep their original ratios: every original weight is a multiple of the scale.
+	var unscaled: Array = []
+	for item in spec.areas:
+		for area in data.areas:
+			if int(area.map_id) != int(item.map_id) or int(area.id) != int(item.area_id):continue
+			if int(area.get("weight_scale",0)) != int(item.scale):unscaled.append(item.area_id)
+			for choice in area.groups:
+				if int(choice.id) < 90000 and int(choice.weight)%int(item.scale) != 0:unscaled.append(item.area_id)
+	check(unscaled.is_empty(),"%d areas scaled by whole factors, original group ratios unchanged" % spec.areas.size())
+
+	# Seeded rolls meet every added pet at Lv.1 in its area.
+	var unmet: Array = []
+	var rolls := 0
+	for item in spec.encounters:
+		var cell: Vector2i = landing["%d/%d" % [int(item.map_id),int(item.area_id)]]
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 7000+int(item.group_id)
+		var met := false
+		for attempt in range(3000):
+			rolls += 1
+			for actor in catalog.roll(int(item.map_id),cell,rng).get("enemies",[]):
+				if int(actor.template_id) == int(item.template_id) and int(actor.level) == 1 and int(actor.source_enemy_id) == int(item.enemy_id):met = true
+			if met:break
+		if not met:unmet.append(str(item.name))
+	check(unmet.is_empty(),"seeded rolls meet every added Lv.1 pet (%d rolls in all)%s" % [rolls,"" if unmet.is_empty() else "; never met: "+"、".join(unmet)])
+
+	# A seeded 自动抓宠 hunt (GDScript scan) finds a Lv.1 左迪洛斯 in 五十年前波拉岛 ...
+	var backend = Backend.new()
+	backend.set_process(false)
+	root.add_child(backend)
+	backend.automation.client_attached = false
+	backend.encounter_rng.seed = 515151
+	var cell: Vector2i = landing["500/639"]
+	var started: Dictionary = backend.handle({"type":"auto_start","kind":"hunt","map_id":500,"cell":[cell.x,cell.y],"filter":{"template":302,"level_one":true,"total":-8,"offsets":[],"auto_capture":false,"limit":0,"fast":false}})
+	check(started.get("ok",false),"a 左迪洛斯 Lv.1 hunt starts at 五十年前波拉岛 %s" % started.get("reason",""))
+	var deadline := Time.get_ticks_msec()+120000
+	while backend.automation.hunt_running and Time.get_ticks_msec() < deadline:
+		backend._process(0.016)
+		await process_frame
+	var hit: Dictionary = backend.automation.hunt_last_hit
+	var found: Dictionary = hit.get("actor",{})
+	check(not found.is_empty() and int(found.template_id) == 302 and int(found.level) == 1 and found.can_capture and backend.battle_open,"the hunt meets a capturable Lv.1 左迪洛斯 after %d rolls and opens the battle" % backend.automation.hunt_rolls)
+	backend.queue_free()
+
+	# ... and the battle authority captures it (seeded battles until one
+	# succeeds), its HP first shaved to 1 as 自动抓宠 does before capturing.
+	var target: Dictionary = found.duplicate(true)
+	if not target.is_empty():target.hp = 1
+	var captured := {}
+	var tries := 0
+	for seed_value in range(1,200):
+		if found.is_empty():break
+		tries += 1
+		var session = Session.new()
+		var config: Dictionary = session.start_wild_battle_config({"area_id":639,"group_id":91002,"enemies":[target.duplicate(true)]})
+		var battle = Battle.new()
+		battle.rng_seed = seed_value
+		battle.start_battle(config)
+		var state: Dictionary = {}
+		for turn in range(6):
+			state = battle.submit_action("capture",0)
+			if not bool(state.get("active",true)):break
+		if str(state.get("outcome","")) == "captured" and session.apply_battle_result(state):
+			captured = session.snapshot().pets[0]
+			break
+	check(not captured.is_empty() and str(captured.species) == "original_302" and int(captured.level) == 1 and captured.base_stats == found.base_stats,"the Lv.1 左迪洛斯 is captured (battle seed %d) with its wild stats" % tries)
+	await process_frame
+	print("RARE ENCOUNTERS: %d failures" % failures)
+	quit(1 if failures else 0)

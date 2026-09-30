@@ -9,6 +9,13 @@ client's pet album names them and the 8.0 client has their battle sprites
 ids 10000 + album number, `source` '8.0' and `stats_known` false: no original
 stats exist, so they carry none. No encounter group names them, so they never
 spawn. The enemybase templates stay as they are.
+
+Then it merges client/data/rare-encounters.json: rare Lv1 pets in higher-level
+areas, the original's own pattern (docs/reverse-engineering/
+rare-level-one-encounters.md). This is the one place those additions enter the
+catalog; the server rolls, the fast hunt helper, 宠物大全, the spot builders and
+the Lv120 predictions all read the result. Added groups and cloned enemies
+carry `rare` / `clone_of` so nothing mistakes them for original rows.
 """
 import argparse
 import csv
@@ -20,6 +27,8 @@ from pathlib import Path
 ALBUM_PETS = Path(__file__).resolve().parent.parent/'docs/reverse-engineering/pets-8.0.json'
 ALBUM = Path('references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/systeminc/petname.h')
 ALBUM_BASE = 10000
+RARE = Path(__file__).resolve().parent.parent/'client/data/rare-encounters.json'
+ORIGINS = ('original_area', 'added')
 
 
 def atoi(value):
@@ -75,6 +84,70 @@ def add_album_pets(data, path=ALBUM_PETS, album=ALBUM):
     return data
 
 
+def _ordinary_enemy_ids(data, area):
+    """Enemy ids of the area's ordinary (not item-gated) groups."""
+    ids = set()
+    for choice in area['groups']:
+        group = data['groups'].get(str(choice['id']))
+        if group and choice['weight'] > 0 and group['requires_item'] < 0 and group['excludes_item'] < 0:
+            ids |= {e['id'] for e in group['enemies'] if e['weight'] > 0}
+    return ids
+
+
+def add_rare_encounters(data, path=RARE):
+    """Merges rare-encounters.json (see the module docstring) into data.
+
+    areas: multiply one area's group weights by `scale` (ratios unchanged).
+    clones: copy an enemy row at Lv1, capturable, at most one per troop.
+    encounters: a new group {Lv1 enemy 1, companion 1} with area weight
+    `weight`. The companion must already be in an ordinary group of that area.
+    """
+    path = Path(path)
+    spec = json.loads(path.read_text())
+
+    def area_of(map_id, area_id):
+        found = [a for a in data['areas'] if a['map_id'] == map_id and a['id'] == area_id]
+        if len(found) != 1:
+            raise ValueError(f'area {area_id} on map {map_id}: {len(found)} matches')
+        return found[0]
+
+    for item in spec.get('areas', []):
+        area = area_of(item['map_id'], item['area_id'])
+        if int(item['scale']) < 1 or 'weight_scale' in area:
+            raise ValueError(f"bad or repeated scale for area {item['area_id']}")
+        for choice in area['groups']:
+            choice['weight'] *= int(item['scale'])
+        area['weight_scale'] = int(item['scale'])
+    for item in spec.get('clones', []):
+        source = data['enemies'].get(str(item['from']))
+        if source is None or str(item['id']) in data['enemies'] or source['template_id'] != item['template_id']:
+            raise ValueError(f"clone {item['id']} of enemy {item['from']}: missing source, taken id or wrong template")
+        data['enemies'][str(item['id'])] = dict(source, id=item['id'], name=f"Lv1{data['templates'][str(source['template_id'])]['name']}（补）",
+            level_min=1, level_max=1, max_count=1, min_count=1, pet_flag=1, clone_of=item['from'], source_line=-1)
+    for item in spec['encounters']:
+        area = area_of(item['map_id'], item['area_id'])
+        enemy = data['enemies'].get(str(item['enemy_id']))
+        if enemy is None or enemy['template_id'] != item['template_id'] or (enemy['level_min'], enemy['level_max']) != (1, 1) or enemy['pet_flag'] == 0:
+            raise ValueError(f"group {item['group_id']}: enemy {item['enemy_id']} is not a capturable Lv1 {item['name']}")
+        if data['templates'][str(item['template_id'])]['name'] != item['name']:
+            raise ValueError(f"group {item['group_id']}: template {item['template_id']} is not {item['name']}")
+        if item['origin'] not in ORIGINS or str(item['group_id']) in data['groups']:
+            raise ValueError(f"group {item['group_id']}: bad origin or taken id")
+        members = [dict(id=item['enemy_id'], weight=1)]
+        if item.get('companion_id') is not None:
+            if item['companion_id'] not in _ordinary_enemy_ids(data, area):
+                raise ValueError(f"group {item['group_id']}: companion {item['companion_id']} is not already in area {item['area_id']}")
+            members.append(dict(id=item['companion_id'], weight=1))
+        data['groups'][str(item['group_id'])] = dict(id=item['group_id'], name=f"rare_lv1_{item['template_id']}", requires_item=-1, excludes_item=-1,
+            enemies=members, invalid_weights=False, source_line=-1,
+            rare=dict(origin=item['origin'], template_id=item['template_id'], enemy_id=item['enemy_id'], reason=item['reason']))
+        area['groups'].append(dict(id=item['group_id'], weight=item['weight']))
+    data['provenance']['rare_encounters'] = dict(file=path.name, sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
+        encounters=len(spec['encounters']), clones=len(spec.get('clones', [])), scaled_areas=len(spec.get('areas', [])),
+        rule='docs/reverse-engineering/rare-level-one-encounters.md; not original rows')
+    return data
+
+
 def build(root):
     root = Path(root)
     data = dict(areas=[], groups={}, enemies={}, templates={}, provenance={})
@@ -110,7 +183,10 @@ if __name__=='__main__':
     p.add_argument('--reference',default='references/chenmingbiao-stone-age/gmsv/data')
     p.add_argument('--output',default='client/assets/legacy/encounters/catalog.json')
     p.add_argument('--album-pets',default=str(ALBUM_PETS),help='the 8.0 pets without an enemybase template; "" to leave them out')
+    p.add_argument('--rare',default=str(RARE),help='rare Lv1 encounters to merge; "" to leave them out')
     a=p.parse_args();data=build(a.reference);out=Path(a.output)
-    if a.album_pets:add_album_pets(data,a.album_pets);out.parent.mkdir(parents=True,exist_ok=True)
+    if a.album_pets:add_album_pets(data,a.album_pets)
+    if a.rare:add_rare_encounters(data,a.rare)
+    out.parent.mkdir(parents=True,exist_ok=True)
     out.write_text(json.dumps(data,ensure_ascii=False,indent=2)+'\n')
     print({key:len(data[key]) for key in ['areas','groups','enemies','templates']})

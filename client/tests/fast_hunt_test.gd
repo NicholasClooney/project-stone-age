@@ -142,6 +142,12 @@ func run() -> void:
 	result = run_area(backend,catalog,"red rex area",500,rex_cell,any,false,2000)
 	check(result.get("different",-1)==0 and int(result.projected)>0,"map 500 (red rex Lv90-95): 2000 rolls identical")
 
+	# An added rare Lv.1 (data/rare-encounters.json): 左迪洛斯 in the same area,
+	# hunted at Lv.1. The helper reads the same merged catalog.
+	var blue_rex := {"template":302,"level_one":true,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":[302]}
+	result = run_area(backend,catalog,"added Lv1 blue rex",500,Vector2i(400,400),blue_rex,false,3000)
+	check(result.get("different",-1)==0 and int(result.get("matches",0))>0,"map 500 added Lv.1 左迪洛斯: 3000 rolls identical, the hunt takes %d" % int(result.get("matches",0)))
+
 	# 60 areas across the world, 150 rolls each: groups with large monsters
 	# (the five-slot swap), empty rolls and every level range.
 	var rng := RandomNumberGenerator.new()
