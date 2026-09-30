@@ -7,6 +7,7 @@ const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const GameSession = preload("res://server/game_session.gd")
 const MusicLibrary = preload("res://scripts/music_library.gd")
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -15,12 +16,8 @@ func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 
-func until(condition: Callable, seconds: float = 10.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+func until(condition: Callable, seconds: float = Wait.DEADLINE) -> bool:
+	return await Wait.until(self,condition,seconds)
 
 func prefs(tag: String) -> String:
 	return "user://radio-test-%s.cfg" % tag
@@ -33,7 +30,7 @@ func connect_client(port: int, tag: String):
 	game.profile_persistence = false
 	game.viewer_prefs_path = prefs(tag)
 	root.add_child(game)
-	await until(func():return not game.data.is_empty() and game.link.online)
+	check(await until(func():return not game.data.is_empty() and game.link.online) and await Wait.settle(self,game),"a client connects and its startup reaches the backend")
 	game.random_encounters = false
 	return game
 
@@ -64,10 +61,11 @@ func run() -> void:
 	for tag in ["a","b"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(prefs(tag)))
 	var backend = Backend.new()
 	root.add_child(backend)
-	var port := 20000+randi()%20000
+	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(backend,port,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"backend listens on localhost")
+	port = server.port
 	var a = await connect_client(port,"a")
 	var b = await connect_client(port,"b")
 	var radio_a = a.radio

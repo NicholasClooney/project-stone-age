@@ -83,7 +83,8 @@ func run_area(backend, catalog: Dictionary, label: String, map_id: int, cell: Ve
 	prepare(automation,catalog,map_id,cell,int(hash(label))*7919+count,filter,flow)
 	var area: Dictionary = automation.hunt_catalog.area_at(map_id,cell)
 	var helper = FastHunt.new()
-	var input := ProjectSettings.globalize_path("user://fast-hunt-test.in")
+	# Named per process: another run of this suite must never replace or remove it.
+	var input := ProjectSettings.globalize_path("user://fast-hunt-test-%d.in" % OS.get_process_id())
 	var file := FileAccess.open(input,FileAccess.WRITE)
 	file.store_string(helper._input(automation.hunt_catalog.data,area,filter,flow,automation.filter_for,automation.hunt_run_seed,0))
 	file.close()

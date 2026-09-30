@@ -18,6 +18,7 @@ const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const SAVE := "user://hunt-resume-test.json"
 const MAP := 100
 const CELL := Vector2i(637,493)
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 var clock := 1000
 
@@ -278,12 +279,8 @@ func setting_and_position() -> void:
 	await process_frame
 
 # ---- a remote device after the restart ---------------------------------------
-func until(condition: Callable, seconds: float = 10.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+func until(condition: Callable, seconds: float = Wait.DEADLINE) -> bool:
+	return await Wait.until(self,condition,seconds)
 
 func remote_device() -> void:
 	var backend = new_backend(false)
@@ -292,10 +289,11 @@ func remote_device() -> void:
 	var fresh = restart(backend)
 	fresh.automation.timer_clock = Time.get_ticks_msec
 	fresh.set_process(true)
-	var port := 20000+randi()%20000
+	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(fresh,port,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"the restarted backend listens")
+	port = server.port
 	check(await until(func():return fresh.automation.flow_active() and fresh.automation.hunt_running),"the cycle resumes on the server's own tick")
 	var game_script = load("res://scripts/game.gd")
 	game_script.server_url_override = "ws://127.0.0.1:%d" % port

@@ -8,6 +8,7 @@ const WsServer = preload("res://server/ws_server.gd")
 const MAP := 100
 const CELL := Vector2i(637,493)
 const PREFS := "user://remote-minimize-test-viewer.cfg"
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -16,12 +17,8 @@ func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 
-func until(condition: Callable, seconds: float = 10.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+func until(condition: Callable, seconds: float = Wait.DEADLINE) -> bool:
+	return await Wait.until(self,condition,seconds)
 
 func connect_client(port: int):
 	var game_script = load("res://scripts/game.gd")
@@ -31,7 +28,7 @@ func connect_client(port: int):
 	game.profile_persistence = false
 	game.viewer_prefs_path = PREFS
 	root.add_child(game)
-	await until(func():return not game.data.is_empty() and game.link.online)
+	check(await until(func():return not game.data.is_empty() and game.link.online) and await Wait.settle(self,game),"a client connects and its startup reaches the backend")
 	return game
 
 func close_client(game) -> void:
@@ -48,10 +45,11 @@ func run() -> void:
 	var backend = Backend.new()
 	root.add_child(backend)
 	backend.handle({"type":"grant_starter_pets"})
-	var port := 20000+randi()%20000
+	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(backend,port,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"backend listens on localhost")
+	port = server.port
 
 	var game = await connect_client(port)
 	check(not game.data.is_empty() and not game.link.is_local(),"remote client connects")
@@ -94,17 +92,18 @@ func run() -> void:
 	check(await until(func():return menu.panel.find_children("StorageRow_"+pet_id,"",true,false).is_empty()),"the open warehouse drops the released pet")
 
 	var rolls: int = backend.automation.hunt_rolls
-	check(await until(func():return backend.automation.hunt_rolls>rolls,5.0) and backend.automation.hunt_running,"the hunt keeps searching through the warehouse work")
+	check(await until(func():return backend.automation.hunt_rolls>rolls) and backend.automation.hunt_running,"the hunt keeps searching through the warehouse work")
 	check(await until(func():return hunt.chip.detail.text.begins_with("遇敌 %d 组" % hunt.rolls) and hunt.rolls>0),"the bar shows the backend's encounter count")
 	game.close_adventure_menu()
-	for i in range(10):await physics_frame
+	# Anything closing the menu sent (a stop would be one) has been handled.
+	await Wait.settle(self,game)
 	check(backend.automation.hunt_running and hunt.minimized and game.paused_input,"closing the menu leaves the hunt minimized and running")
 
 	await close_client(game)
 	check(await until(func():return server.clients().is_empty()),"the page is closed")
 	var second = await connect_client(port)
-	for i in range(30):await physics_frame
 	var again = second.pet_hunt_menu
+	await until(func():return again.minimized and is_instance_valid(again.chip) and again.chip.visible)
 	check(backend.automation.hunt_running,"reloading does not stop the hunt")
 	check(again.minimized and not again.visible and is_instance_valid(again.chip) and again.chip.visible and second.paused_input,"the reloaded page comes back to the bar this device chose")
 	again.open_menu()

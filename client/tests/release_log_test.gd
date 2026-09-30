@@ -13,6 +13,7 @@ const SAVE := "user://release-log-test-save.json"
 const LOG := "user://release-log-test-save.release-log.jsonl"
 const CAPPED := "user://release-log-test-capped.jsonl"
 const PREFS := "user://release-log-test-viewer.cfg"
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -21,12 +22,8 @@ func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 
-func until(condition: Callable, seconds: float = 10.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+func until(condition: Callable, seconds: float = Wait.DEADLINE) -> bool:
+	return await Wait.until(self,condition,seconds)
 
 func pet(id: int, attack: int, defence: int, speed: int, hp: int = 1300) -> Dictionary:
 	return {"pet_id":"pet-%d" % id,"template_id":92,"species":"original_92","name":"扬奇洛斯","level":120,"attack":attack,"defence":defence,"speed":speed,"max_hp":hp,"hp":hp,"growth_weights":[29,38,18,22]}
@@ -129,10 +126,11 @@ func remote() -> void:
 	backend.handle({"type":"grant_starter_pets"})
 	backend.session._profile.pet_storage = herd()
 	backend.handle({"type":"release_pets","ids":["pet-6"]})
-	var port := 20000+randi()%20000
+	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(backend,port,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"backend listens on localhost")
+	port = server.port
 	var game_script = load("res://scripts/game.gd")
 	game_script.server_url_override = "ws://127.0.0.1:%d" % port
 	var game = load("res://scenes/main.tscn").instantiate()

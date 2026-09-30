@@ -7,6 +7,7 @@ const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const MAP := 100
 const CELL := Vector2i(637,493)
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -15,12 +16,8 @@ func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 
-func until(condition: Callable, seconds: float = 10.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+func until(condition: Callable, seconds: float = Wait.DEADLINE) -> bool:
+	return await Wait.until(self,condition,seconds)
 
 func prefs(tag: String) -> String:
 	return "user://remote-settings-test-%s.cfg" % tag
@@ -33,7 +30,7 @@ func connect_client(port: int, tag: String):
 	game.profile_persistence = false
 	game.viewer_prefs_path = prefs(tag)
 	root.add_child(game)
-	await until(func():return not game.data.is_empty() and game.link.online)
+	check(await until(func():return not game.data.is_empty() and game.link.online) and await Wait.settle(self,game),"a client connects and its startup reaches the backend")
 	game.random_encounters = false
 	return game
 
@@ -43,6 +40,10 @@ func close_client(game) -> void:
 	game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame
 
+## Nothing in the way of opening a window (see pet_hunt_menu.gd open_menu).
+func idle(game) -> bool:
+	return not game.paused_input and not game.area_transition_busy and not game.battle_view.visible
+
 func hunt_settings(backend) -> Dictionary:
 	return backend.session.automation_settings().get("hunt",{})
 
@@ -51,17 +52,18 @@ func run() -> void:
 	var backend = Backend.new()
 	root.add_child(backend)
 	backend.handle({"type":"grant_starter_pets"})
-	var port := 20000+randi()%20000
+	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(backend,port,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"backend listens on localhost")
+	port = server.port
 
 	var a = await connect_client(port,"a")
 	var b = await connect_client(port,"b")
 	check(not a.link.is_local() and not b.link.is_local(),"two remote devices connect")
 	a.load_area_id(MAP,CELL)
 	check(await until(func():return backend.automation.position_map==MAP and int(b.data.map_id)==MAP and b.cell==CELL),"both devices stand on the hunting ground")
-	for i in range(10):await physics_frame
+	check(await until(func():return idle(a) and idle(b)),"both devices have arrived and can open a window")
 	var hunt_a = a.pet_hunt_menu
 	var hunt_b = b.pet_hunt_menu
 	hunt_a.open_menu();hunt_b.open_menu()
@@ -119,7 +121,7 @@ func run() -> void:
 	# A reloaded page shows the character's settings.
 	await close_client(a)
 	var c = await connect_client(port,"c")
-	for i in range(10):await physics_frame
+	check(await until(func():return idle(c)),"the reloaded page has arrived and can open a window")
 	var hunt_c = c.pet_hunt_menu
 	hunt_c.open_menu()
 	check(int(hunt_c.rate.value)==40 and int(hunt_c.limit.value)==500 and int(hunt_c.total.value)==6 and not hunt_c.level_one.button_pressed and hunt_c.preset.selected==4,"a reloaded page shows the saved hunt settings")
@@ -134,7 +136,8 @@ func run() -> void:
 	hunt_c.train_after_capture.button_pressed = false
 	hunt_c.start_hunt()
 	check(await until(func():return backend.automation.hunt_running and hunt_c.running),"a hunt starts from the saved settings")
-	check(int(backend.automation.hunt_filter.rate)==40 and int(backend.automation.hunt_filter.limit)==500 and not backend.automation.hunt_filter.level_one,"the backend hunts with the character's settings")
+	var used: Dictionary = backend.automation.hunt_filter
+	check(int(used.get("rate",0))==40 and int(used.get("limit",0))==500 and not bool(used.get("level_one",true)),"the backend hunts with the character's settings")
 	hunt_c.close_menu()
 	check(await until(func():return not backend.automation.hunt_running),"closing stops the hunt")
 

@@ -27,8 +27,11 @@ func _ready() -> void:
 	backend.event.connect(_on_event)
 	backend.automation.client_attached = false
 
+## Port 0 picks any free port (tests); `port` then holds the one chosen.
 func start() -> Error:
-	return _server.listen(port,bind_address)
+	var error := _server.listen(port,bind_address)
+	if error==OK:port = _server.get_local_port()
+	return error
 
 func stop() -> void:
 	for peer in _pending:peer.close()

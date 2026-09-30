@@ -6,6 +6,7 @@ extends SceneTree
 const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const WsLink = preload("res://network/ws_link.gd")
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -15,22 +16,19 @@ func check(ok: bool, note: String) -> void:
 	if not ok:failures += 1
 
 ## Waits up to seconds for condition; the link and server poll every frame.
-func until(condition: Callable, seconds: float = 5.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+func until(condition: Callable, seconds: float = Wait.DEADLINE) -> bool:
+	return await Wait.until(self,condition,seconds)
 
 func run() -> void:
 	var backend = Backend.new()
 	root.add_child(backend)
 	for command in [{"type":"gm_raise_level","index":-1,"target":10},{"type":"gm_set_base_stat","index":-1,"stat":"strength","value":100},{"type":"gm_set_base_stat","index":-1,"stat":"toughness","value":100},{"type":"gm_heal"}]:
 		backend.handle(command)
-	var port := 20000+randi()%20000
+	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(backend,port,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"backend listens on localhost")
+	port = server.port
 	var game_script = load("res://scripts/game.gd")
 	game_script.server_url_override = "ws://127.0.0.1:%d" % port
 	var game = load("res://scenes/main.tscn").instantiate()
