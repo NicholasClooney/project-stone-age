@@ -1,9 +1,18 @@
 {
-  "version": "v0.100.0",
-  "count": 129,
+  "version": "v0.100.1",
+  "count": 130,
   "feature_count": 84,
-  "fix_count": 45,
+  "fix_count": 46,
   "entries": [
+    {
+      "version": "v0.100.1",
+      "date": "2026-09-30",
+      "kind": "fix",
+      "title": "登录界面不再乱码",
+      "details": [
+        "网页版多人服务器的「登录石器时代」界面：角色按钮、PIN 输入框、登录和创建新角色按钮的中文以前显示成方块，现在正常显示。"
+      ]
+    },
     {
       "version": "v0.100.0",
       "date": "2026-09-30",

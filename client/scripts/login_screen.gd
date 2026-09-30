@@ -31,6 +31,10 @@ func configure(owner: Node, target_link) -> void:
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	mouse_filter = Control.MOUSE_FILTER_IGNORE
+	# The link overlay is outside the UI root's theme; without the CJK font the
+	# web build (no system fonts) draws buttons and fields as missing glyphs.
+	theme = Theme.new()
+	theme.default_font = load("res://assets/fonts/NotoSansSC.ttf")
 	hide()
 	panel = PanelContainer.new()
 	panel.name = "LoginPanel"
