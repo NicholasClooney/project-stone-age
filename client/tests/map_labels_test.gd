@@ -44,7 +44,8 @@ func run():
 	for town in ["萨姆吉尔村","玛丽娜丝渔村","柯奥村","霍特尔村","卡坦村"]:
 		check(places.has(town),"萨伊那斯 labels the exit to "+town)
 	var closed: Array=texts(menu,"closed")
-	check(closed.has("阿布的洞窟") and closed.has("柯奥山的小洞窟"),"not yet imported caves are labelled from their original floor names: %s"%[closed])
+	check(closed.has("阿布的洞窟") and closed.has("萨姆吉尔庄园"),"not yet imported places are labelled from their original floor names: %s"%[closed])
+	check(not closed.has("柯奥山的小洞窟") and places.has("柯奥山的小洞窟"),"an imported cave is an ordinary place label")
 	check(texts(menu,"pet").any(func(text):return text.ends_with(" Lv1")),"萨伊那斯 has Lv.1 pet area labels")
 	check(not menu.pet_rects.is_empty(),"Lv.1 pet areas are outlined")
 	var shown: Array=menu.map_labels.filter(func(entry):return entry.node.visible)
