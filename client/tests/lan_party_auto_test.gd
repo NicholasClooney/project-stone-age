@@ -418,7 +418,8 @@ func client() -> void:
 	check(await Wait.until(self,func():return panel.list.find_child("PartyAuto",true,false)!=null),"his party list has 自动战斗 and 快速战斗")
 	var auto_box: CheckBox = panel.list.find_child("PartyAuto",true,false)
 	var compact_box: CheckBox = panel.list.find_child("PartyCompact",true,false)
-	check(not auto_box.button_pressed and compact_box.button_pressed and compact_box.disabled,"自动战斗 off; 快速战斗 on by default, waiting for 自动战斗")
+	# The panel syncs the switches from the profile a frame after building them.
+	check(await Wait.until(self,func():return not auto_box.button_pressed and compact_box.button_pressed and compact_box.disabled),"自动战斗 off; 快速战斗 on by default, waiting for 自动战斗")
 	auto_box.button_pressed = true
 	check(await Wait.until(self,func():return not server.party_auto("bob").is_empty() and not compact_box.disabled and compact_box.button_pressed),"自动战斗 reaches his profile on the server, with 快速战斗 on")
 	var effective := func():return bool(preload("res://scripts/automation_settings.gd").effective(server.backends.bob.session._profile.automation_settings).party.compact)
