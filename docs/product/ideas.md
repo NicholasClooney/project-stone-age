@@ -629,7 +629,7 @@
 ## 2026-09-30 · 加鲁加洞窟与山顶风景 · 部分完成
 
 - 想法：按原版地图恢复拉多拉、森林、哥亚、阿鲁姆、强恩族、龙巢、卡鲁它那、碧青、琉璃、水苍洞窟；任务入口暂时直接开放，保留原版遇敌，网页按到访下载。
-- 状态：已导入并连通 99 张地图；拉多拉山岭洞窟、部分旧山顶和琉璃十五楼共 22 张候选地图因缺少已核对原始入口暂缓。任务、Boss、NPC 服务尚未还原。
+- 状态：已导入并连通 100 张洞窟风景地图；琉璃十五楼经原 NPC 门放宽检查开放，拉多拉山岭洞窟和部分旧山顶共 21 张候选地图仍暂缓。任务、Boss、NPC 服务尚未还原。
 - 去向：`tools/import_world.py`、`tools/verify_jyaruga_world.py`；`docs/reverse-engineering/ordinary-world-expansion.md` 的地图清单与限制。
 
 ## 2026-09-30 · 萨伊那斯剩余风景地图 · 部分完成
@@ -649,3 +649,9 @@
 - 想法：按原版门、坐标和遇敌恢复奇努伊村、关卡、梦幻洞窟与相连室内，网页地图按到访下载。
 - 状态：新增8张往返可达地图；沙姆岛400保留开发练级用途。梦幻洞窟保留原版遇敌及普通传送；任务、魔王与店铺服务未恢复。关卡三个任务门作为开发便利直接开放；42的冲突门及无回程组件入口禁用，6012原版无门暂缓。
 - 去向：`tools/world_regions/seimu.json`；`docs/reverse-engineering/remaining-world-expansion.md` 的逐图遇敌、精确尾字节兼容与暂缓清单。
+
+## 2026-09-30 · 加鲁加服务室内风景 · 部分完成
+
+- 状态：开放卡鲁它那牧场事务所、加加的道场柜台、卡鲁他那道场柜台与琉璃十五楼，保留原门与落点。柜台和事务所只恢复风景，NPC 服务未恢复。
+- 百人道场收费 NPC 位于柜台后的独立步行组件，原入口无法步行到达；道场、医务室和高手房继续暂缓，等待原 NPC 交互。没有恢复百人道场战斗，没有移动门或补造回程。
+- 去向：`feat(world): restore connected Jyaruga service interiors`；地图逐项核查见 `docs/reverse-engineering/remaining-world-expansion.md`，地区配置 `tools/world_regions/jyaruga_interiors.json`。

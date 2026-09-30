@@ -308,6 +308,77 @@ added maps have zero missing graphics and a dedicated on-demand web map pack.
 | 奇努伊的便利商店 | 6009 | no | no | no |
 | 奇努伊室内 (deferred; no original doors) | 6012 | no | no | no |
 
+
+## Jyaruga service interiors and Ruri floor15 (2026-09-30)
+
+Review: `tools/world_regions/jyaruga_interiors.json`; 31 candidates, **4 imported,
+27 deferred**. This restores scenery and original walking doors only. Source
+collision and warp cells/directions remain unchanged. No NPC service, quiz or
+hundred-person dojo battle implementation is included.
+
+The exact 102 gate-script allowlist has been checked: `200/sb_dbt.arg`,
+`genout/wpm_3020_18_12`, and `doujyou/jyajyadou001.arg` through `100.arg`.
+Only `200/sb_dbt.arg` is active in the resulting manifest: original 21014
+(14,14) → 21015 (9,17), with the NPC/battle condition bypassed as a developer
+scenery convenience. The landing is also the original return portal; runtime
+arrival suppression keeps the player on floor15 until leaving (9,16) and
+walking back onto (9,17).
+
+The 3020 fee NPC's original cell (18,12) lies behind the counter in a separate
+walking component. The entrance (4,12) and infirmary return (12,9) are in the
+main component; source collision blocks column17. Thus the fee bypass
+(original LV*5) cannot be reached by walking, and the component finalizer
+removes 3021, 3022 and 3008. The reviewed scripts remain in the allowlist for
+source auditing; this does **not** mean their rooms or gate chain are open.
+Future original NPC interaction is required, rather than moving the door or
+inventing links. All 100 original fight-result gates keep their source cells:
+`x=400-44*floor((n-1)/10), y=124-12*((n-1)%10)`; destinations come directly from
+the corresponding arg, with gate100 → 3008 (20,20). Original side doors
+lead to 3022 (1,7); both medical/master rooms return to 3020 (12,9).
+
+Ordinary doors retained: 200 (328,660/661) ↔ 201 (6,19/20),
+3000 (112,80/81) → 3020 (4,12), and 4000 (82,107) ↔ 4020 (4,12).
+The latter comes from `quiz.create`; quiz destination851 stays excluded.
+No reverse gates are synthesized.
+
+“Original encounter area” below records the source catalog entry; “Active
+encounters” additionally requires a positive probability and nonempty groups.
+The newly opened interiors and floor15 have no active ordinary encounters.
+
+| Map ID | Original name | Original encounter area | Active encounters | Result / relaxed door or deferred reason |
+| --- | --- | --- | --- | --- |
+| 201 | 卡鲁它那牧场事务所 | yes | no | Open; original ordinary doors |
+| 3008 | 师傅的房间 | no | no | Deferred; fee NPC behind counter, entry component unreachable; battles not restored |
+| 3020 | 加加的道场柜台 | no | no | Open; original ordinary doors |
+| 3021 | 百人联手道场 | no | no | Deferred; fee NPC behind counter, entry component unreachable; battles not restored |
+| 3022 | 加加的道场医务室 | no | no | Deferred; fee NPC behind counter, entry component unreachable; battles not restored |
+| 3208 | 多多的道场 | no | no | Deferred; no original incoming/outgoing door |
+| 3308 | 乌鲁力的道场 | no | no | Deferred; no original incoming/outgoing door |
+| 4008 | 卡鲁它那的道场 | no | no | Deferred; no original incoming/outgoing door |
+| 4020 | 卡鲁他那道场柜台 | no | no | Open; original ordinary doors |
+| 20001 | 拉多拉山岭洞窟１楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20002 | 拉多拉山岭洞窟２楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20003 | 拉多拉山岭洞窟３楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20004 | 拉多拉山岭洞窟４楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20005 | 拉多拉山岭洞窟５楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20006 | 拉多拉山岭洞窟６楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20007 | 拉多拉山岭洞窟７楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20008 | 拉多拉山岭洞窟８楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20009 | 拉多拉山岭洞窟９楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20010 | 拉多拉山岭洞窟１０楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20011 | 拉多拉山岭洞窟１０楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20012 | 拉多拉山岭洞窟１０楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 20013 | 拉多拉山岭洞窟１０楼 | no | no | Deferred; internal group stairs only, no outside entrance |
+| 21015 | 琉璃的洞窟１５楼 | yes | no | Open; original sb_dbt NPC/battle gate bypass (developer convenience) |
+| 21103 | 拉多拉洞窟山顶 | no | no | Deferred; no original walking entrance |
+| 21106 | 拉多拉洞窟山顶 | no | no | Deferred; no original walking entrance |
+| 21108 | 碧青的洞窟地下８楼 | no | no | Deferred; no original walking entrance |
+| 21109 | 拉多拉洞窟山顶 | no | no | Deferred; no original walking entrance |
+| 21110 | 碧青的洞窟地下１０楼 | no | no | Deferred; no original walking entrance |
+| 21111 | 碧青的洞窟地下１１楼 | no | no | Deferred; no original walking entrance |
+| 21112 | 拉多拉洞窟山顶 | no | no | Deferred; no original walking entrance |
+| 21113 | 碧青的洞窟地下１３楼 | no | no | Deferred; no original walking entrance |
+
 ## Rebuild / verify
 
 After each region commit, main must re-run the world importer,
@@ -325,4 +396,5 @@ python3 tools/build_exit_names.py
 .tools/asset-venv/bin/python tools/verify_world_regions.py --region sainasu
 .tools/asset-venv/bin/python tools/verify_world_regions.py --region giiru
 .tools/asset-venv/bin/python tools/verify_world_regions.py --region seimu
+.tools/asset-venv/bin/python tools/verify_world_regions.py --region jyaruga_interiors
 ```

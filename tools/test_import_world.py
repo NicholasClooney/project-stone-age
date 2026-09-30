@@ -64,6 +64,18 @@ class WorldImportTests(unittest.TestCase):
             self.assertEqual(len(merged),1)
             self.assertIn('gate_source',merged[0])
 
+    def test_reviewed_direct_borncenter_door_keeps_original_cell(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            npc=root/'gmsv/data/npc/doujyou';npc.mkdir(parents=True)
+            maps=root/'gmsv/data/map';maps.mkdir()
+            (maps/'mapwarp.txt').write_text('')
+            (npc/'door.create').write_text('{\nfloorid=3021\nborncenter=406,126,1,1\nenemy=npcgen_warp|3022|1|7\n}')
+            links=read_reviewed_portals(root,{'jyaruga':{'maps':[3021,3022]}})
+            self.assertEqual(len(links),1)
+            self.assertEqual((links[0]['cell'],links[0]['to_map'],links[0]['target']),([406,126],3022,[1,7]))
+            self.assertNotIn('gate_source',links[0])
+
     def test_dev_training_maps_do_not_expand_ordinary_portals(self):
         self.assertEqual(len(DEV_TRAINING_MAPS), 35)
         self.assertTrue({300,400,500,10001,10006,31706,32020} <= DEV_TRAINING_MAPS)
