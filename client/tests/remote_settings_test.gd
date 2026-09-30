@@ -93,8 +93,10 @@ func run() -> void:
 
 	# Stat conditions per species follow as well.
 	hunt_a.show_stat_settings();hunt_b.show_stat_settings()
+	var shown := str(hunt_a.stat_species.get_selected_id())
+	check(shown==str(hunt_b.stat_species.get_selected_id()) and shown!="-1","both devices' 属性条件 show the same species")
 	hunt_a.stat_numbers.sum.value = 4
-	check(await until(func():return int(backend.session.automation_settings().get("stat_filters",{}).get("92",{}).get("conditions",{}).get("sum",{}).get("minus",0))==4),"a stat condition reaches the profile")
+	check(await until(func():return int(backend.session.automation_settings().get("stat_filters",{}).get(shown,{}).get("conditions",{}).get("sum",{}).get("minus",0))==4),"a stat condition reaches the profile")
 	check(await until(func():return int(hunt_b.stat_numbers.sum.value)==4),"device B's attribute tab shows the new condition")
 	# 保留规则 follows too.
 	hunt_a.rule_per_tier.value = 4
@@ -102,7 +104,7 @@ func run() -> void:
 	hunt_a.rule_auto.button_pressed = true
 	hunt_a.save_stat_settings(true)
 	check(await until(func():
-		var rule: Dictionary = backend.session.automation_settings().get("stat_filters",{}).get("92",{}).get("keep_rule",{})
+		var rule: Dictionary = backend.session.automation_settings().get("stat_filters",{}).get(shown,{}).get("keep_rule",{})
 		return int(rule.get("per_tier",0))==4 and rule.get("order",[])==["attack","max_hp"] and bool(rule.get("auto",false))),"the keep rule reaches the profile")
 	check(await until(func():return int(hunt_b.rule_per_tier.value)==4 and hunt_b.rank_choice()==["attack","max_hp"] and hunt_b.rule_auto.button_pressed),"device B's attribute tab shows it")
 

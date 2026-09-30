@@ -976,16 +976,23 @@ func go_catch(place: Dictionary) -> bool:
 		return false
 	close_menu()
 	feedback = ""
+	_await_arrival(plan)
 	if not travel.call(plan):
-		var why := feedback if not feedback.is_empty() else "传送失败。"
-		open_menu()
-		feedback = why
-		rebuild()
+		_travel_failed(feedback)
 		return false
+	if not pending_hunt.is_empty():_check_arrival()
+	return true
+
+func _await_arrival(plan: Dictionary) -> void:
 	pending_hunt = plan
 	_pending_deadline = Time.get_ticks_msec()+60000
-	_check_arrival()
-	return true
+
+## Back to 宠物大全 with why the teleport did not happen.
+func _travel_failed(why: String) -> void:
+	pending_hunt = {}
+	open_menu()
+	feedback = why if not why.is_empty() else "传送失败。"
+	rebuild()
 
 func _check_arrival() -> void:
 	if Time.get_ticks_msec() > _pending_deadline:
@@ -997,7 +1004,13 @@ func _check_arrival() -> void:
 	open_hunt.call(plan)
 
 ## The real teleport, with the checks 刷怪传送 makes (leveling_destinations.gd).
+## A web client has only the maps it has downloaded: the landing check needs
+## the target map's file, so its packs come first (as walking there would).
 func _travel(plan: Dictionary) -> bool:
+	var needed: Array = world.area_packs(int(plan.map_id))
+	if not world.asset_packs.is_ready(needed):
+		_travel_after_download(plan,needed)
+		return true
 	var area: Dictionary = world.encounter_catalog.area_at(int(plan.map_id),plan.cell)
 	if area.is_empty() or int(area.id) != int(plan.area_id):
 		feedback = "原表已改变，这个地点不再对应该遇敌区。"
@@ -1008,18 +1021,21 @@ func _travel(plan: Dictionary) -> bool:
 	if is_instance_valid(world.travel_router):world.travel_router.cancel("瞬移去抓。")
 	return world.load_area_id(int(plan.map_id),plan.cell)
 
+func _travel_after_download(plan: Dictionary, needed: Array) -> void:
+	var ok: bool = await world.await_packs(needed,"地图 %s" % world.world_catalog.map_name(int(plan.map_id)))
+	if not ok:
+		_travel_failed("地图素材下载失败，请稍后再试。")
+		return
+	feedback = ""
+	_await_arrival(plan)
+	if not _travel(plan):_travel_failed(feedback)
+
 ## 自动抓极品 with the plan's species as the target (and on its 属性条件 page):
-## the target and the Lv.1 limit are saved to the character's hunt settings
-## first, so the window shows them however it is opened.
+## the target and the Lv.1 limit are saved to the character's hunt settings,
+## so the window shows them however it is opened, and shown at once, before a
+## remote client's settings come back.
 func _open_hunt(plan: Dictionary) -> void:
 	world.link.request({"type":"set_automation_settings","settings":{"hunt":{"template":int(plan.template_id),"level_one":bool(plan.level_one),"stat_species":int(plan.template_id)}}})
 	var menu: Control = world.pet_hunt_menu
-	if menu.visible:menu.refresh_candidates()
-	else:menu.open_menu()
-	if not menu.visible:return
-	var picker = menu.get("stat_species")
-	if picker is OptionButton:
-		var index: int = picker.get_item_index(int(plan.template_id))
-		if index >= 0:
-			picker.select(index)
-			if menu.has_method("load_stat_settings"):menu.load_stat_settings()
+	if not menu.visible:menu.open_menu()
+	if menu.visible:menu.show_target(int(plan.template_id),bool(plan.level_one))
