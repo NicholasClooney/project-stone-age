@@ -1,4 +1,4 @@
-"""Import original towns/interiors and explicitly listed developer training areas.
+"""Import original settlements, reviewed scenic caves and developer training areas.
 
 Read-only legacy inputs. Unavailable graphics remain blocked. Original warp
 coordinates are retained; developer spawns are selected from walkable cells.
@@ -24,6 +24,49 @@ ORDINARY_DIRECTORIES = {'sainasu/hotoru', 'sainasu/katan', 'sainasu/kuo',
 CORE = VILLAGES | {100, 200, 1100, 10201, 10202, 10203}
 # Explicit developer destinations only: no quest entrances or script traversal.
 DEV_TRAINING_MAPS = {300, 400, 500} | set(range(10001, 10007)) | set(range(31701, 31707)) | set(range(32001, 32021))
+# Reviewed Jyaruga scenery; named service/quest rooms remain excluded.
+JYARUGA_SCENIC_MAPS = (set(range(20001, 20014)) | set(range(20101, 20106))
+    | set(range(20301, 20310)) | set(range(20401, 20407))
+    | set(range(20501, 20508)) | set(range(20601, 20608))
+    | set(range(20701, 20711)) | set(range(20801, 20808))
+    | set(range(20901, 20904)) | set(range(21001, 21017))
+    | {21103, 21106, 21108, 21109, 21110, 21111, 21112, 21113}
+    | set(range(21201, 21216)) | set(range(21301, 21316)))
+# Only these reviewed warpman scripts may bypass original conditions.
+SCENIC_GATE_SCRIPTS = {
+    'wpm_20604_11_53', 'wpm_20605_51_4', 'wpm_20606_9_23',
+    'wpm_20807_11_37', 'wpm_200_337_653', 'wpm_20901_21_13',
+    'wpm_20901_16_17', 'wpm_20301_200_39', 'wpm_21301_8_3',
+    'wpm_200_73_696', 'wpm_21308_20_10', 'wpm_200_316_711',
+    'wpm_200_359_671', 'wpm_200_358_671', 'wpm_21003_34_10',
+}
+
+
+def read_scenic_gates(root):
+    """Explicit scenery convenience, retaining original cells/destinations."""
+    result = []
+    for path in sorted(Path(root).glob('*.create')):
+        for match in re.finditer(r'\{([^}]+)\}', path.read_text(errors='replace')):
+            block = match[1]
+            script = re.search(r'enemy=npcgen_warpman\|file:genout/([^\s]+)', block)
+            if not script or script[1] not in SCENIC_GATE_SCRIPTS:
+                continue
+            fields = (Path(root) / script[1]).read_text(encoding='gb18030')
+            target = re.search(r'^WARP:(\d+),(\d+),(\d+)', fields, re.M)
+            floor = re.search(r'floorid=(\d+)', block)
+            corner = re.search(r'borncorner=(\d+),(\d+),(\d+),(\d+)', block)
+            if not (target and floor and corner):
+                raise ValueError(f'Invalid reviewed scenery gate: {script[1]}')
+            x,y,x2,y2 = map(int, corner.groups())
+            if (x,y) != (x2,y2):
+                raise ValueError(f'Non-point scenery gate: {script[1]}')
+            result.append(dict(from_map=int(floor[1]), cell=[x,y],
+                to_map=int(target[1]), target=[int(target[2]),int(target[3])],
+                source=f'{path.name}:{path.read_text(errors="replace")[:match.start()].count(chr(10))+1}',
+                gate_source='genout/'+script[1], convenience='原版需要任务或NPC检查，这里直接开放'))
+    return result
+
+
 MUSIC = {40: 'sabgm_t0.wav', 41: 'sabgm_t1.wav', 44: 'sabgm_d2.wav', 45: 'sabgm_f0.wav', 46: 'sabgm_f1.wav'}
 
 
@@ -59,9 +102,9 @@ def read_portals(root):
 
 
 def select_connected_maps(map_paths, portals):
-    """Expand only through original unconditional warps into reviewed settlements.
+    """Expand through original warps into reviewed settlements and scenery.
 
-    No dungeon/family/quest script traversal, synthetic links or gate bypasses.
+    Only explicitly reviewed scenery gates bypass NPC checks; no general script traversal.
     Existing core (including its implemented permit gate) is preserved.
     """
     selected = CORE | {300} | {p['to_map'] for p in portals if p['from_map'] in VILLAGES}
@@ -69,14 +112,15 @@ def select_connected_maps(map_paths, portals):
         additions = {p['to_map'] for p in portals
                      if p['from_map'] in selected and p['to_map'] in map_paths
                      and ('/'.join(map_paths[p['to_map']].parts[-3:-1]) in ORDINARY_DIRECTORIES
-                          or p['to_map'] in GIRU_SETTLEMENT_MAPS)}
+                          or p['to_map'] in GIRU_SETTLEMENT_MAPS
+                          or p['to_map'] in JYARUGA_SCENIC_MAPS)}
         if additions <= selected:
             return selected
         selected |= additions
 
 
 def ordinary_portals(portals, ordinary):
-    """DEV imports must not silently open quest-controlled routes."""
+    """Only selected ordinary/scenic maps get walking portals."""
     return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary
             and (300 not in (p['from_map'], p['to_map'])
                  or (p['from_map'] in (5000, 5100) or p['to_map'] in (5000, 5100)))]
@@ -100,6 +144,29 @@ def disable_conflicting_portals(portals):
     for p in portals:
         if (p['from_map'],*p['cell']) in conflicting_warps:
             p.update(disabled=True,reason='Conflicting original warp destinations; requires source review')
+
+
+# Duplicate original records at reviewed scenery doors. Pick an existing
+# original destination, rather than moving endpoints or enabling all variants.
+SCENIC_DOOR_CHOICES = {
+    (20301,18,6):(200,421,577), (20301,281,125):(200,501,647),
+    (200,285,926):(20601,9,59), (200,432,536):(20701,0,23),
+    (21215,26,11):(21315,52,59), (21315,53,59):(21215,26,11),
+    (21016,13,21):(21011,5,4),
+}
+
+
+def review_scenic_doors(portals):
+    for p in portals:
+        choice=SCENIC_DOOR_CHOICES.get((p['from_map'],*p['cell']))
+        if choice is None:
+            continue
+        if (p['to_map'],*p['target']) == choice:
+            p.pop('disabled',None)
+            p.pop('reason',None)
+            p['convenience']='重复原版入口采用已核对的一个原始落点'
+        else:
+            p.update(disabled=True,reason='Reviewed scenery door uses another original destination')
 
 
 def excluded_reason(path):
@@ -207,6 +274,7 @@ def run(source, reference, output):
     reference=Path(reference); output=Path(output); root=output/'world'
     root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
+    all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
     maps={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
         if path.is_file() and path.read_bytes()[:6]==b'LS2MAP':
@@ -222,6 +290,7 @@ def run(source, reference, output):
     # their entrances, quest gates and progression are restored explicitly.
     portals=ordinary_portals(all_portals, ordinary)
     disable_conflicting_portals(portals)
+    review_scenic_doors(portals)
     unsupported=[dict(p, reason=excluded_reason(maps.get(p['to_map']))) for p in all_portals if p['from_map'] in ordinary and p['to_map'] not in ordinary]
     archive=Archive(source);base=json.loads((output/'samgir.json').read_text()); images={};colors={}; metadata={}; reports={};blocked_portals=[]
     residents=import_residents(archive,reference,root)
@@ -243,7 +312,7 @@ def run(source, reference, output):
         arrival_region=reachable_cells(data,entrance)
         occupied=[npc['cell'] for npc in residents if npc['map_id']==ident]
         spawn=safe_spawn(data,preferred.get(ident,entrance),exits+occupied,arrival_region)
-        kind='training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
+        kind='dungeon' if ident in JYARUGA_SCENIC_MAPS else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.map',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
@@ -272,7 +341,7 @@ def run(source, reference, output):
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Only reviewed settlements connected by original unconditional warps are expanded. New interiors provide scenery and doors, not NPC services. Dungeons, special areas and quest-dependent routes are deferred; unsupported exits include reasons.', 'Explicit dev_only training maps restore scenery and ordinary source encounters. Giru 300 additionally has reviewed original doors to villages 5000/5100 and their ordinary interiors; other training entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
+    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Reviewed settlements and Jyaruga scenery connected by original warps are expanded. Explicit scenic NPC gates are directly open as a developer convenience; quests and NPC services are not restored. Unconnected maps and other special areas remain excluded.', 'Explicit dev_only training maps restore scenery and ordinary source encounters. Giru 300 additionally has reviewed original doors to villages 5000/5100 and their ordinary interiors; other training entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     print(f'{len(metadata)} maps, {len(portals)} portals, {len(blocked_portals)} blocked endpoints, {len(images)} images')
 

@@ -44,7 +44,7 @@ func unsupported_exits(id: int) -> Array:
 func links(id: int) -> Dictionary:
  return portals.get(str(id),{})
 func field(id: int) -> bool:
- return id in [100,200] or str(info(id).get("kind","")) == "training"
+ return id in [100,200] or str(info(id).get("kind","")) in ["training","dungeon"]
 
 # Village-local buildings belong to their nearest village through interior doors.
 # Wilderness and dungeons remain global destinations.
