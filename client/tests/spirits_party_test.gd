@@ -240,6 +240,10 @@ func party_automation() -> void:
 	session._state.allies[1].hp = 5000
 	check(str(session._auto_command(1).action)=="attack","nobody at the line: it attacks")
 	# The leader's own run at its line: 治愈 before a 回复药, the 回复药 without 气力.
+	# The troop is random: keep it standing for the two turns checked below.
+	for enemy in session._state.enemies:
+		enemy.max_hp = 100000
+		enemy.hp = 100000
 	session._state.player_hp = 100
 	var potions := int(session._state.potions)
 	var turn := int(session._state.turn)
