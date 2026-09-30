@@ -46,6 +46,7 @@ func run() -> void:
 	choose()
 	await helper_pool()
 	await cycle()
+	await absolute_mode()
 	print("STAT SURVEY: %d failures" % failures)
 	quit(1 if failures else 0)
 
@@ -293,6 +294,86 @@ func cycle() -> void:
 	var collected: int = automation.flow_collected_count
 	automation.complete_trained_pet(caught)
 	check(automation.flow_collected_count==collected+1 and automation.flow_last_result.contains("摸底选中"),"a survey pick is stored as found: %s" % automation.flow_last_result)
+	backend.handle({"type":"auto_stop"})
+	backend.queue_free()
+	await process_frame
+
+func input_has_survey(automation) -> bool:
+	for line in FileAccess.get_file_as_string(automation.fast_hunt.input_path).split("\n"):
+		if line.begins_with("survey "):return true
+	return false
+
+func set_filter(backend, patch: Dictionary) -> void:
+	backend.handle({"type":"set_automation_settings","settings":{"stat_filters":{"92":patch}}})
+
+## 绝对：≥ 数值: fixed thresholds with no pet of the species and no 摸底; a
+## running cycle follows the player's edits (mode and values) at once.
+func absolute_mode() -> void:
+	var backend = new_backend()
+	var automation = backend.automation
+	var session = backend.session
+	session.grant_starter_pets()
+	for list in ["pets","pet_storage"]:
+		session._profile[list] = session._profile[list].filter(func(pet):return KeepRule.species_pets({"pets":[pet]},92).is_empty())
+	session._profile.active_pet = 0 if not session._profile.pets.is_empty() else -1
+	session._profile.ride_pet = -1
+	set_filter(backend,{"keep_rule":RULE,"threshold_mode":"absolute"})
+	var filter := {"template":92,"level_one":true,"total":-8,"offsets":[-2,-2,-2,-2],"auto_capture":false,"limit":0,"rate":0,"fast":false,"showcase":true}
+	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL,"filter":filter,"settings":{"capture_hp":100}})
+	check(reply.ok and automation.flow_phase=="hunt","an absolute find-pet cycle starts (%s)" % str(reply))
+	var chosen: Dictionary = automation.filter_for(92)
+	check(automation.owned_maxima(92).is_empty() and int(chosen.conditions.sum.value)==624 and int(chosen.conditions.attack.value)==293,"absolute: no blue dragon owned, still 三围合 ≥ 624 or 攻击 ≥ 293")
+	automation._hunt_process(0.016)
+	check(automation.survey.is_empty() and not bool(automation.status().flow.survey.active),"no 摸底 in absolute mode")
+	check(automation.thresholds_text()=="扬奇洛斯：三围合 ≥ 624，或 攻击 ≥ 293","the status reads %s" % automation.thresholds_text())
+
+	# The helper gets the fixed values and no survey section.
+	FastHunt.helper_override = fake_helper()
+	automation.hunt_fast_wanted = true
+	automation.hunt_fast_note = ""
+	automation._hunt_process(0.016)
+	var pid: int = automation.fast_hunt.pid
+	check(automation.fast_hunt.running() and float(input_threshold(automation,0))==624.0 and float(input_threshold(automation,1))==293.0 and not input_has_survey(automation),"the helper scans with ≥ 624 / ≥ 293 and no 摸底")
+
+	# Queued hits are judged against the fixed values only: a better hit
+	# raises nothing, so a lower one that passes stays.
+	var actor92 := {}
+	for i in range(5000):
+		var troop: Dictionary = automation.roll_at(i)
+		for enemy in troop.get("enemies",[]):
+			if int(enemy.template_id)==92 and actor92.is_empty():actor92 = enemy.duplicate(true)
+		if not actor92.is_empty():break
+	var fair := {"attack":294,"defence":170,"speed":150,"max_hp":900}
+	var great := {"attack":320,"defence":190,"speed":160,"max_hp":1000}
+	automation._showcase_add({"index":1,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":fair})
+	automation._showcase_add({"index":2,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":great})
+	check(automation.showcase_queue.size()==2 and int(automation.filter_for(92).conditions.attack.value)==293,"a better queued hit does not raise fixed values: both stay queued")
+
+	# A raised value applies to the running cycle at once: the helper restarts
+	# with it and the queued hit now below it is let go.
+	set_filter(backend,{"conditions":{"attack":{"value":300},"sum":{"value":640}}})
+	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==great and automation.showcase_log.any(func(line):return str(line.kind)=="dropped" and str(line.text).contains("第2组")),"raising 攻击 to 300 lets the queued 294 go")
+	check(automation.showcase_log.any(func(line):return str(line.kind)=="settings" and str(line.text).contains("三围合 ≥ 640")),"the info block says the edit applies now")
+	automation._hunt_process(0.016)
+	check(automation.fast_hunt.running() and automation.fast_hunt.pid!=pid and float(input_threshold(automation,0))==640.0 and float(input_threshold(automation,1))==300.0,"the helper restarts with ≥ 640 / ≥ 300")
+
+	# Back to relative with no blue dragon: 摸底 starts; to absolute again ends it.
+	set_filter(backend,{"threshold_mode":"relative"})
+	automation.showcase_queue = []
+	automation._hunt_process(0.016)
+	check(not automation.survey.is_empty() and input_has_survey(automation),"switched to 最高 − x with no blue dragon: 摸底 starts and the helper surveys")
+	set_filter(backend,{"threshold_mode":"absolute"})
+	check(automation.survey.is_empty() and str(automation.showcase_log.back().kind)=="settings","switched back to fixed values: the 摸底 ends without picks")
+	pid = automation.fast_hunt.pid
+	automation._hunt_process(0.016)
+	check(automation.fast_hunt.pid!=pid and not input_has_survey(automation) and float(input_threshold(automation,0))==640.0,"and the helper hunts with ≥ 640 again (the values were kept)")
+
+	# The mode is kept over a restart (hunt.resume).
+	var state: Dictionary = automation.resume_state()
+	check(str(state.get("flow",{}).get("flow_stat_filters",{}).get(92,{}).get("threshold_mode",""))=="absolute","the resume state keeps threshold_mode")
+	automation.fast_hunt.stop()
+	DirAccess.remove_absolute(FastHunt.helper_override)
+	FastHunt.helper_override = ""
 	backend.handle({"type":"auto_stop"})
 	backend.queue_free()
 	await process_frame

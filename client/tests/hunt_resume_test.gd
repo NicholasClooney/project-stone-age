@@ -14,6 +14,7 @@ const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const Automation = preload("res://server/automation.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
+const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const SAVE := "user://hunt-resume-test.json"
 const MAP := 100
 const CELL := Vector2i(637,493)
@@ -120,6 +121,9 @@ func showcase_cycle() -> void:
 	var queued := queue_rolls(automation)
 	var next_troop := JSON.stringify(automation.roll_at(rolls))
 	automation.flow_skipped_count = 2
+	# 绝对：≥ 数值 for the blue dragon, low enough to let every queued hit stay.
+	backend.handle({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"threshold_mode":"absolute","conditions":{"sum":{"value":0},"attack":{"value":0}}}}}})
+	check(StatFilter.absolute(automation.raw_filter_for(92)) and queue_rolls(automation)==queued,"the running cycle takes 绝对 at once; no queued hit is let go")
 	clock += 90000
 	var elapsed: float = automation.elapsed_seconds()
 	backend.record_shutdown()
@@ -136,6 +140,7 @@ func showcase_cycle() -> void:
 	check(automation.flow_run_id==run_id and automation.flow_showcase and automation.flow_skipped_count==2,"with the same run and counters")
 	check(automation.hunt_run_seed==seed_value and automation.hunt_rolls==rolls and JSON.stringify(automation.roll_at(rolls))==next_troop,"the hunt continues the same run from the same roll")
 	check(queue_rolls(automation)==queued,"the queue is kept, best first (%s)" % str(queue_rolls(automation)))
+	check(str(automation.flow_stat_filters.get(92,{}).get("threshold_mode",""))=="absolute" and int(automation.filter_for(92).conditions.sum.value)==0 and automation.survey.is_empty(),"the cycle's 属性条件 keep 绝对 over the restart")
 	check(absf(automation.elapsed_seconds()-elapsed)<1.0,"the cycle's time goes on from where it was")
 	var resumed := last_stop()
 	check(resumed.get("outcome")=="已恢复" and str(resumed.get("reason","")).begins_with(Automation.RESUMED) and str(resumed.get("run",""))==run_id,"停止记录 says 服务器重启后已恢复")

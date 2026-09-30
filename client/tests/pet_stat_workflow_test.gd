@@ -36,17 +36,39 @@ func run()->void:
 	fake_msec=31000
 	check(flow.elapsed_seconds()==30.0 and hunt.summary().contains("流程总用时 30秒"),"workflow displays elapsed wall time separately from round duration")
 	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"conditions":{"sum":{"minus":9}}}}}})
-	check(int(game.stat_filter(92).conditions.sum.minus)==9 and int(flow.stat_filter_snapshot[92].conditions.sum.minus)==5,"a later settings change cannot change the running loop threshold")
+	check(int(game.stat_filter(92).conditions.sum.minus)==9 and int(flow.stat_filter_snapshot[92].conditions.sum.minus)==9,"a later settings change applies to the running loop at once")
+	# 相对 ↔ 绝对 on the page, while the cycle runs.
+	hunt.set_controls(true)
+	check(not hunt.stat_threshold_mode.disabled and not hunt.stat_checks.sum.disabled and hunt.stat_numbers.sum.editable and hunt.stat_values.sum.editable and hunt.level_one.disabled,"属性条件 stays editable while the cycle runs; the search settings are locked")
+	hunt.load_stat_settings()
+	check(hunt.stat_threshold_mode.selected==0 and hunt.stat_heading.text.contains("最高 − x"),"relative is the default mode")
+	hunt.stat_threshold_mode.select(1);hunt.stat_threshold_mode.item_selected.emit(1)
+	var fixed:Dictionary=game.stat_filter(92)
+	check(Filter.absolute(fixed) and int(fixed.conditions.sum.value)==int(shown_best.sum)-9 and int(fixed.conditions.attack.value)==int(shown_best.attack)-1 and int(fixed.conditions.sum.minus)==9,"switching to 绝对 fills in the thresholds hunted now (三围合 %d, 攻击 %d) and keeps x" % [int(fixed.conditions.sum.value),int(fixed.conditions.attack.value)])
+	check(Filter.absolute(flow.stat_filter_snapshot[92]) and int(Filter.resolve(flow.stat_filter_snapshot[92],{}).conditions.sum.value)==int(shown_best.sum)-9,"the running loop switches too")
+	check(hunt.stat_values.sum.visible and not hunt.stat_numbers.sum.visible and hunt.stat_checks.sum.text=="三围合 ≥" and hunt.stat_results.sum.text=="（现有最高%d）" % int(shown_best.sum) and hunt.stat_results.sum.tooltip_text=="三围合 ≥ %d（现有最高 %d）" % [int(shown_best.sum)-9,int(shown_best.sum)] and hunt.stat_heading.text.contains("固定数值"),"the row reads %s [%d] %s" % [hunt.stat_checks.sum.text,int(hunt.stat_values.sum.value),hunt.stat_results.sum.text])
+	for metric in Filter.METRICS:
+		var row_check:CheckBox=hunt.stat_checks[metric]
+		var value_box:SpinBox=hunt.stat_values[metric]
+		var result:Label=hunt.stat_results[metric]
+		check(row_check.position.x+row_check.get_combined_minimum_size().x<=value_box.position.x and value_box.position.x+value_box.size.x<=result.position.x and result.position.x+result.get_combined_minimum_size().x<=hunt.stat_keeps[metric].position.x,"the absolute %s row fits: check, value, best, 留前" % metric)
+	hunt.stat_values.sum.value=600;hunt.commit_stat_settings()
+	check(int(game.stat_filter(92).conditions.sum.value)==600 and int(Filter.resolve(flow.stat_filter_snapshot[92],{}).conditions.sum.value)==600,"a typed value is saved and hunted at once")
+	hunt.stat_threshold_mode.select(0);hunt.stat_threshold_mode.item_selected.emit(0)
+	check(not Filter.absolute(game.stat_filter(92)) and int(game.stat_filter(92).conditions.sum.minus)==9 and int(game.stat_filter(92).conditions.sum.value)==600 and hunt.stat_numbers.sum.visible and hunt.stat_results.sum.text=="= %d" % (int(shown_best.sum)-9),"back to 相对: x is still 9 and the value is kept")
+	hunt.stat_threshold_mode.select(1);hunt.stat_threshold_mode.item_selected.emit(1)
+	check(int(game.stat_filter(92).conditions.sum.value)==600 and int(game.stat_filter(92).conditions.attack.value)==int(shown_best.attack)-1,"switching to 绝对 again keeps the player's own value")
+	hunt.stat_threshold_mode.select(0);hunt.stat_threshold_mode.item_selected.emit(0)
 	hunt.stop_hunt("test boundary");hunt.hide();game.paused_input=false
 	var source:Dictionary=game.session.snapshot().pets[0].duplicate(true)
 	var previous_storage:int=game.session.snapshot().pet_storage.size()
 	var wild:Dictionary=source.duplicate(true);wild.template_id=92;wild.level=1;wild.erase("gm_modified")
-	flow.stat_filter_snapshot={92:blue_filter()};flow.predicted_rejects=0;flow.best_predicted={}
-	flow.stat_filter_snapshot[92].conditions.sum.value=99999;flow.stat_filter_snapshot[92].conditions.attack.value=99999
+	var fixed_filters:Dictionary=game.backend.automation.flow_stat_filters;var fixed_blue:=Filter.defaults(92);fixed_blue["threshold_mode"]="absolute";fixed_filters[92]=fixed_blue;flow.predicted_rejects=0;flow.best_predicted={}
+	fixed_blue.conditions.sum["value"]=99999;fixed_blue.conditions.attack["value"]=99999
 	check(not flow.accepts_prediction(wild) and flow.predicted_rejects==1 and int(flow.best_predicted.sum)>0,"impossible predicted Lv.120 stats are skipped before capture")
-	flow.stat_filter_snapshot[92].conditions.sum.value=0;flow.stat_filter_snapshot[92].conditions.attack.value=0
+	fixed_blue.conditions.sum["value"]=0;fixed_blue.conditions.attack["value"]=0
 	check(flow.accepts_prediction(wild) and flow.predicted_rejects==1,"predicted qualifying pet proceeds to capture")
-	flow.stat_filter_snapshot={}
+	fixed_filters.erase(92)
 	flow.predicted_rejects=0;flow.best_predicted={}
 	var instant:Dictionary=source.duplicate(true);instant.pet_id="pet-instant";instant.level=1;instant.xp=0;instant.erase("gm_modified")
 	var gradual:Dictionary=instant.duplicate(true);gradual.pet_id="pet-gradual"
