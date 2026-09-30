@@ -35,10 +35,21 @@ func setup(owner: Node, caption: String, slot: int, on_restore: Callable, lines:
 	restore_button.position = Vector2(width-72,(height-34)/2)
 	restore_button.size = Vector2(62,34)
 	add_child(restore_button)
-	var screen: Vector2 = world.get_viewport_rect().size
-	# Above the classic bottom bar, clear of the left-anchored pet windows.
-	position = Vector2(screen.x-width-12,screen.y-44-(height+6)-(HEIGHT+6)*slot)
+	_slot = slot
+	_place()
 	hide()
+
+var _slot := 0
+
+## Above the classic bottom bar at the right edge, clear of the left-anchored
+## pet windows. Placed every frame: 设置 → 画面 can change the screen's size
+## (铺满屏幕, 界面大小) after the chip was made.
+func _place() -> void:
+	var screen: Vector2 = world.get_viewport_rect().size
+	position = Vector2(screen.x-size.x-12,screen.y-44-(size.y+6)-(HEIGHT+6)*_slot)
+
+func _process(_delta: float) -> void:
+	if visible:_place()
 
 func present(heading: String, line: String) -> void:
 	title.text = heading
