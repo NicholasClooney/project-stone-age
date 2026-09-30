@@ -80,13 +80,13 @@ func formatting() -> void:
 	var sample := {
 		"engine":{"fps":60,"frame_ms":16.67,"process_ms":2.5,"physics_ms":0.4,"static_bytes":200*1048576,"static_peak_bytes":250*1048576,"texture_bytes":90*1048576,"buffer_bytes":1048576,"video_bytes":100*1048576,"draw_calls":120,"objects_drawn":300,"objects":5000,"resources":800,"nodes":1500,"orphan_nodes":2},
 		"web":{"wasm":512*1048576},
-		"packs":{"enabled":true,"known":1100,"mounted":40,"mounted_bytes":60*1048576,"downloaded":3,"downloaded_bytes":2*1048576,"pending":1,"failed":0},
+		"packs":{"enabled":true,"known":1100,"mounted":40,"mounted_bytes":60*1048576,"downloaded":3,"downloaded_bytes":2*1048576,"cache_hits":5,"pending":1,"failed":0},
 		"network":rates,
 		"backend":{"tick_ms":0.25,"tick_avg_ms":0.2},
 		"registry":{"textures":{"battle":{"count":3,"bytes":24*1048576},"ui":{"count":200,"bytes":4*1048576}},"texture_bytes":28*1048576,"audio":{"music":{"count":1,"bytes":1048576,"seconds":90.0}},"audio_bytes":1048576,"manifests":{"battle":7000000,"riding":11000000},"manifest_bytes":18000000},
 	}
 	var text := "\n".join(PerfMonitor.lines(sample))
-	for part in ["静态 200.0 MB（峰值 250.0 MB）","显存 100.0 MB · 纹理 90.0 MB · 缓冲 1.0 MB","wasm 堆 512.0 MB","JS 堆 不可用","资源包 已挂载 40 个 60.0 MB","本次下载 3 个 2.0 MB · 等待 1","FPS 60 · 帧 16.7 ms · 逻辑 2.5 ms · 物理 0.4 ms","绘制调用 120","孤立节点 2","【网络】WebSocket","收 20.0 条/s 3.9 KB/s","延迟 12 ms","后台 tick 0.25 ms"]:
+	for part in ["静态 200.0 MB（峰值 250.0 MB）","显存 100.0 MB · 纹理 90.0 MB · 缓冲 1.0 MB","wasm 堆 512.0 MB","JS 堆 不可用","资源包 已挂载 40 个 60.0 MB","本次下载 3 个 2.0 MB · 缓存读取 5 · 等待 1","FPS 60 · 帧 16.7 ms · 逻辑 2.5 ms · 物理 0.4 ms","绘制调用 120","孤立节点 2","【网络】WebSocket","收 20.0 条/s 3.9 KB/s","延迟 12 ms","后台 tick 0.25 ms"]:
 		check(text.contains(part),"the panel shows %s" % part)
 	var details := PerfMonitor.breakdown_lines(sample)
 	check(details[0]=="【纹理 · 估算】共 28.0 MB" and details[1]=="战斗图集 3 张 24.0 MB" and details[2]=="界面 200 张 4.0 MB" and details[3]=="未登记 62.0 MB","the breakdown lists texture owners in order and what nobody reported")

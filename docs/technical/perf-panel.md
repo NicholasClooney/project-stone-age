@@ -20,7 +20,7 @@ The panel is not built until first opened. While it is hidden it does no work. W
 | 显存 · 纹理 · 缓冲 | `RENDER_VIDEO/TEXTURE/BUFFER_MEM_USED` | What the renderer reports it uploaded. 显存 is the total. On the web (WebGL) these are Godot's own estimates. |
 | wasm 堆 | `wasmMemory.buffer.byteLength` (web only) | The whole WebAssembly linear memory. It only grows and never shrinks, so it shows the high-water mark of the static memory plus allocator overhead. It is the number to watch on memory-limited devices (iPhone, iPad, Vision Pro). |
 | JS 堆 | `performance.memory` (Chrome only) | JavaScript heap used / allocated (limit). Safari has no such API, so it shows 不可用. |
-| 资源包 | `AssetPacks.stats()` (web only) | Packs mounted and their file sizes (from `packs.json`), how many this session downloaded instead of reading from the IndexedDB cache, and how many are still pending or failed. Mounted packs stay in the browser's filesystem memory. |
+| 资源包 | `AssetPacks.stats()` (web only) | Packs mounted and their file sizes (from `packs.json`), how many this session downloaded and how many it read from the pack cache (缓存读取), and how many are still pending or failed. Mounted packs stay in the browser's filesystem memory (MEMFS) for the session; cached ones that are not mounted cost nothing. |
 
 **【性能】**
 

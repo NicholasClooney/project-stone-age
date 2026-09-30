@@ -2,62 +2,69 @@ extends Node
 ## On-demand original assets for builds that ship without them (the web
 ## build). Packs come from tools/plan_web_packs.py and build_web_packs.gd; the
 ## index maps maps, sprites, characters and single files to pack names.
-## Downloads are cached in user:// under content-hashed names, so a revisit
-## mounts from cache and a rebuilt pack is fetched again. Each download is
-## retried with backoff before a request reports failure.
+## Packs are cached under content-hashed names, so a revisit reads a pack from
+## the cache and a rebuilt pack is fetched again. Where and how is the store's
+## business (scripts/pack_store.gd natively, scripts/web_pack_store.gd in a
+## browser, a fake in tests); this node queues, retries each fetch with
+## backoff, reports progress, mounts and prunes.
 ## Where assets are already present (the desktop game) nothing is enabled and
 ## every ensure() completes immediately.
 signal progress(label: String, done_bytes: int, total_bytes: int)
 
-const CACHE := "user://packs/"
+const PackStore = preload("res://scripts/pack_store.gd")
+const WebPackStore = preload("res://scripts/web_pack_store.gd")
+## Network downloads at once.
 const PARALLEL := 4
+## Reads from the cache at once (no network; a web cache read is an IndexedDB read).
+const PARALLEL_CACHED := 32
 const RETRIES := 3
-## Bytes HTTPRequest reads per frame.
-const DOWNLOAD_CHUNK := 4 * 1024 * 1024
 
 var enabled := false
 var base_url := ""
 var index: Dictionary = {}
+## Seconds before the first retry; each further retry waits twice as long.
+var retry_delay := 1.0
+var store: RefCounted = PackStore.new()
 var _mounted: Dictionary = {}
+## File names the store holds from earlier sessions or this one's downloads.
+var _cached: Dictionary = {}
 var _queued: Array[String] = []
 var _attempts: Dictionary = {}
 var _active: Dictionary = {}
 var _failed: Dictionary = {}
 var _waiters: Array[Dictionary] = []
-## Packs fetched over the network this session (not mounted from the cache).
+## Packs fetched over the network this session.
 var downloaded_count := 0
 var downloaded_bytes := 0
+## Packs read from the cache this session (web: from IndexedDB into memory).
+var cache_hits := 0
 
-func configure(url: String) -> void:
+## pack_store: a store to use instead of the platform's (tests).
+func configure(url: String, pack_store: RefCounted = null) -> void:
 	enabled = true
 	base_url = url if url.ends_with("/") else url+"/"
-	DirAccess.make_dir_recursive_absolute(CACHE)
+	store = pack_store if pack_store!=null else (WebPackStore.new() if OS.has_feature("web") else PackStore.new())
+	store.setup()
 
-## Fetches packs.json, then drops cached packs the index no longer names.
+## Fetches packs.json and lists the cache, then drops cached packs the index
+## no longer names (without reading them).
 func load_index(done: Callable) -> void:
-	var request := _new_request()
-	add_child(request)
-	request.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, body: PackedByteArray):
-		request.queue_free()
-		var parsed = JSON.parse_string(body.get_string_from_utf8()) if result==HTTPRequest.RESULT_SUCCESS and code==200 else null
-		if not parsed is Dictionary:
-			print("[packs] index unavailable: result %d, HTTP %d" % [result,code])
+	var state := {"index":null,"listed":false,"finished":false}
+	var finish := func():
+		if state.finished or state.index==null or not state.listed:return
+		state.finished = true
+		if not state.index is Dictionary:
 			done.call(false);return
-		index = parsed
+		index = state.index
 		_prune_cache()
-		done.call(true))
-	if request.request(base_url+"packs.json?"+str(Time.get_unix_time_from_system()))!=OK:
-		print("[packs] index request to %s could not start" % base_url)
-		request.queue_free();done.call(false)
-
-func _new_request() -> HTTPRequest:
-	var request := HTTPRequest.new()
-	# A browser already decodes gzip transfers; decoding again would fail.
-	request.accept_gzip = not OS.has_feature("web")
-	# The default 64 KiB is read once per frame (about 4 MB/s at 60 fps), so a
-	# 30 MB core pack took seconds even from localhost.
-	request.download_chunk_size = DOWNLOAD_CHUNK
-	return request
+		done.call(true)
+	store.cached_files(func(files: Array):
+		for file in files:_cached[str(file)] = true
+		state.listed = true
+		finish.call())
+	store.fetch_index(self,base_url+"packs.json?"+str(Time.get_unix_time_from_system()),func(parsed):
+		state.index = parsed if parsed is Dictionary else false
+		finish.call())
 
 ## True while a labelled request (one the player is waiting for) is pending.
 func blocking() -> bool:
@@ -80,7 +87,7 @@ func ensure(packs: Array, done: Callable = Callable(), label: String = "") -> vo
 			var pack := str(name)
 			if not index.get("packs",{}).has(pack) or _mounted.has(pack) or missing.has(pack):continue
 			_failed.erase(pack)
-			if _mount_cached(pack):continue
+			if _mount_local(pack):continue
 			missing.append(pack)
 	if missing.is_empty():
 		if done.is_valid():done.call(true)
@@ -96,7 +103,7 @@ func ensure(packs: Array, done: Callable = Callable(), label: String = "") -> vo
 func prefetch(packs: Array) -> void:
 	for name in packs:
 		var pack := str(name)
-		if enabled and index.get("packs",{}).has(pack) and not _mounted.has(pack) and not _queued.has(pack) and not _active.values().has(pack) and not _mount_cached(pack):
+		if enabled and index.get("packs",{}).has(pack) and not _mounted.has(pack) and not _queued.has(pack) and not _active.values().has(pack) and not _mount_local(pack):
 			_queued.append(pack)
 	_pump()
 
@@ -106,7 +113,7 @@ func stats() -> Dictionary:
 	var packs: Dictionary = index.get("packs",{})
 	var bytes := 0
 	for pack in _mounted:bytes += int(packs.get(pack,{}).get("bytes",0))
-	return {"enabled":enabled,"known":packs.size(),"mounted":_mounted.size(),"mounted_bytes":bytes,"downloaded":downloaded_count,"downloaded_bytes":downloaded_bytes,"pending":_queued.size()+_active.size(),"failed":_failed.size()}
+	return {"enabled":enabled,"known":packs.size(),"mounted":_mounted.size(),"mounted_bytes":bytes,"downloaded":downloaded_count,"downloaded_bytes":downloaded_bytes,"cache_hits":cache_hits,"cached":_cached.size(),"pending":_queued.size()+_active.size(),"failed":_failed.size()}
 
 # ---- lookups -----------------------------------------------------------------
 
@@ -135,52 +142,52 @@ func sprite_packs(idents: Array) -> Array:
 # ---- downloads ---------------------------------------------------------------
 
 func _pump() -> void:
-	while _active.size() < PARALLEL and not _queued.is_empty():
-		var pack: String = _queued.pop_front()
-		if _mounted.has(pack):continue
+	while not _queued.is_empty():
+		var pack: String = _queued.front()
+		if _mounted.has(pack):
+			_queued.pop_front();continue
+		if _active.size() >= (PARALLEL_CACHED if _is_cached(pack) else PARALLEL):break
+		_queued.pop_front()
 		_start(pack)
 	_report()
 
+func _is_cached(pack: String) -> bool:
+	return _cached.has(str(index.packs[pack].file))
+
 func _start(pack: String) -> void:
 	var entry: Dictionary = index.packs[pack]
-	var request := _new_request()
-	request.download_file = CACHE+str(entry.file)+".part"
-	add_child(request)
-	_active[request] = pack
-	request.request_completed.connect(func(result: int, code: int, _headers: PackedStringArray, _body: PackedByteArray):_finished(request,pack,result,code))
-	var error := request.request(base_url+str(entry.file))
-	if error!=OK:
-		print("[packs] %s could not start: error %d" % [pack,error])
-		_finished(request,pack,HTTPRequest.RESULT_CANT_CONNECT,0)
+	var cached := _is_cached(pack)
+	_active[store.fetch(self,base_url+str(entry.file),str(entry.file),int(entry.bytes),func(ok: bool):_finished(pack,ok,cached))] = pack
 
-func _finished(request: HTTPRequest, pack: String, result: int, code: int) -> void:
-	_active.erase(request)
-	request.queue_free()
-	if result!=HTTPRequest.RESULT_SUCCESS or code!=200:print("[packs] %s failed: result %d, HTTP %d" % [pack,result,code])
+func _finished(pack: String, ok: bool, cached: bool) -> void:
+	for handle in _active.keys():
+		if _active[handle]==pack:_active.erase(handle)
 	var entry: Dictionary = index.packs[pack]
-	var part := CACHE+str(entry.file)+".part"
-	var ok := result==HTTPRequest.RESULT_SUCCESS and code==200 and FileAccess.file_exists(part) and FileAccess.get_file_as_bytes(part).size()==int(entry.bytes)
 	if ok:
-		DirAccess.rename_absolute(part,CACHE+str(entry.file))
-		downloaded_count += 1
-		downloaded_bytes += int(entry.bytes)
-		ok = _mount_cached(pack)
+		if cached:cache_hits += 1
+		else:
+			downloaded_count += 1
+			downloaded_bytes += int(entry.bytes)
+		_cached[str(entry.file)] = true
+		ok = _mount_local(pack)
 	if not ok:
-		if FileAccess.file_exists(part):DirAccess.remove_absolute(part)
+		# A cached copy that failed may be damaged: fetch from the network next.
+		_cached.erase(str(entry.file))
 		_attempts[pack] = int(_attempts.get(pack,0))+1
 		if int(_attempts[pack]) < RETRIES:
-			get_tree().create_timer(pow(2.0,float(_attempts[pack]-1))).timeout.connect(func():
+			get_tree().create_timer(retry_delay*pow(2.0,float(_attempts[pack]-1))).timeout.connect(func():
 				_queued.push_front(pack);_pump())
 			return
 		_attempts.erase(pack)
 		_failed[pack] = true
+	else:_attempts.erase(pack)
 	_settle()
 	_pump()
 
-func _mount_cached(pack: String) -> bool:
-	var path := CACHE+str(index.packs[pack].file)
-	if not FileAccess.file_exists(path):return false
-	if not ProjectSettings.load_resource_pack(path):
+func _mount_local(pack: String) -> bool:
+	var file := str(index.packs[pack].file)
+	if not store.has_local(file):return false
+	if not ProjectSettings.load_resource_pack(store.path(file)):
 		print("[packs] %s could not be mounted" % pack)
 		return false
 	_mounted[pack] = true
@@ -218,5 +225,10 @@ func _process(_delta: float) -> void:
 func _prune_cache() -> void:
 	var wanted := {}
 	for entry in index.get("packs",{}).values():wanted[str(entry.file)] = true
-	for file in DirAccess.get_files_at(CACHE):
-		if not wanted.has(file):DirAccess.remove_absolute(CACHE+file)
+	var stale: Array = []
+	for file in _cached:
+		if not wanted.has(file):stale.append(file)
+	for file in stale:_cached.erase(file)
+	if not stale.is_empty():
+		print("[packs] dropping %d cached packs the index no longer names" % stale.size())
+		store.remove(stale)

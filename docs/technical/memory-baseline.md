@@ -17,7 +17,7 @@ Almost all of it is parsed JSON, not pictures. Textures are only about 110 MB af
 1. **Parsed JSON as Variant dictionaries: 10 to 20 times the file size.** Battle manifest 141 MB (from startup), riding manifest 208 MB (from the first battle, never freed), the current map 7 to 196 MB (map 200: 196 MB).
 2. **Web only: every loaded sound decoded to float32 PCM** (Godot's web "sample" playback; music no longer, see [after streamed audio](#after-streamed-audio-optimization-3)): 89 MB at startup, 228 MB alive after the tour, 574 MB created.
 3. **Web only: the wasm heap keeps its high-water mark.** Each map switch parses a new map while the old one is still held, and the pet encyclopedia's thumbnails read whole sheets back. The heap reached 805 MB within minutes and stays there.
-4. **Web only: every downloaded pack lives in MEMFS** (user:// is IDBFS). At startup IDBFS copies the whole IndexedDB cache into memory, including packs this session never mounts. All packs together are 974 MB.
+4. **Web only: every downloaded pack lives in MEMFS** (user:// is IDBFS). At startup IDBFS copies the whole IndexedDB cache into memory, including packs this session never mounts. All packs together are 974 MB. **Fixed by the pack store, see [after the pack store](#after-the-pack-store-optimization-4)**: packs are cached outside IDBFS and only mounted ones are in memory.
 5. **Textures that are never freed:** every battle, pet and character sheet ever drawn (`SheetFrames`), up to 4,000 map tiles, and all pet thumbnails. That is small in a short tour (63 MB), but a sheet averages 10 MB as RGBA, so a long 后台搜宠 session across many species grows without bound.
 
 ## Method
@@ -226,7 +226,7 @@ Streaming has one cost in this no-threads build: the engine mixes music on the m
 | `game.textures` (map tiles and props) | 1,084 tiles, 42 MB | Cleared on a map change only once over 4,000 |
 | `PetThumbnails._made` | 384, 10.6 MB | At most about 580 species, about 16 MB |
 | Web: wasm heap | 805 MB | The worst moment so far |
-| Web: packs in MEMFS | 66 MB cached, 426 mounted | Every pack ever downloaded on this device |
+| Web: packs in MEMFS | 66 MB cached, 426 mounted | Every pack ever downloaded on this device; since optimization 4 only the packs this session mounted |
 | Web: decoded audio | 228 MB (1 MB after optimization 3) | Every stream kept loaded (battle sounds, music, radio); since optimization 3 only sound effects |
 
 What does come back: map data when leaving a map (the same map 100 is 563 MB before and 572 MB after visiting two other maps), battle nodes (static is the same before and after closing a battle), window nodes, and radio tracks on desktop.
@@ -238,12 +238,32 @@ Estimates are from the measurements above. The web numbers matter most, since th
 1. **Done, see [after packed maps](#after-packed-maps-optimization-1). Store maps as packed arrays.** Convert `ground` and `blocked` to `PackedInt32Array` / `PackedByteArray` at import (or read `var_to_bytes` / a binary file instead of JSON). Map 100: 125 MB to about 5 MB; map 200: 196 MB to about 8 MB. Also removes most of the map-switch peak (currently +300 to 400 MB). **Saves about 150 to 200 MB held and 300 MB or more of peak, which on the web is the wasm heap size.**
 2. **Done (split manifests):** startup 362 to 171 MB static, after the tour 611 to 208 MB; see the split columns. **Split the battle and riding manifests per sprite and load on demand**, like the 8.0 pets already are (`battle/pets/<sprite>.json`), and keep frames as packed arrays rather than dictionaries. A battle needs a handful of sprites (about 1 MB each parsed). **Saves about 330 MB static (141 + 208 today) and the web heap with it.** Turning `backgrounds.json` into packed lookups (a battle reads one ground, one battlefield list and one background) saves about 30 MB.
 3. **Done, see [after streamed audio](#after-streamed-audio-optimization-3). Web music as streams, not samples.** Set `playback_type = PLAYBACK_TYPE_STREAM` on the music and radio players (or `audio/general/default_playback_type.web`), keep samples for short effects. Music is decoded in small chunks by the audio worklet. **Saves about 200 MB after the tour and 50 to 60 MB per radio track**; startup 89 MB to about 12 MB. Drop `upcoming_stream` or keep it compressed. (Transcoding the remaining WAV music to Ogg Vorbis helps pack size and desktop memory only a little; streaming is what matters on the web.)
-4. **Keep packs out of MEMFS between sessions.** Store downloaded packs in the Cache API or OPFS from JavaScript and write only the packs this session mounts into a non-persistent MEMFS folder (for example `/tmp/packs`), so startup no longer copies the whole IndexedDB store into memory. **Saves up to the whole cache (up to about 970 MB on a well-travelled device, 66 MB after this tour) at every start.** Mounted packs still cost their size for the session; Godot cannot unmount a pack, so the remaining win is mounting fewer (thumbnails below prefetch whole sprite packs).
+4. **Done, see [after the pack store](#after-the-pack-store-optimization-4). Keep packs out of MEMFS between sessions.** Store downloaded packs in the Cache API or OPFS from JavaScript and write only the packs this session mounts into a non-persistent MEMFS folder (for example `/tmp/packs`), so startup no longer copies the whole IndexedDB store into memory. **Saves up to the whole cache (up to about 970 MB on a well-travelled device, 66 MB after this tour) at every start.** Mounted packs still cost their size for the session; Godot cannot unmount a pack, so the remaining win is mounting fewer (thumbnails below prefetch whole sprite packs).
 5. **Texture budget (LRU) for sprite sheets.** Evict `SheetFrames` sheets (and the AtlasTextures in `battle_view.textures` and `AnimatedPortrait._textures` that keep them alive) beyond a byte budget, say 64 to 128 MB; clear `battle_view.textures` on `close_battle`. Budget `game.textures` by bytes rather than 4,000 entries. **Bounds a long 后台搜宠 session** (today about 10 MB per new species forever); little change in this short tour.
 6. **Palette (R8) textures plus a palette shader.** Import sheets as 1 byte a pixel (`Image.FORMAT_R8` or L8) with a 256 x 1 palette texture and a `canvas_item` shader that looks up the colour. **Cuts every sheet's GPU memory by 4** (battle sheets 6.5 GB to 1.6 GB in total; 63 MB to about 16 MB in this tour) and also the web packs (the build stores RGBA today). Needs changes in `SheetFrames`, the thumbnail cutter and every node that draws sheet frames.
 7. **Pre-cut thumbnails at import.** Write one small still per species (or one atlas) in `tools/import_encounter_art.py` so 宠物大全 never loads and reads back whole sheets. **Removes about 120 MB of static peak, about 250 MB of footprint churn and about 80 MB of driver memory per scroll**, and on the web avoids prefetching every sprite pack (this tour mounted 118 more packs, about 80 MB, during and after one scroll).
 
 Items 1 to 3 are cheap. By these measurements they would take startup from 360 MB to roughly 200 MB of static memory and keep the web heap under about 400 MB instead of 805 MB (an estimate; re-measure).
+
+## After the pack store (optimization 4)
+
+Packs are cached by the page in an IndexedDB database of its own (`web/pack_store.js`) instead of `user://`, and only the packs a session mounts are written into MEMFS (`/tmp/packs/`, not persisted). The first visit after the update deletes the old `user://packs/` from IDBFS before the engine reads it. Details in [web client](web-client.md#pack-cache).
+
+Measured with `tools/web_pack_cache_probe.mjs` (headless Chrome for Testing with SwiftShader, 10 to 18 fps; macOS, 2026-09-30; before = the web build served from `main` just before this change). "Full cache" plants all 1,849 packs (913 MB) in IDBFS the way the old build stored them, as on a browser that has been everywhere; each visit is a new browser on the same profile. Playable = the waiting screen is gone and the village is built; prefetch = the neighbouring maps' packs are mounted too. MB.
+
+| Visit | Game code starts | Playable | Prefetch done | JS heap | Page renderer footprint | wasm heap | Pack requests |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| Before, full cache | 6.0 to 6.9 s | 6.1 to 6.9 s | 6.1 to 7.0 s | 952 to 993 | 1,347 to 1,875 | 138 | 0 |
+| After, first visit after the update (full old cache) | 5.1 s | 7.5 s | 61.5 s | 57 | 451 | 166 | 271 (28 MB) |
+| After, later visits | 5.4 to 5.6 s | 5.5 to 6.6 s | 9.4 to 9.6 s | 53 to 57 | 395 to 450 | 138 | 0 |
+| Before, first visit ever | 5.1 s | 6.5 s | 30.5 s | 62 | 571 | 166 | 271 |
+| After, first visit ever | 5.1 to 5.2 s | 6.4 to 7.4 s | 52.5 to 62.4 s | 54 to 55 | 448 to 566 | 166 | 271 |
+
+- **Memory:** with a full cache the old build held the whole cache as JS memory (about 950 MB of JS heap, 1.3 to 1.9 GB page renderer) on every start. Now a start holds only what it mounts: about 55 MB of JS heap and 400 to 450 MB page renderer, the same as a browser with no cache at all. On the web the IndexedDB copy costs disk, not memory.
+- **Startup time:** in Chrome the engine reached game code 1 to 1.5 s sooner with a full cache (the IDBFS copy is gone). Safari was not measured; the stall reported there on 正在读取素材索引 was the same IDBFS copy, which is larger there relative to its speed.
+- **Warm reads:** a warm start reads 271 packs from the store in about 4 s of background time at these frame rates (the village is playable before that). Reading through an `HTTPRequest` per pack (Godot advances one only once a frame) took about twice as long, hence the direct read.
+- **No network:** later visits make no request for a cached pack. The first visit after the update downloads the packs it uses again (the old cache is deleted, not moved).
+- **Not explained yet:** the first-ever visit's background prefetch took 52 to 62 s instead of 30 s in these runs (the same 271 packs over the same 4 connections; the time to playable did not change). Storing each response (a `clone()` read into a Blob and an IndexedDB write) is the likely cost; a version that passed the stream on without a clone was no faster. Worth a look on a real device before tuning.
 
 ## After packed maps (optimization 1)
 
