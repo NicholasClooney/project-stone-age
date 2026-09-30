@@ -1,13 +1,15 @@
 extends RefCounted
 ## 本机极速模式: runs the pet hunt scan in the native helper (tools/fast_hunt,
-## built to build/fast_hunt) on every CPU core, for automation.gd.
+## built to build/fast_hunt, fast_hunt.exe on Windows) on every CPU core, for
+## automation.gd.
 ##
 ## Every hunt roll i uses its own RandomNumberGenerator seeded with
 ## roll_seed(run_seed, i), in both the GDScript scan and the helper, so the two
 ## search the same rolls and a roll can be replayed on its own. The helper only
 ## searches: automation.gd re-rolls a reported hit in GDScript and acts only on
-## that result. The helper exists where a C compiler built it (macOS, Linux);
-## elsewhere, or if it fails, the GDScript scan runs instead.
+## that result. The helper exists where a C compiler built it (macOS, Linux,
+## Windows with MinGW-w64); elsewhere, or if it fails, the GDScript scan runs
+## instead.
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const METRICS := ["sum","attack","defence","speed"]
 const POLL_MSEC := 100
@@ -37,12 +39,13 @@ static func roll_seed(run_seed: int, index: int) -> int:
 
 static func helper_path() -> String:
 	if not helper_override.is_empty():return helper_override
-	return ProjectSettings.globalize_path("res://").path_join("../build/fast_hunt").simplify_path()
+	var file := "fast_hunt.exe" if OS.get_name()=="Windows" else "fast_hunt"
+	return ProjectSettings.globalize_path("res://").path_join("../build/"+file).simplify_path()
 
 ## "" when the helper can run here, else why not (shown in 自动抓极品).
 static func unavailable_reason() -> String:
 	if OS.has_feature("web"):return "网页版在浏览器里运行，没有本机辅助程序。"
-	if not OS.get_name() in ["macOS","Linux","FreeBSD"]:return "本机极速模式只支持 macOS 和 Linux。"
+	if not OS.get_name() in ["macOS","Linux","FreeBSD","Windows"]:return "本机极速模式只支持 macOS、Linux 和 Windows。"
 	if not FileAccess.file_exists(helper_path()):return "本机辅助程序未编译（需要 C 编译器，运行 scripts/build-fast-hunt.sh）。"
 	return ""
 

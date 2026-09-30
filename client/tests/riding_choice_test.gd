@@ -91,7 +91,7 @@ func certificate_mounts() -> void:
 		for pair in Riding.manifest().get("unavailable",[]):
 			if int(pair.pet) == 100288 and str(pair.reason).contains("--extra-source"):missing = true
 		check(Riding.composite("100000",100288) < 0 and missing,"without the 8.0 data 扬奇洛斯 is listed as unavailable")
-		print("SKIP: 8.0 certificate composites not imported (setup --with-8.0)")
+		print("SKIP: 8.0 certificate composites not imported (setup without --no-8.0)")
 		return
 	check(Riding.composite("100000",100288) == 101309 and Riding.composite("100005",100288) == 101309,"扬奇洛斯 draws character 0's composite for its colour variants")
 	check(Riding.composite("100035",100288) == 101317 and Riding.composite("100235",100374) == 101393,"other characters draw their own 扬奇洛斯 / 帖拉所伊朵 composite")

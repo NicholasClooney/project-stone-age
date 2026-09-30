@@ -13,16 +13,8 @@
 # login.
 set -eu
 cd "$(dirname "$0")/.."
-if [ -n "${GODOT_BIN:-}" ]; then
-  engine="$GODOT_BIN"
-elif [ -x .tools/Godot.app/Contents/MacOS/Godot ]; then
-  engine=.tools/Godot.app/Contents/MacOS/Godot
-elif command -v godot >/dev/null 2>&1; then
-  engine=godot
-else
-  echo 'Install Godot 4.6, or set GODOT_BIN to its executable.' >&2
-  exit 1
-fi
+. scripts/common.sh
+require_godot
 command=""
 for argument in "$@"; do
   case "$argument" in --*) ;; *) command="$argument"; break ;; esac

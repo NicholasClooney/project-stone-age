@@ -9,13 +9,8 @@
 # Delete build/web-packs/cache.json to force every pack to be rewritten.
 set -eu
 cd "$(dirname "$0")/.."
-if [ -n "${GODOT_BIN:-}" ]; then
-  engine="$GODOT_BIN"
-elif [ -x .tools/Godot.app/Contents/MacOS/Godot ]; then
-  engine=.tools/Godot.app/Contents/MacOS/Godot
-else
-  engine=godot
-fi
+. scripts/common.sh
+require_godot
 # One build at a time: two overlapping builds delete each other's packs.
 mkdir -p build
 if ! mkdir build/.web-build.lock 2>/dev/null; then
@@ -23,7 +18,8 @@ if ! mkdir build/.web-build.lock 2>/dev/null; then
   exit 1
 fi
 trap 'rm -rf build/.web-build.lock build/web/packs.new build/web-export' EXIT INT TERM
-python3 tools/plan_web_packs.py
+require_python
+"$PYTHON" tools/plan_web_packs.py
 # Export first, into a staging folder: its editor start also imports changed
 # assets, which the packs below are built from.
 rm -rf build/web-export
@@ -39,7 +35,8 @@ rm -rf build/web/packs.new
 if [ -d build/web/packs ]; then
   cp -c -R build/web/packs build/web/packs.new 2>/dev/null || cp -R build/web/packs build/web/packs.new
 fi
-"$engine" --headless --path client --audio-driver Dummy --script res://tools/build_web_packs.gd -- "$PWD/build/web-packs/plan.json" "$PWD/build/web/packs.new" "$PWD/build/web-packs/cache.json"
+root=$(native_path "$PWD")
+"$engine" --headless --path client --audio-driver Dummy --script res://tools/build_web_packs.gd -- "$root/build/web-packs/plan.json" "$root/build/web/packs.new" "$root/build/web-packs/cache.json"
 if [ ! -f build/web/packs.new/packs.json ]; then
   echo "Asset pack build failed; the previous build is still in place." >&2
   exit 1

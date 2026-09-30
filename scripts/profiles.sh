@@ -15,6 +15,8 @@
 # affected unless profiles.json uses its ports.
 set -eu
 cd "$(dirname "$0")/.."
+. scripts/common.sh
+require_python
 
 command="${1:-}"
 [ $# -gt 0 ] && shift
@@ -36,7 +38,7 @@ fi
 
 # "web <port> <fast threads>" then one "<name> <port> <save>" line per profile; refuses
 # duplicate names, ports or saves.
-table=$(python3 - "$config" <<'PROFILES'
+table=$("$PYTHON" - "$config" <<'PROFILES'
 import json, re, sys
 data = json.load(open(sys.argv[1], encoding="utf-8"))
 web = int(data.get("web_port", 8780))
@@ -64,10 +66,6 @@ threads_arg=""
 [ "$fast_threads" -gt 0 ] && threads_arg="--fast-threads=$fast_threads"
 profiles=$(printf '%s\n' "$table" | awk '$1!="web"')
 ports="$web_port $(printf '%s\n' "$profiles" | awk '{printf "%s ", $2}')"
-
-listening() {
-  lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
-}
 
 wait_for() {
   # wait_for <want: up|down> <seconds> <port>...
@@ -114,6 +112,7 @@ stop_listeners() {
     fi
   done
   for stopper in $stoppers; do wait "$stopper" || true; done
+  # Without lsof (Git Bash) the web server started here is stopped with Ctrl-C instead.
   pids=$(lsof -tnP -iTCP:"$web_port" -sTCP:LISTEN 2>/dev/null || true)
   [ -n "$pids" ] && kill -TERM $pids 2>/dev/null || true
   # shellcheck disable=SC2086
@@ -162,8 +161,8 @@ stop_listeners || { echo "Ports are still in use: $ports" >&2; exit 1; }
 tls=""
 web_tls=""
 if [ -z "${STONE_AGE_TLS_CERT:-}" ] && [ -f .tools/tls/cert.pem ] && [ -f .tools/tls/key.pem ]; then
-  STONE_AGE_TLS_CERT="$PWD/.tools/tls/cert.pem"
-  STONE_AGE_TLS_KEY="$PWD/.tools/tls/key.pem"
+  STONE_AGE_TLS_CERT=$(native_path "$PWD/.tools/tls/cert.pem")
+  STONE_AGE_TLS_KEY=$(native_path "$PWD/.tools/tls/key.pem")
 fi
 if [ -n "${STONE_AGE_TLS_CERT:-}" ] && [ -n "${STONE_AGE_TLS_KEY:-}" ]; then
   tls="--tls-cert=$STONE_AGE_TLS_CERT --tls-key=$STONE_AGE_TLS_KEY"
@@ -178,7 +177,7 @@ mkdir -p build/profiles
 children=""
 echo "==> Starting the web server with the lobby on $web_port"
 # shellcheck disable=SC2086
-python3 tools/serve_web.py --port "$web_port" --profiles "$config" $web_tls > build/profiles/web.log 2>&1 &
+"$PYTHON" tools/serve_web.py --port "$web_port" --profiles "$config" $web_tls > build/profiles/web.log 2>&1 &
 children="$children $!"
 printf '%s\n' "$profiles" | while read -r name port save; do
   [ -n "$name" ] || continue
@@ -187,7 +186,7 @@ done
 while read -r name port save; do
   [ -n "$name" ] || continue
   # shellcheck disable=SC2086
-  ./scripts/run.sh --headless --script res://server/server_main.gd -- $tls $threads_arg "--shutdown-file=$PWD/build/server-$port.shutdown" --port="$port" --save="$save" > "build/profiles/$name.log" 2>&1 &
+  ./scripts/run.sh --headless --script res://server/server_main.gd -- $tls $threads_arg "--shutdown-file=$(native_path "$PWD/build/server-$port.shutdown")" --port="$port" --save="$save" > "build/profiles/$name.log" 2>&1 &
   children="$children $!"
 done <<EOF
 $profiles
@@ -216,7 +215,7 @@ name=""
 if [ -n "$tailscale" ]; then
   echo "==> Forwarding over Tailscale"
   for port in $ports; do "$tailscale" serve --bg --https="$port" "$scheme://127.0.0.1:$port" >/dev/null; done
-  name=$("$tailscale" status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)
+  name=$("$tailscale" status --json 2>/dev/null | "$PYTHON" -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)
 fi
 page="https"
 [ "$scheme" = http ] && page="http"

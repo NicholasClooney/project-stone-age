@@ -17,6 +17,7 @@ import os
 import socket
 import ssl
 import subprocess
+import sys
 from functools import partial
 from pathlib import Path
 
@@ -143,13 +144,22 @@ class Handler(http.server.SimpleHTTPRequestHandler):
 
 def lan_addresses() -> list:
     found = []
-    for interface in ("en0", "en1"):
+    if sys.platform == "darwin":
+        for interface in ("en0", "en1"):
+            try:
+                address = subprocess.run(["ipconfig", "getifaddr", interface], capture_output=True, text=True, timeout=2).stdout.strip()
+            except (OSError, subprocess.TimeoutExpired):
+                address = ""
+            if address:
+                found.append(address)
+    else:
+        # The address of the default route; connecting a UDP socket sends nothing.
         try:
-            address = subprocess.run(["ipconfig", "getifaddr", interface], capture_output=True, text=True, timeout=2).stdout.strip()
-        except (OSError, subprocess.TimeoutExpired):
-            address = ""
-        if address:
-            found.append(address)
+            with socket.socket(socket.AF_INET, socket.SOCK_DGRAM) as probe:
+                probe.connect(("192.0.2.1", 9))
+                found.append(probe.getsockname()[0])
+        except OSError:
+            pass
     return found or [socket.gethostname()]
 
 

@@ -6,28 +6,30 @@ Play it on a Mac, in a browser, on Vision Pro, or on several devices at once aga
 
 ## Setup: one command
 
-The original game data is not in this repository. One script downloads and imports everything:
+The original game data is not in this repository. One script downloads and imports everything a working checkout has, including the web client:
 
 ```sh
 ./scripts/setup-original-data.sh
 ```
 
-It downloads, verifies and imports, skipping whatever is already done:
+Before downloading it lists each download with its size and the disk space needed, and asks (`--yes` skips the question, `--dry-run` only prints). Everything: 2.1 GB of downloads and about 9 GB on disk. It verifies, extracts and imports, skipping whatever is already done, so an interrupted run resumes.
 
 | What | From |
 | --- | --- |
-| Godot 4.6 (macOS; on Linux install it yourself as `godot`) | [godotengine/godot releases](https://github.com/godotengine/godot/releases/tag/4.6-stable) |
-| The StoneAge 2.5 client (about 550 MB, checked against a recorded SHA-256) | [99ds.com](https://99ds.com/) → `downloads/windows/Stoneage2.5-Windows.rar` |
+| Godot 4.6 and its web export templates (only the 39 MB of web templates are fetched) | [godotengine/godot releases](https://github.com/godotengine/godot/releases/tag/4.6-stable) |
+| The StoneAge 2.5 client (553 MB) and the 8.0 client's data (1.2 GB), checked against recorded SHA-256s | [99ds.com](https://99ds.com/) → `downloads/windows/` |
 | The original server data and client source the importers read | [chenmingbiao/stone-age](https://github.com/chenmingbiao/stone-age) and [anson1788/stoneage](https://github.com/anson1788/stoneage), at the revisions pinned in [local-references.json](docs/reverse-engineering/local-references.json) |
-| Python tools (Pillow) | `tools/requirements.txt`, into `.tools/asset-venv` |
+| Python tools (Pillow, soundfile) | `tools/requirements.txt`, into `.tools/asset-venv` |
+
+Then it builds the pet hunt's [本机极速模式](docs/technical/fast-hunt.md) helper (when a C compiler is present), runs Godot's first asset import and builds the web client.
 
 Options:
 
-- `--web` also installs the Godot web export templates, needed to build the browser version.
-- `--with-8.0` also fetches the StoneAge 8.0 client data (1.2 GB) from the same site, which has graphics the 2.5 client lacks.
-- `--import-only` re-runs the importers, for example after an importer changes.
+- `--no-8.0` skips the 8.0 data: 313 pet battle sprites, the later certificate mounts and two radio tracks are then missing.
+- `--no-web` skips the web export templates and the web build.
+- `--import-only` re-runs the importers, for example after an importer changes (a plain rerun also re-imports when an importer changed).
 
-The first run took about 40 minutes on a recent Mac before the art was packed into sprite sheets (most of it Godot's first asset import, which now handles about 5,200 files instead of about 123,000), plus the downloads. Needs `curl`, `python3`, `git` and `bsdtar` (built into macOS; `libarchive-tools` on Linux); a C compiler (`cc`, built into macOS) is optional and enables the pet hunt's [本机极速模式](docs/technical/fast-hunt.md). Downloaded executables are never extracted or run. Details, checksums and manual steps: [original data setup](docs/development/original-data-setup.md).
+The first run takes about half an hour on a recent Mac, plus the downloads. Needs `curl`, `git`, Python 3.10+ and `bsdtar` (built into macOS; `libarchive-tools` on Linux); a C compiler (`cc`, built into macOS) is optional. **Windows:** use WSL2 or Git Bash, see [Windows setup](docs/development/original-data-setup.md#windows). Downloaded executables are never extracted or run. Details, sizes, checksums and manual steps: [original data setup](docs/development/original-data-setup.md).
 
 The client data is community-distributed proprietary game data of unverified lineage. Keep it local: imported assets are gitignored, and none of it may go into a public release without resolving its distribution status.
 

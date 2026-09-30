@@ -19,6 +19,9 @@ Every suite gets its own user:// folder (STONE_AGE_TEST_USER_DIR, see
 scripts/run.sh), so parallel suites and other checkouts never share files and
 none writes next to the real game's save. A passing suite's folder is deleted;
 a failing one's is kept and listed.
+
+The shell scripts are started through `sh`, so this also runs from Git Bash on
+Windows, where Python cannot execute a .sh file itself.
 """
 import argparse
 import json
@@ -56,6 +59,8 @@ def user_dir_root():
     relative = f"Godot/app_userdata/Stone Age tests/{os.path.basename(checkout)}-{crc}/run-{os.getpid()}"
     if sys.platform == "darwin":
         data = Path.home() / "Library" / "Application Support"
+    elif os.name == "nt":
+        data = Path(os.environ.get("APPDATA") or Path.home() / "AppData" / "Roaming")
     else:
         data = Path(os.environ.get("XDG_DATA_HOME") or Path.home() / ".local" / "share")
     return relative, data / relative
@@ -82,7 +87,7 @@ def main():
     queue = sorted(dict.fromkeys(chosen or suites_from_test_sh()), key=lambda name: -durations.get(name, 60.0))
     user_relative, user_root = user_dir_root()
 
-    subprocess.run(["./scripts/run.sh", "--headless", "--editor", "--import", "--quit"], cwd=ROOT,
+    subprocess.run(["sh", "./scripts/run.sh", "--headless", "--editor", "--import", "--quit"], cwd=ROOT,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     running = {}
     results = {}
@@ -94,7 +99,7 @@ def main():
             name = queue.pop(0)
             log = open(logs / f"{name}.log", "w")
             env = dict(os.environ, STONE_AGE_TEST_USER_DIR=f"{user_relative}/{name}")
-            process = subprocess.Popen(["./scripts/run.sh", "--headless", "--script", f"res://tests/{name}.gd"],
+            process = subprocess.Popen(["sh", "./scripts/run.sh", "--headless", "--script", f"res://tests/{name}.gd"],
                                        cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, env=env)
             running[name] = (process, log, time.monotonic())
         time.sleep(0.2)

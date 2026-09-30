@@ -10,24 +10,17 @@
 # file the backend keeps current. Progress is saved after every settlement.
 set -eu
 cd "$(dirname "$0")/.."
-if [ -n "${GODOT_BIN:-}" ]; then
-  engine="$GODOT_BIN"
-elif [ -x .tools/Godot.app/Contents/MacOS/Godot ]; then
-  engine=.tools/Godot.app/Contents/MacOS/Godot
-elif command -v godot >/dev/null 2>&1; then
-  engine=godot
-else
-  echo 'Install Godot 4.6, or set GODOT_BIN to its executable.' >&2
-  exit 1
-fi
+. scripts/common.sh
+require_godot
+require_python
 # The pet hunt's 本机极速模式 helper; without a compiler the hunt scans in GDScript.
 ./scripts/build-fast-hunt.sh --quiet || true
 tls=""
 web_tls=""
 # Certificates from scripts/make-cert.sh are used automatically.
 if [ -z "${STONE_AGE_TLS_CERT:-}" ] && [ -f .tools/tls/cert.pem ] && [ -f .tools/tls/key.pem ]; then
-  STONE_AGE_TLS_CERT="$PWD/.tools/tls/cert.pem"
-  STONE_AGE_TLS_KEY="$PWD/.tools/tls/key.pem"
+  STONE_AGE_TLS_CERT=$(native_path "$PWD/.tools/tls/cert.pem")
+  STONE_AGE_TLS_KEY=$(native_path "$PWD/.tools/tls/key.pem")
 fi
 if [ -n "${STONE_AGE_TLS_CERT:-}" ] && [ -n "${STONE_AGE_TLS_KEY:-}" ]; then
   tls="--tls-cert=$STONE_AGE_TLS_CERT --tls-key=$STONE_AGE_TLS_KEY"
@@ -42,7 +35,7 @@ else
 fi
 if [ -f build/web/index.html ]; then
   # shellcheck disable=SC2086
-  python3 tools/serve_web.py --port "${STONE_AGE_WEB_PORT:-8780}" $web_tls &
+  "$PYTHON" tools/serve_web.py --port "${STONE_AGE_WEB_PORT:-8780}" $web_tls &
   web_pid=$!
   trap 'kill "$web_pid" 2>/dev/null' EXIT INT TERM
 fi
@@ -51,6 +44,6 @@ for argument in "$@"; do
   case "$argument" in --port=*) backend_port="${argument#--port=}" ;; esac
 done
 mkdir -p build
-shutdown_file="$PWD/build/server-$backend_port.shutdown"
+shutdown_file=$(native_path "$PWD/build/server-$backend_port.shutdown")
 # shellcheck disable=SC2086
 "$engine" --headless --path client --audio-driver Dummy --script res://server/server_main.gd -- $tls "--shutdown-file=$shutdown_file" "$@"

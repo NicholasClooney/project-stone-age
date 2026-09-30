@@ -1,18 +1,8 @@
 #!/bin/sh
 set -eu
 cd "$(dirname "$0")/.."
-if [ -n "${GODOT_BIN:-}" ]; then
-  engine="$GODOT_BIN"
-elif [ -x .tools/Godot.app/Contents/MacOS/Godot ]; then
-  engine=.tools/Godot.app/Contents/MacOS/Godot
-elif command -v godot >/dev/null 2>&1; then
-  engine=godot
-elif [ -x /Applications/Godot.app/Contents/MacOS/Godot ]; then
-  engine=/Applications/Godot.app/Contents/MacOS/Godot
-else
-  echo 'Install Godot 4.6, or set GODOT_BIN to its executable.' >&2
-  exit 1
-fi
+. scripts/common.sh
+require_godot
 # The pet hunt's 本机极速模式 helper; without a compiler the hunt scans in GDScript.
 ./scripts/build-fast-hunt.sh --quiet || true
 if [ ! -d client/.godot/imported ]; then
@@ -36,8 +26,9 @@ case "$script" in
       STONE_AGE_TEST_USER_DIR="Godot/app_userdata/Stone Age tests/$(basename "$checkout")-$(printf '%s' "$checkout" | cksum | cut -d ' ' -f 1)"
     fi
     export STONE_AGE_TEST_USER_DIR
-    case "$(uname)" in
-      Darwin) data_root="$HOME/Library/Application Support" ;;
+    case "$platform" in
+      macos) data_root="$HOME/Library/Application Support" ;;
+      windows) data_root=$(native_path "${APPDATA:-$HOME/AppData/Roaming}") ;;
       *) data_root="${XDG_DATA_HOME:-$HOME/.local/share}" ;;
     esac
     # Godot's own log would otherwise rotate the real game's user://logs.

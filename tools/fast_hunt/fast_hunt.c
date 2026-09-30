@@ -37,14 +37,85 @@
  * the pool as it grows keeps exactly that set.
  *
  * Build: cc -O2 -pthread -o build/fast_hunt tools/fast_hunt/fast_hunt.c
+ * Windows (MinGW-w64 gcc, winpthreads): add -static and -lshell32 and name it
+ * build/fast_hunt.exe; scripts/build-fast-hunt.sh does both.
  */
+#ifdef _WIN32
+#define __USE_MINGW_ANSI_STDIO 1
+#endif
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <pthread.h>
 #include <time.h>
+
+/* ---- Platform ---------------------------------------------------------------
+ * Paths arrive as UTF-8 (Godot's user folder contains the project's Chinese
+ * name), the status file is replaced atomically while Godot may be reading
+ * it, and the helper stops when the backend that started it is gone. */
+#ifdef _WIN32
+#include <windows.h>
+#include <shellapi.h>
+#include <tlhelp32.h>
+#include <fcntl.h>
+#include <io.h>
+static wchar_t *wide(const char *text) {
+    int n = MultiByteToWideChar(CP_UTF8, 0, text, -1, NULL, 0);
+    wchar_t *w = calloc(n > 0 ? n : 1, sizeof *w);
+    if (n > 0) MultiByteToWideChar(CP_UTF8, 0, text, -1, w, n);
+    return w;
+}
+static FILE *open_file(const char *path, const char *mode) {
+    wchar_t *w = wide(path), *m = wide(mode);
+    FILE *f = _wfopen(w, m);
+    free(w); free(m);
+    return f;
+}
+/* Godot opens the status file without FILE_SHARE_DELETE, so a replace can
+ * fail for the moment it is being read: retry briefly. */
+static void replace_file(const char *from, const char *to) {
+    wchar_t *a = wide(from), *b = wide(to);
+    for (int attempt = 0; attempt < 200; attempt++) {
+        if (MoveFileExW(a, b, MOVEFILE_REPLACE_EXISTING)) break;
+        Sleep(5);
+    }
+    free(a); free(b);
+}
+static int cpu_count(void) { SYSTEM_INFO info; GetSystemInfo(&info); return (int)info.dwNumberOfProcessors; }
+static HANDLE parent_process;
+static void watch_parent(void) {
+    DWORD self = GetCurrentProcessId(), parent = 0;
+    HANDLE snapshot = CreateToolhelp32Snapshot(TH32CS_SNAPPROCESS, 0);
+    PROCESSENTRY32W entry; entry.dwSize = sizeof entry;
+    if (snapshot != INVALID_HANDLE_VALUE && Process32FirstW(snapshot, &entry)) {
+        do { if (entry.th32ProcessID == self) { parent = entry.th32ParentProcessID; break; } } while (Process32NextW(snapshot, &entry));
+    }
+    if (snapshot != INVALID_HANDLE_VALUE) CloseHandle(snapshot);
+    parent_process = parent ? OpenProcess(SYNCHRONIZE, FALSE, parent) : NULL;
+}
+static int parent_gone(void) { return parent_process && WaitForSingleObject(parent_process, 0) == WAIT_OBJECT_0; }
+/* argv in UTF-8 instead of the ANSI code page. */
+static char **utf8_arguments(int *argc) {
+    wchar_t **w = CommandLineToArgvW(GetCommandLineW(), argc);
+    char **out = calloc(*argc + 1, sizeof *out);
+    for (int i = 0; i < *argc; i++) {
+        int n = WideCharToMultiByte(CP_UTF8, 0, w[i], -1, NULL, 0, NULL, NULL);
+        out[i] = calloc(n > 0 ? n : 1, 1);
+        if (n > 0) WideCharToMultiByte(CP_UTF8, 0, w[i], -1, out[i], n, NULL, NULL);
+    }
+    LocalFree(w);
+    return out;
+}
+#else
 #include <unistd.h>
+static FILE *open_file(const char *path, const char *mode) { return fopen(path, mode); }
+static void replace_file(const char *from, const char *to) { rename(from, to); }
+static int cpu_count(void) { return (int)sysconf(_SC_NPROCESSORS_ONLN); }
+static pid_t parent_process;
+static void watch_parent(void) { parent_process = getppid(); }
+static int parent_gone(void) { return getppid() != parent_process; }
+#endif
 
 /* ---- Godot RandomPCG ------------------------------------------------------ */
 typedef struct { uint64_t state, inc; } Rng;
@@ -109,7 +180,7 @@ static void read_stat(FILE *f, StatFilter *s) {
 }
 
 static void load(const char *path) {
-    FILE *f = fopen(path, "r");
+    FILE *f = open_file(path, "r");
     if (!f) { perror(path); exit(2); }
     need(f, "fasthunt"); if (num(f) != 1) { fprintf(stderr, "input: version\n"); exit(2); }
     need(f, "run_seed"); run_seed = (uint64_t)num(f);
@@ -447,7 +518,7 @@ static const char *status_path;
 static void write_status(const char *kind, int64_t index, int slot, const Tally *t) {
     char tmp[4096];
     snprintf(tmp, sizeof tmp, "%s.tmp", status_path);
-    FILE *f = fopen(tmp, "w");
+    FILE *f = open_file(tmp, "wb");
     if (!f) return;
     fprintf(f, "%s %lld %d %llu %d %llu %d %d\n", kind, (long long)index, slot, (unsigned long long)t->inspected, t->best, (unsigned long long)t->pred_rejects, t->best_sum, t->best_attack);
     if (nsurvey > 0) {
@@ -460,7 +531,7 @@ static void write_status(const char *kind, int64_t index, int slot, const Tally 
         pthread_mutex_unlock(&pool_lock);
     }
     fclose(f);
-    rename(tmp, status_path);
+    replace_file(tmp, status_path);
 }
 
 static double now(void) { struct timespec ts; clock_gettime(CLOCK_MONOTONIC, &ts); return ts.tv_sec + ts.tv_nsec / 1e9; }
@@ -485,6 +556,10 @@ static int print_roll(int64_t index) {
 }
 
 int main(int argc, char **argv) {
+#ifdef _WIN32
+    argv = utf8_arguments(&argc);
+    _setmode(_fileno(stdout), _O_BINARY);  /* LF, as on Unix: the tests parse --roll output */
+#endif
     if (argc < 3) { fprintf(stderr, "usage: fast_hunt INPUT STATUS | fast_hunt INPUT --roll FROM [COUNT]\n"); return 2; }
     load(argv[1]);
     if (!strcmp(argv[2], "--roll")) {
@@ -493,7 +568,7 @@ int main(int argc, char **argv) {
         return 0;
     }
     status_path = argv[2];
-    int cores = (int)sysconf(_SC_NPROCESSORS_ONLN);
+    int cores = cpu_count();
     if (threads <= 0) threads = cores > 2 ? cores - 1 : 1;
     ring_size = threads * 4;
     ring = calloc(ring_size, sizeof *ring);
@@ -505,7 +580,7 @@ int main(int argc, char **argv) {
     const char *kind = NULL; int64_t index = 0; int slot = -1;
     /* The backend kills this process when the hunt stops; if the backend
      * itself goes away, stop too rather than scan without an owner. */
-    pid_t parent = getppid();
+    watch_parent();
     pthread_mutex_lock(&lock);
     while (!kind) {
         Chunk *k = &ring[committed_chunk % ring_size];
@@ -522,7 +597,7 @@ int main(int argc, char **argv) {
             if (kind || now() - last <= 0.1) continue;
         }
         if (now() - last > 0.1) {
-            if (getppid() != parent) { kind = "orphaned"; break; }
+            if (parent_gone()) { kind = "orphaned"; break; }
             pthread_mutex_unlock(&lock);
             write_status("progress", next, 0, &total);
             last = now();

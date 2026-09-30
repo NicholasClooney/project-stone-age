@@ -1,0 +1,3 @@
+# LF in every checkout, including Git for Windows (autocrlf): the shell
+# scripts fail with CRLF, and generated files are compared byte for byte.
+* text=auto eol=lf

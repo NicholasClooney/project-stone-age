@@ -7,4 +7,6 @@
 # Exit status is non-zero if any suite failed. See tools/run_suites.py.
 set -eu
 cd "$(dirname "$0")/.."
-exec python3 tools/run_suites.py "$@"
+. scripts/common.sh
+require_python
+exec "$PYTHON" tools/run_suites.py "$@"

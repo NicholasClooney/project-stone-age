@@ -8,7 +8,7 @@ GM 调试 can grant the special pets (docs/reverse-engineering/special-pets.md).
 That includes the 8.0 pets import_encounters.py adds from the album
 (docs/reverse-engineering/pets-8.0.md). About half the pet sprites exist only
 in the 8.0 client; pass it as --extra-source (scripts/setup-original-data.sh
---with-8.0 does). A sprite is read from the first client that has it
+does by default). A sprite is read from the first client that has it
 complete. The manifest and the battle view key bitmaps by number, and the 8.0
 client reuses some 2.5 numbers for other pictures: such a bitmap of an 8.0
 sprite is renumbered to RENUMBER + its 8.0 number (a number both clients

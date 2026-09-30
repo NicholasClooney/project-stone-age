@@ -10,6 +10,8 @@
 # Any other arguments go to serve.sh (for example --save=user://try.json).
 set -eu
 cd "$(dirname "$0")/.."
+. scripts/common.sh
+require_python
 
 web_port="${STONE_AGE_WEB_PORT:-8780}"
 backend_port=8781
@@ -26,6 +28,10 @@ if command -v tailscale >/dev/null 2>&1; then
   tailscale=tailscale
 elif [ -x /Applications/Tailscale.app/Contents/MacOS/Tailscale ]; then
   tailscale=/Applications/Tailscale.app/Contents/MacOS/Tailscale
+elif command -v tailscale.exe >/dev/null 2>&1; then
+  # WSL2 with Tailscale installed on Windows: Windows reaches the server
+  # through WSL's localhost forwarding.
+  tailscale=tailscale.exe
 else
   echo "Tailscale CLI not found." >&2
   exit 1
@@ -37,10 +43,6 @@ if [ -f .tools/tls/cert.pem ] && [ -f .tools/tls/key.pem ]; then scheme="https+i
 forwards_off() {
   "$tailscale" serve --https="$web_port" off >/dev/null 2>&1 || true
   "$tailscale" serve --https="$backend_port" off >/dev/null 2>&1 || true
-}
-
-listening() {
-  lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
 }
 
 wait_for() {
@@ -101,7 +103,7 @@ fi
 echo "==> Forwarding over Tailscale"
 "$tailscale" serve --bg --https="$web_port" "$scheme://127.0.0.1:$web_port" >/dev/null
 "$tailscale" serve --bg --https="$backend_port" "$scheme://127.0.0.1:$backend_port" >/dev/null
-name=$("$tailscale" status --json 2>/dev/null | python3 -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)
+name=$("$tailscale" status --json 2>/dev/null | "$PYTHON" -c 'import json,sys; print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)
 echo
 echo "Ready: https://${name:-<this Mac>.<tailnet>.ts.net}:$web_port/"
 echo "Ctrl-C stops the server and removes the forwards."

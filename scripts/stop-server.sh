@@ -12,6 +12,8 @@
 # Exits 0 once both ports are free, 1 if something still listens.
 set -eu
 cd "$(dirname "$0")/.."
+. scripts/common.sh
+PYTHON=$(find_python)
 
 web_port="${STONE_AGE_WEB_PORT:-8780}"
 backend_port=8781
@@ -22,10 +24,6 @@ for argument in "$@"; do
   esac
 done
 request="build/server-$backend_port.shutdown"
-
-listening() {
-  lsof -nP -iTCP:"$1" -sTCP:LISTEN >/dev/null 2>&1
-}
 
 both_down() {
   ! listening "$web_port" && ! listening "$backend_port"
@@ -61,6 +59,7 @@ fi
 
 rm -f "$request"
 echo "The server did not quit on request; sending TERM (a running hunt resumes from its periodic resume file)." >&2
+command -v lsof >/dev/null 2>&1 || { echo "No lsof to find the processes (Git Bash): stop the server with Ctrl-C in its window." >&2; exit 1; }
 pids=$(lsof -tnP -iTCP:"$web_port" -iTCP:"$backend_port" -sTCP:LISTEN 2>/dev/null || true)
 if [ -n "$pids" ]; then kill -TERM $pids 2>/dev/null || true; fi
 if wait_down 10; then

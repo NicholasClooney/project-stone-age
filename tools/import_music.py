@@ -2,7 +2,7 @@
 
 Source: the client's data/bgm/sabgm_*.wav. The 8.0 client has 26 tracks, the
 2.5 client 24 (no t11/t12, and an older t9); pass the 8.0 folder when it is
-extracted, see scripts/setup-original-data.sh --with-8.0.
+extracted, as scripts/setup-original-data.sh does by default.
 
 Titles come from bgm_tbl in the 8.5 client source (system/t_music.cpp,
 references/anson1788-stoneage). Its comments are GBK text that was decoded

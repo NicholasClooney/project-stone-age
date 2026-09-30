@@ -7,7 +7,7 @@ The pet hunt (`client/server/automation.gd`, `scan_once`) rolls wild troops at t
 | Piece | Role |
 | --- | --- |
 | `tools/fast_hunt/fast_hunt.c` | C99 helper with pthreads, no dependencies. Scans rolls, reports progress and the first hit. |
-| `scripts/build-fast-hunt.sh` | Builds `build/fast_hunt` with `cc -O2 -pthread` when missing or stale. Called by `run.sh`, `serve.sh` and `setup-original-data.sh`. Without a compiler it prints a note and exits 0. |
+| `scripts/build-fast-hunt.sh` | Builds `build/fast_hunt` with `cc -O2 -pthread` when missing or stale; in Git Bash on Windows `build/fast_hunt.exe` with MinGW-w64 gcc (`-static -lshell32`, winpthreads). Called by `run.sh`, `serve.sh` and `setup-original-data.sh`. Without a compiler it prints a note and exits 0. |
 | `client/server/fast_hunt.gd` | Per-roll seed, availability, writing the helper's input, launching, polling and killing it. |
 | `client/server/automation.gd` | `_fast_process()` drives the helper from the hunt tick; `roll_at`, `first_match` and `_scan_index` replay a roll in GDScript. |
 | `hunt.fast` setting | Per character, default `true` (`client/data/automation_defaults.json`). |
@@ -77,7 +77,7 @@ The number of worker threads belongs to the server's computer, not to a characte
 
 - It runs only when all of these hold:
   - `hunt.fast` is on and `hunt.rate` is 0 (不限速). A positive rate asks for a throttled scan, which stays in GDScript.
-  - The backend's computer can run the helper. `FastHunt.unavailable_reason()` is empty on macOS or Linux when `build/fast_hunt` exists; the web build and Windows fall back.
+  - The backend's computer can run the helper. `FastHunt.unavailable_reason()` is empty on macOS or Linux when `build/fast_hunt` exists, and on Windows when `build/fast_hunt.exe` exists (MinGW-w64 gcc, see [original data setup](../development/original-data-setup.md#windows)); the web build falls back.
   - The hunt uses the real encounter catalog. Tests that swap in a fixture catalog stay in GDScript.
 - The helper starts lazily from the hunt tick. A direct `scan_once()` (the test seam) stops a running helper and continues in GDScript from the committed counters. This is safe because every roll is independent.
 - If the helper cannot start or exits without a final report, the hunt switches to GDScript and the window says why.

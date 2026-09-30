@@ -27,7 +27,7 @@ Instead each album-only pet was paired by eye: its face graphic (`face`, an 8.0 
 
 - Template id 10000 + album number, `source: "8.0"`, `stats_known: false`, `album`, `face`. No encounter group names them, so they never spawn.
 - 宠物大全 shows the sprite, the album family and "没有原版数值"; no Lv.120 prediction. GM 调试 refuses to grant them (a pet needs an initial value and weights to be born).
-- Their sprites come from the 8.0 data, so they need `setup-original-data.sh --with-8.0`.
+- Their sprites come from the 8.0 data, so they need the 8.0 data, which `setup-original-data.sh` imports unless run with `--no-8.0`.
 
 ## Battle sprites from two clients
 

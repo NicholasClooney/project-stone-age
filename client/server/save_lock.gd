@@ -38,9 +38,12 @@ static func holder_pid(save_path: String) -> int:
 
 ## Whether `pid` is a running Godot process (a server or the game). Godot's
 ## own OS.is_process_running only knows its child processes, so this asks ps;
-## a reused pid of another program does not count.
+## a reused pid of another program does not count. Windows asks tasklist.
 static func running_server(pid: int) -> bool:
-	if pid <= 0 or not OS.get_name() in ["macOS","Linux","FreeBSD"]:return false
 	var output: Array = []
+	if pid > 0 and OS.get_name()=="Windows":
+		if OS.execute("tasklist",["/FI","PID eq %d" % pid,"/FO","CSV","/NH"],output)!=0:return false
+		return not output.is_empty() and str(output[0]).to_lower().contains("godot")
+	if pid <= 0 or not OS.get_name() in ["macOS","Linux","FreeBSD"]:return false
 	if OS.execute("ps",["-p",str(pid),"-o","comm="],output)!=0:return false
 	return not output.is_empty() and str(output[0]).to_lower().contains("godot")
