@@ -59,18 +59,25 @@ def effective_area(areas, x, y):
     return chosen
 
 
-def landing(area, areas, collision, forbidden):
+def ground_cells(collision):
+    return {(x, y) for x, y, _ in collision['ground']}
+
+
+def landing(area, areas, collision, forbidden, ground=None):
     width, height = collision['width'], collision['height']
     x1, y1, x2, y2 = area['rect']
     x1, y1, x2, y2 = max(0, x1), max(0, y1), min(width - 1, x2), min(height - 1, y2)
     cx, cy = (x1 + x2) // 2, (y1 + y2) // 2
+    # Unblocked cells without a ground picture are the original's black void
+    # outside the walls (source tile ids below 100 have no graphic).
+    ground = ground if ground is not None else ground_cells(collision)
     # Search actual tiles nearest center; verify the same highest-priority region.
     for radius in range(max(x2-x1, y2-y1) + 1):
         for y in range(max(y1, cy-radius), min(y2, cy+radius)+1):
             for x in range(max(x1, cx-radius), min(x2, cx+radius)+1):
                 if max(abs(x-cx), abs(y-cy)) != radius:
                     continue
-                if collision['blocked'][y*width+x] or (x, y) in forbidden:
+                if collision['blocked'][y*width+x] or (x, y) not in ground or (x, y) in forbidden:
                     continue
                 active = effective_area(areas, x, y)
                 if active and active['id'] == area['id']:
@@ -87,6 +94,7 @@ def build(root):
         if int(key) not in (100, 200) and info['kind'] != 'training':
             continue
         collision = load_map(root/info['path'])
+        ground = ground_cells(collision)
         areas = [a for a in catalog['areas'] if a['map_id'] == int(key)]
         forbidden = {tuple(p['cell']) for p in world['portals'] if p['from_map'] == int(key)}
         forbidden |= {tuple(n['cell']) for n in world['residents'] if n['map_id'] == int(key)}
@@ -94,7 +102,7 @@ def build(root):
             enemies = ordinary_enemies(area, catalog, available)
             if not enemies:
                 continue
-            point = landing(area, areas, collision, forbidden)
+            point = landing(area, areas, collision, forbidden, ground)
             if point is None:
                 continue
             weight = sum(w for _, _, w in enemies)

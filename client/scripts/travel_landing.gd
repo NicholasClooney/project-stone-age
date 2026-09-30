@@ -25,6 +25,7 @@ func safe_destination(map_id: int, target: Vector2i) -> Vector2i:
    for x in range(-radius,radius+1):
     if maxi(absi(x),absi(y))!=radius:continue
     var point:=target+Vector2i(x,y)
-    if bounds.has_point(point) and int(data.blocked[point.y*int(data.width)+point.x])==0 and not occupied.has(point) and not links.has(point):return point
+    # A cell without ground is the black void outside the original's walls.
+    if bounds.has_point(point) and int(data.blocked[point.y*int(data.width)+point.x])==0 and int(data.ground[point.y*int(data.width)+point.x])!=0 and not occupied.has(point) and not links.has(point):return point
  return Vector2i(-1,-1)
 

@@ -5,13 +5,20 @@ class TrainingSpotsTest(unittest.TestCase):
     def test_priority_and_solid_landing(self):
         base={'id':1,'rect':[0,0,2,2],'priority':1}
         overlay={'id':2,'rect':[1,1,1,1],'priority':2}
-        data={'width':3,'height':3,'blocked':[False]*9}
+        data={'width':3,'height':3,'blocked':[False]*9,'ground':[[x,y,1] for y in range(3) for x in range(3)]}
         point=landing(base,[base,overlay],data,{(0,0)})
         self.assertNotEqual(point,[1,1])
         self.assertNotEqual(point,[0,0])
         self.assertEqual(effective_area([base,overlay],*point)['id'],1)
         self.assertEqual(effective_area([base,dict(overlay,priority=1)],1,1)['id'],1)
         self.assertIsNone(landing(base,[base],dict(data,blocked=[True]*9),set()))
+
+    def test_landing_skips_void(self):
+        # Unblocked cells with no ground picture are the black void outside walls.
+        area={'id':1,'rect':[0,0,2,2],'priority':1}
+        data={'width':3,'height':3,'blocked':[False]*9,'ground':[[2,2,7]]}
+        self.assertEqual(landing(area,[area],data,set()),[2,2])
+        self.assertIsNone(landing(area,[area],dict(data,ground=[]),set()))
 
     def test_gate_art_and_weight_filter(self):
         enemy={'template_id':1,'max_count':1,'level_min':1,'level_max':2}
