@@ -2,7 +2,6 @@
  "schema": 1,
  "source": "gmsv/data/map LS2MAP floor names of unsupported_portals destinations",
  "maps": {
-  "40": "奇努伊关卡",
   "117": "迷宫",
   "120": "靠近水田的家",
   "121": "岬之家",

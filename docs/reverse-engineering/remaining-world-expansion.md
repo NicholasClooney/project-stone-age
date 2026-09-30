@@ -266,6 +266,48 @@ Deferred original map names (not imported):
 | 方位的祠 | 31609 | arrival component lacks verified return |
 | 方位的祠 | 31610 | arrival component lacks verified return |
 
+## Seimu
+
+Adds eight connected scenery maps (404 total after this region), reached through
+original doors from developer-only island 400 and the Giru underwater passages.
+Island 400 keeps its training kind, original encounters and `dev_only` flag.
+No original services, dream-cave quest, boss or event progression is restored.
+The three exact `genout/wpm_40_1_8`, `genout/wpm_40_13_1`, and
+`genout/wpm_40_12_18` gates directly open the original underwater return routes
+as a developer scenery convenience. No `400/sb_muge1.arg` or `sb_muge2.arg`
+event is whitelisted: those boss scripts incorrectly send floor42 to floor41.
+Ordinary compiled dream-cave teleport NPCs retain their original destinations.
+
+The region has 141 original portal records touching the eight added maps: 135
+active and six disabled. Two conflicting destinations at 42(45,59) remain
+closed, and four additional floor42 doors enter components without a restored
+return path. All eight map spawns and reachable active arrivals can return to
+an existing island. Hospital6005 has only village6000(44,67) as an incoming
+door; village(43,67) is an original return destination, not an invented entry.
+Room6012 has no door in the full recursive NPC/mapwarp scan and stays deferred.
+
+Map40's original 20×20 LS2MAP is 1645 bytes, including one trailing zero byte.
+Original `server_readmap` reads exactly two 400-short layers and ignores it.
+The importer accepts this exception only for ID40, these dimensions and length,
+that zero byte, and SHA256
+`75eef0bbf69f257b7f3705a1fef98242a4cf2d375cb8838f87a5411297fd9727`.
+Unknown trailing data, including another file with the same header, is rejected.
+The existing 8.0 logical15401 fallback for island400 remains namespaced; all
+added maps have zero missing graphics and a dedicated on-demand web map pack.
+
+| Map | ID | Encounter area | Random encounters | NPC gate directly opened |
+| --- | --- | --- | --- | --- |
+| 奇努伊关卡 | 40 | yes | no | three exact gates listed above |
+| 梦幻的洞窟 | 41 | yes | yes | no |
+| 梦幻的洞窟 | 42 | yes | yes | no; conflicting/non-returning internal doors closed |
+| 沙姆岛 (existing developer training map) | 400 | yes | yes | no |
+| 奇努伊村 | 6000 | yes | no | no |
+| 奇努伊的肉店 | 6004 | no | no | no |
+| 奇努伊的医院 | 6005 | no | no | no |
+| 奇努伊的村长家 | 6006 | no | no | no |
+| 奇努伊的便利商店 | 6009 | no | no | no |
+| 奇努伊室内 (deferred; no original doors) | 6012 | no | no | no |
+
 ## Rebuild / verify
 
 After each region commit, main must re-run the world importer,
@@ -282,4 +324,5 @@ python3 tools/build_exit_names.py
 ./scripts/run.sh --headless --editor --import --quit
 .tools/asset-venv/bin/python tools/verify_world_regions.py --region sainasu
 .tools/asset-venv/bin/python tools/verify_world_regions.py --region giiru
+.tools/asset-venv/bin/python tools/verify_world_regions.py --region seimu
 ```

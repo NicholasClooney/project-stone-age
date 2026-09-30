@@ -1,0 +1,30 @@
+{
+  "maps": [
+    40,
+    41,
+    42,
+    6000,
+    6004,
+    6005,
+    6006,
+    6009,
+    6012
+  ],
+  "towns": [
+    6000
+  ],
+  "interiors": [
+    6004,
+    6005,
+    6006,
+    6009
+  ],
+  "gate_scripts": [
+    "genout/wpm_40_1_8",
+    "genout/wpm_40_13_1",
+    "genout/wpm_40_12_18"
+  ],
+  "deferred": {
+    "6012": "No original incoming or outgoing warp found in full NPC/mapwarp scan"
+  }
+}
