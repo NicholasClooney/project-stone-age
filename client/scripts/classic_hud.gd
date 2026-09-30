@@ -36,7 +36,16 @@ func _ready() -> void:
 	var names := ["游戏设定","交换名片","加入队伍","交易","家族"]
 	var ids := [26101,26103,26105,26234,26237]
 	for i in range(ids.size()):
-		icon(left,ids[i],ids[i]+1,Vector2(3+i*33,3),names[i])
+		var item := icon(left,ids[i],ids[i]+1,Vector2(3+i*33,3),names[i])
+		# LAN phase 3 (scripts/party_panel.gd): 游戏设定 holds the 组队 switch,
+		# 加入队伍 joins the player in front or leaves the party.
+		if i==0:
+			item.name = "GameSettingsButton"
+			item.pressed.connect(func():if is_instance_valid(world.party_panel):world.party_panel.toggle_settings())
+		elif i==2:
+			item.name = "PartyButton"
+			item.pressed.connect(func():if is_instance_valid(world.party_panel):world.party_panel.press_party_button())
+			item.mouse_entered.connect(func():if is_instance_valid(world.party_panel):hover_label = world.party_panel.button_caption())
 	right_panel = Control.new()
 	right_panel.scale = Vector2.ONE*SCALE
 	right_panel.size = Vector2(164,63)

@@ -71,6 +71,10 @@ func switch_area(wilderness: bool, destination: Vector2i) -> bool:
 	return load_area_id(100 if wilderness else 1000,destination+Vector2i(592,448) if wilderness and game.world_catalog.maps.has("100") else destination)
 
 func load_area_id(map_id: int, destination: Vector2i) -> bool:
+	# A 组队 member goes only where the server moves it (after the leader).
+	if game.party_locked() and [map_id,destination]!=game._followed:
+		game.message.text = GameScene.PARTY_LOCKED_TEXT
+		return false
 	var needed := area_packs(map_id)
 	if not game.asset_packs.is_ready(needed):
 		_load_area_after_download(map_id,destination,needed)

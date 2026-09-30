@@ -14,6 +14,7 @@ const PresenceModel = preload("res://network/presence_model.gd")
 const LegacyActor = preload("res://scripts/legacy_actor.gd")
 const Riding = preload("res://scripts/riding.gd")
 const Faces = preload("res://scripts/faces.gd")
+const PartyPanel = preload("res://scripts/party_panel.gd")
 const BATTLE_MARK := "res://assets/legacy/ui/25610.png"
 const CARD_PIN_SECONDS := 4.0
 ## Hit box around a player's feet, in map pixels.
@@ -44,6 +45,9 @@ func configure(owner: Node2D) -> void:
 func on_event(event: Dictionary) -> void:
 	var kind := str(event.get("type",""))
 	if kind!="presence" and kind!="chat":return
+	# Only 一般频道 (said aloud on the map) shows a bubble; 队伍频道 and system
+	# lines stay in the chat lines.
+	if kind=="chat" and str(event.get("channel","一般"))!="一般":return
 	var result: Dictionary = model.apply(event)
 	for id in result.despawned:_drop(id)
 	if kind=="chat" and bool(event.get("mine",false)):_say_own(str(event.get("text","")))
@@ -103,12 +107,18 @@ func _draw_player(player: Dictionary) -> void:
 	holder.get_node("Name").text = str(player.name)
 	var mark: Sprite2D = holder.get_node("Mark")
 	mark.visible = bool(player.b) and _battle_mark!=null
+	# 组队 (LAN phase 3): the leader's flag, hidden while it fights (character.cpp).
+	holder.get_node("LeaderMark").visible = is_leader(player) and not bool(player.b)
 	var bubble: PanelContainer = holder.get_node("Bubble")
 	var talking := not str(player.speech).is_empty()
 	bubble.visible = talking
 	if talking:
 		say_into(bubble,str(player.speech))
-		bubble.position = Vector2(-bubble.size.x/2,-100-bubble.size.y-(16 if mark.visible else 0))
+		bubble.position = Vector2(-bubble.size.x/2,-100-bubble.size.y-(16 if mark.visible or holder.get_node("LeaderMark").visible else 0))
+
+## A 组队 leader: its presence entry names itself as the party's leader.
+static func is_leader(player: Dictionary) -> bool:
+	return str(player.get("pt",""))==str(player.get("id","")) and not str(player.get("id","")).is_empty()
 
 ## Appearance and mount, once their art is here (web packs load on demand).
 func _look(actor, player: Dictionary) -> void:
@@ -153,6 +163,9 @@ func _build(player: Dictionary) -> Node2D:
 	mark.z_index = 20
 	mark.visible = false
 	holder.add_child(mark)
+	var leader: Node2D = PartyPanel.leader_mark()
+	leader.visible = false
+	holder.add_child(leader)
 	holder.add_child(speech_bubble())
 	return holder
 
@@ -235,6 +248,8 @@ func _update_card() -> void:
 	if card==null:_build_card()
 	var lines: PackedStringArray = [str(player.name),"等级 %d" % int(player.lv)]
 	if int(player.ride)>=0:lines.append("骑乘：%s" % (str(player.rn) if not str(player.rn).is_empty() else Riding.pet_name(int(player.ride))))
+	if is_leader(player):lines.append("队长")
+	elif not str(player.get("pt","")).is_empty():lines.append("队员")
 	if bool(player.b):lines.append("战斗中")
 	_card_text.text = "\n".join(lines)
 	_card_face.texture = Faces.texture(str(player.c),int(player.face))

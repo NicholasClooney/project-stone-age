@@ -191,6 +191,7 @@ func _on_link_connected() -> void:
 func _on_link_disconnected() -> void:
 	# The server sends everyone on the map again after the reconnect.
 	if is_instance_valid(game.remote_players):game.remote_players.reset()
+	if is_instance_valid(game.party_panel):game.party_panel.reset()
 	game._offline_profile = game.state.full_profile()
 	game._offline_battles = int(game.state.automation.get("battles",0))
 	if is_instance_valid(game.message):game.message.text = "与服务器的连接中断，正在重连…"
@@ -221,6 +222,12 @@ func _on_backend_message(event: Dictionary) -> void:
 		if is_instance_valid(game.remote_players):game.remote_players.on_event(event)
 		if is_instance_valid(game.chat_panel):game.chat_panel.on_event(event)
 		return
+	# LAN phase 3: 组队.
+	if str(event.get("type",""))=="party":
+		# Kept for a panel built later (the first view can arrive before the map).
+		game.last_party_event = event
+		if is_instance_valid(game.party_panel):game.party_panel.on_event(event)
+		return
 	if not game.is_inside_tree() or game.data.is_empty() or not is_instance_valid(game.battle_view):return
 	match str(event.type):
 		"battle_started":game.present_battle_start(event.state)
@@ -247,7 +254,8 @@ func _on_backend_message(event: Dictionary) -> void:
 				game._follow = [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
 				game.pending_talk = false
 				game.path.clear()
-				if is_instance_valid(game.travel_router) and game.travel_router.active:game.travel_router.cancel("另一台设备移动了角色。")
+				# "party": the server moved this 组队 member after its leader.
+				if is_instance_valid(game.travel_router) and game.travel_router.active:game.travel_router.cancel("跟随队长移动。" if str(event.get("client",""))=="party" else "另一台设备移动了角色。")
 
 func _on_auto_event(detail: Dictionary) -> void:
 	match str(detail.kind):

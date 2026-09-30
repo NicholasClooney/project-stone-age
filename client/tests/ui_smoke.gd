@@ -40,7 +40,9 @@ func run() -> void:
 	root.add_child(game)
 	await ticks(4)
 	var hud=game.classic_hud
-	check(hud.art.size()==50,"50 original UI and dialogue images load (with the V.S. battle mark)")
+	# 60 since the 组队 leader flag's 10 frames (tools/import_ui.py); 50 before that import ran.
+	var expected := 60 if JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/ui/manifest.json")).has("leader_mark") else 50
+	check(hud.art.size()==expected,"%d original UI and dialogue images load (with the V.S. battle mark and the leader flag)" % expected)
 	pointer(Vector2(650,400))
 	await ticks(15)
 	check(not hud.taskbar.visible,"bottom menus retract outside hover area")

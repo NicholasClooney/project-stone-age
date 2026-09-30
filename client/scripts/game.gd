@@ -96,6 +96,10 @@ var new_character := false
 ## server.
 var remote_players: Node
 var chat_panel: Control
+## LAN phase 3: 组队 (scripts/party_panel.gd). A member follows the leader and
+## cannot walk on its own (party_locked).
+var party_panel: Control
+var last_party_event: Dictionary = {}
 ## Several devices can drive one backend. This device's reports carry its id;
 ## another device's walk arrives as a position event and is mirrored here
 ## without rerunning arrival rules (encounters, map links), which the walking
@@ -494,6 +498,10 @@ func _on_map_reported(reply: Dictionary) -> void:_remote._on_map_reported(reply)
 func _connect_remote() -> void:await _remote._connect_remote()
 func link_blocked() -> bool:return _remote.link_blocked()
 func switch_profile() -> void:_remote.switch_profile()
+## A 组队 member: the server moves it after the leader; its own steps, 瞬移
+## and map loads are refused (the move the server sends is followed).
+func party_locked() -> bool:return is_instance_valid(party_panel) and party_panel.is_member()
+const PARTY_LOCKED_TEXT := "组队中由队长带路；想自己走请先离开队伍。"
 ## GM and developer tools: always on alone or on a one-profile server; on a
 ## multi-profile server only for its admin profiles (the backend enforces it).
 func is_admin() -> bool:return bool(state.options.get("admin",true))

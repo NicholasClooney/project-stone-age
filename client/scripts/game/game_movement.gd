@@ -12,6 +12,9 @@ func _init(owner: GameScene) -> void:
 func request_step(destination: Vector2i) -> bool:
 	if game.moving or not game.can_step(game.cell,destination):
 		return false
+	if game.party_locked():
+		game.message.text = GameScene.PARTY_LOCKED_TEXT
+		return false
 	var d := destination-game.cell
 	# Legacy moveAddTbl: direction 0 is south, 4 north; increments turn clockwise.
 	game.player.facing = (GameScene.SCREEN_DIRECTIONS.find(d)+4)%8
@@ -86,6 +89,9 @@ func approach_npc() -> void:
 
 func blink_to(destination: Vector2i) -> bool:
 	if game.paused_input or game.area_transition_busy or game.battle_session.snapshot().active:return false
+	if game.party_locked():
+		game.message.text = GameScene.PARTY_LOCKED_TEXT
+		return false
 	if not Rect2i(0,0,int(game.data.width),int(game.data.height)).has_point(destination):return false
 	var landing:=Vector2i(-1,-1)
 	for radius in range(9):
