@@ -18,9 +18,9 @@ This is not a claim that all reference maps are restored. Other islands, dungeon
 
 ## Reviewed Jyaruga scenic caves (2026-09-30)
 
-The importer now adds 99 connected scenic maps (246 total), using an explicit
+The importer now adds 100 connected scenic maps (including the later reviewed floor 21015), using an explicit
 `JYARUGA_SCENIC_MAPS` allowlist rather than granting access to the dungeon
-directory. All 99 have complete 2.5 graphics and original encounter areas in
+directory. All 100 have complete 2.5 graphics and original encounter areas in
 `encounters/catalog.json`. They use the `dungeon` kind, which enables ordinary
 field encounters. No quest/NPC service implementation is implied.
 
@@ -49,9 +49,14 @@ a single cardinal flood cover an entire cave would incorrectly reject them.
 
 ### Deferred maps
 
+21 original scenic candidates remain deferred after the floor15 review.
+
 - 拉多拉山岭洞窟 20001–20013: source internal stairs exist, but the reviewed
   compiled warp/NPC records contain no entrance from an imported region.
-- 琉璃的洞窟１５楼 21015: source return links exist, but no reviewed entry.
+The later Jyaruga interiors review opens 琉璃的洞窟１５楼 21015 through
+the original `200/sb_dbt.arg` gate at 21014 (14,14) → 21015 (9,17),
+bypassing the original NPC/battle condition for scenery. This leaves 21
+previous scenic candidates deferred; no additional doors are invented.
 - 拉多拉洞窟山顶 / old 碧青 floors 21103, 21106, 21108–21113 (excluding 21107):
   source map files exist without compiled walking entrance links.
 - 哈恩的锻冶场 20508, 沙拉的房间 20608, 审查室 20711, JBA本部 20712,

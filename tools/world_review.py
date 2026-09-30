@@ -61,7 +61,7 @@ def read_reviewed_portals(reference, reviews):
                 continue
             if 'borncorner' in fields:
                 x,y,x2,y2 = map(int,fields['borncorner'].split(','))
-            elif gate and 'borncenter' in fields:
+            elif 'borncenter' in fields:
                 x,y,w,h = map(int,fields['borncenter'].split(','))
                 if (w,h)!=(1,1):raise ValueError(f'Reviewed moving gate: {gate}')
                 x2,y2 = x,y
