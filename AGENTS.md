@@ -20,7 +20,9 @@ Subagents working in their own worktrees don't relaunch; they test and commit, a
 
 - While working, run only the suites your change touches (`./scripts/run.sh --headless --script res://tests/<name>.gd`). Run the full `./scripts/test-all.sh` **once**, at the end.
 - After rebasing onto a moved `main`, rerun the full suite only if the rebase touched code; a rebase whose only conflicts were `changelog-notes.json` / generated changelog files needs just `python3 tools/build_changelog.py --check` and your own suites. The main session runs the full suite after merging.
-- A known flaky suite that fails under load: rerun it alone once; don't rerun the whole suite for it.
+- `./scripts/test-all.sh --only a_test,b_test` runs a few suites in parallel, reported like the full run.
+- No suite is known to be flaky. If one fails under load, don't just rerun it: find what it waits on. Suites wait for a condition with a generous deadline (`res://tests/support/wait.gd`), never a fixed number of frames or a short wall-clock timeout; clients over WebSocket `settle` (one round trip) before another device acts; servers listen on port 0.
+- Tests never use the game's real user:// folder. `scripts/run.sh --script res://tests/…` points user:// at `…/Godot/app_userdata/Stone Age tests/<checkout>-<cksum>/` (the `TestUserDir` autoload reads `STONE_AGE_TEST_USER_DIR`), and `test-all.sh` gives every suite its own folder per run, deleted when it passes. Fixed fixture names like `user://x-test.json` are safe as long as tests reach files through user://, never an absolute path into the real app-data folder.
 - Several agents often run at once while the user's fast hunt uses the CPU. Don't run more than one full suite at a time per agent, and prefer fewer jobs over more.
 
 ## Assets in worktrees
