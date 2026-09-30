@@ -6,7 +6,9 @@ var portals: Dictionary = {}
 var residents: Array = []
 func _init() -> void:
  if not FileAccess.file_exists(ROOT+"world/manifest.json"): return
- var manifest = JSON.parse_string(FileAccess.get_file_as_string(ROOT+"world/manifest.json"))
+ var text := FileAccess.get_file_as_string(ROOT+"world/manifest.json")
+ var manifest = JSON.parse_string(text)
+ preload("res://scripts/perf_registry.gd").track_manifest("world",text.length())
  if not manifest is Dictionary: return
  maps = manifest.get("maps",{})
  residents = manifest.get("residents",[])

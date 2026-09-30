@@ -22,6 +22,9 @@ var _attempts: Dictionary = {}
 var _active: Dictionary = {}
 var _failed: Dictionary = {}
 var _waiters: Array[Dictionary] = []
+## Packs fetched over the network this session (not mounted from the cache).
+var downloaded_count := 0
+var downloaded_bytes := 0
 
 func configure(url: String) -> void:
 	enabled = true
@@ -92,6 +95,14 @@ func prefetch(packs: Array) -> void:
 			_queued.append(pack)
 	_pump()
 
+## For 开发者性能面板: mounted packs and their bytes (the pack files, as in
+## packs.json), what this session downloaded, and what is still pending.
+func stats() -> Dictionary:
+	var packs: Dictionary = index.get("packs",{})
+	var bytes := 0
+	for pack in _mounted:bytes += int(packs.get(pack,{}).get("bytes",0))
+	return {"enabled":enabled,"known":packs.size(),"mounted":_mounted.size(),"mounted_bytes":bytes,"downloaded":downloaded_count,"downloaded_bytes":downloaded_bytes,"pending":_queued.size()+_active.size(),"failed":_failed.size()}
+
 # ---- lookups -----------------------------------------------------------------
 
 func map_packs(map_id: int) -> Array:
@@ -146,6 +157,8 @@ func _finished(request: HTTPRequest, pack: String, result: int, code: int) -> vo
 	var ok := result==HTTPRequest.RESULT_SUCCESS and code==200 and FileAccess.file_exists(part) and FileAccess.get_file_as_bytes(part).size()==int(entry.bytes)
 	if ok:
 		DirAccess.rename_absolute(part,CACHE+str(entry.file))
+		downloaded_count += 1
+		downloaded_bytes += int(entry.bytes)
 		ok = _mount_cached(pack)
 	if not ok:
 		if FileAccess.file_exists(part):DirAccess.remove_absolute(part)

@@ -18,6 +18,7 @@ signal changed
 signal library_changed
 
 const MusicLibrary = preload("res://scripts/music_library.gd")
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 const MANIFEST := "res://assets/legacy/music/manifest.json"
 const MIN_SECONDS := 100.0
 const PREFETCH_SECONDS := 10.0
@@ -291,6 +292,7 @@ func _start(stream: AudioStream) -> void:
 	elif "loop" in stream:
 		stream.loop = true
 	_stream = stream
+	PerfRegistry.track_audio("radio",stream.resource_path,stream)
 	_loops = 0
 	_last_position = 0.0
 	status = ""

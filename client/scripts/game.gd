@@ -163,6 +163,8 @@ var pet_hunt_menu: Control
 var pet_encyclopedia: Control
 var dev_gm_menu: Control
 var dev_map_overview: Control
+## 开发者性能面板 (scripts/perf_panel.gd): built on first use, F3 by default.
+var perf_panel: CanvasLayer
 var pet_training: Control
 ## 电台 (scripts/radio.gd) and its window; the radio plays through `music`.
 var radio: Node
@@ -244,6 +246,7 @@ var marker_cell := Vector2i(-1,-1)
 var character_index := 0
 var character_catalog: Dictionary = {}
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 var character_selection: Control
 var paused_input := false
 var load_error := ""
@@ -334,7 +337,9 @@ func _ready() -> void:
 	if asset_packs.enabled and not await _download_start_area():
 		_show_startup_error("起始地图素材下载失败，请检查与 MacBook 的连接后刷新页面。")
 		return
-	data = JSON.parse_string(FileAccess.get_file_as_string(world_catalog.file(1000)))
+	var map_text := FileAccess.get_file_as_string(world_catalog.file(1000))
+	data = JSON.parse_string(map_text)
+	PerfRegistry.track_manifest("当前地图",map_text.length())
 	build_world()
 	setup_audio()
 	map_transition = preload("res://scripts/classic_map_transition.gd").new()
@@ -394,6 +399,7 @@ func texture(ident: String) -> Texture2D:
 	if cached==null:
 		cached = load("res://assets/legacy/images/"+ident+".png")
 		textures[ident] = cached
+		PerfRegistry.track_texture("map",ident,cached)
 	return cached
 
 ## A walking frame: player characters' frames come from their sprite sheet
@@ -488,6 +494,14 @@ func set_effects_on(on: bool) -> void:_audio.set_effects_on(on)
 func set_effects_volume(value: float) -> void:_audio.set_effects_volume(value)
 func apply_sound() -> void:_audio.apply_sound()
 func toggle_radio() -> void:_audio.toggle_radio()
+
+## 开发者性能面板: an overlay that does nothing until first opened.
+func toggle_perf_panel() -> void:
+	if not is_instance_valid(perf_panel):
+		perf_panel = preload("res://scripts/perf_panel.gd").new()
+		perf_panel.configure(self)
+		add_child(perf_panel)
+	perf_panel.toggle()
 
 # ---- this device's settings (scripts/game/game_device.gd) ----
 func set_zoom(value: float) -> void:_device.set_zoom(value)

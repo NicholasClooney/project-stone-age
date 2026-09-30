@@ -97,6 +97,10 @@ var automation = Automation.new(self)
 ## Events raised while a command or tick runs are delivered after it finishes,
 ## so a client reacting to one never re-enters a half-applied change.
 var _depth := 0
+## How long the last automation tick took, and a running average, for
+## 开发者性能面板 (scripts/perf_monitor.gd reads them; nothing else does).
+var tick_usec := 0
+var tick_avg_usec := 0.0
 var _queue: Array[Dictionary] = []
 
 func _init() -> void:
@@ -121,11 +125,14 @@ func _live_battle_pets() -> Dictionary:
 	return busy
 
 func _process(delta: float) -> void:
+	var started := Time.get_ticks_usec()
 	_depth += 1
 	automation.tick(delta)
 	_depth -= 1
 	_record_releases()
 	_flush()
+	tick_usec = Time.get_ticks_usec()-started
+	tick_avg_usec = lerpf(tick_avg_usec,float(tick_usec),0.1)
 
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.

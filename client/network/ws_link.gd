@@ -31,6 +31,15 @@ var _started := false
 var silence_limit := SILENCE_LIMIT
 var _since_heard := 0.0
 var _since_ping := 0.0
+## Traffic counters for 开发者性能面板 (stats()); latency is the last
+## heartbeat's round trip, -1 before the first.
+var messages_in := 0
+var messages_out := 0
+var bytes_in := 0
+var bytes_out := 0
+var latency_ms := -1
+var _ping_seq := -1
+var _ping_msec := 0
 
 func _init(server_url: String) -> void:
 	url = server_url
@@ -64,8 +73,16 @@ func request(command: Dictionary, done: Callable = Callable()) -> Dictionary:
 	var sent: Dictionary = command.duplicate(true)
 	sent.seq = _seq
 	if done.is_valid():_callbacks[_seq] = done
-	_peer.send_text(Codec.encode(sent))
+	_send(Codec.encode(sent))
 	return {"ok":false,"pending":true}
+
+func _send(text: String) -> void:
+	messages_out += 1
+	bytes_out += text.to_utf8_buffer().size()
+	_peer.send_text(text)
+
+func stats() -> Dictionary:
+	return {"kind":"remote","messages_in":messages_in,"messages_out":messages_out,"bytes_in":bytes_in,"bytes_out":bytes_out,"latency_ms":latency_ms}
 
 func poll(delta: float) -> void:
 	if _peer==null:
@@ -105,7 +122,9 @@ func _heartbeat(delta: float) -> void:
 	if online and _since_ping >= PING_INTERVAL:
 		_since_ping = 0.0
 		_seq += 1
-		_peer.send_text(Codec.encode({"type":"ping","seq":_seq}))
+		_ping_seq = _seq
+		_ping_msec = Time.get_ticks_msec()
+		_send(Codec.encode({"type":"ping","seq":_seq}))
 
 func _drop() -> void:
 	var was_online := online
@@ -125,7 +144,10 @@ func retry_seconds() -> int:
 func _drain() -> void:
 	while _peer!=null and _peer.get_available_packet_count() > 0:
 		_since_heard = 0.0
-		_receive(_peer.get_packet().get_string_from_utf8())
+		var packet := _peer.get_packet()
+		messages_in += 1
+		bytes_in += packet.size()
+		_receive(packet.get_string_from_utf8())
 
 func close() -> void:
 	_closed = true
@@ -134,13 +156,14 @@ func close() -> void:
 func _send_hello() -> void:
 	_seq += 1
 	_hello_seq = _seq
-	_peer.send_text(Codec.encode({"type":"hello","protocol":PROTOCOL,"client_kind":OS.get_name(),"seq":_seq}))
+	_send(Codec.encode({"type":"hello","protocol":PROTOCOL,"client_kind":OS.get_name(),"seq":_seq}))
 
 func _receive(text: String) -> void:
 	var incoming := Codec.decode(text)
 	if incoming.is_empty():return
 	if bool(incoming.get("reply",false)):
 		var seq := int(incoming.get("seq",0))
+		if seq==_ping_seq:latency_ms = Time.get_ticks_msec()-_ping_msec
 		if seq==_hello_seq and incoming.has("snapshot"):
 			online = true
 			_backoff = 1.0

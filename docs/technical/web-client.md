@@ -102,4 +102,4 @@ Not verified: a real Vision Pro or iPhone interruption (Chrome never reports `in
 
 ## Debugging
 
-The web build sets `window.stoneAge` once a second (map, cell, connection, mounted and pending packs) and `window.stoneAgeDev(name)` runs DEV actions (`explore`, `encounter`, `escape`, `return`, `village`, `pets`), both usable from Safari's Web Inspector. Chrome pauses `requestAnimationFrame` in hidden or fully covered windows, which freezes a Godot page; an automated browser tab must be visible to run it.
+The web build sets `window.stoneAge` once a second (map, cell, connection, mounted and pending packs) and `window.stoneAgeDev(name)` runs DEV actions (`explore`, `encounter`, `escape`, `return`, `village`, `pets`), both usable from Safari's Web Inspector. With 开发者性能面板 open (F3), `window.stoneAgePerf` holds its latest sample (wasm heap, engine memory, asset packs); see [perf panel](perf-panel.md). Chrome pauses `requestAnimationFrame` in hidden or fully covered windows, which freezes a Godot page; an automated browser tab must be visible to run it.

@@ -13,7 +13,9 @@ static func manifest() -> Dictionary:
 		_loaded = true
 		var path := ROOT+"manifest.json"
 		if FileAccess.file_exists(path):
-			var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+			var text := FileAccess.get_file_as_string(path)
+			var parsed = JSON.parse_string(text)
+			preload("res://scripts/perf_registry.gd").track_manifest("faces",text.length())
 			if parsed is Dictionary:_manifest = parsed
 	return _manifest
 

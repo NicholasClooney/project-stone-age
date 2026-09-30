@@ -20,7 +20,9 @@ func display_cell() -> Vector2i:
 
 func build_world() -> void:
 	if game.character_catalog.is_empty() and FileAccess.file_exists("res://assets/legacy/characters/catalog.json"):
-		game.character_catalog = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/characters/catalog.json"))
+		var text := FileAccess.get_file_as_string("res://assets/legacy/characters/catalog.json")
+		game.character_catalog = JSON.parse_string(text)
+		preload("res://scripts/perf_registry.gd").track_manifest("characters",text.length())
 	if not game.character_catalog.is_empty():
 		game.data.characters.merge(game.character_catalog.characters,true)
 		game.data.images.merge(game.character_catalog.images,true)
@@ -75,7 +77,9 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	if not FileAccess.file_exists(file):
 		game.message.text = "Import the wilderness assets first; see README.md."
 		return false
-	var next_data: Variant = JSON.parse_string(FileAccess.get_file_as_string(file))
+	var map_text := FileAccess.get_file_as_string(file)
+	var next_data: Variant = JSON.parse_string(map_text)
+	preload("res://scripts/perf_registry.gd").track_manifest("当前地图",map_text.length())
 	if not next_data is Dictionary:
 		return false
 	var width := int(next_data.width)

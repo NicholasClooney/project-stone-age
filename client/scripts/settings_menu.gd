@@ -1,8 +1,9 @@
 extends PanelContainer
 ## 设置 (the classic 系统 menu): zoom, sound and 电台, 游戏助手, character,
 ## 瞬移, saving, 快捷键, 更新日志 and 操作说明, plus a collapsed 开发者
-## section with GM 调试. Opened by Esc with no other window open, the classic
-## taskbar's 系统 and H (on 操作说明); Esc closes it. It pauses the
+## section with GM 调试 and 性能面板. Opened by Esc with no other window
+## open, the classic taskbar's 系统 and H (on 操作说明); Esc closes it. It
+## pauses the
 ## field like the old Help panel it replaces, so it is game.help too (the
 ## gamepad's Start and panel lookup use that). Every choice here is this
 ## device's own (viewer.cfg), see game.gd's device settings.
@@ -198,6 +199,10 @@ func _main_page() -> void:
 		gm.name = "SettingsGM"
 		gm.tooltip_text = "调整等级、属性和体力，发放特殊宠物（开发者功能）"
 		tools.add_child(gm)
+		var perf: Button = world.button("性能面板 [%s]" % _key_of("perf"),func(): close_menu();world.toggle_perf_panel())
+		perf.name = "SettingsPerf"
+		perf.tooltip_text = "内存、帧率、网络和资源占用，可导出快照（开发者功能）"
+		tools.add_child(perf)
 	_sync_zoom()
 
 func _sync_zoom() -> void:
@@ -312,7 +317,7 @@ const HELP := """移动
   电台：原版配乐、收藏、歌单、随机和单曲循环。
   地图导航：按地图查看和传送。
   刷怪传送：按练级点传送到原版刷怪位置。
-  开发者：GM 调试（等级、属性、体力、发放特殊宠物）。
+  开发者：GM 调试（等级、属性、体力、发放特殊宠物）；性能面板（F3）。
 
 地图窗口（M）
   下方有「地图导航」和「刷怪传送」。

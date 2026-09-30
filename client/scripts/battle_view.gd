@@ -10,6 +10,7 @@ const Elements = preload("res://server/elements.gd")
 const PetSkills = preload("res://scripts/pet_skills.gd")
 const BattleEffects = preload("res://scripts/battle_effects.gd")
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 const ART_ROOT := "res://assets/legacy/battle/"
 const STAGE_SIZE := Vector2(800,600)
 var world: Node
@@ -394,6 +395,7 @@ func open_battle(next_state: Dictionary) -> void:
 	capture_transition()
 	if is_instance_valid(battlefield) and is_instance_valid(world):
 		battlefield.texture = load(next_background if not next_background.is_empty() else background_selector.choose(_ground_bitmap()))
+		PerfRegistry.track_texture("battle",battlefield.texture.resource_path if battlefield.texture!=null else "",battlefield.texture)
 		next_background = ""
 	elapsed = 0.0
 	state = {}

@@ -4,6 +4,8 @@ extends RefCounted
 ## composite, a battle sprite, a character) to {files, frames: bitmap ->
 ## [sheet, x, y, w, h]}; file names are relative to the manifest's folder.
 
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
+
 static var _sheets: Dictionary = {}
 static var _frames: Dictionary = {}
 
@@ -22,6 +24,7 @@ static func texture(folder: String, sheets: Dictionary, key: String, bitmap: int
 		if not ResourceLoader.exists(path): return null
 		atlas = load(path)
 		_sheets[path] = atlas
+		PerfRegistry.track_texture(PerfRegistry.folder_category(folder),path,atlas)
 	var frame := AtlasTexture.new()
 	frame.atlas = atlas
 	frame.region = Rect2(int(spot[1]),int(spot[2]),int(spot[3]),int(spot[4]))

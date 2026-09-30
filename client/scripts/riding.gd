@@ -7,7 +7,9 @@ static var _manifest: Dictionary = {}
 
 static func manifest() -> Dictionary:
 	if _manifest.is_empty() and FileAccess.file_exists(PATH):
-		_manifest = JSON.parse_string(FileAccess.get_file_as_string(PATH))
+		var text := FileAccess.get_file_as_string(PATH)
+		_manifest = JSON.parse_string(text)
+		preload("res://scripts/perf_registry.gd").track_manifest("riding",text.length())
 	return _manifest
 
 ## One frame of a rider+mount composite, cut from the composite's sprite sheet
