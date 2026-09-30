@@ -89,6 +89,24 @@ func run() -> void:
 	check(is_equal_approx(game.volume,0.3) and not game.effects_on and game.dev_blink_mode and game.muted and is_equal_approx(zoom,0.35),"设置 changes volume, effects, music, 瞬移 and zoom")
 	check(is_equal_approx(game.effect.volume_db,-80.0) and is_equal_approx(game.music.volume_db,-80.0),"the players follow the new sound settings")
 	check(_saved("zoom") and _saved("music_on"),"the zoom and the music switch are saved on this device")
+	# 画面 on a desktop: fixed aspect, 100% interface, the bar on hover.
+	check(game.fixed_aspect and is_equal_approx(game.ui_scale,100.0) and not game.taskbar_pinned and game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_KEEP and is_equal_approx(game.get_window().content_scale_factor,1.0),"a desktop keeps the fixed aspect, 100% and the hover bar by default")
+	var ui_scale: HSlider = menu.find_child("SettingsUiScale",true,false)
+	ui_scale.value = 150
+	check(is_equal_approx(game.ui_scale,100.0),"dragging 界面大小 does not rescale yet")
+	ui_scale.drag_ended.emit(true)
+	check(is_equal_approx(game.ui_scale,150.0) and is_equal_approx(game.get_window().content_scale_factor,1.5) and _saved("ui_scale"),"letting go applies 150% and saves it")
+	(menu.find_child("SettingsFixedAspect",true,false) as CheckBox).button_pressed = false
+	check(game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_EXPAND and _saved("fixed_aspect"),"unticking 固定横屏比例 lets the view fill the screen")
+	(menu.find_child("SettingsTaskbarPinned",true,false) as CheckBox).button_pressed = true
+	await process_frame
+	await process_frame
+	check(game.taskbar_pinned and game.classic_hud.taskbar.visible and _saved("taskbar_pinned"),"底栏常驻 shows the task buttons without hovering")
+	(menu.find_child("SettingsTaskbarPinned",true,false) as CheckBox).button_pressed = false
+	(menu.find_child("SettingsFixedAspect",true,false) as CheckBox).button_pressed = true
+	ui_scale.value = 100
+	ui_scale.drag_ended.emit(true)
+	check(game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_KEEP and is_equal_approx(game.get_window().content_scale_factor,1.0),"and back to the desktop view")
 	menu.close_menu()
 
 	# M opens the map, not the music switch.

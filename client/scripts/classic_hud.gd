@@ -133,7 +133,9 @@ func layout() -> void:
 
 func _process(delta: float) -> void:
 	var pointer := pointer_position
-	var at_bottom := pointer.y>=size.y-30*SCALE and pointer.y<=size.y
+	# 底栏常驻 (设置 → 画面; on by default on a touch screen, where there is
+	# no hover) keeps the task buttons up instead of the status line.
+	var at_bottom: bool = bool(world.get("taskbar_pinned")) or (pointer.y>=size.y-30*SCALE and pointer.y<=size.y)
 	reveal = move_toward(reveal,1.0 if at_bottom and not world.dialogue.visible and not (is_instance_valid(world.world_travel) and world.world_travel.overlay.visible) else 0.0,delta*6)
 	taskbar.position = Vector2((size.x-640*SCALE)/2,size.y-24*SCALE*reveal)
 	taskbar.visible = reveal>0

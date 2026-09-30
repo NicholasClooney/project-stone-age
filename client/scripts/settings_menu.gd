@@ -120,6 +120,31 @@ func _main_page() -> void:
 	var zoom_label: Label = world.text("",14)
 	zoom_label.name = "SettingsZoomValue"
 	view.add_child(zoom_label)
+	# 界面大小 (50% to 300%), applied when the slider is let go: the slider
+	# itself changes size with it.
+	var scale_row := _section("")
+	scale_row.add_child(world.text("界面大小",14))
+	var ui_scale := HSlider.new()
+	ui_scale.name = "SettingsUiScale"
+	ui_scale.min_value = 50
+	ui_scale.max_value = 300
+	ui_scale.step = 10
+	ui_scale.custom_minimum_size = Vector2(260,24)
+	ui_scale.focus_mode = Control.FOCUS_NONE
+	ui_scale.value = world.ui_scale
+	var scale_label: Label = world.text("%d%%" % roundi(world.ui_scale),14)
+	scale_label.name = "SettingsUiScaleValue"
+	ui_scale.value_changed.connect(func(value: float):scale_label.text = "%d%%" % roundi(value))
+	ui_scale.drag_ended.connect(func(changed: bool):if changed:world.set_ui_scale(ui_scale.value))
+	scale_row.add_child(ui_scale)
+	scale_row.add_child(scale_label)
+	var layout_row := _section("")
+	var fixed := _check("固定横屏比例","SettingsFixedAspect",world.fixed_aspect,world.set_fixed_aspect)
+	fixed.tooltip_text = "开：保持原来的横屏画面比例（屏幕形状不同时两边或上下留黑边）。关：画面铺满整个屏幕，竖屏手机也能用满。"
+	layout_row.add_child(fixed)
+	var pinned := _check("底栏常驻","SettingsTaskbarPinned",world.taskbar_pinned,world.set_taskbar_pinned)
+	pinned.tooltip_text = "底部的 地图 / 状态 / 宠物 / 道具 / 系统 按钮一直显示，不用把鼠标移到底部。手机上默认打开。"
+	layout_row.add_child(pinned)
 	# 声音
 	var sound := _section("声音")
 	sound.add_child(_check("音乐","SettingsSound",not world.muted,func(on: bool):

@@ -237,6 +237,12 @@ var muted := false
 var volume := 0.55
 var effects_on := true
 var effects_volume := 1.0
+## 设置 → 画面 (this device): 固定横屏比例, 界面大小 (percent) and 底栏常驻.
+## Phones and tablets default to filling the screen, larger text and a
+## pinned bottom bar (no hover on a touch screen); see game_device.gd.
+var fixed_aspect := true
+var ui_scale := 100.0
+var taskbar_pinned := false
 ## Extra players that finish a sound the next one would cut off
 ## (scripts/game/game_audio.gd play_effect).
 var effect_voices: Array[AudioStreamPlayer] = []
@@ -562,6 +568,10 @@ func set_zoom_percent(percent: float) -> void:_device.set_zoom_percent(percent)
 func restore_device_settings() -> void:_device.restore_device_settings()
 func playback_speed() -> float:return _device.playback_speed()
 func set_battle_speed(value: float) -> void:_device.set_battle_speed(value)
+func set_fixed_aspect(on: bool) -> void:_device.set_fixed_aspect(on)
+func set_ui_scale(percent: float) -> void:_device.set_ui_scale(percent)
+func set_taskbar_pinned(on: bool) -> void:_device.set_taskbar_pinned(on)
+func touch_device() -> bool:return _device.touch_device()
 func viewer_pref(key: String, fallback: Variant = false) -> Variant:return _device.viewer_pref(key,fallback)
 func set_viewer_pref(key: String, value: Variant) -> void:_device.set_viewer_pref(key,value)
 

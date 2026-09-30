@@ -41,10 +41,46 @@ func restore_device_settings() -> void:
 	game.effects_on = bool(viewer_pref("effects_on",game.effects_on))
 	game.effects_volume = clampf(float(viewer_pref("effects_volume",game.effects_volume)),0.0,1.0)
 	game.dev_blink_mode = bool(viewer_pref("blink_mode",game.dev_blink_mode))
+	var touch := touch_device()
+	game.fixed_aspect = bool(viewer_pref("fixed_aspect",not touch))
+	game.ui_scale = clampf(float(viewer_pref("ui_scale",200.0 if touch else 100.0)),UI_SCALE_MIN,UI_SCALE_MAX)
+	game.taskbar_pinned = bool(viewer_pref("taskbar_pinned",touch))
+	apply_view()
 	var zoom = viewer_pref("zoom",0.0)
 	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))
 	game.load_shortcuts()
 	game.apply_sound()
+
+const UI_SCALE_MIN := 50.0
+const UI_SCALE_MAX := 300.0
+
+## A phone or tablet (the native mobile builds, or the web page on one).
+func touch_device() -> bool:
+	return OS.has_feature("mobile") or OS.has_feature("web_android") or OS.has_feature("web_ios")
+
+## 固定横屏比例 keeps the designed 1280×800 frame (bars around it on another
+## shape); off, the view grows to fill the screen and the HUD follows the
+## edges. 界面大小 scales every 2D element; windows are not re-laid out for
+## very large sizes yet (the player tries what fits).
+func apply_view() -> void:
+	var window := game.get_window()
+	if window==null:return
+	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP if game.fixed_aspect else Window.CONTENT_SCALE_ASPECT_EXPAND
+	window.content_scale_factor = game.ui_scale/100.0
+
+func set_fixed_aspect(on: bool) -> void:
+	game.fixed_aspect = on
+	_save_device("fixed_aspect",on)
+	apply_view()
+
+func set_ui_scale(percent: float) -> void:
+	game.ui_scale = clampf(percent,UI_SCALE_MIN,UI_SCALE_MAX)
+	_save_device("ui_scale",game.ui_scale)
+	apply_view()
+
+func set_taskbar_pinned(on: bool) -> void:
+	game.taskbar_pinned = on
+	_save_device("taskbar_pinned",on)
 
 ## Battle playback speed chosen on this device (1× until one is applied).
 func playback_speed() -> float:
