@@ -45,7 +45,7 @@
 1. 运行世界导入器与遇敌动画导入器（README的资源路径）。新增地图通过 `DEV_TRAINING_MAPS` 显式选择。
 2. `python3 tools/build_training_spots.py` 生成 `client/data/training-spots.json`；本批223个落点。
 3. 筛选普通、非事件、非道具条件的有效敌群；剔除缺概率和缺动画区域。
-4. 对每个落点验证原碰撞、NPC／出入口排除、最高优先级区域归属。点击传送时再次检查落点及区域ID；不按修改后的配置盲目传送。
+4. 对每个落点验证原碰撞、有地面图（原版墙外不可见的黑色空地不算；服务器地图该处只有 100 以下的无图地块号）、NPC／出入口排除、最高优先级区域归属。运行时 `travel_landing.gd` 同样跳过无地面的格子。点击传送时再次检查落点及区域ID；不按修改后的配置盲目传送。
 5. 所有1–120级均可查询，等级优先匹配后给出四个去重选项。高等级可能推荐较低等级怪，这是现有可用原表的结果，不改怪物等级。
 
 测试：`travel_destinations_test`、`travel_assists_test`、`leveling_routes_test`、`test_build_training_spots.py`、`test_import_world.py`。默认后台无窗口、静音。
