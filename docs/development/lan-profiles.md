@@ -11,7 +11,7 @@ Several people play their own characters on one Mac. There are two ways to run i
 | New characters | from the client | edit `profiles.json` and restart |
 | CPU | one process: automation shares the main thread (budget divided) | a process per profile, separate cores |
 
-**Use phase 1** by default: one address, logins, admin-only GM tools, players see each other and chat (phase 2), and they can 组队 and walk together (phase 3). Use phase 0 when several profiles run heavy GDScript automation at once (compact 自动练级, hunts without 本机极速模式) and one core is the bottleneck.
+**Use phase 1** by default: one address, logins, admin-only GM tools, players see each other and chat (phase 2), they can 组队 and walk together (phase 3), and fight as one party (phase 4a). Use phase 0 when several profiles run heavy GDScript automation at once (compact 自动练级, hunts without 本机极速模式) and one core is the bottleneck.
 
 The single-player setup is unchanged: without `--accounts`, `scripts/relaunch.sh` and `scripts/serve.sh` serve `single-player.json` with no login, exactly as before.
 
@@ -80,7 +80,7 @@ On a phase 1 server, everyone logged in sees the other players on the same map, 
 
 ## Phase 3: 组队 and following the leader
 
-On a phase 1 server, players can form a party (组队) on the map and walk together, as in the original (gmsv `char_party.c`, `char_walk.c`, `map_warppoint.c`). Party **battles** are phase 4 and not built: see [the interim battle rule](#battles-for-now-phase-4-is-not-built). Nothing changes for the single-player setup or phase 0 servers; their 加入队伍 button only plays the original's refusal sound.
+On a phase 1 server, players can form a party (组队) on the map and walk together, as in the original (gmsv `char_party.c`, `char_walk.c`, `map_warppoint.c`). Party **battles** are [phase 4a](#phase-4a-party-battles). Nothing changes for the single-player setup or phase 0 servers; their 加入队伍 button only plays the original's refusal sound.
 
 ### What a player sees
 
@@ -92,12 +92,9 @@ On a phase 1 server, players can form a party (组队) on the map and walk toget
 - **Following**: members cannot walk, 瞬移 or travel on their own (「组队中由队长带路；想自己走请先离开队伍。」). When the leader steps, each member steps towards where the one before them stood, so the party walks in a line. When the leader changes map or warps, every member arrives on the leader's destination cell (the original warps them all to one point); they spread out again as the leader walks on.
 - **队伍频道**: in a party the chat row gets a 一般/队伍 button. 队伍 lines reach every member on any map, shown as `[队伍] 名字：内容` in green, with no speech bubble.
 
-### Battles for now (phase 4 is not built)
+### Battles
 
-- Only the leader meets enemies. A member's steps roll nothing, and members cannot start a wild battle.
-- The leader's encounter is **the leader's own solo battle**, exactly as when playing alone. Members are not pulled in, gain nothing from it and wait: their screen shows 「队长战斗中」 until the leader's battle closes. They cannot walk away meanwhile (they follow the leader), but can use their menus.
-- A defeat sends the leader to the village as usual; the members follow the leader there.
-- Phase 4 (see the [study](../product/lan-multiplayer-study.md#4-option-c-grouping-组队-and-shared-battles)) will put the whole party into one battle.
+Only the leader meets enemies (a member's steps roll nothing, and members cannot start a wild battle). The whole party then fights it together: see [phase 4a](#phase-4a-party-battles).
 
 ### Automation
 
@@ -106,7 +103,7 @@ On a phase 1 server, players can form a party (组队) on the map and walk toget
 
 ### Disconnects
 
-- A member whose last device disconnects (or logs out, or switches character) leaves the party.
+- A member whose last device disconnects (or logs out, or switches character) leaves the party. In a party battle that waits until the battle ends (phase 4a).
 - A leader whose last device disconnects disbands it, as the original's leader logging out does (no leader hand-over). A reconnect after a network drop therefore starts outside any party; the 组队 switch stays as it was.
 - Another device of the same character keeps it in the party.
 
@@ -124,7 +121,51 @@ On a phase 1 server, players can form a party (组队) on the map and walk toget
 - The original asks 「和谁组成团队呢？」 when several parties can be joined on the cell in front; here the first one is joined (the `party_join` command takes an optional `target`).
 - 踢出 is ours; `char_party.c` has none.
 - The original's 组队 flag is saved with the character; here it lasts until the server stops.
-- No party battles yet (above), no 助战 or 观战, and no pet followers.
+- No 助战 or 观战, and no pet followers.
+
+## Phase 4a: party battles
+
+When the leader meets enemies, the whole party fights one battle, as in the original (gmsv `battle.c` `BATTLE_PartyNewEntry`, `BATTLE_CommandWait`, `BATTLE_AddExpItem`, `BATTLE_GetExpGold`). Phase 4 is split: **4a** (this) is the shared battle; **4c** (next) the leader's 自动练级 with members' compact auto-battle; **4b** capture ownership, pet switching and 踢出 in battle. 助战 and 观战 are not planned.
+
+### What a player sees
+
+- Every member not already fighting enters the leader's battle on the leader's side, with their own stats, mount, battle pet, pets and 回复药. Each player's screen shows **their own character in the player's place** (their HP, pet, item count and command bar) and the others beside them: the leader in the first ally place, then the other members. On the leader's screen the members stand in the ally places. Ally pets show their own names.
+- **Each player commands only their own character and pet**: 攻击, 防御, 道具 (回复药 on yourself) and 逃跑, and the pet's 攻击, 技能, 防御 and 待机.
+- After sending, the screen shows 「等待队友…」 until the turn resolves. The top line counts the turn down (「回合剩余 N 秒」) and names who the turn still waits for. When it resolves, everyone's screen plays every actor's action.
+- **Turn timer, 45 s**: a player who has not commanded when it runs out attacks (the clone AI's attack) for that turn, and the turn's lines say 「名字超时未下指令，自动攻击。」. Nobody is dropped for missed turns.
+- **A player whose devices all drop** stays in the battle and is played by the same AI every turn (the turn no longer waits for them) until it ends; their save is settled as usual. They leave the party only after the battle.
+- **Escape** takes out only that player and their pet (the original's 40 % + 20 % per try). They are settled at once (no experience or gold, as a solo escape), stay in the party, and see 「队长战斗中」 until the battle ends; then they follow the leader again. A leader who escaped waits too: they cannot walk off or meet enemies (「队友还在战斗中，请等他们结束。」) until the others finish.
+- **Falling**: a player at 0 HP stays in the battle and waits (「你已倒下，等待队友…」); their pet fights on with its standing order. The party loses only when no player is left standing.
+  - The party wins (or the others escape): a fallen player gets up **with 1 HP where they stand, stays in the party, and earns nothing**, as the original (`BATTLE_Exit` sets HP 1; `BATTLE_GetExpGold` pays no dead player). Their fall still costs charm (and the battle pet's loyalty), as a defeat does. Fallen pets also get up with 1 HP.
+  - Everyone falls: each player goes to the village, recovered, as a solo defeat here does. (The original's normal fall also leaves you at 1 HP where you stand; only 击飞 sends you to your 记录点. The village rule is this game's solo rule and stays.)
+- Shops, stores, saves and the other profile changes a battle locks are refused for every participant until they are settled, as in a solo battle.
+- Refused in a party battle: 捕捉 and 换宠 (「组队战斗暂不能捕捉或换宠（下一阶段开放）。」, phase 4b, for the leader too), 镜子的精灵 and 恢复护符. Automation stays refused in a party (phase 3).
+
+### Rewards
+
+- Each player is settled on their own save with their own slice: their HP, 回复药, pets' HP and experience.
+- **Gold**, per living (standing) player on a win, in full, not shared: each defeated enemy's gold plus, for a wild troop, that player's own level × 10 (`BATTLEGOLD`, as `BATTLE_GetExpGold` pays each living player).
+- **「队伍共享经验」** (a switch in the party list; the leader's, **on by default**; not in the save; it counts from the party's next battle). **This is not an original rule, but a convenience of ours**:
+  - On: every defeated enemy gives its **full** experience to **every standing player, their battle pet and their mount** (60 %, the original's rider share), not split. Each receiver's share is still reduced by the original level gap against the enemy: whole up to 5 levels above it, then × (20 − gap) / 15, at least 1 (`EXPGET_MAXLEVEL` 5, `EXPGET_DIV` 15).
+  - Off: the original (`BATTLE_AddExpItem`): each enemy's full experience goes to whoever felled it, the player (and their mount, 60 %) or the pet, with the same level gap.
+  - Either way only standing players on a win are paid, and fallen pets get nothing (`BATTLE_GetExpGold`). Each player's own experience multiplier applies to their share.
+- The pet loyalty for a kill goes to the pet that made it; death penalties are each player's own.
+
+### How it works
+
+- `server/party_battles.gd` (run by the hub) opens the battle when the leader's backend opens one (`Backend.party_battle_hook`): the leader's pending record is marked a party battle, and each member's `GameSession.start_party_config` builds that member's own pending record (their own battle id, the shared troop, their own stats and pets; no capture). It keeps the turn timer (`hub.battle_clock`, ticked each frame), treats players without a device as automatic, and settles each player when they leave the battle or it ends.
+- `server/party_battle_session.gd` (a `SquadBattleSession`, the 五人镜像队 layout: the leader in the player slot, members as allies 12–15 with pets 16–19) holds one command per slot, resolves the turn when `waiting_slots()` is empty or the host says so, runs members' own actions (attack, defend, item, escape; pets' attack, skills 3/10/50, defend, standby), keeps the party going when the leader falls or escapes, credits each kill to its slot, works out each slot's experience (`rewards_for`), and builds each slot's settlement (`slice_for`) and screen (`view_for`, the battle from that player's side).
+- Each participant's backend holds a `SlotView` as its `battle`. Its devices' `battle_command`, `battle_pet_command` and `battle_pet_skill` reach its own slot; the turn is presented to everyone with `battle_turn`, and a command that does not yet resolve it sends everyone a `battle_state` with the waiting state. See [backend interface](../technical/backend-interface.md#party-battles-lan-phase-4a).
+- `GameSession.apply_battle_result` takes the party's experience from the slice (`party_xp`) and handles `party_stay` (fallen, party won).
+- Where the automatic command comes from is one place, `PartyBattleSession._auto_command` with `auto_slots`: phase 4c plugs members' auto-battle presets in there.
+- Client: `scripts/battle_view.gd` (「等待队友…」, the countdown line, escaping allies running off, pet names), `network/battle_client.gd` (commands name their slot), `scripts/party_panel.gd` (the 队伍共享经验 switch).
+
+### Differences from the original
+
+- The original waits for every living player (`BATTLE_CommandWait`) and, with `_BATTLECOMMAND_TIME`, forces anyone still silent 120 s after the first command out of the battle and the party. Here the timer is 45 s from the start of the turn and a silent player just attacks; nobody is dropped.
+- Members' pets always obey in 4a; the loyalty check (不听指挥) runs only for the leader's pet.
+- 队伍共享经验 (above) is ours.
+- The leader's screen and each member's screen place their own character in the player's place; the original keeps one fixed layout for everyone.
 
 ## Phase 0: one server per profile
 
