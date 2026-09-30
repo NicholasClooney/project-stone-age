@@ -246,6 +246,23 @@ static func _wild_rows(catalog: Dictionary) -> Dictionary:
 
 # ---- queries -----------------------------------------------------------------
 
+## The wild areas of one map where a pet can be met and caught at Lv.1, from
+## the same locations as 野外出现地点: [{area_id, cell (verified landing, or
+## [] when none), names: [pet names in album order]}], by area id.
+func level_one_areas(map_id: int) -> Array:
+	var by_area := {}
+	for id in order:
+		var entry: Dictionary = species[id]
+		for place in entry.get("locations",[]):
+			if int(place.map_id) != map_id or not place.capturable or int(place.level_min) > 1:continue
+			var area := int(place.area_id)
+			if not by_area.has(area):by_area[area] = {"area_id":area,"cell":place.cell.duplicate(),"names":[]}
+			var name := str(entry.name)
+			if not by_area[area].names.has(name):by_area[area].names.append(name)
+	var result: Array = by_area.values()
+	result.sort_custom(func(a,b):return int(a.area_id) < int(b.area_id))
+	return result
+
 func entry_for(template_id: int) -> Dictionary:
 	return species.get(by_template.get(template_id,-1),{})
 

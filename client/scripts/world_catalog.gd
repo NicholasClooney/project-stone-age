@@ -4,6 +4,11 @@ const ROOT := "res://assets/legacy/"
 var maps: Dictionary = {}
 var portals: Dictionary = {}
 var residents: Array = []
+## Original exits to maps that are not imported yet (caves, mountain passes,
+## 庄园): from_map -> [portal], from provenance.unsupported_portals.
+var closed_exits: Dictionary = {}
+## Names of those maps (data/exit-names.json, tools/build_exit_names.py).
+var exit_names: Dictionary = {}
 func _init() -> void:
  if not FileAccess.file_exists(ROOT+"world/manifest.json"): return
  var text := FileAccess.get_file_as_string(ROOT+"world/manifest.json")
@@ -17,11 +22,25 @@ func _init() -> void:
   var key := str(int(link.from_map))
   if not portals.has(key):portals[key] = {}
   portals[key][Vector2i(int(link.cell[0]),int(link.cell[1]))] = link
+ for link in manifest.get("provenance",{}).get("unsupported_portals",[]):
+  var key := str(int(link.from_map))
+  if not closed_exits.has(key):closed_exits[key] = []
+  closed_exits[key].append(link)
+ if FileAccess.file_exists("res://data/exit-names.json"):
+  var names = JSON.parse_string(FileAccess.get_file_as_string("res://data/exit-names.json"))
+  if names is Dictionary:exit_names = names.get("maps",{})
 func info(id: int) -> Dictionary:
  return maps.get(str(id),{})
 func file(id: int) -> String:
  if maps.has(str(id)):return ROOT+str(maps[str(id)].path)
  return ROOT+str({100:"wilderness.json",1000:"samgir.json",1002:"shop.json"}.get(id,""))
+## A map's name: imported maps from the manifest, exit destinations from
+## data/exit-names.json, otherwise its number.
+func map_name(id: int) -> String:
+ var name := str(info(id).get("name",exit_names.get(str(id),"")))
+ return name if not name.is_empty() else "#%d" % id
+func unsupported_exits(id: int) -> Array:
+ return closed_exits.get(str(id),[])
 func links(id: int) -> Dictionary:
  return portals.get(str(id),{})
 func field(id: int) -> bool:

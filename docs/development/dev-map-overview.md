@@ -2,6 +2,17 @@
 
 Open the map navigator from **游戏助手** (G) → **地图导航**, or from the button below the map window (M). The dropdown browses villages, wilderness and caves without moving the player; building interiors are excluded. This replaces the separate teleport menu: 53 regions remain from 147 imported maps, excluding 94 building interiors. The current interior can still be viewed without appearing as a dropdown choice. The random-encounter toggle also lives here. The view covers the complete current island, including800×1200 Jaruga. Yellow markers are NPCs, cyan markers are original doors/exits, and white marks the player when viewing their map.
 
+## Names on the map
+
+Every marker carries its name, always shown (not only when zoomed in); a legend sits along the bottom of the view. Clicking a name selects its marker like clicking the dot.
+
+- **Places (white names, cyan dots)**: exits to other maps, labelled with the destination map's name from the world manifest (`portals`), e.g. 萨姆吉尔村. Exits with the same name within 12 cells share one marker.
+- **Not yet open (grey)**: original exits to maps that are not imported yet (caves, mountain passes, 庄园), from the manifest's `provenance.unsupported_portals`. Their names come from each map's original LS2MAP header, collected into `client/data/exit-names.json` by `tools/build_exit_names.py` (rerun it after `import_world.py` changes the unsupported exits). The floor suffix is dropped (阿布的洞窟地下１楼 → 阿布的洞窟); two Giru dungeons that name only their floor show as 洞窟 地下１楼. Clicking one moves next to the entrance on the current map; the cave itself stays unavailable.
+- **Lv.1 pets (green diamond, faint green area outline)**: on the 地点 tab, every encounter area of the map where a pet can be met and caught at Lv.1, from the same wild locations as 宠物大全's 野外出现地点 (`PetEncyclopedia.level_one_areas`). The label lists the pets, e.g. 「邦奇诺 Lv1」, at most three names then 等N种. With a verified landing the marker sits there and clicking checks the encounter area like the Lv.1 宠物 tab; otherwise it sits at the area's centre.
+- **NPCs (yellow)** and, on their tabs, **training spots (orange)** and **Lv.1 宠物 rows (green, same cell joined with 、)**.
+
+Labels are Label nodes (12 px, black outline) built once when the map or tab changes; zoom and pan only move them. Placement is greedy in the order places, pets, closed exits, training, NPCs: right of the marker, then left, above, below, then stacked downwards or upwards until the label clears those already placed; if nothing fits it keeps the first spot. `map_labels_test.gd` covers manifest names on 萨伊那斯, 邦奇诺 on 吉鲁岛, labels at zoom 1 with no overlaps on 萨伊那斯, and clicking a name or a dot to travel.
+
 - **步行** remains available. Click a map point or listed point of interest to walk there. Cross-map navigation follows original portal links and physically walks each segment. The map closes when walking begins.
 - **DEV 传送** is the initial default and explicitly bypasses walking and gates. Click to land on nearby walkable ground, excluding NPC cells and automatic portal triggers.
 - Scroll to zoom toward the pointer; drag to pan; **居中 / 全图** restores the full extent. Esc closes the navigator.
