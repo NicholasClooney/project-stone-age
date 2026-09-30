@@ -11,7 +11,7 @@ func _init(owner: GameScene) -> void:
 func begin_battle(boss: bool = false, enemy_count: int = 0) -> bool:
 	if game.moving or game.paused_input or not game.world_catalog.field(int(game.data.map_id)) or game.battle_view==null:
 		return false
-	if not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
+	if not preload("res://scripts/battle_art.gd").present():
 		game.message.text = "Import original battle assets first; see README.md."
 		return false
 	var reply: Dictionary = game.link.request({"type":"begin_battle","boss":boss,"enemy_count":enemy_count})
@@ -61,7 +61,7 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	# above it; the battle waits for commands until they close.
 	game.battle_view.open_battle(battle_state)
 	refresh_pet_window()
-	var manifest: Dictionary = preload("res://scripts/battle_art.gd").data()
+	var manifest: Dictionary = preload("res://scripts/battle_art.gd").index()
 	if game.showcase_music_active():game.begin_showcase_music()
 	game.set_music(game.music_track("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	game.play_battle_sound(215)

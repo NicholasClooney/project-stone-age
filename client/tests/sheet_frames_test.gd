@@ -1,7 +1,9 @@
 extends SceneTree
 ## Imported frames are cut from sprite sheets (docs/technical/sprite-sheets.md):
 ## every animation frame of a sprite resolves to its sheet at the frame's size.
-const SheetFrames = preload("res://scripts/sheet_frames.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
+const BattleArt = preload("res://scripts/battle_art.gd")
+const CharacterArt = preload("res://scripts/character_art.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -10,74 +12,69 @@ func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 
-func manifest(path: String) -> Dictionary:
-	return JSON.parse_string(FileAccess.get_file_as_string(path)) if FileAccess.file_exists(path) else {}
-
-## Every frame of the given sprites, and a sample of frames from all of them.
-func check_frames(label: String, folder: String, data: Dictionary, sprites: Array) -> void:
-	var sheets: Dictionary = data.get("sheets",{})
-	check(not sheets.is_empty() and sheets.size()==data.characters.size(),"%s: every sprite has a sheet (%d)" % [label,sheets.size()])
+## Every frame of the given sprites, and the first frame of all of them.
+func check_frames(label: String, entries: Dictionary, sprites: Array) -> void:
+	var sheeted := true
+	for key in entries:
+		if entries[key].files.is_empty():sheeted = false
+	check(not entries.is_empty() and sheeted,"%s: every sprite has a sheet (%d)" % [label,entries.size()])
 	for sprite in sprites:
 		var complete := true
-		for animation in data.characters[sprite].values():
-			for frame in animation.frames:
-				var bitmap := int(frame.image)
-				var texture := SheetFrames.texture(folder,sheets,sprite,bitmap)
-				var info: Dictionary = data.images[str(bitmap)]
-				if not texture is AtlasTexture or texture.get_size()!=Vector2(float(info.w),float(info.h)) or texture.get_image().is_invisible():complete = false
+		var art: Dictionary = entries[sprite]
+		for animation in art.animations.values():
+			for i in range(SpriteArt.frame_count(animation)):
+				var bitmap := SpriteArt.image(animation,i)
+				var texture := SpriteArt.texture(art,bitmap)
+				if not texture is AtlasTexture or Vector2i(texture.get_size())!=SpriteArt.image_size(art,bitmap) or texture.get_image().is_invisible():complete = false
 		check(complete,"%s: sprite %s draws every frame from its sheet" % [label,sprite])
-	var sampled := 0
 	var ok := true
-	for sprite in data.characters:
-		var frames: Array = data.characters[sprite].values()[0].frames
-		var bitmap := int(frames[0].image)
-		var texture := SheetFrames.bitmap_texture(folder,sheets,bitmap)
-		if texture==null or texture.get_size()!=Vector2(float(data.images[str(bitmap)].w),float(data.images[str(bitmap)].h)):ok = false
-		sampled += 1
-	check(ok,"%s: the first frame of all %d sprites is found by bitmap alone" % [label,sampled])
+	for sprite in entries:
+		var art: Dictionary = entries[sprite]
+		var bitmap := SpriteArt.image(art.animations.values()[0],0)
+		var texture := SpriteArt.texture(art,bitmap)
+		if texture==null or Vector2i(texture.get_size())!=SpriteArt.image_size(art,bitmap):ok = false
+	check(ok,"%s: the first frame of all %d sprites is found" % [label,entries.size()])
 
-## Pet sprites kept in battle/pets/<sprite>.json (BattleArt): merged into the
-## shared manifest on first use, after a battle already indexed the sheets,
-## every frame is still found by bitmap alone (the battle view's lookup).
+## Pet sprites that ship in their own web pack (BattleArt extra sprites).
 func extra_sprites() -> void:
-	const BattleArt = preload("res://scripts/battle_art.gd")
-	var data: Dictionary = BattleArt.data()
-	var folder := "res://assets/legacy/battle/"
-	check(data.get("extra_sprites",{}).size() > 300 and not data.characters.has("101869"),"most pet sprites live in their own files, not the manifest (%d)" % data.get("extra_sprites",{}).size())
-	SheetFrames.bitmap_texture(folder,data.sheets,int(data.characters["100250"]["3_1"].frames[0].image))
-	check(BattleArt.ensure(101869) and data.characters.has("101869") and data.sheets.has("101869"),"巴雅's sprite (101869, 8.0) merges in on first use")
+	check(BattleArt.index().get("extra_sprites",{}).size() > 300 and not BattleArt.index().sprites.has("101869"),"most pet sprites ship with their own web pack (%d)" % BattleArt.index().get("extra_sprites",{}).size())
+	var art := BattleArt.art(101869)
+	check(BattleArt.ensure(101869) and BattleArt.is_extra(101869) and not art.is_empty(),"巴雅's sprite (101869, 8.0) loads on first use")
 	var complete := true
 	var renumbered := 0
-	for animation in data.characters["101869"].values():
-		for frame in animation.frames:
-			var bitmap := int(frame.image)
+	for animation in art.animations.values():
+		for i in range(SpriteArt.frame_count(animation)):
+			var bitmap := SpriteArt.image(animation,i)
 			if bitmap >= 1000000000:renumbered += 1
-			var texture := SheetFrames.bitmap_texture(folder,data.sheets,bitmap)
-			var info: Dictionary = data.images[str(bitmap)]
-			if texture==null or texture.get_size()!=Vector2(float(info.w),float(info.h)):complete = false
-	check(complete,"every frame of it is found by bitmap after the merge")
+			var texture := SpriteArt.texture(art,bitmap)
+			if texture==null or Vector2i(texture.get_size())!=SpriteArt.image_size(art,bitmap):complete = false
+	check(complete,"every frame of it is found in its sheet")
 	check(renumbered == 0,"its bitmaps keep their numbers: 2.5 has the same pictures or none under them")
 	# 机豹 (101423, 8.0 only): 2.5 uses its bitmap numbers for other pictures.
-	for animation in data.characters["101423"].values():
-		for frame in animation.frames:
-			if int(frame.image) >= 1000000000:renumbered += 1
+	for animation in BattleArt.animations(101423).values():
+		for i in range(SpriteArt.frame_count(animation)):
+			if SpriteArt.image(animation,i) >= 1000000000:renumbered += 1
 	check(renumbered > 0,"8.0 bitmaps whose numbers 2.5 uses for other pictures are renumbered (机豹: %d frames)" % renumbered)
 
 func run() -> void:
-	var battle := manifest("res://assets/legacy/battle/manifest.json")
-	check_frames("battle","res://assets/legacy/battle/",battle,["100000","100250"])
-	check(SheetFrames.texture("res://assets/legacy/battle/",battle.sheets,"100000",-1)==null,"a frame no sheet holds draws nothing")
+	var battle := {}
+	for sprite in BattleArt.index().sprites:battle[sprite] = BattleArt.read(sprite)
+	check_frames("battle",battle,["100000","100250"])
+	check(SpriteArt.texture(battle["100000"],-1)==null,"a frame no sheet holds draws nothing")
 	check(not DirAccess.dir_exists_absolute("res://assets/legacy/battle/images"),"no per-frame battle PNGs are left for Godot to import")
 	extra_sprites()
-	var characters := manifest("res://assets/legacy/characters/catalog.json")
-	check_frames("characters","res://assets/legacy/characters/",characters,["100000","100010"])
+	var characters := {}
+	for character in CharacterArt.index().characters:characters[character] = CharacterArt.read(character)
+	check_frames("characters",characters,["100000","100010"])
 	# A frame only the sheet holds has no PNG left; one a map also draws keeps it.
 	var only_sheet := 0
 	var total := 0
-	for character in characters.sheets:
-		for bitmap in characters.sheets[character].frames:
+	for character in characters:
+		var art: Dictionary = characters[character]
+		for bitmap in art.bitmaps:
+			if SpriteArt.spot(art,bitmap).is_empty():continue
 			total += 1
-			if not ResourceLoader.exists("res://assets/legacy/images/%s.png" % bitmap):only_sheet += 1
+			if not ResourceLoader.exists("res://assets/legacy/images/%d.png" % bitmap):only_sheet += 1
 	check(only_sheet > total*0.9,"most packed walking frames no longer exist as single PNGs (%d of %d)" % [only_sheet,total])
 	# The field draws player characters from the sheet.
 	var game = load("res://scenes/main.tscn").instantiate()
@@ -85,7 +82,7 @@ func run() -> void:
 	root.add_child(game)
 	await process_frame
 	await process_frame
-	var bitmap := int(characters.characters["100000"].values()[0].frames[0].image)
+	var bitmap := SpriteArt.image(characters["100000"].animations.values()[0],0)
 	check(game.character_frame("100000",bitmap) is AtlasTexture,"the field draws a player character's frame from its sheet")
 	check(game.player.sprite.texture!=null,"the player is drawn")
 	game.process_mode = Node.PROCESS_MODE_DISABLED

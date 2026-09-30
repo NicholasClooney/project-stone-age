@@ -59,6 +59,7 @@ var storage_favorites_first := true
 const PetStatFilter=preload("res://scripts/pet_stat_filter.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
 const Riding = preload("res://scripts/riding.gd")
 const Elements = preload("res://server/elements.gd")
 const ElementBars = preload("res://scripts/element_bars.gd")
@@ -265,9 +266,10 @@ func art_button(ident: int, point: Vector2, action: String, value: Variant = nul
 	return button
 
 func portrait(sprite: int, point: Vector2, bounds: Vector2) -> void:
-	var frames: Array = AnimatedPortrait.animation_for(str(sprite),3,0).frames
+	var art: Dictionary = preload("res://scripts/battle_art.gd").art(sprite)
+	var animation: Dictionary = AnimatedPortrait.animation_for(str(sprite),3,0)
 	var view := TextureRect.new()
-	view.texture = preload("res://scripts/sheet_frames.gd").texture("res://assets/legacy/battle/",AnimatedPortrait.manifest().get("sheets",{}),str(sprite),int(frames[0].image))
+	view.texture = SpriteArt.texture(art,SpriteArt.image(animation,0)) if SpriteArt.frame_count(animation) > 0 else null
 	view.position = point
 	view.size = bounds
 	view.expand_mode = TextureRect.EXPAND_IGNORE_SIZE

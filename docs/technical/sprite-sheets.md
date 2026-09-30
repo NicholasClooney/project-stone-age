@@ -4,9 +4,9 @@ The original client stores every animation frame as its own bitmap. Importing th
 
 | Art | Sheet per | Packed by | Manifest | Sheets |
 | --- | --- | --- | --- | --- |
-| Riding | rider and mount composite | `tools/import_riding.py` | `riding/manifest.json` | `riding/sheets/` |
-| Battle sprites | battle sprite (player, pet, enemy) | `tools/pack_frame_sheets.py battle` | `battle/manifest.json` | `battle/sheets/` |
-| Walking art | player character | `tools/pack_frame_sheets.py characters` | `characters/catalog.json` | `characters/sheets/` |
+| Riding | rider and mount composite | `tools/import_riding.py` | `riding/manifest.json`, split into `riding/composites/` | `riding/sheets/` |
+| Battle sprites | battle sprite (player, pet, enemy) | `tools/pack_frame_sheets.py battle` | `battle/manifest.json`, split into `battle/sprites/` | `battle/sheets/` |
+| Walking art | player character | `tools/pack_frame_sheets.py characters` | `characters/catalog.json`, split into `characters/art/` | `characters/sheets/` |
 | Map tiles and props | not packed, see below | | map files (`world/<id>.map`) | `images/` |
 
 ## Why per-frame PNGs were slow
@@ -67,19 +67,52 @@ A battle bitmap number names one picture: 8.0 bitmaps whose number 2.5 uses for 
 
 `frames` maps a bitmap id to `[sheet, x, y, w, h]`: the index into `files` and the frame's rectangle in that sheet. A bitmap used by several composites is copied into each composite's sheet, so a composite never needs another composite's file.
 
+These manifests are the importers' working data. The game does not read them.
+
+## Runtime files
+
+Parsed by Godot, every frame of a manifest was its own `Dictionary`: the battle manifest took 141 MB from startup and the riding manifest 208 MB from the first battle, for good ([memory baseline](memory-baseline.md)). `tools/split_manifests.py` turns each manifest into a small index and one compact file per sprite; the game reads the index at startup and a sprite's file when it is drawn:
+
+| Manifest | Index | One file per | Web pack of the file |
+| --- | --- | --- | --- |
+| `battle/manifest.json`, `battle/pets/*.json` | `battle/index.json`: player and enemy ids, club variants, UI, audio, frame sounds, and `sprites` / `extra_sprites` | battle sprite: `battle/sprites/<id>.json` | `core`; a pet sprite only 宠物大全 and GM grants need (`extra_sprites`) is in its `sprite-<id>` pack |
+| `riding/manifest.json` | `riding/index.json`: pairs, names, frame sounds, `composites` | composite: `riding/composites/<id>.json` | its `riding-<id>` pack, which battles and the field already wait for |
+| `characters/catalog.json` | `characters/index.json`: the chooser's `choices`, `characters` | character: `characters/art/<id>.json` | `core` |
+| `battle/backgrounds.json` | `battle/battlefields.json`: the ground to battlefield table as packed lookups | | `core` |
+
+A sprite file stores numbers, not objects:
+
+```json
+{"animations": {"3_0": [600, 10177, 0, 0, 0, 10178, 0, 0, 10000]},
+ "files": ["sheets/100000.png"],
+ "bitmaps": [10177, -22, -57, 44, 70, 0, 41, 0]}
+```
+
+An animation is its `duration_ms` and then image, x, y, sound for each frame. `bitmaps` has 8 numbers per bitmap the animations draw: the bitmap, its draw offset and size, the index into `files` (-1 when it is not packed) and its position in that sheet. A club variant that draws another sprite's frames names that sheet in `files`, so every sprite is complete on its own. `sprites` and `extra_sprites` map each sprite to the sheets a battle needs, or `false` when it lacks an action or direction a battle plays; `server/troop_art.gd` decides from that without reading any sprite file.
+
+`battlefields.json` keeps the 73 distinct battlefield triples, one little-endian uint16 per ground id (base64) naming its triple, and the ground bitmaps with their grounds as two sorted arrays for a binary search: 36 MB parsed before, well under 1 MB now.
+
+The split runs at the end of `pack_frame_sheets.py`, `import_riding.py`, `import_battle_sounds.py` and `import_battle_backgrounds.py`, and last in `scripts/setup-original-data.sh`. After any other importer that changes a manifest, run `python3 tools/split_manifests.py`.
+
 ## Runtime
 
-`client/scripts/sheet_frames.gd` `texture(folder, sheets, key, bitmap)` returns an `AtlasTexture` whose atlas is the sheet and whose region is the frame's rectangle. Sheets and frames are cached in static dictionaries, so each sheet loads once and each frame object is made once. When a sheet is not available yet (its web pack is still downloading) it returns `null` and caches nothing, so the next draw tries again. Its users:
+`client/scripts/sprite_art.gd` parses a sprite file into an entry: `animations` with each animation's frames in a `PackedInt32Array`, `bitmaps` (bitmap to row) and the rows themselves in one `PackedInt32Array`. A battle sprite is tens of KB in memory instead of about 0.8 MB. `SpriteArt.texture(entry, bitmap)` returns an `AtlasTexture` of the frame (`sheet_frames.gd` `region`, which loads each sheet once) and caches it in the entry; while a sheet is not available yet (its web pack is still downloading) it returns `null` and caches nothing, so the next draw tries again.
 
-- riding: `riding.gd` `frame_texture(composite, bitmap)`, for `legacy_actor.gd` (field) and `battle_view.gd` (mounted battles);
-- battle sprites: `battle_view.gd` (`bitmap_texture`), `pet_follower.gd`, `animated_portrait.gd`, `adventure_menu.gd` portraits, and `server/troop_art.gd` (`available`, to validate encounter art);
-- walking art: `game.character_frame(character, bitmap)`, which falls back to the single PNG for map residents and frames that are not packed.
+The loaders keep the most recently used entries (`client/scripts/art_cache.gd`): `battle_art.gd` 32 sprites, `riding.gd` 8 composites, `character_art.gd` 64 characters (the chooser shows them all). A node that draws a sprite holds its entry, so dropping one from the cache never takes art off the screen; the file is only read again later. 宠物大全's pictures read sprites with `BattleArt.peek`, which does not keep them. A missing file (a web pack not here yet) is not cached either.
 
-`sheet_frames_test.gd` checks that every frame of sample sprites comes from its sheet at the frame's size, that every sprite's first frame is found by bitmap alone, and that the per-frame PNGs are gone.
+Users:
+
+- riding: `riding.gd` `art(composite)` and `frame_texture`, for `legacy_actor.gd` (field) and `battle_view.gd` (mounted battles);
+- battle sprites: `battle_view.gd` (each actor holds its entry), `pet_follower.gd`, `animated_portrait.gd`, `adventure_menu.gd` portraits, `pet_thumbnails.gd`, and `server/troop_art.gd` (the index only);
+- walking art: `legacy_actor.gd` and `game.character_frame(character, bitmap)`, which falls back to the single PNG for frames that are not packed. Walking art a map JSON carries itself is converted with `SpriteArt.from_legacy`.
+
+The faces manifest (0.1 MB) keeps the manifest layout and `SheetFrames.texture(folder, sheets, key, bitmap)`.
+
+`sheet_frames_test.gd` checks that every frame of sample sprites comes from its sheet at the frame's size, that every sprite's first frame is found, and that the per-frame PNGs are gone. `split_manifests_test.gd` checks the cache and, against the importers' manifests, that every frame, sound, offset and sheet rectangle of sample battle sprites (8.0 pets included), riding composites and characters, the frame sounds, TroopArt's check and the battlefield lookups are unchanged. `tools/test_split_manifests.py` tests the split itself.
 
 ## Web packs
 
-`tools/plan_web_packs.py` puts each sheet in the pack that already stood for its sprite: `riding-<id>`, `sprite-<id>` and `char-<id>`. Frame PNGs still present (walking frames maps also draw, or an import not packed yet) stay in those packs as before.
+`tools/plan_web_packs.py` puts each sheet in the pack that already stood for its sprite: `riding-<id>`, `sprite-<id>` and `char-<id>`. Frame PNGs still present (walking frames maps also draw, or an import not packed yet) stay in those packs as before. The runtime files go where the table in [runtime files](#runtime-files) says; the importers' manifests are not shipped, which took the core pack from about 32 MB to 11 MB.
 
 ## Measured (M-series Mac)
 

@@ -74,7 +74,7 @@ func run():
  choices[1].pressed.emit()
  settle()
  check(authority.snapshot().active_pet==1 and view.actors[2].enabled,"pet switch consumes a round and replacement enters")
- check(view.actors[2].animations==view.manifest.characters["100251"],"replacement uses its own original animation set")
+ check(view.actors[2].art.key=="100251" and view.actors[2].animations==preload("res://scripts/battle_art.gd").animations("100251"),"replacement uses its own original animation set")
  view._request_action("pet")
  view.choice_panel.get_node("WithdrawPet").pressed.emit()
  settle()

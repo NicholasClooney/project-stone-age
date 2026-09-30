@@ -2,13 +2,15 @@
 
 Where runtime memory goes, measured before any optimization (2026-09-30, `main` at c2e6062 plus the re-import of the 8.0 album pets). A desktop Safari tab reached about 6 GB and iPhone Safari reloads the page, most likely out of memory. Re-run the same probes after each optimization and compare against the tables below.
 
+**After split manifests** (optimization 2, [runtime files](sprite-sheets.md#runtime-files)): the battle and riding manifests, `backgrounds.json` and the character catalog are read per sprite on demand. Desktop, same tour, `main` at 404fc92 before and after: startup 362 to 171 MB static, back in the village after the tour 611 to 208 MB, peak 997 to 680 MB. The columns marked "split" below are that run. Web, after only (compare with the web table): wasm heap 412 to 199 MB at startup and 805 to 495 MB after the tour; the core pack 32 to 11 MB.
+
 ## Headline
 
-| | Desktop (Godot 4.6, Compatibility, M-series Mac) | Web (Chrome for Testing, headless) |
-| --- | --- | --- |
-| Startup, Samgir village | 360 MB Godot static, 36 MB textures, 824 MB process footprint | 412 MB wasm heap, 89 MB decoded audio, 815 MB page renderer |
-| After the tour | 608 MB static (back in the village), 1.3 to 1.7 GB footprint | 805 MB wasm heap, 228 MB decoded audio, 1.52 GB page renderer plus 0.4 GB GPU process |
-| Peak | 995 MB static | The wasm heap never shrinks, so the peak is what stays |
+| | Desktop (Godot 4.6, Compatibility, M-series Mac) | Desktop, after split manifests | Web (Chrome for Testing, headless) |
+| --- | --- | --- | --- |
+| Startup, Samgir village | 360 MB Godot static, 36 MB textures, 824 MB process footprint | 171 MB static, 36 MB textures, 559 MB footprint | 412 MB wasm heap, 89 MB decoded audio, 815 MB page renderer |
+| After the tour | 608 MB static (back in the village), 1.3 to 1.7 GB footprint | 208 MB static, 0.8 to 1.0 GB footprint | 805 MB wasm heap, 228 MB decoded audio, 1.52 GB page renderer plus 0.4 GB GPU process |
+| Peak | 995 MB static | 680 MB static (leaving map 200) | The wasm heap never shrinks, so the peak is what stays |
 
 Almost all of it is parsed JSON, not pictures. Textures are only about 110 MB after the tour. The biggest consumers, in order:
 
@@ -73,31 +75,33 @@ It does not measure Safari. Safari's Web Inspector (Timelines, Memory) shows the
 
 Memory in MB. "File textures" is the RGBA estimate of the imported textures in the cache. "Texture mem" is Godot's own count, which also includes fonts, thumbnails and render targets.
 
-| Step | Map | Static | Static max | Texture mem | File textures | Footprint | Objects | Nodes | Draw calls |
-| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
-| 00 engine only | | 31 | 32 | 8 | 0 | 316 | 1,469 | 1 | 0 |
-| 01 startup: village | 1000 | 360 | 382 | 36 | 21 | 824 | 5,602 | 1,123 | 2,369 |
-| 02 test profile | 1000 | 364 | 382 | 36 | 21 | 842 | 5,602 | 1,123 | 2,369 |
-| 03 walked around the village | 1000 | 364 | 382 | 38 | 22 | 846 | 5,677 | 1,125 | 2,371 |
-| 04 Samgir wilderness | 100 | 563 | 600 | 42 | 25 | 1,115 | 5,657 | 1,055 | 2,358 |
-| 05 吉鲁岛 + walk | 300 | 477 | 665 | 55 | 35 | 1,002 | 6,085 | 1,311 | 1,456 |
-| 06 map 200 | 200 | 679 | 815 | 68 | 45 | 1,189 | 6,323 | 1,307 | 2,324 |
-| 07 back to map 100 | 100 | 572 | 869 | 68 | 45 | 1,078 | 6,071 | 1,055 | 2,358 |
-| 08 battle open | 100 | 785 | 869 | 75 | 49 | 1,337 | 6,151 | 1,060 | 2,425 |
-| 09 after the battle | 100 | 784 | 869 | 75 | 49 | 1,337 | 6,147 | 1,060 | 2,358 |
-| 10 capture battle open | 100 | 785 | 869 | 77 | 51 | 1,212 | 6,204 | 1,062 | 2,413 |
-| 11 after the capture battle | 100 | 784 | 869 | 77 | 51 | 1,212 | 6,200 | 1,062 | 2,358 |
-| 12 pet window | 100 | 786 | 869 | 79 | 52 | 1,216 | 6,499 | 1,160 | 2,441 |
-| 13 同种比较 | 100 | 800 | 869 | 80 | 52 | 1,231 | 7,575 | 1,547 | 2,635 |
-| 14 pet window closed | 100 | 801 | 869 | 80 | 52 | 1,231 | 7,575 | 1,547 | 2,358 |
-| 15 宠物大全 grid | 100 | 859 | 870 | 81 | 52 | 1,389 | 19,665 | 5,854 | 2,492 |
-| 16 grid scrolled to the end | 100 | 859 | 987 | 94 | 52 | 1,644 | 20,012 | 5,854 | 2,548 |
-| 17 list view | 100 | 818 | 987 | 94 | 52 | 1,676 | 9,333 | 2,084 | 2,479 |
-| 18 detail (扬奇洛斯) | 100 | 813 | 987 | 105 | 60 | 1,548 | 8,532 | 1,749 | 2,557 |
-| 19 radio, 5 tracks | 100 | 811 | 987 | 105 | 60 | 1,545 | 7,977 | 1,547 | 2,358 |
-| 20 设置 | 100 | 811 | 987 | 105 | 60 | 1,548 | 8,119 | 1,590 | 2,405 |
-| 21 all closed, village | 1000 | 608 | 987 | 107 | 61 | 1,424 | 8,237 | 1,661 | 2,351 |
-| 22 3 more battles, village | 1000 | 608 | 995 | 109 | 63 | 1,295 | 8,278 | 1,661 | 2,351 |
+| Step | Map | Static | Static max | Texture mem | File textures | Footprint | Objects | Nodes | Draw calls | Static, split | Static max, split | Footprint, split |
+| --- | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: | ---: |
+| 00 engine only | | 31 | 32 | 8 | 0 | 316 | 1,469 | 1 | 0 | 31 | 34 | 321 |
+| 01 startup: village | 1000 | 360 | 382 | 36 | 21 | 824 | 5,602 | 1,123 | 2,369 | 171 | 173 | 559 |
+| 02 test profile | 1000 | 364 | 382 | 36 | 21 | 842 | 5,602 | 1,123 | 2,369 | 174 | 191 | 575 |
+| 03 walked around the village | 1000 | 364 | 382 | 38 | 22 | 846 | 5,677 | 1,125 | 2,371 | 174 | 191 | 547 |
+| 04 Samgir wilderness | 100 | 563 | 600 | 42 | 25 | 1,115 | 5,657 | 1,055 | 2,358 | 374 | 414 | 837 |
+| 05 吉鲁岛 + walk | 300 | 477 | 665 | 55 | 35 | 1,002 | 6,085 | 1,311 | 1,456 | 287 | 476 | 735 |
+| 06 map 200 | 200 | 679 | 815 | 68 | 45 | 1,189 | 6,323 | 1,307 | 2,324 | 490 | 626 | 1,003 |
+| 07 back to map 100 | 100 | 572 | 869 | 68 | 45 | 1,078 | 6,071 | 1,055 | 2,358 | 383 | 680 | 944 |
+| 08 battle open | 100 | 785 | 869 | 75 | 49 | 1,337 | 6,151 | 1,060 | 2,425 | 384 | 680 | 965 |
+| 09 after the battle | 100 | 784 | 869 | 75 | 49 | 1,337 | 6,147 | 1,060 | 2,358 | 383 | 680 | 895 |
+| 10 capture battle open | 100 | 785 | 869 | 77 | 51 | 1,212 | 6,204 | 1,062 | 2,413 | 384 | 680 | 901 |
+| 11 after the capture battle | 100 | 784 | 869 | 77 | 51 | 1,212 | 6,200 | 1,062 | 2,358 | 384 | 680 | 901 |
+| 12 pet window | 100 | 786 | 869 | 79 | 52 | 1,216 | 6,499 | 1,160 | 2,441 | 386 | 680 | 906 |
+| 13 同种比较 | 100 | 800 | 869 | 80 | 52 | 1,231 | 7,575 | 1,547 | 2,635 | 400 | 680 | 920 |
+| 14 pet window closed | 100 | 801 | 869 | 80 | 52 | 1,231 | 7,575 | 1,547 | 2,358 | 400 | 680 | 921 |
+| 15 宠物大全 grid | 100 | 859 | 870 | 81 | 52 | 1,389 | 19,665 | 5,854 | 2,492 | 458 | 680 | 1,050 |
+| 16 grid scrolled to the end | 100 | 859 | 987 | 94 | 52 | 1,644 | 20,012 | 5,854 | 2,548 | 459 | 680 | 1,581 |
+| 17 list view | 100 | 818 | 987 | 94 | 52 | 1,676 | 9,333 | 2,084 | 2,479 | 418 | 680 | 1,392 |
+| 18 detail (扬奇洛斯) | 100 | 813 | 987 | 105 | 60 | 1,548 | 8,532 | 1,749 | 2,557 | 413 | 680 | 1,107 |
+| 19 radio, 5 tracks | 100 | 811 | 987 | 105 | 60 | 1,545 | 7,977 | 1,547 | 2,358 | 411 | 680 | 1,008 |
+| 20 设置 | 100 | 811 | 987 | 105 | 60 | 1,548 | 8,119 | 1,590 | 2,405 | 412 | 680 | 1,010 |
+| 21 all closed, village | 1000 | 608 | 987 | 107 | 61 | 1,424 | 8,237 | 1,661 | 2,351 | 208 | 680 | 1,018 |
+| 22 3 more battles, village | 1000 | 608 | 995 | 109 | 63 | 1,295 | 8,278 | 1,661 | 2,351 | 208 | 680 | 776 |
+
+The split columns are the same tour after optimization 2, measured on `main` at 404fc92 without and with it; the run without it matched the columns on the left to within 3 MB. Texture memory, objects, nodes and draw calls did not change. Every step is about 190 MB lower from startup and 400 MB lower from the first battle on (141 MB battle manifest, 208 MB riding manifest, 36 MB backgrounds, 16 MB character catalog). What remains is mostly maps (optimization 1).
 
 Orphan nodes stayed at 0 throughout. Closing windows frees their nodes (20,012 objects with the grid open, 8,237 after). Two runs gave the same static numbers to within 1 MB.
 
@@ -113,6 +117,12 @@ Orphan nodes stayed at 0 throughout. Closing windows frees their nodes (20,012 o
 | `battle/backgrounds.json` | 6.0 | 36 | 5.7 | From startup (`battle_view.background_selector`), for good |
 | `characters/catalog.json` | 0.8 | 16 | 2.1 | From startup (`game.character_catalog`), for good |
 | `encounters/catalog.json` | 1.8 | 13 | 1.9 | From startup (backend), for good |
+| After split: `battle/index.json` | 0.03 | 0.3 | 0.05 | From startup |
+| After split: one battle sprite (`battle/sprites/100250.json`) | 0.02 | 0.1 | about 0.01 | The last 32 drawn |
+| After split: `riding/index.json` | 0.07 | 0.9 | 0.1 | From the first battle |
+| After split: one riding composite | 0.02 | 0.1 | about 0.01 | The last 8 drawn |
+| After split: `battle/battlefields.json` | 0.4 | 2.4 | 0.3 | From startup (the battle view) |
+| After split: `characters/index.json`, one character | 0.01 each | 0.1 each | under 0.01 | Index from startup, the last 64 characters drawn |
 | `world/1000.json`, `samgir.json` | 0.5 each | 7 each | 1.3 | Village |
 
 Why so large: a map's `ground` is 575,236 three-number arrays for map 100, and each is its own `Array` of `Variant`s. The manifests store every animation frame as a `Dictionary` (`{image, x, y, sound}`). Reading the file also makes a temporary `String` of 4 bytes per character (Godot strings are UTF-32), so switching maps briefly holds the old map, the new text and the new map at once. Hence the peaks: 600 MB on the first visit to map 100, 869 MB when leaving map 200.
@@ -143,6 +153,20 @@ Small. WAV imports are QOA-compressed and Ogg stays compressed; both are decoded
 | 07 宠物大全 grid scrolled | 805 | 360 | 217 (521) | 1,423 | 408 | 364 |
 | 08 back in the village | 805 | 434 | 228 (574) | 1,520 | 401 | 426 |
 | 09 reload, second visit | 412 | 212 | 89 (126) | 787 | 340 | 271 |
+
+After split manifests (same probe on 404fc92 plus the change, ports 8792 and 8793; a few steps timed out waiting for a battle to end and moved on, so the later rows are rougher):
+
+| Step | wasm heap | JS heap used | Audio buffers alive (created) | Page renderer footprint | Packs mounted |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| 01 startup, first visit | 199 | 154 | 89 (178) | 610 | 271 |
+| 02 map 100 | 495 | 262 | 146 (261) | 931 | 299 |
+| 03 battle open | 495 | 234 | 140 (297) | 942 | 307 |
+| 05 after 3 more battles | 495 | 301 | 182 (453) | 989 | 309 |
+| 07 宠物大全 grid scrolled | 495 | 272 | 182 (495) | 1,153 | 397 |
+| 08 back in the village | 495 | 320 | 193 (547) | 1,199 | 461 |
+| 09 reload, second visit | 199 | 504 | 89 (126) | 1,147 | 271 |
+
+The heap now peaks at the first map 100 parse and stays there: the manifests no longer add to it. IndexedDB held 45 MB of packs after the reload (66 MB before), since the core pack no longer carries the importer manifests.
 
 - **wasm heap = the desktop's static peak, kept.** Emscripten grows linear memory and never returns it. 412 MB at startup (battle manifest and the first map parse), 709 MB after the first map switch, 805 MB after the riding manifest loaded. On a phone, a single parse of map 200 while another large map is held can push it past what Safari allows.
 - **Audio is decoded in full.** Godot 4.6 plays AudioStreamWAV and AudioStreamOggVorbis on the web as samples: the whole stream becomes an `AudioBuffer` of 32-bit floats per channel (about 350 KB per second of stereo), whatever its compression. Startup's 220 seconds of audio cost 89 MB. The buffer lives as long as the stream resource, so `battle_sounds`, `ui_sounds`, the map and battle music and the radio's current and next tracks all stay decoded. A 3-minute radio track is about 63 MB.
@@ -195,9 +219,9 @@ Streaming has one cost in this no-threads build: the engine mixes music on the m
 
 | Held | Size in the tour | Grows with |
 | --- | --- | --- |
-| Riding manifest (`Riding._manifest`) | 208 MB static | Loaded once on the first battle or mount |
-| Battle manifest (`BattleArt._data`) | 141 MB static | Every 8.0 pet sprite `ensure()` merges in |
-| `backgrounds.json`, character catalog, encounter catalog | 65 MB static | Fixed |
+| Riding manifest (`Riding._manifest`) | 208 MB static | Loaded once on the first battle or mount. After split manifests: the index (under 1 MB) and the last 8 composites (about 0.1 MB each) |
+| Battle manifest (`BattleArt._data`) | 141 MB static | Every 8.0 pet sprite `ensure()` merges in. After split manifests: the index and the last 32 sprites (about 0.1 MB each) |
+| `backgrounds.json`, character catalog, encounter catalog | 65 MB static | Fixed. After split manifests: battlefields about 2 MB, characters under 1 MB, encounters 13 MB |
 | `SheetFrames._sheets` / `_frames`, plus `battle_view.textures` and `AnimatedPortrait._textures` holding AtlasTextures of them | 6 sheets, 18 MB | Every distinct sprite drawn (about 10 MB each as RGBA) |
 | `game.textures` (map tiles and props) | 1,084 tiles, 42 MB | Cleared on a map change only once over 4,000 |
 | `PetThumbnails._made` | 384, 10.6 MB | At most about 580 species, about 16 MB |
@@ -212,7 +236,7 @@ What does come back: map data when leaving a map (the same map 100 is 563 MB bef
 Estimates are from the measurements above. The web numbers matter most, since there every peak stays in the wasm heap.
 
 1. **Done, see [after packed maps](#after-packed-maps-optimization-1). Store maps as packed arrays.** Convert `ground` and `blocked` to `PackedInt32Array` / `PackedByteArray` at import (or read `var_to_bytes` / a binary file instead of JSON). Map 100: 125 MB to about 5 MB; map 200: 196 MB to about 8 MB. Also removes most of the map-switch peak (currently +300 to 400 MB). **Saves about 150 to 200 MB held and 300 MB or more of peak, which on the web is the wasm heap size.**
-2. **Split the battle and riding manifests per sprite and load on demand**, like the 8.0 pets already are (`battle/pets/<sprite>.json`), and keep frames as packed arrays rather than dictionaries. A battle needs a handful of sprites (about 1 MB each parsed). **Saves about 330 MB static (141 + 208 today) and the web heap with it.** Turning `backgrounds.json` into packed lookups (a battle reads one ground, one battlefield list and one background) saves about 30 MB.
+2. **Done (split manifests):** startup 362 to 171 MB static, after the tour 611 to 208 MB; see the split columns. **Split the battle and riding manifests per sprite and load on demand**, like the 8.0 pets already are (`battle/pets/<sprite>.json`), and keep frames as packed arrays rather than dictionaries. A battle needs a handful of sprites (about 1 MB each parsed). **Saves about 330 MB static (141 + 208 today) and the web heap with it.** Turning `backgrounds.json` into packed lookups (a battle reads one ground, one battlefield list and one background) saves about 30 MB.
 3. **Done, see [after streamed audio](#after-streamed-audio-optimization-3). Web music as streams, not samples.** Set `playback_type = PLAYBACK_TYPE_STREAM` on the music and radio players (or `audio/general/default_playback_type.web`), keep samples for short effects. Music is decoded in small chunks by the audio worklet. **Saves about 200 MB after the tour and 50 to 60 MB per radio track**; startup 89 MB to about 12 MB. Drop `upcoming_stream` or keep it compressed. (Transcoding the remaining WAV music to Ogg Vorbis helps pack size and desktop memory only a little; streaming is what matters on the web.)
 4. **Keep packs out of MEMFS between sessions.** Store downloaded packs in the Cache API or OPFS from JavaScript and write only the packs this session mounts into a non-persistent MEMFS folder (for example `/tmp/packs`), so startup no longer copies the whole IndexedDB store into memory. **Saves up to the whole cache (up to about 970 MB on a well-travelled device, 66 MB after this tour) at every start.** Mounted packs still cost their size for the session; Godot cannot unmount a pack, so the remaining win is mounting fewer (thumbnails below prefetch whole sprite packs).
 5. **Texture budget (LRU) for sprite sheets.** Evict `SheetFrames` sheets (and the AtlasTextures in `battle_view.textures` and `AnimatedPortrait._textures` that keep them alive) beyond a byte budget, say 64 to 128 MB; clear `battle_view.textures` on `close_battle`. Budget `game.textures` by bytes rather than 4,000 entries. **Bounds a long 后台搜宠 session** (today about 10 MB per new species forever); little change in this short tour.

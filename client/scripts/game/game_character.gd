@@ -18,7 +18,7 @@ func change_character(id: String = "") -> void:
 	if not game.asset_packs.is_ready([game.asset_packs.character_pack(id)]):
 		game.asset_packs.ensure([game.asset_packs.character_pack(id)],func(ok: bool):if ok:change_character(id),"角色")
 		return
-	if not game.data.characters.has(id) or not game.session.set_character(id):return
+	if not (game.character_catalog.get("characters",{}).has(id) or game.data.get("characters",{}).has(id)) or not game.session.set_character(id):return
 	game.player.character_id = id
 	refresh_riding()
 	game.player.current_image = -1
@@ -39,7 +39,7 @@ func refresh_companion() -> void:
 		game.pet_follower.queue_free()
 	game.pet_follower = null
 	var profile: Dictionary = game.session.snapshot()
-	if int(profile.active_pet)<0 or not FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):return
+	if int(profile.active_pet)<0 or not preload("res://scripts/battle_art.gd").present():return
 	var pet: Dictionary = profile.pets[int(profile.active_pet)]
 	if int(pet.hp)<=0:return
 	game.pet_follower = PetFollower.new()

@@ -17,6 +17,7 @@ import shutil
 from pathlib import Path
 from import_legacy import Archive
 from sprite_sheets import save_sheets
+from split_manifests import split_riding
 from import_battle import animations
 
 # RPlistMode (char_base.c:549): the classic player appearances are 100000..100235.
@@ -303,3 +304,5 @@ if __name__ == '__main__':
     p.add_argument('--extra-source', help='a later client whose data/ has the composites the source lacks, for example .tools/legacy/extracted/SA8.0-20260803')
     a = p.parse_args()
     run(a.source, a.table, a.output, a.reference, a.characters, a.extra_source)
+    # The game reads riding/index.json and one file per composite (split_manifests.py).
+    split_riding(Path(a.output).parent)

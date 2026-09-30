@@ -259,8 +259,11 @@ var help: PanelContainer
 var marker: Node2D
 var marker_cell := Vector2i(-1,-1)
 var character_index := 0
+## characters/index.json (scripts/character_art.gd): the chooser's `choices`
+## and the list of `characters`; each one's art is read when it is drawn.
 var character_catalog: Dictionary = {}
-const SheetFrames = preload("res://scripts/sheet_frames.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
+const CharacterArt = preload("res://scripts/character_art.gd")
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
 var character_selection: Control
 var paused_input := false
@@ -428,9 +431,9 @@ func texture(ident: String) -> Texture2D:
 ## (characters/sheets, docs/technical/sprite-sheets.md); map residents and
 ## anything not packed are single PNGs.
 func character_frame(character: String, ident: int) -> Texture2D:
-	var sheets: Dictionary = character_catalog.get("sheets",{})
-	if sheets.get(character,{}).get("frames",{}).has(str(ident)):
-		var frame: Texture2D = SheetFrames.texture("res://assets/legacy/characters/",sheets,character,ident)
+	var art := CharacterArt.art(character)
+	if not SpriteArt.spot(art,ident).is_empty():
+		var frame: Texture2D = SpriteArt.texture(art,ident)
 		if frame != null or not ResourceLoader.exists("res://assets/legacy/images/%d.png" % ident):return frame
 	return texture(str(ident))
 

@@ -1,4 +1,6 @@
 extends SceneTree
+const BattleArt = preload("res://scripts/battle_art.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
 ## Battle sounds follow the original client: every committed command plays SE
 ## 203 (battlemenu.cpp BattleTargetSelect:3207, BattleButtonGuard:1253), so a
 ## turn with a pet beeps twice; every attacker that deals damage plays the hit
@@ -68,10 +70,10 @@ func run() -> void:
 	var manifest: Dictionary = view.manifest
 	var unmapped: Array = manifest.get("provenance",{}).get("frame_sounds_unmapped",[])
 	var missing: Array = []
-	for animations in manifest.characters.values():
-		for clip in animations.values():
-			for frame in clip.frames:
-				var sound := int(frame.get("sound",0))
+	for sprite in manifest.sprites:
+		for clip in BattleArt.animations(sprite).values():
+			for i in range(SpriteArt.frame_count(clip)):
+				var sound := SpriteArt.sound(clip,i)
 				if sound>0 and sound<10000 and not manifest.frame_sounds.has(str(sound)) and not unmapped.has(sound) and not missing.has(sound):missing.append(sound)
 	check(missing.is_empty(),"every battle frame sound id is mapped to an original SE (missing %s)" % str(missing))
 	check(manifest.frame_sounds.has("62") and manifest.frame_sounds.has("63") and manifest.frame_sounds.has("252") and manifest.frame_sounds.has("254"),"swing (62, 63) and hit (252, 254) sounds no longer need the riding manifest")

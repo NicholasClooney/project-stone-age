@@ -9,13 +9,20 @@ signal capture_music_requested(celebrating: bool)
 const Elements = preload("res://server/elements.gd")
 const PetSkills = preload("res://scripts/pet_skills.gd")
 const BattleEffects = preload("res://scripts/battle_effects.gd")
-const SheetFrames = preload("res://scripts/sheet_frames.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
+const BattleArt = preload("res://scripts/battle_art.gd")
+const Riding = preload("res://scripts/riding.gd")
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
 const ART_ROOT := "res://assets/legacy/battle/"
 const STAGE_SIZE := Vector2(800,600)
 var world: Node
 var stage: Control
+## battle/index.json (scripts/battle_art.gd): player and enemy ids, club
+## variants, UI pictures and audio. Each actor holds its sprite's own entry.
 var manifest: Dictionary = {}
+## Frame sound id -> file: the battle sprites', plus the riding composites'
+## once a mounted battle has shown one.
+var frame_sounds: Dictionary = {}
 var state: Dictionary = {}
 var status: Label
 var report: Label
@@ -33,7 +40,6 @@ var result_sound_played := false
 var result_level_up := false
 var commands: Array[TextureButton] = []
 var actors: Array[Dictionary] = []
-var textures: Dictionary = {}
 var riding_art_cues: Array[Dictionary] = []
 var riding_hp_bar: Control
 var riding_hp_fill: ColorRect
@@ -105,9 +111,9 @@ func ally_art(ally: Dictionary, mounted: bool = true) -> String:
 func can_render_allies(allies: Array) -> bool:
 	if allies.size()>4:return false
 	for ally in allies:
-		var animations: Dictionary=manifest.get("characters",{}).get(ally_art(ally),{})
+		var animations: Dictionary=sprite_art(ally_art(ally)).get("animations",{})
 		for action in [0,1,2,3,4,10]:
-			if animations.get("%d_3"%action,{}).get("frames",[]).is_empty():return false
+			if SpriteArt.frame_count(animations.get("%d_3"%action,{}))==0:return false
 	return true
 func enemies_of(snapshot: Dictionary) -> Array:
 	return snapshot.get("enemies",[{"hp":snapshot.get("enemy_hp",0),"max_hp":snapshot.get("enemy_max_hp",1),"name":snapshot.get("enemy_name","乌力"),"sprite":snapshot.get("enemy_sprite",100250)}])
@@ -156,8 +162,9 @@ func _ready() -> void:
 	stage.size = STAGE_SIZE
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stage)
-	if FileAccess.file_exists(ART_ROOT+"manifest.json"):
-		manifest = preload("res://scripts/battle_art.gd").data()
+	if BattleArt.present():
+		manifest = BattleArt.index()
+		frame_sounds = BattleArt.frame_sounds().duplicate()
 		battlefield = picture("background.png",Vector2.ZERO)
 		battlefield.z_index = -1000
 		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
@@ -330,11 +337,10 @@ func picture(path: String, point: Vector2) -> TextureRect:
 	return result
 
 func add_actor(ident: String, point: Vector2, facing: int) -> void:
-	preload("res://scripts/battle_art.gd").ensure(ident)
-	var characters: Dictionary = manifest.get("characters",{})
-	if not characters.has(ident):
+	var art := sprite_art(ident)
+	if art.is_empty():
 		return
-	var animations: Dictionary = characters[ident]
+	var animations: Dictionary = art.animations
 	var key := "3_%d" % facing
 	if not animations.has(key):
 		for candidate in animations:
@@ -346,7 +352,7 @@ func add_actor(ident: String, point: Vector2, facing: int) -> void:
 	var sprite := Sprite2D.new()
 	sprite.centered = false
 	stage.add_child(sprite)
-	actors.append({"character_id":ident,"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
+	actors.append({"character_id":ident,"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"art":art,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
 
 func layout() -> void:
 	if stage == null:
@@ -423,10 +429,12 @@ func open_battle(next_state: Dictionary) -> void:
 		unmounted_player_art = ident
 		var mounted := int(next_state.get("mounted_sprite",-1))
 		if mounted >= 0 and ensure_riding_art(str(mounted)): ident = str(mounted)
-		if manifest.characters.has(ident):
+		var art := sprite_art(ident)
+		if not art.is_empty():
 			actors[0]["character_id"] = ident
-			actors[0].animations = manifest.characters[ident]
-			actors[0].animation = manifest.characters[ident]["3_%d" % int(actors[0].facing)]
+			actors[0].art = art
+			actors[0].animations = art.animations
+			actors[0].animation = art.animations["3_%d" % int(actors[0].facing)]
 	update_riding_health(next_state)
 	update_ally_mount_health(next_state)
 	var enemy_art := str(next_state.get("enemy_sprite",SPECIES_ART.get(str(next_state.get("enemy_species","wooli")),"100250")))
@@ -530,13 +538,14 @@ func capture_transition() -> void:
 		transition_tiles.append({"node":tile,"origin":tile.position,"release":float(release)/60.0})
 
 func set_actor_art(index: int, ident: String) -> void:
-	preload("res://scripts/battle_art.gd").ensure(ident)
-	if index >= actors.size() or not manifest.get("characters",{}).has(ident): return
+	var art := sprite_art(ident)
+	if index >= actors.size() or art.is_empty(): return
 	actors[index]["character_id"] = ident
-	if index==0 and not preload("res://scripts/riding.gd").manifest().get("characters",{}).has(ident):unmounted_player_art=ident
-	actors[index].animations = manifest.characters[ident]
+	if index==0 and not Riding.has_composite(ident):unmounted_player_art=ident
+	actors[index].art = art
+	actors[index].animations = art.animations
 	var key := "3_%d" % int(actors[index].facing)
-	if manifest.characters[ident].has(key): actors[index].animation = manifest.characters[ident][key]
+	if art.animations.has(key): actors[index].animation = art.animations[key]
 
 func close_battle() -> void:
 	hide()
@@ -645,11 +654,8 @@ func queue_strike(index: int, target: int, at: float) -> Dictionary:
 	var clip: Dictionary = actor.animations.get("0_%d" % facing,{})
 	var strike := clampf(float(clip.get("duration_ms",600))/1000.0,0.35,1.2)
 	var hit_fraction := 0.5
-	var frames: Array = clip.get("frames",[])
-	for i in range(frames.size()):
-		if int(frames[i].get("sound",0))>=10000:
-			hit_fraction = float(i)/frames.size()
-			break
+	var hit_frame := SpriteArt.hit_frame(clip)
+	if hit_frame>=0:hit_fraction = float(hit_frame)/SpriteArt.frame_count(clip)
 	queue_motion(index,home,contact,at,travel,facing)
 	queue_pose(index,4,at,travel)
 	actors[index].cues.append({"at":at+travel,"action":0,"seconds":strike,"facing":facing})
@@ -672,10 +678,8 @@ func queue_capture(at: float, success: bool, target: int = 1) -> Dictionary:
 	var clip: Dictionary = actors[0].animations["0_3"]
 	var strike := float(clip.duration_ms)/1000.0
 	var hit := at+travel+strike*0.5
-	for i in range(clip.frames.size()):
-		if int(clip.frames[i].get("sound",0))>=10000:
-			hit = at+travel+strike*float(i)/clip.frames.size()
-			break
+	var hit_frame := SpriteArt.hit_frame(clip)
+	if hit_frame>=0:hit = at+travel+strike*float(hit_frame)/SpriteArt.frame_count(clip)
 	queue_motion(0,home,contact,at,travel,3)
 	actors[0].cues.append({"at":at,"action":4,"seconds":travel,"facing":3})
 	actors[0].cues.append({"at":at+travel,"action":0,"seconds":strike,"facing":3})
@@ -1150,32 +1154,29 @@ func _advance_playback(delta: float) -> void:
 			animation = actor.animations.get("1_%d" % (int(elapsed*60)%8),animation)
 		var resting_dead := displayed_hp[actor_index]<=0 and elapsed>=float(actor.until)
 		if resting_dead: animation = actor.animations.get("2_%d" % int(actor.facing),animation)
-		var frames: Array = animation.frames
-		if frames.is_empty():
+		var count := SpriteArt.frame_count(animation)
+		if count==0:
 			continue
 		var duration := maxf(float(animation.duration_ms)/1000.0,0.1)
-		var index := int(fmod(elapsed,duration)/duration*frames.size())%frames.size()
+		var index := int(fmod(elapsed,duration)/duration*count)%count
 		var temporary := elapsed < float(actor.until) and not str(actor.temporary).is_empty()
 		if temporary:
-			index = int(fmod((elapsed-float(actor.started))*float(actor.get("rate",1.0))+float(actor.get("phase",0.0)),duration)/duration*frames.size()) if int(str(actor.temporary).get_slice("_",0)) in [4,7,8] else mini(int((elapsed-float(actor.started))/duration*frames.size()),frames.size()-1)
+			index = int(fmod((elapsed-float(actor.started))*float(actor.get("rate",1.0))+float(actor.get("phase",0.0)),duration)/duration*count) if int(str(actor.temporary).get_slice("_",0)) in [4,7,8] else mini(int((elapsed-float(actor.started))/duration*count),count-1)
 		if elapsed>=float(actor.get("spin_start",INF)) and elapsed<float(actor.get("spin_end",-INF)):
-			index = int(fmod(elapsed,duration)/duration*frames.size())
-		if resting_dead: index = frames.size()-1
-		var frame: Dictionary = frames[index]
+			index = int(fmod(elapsed,duration)/duration*count)
+		if resting_dead: index = count-1
 		var frame_key := str(actor.temporary)+"_"+str(index) if temporary else "idle_"+str(index)
 		if frame_key != str(actor.last_frame):
 			actor.last_frame = frame_key
-			var sound_id := int(frame.get("sound",0))
-			if temporary and manifest.get("frame_sounds",{}).has(str(sound_id)):
+			var sound_id := SpriteArt.sound(animation,index)
+			if temporary and frame_sounds.has(str(sound_id)):
 				sound_requested.emit(sound_id)
-		var ident := str(int(frame.image))
-		var metadata: Dictionary = manifest.images[ident]
+		var art: Dictionary = actor.art
 		var sprite: Sprite2D = actor.sprite
-		if textures.get(ident)==null: textures[ident] = SheetFrames.bitmap_texture(ART_ROOT,manifest.get("sheets",{}),int(ident))
-		sprite.texture = textures[ident]
+		sprite.texture = SpriteArt.texture(art,SpriteArt.image(animation,index))
 		if sprite.texture==null: continue
 		sprite.z_index = clampi(int(actor.point.y),0,599)-600
-		sprite.position = actor.point+Vector2(float(metadata.x)+float(frame.x),float(metadata.y)+float(frame.y))
+		sprite.position = actor.point+SpriteArt.offset(art,animation,index)
 		var target: Button = target_buttons[actor_index]
 		target.visible = shown
 		target.position = sprite.position
@@ -1422,17 +1423,15 @@ func original_choice(ident: int, center: Vector2, callback: Callable) -> Texture
 	return button
 
 func ensure_riding_art(ident: String) -> bool:
-	var riding: Dictionary = preload("res://scripts/riding.gd").manifest()
-	if not riding.get("characters",{}).has(ident): return false
-	manifest.characters[ident] = riding.characters[ident]
-	manifest.frame_sounds.merge(riding.get("frame_sounds",{}),true)
-	for animation in riding.characters[ident].values():
-		for frame in animation.frames:
-			var bitmap := str(int(frame.image))
-			manifest.images[bitmap] = riding.images[bitmap]
-			if textures.get(bitmap)==null:
-				textures[bitmap] = preload("res://scripts/riding.gd").frame_texture(ident,int(bitmap))
+	if Riding.art(ident).is_empty(): return false
+	frame_sounds.merge(Riding.index().get("frame_sounds",{}),true)
 	return true
+
+## A sprite's entry (scripts/sprite_art.gd): a riding composite's or a battle
+## sprite's (their ids do not overlap). {} when its file is not here.
+func sprite_art(ident: String) -> Dictionary:
+	if Riding.has_composite(ident): return Riding.art(ident)
+	return BattleArt.art(ident)
 
 ## The hit sound of an attacker's strike: oft.cpp play_damage() maps the hit
 ## marker (a frame sound >= 10000, pattern.cpp:219-224) of the attack clip to
@@ -1441,8 +1440,8 @@ func ensure_riding_art(ident: String) -> bool:
 func impact_sound(index: int) -> int:
 	var facing := 7 if enemy_index(index)>=0 else 3
 	var clip: Dictionary = actors[index].animations.get("0_%d" % facing,{})
-	for frame in clip.get("frames",[]):
-		var marker := int(frame.get("sound",0))
+	for i in range(SpriteArt.frame_count(clip)):
+		var marker := SpriteArt.sound(clip,i)
 		if marker >= 10100: marker -= 100
 		if marker >= 10000:
 			return {10000:250,10001:254,10002:251,10003:251,10004:252,10005:-1,10006:-1,10007:254}.get(marker,250)

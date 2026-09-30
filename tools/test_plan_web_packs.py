@@ -18,9 +18,28 @@ class PlanWebPacksTest(unittest.TestCase):
             for path in paths:
                 self.assertNotIn(path, seen, f"{path} in {seen.get(path)} and {name}")
                 seen[path] = name
-        on_disk = {plan_web_packs.res(p) for p in LEGACY.rglob("*") if p.is_file() and p.suffix != ".import" and p.name != ".DS_Store"}
+        on_disk = {plan_web_packs.res(p) for p in LEGACY.rglob("*") if p.is_file() and p.suffix != ".import" and p.name != ".DS_Store"
+                   and not plan_web_packs.is_source(p)}
         self.assertEqual(on_disk - set(self.plan["skipped"]), set(seen))
         self.assertFalse(set(self.plan["skipped"]) & set(seen))
+
+    def test_importer_manifests_are_not_shipped(self):
+        shipped = {path for paths in self.plan["packs"].values() for path in paths}
+        for source in ("battle/manifest.json", "riding/manifest.json", "characters/catalog.json", "battle/backgrounds.json"):
+            self.assertNotIn(plan_web_packs.RES + source, shipped)
+        self.assertFalse(any(path.startswith(plan_web_packs.RES + "battle/pets/") for path in shipped))
+
+    @unittest.skipUnless((LEGACY / "battle/index.json").is_file(), "art manifests not split (tools/split_manifests.py)")
+    def test_core_holds_the_indexes_and_every_non_pet_sprite_file(self):
+        import json
+        core = set(self.plan["packs"]["core"])
+        for name in ("battle/index.json", "riding/index.json", "characters/index.json", "battle/battlefields.json"):
+            self.assertIn(plan_web_packs.RES + name, core)
+        index = json.loads((LEGACY / "battle/index.json").read_text())
+        for ident in index["sprites"]:
+            self.assertIn(f"{plan_web_packs.RES}battle/sprites/{ident}.json", core, ident)
+        for ident in json.loads((LEGACY / "characters/index.json").read_text())["characters"]:
+            self.assertIn(f"{plan_web_packs.RES}characters/art/{ident}.json", core, ident)
 
     def test_lookups_name_real_packs(self):
         packs = set(self.plan["packs"])
@@ -54,6 +73,8 @@ class PlanWebPacksTest(unittest.TestCase):
             pack = self.plan["riding"].get(ident)
             self.assertEqual(pack, f"riding-{ident}", key)
             contents = set(self.plan["packs"][pack])
+            if (LEGACY / "riding/index.json").is_file():
+                self.assertIn(f"{plan_web_packs.RES}riding/composites/{ident}.json", contents, key)
             sheet = riding["sheets"][ident]
             for name in sheet["files"]:
                 self.assertIn(f"{plan_web_packs.RES}riding/{name}", contents, key)
@@ -84,8 +105,9 @@ class PlanWebPacksTest(unittest.TestCase):
         for ident, name in battle["extra_sprites"].items():
             extra = json.loads((LEGACY / "battle" / name).read_text())
             contents = set(self.plan["packs"][self.plan["sprites"][ident]])
-            self.assertIn(f"{plan_web_packs.RES}battle/{name}", contents, ident)
-            self.assertNotIn(f"{plan_web_packs.RES}battle/{name}", core, ident)
+            runtime = f"{plan_web_packs.RES}battle/sprites/{ident}.json"
+            self.assertIn(runtime, contents, ident)
+            self.assertNotIn(runtime, core, ident)
             sheet = extra["sheets"][ident]
             for file in sheet["files"]:
                 self.assertIn(f"{plan_web_packs.RES}battle/{file}", contents, ident)

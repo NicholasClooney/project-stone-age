@@ -2,6 +2,7 @@ extends SceneTree
 ## Every imported ridePetTable mount: backend rules, the pet window's ride
 ## button and a mounted battle with a mount other than the gold tiger.
 const Riding = preload("res://scripts/riding.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
 var failures := 0
 func check(ok: bool, label: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+label)
@@ -21,20 +22,23 @@ func prepare(session) -> void:
 
 ## Every frame of a composite is cut from its sprite sheet at the frame's size.
 func sheet_frames() -> void:
-	var manifest := Riding.manifest()
-	check(manifest.get("sheets",{}).size()==manifest.characters.size(),"every composite has a sprite sheet")
+	var sheeted := true
+	for composite in Riding.index().get("composites",{}):
+		if Riding.read(composite).get("files",PackedStringArray()).is_empty():sheeted = false
+	check(sheeted and Riding.index().get("composites",{}).size() > 19,"every composite has a sprite sheet")
 	for composite in ["101004","101009"]:
 		var complete := true
-		for animation in manifest.characters[composite].values():
-			for frame in animation.frames:
-				var texture := Riding.frame_texture(composite,int(frame.image))
-				var info: Dictionary = manifest.images[str(int(frame.image))]
-				if not texture is AtlasTexture or texture.get_size()!=Vector2(float(info.w),float(info.h)) or texture.get_image().is_invisible():complete = false
+		var art := Riding.art(composite)
+		for animation in art.animations.values():
+			for i in range(SpriteArt.frame_count(animation)):
+				var bitmap := SpriteArt.image(animation,i)
+				var texture := Riding.frame_texture(composite,bitmap)
+				if not texture is AtlasTexture or Vector2i(texture.get_size())!=SpriteArt.image_size(art,bitmap) or texture.get_image().is_invisible():complete = false
 		check(complete,"composite %s draws every frame from its sheet" % composite)
 	check(Riding.frame_texture("101004",-5)==null,"a frame the sheet lacks draws nothing instead of failing")
 
 func run() -> void:
-	check(Riding.manifest().get("pairs",{}).size() > 19,"importer provides more than the gold tiger and brontosaurus pairs")
+	check(Riding.index().get("pairs",{}).size() > 19,"importer provides more than the gold tiger and brontosaurus pairs")
 	check(Riding.composite("100000",100329) == 101004 and Riding.composite("100020",100396) == 101010,"ridePetTable pairs for other mounts resolve")
 	var rideable := Riding.rideable_pets("100000")
 	check([100329,100352,100372,100373,100369,100370,100904].all(func(pet): return rideable.has(pet)),"appearance 100000 rides its two ridePetTable mounts and the certificate mounts the 2.5 pack draws")
@@ -85,10 +89,10 @@ func backend_rules() -> void:
 func certificate_mounts() -> void:
 	check(not Riding.REQUIRE_RIDING_CERTIFICATES,"riding certificates are not required (documented decision)")
 	check(int(Riding.pair("100000",100288).get("certificate",-1)) == 4,"扬奇洛斯 records its certificate RIDE_PET4")
-	var has_8_0: bool = not Riding.manifest().get("extra_source",{}).get("composites",[]).is_empty()
+	var has_8_0: bool = not Riding.index().get("extra_source",{}).get("composites",[]).is_empty()
 	if not has_8_0:
 		var missing := false
-		for pair in Riding.manifest().get("unavailable",[]):
+		for pair in Riding.index().get("unavailable",[]):
 			if int(pair.pet) == 100288 and str(pair.reason).contains("--extra-source"):missing = true
 		check(Riding.composite("100000",100288) < 0 and missing,"without the 8.0 data 扬奇洛斯 is listed as unavailable")
 		print("SKIP: 8.0 certificate composites not imported (setup without --no-8.0)")
@@ -96,7 +100,7 @@ func certificate_mounts() -> void:
 	check(Riding.composite("100000",100288) == 101309 and Riding.composite("100005",100288) == 101309,"扬奇洛斯 draws character 0's composite for its colour variants")
 	check(Riding.composite("100035",100288) == 101317 and Riding.composite("100235",100374) == 101393,"other characters draw their own 扬奇洛斯 / 帖拉所伊朵 composite")
 	check(Riding.composite("100000",101532) == 101978 and Riding.composite("100000",101576) == 101989,"史卡鲁 and 罗多克雷 use the 1019xx composites")
-	check(Riding.manifest().characters.has("101309") and Riding.manifest().characters["101309"].has("0_3"),"the certificate composite includes battle actions")
+	check(Riding.art("101309").get("animations",{}).has("0_3"),"the certificate composite includes battle actions")
 	check(Riding.pet_name(100288) == "扬奇洛斯" and Riding.pet_name(100370) == "奇宝","certificate mount names come from the enemy templates")
 	check(Riding.composite("100000",100373) == 101009,"红暴龙 keeps the leader composite: 8.0 has no normal-outfit one either")
 	var session = preload("res://server/game_session.gd").new()

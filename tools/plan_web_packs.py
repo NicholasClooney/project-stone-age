@@ -5,14 +5,22 @@ art is never downloaded twice:
 
   loading         the waiting screen's image and music, fetched before
                   anything else so the screen can cover the core download
-  core            small always-needed data: catalogs, UI, battle
-                  manifest/UI/audio (the battle music too), the map catalog
+  core            small always-needed data: catalogs, UI, the battle,
+                  riding and character indexes, battle sprites' and
+                  characters' own files (tools/split_manifests.py), the
+                  map catalog, the battle music
   map-<id>        one map file (world/<id>.map) plus tiles and residents no other map uses
   char-<id>       one player character's walking art
   tiles-<hash>    tiles shared by several maps, grouped by the exact set of
                   maps that use them
-  sprite-<id>     one battle/pet sprite's frames
-  riding-<id>     one mounted composite's frames
+  sprite-<id>     one battle/pet sprite's frames (and, for a pet sprite
+                  only 宠物大全 and GM grants need, its own file)
+  riding-<id>     one mounted composite's frames and its own file
+
+The importers' working manifests (battle/manifest.json, battle/pets/,
+riding/manifest.json, characters/catalog.json, battle/backgrounds.json) are
+not shipped: the game reads the files split_manifests.py makes from them.
+They still tell this planner which pack owns each sheet.
   bg-<name>       one battle background
   music-<name>    one track of the music library (tools/import_music.py),
                   fetched when a map, or the radio (电台), plays it
@@ -37,6 +45,14 @@ from map_file import load_map
 ROOT = Path(__file__).resolve().parents[1]
 LEGACY = ROOT / "client/assets/legacy"
 RES = "res://assets/legacy/"
+# Importer working data the game does not read (tools/split_manifests.py).
+SOURCES = ("battle/manifest.json", "battle/pets", "riding/manifest.json", "characters/catalog.json",
+           "battle/backgrounds.json")
+
+
+def is_source(path: Path) -> bool:
+    relative = path.relative_to(LEGACY).as_posix()
+    return any(relative == source or relative.startswith(source + "/") for source in SOURCES)
 
 
 def res(path: Path) -> str:
@@ -74,7 +90,7 @@ def plan() -> dict:
     library = library_tracks()
     files = [p for p in LEGACY.rglob("*") if p.is_file() and p.suffix != ".import" and p.name != ".DS_Store"]
     skipped = sorted(res(p) for p in files if stale_music(p, library))
-    files = [p for p in files if not stale_music(p, library)]
+    files = [p for p in files if not stale_music(p, library) and not is_source(p)]
     owner: dict = {}
     packs = collections.defaultdict(list)
 
@@ -174,15 +190,16 @@ def plan() -> dict:
         for image in sorted(images):
             assign(pack, LEGACY / f"battle/images/{image}.png")
         lookups["sprites"][ident] = pack
-    # Pet sprites kept in their own file (import_encounter_art.py): the file
-    # travels with its sheets, so only the manifest's small list is in core.
+    # Pet sprites kept in their own file (import_encounter_art.py): the
+    # sprite's runtime file travels with its sheets, so only the index's
+    # small list is in core. Every other sprite's runtime file is in core.
     for ident, name in battle.get("extra_sprites", {}).items():
         pack = f"sprite-{ident}"
         path = LEGACY / "battle" / name
         if not path.exists():
             continue
         extra = json.loads(path.read_text())
-        assign(pack, path)
+        assign(pack, LEGACY / "battle/sprites" / f"{ident}.json")
         for sheet in extra.get("sheets", {}).values():
             for file in sheet["files"]:
                 assign(pack, LEGACY / "battle" / file)
@@ -197,6 +214,7 @@ def plan() -> dict:
             pack = f"riding-{ident}"
             for name in sheet["files"]:
                 assign(pack, LEGACY / "riding" / name)
+            assign(pack, LEGACY / "riding/composites" / f"{ident}.json")
             lookups["riding"][ident] = pack
 
     for path in sorted((LEGACY / "battle/backgrounds").glob("*")):

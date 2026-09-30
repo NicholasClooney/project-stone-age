@@ -94,8 +94,8 @@ func core() -> void:
 	var projected := Rules.project_pet(own,120)
 	check(best.count == 2 and best.best_sum >= int(projected.attack)+int(projected.defence)+int(projected.speed),"best owned Lv.120 三围合 uses the exact projection (%d)" % best.best_sum)
 
-static func AnimatedPortraitFrames(sprite: int) -> Array:
-	return preload("res://scripts/animated_portrait.gd").animation_for(str(sprite),3,1).get("frames",[])
+static func AnimatedPortraitFrames(sprite: int) -> PackedInt32Array:
+	return preload("res://scripts/animated_portrait.gd").animation_for(str(sprite),3,1).get("frames",PackedInt32Array())
 
 func window() -> void:
 	var game = load("res://scenes/main.tscn").instantiate()
