@@ -631,3 +631,9 @@
 - 想法：补齐柯尔克村和萨伊那斯洞窟、矿坑与研究所，沿用原版传送和遇敌资料。
 - 状态：新增67张已连通地图；便利商店、柯奥/霍特尔洞窟及大坑道地下支线28张候选缺少原始进入路径，暂缓。已核对NPC/战斗入口直接开放，未恢复任务、Boss和商店服务。
 - 去向：`tools/world_regions/sainasu.json`；`docs/reverse-engineering/remaining-world-expansion.md`。
+
+## 2026-09-30 · 吉鲁剩余风景地图 · 部分完成
+
+- 想法：按原版门、坐标与遇敌恢复吉鲁山岭、洞窟、海底通路、矿山和采石场，网页地图按到访下载。
+- 状态：实际新增83张通过行走组件往返验证的地图；任务门直接开放仅为游览便利，任务、Boss与NPC服务未实现。方位祠后七图缺组件回程、没落矿坑入口同格跨楼冲突、水晶等地图缺入口，共27张候选暂缓；未做渲染像素核验。
+- 去向：`tools/world_regions/giiru.json`；`docs/reverse-engineering/remaining-world-expansion.md` 的逐图清单、放宽门记录与8.0补图重建说明。

@@ -104,6 +104,168 @@ troop groups. Town/service records can exist with zero probability.
 | 玄黄的洞窟地下１４楼 | 11214 | yes | yes | yes |
 | 玄黄的洞窟地下１５楼 | 11215 | yes | no | yes |
 
+## Giru
+
+Adds **83 connected maps**, based on the imported-map component verification report:
+16 crimson cave maps, eight East Giru mountain maps, five North Giru road maps,
+seven unnamed passage maps (30301–30307), three North Giru mountain maps,
+11 Banamu cave maps, three unnamed passage maps (30701–30703), three Gaturo
+cave/room maps, three Meruna cave/room maps, four underwater passage maps,
+three direction shrine maps, six Asumaru mine maps, and 11 quarry/knowledge/spirit
+maps. The 303 and 307 passage groups retain their original generic floor names;
+no cave affiliation is invented. Existing villages and island maps are retained.
+
+Reviewed quest/NPC/battle gates directly open as a scenery convenience. Their
+original direction, source cells and destination coordinates are preserved;
+quests, bosses and NPC services are not implemented. The table records each
+exact relaxed gate argument path, rather than claiming quest completion.
+Original encounter-area records and actual random encounters remain distinct.
+
+The following 27 candidates remain unavailable:
+
+- 31604–31610 (direction shrine): an arrival walking component lacks a verified
+  return to the island; map-level graph connectivity alone is insufficient.
+- 31201–31205 (fallen mine): original island cell 300(444,494) targets both
+  31201(23/24,49) and 31205(20,11). This is a cross-floor conflict, so no arbitrary
+  destination is chosen and no replacement entrance is invented.
+- 30017 (volcanic fissure passage): header dimensions are 49×99, with 596 trailing
+  bytes. Original server readers use the header-sized layers; dimensions must
+  not be guessed as 50×100. Only an outgoing door to 30008 is known, with no
+  incoming entrance, so the map stays deferred.
+- 30022–30026 (crystal cave): all missing graphics can be recovered from 8.0,
+  but no original incoming entrance is known. Recoverable art does not authorize
+  opening an unconnected map.
+- 5107, 9355–9357 (Dana rooms/passages) and 30901–30905: no reachable original
+  incoming doors. 9357 only has an entrance from the unavailable 9356.
+
+Two source files for 31001 differ only in name bytes; geometry after byte 40
+matches the 2.5 client. The reviewed `giiru/dan_3-10-01` source preserves the
+Gaturo name without treating the duplicate as a geometry conflict.
+
+The original island 400 also needs logical tile **15401** from the 8.0 fallback.
+Fallback bitmap filenames use a separate namespace so 8.0 bitmap IDs cannot
+silently overwrite 2.5 images. This is a graphics recovery detail, not new island
+content. Verification checks graphics references and walking components; no
+rendered-pixel comparison has been performed.
+
+| Map | ID | Encounter area | Random encounters | NPC gate directly opened (argument paths) |
+| --- | --- | --- | --- | --- |
+| 深红的洞窟地下１楼 | 30001 | yes | yes | `genout/wpm_30502_45_41` |
+| 深红的洞窟地下２楼 | 30002 | yes | yes | no |
+| 深红的洞窟地下３楼 | 30003 | yes | yes | no |
+| 深红的洞窟地下４楼 | 30004 | yes | yes | no |
+| 深红的洞窟地下５楼 | 30005 | yes | yes | no |
+| 深红的洞窟地下６楼 | 30006 | yes | yes | no |
+| 深红的洞窟地下７楼 | 30007 | yes | yes | `300/sb_hba7.arg` |
+| 深红的洞窟地下８楼 | 30008 | yes | yes | `300/sb_hba7.arg`, `300/sb_hba9.arg` |
+| 深红的洞窟地下７楼 | 30009 | yes | yes | `300/sb_hba9.arg` |
+| 深红的洞窟地下６楼 | 30010 | yes | yes | no |
+| 深红的洞窟地下５楼 | 30011 | yes | yes | no |
+| 深红的洞窟地下４楼 | 30012 | yes | yes | no |
+| 深红的洞窟地下３楼 | 30013 | yes | yes | no |
+| 深红的洞窟地下２楼 | 30014 | yes | yes | no |
+| 深红的洞窟地下１楼 | 30015 | yes | yes | `genout/wpm_30503_26_5` |
+| 深红的洞窟地下９楼 | 30016 | yes | no | `300/sb_hpa.arg` |
+| 东吉鲁山岭１楼 | 30101 | yes | yes | no |
+| 东吉鲁山岭２楼 | 30102 | yes | yes | no |
+| 东吉鲁山岭地下１楼 | 30103 | yes | yes | no |
+| 东吉鲁山岭１楼 | 30104 | yes | yes | no |
+| 东吉鲁山岭１楼 | 30105 | yes | yes | no |
+| 东吉鲁山岭１楼 | 30106 | yes | yes | no |
+| 东吉鲁山岭地下１楼 | 30107 | yes | yes | no |
+| 东吉鲁山岭１楼 | 30108 | yes | yes | no |
+| 北吉鲁的通路地下１楼 | 30201 | yes | yes | no |
+| 北吉鲁的通路地下2楼 | 30202 | yes | yes | no |
+| 北吉鲁的通路地下３楼 | 30203 | yes | yes | no |
+| 北吉鲁的通路地下２楼 | 30204 | yes | yes | no |
+| 北吉鲁的通路地下１楼 | 30205 | yes | yes | no |
+| 地下1楼 | 30301 | yes | yes | `genout/wpm_300_247_222` |
+| 地下2楼 | 30302 | yes | yes | no |
+| 地下1楼 | 30303 | yes | yes | no |
+| 地下2楼 | 30304 | yes | yes | no |
+| 地下3楼 | 30305 | yes | yes | no |
+| 地下2楼 | 30306 | yes | yes | no |
+| 地下1楼 | 30307 | yes | yes | `genout/wpm_300_182_162` |
+| 北吉鲁山岭地下１楼 | 30401 | yes | yes | no |
+| 北吉鲁山岭地下２楼 | 30402 | yes | yes | no |
+| 北吉鲁山岭地下１楼 | 30403 | yes | yes | no |
+| 巴那姆的洞窟地下１楼 | 30501 | yes | yes | no |
+| 巴那姆的洞窟地下２楼 | 30502 | yes | yes | `genout/wpm_30502_45_41` |
+| 巴那姆的洞窟地下２楼 | 30503 | yes | yes | `genout/wpm_30503_26_5` |
+| 巴那姆的洞窟地下１楼 | 30504 | yes | yes | no |
+| 巴那姆的洞窟１楼 | 30505 | yes | yes | no |
+| 巴那姆的洞窟地下１楼 | 30506 | yes | yes | no |
+| 巴那姆的洞窟地下２楼 | 30507 | yes | yes | no |
+| 巴那姆的洞窟地下３楼 | 30508 | yes | yes | no |
+| 巴那姆的洞窟地下２楼 | 30509 | yes | yes | no |
+| 巴那姆的洞窟地下３楼 | 30510 | yes | yes | no |
+| 巴那姆的洞窟地下３楼 | 30511 | yes | yes | no |
+| 地下１楼 | 30701 | yes | yes | no |
+| 地下２楼 | 30702 | yes | yes | no |
+| 地下１楼 | 30703 | yes | yes | no |
+| 加特洛的洞窟１楼 | 31001 | yes | no | no |
+| 加特洛的洞窟２楼 | 31002 | yes | no | no |
+| 族长的房间 | 31003 | yes | no | no |
+| 美鲁娜的洞窟１楼 | 31101 | yes | no | no |
+| 美鲁娜的洞窟２楼 | 31102 | yes | no | no |
+| 族长的房间 | 31103 | yes | no | no |
+| 吉鲁的海底通路 | 31301 | yes | yes | no |
+| 吉鲁的海底通道 | 31302 | yes | yes | no |
+| 奇努伊的海底通路 | 31401 | yes | yes | no |
+| 奇努伊的海底通路 | 31501 | yes | yes | no |
+| 方位的祠 | 31601 | yes | yes | no |
+| 方位的祠 | 31602 | yes | yes | no |
+| 方位的祠 | 31603 | yes | no | `300/sb_4sinh3.arg`, `300/sb_4sink3.arg`, `300/sb_4sinm3.arg`, `300/sb_4sint3.arg` |
+| 阿斯玛鲁矿山１楼 | 31801 | yes | yes | no |
+| 阿斯玛鲁矿山２楼 | 31802 | yes | yes | no |
+| 阿斯玛鲁矿山３楼 | 31803 | yes | yes | no |
+| 阿斯玛鲁矿山４楼 | 31804 | yes | yes | no |
+| 阿斯玛鲁矿山５楼 | 31805 | yes | no | `genout/wpm_31805_22_4` |
+| 阿斯玛鲁矿山６楼 | 31806 | yes | yes | `genout/wpm_31805_22_4` |
+| 吉鲁采石场１楼 | 31901 | yes | yes | no |
+| 采石场事务所 | 31902 | yes | no | no |
+| 吉鲁采石场２楼 | 31903 | yes | yes | `genout/wpm_31903_39_4` |
+| 吉鲁采石场３楼 | 31904 | yes | yes | `genout/wpm_31903_39_4`, `genout/wpm_31910_10_11`, `genout/wpm_31910_13_12`, `genout/wpm_31910_13_5` |
+| 吉鲁采石场４楼 | 31905 | yes | yes | `genout/wpm_31910_12_9`, `genout/wpm_31910_14_8`, `genout/wpm_31910_5_8` |
+| 吉鲁采石场５楼 | 31906 | yes | yes | `genout/wpm_31910_10_8`, `genout/wpm_31910_6_11`, `genout/wpm_31910_6_6` |
+| 吉鲁采石场６楼 | 31907 | yes | yes | `genout/wpm_31910_11_6`, `genout/wpm_31910_15_5`, `genout/wpm_31910_9_5` |
+| 吉鲁采石场７楼 | 31908 | yes | yes | no |
+| 吉鲁采石场８楼 | 31909 | yes | no | `giiru/event/event30_7` |
+| 真知之间 | 31910 | yes | no | `genout/wpm_31910_10_11`, `genout/wpm_31910_10_8`, `genout/wpm_31910_11_6`, `genout/wpm_31910_12_9`, `genout/wpm_31910_13_12`, `genout/wpm_31910_13_5`, `genout/wpm_31910_14_8`, `genout/wpm_31910_15_5`, `genout/wpm_31910_5_8`, `genout/wpm_31910_6_11`, `genout/wpm_31910_6_6`, `genout/wpm_31910_8_9`, `genout/wpm_31910_9_5`, `giiru/event/event30_7` |
+| 精灵之间 | 31911 | yes | no | `genout/wpm_31910_8_9` |
+
+Deferred original map names (not imported):
+
+| Map | ID | Reason |
+| --- | --- | --- |
+| 长老房间 | 5107 | no reachable original entrance |
+| 达那密道 | 9355 | no reachable original entrance |
+| 蛇王巢穴 | 9356 | no reachable original entrance |
+| 达那密道 | 9357 | no reachable original entrance |
+| 火山裂缝通道 | 30017 | trailing bytes; no incoming entrance |
+| 水晶洞窟 | 30022 | 8.0 graphics recoverable; no incoming entrance |
+| 水晶洞窟 | 30023 | 8.0 graphics recoverable; no incoming entrance |
+| 水晶洞窟 | 30024 | 8.0 graphics recoverable; no incoming entrance |
+| 水晶洞窟 | 30025 | 8.0 graphics recoverable; no incoming entrance |
+| 水晶洞窟核心 | 30026 | 8.0 graphics recoverable; no incoming entrance |
+| 地下１楼 | 30901 | no reachable original entrance |
+| 地下２楼 | 30902 | no reachable original entrance |
+| 地下３楼 | 30903 | no reachable original entrance |
+| 地下２楼 | 30904 | no reachable original entrance |
+| 地下１楼 | 30905 | no reachable original entrance |
+| 没落的矿坑１楼 | 31201 | cross-floor entrance conflict |
+| 没落的矿坑２楼 | 31202 | cross-floor entrance conflict |
+| 没落的矿坑３楼 | 31203 | cross-floor entrance conflict |
+| 没落的矿坑４楼 | 31204 | cross-floor entrance conflict |
+| 没落的矿坑５楼 | 31205 | cross-floor entrance conflict |
+| 方位的祠 | 31604 | arrival component lacks verified return |
+| 方位的祠 | 31605 | arrival component lacks verified return |
+| 方位的祠 | 31606 | arrival component lacks verified return |
+| 方位的祠 | 31607 | arrival component lacks verified return |
+| 方位的祠 | 31608 | arrival component lacks verified return |
+| 方位的祠 | 31609 | arrival component lacks verified return |
+| 方位的祠 | 31610 | arrival component lacks verified return |
+
 ## Rebuild / verify
 
 After each region commit, main must re-run the world importer,
@@ -114,9 +276,10 @@ travel from/return to an existing island. It also checks every reachable arrival
 component for a return path. The headless suites do not verify rendered pixels.
 
 ```sh
-.tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+.tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --fallback-source .tools/legacy/extracted/SA8.0-20260803
 .tools/asset-venv/bin/python tools/plan_web_packs.py
 python3 tools/build_exit_names.py
 ./scripts/run.sh --headless --editor --import --quit
 .tools/asset-venv/bin/python tools/verify_world_regions.py --region sainasu
+.tools/asset-venv/bin/python tools/verify_world_regions.py --region giiru
 ```

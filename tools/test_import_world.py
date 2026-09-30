@@ -6,6 +6,7 @@ import tempfile
 import unittest
 from test_import_wilderness import FakeArchive
 from world_review import read_reviewed_portals, merge_portals
+from world_fallback import FallbackArchive, FALLBACK_BITMAP_BASE
 from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS, settlement_owner, JYARUGA_SCENIC_MAPS, read_scenic_gates, review_scenic_doors
 
 
@@ -71,7 +72,7 @@ class WorldImportTests(unittest.TestCase):
         links=[original,dict(from_map=100,to_map=10001),dict(from_map=10001,to_map=100),dict(from_map=31701,to_map=31702)]
         self.assertEqual(ordinary_portals(links,{100,1000}),[original])
 
-    def test_giru_settlements_exclude_quest_rooms_and_self_gate_warp(self):
+    def test_giru_reviewed_scenery_keeps_training_routes_and_self_gate_closed(self):
         paths={5000:Path('map/giiru/south/furuudo'),5001:Path('map/giiru/south/5001'),
                5100:Path('map/giiru/north/dana'),5106:Path('map/giiru/north/5106'),
                5107:Path('map/giiru/north/5107'),9355:Path('map/giiru/north/snake_9355')}
@@ -80,8 +81,9 @@ class WorldImportTests(unittest.TestCase):
                 (5106,5107),(5100,9355),(300,300),(300,31701)]]
         selected=select_connected_maps(paths,links)
         self.assertTrue({300,5000,5001,5100,5106} <= selected)
-        self.assertFalse({5107,9355,31701} & selected)
-        self.assertEqual(ordinary_portals(links,selected),links[:5])
+        self.assertTrue({5107,9355} <= selected)  # Now reviewed scenery, still requires an original link.
+        self.assertNotIn(31701,selected)
+        self.assertEqual(ordinary_portals(links,selected),links[:7])
         self.assertEqual(settlement_owner(5001,paths),5000)
         self.assertEqual(settlement_owner(5106,paths),5100)
 
@@ -104,6 +106,21 @@ class WorldImportTests(unittest.TestCase):
         self.assertNotIn('disabled',links[0])
         self.assertTrue(all(p['disabled'] for p in links[1:]))
         self.assertEqual(links[0]['target'],[9,59])
+
+    def test_fallback_only_fills_missing_logical_ids_in_separate_namespace(self):
+        class Art:
+            def __init__(self, name, logical):
+                self.name=name;self.map_ids=logical;self.entries={10:dict(id=10,hit=2)}
+            def image(self, bitmap):return self.name,bitmap
+        primary=Art('classic',{100:10})
+        later=Art('later',{100:10,999:10})
+        art=FallbackArchive(primary,later,[100,999])
+        self.assertEqual(art.map_ids[100],10)
+        self.assertEqual(art.map_ids[999],FALLBACK_BITMAP_BASE+10)
+        self.assertEqual(art.image(10),('classic',10))
+        self.assertEqual(art.image(art.map_ids[999]),('later',10))
+        self.assertEqual(primary.map_ids,{100:10})
+        self.assertEqual(art.logical_ids,[999])
 
     def test_original_header_and_dimensions(self):
         with tempfile.TemporaryDirectory() as directory:

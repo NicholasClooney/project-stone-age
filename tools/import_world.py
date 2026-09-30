@@ -13,9 +13,11 @@ import struct
 from import_legacy import Archive
 from map_file import save_map
 from world_review import load_reviews, read_reviewed_portals, merge_portals
+from world_fallback import FallbackArchive
+from world_components import finalize_reviewed_maps
 
 REGION_REVIEWS = load_reviews()
-REVIEWED_REGION_MAPS = {i for r in REGION_REVIEWS.values() for i in r["maps"]}
+REVIEWED_REGION_MAPS = {i for r in REGION_REVIEWS.values() for i in r["maps"] if str(i) not in r.get("deferred",{})}
 REVIEWED_INTERIORS = {i for r in REGION_REVIEWS.values() for i in r.get("interiors",[])}
 
 VILLAGES = {1000, 2000, 3000, 4000}
@@ -282,18 +284,27 @@ def import_residents(archive, reference, root):
     return residents
 
 
-def run(source, reference, output):
+def run(source, reference, output, fallback_source=None):
     reference=Path(reference); output=Path(output); root=output/'world'
     root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
     all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
     all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS))
-    maps={}; conflicting=set()
+    maps={}; variants={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
         if path.is_file() and path.read_bytes()[:6]==b'LS2MAP':
             ident=struct.unpack_from('>H',path.read_bytes(),6)[0]
+            variants.setdefault(ident,[]).append(path)
             if ident in maps and maps[ident].read_bytes()!=path.read_bytes():conflicting.add(ident)
             maps[ident]=path
+    for review in REGION_REVIEWS.values():
+        for key, record in review.get('map_sources',{}).items():
+            ident=int(key);chosen=reference/record['path'];raw=chosen.read_bytes()
+            if hashlib.sha256(raw).hexdigest()!=record['sha256']:
+                raise ValueError(f'Reviewed map source changed: {chosen}')
+            if any(p.read_bytes()[:8]+p.read_bytes()[40:]!=raw[:8]+raw[40:] for p in variants.get(ident,[])):
+                raise ValueError(f'Reviewed alias has different map geometry: {ident}')
+            maps[ident]=chosen;conflicting.discard(ident)
     ordinary=select_connected_maps(maps,all_portals)
     selected=ordinary | DEV_TRAINING_MAPS
     if selected & conflicting:raise ValueError(f'Conflicting selected map IDs: {sorted(selected & conflicting)}')
@@ -307,9 +318,16 @@ def run(source, reference, output):
     unsupported=[dict(p, reason=excluded_reason(maps.get(p['to_map']))) for p in all_portals if p['from_map'] in ordinary and p['to_map'] not in ordinary]
     archive=Archive(source);base=json.loads((output/'samgir.json').read_text()); images={};colors={}; metadata={}; reports={};blocked_portals=[]
     residents=import_residents(archive,reference,root)
+    parsed_maps={ident:read_map(maps[ident]) for ident in selected}
+    fallback_ids=[]
+    if fallback_source:
+        missing_values={v for parsed in parsed_maps.values() for layer in parsed[4:6] for v in layer if v>99 and v not in archive.map_ids}
+        if missing_values:
+            archive=FallbackArchive(archive,Archive(fallback_source),missing_values)
+            fallback_ids=archive.logical_ids
     preferred={100:[637,493],200:[570,377],1000:[89,73],2000:[74,56],3000:[84,100],4000:[76,90]}
     for ident in sorted(selected):
-        parsed=read_map(maps[ident]);data,used,missing=convert(archive,parsed)
+        parsed=parsed_maps[ident];data,used,missing=convert(archive,parsed)
         for bitmap in sorted(used):
             key=str(bitmap)
             if key not in images:
@@ -354,9 +372,13 @@ def run(source, reference, output):
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Reviewed settlements and Jyaruga scenery connected by original warps are expanded. Explicit scenic NPC gates are directly open as a developer convenience; quests and NPC services are not restored. Unconnected maps and other special areas remain excluded.', 'Explicit dev_only training maps restore scenery and ordinary source encounters. Giru 300 additionally has reviewed original doors to villages 5000/5100 and their ordinary interiors; other training entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
+    removed=finalize_reviewed_maps(output,metadata,portals,residents,reports,REVIEWED_REGION_MAPS,reachable_cells,safe_spawn)
+    unsupported.extend(dict(p,reason='Original map has no reachable reviewed entry/return component') for p in portals if p['from_map'] not in removed and p['to_map'] in removed)
+    portals=[p for p in portals if p['from_map'] not in removed and p['to_map'] not in removed]
+    if removed:print(f'Unreachable reviewed maps remain deferred: {sorted(removed)}',flush=True)
+    manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',fallback_graphics=dict(source=str(fallback_source) if fallback_ids else None,logical_ids=fallback_ids,bitmap_namespace=1000000000),maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Reviewed settlements and Jyaruga scenery connected by original warps are expanded. Explicit scenic NPC gates are directly open as a developer convenience; quests and NPC services are not restored. Unconnected maps and other special areas remain excluded.', 'Explicit dev_only training maps restore scenery and ordinary source encounters. Giru 300 additionally has reviewed original doors to villages 5000/5100 and their ordinary interiors; other training entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     print(f'{len(metadata)} maps, {len(portals)} portals, {len(blocked_portals)} blocked endpoints, {len(images)} images')
 
 if __name__=='__main__':
-    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('source');parser.add_argument('--reference',default='references/chenmingbiao-stone-age');parser.add_argument('--output',default='client/assets/legacy');args=parser.parse_args();run(args.source,args.reference,args.output)
+    parser=argparse.ArgumentParser(description=__doc__);parser.add_argument('source');parser.add_argument('--reference',default='references/chenmingbiao-stone-age');parser.add_argument('--output',default='client/assets/legacy');parser.add_argument('--fallback-source');args=parser.parse_args();run(args.source,args.reference,args.output,args.fallback_source)
