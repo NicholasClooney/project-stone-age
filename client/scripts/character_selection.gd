@@ -22,6 +22,7 @@ func _ready() -> void:
 	process_mode = Node.PROCESS_MODE_DISABLED
 func open_menu() -> void:
 	if world.battle_view.visible or world.area_transition_busy:return
+	_face = -1
 	# On the web every character's art is a separate pack; fetch them all
 	# (once, then cached) before drawing, or most portraits would be empty.
 	var packs := character_packs()
@@ -142,14 +143,20 @@ func character_packs() -> Array:
 		if not pack.is_empty() and not pack in packs:packs.append(pack)
 	return packs
 
+## The face this menu last chose. On a remote client the snapshot catches up
+## only when the server's reply arrives, so reading it again right after a
+## change undid that change (an eye step, then a mouth step, lost the mouth).
+var _face := -1
+
 ## Eye (unit 5) or mouth (unit 1) one step on, wrapping within 0..4.
 func change_face(unit: int, step: int) -> void:
-	var face := int(world.session.snapshot().get("face",0))
+	var face := _face if _face>=0 else int(world.session.snapshot().get("face",0))
 	var eye := int(face/5)
 	var mouth := face%5
 	if unit == 5:eye = (eye+step+5)%5
 	else:mouth = (mouth+step+5)%5
 	if world.session.set_face(eye*5+mouth):
+		_face = eye*5+mouth
 		world.play_click()
 	_refresh()
 
@@ -159,7 +166,7 @@ func _refresh() -> void:
 	for id in buttons:
 		buttons[id].modulate = Color("f8d678") if id == current else Color.WHITE
 	if face_view != null:
-		var face := int(profile.get("face",0))
+		var face := _face if _face>=0 else int(profile.get("face",0))
 		face_view.texture = Faces.texture(current,face)
 		face_label.text = "人物面部 · 眼睛 %d · 嘴巴 %d" % [int(face/5)+1,face%5+1] if face_view.texture != null else "人物面部未导入（tools/import_faces.py）"
 func _layout() -> void:

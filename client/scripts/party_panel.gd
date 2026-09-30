@@ -98,8 +98,18 @@ func _refresh() -> void:
 func _process(_delta: float) -> void:
 	var shown: bool = available() and in_party() and not world.data.is_empty()
 	list.visible = shown
+	if shown:_place_list()
 	banner.visible = shown and bool(view.get("battle",false)) and not (is_instance_valid(world.battle_view) and world.battle_view.visible)
 	_own_leader_mark()
+
+## Below the top-left HUD (游戏助手 and the Lv / 体力 / 石币 line, which can
+## grow a second line for the automation), never over it.
+func _place_list() -> void:
+	var top := 86.0
+	for node in [world.get("helper_button"),world.get("adventure_hint")]:
+		if node is Control and is_instance_valid(node) and node.is_visible_in_tree():
+			top = maxf(top,node.position.y+node.size.y+6)
+	list.position = Vector2(8,top)
 
 # ---- 加入队伍 ------------------------------------------------------------------
 

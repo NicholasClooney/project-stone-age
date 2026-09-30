@@ -310,6 +310,17 @@ func client() -> void:
 	await Wait.settle(self,game)
 	check(is_instance_valid(game.party_panel) and game.party_panel.available() and not game.party_panel.in_party(),"the party panel knows Bob can party, and is in none")
 	check(game.classic_hud.find_child("PartyButton",true,false)!=null and game.party_panel.button_caption()=="加入队伍。","the bar's 加入队伍 button says 加入队伍。")
+	# 人物面部 over the network: an eye step then a mouth step, before the
+	# server's reply comes back, keeps both.
+	var chooser: Control = game.character_selection
+	chooser.open_menu()
+	await Wait.until(self,func():return chooser.visible)
+	var before := int(server.backends.bob.session.snapshot().get("face",0))
+	chooser.find_child("Face_眼睛_next",true,false).pressed.emit()
+	chooser.find_child("Face_嘴巴_next",true,false).pressed.emit()
+	var want := ((int(before/5)+1)%5)*5+(before%5+1)%5
+	check(await Wait.until(self,func():return int(server.backends.bob.session.snapshot().get("face",0))==want),"a quick eye step then mouth step both reach the server (%d, want %d)" % [int(server.backends.bob.session.snapshot().get("face",0)),want])
+	chooser.close_menu()
 	# MENU opens 设置, whose 组队 switch starts on and reaches the server.
 	game.classic_hud.find_child("GameSettingsButton",true,false).pressed.emit()
 	var switch: CheckBox = game.settings_menu.find_child("SettingsPartySwitch",true,false)
@@ -326,6 +337,8 @@ func client() -> void:
 	game.classic_hud.find_child("PartyButton",true,false).pressed.emit()
 	check(await Wait.until(self,func():return game.party_panel.is_member()),"pressing 加入队伍 joins Alice")
 	check(await Wait.until(self,func():return game.party_panel.list.visible and game.party_panel.list.find_child("LeaveParty",true,false)!=null),"the party list shows, with 离开队伍")
+	var hint: Control = game.adventure_hint
+	check(game.party_panel.list.position.y>=game.helper_button.position.y+game.helper_button.size.y and (not hint.visible or game.party_panel.list.position.y>=hint.position.y+hint.size.y),"the party list sits below 游戏助手 and the Lv line, not over them")
 	var free := Vector2i(-1,-1)
 	for d in game.SCREEN_DIRECTIONS:
 		if game.can_step(game.cell,game.cell+d):free = game.cell+d
