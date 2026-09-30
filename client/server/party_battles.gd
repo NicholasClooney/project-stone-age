@@ -114,6 +114,10 @@ func _member_entry(info: Dictionary, config: Dictionary) -> Dictionary:
 	ally.base_stats = {"attack":ally.attack,"defence":ally.defence,"speed":ally.speed}
 	# The member's own 恢复护符 (PartyBattleSession.slot_healing).
 	ally.healing = bool(config.get("healing_available",false))
+	# The member's own 气力 and worn 精灵 (server/spirits.gd).
+	ally.mp = int(config.get("player_mp",0))
+	ally.spirits = config.get("spirits",{}).duplicate(true)
+
 	var pet: Dictionary = pets[active].duplicate(true) if active>=0 and active<pets.size() else {}
 	return {"ally":ally,"pet":pet,"pets":pets.duplicate(true)}
 

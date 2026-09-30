@@ -1,7 +1,8 @@
 extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
-const SAVE_VERSION := 3
+## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
+const SAVE_VERSION := 4
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
@@ -13,6 +14,7 @@ const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const KeepRule = preload("res://scripts/keep_rule.gd")
 const ReleaseLog = preload("res://server/release_log.gd")
+const Spirits = preload("res://server/spirits.gd")
 ## 放生记录 entries for pets released since the backend last took them
 ## (take_release_events); the backend appends them to the log file.
 var release_events: Array = []
@@ -21,7 +23,8 @@ var release_events: Array = []
 ## knows, or GM发放).
 var capture_events: Array = []
 const MusicLibrary = preload("res://scripts/music_library.gd")
-const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800}
+## The spirit equipment sells at its itemset.txt cost (docs/reverse-engineering/magic-and-mp.md).
+const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800,"haru_armor":400,"freya_robe":484,"teo_robe":528,"koyala_charm":1000}
 const SPECIES := {
 	"blue_dragon":{"name":"扬奇洛斯","alias":"蓝人龙","category":"人龙","sprite":100288,"speed":20},
 	"golden_tiger":{"name":"金格萨贝鲁","alias":"金虎","category":"老虎","sprite":100330,"speed":29},
@@ -54,11 +57,12 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0},"equipped_mirror":false,"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0,"haru_armor":0,"freya_robe":0,"teo_robe":0,"koyala_charm":0},"equipped_mirror":false,"equipment":{"body":"","amulet":""},"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
 	_profile.player.hp = _profile.player.max_hp
+	_profile.player.mp = Spirits.MAX_MP
 	# A new character starts at charm 60 under the charm rules (loyalty.gd).
 	_profile.player.charm = Loyalty.CHARM_START
 	_profile.player.charm_rules = 1
@@ -106,9 +110,13 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	var pet: Dictionary = {}
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
-	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":player.defence,"player_speed":player.speed,"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	var armour := equipment_mods()
+	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":maxi(0,int(player.defence)+int(armour.defence)),"player_speed":maxi(1,int(player.speed)+int(armour.speed)),"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
 	config.healing_available=int(_profile.inventory.get("healing_charm",0))>0
 	config.mirror_available=bool(_profile.get("equipped_mirror",false))
+	# 气力 and the 精灵 of the worn equipment (server/spirits.gd).
+	config.player_mp = player_mp()
+	config.spirits = spirits()
 	config.experience_multiplier = experience_multiplier
 	config.ride_pet_index = int(_profile.get("ride_pet",-1))
 	config.ride_pet = _profile.pets[config.ride_pet_index].duplicate(true) if config.ride_pet_index>=0 else {}
@@ -124,7 +132,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.ally_pets = []
 	if clone_squad_enabled:
 		for i in range(4):
-			config.allies.append({"name":"分身 %d" % (i+1),"character_id":str(_profile.character_id),"kind":"player","weapon":config.player_weapon,"hp":player.hp,"max_hp":player.max_hp,"attack":config.player_attack,"defence":player.defence,"speed":player.speed,"level":player.level,"vital":config.player_vital,"luck":0,"elements":config.player_elements.duplicate()})
+			config.allies.append({"name":"分身 %d" % (i+1),"character_id":str(_profile.character_id),"kind":"player","weapon":config.player_weapon,"hp":player.hp,"max_hp":player.max_hp,"attack":config.player_attack,"defence":config.player_defence,"speed":config.player_speed,"level":player.level,"vital":config.player_vital,"luck":0,"elements":config.player_elements.duplicate()})
 			var mirror: Dictionary = config.allies.back()
 			mirror.mount = config.ride_pet.duplicate(true)
 			mirror.mounted_sprite = config.mounted_sprite
@@ -248,6 +256,10 @@ func apply_battle_result(result: Dictionary) -> bool:
 	var potions := int(result.get("potions",-1))
 	if hp < 0 or hp > _profile.player.max_hp or potions < 0 or potions > _pending.potions:
 		return false
+	# 气力 is only spent in a battle (nothing there restores it).
+	var mp_start := int(_pending.get("player_mp",player_mp()))
+	var mp := int(result.get("player_mp",mp_start))
+	if mp < 0 or mp > mp_start:return false
 	var captures: Array = result.get("captured_species_list",[])
 	var enemies: Array = result.get("enemies",[])
 	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>PET_CAPACITY:return false
@@ -319,6 +331,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 	if int(ride_index)>=0 and (int(result.get("active_pet",-1)) == int(ride_index) or int(battle_pets[int(ride_index)].hp)<=0):return false
 	_profile.ride_pet = int(slots[int(ride_index)]) if int(ride_index)>=0 else -1
 	_profile.player.hp = hp
+	_profile.player.mp = mp
 	_profile.inventory.potion = potions
 	for i in range(battle_pets.size()):
 		if int(slots[i])>=0:_profile.pets[int(slots[i])].hp = int(battle_pets[i].hp)
@@ -453,15 +466,17 @@ func _gain_xp(actor: Dictionary, amount: int) -> void:
 	if actor.level >= MAX_LEVEL:actor.xp = 0
 
 func buy_item(item: String) -> bool:
-	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.player.gold < ITEM_PRICES[item] or _profile.inventory[item] >= 99:
+	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.player.gold < ITEM_PRICES[item] or int(_profile.inventory.get(item,0)) >= 99:
 		return false
 	_profile.player.gold -= ITEM_PRICES[item]
-	_profile.inventory[item] += 1
+	_profile.inventory[item] = int(_profile.inventory.get(item,0))+1
 	return true
 
 func sell_item(item: String) -> bool:
-	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.inventory[item] <= 0 or ((item == "club" and _profile.equipped and _profile.inventory.club == 1) or (item=="mirror_charm" and _profile.get("equipped_mirror",false) and _profile.inventory.mirror_charm==1)):
+	if not _pending.is_empty() or not ITEM_PRICES.has(item) or int(_profile.inventory.get(item,0)) <= 0 or ((item == "club" and _profile.equipped and _profile.inventory.club == 1) or (item=="mirror_charm" and _profile.get("equipped_mirror",false) and _profile.inventory.mirror_charm==1)):
 		return false
+	# The worn copy of a piece of spirit equipment cannot be sold.
+	if item in Spirits.SPIRIT_ITEMS and item in worn_items() and int(_profile.inventory.get(item,0))==1:return false
 	_profile.inventory[item] -= 1
 	_profile.player.gold += int(ITEM_PRICES[item] / 2)
 	return true
@@ -474,10 +489,152 @@ func use_item(item: String = "potion") -> bool:
 	return true
 
 func equip_item(item: String = "club") -> bool:
-	if not _pending.is_empty() or item not in ["club","mirror_charm"] or int(_profile.inventory.get(item,0))<=0:
+	last_error = ""
+	if not _pending.is_empty() or item not in ["club","mirror_charm"]+Spirits.SPIRIT_ITEMS or int(_profile.inventory.get(item,0))<=0:
 		return false
-	if item=="mirror_charm":_profile.equipped_mirror=not bool(_profile.get("equipped_mirror",false))
+	if item in Spirits.SPIRIT_ITEMS:return _toggle_spirit_item(item)
+	if item=="mirror_charm":
+		# Both are ITEM_AMULET: char_item.c:379 never wears two together.
+		if not bool(_profile.get("equipped_mirror",false)) and not str(_equipment().amulet).is_empty():
+			last_error = Spirits.SAME_KIND
+			return false
+		_profile.equipped_mirror=not bool(_profile.get("equipped_mirror",false))
 	else:_profile.equipped = not _profile.equipped
+	return true
+
+# ---- 气力 and 精灵 (server/spirits.gd) --------------------------------------
+
+## {"body": item or "", "amulet": item or ""}: the worn spirit equipment.
+func _equipment() -> Dictionary:
+	if not _profile.get("equipment") is Dictionary:_profile.equipment = {"body":"","amulet":""}
+	for slot in ["body","amulet"]:
+		if not _profile.equipment.has(slot):_profile.equipment[slot] = ""
+	return _profile.equipment
+
+## The spirit items worn now (body armour, the amulet).
+func worn_items() -> Array:
+	var result: Array = []
+	for slot in ["body","amulet"]:
+		var item := str(_equipment()[slot])
+		if not item.is_empty():result.append(item)
+	return result
+
+## Wearing a worn item again takes it off; another body armour replaces the
+## worn one. char_item.c: ITEM_LEVEL above the player's level is refused
+## (能力不足无法装备), and so is a second amulet (the mirror).
+func _toggle_spirit_item(item: String) -> bool:
+	var data: Dictionary = Spirits.ITEMS[item]
+	var slot := str(data.slot)
+	var worn := _equipment()
+	if str(worn[slot])==item:
+		worn[slot] = ""
+		return true
+	if int(data.level)>int(_profile.player.level):
+		last_error = Spirits.TOO_WEAK
+		return false
+	if slot=="amulet" and bool(_profile.get("equipped_mirror",false)):
+		last_error = Spirits.SAME_KIND
+		return false
+	worn[slot] = item
+	return true
+
+## The worn equipment's defence and speed (itemset.txt modifiers).
+func equipment_mods() -> Dictionary:
+	var result := {"defence":0,"speed":0}
+	for item in worn_items():
+		result.defence += int(Spirits.ITEMS[item].defence)
+		result.speed += int(Spirits.ITEMS[item].speed)
+	return result
+
+func player_mp() -> int:
+	return clampi(int(_profile.player.get("mp",Spirits.MAX_MP)),0,Spirits.MAX_MP)
+
+## The spirits the worn equipment gives, by slot (battle configs carry these;
+## the original's battle 精灵 menu lists the equipment slots' magic).
+func spirits() -> Dictionary:
+	var result := {}
+	for slot in ["body","amulet"]:
+		var item := str(_equipment()[slot])
+		if item.is_empty():continue
+		var entry := Spirits.spirit_entry(item)
+		if not entry.is_empty():result[slot] = entry
+	return result
+
+## A healing spirit cast outside battle (lssproto_MU_recv -> MAGIC_Use):
+## target 0 the player, k the k-th carried pet (Callfromcli_Util_
+## getTargetCharaindex; party members are not built). Only FIELD_ALL spells
+## (治愈, 滋润); MYSELF heals the caster whatever the target. last_note says
+## what happened (magic_field.c's line: 耐久力回复N / X的耐久力回复N).
+var last_note := ""
+var field_rng := RandomNumberGenerator.new()
+func use_spirit(slot: String, target: int = 0) -> bool:
+	last_error = ""
+	last_note = ""
+	if not _pending.is_empty():
+		last_error = "战斗中请用战斗里的「精灵」指令。"
+		return false
+	var spirit: Dictionary = spirits().get(slot,{})
+	if spirit.is_empty():
+		last_error = "这个位置没有装备精灵。"
+		return false
+	if str(spirit.kind)!="recovery" or int(spirit.field)==Spirits.FIELD_BATTLE:
+		last_error = "%s只能在战斗中使用。" % str(spirit.name)
+		return false
+	if int(spirit.target)==Spirits.TARGET_OTHER and (target<0 or target>_profile.pets.size()):
+		last_error = "请选择自己或随身宠物。"
+		return false
+	if player_mp()<int(spirit.mp):
+		last_error = Spirits.NO_MP
+		return false
+	_profile.player.mp = player_mp()-int(spirit.mp)
+	var on_player: bool = int(spirit.target)==Spirits.TARGET_MYSELF or target==0
+	var actor: Dictionary = _profile.player if on_player else _profile.pets[target-1]
+	var before := int(actor.hp)
+	actor.hp = mini(int(actor.max_hp),before+Spirits.field_heal(int(spirit.power),field_rng))
+	var gained := int(actor.hp)-before
+	last_note = "耐久力回复%d" % gained if on_player else "%s的耐久力回复%d" % [str(actor.get("name","宠物")),gained]
+	return true
+
+## 用精灵补血 between battles (自动练级, a party leader's run for every
+## member): FIELD_ALL healing 精灵 on the player, then on the carried pets
+## in `pet_indices` (the battle pet, the mount), while one is at or below
+## `line` percent and the 气力 lasts. Returns whether anything was cast.
+func spirit_heal_to_line(line: int, pet_indices: Array = []) -> bool:
+	var cast := false
+	for _guard in range(200):
+		var done := false
+		var own := _field_spirit([Spirits.TARGET_MYSELF,Spirits.TARGET_OTHER])
+		if _below_line(_profile.player,line) and not own.is_empty():
+			done = use_spirit(own,0)
+		else:
+			var other := _field_spirit([Spirits.TARGET_OTHER])
+			for index in pet_indices:
+				if other.is_empty() or done:break
+				if int(index)>=0 and int(index)<_profile.pets.size() and _below_line(_profile.pets[int(index)],line):done = use_spirit(other,int(index)+1)
+		if not done:break
+		cast = true
+	return cast
+
+## The slot of a worn FIELD_ALL healing spirit with one of `targets` whose
+## 气力 the player has ("" when none).
+func _field_spirit(targets: Array) -> String:
+	var worn := spirits()
+	for target in targets:
+		for slot in worn:
+			var spirit: Dictionary = worn[slot]
+			if str(spirit.kind)=="recovery" and int(spirit.field)!=Spirits.FIELD_BATTLE and int(spirit.target)==int(target) and int(spirit.mp)<=player_mp():return str(slot)
+	return ""
+
+static func _below_line(actor: Dictionary, line: int) -> bool:
+	return int(actor.hp)>0 and int(actor.hp)<int(actor.max_hp) and int(actor.hp)*100<=int(actor.max_hp)*line
+
+## Developer grant: one of each piece of spirit equipment and full 气力.
+func gm_grant_spirits() -> bool:
+	last_error=""
+	if not _pending.is_empty():return _gm_error("战斗中不能发放装备。")
+	for item in Spirits.SPIRIT_ITEMS:_profile.inventory[item] = maxi(1,int(_profile.inventory.get(item,0)))
+	_profile.player.mp = Spirits.MAX_MP
+	_gm_mark(_profile.player)
 	return true
 
 # Single-player convenience grant, once per profile; loaded game writes normally.
@@ -498,10 +655,13 @@ func heal_carried_pets() -> bool:
 			changed=true
 	return changed
 
+## 休息 at the villager: NPC_HealerAllHeal (npc_healer.c) restores 耐久力
+## and 气力, and the pets. A defeat (_recover alone) leaves 气力 as it was.
 func heal() -> bool:
 	if not _pending.is_empty():
 		return false
 	_recover()
+	_profile.player.mp = Spirits.MAX_MP
 	return true
 
 func _recover() -> void:
@@ -940,6 +1100,12 @@ func load_game(path: String) -> bool:
 			_ensure_pet_ids()
 			if not _profile.inventory.has("mirror_charm"):_profile.inventory.mirror_charm=0
 			if not _profile.has("equipped_mirror"):_profile.equipped_mirror=false
+			# Saves before 气力 (version 3 and older) start with it full, and
+			# with no spirit equipment.
+			if not _profile.player.has("mp"):_profile.player.mp = Spirits.MAX_MP
+			for item in Spirits.SPIRIT_ITEMS:
+				if not _profile.inventory.has(item):_profile.inventory[item] = 0
+			_equipment()
 			if not _profile.has("ride_pet"):_profile.ride_pet = -1
 			if not _profile.has("character_id"):_profile.character_id = "100000"
 			if not _profile.has("travel_pass"):
@@ -1019,8 +1185,17 @@ func _valid_profile(value: Variant) -> bool:
 	if value.has("equipped_mirror") and not value.equipped_mirror is bool:return false
 	if value.get("equipped_mirror",false) and int(value.inventory.get("mirror_charm",0))<1:return false
 	for item in ITEM_PRICES:
-		if not _integer(value.inventory.get(item,0 if item=="mirror_charm" else null),0,99):
+		if not _integer(value.inventory.get(item,0 if item=="mirror_charm" or item in Spirits.SPIRIT_ITEMS else null),0,99):
 			return false
+	if value.player.has("mp") and not _integer(value.player.mp,0,Spirits.MAX_MP):return false
+	if value.has("equipment"):
+		if not value.equipment is Dictionary:return false
+		for slot in value.equipment:
+			var worn = value.equipment[slot]
+			if not slot in ["body","amulet"] or not worn is String:return false
+			if worn.is_empty():continue
+			if not worn in Spirits.SPIRIT_ITEMS or str(Spirits.ITEMS[worn].slot)!=slot or int(value.inventory.get(worn,0))<1:return false
+		if not str(value.equipment.get("amulet","")).is_empty() and bool(value.get("equipped_mirror",false)):return false
 	if value.equipped and value.inventory.club < 1:
 		return false
 	for key in ["accepted","boss_defeated","claimed"]:
@@ -1161,6 +1336,9 @@ func effective_player_stats() -> Dictionary:
 	var result := {}
 	for key in Progression.DERIVED:result[key] = _profile.player[key]
 	result.attack += 4 if _profile.equipped else 0
+	var armour := equipment_mods()
+	result.defence = maxi(0,int(result.defence)+int(armour.defence))
+	result.speed = maxi(1,int(result.speed)+int(armour.speed))
 	var riding := int(_profile.get("ride_pet",-1))
 	if riding>=0:
 		result = preload("res://scripts/riding.gd").adjusted_stats(result,_profile.pets[riding])
@@ -1372,6 +1550,7 @@ func gm_heal(index: int = -2) -> bool:
 	for actor in actors:
 		actor.hp=actor.max_hp
 		_gm_mark(actor)
+	if index in [-2,-1]:_profile.player.mp = Spirits.MAX_MP
 	return true
 
 func claim_default_companions() -> bool:

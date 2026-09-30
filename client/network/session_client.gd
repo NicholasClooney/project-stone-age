@@ -78,6 +78,16 @@ func equip_item(item: String = "club") -> bool:return request({"type":"equip_ite
 func buy_travel_pass() -> bool:return request({"type":"buy_travel_pass"})
 func heal() -> bool:return request({"type":"heal"})
 func heal_carried_pets() -> bool:return request({"type":"heal_carried_pets"})
+## What the last field 精灵 did (耐久力回复N), when the reply came back at once.
+var last_note := ""
+## A worn healing 精灵 outside battle: slot body/amulet, target 0 the player
+## or k the k-th carried pet (GameSession.use_spirit).
+func use_spirit(slot: String, target: int = 0) -> bool:
+	var reply: Dictionary = link.request({"type":"use_spirit","slot":slot,"target":target})
+	last_note = str(reply.get("note","精灵已施放。")) if bool(reply.get("ok",false)) or bool(reply.get("pending",false)) else ""
+	last_error = "" if bool(reply.get("ok",false)) or bool(reply.get("pending",false)) else str(reply.get("reason",""))
+	return bool(reply.get("ok",false)) or bool(reply.get("pending",false))
+func gm_grant_spirits() -> bool:return request({"type":"gm_grant_spirits"})
 func grant_pet_care_items() -> bool:return request({"type":"grant_pet_care_items"})
 func level_pet_to(pet_id: String, target: int) -> bool:return request({"type":"level_pet_to","pet_id":pet_id,"target":target})
 func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:

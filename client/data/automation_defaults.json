@@ -3,6 +3,7 @@
   "training": {
     "xp": 10,
     "compact": true,
+    "spirit": true,
     "hp": 10,
     "level": 120,
     "level_explicit": false,

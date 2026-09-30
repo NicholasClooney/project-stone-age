@@ -51,6 +51,9 @@ func _ready()->void:
 	_action("赠送角色分配点",Vector2(175,393),func():_apply(world.session.gm_grant_points(point_input.value)))
 	_action("恢复所选体力",Vector2(405,393),func():_apply(world.session.gm_heal(_actor())))
 	_action("恢复全队体力",Vector2(620,393),func():_apply(world.session.gm_heal(-2)))
+	var spirits_button:=_action("发放精灵装备",Vector2(760,440),func():_apply(world.session.gm_grant_spirits()))
+	spirits_button.name="GmGrantSpirits"
+	spirits_button.tooltip_text="开发者功能：哈鲁Lv1铠2（治愈）、芙雷雅Lv1服2（滋润）、提欧Lv1服2（恩惠）、柯雅拉Lv1护身符（复活）各一件，并回满气力；标记 GM。"
 	_grant_row(440)
 	escape_button=world.button("立即脱战 · 无奖励",_escape)
 	escape_button.position=Vector2(24,490)
@@ -160,7 +163,8 @@ func _refresh_actor()->void:
 	var actor:Dictionary=profile.player if _actor()==-1 else profile.pets[_actor()]
 	for stat in stat_inputs:stat_inputs[stat].value=float(actor.base_stats.get(stat,0))/100.0
 	level_input.value=120
-	summary.text="Lv.%d%s\n体力 %d / %d\n攻击 %d　防御 %d\n速度 %d\n角色可分配点 %d" % [actor.level," · GM已修改" if actor.get("gm_modified",false) else "",actor.hp,actor.max_hp,actor.attack,actor.defence,actor.speed,profile.player.stat_points]
+	summary.text="Lv.%d%s\n体力 %d / %d%s\n攻击 %d　防御 %d\n速度 %d\n角色可分配点 %d" % [actor.level," · GM已修改" if actor.get("gm_modified",false) else "",actor.hp,actor.max_hp,"　气力 %d" % int(actor.mp) if actor.has("mp") else "",actor.attack,actor.defence,actor.speed,profile.player.stat_points]
+
 	for button in mutation_buttons:button.disabled=world.battle_view.visible or world.session.gm_pending()
 	escape_button.disabled=not world.battle_view.visible or not world.battle_session.snapshot().get("active",false)
 func _apply(success:bool,cleared:bool=false)->void:

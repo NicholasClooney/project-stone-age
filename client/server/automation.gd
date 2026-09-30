@@ -460,6 +460,19 @@ func step() -> void:
 			if single_battle:stop("本场自动战斗已完成");return
 			return
 		if party_waiting():return
+		# 用精灵补血: a healing 精灵 while the 气力 lasts, before a 回复药 or a
+		# stop (the player, its pet or mount at the line; in a party battle a
+		# teammate too, or a fallen one with 复活精灵).
+		if bool(settings.get("spirit",true)):
+			var cast: Dictionary = Policy.spirit_choice(state,int(settings.hp),backend.party_battle())
+			if not cast.is_empty():
+				backend.battle.set_pet_command("defend")
+				var healed: Dictionary = backend.battle_command({"action":str(cast.action),"target":int(cast.target)})
+				turns += 1
+				if healed.get("settled",false) and not backend.party_battle():record_result(healed)
+				turn_text = "第 %d 回合 · 用精灵补血 · 气力 %d" % [turns,int(healed.get("player_mp",0))]
+				_emit_status()
+				return
 		var reason := health_reason(state)
 		if not reason.is_empty() and backend.party_battle():
 			# A party leader heals instead of stopping the whole party: a
@@ -473,6 +486,7 @@ func step() -> void:
 				_emit_status()
 				return
 			reason += heal_note(reason,bool(state.get("healing_available",false)))
+		if not reason.is_empty() and bool(settings.get("spirit",true)):reason += spirit_note(reason,state)
 		if not reason.is_empty():stop(reason);return
 		if turns >= 200:stop("单场超过200回合，请手动处理");return
 		if str(settings.preset)=="capture" and backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
@@ -488,7 +502,7 @@ func step() -> void:
 		var next: Dictionary = backend.battle_command({"action":str(decision.action),"target":int(decision.target),"pet_target":int(decision.target),"switch_pet":int(decision.get("switch",-2))})
 		turns += 1
 		if next.get("settled",false) and not backend.party_battle():record_result(next)
-		turn_text = "第 %d 回合 · 体力 %d/%d\n%s" % [turns,next.player_hp,next.player_max_hp," / ".join(next.events)]
+		turn_text = "第 %d 回合 · 体力 %d/%d · 气力 %d\n%s" % [turns,next.player_hp,next.player_max_hp,int(next.get("player_mp",0))," / ".join(next.events)]
 		_emit_status()
 		return
 	if backend.session.heal_carried_pets():
@@ -509,8 +523,13 @@ func step() -> void:
 	if backend.party_guard.is_valid():
 		var why := str(backend.party_guard.call())
 		if not why.is_empty():stop(why);return
+	# 用精灵补血 between battles too: 治愈 / 滋润 are FIELD_ALL spells.
+	if bool(settings.get("spirit",true)) and backend.session.spirit_heal_to_line(int(settings.hp),[int(backend.session._profile.active_pet),int(backend.session._profile.get("ride_pet",-1))]):
+		backend.save()
+		backend.publish()
 	var reason := profile_health_reason()
 	if not reason.is_empty():stop(reason);return
+
 	compact_active = bool(settings.compact)
 	_emit_status()
 	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
@@ -634,6 +653,15 @@ func party_heal(state: Dictionary) -> String:
 	var pet_hp := int(state.get("pet_hp",0))
 	var pet_max := maxi(1,int(state.get("pet_max_hp",1)))
 	if pet_hp>0 and pet_hp*100<=pet_max*line and bool(state.get("healing_available",false)):return "heal_pet"
+	return ""
+
+## After a health_reason with 用精灵补血 on: "，气力不足以用精灵" when a worn
+## healing 精灵 could have healed that one (the player: any; a pet: 滋润 or
+## 恩惠) but the 气力 is short; "" otherwise.
+static func spirit_note(reason: String, state: Dictionary) -> String:
+	var targets: Array = [0,1,8] if reason=="玩家体力达到停机线" else [1,8]
+	for spirit in state.get("spirits",{}).values():
+		if str(spirit.get("kind",""))=="recovery" and int(spirit.get("target",-1)) in targets:return "，气力不足以用精灵"
 	return ""
 
 ## Why healing could not help, after a health_reason in a party.

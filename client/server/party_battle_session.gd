@@ -24,8 +24,12 @@ extends "res://server/squad_battle_session.gd"
 ##
 ## This file holds no clock, sockets or profiles: commands come in per slot,
 ## and the host decides when a turn resolves. Refused in 4a: capture and pet
-## switching (4b), 镜子的精灵 and 恢复护符. Members' pets always obey (the
-## loyalty check runs for the leader's pet only; 4b).
+## switching (4b) and 镜子的精灵. Members' pets always obey (the loyalty
+## check runs for the leader's pet only; 4b). The healing 精灵
+## (server/spirits.gd) work for every player: each casts from its own 气力
+## on anyone on the party's side (a teammate, a pet, the whole side), and
+## 复活精灵 gets a fallen teammate back up.
+const BattleAutoPolicy = preload("res://scripts/battle_auto_policy.gd")
 const Riding = preload("res://scripts/riding.gd")
 const EXPGET_MAXLEVEL := 5
 const EXPGET_DIV := 15
@@ -39,8 +43,9 @@ var share_exp := true
 ## of a device, and the turn does not wait for it: its player has no device
 ## online (the clone AI's attack), or turned on 组队自动战斗 (LAN phase 4c).
 var auto_slots: Dictionary = {}
-## Slot -> {hp}: a member's 组队自动战斗 preset (_auto_command). `hp` is the
-## player's own 停机线 in percent: at or below it the slot drinks a 回复药.
+## Slot -> {hp, spirit}: a member's 组队自动战斗 preset (_auto_command). `hp`
+## is the player's own 停机线 in percent: at or below it the slot heals
+## (a 精灵 when `spirit` and 气力 allow, else a 回复药).
 var auto_policies: Dictionary = {}
 ## Slot -> {name, id, character_id, weapon}.
 var slot_info: Array = []
@@ -121,6 +126,11 @@ func submit_slot(slot: int, action: String, target: int = -1) -> String:
 	if slot_hp(slot)<=0:return "你已倒下，等待队友结束战斗。"
 	if action in ["capture","switch"]:return "组队战斗暂不能捕捉或换宠（下一阶段开放）。"
 	if action in ["mirror_self","mirror_pet"]:return "组队战斗暂不能使用镜子的精灵。"
+	if action.begins_with("spirit:"):
+		var why := spirit_refusal(_caster(slot),action.trim_prefix("spirit:"),target,slot)
+		if not why.is_empty():return why
+		_commands[slot] = {"action":action,"target":target,"ref":_target_ref(target,slot)}
+		return ""
 	if action=="heal_pet":
 		var pet := _slot_pet(slot)
 		if not slot_healing(slot):return "没有恢复护符。"
@@ -156,6 +166,43 @@ func set_slot_pet_target(slot: int, target: int) -> void:
 func _slot_pet(slot: int) -> Dictionary:
 	return _state.pet if slot==0 else _state.ally_pets[slot-1]
 
+## The slot's player as a 精灵 caster ref.
+func _caster(slot: int) -> Dictionary:
+	return {"kind":"player","index":-1} if slot==0 else {"kind":"ally","index":slot-1}
+
+## A target code as member `viewer` sees the battle (view_for): 0 itself,
+## 1 its pet, 2+2p / 3+2p the p-th ally on its screen (the leader first,
+## then the other members in order) and that ally's pet, SIDE the party.
+func _target_ref(code: int, viewer: int = 0) -> Dictionary:
+	if viewer<=0 or code==Spirits.SIDE:return super._target_ref(code,viewer)
+	if code==Spirits.SELF:return {"kind":"ally","index":viewer-1}
+	if code==Spirits.OWN_PET:return {"kind":"ally_pet","index":viewer-1}
+	if code<2 or code>9:return {}
+	var position := int((code-2)/2)
+	var pet := code%2==1
+	if position==0:return {"kind":"pet" if pet else "player","index":-1}
+	for member in range(_state.get("allies",[]).size()):
+		if member!=viewer-1 and _ally_position(viewer,member)==position:return {"kind":"ally_pet" if pet else "ally","index":member}
+	return {}
+
+## A canonical ref as member `slot` sees it (the inverse of _target_ref).
+func _view_ref(ref: Dictionary, slot: int) -> Dictionary:
+	var kind := str(ref.get("kind",""))
+	var index := int(ref.get("index",-1))
+	match kind:
+		"player":return {"kind":"ally","index":0}
+		"pet":return {"kind":"ally_pet","index":0}
+		"ally","ally_pet":
+			var pet := kind=="ally_pet"
+			if index==slot-1:return {"kind":"pet" if pet else "player","index":-1}
+			return {"kind":kind,"index":_ally_position(slot,index)}
+	return ref.duplicate()
+
+## The leader and its pet are out once the leader escaped.
+func _ref_present(ref: Dictionary) -> bool:
+	if str(ref.get("kind","")) in ["player","pet"] and not slot_in(0):return false
+	return super._ref_present(ref)
+
 ## The slot's player carries a 恢复护符 (it is never used up).
 func slot_healing(slot: int) -> bool:
 	if slot==0:return bool(_state.get("healing_available",false))
@@ -168,6 +215,12 @@ func slot_healing(slot: int) -> bool:
 ## player's own 停机线, with a 回复药 left, it drinks one instead.
 func _auto_command(slot: int) -> Dictionary:
 	if not auto_policies.has(slot):return {"action":"attack","target":-1}
+	# A healing 精灵 before a 回复药 (LAN phase 4c presets, 用精灵补血): the
+	# player at its line, a teammate at that line, a fallen teammate.
+	if bool(auto_policies[slot].get("spirit",true)):
+		var cast: Dictionary = BattleAutoPolicy.spirit_choice(view_for(slot),int(auto_policies[slot].get("hp",10)),true)
+		if not cast.is_empty():
+			return {"action":str(cast.action),"target":int(cast.target),"ref":_target_ref(int(cast.target),slot),"auto":true}
 	# As battle_auto_policy.gd: a pet at half its hp or less gets the 恢复护符.
 	var own_pet := _slot_pet(slot)
 	if slot_healing(slot) and not own_pet.is_empty() and int(own_pet.get("hp",0))>0 and int(own_pet.get("hp",0))*2<=int(own_pet.get("max_hp",0)):
@@ -252,6 +305,9 @@ func _extra_action(actor: Dictionary, _action: String) -> void:
 		return
 	var command: Dictionary = _commands.get(slot,_auto_command(slot))
 	_last_outcome = str(command.action)
+	if str(command.action).begins_with("spirit:"):
+		_cast_spirit(_caster(slot),str(command.action).trim_prefix("spirit:"),command.get("ref",_target_ref(int(command.target),slot)))
+		return
 	match str(command.action):
 		"attack":
 			_target = int(command.target) if _enemy_alive(int(command.target)) else int(_state.selected_target)
@@ -385,7 +441,10 @@ func _check_end() -> void:
 	var fell := false
 	for slot in range(slot_count()):
 		if not slot_in(slot):continue
-		if slot_hp(slot)>0:anyone = true
+		if slot_hp(slot)>0:
+			anyone = true
+			# 复活精灵 got it up: a later fall is announced again.
+			_fallen.erase(slot)
 		else:
 			fell = true
 			if not _fallen.has(slot):
@@ -538,6 +597,7 @@ func slice_for(slot: int, battle_id: String) -> Dictionary:
 	var result := {"active":false,"battle_id":battle_id,"outcome":ending.outcome,"party_stay":ending.stay,"captured_species_list":[],"enemies":_slot_enemies(slot,_state.enemies),"pets":_slot_pets(slot),"party_xp":rewards_for(slot) if ending.outcome=="win" else {"player":0,"pets":_zeros(_slot_roster(slot).size())}}
 	if slot==0:
 		result.player_hp = int(_state.player_hp)
+		result.player_mp = int(_state.get("player_mp",0))
 		result.potions = int(_state.potions)
 		result.active_pet = int(_state.active_pet)
 		result.ride_pet = int(_state.get("ride_pet",-1))
@@ -545,6 +605,7 @@ func slice_for(slot: int, battle_id: String) -> Dictionary:
 	else:
 		var member: Dictionary = _state.allies[slot-1]
 		result.player_hp = int(member.hp)
+		result.player_mp = int(member.get("mp",0))
 		result.potions = int(member.get("potions",0))
 		result.active_pet = int(member.get("active_pet",-1))
 		result.ride_pet = _slot_ride(slot)
@@ -627,11 +688,25 @@ func _remap_fields(target: Dictionary, source: Dictionary, slot: int) -> void:
 	target.pet_hp = int(pet.get("hp",0))
 	target.pet_max_hp = int(pet.get("max_hp",0))
 	target.pets = _slot_pets(slot,source)
+	if source.has("player_mp"):target.player_mp = int(me.get("mp",0))
+	# A 精灵 cast's caster, target and healed, from this member's side.
+	if source.has("spirit"):
+		var spirit: Dictionary = source.spirit.duplicate(true)
+		spirit.caster = _view_ref(spirit.caster,slot)
+		spirit.target = _view_ref(spirit.target,slot)
+		for heal in spirit.heals:
+			var seen := _view_ref(heal,slot)
+			heal.kind = seen.kind
+			heal.index = seen.index
+		target.spirit = spirit
+
 	target.pet_index = int(me.get("active_pet",-1)) if not pet.is_empty() else -1
 	target.ride_pet = int(me.get("ride_pet",-1)) if int(me.get("mount",{}).get("hp",0))>0 else -1
 	target.mounted_sprite = int(me.get("mounted_sprite",-1))
 	if source.has("potions") or source.has("player_level"):
 		target.potions = int(me.get("potions",0))
+		target.player_mp = int(me.get("mp",0))
+		target.spirits = me.get("spirits",{}).duplicate(true)
 		target.player_level = int(me.get("level",1))
 		target.player_elements = me.get("elements",[0,0,0,0]).duplicate()
 		target.pet = pet.duplicate(true)

@@ -193,7 +193,7 @@ func _ready() -> void:
 	# StockDispBuffer uses a common anchor plus each bitmap's stored offset.
 	# battlemenu.cpp:3757-3765, anim_tbl.h:25000-series classic menu.
 	ui_picture(25116,MENU_ANCHOR,command_panel)
-	var choices := [["attack",25100,"攻击"],["magic",25102,"镜子的精灵（装备护身符后可用）"],["capture",25104,"捕捉"],["help",25106,"求救（单人模式）"],["defend",25108,"防御"],["item",25110,"道具"],["pet",25112,"宠物"],["escape",25114,"逃跑"]]
+	var choices := [["attack",25100,"攻击"],["magic",25102,"精灵（穿戴带精灵的装备后可用）"],["capture",25104,"捕捉"],["help",25106,"求救（单人模式）"],["defend",25108,"防御"],["item",25110,"道具"],["pet",25112,"宠物"],["escape",25114,"逃跑"]]
 	for choice in choices:
 		var button := TextureButton.new()
 		button.name = str(choice[0]).capitalize()
@@ -930,20 +930,14 @@ func _request_action(action: String) -> void:
 	if world_modal_open() or command_phase=="waiting": return
 	if not bool(state.get("active",false)) or elapsed < feedback_until: return
 	if action == "help": return
-	if action == "magic" and not (bool(state.get("mirror_available",false)) or bool(state.get("healing_available",false))): return
+	if action == "magic" and not magic_available(): return
 	if action=="capture" and (bool(state.get("boss",false)) or not bool(state.get("can_capture",true))): return
 	sound_requested.emit(217)
 	clear_choices()
 	selected_action = action
 	last_player_command = action if action in ["attack","capture"] else "attack"
 	if action == "magic":
-		var mirror_choice:=choice("镜子的精灵 → 自己",Vector2(500,220),func(): complete_player_command("mirror_self"))
-		mirror_choice.disabled=not bool(state.get("mirror_available",false))
-		var pet_choice := choice("镜子的精灵 → 出战宠物",Vector2(500,265),func(): complete_player_command("mirror_pet"))
-		pet_choice.disabled = not bool(state.get("mirror_available",false)) or int(state.get("pet_hp",0))<=0
-		var healing_choice:=choice("恢复护符 → 出战宠物",Vector2(500,310),func(): complete_player_command("heal_pet"))
-		healing_choice.disabled=not bool(state.get("healing_available",false)) or int(state.get("pet_hp",0))<=0 or int(state.get("pet_hp",0))>=int(state.get("pet_max_hp",0))
-		hint.text = "反射一次直接物理攻击；暂不计算气力。"
+		show_magic_choices()
 	elif action == "item":
 		ui_picture(26061,Vector2(650,235),choice_panel)
 		ui_picture(26072,Vector2(650,222),choice_panel)
@@ -978,9 +972,93 @@ func _request_action(action: String) -> void:
 	else:
 		complete_player_command(action)
 
+## The 精灵 button works: a worn spirit, the mirror or the 恢复护符.
+func magic_available() -> bool:
+	return bool(state.get("mirror_available",false)) or bool(state.get("healing_available",false)) or not state.get("spirits",{}).is_empty()
+
+## The battle 精灵 menu (battlemenu.cpp BattleButtonJujutsu): each worn
+## spirit with "cost/气力", red when the 气力 is short (choosing it then
+## plays the refusal sound 220), then the mirror and the 恢复护符.
+func show_magic_choices() -> void:
+	var mp := int(state.get("player_mp",0))
+	var y := 175.0
+	var spirits: Dictionary = state.get("spirits",{})
+	for slot in ["body","amulet"]:
+		if not spirits.has(slot):continue
+		var spirit: Dictionary = spirits[slot]
+		var row := choice("%s  %d/%d" % [str(spirit.name),int(spirit.mp),mp],Vector2(500,y),choose_spirit.bind(str(slot)))
+		row.name = "Spirit_"+str(slot)
+		row.size.x = 280
+		row.tooltip_text = "%s（%s）" % [str(spirit.comment),str(spirit.item_name)]
+		if int(spirit.mp)>mp:row.add_theme_color_override("font_color",Color(1,0.35,0.35))
+		y += 42
+	if bool(state.get("mirror_available",false)):
+		var short := mp<5
+		var mirror_choice:=choice("镜子的精灵 → 自己  5/%d" % mp,Vector2(500,y),func(): complete_player_command("mirror_self"))
+		mirror_choice.name = "MirrorSelf"
+		mirror_choice.disabled = short
+		var pet_choice := choice("镜子的精灵 → 出战宠物",Vector2(500,y+42),func(): complete_player_command("mirror_pet"))
+		pet_choice.name = "MirrorPet"
+		pet_choice.disabled = short or int(state.get("pet_hp",0))<=0
+		y += 84
+	var healing_choice:=choice("恢复护符 → 出战宠物",Vector2(500,y),func(): complete_player_command("heal_pet"))
+	healing_choice.disabled=not bool(state.get("healing_available",false)) or int(state.get("pet_hp",0))<=0 or int(state.get("pet_hp",0))>=int(state.get("pet_max_hp",0))
+	hint.text = "精灵：气力 %d/100；右键 / Esc 取消。" % mp
+
+## A spirit row chosen: target itself, the whole side, or (滋润, 复活) a
+## member of the player's side clicked next.
+func choose_spirit(slot: String) -> void:
+	var spirit: Dictionary = state.get("spirits",{}).get(slot,{})
+	if spirit.is_empty():return
+	if int(spirit.mp)>int(state.get("player_mp",0)):
+		sound_requested.emit(220)
+		hint.text = "气力不足。"
+		return
+	sound_requested.emit(217)
+	match int(spirit.get("target",-1)):
+		0:
+			player_target = 0
+			complete_player_command("spirit:"+slot)
+		8:
+			player_target = 20
+			complete_player_command("spirit:"+slot)
+		_:
+			clear_choices()
+			selected_action = "spirit:"+slot
+			hint.text = "%s：请点击我方目标%s；右键 / Esc 取消。" % [str(spirit.name),"（倒下的队友或宠物）" if bool(spirit.get("dead",false)) else ""]
+
+## A clicked actor as a 精灵 target code of this player's side (server/
+## spirits.gd): 0 itself, 1 its pet, 2+2i / 3+2i ally i and its pet; -1 for
+## anyone else, or a fallen one unless the spell revives.
+func own_target_code(index: int, dead_ok: bool) -> int:
+	var code := -1
+	if index==0:code = 0
+	elif index==2 and not state.get("pet",{}).is_empty():code = 1
+	elif index>=12 and index<16 and index-12<state.get("allies",[]).size():code = 2+2*(index-12)
+	elif index>=16 and index<20 and index-16<state.get("ally_pets",[]).size() and not state.ally_pets[index-16].is_empty():code = 3+2*(index-16)
+	if code<0:return -1
+	if not dead_ok and health_of(state,index)<=0:return -1
+	return code
+
+## The actor showing a spirit's ref (player, pet, ally i, ally_pet i).
+func ref_actor_index(ref: Dictionary) -> int:
+	match str(ref.get("kind","")):
+		"player":return 0
+		"pet":return 2
+		"ally":return ally_actor(int(ref.get("index",0)))
+		"ally_pet":return ally_pet_actor(int(ref.get("index",0)))
+	return -1
+
 func select_target(index: int) -> void:
+
 	if world_modal_open() or command_phase=="waiting": return
 	if elapsed < feedback_until or not bool(state.get("active",false)): return
+	if command_phase=="player" and selected_action.begins_with("spirit:"):
+		var code := own_target_code(index,bool(state.get("spirits",{}).get(selected_action.trim_prefix("spirit:"),{}).get("dead",false)))
+		if code>=0:
+			player_target = code
+			complete_player_command(selected_action)
+		return
 	if command_phase == "pet" and enemy_index(index)>=0 and health_of(state,index)>0 and selected_action in ["pet_attack","pet_skill"]:
 		pet_target = enemy_index(index)
 		finish_pet_command(selected_action.trim_prefix("pet_"))
@@ -1191,7 +1269,7 @@ func _advance_playback(delta: float) -> void:
 		var progress := clampf((elapsed-pet_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
 		choice_panel.position.x = 300.0*pow(1.0-progress,2)
 	for button in commands:
-		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or (str(button.get_meta("action","")) == "help" or (str(button.get_meta("action","")) == "magic" and not (bool(state.get("mirror_available",false)) or bool(state.get("healing_available",false)))))
+		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or (str(button.get_meta("action","")) == "help" or (str(button.get_meta("action","")) == "magic" and not magic_available()))
 		if str(button.get_meta("action",""))=="capture":
 			var unavailable := bool(state.get("boss",false)) or not bool(state.get("can_capture",true))
 			button.disabled = button.disabled or unavailable
@@ -1284,6 +1362,8 @@ func hover_actor_text(index: int) -> String:
 	elif index>=12: level=int(state.get("allies",[])[index-12].get("level",0))
 	elif enemy_index(index)>=0: level=int(enemies_of(state)[enemy_index(index)].get("level",state.get("enemy_level",0)))
 	var text := "%s%s  体力 %d/%d" % [actor_name,"  Lv.%d" % level if level>0 else "",maxi(0,displayed_hp[index]),maximum]
+	# mouse.cpp:690: the player's own line also shows 气力 (pc.mp).
+	if index==0 and state.has("player_mp"):text += "  气力 %d" % int(state.player_mp)
 	var elements := hover_elements(index)
 	if elements.size()==4:text += "  属性 %s" % Elements.text(elements)
 	# mouse.cpp:690-746 exposes friendly HP; enemy HP is _STONDEBUG_ only
@@ -1378,7 +1458,19 @@ func queue_group_turn(previous: Dictionary) -> void:
 			if disobey=="attack_owner": target = 0
 			if disobey=="escape": word_cues.append({"at":at,"index":2,"id":26513})
 		var timing := {"hit":at+0.25,"end":at+0.5}
-		if outcome=="mirror_cast":
+		if outcome in ["spirit","spirit_fail"]:
+			# The original's BJ: MAGIC_EFFECT_USER on the caster, then the heal
+			# (or revive) effect on everyone it reached; the HP bars and heal
+			# numbers follow at the hit.
+			var spirit: Dictionary = frame.get("spirit",{})
+			queue_pose(index,10,at,1.0)
+			if outcome=="spirit":
+				mirror_cues.append({"at":at,"id":int(spirit.get("user_effect",100600)),"index":index})
+				for heal in spirit.get("heals",[]):
+					var healed := ref_actor_index(heal)
+					if healed>=0 and healed<actors.size():mirror_cues.append({"at":at+1.0,"id":int(spirit.get("effect",100601)),"index":healed})
+			timing={"hit":at+1.2,"end":at+2.2}
+		elif outcome=="mirror_cast":
 			queue_pose(0,10,at,1.5)
 			mirror_cues.append({"at":at,"id":100600,"index":0})
 			mirror_cues.append({"at":at+1.5,"id":100610,"index":2 if pending_action=="mirror_pet" else 0})

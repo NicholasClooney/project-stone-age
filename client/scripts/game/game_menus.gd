@@ -4,6 +4,8 @@ extends RefCounted
 ## (status, pets, items, shop, quest). The menu and the NPC stay on the game;
 ## see docs/technical/game-scripts.md.
 var game: GameScene
+const Spirits = preload("res://server/spirits.gd")
+
 
 func _init(owner: GameScene) -> void:
 	game = owner
@@ -140,13 +142,26 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 		"heal":success = at_villager and game.session.heal()
 		"save":success = game.checkpoint()
 		"mute":game.toggle_mute(); success = true
+		"use_spirit":
+			# A field 精灵 (治愈 / 滋润): value [slot, target].
+			success = game.session.use_spirit(str(value[0]),int(value[1]))
+			note = game.session.last_note if success else game.session.last_error
+		_:
+			# The other shop rows and the 精灵 equipment (server/spirits.gd).
+			var item := action.trim_prefix("buy_").trim_prefix("sell_").trim_prefix("equip_")
+			if action.begins_with("buy_"):success = at_shop and game.session.buy_item(item)
+			elif action.begins_with("sell_"):success = at_shop and game.session.sell_item(item)
+			elif action.begins_with("equip_") and item in Spirits.SPIRIT_ITEMS:
+				success = game.session.equip_item(item)
+				if not success:note = game.session.last_error
 	if success:
 		game.checkpoint()
-		note = "已完成。"
+		if note.is_empty():note = "已完成。"
 		if action=="claim_quest":note = "委托完成！获得石币、经验与回复药。"
 		elif action=="heal":note = "你与伙伴恢复了体力。"
 		elif action=="accept_quest":note = "委托已接受，出发去村外吧！"
 	elif action=="select_pet" and not game.session.last_error.is_empty():note = game.session.last_error
-	else:note = "现在无法这样做，请检查条件、石币或数量。"
+	elif note.is_empty() and action in ["equip_mirror"] and not game.session.last_error.is_empty():note = game.session.last_error
+	elif note.is_empty():note = "现在无法这样做，请检查条件、石币或数量。"
 	game.adventure_menu.refresh(note)
 	game.play_ui_sound(201)

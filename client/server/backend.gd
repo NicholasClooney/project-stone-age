@@ -28,6 +28,8 @@ const PROFILE_COMMANDS := {
 	"buy_travel_pass":["buy_travel_pass",[]],
 	"heal":["heal",[]],
 	"heal_carried_pets":["heal_carried_pets",[]],
+	"use_spirit":["use_spirit",["slot","target"]],
+	"gm_grant_spirits":["gm_grant_spirits",[]],
 	"grant_pet_care_items":["grant_pet_care_items",[]],
 	"level_pet_to":["level_pet_to",["pet_id","target"]],
 	"store_pet":["store_pet",["index","auto_hunt"]],
@@ -375,11 +377,13 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	# A remote command missing a required field is refused, not a script error.
 	if arguments.size() < _required_arguments(spec[0]):return _reject("missing %s" % spec[1][arguments.size()])
 	session.last_error = ""
+	session.last_note = ""
 	var ok: bool = session.callv(spec[0],arguments)
 	if not ok:return _reject(session.last_error)
 	save()
 	_publish()
-	return {"ok":true}
+	# What a field 精灵 did (耐久力回复N), for the device that cast it.
+	return {"ok":true,"note":session.last_note} if not session.last_note.is_empty() else {"ok":true}
 
 ## Partial update of the profile's automation settings (see
 ## scripts/automation_settings.gd): deep-merged and validated; null resets a

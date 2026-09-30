@@ -17,6 +17,9 @@ var result: Label
 var speed: OptionButton
 var multiplier: OptionButton
 var compact: CheckBox
+## 用精灵补血 (training.spirit).
+var spirit: CheckBox
+
 var hp_floor: SpinBox
 var target_level: SpinBox
 var level_explicit:=false
@@ -87,10 +90,12 @@ func _ready() -> void:
 	label_at(panel,"经验倍率",Vector2(420,116),17)
 	multiplier=options(["1× 原版","2×","10×","100×"],Vector2(555,106))
 	compact=CheckBox.new();compact.text="地图内简略战斗（不切换画面，只显示战况）";compact.position=Vector2(24,164);panel.add_child(compact)
+	spirit=CheckBox.new();spirit.name="SpiritHeal";spirit.text="用精灵补血";spirit.position=Vector2(560,164);panel.add_child(spirit)
+	spirit.tooltip_text="到停机线时先用身上装备的补血精灵（治愈／滋润／恩惠，队伍里倒下的队友用复活精灵），气力不够再喝回复药或停机。气力只在村里休息时恢复。"
 	label_at(panel,"低于此血量停机 %",Vector2(24,223),17);hp_floor=number(Vector2(230,213),1,100,10)
 	label_at(panel,"角色等级（0不限）",Vector2(430,223),16);target_level=number(Vector2(610,213),0,120,120)
 	label_at(panel,"最多战斗场次",Vector2(24,273),17);battle_limit=number(Vector2(230,263),1,100000,1000)
-	label_at(panel,"保护玩家、出战宠与坐骑；不会自动补血。中途停止可接手战斗。",Vector2(24,318),16)
+	label_at(panel,"保护玩家、出战宠与坐骑：到停机线先用补血精灵（有气力时），否则停机。中途停止可接手战斗。",Vector2(24,318),16)
 	start_button=world.button("原地连续遇敌",start_training);start_button.position=Vector2(24,570);panel.add_child(start_button)
 	var apply: Button=world.button("应用设置并关闭",func():apply_settings();close_menu());apply.position=Vector2(260,570);panel.add_child(apply)
 	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(730,570);panel.add_child(close)
@@ -145,6 +150,7 @@ func load_settings() -> void:
 	_loading=true
 	if _changed(old_training,training,"xp"):multiplier.select(maxi(0,[1,2,10,100].find(int(training.xp))))
 	if _changed(old_training,training,"compact"):compact.set_pressed_no_signal(bool(training.compact))
+	if _changed(old_training,training,"spirit"):spirit.set_pressed_no_signal(bool(training.get("spirit",true)))
 	var shown:=all.duplicate(true)
 	if not _sync_spin(hp_floor,old_training.get("hp"),training.hp):shown.training.hp=old_training.hp
 	if not _sync_spin(battle_limit,old_training.get("limit"),training.limit):shown.training.limit=old_training.limit
@@ -180,7 +186,7 @@ static func _sync_spin(input: SpinBox, old_value: Variant, new_value: Variant, f
 
 ## Every choice in these controls, in the runner's flat settings shape.
 func current_settings() -> Dictionary:
-	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
+	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
 	result.capture_pet_id=_selected_pet_id()
 	return result
 
@@ -198,7 +204,7 @@ func settings_patch() -> Dictionary:
 	if _training_applied:
 		_training_applied=false
 		var chosen: Dictionary=current_settings()
-		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
+		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
 		if level_explicit:wanted.level=chosen.level
 		var training:=AutomationSettings.diff(all.training,wanted)
 		if not level_explicit and world.automation_overrides().get("training",{}).has("level"):training.level=null

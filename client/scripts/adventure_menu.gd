@@ -68,6 +68,15 @@ const ElementBars = preload("res://scripts/element_bars.gd")
 var element_editor_open := false
 var element_draft: Array = []
 const Faces = preload("res://scripts/faces.gd")
+## The 精灵 equipment's data (itemset.txt / magic.txt rows, read only).
+const Spirits = preload("res://server/spirits.gd")
+const GameSessionScript = preload("res://server/game_session.gd")
+## The bag's slots in order (menu.cpp:8976: five a row, 51 px apart, rows 48 px).
+const BAG := ["potion","club","mirror_charm","healing_charm","haru_armor","freya_robe","teo_robe","koyala_charm"]
+## The item shop's stock: the original Samgir shop's potion and club, then
+## conveniences (docs/reverse-engineering/magic-and-mp.md says where the
+## original sells each piece of spirit equipment).
+const SHOP := ["potion","club","mirror_charm","haru_armor","freya_robe","teo_robe","koyala_charm"]
 ## Facing of the pet window's portrait; the original starts at 1 each time it opens.
 var pet_portrait_facing := 1
 var name_edit: LineEdit
@@ -297,7 +306,8 @@ func status_panel(profile: Dictionary) -> void:
 	else:
 		portrait(int(character),Vector2(177,84),Vector2(64,68))
 	# menu.cpp:11680: the ninth row is 魅力 (pc.charm).
-	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"—",str(effective.attack),str(effective.defence),str(effective.speed),str(int(p.get("charm",60)))]
+	# menu.cpp:11676: the fifth row is 气力 (pc.mp).
+	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"%d / %d" % [int(p.get("mp",Spirits.MAX_MP)),Spirits.MAX_MP],str(effective.attack),str(effective.defence),str(effective.speed),str(int(p.get("charm",60)))]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
 	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]
 	var base_keys := ["vitality","strength","toughness","dexterity"]
@@ -403,16 +413,30 @@ func element_editor(current: Array, top: float) -> void:
 	panel.add_child(cancel)
 
 func item_name(key: String) -> String:
+	if key in Spirits.SPIRIT_ITEMS:return str(Spirits.ITEMS[key].name)
 	return {"potion":"耐久力回复药","club":"小棍棒","healing_charm":"恢复护符（辅助）","mirror_charm":"美丽尼亚护身符1"}.get(key,key)
 
 func item_description(key: String) -> String:
-	return {"potion":"恢复体力；战斗中也可使用。","club":"攻击 +4；装备后生效。","healing_charm":"恢复存活随身宠；自动战斗半血治疗，不耗气。","mirror_charm":"主动镜之精灵：消耗行动，暂不消耗气力。"}.get(key,"")
+	if key in Spirits.SPIRIT_ITEMS:
+		var data: Dictionary = Spirits.ITEMS[key]
+		var magic: Dictionary = Spirits.magic_of(key)
+		return "%s · %s，气力 %d%s%s" % [str(data.memo),str(magic.comment),int(data.mp),"；Lv%d 可装备" % int(data.level) if int(data.level)>0 else "","；只在战斗中" if int(magic.field)==Spirits.FIELD_BATTLE else "；战斗内外都可用"]
+	return {"potion":"恢复体力；战斗中也可使用。","club":"攻击 +4；装备后生效。","healing_charm":"恢复存活随身宠；自动战斗半血治疗，不耗气。","mirror_charm":"主动镜之精灵：消耗行动和 5 点气力。"}.get(key,"")
 
 func item_equipped(profile: Dictionary, key: String) -> bool:
+	if key in Spirits.SPIRIT_ITEMS:return key in profile.get("equipment",{}).values()
 	return bool(profile.get("equipped",false)) if key=="club" else bool(profile.get("equipped_mirror",false)) if key=="mirror_charm" else false
 
 func equip_action(key: String) -> String:
+	if key in Spirits.SPIRIT_ITEMS:return "equip_"+key
 	return "heal_pets" if key=="healing_charm" else "equip_mirror" if key=="mirror_charm" else "equip"
+
+## Where a worn item shows (menu.cpp:8940 ItemBuffer: 1 BODY (134,129),
+## 2 ARM (61,129), 3 DECORATION (32,68)).
+func equip_center(key: String) -> Vector2:
+	if key=="club":return Vector2(61,129)
+	if key in Spirits.ITEMS and str(Spirits.ITEMS[key].slot)=="body":return Vector2(134,129)
+	return Vector2(32,68)
 
 func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
@@ -421,34 +445,38 @@ func inventory_panel(profile: Dictionary) -> void:
 	# Classic five-slot frame: InitItem menu.cpp8940-8973. Weapon is
 	# CHAR_ARM=2 at(61,129), not the top-left accessory slot. The frame
 	# already contains head/body/hand silhouettes; no invented mannequin.
-	for key in ["club","mirror_charm"]:
+	for key in ["club","mirror_charm"]+Spirits.SPIRIT_ITEMS:
 		if not item_equipped(profile,key):continue
-		var center:=Vector2(61,129) if key=="club" else Vector2(32,68)
+		var center:=equip_center(key)
 		var icon:=item_icon(key,Vector2.ZERO)
+		if icon.texture==null:continue
 		icon.position=Vector2(49,118) if key=="club" else center-icon.texture.get_size()/2
-		icon.name="EquippedClubIcon" if key=="club" else "EquippedMirrorIcon"
+		icon.name="EquippedClubIcon" if key=="club" else "EquippedMirrorIcon" if key=="mirror_charm" else "EquippedIcon_"+key
 		var equipped_slot := choice("",center-Vector2(23,23),"",null)
 		for connection in equipped_slot.pressed.get_connections():equipped_slot.pressed.disconnect(connection.callable)
-		equipped_slot.name="EquippedClub" if key=="club" else "EquippedMirror"
+		equipped_slot.name="EquippedClub" if key=="club" else "EquippedMirror" if key=="mirror_charm" else "Equipped_"+key
 		equipped_slot.size=Vector2(48,48)
 		equipped_slot.tooltip_text=item_name(key)+" · 双击卸下"
-		var selection:="equipped" if key=="club" else "equipped_mirror"
+		var selection: String="equipped" if key=="club" else "equipped_mirror" if key=="mirror_charm" else "equipped_"+key
 		Highlight.attach(equipped_slot,Rect2(Vector2(-1,-1),Vector2(50,47)),selected_item_slot==selection)
 		equipped_slot.pressed.connect(func(): selected_item=key;selected_item_slot=selection;rebuild())
 		equipped_slot.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
 				world.perform_adventure_action(equip_action(key),false)
 		)
-	for i in range(4):
-		var key: String = ["potion","club","mirror_charm","healing_charm"][i]
+	for i in range(BAG.size()):
+		var key: String = BAG[i]
+		var cell := Vector2((i%5)*51,int(i/5)*48)
 		# Authority inventory is total owned; equipment consumes one visible
 		# bag copy without deleting ownership. Spare copies remain in the bag.
 		var bag_count := maxi(0,int(profile.inventory.get(key,0))-(1 if item_equipped(profile,key) else 0))
 		if bag_count>0:
-			var offset := Vector2(-11,-21) if key=="potion" else Vector2(-12,-11)
-			item_icon(key,Vector2(32+i*51,200)+offset).name="BagIcon_"+key
-			label(str(bag_count),Vector2(31+i*51,201),40,12).name="BagCount_"+key
-		var slot := choice("",Vector2(11+i*51,175),"",null,bag_count>0)
+			var icon := item_icon(key,Vector2.ZERO)
+			icon.name="BagIcon_"+key
+			# The original centres each item on its slot (32+j, 200+k).
+			icon.position = Vector2(32,200)+cell-(icon.texture.get_size()/2 if icon.texture!=null else Vector2.ZERO)
+			label(str(bag_count),Vector2(31,201)+cell,40,12).name="BagCount_"+key
+		var slot := choice("",Vector2(11,175)+cell,"",null,bag_count>0)
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
 		slot.name="ItemSlot_"+key
 		slot.size=Vector2(48,48)
@@ -461,8 +489,28 @@ func inventory_panel(profile: Dictionary) -> void:
 		)
 	var potion := selected_item=="potion"
 	label(item_name(selected_item),Vector2(15,328),240,15)
-	label(item_description(selected_item),Vector2(15,354),239,14)
-	choice("使用" if potion else ("恢复宠物" if selected_item=="healing_charm" else "卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
+	label(item_description(selected_item),Vector2(15,354),239,12 if selected_item in Spirits.SPIRIT_ITEMS else 14)
+	var main := choice("使用" if potion else ("恢复宠物" if selected_item=="healing_charm" else "卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
+	spirit_field_buttons(profile,main)
+
+## The worn healing 精灵 cast outside battle (FIELD_ALL: 治愈, 滋润): on the
+## player, or with 滋润 on the battle pet (the original's status window 精灵).
+func spirit_field_buttons(profile: Dictionary, main: Button) -> void:
+	if not selected_item in Spirits.SPIRIT_ITEMS or not item_equipped(profile,selected_item):return
+	var magic := Spirits.magic_of(selected_item)
+	if str(magic.kind)!="recovery" or int(magic.field)==Spirits.FIELD_BATTLE:return
+	main.size.x = 70
+	var slot := str(Spirits.ITEMS[selected_item].slot)
+	var enough := int(profile.player.get("mp",Spirits.MAX_MP))>=int(Spirits.ITEMS[selected_item].mp)
+	var self_cast := choice("精灵→自己",Vector2(86,404),"use_spirit",[slot,0],enough)
+	self_cast.name = "SpiritOnSelf"
+	self_cast.size.x = 90
+	self_cast.tooltip_text = "%s，消耗气力 %d（剩 %d）" % [str(magic.name),int(Spirits.ITEMS[selected_item].mp),int(profile.player.get("mp",0))]
+	if int(magic.target)==Spirits.TARGET_OTHER and int(profile.active_pet)>=0:
+		var pet_cast := choice("→出战宠",Vector2(178,404),"use_spirit",[slot,int(profile.active_pet)+1],enough)
+		pet_cast.name = "SpiritOnPet"
+		pet_cast.size.x = 80
+		pet_cast.tooltip_text = self_cast.tooltip_text
 
 func pet_native_button(ident: int, center: Vector2, callback: Callable, title: String = "") -> TextureButton:
 	var button := TextureButton.new()
@@ -731,20 +779,26 @@ func shop_panel(profile: Dictionary) -> void:
 	label("萨姆吉尔的道具店",Vector2(121,13),220,17)
 	label("需要什么呢？",Vector2(18,53),200,15)
 	label("石币 %d" % profile.player.gold,Vector2(235,73),185,14)
-	for i in range(3):
-		var key: String = ["potion","club","mirror_charm"][i]
-		var caption := item_name(key)
-		item_icon(key,Vector2(25,119+i*64))
-		label(caption,Vector2(85,117+i*64),190,16)
-		label("%d 石币    持有 %d" % [[10,30,4800][i],profile.inventory.get(key,0)],Vector2(85,141+i*64),230,14)
-		var row:=choice("",Vector2(18,111+i*64),"",null)
+	if not selected_item in SHOP:selected_item = "potion"
+	for i in range(SHOP.size()):
+		var key: String = SHOP[i]
+		# Two columns of four rows (the stock outgrew one column).
+		var at := Vector2(18+int(i/4)*205,111+(i%4)*48)
+		var icon := item_icon(key,Vector2.ZERO)
+		if icon.texture!=null:icon.position = at+Vector2(24,22)-icon.texture.get_size()/2
+		label(item_name(key),at+Vector2(50,0),150,14)
+		label("%d 石币 · 持有 %d" % [int(GameSessionScript.ITEM_PRICES.get(key,0)),int(profile.inventory.get(key,0))],at+Vector2(50,22),150,12)
+		var row:=choice("",at,"",null)
 		for connection in row.pressed.get_connections():row.pressed.disconnect(connection.callable)
-		row.size=Vector2(390,58)
+		row.name = "ShopRow_"+key
+		row.size=Vector2(200,46)
+		Highlight.attach(row,Rect2(Vector2(-1,-1),Vector2(202,48)),selected_item==key)
 		row.pressed.connect(func(): selected_item=key;rebuild())
 	item_icon(selected_item,Vector2(43,319))
-	label(item_name(selected_item)+(" · 镜之精灵" if selected_item=="mirror_charm" else " · "+item_description(selected_item)),Vector2(111,310),300,13)
-	label("售出 %d 石币" % ({"potion":5,"club":15,"mirror_charm":2400}[selected_item]),Vector2(111,338),200,14)
-	art_button(26098,Vector2(231,382),"buy_"+selected_item,null,int(profile.player.gold)>=({"potion":10,"club":30,"mirror_charm":4800}[selected_item])).tooltip_text="购买一个"
+	label(item_name(selected_item)+(" · 镜之精灵" if selected_item=="mirror_charm" else " · "+item_description(selected_item)),Vector2(111,305),300,12)
+	label("售出 %d 石币" % int(int(GameSessionScript.ITEM_PRICES.get(selected_item,0))/2),Vector2(111,352),200,14)
+	art_button(26098,Vector2(231,382),"buy_"+selected_item,null,int(profile.player.gold)>=int(GameSessionScript.ITEM_PRICES.get(selected_item,0))).tooltip_text="购买一个"
+
 	art_button(26097,Vector2(312,382),"sell_"+selected_item,null,int(profile.inventory.get(selected_item,0))>0 and (not item_equipped(profile,selected_item) or int(profile.inventory.get(selected_item,0))>1)).tooltip_text="卖出一个"
 
 func style_pet_modal(root_control:Control)->void:

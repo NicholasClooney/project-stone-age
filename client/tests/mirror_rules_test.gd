@@ -12,9 +12,11 @@ func _initialize()->void:
 	battle=Battle.new()
 	battle.start_battle({"mirror_available":true,"enemy_max_hp":500,"player_speed":999})
 	battle._player_action("mirror_self")
-	check(battle.snapshot().mirror_self==1 and not battle.snapshot().has("player_mp"),"active self cast grants one charge without MP")
+	check(battle.snapshot().mirror_self==1 and battle.snapshot().player_mp==95,"active self cast grants one charge for 5 气力 (item 1460 magicusemp)")
 	for i in range(25): battle._player_action("mirror_self")
-	check(battle.snapshot().mirror_self==1,"25 casts remain free and do not stack charges")
+	check(battle.snapshot().mirror_self==1 and battle.snapshot().player_mp==0,"each cast spends 5 气力 until none is left; charges do not stack")
+	check(battle.submit_action("mirror_self").turn==0,"without 5 气力 the mirror command is refused")
+
 	var hp:int=battle.snapshot().player_hp
 	check(not battle._reflect_incoming(0,false) and battle.snapshot().mirror_self==1,"zero damage does not consume mirror")
 	check(battle._reflect_incoming(12,false) and battle.snapshot().player_hp==hp and battle.snapshot().enemy_hp==488,"positive physical hit reflected away from player")

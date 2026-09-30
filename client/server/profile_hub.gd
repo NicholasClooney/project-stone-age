@@ -345,12 +345,15 @@ func party_auto(id: String) -> Dictionary:
 	if not (own is Dictionary and bool(own.get("auto",false))):return {}
 	var training = overrides.get("training",{})
 	var line := int(training.get("hp",AutomationSettings.defaults().training.hp)) if training is Dictionary else int(AutomationSettings.defaults().training.hp)
-	return {"hp":line}
+	var spirit := bool(training.get("spirit",AutomationSettings.defaults().training.get("spirit",true))) if training is Dictionary else bool(AutomationSettings.defaults().training.get("spirit",true))
+	return {"hp":line,"spirit":spirit}
 
 ## Backend.party_guard of a party leader's 自动练级, before each new troop,
 ## for the leader and every member at their own 停机线 (the leader's run's,
 ## each member's own): the 恢复护符 heals their carried pets (it is never
-## used up), and a player at the line drinks 回复药 until above it. The
+## used up), and a player at the line casts their worn field 精灵 (治愈,
+## 滋润; their own 用精灵补血 switch) while the 气力 lasts, then drinks
+## 回复药 until above it. The
 ## party keeps going; only someone healing cannot lift (no 回复药 left, no
 ## 恢复护符, a fallen pet) stops the run, saying who and why.
 func _party_guard(leader: String) -> String:
@@ -362,6 +365,9 @@ func _party_guard(leader: String) -> String:
 		var changed: bool = session.heal_carried_pets()
 		var line := int(backend.automation.settings.hp) if id==leader else int(backend.automation.profile_settings().hp)
 		var player: Dictionary = session._profile.player
+		# 用精灵补血 (each player's own switch): a field 精灵 before 回复药.
+		var own: Dictionary = backend.automation.settings if id==leader else backend.automation.profile_settings()
+		if bool(own.get("spirit",true)) and session.spirit_heal_to_line(line,[int(session._profile.active_pet),int(session._profile.get("ride_pet",-1))]):changed = true
 		while int(player.hp)*100<=int(player.max_hp)*line and session.use_item("potion"):changed = true
 		if changed:
 			backend.save()

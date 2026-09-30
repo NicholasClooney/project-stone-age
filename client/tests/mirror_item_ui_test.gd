@@ -16,7 +16,7 @@ func run():
  menu.selected_item="mirror_charm";menu.open_menu("shop")
  await process_frame
  for child in menu.panel.get_children():
-  if child is Label and child.position==Vector2(111,310):check(child.position.y+child.size.y<=338,"shop description stays above sell price")
+  if child is Label and child.position==Vector2(111,305):check(child.position.y+child.size.y<=352,"shop description stays above sell price")
  check(menu.item_name("mirror_charm")=="美丽尼亚护身符1","original accessory appears in shop")
  game.perform_adventure_action("buy_mirror_charm")
  check(game.session.snapshot().inventory.mirror_charm==1 and game.session.snapshot().player.gold==5200,"shop buys original4800charm")
@@ -28,7 +28,7 @@ func run():
  check(not menu.panel.has_node("BagIcon_mirror_charm"),"equipped only copy leaves bag")
  var icon=menu.panel.get_node("EquippedMirrorIcon")
  check(icon.position+icon.texture.get_size()/2==Vector2(32,68),"original DECORATION1 center retained")
- check(menu.item_description("mirror_charm").contains("主动") and menu.item_description("mirror_charm").contains("暂不消耗气力"),"active cast and waived MP described")
+ check(menu.item_description("mirror_charm").contains("主动") and menu.item_description("mirror_charm").contains("5 点气力"),"active cast and its 5 气力 described")
  double_click(menu.panel.get_node("EquippedMirror"));await process_frame
  check(not game.session.snapshot().equipped_mirror and menu.panel.has_node("BagIcon_mirror_charm"),"unequip returns accessory to bag")
  menu.open_menu("shop");game.perform_adventure_action("sell_mirror_charm")

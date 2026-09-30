@@ -243,7 +243,7 @@ func _rebuild_list() -> void:
 	action.add_theme_font_size_override("font_size",11)
 	list_rows.add_child(action)
 	if is_member():
-		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；宠物半血以下用恢复护符治疗；体力到停机线且有回复药时喝药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
+		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；宠物半血以下用恢复护符治疗；打开「用精灵补血」时，自己或队友到停机线先用身上的补血精灵、队友倒下用复活精灵，气力不够再喝回复药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
 		compact_box = _switch("PartyCompact","快速战斗","配合自动战斗：不切换到战斗画面，只在上方显示战况，可随时「查看战斗」。",func(on):set_party_setting("compact",on))
 		list_rows.add_child(auto_box)
 		list_rows.add_child(compact_box)
@@ -330,7 +330,7 @@ func _auto_battle_frame() -> void:
 		var battle: Dictionary = world.state.battle
 		var id := str(battle.get("battle_id",""))
 		if bool(battle.get("active",false)):
-			auto_text.text = "组队战斗 · 自动 · 第 %d 回合 · 体力 %d/%d · 回复药 %d" % [int(battle.get("turn",0))+1,int(battle.get("player_hp",0)),int(battle.get("player_max_hp",0)),int(battle.get("potions",0))]
+			auto_text.text = "组队战斗 · 自动 · 第 %d 回合 · 体力 %d/%d · 气力 %d · 回复药 %d" % [int(battle.get("turn",0))+1,int(battle.get("player_hp",0)),int(battle.get("player_max_hp",0)),int(battle.get("player_mp",0)),int(battle.get("potions",0))]
 		else:
 			auto_text.text = "组队战斗结束：%s" % {"win":"胜利","defeat":"全队倒下" if not bool(battle.get("party_fallen",false)) else "你倒下了，队友获胜","escaped":"已逃离"}.get(str(battle.get("outcome","")),"结束")
 			if _closed!=id:

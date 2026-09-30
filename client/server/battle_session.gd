@@ -19,6 +19,9 @@ var _skill_used := false
 const CaptureRules = preload("res://server/capture_rules.gd")
 const CombatRules = preload("res://server/classic_combat_rules.gd")
 const Loyalty = preload("res://server/loyalty.gd")
+const Spirits = preload("res://server/spirits.gd")
+## 镜子的精灵's 气力 (itemset.txt item 1460 magicusemp).
+const MIRROR_MP := 5
 var _acting_enemy := 0
 var _target := 0
 var _pet_choice := -2
@@ -33,6 +36,10 @@ var _pet_guard := false
 var _last_ride_damage := 0
 ## The pet's loyalty check this action ("" when it obeyed), for the frame.
 var _pet_disobey := ""
+## The player's 精灵 target code this turn (server/spirits.gd), and what the
+## last spirit cast did, for its frame.
+var _spirit_target := 0
+var _last_spirit: Dictionary = {}
 
 # Optional authority extensions. Defaults retain the original solo scheduler.
 func _extend_actors(_actors: Array[Dictionary], _action: String) -> void:
@@ -67,6 +74,9 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["mirror_available"]=bool(config.get("mirror_available",false))
 	_state["mirror_self"]=0
 	_state["mirror_pets"]={}
+	# 气力 and the 精灵 the worn equipment gives (GameSession.spirits()).
+	_state["player_mp"]=clampi(int(config.get("player_mp",Spirits.MAX_MP)),0,Spirits.MAX_MP)
+	_state["spirits"]=config.get("spirits",{}).duplicate(true)
 	_state["turn_order"] = initial_order
 	_state["turn_frames"] = []
 	_state["player_level"] = int(config.get("player_level",1))
@@ -118,11 +128,15 @@ func set_pet_command(command: String) -> bool:
 	return true
 
 func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
-	if not _state.active or action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet"]:
+	if not _state.active or (action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet"] and not action.begins_with("spirit:")):
 		return snapshot()
+	if action.begins_with("spirit:"):
+		if not spirit_refusal({"kind":"player","index":-1},action.trim_prefix("spirit:"),target).is_empty():return snapshot()
+		_spirit_target = target
+		target = -1
 	if action=="heal_pet" and (not _state.healing_available or _state.active_pet<0 or _state.pet_hp<=0 or _state.pet_hp>=_state.pet_max_hp):return snapshot()
 	if action.begins_with("mirror_"):
-		if not _state.mirror_available:return snapshot()
+		if not _state.mirror_available or int(_state.get("player_mp",0))<MIRROR_MP:return snapshot()
 		if action=="mirror_pet" and (_state.active_pet<0 or _state.pet_hp<=0):return snapshot()
 	if action == "item" and (_state.potions <= 0 or _state.player_hp >= _state.player_max_hp):
 		return snapshot()
@@ -180,6 +194,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 		_last_damage = 0
 		_last_ride_damage = 0
 		_pet_disobey = ""
+		_last_spirit = {}
 		_pending_counter = {}
 		_state.turn_order.append(actor.actor)
 		match actor.actor:
@@ -211,6 +226,12 @@ func _player_action(action: String) -> void:
 			_last_outcome="heal_pet"
 			_state.events.append("恢复护符：你为%s恢复体力，不消耗气力。"%str(_state.pet_name))
 		"mirror_self","mirror_pet":
+			# MAGIC_MagicDef: without the 气力 the spell does nothing.
+			if int(_state.get("player_mp",0))<MIRROR_MP:
+				_last_outcome="spirit_fail"
+				_state.events.append("气力不足，镜子的精灵没有回应。")
+				return
+			_state.player_mp=int(_state.player_mp)-MIRROR_MP
 			if action=="mirror_self":_state.mirror_self=1
 			else:_state.mirror_pets[_state.active_pet]=1
 			_last_outcome="mirror_cast"
@@ -260,6 +281,9 @@ func _player_action(action: String) -> void:
 			_state.potions -= 1
 			_state.player_hp = mini(_state.player_max_hp,_state.player_hp + 30)
 			_state.events.append("使用药草，恢复体力。")
+		_:
+			if action.begins_with("spirit:"):_cast_spirit({"kind":"player","index":-1},action.trim_prefix("spirit:"),_target_ref(_spirit_target))
+
 
 func _pet_action(command: String) -> void:
 	if command == "standby":
@@ -480,6 +504,10 @@ func _finish(outcome: String, message: String) -> void:
 
 func _record_frame(actor: String) -> void:
 	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"ride_pet":int(_state.get("ride_pet",-1)),"mounted_sprite":int(_state.get("mounted_sprite",-1)),"ride_damage":_last_ride_damage,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and _pet_disobey.is_empty() and not _last_outcome.begins_with("counter") else 0,"disobey":_pet_disobey if actor == "pet" else ""})
+	# A 精灵 cast: who cast what on whom, and each heal (the original's BJ/BD).
+	if not _last_spirit.is_empty():_state.turn_frames.back().spirit = _last_spirit.duplicate(true)
+	_state.turn_frames.back().player_mp = int(_state.get("player_mp",0))
+
 
 func _resolve_counter() -> void:
 	_last_ride_damage = 0
@@ -575,3 +603,157 @@ func _end_without_rewards(developer: bool, note: String) -> Dictionary:
 	_finish("escaped",note)
 	_record_frame("player")
 	return snapshot()
+
+# ---- 精灵 (server/spirits.gd, docs/reverse-engineering/magic-and-mp.md) ------
+# A member of the player's side is a ref {kind, index}: player, pet (the
+# player's battle pet), ally i and ally_pet i (squads and party battles), or
+# side (the whole side, for 恩惠). Target codes are the caster's own view.
+
+## The ref a target code names, seen from the player (party battles map
+## their members' views, party_battle_session.gd).
+func _target_ref(code: int, _viewer: int = 0) -> Dictionary:
+	if code==Spirits.SIDE:return {"kind":"side","index":-1}
+	if code==Spirits.SELF:return {"kind":"player","index":-1}
+	if code==Spirits.OWN_PET:return {"kind":"pet","index":-1}
+	if code>=2 and code<=9:return {"kind":"ally" if code%2==0 else "ally_pet","index":int((code-2)/2)}
+	return {}
+
+## The ref is in the battle (not escaped; a fallen one is still in it).
+func _ref_present(ref: Dictionary) -> bool:
+	match str(ref.get("kind","")):
+		"player":return true
+		"pet":return not _state.pet.is_empty()
+		"ally","ally_pet":
+			var i := int(ref.index)
+			var allies: Array = _state.get("allies",[])
+			if i<0 or i>=allies.size() or bool(allies[i].get("escaped",false)):return false
+			return ref.kind=="ally" or (i<_state.get("ally_pets",[]).size() and not _state.ally_pets[i].is_empty())
+	return false
+
+func _ref_actor(ref: Dictionary) -> Dictionary:
+	match str(ref.kind):
+		"player":return {"hp":_state.player_hp,"max_hp":_state.player_max_hp,"name":"你"}
+		"pet":return _state.pet
+		"ally":return _state.allies[int(ref.index)]
+		"ally_pet":return _state.ally_pets[int(ref.index)]
+	return {}
+
+func _ref_hp(ref: Dictionary) -> int:
+	return int(_state.player_hp) if ref.kind=="player" else int(_state.pet_hp) if ref.kind=="pet" else int(_ref_actor(ref).get("hp",0))
+
+func _ref_max(ref: Dictionary) -> int:
+	return int(_state.player_max_hp) if ref.kind=="player" else int(_state.pet_max_hp) if ref.kind=="pet" else int(_ref_actor(ref).get("max_hp",1))
+
+func _ref_set_hp(ref: Dictionary, hp: int) -> void:
+	match str(ref.kind):
+		"player":_state.player_hp = hp
+		"pet":
+			_state.pet_hp = hp
+			_state.pet.hp = hp
+			if int(_state.active_pet)>=0 and int(_state.active_pet)<_state.pets.size():_state.pets[_state.active_pet].hp = hp
+		_:_ref_actor(ref).hp = hp
+
+func _ref_name(ref: Dictionary) -> String:
+	if ref.kind=="player":return "你"
+	return str(_ref_actor(ref).get("name","宠物" if str(ref.kind).ends_with("pet") else "队友"))
+
+## The rider's living mount as a dictionary to change in place, or {}.
+func _ref_mount(ref: Dictionary) -> Dictionary:
+	if ref.kind=="player":
+		var index := int(_state.get("ride_pet",-1))
+		if index>=0 and index<_state.pets.size() and int(_state.pets[index].hp)>0:return _state.pets[index]
+	elif ref.kind=="ally":
+		var mount: Dictionary = _ref_actor(ref).get("mount",{})
+		if int(mount.get("hp",0))>0:return mount
+	return {}
+
+## Every present member of the player's side (BATTLE_MultiList's side).
+func _side_refs() -> Array:
+	var result: Array = [{"kind":"player","index":-1},{"kind":"pet","index":-1}]
+	for i in range(_state.get("allies",[]).size()):
+		result.append({"kind":"ally","index":i})
+		result.append({"kind":"ally_pet","index":i})
+	return result.filter(_ref_present)
+
+func _living_side() -> Array:
+	return _side_refs().filter(func(ref):return _ref_hp(ref)>0)
+
+## The caster's 气力 and spirits: the player's, or ally i's (party battles).
+func _caster_mp(caster: Dictionary) -> int:
+	return int(_state.get("player_mp",0)) if caster.kind=="player" else int(_state.allies[int(caster.index)].get("mp",0))
+
+func _set_caster_mp(caster: Dictionary, mp: int) -> void:
+	if caster.kind=="player":_state.player_mp = mp
+	else:_state.allies[int(caster.index)].mp = mp
+
+func _caster_spirits(caster: Dictionary) -> Dictionary:
+	return _state.get("spirits",{}) if caster.kind=="player" else _state.allies[int(caster.index)].get("spirits",{})
+
+## Why this 精灵 command cannot be given ("" when it can): the battle 精灵
+## menu's rules (battlemenu.cpp:755: a map-only spell or too little 气力 is
+## refused; the target is one the spell's MAGIC_TARGET allows).
+func spirit_refusal(caster: Dictionary, slot: String, code: int, viewer: int = 0) -> String:
+	var spirit: Dictionary = _caster_spirits(caster).get(slot,{})
+	if spirit.is_empty():return "没有装备这个精灵。"
+	if str(spirit.get("kind","")) not in ["recovery","ressurect"]:return "这个精灵在战斗菜单里还不能用。"
+	if int(spirit.field)==Spirits.FIELD_MAP:return "%s只能在战斗外使用。" % str(spirit.name)
+	if not Spirits.target_fits(spirit,code):return "这个精灵不能对这个目标使用。"
+	if _caster_mp(caster)<int(spirit.mp):return Spirits.NO_MP
+	if code!=Spirits.SIDE:
+		var ref := _target_ref(code,viewer)
+		if ref.is_empty() or not _ref_present(ref):return "目标不在战斗中。"
+		# The client offers only standing targets unless the spell revives.
+		if not bool(spirit.dead) and _ref_hp(ref)<=0:return "目标已经倒下。"
+	return ""
+
+## MAGIC_DirectUse -> MAGIC_Recovery / MAGIC_OtherRecovery / MAGIC_Ressurect:
+## 气力 first (too little and nothing happens), then BATTLE_MultiRecovery or
+## BATTLE_MultiRessurect. A single heal on a target that fell meanwhile goes
+## to a random standing member of the side (BATTLE_MultiList).
+func _cast_spirit(caster: Dictionary, slot: String, target: Dictionary) -> void:
+	var spirit: Dictionary = _caster_spirits(caster).get(slot,{})
+	var who := _ref_name(caster)
+	_last_outcome = "spirit_fail"
+	if spirit.is_empty() or target.is_empty():return
+	var mp := _caster_mp(caster)
+	if mp<int(spirit.mp):
+		_state.events.append("%s的气力不足，%s没有回应。" % [who,str(spirit.name)])
+		return
+	_set_caster_mp(caster,mp-int(spirit.mp))
+	_last_outcome = "spirit"
+	var power := int(spirit.power)
+	var heals: Array = []
+	if str(spirit.kind)=="ressurect":
+		# BATTLE_MultiListDead: only a fallen member; else nothing, 气力 spent.
+		if target.kind!="side" and _ref_present(target) and _ref_hp(target)<=0:
+			var gained := Spirits.revive_hp(power,_ref_max(target),_rng)
+			_ref_set_hp(target,gained)
+			heals.append({"kind":target.kind,"index":int(target.get("index",-1)),"amount":gained,"mount_amount":0,"revived":true})
+			_state.events.append("%s使用%s，%s恢复意识（体力 %d）。" % [who,str(spirit.name),_ref_name(target),gained])
+		else:
+			_state.events.append("%s使用%s，但没有倒下的目标。" % [who,str(spirit.name)])
+	else:
+		var refs: Array = []
+		if int(spirit.target)==Spirits.TARGET_MYSELF:refs = [caster]
+		elif target.kind=="side":refs = _living_side()
+		elif _ref_present(target) and _ref_hp(target)>0:refs = [target]
+		else:
+			var standing := _living_side()
+			if not standing.is_empty():refs = [standing[_rng.randi_range(0,standing.size()-1)]]
+		var parts: PackedStringArray = []
+		for ref in refs:
+			var amount := Spirits.battle_heal(power,_rng)
+			var own := amount
+			var mount_part := 0
+			var mount := _ref_mount(ref)
+			var hp := _ref_hp(ref)
+			if not mount.is_empty():
+				var split: Array = Spirits.split_heal(amount,hp,_ref_max(ref),int(mount.hp),int(mount.max_hp))
+				own = int(split[0])
+				mount_part = int(split[1])
+				mount.hp = mini(int(mount.max_hp),int(mount.hp)+mount_part)
+			_ref_set_hp(ref,mini(_ref_max(ref),hp+own))
+			heals.append({"kind":ref.kind,"index":int(ref.get("index",-1)),"amount":own,"mount_amount":mount_part,"revived":false})
+			parts.append("%s耐久力回复%d" % [_ref_name(ref),own]+("（骑宠 %d）" % mount_part if mount_part>0 else ""))
+		_state.events.append("%s使用%s：%s。" % [who,str(spirit.name),"，".join(parts) if not parts.is_empty() else "没有目标"])
+	_last_spirit = {"slot":slot,"item":str(spirit.get("item","")),"magic":int(spirit.magic),"name":str(spirit.name),"kind":str(spirit.kind),"caster":caster.duplicate(),"target":target.duplicate(),"user_effect":Spirits.EFFECT_USER,"effect":Spirits.target_effect(str(spirit.kind),power),"heals":heals}

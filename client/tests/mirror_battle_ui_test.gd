@@ -28,6 +28,6 @@ func run()->void:
 	check(not view.mirror_effects.is_empty() and view.mirror_effects[0].sprite.texture!=null,"original effect sprite texture loads during playback")
 	view._process(5.0)
 	var data:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/mvp/mirror-effects.json"))
-	check(data.images.size()==48,"both original effect sequences expose 48 images")
+	check(data.images.size()>=48 and data.characters.has("100600") and data.characters.has("100610"),"the caster and mirror sequences are among the original effect images (%d)" % data.images.size())
 	view.queue_free();await process_frame
 	quit(1 if failures else 0)

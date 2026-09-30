@@ -210,7 +210,7 @@ func update_adventure_hint() -> void:
 		game.helper_button.text = helper_caption()
 	var profile: Dictionary = game.session.snapshot()
 	# Only the status: the early quest's goals (村外的伙伴) no longer lead anywhere.
-	game.adventure_hint.text = "Lv.%d  体力 %d/%d  石币 %d" % [profile.player.level,profile.player.hp,profile.player.max_hp,profile.player.gold]
+	game.adventure_hint.text = "Lv.%d  体力 %d/%d  气力 %d  石币 %d" % [profile.player.level,profile.player.hp,profile.player.max_hp,int(profile.player.get("mp",100)),profile.player.gold]
 	if not game.last_adventure_message.is_empty():game.adventure_hint.text += "\n"+game.last_adventure_message
 
 ## 游戏助手 with its current key (快捷键 can rebind it).
