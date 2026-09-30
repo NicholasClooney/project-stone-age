@@ -346,7 +346,8 @@ func party_auto(id: String) -> Dictionary:
 	var training = overrides.get("training",{})
 	var line := int(training.get("hp",AutomationSettings.defaults().training.hp)) if training is Dictionary else int(AutomationSettings.defaults().training.hp)
 	var spirit := bool(training.get("spirit",AutomationSettings.defaults().training.get("spirit",true))) if training is Dictionary else bool(AutomationSettings.defaults().training.get("spirit",true))
-	return {"hp":line,"spirit":spirit}
+	var side := int(training.get("side_heal",AutomationSettings.defaults().training.get("side_heal",50))) if training is Dictionary else int(AutomationSettings.defaults().training.get("side_heal",50))
+	return {"hp":line,"spirit":spirit,"side":side}
 
 ## Backend.party_guard of a party leader's 自动练级, before each new troop,
 ## for the leader and every member at their own 停机线 (the leader's run's,

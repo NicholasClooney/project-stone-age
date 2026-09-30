@@ -6,7 +6,8 @@ extends RefCounted
 ##
 ## Overrides shape (every part optional):
 ##   training     {xp, compact, spirit (用精灵补血: a healing 精灵 before a
-##                 回复药 at the 停机线), hp, level, level_explicit, limit, preset}
+##                 回复药 at the 停机线), side_heal (全体补血: 恩惠 when
+##                 anyone on the side is below this percent, 0 off), hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
 ##   party        {auto (组队自动战斗: a party member's slot commands itself
 ##                 from its 自动练级 preset each turn), compact (快速战斗 for
@@ -41,7 +42,7 @@ const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":
 const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
-	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
+	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120]},
 	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"stat_species":["int",-1,1000000]},
@@ -87,7 +88,7 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 	var capture: Dictionary = all.capture
 	var level := int(training.level) if bool(training.level_explicit) else (0 if player_level>=120 else 120)
 	return {"xp":int(training.xp),"compact":bool(training.compact),"hp":int(training.hp),"level":level,"level_explicit":bool(training.level_explicit),
-		"limit":int(training.limit),"preset":str(training.preset),"spirit":bool(training.get("spirit",true)),"capture_hp":int(capture.hp),"capture_pet":int(capture.pet),
+		"limit":int(training.limit),"preset":str(training.preset),"spirit":bool(training.get("spirit",true)),"side_heal":int(training.get("side_heal",50)),"capture_hp":int(capture.hp),"capture_pet":int(capture.pet),
 		"capture_pet_id":str(capture.pet_id),"capture_pet_max_level":int(capture.pet_max_level)}
 
 ## Hunt scan filter without the location-dependent `usable` list.

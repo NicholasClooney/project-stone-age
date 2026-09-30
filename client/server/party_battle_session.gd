@@ -166,6 +166,16 @@ func set_slot_pet_target(slot: int, target: int) -> void:
 func _slot_pet(slot: int) -> Dictionary:
 	return _state.pet if slot==0 else _state.ally_pets[slot-1]
 
+## Another slot's command this turn already casts a whole-side heal (恩惠).
+func _side_heal_taken(slot: int) -> bool:
+	for other in _commands:
+		if int(other)==slot:continue
+		var command: Dictionary = _commands[other]
+		if not str(command.get("action","")).begins_with("spirit:") or str(command.get("ref",{}).get("kind",""))!="side":continue
+		var spirit: Dictionary = _caster_spirits(_caster(int(other))).get(str(command.action).trim_prefix("spirit:"),{})
+		if str(spirit.get("kind",""))=="recovery":return true
+	return false
+
 ## The slot's player as a 精灵 caster ref.
 func _caster(slot: int) -> Dictionary:
 	return {"kind":"player","index":-1} if slot==0 else {"kind":"ally","index":slot-1}
@@ -218,7 +228,10 @@ func _auto_command(slot: int) -> Dictionary:
 	# A healing 精灵 before a 回复药 (LAN phase 4c presets, 用精灵补血): the
 	# player at its line, a teammate at that line, a fallen teammate.
 	if bool(auto_policies[slot].get("spirit",true)):
-		var cast: Dictionary = BattleAutoPolicy.spirit_choice(view_for(slot),int(auto_policies[slot].get("hp",10)),true)
+		# 全体补血: one 恩惠 a turn is enough. The leader's command comes in
+		# first, then the automatic slots in slot order; a slot skips 恩惠 when
+		# an earlier command this turn already casts it.
+		var cast: Dictionary = BattleAutoPolicy.spirit_choice(view_for(slot),int(auto_policies[slot].get("hp",10)),true,int(auto_policies[slot].get("side",0)),_side_heal_taken(slot))
 		if not cast.is_empty():
 			return {"action":str(cast.action),"target":int(cast.target),"ref":_target_ref(int(cast.target),slot),"auto":true}
 	# As battle_auto_policy.gd: a pet at half its hp or less gets the 恢复护符.

@@ -51,7 +51,12 @@ static func capture_pet_choice(state:Dictionary,settings:Dictionary,target_level
 ## `team` (a party battle) also a fallen teammate (复活精灵) and the lowest
 ## teammate at the line (滋润, or 恩惠 when two or more are). Only spirits
 ## whose 气力 the caster still has; a 回复药 is the caller's fallback.
-static func spirit_choice(state: Dictionary, line: int, team: bool = false) -> Dictionary:
+## `side_line` (全体补血, training.side_heal, 0 off): first of all, a worn
+## 恩惠 on the whole side when anyone standing on it (the caster, its pet
+## and mount, allies and their pets and mounts) is below that percent;
+## exactly at it does not count. `side_taken`: another caster already casts
+## 恩惠 this turn (party battles), so this one does not.
+static func spirit_choice(state: Dictionary, line: int, team: bool = false, side_line: int = 0, side_taken: bool = false) -> Dictionary:
  var spirits: Dictionary = state.get("spirits",{})
  var mp := int(state.get("player_mp",0))
  var by_target := {}
@@ -62,6 +67,7 @@ static func spirit_choice(state: Dictionary, line: int, team: bool = false) -> D
   if str(spirit.get("kind",""))=="ressurect":revive = "spirit:"+str(slot)
   elif str(spirit.get("kind",""))=="recovery":by_target[int(spirit.get("target",-1))] = "spirit:"+str(slot)
  if by_target.is_empty() and revive.is_empty():return {}
+ if side_line>0 and not side_taken and by_target.has(8) and side_below(state,side_line):return {"action":by_target[8],"target":20}
  var own_hp := int(state.get("player_hp",0))
  var own_max := maxi(1,int(state.get("player_max_hp",1)))
  var mount_low := false
@@ -94,6 +100,29 @@ static func spirit_choice(state: Dictionary, line: int, team: bool = false) -> D
  if by_target.has(1):return {"action":by_target[1],"target":2+2*lowest}
  if by_target.has(8):return {"action":by_target[8],"target":20}
  return {}
+
+## Someone standing on the caster's side is below `percent` of their HP:
+## the caster, its pet and mount, the allies (not escaped), their pets and
+## mounts. Exactly at `percent` is not below.
+static func side_below(state: Dictionary, percent: int) -> bool:
+ var members: Array = [[int(state.get("player_hp",0)),int(state.get("player_max_hp",1))]]
+ var pet: Dictionary = state.get("pet",{})
+ if not pet.is_empty():members.append([int(state.get("pet_hp",pet.get("hp",0))),int(state.get("pet_max_hp",pet.get("max_hp",1)))])
+ var ride := int(state.get("ride_pet",-1))
+ var pets: Array = state.get("pets",[])
+ if ride>=0 and ride<pets.size():members.append([int(pets[ride].get("hp",0)),int(pets[ride].get("max_hp",1))])
+ var allies: Array = state.get("allies",[])
+ var ally_pets: Array = state.get("ally_pets",[])
+ for i in range(allies.size()):
+  var ally: Dictionary = allies[i]
+  if bool(ally.get("escaped",false)):continue
+  members.append([int(ally.get("hp",0)),int(ally.get("max_hp",1))])
+  var mount: Dictionary = ally.get("mount",{})
+  if not mount.is_empty():members.append([int(mount.get("hp",0)),int(mount.get("max_hp",1))])
+  if i<ally_pets.size() and not ally_pets[i].is_empty():members.append([int(ally_pets[i].get("hp",0)),int(ally_pets[i].get("max_hp",1))])
+ for member in members:
+  if int(member[0])>0 and int(member[0])*100<int(member[1])*percent:return true
+ return false
 
 ## Standing, hurt and at or below the 停机线 (`line` percent).
 static func _at_line(hp: int, max_hp: int, line: int) -> bool:

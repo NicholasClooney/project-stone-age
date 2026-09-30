@@ -464,7 +464,7 @@ func step() -> void:
 		# stop (the player, its pet or mount at the line; in a party battle a
 		# teammate too, or a fallen one with 复活精灵).
 		if bool(settings.get("spirit",true)):
-			var cast: Dictionary = Policy.spirit_choice(state,int(settings.hp),backend.party_battle())
+			var cast: Dictionary = Policy.spirit_choice(state,int(settings.hp),backend.party_battle(),int(settings.get("side_heal",50)))
 			if not cast.is_empty():
 				backend.battle.set_pet_command("defend")
 				var healed: Dictionary = backend.battle_command({"action":str(cast.action),"target":int(cast.target)})

@@ -19,6 +19,8 @@ var multiplier: OptionButton
 var compact: CheckBox
 ## 用精灵补血 (training.spirit).
 var spirit: CheckBox
+## 全体补血 threshold in percent (training.side_heal, 0 off).
+var side_heal: SpinBox
 
 var hp_floor: SpinBox
 var target_level: SpinBox
@@ -95,6 +97,9 @@ func _ready() -> void:
 	label_at(panel,"低于此血量停机 %",Vector2(24,223),17);hp_floor=number(Vector2(230,213),1,100,10)
 	label_at(panel,"角色等级（0不限）",Vector2(430,223),16);target_level=number(Vector2(610,213),0,120,120)
 	label_at(panel,"最多战斗场次",Vector2(24,273),17);battle_limit=number(Vector2(230,263),1,100000,1000)
+	label_at(panel,"全体补血：有人体力低于 %",Vector2(400,273),16);side_heal=number(Vector2(610,263),0,100,50)
+	side_heal.name="SideHeal"
+	side_heal.tooltip_text="全体补血：我方有人（自己、宠物、坐骑，组队时每个队友和他们的宠物）体力低于这个百分比时，用身上的恩惠的精灵给全体补血；正好等于不算。0 关闭。没穿恩惠时照旧：到停机线再用治愈／滋润或喝药。需要打开「用精灵补血」。"
 	label_at(panel,"保护玩家、出战宠与坐骑：到停机线先用补血精灵（有气力时），否则停机。中途停止可接手战斗。",Vector2(24,318),16)
 	start_button=world.button("原地连续遇敌",start_training);start_button.position=Vector2(24,570);panel.add_child(start_button)
 	var apply: Button=world.button("应用设置并关闭",func():apply_settings();close_menu());apply.position=Vector2(260,570);panel.add_child(apply)
@@ -154,6 +159,7 @@ func load_settings() -> void:
 	var shown:=all.duplicate(true)
 	if not _sync_spin(hp_floor,old_training.get("hp"),training.hp):shown.training.hp=old_training.hp
 	if not _sync_spin(battle_limit,old_training.get("limit"),training.limit):shown.training.limit=old_training.limit
+	if not _sync_spin(side_heal,old_training.get("side_heal"),int(training.get("side_heal",50))):shown.training.side_heal=old_training.side_heal
 	if _changed(old_training,training,"preset"):preset.select(maxi(0,["attack","capture","train_pet"].find(str(training.preset))))
 	if _changed(old_training,training,"level_explicit") or _changed(old_training,training,"level"):
 		if _typing(target_level):
@@ -186,7 +192,7 @@ static func _sync_spin(input: SpinBox, old_value: Variant, new_value: Variant, f
 
 ## Every choice in these controls, in the runner's flat settings shape.
 func current_settings() -> Dictionary:
-	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
+	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"side_heal":int(side_heal.value),"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
 	result.capture_pet_id=_selected_pet_id()
 	return result
 
@@ -204,7 +210,8 @@ func settings_patch() -> Dictionary:
 	if _training_applied:
 		_training_applied=false
 		var chosen: Dictionary=current_settings()
-		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
+		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"side_heal":chosen.side_heal,
+"hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
 		if level_explicit:wanted.level=chosen.level
 		var training:=AutomationSettings.diff(all.training,wanted)
 		if not level_explicit and world.automation_overrides().get("training",{}).has("level"):training.level=null
@@ -262,7 +269,7 @@ func close_menu() -> void:
 ## Saves these choices to the profile and applies this device's playback speed
 ## and the live experience multiplier.
 func apply_settings() -> void:
-	for input in [capture_hp,capture_pet_max_level,hp_floor,target_level,battle_limit]:
+	for input in [capture_hp,capture_pet_max_level,hp_floor,target_level,battle_limit,side_heal]:
 		if input.get_line_edit().has_focus():input.apply()
 	var chosen: Dictionary=current_settings()
 	world.set_battle_speed(float(chosen.speed))

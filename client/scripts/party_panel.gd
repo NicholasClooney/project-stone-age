@@ -243,7 +243,7 @@ func _rebuild_list() -> void:
 	action.add_theme_font_size_override("font_size",11)
 	list_rows.add_child(action)
 	if is_member():
-		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；宠物半血以下用恢复护符治疗；打开「用精灵补血」时，自己或队友到停机线先用身上的补血精灵、队友倒下用复活精灵，气力不够再喝回复药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
+		auto_box = _switch("PartyAuto","自动战斗","打开后，每回合由服务器按你的自动练级设定替你出招（普通攻击，宠物一起攻击；宠物半血以下用恢复护符治疗；打开「用精灵补血」时，有人体力低于「全体补血」的百分比时用恩惠的精灵给全体补血，自己或队友到停机线先用身上的补血精灵、队友倒下用复活精灵，气力不够再喝回复药），不用等 45 秒。\n队长开自动练级时一直跟着打。",func(on):set_party_setting("auto",on))
 		compact_box = _switch("PartyCompact","快速战斗","配合自动战斗：不切换到战斗画面，只在上方显示战况，可随时「查看战斗」。",func(on):set_party_setting("compact",on))
 		list_rows.add_child(auto_box)
 		list_rows.add_child(compact_box)
