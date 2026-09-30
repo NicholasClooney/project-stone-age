@@ -13,7 +13,8 @@ extends RefCounted
 ## at most every TICK_MSEC and send nothing when nothing changed.
 ##
 ## Profile entries passed in: {id, name, level, look: {c, face, ride, rn},
-## map (int, -1 unknown), cell (Vector2i), battle (bool), connections (Array)}.
+## map (int, -1 unknown), cell (Vector2i), battle (bool), connections (Array),
+## party (optional, LAN phase 3: the leader's id while in a 组队 party)}.
 
 const TICK_MSEC := 150
 ## The 战斗中 mark stays this long after a battle closes, so back-to-back
@@ -58,7 +59,7 @@ func entry(profile: Dictionary, now: int) -> Dictionary:
 	_where[id] = [map_id,cell]
 	if bool(profile.get("battle",false)):_battle_until[id] = now+BATTLE_HOLD_MSEC
 	var look: Dictionary = profile.get("look",{})
-	return {"id":id,"name":str(profile.get("name","")),"lv":int(profile.get("level",1)),"c":str(look.get("c","100000")),"face":int(look.get("face",0)),"ride":int(look.get("ride",-1)),"rn":str(look.get("rn","")),"cell":[cell.x,cell.y],"f":int(_facing.get(id,4)),"b":now<int(_battle_until.get(id,-1))}
+	return {"id":id,"name":str(profile.get("name","")),"lv":int(profile.get("level",1)),"c":str(look.get("c","100000")),"face":int(look.get("face",0)),"ride":int(look.get("ride",-1)),"rn":str(look.get("rn","")),"cell":[cell.x,cell.y],"f":int(_facing.get(id,4)),"b":now<int(_battle_until.get(id,-1)),"pt":str(profile.get("party",""))}
 
 ## Every connection's news since its last tick: [[connection, message], ...].
 ## Nothing before TICK_MSEC has passed since the last tick, unless forced.
@@ -117,13 +118,15 @@ func forget(connection) -> void:
 ## One 一般频道 line from `speaker` (a profile entry). Returns {reply,
 ## deliveries: [[connection, message], ...]}: every device of every profile on
 ## the speaker's map hears it, the speaker's own included (`mine`).
-func say(now: int, speaker: Dictionary, profiles: Array, raw: String) -> Dictionary:
+## With `party` (the speaker's party ids, LAN phase 3) it is a 队伍频道 line
+## instead: every device of those profiles hears it, on any map.
+func say(now: int, speaker: Dictionary, profiles: Array, raw: String, party: Array = []) -> Dictionary:
 	var text := clean(raw)
 	var refused := func(reason: String) -> Dictionary:return {"reply":{"ok":false,"reason":reason},"deliveries":[]}
 	if text.is_empty():return refused.call("说点什么吧。")
 	if text.length()>CHAT_MAX_CHARS:return refused.call("一次最多说 %d 个字。" % CHAT_MAX_CHARS)
 	var map_id := int(speaker.get("map",-1))
-	if map_id<0:return refused.call("还不在地图上，暂时不能说话。")
+	if map_id<0 and party.is_empty():return refused.call("还不在地图上，暂时不能说话。")
 	var id := str(speaker.id)
 	var recent: Array = _said.get(id,[]).filter(func(time):return now-int(time)<CHAT_WINDOW_MSEC)
 	if recent.size()>=CHAT_BURST:
@@ -133,9 +136,10 @@ func say(now: int, speaker: Dictionary, profiles: Array, raw: String) -> Diction
 	_said[id] = recent
 	var deliveries: Array = []
 	for profile in profiles:
-		if int(profile.get("map",-1))!=map_id:continue
+		if party.is_empty() and int(profile.get("map",-1))!=map_id:continue
+		if not party.is_empty() and not str(profile.id) in party:continue
 		for connection in profile.get("connections",[]):
-			deliveries.append([connection,{"type":"chat","v":1,"channel":"一般","map_id":map_id,"id":id,"name":str(speaker.get("name","")),"text":text,"mine":str(profile.id)==id}])
+			deliveries.append([connection,{"type":"chat","v":1,"channel":"一般" if party.is_empty() else "队伍","map_id":map_id,"id":id,"name":str(speaker.get("name","")),"text":text,"mine":str(profile.id)==id}])
 	messages_sent += deliveries.size()
 	return {"reply":{"ok":true,"text":text},"deliveries":deliveries}
 
