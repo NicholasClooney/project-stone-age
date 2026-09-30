@@ -368,6 +368,18 @@ func client() -> void:
 	check(game.chat_panel.party_channel() and game.chat_panel.channel_button.text=="队伍","it switches to 队伍")
 	game.chat_panel._submit("出发")
 	check(await Wait.until(self,func():return game.chat_panel.lines.any(func(line):return str(line.text)=="[队伍] Bob：出发")),"a 队伍 line comes back to Bob")
+	# 记录 opens and closes; the chat row comes back down to where it was.
+	var row: Control = game.chat_panel.find_child("Row",true,false)
+	await process_frame
+	var row_y := row.global_position.y
+	game.chat_panel.toggle_history()
+	await process_frame
+	await process_frame
+	check(row.global_position.y==row_y,"with 记录 open the chat row stays put (history grows upwards)")
+	game.chat_panel.toggle_history()
+	await process_frame
+	await process_frame
+	check(row.global_position.y==row_y,"and it stays after 记录 closes (%d, was %d)" % [int(row.global_position.y),int(row_y)])
 	# Leaving unlocks walking.
 	game.party_panel.list.find_child("LeaveParty",true,false).pressed.emit()
 	check(await Wait.until(self,func():return not game.party_panel.in_party()),"离开队伍 leaves")

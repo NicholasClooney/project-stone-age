@@ -110,6 +110,9 @@ func _process(_delta: float) -> void:
 		_update_channel()
 	var bar: float = world.classic_hud.bar.size.y if is_instance_valid(world.classic_hud) else 30.0
 	var column: Control = get_node("Column")
+	# A container never shrinks by itself: after 记录 closes (or recent lines
+	# expire) the column kept its tall size and floated up the screen.
+	column.size = column.get_combined_minimum_size()
 	column.position = Vector2(0,-column.size.y-bar-6)
 	_refresh_recent()
 

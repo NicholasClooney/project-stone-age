@@ -1,9 +1,18 @@
 {
-  "version": "v0.104.0",
-  "count": 137,
+  "version": "v0.104.1",
+  "count": 138,
   "feature_count": 88,
-  "fix_count": 49,
+  "fix_count": 50,
   "entries": [
+    {
+      "version": "v0.104.1",
+      "date": "2026-09-30",
+      "kind": "fix",
+      "title": "聊天栏不再上飘",
+      "details": [
+        "多人服务器：点「记录」看完聊天记录再关掉后，说话和记录按钮会回到左下角原位，不再停在半空。"
+      ]
+    },
     {
       "version": "v0.104.0",
       "date": "2026-09-30",
