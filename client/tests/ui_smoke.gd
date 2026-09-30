@@ -40,7 +40,7 @@ func run() -> void:
 	root.add_child(game)
 	await ticks(4)
 	var hud=game.classic_hud
-	check(hud.art.size()==49,"49 original UI and dialogue images load")
+	check(hud.art.size()==50,"50 original UI and dialogue images load (with the V.S. battle mark)")
 	pointer(Vector2(650,400))
 	await ticks(15)
 	check(not hud.taskbar.visible,"bottom menus retract outside hover area")

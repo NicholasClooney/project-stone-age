@@ -189,6 +189,8 @@ func _on_link_connected() -> void:
 	game.message.text = _offline_summary()
 
 func _on_link_disconnected() -> void:
+	# The server sends everyone on the map again after the reconnect.
+	if is_instance_valid(game.remote_players):game.remote_players.reset()
 	game._offline_profile = game.state.full_profile()
 	game._offline_battles = int(game.state.automation.get("battles",0))
 	if is_instance_valid(game.message):game.message.text = "与服务器的连接中断，正在重连…"
@@ -214,6 +216,11 @@ func acknowledge_presentation() -> void:
 	game.link.request({"type":"presented","battle_id":str(game.state.battle.get("battle_id","")),"turn":int(game.state.battle.get("turn",0))})
 
 func _on_backend_message(event: Dictionary) -> void:
+	# LAN phase 2: other players and 一般频道, even before the map is built.
+	if str(event.get("type","")) in ["presence","chat"]:
+		if is_instance_valid(game.remote_players):game.remote_players.on_event(event)
+		if is_instance_valid(game.chat_panel):game.chat_panel.on_event(event)
+		return
 	if not game.is_inside_tree() or game.data.is_empty() or not is_instance_valid(game.battle_view):return
 	match str(event.type):
 		"battle_started":game.present_battle_start(event.state)

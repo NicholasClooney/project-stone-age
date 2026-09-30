@@ -91,6 +91,11 @@ var _link_status: Label
 ## whether this login created the character (it then picks its look first).
 var login_screen: Control
 var new_character := false
+## LAN phase 2: the other players on this map (scripts/remote_players.gd) and
+## 一般频道 (scripts/chat_panel.gd). Both stay empty without a multi-profile
+## server.
+var remote_players: Node
+var chat_panel: Control
 ## Several devices can drive one backend. This device's reports carry its id;
 ## another device's walk arrives as a position event and is mirrored here
 ## without rerunning arrival rules (encounters, map links), which the walking

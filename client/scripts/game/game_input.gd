@@ -63,8 +63,10 @@ func on_input(event: InputEvent) -> void:
 		if game.get_viewport().gui_get_focus_owner() is LineEdit:return
 		if event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion:game.get_viewport().set_input_as_handled()
 		return
+	# Typing (一般频道 or any other field) never walks.
+	var typing: bool = game.get_viewport().gui_get_focus_owner() is LineEdit
 	for action in ["north","south","west","east"]:
-		if event.is_action_pressed(action) and not event.is_echo() and not game.paused_input:
+		if event.is_action_pressed(action) and not event.is_echo() and not game.paused_input and not typing:
 			if is_instance_valid(game.travel_router):game.travel_router.cancel("手动移动取消了自动寻路。")
 			game.pending_talk = false
 			game.held.erase(action)
@@ -132,6 +134,11 @@ func on_unhandled_input(event: InputEvent) -> void:
 	if game.dialogue.visible:
 		if event.is_action_pressed("ui_cancel") or event.is_action_pressed("ui_accept"):
 			game.close_dialogue()
+		game.get_viewport().set_input_as_handled()
+		return
+	# Enter opens 一般频道's line on a multi-profile server.
+	if event is InputEventKey and event.pressed and not event.echo and event.keycode in [KEY_ENTER,KEY_KP_ENTER] and is_instance_valid(game.chat_panel) and game.chat_panel.available() and not game.settings_menu.visible:
+		game.chat_panel.open_input()
 		game.get_viewport().set_input_as_handled()
 		return
 	# M (Ctrl+M too) opens the classic map window.

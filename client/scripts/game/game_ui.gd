@@ -125,6 +125,13 @@ func build_ui() -> void:
 	game.helper_menu = preload("res://scripts/helper_menu.gd").new()
 	root.add_child(game.helper_menu)
 	game.helper_menu.configure(game)
+	game.remote_players = preload("res://scripts/remote_players.gd").new()
+	game.remote_players.name = "RemotePlayers"
+	game.remote_players.configure(game)
+	game.add_child(game.remote_players)
+	game.chat_panel = preload("res://scripts/chat_panel.gd").new()
+	root.add_child(game.chat_panel)
+	game.chat_panel.configure(game)
 	build_dialogue(root)
 	game.adventure_menu = AdventureMenu.new()
 	game.adventure_menu.configure(game)
