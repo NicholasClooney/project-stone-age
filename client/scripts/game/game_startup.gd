@@ -75,7 +75,7 @@ func _download_start_area() -> bool:
 ## once a second, for Safari's Web Inspector on another device.
 func _publish_web_status() -> void:
 	var status := {"map":int(game.data.get("map_id",-1)),"cell":[game.cell.x,game.cell.y],"online":bool(game.link.get("online")) if not game.link.is_local() else true,
-		"battle":bool(is_instance_valid(game.battle_view) and game.battle_view.visible),"mounted":game.asset_packs._mounted.size(),"pending":game.asset_packs._queued.size()+game.asset_packs._active.size(),"downloading":game.asset_packs._active.values(),"queued":game.asset_packs._queued,"waiters":game.asset_packs._waiters.size(),"waiting_screen":is_instance_valid(game.waiting_screen) and game.waiting_screen.visible,
+		"battle":bool(is_instance_valid(game.battle_view) and game.battle_view.visible),"mounted":game.asset_packs._mounted.size(),"cache_hits":game.asset_packs.cache_hits,"downloaded":game.asset_packs.downloaded_count,"pack_cache":bool(game.asset_packs.store.has_method("persistent") and game.asset_packs.store.persistent()),"pending":game.asset_packs._queued.size()+game.asset_packs._active.size(),"downloading":game.asset_packs._active.values(),"queued":game.asset_packs._queued,"waiters":game.asset_packs._waiters.size(),"waiting_screen":is_instance_valid(game.waiting_screen) and game.waiting_screen.visible,
 		"message":str(game.message.text) if is_instance_valid(game.message) else "",
 		"radio":str(game.radio.current) if is_instance_valid(game.radio) and game.radio.on else "","music":str(game.music.stream.resource_path) if is_instance_valid(game.music) and game.music.stream!=null else "",
 		"music_at":snappedf(game.music.get_playback_position(),0.01) if is_instance_valid(game.music) and game.music.playing else -1.0}

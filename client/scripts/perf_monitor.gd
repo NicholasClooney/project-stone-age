@@ -106,7 +106,7 @@ static func lines(data: Dictionary) -> PackedStringArray:
 	var packs: Dictionary = data.get("packs",{})
 	if bool(packs.get("enabled",false)):
 		out.append("资源包 已挂载 %d 个 %s" % [int(packs.mounted),format_bytes(packs.mounted_bytes)])
-		out.append("　本次下载 %d 个 %s · 等待 %d%s" % [int(packs.downloaded),format_bytes(packs.downloaded_bytes),int(packs.pending)," · 失败 %d" % int(packs.failed) if int(packs.get("failed",0))>0 else ""])
+		out.append("　本次下载 %d 个 %s · 缓存读取 %d · 等待 %d%s" % [int(packs.downloaded),format_bytes(packs.downloaded_bytes),int(packs.get("cache_hits",0)),int(packs.pending)," · 失败 %d" % int(packs.failed) if int(packs.get("failed",0))>0 else ""])
 	out.append("【性能】")
 	out.append("FPS %d · 帧 %.1f ms · 逻辑 %.1f ms · 物理 %.1f ms" % [int(e.get("fps",0)),float(e.get("frame_ms",0)),float(e.get("process_ms",0)),float(e.get("physics_ms",0))])
 	out.append("绘制调用 %d · 绘制对象 %d" % [int(e.get("draw_calls",0)),int(e.get("objects_drawn",0))])
