@@ -57,6 +57,11 @@ func open(config: Dictionary, rng_seed: int, leader_id: String):
 	var member_ids: Array = []
 	for id in hub.party.members(leader_id).slice(1):
 		var backend = hub.backends.get(id)
+		# A member still looking at the last battle's result (or whose device
+		# plays 快速战斗 and has not closed it yet) is taken into this one:
+		# the leader's 自动练级 meets the next troop at once (LAN phase 4c).
+		if backend!=null and backend.battle_open and backend.party_battle() and not fighting.has(id) and not bool(backend.battle.entry.session._state.active) and backend.session._pending.is_empty():
+			backend.close_battle()
 		if backend==null or backend.battle_open or not backend.session._pending.is_empty() or fighting.has(id):continue
 		member_ids.append(id)
 	if member_ids.is_empty():return null
@@ -92,6 +97,7 @@ func open(config: Dictionary, rng_seed: int, leader_id: String):
 	_update_auto(entry)
 	print("[%s] 组队战斗开始：%s。" % [hub._name(leader_id),"、".join(ids.map(func(id):return hub._name(id)))])
 	for slot in range(1,ids.size()):hub.backends[ids[slot]].open_party_battle(SlotView.new(self,entry,slot))
+	entry.opened = true
 	return SlotView.new(self,entry,0)
 
 func _slot_info(id: String, backend, config: Dictionary) -> Dictionary:
@@ -119,11 +125,25 @@ func tick() -> void:
 		if entry.session.waiting_slots().is_empty():_resolve(entry,[])
 		elif now()>=int(entry.deadline):_resolve(entry,entry.session.waiting_slots())
 
+## Who the turn does not wait for: players with no device (the clone AI's
+## attack), and members with 组队自动战斗 on (their own preset, LAN phase 4c:
+## hub.party_auto). The leader's slot is its own: its 自动练级 run commands it.
 func _update_auto(entry: Dictionary) -> void:
 	var auto := {}
+	var policies := {}
 	for slot in range(entry.ids.size()):
-		if hub.connections_of(str(entry.ids[slot])).is_empty():auto[slot] = true
+		var id := str(entry.ids[slot])
+		if hub.connections_of(id).is_empty():auto[slot] = true
+		var preset: Dictionary = hub.party_auto(id) if slot>0 else {}
+		if not preset.is_empty():
+			auto[slot] = true
+			policies[slot] = preset
+	var changed: bool = auto!=entry.session.auto_slots
 	entry.session.auto_slots = auto
+	entry.session.auto_policies = policies
+	# A player switched 自动战斗 (or lost or regained its devices): every
+	# screen shows who the turn waits for now.
+	if changed and bool(entry.get("opened",false)):_status(entry)
 
 ## A player's command for this turn, from their backend. "" or why refused.
 func submit(entry: Dictionary, slot: int, action: String, target: int) -> String:
@@ -173,6 +193,8 @@ func _push(entry: Dictionary) -> void:
 		# The party fell: the server has everyone in the village now, so a
 		# player with no device is there too and nobody is walked back.
 		if not slice.is_empty() and str(slice.outcome)=="defeat" and not bool(slice.get("party_stay",false)):
+			# The leader's 自动练级 ends with the party (LAN phase 4c).
+			if backend.automation.running:backend.automation.stop("全队倒下，自动练级已停止。")
 			var village: Dictionary = preload("res://server/backend.gd").VILLAGE
 			backend.handle({"type":"report_position","map_id":int(village.map_id),"cell":[int(village.x),int(village.y)],"map_changed":true,"client":"party"})
 	if not bool(session.snapshot().active):
@@ -236,6 +258,13 @@ class SlotView extends RefCounted:
 
 	func party_view() -> bool:
 		return true
+
+	## The battle runs and this slot has nothing to send this turn: its
+	## command is in, or its player is down or out. A 自动练级 run waits
+	## then, spending no frame budget (LAN phase 4c).
+	func waiting_for_others() -> bool:
+		var session = entry.session
+		return bool(session._state.active) and (session.has_command(slot) or not session.slot_standing(slot))
 
 	func snapshot() -> Dictionary:
 		return host.view(entry,slot)

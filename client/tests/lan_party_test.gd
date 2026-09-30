@@ -214,9 +214,9 @@ func hub() -> void:
 	var step: Dictionary = server.handle(2,{"type":"field_step","map_id":100,"cell":[600,500],"encounter":true})
 	check(step.ok and not step.battle and not step.hit,"a member's field step meets nothing")
 	check(not server.handle(2,{"type":"wild_encounter","map_id":100,"cell":[600,500]}).ok and not server.backends.bob.battle_open,"a member cannot start a wild battle")
-	# Automation: refused in a party, for members and the leader.
+	# Automation: members start none; hunts are refused for the leader too (LAN phase 4c).
 	var auto: Dictionary = server.handle(2,{"type":"auto_start","kind":"battle"})
-	check(not auto.ok and str(auto.reason).contains("组队中"),"a member cannot start 自动练级: %s" % str(auto.get("reason","")))
+	check(not auto.ok and str(auto.reason).contains("队员跟着队长走"),"a member cannot start 自动练级: %s" % str(auto.get("reason","")))
 	check(not server.handle(1,{"type":"auto_start","kind":"hunt"}).ok and not server.backends.alice.automation.hunt_running,"nor can the leader start a hunt")
 	check(not server.handle(4,{"type":"auto_start","kind":"nothing"}).reason.contains("组队中"),"Dan, alone, is not refused for a party")
 	# The leader's encounter is the whole party's battle (LAN phase 4a; see

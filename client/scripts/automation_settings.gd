@@ -7,6 +7,10 @@ extends RefCounted
 ## Overrides shape (every part optional):
 ##   training     {xp, compact, hp, level, level_explicit, limit, preset}
 ##   capture      {hp, pet, pet_id, pet_max_level}
+##   party        {auto (组队自动战斗: a party member's slot commands itself
+##                 from its 自动练级 preset each turn), compact (快速战斗 for
+##                 that: the device shows a status line, not the battle view)}
+##                 (LAN phase 4c, docs/development/lan-profiles.md)
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue,
 ##                 resume (重启后自动恢复), stat_species (属性条件 shows it; -1 follows the target)}
 ##   stat_filters {"<template id>": {mode, threshold_mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
@@ -37,6 +41,7 @@ const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["r
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
+	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120]},
 	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"stat_species":["int",-1,1000000]},
 }

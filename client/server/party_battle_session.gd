@@ -35,10 +35,13 @@ const PET_COMMANDS := ["attack","skill","defend","standby"]
 
 ## 队伍共享经验 for this battle (the party's switch when it started).
 var share_exp := true
-## Slot -> true: this slot's command comes from the automatic source (the
-## clone AI's attack) instead of a device: its player has no device online.
-## LAN phase 4c plugs members' auto-battle presets in here (_auto_command).
+## Slot -> true: this slot's command comes from the automatic source instead
+## of a device, and the turn does not wait for it: its player has no device
+## online (the clone AI's attack), or turned on 组队自动战斗 (LAN phase 4c).
 var auto_slots: Dictionary = {}
+## Slot -> {hp}: a member's 组队自动战斗 preset (_auto_command). `hp` is the
+## player's own 停机线 in percent: at or below it the slot drinks a 回复药.
+var auto_policies: Dictionary = {}
 ## Slot -> {name, id, character_id, weapon}.
 var slot_info: Array = []
 ## Slot -> this turn's command {action, target}, cleared when the turn resolves.
@@ -145,10 +148,24 @@ func set_slot_pet_target(slot: int, target: int) -> void:
 func _slot_pet(slot: int) -> Dictionary:
 	return _state.pet if slot==0 else _state.ally_pets[slot-1]
 
-## The automatic command source: the clone AI attacks (squad allies attack
-## the selected enemy). LAN phase 4c gives members' presets a say here.
-func _auto_command(_slot: int) -> Dictionary:
-	return {"action":"attack","target":-1}
+## The automatic command source. Without a preset the clone AI attacks
+## (squad allies attack the selected enemy). A member's 组队自动战斗 preset
+## (LAN phase 4c) plays as 自动练级's 普通攻击 does (battle_auto_policy.gd):
+## the first standing enemy, the pet attacking with it; and at or below the
+## player's own 停机线, with a 回复药 left, it drinks one instead.
+func _auto_command(slot: int) -> Dictionary:
+	if not auto_policies.has(slot):return {"action":"attack","target":-1}
+	var hp := slot_hp(slot)
+	var max_hp := int(_state.player_max_hp) if slot==0 else int(_state.allies[slot-1].max_hp)
+	var potions := int(_state.potions) if slot==0 else int(_state.allies[slot-1].get("potions",0))
+	if potions>0 and hp<max_hp and hp*100<=max_hp*int(auto_policies[slot].get("hp",10)):return {"action":"item","target":-1,"auto":true}
+	var target := _first_enemy()
+	if not _slot_pet(slot).is_empty():
+		var order: Dictionary = _pet_orders.get(slot,{"command":"attack","skill":0,"target":-1})
+		order.command = "attack"
+		order.target = target
+		_pet_orders[slot] = order
+	return {"action":"attack","target":target,"auto":true}
 
 ## Resolves the turn: every standing player without a command gets the
 ## automatic one (the 45 s timer, a disconnected player). `timed_out`: the

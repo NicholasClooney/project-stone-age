@@ -45,7 +45,13 @@ func log_line(text: String) -> void:
 ## Whether this backend spends a frame budget now: compact battles, or a hunt
 ## scanning in GDScript (the native helper scans on its own threads).
 func busy() -> bool:
-	return (running and bool(settings.get("compact",false))) or (hunt_running and not fast_hunt.running())
+	return (running and bool(settings.get("compact",false)) and not party_waiting()) or (hunt_running and not fast_hunt.running())
+
+## A party leader's run (LAN phase 4c) has sent its command for the party
+## battle's turn (or its player is down) and waits for the others: a member
+## commanding by hand, or the 45 s turn timer. Nothing to do until then.
+func party_waiting() -> bool:
+	return backend.battle_open and backend.party_battle() and backend.battle.waiting_for_others()
 
 ## Tests drive step() themselves when false.
 var auto_tick := true
@@ -415,7 +421,7 @@ func tick_battle(delta: float) -> void:
 	# Compact battles have nothing to watch: run steps back to back within a frame budget.
 	if bool(settings.compact) and (compact_active or not backend.battle_open):
 		var until := Time.get_ticks_usec()+frame_budget(COMPACT_BUDGET_USEC)
-		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until:step()
+		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until and not party_waiting():step()
 		return
 	cooldown -= delta
 	if cooldown > 0:return
@@ -434,6 +440,9 @@ func step() -> void:
 			battles += 1
 			turns = 0
 			var outcome: String = state.outcome
+			# A party battle settled when its last turn resolved, maybe after
+			# this run's own command (LAN phase 4c).
+			if backend.party_battle() and bool(backend.battle_state.get("settled",false)):record_result(backend.battle_state)
 			_close_battle()
 			if outcome=="defeat":
 				# Defeat returns the player to the village and ends the run. An
@@ -450,6 +459,7 @@ func step() -> void:
 			if outcome not in ["win","captured"]:stop("战斗未获胜");return
 			if single_battle:stop("本场自动战斗已完成");return
 			return
+		if party_waiting():return
 		var reason := health_reason(state)
 		if not reason.is_empty():stop(reason);return
 		if turns >= 200:stop("单场超过200回合，请手动处理");return
@@ -465,7 +475,7 @@ func step() -> void:
 		backend.battle.set_pet_command(str(decision.pet))
 		var next: Dictionary = backend.battle_command({"action":str(decision.action),"target":int(decision.target),"pet_target":int(decision.target),"switch_pet":int(decision.get("switch",-2))})
 		turns += 1
-		if next.get("settled",false):record_result(next)
+		if next.get("settled",false) and not backend.party_battle():record_result(next)
 		turn_text = "第 %d 回合 · 体力 %d/%d\n%s" % [turns,next.player_hp,next.player_max_hp," / ".join(next.events)]
 		_emit_status()
 		return
@@ -484,6 +494,11 @@ func step() -> void:
 	if battles>=int(settings.limit):stop("已达到战斗场次上限");return
 	var reason := profile_health_reason()
 	if not reason.is_empty():stop(reason);return
+	# A party leader (LAN phase 4c): every member is checked at its own 停机线
+	# too, after 组队自动战斗 members drank what they need.
+	if backend.party_guard.is_valid():
+		reason = str(backend.party_guard.call())
+		if not reason.is_empty():stop(reason);return
 	compact_active = bool(settings.compact)
 	_emit_status()
 	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
@@ -584,17 +599,20 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 	_emit_status()
 	return true
 
-func health_reason(state: Dictionary) -> String:
-	if float(state.player_hp)/maxf(1,float(state.player_max_hp))*100<=int(settings.hp):return "玩家体力达到停机线"
-	for index in [int(state.get("active_pet",-1)),int(state.get("ride_pet",-1)),starting_ride]:
+## `line`: the 停机线 in percent; -1 is this run's (settings.hp), and then
+## the mount the run started on counts too.
+func health_reason(state: Dictionary, line: int = -1) -> String:
+	var floor_percent := int(settings.hp) if line<0 else line
+	if float(state.player_hp)/maxf(1,float(state.player_max_hp))*100<=floor_percent:return "玩家体力达到停机线"
+	for index in [int(state.get("active_pet",-1)),int(state.get("ride_pet",-1)),starting_ride if line<0 else -1]:
 		if index>=0 and index<state.get("pets",[]).size():
 			var pet: Dictionary = state.pets[index]
-			if float(pet.hp)/maxf(1,float(pet.max_hp))*100<=int(settings.hp):return "%s 体力达到停机线" % str(pet.get("name","宠物"))
+			if float(pet.hp)/maxf(1,float(pet.max_hp))*100<=floor_percent:return "%s 体力达到停机线" % str(pet.get("name","宠物"))
 	return ""
 
-func profile_health_reason() -> String:
-	var p: Dictionary = backend.session.snapshot()
-	return health_reason({"player_hp":p.player.hp,"player_max_hp":p.player.max_hp,"pets":p.pets,"active_pet":p.active_pet,"ride_pet":p.get("ride_pet",-1)})
+func profile_health_reason(line: int = -1) -> String:
+	var p: Dictionary = backend.session._profile
+	return health_reason({"player_hp":p.player.hp,"player_max_hp":p.player.max_hp,"pets":p.pets,"active_pet":p.active_pet,"ride_pet":p.get("ride_pet",-1)},line)
 
 func stop(reason: String) -> void:
 	release_clone_override()

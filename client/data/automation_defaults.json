@@ -9,6 +9,10 @@
     "limit": 1000,
     "preset": "attack"
   },
+  "party": {
+    "auto": false,
+    "compact": false
+  },
   "capture": {
     "hp": 100,
     "pet": -1,

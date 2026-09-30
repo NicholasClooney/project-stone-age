@@ -25,6 +25,7 @@ const FastHuntShare = preload("res://server/fast_hunt_share.gd")
 const Presence = preload("res://server/presence.gd")
 const Party = preload("res://server/party.gd")
 const PartyBattles = preload("res://server/party_battles.gd")
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
 
 var accounts
 ## id -> Backend, for every profile opened since the server started.
@@ -103,6 +104,7 @@ func open_profile(id: String) -> String:
 	backend.load_resume()
 	backend.event.connect(_on_backend_event.bind(id))
 	backend.party_battle_hook = party_battles.open.bind(id)
+	backend.party_guard = _party_guard.bind(id)
 	backends[id] = backend
 	return ""
 
@@ -288,13 +290,18 @@ func party_tick(profiles: Array = []) -> int:
 ## Commands a party refuses, or answers itself; {} lets the backend handle it.
 ## Members follow the leader: their own walking reports are ignored (the
 ## device is told where the server has them), they meet no enemies and start
-## no battles. Nobody in a party starts automation.
+## no battles. Only the leader starts automation, and only 自动练级 (LAN
+## phase 4c, _auto_refusal).
 func _party_refusal(connection: int, id: String, type: String, command: Dictionary) -> Dictionary:
 	if not party.in_party(id):return {}
-	if type=="auto_start":return {"ok":false,"reason":"组队中不能使用自动练级、自动抓宠和找宠，请先离开队伍。"}
 	# A leader who escaped from the party's battle waits for the others
 	# before walking on or meeting enemies (LAN phase 4a).
 	var waiting: bool = party.is_leader(id) and party_battles.party_busy(id) and not party_battles.in_battle(id)
+	if type=="auto_start":
+		var why := _auto_refusal(id,command)
+		if why.is_empty() and waiting:why = "队友还在战斗中，请等他们结束。"
+		if not why.is_empty():return {"ok":false,"reason":why}
+		return {}
 	if not party.is_member(id) and not waiting:return {}
 	match type:
 		"report_position":
@@ -307,6 +314,68 @@ func _party_refusal(connection: int, id: String, type: String, command: Dictiona
 		"field_step":return {"ok":true,"hit":false,"battle":false,"party":true}
 		"wild_encounter","begin_battle","open_battle":return {"ok":false,"reason":"队友还在战斗中，请等他们结束。" if waiting else "组队时只有队长会遇敌；队员跟着队长走。"}
 	return {}
+
+# ---- automation in a party (LAN phase 4c) -------------------------------------
+
+const REFUSE_HUNT := "组队中不能使用自动抓宠、找宠和后台搜宠：它们要停下来比较、放生和存仓库，跟不上队伍。请先离开队伍。"
+
+## Why `id`, in a party, cannot start this automation; "" when it may. The
+## leader may run 自动练级 with the 普通攻击 preset: every troop it meets is a
+## party battle. Members follow and fight with 组队自动战斗 instead; capture,
+## hunts and the find-pet cycle are refused for everyone.
+func _auto_refusal(id: String, command: Dictionary) -> String:
+	var kind := str(command.get("kind",""))
+	if kind in ["hunt","find_pet","capture_battle"]:return REFUSE_HUNT
+	if kind=="pet_train":return "组队中不能带宠升级（它要单独的镜像助战），请先离开队伍。"
+	if party.is_member(id):return "队员跟着队长走，不能自己开始自动练级；想自动出招，请在队伍列表打开「自动战斗」。"
+	if kind!="battle":return "组队中不能使用这项自动功能，请先离开队伍。"
+	var preset := str(backends[id].automation.profile_settings().preset)
+	var given = command.get("settings",{})
+	if given is Dictionary and given.has("preset"):preset = str(given.preset)
+	if command.has("capture_target") or preset!="attack":return "组队中的自动练级只能用「普通攻击」预设；抓宠和带宠升级请先离开队伍。"
+	return ""
+
+## A member's 组队自动战斗 preset for its party battle slot, {} when off:
+## {hp: its own 停机线}. PartyBattleSession._auto_command plays it.
+func party_auto(id: String) -> Dictionary:
+	var backend = backends.get(id)
+	if backend==null:return {}
+	var overrides: Dictionary = backend.session._profile.get("automation_settings",{})
+	var own = overrides.get("party",{})
+	if not (own is Dictionary and bool(own.get("auto",false))):return {}
+	var training = overrides.get("training",{})
+	var line := int(training.get("hp",AutomationSettings.defaults().training.hp)) if training is Dictionary else int(AutomationSettings.defaults().training.hp)
+	return {"hp":line}
+
+## Backend.party_guard of a party leader's 自动练级, before each new troop:
+## every member's 恢复护符 heals its carried pets (as the leader's run does),
+## a 组队自动战斗 member at or below its own 停机线 drinks 回复药 until it is
+## above (or has none left), and then any member still at its line stops the
+## run, as the leader's own line does: the party goes to heal together.
+func _party_guard(leader: String) -> String:
+	if not party.is_leader(leader):return ""
+	for id in party.members(leader).slice(1):
+		var backend = backends.get(id)
+		if backend==null or not backend.session._pending.is_empty():continue
+		var changed: bool = backend.session.heal_carried_pets()
+		var preset := party_auto(id)
+		var line := int(preset.get("hp",-1)) if not preset.is_empty() else int(backend.automation.profile_settings().hp)
+		if not preset.is_empty():
+			var player: Dictionary = backend.session._profile.player
+			while int(player.hp)*100<=int(player.max_hp)*line and backend.session.use_item("potion"):changed = true
+		if changed:
+			backend.save()
+			backend.publish()
+		var why: String = backend.automation.profile_health_reason(line)
+		if not why.is_empty():return "队友%s：%s" % [_name(id),why]
+	return ""
+
+## Stops the 自动练级 of `leader` (when it runs) because its party changed.
+func _stop_party_run(leader: String, reason: String) -> void:
+	var backend = backends.get(leader)
+	if backend==null or not backend.automation.running:return
+	backend.automation.stop(reason)
+	backend.automation.log_line("[自动练级] "+reason)
 
 ## The leader moved: every member steps after it, or goes where it warped.
 func _party_follow(leader: String, before: Array) -> void:
@@ -348,6 +417,11 @@ func _party_command(connection: int, type: String, command: Dictionary) -> Dicti
 func _party_left(id: String, result: Dictionary, why: String) -> Dictionary:
 	if not result.ok:return result
 	var name := _name(id)
+	# The leader's 自动练级 was fighting for this party (LAN phase 4c).
+	var leader := str(result.leader)
+	if bool(result.disbanded) and leader==id:_stop_party_run(leader,"队伍已解散，自动练级已停止。")
+	elif why=="kick":_stop_party_run(leader,"踢出了%s，自动练级已停止。" % name)
+	else:_stop_party_run(leader,"%s离开了队伍，自动练级已停止。" % name)
 	if bool(result.disbanded) and str(result.leader)==id:
 		print("[%s] 解散了队伍。" % name)
 		for member in result.left:_system(member,"团队已解散！")
@@ -362,6 +436,8 @@ func _party_left(id: String, result: Dictionary, why: String) -> Dictionary:
 ## its party; a leader's party disbands (CHAR_DischargeParty at logout).
 func _party_gone(id: String) -> void:
 	if id.is_empty() or not party.in_party(id) or not connections_of(id).is_empty():return
+	# A leader's 自动练级 needs its leader at the table (LAN phase 4c).
+	if party.is_leader(id):_stop_party_run(id,"队长已离线，自动练级已停止。")
 	# In a party battle it is auto-played, and leaves once the battle ends.
 	if party_battles.lost_devices(id):return
 	_party_left(id,party.leave(id),"")

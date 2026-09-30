@@ -553,6 +553,9 @@ func open_battle(config: Dictionary) -> Dictionary:
 ## LAN phase 4a: set by the profile hub; (config, rng seed) -> the leader's
 ## party battle view, or null for an ordinary battle.
 var party_battle_hook: Callable
+## LAN phase 4c: set by the profile hub; () -> "" or why a party leader's
+## 自动练级 stops before meeting the next troop (a member at its 停机线).
+var party_guard: Callable
 
 ## This profile joins a party battle (its pending record is already set):
 ## `view` is its window on it (server/party_battles.gd SlotView).
@@ -619,6 +622,13 @@ func _cmd_battle_command(command: Dictionary) -> Dictionary:
 	return {"ok":true,"state":battle_command(command)}
 
 func battle_command(command: Dictionary) -> Dictionary:
+	if party_battle():
+		# The leader's 自动练级 in a party battle (LAN phase 4c): its command
+		# goes to its own slot; the host presents and settles the turn when
+		# it resolves (party_turn), which may be now or after the others.
+		if command.has("pet_target"):battle.set_pet_target(int(command.pet_target))
+		battle.submit(str(command.get("action","")),int(command.get("target",-1)))
+		return battle_state.duplicate(true) if bool(battle_state.get("settled",false)) else battle.snapshot()
 	if command.has("pet_target"):battle.set_pet_target(int(command.pet_target))
 	var skill_id := int(command.get("pet_skill",0))
 	if skill_id > 0 and battle.snapshot().pet_command == "skill":battle.set_pet_skill(skill_id)
@@ -675,8 +685,11 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}) -> Dictionary:
 	_emit({"type":"battle_turn","state":state.duplicate(true)})
 	return state.duplicate(true)
 
-func _cmd_battle_close(_command: Dictionary) -> Dictionary:
+func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	if not battle_open:return _stale("no open battle")
+	# Naming the battle: one already closed and replaced (a party leader's
+	# 自动练级 met the next troop, LAN phase 4c) is not an error.
+	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
 	return {"ok":true,"outcome":close_battle()}
 
