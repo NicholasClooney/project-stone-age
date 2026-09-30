@@ -68,16 +68,15 @@ fi
 
 echo "==> Stopping the running server"
 # Only what listens on these two ports (other servers, such as a test page on
-# another port, keep running). Interrupt like Ctrl-C so the backend saves.
+# another port, keep running). TERM, not INT: a server started in the
+# background ignores INT, and Godot quits cleanly on TERM (it saves and writes
+# the restart-resume file in server_main.gd _finalize).
 signal_listeners() {
   pids=$(lsof -tnP -iTCP:"$web_port" -iTCP:"$backend_port" -sTCP:LISTEN 2>/dev/null || true)
   [ -n "$pids" ] && kill "-$1" $pids 2>/dev/null || true
 }
-signal_listeners INT
-if ! wait_for down 20 "$web_port" "$backend_port"; then
-  signal_listeners TERM
-  wait_for down 10 "$web_port" "$backend_port" || { echo "Ports $web_port/$backend_port are still in use." >&2; exit 1; }
-fi
+signal_listeners TERM
+wait_for down 30 "$web_port" "$backend_port" || { echo "Ports $web_port/$backend_port are still in use." >&2; exit 1; }
 
 echo "==> Starting the server"
 # Arguments meant for this script are dropped; the rest go to the backend.
@@ -90,7 +89,10 @@ stop() {
   echo
   echo "==> Stopping: removing forwards and the server"
   forwards_off
-  kill -INT "$server" 2>/dev/null || true
+  # The backend itself, so it quits cleanly and saves (see signal_listeners).
+  signal_listeners TERM
+  wait_for down 30 "$web_port" "$backend_port" || true
+  kill -TERM "$server" 2>/dev/null || true
   wait "$server" 2>/dev/null || true
   exit 0
 }

@@ -10,7 +10,7 @@
 
 The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a fix or feature there is ready:
 
-1. **Relaunch first so the user can test.** Back up the save (`single-player.json.before-<name>-<stamp>`), stop the previous relaunch, run `./scripts/relaunch.sh` in the background and wait for `Ready:`. Tell the user it is up.
+1. **Relaunch first so the user can test.** Back up the save (`single-player.json.before-<name>-<stamp>`). Stop the running server **cleanly** before anything else: `kill -TERM $(lsof -tnP -iTCP:8780 -iTCP:8781 -sTCP:LISTEN)` and wait until both ports are free (Godot saves and writes `<save>.resume.json` on TERM; a killed server loses the running hunt's resume). Only then stop the previous relaunch task, run `./scripts/relaunch.sh` in the background and wait for `Ready:`. Tell the user it is up.
 2. **Then run the tests** while the user plays: the changed suites, then `STONE_AGE_TEST_LOGS=<private dir> ./scripts/test-all.sh`. Don't make the user wait on tests before they can try the change.
 3. Commit, refresh the changelog and fast-forward `main` once the tests pass. If they fail, fix and relaunch again.
 
