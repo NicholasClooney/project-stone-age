@@ -4,6 +4,7 @@ import socket
 import tempfile
 import threading
 import unittest
+import urllib.error
 import urllib.request
 from functools import partial
 from pathlib import Path
@@ -61,6 +62,33 @@ class LobbyTest(unittest.TestCase):
                 server.server_close()
                 listener.server_close()
                 serve_web.Handler.profiles_path = ""
+
+
+class RevalidationTest(unittest.TestCase):
+    def test_engine_revisit_gets_304(self):
+        with tempfile.TemporaryDirectory() as folder:
+            (Path(folder) / "index.wasm").write_bytes(b"\0asm" + bytes(4096))
+            server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), partial(serve_web.Handler, directory=folder))
+            threading.Thread(target=server.serve_forever, daemon=True).start()
+            try:
+                url = f"http://127.0.0.1:{server.server_address[1]}/index.wasm"
+                first = urllib.request.Request(url, headers={"Accept-Encoding": "gzip"})
+                with urllib.request.urlopen(first) as reply:
+                    etag = reply.headers["ETag"]
+                    self.assertEqual(reply.status, 200)
+                    self.assertEqual(reply.headers["Cache-Control"], "no-cache")
+                self.assertTrue(etag)
+                again = urllib.request.Request(url, headers={"Accept-Encoding": "gzip", "If-None-Match": etag})
+                with self.assertRaises(urllib.error.HTTPError) as caught:
+                    urllib.request.urlopen(again)
+                self.assertEqual(caught.exception.code, 304)
+                (Path(folder) / "index.wasm").write_bytes(b"\0asm" + bytes(8192))
+                with urllib.request.urlopen(again) as reply:
+                    self.assertEqual(reply.status, 200)
+                    self.assertNotEqual(reply.headers["ETag"], etag)
+            finally:
+                server.shutdown()
+                server.server_close()
 
 
 if __name__ == "__main__":

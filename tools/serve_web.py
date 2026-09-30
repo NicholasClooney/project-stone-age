@@ -89,7 +89,18 @@ class Handler(http.server.SimpleHTTPRequestHandler):
         if found is None:
             return False
         path, body = found
+        # The engine (index.wasm, about 38 MB) and index.pck are no-cache so a
+        # rebuilt game is picked up, but a revisit only asks whether they
+        # changed: a matching ETag gets 304 and the browser uses its copy.
+        stat = path.stat()
+        etag = '"%x-%x"' % (stat.st_mtime_ns, stat.st_size)
+        if etag in [tag.strip() for tag in self.headers.get("If-None-Match", "").split(",")]:
+            self.send_response(304)
+            self.send_header("ETag", etag)
+            self.end_headers()
+            return True
         self.send_response(200)
+        self.send_header("ETag", etag)
         self.send_header("Content-Type", self.guess_type(str(path)))
         self.send_header("Content-Encoding", "gzip")
         # No Content-Length: Godot's web HTTPRequest counts the decoded body the
