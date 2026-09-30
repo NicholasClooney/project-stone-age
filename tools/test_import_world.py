@@ -161,6 +161,22 @@ class WorldImportTests(unittest.TestCase):
                 with self.assertRaises(ValueError):
                     read_map(path)
 
+    def test_seimu_permits_protect_all_sea_directions_without_moving_doors(self):
+        from import_world import require_seimu_permits
+        pairs = [(40,31401,[1,8],[92,27]), (40,31301,[13,1],[10,104]),
+                 (40,31501,[12,18],[32,2]), (31401,40,[94,27],[1,9]),
+                 (31301,40,[10,103],[12,1]), (31501,40,[34,2],[11,18])]
+        portals = [dict(from_map=a,to_map=b,cell=x,target=y,convenience='open')
+                   for a,b,x,y in pairs]
+        ordinary = dict(from_map=40,to_map=6000,cell=[6,3],target=[32,68])
+        portals.append(ordinary)
+        require_seimu_permits(portals)
+        self.assertTrue(all(p['requires_travel_pass'] and 'convenience' not in p
+                            for p in portals[:-1]))
+        self.assertEqual([(p['from_map'],p['to_map'],p['cell'],p['target'])
+                          for p in portals[:-1]], pairs)
+        self.assertNotIn('requires_travel_pass', ordinary)
+
     def test_seimu_island_expansion_keeps_unreviewed_destinations_out(self):
         paths = {6000:Path('map/seimu/village/6000'),
                  6005:Path('map/seimu/village/6005'),

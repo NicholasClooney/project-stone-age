@@ -273,8 +273,13 @@ original doors from developer-only island 400 and the Giru underwater passages.
 Island 400 keeps its training kind, original encounters and `dev_only` flag.
 No original services, dream-cave quest, boss or event progression is restored.
 The three exact `genout/wpm_40_1_8`, `genout/wpm_40_13_1`, and
-`genout/wpm_40_12_18` gates directly open the original underwater return routes
-as a developer scenery convenience. No `400/sb_muge1.arg` or `sb_muge2.arg`
+`genout/wpm_40_12_18` gates retain their original underwater destinations. Their source scripts have
+empty `FREE:` and `MONEY:300` (paid NPC passage, with party restrictions);
+this implementation uses the existing reusable profile `travel_pass` instead
+of restoring the original 300-stone fee dialogue. All six directions between
+40 and 31301/31401/31501 require that permit, including the originally ordinary
+return doors. This deliberate restriction prevents bypassing the 10202 gate
+from Sainas, Jyaruga, Giru or developer-only Seimu. No `400/sb_muge1.arg` or `sb_muge2.arg`
 event is whitelisted: those boss scripts incorrectly send floor42 to floor41.
 Ordinary compiled dream-cave teleport NPCs retain their original destinations.
 
@@ -297,7 +302,7 @@ added maps have zero missing graphics and a dedicated on-demand web map pack.
 
 | Map | ID | Encounter area | Random encounters | NPC gate directly opened |
 | --- | --- | --- | --- | --- |
-| 奇努伊关卡 | 40 | yes | no | three exact gates listed above |
+| 奇努伊关卡 | 40 | yes | no | no; all three sea routes require profile travel_pass in both directions |
 | 梦幻的洞窟 | 41 | yes | yes | no |
 | 梦幻的洞窟 | 42 | yes | yes | no; conflicting/non-returning internal doors closed |
 | 沙姆岛 (existing developer training map) | 400 | yes | yes | no |

@@ -141,6 +141,20 @@ def ordinary_portals(portals, ordinary):
                  or p['from_map'] in REVIEWED_REGION_MAPS or p['to_map'] in REVIEWED_REGION_MAPS)]
 
 
+def require_seimu_permits(portals):
+    """Conservative profile permit gate on every direction of the three sea routes.
+
+    Original outgoing NPCs have FREE empty / MONEY 300; fee dialogue is not
+    restored. Incoming ordinary doors must also be gated to prevent crossing
+    between islands via the common checkpoint from any starting island.
+    """
+    for portal in portals:
+        if (portal['from_map'] == 40 and portal['to_map'] in (31301,31401,31501)
+                or portal['to_map'] == 40 and portal['from_map'] in (31301,31401,31501)):
+            portal['requires_travel_pass'] = True
+            portal.pop('convenience',None)
+
+
 def settlement_owner(ident, map_paths):
     """Use reviewed town source folders, never numerical map-id ranges."""
     path = map_paths[ident]
@@ -318,6 +332,7 @@ def run(source, reference, output, fallback_source=None):
     # Preserve the existing exploration graph. Extra areas are DEV-only until
     # their entrances, quest gates and progression are restored explicitly.
     portals=ordinary_portals(all_portals, ordinary)
+    require_seimu_permits(portals)
     disable_conflicting_portals(portals)
     review_scenic_doors(portals)
     unsupported=[dict(p, reason=excluded_reason(maps.get(p['to_map']))) for p in all_portals if p['from_map'] in ordinary and p['to_map'] not in ordinary]

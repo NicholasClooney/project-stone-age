@@ -750,9 +750,19 @@ func _cmd_presented(command: Dictionary) -> Dictionary:
 	automation.presented(str(command.get("battle_id","")),int(command.get("turn",-1)))
 	return {"ok":true}
 
+## Authorize the guarded sea portal using this backend's current map and permit.
+func _cmd_check_passage(command: Dictionary) -> Dictionary:
+	if int(command.get("from_map",-1))!=automation.position_map:return _reject("位置已经改变。")
+	if preload("res://scripts/passage_rules.gd").requires_permit(automation.position_map,int(command.get("to_map",-1))) and not session.has_travel_pass():
+		return _reject("穿过海底关卡需要通行证。")
+	return {"ok":true}
+
 ## Positions are reported by whichever client walks; every other client
 ## follows the broadcast (the reporter recognises its own client id).
 func _cmd_report_position(command: Dictionary) -> Dictionary:
+	var origin: int = automation.position_map
+	if preload("res://scripts/passage_rules.gd").requires_permit(origin,int(command.map_id)) and not session.has_travel_pass():
+		return _reject("穿过海底关卡需要通行证。")
 	var cell := _cell(command)
 	var moved: bool = int(command.map_id)!=automation.position_map or cell!=automation.position_cell
 	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)))

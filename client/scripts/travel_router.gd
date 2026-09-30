@@ -19,6 +19,12 @@ func cancel(reason: String = "") -> void:
 	final_cell=Vector2i(-1,-1)
 	last_error=reason
 func map_route(origin: int, target: int, permit: bool) -> Array[int]:
+	# Preserve the established 10201/10202/10203 passage when it connects the
+	# destination; Seimu's newer paid-NPC scenery route is an alternate route.
+	var route:=_map_route(origin,target,permit,false)
+	if not route.is_empty() or not permit:return route
+	return _map_route(origin,target,permit,true)
+func _map_route(origin: int, target: int, permit: bool, seimu: bool) -> Array[int]:
 	if origin==target:return [origin]
 	var queue: Array[int]=[origin]
 	var previous: Dictionary={origin:-1}
@@ -26,7 +32,8 @@ func map_route(origin: int, target: int, permit: bool) -> Array[int]:
 		var current: int=queue.pop_front()
 		for link in world.world_catalog.links(current).values():
 			var next:=int(link.to_map)
-			if previous.has(next) or (not permit and next==10202 and next!=target):continue
+			var sea_gate: bool = preload("res://scripts/passage_rules.gd").requires_permit(current,next) or bool(link.get("requires_travel_pass",false))
+			if previous.has(next) or (sea_gate and (not permit or not seimu)) or (not permit and next==10202 and next!=target):continue
 			previous[next]=current
 			if next==target:
 				var route: Array[int]=[target]

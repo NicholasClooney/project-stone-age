@@ -181,6 +181,17 @@ func handle_arrival() -> bool:
 	var links: Dictionary = game.world_catalog.links(int(game.data.map_id))
 	if links.has(game.cell):
 		var link: Dictionary = links[game.cell]
+		if preload("res://scripts/passage_rules.gd").requires_permit(int(game.data.map_id),int(link.to_map)) or bool(link.get("requires_travel_pass",false)):
+			if not game.session.has_travel_pass():
+				game.message.text = "穿过海底关卡需要通行证。"
+				return false
+			game.paused_input = true
+			game.clear_input()
+			game.link.request({"type":"check_passage","from_map":int(game.data.map_id),"to_map":int(link.to_map)},func(reply: Dictionary):
+				game.paused_input = false
+				if reply.get("ok",false):transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
+				else:game.message.text = str(reply.get("reason","穿过海底关卡需要通行证。")))
+			return true
 		return transition_area(int(link.to_map),Vector2i(int(link.target[0]),int(link.target[1])))
 	if game.world_catalog.field(int(game.data.map_id)) and game.random_encounters:
 		game.field_steps += 1
