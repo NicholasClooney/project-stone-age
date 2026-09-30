@@ -62,6 +62,14 @@ const PROFILE_COMMANDS := {
 	"move_music_in_playlist":["move_music_in_playlist",["name","position","track","step"]],
 }
 
+## GM and developer commands (ADMIN_COMMANDS, every gm_*) are refused unless
+## this is set. A lone server or the desktop game is always admin; a
+## multi-profile server (server/profile_hub.gd) sets it from the accounts file.
+var admin := true
+## The account this backend plays on a multi-profile server, "" otherwise.
+var account_name := ""
+const ADMIN_COMMANDS := ["battle_escape_dev","start_battle_config","start_wild_battle_config","open_battle","begin_battle","set_fast_hunt_threads"]
+
 var session = GameSession.new()
 var battle = BattleSession.new()
 ## Augmented copy of the latest battle state (settlement summary included).
@@ -294,13 +302,18 @@ const TURN_COMMANDS := ["battle_command","battle_pet_command","battle_pet_skill"
 func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
 	var reply: Dictionary
-	if type in TURN_COMMANDS and command.has("turn") and not _current_turn(command):reply = _stale("battle turn already resolved")
+	if not admin and admin_only(type):reply = _reject("只有管理员角色可以使用 GM 和开发者功能。")
+	elif type in TURN_COMMANDS and command.has("turn") and not _current_turn(command):reply = _stale("battle turn already resolved")
 	elif PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
 	elif has_method("_cmd_"+type):reply = call("_cmd_"+type,command)
 	else:reply = _reject("unknown command "+type)
 	reply.seq = command.get("seq",0)
 	reply.type = "ack" if reply.get("ok",false) else "rejected"
 	return reply
+
+## GM tools, battle fixtures, 立即脱战 and the server's 线程数.
+static func admin_only(type: String) -> bool:
+	return type.begins_with("gm_") or type in ADMIN_COMMANDS
 
 func _current_turn(command: Dictionary) -> bool:
 	var live: Dictionary = battle.snapshot()
@@ -720,7 +733,9 @@ func _derived() -> Dictionary:
 	return {"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
-	return {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier}
+	var options := {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier,"admin":admin}
+	if not account_name.is_empty():options.account = account_name
+	return options
 
 func _cell(command: Dictionary) -> Vector2i:
 	var cell: Array = command.get("cell",[0,0])

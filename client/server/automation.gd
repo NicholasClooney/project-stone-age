@@ -27,6 +27,26 @@ const HUNT_MAX_BACKLOG_SECONDS := 0.1
 const DEFAULT_SPEED := 8.0
 
 var backend
+## How many backends share this process's main thread for automation work
+## now (server/profile_hub.gd sets it every frame). Compact battles and
+## GDScript hunt scans each get 1/budget_share of their frame budget, so five
+## busy profiles still spend about 12 ms per frame in total, not 60.
+var budget_share := 1
+
+## This frame's slice of `full` microseconds.
+func frame_budget(full: int) -> int:
+	return maxi(1000,full/maxi(1,budget_share))
+
+## The server log, prefixed with the account on a multi-profile server.
+func log_line(text: String) -> void:
+	var account := str(backend.get("account_name")) if backend!=null and backend.get("account_name")!=null else ""
+	print(("[%s] " % account if not account.is_empty() else "")+text)
+
+## Whether this backend spends a frame budget now: compact battles, or a hunt
+## scanning in GDScript (the native helper scans on its own threads).
+func busy() -> bool:
+	return (running and bool(settings.get("compact",false))) or (hunt_running and not fast_hunt.running())
+
 ## Tests drive step() themselves when false.
 var auto_tick := true
 ## False when no client presents battles; paced waits are then skipped.
@@ -394,7 +414,7 @@ func tick_battle(delta: float) -> void:
 	if not running:return
 	# Compact battles have nothing to watch: run steps back to back within a frame budget.
 	if bool(settings.compact) and (compact_active or not backend.battle_open):
-		var until := Time.get_ticks_usec()+COMPACT_BUDGET_USEC
+		var until := Time.get_ticks_usec()+frame_budget(COMPACT_BUDGET_USEC)
 		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until:step()
 		return
 	cooldown -= delta
@@ -690,7 +710,7 @@ func _hunt_process(delta: float) -> void:
 		return
 	var unlimited := int(hunt_filter.rate)<=0
 	if not unlimited:hunt_credit = minf(hunt_credit+delta*float(hunt_filter.rate),maxf(1.0,float(hunt_filter.rate)*HUNT_MAX_BACKLOG_SECONDS))
-	var until := Time.get_ticks_usec()+HUNT_FRAME_BUDGET_USEC
+	var until := Time.get_ticks_usec()+frame_budget(HUNT_FRAME_BUDGET_USEC)
 	while hunt_running and (unlimited or hunt_credit>=1) and Time.get_ticks_usec()<until:
 		if not unlimited:hunt_credit -= 1
 		scan_once()
@@ -1159,7 +1179,7 @@ func _finish_survey() -> void:
 	if picks.is_empty():text += "，重新摸底。"
 	survey_last = {"candidates":verified.size(),"picked":picks.size(),"text":text}
 	_showcase_line("survey",text)
-	print("[找宠流程] "+text)
+	log_line("[找宠流程] "+text)
 	for p in picks:
 		p.survey = true
 		if flow_showcase:_showcase_add(p)
@@ -1429,7 +1449,7 @@ func _record_stop(scope: String, outcome: String, reason: String, pet: Dictionar
 	stop_events.append(entry)
 	var who := ""
 	if not str(entry.name).is_empty():who = " · %s%s" % [entry.name," "+str(entry.pet_id) if not str(entry.pet_id).is_empty() else ""]
-	print("[%s] %s：%s%s · 已遇敌 %d 组 · 达标 %d · 存仓 %d · 跳过 %d" % ["找宠流程" if scope=="flow" else "自动抓极品",outcome,reason.replace("\n"," "),who,hunt_rolls,flow_collected_count,flow_stored_count,flow_skipped_count])
+	log_line("[%s] %s：%s%s · 已遇敌 %d 组 · 达标 %d · 存仓 %d · 跳过 %d" % ["找宠流程" if scope=="flow" else "自动抓极品",outcome,reason.replace("\n"," "),who,hunt_rolls,flow_collected_count,flow_stored_count,flow_skipped_count])
 
 func take_stop_events() -> Array:
 	var result := stop_events
@@ -1446,7 +1466,7 @@ func record_shutdown() -> Dictionary:
 	var reason := "服务器关闭（重启或退出）；已记下进度，重启后在原地自动恢复。" if not state.is_empty() else "服务器关闭（重启或退出），自动抓极品中断；重新打开后需要再次开始。"
 	if flow_active():_record_stop("flow","暂停" if not state.is_empty() else "停止",reason,_involved_pet())
 	elif hunt_running:_record_stop("hunt","暂停" if not state.is_empty() else "停止",reason)
-	elif str(state.get("kind",""))=="training":print("[自动练级] 服务器关闭；重启后在原地自动恢复。")
+	elif str(state.get("kind",""))=="training":log_line("[自动练级] 服务器关闭；重启后在原地自动恢复。")
 	if backend.battle_open and (running or flow_active()):
 		release_clone_override()
 		backend.abandon_battle()
@@ -1543,7 +1563,7 @@ func try_resume() -> void:
 		pending_resume = {}
 		var why := "服务器重启后没有恢复：角色已不在原来的位置（%s (%d, %d)）。" % [backend.map_name(int(state.map_id)),at.x,at.y]
 		if str(state.kind)!="training":_record_stop("flow" if str(state.kind)=="flow" else "hunt","停止",why)
-		print("[重启后自动恢复] "+why)
+		log_line("[重启后自动恢复] "+why)
 		return
 	if backend.battle_open or bool(backend.battle.snapshot().get("active",false)):return
 	pending_resume = {}
@@ -1571,7 +1591,7 @@ func _resume_hunt(state: Dictionary) -> void:
 		_record_stop("hunt","停止","服务器重启后无法恢复筛选：%s" % hunt_status)
 		return
 	_record_stop("hunt","已恢复","%s：从第 %d 组接着筛选。" % [RESUMED,hunt_rolls+1])
-	print("[自动抓极品] %s" % RESUMED)
+	log_line("[自动抓极品] %s" % RESUMED)
 
 func _resume_training(state: Dictionary) -> void:
 	var saved: Dictionary = state.get("training",{})
@@ -1582,11 +1602,11 @@ func _resume_training(state: Dictionary) -> void:
 		start_training()
 		settings = kept
 	if not running:
-		print("[自动练级] 服务器重启后无法恢复：%s" % stop_reason);return
+		log_line("[自动练级] 服务器重启后无法恢复：%s" % stop_reason);return
 	battles = int(saved.get("battles",0));skipped = int(saved.get("skipped",0))
 	earned_xp = int(saved.get("earned_xp",0));earned_pet_xp = int(saved.get("earned_pet_xp",0));initial_level = int(saved.get("initial_level",initial_level))
 	turn_text = RESUMED
-	print("[自动练级] %s（已打 %d 场）" % [RESUMED,battles])
+	log_line("[自动练级] %s（已打 %d 场）" % [RESUMED,battles])
 	_emit_status()
 
 func _resume_flow(state: Dictionary) -> void:

@@ -1,14 +1,17 @@
 extends Node
-## WebSocket front for one Backend. Each text frame is one JSON command; the
-## reply goes back to the sender and backend events to every connection. Any
-## number of devices watch and drive the one session; commands are handled
-## one at a time, so the first of two conflicting commands wins and the
-## other is rejected by the rules (or as stale). Automation keeps running
-## with no connection.
+## WebSocket front for one Backend, or for a ProfileHub (one server, many
+## profiles: server/profile_hub.gd). Each text frame is one JSON command; the
+## reply goes back to the sender and backend events to every connection (with
+## a hub: to every connection logged into that event's profile). Any number
+## of devices watch and drive one session; commands are handled one at a
+## time, so the first of two conflicting commands wins and the other is
+## rejected by the rules (or as stale). Automation keeps running with no
+## connection.
 const Codec = preload("res://network/codec.gd")
 const MAX_MESSAGE_BYTES := 1 << 20
 
 var backend
+var hub
 var port := 8781
 var bind_address := "*"
 ## Set for wss://: TLS is negotiated on each connection before the WebSocket.
@@ -18,12 +21,17 @@ var _handshakes: Array[StreamPeerTLS] = []
 var _pending: Array[WebSocketPeer] = []
 var _clients: Array[WebSocketPeer] = []
 
+## `target` is a Backend, or a ProfileHub (it has the `outgoing` signal).
 func _init(target, listen_port: int = 8781, address: String = "*") -> void:
-	backend = target
+	if target.has_signal("outgoing"):hub = target
+	else:backend = target
 	port = listen_port
 	bind_address = address
 
 func _ready() -> void:
+	if hub!=null:
+		hub.outgoing.connect(_on_outgoing)
+		return
 	backend.event.connect(_on_event)
 	backend.automation.client_attached = false
 
@@ -75,7 +83,8 @@ func _process(_delta: float) -> void:
 				_receive(peer,peer.get_packet().get_string_from_utf8())
 		elif state==WebSocketPeer.STATE_CLOSED:
 			_clients.erase(peer)
-			backend.automation.client_attached = not _clients.is_empty()
+			if hub!=null:hub.disconnect_connection(peer.get_instance_id())
+			else:backend.automation.client_attached = not _clients.is_empty()
 
 ## Connected clients, for tests and diagnostics.
 func clients() -> Array[WebSocketPeer]:
@@ -89,21 +98,26 @@ func _accept(stream: StreamPeer) -> void:
 
 func _promote(peer: WebSocketPeer) -> void:
 	_clients.append(peer)
-	backend.automation.client_attached = true
+	if hub==null:backend.automation.client_attached = true
 
 func _receive(peer: WebSocketPeer, text: String) -> void:
 	var command := Codec.decode(text)
 	if command.is_empty():
-		_send(peer,{"type":"rejected","seq":0,"ok":false,"reason":"malformed command","v":backend.PROTOCOL})
+		_send(peer,{"type":"rejected","seq":0,"ok":false,"reason":"malformed command","v":1})
 		return
 	# Events raised by the command reach every client before this reply.
-	var reply: Dictionary = backend.handle(command)
+	var reply: Dictionary = hub.handle(peer.get_instance_id(),command) if hub!=null else backend.handle(command)
 	reply.reply = true
 	if peer.get_ready_state()==WebSocketPeer.STATE_OPEN:_send(peer,reply)
 
 func _on_event(message: Dictionary) -> void:
 	for peer in _clients:
 		if peer.get_ready_state()==WebSocketPeer.STATE_OPEN:_send(peer,message)
+
+## A hub's event for one connection (a device logged into that profile).
+func _on_outgoing(connection: int, message: Dictionary) -> void:
+	for peer in _clients:
+		if peer.get_instance_id()==connection and peer.get_ready_state()==WebSocketPeer.STATE_OPEN:_send(peer,message)
 
 func _send(peer: WebSocketPeer, message: Dictionary) -> void:
 	peer.send_text(Codec.encode(message))
