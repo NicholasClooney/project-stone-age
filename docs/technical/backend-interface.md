@@ -59,6 +59,19 @@ Before a login only these and `ping` are accepted; anything else is rejected wit
 
 Every snapshot and `profile` event carries `options.admin` (always true without accounts) and, on a multi-profile server, `options.account`. A backend with `admin` false refuses `Backend.ADMIN_COMMANDS` (`battle_escape_dev`, `start_battle_config`, `start_wild_battle_config`, `open_battle`, `begin_battle`, `set_fast_hunt_threads`) and every `gm_*` with 「只有管理员角色可以使用 GM 和开发者功能。」.
 
+## Presence and chat on a multi-profile server
+
+LAN phase 2 (`server/presence.gd`, run by the hub; [LAN profiles](../development/lan-profiles.md)). Only a hub sends these; a lone server and the desktop game never do, and a lone backend rejects `say` as an unknown command.
+
+| Message | Fields | Notes |
+| --- | --- | --- |
+| `presence` event | `map_id`, `full`, `players` [entry], optional `left` [ids] | To each logged-in connection, about the *other* profiles on its own profile's map. `full`: the complete list (first tick after a login or reconnect, and whenever the viewer's map changes; an empty list clears). Otherwise `players` holds new players in full and, for known ones, `id` plus only the changed keys. At most one per connection every 150 ms (`Presence.TICK_MSEC`), and none when nothing changed. |
+| entry | `id` (profile id), `name` (account), `lv`, `c` (character id), `face`, `ride` (ridden pet's sprite, -1 none), `rn` (its name), `cell` [x, y], `f` (facing 0..7, from the last step), `b` (战斗中) | A profile is listed while one of its devices is connected and its map is known (from `report_position`). `b` is a battle open, or compact 自动练级 running, held 2 s after it ends. Walking is not sent: the client animates while it moves an actor towards `cell`. |
+| `say` command | `text` | 一般频道. Trimmed, line breaks become spaces; 1 to 60 characters; at most 3 lines per 5 s per character; needs a known map. Rejected with a Chinese `reason` otherwise. |
+| `chat` event | `channel` (`一般`), `map_id`, `id`, `name`, `text`, `mine` | To every device of every profile on the speaker's map, the speaker's own devices with `mine` true. |
+
+The same-profile `position` mirror (another device of *your* character walking) is unchanged and separate from `presence`.
+
 ## Automation settings
 
 Automation settings belong to the character: `profile.automation_settings` holds only the player's overrides, and effective values are the defaults in `client/data/automation_defaults.json` deep-merged with them (`client/scripts/automation_settings.gd`, shared by backend and clients). Sections: `training` (`xp`, `compact`, `hp`, `level`, `level_explicit`, `limit`, `preset`), `capture` (`hp`, `pet`, `pet_id`, `pet_max_level`), `hunt` (`template`, `level_one`, `auto_capture`, `train_after_capture`, `total`, `offsets`, `rate`, `limit`, `fast`: 本机极速模式, see [fast hunt](fast-hunt.md)) and `stat_filters` keyed by template id (`mode`, `stop_after`, `keep_rule` (保留规则, `client/scripts/keep_rule.gd`: `tiers` 0 to 20, default 2; `per_tier` 0 to 1000, default 3; `order`, 1 to 5 distinct keys of `sum`, `attack`, `defence`, `speed`, `max_hp`, default `["attack","speed","max_hp"]`, ties falling back to the remaining keys in `sum, attack, defence, speed, max_hp` order and then the lower pet id; `champions` 0 to 1000, default 2; `champion_stats`, any of `attack`, `defence`, `speed`, `max_hp`, default all four; `auto`, default false, tidies the whole species after each pet the find-pet cycle stores; it replaced `keep_qualified`/`rank`, and a stored `rank` becomes `order` without `sum`), `conditions.<sum|attack|defence|speed>.{enabled,value,strict,keep}`); the defaults file also carries per-species filter defaults under `species`.
@@ -110,7 +123,7 @@ Walking is mirrored: each client tags `report_position` with its id, the backend
 
 ## Test seams
 
-Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings; `radio_test` covers the radio library across two devices. `profile_hub_test` and `remote_login_test` cover multi-profile servers (routing, logins, admin gating, per-profile saves and resume, the login screen).
+Tests may still reach authority internals through `world.session._profile`, `_pending`, `world.battle_session._state` and similar. These work only with a `LocalLink`; once used, every client read resyncs from the backend. `game.sync_state()` resyncs after changing `game.backend` directly. `scripts/test-all.sh` runs every suite in parallel and reports each; `backend_automation_test` and `remote_link_test` cover detached automation and the WebSocket path; `automation_settings_test` and `remote_settings_test` cover profile settings; `radio_test` covers the radio library across two devices. `profile_hub_test` and `remote_login_test` cover multi-profile servers (routing, logins, admin gating, per-profile saves and resume, the login screen); `lan_presence_test` covers the presence feed, chat and the client's presence model.
 
 ## Decisions (2026-09-27)
 

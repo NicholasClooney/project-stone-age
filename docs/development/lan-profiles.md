@@ -11,7 +11,7 @@ Several people play their own characters on one Mac. There are two ways to run i
 | New characters | from the client | edit `profiles.json` and restart |
 | CPU | one process: automation shares the main thread (budget divided) | a process per profile, separate cores |
 
-**Use phase 1** by default: one address, logins, admin-only GM tools, and it is the base for seeing each other later. Use phase 0 when several profiles run heavy GDScript automation at once (compact 自动练级, hunts without 本机极速模式) and one core is the bottleneck.
+**Use phase 1** by default: one address, logins, admin-only GM tools, and players see each other and chat (phase 2). Use phase 0 when several profiles run heavy GDScript automation at once (compact 自动练级, hunts without 本机极速模式) and one core is the bottleneck.
 
 The single-player setup is unchanged: without `--accounts`, `scripts/relaunch.sh` and `scripts/serve.sh` serve `single-player.json` with no login, exactly as before.
 
@@ -51,6 +51,32 @@ scripts/relaunch.sh --accounts=user://lan/accounts.json
 - **Backups**: opening an existing save (first login, or a restart) copies it to `backups/<save>@<date-time>.json` next to it; the newest 5 per save are kept (`server/save_backups.gd`).
 - **Resume after a restart**: a character whose run was written down at shutdown opens when the server starts, so its hunt, find-pet cycle or 自动练级 goes on before anyone logs in.
 - A character opens on its first login and stays open until the server stops, so its automation runs with nobody connected. Paced battles wait for that character's own devices only.
+
+## Phase 2: seeing each other and 一般频道
+
+On a phase 1 server, everyone logged in sees the other players on the same map, and can talk to them. Nothing changes for the single-player setup or phase 0 servers: they have no other players.
+
+### What a player sees
+
+- **Other players** walk around with their own look and mount (the original character and riding art, `scripts/remote_players.gd`), smoothly between cells, with their name at their feet in white, as the original draws it. They never block a cell, take a click or trigger anything: walking, encounters, NPCs and automation behave as if they were not there.
+- **战斗中**: while one of them fights (a battle is open, or compact 自动练级 is running) the original V.S. mark (CG_VS_MARK_1A, graphic 25610) floats over their head.
+- **Card**: resting the pointer on a player (or clicking one; the click still walks) shows their face, name, 等级, 骑乘 and 战斗中.
+- **一般频道**: bottom left, above the classic bar. **Enter** or 说话 opens the line (up to 60 characters; Enter sends, Esc cancels; typing never walks). Everyone on the same map sees `名字：内容` in the chat lines and a speech bubble over the speaker for 5 s, the speaker too. 记录 opens the last 100 lines. The field keeps the newest 4 lines of the last minute. Sending more than 3 lines in 5 s is refused with 「说话太快了，请 N 秒后再说。」.
+
+### How it works
+
+- The hub reads each open profile's look, level, mount, battle state and last reported cell (`Backend.presence_state`, from `report_position`) every 150 ms and sends each connection a `presence` event with only what changed among the other players on its map (`server/presence.gd`). A full list goes out after a login, a reconnect or a map change. See [backend interface](../technical/backend-interface.md#presence-and-chat-on-a-multi-profile-server).
+- The client keeps a small model (`network/presence_model.gd`): each player walks towards its last cell at the local walking pace (catching up when more than 2 cells behind, jumping when more than 8), and its facing and walking animation come from that movement.
+- `say` goes to the hub, which checks it (`Presence.say`) and sends `chat` to every device on the speaker's map; the server log shows 「[名字] 一般频道：…」.
+- **Bandwidth**: one walking player costs each viewer about 6 messages a second of roughly 95 bytes (`{"type":"presence","v":1,"map_id":1000,"full":false,"players":[{"id":"p1","cell":[81,90],"f":3}]}`), about 0.6 KB/s. Ten players all walking on one map is at most ~7 messages/s of about 380 bytes per viewer, ~2.5 KB/s each and ~25 KB/s for the server. Standing players cost nothing. CPU: the hub compares about players × viewers small dictionaries per tick.
+
+### Differences from the original
+
+- The original shows a fixed balloon icon (CG_ICON_FUKIDASI, 26500) for 1 s and the words only in the chat lines. Here the bubble shows the words, in the balloon's colours, for 5 s.
+- The original keeps its chat lines on the field until pushed out; here lines older than a minute leave the field (记录 keeps them).
+- Only 一般频道, and only the speaker's map. No 密语, 队伍, 家族 or 世界 channels, no 聊天表情, no name colours, no 称号 or family names over players, no 名片 or trade marks.
+- Players' pets do not follow them for others; only the mount shows.
+- The original's `nameOverTheHeadFlag` setting (hide names) is not there.
 
 ## Phase 0: one server per profile
 
@@ -110,6 +136,6 @@ The game itself is still at `/`. Without `?server=` it connects to port 8781.
 
 - Phase 0 has no login: anyone who can reach a profile's port plays that character, including GM commands.
 - Phase 1 logins are for friends on a LAN or tailnet: a 4 to 8 digit PIN, no email or recovery (an admin sets a new PIN with `scripts/accounts.sh pin`). Do not forward the port to the internet; movement and rewards are client-trusted.
-- Players do not see each other yet (Phase 2) and cannot party (Phase 3+).
+- Players see each other and chat on phase 1 servers only (not phase 0), and cannot party yet (Phase 3+).
 - Do not point the desktop game at a save a server is using. The desktop game does not check the lock.
 - There is no per-character CPU view yet: 开发者性能面板 shows backend ticks only for the desktop game's own backend.
