@@ -11,7 +11,7 @@ Several people play their own characters on one Mac. There are two ways to run i
 | New characters | from the client | edit `profiles.json` and restart |
 | CPU | one process: automation shares the main thread (budget divided) | a process per profile, separate cores |
 
-**Use phase 1** by default: one address, logins, admin-only GM tools, players see each other and chat (phase 2), they can 组队 and walk together (phase 3), and fight as one party (phase 4a). Use phase 0 when several profiles run heavy GDScript automation at once (compact 自动练级, hunts without 本机极速模式) and one core is the bottleneck.
+**Use phase 1** by default: one address, logins, admin-only GM tools, players see each other and chat (phase 2), they can 组队 and walk together (phase 3), fight as one party (phase 4a), and the leader can run 自动练级 for the party (phase 4c). Use phase 0 when several profiles run heavy GDScript automation at once (compact 自动练级, hunts without 本机极速模式) and one core is the bottleneck.
 
 The single-player setup is unchanged: without `--accounts`, `scripts/relaunch.sh` and `scripts/serve.sh` serve `single-player.json` with no login, exactly as before.
 
@@ -98,8 +98,8 @@ Only the leader meets enemies (a member's steps roll nothing, and members cannot
 
 ### Automation
 
-- Nobody in a party can start 自动练级, 自动抓宠 or 找宠, leader included: 「组队中不能使用自动练级、自动抓宠和找宠，请先离开队伍。」. The runners assume they own the character's position and battle, which a party breaks.
-- Joining is refused while either side runs automation, so a party never has a run going.
+- Since [phase 4c](#phase-4c-自动练级-in-a-party) the leader may run 自动练级 (普通攻击) for the party and members may turn on 自动战斗. 自动抓宠, 找宠, 后台搜宠 and 带宠升级 stay refused for everyone in a party.
+- Joining is refused while either side runs automation, so nobody joins a running party run.
 
 ### Disconnects
 
@@ -111,7 +111,7 @@ Only the leader meets enemies (a member's steps roll nothing, and members cannot
 
 - `server/party.gd` holds the parties and the switches and knows the rules: `join` (the cell in front for a facing, the leader's distance, battle, switch, automation, 5 at most), `leave`, `kick`, `disband` and `follow` (the leader's old and new cell to each member's move). The hub (`server/profile_hub.gd`) runs it.
 - The leader's `report_position` goes to its backend as before; the hub then moves each member's backend with a `report_position` of client `party`. Every device of that member receives the usual `position` event and walks after it (the same path another device of your own character uses), loading the new map on a map change.
-- A member's own `report_position` is ignored and its device is sent where the server has it; `field_step` answers with no encounter; `wild_encounter`, `begin_battle` and `open_battle` are refused. Anyone in a party gets `auto_start` refused.
+- A member's own `report_position` is ignored and its device is sent where the server has it; `field_step` answers with no encounter; `wild_encounter`, `begin_battle` and `open_battle` are refused. `auto_start` in a party is refused except the leader's 自动练级 (phase 4c).
 - Each device gets a `party` event with its view (switch, leader, members, and for members whether the leader fights) when it changes, checked with the presence tick. The presence entries carry `pt`, the leader's id. See [backend interface](../technical/backend-interface.md#presence-and-chat-on-a-multi-profile-server).
 - Client: `scripts/party_panel.gd` (the button, the list, 队长战斗中, the leader flag), `GameScene.party_locked()` guarding `request_step`, `blink_to` and `load_area_id`, the 频道 button in `scripts/chat_panel.gd`, and the flag and card line in `scripts/remote_players.gd`.
 - The flag's 10 frames come from `tools/import_ui.py` (UI images 25600–25609 and `leader_mark` in `ui/manifest.json`). Without that import the flag is a small yellow 队长 badge.
@@ -125,7 +125,7 @@ Only the leader meets enemies (a member's steps roll nothing, and members cannot
 
 ## Phase 4a: party battles
 
-When the leader meets enemies, the whole party fights one battle, as in the original (gmsv `battle.c` `BATTLE_PartyNewEntry`, `BATTLE_CommandWait`, `BATTLE_AddExpItem`, `BATTLE_GetExpGold`). Phase 4 is split: **4a** (this) is the shared battle; **4c** (next) the leader's 自动练级 with members' compact auto-battle; **4b** capture ownership, pet switching and 踢出 in battle. 助战 and 观战 are not planned.
+When the leader meets enemies, the whole party fights one battle, as in the original (gmsv `battle.c` `BATTLE_PartyNewEntry`, `BATTLE_CommandWait`, `BATTLE_AddExpItem`, `BATTLE_GetExpGold`). Phase 4 is split: **4a** (this) is the shared battle; **4c** ([built](#phase-4c-自动练级-in-a-party)) the leader's 自动练级 with members' compact auto-battle; **4b** (next) capture ownership, pet switching and 踢出 in battle. 助战 and 观战 are not planned.
 
 ### What a player sees
 
@@ -139,7 +139,7 @@ When the leader meets enemies, the whole party fights one battle, as in the orig
   - The party wins (or the others escape): a fallen player gets up **with 1 HP where they stand, stays in the party, and earns nothing**, as the original (`BATTLE_Exit` sets HP 1; `BATTLE_GetExpGold` pays no dead player). Their fall still costs charm (and the battle pet's loyalty), as a defeat does. Fallen pets also get up with 1 HP.
   - Everyone falls: each player goes to the village, recovered, as a solo defeat here does. (The original's normal fall also leaves you at 1 HP where you stand; only 击飞 sends you to your 记录点. The village rule is this game's solo rule and stays.)
 - Shops, stores, saves and the other profile changes a battle locks are refused for every participant until they are settled, as in a solo battle.
-- Refused in a party battle: 捕捉 and 换宠 (「组队战斗暂不能捕捉或换宠（下一阶段开放）。」, phase 4b, for the leader too), 镜子的精灵 and 恢复护符. Automation stays refused in a party (phase 3).
+- Refused in a party battle: 捕捉 and 换宠 (「组队战斗暂不能捕捉或换宠（下一阶段开放）。」, phase 4b, for the leader too), 镜子的精灵 and 恢复护符. Automation in a party: [phase 4c](#phase-4c-自动练级-in-a-party).
 
 ### Rewards
 
@@ -166,6 +166,38 @@ When the leader meets enemies, the whole party fights one battle, as in the orig
 - Members' pets always obey in 4a; the loyalty check (不听指挥) runs only for the leader's pet.
 - 队伍共享经验 (above) is ours.
 - The leader's screen and each member's screen place their own character in the player's place; the original keeps one fixed layout for everyone.
+
+## Phase 4c: 自动练级 in a party
+
+The leader can run 自动练级 for the whole party, and members can let the server command their own slot. The original has no automation; this is ours, built on the phase 4a battle.
+
+### What a player sees
+
+- **The leader** starts 自动练级 (游戏助手 → 原地连续遇敌) on a field cell as when alone. Only the **普通攻击** preset: 抓宠 and 带宠升级 are refused (「组队中的自动练级只能用「普通攻击」预设；抓宠和带宠升级请先离开队伍。」). The run is the solo one: it stays on its cell and meets troop after troop there (it never walks, travels or goes back to heal; members stand behind the leader as phase 3 put them). Every troop is a phase 4a party battle that every member enters, and its slot is commanded by the leader's preset. Compact (地图内简略战斗) or with the battle view, as the leader chose.
+- **Members** get two switches in the party list: **自动战斗** and **快速战斗** (快速战斗 needs 自动战斗).
+  - 自动战斗 on: each turn the server commands the member's slot from the member's own preset at once, like 普通攻击 in 自动练级: attack the first standing enemy, the pet attacking with it. At or below the member's own 停机线 (低于此血量停机 %, default 10 %) with a 回复药 left, it drinks one instead. The turn never waits for that member, and the 45 s timer never runs out on them. Their battle view (if they watch) shows 「自动战斗中…」 instead of the command bar; switching 自动战斗 off mid-turn brings the command bar back.
+  - 自动战斗 off: the member commands by hand as in 4a (45 s timer, then the clone AI's attack).
+  - 快速战斗 on too: this device does not switch to the battle view. A line under the top bar shows 「组队战斗 · 自动 · 第 N 回合 · 体力 a/b · 回复药 n」, then how it ended; **查看战斗** opens the running battle in the battle view (the next battle is compact again). The device closes each finished battle by itself. Switching either off during a battle opens the battle view.
+- **Next troop**: a member whose device still shows the last battle's result (or has not closed it yet) is taken into the next battle anyway: the server closes the finished one for them. This applies to every member, also without 自动战斗, so a manual member never misses a battle of the leader's run.
+- **Healing between troops**: before each troop the leader's run checks, as it checks the leader's own 停机线, every member at **their own** 停机线 (their player, battle pet and mount). First each member's 恢复护符 heals their carried pets (as the leader's run does for the leader), and a member with 自动战斗 drinks 回复药 out of battle until above their line or out of potions. A member still at the line stops the run: 「队友名字：玩家体力达到停机线」 (a member who fell in a won battle gets up with 1 HP and so stops it unless their potions lift them). The party then heals together by hand. The whole party falling ends the run: 「全队倒下，自动练级已停止。」, everyone in the village.
+- **Stops**: the leader stopping it; a member leaving (「名字离开了队伍，自动练级已停止。」), being kicked (「踢出了名字，…」); the party disbanding (「队伍已解散，…」); the leader's last device disconnecting (「队长已离线，…」; the party then disbands as in phase 3, after a running battle ends). A battle running when the run stops continues under manual control (compact hands it to the battle view), as a solo stop does.
+- **Still refused in a party**, leader and members: 自动抓宠, 找宠 and 后台搜宠 (「组队中不能使用自动抓宠、找宠和后台搜宠：它们要停下来比较、放生和存仓库，跟不上队伍。请先离开队伍。」), and 带宠升级 (it needs its own mirror squad). Members cannot start 自动练级 (「队员跟着队长走，不能自己开始自动练级；想自动出招，请在队伍列表打开「自动战斗」。」). Nobody can join a party whose leader runs automation (phase 3).
+
+### Decisions
+
+- **Where the switches live**: 自动战斗 and 快速战斗 are the character's, `automation_settings.party.auto` / `.compact` in the save (default off), like the other automation settings. The server needs 自动战斗 with no device connected; every device of the character shows and changes the same switches. They count from the next turn.
+- **What 快速战斗 means for a member**: the party battle never waits on a member's device anyway (only the leader's own run waits for its own presentation, and only when not compact), so for a member it is a client choice: no battle view, a status line, and the device closes finished battles. With 自动战斗 off it has no effect (a manual member needs the battle view).
+- **Restart**: the party is not saved, so after a server restart the leader's recorded run resumes **alone** on its cell like any 自动练级 (the members start outside any party).
+- **Leader's own 自动战斗**: ignored; the leader's slot is its 自动练级's (or the leader's hands).
+- **Frame budget**: a run whose command for the turn is in (or whose leader is down) waits and is not counted by `share_budget`, and its compact loop stops stepping; with every member on 自动战斗 a compact run resolves turns as fast as solo.
+
+### How it works
+
+- `profile_hub.gd` `_auto_refusal` (what a party refuses), `party_auto` (a member's preset: `{hp}`), `_party_guard` (the between-troop check, `Backend.party_guard` of each profile) and `_stop_party_run` (leave, kick, disband, the leader's last device).
+- `party_battles.gd` `_update_auto` puts 自动战斗 members into `PartyBattleSession.auto_slots` with their `auto_policies`; `_auto_command` plays the preset. `open` closes a member's finished party battle before the next one. A change of who is automatic sends everyone a `battle_state`.
+- `automation.gd`: in a party battle the run submits once per turn (`Backend.battle_command` goes to its slot; `party_waiting` holds it until the turn resolves) and counts the settled experience when it closes the battle.
+- Client: `scripts/party_panel.gd` (the switches, the status line, 查看战斗, closing finished battles), `GameScene.party_compact` (no battle view), `battle_view.gd` (「自动战斗中…」).
+- Tests: `tests/lan_party_auto_test.gd`.
 
 ## Phase 0: one server per profile
 
@@ -225,6 +257,6 @@ The game itself is still at `/`. Without `?server=` it connects to port 8781.
 
 - Phase 0 has no login: anyone who can reach a profile's port plays that character, including GM commands.
 - Phase 1 logins are for friends on a LAN or tailnet: a 4 to 8 digit PIN, no email or recovery (an admin sets a new PIN with `scripts/accounts.sh pin`). Do not forward the port to the internet; movement and rewards are client-trusted.
-- Players see each other, chat and 组队 on phase 1 servers only (not phase 0). Party battles (phase 4) are not built: the leader fights alone while the members wait.
+- Players see each other, chat and 组队 on phase 1 servers only (not phase 0). Party battles (phase 4a) and the leader's 自动练级 (phase 4c) are built; capture, pet switching and 踢出 in a party battle (phase 4b) are not.
 - Do not point the desktop game at a save a server is using. The desktop game does not check the lock.
 - There is no per-character CPU view yet: 开发者性能面板 shows backend ticks only for the desktop game's own backend.
