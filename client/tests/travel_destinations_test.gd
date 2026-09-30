@@ -15,7 +15,7 @@ func run():
   if game.world_catalog.is_building(int(key)):
    excluded+=1
    check(menu.selector.get_item_index(int(key))<0,"building excluded from map dropdown "+key)
- check(excluded==94,"all94 imported settlement buildings excluded")
+ check(excluded>=94,"all %d imported settlement buildings excluded (94 before the Sainasu interiors)"%excluded)
  for id in [100,200,300,1000,2000,5000,5100,10201,10202,10203,32001]:
   check(menu.selector.get_item_index(id)>=0,"outdoor village or cave remains selectable%d"%id)
  var landing=game.travel_landing
