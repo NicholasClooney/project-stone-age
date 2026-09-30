@@ -32,6 +32,8 @@ func run() -> void:
 	var menu = game.adventure_menu
 	game.session.gm_raise_level(-1,10)
 	game.session.gm_heal(-2)
+	check(bool(game.session.snapshot().get("free_spirits",true)),"精灵不耗气力 is on for a new character")
+	game.session.set_free_spirits(false)
 	check(game.session.gm_grant_spirits(),"GM 调试 grants the spirit equipment")
 	var profile: Dictionary = game.session.snapshot()
 	check(int(profile.inventory.haru_armor)==1 and int(profile.inventory.freya_robe)==1 and int(profile.inventory.teo_robe)==1 and int(profile.inventory.koyala_charm)==1,"one 哈鲁, 芙雷雅, 提欧 and 柯雅拉 each")

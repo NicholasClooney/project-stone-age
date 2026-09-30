@@ -45,6 +45,7 @@ const PROFILE_COMMANDS := {
 	"learn_pet_skill":["learn_pet_skill",["index","skill_id"]],
 	"set_character":["set_character",["id"]],
 	"set_face":["set_face",["face"]],
+	"set_free_spirits":["set_free_spirits",["on"]],
 	"accept_quest":["accept_quest",[]],
 	"claim_quest":["claim_quest",[]],
 	"grant_starter_pets":["grant_starter_pets",[]],

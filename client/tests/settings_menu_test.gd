@@ -61,7 +61,7 @@ func run() -> void:
 	await process_frame
 	var menu = game.settings_menu
 	check(menu.visible and game.paused_input and game.help==menu,"Esc with nothing open opens 设置 and pauses walking")
-	for control in ["SettingsZoom","SettingsZoomValue","SettingsSound","SettingsEffects","SettingsVolume","SettingsEffectsVolume","SettingsRadio","SettingsHelper","SettingsCharacter","SettingsBlinkMode","SettingsSave","Changelog","SettingsHelp","SettingsKeys","SettingsDeveloper"]:
+	for control in ["SettingsZoom","SettingsZoomValue","SettingsSound","SettingsEffects","SettingsVolume","SettingsEffectsVolume","SettingsRadio","SettingsHelper","SettingsCharacter","SettingsBlinkMode","SettingsFreeSpirits","SettingsSave","Changelog","SettingsHelp","SettingsKeys","SettingsDeveloper"]:
 		check(menu.find_child(control,true,false)!=null,"设置 has %s" % control)
 	check(menu.find_child("SettingsGM",true,false)==null,"开发者 starts collapsed")
 	(menu.find_child("SettingsDeveloper",true,false) as Button).pressed.emit()

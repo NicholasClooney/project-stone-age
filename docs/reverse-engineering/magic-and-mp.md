@@ -80,3 +80,7 @@ Ours, not the original's: `training.spirit` (on by default; 轻松助手 「用�
 ## Not built
 
 Attack and status 精灵 (猛毒, 硬化, 混乱, 酒, 睡眠 and their all-side forms, 大地/水/火炎/疾风/调和, 彩虹/极光, 光, 守护, 复活光/镜/守护, the `_ATTACK_MAGIC` spells), status recovery (净化), pets casting 精灵 (pet skills), family 气力 discounts, the paid window healer, party members as field targets, and 精灵 on items other than the five above.
+
+## 精灵不耗气力 (not the original)
+
+A per-character rule, **on by default**, in 设置 → 规则 (`set_free_spirits`, saved as `free_spirits` in the profile; a save without the key counts as on). Some private servers made 精灵 free; with it on every worn 精灵 and the 镜子的精灵 cost 0 气力 (`GameSession.spirits()` reports `mp` 0 and battle configs carry `mirror_mp` 0), in battle, outside it and in automation. 气力 itself is unchanged and still shown. Turned off, the original costs above apply.

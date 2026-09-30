@@ -222,6 +222,11 @@ func _main_page() -> void:
 		switch.name = "SettingsSwitchProfile"
 		switch.tooltip_text = "退出这台设备上的登录，回到选择角色的画面；自动战斗和找宠在服务器上继续"
 		character.add_child(switch)
+	# 精灵不耗气力: a character rule on the server (not the original).
+	var rules := _section("规则")
+	var free := _check("精灵不耗气力（非原版）","SettingsFreeSpirits",bool(world.session.snapshot().get("free_spirits",true)),func(on: bool): world.session.set_free_spirits(on))
+	free.tooltip_text = "开（默认）：精灵和镜子的精灵不消耗气力，像一些私服那样。关：按原版消耗气力，气力只能在村民那里休息补满。"
+	rules.add_child(free)
 	# 组队 (LAN phase 3): the original's 其他设定 switch, on by default here.
 	var party = world.get("party_panel")
 	if is_instance_valid(party) and party.available():

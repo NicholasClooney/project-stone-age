@@ -993,8 +993,9 @@ func show_magic_choices() -> void:
 		if int(spirit.mp)>mp:row.add_theme_color_override("font_color",Color(1,0.35,0.35))
 		y += 42
 	if bool(state.get("mirror_available",false)):
-		var short := mp<5
-		var mirror_choice:=choice("镜子的精灵 → 自己  5/%d" % mp,Vector2(500,y),func(): complete_player_command("mirror_self"))
+		var mirror_mp := int(state.get("mirror_mp",5))
+		var short := mp<mirror_mp
+		var mirror_choice:=choice("镜子的精灵 → 自己  %d/%d" % [mirror_mp,mp],Vector2(500,y),func(): complete_player_command("mirror_self"))
 		mirror_choice.name = "MirrorSelf"
 		mirror_choice.disabled = short
 		var pet_choice := choice("镜子的精灵 → 出战宠物",Vector2(500,y+42),func(): complete_player_command("mirror_pet"))

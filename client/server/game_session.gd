@@ -117,6 +117,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	# 气力 and the 精灵 of the worn equipment (server/spirits.gd).
 	config.player_mp = player_mp()
 	config.spirits = spirits()
+	config.mirror_mp = 0 if free_spirits() else preload("res://server/battle_session.gd").MIRROR_MP
 	config.experience_multiplier = experience_multiplier
 	config.ride_pet_index = int(_profile.get("ride_pet",-1))
 	config.ride_pet = _profile.pets[config.ride_pet_index].duplicate(true) if config.ride_pet_index>=0 else {}
@@ -546,6 +547,17 @@ func equipment_mods() -> Dictionary:
 		result.speed += int(Spirits.ITEMS[item].speed)
 	return result
 
+## 精灵不耗气力 (设置 → 角色; on unless the player turns it off): a
+## convenience some private servers made, not the original. Every 精灵 and
+## the 镜子的精灵 then cost 0 气力; 气力 itself is kept as it is.
+func free_spirits() -> bool:
+	return bool(_profile.get("free_spirits",true))
+
+func set_free_spirits(on: bool) -> bool:
+	if not _pending.is_empty():return false
+	_profile.free_spirits = on
+	return true
+
 func player_mp() -> int:
 	return clampi(int(_profile.player.get("mp",Spirits.MAX_MP)),0,Spirits.MAX_MP)
 
@@ -557,7 +569,9 @@ func spirits() -> Dictionary:
 		var item := str(_equipment()[slot])
 		if item.is_empty():continue
 		var entry := Spirits.spirit_entry(item)
-		if not entry.is_empty():result[slot] = entry
+		if entry.is_empty():continue
+		if free_spirits():entry.mp = 0
+		result[slot] = entry
 	return result
 
 ## A healing spirit cast outside battle (lssproto_MU_recv -> MAGIC_Use):

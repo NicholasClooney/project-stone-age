@@ -76,6 +76,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["mirror_pets"]={}
 	# 气力 and the 精灵 the worn equipment gives (GameSession.spirits()).
 	_state["player_mp"]=clampi(int(config.get("player_mp",Spirits.MAX_MP)),0,Spirits.MAX_MP)
+	_state["mirror_mp"]=int(config.get("mirror_mp",MIRROR_MP))
 	_state["spirits"]=config.get("spirits",{}).duplicate(true)
 	_state["turn_order"] = initial_order
 	_state["turn_frames"] = []
@@ -136,7 +137,7 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 		target = -1
 	if action=="heal_pet" and (not _state.healing_available or _state.active_pet<0 or _state.pet_hp<=0 or _state.pet_hp>=_state.pet_max_hp):return snapshot()
 	if action.begins_with("mirror_"):
-		if not _state.mirror_available or int(_state.get("player_mp",0))<MIRROR_MP:return snapshot()
+		if not _state.mirror_available or int(_state.get("player_mp",0))<int(_state.get("mirror_mp",MIRROR_MP)):return snapshot()
 		if action=="mirror_pet" and (_state.active_pet<0 or _state.pet_hp<=0):return snapshot()
 	if action == "item" and (_state.potions <= 0 or _state.player_hp >= _state.player_max_hp):
 		return snapshot()
@@ -227,11 +228,11 @@ func _player_action(action: String) -> void:
 			_state.events.append("恢复护符：你为%s恢复体力，不消耗气力。"%str(_state.pet_name))
 		"mirror_self","mirror_pet":
 			# MAGIC_MagicDef: without the 气力 the spell does nothing.
-			if int(_state.get("player_mp",0))<MIRROR_MP:
+			if int(_state.get("player_mp",0))<int(_state.get("mirror_mp",MIRROR_MP)):
 				_last_outcome="spirit_fail"
 				_state.events.append("气力不足，镜子的精灵没有回应。")
 				return
-			_state.player_mp=int(_state.player_mp)-MIRROR_MP
+			_state.player_mp=int(_state.player_mp)-int(_state.get("mirror_mp",MIRROR_MP))
 			if action=="mirror_self":_state.mirror_self=1
 			else:_state.mirror_pets[_state.active_pet]=1
 			_last_outcome="mirror_cast"

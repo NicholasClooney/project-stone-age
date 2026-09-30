@@ -41,6 +41,12 @@ func c_recovery(power: int, rng: RandomNumberGenerator, ride: Array = []) -> Arr
 func c_ressurect(power: int, rng: RandomNumberGenerator) -> int:
 	return maxi(1,int(c_RAND(power*0.9,power*1.1,rng.randi() & 0x7fffffff)))
 
+## A session on the original rules: 精灵 cost 气力 (精灵不耗气力 off).
+func original() -> Session:
+	var session := Session.new()
+	session.set_free_spirits(false)
+	return session
+
 func run() -> void:
 	mp_and_saves()
 	formulas()
@@ -48,11 +54,12 @@ func run() -> void:
 	battle_casts()
 	party_side()
 	field_use()
+	free_spirits()
 	print("SPIRITS RULES: %d failures" % failures)
 	quit(1 if failures else 0)
 
 func strong_session() -> Session:
-	var s := Session.new()
+	var s := original()
 	s._profile.player.level = 12
 	s._profile.player.gold = 100000
 	s.grant_starter_pets()
@@ -60,7 +67,7 @@ func strong_session() -> Session:
 	return s
 
 func mp_and_saves() -> void:
-	var s := Session.new()
+	var s := original()
 	check(int(s.snapshot().player.mp)==100 and Spirits.MAX_MP==100,"a new character starts with 气力 100/100 (char.c:275 CHAR_MAXMP)")
 	s._profile.player.mp = 37
 	var path := "user://spirits-rules-test.json"
@@ -136,7 +143,7 @@ func formulas() -> void:
 	check(Spirits.target_effect("recovery",80)==100601 and Spirits.target_effect("recovery",160)==100602 and Spirits.target_effect("recovery",480)==100603 and Spirits.target_effect("ressurect",100)==100607,"SPR_heal / SPR_fukkatu by power (MAGIC_Recovery_Battle)")
 
 func equipment() -> void:
-	var s := Session.new()
+	var s := original()
 	s._profile.player.gold = 100000
 	check(s.buy_item("haru_armor") and int(s.snapshot().player.gold)==99600,"哈鲁Lv1铠2 costs 400 (itemset.txt)")
 	check(not s.equip_item("haru_armor") and s.last_error=="能力不足无法装备。","a Lv1 player cannot wear the Lv10 armour (char_item.c LACKOFCLASS)")
@@ -293,6 +300,36 @@ func party_side() -> void:
 	check(battle.spirit_refusal({"kind":"player","index":-1},"amulet",2).is_empty(),"a fallen ally is a revive target")
 	state = battle.submit_action("spirit:amulet",2)
 	check(int(state.allies[0].hp)>0,"复活精灵 gets the fallen ally up")
+
+## 精灵不耗气力 (on by default, not the original): the same spells for 0 气力,
+## in battle, outside it and for the mirror; the switch saves with the character.
+func free_spirits() -> void:
+	var s := Session.new()
+	check(s.free_spirits(),"a new character has 精灵不耗气力 on")
+	s._profile.player.level = 12
+	s._profile.player.gold = 100000
+	s.grant_starter_pets()
+	s.select_pet(0)
+	s.buy_item("haru_armor");s.equip_item("haru_armor")
+	s._profile.player.mp = 0
+	s._profile.player.hp = 1
+	check(int(s.spirits().body.mp)==0,"worn spirits cost 0 气力")
+	check(s.use_spirit("body",0) and int(s._profile.player.hp)>1 and int(s._profile.player.mp)==0,"治愈 outside battle works with 0 气力 and spends none")
+	var config := s.start_battle_config()
+	check(int(config.mirror_mp)==0 and int(config.spirits.body.mp)==0,"a battle config carries the free costs, the mirror's too")
+	var battle = Battle.new()
+	battle.rng_seed = 5
+	battle.start_battle(config)
+	battle._state.player_hp = 10
+	battle._cast_spirit({"kind":"player","index":-1},"body",battle._target_ref(0))
+	check(int(battle._state.player_hp)>10 and int(battle._state.player_mp)==0,"in battle it heals with 0 气力")
+	s._pending.clear()
+	check(s.set_free_spirits(false) and not s.free_spirits() and int(s.spirits().body.mp)==5,"turned off, the original 5 气力 applies again")
+	var path := "user://free-spirits-test.json"
+	check(s.save_game(path),"the switch saves")
+	var loaded := Session.new()
+	check(loaded.load_game(path) and not loaded.free_spirits(),"and loads off")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func field_use() -> void:
 	var s := strong_session()

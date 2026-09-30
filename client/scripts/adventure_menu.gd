@@ -501,11 +501,12 @@ func spirit_field_buttons(profile: Dictionary, main: Button) -> void:
 	if str(magic.kind)!="recovery" or int(magic.field)==Spirits.FIELD_BATTLE:return
 	main.size.x = 70
 	var slot := str(Spirits.ITEMS[selected_item].slot)
-	var enough := int(profile.player.get("mp",Spirits.MAX_MP))>=int(Spirits.ITEMS[selected_item].mp)
+	var cost := 0 if bool(profile.get("free_spirits",true)) else int(Spirits.ITEMS[selected_item].mp)
+	var enough := int(profile.player.get("mp",Spirits.MAX_MP))>=cost
 	var self_cast := choice("精灵→自己",Vector2(86,404),"use_spirit",[slot,0],enough)
 	self_cast.name = "SpiritOnSelf"
 	self_cast.size.x = 90
-	self_cast.tooltip_text = "%s，消耗气力 %d（剩 %d）" % [str(magic.name),int(Spirits.ITEMS[selected_item].mp),int(profile.player.get("mp",0))]
+	self_cast.tooltip_text = "%s，消耗气力 %d（剩 %d）" % [str(magic.name),cost,int(profile.player.get("mp",0))]
 	if int(magic.target)==Spirits.TARGET_OTHER and int(profile.active_pet)>=0:
 		var pet_cast := choice("→出战宠",Vector2(178,404),"use_spirit",[slot,int(profile.active_pet)+1],enough)
 		pet_cast.name = "SpiritOnPet"

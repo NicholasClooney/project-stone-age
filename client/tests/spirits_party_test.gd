@@ -74,6 +74,7 @@ func solo_run() -> void:
 	for command in [{"type":"gm_raise_level","index":-1,"target":10},{"type":"gm_set_base_stat","index":-1,"stat":"toughness","value":100},{"type":"gm_heal"},{"type":"gm_grant_spirits"},{"type":"equip_item","item":"haru_armor"}]:
 		backend.handle(command)
 	var session = backend.session
+	session.set_free_spirits(false)
 	check(session.spirits().has("body") and int(session.player_mp())==100,"the solo player wears 哈鲁Lv1铠2 (治愈) with 气力 100")
 	backend.encounter_rng.seed = choose_seed(backend,3)
 	backend.automation.client_attached = false
@@ -129,6 +130,7 @@ func party_hub(names: Array = ["Alice","Bob","Cid"]) -> Array:
 	server.handle(2,{"type":"party_join","facing":EAST})
 	if names.size()>2:server.handle(3,{"type":"party_join","facing":2})
 	for id in server.backends:
+		server.backends[id].session.set_free_spirits(false)
 		var player: Dictionary = server.backends[id].session._profile.player
 		player.level = 12
 		player.hp = 5000
