@@ -52,6 +52,10 @@ func close_menu() -> void:
 	world.paused_input = world.battle_view.visible or world.automation_minimized()
 	world.clear_input()
 
+## The screen changed size (game_device.gd relayout_windows): centre again.
+func relayout() -> void:
+	_center()
+
 func _center() -> void:
 	reset_size()
 	var screen: Vector2 = world.get_viewport_rect().size

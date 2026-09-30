@@ -96,6 +96,11 @@ func run() -> void:
 	check(is_equal_approx(game.ui_scale,100.0),"dragging 界面大小 does not rescale yet")
 	ui_scale.drag_ended.emit(true)
 	check(is_equal_approx(game.ui_scale,150.0) and is_equal_approx(game.get_window().content_scale_factor,1.5) and _saved("ui_scale"),"letting go applies 150% and saves it")
+	await process_frame
+	await process_frame
+	var screen: Vector2 = game.get_viewport_rect().size
+	check(menu.position.distance_to(((screen-menu.size)/2).max(Vector2(8,8)))<1.0,"设置 is centred again on the rescaled screen (%s, screen %s)" % [str(menu.position),str(screen)])
+	check(is_equal_approx(game.classic_hud.bar.size.x,game.classic_hud.size.x),"the bottom bar still spans the screen")
 	(menu.find_child("SettingsFixedAspect",true,false) as CheckBox).button_pressed = false
 	check(game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_EXPAND and _saved("fixed_aspect"),"unticking 固定横屏比例 lets the view fill the screen")
 	(menu.find_child("SettingsTaskbarPinned",true,false) as CheckBox).button_pressed = true

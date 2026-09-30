@@ -49,6 +49,8 @@ func restore_device_settings() -> void:
 	game.background_audio = bool(viewer_pref("background_audio",false))
 	apply_view()
 	watch_page_visibility()
+	if not game.get_viewport().size_changed.is_connected(_on_screen_resized):
+		game.get_viewport().size_changed.connect(_on_screen_resized)
 	var zoom = viewer_pref("zoom",0.0)
 	if (zoom is float or zoom is int) and float(zoom)>0.0:set_zoom(float(zoom))
 	game.load_shortcuts()
@@ -71,6 +73,7 @@ func apply_view() -> void:
 	window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_KEEP if game.fixed_aspect else Window.CONTENT_SCALE_ASPECT_EXPAND
 	window.content_scale_factor = game.ui_scale/100.0
 	if not _page_hidden:Engine.max_fps = engine_fps()
+	relayout_windows.call_deferred()
 
 func set_fixed_aspect(on: bool) -> void:
 	game.fixed_aspect = on
@@ -81,6 +84,17 @@ func set_ui_scale(percent: float) -> void:
 	game.ui_scale = clampf(percent,UI_SCALE_MIN,UI_SCALE_MAX)
 	_save_device("ui_scale",game.ui_scale)
 	apply_view()
+
+func _on_screen_resized() -> void:
+	relayout_windows.call_deferred()
+
+## After the screen's size changes (界面大小, 固定横屏比例, a phone turned or
+## a browser resized) every open window goes back to where it opens: 设置
+## centred again and so on. A window opts in with relayout().
+func relayout_windows() -> void:
+	if not game.is_inside_tree():return
+	for node in game.get_tree().root.find_children("*","Control",true,false):
+		if node.has_method("relayout") and node.is_visible_in_tree():node.relayout()
 
 const FPS_MIN := 15
 const FPS_MAX := 60

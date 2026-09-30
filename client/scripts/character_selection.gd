@@ -169,6 +169,9 @@ func _refresh() -> void:
 		var face := _face if _face>=0 else int(profile.get("face",0))
 		face_view.texture = Faces.texture(current,face)
 		face_label.text = "人物面部 · 眼睛 %d · 嘴巴 %d" % [int(face/5)+1,face%5+1] if face_view.texture != null else "人物面部未导入（tools/import_faces.py）"
+func relayout() -> void:
+	_layout()
+
 func _layout() -> void:
 	if shell == null:return
 	shell.position = Vector2(maxf(8,(size.x-858)/2),maxf(8,(size.y-690)/2))

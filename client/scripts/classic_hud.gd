@@ -123,10 +123,19 @@ func icon(parent: Node, normal: int, pressed: int, point: Vector2, caption: Stri
 	Highlight.attach(result,Rect2(Vector2(-2,-2),result.texture_normal.get_size()+Vector2(4,4)))
 	return result
 
+## The bottom bar's scale: exactly the screen's width on a phone or tablet
+## (whatever 界面大小 is, the seven buttons span the screen), and the
+## original 1.25 elsewhere unless the screen is narrower than that.
+func bottom_scale() -> float:
+	if size.x<=0:return SCALE
+	if world.has_method("touch_device") and world.touch_device():return size.x/640.0
+	return minf(SCALE,size.x/640.0)
+
 func layout() -> void:
+	var bottom := bottom_scale()
 	right_panel.position = Vector2(size.x-164*SCALE,0)
-	bar.position = Vector2(0,size.y-24*SCALE)
-	bar.size = Vector2(size.x,24*SCALE)
+	bar.position = Vector2(0,size.y-24*bottom)
+	bar.size = Vector2(size.x,24*bottom)
 	status.position = Vector2(0,size.y-25)
 	status.size = Vector2(size.x,24)
 	map_panel.position = Vector2(size.x-248*SCALE-8,90)
@@ -135,9 +144,11 @@ func _process(delta: float) -> void:
 	var pointer := pointer_position
 	# 底栏常驻 (设置 → 画面; on by default on a touch screen, where there is
 	# no hover) keeps the task buttons up instead of the status line.
-	var at_bottom: bool = bool(world.get("taskbar_pinned")) or (pointer.y>=size.y-30*SCALE and pointer.y<=size.y)
+	var bottom := bottom_scale()
+	var at_bottom: bool = bool(world.get("taskbar_pinned")) or (pointer.y>=size.y-30*bottom and pointer.y<=size.y)
 	reveal = move_toward(reveal,1.0 if at_bottom and not world.dialogue.visible and not (is_instance_valid(world.world_travel) and world.world_travel.overlay.visible) else 0.0,delta*6)
-	taskbar.position = Vector2((size.x-640*SCALE)/2,size.y-24*SCALE*reveal)
+	taskbar.scale = Vector2.ONE*bottom
+	taskbar.position = Vector2((size.x-640*bottom)/2,size.y-24*bottom*reveal)
 	taskbar.visible = reveal>0
 	status.visible = reveal<0.05
 	status.text = hover_label if not hover_label.is_empty() else "一般频道                     %s (%d) 坐标 (%d, %d)                     玩家模式 0" % [world.area_name(),int(world.data.map_id),world.display_cell().x,world.display_cell().y]

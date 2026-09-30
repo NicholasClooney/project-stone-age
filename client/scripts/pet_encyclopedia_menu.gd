@@ -179,11 +179,18 @@ func _clear_body() -> void:
 		body.remove_child(child)
 		child.queue_free()
 
-func rebuild() -> void:
-	if not is_instance_valid(body) or book == null:return
+## Centred, as large as the screen allows up to PANEL_SIZE.
+func _place_panel() -> void:
 	var screen: Vector2 = get_viewport_rect().size
 	panel.size = Vector2(minf(PANEL_SIZE.x,screen.x-16),minf(PANEL_SIZE.y,screen.y-16))
 	panel.position = ((screen-panel.size)/2).max(Vector2(8,8))
+
+func relayout() -> void:
+	if is_instance_valid(panel):_place_panel()
+
+func rebuild() -> void:
+	if not is_instance_valid(body) or book == null:return
+	_place_panel()
 	_clear_body()
 	for pair in [[grid_button,"grid"],[list_button,"list"]]:
 		pair[0].add_theme_stylebox_override("normal",world.box(Color("775b3c"),PetTable.GOLD) if view == pair[1] else world.box(Color("574431"),Color("9d8354")))

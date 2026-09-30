@@ -37,9 +37,12 @@ func open_panel() -> void:
 	if not _placed:
 		_placed = true
 		await get_tree().process_frame
-		var screen: Vector2 = world.get_viewport_rect().size
-		# Bottom left, above the classic bottom bar and clear of the automation bars.
-		position = Vector2(12,maxf(90.0,screen.y-size.y-44))
+		relayout()
+
+## Bottom left, above the classic bottom bar and clear of the automation bars.
+func relayout() -> void:
+	var screen: Vector2 = world.get_viewport_rect().size
+	position = Vector2(12,maxf(90.0,screen.y-size.y-44))
 
 func close_panel() -> void:
 	hide()
