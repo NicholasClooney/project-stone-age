@@ -11,8 +11,11 @@ extends Control
 ##   决斗, 名片, 聊天 and 交易); here MENU opens 设置 instead.
 ## - The party list (top left) shows the members, the leader first with ★;
 ##   the leader can 踢出 a member or 解散队伍, a member can 离开队伍.
-## - While the leader fights, members see 「队长战斗中」 and wait (party
-##   battles are LAN phase 4): the leader's battle is its own solo battle.
+## - When the leader meets enemies, every member not already fighting joins
+##   the same battle (LAN phase 4a, server/party_battles.gd); a member who
+##   escaped from it sees 「队长战斗中」 until it ends.
+## - 「队伍共享经验」 (ours, not the original's): in the list, the leader's
+##   switch, on by default; members see whether it is on.
 ## - The leader wears the original leader flag (SPR_leader 100500, the frames
 ##   tools/import_ui.py writes as ui/25600..25609), over the head where the
 ##   V.S. mark goes, hidden while fighting (character.cpp).
@@ -90,7 +93,7 @@ func reset() -> void:
 	_refresh()
 
 func _refresh() -> void:
-	var key := JSON.stringify([view.get("leader",""),view.get("members",[]),view.get("me","")])
+	var key := JSON.stringify([view.get("leader",""),view.get("members",[]),view.get("me",""),view.get("share_exp",true)])
 	if key!=_list_key:
 		_list_key = key
 		_rebuild_list()
@@ -195,15 +198,42 @@ func _rebuild_list() -> void:
 			out.add_theme_font_size_override("font_size",11)
 			row.add_child(out)
 		list_rows.add_child(row)
+	list_rows.add_child(_share_row())
 	var action: Button = world.button("解散队伍" if is_leader() else "离开队伍",leave)
 	action.name = "LeaveParty"
 	action.add_theme_font_size_override("font_size",11)
 	list_rows.add_child(action)
 	if is_member():
-		var note: Label = world.text("跟着队长走；只有队长会遇敌。",11)
+		var note: Label = world.text("跟着队长走；队长遇敌时一起战斗。",11)
 		note.add_theme_color_override("font_color",Color("c8bea0"))
 		list_rows.add_child(note)
 	list.reset_size()
+
+## 「队伍共享经验」: every defeated enemy gives its full experience to every
+## living member and their pets (not split; the original's level gap still
+## applies). Off: the original's rule, only whoever defeated it. The leader
+## switches it; it counts from the party's next battle.
+func _share_row() -> Control:
+	var on := shares_exp()
+	if is_leader():
+		var box := CheckBox.new()
+		box.name = "PartyShareExp"
+		box.text = "队伍共享经验"
+		box.button_pressed = on
+		box.add_theme_font_size_override("font_size",12)
+		box.tooltip_text = "打开：每个被打倒的敌人，全额经验给每位活着的队员和他们的宠物（仍按原版等级差折减）。\n关闭：原版规则，只给打倒它的人或宠物。\n本作新增的便利功能，不是原版规则。"
+		box.toggled.connect(set_share_exp)
+		return box
+	var note: Label = world.text("队伍共享经验：%s" % ("开" if on else "关"),11)
+	note.name = "PartyShareExpNote"
+	note.add_theme_color_override("font_color",Color("c8bea0"))
+	return note
+
+func shares_exp() -> bool:
+	return bool(view.get("share_exp",true))
+
+func set_share_exp(on: bool) -> void:
+	world.link.request({"type":"party_share_exp","on":on},_on_reply)
 
 # ---- the 组队 switch (设置 → 组队) ------------------------------------------------
 

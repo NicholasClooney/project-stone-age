@@ -79,6 +79,11 @@ var pet_target := 0
 var switch_pet_index := -2
 var selected_pet_skill := 0
 var pet_art_cues: Array[Dictionary] = []
+## LAN phase 4a party battle (state.party): this device commands only its own
+## slot. After sending, it waits (command_phase "waiting", 「等待队友…」) until
+## the turn resolves; the status line counts down the turn timer.
+var party_status: Label
+var party_deadline_msec := 0
 # oft.cpp:144,11514-11605: classic two enemy rows and center-first ordering.
 const ENEMY_SLOT_ORDER := [2,1,3,0,4]
 # At 800x600 the friendly side receives DISPLACEMENT (160,120).
@@ -177,6 +182,11 @@ func _ready() -> void:
 	hover_info.name = "BattleHoverInfo"
 	hover_info.z_index = 20
 	hover_info.hide()
+	party_status = label("",16,Vector2(360,12),Vector2(420,26))
+	party_status.name = "PartyStatus"
+	party_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_RIGHT
+	party_status.add_theme_color_override("font_color",Color("ffe070"))
+	party_status.hide()
 	command_panel = Control.new()
 	command_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	stage.add_child(command_panel)
@@ -497,6 +507,11 @@ func open_battle(next_state: Dictionary) -> void:
 		actor.motions = []
 		queue_motion(i,actor.point,actor.home,TRANSITION_SECONDS,ENTRY_SECONDS,int(actor.facing))
 		queue_pose(i,4,TRANSITION_SECONDS,ENTRY_SECONDS)
+	# A party member who already escaped (a device joining mid-battle).
+	for i in range(mini(4,allies.size())):
+		if not bool(allies[i].get("escaped",false)):continue
+		for index in [ally_actor(i),ally_pet_actor(i)]:
+			if index<actors.size():actors[index].hide_at = 0.0
 	menu_slide_at = TRANSITION_SECONDS+ENTRY_SECONDS
 	feedback_until = TRANSITION_SECONDS+ENTRY_SECONDS+MENU_SLIDE_SECONDS
 	command_panel.position.x = 300
@@ -580,7 +595,8 @@ func show_state(next_state: Dictionary) -> void:
 	for i in range(mini(4,state.get("allies",[]).size())):
 		actor_labels[ally_actor(i)].text=str(state.allies[i].get("name","伙伴"))
 	for i in range(mini(4,state.get("ally_pets",[]).size())):
-		actor_labels[ally_pet_actor(i)].text="分身%d · %s" % [i+1,state.ally_pets[i].get("name","宠物")]
+		# Party battles show the players' own pets; the clone squad's copies say 分身.
+		actor_labels[ally_pet_actor(i)].text=str(state.ally_pets[i].get("name","宠物")) if state.has("party") else "分身%d · %s" % [i+1,state.ally_pets[i].get("name","宠物")]
 	mark_hunt_target(hunt_target_index)
 	var messages := PackedStringArray()
 	for event in state.get("events",[]): messages.append(str(event))
@@ -596,6 +612,57 @@ func show_state(next_state: Dictionary) -> void:
 	if bool(state.get("active",false)):
 		selected_action = last_player_command if last_player_command=="attack" or (last_player_command=="capture" and not bool(state.get("boss",false)) and bool(state.get("can_capture",true))) else "attack"
 		hint.text = "攻击：请选择敌人；右键 / Esc 取消。" if selected_action=="attack" else "捕捉：请选择敌人；右键 / Esc 取消。"
+	_apply_party_state()
+
+# ---- party battles (LAN phase 4a) --------------------------------------------
+
+static func ally_of(snapshot: Dictionary, index: int) -> Dictionary:
+	var allies: Array = snapshot.get("allies",[])
+	return allies[index] if index>=0 and index<allies.size() else {}
+
+func in_party_battle() -> bool:
+	return state.has("party")
+
+## This device's own entry in state.party.members.
+func party_me() -> Dictionary:
+	var party: Dictionary = state.get("party",{})
+	for member in party.get("members",[]):
+		if int(member.get("slot",-1))==int(party.get("slot",-2)):return member
+	return {}
+
+## A battle_state event: someone sent a command, this turn still waits.
+func update_party(next_state: Dictionary) -> void:
+	if state.is_empty() or not next_state.has("party") or int(next_state.get("turn",-1))!=int(state.get("turn",-1)):return
+	state.party = next_state.party.duplicate(true)
+	_apply_party_state()
+
+func _apply_party_state() -> void:
+	if not in_party_battle() or not built:
+		if built:party_status.hide()
+		return
+	party_deadline_msec = Time.get_ticks_msec()+int(state.party.get("seconds",0))*1000
+	if bool(state.get("active",false)) and (bool(state.party.get("sent",false)) or bool(party_me().get("down",false))) and command_phase!="waiting":
+		_enter_party_wait()
+
+## Sent (or fallen): no commands until the turn resolves.
+func _enter_party_wait() -> void:
+	command_phase = "waiting"
+	selected_action = ""
+	queued_player_action = ""
+	clear_choices()
+	command_panel.hide()
+	hint.text = "你已倒下，等待队友…" if bool(party_me().get("down",false)) else "等待队友…"
+
+## The status line: the turn timer, and who the turn still waits for.
+func _party_status_text() -> String:
+	var seconds := maxi(0,ceili((party_deadline_msec-Time.get_ticks_msec())/1000.0))
+	var waiting: PackedStringArray = []
+	for member in state.party.get("members",[]):
+		if int(member.get("slot",-1))==int(state.party.get("slot",-2)):continue
+		if not bool(member.get("sent",false)) and not bool(member.get("down",false)) and not bool(member.get("out",false)) and not bool(member.get("auto",false)):waiting.append(str(member.get("name","")))
+	var text := ("等待队友… " if command_phase=="waiting" else "")+"回合剩余 %d 秒" % seconds
+	if not waiting.is_empty() and command_phase=="waiting":text += "（%s）" % "、".join(waiting)
+	return text
 
 func update_result_text() -> void:
 	var outcome := str(state.get("outcome",""))
@@ -603,7 +670,10 @@ func update_result_text() -> void:
 	var lines := PackedStringArray()
 	var profile: Dictionary = world.session.snapshot() if is_instance_valid(world) and world.get("session")!=null else {}
 	result_level_up = false
-	if outcome=="win" or (outcome=="captured" and int(state.get("xp",0))>0):
+	if bool(state.get("party_fallen",false)):
+		# The party won or left without this fallen player (battle.c BATTLE_Exit).
+		lines.append("你在战斗中倒下了。\n队友结束了战斗，你以 1 点体力起身，没有获得经验和石币。")
+	elif outcome=="win" or (outcome=="captured" and int(state.get("xp",0))>0):
 		lines.append("战斗胜利！" if outcome=="win" else "捕捉成功，战斗结束！")
 		lines.append("获得经验值  %d" % int(state.get("xp",0)))
 		lines.append("获得石币  %d" % int(state.get("gold",0)))
@@ -851,7 +921,7 @@ func choice(text: String, position_at: Vector2, callback: Callable) -> Button:
 	return button
 
 func _request_action(action: String) -> void:
-	if world_modal_open(): return
+	if world_modal_open() or command_phase=="waiting": return
 	if not bool(state.get("active",false)) or elapsed < feedback_until: return
 	if action == "help": return
 	if action == "magic" and not (bool(state.get("mirror_available",false)) or bool(state.get("healing_available",false))): return
@@ -903,7 +973,7 @@ func _request_action(action: String) -> void:
 		complete_player_command(action)
 
 func select_target(index: int) -> void:
-	if world_modal_open(): return
+	if world_modal_open() or command_phase=="waiting": return
 	if elapsed < feedback_until or not bool(state.get("active",false)): return
 	if command_phase == "pet" and enemy_index(index)>=0 and health_of(state,index)>0 and selected_action in ["pet_attack","pet_skill"]:
 		pet_target = enemy_index(index)
@@ -976,10 +1046,13 @@ func submit_command() -> void:
 	queued_player_action = ""
 	selected_action = ""
 	clear_choices()
+	var turn := int(state.get("turn",0))
 	action_requested.emit(action)
+	# A party battle waits for the others (unless this command resolved it).
+	if in_party_battle() and bool(state.get("active",false)) and int(state.get("turn",0))==turn:_enter_party_wait()
 
 func cancel_selection() -> void:
-	if not bool(state.get("active",false)): return
+	if not bool(state.get("active",false)) or command_phase=="waiting": return
 	sound_requested.emit(217)
 	if command_phase == "pet" and selected_action.begins_with("pet_"):
 		selected_action = ""
@@ -993,7 +1066,7 @@ func cancel_selection() -> void:
 	hint.text = "请选择指令；攻击或捕捉后点击目标。"
 
 func nothing_to_cancel() -> bool:
-	return not bool(state.get("active",false)) or (command_phase=="player" and selected_action.is_empty() and queued_player_action.is_empty())
+	return not bool(state.get("active",false)) or command_phase=="waiting" or (command_phase=="player" and selected_action.is_empty() and queued_player_action.is_empty())
 
 func world_modal_open() -> bool:
 	if not is_instance_valid(world): return false
@@ -1093,6 +1166,8 @@ func _advance_playback(delta: float) -> void:
 			elif difference<0: battle_effects.heal(point,-difference)
 		displayed_hp[recipient] = int(cue.hp)
 	hint.visible = not is_animating()
+	party_status.visible = in_party_battle() and bool(state.get("active",false)) and not is_animating()
+	if party_status.visible:party_status.text = _party_status_text()
 	var finished := not str(state.get("outcome","")).is_empty() and not is_animating()
 	result_panel.visible = finished and (str(state.get("outcome",""))!="defeat" or not is_instance_valid(world))
 	if result_panel.visible and not result_sound_played:
@@ -1323,6 +1398,13 @@ func queue_group_turn(previous: Dictionary) -> void:
 			timing = queue_capture(at,outcome=="captured",target)
 		elif who=="player" and pending_action=="escape" and outcome=="escape":
 			timing = queue_escape(at,str(state.get("outcome",""))=="escaped",before)
+		elif who=="ally" and outcome=="escape" and bool(ally_of(frame,int(frame.get("ally_index",0))).get("escaped",false)):
+			# A party member got away: it and its pet run off the field.
+			for runner in [index,ally_pet_actor(int(frame.get("ally_index",0)))]:
+				if runner>=actors.size():continue
+				queue_motion(runner,actors[runner].home,actors[runner].home+Vector2(300,300),at,0.8,7)
+				actors[runner].hide_at = at+0.8
+			timing = {"hit":at+0.8,"end":at+0.8}
 		elif outcome in ["hit","miss","critical","counter","counter_miss","counter_critical"]:
 			timing = queue_strike(index,target,at)
 			if outcome.begins_with("counter"): word_cues.append({"at":at,"index":index,"id":26507})

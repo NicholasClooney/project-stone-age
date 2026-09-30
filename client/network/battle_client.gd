@@ -46,6 +46,8 @@ func _for_turn(command: Dictionary) -> Dictionary:
 	if link.is_local() or not state.battle.has("battle_id"):return command
 	command.battle_id = str(state.battle.battle_id)
 	command.turn = int(state.battle.get("turn",0))
+	# A party battle (LAN phase 4a): this character's slot in it.
+	if state.battle.has("party_slot"):command.slot = int(state.battle.party_slot)
 	return command
 
 # ---- in-process test seams: only valid with a LocalLink ----------------------

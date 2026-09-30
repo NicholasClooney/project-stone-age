@@ -232,6 +232,9 @@ func _on_backend_message(event: Dictionary) -> void:
 	match str(event.type):
 		"battle_started":game.present_battle_start(event.state)
 		"battle_turn":game.present_battle_turn(event.state)
+		# A party battle's turn still waits: who has sent, the turn timer.
+		"battle_state":
+			if game.battle_view.visible and event.state.has("party"):game.battle_view.update_party(event.state)
 		"battle_closed":game.present_battle_close(str(event.outcome))
 		"profile":
 			if is_instance_valid(game.clone_button):game.clone_button.set_pressed_no_signal(bool(game.state.options.get("clone_squad",false)))
