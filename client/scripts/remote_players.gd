@@ -132,7 +132,7 @@ func _look(actor, player: Dictionary) -> void:
 		world.asset_packs.ensure(packs)
 		return
 	actor.set_meta("look",key)
-	actor.character_id = character if world.data.characters.has(character) else "100000"
+	actor.character_id = character if world.character_catalog.get("characters",{}).has(character) or world.data.get("characters",{}).has(character) else "100000"
 	actor.mounted_character_id = str(composite) if composite>=0 else ""
 	actor.current_image = -1
 

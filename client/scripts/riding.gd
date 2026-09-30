@@ -1,24 +1,52 @@
 extends RefCounted
 ## Native composite lookup. No rider sprite is painted on top of a pet.
-const PATH := "res://assets/legacy/riding/manifest.json"
+## tools/split_manifests.py writes riding/index.json (rider and mount pairs,
+## names, frame sounds, the composite list) and one file per composite,
+## riding/composites/<id>.json, which ships in the composite's web pack with
+## its sheet. A composite's file is read when it is drawn and kept among the
+## last LIMIT used (scripts/art_cache.gd, scripts/sprite_art.gd).
+const ROOT := "res://assets/legacy/riding/"
+const INDEX := ROOT+"index.json"
+const LIMIT := 8
 const Elements = preload("res://server/elements.gd")
-const SheetFrames = preload("res://scripts/sheet_frames.gd")
-static var _manifest: Dictionary = {}
+const SpriteArt = preload("res://scripts/sprite_art.gd")
+const ArtCache = preload("res://scripts/art_cache.gd")
+static var _index: Dictionary = {}
+static var _cache: ArtCache
 
-static func manifest() -> Dictionary:
-	if _manifest.is_empty() and FileAccess.file_exists(PATH):
-		var text := FileAccess.get_file_as_string(PATH)
-		_manifest = JSON.parse_string(text)
+static func index() -> Dictionary:
+	if _index.is_empty() and FileAccess.file_exists(INDEX):
+		var text := FileAccess.get_file_as_string(INDEX)
+		var parsed = JSON.parse_string(text)
+		if parsed is Dictionary:_index = parsed
 		preload("res://scripts/perf_registry.gd").track_manifest("riding",text.length())
-	return _manifest
+	return _index
 
-## One frame of a rider+mount composite, cut from the composite's sprite sheet
-## (scripts/sheet_frames.gd). Null while the sheet's web pack is downloading.
+static func cache() -> ArtCache:
+	if _cache == null:_cache = ArtCache.new(LIMIT,"riding composites")
+	return _cache
+
+static func has_composite(composite: String) -> bool:
+	return index().get("composites",{}).has(composite)
+
+## The composite's entry (scripts/sprite_art.gd), or {} when there is none or
+## its web pack is not here yet.
+static func art(composite: String) -> Dictionary:
+	if not has_composite(composite):return {}
+	return cache().get_entry(composite,read)
+
+static func read(composite: String) -> Dictionary:
+	var path := ROOT+"composites/"+composite+".json"
+	if not FileAccess.file_exists(path):return {}
+	return SpriteArt.parse(FileAccess.get_file_as_string(path),composite,ROOT)
+
+## One frame of a rider+mount composite, cut from the composite's sprite sheet.
+## Null while the sheet's web pack is downloading.
 static func frame_texture(composite: String, bitmap: int) -> Texture2D:
-	return SheetFrames.texture("res://assets/legacy/riding/",manifest().get("sheets",{}),composite,bitmap)
+	return SpriteArt.texture(art(composite),bitmap)
 
 static func pair(character_id: String, pet_sprite: int) -> Dictionary:
-	return manifest().get("pairs",{}).get(character_id+":"+str(pet_sprite),{})
+	return index().get("pairs",{}).get(character_id+":"+str(pet_sprite),{})
 
 static func composite(character_id: String, pet_sprite: int) -> int:
 	return int(pair(character_id,pet_sprite).get("sprite",-1))
@@ -41,13 +69,13 @@ static func missing_certificate(player: Dictionary, ride: Dictionary) -> bool:
 ## Pet sprites this rider appearance has a native composite for (ridePetTable).
 static func rideable_pets(character_id: String) -> Array:
 	var result: Array = []
-	for pair in manifest().get("pairs",{}).values():
+	for pair in index().get("pairs",{}).values():
 		if str(int(pair.rider)) == character_id and not result.has(int(pair.pet)):result.append(int(pair.pet))
 	result.sort()
 	return result
 
 static func pet_name(pet_sprite: int) -> String:
-	return str(manifest().get("names",{}).get(str(pet_sprite),pet_sprite))
+	return str(index().get("names",{}).get(str(pet_sprite),pet_sprite))
 
 ## Why this pet cannot be ridden now, or "" when it can. Source order and rules:
 ## family.c FAMILY_RidePet (battle pet, already riding, learned riding level,

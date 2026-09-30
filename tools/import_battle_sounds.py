@@ -21,6 +21,8 @@ import re
 import shutil
 from pathlib import Path
 
+from split_manifests import split
+
 TABLE = 'references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/systeminc/sndcnf.h'
 HIT_SE = {10000: 250, 10001: 254, 10002: 251, 10003: 251, 10004: 252, 10005: None, 10006: None, 10007: 254}
 
@@ -106,3 +108,5 @@ if __name__ == '__main__':
     parser.add_argument('--table', default=TABLE, help='sndcnf.h of the original client source')
     args = parser.parse_args()
     run(args.source, args.output, args.table)
+    # The game reads the frame sounds from the split indexes (split_manifests.py).
+    split(['battle', 'riding'], Path(args.output))

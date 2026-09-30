@@ -1141,11 +1141,8 @@ func _valid_character(id: Variant) -> bool:
 	if not id is String or not id.is_valid_int():return false
 	var number := int(id)
 	if str(number) != id or number < 100000 or number > 100235 or (number-100000)%5 != 0:return false
-	var path := "res://assets/legacy/characters/catalog.json"
-	if FileAccess.file_exists(path):
-		var catalog: Dictionary = JSON.parse_string(FileAccess.get_file_as_string(path))
-		return catalog.get("characters",{}).has(id)
-	return true
+	var catalog: Dictionary = preload("res://scripts/character_art.gd").index()
+	return catalog.is_empty() or catalog.get("characters",{}).has(id)
 
 ## 人物面部: which of the appearance's 25 original faces (eye * 5 + mouth,
 ## client login.cpp:3401) the status window shows. It keeps its eye and mouth

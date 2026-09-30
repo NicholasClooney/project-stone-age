@@ -8,12 +8,14 @@ func run() -> void:
 	var selector = preload("res://scripts/battle_background.gd").new()
 	check(selector.catalog.get("backgrounds",{}).size()==217,"217 original battle terrain assets are available")
 	var visited := {}
-	for bitmap in selector.catalog.bitmap_to_ground:
-		var tile := str(int(selector.catalog.bitmap_to_ground[bitmap]))
-		if not selector.catalog.ground_to_battlefields.has(tile):continue
-		var choices: Array = selector.catalog.ground_to_battlefields[tile]
+	var bitmaps: PackedInt32Array = selector.catalog.bitmaps
+	for i in range(bitmaps.size()):
+		var tile := str(int(selector.catalog.grounds[i]))
+		var choices: Array = selector.choices(int(tile))
+		if choices==[0,0,0]:continue
 		if choices.any(func(x):return not selector.catalog.backgrounds.has(str(int(x)))):continue
-		selector.choose(bitmap)
+		check(selector.ground_of(bitmaps[i])==int(tile),"bitmap %d finds its ground %s" % [bitmaps[i],tile])
+		selector.choose(str(bitmaps[i]))
 		check(choices.any(func(x):return int(x)==selector.last_field),"ground %s selects one of original three fields" % tile)
 		visited[selector.last_field]=true
 		if visited.size()>=4:break

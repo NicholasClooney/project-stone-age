@@ -5,8 +5,8 @@ extends Control
 ## window keeps the loop where it was instead of restarting at frame 0.
 ## Clicking turns the sprite one facing, like AnimDisp ANIM_DISP_PET (menu.cpp:1177).
 const BattleArt = preload("res://scripts/battle_art.gd")
+const SpriteArt = preload("res://scripts/sprite_art.gd")
 const STAND := 3
-static var _textures: Dictionary = {}
 
 var sprite := ""
 var facing := 1
@@ -15,23 +15,26 @@ var current_image := -1
 var turned: Callable
 var _offset := Vector2.ZERO
 var _texture: Texture2D
-
-static func manifest() -> Dictionary:
-	return BattleArt.data()
+## The sprite's entry (scripts/sprite_art.gd), held while the portrait shows it.
+var _art: Dictionary = {}
 
 static func animation_for(ident: String, action_id: int, direction: int) -> Dictionary:
-	BattleArt.ensure(ident)
-	var animations: Dictionary = manifest().get("characters",{}).get(ident,{})
+	var animations: Dictionary = BattleArt.animations(ident)
 	return animations.get("%d_%d" % [action_id,direction],animations.get("%d_0" % action_id,{}))
 
-## The frame shown at `msec` on the shared clock (battle_view.gd / pet_follower.gd
-## spread duration_ms evenly over the frames and loop).
-static func frame_at(animation: Dictionary, msec: int) -> Dictionary:
-	var frames: Array = animation.get("frames",[])
-	if frames.is_empty():return {}
+## The frame index shown at `msec` on the shared clock (battle_view.gd /
+## pet_follower.gd spread duration_ms evenly over the frames and loop), or -1.
+static func frame_index(animation: Dictionary, msec: int) -> int:
+	var count := SpriteArt.frame_count(animation)
+	if count == 0:return -1
 	var duration := maxf(0.1,float(animation.get("duration_ms",1000))/1000.0)
 	var seconds := float(msec)/1000.0
-	return frames[int(fmod(seconds,duration)/duration*frames.size())%frames.size()]
+	return int(fmod(seconds,duration)/duration*count)%count
+
+## The frame shown at `msec` as {image, x, y, sound}, or {}.
+static func frame_at(animation: Dictionary, msec: int) -> Dictionary:
+	var index := frame_index(animation,msec)
+	return SpriteArt.frame(animation,index) if index >= 0 else {}
 
 func setup(ident: String, direction: int, on_turn: Callable = Callable()) -> void:
 	sprite = ident
@@ -45,20 +48,20 @@ func _process(_delta: float) -> void:
 	_update(Time.get_ticks_msec())
 
 func _update(msec: int) -> void:
-	var frame := frame_at(animation_for(sprite,action,facing),msec)
-	if frame.is_empty():return
-	var image := int(frame.image)
+	if _art.is_empty() or str(_art.key) != sprite:_art = BattleArt.art(sprite)
+	if _art.is_empty():return
+	var animations: Dictionary = _art.animations
+	var animation: Dictionary = animations.get("%d_%d" % [action,facing],animations.get("%d_0" % action,{}))
+	var index := frame_index(animation,msec)
+	if index < 0:return
+	var image := SpriteArt.image(animation,index)
 	if image == current_image:return
-	var metadata: Dictionary = manifest().images.get(str(image),{})
-	if not _textures.has(image):
-		# A web client may not hold this sprite's pack yet; keep the last frame.
-		var texture: Texture2D = preload("res://scripts/sheet_frames.gd").texture("res://assets/legacy/battle/",manifest().get("sheets",{}),str(sprite),image)
-		if texture==null:return
-		if _textures.size() >= 512:_textures.clear()
-		_textures[image] = texture
+	# A web client may not hold this sprite's pack yet; keep the last frame.
+	var texture := SpriteArt.texture(_art,image)
+	if texture==null:return
 	current_image = image
-	_texture = _textures[image]
-	_offset = Vector2(float(metadata.get("x",0))+float(frame.get("x",0)),float(metadata.get("y",0))+float(frame.get("y",0)))
+	_texture = texture
+	_offset = SpriteArt.offset(_art,animation,index)
 	queue_redraw()
 
 func _draw() -> void:

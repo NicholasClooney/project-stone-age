@@ -44,7 +44,7 @@ func run()->void:
 	check(menu.panel.get_node_or_null("PetPortrait")!=null,"nativepetportrait displayed")
 	var portrait=menu.panel.get_node("PetPortrait")
 	var standing:Dictionary=portrait.animation_for("100250",3,1)
-	check(portrait.facing==1 and portrait.action==3 and standing.frames.size()>1,"portrait loops the standing animation at original facing 1")
+	check(portrait.facing==1 and portrait.action==3 and preload("res://scripts/sprite_art.gd").frame_count(standing)>1,"portrait loops the standing animation at original facing 1")
 	# process_frame fires before nodes process: let one full frame run.
 	await process_frame
 	await process_frame

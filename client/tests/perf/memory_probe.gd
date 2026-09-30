@@ -12,6 +12,7 @@ extends SceneTree
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
 const BattleArt = preload("res://scripts/battle_art.gd")
 const Riding = preload("res://scripts/riding.gd")
+const CharacterArt = preload("res://scripts/character_art.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const Faces = preload("res://scripts/faces.gd")
@@ -328,12 +329,12 @@ func _caches() -> Dictionary:
 		"sheet_frames_sheet_mb":snappedf(sheet_bytes/MB,0.1),
 		"sheet_frames_frames":SheetFrames._frames.size(),
 		"map_tiles":game.textures.size() if is_instance_valid(game) else 0,
-		"battle_view_textures":game.battle_view.textures.size() if is_instance_valid(game) else 0,
-		"portrait_frames":AnimatedPortrait._textures.size(),
 		"thumbs":thumbs,
 		"thumb_mb":snappedf(thumb_bytes/MB,0.1),
-		"battle_manifest_sprites":BattleArt._data.get("characters",{}).size(),
-		"riding_manifest_loaded":not Riding._manifest.is_empty(),
+		"battle_sprites_cached":BattleArt.cache().size(),
+		"battle_sprite_reads":BattleArt.cache().reads,
+		"riding_composites_cached":Riding.cache().size(),
+		"characters_cached":CharacterArt.cache().size(),
 		"faces_manifest_loaded":Faces._loaded,
 		"battle_sounds":game.battle_sounds.size() if is_instance_valid(game) else 0,
 	}
@@ -375,14 +376,17 @@ func cpu_copy_check() -> void:
 ## What parsing each big JSON costs in memory (Variant dictionaries), against its
 ## file size; for world/*.map, what the loaded packed map holds.
 func json_costs() -> void:
-	var files := ["battle/manifest.json","riding/manifest.json","battle/backgrounds.json","characters/catalog.json","encounters/catalog.json","world/manifest.json","world/200.map","world/100.map","world/300.map","world/1000.map","faces/manifest.json","ui/manifest.json","samgir.json"]
+	var files := ["battle/index.json","battle/sprites/100000.json","battle/sprites/100250.json","riding/index.json","riding/composites/101004.json","battle/battlefields.json","characters/index.json","characters/art/100000.json","encounters/catalog.json","world/manifest.json","world/200.map","world/100.map","world/300.map","world/1000.map","faces/manifest.json","ui/manifest.json","samgir.json"]
 	var results: Array = []
 	for name in files:
 		if FileAccess.file_exists(LEGACY+name):results.append(_parse_cost(name))
 	var held := {
-		"BattleArt._data (battle manifest + merged pets)":var_to_bytes(BattleArt.data()).size()/MB,
-		"Riding manifest":var_to_bytes(Riding._manifest).size()/MB,
+		"BattleArt index":var_to_bytes(BattleArt.index()).size()/MB,
+		"BattleArt cached sprites":_cached_bytes(BattleArt.cache())/MB,
+		"Riding index":var_to_bytes(Riding.index()).size()/MB,
+		"Riding cached composites":_cached_bytes(Riding.cache())/MB,
 		"game.character_catalog":var_to_bytes(game.character_catalog).size()/MB,
+		"CharacterArt cached":_cached_bytes(CharacterArt.cache())/MB,
 		"game.data (current map)":var_to_bytes(game.data).size()/MB,
 		"encounter catalog":var_to_bytes(game.encounter_catalog.data).size()/MB,
 		"faces manifest":var_to_bytes(Faces._manifest).size()/MB,
@@ -391,6 +395,15 @@ func json_costs() -> void:
 	for line in results:print("[probe] json %s: file %.1f MB -> parsed %.1f MB static (var_to_bytes %.1f MB)" % [line.file,line.file_mb,line.parsed_mb,line.var_to_bytes_mb])
 	print("[probe] held at the end (var_to_bytes MB): %s" % JSON.stringify(held))
 	rows.append({"step":"json_costs","files":results,"held":held})
+
+## var_to_bytes of an ArtCache's entries (their AtlasTextures left out).
+static func _cached_bytes(cache) -> int:
+	var total := 0
+	for key in cache.keys():
+		var entry: Dictionary = cache.cached(key).duplicate()
+		entry.erase("textures")
+		total += var_to_bytes(entry).size()
+	return total
 
 ## One file's parse, measured with its text already read; the temporaries go
 ## when the function returns, so files do not disturb each other.

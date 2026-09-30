@@ -21,13 +21,8 @@ func display_cell() -> Vector2i:
 	return game.cell+Vector2i(int(origin[0]),int(origin[1]))
 
 func build_world() -> void:
-	if game.character_catalog.is_empty() and FileAccess.file_exists("res://assets/legacy/characters/catalog.json"):
-		var text := FileAccess.get_file_as_string("res://assets/legacy/characters/catalog.json")
-		game.character_catalog = JSON.parse_string(text)
-		preload("res://scripts/perf_registry.gd").track_manifest("characters",text.length())
-	if not game.character_catalog.is_empty():
-		game.data.characters.merge(game.character_catalog.characters,true)
-		game.data.images.merge(game.character_catalog.images,true)
+	# Player characters' walking art is read per character when drawn (legacy_actor.gd).
+	if game.character_catalog.is_empty():game.character_catalog = preload("res://scripts/character_art.gd").index()
 	game.terrain = LegacyGround.new()
 	game.terrain.world = game
 	game.terrain.fill(game.data.ground)
@@ -39,7 +34,7 @@ func build_world() -> void:
 	game.player = LegacyActor.new()
 	game.player.world = game
 	game.player.character_id = str(game.session.snapshot().get("character_id","100000"))
-	if not game.data.characters.has(game.player.character_id):game.player.character_id = "100000"
+	if not game.character_catalog.get("characters",{}).has(game.player.character_id) and not game.data.get("characters",{}).has(game.player.character_id):game.player.character_id = "100000"
 	game.player.position = game.project(game.logical_position)
 	game.actors.add_child(game.player)
 	game.camera = Camera2D.new()

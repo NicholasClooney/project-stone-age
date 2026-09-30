@@ -7,6 +7,7 @@ import re
 import struct
 from PIL import Image
 from import_legacy import Archive
+from split_manifests import split_backgrounds
 
 
 def read_mapping(path):
@@ -70,3 +71,5 @@ if __name__ == '__main__':
     parser.add_argument('--output', default='client/assets/legacy/battle')
     args = parser.parse_args()
     run(args.source, args.mapping, args.output)
+    # The game reads the packed lookups (split_manifests.py).
+    split_backgrounds(Path(args.output).parent)

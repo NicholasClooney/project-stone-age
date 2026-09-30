@@ -481,8 +481,11 @@ else
   run "$PY" tools/import_encounter_art.py "$CLIENT25" $extra
   # After every sprite importer: each frame's original sound effect and hit sound.
   run "$PY" tools/import_battle_sounds.py "$CLIENT25" --table "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/systeminc/sndcnf.h"
-  # Last: packs the per-frame PNGs the importers above wrote into sprite sheets.
+  # Packs the per-frame PNGs the importers above wrote into sprite sheets.
   run "$PY" tools/pack_frame_sheets.py
+  # Last: the small per-sprite files and indexes the game reads, from the
+  # importers' manifests (the importers above also refresh their own).
+  run python3 tools/split_manifests.py
   echo "$import_key" > "$IMPORT_STAMP"
 fi
 

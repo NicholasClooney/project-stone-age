@@ -75,8 +75,8 @@ func setup_audio() -> void:
 	game.effect = AudioStreamPlayer.new()
 	for entry in [[201,"sas_01.wav"],[202,"sas_02.wav"],[203,"sas_03.wav"]]:
 		game.ui_sounds[entry[0]] = load("res://assets/legacy/"+entry[1])
-	if FileAccess.file_exists("res://assets/legacy/battle/manifest.json"):
-		var manifest: Dictionary = preload("res://scripts/battle_art.gd").data()
+	if preload("res://scripts/battle_art.gd").present():
+		var manifest: Dictionary = preload("res://scripts/battle_art.gd").index()
 		for ident in manifest.get("frame_sounds",{}):
 			game.battle_sounds[int(ident)] = load("res://assets/legacy/battle/"+str(manifest.frame_sounds[ident]))
 		if manifest.audio.has("battle_cancel"):
@@ -95,7 +95,7 @@ func setup_audio() -> void:
 
 func play_battle_sound(ident: int) -> void:
 	if not game.battle_sounds.has(ident):
-		var path := str(preload("res://scripts/riding.gd").manifest().get("frame_sounds",{}).get(str(ident),""))
+		var path := str(preload("res://scripts/riding.gd").index().get("frame_sounds",{}).get(str(ident),""))
 		if not path.is_empty():
 			game.battle_sounds[ident] = load("res://assets/legacy/riding/"+path)
 			PerfRegistry.track_audio("effects",ident,game.battle_sounds[ident])

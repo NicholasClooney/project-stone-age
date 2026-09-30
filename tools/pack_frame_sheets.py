@@ -22,6 +22,9 @@ The battle manifest's `extra_sprites` (pet sprites import_encounter_art.py
 keeps in battle/pets/<sprite>.json) are packed the same way; each file gets
 its own `sheets`.
 
+Last, the manifests are split into the small per-sprite files the game reads
+(split_manifests.py).
+
 Re-running is safe: a frame whose PNG is gone is cut back out of the sheet
 that holds it (the sheets are lossless), so running one importer again and
 then this tool repacks everything.
@@ -35,6 +38,7 @@ from PIL import Image
 
 from sprite_sheets import save_sheets
 from map_file import load_map
+from split_manifests import split
 
 LEGACY = Path(__file__).resolve().parents[1] / 'client/assets/legacy'
 # target: (manifest, frame folder, globs of manifests whose `images` also draw from the folder)
@@ -153,3 +157,5 @@ if __name__ == '__main__':
     for target in args.targets or list(TARGETS):
         manifest, images, others = TARGETS[target]
         pack(LEGACY / manifest, LEGACY / images, referenced(LEGACY, others))
+    # The game reads per-sprite files made from the manifests (split_manifests.py).
+    split(args.targets or list(TARGETS), LEGACY)

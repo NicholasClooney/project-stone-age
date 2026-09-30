@@ -1,9 +1,10 @@
 extends Node2D
 var world: Node2D
 var sprite: Sprite2D
-var manifest: Dictionary
+## The pet's sprite entry (scripts/sprite_art.gd); its frames are cut on first draw.
+var art: Dictionary = {}
 var animations: Dictionary = {}
-var textures: Dictionary = {}
+const SpriteArt = preload("res://scripts/sprite_art.gd")
 var sprite_id := ""
 var pet_name := ""
 var elapsed := 0.0
@@ -21,20 +22,15 @@ func _ready() -> void:
 	name_label.add_theme_constant_override("shadow_offset_y",1)
 	name_label.position = Vector2(-30,-58)
 	add_child(name_label)
-	manifest = preload("res://scripts/battle_art.gd").data()
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 func select_pet(ident: String, caption: String) -> void:
 	pet_name = caption
 	name_label.text = caption
 	if sprite_id==ident:return
 	# A pet sprite in its own file whose web pack is not here yet: retry on the next call.
-	sprite_id = ident if preload("res://scripts/battle_art.gd").ensure(ident) else ""
-	animations = manifest.characters.get(ident,{})
-	textures.clear()
-	for animation in animations.values():
-		for frame in animation.frames:
-			var key := str(int(frame.image))
-			if not textures.has(key):textures[key] = preload("res://scripts/sheet_frames.gd").texture("res://assets/legacy/battle/",manifest.get("sheets",{}),ident,int(key))
+	art = preload("res://scripts/battle_art.gd").art(ident)
+	sprite_id = ident if not art.is_empty() else ""
+	animations = art.get("animations",{})
 func _process(delta: float) -> void:
 	if animations.is_empty():return
 	elapsed += delta
@@ -51,9 +47,8 @@ func _process(delta: float) -> void:
 	var animation: Dictionary = animations.get(key,animations.get("3_0",{}))
 	if animation.is_empty():return
 	var duration := maxf(0.1,float(animation.duration_ms)/1000.0)
-	var frames: Array = animation.frames
-	var frame: Dictionary = frames[int(fmod(elapsed,duration)/duration*frames.size())%frames.size()]
-	var ident := str(int(frame.image))
-	var meta: Dictionary = manifest.images[ident]
-	sprite.texture = textures[ident]
-	sprite.position = Vector2(meta.x+frame.x,meta.y+frame.y)
+	var count := SpriteArt.frame_count(animation)
+	if count == 0:return
+	var index := int(fmod(elapsed,duration)/duration*count)%count
+	sprite.texture = SpriteArt.texture(art,SpriteArt.image(animation,index))
+	sprite.position = SpriteArt.offset(art,animation,index)
