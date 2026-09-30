@@ -25,7 +25,6 @@ const ACTIONS := [
 	["character","换角色",[KEY_TAB]],
 	["sit","坐下 / 站起",[KEY_X]],
 	["wave","挥手",[KEY_E]],
-	["reset","回到村中广场",[KEY_R]],
 	["perf","性能面板（开发者）",[KEY_F3]],
 ]
 

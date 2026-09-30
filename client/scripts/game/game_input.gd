@@ -173,8 +173,6 @@ func on_unhandled_input(event: InputEvent) -> void:
 		game.zoom_by(GameScene.ZOOM_STEP)
 	elif event.is_action_pressed("zoom_out") and not game.paused_input:
 		game.zoom_by(-GameScene.ZOOM_STEP)
-	elif event.is_action_pressed("reset"):
-		game.reset_player()
 	elif event.is_action_pressed("character"):
 		game.change_character()
 	elif event.is_action_pressed("sit") and not game.moving:

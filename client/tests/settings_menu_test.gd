@@ -56,6 +56,16 @@ func run() -> void:
 	game.toggle_mute()
 	game.restore_device_settings()
 
+	# R no longer sends the player back to the village square (Cmd+R, the
+	# browser's reload, reached the game as R).
+	check(not game.shortcuts.has("reset") and not InputMap.has_action("reset"),"there is no 回到村中广场 shortcut")
+	var stood: Vector2i = game.cell
+	game.cell += Vector2i(1,0)
+	var moved: Vector2i = game.cell
+	key(KEY_R)
+	await process_frame
+	check(game.cell==moved,"R leaves the player where they are")
+	game.cell = stood
 	# Esc with no window open opens 设置.
 	key(KEY_ESCAPE)
 	await process_frame

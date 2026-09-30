@@ -1,9 +1,18 @@
 {
-  "version": "v0.114.0",
-  "count": 152,
+  "version": "v0.114.1",
+  "count": 153,
   "feature_count": 98,
-  "fix_count": 54,
+  "fix_count": 55,
   "entries": [
+    {
+      "version": "v0.114.1",
+      "date": "2026-09-30",
+      "kind": "fix",
+      "title": "去掉 R 键回村",
+      "details": [
+        "按 R 不再把人物传回萨姆吉尔村中广场。在浏览器里按 Cmd+R（或 Ctrl+R）刷新时，游戏也会收到 R，以前会莫名其妙回村，组队时还会离开队长身边。快捷键设置里也不再有这一项。"
+      ]
+    },
     {
       "version": "v0.114.0",
       "date": "2026-09-30",
