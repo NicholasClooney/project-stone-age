@@ -1,7 +1,11 @@
 extends SceneTree
 ## Headless backend for remote clients, run from this same project:
 ##   scripts/serve.sh [--port=8781] [--bind=*] [--save=user://single-player.json]
-##     [--shutdown-file=<path>]
+##     [--shutdown-file=<path>] [--fast-threads=N]
+## --fast-threads fixes this server's 本机极速模式 线程数 instead of the shared
+## setting. Several servers can run side by side (one per LAN profile,
+## scripts/profiles.sh); each holds `<save>.lock` so no two open the same save
+## (server/save_lock.gd), and releases it when it stops.
 ## It loads the same save as the desktop game, ticks automation on its own and
 ## saves after settlements. Do not run the desktop game on the same save at the
 ## same time; both would write it.
@@ -13,11 +17,14 @@ extends SceneTree
 const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const ShutdownRequest = preload("res://server/shutdown_request.gd")
+const SaveLock = preload("res://server/save_lock.gd")
+const ServerSettings = preload("res://server/server_settings.gd")
 
 var backend
 var server
 var shutdown_request
 var _stopped := false
+var locked_path := ""
 
 func _initialize() -> void:
 	var options := {"port":"8781","bind":"*","save":"user://single-player.json"}
@@ -25,9 +32,17 @@ func _initialize() -> void:
 		if argument.begins_with("--") and argument.contains("="):
 			var pair := argument.trim_prefix("--").split("=",true,1)
 			options[pair[0]] = pair[1]
+	var path := str(options.save)
+	var refused := SaveLock.acquire(path)
+	if not refused.is_empty():
+		printerr(refused)
+		quit(1)
+		return
+	locked_path = path
+	if options.has("fast-threads") and int(options["fast-threads"]) > 0:
+		ServerSettings.threads_override = mini(int(options["fast-threads"]),ServerSettings.cores())
 	backend = Backend.new()
 	root.add_child(backend)
-	var path := str(options.save)
 	if FileAccess.file_exists(path) or FileAccess.file_exists(path+".bak"):
 		if not backend.load_profile(path):
 			printerr("Save %s could not be read; refusing to start so it is not overwritten." % ProjectSettings.globalize_path(path))
@@ -65,10 +80,13 @@ func _process(_delta: float) -> bool:
 		quit(0)
 	return false
 
+## Both ways out (a shutdown request, or _finalize): save, write the resume
+## file, then give up the save lock.
 func _stop() -> void:
-	if _stopped or backend==null:return
+	if _stopped:return
 	_stopped = true
-	backend.shut_down()
+	if backend!=null:backend.shut_down()
+	if not locked_path.is_empty():SaveLock.release(locked_path)
 
 func _finalize() -> void:
 	_stop()

@@ -1,0 +1,80 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>石器时代 · 大厅</title>
+<!-- The LAN lobby (tools/serve_web.py --profiles, scripts/profiles.sh): every
+     profile on this computer with its server's state and a link that opens
+     the web client on it through ?server=. See docs/development/lan-profiles.md. -->
+<style>
+  :root { color-scheme: light dark; --bg: #f3ecdf; --card: #fffaf1; --ink: #3b2f22; --muted: #8a7a63; --line: #d9cbb2; --accent: #a4622b; --ok: #3f8a4a; --off: #a39a8c; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #1d1a16; --card: #29241e; --ink: #eee3d0; --muted: #a8997f; --line: #463d31; --accent: #e3a05e; --ok: #74c47f; --off: #6f675c; } }
+  body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.5 -apple-system, "PingFang SC", "Microsoft YaHei", sans-serif; }
+  main { max-width: 560px; margin: 0 auto; padding: 32px 16px; }
+  h1 { font-size: 24px; margin: 0 0 4px; letter-spacing: 2px; }
+  p.note { margin: 0 0 20px; color: var(--muted); font-size: 14px; }
+  ul { list-style: none; padding: 0; margin: 0; display: grid; gap: 10px; }
+  li { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--card); border: 1px solid var(--line); border-radius: 10px; }
+  .dot { width: 10px; height: 10px; border-radius: 50%; background: var(--off); flex: none; }
+  .online .dot { background: var(--ok); }
+  .who { flex: 1; min-width: 0; }
+  .who b { display: block; font-size: 17px; }
+  .who span { color: var(--muted); font-size: 13px; }
+  a.enter { padding: 8px 18px; border-radius: 8px; background: var(--accent); color: #fff; text-decoration: none; font-weight: 600; white-space: nowrap; }
+  li:not(.online) a.enter { background: var(--off); pointer-events: none; }
+  #error { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <h1>石器时代 · 大厅</h1>
+  <p class="note">每个角色一个服务器。选自己的角色点「进入」；离线的角色需要先在这台电脑上启动（scripts/profiles.sh）。</p>
+  <ul id="profiles"><li>正在读取…</li></ul>
+  <p class="note" id="error"></p>
+</main>
+<script>
+const list = document.getElementById('profiles');
+const error = document.getElementById('error');
+// The web client on this same page host, pointed at the profile's backend.
+function enterUrl(port) {
+  const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
+  return `${location.origin}/?server=${encodeURIComponent(`${scheme}://${location.hostname}:${port}`)}`;
+}
+function render(profiles) {
+  list.replaceChildren(...profiles.map((p) => {
+    const item = document.createElement('li');
+    if (p.online) item.className = 'online';
+    const dot = document.createElement('span');
+    dot.className = 'dot';
+    const who = document.createElement('div');
+    who.className = 'who';
+    const name = document.createElement('b');
+    name.textContent = p.title;
+    const state = document.createElement('span');
+    state.textContent = `${p.online ? '在线' : '离线'} · 端口 ${p.port}`;
+    who.append(name, state);
+    const enter = document.createElement('a');
+    enter.className = 'enter';
+    enter.textContent = '进入';
+    enter.href = enterUrl(p.port);
+    item.append(dot, who, enter);
+    return item;
+  }));
+  if (!profiles.length) list.innerHTML = '<li>profiles.json 里还没有角色。</li>';
+}
+async function refresh() {
+  try {
+    const reply = await fetch('/lobby.json', { cache: 'no-store' });
+    const data = await reply.json();
+    render(data.profiles || []);
+    error.textContent = data.error ? `读取 profiles.json 失败：${data.error}` : '';
+  } catch (e) {
+    error.textContent = '连不上这台电脑的网页服务器。';
+  }
+}
+refresh();
+setInterval(refresh, 5000);
+</script>
+</body>
+</html>

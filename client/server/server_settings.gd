@@ -9,6 +9,9 @@ extends RefCounted
 const PATH := "user://server-settings.cfg"
 ## Tests point this at their own file.
 static var path_override := ""
+## A server started with --fast-threads=N (server_main.gd) uses N as its
+## budget instead of the shared file, and refuses changes to 线程数.
+static var threads_override := 0
 
 static func _path() -> String:
 	return path_override if not path_override.is_empty() else PATH
@@ -17,6 +20,7 @@ static func cores() -> int:
 	return maxi(1,OS.get_processor_count())
 
 static func fast_hunt_threads() -> int:
+	if threads_override > 0:return threads_override
 	var config := ConfigFile.new()
 	if config.load(_path())!=OK:return 0
 	var value = config.get_value("fast_hunt","threads",0)
@@ -29,6 +33,7 @@ static func valid_threads(value: Variant) -> bool:
 
 ## Saves the thread count; "" on success, else the reason it was refused.
 static func set_fast_hunt_threads(value: Variant) -> String:
+	if threads_override > 0:return "这台服务器启动时用 --fast-threads=%d 固定了线程数。" % threads_override
 	if not valid_threads(value):return "线程数须为 0（自动）到 %d 的整数。" % cores()
 	var config := ConfigFile.new()
 	config.load(_path())

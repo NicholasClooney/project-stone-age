@@ -4,10 +4,15 @@ Compresses the engine, scripts, JSON and packs with gzip once per file
 version, marks content-hashed packs immutable and everything else
 revalidated, and prints the addresses to open on another device. With
 --cert/--key it serves HTTPS, which a browser needs for a secure context.
+With --profiles (scripts/profiles.sh) it also serves the LAN lobby at /lobby:
+every profile on this computer, whether its server is online, and a link
+that opens the web client on it (docs/development/lan-profiles.md).
 """
 import argparse
+import errno
 import gzip
 import http.server
+import json
 import os
 import socket
 import ssl
@@ -17,7 +22,38 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 COMPRESSIBLE = {".wasm", ".js", ".pck", ".json", ".html"}
+LOBBY_PAGE = ROOT / "web" / "lobby.html"
 _cache: dict = {}
+
+
+def load_profiles(path) -> list:
+    """The profiles of a profiles.json: [{name, title, port, save}]."""
+    data = json.loads(Path(path).read_text(encoding="utf-8"))
+    result = []
+    for entry in data.get("profiles", []):
+        name = str(entry["name"])
+        result.append({"name": name, "title": str(entry.get("title") or name), "port": int(entry["port"]),
+                       "save": str(entry.get("save") or f"user://{name}.json")})
+    return result
+
+
+def port_open(port: int) -> bool:
+    """Whether a server on this computer listens on the port. It tries to bind
+    the port rather than connect: a probe connection would make the backend
+    log a failed TLS handshake every few seconds."""
+    for host in ("0.0.0.0", "127.0.0.1"):
+        with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as probe:
+            try:
+                probe.bind((host, port))
+            except OSError as error:
+                if error.errno == errno.EADDRINUSE:
+                    return True
+    return False
+
+
+def lobby(profiles: list, online=port_open) -> list:
+    """What the lobby page lists: name, title, port and whether it answers."""
+    return [{"name": p["name"], "title": p["title"], "port": p["port"], "online": bool(online(p["port"]))} for p in profiles]
 
 
 class Handler(http.server.SimpleHTTPRequestHandler):
@@ -65,7 +101,34 @@ class Handler(http.server.SimpleHTTPRequestHandler):
             self.wfile.write(body)
         return True
 
+    profiles_path = ""
+
+    def _send_bytes(self, body: bytes, content_type: str) -> None:
+        self.send_response(200)
+        self.send_header("Content-Type", content_type)
+        self.send_header("Content-Length", str(len(body)))
+        self.end_headers()
+        self.wfile.write(body)
+
+    def _lobby(self) -> bool:
+        if not self.profiles_path:
+            return False
+        path = self.path.split("?", 1)[0]
+        if path in ("/lobby", "/lobby/", "/lobby.html"):
+            self._send_bytes(LOBBY_PAGE.read_bytes(), "text/html; charset=utf-8")
+            return True
+        if path == "/lobby.json":
+            try:
+                body = json.dumps({"profiles": lobby(load_profiles(self.profiles_path))}, ensure_ascii=False)
+            except (OSError, ValueError, KeyError) as error:
+                body = json.dumps({"profiles": [], "error": str(error)}, ensure_ascii=False)
+            self._send_bytes(body.encode("utf-8"), "application/json; charset=utf-8")
+            return True
+        return False
+
     def do_GET(self) -> None:
+        if self._lobby():
+            return
         if not self._send_compressed(False):
             super().do_GET()
 
@@ -97,9 +160,12 @@ def main() -> None:
     parser.add_argument("--dir", default=str(ROOT / "build/web"))
     parser.add_argument("--cert")
     parser.add_argument("--key")
+    parser.add_argument("--profiles", help="profiles.json: also serve the LAN lobby at /lobby")
     args = parser.parse_args()
     if not (Path(args.dir) / "index.html").exists():
         raise SystemExit(f"No web build in {args.dir}; run scripts/build-web.sh first.")
+    if args.profiles:
+        Handler.profiles_path = str(Path(args.profiles).resolve())
     server = http.server.ThreadingHTTPServer((args.bind, args.port), partial(Handler, directory=args.dir))
     scheme = "http"
     if args.cert and args.key:
@@ -109,6 +175,8 @@ def main() -> None:
         scheme = "https"
     for address in lan_addresses():
         print(f"Web client: {scheme}://{address}:{args.port}/")
+        if args.profiles:
+            print(f"Lobby: {scheme}://{address}:{args.port}/lobby")
     server.serve_forever()
 
 

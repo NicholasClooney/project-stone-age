@@ -1,0 +1,7 @@
+{
+  "web_port": 8780,
+  "profiles": [
+    {"name": "nicholas", "title": "Nicholas", "port": 8781, "save": "user://single-player.json"},
+    {"name": "alice", "title": "Alice", "port": 8782, "save": "user://alice.json"}
+  ]
+}

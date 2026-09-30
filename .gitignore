@@ -12,3 +12,6 @@ __pycache__/
 
 # Local upstream checkouts and offline Git archives.
 /references/
+
+# LAN profiles of this computer (scripts/profiles.sh; see scripts/profiles.example.json).
+/profiles.json
