@@ -147,9 +147,8 @@ func _build(player: Dictionary) -> Node2D:
 	var label: Label = world.text("",12)
 	label.name = "Name"
 	label.add_theme_color_override("font_color",Color.WHITE)
-	label.add_theme_color_override("font_shadow_color",Color.BLACK)
-	label.add_theme_constant_override("shadow_offset_x",1)
-	label.add_theme_constant_override("shadow_offset_y",1)
+	label.add_theme_color_override("font_outline_color",Color.BLACK)
+	label.add_theme_constant_override("outline_size",4)
 	label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	label.size = Vector2(160,16)
 	label.position = Vector2(-80,-10)

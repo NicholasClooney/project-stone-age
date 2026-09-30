@@ -17,9 +17,9 @@ func _ready() -> void:
 	add_child(sprite)
 	name_label = world.text("",13)
 	name_label.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
-	name_label.add_theme_color_override("font_shadow_color",Color.BLACK)
-	name_label.add_theme_constant_override("shadow_offset_x",1)
-	name_label.add_theme_constant_override("shadow_offset_y",1)
+	name_label.add_theme_color_override("font_color",Color.WHITE)
+	name_label.add_theme_color_override("font_outline_color",Color.BLACK)
+	name_label.add_theme_constant_override("outline_size",4)
 	name_label.position = Vector2(-30,-58)
 	add_child(name_label)
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST

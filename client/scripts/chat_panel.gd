@@ -45,7 +45,7 @@ func configure(owner: Node2D) -> void:
 	history.custom_minimum_size = Vector2(420,220)
 	history.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	var backdrop := StyleBoxFlat.new()
-	backdrop.bg_color = Color(0,0,0,0.55)
+	backdrop.bg_color = Color(0.04,0.05,0.06,0.82)
 	backdrop.set_corner_radius_all(3)
 	for side in [SIDE_LEFT,SIDE_RIGHT,SIDE_TOP,SIDE_BOTTOM]:backdrop.set_content_margin(side,4)
 	history.add_theme_stylebox_override("panel",backdrop)
@@ -197,9 +197,9 @@ func _refresh_recent(force: bool = false) -> void:
 func _line_label(text: String, color: Color) -> Label:
 	var label: Label = world.text(text,13)
 	label.add_theme_color_override("font_color",color)
-	label.add_theme_color_override("font_shadow_color",Color.BLACK)
-	label.add_theme_constant_override("shadow_offset_x",1)
-	label.add_theme_constant_override("shadow_offset_y",1)
+	# An outline, not a 1-pixel shadow: lines stay readable on snow and on the backdrop.
+	label.add_theme_color_override("font_outline_color",Color(0,0,0,0.9))
+	label.add_theme_constant_override("outline_size",4)
 	label.autowrap_mode = TextServer.AUTOWRAP_ARBITRARY
 	label.custom_minimum_size.x = 410
 	label.mouse_filter = Control.MOUSE_FILTER_IGNORE
