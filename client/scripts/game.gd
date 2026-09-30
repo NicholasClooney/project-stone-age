@@ -87,6 +87,10 @@ var _offline_battles := 0
 var link_overlay: Control
 var _link_backdrop: Control
 var _link_status: Label
+## 登录 (scripts/login_screen.gd) for a server hosting several profiles, and
+## whether this login created the character (it then picks its look first).
+var login_screen: Control
+var new_character := false
 ## Several devices can drive one backend. This device's reports carry its id;
 ## another device's walk arrives as a position event and is mirrored here
 ## without rerunning arrival rules (encounters, map links), which the walking
@@ -368,6 +372,11 @@ func _ready() -> void:
 	if is_instance_valid(waiting_screen):
 		waiting_screen.release()
 		waiting_screen.enter_game()
+	# A character just created on a multi-profile server picks its look first.
+	if new_character:
+		new_character = false
+		character_selection.title_text = "新角色 · 选择外观（以后可在 设置 → 换角色 更改）"
+		change_character()
 	get_window().focus_exited.connect(release_keyboard_input)
 	get_tree().auto_accept_quit = false
 	get_window().close_requested.connect(close_game)
@@ -478,6 +487,12 @@ func _step_follow() -> bool:return _remote._step_follow()
 func _on_map_reported(reply: Dictionary) -> void:_remote._on_map_reported(reply)
 func _connect_remote() -> void:await _remote._connect_remote()
 func link_blocked() -> bool:return _remote.link_blocked()
+func switch_profile() -> void:_remote.switch_profile()
+## GM and developer tools: always on alone or on a one-profile server; on a
+## multi-profile server only for its admin profiles (the backend enforces it).
+func is_admin() -> bool:return bool(state.options.get("admin",true))
+## The account name on a multi-profile server, "" otherwise.
+func account_name() -> String:return str(state.options.get("account",""))
 func _update_link_overlay() -> void:_remote._update_link_overlay()
 func acknowledge_presentation() -> void:_remote.acknowledge_presentation()
 func _on_backend_message(event: Dictionary) -> void:_remote._on_backend_message(event)

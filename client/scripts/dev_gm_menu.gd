@@ -132,6 +132,7 @@ func _action(title:String,position:Vector2,callback:Callable)->Button:
 	return button
 func _actor()->int:return actor_picker.get_selected_id()
 func open_menu()->void:
+	if world.has_method("is_admin") and not world.is_admin():return
 	if world.paused_input and not world.battle_view.visible:return
 	previous_pause=world.paused_input
 	world.clear_input()

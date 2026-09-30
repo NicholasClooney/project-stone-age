@@ -9,6 +9,9 @@ const Faces = preload("res://scripts/faces.gd")
 ## eye and mouth choices (login.cpp:3545-3592, five of each, wrapping).
 var face_view: TextureRect
 var face_label: Label
+## The window's title: a new character on a multi-profile server says so.
+var title_text := "DEV · 选择角色"
+var title_label: Label
 func configure(owner: Node2D) -> void:world = owner
 func _ready() -> void:
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -33,12 +36,14 @@ func open_menu() -> void:
 	world.paused_input = true
 	_set_dev_visible(false)
 	if shell == null:_build()
+	title_label.text = title_text
 	_refresh()
 	show()
 	world.play_ui_sound(202)
 	_layout()
 func close_menu() -> void:
 	hide()
+	title_text = "DEV · 选择角色"
 	world.play_ui_sound(203)
 	world.paused_input = previous_pause
 	_set_dev_visible(true)
@@ -60,7 +65,8 @@ func _build() -> void:
 	var heading := HBoxContainer.new()
 	content.add_child(heading)
 	var title := Label.new()
-	title.text = "DEV · 选择角色"
+	title_label = title
+	title.text = title_text
 	title.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	heading.add_child(title)
 	var close := Button.new()

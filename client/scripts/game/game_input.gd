@@ -59,6 +59,8 @@ func on_input(event: InputEvent) -> void:
 	if game.data.is_empty():
 		return
 	if game.link_blocked():
+		# The login screen's fields still type.
+		if game.get_viewport().gui_get_focus_owner() is LineEdit:return
 		if event is InputEventKey or event is InputEventJoypadButton or event is InputEventJoypadMotion:game.get_viewport().set_input_as_handled()
 		return
 	for action in ["north","south","west","east"]:

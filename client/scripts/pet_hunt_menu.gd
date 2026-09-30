@@ -444,7 +444,7 @@ func _show_threads(automation: Dictionary) -> void:
 	cores_label.visible = cores > 0
 	if cores <= 0:return
 	thread_count.max_value = cores
-	thread_count.editable = fast_unavailable().is_empty()
+	thread_count.editable = fast_unavailable().is_empty() and (not world.has_method("is_admin") or world.is_admin())
 	if not thread_count.get_line_edit().has_focus():thread_count.set_value_no_signal(int(hunt.get("threads",0)))
 	cores_label.text = "本机%d核" % cores
 	thread_count.tooltip_text = "本机极速模式同时用几个线程（服务器所在电脑的设置，所有设备共用）。0 为自动：用 %d 个（核心数减 1）。现在用 %d 个；修改后正在进行的筛选立即换用新值。调小可以给其他程序留出 CPU，速度会相应变慢。" % [cores-1 if cores > 2 else 1,int(hunt.get("threads_used",0))]

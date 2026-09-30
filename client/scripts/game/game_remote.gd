@@ -4,6 +4,7 @@ extends RefCounted
 ## and dispatching the backend's messages to the presentation. The game keeps
 ## the state; see docs/technical/game-scripts.md.
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
+const LoginScreen = preload("res://scripts/login_screen.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -65,10 +66,44 @@ func _on_map_reported(reply: Dictionary) -> void:
 ## Remote start: wait for the backend's first snapshot before building the map.
 func _connect_remote() -> void:
 	_build_link_overlay()
+	_restore_login()
+	game.link.login_needed.connect(_on_login_needed)
 	game.link.connected.connect(_on_link_connected)
 	game.link.disconnected.connect(_on_link_disconnected)
 	game.link.connect_now()
 	await game.link.connected
+
+# ---- 登录 (a server hosting several profiles) ----------------------------
+
+## This device's remembered login for this server: viewer.cfg `logins`, server
+## address -> {name, token}.
+func _restore_login() -> void:
+	var saved = game.viewer_pref("logins",{})
+	var login = saved.get(game.remote_url,{}) if saved is Dictionary else {}
+	if login is Dictionary:
+		game.link.login_name = str(login.get("name",""))
+		game.link.login_token = str(login.get("token",""))
+
+func _remember_login() -> void:
+	var saved = game.viewer_pref("logins",{})
+	var logins: Dictionary = saved.duplicate() if saved is Dictionary else {}
+	var wanted := {"name":str(game.link.login_name),"token":str(game.link.login_token)}
+	if game.link.login_token.is_empty():logins.erase(game.remote_url)
+	elif logins.get(game.remote_url,{})==wanted:return
+	else:logins[game.remote_url] = wanted
+	game.set_viewer_pref("logins",logins)
+
+func _on_login_needed(info: Dictionary) -> void:
+	if not is_instance_valid(game.login_screen):return
+	game.login_screen.open(info)
+	_update_link_overlay()
+
+## 切换角色: forget this device's login and start over at the picker.
+func switch_profile() -> void:
+	if game.link.is_local():return
+	game.link.logout(func(_reply):
+		_remember_login()
+		game.get_tree().reload_current_scene())
 
 func _build_link_overlay() -> void:
 	var layer := CanvasLayer.new()
@@ -104,6 +139,10 @@ func _build_link_overlay() -> void:
 	game._link_status = game.text("",20)
 	game._link_status.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	column.add_child(game._link_status)
+	game.login_screen = LoginScreen.new()
+	game.login_screen.name = "LoginScreen"
+	game.login_screen.configure(game,game.link)
+	game.link_overlay.add_child(game.login_screen)
 	_update_link_overlay()
 
 ## True while the backend is unreachable; the overlay then owns all input.
@@ -122,13 +161,20 @@ func _update_link_overlay() -> void:
 		game._link_backdrop.visible = blocked and game.data.is_empty()
 		game.link_overlay.color.a = 0.45 if game._link_backdrop.visible else 0.72
 	if not blocked:return
-	if game.data.is_empty():
+	if is_instance_valid(game.login_screen) and game.login_screen.visible and bool(game.link.get("awaiting_login")):
+		game._link_status.text = ""
+	elif game.data.is_empty():
 		game._link_status.text = "正在连接 MacBook 上的服务器\n%s …" % game.remote_url
 	else:
 		var retry: int = game.link.retry_seconds()
 		game._link_status.text = "与 MacBook 上的服务器断开连接\n%s\n自动战斗和找宠会在服务器上继续。" % ("%d 秒后重试…" % retry if retry > 0 else "正在重连…")
 
 func _on_link_connected() -> void:
+	if is_instance_valid(game.login_screen):
+		game.login_screen.hide()
+		if bool(game.login_screen.last_login.get("created",false)):game.new_character = true
+		game.login_screen.last_login = {}
+	if not game.link.account.is_empty():_remember_login()
 	if game.data.is_empty() or not is_instance_valid(game.battle_view):return
 	game._on_automation_settings()
 	# Resync presentation to the backend's current battle and progress.

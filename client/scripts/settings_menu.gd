@@ -164,6 +164,13 @@ func _main_page() -> void:
 	var choose: Button = world.button("换角色 [%s]" % _key_of("character"),func(): close_menu();world.change_character())
 	choose.name = "SettingsCharacter"
 	character.add_child(choose)
+	# A multi-profile server: who is logged in here, and 切换角色.
+	var account: String = world.account_name() if world.has_method("account_name") else ""
+	if not account.is_empty():
+		var switch: Button = world.button("切换角色（%s）" % account,func(): close_menu();world.switch_profile())
+		switch.name = "SettingsSwitchProfile"
+		switch.tooltip_text = "退出这台设备上的登录，回到选择角色的画面；自动战斗和找宠在服务器上继续"
+		character.add_child(switch)
 	var movement := _section("移动")
 	var blink := _check("瞬移模式","SettingsBlinkMode",world.dev_blink_mode,world.set_blink_mode)
 	blink.tooltip_text = "开启后点击当前地图即可瞬移；障碍旁寻找可站立位置，关闭后恢复点击寻路"
@@ -188,7 +195,10 @@ func _main_page() -> void:
 	var keys: Button = world.button("快捷键",func(): page = "keys";capturing = [];conflict = {};rebuild();_center())
 	keys.name = "SettingsKeys"
 	about.add_child(keys)
-	# 开发者 (collapsed)
+	# 开发者 (collapsed); on a multi-profile server only its admins have it.
+	if world.has_method("is_admin") and not world.is_admin():
+		_sync_zoom()
+		return
 	var developer := _section("")
 	var fold: Button = world.button(("▼ " if developer_open else "▶ ")+"开发者",func(): developer_open = not developer_open;rebuild();_center())
 	fold.name = "SettingsDeveloper"

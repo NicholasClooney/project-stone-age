@@ -6,9 +6,16 @@ extends RefCounted
 ## every frame. A connection that goes silent (server killed without a close,
 ## Wi-Fi dropped, Mac asleep) is dropped after SILENCE_LIMIT seconds of
 ## missed heartbeats, so the client always learns it is offline.
+##
+## A server hosting several profiles (server/profile_hub.gd) answers hello
+## with login_required instead of a snapshot: login_needed carries its
+## profile list, and login() sends the name and PIN (or creates a character).
+## The login's token is kept and sent with every later hello, so a reconnect
+## logs in again by itself.
 signal message(event: Dictionary)
 signal connected
 signal disconnected
+signal login_needed(info: Dictionary)
 
 const Codec = preload("res://network/codec.gd")
 const PROTOCOL := 1
@@ -40,6 +47,15 @@ var bytes_out := 0
 var latency_ms := -1
 var _ping_seq := -1
 var _ping_msec := 0
+## Multi-profile servers: the profile this device logs into and its token
+## (the game keeps them in viewer.cfg), the server's answer about the
+## account ({name, admin}), and whether the server waits for a login now.
+var login_name := ""
+var login_token := ""
+var account: Dictionary = {}
+var awaiting_login := false
+var _login_seq := -1
+var _login_done: Callable
 
 func _init(server_url: String) -> void:
 	url = server_url
@@ -52,6 +68,8 @@ func connect_now() -> void:
 	_started = true
 	if _peer!=null:_peer.close()
 	_hello_seq = -1
+	awaiting_login = false
+	_login_seq = -1
 	_last_state = -1
 	_since_heard = 0.0
 	_since_ping = 0.0
@@ -119,7 +137,7 @@ func _heartbeat(delta: float) -> void:
 		_drop()
 		return
 	_since_ping += delta
-	if online and _since_ping >= PING_INTERVAL:
+	if (online or awaiting_login) and _since_ping >= PING_INTERVAL:
 		_since_ping = 0.0
 		_seq += 1
 		_ping_seq = _seq
@@ -131,6 +149,8 @@ func _drop() -> void:
 	online = false
 	_peer = null
 	_hello_seq = -1
+	awaiting_login = false
+	_login_seq = -1
 	var pending := _callbacks
 	_callbacks = {}
 	for seq in pending:pending[seq].call({"ok":false,"reason":"offline","type":"rejected"})
@@ -156,7 +176,39 @@ func close() -> void:
 func _send_hello() -> void:
 	_seq += 1
 	_hello_seq = _seq
-	_send(Codec.encode({"type":"hello","protocol":PROTOCOL,"client_kind":OS.get_name(),"seq":_seq}))
+	var hello := {"type":"hello","protocol":PROTOCOL,"client_kind":OS.get_name(),"seq":_seq}
+	if not login_token.is_empty():hello.login = {"name":login_name,"token":login_token}
+	_send(Codec.encode(hello))
+
+## Logs into a multi-profile server while it waits for a login:
+## {"type":"login", name, pin} or {"type":"create_profile", name, pin}. On
+## success the link goes online as after a hello, and keeps the token for
+## reconnects. `done` gets the reply either way.
+func login(command: Dictionary, done: Callable = Callable()) -> void:
+	if _peer==null or _peer.get_ready_state()!=WebSocketPeer.STATE_OPEN or not awaiting_login:
+		if done.is_valid():done.call({"ok":false,"reason":"offline","type":"rejected"})
+		return
+	_seq += 1
+	_login_seq = _seq
+	var sent := command.duplicate(true)
+	sent.seq = _seq
+	if done.is_valid():_callbacks[_seq] = done
+	_send(Codec.encode(sent))
+
+## Forgets this device's login on the server and here (切换角色).
+func logout(done: Callable = Callable()) -> void:
+	login_token = ""
+	request({"type":"logout"},done)
+
+func _logged_in(incoming: Dictionary) -> void:
+	account = incoming.get("account",{})
+	if account.has("name"):login_name = str(account.name)
+	if incoming.has("token"):login_token = str(incoming.token)
+	awaiting_login = false
+	online = true
+	_backoff = 1.0
+	message.emit(incoming.snapshot)
+	connected.emit()
 
 func _receive(text: String) -> void:
 	var incoming := Codec.decode(text)
@@ -165,10 +217,23 @@ func _receive(text: String) -> void:
 		var seq := int(incoming.get("seq",0))
 		if seq==_ping_seq:latency_ms = Time.get_ticks_msec()-_ping_msec
 		if seq==_hello_seq and incoming.has("snapshot"):
-			online = true
+			_logged_in(incoming)
+			return
+		if seq==_hello_seq and bool(incoming.get("login_required",false)):
+			# A remembered token that no longer works is dropped.
+			if incoming.has("reason"):login_token = ""
+			awaiting_login = true
 			_backoff = 1.0
-			message.emit(incoming.snapshot)
-			connected.emit()
+			login_needed.emit(incoming)
+			return
+		if seq==_login_seq:
+			_login_seq = -1
+			# The caller hears first, then the game sees the snapshot.
+			if _callbacks.has(seq):
+				var answer: Callable = _callbacks[seq]
+				_callbacks.erase(seq)
+				answer.call(incoming)
+			if bool(incoming.get("ok",false)) and incoming.has("snapshot"):_logged_in(incoming)
 			return
 		if _callbacks.has(seq):
 			var done: Callable = _callbacks[seq]
