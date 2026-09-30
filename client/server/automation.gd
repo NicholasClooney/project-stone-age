@@ -1435,6 +1435,16 @@ func resume_state() -> Dictionary:
 		state.training = {"pet_id":training_pet_id,"level":training_pet_level,"battles":battles,"skipped":skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,"initial_level":initial_level}
 	return state
 
+## Changes whenever the run moves on in a way the resume file must follow at
+## once (backend.gd keep_resume_file): what runs, its phase, the pet worked
+## on, the 后台搜宠 queue and the cycle's counts. Counters that only grow
+## (rolls, battles, time) are left to the periodic write.
+func resume_key() -> String:
+	var queued := PackedInt64Array()
+	for entry in showcase_queue:queued.append(int(entry.get("index",-1)))
+	return str([flow_phase,flow_stop_pending.is_empty(),hunt_running,running,single_battle,pending_resume.is_empty(),flow_pet_id,
+		flow_stored_count,flow_kept_count,flow_collected_count,flow_skipped_count,flow_released_count,queued,showcase_current.get("index",-1),training_pet_id])
+
 ## A state written by record_shutdown, read at startup. The character is taken
 ## to be where the run was until a client says otherwise.
 func load_resume(state: Dictionary) -> void:

@@ -161,7 +161,11 @@ func showcase_cycle() -> void:
 	check(automation.flow_phase=="hunt" and int(automation.showcase_queue[0].index)==catching,"its hit goes back to the front of the queue")
 	check(str(last_stop().get("reason","")).contains("放回排队"),"停止记录 says so")
 	check(drive(fresh,func():return automation.flow_phase=="capture" and fresh.battle_open),"its capture battle opens again")
-	check(int(automation.showcase_current.index)==catching and int(fresh.battle.snapshot().enemies[slot].growth_seed)==growth,"replayed from its seed: the same pet")
+	# The hunt scans on meanwhile; a better hit found by then goes first and
+	# this one waits its turn in the queue.
+	if int(automation.showcase_current.index)==catching:
+		check(int(fresh.battle.snapshot().enemies[slot].growth_seed)==growth,"replayed from its seed: the same pet")
+	else:check(queue_rolls(automation).has(catching),"a better hit went first; this one still waits in the queue")
 
 	# Caught, but the server stopped before the cycle moved on to training.
 	for i in range(2000):

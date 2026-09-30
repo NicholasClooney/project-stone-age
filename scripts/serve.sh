@@ -4,7 +4,10 @@
 # Backend options: --port=8781 --bind=* --save=user://single-player.json
 # Web options via environment: STONE_AGE_WEB_PORT (8780), STONE_AGE_TLS_CERT and
 # STONE_AGE_TLS_KEY (serve both over TLS for a secure browser context).
-# Stop with Ctrl-C; progress is saved after every settlement and on exit.
+# Stop with scripts/stop-server.sh (same --port): it asks the backend through
+# build/server-<port>.shutdown to save, write the restart-resume file and quit.
+# Ctrl-C in a terminal works too; a running hunt then resumes from the resume
+# file the backend keeps current. Progress is saved after every settlement.
 set -eu
 cd "$(dirname "$0")/.."
 if [ -n "${GODOT_BIN:-}" ]; then
@@ -43,5 +46,11 @@ if [ -f build/web/index.html ]; then
   web_pid=$!
   trap 'kill "$web_pid" 2>/dev/null' EXIT INT TERM
 fi
+backend_port=8781
+for argument in "$@"; do
+  case "$argument" in --port=*) backend_port="${argument#--port=}" ;; esac
+done
+mkdir -p build
+shutdown_file="$PWD/build/server-$backend_port.shutdown"
 # shellcheck disable=SC2086
-"$engine" --headless --path client --audio-driver Dummy --script res://server/server_main.gd -- $tls "$@"
+"$engine" --headless --path client --audio-driver Dummy --script res://server/server_main.gd -- $tls "--shutdown-file=$shutdown_file" "$@"

@@ -86,9 +86,20 @@ var stop_log = preload("res://server/release_log.gd").new()
 var stop_log_path := ""
 ## Counts appends to the three logs (_record_releases).
 var pet_log_revision := 0
-## 重启后自动恢复: <save>.resume.json (resume_path for tests), written at
-## shutdown and read once at startup.
+## 重启后自动恢复: <save>.resume.json (resume_path for tests), read once at
+## startup. The standalone server (keep_resume_current) keeps it current while
+## a run goes on, since a killed or TERM-ed Godot never reaches _finalize:
+## at once when the run moves on (phase, pet, 后台搜宠 queue, counts), else
+## every RESUME_INTERVAL_MSEC, and removes it when the run stops. The save is
+## written first each time, so the file never names pets the save lacks.
 var resume_path := ""
+var keep_resume_current := false
+const RESUME_INTERVAL_MSEC := 10000
+var resume_clock: Callable = Time.get_ticks_msec
+## Writes of the resume file, for tests.
+var resume_writes := 0
+var _resume_key := ""
+var _resume_written_msec := -1
 static var _map_names: Dictionary = {}
 var last_saved_payload := ""
 var rev := 0
@@ -131,6 +142,7 @@ func _process(delta: float) -> void:
 	_depth -= 1
 	_record_releases()
 	_flush()
+	if keep_resume_current:keep_resume_file()
 	tick_usec = Time.get_ticks_usec()-started
 	tick_avg_usec = lerpf(tick_avg_usec,float(tick_usec),0.1)
 
@@ -179,17 +191,64 @@ func record_shutdown() -> void:
 	_record_releases()
 	var path := _resume_file()
 	if path.is_empty():return
+	if state.is_empty():_remove_resume_file(path)
+	else:_write_resume_file(path,state)
+
+## A graceful stop (server_main.gd, on a shutdown request or a normal quit):
+## nothing runs any more, the run is written down, the profile saved.
+func shut_down() -> void:
+	keep_resume_current = false
+	set_process(false)
+	record_shutdown()
+	if not save():printerr("Could not save %s at shutdown: %s" % [save_path,session.last_error])
+
+## Keeps the resume file in step with the running automation (see resume_path).
+## Called after every tick; cheap unless the run moved on or the interval passed.
+func keep_resume_file() -> void:
+	var path := _resume_file()
+	if path.is_empty():return
+	var now := int(resume_clock.call())
+	var key: String = automation.resume_key()
+	if key==_resume_key and _resume_written_msec>=0 and now-_resume_written_msec<RESUME_INTERVAL_MSEC:return
+	_resume_key = key
+	_resume_written_msec = now
+	var state: Dictionary = automation.resume_state() if automation.resume_wanted() else {}
 	if state.is_empty():
-		if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+		_remove_resume_file(path)
 		return
-	var file := FileAccess.open(path,FileAccess.WRITE)
+	# The profile first: a pet the file names (caught, in training) is in the
+	# save. A pet settled after this write is found again on resume
+	# (automation.gd _resume_capture / _resume_train reconcile it). With a
+	# battle open the save waits; the battle is fought again after a restart.
+	if session._pending.is_empty():
+		session.set_location(int(state.map_id),int(state.cell[0]),int(state.cell[1]))
+		if not save():
+			printerr("Could not save %s; the resume file waits for the next save." % save_path)
+			_resume_written_msec = -1
+			return
+	_write_resume_file(path,state)
+
+## Written to a temporary file and renamed over the old one, so a kill leaves
+## either the previous or the new file, never half of one.
+func _write_resume_file(path: String, state: Dictionary) -> void:
+	var file := FileAccess.open(path+".tmp",FileAccess.WRITE)
 	if file==null:
 		printerr("Could not write %s; the automation will not resume." % path)
 		return
 	# Native JSON keeps ints, int keys and nested types exactly, so queued
 	# troops compare equal when replayed.
 	file.store_string(JSON.stringify(JSON.from_native(state)))
+	file.flush()
+	var error := file.get_error()
 	file.close()
+	var absolute := ProjectSettings.globalize_path(path)
+	if error!=OK or DirAccess.rename_absolute(absolute+".tmp",absolute)!=OK:
+		printerr("Could not write %s; the automation will not resume." % path)
+		return
+	resume_writes += 1
+
+func _remove_resume_file(path: String) -> void:
+	if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 ## After load_profile: a run written down at the last shutdown goes on once
 ## the character stands where it ran (automation.gd try_resume). The file is

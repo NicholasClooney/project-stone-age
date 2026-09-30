@@ -2,7 +2,8 @@
 # Rebuild and restart the game for play over Tailscale, in one step:
 #   1. remove this Mac's Tailscale forwards for the web and backend ports
 #   2. build the web client (scripts/build-web.sh; skip with --skip-build)
-#   3. stop a running scripts/serve.sh (the backend saves as it exits)
+#   3. stop a running scripts/serve.sh (scripts/stop-server.sh: the backend
+#      saves and writes the restart-resume file as it exits)
 #   4. start scripts/serve.sh and wait until both ports answer
 #   5. forward https://<this Mac>.<tailnet>.ts.net:8780 and :8781 to it
 # Stays in the foreground: Ctrl-C stops the server and removes the forwards.
@@ -68,15 +69,10 @@ fi
 
 echo "==> Stopping the running server"
 # Only what listens on these two ports (other servers, such as a test page on
-# another port, keep running). TERM, not INT: a server started in the
-# background ignores INT, and Godot quits cleanly on TERM (it saves and writes
-# the restart-resume file in server_main.gd _finalize).
-signal_listeners() {
-  pids=$(lsof -tnP -iTCP:"$web_port" -iTCP:"$backend_port" -sTCP:LISTEN 2>/dev/null || true)
-  [ -n "$pids" ] && kill "-$1" $pids 2>/dev/null || true
-}
-signal_listeners TERM
-wait_for down 30 "$web_port" "$backend_port" || { echo "Ports $web_port/$backend_port are still in use." >&2; exit 1; }
+# another port, keep running). stop-server.sh asks the backend to save and
+# quit, and falls back to TERM after 30 s (Godot skips _finalize on TERM; the
+# resume file the backend keeps current during a run covers that).
+./scripts/stop-server.sh "--port=$backend_port" "--web-port=$web_port" || { echo "Ports $web_port/$backend_port are still in use." >&2; exit 1; }
 
 echo "==> Starting the server"
 # Arguments meant for this script are dropped; the rest go to the backend.
@@ -89,9 +85,8 @@ stop() {
   echo
   echo "==> Stopping: removing forwards and the server"
   forwards_off
-  # The backend itself, so it quits cleanly and saves (see signal_listeners).
-  signal_listeners TERM
-  wait_for down 30 "$web_port" "$backend_port" || true
+  # The backend itself first, so it saves and writes the resume file.
+  ./scripts/stop-server.sh "--port=$backend_port" "--web-port=$web_port" || true
   kill -TERM "$server" 2>/dev/null || true
   wait "$server" 2>/dev/null || true
   exit 0
