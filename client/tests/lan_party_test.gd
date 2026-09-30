@@ -4,13 +4,16 @@ extends SceneTree
 ## switch, 5 at most, leaving, 踢出, disbanding), members following the leader
 ## in a line and across map changes, encounters for the leader only, the
 ## automation refused in a party, 队伍频道, the presence feed's party field,
-## and disconnects.
+## disconnects, and one real game client as a member.
 ##
 ## The functional core runs for real: the party rules, the hub, real backends
 ## taking report_position, field_step, battles and auto_start. Only the shell
-## is faked: the clock, and connections as plain ids (as in profile_hub_test).
+## is faked: the clock, and connections as plain ids (as in profile_hub_test);
+## the client part uses a real localhost WebSocket.
 const Party = preload("res://server/party.gd")
 const ProfileHub = preload("res://server/profile_hub.gd")
+const WsServer = preload("res://server/ws_server.gd")
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 var now := 10000
 var dir := ""
@@ -40,6 +43,7 @@ func run() -> void:
 	rules()
 	follow()
 	await hub()
+	await client()
 	remove_tree(dir)
 	print("LAN PARTY: %d failures" % failures)
 	quit(1 if failures else 0)
@@ -267,6 +271,76 @@ func hub() -> void:
 	check(server.handle(3,{"type":"party_leave"}).ok and server.party.members("alice")==["alice","bob"],"Cid leaves with 离开队伍")
 	check(server.handle(1,{"type":"party_disband"}).ok and server.party.parties.is_empty(),"Alice disbands with 解散队伍")
 	check(not server.handle(2,{"type":"party_disband"}).ok,"only a leader disbands")
+	server.shut_down()
+	server.queue_free()
+	await process_frame
+
+## A real game client as a member: the 加入队伍 button, the party list, the
+## walking lock, following the leader and 队长战斗中.
+func client() -> void:
+	var accounts := dir.path_join("client-accounts.json")
+	var server = ProfileHub.new(accounts)
+	server.backups = false
+	server.share_dir = ""
+	root.add_child(server)
+	check(server.start(),"a hub for the client")
+	var ws = WsServer.new(server,0,"127.0.0.1")
+	root.add_child(ws)
+	check(ws.start()==OK,"it listens")
+	var url := "ws://127.0.0.1:%d" % ws.port
+	# Alice (the admin, driven directly) and Bob's character.
+	server.handle(900001,{"type":"create_profile","name":"Alice","pin":"1111"})
+	server.handle(900002,{"type":"create_profile","name":"Bob","pin":"2222"})
+	server.disconnect_connection(900002)
+	server.handle(900001,{"type":"party_switch","on":true})
+	var game_script = load("res://scripts/game.gd")
+	game_script.server_url_override = url
+	var game = load("res://scenes/main.tscn").instantiate()
+	game_script.server_url_override = ""
+	game.profile_persistence = false
+	root.add_child(game)
+	check(await Wait.until(self,func():return is_instance_valid(game.login_screen) and game.login_screen.visible),"Bob's game opens on the 登录 screen")
+	game.login_screen.find_child("Profile_Bob",true,false).pressed.emit()
+	game.login_screen.pin.text = "2222"
+	game.login_screen.login_button.pressed.emit()
+	check(await Wait.until(self,func():return not game.data.is_empty() and game.link.online),"Bob is in the world")
+	await Wait.settle(self,game)
+	check(is_instance_valid(game.party_panel) and game.party_panel.available() and not game.party_panel.in_party(),"the party panel knows Bob can party, and is in none")
+	check(game.classic_hud.find_child("PartyButton",true,false)!=null and game.party_panel.button_caption()=="加入队伍。","the bar's 加入队伍 button says 加入队伍。")
+	# Alice stands right in front of Bob.
+	var map_id := int(game.data.map_id)
+	var ahead: Vector2i = game.cell+game.SCREEN_DIRECTIONS[(int(game.player.facing)+4)%8]
+	report(server,900001,map_id,ahead)
+	game.classic_hud.find_child("PartyButton",true,false).pressed.emit()
+	check(await Wait.until(self,func():return game.party_panel.is_member()),"pressing 加入队伍 joins Alice")
+	check(await Wait.until(self,func():return game.party_panel.list.visible and game.party_panel.list.find_child("LeaveParty",true,false)!=null),"the party list shows, with 离开队伍")
+	var free := Vector2i(-1,-1)
+	for d in game.SCREEN_DIRECTIONS:
+		if game.can_step(game.cell,game.cell+d):free = game.cell+d
+	check(free.x>=0 and game.party_locked() and not game.request_step(free) and game.message.text==game.PARTY_LOCKED_TEXT,"Bob cannot step to a free cell on his own in the party")
+	check(not game.load_area_id(1002,Vector2i(16,15)) and int(game.data.map_id)==map_id,"nor change the map")
+	# Alice steps away: Bob follows onto her old cell.
+	report(server,900001,map_id,ahead+(ahead-game.cell))
+	check(await Wait.until(self,func():return game.cell==ahead and not game.moving),"Alice steps on; Bob's game walks after her (%s)" % str(game.cell))
+	# Alice fights: Bob waits.
+	server.handle(900001,{"type":"begin_battle"})
+	check(await Wait.until(self,func():return game.party_panel.banner.visible),"Alice's battle shows 队长战斗中 on Bob's screen")
+	check(not game.battle_view.visible,"Bob is not pulled into the battle")
+	server.backends.alice.abandon_battle()
+	check(await Wait.until(self,func():return not game.party_panel.banner.visible),"it goes when her battle ends")
+	# 队伍频道 from the chat panel.
+	check(await Wait.until(self,func():return game.chat_panel.channel_button.visible),"the chat shows a 频道 button in a party")
+	game.chat_panel.toggle_channel()
+	check(game.chat_panel.party_channel() and game.chat_panel.channel_button.text=="队伍","it switches to 队伍")
+	game.chat_panel._submit("出发")
+	check(await Wait.until(self,func():return game.chat_panel.lines.any(func(line):return str(line.text)=="[队伍] Bob：出发")),"a 队伍 line comes back to Bob")
+	# Leaving unlocks walking.
+	game.party_panel.list.find_child("LeaveParty",true,false).pressed.emit()
+	check(await Wait.until(self,func():return not game.party_panel.in_party()),"离开队伍 leaves")
+	check(not game.party_locked() and game.chat_panel.lines.any(func(line):return str(line.text)=="脱离团队！"),"Bob walks freely again and saw 脱离团队！")
+	game.queue_free()
+	await process_frame
+	ws.stop()
 	server.shut_down()
 	server.queue_free()
 	await process_frame

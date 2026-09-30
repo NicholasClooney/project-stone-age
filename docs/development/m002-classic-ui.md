@@ -8,7 +8,7 @@ Click Map or press Ctrl+M to toggle the original map window. Its original close 
 
 ## Asset evidence and limits
 
-`tools/import_ui.py` imports 50 PNGs (with the V.S. mark over players in battle, LAN phase 2), original open/close WAVs, and terrain colors from the same local client as M000. Outputs remain in ignored `client/assets/legacy/ui/`; run after the main map import.
+`tools/import_ui.py` imports 60 PNGs (with the V.S. mark over players in battle, LAN phase 2, and the 10 frames of the 组队 leader flag SPR_leader 100500 as 25600–25609, LAN phase 3; `manifest.json` `leader_mark` gives their play order), original open/close WAVs, and terrain colors from the same local client as M000. Outputs remain in ignored `client/assets/legacy/ui/`; run after the main map import.
 
 Original logical graphic IDs must resolve through ADRN's `attr.bmpnumber` field at offset 76. They are not direct archive frame indexes. This also corrects the previous NPC importer: logical 16039 maps to archive bitmap 5885.
 

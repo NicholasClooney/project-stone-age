@@ -11,6 +11,7 @@ const SHOWN_LINES := 4
 const RECENT_SECONDS := 60.0
 const MAX_CHARS := 60
 const SYSTEM_COLOR := Color("ffe070")
+const PARTY_COLOR := Color("a8f0a0")
 
 var world: Node2D
 ## {text, color, time}
@@ -21,6 +22,9 @@ var history_lines: VBoxContainer
 var input: LineEdit
 var talk_button: Button
 var log_button: Button
+## 频道 (LAN phase 3): 一般 or 队伍, shown while in a party.
+var channel_button: Button
+var channel := "一般"
 var clock: Callable = func() -> float:return Time.get_ticks_msec()/1000.0
 
 func configure(owner: Node2D) -> void:
@@ -67,7 +71,11 @@ func configure(owner: Node2D) -> void:
 	log_button = world.button("记录",toggle_history)
 	log_button.name = "Log"
 	log_button.tooltip_text = "聊天记录"
-	for button in [talk_button,log_button]:
+	channel_button = world.button("一般",toggle_channel)
+	channel_button.name = "Channel"
+	channel_button.tooltip_text = "频道：一般（同地图）或队伍（队友，不论在哪张地图）"
+	channel_button.hide()
+	for button in [channel_button,talk_button,log_button]:
 		button.add_theme_font_size_override("font_size",11)
 		row.add_child(button)
 	input = LineEdit.new()
@@ -96,6 +104,10 @@ func _process(_delta: float) -> void:
 		visible = wanted
 		if not wanted:close_input()
 	if not visible:return
+	var partied: bool = is_instance_valid(world.party_panel) and world.party_panel.in_party()
+	if partied!=channel_button.visible:
+		channel_button.visible = partied
+		_update_channel()
 	var bar: float = world.classic_hud.bar.size.y if is_instance_valid(world.classic_hud) else 30.0
 	var column: Control = get_node("Column")
 	column.position = Vector2(0,-column.size.y-bar-6)
@@ -124,13 +136,32 @@ func _submit(line: String) -> void:
 	var text := line.strip_edges()
 	close_input()
 	if text.is_empty():return
-	world.link.request({"type":"say","text":text},func(reply: Dictionary):
+	var command := {"type":"say","text":text}
+	if party_channel():command.channel = "队伍"
+	world.link.request(command,func(reply: Dictionary):
 		if not bool(reply.get("ok",false)) and str(reply.get("reason",""))!="offline":add_line(str(reply.get("reason","")),SYSTEM_COLOR))
 
-## A chat event from the server.
+## A chat event from the server: 一般频道, 队伍频道 (LAN phase 3) or a system
+## line (组队 news, in the original's yellow).
 func on_event(event: Dictionary) -> void:
 	if str(event.get("type",""))!="chat":return
-	add_line("%s：%s" % [str(event.get("name","")),str(event.get("text",""))],Color("b8f0ff") if bool(event.get("mine",false)) else Color.WHITE)
+	match str(event.get("channel","一般")):
+		"系统":add_line(str(event.get("text","")),SYSTEM_COLOR)
+		"队伍":add_line("[队伍] %s：%s" % [str(event.get("name","")),str(event.get("text",""))],PARTY_COLOR)
+		_:add_line("%s：%s" % [str(event.get("name","")),str(event.get("text",""))],Color("b8f0ff") if bool(event.get("mine",false)) else Color.WHITE)
+
+## 队伍频道 while in a party and chosen with the 频道 button.
+func party_channel() -> bool:
+	return channel=="队伍" and is_instance_valid(world.party_panel) and world.party_panel.in_party()
+
+func toggle_channel() -> void:
+	channel = "一般" if channel=="队伍" else "队伍"
+	_update_channel()
+
+func _update_channel() -> void:
+	var party := party_channel()
+	channel_button.text = "队伍" if party else "一般"
+	input.placeholder_text = ("队伍频道" if party else "一般频道")+"：Enter 发送，Esc 取消"
 
 func add_line(text: String, color: Color = Color.WHITE) -> void:
 	lines.append({"text":text,"color":color,"time":float(clock.call())})
