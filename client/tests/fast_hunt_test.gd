@@ -148,6 +148,11 @@ func run() -> void:
 	result = run_area(backend,catalog,"added Lv1 blue rex",500,Vector2i(400,400),blue_rex,false,3000)
 	check(result.get("different",-1)==0 and int(result.get("matches",0))>0,"map 500 added Lv.1 左迪洛斯: 3000 rolls identical, the hunt takes %d" % int(result.get("matches",0)))
 
+	# A 补充 Lv.1 in a scaled area (吉鲁岛 311, ×33): 邦浦洛斯 next to its Lv43-45 row.
+	var grey_dragon := {"template":93,"level_one":true,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":[93]}
+	result = run_area(backend,catalog,"added Lv1 grey dragon",300,Vector2i(402,307),grey_dragon,false,3000)
+	check(result.get("different",-1)==0 and int(result.get("matches",0))>0,"吉鲁岛 311 added Lv.1 邦浦洛斯: 3000 rolls identical, the hunt takes %d" % int(result.get("matches",0)))
+
 	# 60 areas across the world, 150 rolls each: groups with large monsters
 	# (the five-slot swap), empty rolls and every level range.
 	var rng := RandomNumberGenerator.new()

@@ -2774,9 +2774,9 @@
         402,
         307
       ],
-      "level_min": 43,
+      "level_min": 1,
       "level_max": 45,
-      "mean_level": 44.0,
+      "mean_level": 43.57,
       "monsters": [
         "布鲁顿",
         "邦浦洛斯"
@@ -3031,7 +3031,7 @@
       ],
       "level_min": 1,
       "level_max": 54,
-      "mean_level": 52.25,
+      "mean_level": 52.0,
       "monsters": [
         "利则诺顿",
         "齐尔格尔顿"
@@ -3331,9 +3331,9 @@
         218,
         319
       ],
-      "level_min": 90,
+      "level_min": 1,
       "level_max": 105,
-      "mean_level": 97.5,
+      "mean_level": 97.0,
       "monsters": [
         "克邦凯斯",
         "加克拉",
@@ -3465,9 +3465,9 @@
         25,
         25
       ],
-      "level_min": 22,
+      "level_min": 1,
       "level_max": 24,
-      "mean_level": 23.0,
+      "mean_level": 22.88,
       "monsters": [
         "贝洛恩",
         "贝洛洛克"
@@ -3738,7 +3738,7 @@
       ],
       "level_min": 1,
       "level_max": 87,
-      "mean_level": 85.58,
+      "mean_level": 85.17,
       "monsters": [
         "扬奇洛斯",
         "朵洛将恩",

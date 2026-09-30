@@ -10,7 +10,10 @@
     {"map_id": 32007, "area_id": 617, "scale": 17, "reason": "地下7楼权重和 6；×17 后 102"},
     {"map_id": 32008, "area_id": 618, "scale": 14, "reason": "地下8楼权重和 7；×14 后 98"},
     {"map_id": 32020, "area_id": 630, "scale": 3, "reason": "地下20楼现有组权重和 40（组 1053 原表缺失）；×3 后 120"},
-    {"map_id": 100, "area_id": 56, "scale": 8, "reason": "乌力 Lv15–20 区普通组权重和 12；×8 后 96"}
+    {"map_id": 100, "area_id": 56, "scale": 8, "reason": "乌力 Lv15–20 区普通组权重和 12；×8 后 96"},
+    {"map_id": 300, "area_id": 311, "scale": 33, "reason": "吉鲁岛南部人龙 Lv43–45 区权重和 3；×33 后 99。原版把 Lv1 灰/黄人龙组放在套在本区里的小区 332/333（权重 1/101），但它们与本区同优先级 20，本作按原表顺序取本区，所以那两组走不到"},
+    {"map_id": 500, "area_id": 659, "scale": 10, "reason": "五十年前波拉岛 Lv90–95 加格区普通组权重和 10（另有要道具的组 15）；×10 后 100"},
+    {"map_id": 10004, "area_id": 76, "scale": 2, "reason": "阿布的洞窟地下4楼权重和 45；×2 后 90"}
   ],
   "clones": [
     {"id": 90001, "from": 1645, "template_id": 812, "reason": "原表 Lv1 斑尼迪克（1645）不可捕捉（pet_flag 0），复制为可捕捉"},
@@ -40,6 +43,12 @@
     {"group_id": 91035, "template_id": 902, "name": "葛雷洛比", "enemy_id": 1795, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "水年兽，原版只在春节活动出现；放在霍特尔村门口的野外"},
     {"group_id": 91036, "template_id": 903, "name": "葛雷吉鲁", "enemy_id": 1796, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "火年兽，原版只在春节活动出现；放在霍特尔村门口的野外"},
     {"group_id": 91037, "template_id": 904, "name": "葛雷马恩", "enemy_id": 1797, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "风年兽，原版只在春节活动出现；放在霍特尔村门口的野外"},
-    {"group_id": 91038, "template_id": 5, "name": "黑乌力", "enemy_id": 475, "companion_id": 255, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "黑猪，原版无野外（赛事奖品/一转赠送）；放在萨伊那斯的乌力 Lv15–20 区。用原表未使用的 Lv1（475）"}
+    {"group_id": 91038, "template_id": 5, "name": "黑乌力", "enemy_id": 475, "companion_id": 255, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "黑猪，原版无野外（赛事奖品/一转赠送）；放在萨伊那斯的乌力 Lv15–20 区。用原表未使用的 Lv1（475）"},
+    {"group_id": 91039, "template_id": 91, "name": "利则诺顿", "enemy_id": 1138, "companion_id": 1187, "map_id": 300, "area_id": 473, "weight": 1, "origin": "original_area", "reason": "绿人龙：原版在吉鲁岛北部有 Lv51–53（1187），本区原版也有权重 1 的 Lv1 组（627）；用原版未导入迷宫（21013）的 Lv1 行（1138）"},
+    {"group_id": 91040, "template_id": 93, "name": "邦浦洛斯", "enemy_id": 979, "companion_id": 980, "map_id": 300, "area_id": 311, "weight": 1, "origin": "original_area", "reason": "灰人龙：原版在此区有 Lv43–45（980）；用原版吉鲁岛小区 332 的 Lv1 行（979），那个小区在本作被同优先级的本区盖住"},
+    {"group_id": 91041, "template_id": 95, "name": "布鲁顿", "enemy_id": 981, "companion_id": 982, "map_id": 300, "area_id": 311, "weight": 1, "origin": "original_area", "reason": "黄人龙：原版在此区有 Lv43–45（982）；用原版吉鲁岛小区 333 的 Lv1 行（981），那个小区在本作被同优先级的本区盖住"},
+    {"group_id": 91042, "template_id": 223, "name": "加格", "enemy_id": 446, "companion_id": 1491, "map_id": 500, "area_id": 659, "weight": 1, "origin": "original_area", "reason": "白鲨：原版在此区有 Lv90–95（1491），是已导入地图里唯一的野外；用原版未导入迷宫（10203）的 Lv1 行（446）"},
+    {"group_id": 91043, "template_id": 41, "name": "贝洛恩", "enemy_id": 266, "companion_id": 278, "map_id": 10004, "area_id": 76, "weight": 1, "origin": "original_area", "reason": "原版在阿布的洞窟地下3/4楼有 Lv22–24（278），是已导入地图里最低的；用原版未导入迷宫（10101）的 Lv1 行（266）"},
+    {"group_id": 91044, "template_id": 144, "name": "格尔格", "enemy_id": 994, "companion_id": 1384, "map_id": 32005, "area_id": 615, "weight": 1, "origin": "original_area", "reason": "红猩猩：原版在漆黑的洞窟地下5楼有 Lv85–87（1384），本层原版也有权重 1 的 Lv1 组（736）；用原版未导入迷宫（31204）的 Lv1 行（994）"}
   ]
 }

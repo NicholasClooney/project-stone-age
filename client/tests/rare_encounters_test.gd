@@ -76,6 +76,35 @@ func run() -> void:
 		if not why.is_empty():bad.append(str(item.name)+why)
 	check(bad.is_empty(),"%d added pets: each in its area at Lv.1, capturable, area weight 1 (%.2f%%–%.2f%% of the area), companion 1:1, capture difficulty from the template%s" % [spec.encounters.size(),lowest*100,highest*100,"" if bad.is_empty() else ": "+"；".join(bad)])
 
+	# 补充 rows sit next to the same pet at a higher level in that area.
+	var not_there: Array = []
+	for item in spec.encounters:
+		if str(item.origin) != "original_area":continue
+		var area: Dictionary = catalog.area_at(int(item.map_id),landing["%d/%d" % [int(item.map_id),int(item.area_id)]])
+		var higher := false
+		for choice in area.groups:
+			var group: Dictionary = data.groups.get(str(int(choice.id)),{})
+			if group.has("rare"):continue
+			for member in group.get("enemies",[]):
+				var row: Dictionary = data.enemies.get(str(int(member.id)),{})
+				if int(row.get("template_id",-1)) == int(item.template_id) and int(row.get("level_min",0)) > 1:higher = true
+		if not higher:not_there.append(str(item.name))
+	check(not_there.is_empty(),"every 补充 Lv.1 is in an area that has the same pet at a higher level%s" % ("" if not_there.is_empty() else ": "+"、".join(not_there)))
+
+	# Every classic pet (data/classic-pets.json) with a reachable wild spot has a Lv.1 spot.
+	var wild := {}
+	for spot in read_json("res://data/training-spots.json").get("spots",[]):
+		for name in spot.get("monsters",[]):wild[str(name)] = true
+	var level_one := {}
+	for spot in read_json("res://data/level-one-spots.json").get("spots",[]):level_one[int(spot.template_id)] = true
+	var missing: Array = []
+	var classic := 0
+	for pet in read_json("res://data/classic-pets.json").get("pets",[]):
+		if pet.template_id == null or not wild.has(str(data.templates[str(int(pet.template_id))].name)):continue
+		classic += 1
+		if not level_one.has(int(pet.template_id)):missing.append(str(pet.name))
+	check(missing.is_empty(),"all %d classic pets with a wild spot also have a Lv.1 spot%s" % [classic,"" if missing.is_empty() else "; missing: "+"、".join(missing)])
+
 	# Scaled areas keep their original ratios: every original weight is a multiple of the scale.
 	var unscaled: Array = []
 	for item in spec.areas:

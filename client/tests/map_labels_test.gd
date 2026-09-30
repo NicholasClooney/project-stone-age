@@ -63,6 +63,11 @@ func run():
 	var bangino: Dictionary=find_label(menu,"pet","邦奇诺")
 	check(not bangino.is_empty() and str(bangino.node.text).ends_with(" Lv1") and bangino.node.visible,"吉鲁岛 shows 「邦奇诺 … Lv1」 without zooming")
 	check(texts(menu,"place").has("福尔德村") and texts(menu,"place").has("达那村"),"吉鲁岛 labels its village exits")
+	# 补充 Lv.1 人龙 on 吉鲁岛 (the original's own Lv.1 灰/黄人龙 areas 332/333
+	# keep their green labels; 利则诺顿 has no original Lv.1 here).
+	var grey: Dictionary=find_label(menu,"pet_added","邦浦洛斯、布鲁顿")
+	var green: Dictionary=find_label(menu,"pet_added","利则诺顿")
+	check(not grey.is_empty() and not green.is_empty() and grey.node.label_settings.font_color==menu.ADDED_PET_COLOR and not texts(menu,"pet").any(func(text):return text.contains("利则诺顿")),"吉鲁岛's 补充 Lv.1 人龙 are labelled in the added colour, not as original")
 	# Rare Lv.1 spots the project added (data/rare-encounters.json) get their
 	# own colour; the original Lv.1 邦恩多斯 in the 龙穴 stays green.
 	var lair: Array=book.level_one_areas(500).filter(func(area):return int(area.area_id)==652)

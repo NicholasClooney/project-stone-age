@@ -809,6 +809,38 @@
     },
     {
       "map_id": 300,
+      "area_id": 311,
+      "cell": [
+        402,
+        307
+      ],
+      "map_name": "吉鲁岛",
+      "name": "邦浦洛斯",
+      "enemy_id": 979,
+      "template_id": 93,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "original_area"
+    },
+    {
+      "map_id": 300,
+      "area_id": 311,
+      "cell": [
+        402,
+        307
+      ],
+      "map_name": "吉鲁岛",
+      "name": "布鲁顿",
+      "enemy_id": 981,
+      "template_id": 95,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "original_area"
+    },
+    {
+      "map_id": 300,
       "area_id": 314,
       "cell": [
         509,
@@ -911,6 +943,22 @@
       "level_min": 1,
       "level_max": 1,
       "dev_only": true
+    },
+    {
+      "map_id": 300,
+      "area_id": 473,
+      "cell": [
+        244,
+        68
+      ],
+      "map_name": "吉鲁岛",
+      "name": "利则诺顿",
+      "enemy_id": 1138,
+      "template_id": 91,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "original_area"
     },
     {
       "map_id": 400,
@@ -1055,6 +1103,38 @@
       "origin": "added"
     },
     {
+      "map_id": 500,
+      "area_id": 659,
+      "cell": [
+        218,
+        319
+      ],
+      "map_name": "五十年前波拉岛",
+      "name": "加格",
+      "enemy_id": 446,
+      "template_id": 223,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "original_area"
+    },
+    {
+      "map_id": 10004,
+      "area_id": 76,
+      "cell": [
+        25,
+        25
+      ],
+      "map_name": "阿布的洞窟地下４楼",
+      "name": "贝洛恩",
+      "enemy_id": 266,
+      "template_id": 41,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "original_area"
+    },
+    {
       "map_id": 32005,
       "area_id": 615,
       "cell": [
@@ -1068,6 +1148,22 @@
       "level_min": 1,
       "level_max": 1,
       "dev_only": true
+    },
+    {
+      "map_id": 32005,
+      "area_id": 615,
+      "cell": [
+        29,
+        30
+      ],
+      "map_name": "漆黑的洞窟 地下5楼",
+      "name": "格尔格",
+      "enemy_id": 994,
+      "template_id": 144,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "original_area"
     },
     {
       "map_id": 32006,

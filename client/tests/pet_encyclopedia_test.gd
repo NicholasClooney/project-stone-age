@@ -113,6 +113,10 @@ func rare_places(book) -> void:
 	var red: Dictionary = book.entry_for(303)
 	var original: Array = red.locations.filter(func(place):return str(place.origin).is_empty() and int(place.map_id) == 500 and int(place.area_id) == 639)
 	check(original.size() == 1 and int(original[0].level_min) >= 90 and int(Encyclopedia.best_location(red).level_min) == 1 and Encyclopedia.best_location(red).origin == "original_area" and Encyclopedia.where_text(red).ends_with("Lv.1为补充"),"红暴 keeps its original Lv.90–95 place and gains a separate 补充 Lv.1 place")
+	var green: Dictionary = book.entry_for(91)
+	var north: Array = green.locations.filter(func(place):return str(place.origin).is_empty() and int(place.map_id) == 300 and int(place.level_min) >= 51)
+	var green_best: Dictionary = Encyclopedia.best_location(green)
+	check(not north.is_empty() and int(green_best.map_id) == 300 and int(green_best.area_id) == 473 and int(green_best.level_min) == 1 and green_best.origin == "original_area" and Encyclopedia.origin_text(green_best.origin).begins_with("补充"),"利则诺顿 keeps its original Lv.51–53 吉鲁岛 places and gains a 补充 Lv.1 in area 473")
 	var water: Dictionary = book.entry_for(252)
 	check(water.locations.any(func(place):return int(place.map_id) == 32018 and int(place.level_min) == 1 and str(place.origin).is_empty()),"布林帖斯's original Lv.1 in 地下18楼 stays unmarked")
 

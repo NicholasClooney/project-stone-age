@@ -60,8 +60,14 @@ Map 500 五十年前波拉岛 is reached with 地图导航 or 宠物大全's 瞬
 | 葛雷吉鲁 火年兽 (903) | 萨伊那斯 · 38 | 1 | 1/127 | 0.79% | 1796 | — | 非原版 | same |
 | 葛雷马恩 风年兽 (904) | 萨伊那斯 · 38 | 1 | 1/127 | 0.79% | 1797 | — | 非原版 | same |
 | 黑乌力 黑猪 (5) | 萨伊那斯 · 56 | 1 | 1/97 (1.03%) | 0.93% | 475 | 255 乌力 Lv15–20 | 非原版 | the 乌力 field, Lv15–20 |
+| 利则诺顿 绿人龙 (91) | 吉鲁岛 · 473 | 1 | 1/102 (0.98%) | 0.79% | 1138 | 1187 Lv51–53 | 补充 | its most common place (49.5%); the area already has an original weight-1 Lv.1 group (627). 1138 is the Lv.1 row of dungeon 21013 (not imported) |
+| 邦浦洛斯 灰人龙 (93) | 吉鲁岛 · 311 | 1 | 1/101 (0.99%) | 0.77% | 979 | 980 Lv43–45 | 补充 | lowest wild level. 979 is the original's own 吉鲁岛 Lv.1 row (area 332, see below) |
+| 布鲁顿 黄人龙 (95) | 吉鲁岛 · 311 | 1 | 1/101 (0.99%) | 0.78% | 981 | 982 Lv43–45 | 补充 | same; 981 is the original's area 333 Lv.1 row |
+| 加格 白鲨 (223) | 五十年前波拉岛 · 659 | 1 | 1/101 (0.99%) | 0.81% | 446 | 1491 Lv90–95 | 补充 | its only wild place on an imported map (659–661 share one group; 659 has the highest priority). 446 is dungeon 10203's Lv.1 row |
+| 贝洛恩 (41) | 阿布的洞窟地下4楼 · 76 | 1 | 1/91 (1.10%) | 0.95% | 266 | 278 Lv22–24 | 补充 | lowest wild level (地下3/4楼); 地下3楼's area 74 lists two groups missing from group.txt, 76 does not. 266 is dungeon 10101's Lv.1 row |
+| 格尔格 红猩猩 (144) | 漆黑的洞窟 地下5楼 · 615 | 1 | 1/102 (0.98%) | 0.82% | 994 | 1384 Lv85–87 | 补充 | the floor already weighs 101 with an original weight-1 Lv.1 group (736). 994 is dungeon 31204's Lv.1 row |
 
-Scaled areas: 500/639 ×2, 500/652 ×2, 500/638 ×3, 地下6楼 ×14, 地下7楼 ×17, 地下8楼 ×14, 地下20楼 ×3, 萨伊那斯 56 ×8.
+Scaled areas: 500/639 ×2, 500/652 ×2, 500/638 ×3, 地下6楼 ×14, 地下7楼 ×17, 地下8楼 ×14, 地下20楼 ×3, 萨伊那斯 56 ×8, 吉鲁岛 311 ×33, 500/659 ×10, 阿布的洞窟地下4楼 76 ×2.
 
 Already Lv.1 in the original, so nothing is added: 布林帖斯 (地下18楼), 邦恩多斯 (龙穴), 布拉奇多斯 (沙姆岛), 贝鲁卡 / 贝鲁伊卡 (加鲁卡), 格鲁西斯 (吉鲁岛).
 
@@ -69,15 +75,17 @@ Already Lv.1 in the original, so nothing is added: 布林帖斯 (地下18楼), �
 
 - **Later, when their maps are imported**, these become original Lv.1 spots on their own: 奥卡洛斯 on 31806 (阿斯玛鲁矿山, area 363), 加宝格恩 on 30702 (area 605), 布洛多斯 on 5507 (area 658). The 飞龙 home 30701–30703 (帖拉格恩, 加宝格恩, 迪布恩 Lv80–82) would suit 帖拉格恩 better than 漆黑的洞窟. 萨格鲁's original 伊甸大陆 (蒙达山) is not in the reference data at all.
 - **Later (8.0-era) variants are not added**: only the classic pets asked for are. Template numbers from about 700 up are later additions to `enemybase.txt` (the 2.5-era pets are 1–~600), and these have no Lv.1 spot here: 水5火5 巴朵兰恩 724, 斑尼迪克 1036 (暴龙队 variant), 朵巴奈特 811/979, 阿米朵 813, 布洛多多 1042, 邦司凉朵 814, 嘎吱拉 796, 哥斯哥斯 797, 蒙哥拉斯 798, 可可恩 803, 克洛恩 804, 布兰恩 805, 迪布恩 806, 玛斯贝卡 779. Exceptions asked for by name: 金暴 812, 蓝虎 776, 白虎 777, 黑虎 778, 机豹 968.
+- **Classic pets whose only wild rows are on maps not imported yet** get nothing, because no imported area has them at any level: 石龟 (54, dungeons 11001–11005 Lv1–15 and 30501–30511), 卡达鲁卡斯 绿穿山甲 (81, 10601–10605 Lv1–15, 30301–30307), 卡卡金宝 红蛙 (234, 30601–30606, with an original Lv.1 row 1682). They become original Lv.1 spots once those dungeons are imported. The Giru import (`tools/world_regions/giiru.json`) walks into some of their higher-level dungeons as `kind: dungeon` maps, which the spot builders do not index (only `training` maps and 100/200): 石龟 Lv55–57 on 30501 巴那姆的洞窟, 卡达鲁卡斯 Lv80–82 and 格尔格 Lv82–84 on 30301/30302. If those maps become hunt targets, 石龟 and 卡达鲁卡斯 can get a 补充 Lv.1 there (rows 502, 505). 31204 holds an original Lv.1 格尔格 (994, 1/41), and 31806 one for 奥卡洛斯 (1037); once they are indexed, the 格尔格 and 奥卡洛斯 additions can go. 乌力乌力 (2) is a starter whose only wild row is dungeon 10204 (Lv20–30). The classic entries with `original_wild: false` (吉比, 鲁比, 蒙奇, 摩娜西普, 乌力王) are not wild pets.
+- **吉鲁岛's own Lv.1 人龙**: the original puts Lv.1 邦浦洛斯 (group 438) and 布鲁顿 (group 440) at weight 1/101 in areas 332 and 333, small rects inside area 311 with the same priority 20. `encounter_catalog.gd area_at` keeps the first area on a priority tie, so 311 always wins and those groups are never rolled (地图导航 still labels them green). The server source for the original tie rule is not in `references/`. If it turns out to pick the later area, 332/333 become reachable and the two 311 additions can go.
 - The 新手 tigers (161–164) are weaker starter gifts, so they are left out. 吉比 (910) and 凯恩 (918) share the 年兽 album page but are not 年兽.
 - Only 黑羊 was asked for in 布伊德系. 布伊德 (311) and 摩娜西普 金羊 (312) still have no wild spot, and 卡伊霍恩 / 拉伊霍恩 only Lv95–105.
 
 ## Verification
 
 - `python3 -m unittest discover -s tools -p test_import_encounters.py`: merge rules, refusals, and every shipped share between 0.5% and 1.5%.
-- `res://tests/rare_encounters_test.gd`: every addition in its area at Lv.1 with weight 1, companion 1:1 and the template's capture parameter; the reference group untouched; seeded rolls meet every added pet; a seeded GDScript hunt finds a Lv.1 左迪洛斯 and the battle authority captures it.
-- `res://tests/fast_hunt_test.gd`: C helper and GDScript roll the same 3000 rolls for the added 左迪洛斯 at 500/639.
-- `res://tests/pet_encyclopedia_test.gd`: each spot is a reachable Lv.1 location of its species, labelled 补充 / 原版无野外，非原版.
+- `res://tests/rare_encounters_test.gd`: every addition in its area at Lv.1 with weight 1, companion 1:1 and the template's capture parameter; the reference group untouched; seeded rolls meet every added pet; every 补充 addition sits beside the same pet at a higher level; every classic pet with a wild spot has a Lv.1 spot; a seeded GDScript hunt finds a Lv.1 左迪洛斯 and the battle authority captures it.
+- `res://tests/fast_hunt_test.gd`: C helper and GDScript roll the same 3000 rolls for the added 左迪洛斯 at 500/639 and for 邦浦洛斯 in the scaled 吉鲁岛 311.
+- `res://tests/pet_encyclopedia_test.gd`: each spot is a reachable Lv.1 location of its species, labelled 补充 / 原版无野外，非原版; 利则诺顿's best place is its 补充 Lv.1 on 吉鲁岛. `res://tests/map_labels_test.gd`: 吉鲁岛's 补充 人龙 labels use the added colour.
 
 ## Rebuild
 
