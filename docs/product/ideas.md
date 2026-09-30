@@ -607,3 +607,9 @@
 
 - 想法：建项目仓库，第一次提交放全部文档；用 Godot 迭代着做，大约 30 分钟的 agent 工作就能在萨姆吉尔走路，有音乐、基本动画和音效，然后一步步叠加。
 - 去向：d6bddb6、ad89b51；`docs/development/iterative-development.md`
+
+## 2026-09-30 · 加鲁加洞窟与山顶风景 · 部分完成
+
+- 想法：按原版地图恢复拉多拉、森林、哥亚、阿鲁姆、强恩族、龙巢、卡鲁它那、碧青、琉璃、水苍洞窟；任务入口暂时直接开放，保留原版遇敌，网页按到访下载。
+- 状态：已导入并连通 99 张地图；拉多拉山岭洞窟、部分旧山顶和琉璃十五楼共 22 张候选地图因缺少已核对原始入口暂缓。任务、Boss、NPC 服务尚未还原。
+- 去向：`tools/import_world.py`、`tools/verify_jyaruga_world.py`；`docs/reverse-engineering/ordinary-world-expansion.md` 的地图清单与限制。

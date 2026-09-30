@@ -5,7 +5,7 @@ import struct
 import tempfile
 import unittest
 from test_import_wilderness import FakeArchive
-from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS, settlement_owner
+from import_world import read_map, read_portals, convert, safe_spawn, reachable_cells, select_connected_maps, excluded_reason, disable_conflicting_portals, ordinary_portals, DEV_TRAINING_MAPS, settlement_owner, JYARUGA_SCENIC_MAPS, read_scenic_gates, review_scenic_doors
 
 
 class WorldImportTests(unittest.TestCase):
@@ -20,6 +20,26 @@ class WorldImportTests(unittest.TestCase):
         self.assertFalse({1400,10001,999}&selected)
         self.assertIn('quest',excluded_reason(paths[10001]))
         self.assertIn('missing',excluded_reason(None))
+
+    def test_scenic_selection_keeps_service_rooms_excluded(self):
+        self.assertTrue({20001,20013,20105,20309,20807,21016,21315} <= JYARUGA_SCENIC_MAPS)
+        self.assertFalse({20508,20608,20711,20712,117} & JYARUGA_SCENIC_MAPS)
+        paths={20801:Path('map/jyaruga/dungeon/20801'),20711:Path('map/jyaruga/dungeon/20711')}
+        selected=select_connected_maps(paths,[dict(from_map=200,to_map=20801),dict(from_map=20801,to_map=20711)])
+        self.assertIn(20801,selected)
+        self.assertNotIn(20711,selected)
+
+    def test_reviewed_npc_gate_preserves_original_destination(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            (root/'gate.create').write_text('{\nfloorid=200\nborncorner=73,696,73,696\nenemy=npcgen_warpman|file:genout/wpm_200_73_696\n}\n{\nfloorid=200\nborncorner=1,2,1,2\nenemy=npcgen_warpman|file:genout/unreviewed\n}')
+            (root/'wpm_200_73_696').write_text('WARP:21201,61,46\nFREE:LV>64&ENDEV=4\n')
+            gates=read_scenic_gates(root)
+            self.assertEqual(len(gates),1)
+            self.assertEqual(gates[0]['cell'],[73,696])
+            self.assertEqual(gates[0]['target'],[61,46])
+            self.assertEqual(gates[0]['to_map'],21201)
+            self.assertIn('直接开放',gates[0]['convenience'])
 
     def test_dev_training_maps_do_not_expand_ordinary_portals(self):
         self.assertEqual(len(DEV_TRAINING_MAPS), 35)
@@ -51,6 +71,17 @@ class WorldImportTests(unittest.TestCase):
         self.assertTrue(all(p['disabled'] for p in portals[:2]))
         self.assertNotIn('disabled',portals[2])
         self.assertEqual(portals[0]['target'],[10,15])
+
+    def test_reviewed_scenic_conflict_uses_original_choice_only(self):
+        links=[dict(from_map=200,cell=[285,926],to_map=20601,target=[9,59]),
+               dict(from_map=200,cell=[285,926],to_map=20601,target=[10,59]),
+               dict(from_map=200,cell=[229,988],to_map=3413,target=[10,15]),
+               dict(from_map=200,cell=[229,988],to_map=3413,target=[10,16])]
+        disable_conflicting_portals(links)
+        review_scenic_doors(links)
+        self.assertNotIn('disabled',links[0])
+        self.assertTrue(all(p['disabled'] for p in links[1:]))
+        self.assertEqual(links[0]['target'],[9,59])
 
     def test_original_header_and_dimensions(self):
         with tempfile.TemporaryDirectory() as directory:
