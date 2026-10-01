@@ -865,6 +865,20 @@ func pet_panel(profile: Dictionary) -> void:
 		pet_portrait_facing=facing
 		world.play_battle_sound(217))
 	pet_native_button(26046,Vector2(198,286),func(): pet_switch_view("skills"),"宠物技能")
+	# 存入仓库 beside 宠物技能: the pet shown here goes to the warehouse.
+	var stash:Button=world.button("存入仓库",func():
+		var shown:=selected_pet
+		if world.session.store_pet(shown):
+			world.refresh_companion();world.checkpoint();feedback="已存入仓库。"
+			selected_pet=clampi(shown,0,maxi(0,world.session.snapshot().pets.size()-1))
+		else:feedback=world.session.last_error
+		rebuild())
+	stash.name="PetStatusStore";stash.position=Vector2(20,272);stash.size=Vector2(96,28);stash.add_theme_font_size_override("font_size",13)
+	var stash_lock:=battle_lock(str(pet.get("pet_id","")),"存入仓库")
+	if selected_pet==int(world.session.snapshot().get("ride_pet",-1)):stash.disabled=true;stash.tooltip_text="请先下骑当前骑宠。"
+	elif not stash_lock.is_empty():stash.disabled=true;stash.tooltip_text=stash_lock
+	else:stash.tooltip_text="把这只宠物存入仓库"
+	panel.add_child(stash)
 	pet_native_button(26043,Vector2(190,317),func(): pet_switch_view("list"))
 	pet_navigation(pets.size(),317)
 	if pet_rename:pet_rename_panel(pet)

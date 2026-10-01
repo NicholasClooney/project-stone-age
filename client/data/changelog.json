@@ -1,9 +1,18 @@
 {
-  "version": "v0.162.0",
-  "count": 238,
-  "feature_count": 146,
+  "version": "v0.163.0",
+  "count": 239,
+  "feature_count": 147,
   "fix_count": 92,
   "entries": [
+    {
+      "version": "v0.163.0",
+      "date": "2026-10-01",
+      "kind": "feat",
+      "title": "宠物状态页可直接存入仓库",
+      "details": [
+        "宠物状态页「宠物技能」旁边新增「存入仓库」，直接把正在看的这只存进仓库；骑乘中或战斗中的宠物不能存，按钮会说明原因。"
+      ]
+    },
     {
       "version": "v0.162.0",
       "date": "2026-10-01",

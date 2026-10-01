@@ -83,6 +83,17 @@ func run()->void:
 	await process_frame
 	menu.panel.get_node("PetState1").pressed.emit()
 	check(world.session.snapshot().active_pet==1,"restingpetstatebutton selects")
+	# 存入仓库 beside 宠物技能 stores the pet shown in the status page.
+	menu.selected_pet=3
+	menu.pet_switch_view("detail")
+	await process_frame
+	var stash=menu.panel.get_node_or_null("PetStatusStore")
+	var before_pets:int=world.session.snapshot().pets.size()
+	var before_storage:int=world.session.snapshot().get("pet_storage",[]).size()
+	check(stash!=null and not stash.disabled and menu.panel.get_rect().has_point(menu.panel.position+stash.position),"the status page has 存入仓库 beside 宠物技能")
+	if stash!=null:stash.pressed.emit()
+	await process_frame
+	check(world.session.snapshot().pets.size()==before_pets-1 and world.session.snapshot().get("pet_storage",[]).size()==before_storage+1 and world.session.snapshot().pet_storage.back().name=="乌力伙伴4","it stores that pet in the warehouse")
 	world.close_adventure_menu()
 	world.music.stop();world.effect.stop();world.queue_free()
 	await process_frame
