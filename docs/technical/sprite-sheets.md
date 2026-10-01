@@ -36,7 +36,7 @@ The original art is 8-bit palette art with on/off transparency. Every riding she
 - It only converts when that is exact: more than 255 colours, or any partly transparent pixel, keeps the sheet RGBA.
 - `tools/test_sprite_sheets.py` checks that a palette sheet shows exactly the same visible pixels as the RGBA one (fully transparent pixels may carry a different hidden colour) and that partial alpha stays RGBA.
 
-One byte per pixel instead of four cut the riding sheets from 795 MB (RGBA) to 234 MB and made writing them faster.
+One byte per pixel instead of four cut the riding sheets from 795 MB (RGBA) to 234 MB and made writing them faster. The game can also keep them at one byte a pixel on the GPU, see [palette textures](palette-textures.md).
 
 ## Battle sprites and walking art (`tools/pack_frame_sheets.py`)
 

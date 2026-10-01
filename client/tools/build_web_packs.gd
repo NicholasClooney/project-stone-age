@@ -14,6 +14,7 @@ extends SceneTree
 
 ## Bump when the packing itself changes, so every pack is rewritten once.
 const FORMAT := 1
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 
 func _initialize() -> void:
 	var arguments := OS.get_cmdline_user_args()
@@ -70,6 +71,10 @@ func _fingerprint(paths: Array) -> String:
 	var parts := PackedStringArray([str(FORMAT)])
 	for path in paths:
 		var source := str(path)
+		if PaletteSheet.wanted(source):
+			if not FileAccess.file_exists(source):return ""
+			parts.append("palette %s@%d" % [source,FileAccess.get_modified_time(source)])
+			continue
 		var remap_file := source+".import"
 		if not FileAccess.file_exists(remap_file):
 			if not FileAccess.file_exists(source):return ""
@@ -108,9 +113,11 @@ func _write_pack(name: String, paths: Array, out: String) -> Dictionary:
 	written.close()
 	return {"file":file_name,"bytes":size,"sha256":digest}
 
+## A sheet drawn from its palette PNG (scripts/palette_sheet.gd) ships that
+## PNG as it is, without the imported RGBA copy.
 func _add(packer: PCKPacker, path: String) -> bool:
 	var remap_file := path+".import"
-	if not FileAccess.file_exists(remap_file):
+	if PaletteSheet.wanted(path) or not FileAccess.file_exists(remap_file):
 		return FileAccess.file_exists(path) and packer.add_file(path,path)==OK
 	if packer.add_file(remap_file,remap_file)!=OK:return false
 	for imported in _imported_files(remap_file):
