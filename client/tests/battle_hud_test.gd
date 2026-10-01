@@ -40,7 +40,7 @@ func run():
  game.set_effects_on(true)
  var hud=game.classic_hud
  var move=InputEventMouseMotion.new()
- move.position=Vector2(hud.size.x/2,hud.size.y-10)
+ move.position=Vector2(650,790)
  root.push_input(move,true)
  await create_timer(0.3).timeout
  check(hud.taskbar.visible,"bottom menu reveals over battle")

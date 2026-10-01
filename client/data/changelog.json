@@ -1,9 +1,16 @@
 {
-  "version": "v0.163.5",
-  "count": 244,
+  "version": "v0.163.6",
+  "count": 245,
   "feature_count": 147,
-  "fix_count": 97,
+  "fix_count": 98,
   "entries": [
+    {
+      "version": "v0.163.6",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "keep combatants at their former size on large windows",
+      "details": []
+    },
     {
       "version": "v0.163.5",
       "date": "2026-10-01",
