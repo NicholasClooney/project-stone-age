@@ -759,6 +759,24 @@ func spirit_field_buttons(profile: Dictionary, main: Button) -> void:
 		pet_cast.size.x = 80
 		pet_cast.tooltip_text = self_cast.tooltip_text
 
+## 宠物技能's button (26046) with its lettering replaced by the stone face of
+## its left edge, for buttons the original has no art for.
+func native_blank_button() -> Texture2D:
+	if art.has(-26046):return art[-26046]
+	var image:=original(26046).get_image()
+	image.convert(Image.FORMAT_RGBA8)
+	var source: Image = image.duplicate()
+	var width:=image.get_width()
+	# Lettering and its outline become the face's stone speckle; stone stays.
+	var stone:=[Color8(128,128,128),Color8(160,160,164),Color8(166,202,240),Color8(192,220,192)]
+	for x in range(3,width-3):
+		for y in range(1,image.get_height()-2):
+			var c: Color = source.get_pixel(x,y)
+			if not stone.any(func(s:Color):return s.is_equal_approx(Color(c.r,c.g,c.b,1.0))):
+				image.set_pixel(x,y,source.get_pixel(2,y) if (x+y)%3 else Color8(160,160,164))
+	art[-26046]=ImageTexture.create_from_image(image)
+	return art[-26046]
+
 func pet_native_button(ident: int, center: Vector2, callback: Callable, title: String = "") -> TextureButton:
 	var button := TextureButton.new()
 	button.texture_normal = original(ident)
@@ -865,20 +883,37 @@ func pet_panel(profile: Dictionary) -> void:
 		pet_portrait_facing=facing
 		world.play_battle_sound(217))
 	pet_native_button(26046,Vector2(198,286),func(): pet_switch_view("skills"),"宠物技能")
-	# 存入仓库 beside 宠物技能: the pet shown here goes to the warehouse.
-	var stash:Button=world.button("存入仓库",func():
+	# 存入仓库 beside 宠物技能, drawn like the original buttons (stone face,
+	# green text with a dark outline) on a face cut from 宠物技能's art.
+	var stash:=TextureButton.new()
+	stash.name="PetStatusStore"
+	stash.texture_normal=native_blank_button()
+	stash.position=Vector2(90,286)-stash.texture_normal.get_size()/2
+	var stash_text:=Label.new()
+	stash_text.text="存入仓库"
+	stash_text.size=stash.texture_normal.get_size()
+	stash_text.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
+	stash_text.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
+	stash_text.add_theme_font_size_override("font_size",13)
+	stash_text.add_theme_color_override("font_color",Color8(40,225,40))
+	stash_text.add_theme_color_override("font_outline_color",Color8(40,35,30))
+	stash_text.add_theme_constant_override("outline_size",4)
+	stash_text.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	stash.add_child(stash_text)
+	stash.pressed.connect(func():
 		var shown:=selected_pet
 		if world.session.store_pet(shown):
 			world.refresh_companion();world.checkpoint();feedback="已存入仓库。"
 			selected_pet=clampi(shown,0,maxi(0,world.session.snapshot().pets.size()-1))
 		else:feedback=world.session.last_error
 		rebuild())
-	stash.name="PetStatusStore";stash.position=Vector2(20,272);stash.size=Vector2(96,28);stash.add_theme_font_size_override("font_size",13)
 	var stash_lock:=battle_lock(str(pet.get("pet_id","")),"存入仓库")
-	if selected_pet==int(world.session.snapshot().get("ride_pet",-1)):stash.disabled=true;stash.tooltip_text="请先下骑当前骑宠。"
-	elif not stash_lock.is_empty():stash.disabled=true;stash.tooltip_text=stash_lock
-	else:stash.tooltip_text="把这只宠物存入仓库"
+	if selected_pet==int(world.session.snapshot().get("ride_pet",-1)):stash_lock="骑乘中的宠物不能存入仓库，请先下骑。"
+	stash.disabled=not stash_lock.is_empty()
+	stash.tooltip_text=stash_lock if stash.disabled else "把这只宠物存入仓库"
+	if stash.disabled:stash.modulate=Color(1,1,1,0.45)
 	panel.add_child(stash)
+	Highlight.attach(stash,Rect2(Vector2(-2,-2),stash.texture_normal.get_size()+Vector2(4,4)))
 	pet_native_button(26043,Vector2(190,317),func(): pet_switch_view("list"))
 	pet_navigation(pets.size(),317)
 	if pet_rename:pet_rename_panel(pet)

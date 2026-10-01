@@ -1,9 +1,16 @@
 {
-  "version": "v0.163.0",
-  "count": 239,
+  "version": "v0.163.1",
+  "count": 240,
   "feature_count": 147,
-  "fix_count": 92,
+  "fix_count": 93,
   "entries": [
+    {
+      "version": "v0.163.1",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "draw the status page store button like the original buttons",
+      "details": []
+    },
     {
       "version": "v0.163.0",
       "date": "2026-10-01",
