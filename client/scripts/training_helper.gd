@@ -22,6 +22,8 @@ var multiplier: OptionButton
 var compact: CheckBox
 ## 用精灵补血 (training.spirit).
 var spirit: CheckBox
+## 练级保护 (training.protect): fallen pets still earn experience in runs.
+var protect: CheckBox
 ## 全体补血 threshold in percent (training.side_heal, 0 off).
 var side_heal: SpinBox
 
@@ -96,6 +98,8 @@ func _ready() -> void:
 	multiplier=options(["1× 原版","2×","10×","100×"],Vector2(555,106))
 	compact=CheckBox.new();compact.text="地图内简略战斗（不切换画面，只显示战况）";compact.position=Vector2(24,164);panel.add_child(compact)
 	spirit=CheckBox.new();spirit.name="SpiritHeal";spirit.text="用精灵补血";spirit.position=Vector2(560,164);panel.add_child(spirit)
+	protect=CheckBox.new();protect.name="TrainingProtect";protect.text="练级保护";protect.position=Vector2(720,164);panel.add_child(protect)
+	protect.tooltip_text="非原版助手（默认开）：自动练级、自动抓宠和后台搜宠里，随身宠物倒下也照样分到经验、不掉忠诚，每场之间随身宠物回满血（倒下的也救回）。低等级宠物在高等级区也能练。手动战斗仍按原版。"
 	spirit.tooltip_text="到停机线时先用身上装备的补血精灵（治愈／滋润／恩惠，队伍里倒下的队友用复活精灵），气力不够再喝回复药或停机。气力只在村里休息时恢复。"
 	label_at(panel,"低于此血量停机 %",Vector2(24,223),17);hp_floor=number(Vector2(230,213),1,100,10)
 	label_at(panel,"角色等级（0不限）",Vector2(430,223),16);target_level=number(Vector2(610,213),0,120,120)
@@ -164,6 +168,7 @@ func load_settings() -> void:
 	if _changed(old_training,training,"xp"):multiplier.select(maxi(0,[1,2,10,100].find(int(training.xp))))
 	if _changed(old_training,training,"compact"):compact.set_pressed_no_signal(bool(training.compact))
 	if _changed(old_training,training,"spirit"):spirit.set_pressed_no_signal(bool(training.get("spirit",true)))
+	if _changed(old_training,training,"protect"):protect.set_pressed_no_signal(bool(training.get("protect",true)))
 	var shown:=all.duplicate(true)
 	if not _sync_spin(hp_floor,old_training.get("hp"),training.hp):shown.training.hp=old_training.hp
 	if not _sync_spin(battle_limit,old_training.get("limit"),training.limit):shown.training.limit=old_training.limit
@@ -202,7 +207,7 @@ static func _sync_spin(input: SpinBox, old_value: Variant, new_value: Variant, f
 
 ## Every choice in these controls, in the runner's flat settings shape.
 func current_settings() -> Dictionary:
-	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"side_heal":int(side_heal.value),"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
+	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"protect":protect.button_pressed,"side_heal":int(side_heal.value),"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
 	result.capture_pet_id=_selected_pet_id()
 	return result
 
@@ -220,7 +225,7 @@ func settings_patch() -> Dictionary:
 	if _training_applied:
 		_training_applied=false
 		var chosen: Dictionary=current_settings()
-		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"side_heal":chosen.side_heal,
+		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"protect":chosen.protect,"side_heal":chosen.side_heal,
 "hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
 		if level_explicit:wanted.level=chosen.level
 		var training:=AutomationSettings.diff(all.training,wanted)

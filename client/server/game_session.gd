@@ -203,6 +203,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 		actor.merge({"name":config.enemy_name,"species":species,"sprite":enemy.sprite,"level":3 if boss else 1,"reward_xp":config.reward_xp,"reward_gold":config.reward_gold})
 		config.enemies.append(actor)
 	_profile.next_battle += 1
+	config.protect_pets = protect_pets
 	_pending = config.duplicate(true)
 	return config
 
@@ -277,6 +278,7 @@ func start_wild_battle_config(troop: Dictionary, clear_target: int = -1) -> Dict
 	config.battle_gold = int(_profile.player.level)*10
 	config.area_id = int(troop.get("area_id",-1))
 	config.group_id = int(troop.get("group_id",-1))
+	config.protect_pets = protect_pets
 	_pending = config.duplicate(true)
 	return config
 
@@ -309,6 +311,7 @@ func start_party_config(party_battle_id: String, enemies: Array = [], battle_gol
 	config.capture_slots = 0
 	config.party = true
 	config.party_battle_id = party_battle_id
+	config.protect_pets = protect_pets
 	_pending = config.duplicate(true)
 	return config
 
@@ -446,7 +449,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		# battle.c:3175: +2 charm once for a battle that levels the player up.
 		if int(_profile.player.level)>level_before:Loyalty.add_charm(_profile.player,Loyalty.CHARM_PLAYER_LEVEL_UP)
 		for i in range(_profile.pets.size()):
-			if _profile.pets[i].hp>0:_gain_xp(_profile.pets[i],int(pet_rewards[i]))
+			if _profile.pets[i].hp>0 or protect_pets:_gain_xp(_profile.pets[i],int(pet_rewards[i]))
 			else:pet_rewards[i] = 0
 		if outcome == "win" and _profile.quest.accepted and not _profile.quest.claimed:
 			if _pending.boss:
@@ -531,7 +534,7 @@ func _battle_loyalty(result: Dictionary, enemies: Array, battle_pets: Array, out
 	for i in range(mini(battle_pets.size(),roster.size())):
 		# A mount is not a battle entry: its fall is no pet death (battle.c:4389).
 		if i==int(_pending.get("ride_pet_index",-1)) or int(slots[i])<0:continue
-		if int(roster[i].get("hp",0))>0 and int(battle_pets[i].hp)==0:
+		if int(roster[i].get("hp",0))>0 and int(battle_pets[i].hp)==0 and not protect_pets:
 			Loyalty.add_variable(_profile.pets[int(slots[i])],Loyalty.death_penalty(Loyalty.AI_PET_DEAD,level))
 	if outcome=="defeat":
 		Loyalty.add_charm(player,Loyalty.death_penalty(Loyalty.CHARM_PLAYER_DEAD,level))
@@ -835,6 +838,31 @@ func heal_carried_pets() -> bool:
 			pet.hp=pet.max_hp
 			changed=true
 	return changed
+
+## 练级保护 (training.protect, not original), set by the automation runner for
+## the battles it fights: a carried pet that falls loses no loyalty and still
+## earns its experience, and restore_carried_pets brings every carried pet
+## back to full HP between battles.
+var protect_pets := false
+
+func restore_carried_pets() -> bool:
+	if not _pending.is_empty():return false
+	var changed:=false
+	for pet in _profile.pets:
+		if int(pet.hp)<int(pet.max_hp):
+			pet.hp=pet.max_hp
+			changed=true
+	return changed
+
+## Brings a fallen carried pet back to full HP between battles (后台搜宠's
+## training; not an original rule). False while a battle is pending.
+func revive_carried_pet(pet_id: String) -> bool:
+	if not _pending.is_empty():return false
+	for pet in _profile.pets:
+		if str(pet.get("pet_id",""))==pet_id and int(pet.hp)<=0:
+			pet.hp=pet.max_hp
+			return true
+	return false
 
 ## 休息 at the villager: NPC_HealerAllHeal (npc_healer.c) restores 耐久力
 ## and 气力, and the pets. A defeat (_recover alone) leaves 气力 as it was.

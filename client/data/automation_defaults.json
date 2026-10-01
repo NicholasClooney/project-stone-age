@@ -4,6 +4,7 @@
     "xp": 10,
     "compact": true,
     "spirit": true,
+    "protect": true,
     "side_heal": 50,
     "hp": 10,
     "level": 120,

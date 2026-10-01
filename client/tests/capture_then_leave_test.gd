@@ -39,6 +39,8 @@ func run()->void:
 	check(raised.is_empty(),"no carried pet gained a level (the run left instead of fighting on): %s"%str(raised))
 	var report:String=game.battle_view.report.text if is_instance_valid(game.battle_view.report) else ""
 	check(str(game.battle_session.snapshot().get("outcome",""))=="escaped","the battle ends by escaping, the second enemy untouched (%s)"%report)
+	var why:=str(game.backend.automation.stop_reason)
+	check(why=="本场自动战斗已完成","the find-pet flow counts escaping with the catch as a finished capture, not 战斗未获胜 (%s)"%why)
 	game.queue_free()
 	await process_frame
 	print("CAPTURE THEN LEAVE: %d failures"%failures)

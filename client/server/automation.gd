@@ -71,6 +71,11 @@ var capture_target := -1
 var training_pet_id := ""
 var training_pet_level := 120
 var finish_after_capture := false
+## Times in a row the pet being trained fell without gaining a level, and the
+## level it had then; at TRAINING_FALL_LIMIT the run stops instead of looping.
+var training_falls := 0
+var training_fall_level := 0
+const TRAINING_FALL_LIMIT := 20
 var clone_override_active := false
 var previous_clone_enabled := false
 var compact_active := false
@@ -468,7 +473,10 @@ func step() -> void:
 				return
 			_emit_status()
 			var clear_caught := int(state.get("clear_capture_target",-1))>=0 and bool(state.enemies[int(state.clear_capture_target)].get("captured",false))
-			if outcome not in ["win","captured"] and not (outcome=="escaped" and clear_caught):stop("战斗未获胜");return
+			# A capture run leaves after the catch (no experience for the weaken
+			# pet): escaping with the target caught is a finished capture.
+			var target_caught: bool = capture_target>=0 and capture_target<state.enemies.size() and bool(state.enemies[capture_target].get("captured",false))
+			if outcome not in ["win","captured"] and not (outcome=="escaped" and (clear_caught or target_caught)):stop("战斗未获胜");return
 			if single_battle:stop("本场自动战斗已完成");return
 			return
 		if party_waiting():return
@@ -523,7 +531,8 @@ func step() -> void:
 		turn_text = "第 %d 回合 · 体力 %d/%d · 气力 %d\n%s" % [turns,next.player_hp,next.player_max_hp,int(next.get("player_mp",0))," / ".join(next.events)]
 		_emit_status()
 		return
-	if backend.session.heal_carried_pets():
+	# 练级保护 brings every carried pet back to full between battles.
+	if (backend.session.restore_carried_pets() if bool(settings.get("protect",true)) else backend.session.heal_carried_pets()):
 		backend.save()
 		backend.publish()
 	var p: Dictionary = backend.session.snapshot()
@@ -534,6 +543,21 @@ func step() -> void:
 		if selected < 0:stop("目标宠物不在随身队伍");return
 		if selected!=int(p.active_pet):stop("目标宠物不再出战");return
 		if int(p.pets[selected].level)>=training_pet_level:stop("目标宠物已达到等级目标");return
+		# A fallen pet earns no experience: training it on would loop forever.
+		# 后台搜宠 revives its own pet between battles (a project convenience);
+		# a stop asked for meanwhile ends the cycle here instead of after Lv.120.
+		if int(p.pets[selected].get("hp",0))<=0:
+			training_falls += 1
+			if training_falls>=TRAINING_FALL_LIMIT:stop("目标宠物连续倒下%d次，这里的敌人对它太强，请换个地方练级" % TRAINING_FALL_LIMIT);return
+			if flow_active() and flow_phase=="train" and flow_stop_pending.is_empty() and backend.session.revive_carried_pet(training_pet_id):
+				backend.save()
+				backend.publish()
+				_showcase_line("retry","%s 倒下了，已救回，继续练级（第%d次）。" % [str(p.pets[selected].get("name","")),training_falls])
+			else:stop("目标宠物已倒下");return
+		elif int(p.pets[selected].level)>training_fall_level:
+			training_falls = 0
+			training_fall_level = int(p.pets[selected].level)
+	if flow_active() and flow_phase=="train" and not flow_stop_pending.is_empty():stop_cycle("已停止：%s" % flow_stop_pending);return
 	if int(settings.level) > 0 and int(p.player.level)>=int(settings.level):stop("已达到目标等级");return
 	if battles>=int(settings.limit):stop("已达到战斗场次上限");return
 	# A party leader (LAN phase 4c): the leader and every member are healed
@@ -550,6 +574,7 @@ func step() -> void:
 
 	compact_active = bool(settings.compact)
 	_emit_status()
+	backend.session.protect_pets = bool(settings.get("protect",true))
 	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
 	if not opened.ok:
 		compact_active = false
@@ -643,6 +668,9 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 	settings.merge(overrides,true)
 	start_training()
 	if not running:return false
+	if training_pet_id!=pet_id:
+		training_falls = 0
+		training_fall_level = int(profile.pets[chosen].get("level",1))
 	training_pet_id = pet_id
 	training_pet_level = clampi(target_level_value,1,120)
 	_emit_status()
@@ -685,8 +713,13 @@ func profile_health_reason(line: int = -1) -> String:
 	var p: Dictionary = backend.session._profile
 	return health_reason({"player_hp":p.player.hp,"player_max_hp":p.player.max_hp,"pets":p.pets,"active_pet":p.active_pet,"ride_pet":p.get("ride_pet",-1)},line)
 
+## 练级保护 (training.protect) for the battle about to open (game_session.gd).
+func _protect_pets() -> void:
+	backend.session.protect_pets = bool(profile_settings().get("protect",true))
+
 func stop(reason: String) -> void:
 	release_clone_override()
+	backend.session.protect_pets = false
 	running = false
 	stop_reason = reason
 	backend.set_capture_assist(false)
@@ -854,6 +887,7 @@ func _open_hit(troop: Dictionary, i: int, quality: Dictionary, roll: Dictionary 
 	var found := "找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset]
 	if not TroopArt.can_render(troop.enemies):
 		stop_hunt(found+"\n敌群原版素材不可用，保留本次结果并停止，未进入战斗。");return
+	_protect_pets()
 	var config: Dictionary = backend.session.start_wild_battle_config(troop,_mixed_clear_target(troop,i))
 	if config.is_empty():
 		stop_hunt(found+"\n战斗校验未通过，已停止。");return
@@ -2183,6 +2217,7 @@ func _showcase_capture() -> void:
 		_skip_hit("复核不一致","排队的第 %d 组复核不一致，没有进入战斗。" % (int(entry.index)+1));return
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		stop_cycle("宠物栏已满，请自行存放伙伴后再开始。");return
+	_protect_pets()
 	var config: Dictionary = backend.session.start_wild_battle_config(troop,_mixed_clear_target(troop,int(entry.slot)))
 	if config.is_empty():stop_cycle("战斗校验未通过，已停止。");return
 	var refusal := mixed_refusal(troop,int(entry.slot),config)
