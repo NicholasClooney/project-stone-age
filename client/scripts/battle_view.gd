@@ -438,6 +438,10 @@ func layout_arena() -> void:
 		actor_label.scale = Vector2.ONE*canvas_factor
 		actor_label.size = Vector2(200,45)/canvas_factor
 	var hud_factor := stage.scale.x*canvas_factor
+	# Combatants keep the size the original 640×480 battle had when it was
+	# letterboxed into this window (never below native pixels), and only
+	# shrink when the window cannot fit both camps.
+	var scene_factor := maxf(1.0,minf(physical_size.x/640.0,physical_size.y/480.0))
 	# Reserve the actual settled PLAYER menu rectangle at the top right.
 	# All camps fit below this band, so depth order never hides a combatant.
 	var menu := player_menu_rect()
@@ -452,14 +456,14 @@ func layout_arena() -> void:
 		var beside := available
 		beside.size.x = maxf(1,(choices.position.x-8.0*stage.scale.x)*canvas_factor-beside.position.x)
 		var probe = preload("res://scripts/battle_layout.gd").new()
-		probe.solve(entries,beside)
+		probe.solve(entries,beside,scene_factor)
 		var beside_factor: float = probe.factor
-		probe.solve(entries,below)
+		probe.solve(entries,below,scene_factor)
 		available = beside if beside_factor>probe.factor else below
 		for child in choice_panel.get_children():
 			if child is Button:
 				child.add_theme_font_size_override("font_size",maxi(16,roundi(14.0/maxf(hud_factor,0.001))))
-	responsive.solve(entries,available)
+	responsive.solve(entries,available,scene_factor)
 	arena.scale = Vector2.ONE*responsive.factor/canvas_factor
 	arena.position = responsive.origin/canvas_factor
 	for node in actor_labels+hp_bars:

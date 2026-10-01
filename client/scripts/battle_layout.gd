@@ -18,7 +18,9 @@ func point(native: Vector2) -> Vector2:
 	var weight := clampf((projection-enemy_edge)/maxf(friend_edge-enemy_edge,0.001),0.0,1.0)
 	return native+enemy_shift.lerp(friend_shift,weight)
 
-func solve(entries: Array, available: Rect2) -> void:
+## max_factor: the scale the whole native scene had before (the HUD scale), so
+## combatants keep that size and only shrink when the window cannot fit them.
+func solve(entries: Array, available: Rect2, max_factor: float = 1.0) -> void:
 	vertical = false
 	if entries.is_empty(): return
 	var camps := [Rect2(),Rect2()]
@@ -41,7 +43,7 @@ func solve(entries: Array, available: Rect2) -> void:
 	bounds = camps[0].merge(camps[1]) if seen[0] and seen[1] else camps[0] if seen[0] else camps[1]
 	# Keep native scale until an individual camp itself requires shrinking.
 	var camp_size := Vector2(maxf(camps[0].size.x,camps[1].size.x),maxf(camps[0].size.y,camps[1].size.y))
-	var camp_factor := minf(1.0,minf(available.size.y/600.0,minf(available.size.x/maxf(camp_size.x,1),available.size.y/maxf(camp_size.y,1))))
+	var camp_factor := minf(max_factor,minf(available.size.y/600.0*max_factor,minf(available.size.x/maxf(camp_size.x,1),available.size.y/maxf(camp_size.y,1))))
 	if seen[0] and seen[1] and (bounds.size.x*camp_factor>available.size.x or bounds.size.y*camp_factor>available.size.y or camps[0].intersects(camps[1])):
 		var gap := 32.0
 		var upper := Vector2(0,-(camps[1].size.y+gap)/2.0)
@@ -61,7 +63,7 @@ func solve(entries: Array, available: Rect2) -> void:
 		if vertical_fit>diagonal_fit or camps[0].intersects(camps[1]):
 			vertical = true
 			bounds = candidate
-	factor = minf(1.0,minf(available.size.x/maxf(bounds.size.x,1),available.size.y/maxf(bounds.size.y,1)))
+	factor = minf(max_factor,minf(available.size.x/maxf(bounds.size.x,1),available.size.y/maxf(bounds.size.y,1)))
 	origin = available.get_center()-bounds.get_center()*factor
 
 func point_vertical(native: Vector2) -> Vector2:

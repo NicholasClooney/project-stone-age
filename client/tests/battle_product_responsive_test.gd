@@ -4,7 +4,7 @@ const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 var game
 var view
-const SIZES = [Vector2i(1280,720),Vector2i(800,800),Vector2i(720,1280),Vector2i(390,844)]
+const SIZES = [Vector2i(2400,1500),Vector2i(1280,720),Vector2i(800,800),Vector2i(720,1280),Vector2i(390,844)]
 const SHOTS = "/private/tmp/battle-responsive-fix-shots/"
 func _initialize(): run.call_deferred()
 func check(ok: bool, note: String):
