@@ -7,7 +7,10 @@ var jobs: Array = []
 var enabled_events: Array = []
 func _init() -> void:
  var config = JSON.parse_string(FileAccess.get_file_as_string("res://data/early-quests.json"))
- if config is Dictionary: enabled_events = config.get("enabled_events", []).duplicate()
+ if config is Dictionary:
+  for event in config.get("enabled_events", []):
+   if (event is int or event is float) and float(event) == floor(float(event)) and int(event) > 0 and int(event) < 192:
+    enabled_events.append(int(event))
  if not FileAccess.file_exists(ROOT + "quests/catalog.json"): return
  var data = JSON.parse_string(FileAccess.get_file_as_string(ROOT + "quests/catalog.json"))
  if not data is Dictionary or int(data.get("version", 0)) != 1: return

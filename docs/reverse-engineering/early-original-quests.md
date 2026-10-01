@@ -1,8 +1,9 @@
 # 原版任务解释器与已知偏差
 
 本期只支持 `sainasu/event/event02_1`、`event02_2` 的不可思议的贝壳任务。
-共享机制默认通过 `client/data/early-quests.json` 关闭公开事件；测试只在真实
-QuestCatalog 实例中覆盖 `enabled_events=[2]`，不伪造分支或奖励。
+公开目录 `client/data/early-quests.json` 启用事件 2。玩家可点击日美子
+（萨姆吉尔 1000，57/124）与弥生（玛丽娜丝 2000，55/92）。
+测试使用真实 QuestCatalog 和原分支，不伪造对白或奖励。
 伐木依赖缺失地图 20508、event19、许可证门控木敌群及战斗掉物，尚未实现。
 
 原参考 `gmsv/npc/npc_exchangeman.c` 保留文件分支顺序，EventNo 正数且
@@ -30,3 +31,17 @@ CLEAN YES 清指定 NOW/END，NO 和窗口关闭不改变存档。
 存档点原位证据见 `char/char_data.c:689-720`、`npc_savepoint.c:543-551`；
 确认流程见 `npc_exchangeman.c:570-601,1744-1768`，距离见
 `npcutil.c:553-567`，旗标见 `npcutil.c:1310-1422`。
+
+## 导入格式与资源
+
+`tools/early_quest_sources.json` 固定 NPC 参数、create、itemset、jobdaily
+的来源及 SHA256。`tools/import_early_quests.py` 按 GB18030 解码并校验，
+生成忽略提交的 `client/assets/legacy/quests/catalog.json`，目录 version=1。
+`npcs` 保存原地图、cell、贴图及有序 branches；branch 保存 EventNo、TYPE、
+EVENT、原文消息与动作。`items` 按原 ID 保存 name/memo/icon，`jobs` 保存
+jobdaily 标题与 NOWEV/ENDEV 状态。新增来源需更新白名单，未知语法拒绝导入。
+
+物品 2414（不可思议的贝壳）、2415（仙尼亚的花）与两个静态 NPC 均使用
+2.5 原图。网页目录和物品归 core，NPC 图归各自地图包。导入任务后运行
+`tools/plan_web_packs.py` 与 headless editor import，无需重导世界或遇敌。
+Headless 测试不验证渲染像素。

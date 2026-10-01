@@ -22,6 +22,9 @@ func fresh():
 	b.quest_catalog.enabled_events=[2]
 	return b
 func run() -> void:
+	var public_backend=Backend.new()
+	check(public_backend.quest_catalog.enabled_events==[2] and public_backend.quest_catalog.active_npcs().size()==2,"public catalog exposes both original shell NPCs")
+	public_backend.free()
 	migration()
 	for bit in range(4):direction(bit)
 	rejections()
