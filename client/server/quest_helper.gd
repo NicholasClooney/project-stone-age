@@ -134,7 +134,7 @@ func doctor_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var target:=capture_step(backend,species)
  var held:Array=[]
  for pet in profile.pets:
-  if str(pet.species)=="original_%d"%species:held.append("%s Lv.%d%s"%[str(pet.get("pet_id","")),int(pet.level),"（事件或来源不明，不可交付）" if Rules.Session.original_pet_event(pet)!=0 else ""])
+  if str(pet.get("species",""))=="original_%d"%species:held.append("%s Lv.%d%s"%[str(pet.get("pet_id","")),int(pet.level),"（事件或来源不明，不可交付）" if Rules.Session.original_pet_event(pet)!=0 else ""])
  var detail:="捕获普通%s并培养至%d级；只交随身栏首个符合宠物%s"%[name,level,"；当前："+"、".join(held) if not held.is_empty() else "；尚未持有"]
  if target.is_empty():
   quest.steps.append({"id":prefix+"capture","npc_id":"","current":started and eligible<0 and not ended,"done":eligible>=0 or ended,"actionable":false,"label":detail+"（尚无已导入捕获地点）","source":{"type":"pet_requirement","species":species,"level":level,"original_end_event":0}})

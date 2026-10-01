@@ -1,9 +1,16 @@
 {
-  "version": "v0.138.0",
-  "count": 191,
+  "version": "v0.138.1",
+  "count": 192,
   "feature_count": 122,
-  "fix_count": 69,
+  "fix_count": 70,
   "entries": [
+    {
+      "version": "v0.138.1",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "tolerate pets without a species in doctor helper steps",
+      "details": []
+    },
     {
       "version": "v0.138.0",
       "date": "2026-10-01",
