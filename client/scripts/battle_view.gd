@@ -18,9 +18,6 @@ const ART_ROOT := "res://assets/legacy/battle/"
 const STAGE_SIZE := Vector2(800,600)
 var world: Node
 var stage: Control
-var arena: Control
-var responsive = preload("res://scripts/battle_layout.gd").new()
-var layout_signature := ""
 ## battle/index.json (scripts/battle_art.gd): player and enemy ids, club
 ## variants, UI pictures and audio. Each actor holds its sprite's own entry.
 var manifest: Dictionary = {}
@@ -171,17 +168,11 @@ func _ready() -> void:
 	stage.size = STAGE_SIZE
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stage)
-	arena = Control.new()
-	arena.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	add_child(arena)
 	if BattleArt.present():
 		manifest = BattleArt.index()
 		frame_sounds = BattleArt.frame_sounds().duplicate()
 		battlefield = picture("background.png",Vector2.ZERO)
-		battlefield.reparent(self,false)
 		battlefield.z_index = -1000
-		battlefield.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
-		battlefield.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
 		add_actor(str(manifest.get("enemy_id","")),Vector2(101,150),7)
 	status = label("",16,Vector2(20,12),Vector2(420,26))
@@ -232,7 +223,7 @@ func _ready() -> void:
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		target.focus_mode = Control.FOCUS_NONE
 		target.pressed.connect(select_target.bind(i))
-		arena.add_child(target)
+		stage.add_child(target)
 		target_buttons.append(target)
 		var highlight := Panel.new()
 		highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -243,7 +234,7 @@ func _ready() -> void:
 		outline.set_border_width_all(1)
 		highlight.add_theme_stylebox_override("panel",outline)
 		highlight.hide()
-		arena.add_child(highlight)
+		stage.add_child(highlight)
 		target_highlights.append(highlight)
 		actor_labels.append(label("",14,target.position+Vector2(-30,125),Vector2(200,45)))
 		var meter := Control.new()
@@ -287,10 +278,9 @@ func _ready() -> void:
 		ally_mount_bars.append(meter)
 		ally_mount_fills.append(fill)
 	battle_effects = BattleEffects.new()
-	arena.add_child(battle_effects)
+	stage.add_child(battle_effects)
 	battle_effects.setup(manifest)
 	battle_effects.externally_driven = true
-	battle_effects.map_point = responsive.point
 	result_panel = Control.new()
 	result_panel.position = Vector2(240,180)
 	result_panel.size = Vector2(320,288)
@@ -372,7 +362,7 @@ func add_actor(ident: String, point: Vector2, facing: int) -> void:
 		return
 	var sprite := Sprite2D.new()
 	sprite.centered = false
-	arena.add_child(sprite)
+	stage.add_child(sprite)
 	actors.append({"character_id":ident,"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"art":art,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
 
 func layout() -> void:
@@ -381,55 +371,6 @@ func layout() -> void:
 	var factor := minf(size.x/STAGE_SIZE.x,size.y/STAGE_SIZE.y)
 	stage.scale = Vector2.ONE*factor
 	stage.position = (size-STAGE_SIZE*factor)/2
-	if is_instance_valid(battlefield):
-		battlefield.position = Vector2.ZERO
-		battlefield.size = size
-	layout_arena()
-
-
-func layout_arena() -> void:
-	var entries: Array = []
-	for i in range(actors.size()):
-		var actor: Dictionary = actors[i]
-		if not bool(actor.get("enabled",true)): continue
-		var box := Rect2(Vector2(-25,-90),Vector2(50,90))
-		var art: Dictionary = actor.art
-		for animation in [art.animations.get("3_%d"%int(actor.facing),actor.animation)]:
-			for frame in range(SpriteArt.frame_count(animation)):
-				var dimensions := Vector2(SpriteArt.image_size(art,SpriteArt.image(animation,frame)))
-				box = box.merge(Rect2(SpriteArt.offset(art,animation,frame),dimensions))
-		entries.append({"home":actor.home,"box":Rect2(Vector2(actor.home)+box.position,box.size),"side":0 if enemy_index(i)>=0 else 1})
-	# Window canvas_items scaling keeps the map/HUD in logical units. Solve
-	# the battlefield in displayed pixels so a narrow physical window cannot
-	# masquerade as a wide 1280-unit canvas.
-	var canvas_factor := maxf(get_viewport().get_final_transform().get_scale().x,0.001)
-	var physical_size := size*canvas_factor
-	battle_effects.canvas_factor = canvas_factor
-	# Rasterize text at the window's font resolution, then compensate the
-	# arena transform. This avoids low-resolution glyphs on a scaled canvas.
-	for actor_label in actor_labels:
-		actor_label.add_theme_font_size_override("font_size",maxi(1,roundi(14.0/canvas_factor)))
-		actor_label.scale = Vector2.ONE*canvas_factor
-		actor_label.size = Vector2(200,45)/canvas_factor
-	var hud_factor := stage.scale.x*canvas_factor
-	var top := maxf(42.0,110.0*hud_factor)
-	var bottom := physical_size.y-maxf(30.0,92.0*hud_factor)
-	responsive.solve(entries,Rect2(Vector2(8,top),Vector2(maxf(1,physical_size.x-16),maxf(1,bottom-top))))
-	arena.scale = Vector2.ONE*responsive.factor/canvas_factor
-	arena.position = responsive.origin/canvas_factor
-	# The existing command menu stays at its native HUD anchor. If a tall
-	# viewport puts it across the upper camp, use spare vertical space below it.
-	var menu := Rect2(stage.position+Vector2(550,0)*stage.scale.x,Vector2(250,140)*stage.scale.x)
-	var displacement := 0.0
-	for entry in entries:
-		var box: Rect2 = entry.box
-		box.position += responsive.point(entry.home)-Vector2(entry.home)
-		box = Rect2(arena.position+box.position*arena.scale.x,box.size*arena.scale.x)
-		if menu.intersects(box): displacement = maxf(displacement,menu.end.y-box.position.y+8.0)
-	var spare: float = size.y-8.0-(arena.position.y+responsive.bounds.end.y*arena.scale.x)
-	arena.position.y += minf(displacement,maxf(0.0,spare))
-	for node in actor_labels+hp_bars:
-		if node.get_parent()!=arena: node.reparent(arena,false)
 
 var hunt_target_index := -1
 
@@ -1270,23 +1211,15 @@ func _process(delta: float) -> void:
 
 func _advance_playback(delta: float) -> void:
 	elapsed += delta
-	var signature := str(size)+str(get_viewport().get_final_transform().get_scale())
-	for actor in actors: signature += str(actor.character_id)+str(actor.get("enabled",true))
-	if signature!=layout_signature:
-		layout_signature = signature
-		layout_arena()
 	while not mirror_cues.is_empty() and elapsed>=float(mirror_cues[0].at):
 		var cue: Dictionary = mirror_cues.pop_front()
 		var effect = preload("res://scripts/mirror_effect.gd").new()
-		arena.add_child(effect)
-		effect.setup(int(cue.id),responsive.point(actors[int(cue.index)].point))
-		effect.set_meta("native_point",actors[int(cue.index)].point)
+		stage.add_child(effect)
+		effect.setup(int(cue.id),actors[int(cue.index)].point)
 		mirror_effects.append(effect)
 	for i in range(mirror_effects.size()-1,-1,-1):
 		if not is_instance_valid(mirror_effects[i]): mirror_effects.remove_at(i)
-		else:
-			mirror_effects[i].position = responsive.point(mirror_effects[i].get_meta("native_point"))
-			mirror_effects[i].advance(delta)
+		else: mirror_effects[i].advance(delta)
 	battle_effects.advance(delta)
 	for tile in transition_tiles:
 		var frames := maxf(0.0,(elapsed-float(tile.release))*60.0)
@@ -1378,14 +1311,11 @@ func _advance_playback(delta: float) -> void:
 			var maximum := maxi(1,int(actor.get("maximum",1)) if actor_index==2 else health_of(state,actor_index,true))
 			# Original battlemenu.cpp HpMeterDisp: every actor uses y-80,
 			# including small pets. The PET label is baked into frame26020.
-			hp_bars[actor_index].position = responsive.point(actor.point)+Vector2(0,-80)
+			hp_bars[actor_index].position = actor.point+Vector2(0,-80)
 			hp_bars[actor_index].visible = shown and displayed_hp[actor_index]>0
 			hp_fills[actor_index].size.x = int(clampf(float(displayed_hp[actor_index])/maximum,0,1)*40.0)
 		if actor_index<actor_labels.size():
-			actor_labels[actor_index].position = responsive.point(actor.point)+Vector2(-100,-10)
-			var left := -arena.position.x/arena.scale.x
-			var right := (size.x-arena.position.x)/arena.scale.x-actor_labels[actor_index].size.x*actor_labels[actor_index].scale.x
-			actor_labels[actor_index].position.x = clampf(actor_labels[actor_index].position.x,left,maxf(left,right))
+			actor_labels[actor_index].position = actor.point+Vector2(-100,-10)
 		var animation: Dictionary = actor.animation
 		if elapsed < float(actor.until) and not str(actor.temporary).is_empty():
 			animation = actor.animations[actor.temporary]
@@ -1416,7 +1346,7 @@ func _advance_playback(delta: float) -> void:
 		if sprite.texture==null: continue
 		PaletteSheet.apply(sprite,sprite.texture)
 		sprite.z_index = clampi(int(actor.point.y),0,599)-600
-		sprite.position = responsive.point(actor.point)+SpriteArt.offset(art,animation,index)
+		sprite.position = actor.point+SpriteArt.offset(art,animation,index)
 		var target: Button = target_buttons[actor_index]
 		target.visible = shown
 		target.position = sprite.position
@@ -1427,12 +1357,12 @@ func _advance_playback(delta: float) -> void:
 		var highlight: Panel = target_highlights[actor_index]
 		highlight.position = target.position-Vector2(2,2)
 		highlight.size = target.size+Vector2(4,4)
-		highlight.visible = eligible and target.get_rect().has_point(arena.get_local_mouse_position())
+		highlight.visible = eligible and target.get_rect().has_point(stage.get_local_mouse_position())
 		var phase := int(elapsed*60.0)%60
 		var outline: StyleBoxFlat = highlight.get_theme_stylebox("panel")
 		outline.border_color = Color.GREEN if phase<45 else (Color(0,0.5,0) if phase>=50 and phase<55 else Color.WHITE)
 
-	update_hover_info(arena.get_local_mouse_position())
+	update_hover_info(stage.get_local_mouse_position())
 
 func hover_actor_text(index: int) -> String:
 	var actor_name := actor_labels[index].text
