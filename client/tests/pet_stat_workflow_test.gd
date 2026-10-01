@@ -24,9 +24,10 @@ func run()->void:
 	check(Filter.enabled(Filter.defaults(92)) and int(Filter.defaults(92).conditions.sum.minus)==1 and int(blue_filter().conditions.sum.value)==624,"blue dragon defaults to 三围合 ≥ 最高 − 1")
 	var other:=Filter.defaults(194)
 	check(other.conditions.sum.enabled and other.conditions.attack.enabled and int(other.conditions.sum.keep)==0 and int(other.conditions.attack.keep)==0,"other species default to 三围合 or 攻击 too, without blue's 留前")
+	check(game.link.request({"type":"gm_grant_pet","template":92,"full_grade":true}).ok,"real session grants an owned blue dragon for threshold captions")
 	hunt.open_menu();hunt.show_stat_settings()
 	check(hunt.stat_page.visible and not hunt.capture_page.visible and not hunt.species.visible,"attribute tab exclusively displays its own controls")
-	var shown_best:=Filter.maxima(preload("res://scripts/keep_rule.gd").species_pets(game.state.profile,92).map(preload("res://scripts/keep_rule.gd").stats_of))
+	var shown_best:=Filter.maxima(preload("res://scripts/keep_rule.gd").species_pets(game.session.snapshot(),92).map(preload("res://scripts/keep_rule.gd").stats_of))
 	var sum_check:CheckBox=hunt.stat_checks.sum
 	check(sum_check.text=="三围合 ≥ 最高%d −" % int(shown_best.sum) and hunt.stat_results.sum.text=="= %d" % (int(shown_best.sum)-1) and hunt.stat_results.sum.tooltip_text=="三围合 ≥ 最高 %d − 1 = %d" % [int(shown_best.sum),int(shown_best.sum)-1],"the page reads %s [1] %s" % [sum_check.text,hunt.stat_results.sum.text])
 	for metric in Filter.METRICS:
@@ -50,12 +51,27 @@ func run()->void:
 	var fixed:Dictionary=game.stat_filter(92)
 	check(Filter.absolute(fixed) and int(fixed.conditions.sum.value)==int(shown_best.sum)-9 and int(fixed.conditions.attack.value)==int(shown_best.attack)-1 and int(fixed.conditions.sum.minus)==9,"switching to 绝对 fills in the thresholds hunted now (三围合 %d, 攻击 %d) and keeps x" % [int(fixed.conditions.sum.value),int(fixed.conditions.attack.value)])
 	check(Filter.absolute(flow.stat_filter_snapshot[92]) and int(Filter.resolve(flow.stat_filter_snapshot[92],{}).conditions.sum.value)==int(shown_best.sum)-9,"the running loop switches too")
-	check(hunt.stat_values.sum.visible and not hunt.stat_numbers.sum.visible and hunt.stat_checks.sum.text=="三围合 ≥" and hunt.stat_results.sum.text=="（现有最高%d）" % int(shown_best.sum) and hunt.stat_results.sum.tooltip_text=="三围合 ≥ %d（现有最高 %d）" % [int(shown_best.sum)-9,int(shown_best.sum)] and hunt.stat_heading.text.contains("固定数值"),"the row reads %s [%d] %s" % [hunt.stat_checks.sum.text,int(hunt.stat_values.sum.value),hunt.stat_results.sum.text])
+	check(hunt.stat_values.sum.visible and not hunt.stat_numbers.sum.visible and hunt.stat_checks.sum.text=="三围合 ≥" and hunt.stat_results.sum.text=="最高%d" % int(shown_best.sum) and hunt.stat_results.sum.tooltip_text=="三围合 ≥ %d（现有最高 %d）" % [int(shown_best.sum)-9,int(shown_best.sum)] and hunt.stat_heading.text.contains("固定数值"),"the row reads %s [%d] %s" % [hunt.stat_checks.sum.text,int(hunt.stat_values.sum.value),hunt.stat_results.sum.text])
+	await process_frame
 	for metric in Filter.METRICS:
 		var row_check:CheckBox=hunt.stat_checks[metric]
 		var value_box:SpinBox=hunt.stat_values[metric]
 		var result:Label=hunt.stat_results[metric]
-		check(row_check.position.x+row_check.get_combined_minimum_size().x<=value_box.position.x and value_box.position.x+value_box.size.x<=result.position.x and result.position.x+result.get_combined_minimum_size().x<=hunt.stat_keeps[metric].position.x,"the absolute %s row fits: check, value, best, 留前" % metric)
+		var keep_box:SpinBox=hunt.stat_keeps[metric]
+		var caption:String=Filter.METRIC_NAMES[metric]
+		var tooltip:="%s ≥ %d（现有最高 %d）" % [caption,int(fixed.conditions[metric].value),int(shown_best[metric])]
+		check(int(shown_best[metric])>0 and row_check.text=="%s ≥" % caption and result.text=="最高%d" % int(shown_best[metric]) and result.tooltip_text==tooltip and row_check.tooltip_text==tooltip,"absolute %s shows exact owned maximum and complete threshold tooltip" % metric)
+		check(row_check.is_visible_in_tree() and value_box.is_visible_in_tree() and result.is_visible_in_tree() and keep_box.is_visible_in_tree() and not hunt.stat_numbers[metric].visible,"absolute %s row controls remain visible with relative input hidden" % metric)
+		var keep_label:Label
+		for sibling in keep_box.get_parent().get_children():
+			if sibling is Label and sibling.text=="留前" and is_equal_approx(sibling.position.x,keep_box.position.x-40):keep_label=sibling
+		check(keep_label!=null and keep_label.is_visible_in_tree(),"absolute %s keep caption remains visible" % metric)
+		if keep_label==null:continue
+		var row:Array[Control]=[row_check,value_box,result,keep_label,keep_box]
+		for i in range(1,row.size()):
+			var previous:Rect2=row[i-1].get_global_rect()
+			var current:Rect2=row[i].get_global_rect()
+			check(previous.end.x<=current.position.x and not previous.intersects(current),"absolute %s row rects ordered without overlap: %s / %s" % [metric,row[i-1].name,row[i].name])
 	hunt.stat_values.sum.value=600;hunt.commit_stat_settings()
 	check(int(game.stat_filter(92).conditions.sum.value)==600 and int(Filter.resolve(flow.stat_filter_snapshot[92],{}).conditions.sum.value)==600,"a typed value is saved and hunted at once")
 	hunt.stat_threshold_mode.select(0);hunt.stat_threshold_mode.item_selected.emit(0)
