@@ -19,6 +19,7 @@ var _skill_used := false
 const CaptureRules = preload("res://server/capture_rules.gd")
 const CombatRules = preload("res://server/classic_combat_rules.gd")
 const Loyalty = preload("res://server/loyalty.gd")
+const OriginalEquipment = preload("res://server/original_equipment.gd")
 const Spirits = preload("res://server/spirits.gd")
 ## 镜子的精灵's 气力 (itemset.txt item 1460 magicusemp).
 const MIRROR_MP := 5
@@ -70,6 +71,11 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	var pet: Dictionary = config.get("pet", {}).duplicate(true)
 	_state = {"active":true,"outcome":"","battle_id":config.get("battle_id", ""),"player_hp":config.get("player_hp",48),"player_max_hp":config.get("player_max_hp",48),"enemy_hp":config.get("enemy_max_hp",32),"enemy_max_hp":config.get("enemy_max_hp",32),"enemy_name":config.get("enemy_name","乌力"),"enemy_species":config.get("enemy_species","wooli"),"enemy_sprite":config.get("enemy_sprite",100250),"pet_sprite":pet.get("sprite",100250),"pet_name":pet.get("name",""),"skill_unlocked":pet.get("skill_unlocked",false),"boss":config.get("boss",false),"turn":0,"events":["遭遇野生石器伙伴！"],"pet":pet,"pet_command":"attack","pet_hp":pet.get("hp",0),"pet_max_hp":pet.get("max_hp",0),"potions":config.get("potions",0),"captured_species":"","xp":0,"gold":0,"skill_used":false}
 	var initial_order: Array[String] = []
+	_state["player_resistances"]=config.get("player_resistances",[0,0,0,0,0,0]).duplicate()
+	_state["player_weapon"]=config.get("player_weapon","")
+	_state["original_equipment_items"]=config.get("original_equipment_items",[]).duplicate(true)
+	_state["equipment_base"]=config.get("equipment_base",{}).duplicate()
+	_state["equipment_occupied"]=config.get("equipment_occupied",[false,false,false,false,false]).duplicate()
 	_state["healing_available"]=bool(config.get("healing_available",false))
 	_state["mirror_available"]=bool(config.get("mirror_available",false))
 	_state["mirror_self"]=0
@@ -409,6 +415,7 @@ func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 	_last_outcome = result.outcome
 	_last_damage = mini(int(int(result.damage)/int(stats.get("damage_divisor",1))),int(enemy.hp))
 	enemy.hp -= _last_damage
+	if str(stats.get("kind",""))=="player":_wear_attacker(int(result.damage))
 	if int(enemy.hp) == 0:
 		enemy["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
 		enemy["defeated_with_ride_index"] = int(_state.get("ride_pet",-1)) if stats.kind == "player" else -1
@@ -543,6 +550,7 @@ func _resolve_counter() -> void:
 	if actor != "enemy":
 		_last_damage = mini(damage,int(_state.enemies[_target].hp))
 		_state.enemies[_target].hp -= _last_damage
+		if actor=="player":_wear_equipment(damage,true)
 		if int(_state.enemies[_target].hp) == 0:
 			_state.enemies[_target]["defeated_by_pet_index"] = _state.active_pet if _state.pet_hp > 0 else -1
 			_state.enemies[_target]["defeated_with_ride_index"] = int(_state.get("ride_pet",-1)) if actor == "player" else -1
@@ -588,6 +596,71 @@ func _apply_player_damage(damage: int) -> void:
 			_state.events.append("骑乘伙伴倒下了，下骑。")
 	_last_damage = mini(player_damage,int(_state.player_hp))
 	_state.player_hp -= _last_damage
+	_wear_equipment(damage,false)
+
+## Virtual attacker routing lets real party members wear their own items.
+func _wear_attacker(damage: int) -> void:
+	_wear_equipment(damage,true)
+
+func _wear_equipment(damage: int, arm: bool, member: Dictionary = {}) -> void:
+	if damage<=0:return
+	var owner: Dictionary=_state if member.is_empty() else member
+	var entries: Array=owner.get("original_equipment_items",[])
+	if entries.is_empty():return
+	var selected:=2
+	if not arm:
+		var roll:=_rng.randi_range(0,99)
+		selected=1 if roll<50 else 0 if roll<67 else 3 if roll<84 else 4
+		var occupied: Array=owner.get("equipment_occupied",[false,false,false,false,false])
+		var found:=false
+		for i in range(5):
+			if selected!=2 and occupied[selected]:found=true;break
+			selected=(selected+1)%5
+		if not found:return
+	for entry in entries:
+		var data: Dictionary=OriginalEquipment.ITEMS[int(entry.item_id)]
+		if (2 if str(data.slot)=="arm" else 3 if str(data.slot)=="amulet" else 4)!=selected or int(data.durability)<1 or int(entry.durability)<=0:continue
+		var before:=OriginalEquipment.stage(entry)
+		entry.durability=maxi(0,int(entry.durability)-OriginalEquipment.wear_amount(damage,arm,_rng))
+		if int(entry.durability)==0:
+			owner.equipment_occupied[selected]=false
+			_state.events.append("%s因过度损坏而消失。" % str(data.name))
+			_refresh_original_equipment(owner,member.is_empty())
+		elif OriginalEquipment.stage(entry)!=before:
+			_state.events.append("%s是%s的。" % [str(data.name),OriginalEquipment.STAGES[OriginalEquipment.stage(entry)]])
+		break
+
+## A checkpoint restores the live instances, then recomputes effective stats.
+## Pending holds admission stats; it must not restore an already broken axe.
+func restore_original_equipment() -> void:
+	if not _state.get("original_equipment_items",[]).is_empty():_refresh_original_equipment(_state,true)
+
+func _refresh_original_equipment(owner: Dictionary, leader: bool) -> void:
+	var entries: Array=owner.get("original_equipment_items",[])
+	var resistance: Array=[0,0,0,0,0,0]
+	var modifiers: Dictionary={"attack":0,"defence":0,"speed":0,"charm":0}
+	var axe:=false
+	for entry in entries:
+		var data: Dictionary=OriginalEquipment.ITEMS[int(entry.item_id)]
+		if int(entry.durability)<=0 and int(data.durability)>0:continue
+		axe=axe or str(data.slot)=="arm"
+		for stat in OriginalEquipment.STATS:modifiers[stat]+=int(data[stat])
+		var values: Array=data.get("resistances",[0,0,0,0,0,0])
+		for i in range(6):resistance[i]+=int(values[i])
+	for stat in OriginalEquipment.STATS:
+		var value:=int(owner.get("equipment_base",{}).get(stat,0))+int(modifiers[stat])
+		value=clampi(value,0,100) if stat=="charm" else maxi(0 if stat=="defence" else 1,value)
+		if leader:_config["player_"+stat]=value
+		elif owner.get("base_stats",{}).has(stat):owner.base_stats[stat]=value
+	var weapon: String="axe" if axe else "club" if str(_config.get("player_weapon","") if leader else owner.get("weapon",""))=="club" else ""
+	if leader:
+		_config.player_resistances=resistance
+		_state.player_resistances=resistance.duplicate()
+		_config.player_weapon=weapon
+		_state.player_weapon=weapon
+	else:
+		owner.resistances=resistance
+		owner.weapon=weapon
 
 func developer_escape() -> Dictionary:
 	return _end_without_rewards(true,"DEV：立即脱战，不获得经验、石币或捕获奖励。")

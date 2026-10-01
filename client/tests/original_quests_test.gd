@@ -62,7 +62,7 @@ func migration() -> void:
 		file.store_string(JSON.stringify(old));file.close()
 		check(session.load_game(path),"load legacy v%d" % version)
 		var migrated: Dictionary=session.snapshot()
-		check(migrated.version==5 and migrated.original_items.is_empty() and migrated.origin.village_id==1000 and migrated.location==old.location and migrated.inventory.potion==37 and migrated.travel_pass,"v%d retains stacks/location/pass, origin not inferred from map" % version)
+		check(migrated.version==Session.SAVE_VERSION and migrated.original_items.is_empty() and migrated.origin.village_id==1000 and migrated.location==old.location and migrated.inventory.potion==37 and migrated.travel_pass,"v%d retains stacks/location/pass, origin not inferred from map" % version)
 		check(migrated.pets==old.pets and migrated.pet_storage==old.pet_storage and migrated.player==old.player and migrated.character_id==old.character_id and migrated.equipped==old.equipped and migrated.quest==old.quest,"v%d preserves pets/stats/charm/luck/flags/equipment/character" % version)
 		for key in ["active_pet","ride_pet","equipment","allocated_stats","gm_modified","gm_bonus_points","default_companions_claimed","music","automation_settings","completed_battles","next_battle"]:
 			if key=="allocated_stats":check(migrated.player[key]==old.player[key],"allocated stats preserved")

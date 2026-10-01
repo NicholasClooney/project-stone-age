@@ -69,6 +69,7 @@ var element_editor_open := false
 var element_draft: Array = []
 const Faces = preload("res://scripts/faces.gd")
 ## The 精灵 equipment's data (itemset.txt / magic.txt rows, read only).
+const OriginalEquipment = preload("res://server/original_equipment.gd")
 const Spirits = preload("res://server/spirits.gd")
 const GameSessionScript = preload("res://server/game_session.gd")
 ## The bag's slots in order (menu.cpp:8976: five a row, 51 px apart, rows 48 px).
@@ -309,7 +310,7 @@ func status_panel(profile: Dictionary) -> void:
 		portrait(int(character),Vector2(177,84),Vector2(64,68))
 	# menu.cpp:11680: the ninth row is 魅力 (pc.charm).
 	# menu.cpp:11676: the fifth row is 气力 (pc.mp).
-	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"%d / %d" % [int(p.get("mp",Spirits.MAX_MP)),Spirits.MAX_MP],str(effective.attack),str(effective.defence),str(effective.speed),str(int(p.get("charm",60)))]
+	var values := [str(p.level),str(p.xp),str(int(p.level)*30-int(p.xp)),"%d / %d" % [p.hp,p.max_hp],"%d / %d" % [int(p.get("mp",Spirits.MAX_MP)),Spirits.MAX_MP],str(effective.attack),str(effective.defence),str(effective.speed),str(int(effective.get("charm",p.get("charm",60))))]
 	for i in range(values.size()):label(values[i],Vector2(87,70+i*21),83,13)
 	var base_positions := [Vector2(81,288),Vector2(201,288),Vector2(81,308),Vector2(201,308)]
 	var base_keys := ["vitality","strength","toughness","dexterity"]
@@ -493,32 +494,62 @@ func inventory_panel(profile: Dictionary) -> void:
 				if not item_equipped(world.session.snapshot(),key):world.perform_adventure_action(equip_action(key),true)
 		)
 	var originals: Array=profile.get("original_items",[])
+	var instances: Array=profile.get("original_instances",[])
+	var visible_originals:=0
 	for index in range(originals.size()):
 		var ident:=int(originals[index])
-		var position_index:=bag.size()+index
+		var entry: Dictionary=instances[index] if index<instances.size() else {}
+		var equipped:=OriginalEquipment.worn(profile,int(entry.get("uid",0)))
+		var position_index:=bag.size()+visible_originals
+		if not equipped:visible_originals+=1
 		var cell:=Vector2((position_index%5)*51,int(position_index/5)*48)
 		var data: Dictionary=quest_catalog.items.get(str(ident),{})
 		var icon:=TextureRect.new()
 		var icon_path: String="res://assets/legacy/"+str(data.get("icon_path",""))
 		if ResourceLoader.exists(icon_path):icon.texture=load(icon_path)
 		icon.name="OriginalItemIcon_%d" % index
-		icon.position=Vector2(32,200)+cell-(icon.texture.get_size()/2 if icon.texture!=null else Vector2.ZERO)
+		var center:=Vector2(61,129) if int(ident) in [2465,2485] else Vector2(32,68) if ident==2427 else Vector2(83,68)
+		icon.position=(center if equipped else Vector2(32,200)+cell)-(icon.texture.get_size()/2 if icon.texture!=null else Vector2.ZERO)
 		icon.mouse_filter=Control.MOUSE_FILTER_IGNORE
 		panel.add_child(icon)
-		var slot:=choice("",Vector2(11,175)+cell,"",null)
+		var slot:=choice("",center-Vector2(23,23) if equipped else Vector2(11,175)+cell,"",null)
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
 		slot.name="OriginalItemSlot_%d" % index;slot.size=Vector2(48,48)
-		slot.tooltip_text=str(data.get("name",str(ident)))
+		slot.tooltip_text=str(data.get("name",str(ident)))+(" · 双击卸下" if equipped else " · 双击装备" if OriginalEquipment.ITEMS.has(ident) else "")
 		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_original_item==index)
 		slot.pressed.connect(func():selected_original_item=index;selected_item_slot="original_%d" % index;rebuild())
-	for index in range(bag.size()+originals.size(),15):
+		if OriginalEquipment.ITEMS.has(ident):
+			slot.gui_input.connect(func(event: InputEvent):
+				if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
+					world.perform_adventure_action("equip_original:%d" % int(entry.uid),not equipped)
+			)
+	for index in range(bag.size()+visible_originals,15):
 		var empty:=choice("",Vector2(11+(index%5)*51,175+int(index/5)*48),"",null,false)
 		empty.name="EmptyItemSlot_%d" % index;empty.size=Vector2(48,48)
-	# Original instances are descriptive quest items, without equipment actions.
+	# Story items remain descriptive; reviewed equipment uses instance commands.
 	if selected_original_item>=0 and selected_original_item<originals.size():
 		var data: Dictionary=quest_catalog.items.get(str(int(originals[selected_original_item])),{})
 		label(str(data.get("name","")),Vector2(15,328),240,15).name="OriginalItemName"
-		label(str(data.get("description","")),Vector2(15,354),239,14).name="OriginalItemDescription"
+		var description:=label(str(data.get("description","")),Vector2(15,354),239,14)
+		description.name="OriginalItemDescription"
+		var ident:=int(originals[selected_original_item])
+		if OriginalEquipment.ITEMS.has(ident) and selected_original_item<instances.size():
+			description.position.y=348
+			description.add_theme_font_size_override("font_size",10)
+			description.max_lines_visible=2
+			description.tooltip_text=description.text
+			var entry: Dictionary=instances[selected_original_item]
+			var worn:=OriginalEquipment.worn(profile,int(entry.uid))
+			var spec: Dictionary=OriginalEquipment.ITEMS[ident]
+			var details:=label("等级 %d · 攻 %+d 防 %+d 敏 %+d 魅 %+d\n%s" % [int(spec.level),int(spec.attack),int(spec.defence),int(spec.speed),int(spec.charm),"无战斗磨损" if int(spec.durability)==0 else "耐久 %d / %d · %s" % [int(entry.durability),int(spec.durability),OriginalEquipment.STAGES[OriginalEquipment.stage(entry)]]],Vector2(15,374),246,11)
+			details.name="OriginalEquipmentDetails"
+			if ident==2427:
+				var resistance:=label("六状态耐性 +2 尚未生效",Vector2(90,410),174,10)
+				resistance.name="OriginalResistanceUnavailable"
+				resistance.tooltip_text="六状态耐性 +2：状态战斗尚未实现，未生效"
+			var equip:=choice("卸下" if worn else "装备",Vector2(14,404),"equip_original:%d" % int(entry.uid),not worn)
+			equip.name="EquipOriginalItem"
+			if ident==2427:equip.size.x=70
 		return
 	selected_original_item=-1
 	var potion := selected_item=="potion"

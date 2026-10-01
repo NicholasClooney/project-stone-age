@@ -79,6 +79,11 @@ func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 		_pending_counter.target=_acting_kind
 		_pending_counter.ally_index=_acting_ally
 
+func _wear_attacker(damage: int) -> void:
+	if _acting_ally>=0:
+		if _acting_kind=="ally":_wear_equipment(damage,true,_member(_acting_ally,"ally"))
+	else:super._wear_attacker(damage)
+
 func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 	# Negative entries delegate to the unchanged player/pet target selection.
 	var targets: Array[int]=[-1]
@@ -128,7 +133,9 @@ func _resolve_counter() -> void:
 	_last_damage=mini(damage,int(defender.hp))
 	_last_ride_damage=0
 	_last_outcome="counter_miss" if result.outcome=="miss" else "counter_critical" if result.outcome=="critical" else "counter"
-	if from_ally:enemy.hp-=_last_damage
+	if from_ally:
+		enemy.hp-=_last_damage
+		if kind=="ally":_wear_equipment(damage,true,ally)
 	else:_apply_member_damage(index,kind,damage)
 	_acting_ally=index if from_ally else -1
 	_acting_kind=kind
@@ -162,3 +169,4 @@ func _apply_member_damage(index: int, kind: String, damage: int) -> void:
 			_refresh_mount(index)
 	_last_damage=mini(own_damage,int(member.hp))
 	member.hp-=_last_damage
+	if kind=="ally":_wear_equipment(damage,false,member)

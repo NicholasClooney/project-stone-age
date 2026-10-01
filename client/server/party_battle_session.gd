@@ -620,6 +620,7 @@ func slice_for(slot: int, battle_id: String) -> Dictionary:
 	var ending := slot_outcome(slot)
 	var result := {"active":false,"battle_id":battle_id,"outcome":ending.outcome,"party_stay":ending.stay,"captured_species_list":[],"enemies":_slot_enemies(slot,_state.enemies),"pets":_slot_pets(slot),"party_xp":rewards_for(slot) if ending.outcome=="win" else {"player":0,"pets":_zeros(_slot_roster(slot).size())}}
 	if slot==0:
+		result.original_equipment_items = _state.get("original_equipment_items",[]).duplicate(true)
 		result.player_hp = int(_state.player_hp)
 		result.player_mp = int(_state.get("player_mp",0))
 		result.potions = int(_state.potions)
@@ -628,6 +629,7 @@ func slice_for(slot: int, battle_id: String) -> Dictionary:
 		result.pet_escapes = int(_state.get("pet_escapes",0))
 	else:
 		var member: Dictionary = _state.allies[slot-1]
+		result.original_equipment_items = member.get("original_equipment_items",[]).duplicate(true)
 		result.player_hp = int(member.hp)
 		result.player_mp = int(member.get("mp",0))
 		result.potions = int(member.get("potions",0))
@@ -651,6 +653,7 @@ func view_for(slot: int) -> Dictionary:
 	var canonical := snapshot()
 	var view: Dictionary = canonical if slot==0 else _remap(canonical,slot)
 	view.enemies = _slot_enemies(slot,canonical.enemies)
+	view.player_weapon = str(_state.get("player_weapon","")) if slot==0 else str(_state.allies[slot-1].get("weapon",""))
 	view.party_slot = slot
 	view.can_capture = false
 	view.mirror_available = false

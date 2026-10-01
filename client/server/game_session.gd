@@ -2,7 +2,8 @@ extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
-const SAVE_VERSION := 5
+const SAVE_VERSION := 6
+const OriginalEquipment = preload("res://server/original_equipment.gd")
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
@@ -99,7 +100,7 @@ static func original_state_valid(value: Dictionary) -> bool:
 		if not words is Array or words.size()!=6:return false
 		for word in words:
 			if not (word is int or word is float) or float(word)!=floor(float(word)) or word<0 or word>4294967295:return false
-	if not value.get("original_items") is Array or value.original_items.size()>15:return false
+	if not value.get("original_items") is Array or value.original_items.size()>(18 if int(value.get("version",5))>=6 else 15):return false
 	for item in value.original_items:
 		if not (item is int or item is float) or float(item)!=floor(float(item)) or item<=0 or item>2147483647:return false
 	var origin = value.get("origin")
@@ -110,6 +111,8 @@ static func original_state_valid(value: Dictionary) -> bool:
 
 static func bag_slots(profile: Dictionary) -> int:
 	var total: int = profile.get("original_items",[]).size()
+	for uid in profile.get("original_equipment",{}).values():
+		if int(uid)>0:total-=1
 	var worn: Array = profile.get("equipment",{}).values()
 	if profile.get("equipped",false):worn.append("club")
 	if profile.get("equipped_mirror",false):worn.append("mirror_charm")
@@ -118,6 +121,7 @@ static func bag_slots(profile: Dictionary) -> int:
 	return total
 
 func snapshot() -> Dictionary:
+	OriginalEquipment.migrate(_profile)
 	_ensure_pet_ids()
 	_sync_stat_points()
 	_refresh_loyalty()
@@ -144,8 +148,9 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	var pet: Dictionary = {}
 	if _profile.active_pet >= 0:
 		pet = _profile.pets[_profile.active_pet].duplicate(true)
+	OriginalEquipment.migrate(_profile)
 	var armour := equipment_mods()
-	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":player.attack+(4 if _profile.equipped else 0),"player_defence":maxi(0,int(player.defence)+int(armour.defence)),"player_speed":maxi(1,int(player.speed)+int(armour.speed)),"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
+	var config := {"battle_id":"battle-%d" % _profile.next_battle,"player_hp":player.hp,"player_max_hp":player.max_hp,"player_attack":maxi(1,int(player.attack)+int(armour.attack)),"player_defence":maxi(0,int(player.defence)+int(armour.defence)),"player_speed":maxi(1,int(player.speed)+int(armour.speed)),"enemy_species":species,"enemy_name":("强壮的" if boss else "") + enemy.name,"enemy_sprite":enemy.sprite,"enemy_max_hp":enemy.max_hp,"enemy_attack":enemy.attack,"enemy_defence":enemy.defence,"enemy_speed":enemy.speed,"boss":boss,"pet":pet,"potions":_profile.inventory.potion,"can_capture":_profile.pets.size() < PET_CAPACITY,"reward_xp":60 if boss else 20,"reward_gold":30 if boss else 10}
 	config.healing_available=int(_profile.inventory.get("healing_charm",0))>0
 	config.mirror_available=bool(_profile.get("equipped_mirror",false))
 	# 气力 and the 精灵 of the worn equipment (server/spirits.gd).
@@ -158,10 +163,16 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.mounted_sprite = preload("res://scripts/riding.gd").composite(str(_profile.character_id),int(config.ride_pet.get("sprite",0))) if not config.ride_pet.is_empty() else -1
 	config.player_level = player.level
 	# Reference effective charm/luck; login owns the native-day luck refresh.
-	config.player_charm = int(player.get("charm",60))
+	config.player_charm = clampi(int(player.get("charm",60))+int(armour.charm),0,100)
+	config.original_equipment_items = OriginalEquipment.battle_items(_profile)
+	config.player_resistances = OriginalEquipment.resistances(_profile)
+	config.equipment_base = {}
+	var original_mods:=OriginalEquipment.mods(_profile)
+	for stat in OriginalEquipment.STATS:config.equipment_base[stat]=int(player.get(stat,60 if stat=="charm" else 0))+int(armour[stat])-int(original_mods[stat])
+	config.equipment_occupied = [false,not str(_equipment().body).is_empty(),bool(_profile.equipped) or int(_profile.original_equipment.arm)>0,bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty() or int(_profile.original_equipment.amulet)>0,int(_profile.original_equipment.bracelet)>0]
 	config.player_luck = int(player.get("luck",0))
 	config.player_vital = int(player.base_stats.vitality)/100.0
-	config.player_weapon = "club" if _profile.equipped else ""
+	config.player_weapon = "axe" if int(_profile.original_equipment.arm)>0 else "club" if _profile.equipped else ""
 	config.player_elements = player_elements()
 	config.allies = []
 	config.ally_pets = []
@@ -288,6 +299,8 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	var id: String = _pending.battle_id
 	if id in _profile.completed_battles:
 		return false
+	var equipment_result = result.get("original_equipment_items",[] if _pending.get("original_equipment_items",[]).is_empty() else null)
+	if not OriginalEquipment.result_valid(_pending.get("original_equipment_items",[]),equipment_result):return false
 	var hp := int(result.get("player_hp",-1))
 	var potions := int(result.get("potions",-1))
 	if hp < 0 or hp > _profile.player.max_hp or potions < 0 or potions > _pending.potions:
@@ -383,6 +396,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		if seen_claims.has(key) or int(enemies[index].hp)!=0 or bool(enemies[index].get("captured",false)):return false
 		seen_claims[key] = true
 		items.append(int(generated[int(claim.item)]))
+	OriginalEquipment.settle(_profile,equipment_result)
 	_profile.ride_pet = int(slots[int(ride_index)]) if int(ride_index)>=0 else -1
 	_profile.player.hp = hp
 	_profile.player.mp = mp
@@ -392,7 +406,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	_profile.active_pet = int(slots[int(result.active_pet)]) if int(result.get("active_pet",-1))>=0 else -1
 	# The owner a pet caught this battle judged its loyalty by (battle_event.c:3435).
 	var owner_level := int(_profile.player.level)
-	var owner_charm := int(_profile.player.get("charm",Loyalty.CHARM_START))
+	var owner_charm := clampi(int(_profile.player.get("charm",Loyalty.CHARM_START))+int(equipment_mods().charm),0,100)
 	_battle_loyalty(result,enemies,battle_pets,outcome,roster,slots)
 	# Rewards per party slot from here on (the result summary reads them so).
 	var party_rewards: Array = []
@@ -427,7 +441,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	if outcome=="win" and hp>0:
 		for item in items:
 			var received := bag_slots(_profile)<15
-			if received:_profile.original_items.append(item)
+			if received:OriginalEquipment.add(_profile,item)
 			result.drop_summary.append({"item_id":item,"received":received})
 	result.experience_multiplier = multiplier
 	result.xp = earned_xp
@@ -506,8 +520,10 @@ func _battle_loyalty(result: Dictionary, enemies: Array, battle_pets: Array, out
 ## (char.c:2918). Pets without variable_ai predate the rules and are migrated
 ## when the save loads; until then they keep obeying as before.
 func _refresh_loyalty() -> void:
+	var owner: Dictionary=_profile.player.duplicate()
+	owner.charm=clampi(int(owner.get("charm",60))+int(equipment_mods().charm),0,100)
 	for pet in _profile.pets+_profile.get("pet_storage",[]):
-		if pet.has("variable_ai"):Loyalty.refresh(pet,_profile.player)
+		if pet.has("variable_ai"):Loyalty.refresh(pet,owner)
 
 func _gain_xp(actor: Dictionary, amount: int) -> void:
 	actor.xp += amount
@@ -564,17 +580,45 @@ func equip_item(item: String = "club") -> bool:
 
 func _equip_item(item: String) -> bool:
 	last_error = ""
+	OriginalEquipment.migrate(_profile)
+	if item.begins_with("original:"):return _toggle_original_item(item.trim_prefix("original:"))
 	if not _pending.is_empty() or item not in ["club","mirror_charm"]+Spirits.SPIRIT_ITEMS or int(_profile.inventory.get(item,0))<=0:
 		return false
 	if item in Spirits.SPIRIT_ITEMS:return _toggle_spirit_item(item)
 	if item=="mirror_charm":
 		# Both are ITEM_AMULET: char_item.c:379 never wears two together.
-		if not bool(_profile.get("equipped_mirror",false)) and not str(_equipment().amulet).is_empty():
+		if not bool(_profile.get("equipped_mirror",false)) and (not str(_equipment().amulet).is_empty() or int(_profile.original_equipment.amulet)>0):
 			last_error = Spirits.SAME_KIND
 			return false
 		_profile.equipped_mirror=not bool(_profile.get("equipped_mirror",false))
-	else:_profile.equipped = not _profile.equipped
+	else:
+		if not _profile.equipped:_profile.original_equipment.arm=0
+		_profile.equipped = not _profile.equipped
 	return true
+
+## The command addresses one owned instance, never an item-id copy.
+func _toggle_original_item(raw_uid: String) -> bool:
+	if not _pending.is_empty() or not raw_uid.is_valid_int():return false
+	var uid:=int(raw_uid)
+	for entry in _profile.original_instances:
+		if int(entry.uid)!=uid:continue
+		var id:=int(entry.item_id)
+		if not OriginalEquipment.ITEMS.has(id):return false
+		var data: Dictionary=OriginalEquipment.ITEMS[id]
+		var slot:=str(data.slot)
+		if int(_profile.original_equipment[slot])==uid:
+			_profile.original_equipment[slot]=0
+			return true
+		if int(_profile.player.level)<int(data.level):
+			last_error=Spirits.TOO_WEAK
+			return false
+		if (slot=="bracelet" and int(_profile.original_equipment.bracelet)>0) or (slot=="amulet" and (int(_profile.original_equipment.amulet)>0 or bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty())):
+			last_error=Spirits.SAME_KIND
+			return false
+		_profile.original_equipment[slot]=uid
+		if slot=="arm":_profile.equipped=false
+		return true
+	return false
 
 # ---- 气力 and 精灵 (server/spirits.gd) --------------------------------------
 
@@ -606,15 +650,16 @@ func _toggle_spirit_item(item: String) -> bool:
 	if int(data.level)>int(_profile.player.level):
 		last_error = Spirits.TOO_WEAK
 		return false
-	if slot=="amulet" and bool(_profile.get("equipped_mirror",false)):
+	if slot=="amulet" and (bool(_profile.get("equipped_mirror",false)) or int(_profile.get("original_equipment",{}).get("amulet",0))>0):
 		last_error = Spirits.SAME_KIND
 		return false
 	worn[slot] = item
 	return true
 
-## The worn equipment's defence and speed (itemset.txt modifiers).
+## All reviewed itemset attack/defence/speed/charm modifiers.
 func equipment_mods() -> Dictionary:
-	var result := {"defence":0,"speed":0}
+	var result := OriginalEquipment.mods(_profile)
+	result.attack+=4 if _profile.equipped else 0
 	for item in worn_items():
 		result.defence += int(Spirits.ITEMS[item].defence)
 		result.speed += int(Spirits.ITEMS[item].speed)
@@ -729,7 +774,8 @@ func grant_pet_care_items() -> bool:
 	if not _pending.is_empty() or _profile.get("pet_care_granted",false):return false
 	_profile.inventory.healing_charm=maxi(1,int(_profile.inventory.get("healing_charm",0)))
 	_profile.inventory.mirror_charm=maxi(1,int(_profile.inventory.get("mirror_charm",0)))
-	_profile.equipped_mirror=true
+	OriginalEquipment.migrate(_profile)
+	if int(_profile.original_equipment.amulet)==0 and str(_equipment().amulet).is_empty():_profile.equipped_mirror=true
 	_profile.pet_care_granted=true
 	return true
 
@@ -1152,6 +1198,7 @@ func set_location(map_id: int, x: int, y: int) -> bool:
 	return true
 
 func save_game(path: String) -> bool:
+	OriginalEquipment.migrate(_profile)
 	_ensure_pet_ids()
 	_sync_stat_points()
 	_refresh_loyalty()
@@ -1184,6 +1231,8 @@ func load_game(path: String) -> bool:
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
 			_profile = _normalize_numbers(parsed)
+			if int(_profile.version)<6:
+				for key in ["original_instances","original_equipment","next_original_uid"]:_profile.erase(key)
 			_refresh_login_luck()
 			_ensure_pet_ids()
 			if not _profile.inventory.has("mirror_charm"):_profile.inventory.mirror_charm=0
@@ -1228,6 +1277,7 @@ func load_game(path: String) -> bool:
 			for pet in _profile.pets+_profile.pet_storage:Loyalty.migrate_pet(pet,_profile.player)
 			_refresh_loyalty()
 			if int(_profile.version)<5:_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
+			OriginalEquipment.migrate(_profile)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true
@@ -1245,6 +1295,7 @@ func _valid_profile(value: Variant) -> bool:
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
 	if int(value.version)>=5 and not original_state_valid(value):return false
+	if int(value.version)>=6 and (not OriginalEquipment.valid(value) or bag_slots(value)>15):return false
 	for key in ["player","inventory","quest","location"]:
 		if not value.get(key) is Dictionary:
 			return false
@@ -1425,8 +1476,9 @@ func set_player_elements(elements: Variant) -> bool:
 func effective_player_stats() -> Dictionary:
 	var result := {}
 	for key in Progression.DERIVED:result[key] = _profile.player[key]
-	result.attack += 4 if _profile.equipped else 0
 	var armour := equipment_mods()
+	result.attack = maxi(1,int(result.attack)+int(armour.attack))
+	result.charm = clampi(int(_profile.player.get("charm",60))+int(armour.charm),0,100)
 	result.defence = maxi(0,int(result.defence)+int(armour.defence))
 	result.speed = maxi(1,int(result.speed)+int(armour.speed))
 	var riding := int(_profile.get("ride_pet",-1))
