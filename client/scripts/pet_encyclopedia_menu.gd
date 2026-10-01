@@ -51,6 +51,12 @@ var list_page := 0
 var facing := 1
 var feedback := ""
 var owned: Dictionary = {}
+## Scroll offset of the grid and the list, kept with the view and species
+## across closing and reopening (viewer pref encyclopedia_place).
+var scroll_of: Dictionary = {}
+var _restored := false
+## The view the current scroll area belongs to.
+var _scroll_view := ""
 ## Seams for tests: travel(plan) -> bool moves the character (default
 ## _travel: a verified teleport), open_hunt(plan) opens 自动抓极品 on the
 ## plan's species (default _open_hunt).
@@ -175,11 +181,13 @@ func encyclopedia():
 	if book == null:book = Encyclopedia.shared(world.encounter_catalog.data,world.world_catalog.maps)
 	return book
 
-## Opens on the grid, or on one species' page when template_id is a pet.
+## Opens where the player left it (view, species page, scroll), or on one
+## species' page when template_id is a pet.
 func open_menu(template_id: int = -1) -> void:
 	# Opens over a battle too (the battle waits); 瞬移去抓 says why it cannot run.
 	if world.area_transition_busy:return
 	encyclopedia()
+	_restore_place()
 	owned = book.owned_counts(world.session.snapshot())
 	feedback = ""
 	var entry: Dictionary = book.entry_for(template_id) if template_id >= 0 else {}
@@ -188,7 +196,7 @@ func open_menu(template_id: int = -1) -> void:
 		view = "detail"
 		current = int(entry.id)
 		facing = 1
-	elif view == "detail":
+	elif view == "detail" and book.entry_for(current).is_empty():
 		view = back_view
 	if is_instance_valid(world.travel_router):world.travel_router.cancel("已打开宠物大全。")
 	world.clear_input()
@@ -199,16 +207,41 @@ func open_menu(template_id: int = -1) -> void:
 
 func close_menu() -> void:
 	if not visible:return
+	_save_place()
 	hide()
 	_clear_body()
 	world.release_input()
 	world.clear_input()
 
 func _switch(next: String) -> void:
+	_remember_scroll()
 	view = next
 	rebuild()
+	_save_place()
+
+func _remember_scroll() -> void:
+	if _scroll_view in ["grid","list"] and is_instance_valid(scroll):scroll_of[_scroll_view] = scroll.scroll_vertical
+
+## The place is saved per device (viewer pref), so it also survives a reload.
+func _save_place() -> void:
+	_remember_scroll()
+	if world.has_method("set_viewer_pref"):world.set_viewer_pref("encyclopedia_place",{"view":view,"back":back_view,"species":current,"scroll":scroll_of})
+
+func _restore_place() -> void:
+	if _restored or not world.has_method("viewer_pref"):return
+	_restored = true
+	var place = world.viewer_pref("encyclopedia_place",{})
+	if not place is Dictionary or place.is_empty():return
+	if str(place.get("back","")) in ["grid","list"]:back_view = str(place.back)
+	current = int(place.get("species",-1))
+	view = str(place.get("view","grid"))
+	if view not in ["grid","list","detail"] or (view == "detail" and book.entry_for(current).is_empty()):view = back_view
+	var saved = place.get("scroll",{})
+	if saved is Dictionary:
+		for key in saved:scroll_of[str(key)] = int(saved[key])
 
 func show_species(id: int) -> void:
+	_remember_scroll()
 	if view != "detail":back_view = view
 	view = "detail"
 	current = id
@@ -244,6 +277,7 @@ func relayout() -> void:
 func rebuild() -> void:
 	if not is_instance_valid(body) or book == null:return
 	_place_panel()
+	_remember_scroll()
 	_clear_body()
 	for pair in [[grid_button,"grid"],[list_button,"list"]]:
 		pair[0].add_theme_stylebox_override("normal",world.box(Color("775b3c"),PetTable.GOLD) if view == pair[1] else world.box(Color("574431"),Color("9d8354")))
@@ -254,6 +288,13 @@ func rebuild() -> void:
 		"list":_build_list()
 		"detail":_build_detail()
 		_:_build_grid()
+	_scroll_view = view
+	if view != "detail" and is_instance_valid(scroll) and int(scroll_of.get(view,0)) > 0:_scroll_back.call_deferred(scroll,int(scroll_of[view]))
+
+## Rows are laid out a frame after they are added; scroll once they are.
+func _scroll_back(area: ScrollContainer, value: int) -> void:
+	await get_tree().process_frame
+	if is_instance_valid(area) and area == scroll:area.scroll_vertical = value
 
 func _visible_ids() -> Array:
 	return book.filtered(search.text,catchable_box.button_pressed,classic_box.button_pressed,ownership(),owned)

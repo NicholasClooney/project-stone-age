@@ -276,7 +276,30 @@ func window() -> void:
 	check(hunt.visible and hunt.species.get_selected_id() == 113 and int(game.automation_settings().hunt.template) == 113 and bool(game.automation_settings().hunt.level_one),"自动抓极品 opens with 昆伊 and the Lv.1 limit")
 	check(hunt.stat_species.get_selected_id() == 113 and int(game.automation_settings().hunt.stat_species) == 113,"its 属性条件 page shows 昆伊, remembered with the character")
 	hunt.close_menu()
-	# The pet window's entry opens on the selected pet's species.
+	# 宠物大全 reopens where the player left it: the view, the species page and
+	# the scroll, also after a reload (viewer pref), and from the pet window.
+	menu.close_menu()
+	game.viewer_prefs_path = "user://encyclopedia_test_prefs.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(game.viewer_prefs_path))
+	menu.open_menu()
+	menu._switch("list")
+	for i in range(3):await process_frame
+	menu.scroll.scroll_vertical = 300
+	var scrolled: int = menu.scroll.scroll_vertical
+	menu.close_menu()
+	menu.open_menu()
+	for i in range(3):await process_frame
+	check(menu.view == "list" and scrolled > 0 and menu.scroll.scroll_vertical == scrolled,"reopens on the list at the same scroll (%d)" % scrolled)
+	menu.show_species(113)
+	menu.close_menu()
+	menu.view = "grid";menu.current = -1;menu.scroll_of = {};menu._restored = false
+	menu.open_menu()
+	for i in range(3):await process_frame
+	check(menu.view == "detail" and menu.current == 113 and menu.back_view == "list","a reload reopens the species page it was on")
+	menu._switch(menu.back_view)
+	for i in range(3):await process_frame
+	check(menu.view == "list" and menu.scroll.scroll_vertical == scrolled,"返回 goes to the list at the saved scroll")
+	menu.close_menu()
 	game.session.grant_starter_pets()
 	game.show_adventure_menu("pets")
 	await process_frame
@@ -287,7 +310,7 @@ func window() -> void:
 	entry_button.pressed.emit()
 	await process_frame
 	var expected: Dictionary = menu.book.entry_for_pet(selected)
-	check(menu.visible and not adventure.visible and menu.view == "detail" and menu.current == int(expected.id),"the pet window opens 宠物大全 on %s" % selected.name)
+	check(menu.visible and not adventure.visible and menu.view == "list","the pet window opens 宠物大全 where it was left, not on %s" % selected.name)
 	# 已拥有 in the list: the character's species, each with 我的 (count, best Lv.120).
 	var mine: Dictionary = menu.book.owned_counts(game.session.snapshot())
 	menu.view = "list"
