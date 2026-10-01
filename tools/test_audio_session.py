@@ -29,12 +29,13 @@ class FakeContext {
   createBufferSource() { return {connect() {}, start() { sources++; }}; }
 }
 const handlers = {};
-const nav = {mediaSession: {metadata: null, playbackState: "none", setActionHandler(name, fn) { handlers[name] = fn; }}};
+const nav = {audioSession: {type: "auto"}, mediaSession: {metadata: null, playbackState: "none", setActionHandler(name, fn) { handlers[name] = fn; }}};
 const win = {AudioContext: FakeContext, addEventListener: on(listeners.win), btoa: (s) => Buffer.from(s, "binary").toString("base64"),
   MediaMetadata: function (m) { Object.assign(this, m); }};
 const doc = {hidden: false, addEventListener: on(listeners.doc),
   createElement: () => ({setAttribute() {}, play() { played++; return Promise.resolve(); }})};
 const api = install(win, doc, nav);
+const playbackSession = nav.audioSession.type === "playback" && api.session === "playback";
 const events = [];
 api.listener = (e) => events.push(e);
 
@@ -73,6 +74,7 @@ Promise.resolve().then(() => new Promise((r) => setTimeout(r, 0))).then(() => {
   api.setNowPlaying("", false);
   results.clearsNowPlaying = nav.mediaSession.metadata === null && nav.mediaSession.playbackState === "none";
   results.silentWav = api.silentWav(800).startsWith("data:audio/wav;base64,UklGR");
+  results.playbackSession = playbackSession;
   console.log(JSON.stringify(results));
 });
 """

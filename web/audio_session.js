@@ -22,8 +22,17 @@
 
   function install(win, doc, nav) {
     var Native = win.AudioContext || win.webkitAudioContext;
-    var api = {contexts: [], listener: null, returned: false, log: [], resumes: 0};
+    var api = {contexts: [], listener: null, returned: false, log: [], resumes: 0, session: ""};
     win.stoneAgeAudio = api;
+    // iOS / iPadOS 16.4+ Safari: a "playback" audio session plays through the
+    // ring/silent switch, like a music app (the default "auto" session is
+    // silenced in silent mode). Set before any AudioContext is created.
+    try {
+      if (nav && nav.audioSession && "type" in nav.audioSession) {
+        nav.audioSession.type = "playback";
+        api.session = String(nav.audioSession.type);
+      }
+    } catch (error) { api.session = "unavailable"; }
     if (!Native) return api;
 
     function note(what) {
