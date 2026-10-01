@@ -7,7 +7,7 @@ extends PanelContainer
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const SHOWN := 5
 const WIDTH := 560.0
-const COLORS := {"found":Color("ffd98a"), "captured":Color("f8edc7"), "level":Color("f8edc7"), "kept":Color("9fe39a"),
+const COLORS := {"found":Color("ffd98a"), "capture":Color("ffd98a"), "paused":Color("f0a08a"), "captured":Color("f8edc7"), "level":Color("f8edc7"), "kept":Color("9fe39a"),
 	"released":Color("f0a08a"), "survey":Color("9fd0e3"), "dropped":Color("b6aa8a"), "skipped":Color("b6aa8a"), "retry":Color("b6aa8a"), "resumed":Color("9fe39a")}
 var world: Node
 var lines: VBoxContainer
@@ -32,7 +32,16 @@ static func shown_lines(automation: Dictionary) -> Array:
 	var flow: Dictionary = automation.get("flow", {})
 	if not bool(flow.get("showcase", false)):return []
 	var log: Array = flow.get("log", [])
-	return log.slice(maxi(0, log.size() - SHOWN))
+	var count := int(flow.get("queue_dropped",0))
+	var capacity := SHOWN-1 if count>0 else SHOWN
+	var result: Array = log.slice(maxi(0, log.size() - capacity))
+	if count>0:
+		var species: Dictionary = flow.get("queue_dropped_species",{})
+		var names: PackedStringArray = []
+		for id in species:
+			names.append("%s %d" % [str(flow.get("queue_dropped_names",{}).get(id,id)),int(species[id])])
+		result.append({"kind":"dropped","text":"排队淘汰 %d 只（%s）" % [count,"、".join(names)]})
+	return result
 
 func on_status(automation: Dictionary) -> void:
 	var shown := shown_lines(automation)

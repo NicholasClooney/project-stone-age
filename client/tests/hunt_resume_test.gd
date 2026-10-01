@@ -123,6 +123,10 @@ func showcase_cycle() -> void:
 	check(scan_until(automation,func():return automation.showcase_queue.size()>=3),"hits wait in the queue")
 	var run_id: String = automation.flow_run_id
 	var seed_value: int = automation.hunt_run_seed
+	# Real overflow updates the new counters before saving/restoring.
+	check(scan_until(automation,func():return automation.showcase_dropped_count>0),"real scanning overflows a species queue")
+	var drop_count: int=automation.showcase_dropped_count
+	var drop_species: Dictionary=automation.showcase_dropped_species.duplicate()
 	var rolls: int = automation.hunt_rolls
 	var queued := queue_rolls(automation)
 	var next_troop := JSON.stringify(automation.roll_at(rolls))
@@ -145,6 +149,7 @@ func showcase_cycle() -> void:
 	check(automation.flow_active() and automation.flow_phase=="hunt" and automation.hunt_running,"the cycle goes on after the restart")
 	check(automation.shared_keep_rule().per_tier==4 and automation.shared_keep_rule().order==["attack","max_hp"],"resumed cycle uses the shared saved rule")
 	check(automation.flow_run_id==run_id and automation.flow_showcase and automation.flow_skipped_count==2,"with the same run and counters")
+	check(automation.showcase_dropped_count==drop_count and automation.showcase_dropped_species==drop_species,"queue removal counters survive real save/resume")
 	check(automation.hunt_run_seed==seed_value and automation.hunt_rolls==rolls and JSON.stringify(automation.roll_at(rolls))==next_troop,"the hunt continues the same run from the same roll")
 	check(queue_rolls(automation)==queued,"the queue is kept, best first (%s)" % str(queue_rolls(automation)))
 	check(str(automation.flow_stat_filters.get(92,{}).get("threshold_mode",""))=="absolute" and int(automation.filter_for(92).conditions.sum.value)==0 and automation.survey.is_empty(),"the cycle's 属性条件 keep 绝对 over the restart")

@@ -105,6 +105,8 @@ var stop_log = preload("res://server/release_log.gd").new()
 var stop_log_path := ""
 ## Counts appends to the three logs (_record_releases).
 var pet_log_revision := 0
+var _pet_log_pending := false
+var _pet_log_sent_msec := -1000
 ## 重启后自动恢复: <save>.resume.json (resume_path for tests), read once at
 ## startup. The standalone server (keep_resume_current) keeps it current while
 ## a run goes on, since a killed or TERM-ed Godot never reaches _finalize:
@@ -194,11 +196,18 @@ func handle(command: Dictionary) -> Dictionary:
 func _record_releases() -> void:
 	_release_log_file()
 	var appended: bool = not session.release_events.is_empty() or not session.capture_events.is_empty() or not automation.stop_events.is_empty()
+	# Persist every uncaught record, merging only its refresh notifications.
+	# Captures, actual releases and stops must still be visible immediately.
+	var queue_only: bool = session.capture_events.is_empty() and automation.stop_events.is_empty() and session.release_events.all(func(entry):return bool(entry.get("uncaught",false)))
 	if not session.release_events.is_empty():release_log.append(session.take_release_events())
 	if not session.capture_events.is_empty():capture_log.append(session.take_capture_events().map(_capture_entry))
 	if not automation.stop_events.is_empty():stop_log.append(automation.take_stop_events())
 	if appended:
 		pet_log_revision += 1
+		_pet_log_pending = true
+	if _pet_log_pending and ((appended and not queue_only) or Time.get_ticks_msec()-_pet_log_sent_msec>=1000):
+		_pet_log_pending = false
+		_pet_log_sent_msec = Time.get_ticks_msec()
 		_emit({"type":"pet_log_changed","revision":pet_log_revision})
 
 ## The logs' files follow the save: <save>.release-log.jsonl and

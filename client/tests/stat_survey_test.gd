@@ -159,7 +159,7 @@ func plus_n(automation, session, actor92: Dictionary) -> void:
 	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==edge2,"a better one drops the first (it no longer beats the best by 1) and stays itself")
 	var logged := uncaught(session,11)
 	check(logged.size()==1 and str(logged[0].where)=="未捕获" and str(logged[0].run_seed)=="1234567890123456789" and int(logged[0].slot)==2 and str(logged[0].reason).begins_with("门槛已提高（") and logged[0].beaten_by.size()==1 and str(logged[0].beaten_by[0].pet_id)=="第12组","the dropped hit is in 放生记录 with its seed and slot: %s" % str(logged))
-	check(str(automation.showcase_log.back().text).contains("第11组"),"the info line names it: %s" % automation.showcase_log.back().text)
+	check(session.release_events.back().roll==11 and automation.showcase_dropped_count>0,"the record names the roll and the info summary counts it")
 	# Two equal best hits: the earlier roll stays, never both dropped.
 	automation._showcase_add({"index":12,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":edge2.duplicate()})
 	check(automation.showcase_queue.size()==1 and int(automation.showcase_queue[0].index)==11 and uncaught(session,13).size()==1,"of two equal best hits the earlier one stays")
@@ -236,7 +236,7 @@ func cycle() -> void:
 	low.erase("survey");low.prediction = {"attack":1,"defence":1,"speed":1,"max_hp":1}
 	automation.showcase_queue.push_front(low)
 	automation._showcase_capture()
-	check(not backend.battle_open and automation.flow_phase=="hunt" and automation.showcase_log.back().kind=="dropped" and str(automation.showcase_log.back().text).begins_with("门槛已提高"),"a queued hit under the risen threshold is dropped: %s" % automation.showcase_log.back().text)
+	check(not backend.battle_open and automation.flow_phase=="hunt" and automation.showcase_dropped_count>0 and backend.session.release_events.back().source=="门槛已提高","a queued hit under the risen threshold is counted and recorded")
 
 	# The running helper restarts with the new thresholds.
 	FastHunt.helper_override = fake_helper()
@@ -269,7 +269,7 @@ func cycle() -> void:
 	var top_sum: int = int(top_hit.attack)+int(top_hit.defence)+int(top_hit.speed)
 	check(int(automation.species_maxima(92).sum)==top_sum and int(automation.filter_for(92).conditions.sum.value)==top_sum-1,"the queued best counts as 最高: need 三围合 ≥ %d" % (top_sum-1))
 	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==top_hit,"the queued hit it outclasses is let go at once")
-	check(str(automation.showcase_log.back().text).contains("排队中的第2组") and str(automation.showcase_log.back().text).contains("不再够格"),"in one line naming the roll: %s" % automation.showcase_log.back().text)
+	check(backend.session.release_events.back().roll==2 and backend.session.release_events.back().source=="门槛已提高","the detailed uncaught record names the outclassed roll")
 	automation.showcase_queue = []
 	plus_n(automation,session,actor92)
 
@@ -359,7 +359,7 @@ func absolute_mode() -> void:
 	# A raised value applies to the running cycle at once: the helper restarts
 	# with it and the queued hit now below it is let go.
 	set_filter(backend,{"conditions":{"attack":{"value":300},"sum":{"value":640}}})
-	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==great and automation.showcase_log.any(func(line):return str(line.kind)=="dropped" and str(line.text).contains("第2组")),"raising 攻击 to 300 lets the queued 294 go")
+	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==great and backend.release_log.entries().any(func(entry):return str(entry.source)=="门槛已提高" and int(entry.roll)==2),"raising 攻击 to 300 lets the queued 294 go")
 	check(automation.showcase_log.any(func(line):return str(line.kind)=="settings" and str(line.text).contains("三围合 ≥ 640")),"the info block says the edit applies now")
 	automation._hunt_process(0.016)
 	check(automation.fast_hunt.running() and automation.fast_hunt.pid!=pid and float(input_threshold(automation,0))==640.0 and float(input_threshold(automation,1))==300.0,"the helper restarts with ≥ 640 / ≥ 300")

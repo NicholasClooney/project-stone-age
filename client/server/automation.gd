@@ -205,6 +205,12 @@ var showcase_show_battle := false
 ## The info block's lines: {id, kind, text}, newest last.
 var showcase_log: Array = []
 var _showcase_log_serial := 0
+## Uncaught queue removals are detailed in 放生记录, summarized in the ticker.
+var showcase_dropped_count := 0
+var showcase_dropped_species: Dictionary = {}
+const STATUS_PROGRESS_MSEC := 1000
+var _status_sent_msec := -STATUS_PROGRESS_MSEC
+var _status_pending := false
 var _flow_run_serial := 0
 ## 停止记录: every stop, pause and skip of the hunt and the find-pet cycle,
 ## drained by the backend into <save>.stop-log.jsonl (server/release_log.gd).
@@ -477,6 +483,7 @@ func position_changed(map_id: int, cell: Vector2i, map_changed: bool = false) ->
 ## Standalone backend tick. An in-process client drives the same three parts
 ## from its frame loop instead (tick_battle, hunt_process, flow_step).
 func tick(delta: float) -> void:
+	_flush_progress_status()
 	if not auto_tick:return
 	try_resume()
 	tick_battle(delta)
@@ -485,6 +492,7 @@ func tick(delta: float) -> void:
 	if flow_active():flow_step()
 
 func tick_battle(delta: float) -> void:
+	_flush_progress_status()
 	if not running:return
 	_training_yield=false
 	# Compact battles have nothing to watch: run steps back to back within a frame budget.
@@ -547,7 +555,7 @@ func step() -> void:
 			turns += 1
 			if charmed.get("settled",false):record_result(charmed)
 			turn_text = "第 %d 回合 · 恢复护符治疗宠物" % turns
-			_emit_status()
+			_emit_status(true)
 			return
 		# 用精灵补血: a healing 精灵 while the 气力 lasts, before a 回复药 or a
 		# stop (the player, its pet or mount at the line; in a party battle a
@@ -560,7 +568,7 @@ func step() -> void:
 				turns += 1
 				if healed.get("settled",false) and not backend.party_battle():record_result(healed)
 				turn_text = "第 %d 回合 · 用精灵补血 · 气力 %d" % [turns,int(healed.get("player_mp",0))]
-				_emit_status()
+				_emit_status(true)
 				return
 		var reason := health_reason(state)
 		if not reason.is_empty() and backend.party_battle():
@@ -572,7 +580,7 @@ func step() -> void:
 				backend.battle_command({"action":heal,"target":-1})
 				turns += 1
 				turn_text = "第 %d 回合 · %s" % [turns,"喝回复药" if heal=="item" else "恢复护符治疗宠物"]
-				_emit_status()
+				_emit_status(true)
 				return
 			reason += heal_note(reason,bool(state.get("healing_available",false)))
 		if not reason.is_empty() and bool(settings.get("spirit",true)):reason += spirit_note(reason,state)
@@ -596,7 +604,7 @@ func step() -> void:
 		turns += 1
 		if next.get("settled",false) and not backend.party_battle():record_result(next)
 		turn_text = "第 %d 回合 · 体力 %d/%d · 气力 %d\n%s" % [turns,next.player_hp,next.player_max_hp,int(next.get("player_mp",0))," / ".join(next.events)]
-		_emit_status()
+		_emit_status(true)
 		return
 	# 练级保护 brings every carried pet back to full between battles.
 	if (backend.session.restore_carried_pets() if bool(settings.get("protect",true)) else backend.session.heal_carried_pets()):
@@ -954,7 +962,7 @@ func _hunt_process(delta: float) -> void:
 	# A rate of 0 or less is unlimited: scan for the whole frame budget.
 	if _fast_process():
 		hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
-		if hunt_running:_emit_status()
+		if hunt_running:_emit_status(true)
 		return
 	var unlimited := int(hunt_filter.rate)<=0
 	if not unlimited:hunt_credit = minf(hunt_credit+delta*float(hunt_filter.rate),maxf(1.0,float(hunt_filter.rate)*HUNT_MAX_BACKLOG_SECONDS))
@@ -963,7 +971,7 @@ func _hunt_process(delta: float) -> void:
 		if not unlimited:hunt_credit -= 1
 		scan_once()
 	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
-	if hunt_running:_emit_status()
+	if hunt_running:_emit_status(true)
 
 ## One GDScript scan step: the next roll of this run.
 func scan_once() -> void:
@@ -1533,6 +1541,7 @@ func start_cycle(continuing: bool) -> bool:
 	if not continuing:
 		flow_showcase = flow_capture_only or bool(flow_hunt_request.get("showcase",false))
 		showcase_queue = [];showcase_current = {};showcase_log = [];showcase_last_template = -1
+		showcase_dropped_count = 0;showcase_dropped_species = {}
 	_emit_event({"kind":"flow_hunt"})
 	if not start_hunt(flow_hunt_request):
 		stop_cycle(hunt_status);return false
@@ -1588,7 +1597,7 @@ func stop_cycle(message: String = "已手动停止") -> void:
 	if hunt_running:stop_hunt(message)
 	if running:stop(message)
 	_stopping_cycle = false
-	_emit_status()
+	_showcase_line("paused",message)
 	_emit_event({"kind":"flow_paused","reason":message})
 
 func flow_step() -> void:
@@ -1791,7 +1800,7 @@ const RESUME_KINDS := ["flow","hunt","training"]
 const RESUME_FLOW_FIELDS := ["flow_phase","flow_reason","flow_pet_id","flow_known_ids","flow_matched_actor","flow_matched_index","flow_matched_roll",
 	"flow_stat_filters","flow_settings_overrides","flow_target_filter","flow_hunt_request","flow_stored_count","flow_last_result","flow_last_stored_id",
 	"flow_last_stored_total","flow_kept_count","flow_collected_count","flow_pruned_count","flow_run_reject_ids","flow_released_count","flow_held_count",
-	"flow_predicted_rejects","flow_run_id","flow_showcase","flow_capture_only","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","flow_skip_kind",
+	"flow_predicted_rejects","flow_run_id","flow_showcase","flow_capture_only","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","showcase_dropped_count","showcase_dropped_species","flow_skip_kind",
 	"flow_skip_streak","flow_skipped_count","flow_skip_note","flow_best_predicted","survey_picks","survey_last","flow_target_survey"]
 const RESUMED := "服务器重启后已恢复"
 ## Read back at startup (load_resume) and applied by try_resume.
@@ -2162,7 +2171,7 @@ func _showcase_add(entry: Dictionary) -> void:
 			showcase_queue.erase(last)
 			_drop_queued(last)
 	if showcase_queue.has(entry):entry["queue_admission_rank"] = _species_queue(_template_of(entry)).find(entry)+1
-	_emit_status()
+	_emit_status(true)
 
 static func _template_of(entry: Dictionary) -> int:
 	return int(entry.get("actor",{}).get("template_id",-1))
@@ -2227,32 +2236,23 @@ func _prune_below_threshold() -> void:
 		_log_uncaught(entry,"门槛已提高","门槛已提高（%s）" % StatFilter.describe_thresholds(raw_filter_for(id),best),_same_species(_entry_others(entry,kept_hits),id))
 	if dropped.is_empty():return
 	showcase_queue = kept
-	var names: Array = dropped.map(func(e):return "第%d组 %s（预测%s）" % [int(e.index)+1,str(e.actor.get("name","")),_stat_text(e.prediction)])
-	var id0 := int(dropped[0].actor.get("template_id",-1))
-	_showcase_line("dropped","门槛已提高（%s），排队中的%s不再够格，已放弃" % [_template_name(id0)+"："+StatFilter.describe_thresholds(raw_filter_for(id0),species_maxima(id0)),"、".join(names)])
+	for entry in dropped:_count_queue_drop(entry)
 
-## A hit its species' full queue let go (already taken out of the queue).
+## Detailed reasons and beaters stay authoritative in the release record.
 func _drop_queued(entry: Dictionary) -> void:
 	var limit := queue_limit()
-	var p: Dictionary = entry.prediction
-	# The hits of its species just above it, closest first.
 	var same := _species_queue(_template_of(entry))
 	var above: Array = same.slice(maxi(0,same.size()-3))
 	above.reverse()
 	var reason := "%s的排队已满（每个品种上限%d），排在第%d" % [_template_name(_template_of(entry)),limit,limit+1]
 	_log_uncaught(entry,"排队已满",reason,above)
-	# Say why: its predicted Lv.120 stats in the 保留规则 order, against the
-	# last one kept, and the stat that decided it.
-	var keys := _rank_keys(entry)
-	var line := "排队已满：放弃第%d组 %s（%s），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),_rank_text(p,keys),reason]
-	if not above.is_empty():
-		var last: Dictionary = above[0]
-		var decided := ""
-		for key in keys:
-			if StatFilter.rank_value(last.prediction,key)!=StatFilter.rank_value(p,key):
-				decided = "%s %d > %d" % [STAT_NAMES.get(key,key),StatFilter.rank_value(last.prediction,key),StatFilter.rank_value(p,key)];break
-		line += "；排第%d的第%d组 %s更高（%s）" % [limit,int(last.index)+1,decided if not decided.is_empty() else "同分、更早找到",_rank_text(last.prediction,keys)]
-	_showcase_line("dropped",line)
+	_count_queue_drop(entry)
+
+func _count_queue_drop(entry: Dictionary) -> void:
+	showcase_dropped_count += 1
+	var id := str(_template_of(entry))
+	showcase_dropped_species[id] = int(showcase_dropped_species.get(id,0))+1
+	_status_pending = true
 
 const STAT_NAMES := {"sum":"三围合","attack":"攻","defence":"防","speed":"敏","max_hp":"血"}
 
@@ -2389,8 +2389,9 @@ func _showcase_capture() -> void:
 	if not flow_target_survey and StatFilter.enabled(flow_target_filter) and not StatFilter.evaluate(p,flow_target_filter):
 		var thresholds := StatFilter.describe_thresholds(raw_filter_for(int(actor.get("template_id",-1))),entry_maxima(entry,[]))
 		_log_uncaught(entry,"门槛已提高","门槛已提高（%s）" % thresholds,_same_species(_entry_others(entry,[]),int(actor.get("template_id",-1))))
-		_showcase_line("dropped","门槛已提高（%s），放弃第%d组 %s（预测%s）" % [thresholds,int(entry.index)+1,str(actor.get("name","")),_stat_text(p)])
+		_count_queue_drop(entry)
 		showcase_current = {}
+		_emit_status(true)
 		return
 	var full := int(entry.quality.get("total_offset",0))==8
 	var rarity: Array = Rarity.describe(int(actor.get("template_id",-1)),p,full)
@@ -2423,7 +2424,7 @@ func _showcase_capture() -> void:
 	flow_phase = "capture"
 	start_capture_battle(flow_matched_index,true)
 	if not running:stop_cycle("无法开始自动捕捉，请手动处理当前战斗。");return
-	_emit_status()
+	_showcase_line("capture","开始捕获：%s · 第%d组" % [str(actor.get("name","")),int(entry.index)+1])
 	# Devices clear the stage for the battle (the hunt window folds away).
 	_emit_event({"kind":"flow_reveal"})
 
@@ -2556,7 +2557,7 @@ func status() -> Dictionary:
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(shared_keep_rule().get("auto",false)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"capture_only":flow_capture_only,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
 			"survey":survey_status(),"thresholds":thresholds_text(),
-			"log":showcase_log.duplicate(true),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
+			"log":showcase_log.duplicate(true),"queue_dropped":showcase_dropped_count,"queue_dropped_species":showcase_dropped_species.duplicate(),"queue_dropped_names":_queue_drop_names(),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
 
 ## 摸底 for the hunt window and the minimized bar: {active, remaining,
@@ -2577,8 +2578,24 @@ func thresholds_text() -> String:
 		if lines.size()>=3:break
 	return "\n".join(lines)
 
-func _emit_status() -> void:
+## Only progress/queue churn is coalesced; callers keep transitions immediate.
+## Build the complete snapshot only when sending, never for a deferred tick.
+func _emit_status(progress: bool = false) -> void:
+	if progress and Time.get_ticks_msec()-_status_sent_msec<STATUS_PROGRESS_MSEC:
+		_status_pending = true
+		return
+	_status_pending = false
+	_status_sent_msec = Time.get_ticks_msec()
 	backend.emit_event({"type":"auto_status","status":status()})
+
+func _queue_drop_names() -> Dictionary:
+	var names := {}
+	for id in showcase_dropped_species:names[id] = _template_name(int(id))
+	return names
+
+func _flush_progress_status() -> void:
+	if _status_pending and Time.get_ticks_msec()-_status_sent_msec>=STATUS_PROGRESS_MSEC:
+		_emit_status(true)
 
 func _emit_event(detail: Dictionary) -> void:
 	backend.emit_event({"type":"auto_event","detail":detail})

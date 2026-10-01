@@ -125,7 +125,7 @@ func run() -> void:
 	check(dropped.size()==1 and bool(dropped[0].get("uncaught",false)) and str(dropped[0].where)=="未捕获","the dropped hit goes to 放生记录 as 未捕获·排队已满")
 	check(dropped.size()==1 and str(dropped[0].reason).ends_with("的排队已满（每个品种上限10），排在第11") and not dropped[0].beaten_by.is_empty() and int(dropped[0].lv120.attack)>0,"with its reason, the hits that beat it and its predicted Lv120 stats")
 	check(dropped.size()==1 and str(dropped[0].run_seed)==str(automation.hunt_run_seed) and dropped[0].has("slot"),"with its run seed and slot, to replay it later")
-	check(log_kinds(game).has("dropped"),"and a line in the info block")
+	check(automation.showcase_dropped_count==1 and not log_kinds(game).has("dropped"),"queue removals are counted without individual ticker logs")
 	# A smaller limit applies to the next run and drops the worst at once.
 	hunt.showcase_xp.select(3)
 	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"queue":3}}})
@@ -149,8 +149,9 @@ func run() -> void:
 	check(flow.phase=="capture" and game.battle_view.visible and not game.state.automation.compact,"the capture battle opens right away and is presented")
 	check(not game.training_helper.visible,"no 自动练级 progress window over the capture battle")
 	check(not hunt.visible and hunt.minimized,"the hunt window folds to its progress bar")
-	var lines: Array = game.state.automation.flow.log
+	var lines: Array = game.state.automation.flow.log.filter(func(line):return line.kind=="found")
 	check(str(lines.back().kind)=="found" and str(lines.back().text).contains("三围合%d" % (int(predicted.attack)+int(predicted.defence)+int(predicted.speed))) and str(lines.back().text).contains("排队2"),"the info block says what was found, its Lv120 prediction and the queue (%s)" % str(lines.back().text))
+	check(log_kinds(game).has("capture"),"starting the real capture is a separate key info event")
 	flow.on_status(game.state.automation)
 	check(game.showcase_ticker.visible and game.showcase_ticker.find_child("Line_found",true,false)!=null,"this device shows the info block")
 	check(is_equal_approx(game.battle_view.playback_speed,8.0),"the battle plays at this device's 战斗速度")

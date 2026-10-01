@@ -105,6 +105,7 @@ func run() -> void:
 	check(grouped(automation),"the queue is grouped by species, each best first by its keep rule")
 	var dropped: Array = backend.session.release_events.filter(func(e):return str(e.get("source",""))=="排队已满")
 	check(dropped.size()==2 and dropped.all(func(e):return int(e.template_id)==a),"only species A's overflow is dropped")
+	check(automation.showcase_dropped_count==2 and automation.showcase_dropped_species=={str(a):2},"overflow summary counts only the affected species")
 	var a_name := str(backend.encounter_catalog.data.templates.get(str(a),{}).get("name",""))
 	check(dropped.size()==2 and dropped.all(func(e):return str(e.reason).begins_with(a_name+"的排队已满（每个品种上限3）")),"the reason names the species' queue (%s)" % (str(dropped[0].reason) if not dropped.is_empty() else ""))
 	check(dropped.all(func(e):return not e.beaten_by.is_empty() and e.beaten_by.all(func(other):return str(other.name)==a_name)),"only hits of its own species beat it")
