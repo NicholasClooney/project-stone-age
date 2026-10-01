@@ -1,5 +1,5 @@
 #!/bin/sh
-# Run after a successful feat/fix commit. Amend only generated files, preserving
+# Run after a successful commit with Markdown changelog notes. Amend only generated files, preserving
 # unrelated staged and unstaged work. No hash is stored in either output.
 set -eu
 cd "$(dirname "$0")/.."

@@ -52,4 +52,71 @@ class RefreshWorkflowTest(unittest.TestCase):
             self.assertNotEqual(blocked.returncode,0)
             self.assertIn('Unsaved user edit',(root/'client/project.godot').read_text())
 
+
+class MarkdownNotesTest(unittest.TestCase):
+    def test_migrated_legacy_notes_are_lossless(self):
+        import json, subprocess
+        from pathlib import Path
+        from build_changelog import read_notes
+        root=Path(__file__).resolve().parents[1]
+        revision=subprocess.check_output(['git','log','-1','--diff-filter=AM','--format=%H','--','docs/development/changelog-notes.json'],cwd=root,text=True).strip()
+        old=json.loads(subprocess.check_output(['git','show',revision+':docs/development/changelog-notes.json'],cwd=root,text=True))
+        migrated=read_notes(root/'docs/development/changelog-notes')
+        for subject,note in old.items():
+            self.assertEqual(migrated[subject],dict(title=note['title'],details=note.get('details',[])))
+
+    def test_roundtrip_and_invalid_notes(self):
+        import json, tempfile
+        from pathlib import Path
+        from build_changelog import read_notes
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            path=root/'20261001T120000Z-unicode.md'
+            valid='---\nsubject: '+json.dumps('fix: "引号"',ensure_ascii=False)+'\ntitle: '+json.dumps('多行\n标题',ensure_ascii=False)+'\n---\n\n- 第一行\n  第二行\n  \n  - 嵌套文字\n- 顺序二\n'
+            path.write_text(valid)
+            self.assertEqual(read_notes(root)['fix: "引号"'],dict(title='多行\n标题',details=['第一行\n第二行\n\n- 嵌套文字','顺序二']))
+            other=root/'20261001T120001Z-duplicate.md';other.write_text(valid)
+            with self.assertRaisesRegex(ValueError,'duplicate subject'):read_notes(root)
+            other.unlink()
+            for bad in [valid.replace('subject: ', 'unknown: '),valid.replace('title: ', 'subject: '),valid.replace('---\n','',1),valid.replace('- 第一行','unsupported'),valid.replace('title: "多行\\n标题"','title: 3')]:
+                path.write_text(bad)
+                with self.assertRaises(ValueError):read_notes(root)
+            path.write_text(valid)
+            for name in ['bad.md','20260230T120000Z-invalid.md','20261001T250000Z-invalid.md']:
+                path.rename(root/name)
+                with self.assertRaises(ValueError):read_notes(root)
+                (root/name).rename(path)
+
+    def test_real_git_first_parent_cherry_pick_and_rebase(self):
+        import json, shutil, subprocess, tempfile
+        from pathlib import Path
+        source=Path(__file__).resolve().parents[1]
+        with tempfile.TemporaryDirectory() as directory:
+            root=Path(directory)
+            def git(*args):return subprocess.check_output(['git',*args],cwd=root,text=True,stderr=subprocess.STDOUT).strip()
+            def commit(subject,file):
+                (root/file).write_text(subject);git('add','.');git('commit','-qm',subject)
+            def generate():
+                subprocess.run(['python3','tools/build_changelog.py'],cwd=root,check=True)
+                return json.loads((root/'client/data/changelog.json').read_text())
+            git('init','-q','-b','main');git('config','user.name','Test');git('config','user.email','test@example.invalid')
+            for folder in ['tools','client/data','docs/development/changelog-notes']:(root/folder).mkdir(parents=True,exist_ok=True)
+            shutil.copyfile(source/'tools/build_changelog.py',root/'tools/build_changelog.py')
+            (root/'client/project.godot').write_text('[application]\n')
+            # Filename dates intentionally oppose the Git ordering.
+            for stamp,subject,title in [('20261001T120000Z','fix: Side','侧线'),('20261002T120000Z','feat: Main','主线')]:
+                (root/f'docs/development/changelog-notes/{stamp}-note.md').write_text('---\nsubject: '+json.dumps(subject)+'\ntitle: '+json.dumps(title)+'\n---\n\n- 说明\n')
+            commit('chore: setup','setup');base=git('rev-parse','HEAD')
+            git('checkout','-qb','side');commit('fix: Side','side');side=git('rev-parse','HEAD')
+            git('checkout','-q','main');commit('feat: Main','main')
+            git('merge','--no-ff','-qm','chore: merge side','side')
+            self.assertEqual([e['title'] for e in generate()['entries']],['主线'])
+            git('reset','--hard','HEAD^');git('cherry-pick',side)
+            self.assertEqual([e['title'] for e in generate()['entries']],['侧线','主线'])
+            git('restore','client/project.godot');(root/'client/data/changelog.json').unlink()
+            git('checkout','-q','side');commit('fix: Rebased follow-up','follow-up');git('rebase','main')
+            self.assertEqual([e['title'] for e in generate()['entries']],['Rebased follow-up','侧线','主线'])
+            commit('fix: No curated note','no-note')
+            self.assertEqual(generate()['entries'][0]['title'],'No curated note')
+
 if __name__=='__main__':unittest.main()
