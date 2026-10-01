@@ -1429,6 +1429,7 @@ func matched(index: int, actor: Dictionary) -> void:
 	refresh_maxima()
 	flow_target_survey = false
 	flow_target_filter = filter_for(int(actor.get("template_id",-1))).duplicate(true)
+	flow_target_filter["capture_threshold_text"] = StatFilter.describe_thresholds(raw_filter_for(int(actor.get("template_id",-1))),species_maxima(int(actor.get("template_id",-1))))
 	flow_matched_index = index
 	flow_matched_actor = actor.duplicate(true)
 	flow_capture_battle_id = str(backend.battle.snapshot().get("battle_id",""))
@@ -2015,6 +2016,7 @@ func _showcase_enqueue(index: int, slot: int, troop: Dictionary, quality: Dictio
 ## Queues an entry (a hit, or a survey pick marked survey) in its species'
 ## queue, best first; each species' queue keeps at most queue_limit().
 func _showcase_add(entry: Dictionary) -> void:
+	entry["queued_at"] = Time.get_unix_time_from_system()
 	showcase_queue.append(entry)
 	_sort_queue()
 	_prune_below_threshold()
@@ -2023,6 +2025,7 @@ func _showcase_add(entry: Dictionary) -> void:
 			var last: Dictionary = _species_queue(id).back()
 			showcase_queue.erase(last)
 			_drop_queued(last)
+	if showcase_queue.has(entry):entry["queue_admission_rank"] = _species_queue(_template_of(entry)).find(entry)+1
 	_emit_status()
 
 static func _template_of(entry: Dictionary) -> int:
@@ -2059,6 +2062,8 @@ func _take_queued() -> Dictionary:
 		if int(id)>showcase_last_template:
 			chosen = int(id);break
 	var entry: Dictionary = _species_queue(chosen)[0]
+	entry["queue_departure_rank"] = 1
+	entry["dequeued_at"] = Time.get_unix_time_from_system()
 	showcase_queue.erase(entry)
 	showcase_last_template = chosen
 	return entry
@@ -2237,6 +2242,7 @@ func _showcase_capture() -> void:
 	# Judged without itself: it is the best queued hit, so only owned pets and
 	# picks count (entry_maxima).
 	flow_target_filter = filter_excluding(entry,[]).duplicate(true)
+	flow_target_filter["capture_threshold_text"] = StatFilter.describe_thresholds(raw_filter_for(int(actor.get("template_id",-1))),entry_maxima(entry,[]))
 	var p: Dictionary = entry.prediction
 	# The thresholds may have risen since this hit was queued (a better pet
 	# arrived): one no longer good enough is let go. Survey picks are caught.
@@ -2426,3 +2432,68 @@ static func _int_keys(source: Dictionary) -> Dictionary:
 	var result := {}
 	for key in source:result[int(key)] = source[key]
 	return result
+
+## Frozen before joining inventory. Comparison includes all waiting hits; the
+## gate retains the actual resolved capture-entry filter (not a later gate).
+func capture_decision(pet: Dictionary, source: String) -> Dictionary:
+	var species := KeepRule.PetComparison.species_key(pet)
+	var template := int(pet.get("template_id",-1))
+	if species.trim_prefix("original_").is_valid_int():template = int(species.trim_prefix("original_"))
+	var raw: Dictionary = raw_filter_for(template) if source=="找宠流程" else AutomationSettings.stat_filter(backend.session.automation_settings(),template)
+	var mine: Dictionary = KeepRule.stats_of(pet)
+	var peers: Array = []
+	var seen := {}
+	var profile: Dictionary = backend.session.snapshot()
+	for other in profile.get("pets",[])+profile.get("pet_storage",[]):
+		if KeepRule.PetComparison.species_key(other)!=species:continue
+		var uid := str(other.get("pet_id",""))
+		if uid==str(pet.get("pet_id","")) or (not uid.is_empty() and seen.has(uid)):continue
+		if not uid.is_empty():seen[uid]=true
+		peers.append(KeepRule.stats_of(other))
+	var pending_seen := {}
+	for entry in _pending_picks()+_queued_hits():
+		if source=="找宠流程" and not showcase_current.is_empty() and _capture_hit_uid(entry)==_capture_hit_uid(showcase_current):continue
+		if KeepRule.PetComparison.species_key(entry.actor)!=species:continue
+		var uid := str(entry.actor.get("pet_id",""))
+		if not uid.is_empty() and (uid==str(pet.get("pet_id","")) or seen.has(uid)):continue
+		var hit_uid := _capture_hit_uid(entry)
+		if pending_seen.has(hit_uid):continue
+		pending_seen[hit_uid]=true
+		if not uid.is_empty():seen[uid]=true
+		peers.append(entry.prediction)
+	var metrics: Array = []
+	for key in StatFilter.rank_order(raw.get("keep_rule",{}).get("order",["attack","speed","max_hp"])):
+		var value := StatFilter.rank_value(mine,key)
+		var higher := 0
+		var tied := 0
+		var original_max = null
+		for other in peers:
+			var v := StatFilter.rank_value(other,key)
+			if original_max==null or v>original_max:original_max=v
+			if v>value:higher+=1
+			if v==value:tied+=1
+		metrics.append({"key":key,"value":value,"rank":1+higher,"ties":tied,"original_max":original_max})
+	var tags: Array = []
+	var thresholds: Dictionary = {}
+	if source=="找宠流程":
+		thresholds = flow_target_filter.duplicate(true)
+		if flow_target_survey:tags.append("survey")
+		if not StatFilter.enabled(thresholds):tags.append("unconditional")
+		elif StatFilter.evaluate(mine,thresholds):tags.append("stats")
+		var troop: Dictionary = showcase_current.get("troop",hunt_last_hit.get("troop",{}))
+		if tags.has("stats") and bool(hunt_filter.get("mixed_if_stats",false)) and HuntRules.wants_clean(hunt_filter) and not troop.is_empty() and not HuntRules.clean_troop(troop):tags.append("mixed_if_stats")
+	else:tags.append("gm" if source=="GM发放" else ("automatic" if source=="自动抓宠" else "manual"))
+	var threshold_text := ""
+	if tags.has("stats"):
+		threshold_text = str(thresholds.get("capture_threshold_text",""))
+		if not threshold_text.is_empty():threshold_text += "；"
+		threshold_text += StatFilter.describe(mine,thresholds)
+	var result := {"at":"before_inventory_join","tags":tags,"metrics":metrics,"rule":raw.duplicate(true),"thresholds":thresholds,"threshold_text":threshold_text}
+	if showcase_current.has("queued_at") and source=="找宠流程":
+		result["queue"] = {"admission_rank":showcase_current.get("queue_admission_rank",null),"departure_rank":showcase_current.get("queue_departure_rank",null),"queued_at":showcase_current.queued_at,"dequeued_at":showcase_current.get("dequeued_at",null)}
+		if showcase_current.has("dequeued_at"):result.queue["wait_seconds"] = maxf(0,float(showcase_current.dequeued_at)-float(showcase_current.queued_at))
+	return result
+
+## A replayable wild hit has no owned pet_id yet; roll/seed/slot identify it.
+static func _capture_hit_uid(entry: Dictionary) -> String:
+	return "%s:%s:%s" % [str(entry.get("run_seed","")),str(entry.get("index","")),str(entry.get("slot",""))]

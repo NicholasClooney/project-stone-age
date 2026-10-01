@@ -136,6 +136,7 @@ func _init() -> void:
 	original_quests.catalog = quest_catalog
 	encounter_rng.randomize()
 	session.battle_pets_hook = _live_battle_pets
+	session.capture_entry_hook = _capture_entry
 
 ## The open battle's live participants (pet_id -> reason) beyond its start
 ## roster: the pet fighting now, any pet that has already defeated an enemy
@@ -329,6 +330,7 @@ func _resume_file() -> String:
 ## Where a capture came from: the find-pet cycle (with its run), the hunt's
 ## automatic capture battle, or a battle the player fought; GM grants say so.
 func _capture_entry(event: Dictionary) -> Dictionary:
+	if event.has("entry"):return event.entry.duplicate(true)
 	var pet: Dictionary = event.pet
 	var source := str(event.get("source",""))
 	if source.is_empty():
@@ -336,7 +338,8 @@ func _capture_entry(event: Dictionary) -> Dictionary:
 		elif automation.running and str(automation.settings.get("preset",""))=="capture":source = "自动抓宠"
 		else:source = "手动捕获"
 	var lv120: Dictionary = Progression.project_pet(pet,120) if int(pet.get("level",1))<120 else {}
-	return ReleaseLog.capture_entry(pet,lv120,automation.position_map,map_name(automation.position_map),automation.position_cell,source,automation.flow_run_id if source=="找宠流程" else "")
+	var entry := ReleaseLog.capture_entry(pet,lv120,automation.position_map,map_name(automation.position_map),automation.position_cell,source,automation.flow_run_id if source=="找宠流程" else "",automation.capture_decision(pet,source))
+	return entry
 
 ## The map's name from the imported world catalog ("" when unknown).
 static func map_name(map_id: int) -> String:
@@ -637,6 +640,7 @@ func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
 
 func open_battle(config: Dictionary) -> Dictionary:
 	session.battle_pets_hook = _live_battle_pets
+	session.capture_entry_hook = _capture_entry
 	encounter_serial += 1
 	# A multi-profile server's party leader: the whole party fights it (LAN
 	# phase 4a, server/party_battles.gd), or the hook declines with null.
@@ -663,6 +667,7 @@ var party_guard: Callable
 ## `view` is its window on it (server/party_battles.gd SlotView).
 func open_party_battle(view) -> Dictionary:
 	session.battle_pets_hook = _live_battle_pets
+	session.capture_entry_hook = _capture_entry
 	battle = view
 	battle_state = battle.snapshot()
 	battle_open = true
