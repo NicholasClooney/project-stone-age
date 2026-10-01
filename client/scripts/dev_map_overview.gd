@@ -351,6 +351,13 @@ func _layout_labels() -> void:
 		placed.append(Rect2(node.position,size))
 
 func select_poi(poi: Dictionary) -> bool:
+	# A web client has only the maps it downloaded: the landing check reads
+	# the target map's file, so its packs come first (as in 宠物大全).
+	var needed: Array=world.area_packs(int(poi.map_id))
+	if not world.asset_packs.is_ready(needed):
+		note.text="正在下载地图 %s…"%world.world_catalog.map_name(int(poi.map_id))
+		_select_after_download(poi,needed)
+		return true
 	if poi.has("area_id"):
 		var point: Vector2i=poi.cell
 		var area: Dictionary=world.encounter_catalog.area_at(int(poi.map_id),point)
@@ -365,6 +372,13 @@ func select_poi(poi: Dictionary) -> bool:
 		note.text="该遇敌落点已不可用，请选择其他地点。"
 		return false
 	return select_target(poi.cell)
+
+func _select_after_download(poi: Dictionary, needed: Array) -> void:
+	var ok: bool=await world.await_packs(needed,"地图 %s"%world.world_catalog.map_name(int(poi.map_id)))
+	if not ok:
+		note.text="地图素材下载失败，请稍后再试。"
+		return
+	select_poi(poi)
 
 func cell_to_point(cell: Vector2i) -> Vector2:
 	return map_rect.position+(Vector2(cell)+Vector2.ONE*0.5)/Vector2(map_dimensions)*map_rect.size

@@ -116,6 +116,35 @@ func run() -> void:
 	finish_download(game,false)
 	check(await until(func():return menu.visible),"a failed download reopens 宠物大全")
 	check(menu.feedback.contains("下载失败") and menu.feedback_label.visible and int(game.data.map_id) == 500 and menu.pending_hunt.is_empty(),"and says the map could not be downloaded")
+	menu.close_menu()
+	await until(func():return not game.paused_input)
+
+	# 刷怪传送 to a map not downloaded yet: the map comes first, then the teleport.
+	var leveling = game.leveling_destinations
+	leveling.open_menu()
+	var pick := -1
+	for i in range(leveling.ranked.size()):
+		if int(leveling.ranked[i].map_id) != 500:
+			pick = i
+			break
+	check(pick >= 0,"刷怪传送 lists a spot on another map")
+	if pick < 0:return finish(game,backend,server)
+	var spot: Dictionary = leveling.ranked[pick]
+	web_packs(game,int(spot.map_id))
+	check(leveling.visit(pick) and leveling.details.text.contains("正在下载地图") and int(game.data.map_id) == 500,"刷怪传送 waits for the map's download instead of refusing the landing")
+	finish_download(game,true)
+	check(await until(func():return int(game.data.map_id) == int(spot.map_id) and game.cell == Vector2i(spot.cell[0],spot.cell[1]) and not game.area_transition_busy),"then teleports to the spot (%s)" % str(spot.cell))
+	await Wait.settle(self,game)
+
+	# 地图导航's Lv.1 place on a map not downloaded yet: the same.
+	var nav = game.dev_map_overview
+	var target := {"name":"奥卡洛斯 Lv1","cell":cell,"map_id":500,"area_id":int(place.area_id),"kind":"pet_added"}
+	web_packs(game,500)
+	nav.open_map()
+	check(nav.select_poi(target) and nav.note.text.contains("正在下载地图"),"地图导航 waits for the map's download before checking the landing")
+	finish_download(game,true)
+	check(await until(func():return nav.current_map == 500),"then browses the downloaded map to travel there")
+	nav.close_map()
 	finish(game,backend,server)
 
 func finish(game, backend, server) -> void:

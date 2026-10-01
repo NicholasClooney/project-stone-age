@@ -53,12 +53,25 @@ func refresh() -> void:
 	visit_button.disabled=ranked.is_empty()
 	if not ranked.is_empty():choices.select(0);show_choice(0)
 	else:details.text="当前没有验证通过的练级区。请先导入原版地图、怪物动画并生成练级地点数据。"
+func _visit_after_download(index: int, needed: Array) -> void:
+	var ok: bool=await world.await_packs(needed,"地图 %s"%world.world_catalog.map_name(int(ranked[index].map_id)))
+	if not ok:
+		details.text="地图素材下载失败，请稍后再试。"
+		return
+	visit(index)
 func show_choice(index: int) -> void:
 	var spot: Dictionary=ranked[index]
 	details.text="常见敌人：%s。\n传送后可开启「自动练级」。这里只提供场景和普通遇敌；DEV 直达不代表任务或门禁已恢复。"%"、".join(spot.monsters)
 func visit(index: int) -> bool:
 	if index<0 or index>=ranked.size() or world.area_transition_busy or world.battle_session.snapshot().active:return false
 	var spot: Dictionary=ranked[index]
+	# A web client has only the maps it downloaded: the landing check reads
+	# the target map's file, so its packs come first (as in 宠物大全).
+	var needed: Array=world.area_packs(int(spot.map_id))
+	if not world.asset_packs.is_ready(needed):
+		details.text="正在下载地图 %s…"%world.world_catalog.map_name(int(spot.map_id))
+		_visit_after_download(index,needed)
+		return true
 	var point:=Vector2i(spot.cell[0],spot.cell[1])
 	var area: Dictionary=world.encounter_catalog.area_at(int(spot.map_id),point)
 	if area.is_empty() or int(area.id)!=int(spot.area_id):details.text="原表已改变，请重新生成练级地点。";return false
