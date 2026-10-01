@@ -56,5 +56,20 @@ func _initialize():
  check(stuck.has("stop") and str(stuck.stop).begins_with("捕获率为0"),"odds 0 and no weaken pet: stop with the reason, never throw forever")
  odds_state.enemies[0].capture_odds=5
  check(Policy.decide(odds_state,odds_settings,0).action=="capture","some odds and no weaken pet: keep throwing")
+ # 练级保护: a fallen weaken pet is revived in battle instead of stopping.
+ var fallen={"enemies":[{"hp":72,"max_hp":72,"level":1,"can_capture":true,"capture_odds":0}],"pets":[{"hp":0,"max_hp":20,"level":1,"pet_id":"w"}],"active_pet":0,"ride_pet":-1}
+ var fallen_settings={"preset":"capture","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":1}
+ check(Policy.decide(fallen,fallen_settings,0).has("stop"),"without 练级保护 a fallen weaken pet stops the run")
+ fallen.protect_pets=true
+ var revive=Policy.decide(fallen,fallen_settings,0)
+ check(revive.get("action","")=="revive_pet" and int(revive.switch)==0,"with 练级保护 it is revived in battle")
+ var Authority=load("res://server/battle_session.gd")
+ var session=Authority.new()
+ var opened:Dictionary=session.start_battle({"player_hp":100,"player_max_hp":100,"enemy_max_hp":30,"enemy_speed":1,"enemy_attack":1,"protect_pets":true,"pet":{"species":"wooli","name":"乌力","sprite":100250,"hp":0,"max_hp":40,"attack":1,"speed":1}})
+ var back:Dictionary=session.submit_action("revive_pet",0,int(opened.active_pet))
+ check(int(back.pets[int(opened.active_pet)].hp)>0 and str(back.events).contains("就地复活"),"revive_pet brings the pet back in battle")
+ var strict=Authority.new()
+ var plain:Dictionary=strict.start_battle({"player_hp":100,"player_max_hp":100,"enemy_max_hp":30,"pet":{"species":"wooli","name":"乌力","sprite":100250,"hp":0,"max_hp":40,"attack":1,"speed":1}})
+ check(int(strict.submit_action("revive_pet",0,int(plain.active_pet)).pets[int(plain.active_pet)].hp)==0,"outside 练级保护 the battle refuses it")
  print("BATTLE AUTO POLICY: %d failures"%failures)
  quit(1 if failures else 0)

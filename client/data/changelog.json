@@ -1,9 +1,18 @@
 {
-  "version": "v0.152.2",
-  "count": 216,
+  "version": "v0.152.3",
+  "count": 217,
   "feature_count": 136,
-  "fix_count": 80,
+  "fix_count": 81,
   "entries": [
+    {
+      "version": "v0.152.3",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "削血宠倒下就地复活",
+      "details": [
+        "开着练级保护时，自动抓宠里削血宠在战斗中倒下会就地复活（占用人物这一回合），不再因此停下。手动战斗仍按原版。"
+      ]
+    },
     {
       "version": "v0.152.2",
       "date": "2026-10-01",

@@ -77,6 +77,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["equipment_base"]=config.get("equipment_base",{}).duplicate()
 	_state["equipment_occupied"]=config.get("equipment_occupied",[false,false,false,false,false]).duplicate()
 	_state["healing_available"]=bool(config.get("healing_available",false))
+	_state["protect_pets"]=bool(config.get("protect_pets",false))
 	_state["mirror_available"]=bool(config.get("mirror_available",false))
 	_state["mirror_self"]=0
 	_state["mirror_pets"]={}
@@ -142,7 +143,7 @@ func set_pet_command(command: String) -> bool:
 	return true
 
 func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
-	if not _state.active or (action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet"] and not action.begins_with("spirit:")):
+	if not _state.active or (action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet","revive_pet"] and not action.begins_with("spirit:")):
 		return snapshot()
 	if action.begins_with("spirit:"):
 		if not spirit_refusal({"kind":"player","index":-1},action.trim_prefix("spirit:"),target).is_empty():return snapshot()
@@ -152,6 +153,8 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 	if action.begins_with("mirror_"):
 		if not _state.mirror_available or int(_state.get("player_mp",0))<int(_state.get("mirror_mp",MIRROR_MP)):return snapshot()
 		if action=="mirror_pet" and (_state.active_pet<0 or _state.pet_hp<=0):return snapshot()
+	# 练级保护 (not original): an automated run brings a fallen carried pet back.
+	if action=="revive_pet" and (not bool(_config.get("protect_pets",false)) or pet_index<0 or pet_index>=_state.pets.size() or pet_index==int(_state.get("ride_pet",-1)) or int(_state.pets[pet_index].get("hp",0))>0):return snapshot()
 	if action == "item" and (_state.potions <= 0 or _state.player_hp >= _state.player_max_hp):
 		return snapshot()
 	if action == "capture" and (_state.boss or not _config.get("can_capture",true) or _state.captured_species_list.size() >= int(_config.get("capture_slots",5)) ):
@@ -253,6 +256,10 @@ func _player_action(action: String) -> void:
 			else:_state.mirror_pets[_state.active_pet]=1
 			_last_outcome="mirror_cast"
 			_state.events.append("镜子的精灵：%s获得一次直接攻击反射。" % ("你" if action=="mirror_self" else str(_state.pet_name)))
+		"revive_pet":
+			_state.pets[_pet_choice].hp = int(_state.pets[_pet_choice].get("max_hp",1))
+			if _pet_choice==int(_state.active_pet):_sync_pet()
+			_state.events.append("练级保护：%s就地复活。" % str(_state.pets[_pet_choice].get("name","宠物")))
 		"switch":
 			_state.active_pet = _pet_choice
 			_sync_pet()

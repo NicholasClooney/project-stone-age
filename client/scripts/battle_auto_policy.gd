@@ -31,6 +31,7 @@ static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dict
   if low_enough and odds==0:return {"stop":"捕获率为0：需要削血宠先削血（%s）"%str(choice.stop)}
   return choice
  var best:=int(choice.index)
+ if int(state.pets[best].get("hp",0))<=0:return {"action":"revive_pet","pet":"defend","target":target,"switch":best}
  if best!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":best}
  return {"action":"defend","pet":"attack","target":target}
 
@@ -56,7 +57,8 @@ static func capture_pet_choice(state:Dictionary,settings:Dictionary,target_level
  var best:=-1
  for i in range(pets.size()):
   if selected>=0 and i!=selected:continue
-  if i==int(state.get("ride_pet",-1)) or int(pets[i].get("hp",0))<=0:continue
+  # 练级保护: a fallen weaken pet is revived in battle rather than skipped.
+  if i==int(state.get("ride_pet",-1)) or (int(pets[i].get("hp",0))<=0 and not bool(state.get("protect_pets",false))):continue
   var limit:=int(settings.get("capture_pet_max_level",10))
   if selected<0:limit=mini(limit,target_level)
   if int(pets[i].get("level",1))>limit:continue
@@ -171,6 +173,7 @@ static func clear_capture_decision(state: Dictionary, settings: Dictionary, targ
  if hard and int(enemy.hp)*100>int(enemy.get("max_hp",1))*line:
   var choice := capture_pet_choice(state,settings,int(enemy.get("level",1)))
   if choice.has("stop"):return choice
+  if int(state.pets[int(choice.index)].get("hp",0))<=0:return {"action":"revive_pet","pet":"defend","target":target,"switch":int(choice.index),"assist":true}
   if int(choice.index)!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":int(choice.index),"assist":true}
   return {"action":"defend","pet":"attack","target":target,"assist":true}
  return {"action":"capture","pet":"defend","target":target,"assist":true}
