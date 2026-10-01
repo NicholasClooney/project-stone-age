@@ -57,7 +57,7 @@ const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"protect":["bool"],"select_troops":["bool"],"borrow_troops":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120],"fallback_attempts":["int",1,30],"fallback_rate":["int",0,98],"fallback_hp":["int",1,99]},
-	"hunt":{"keep_rule":KEEP_RULE_SPEC,"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
+	"hunt":{"keep_rule":KEEP_RULE_SPEC,"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"capture_only":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
 }
 static var _defaults: Dictionary = {}
 
@@ -74,6 +74,10 @@ static func effective(overrides: Dictionary) -> Dictionary:
 	# A stored level without a flag is a player's own target (older clients).
 	var training := _dict(overrides.get("training",{}))
 	if training.has("level") and not training.has("level_explicit"):result.training.level_explicit = true
+	# Capture-only overrides training, uses the same background queue, and
+	# accepts newborns only. Persisted preferences for the other mode remain.
+	if bool(result.hunt.get("capture_only",false)):
+		result.hunt.merge({"level_one":true,"auto_capture":true,"train_after_capture":false,"showcase":true},true)
 	return result
 
 static func default_stat_filter(template_id: int) -> Dictionary:
@@ -106,7 +110,7 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 ## Hunt scan filter without the location-dependent `usable` list.
 static func hunt_filter(overrides: Dictionary) -> Dictionary:
 	var hunt: Dictionary = effective(overrides).hunt
-	var result := {"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
+	var result := {"capture_only":bool(hunt.get("capture_only",false)),"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
 		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"queue":int(hunt.queue),
 		"clean_only":bool(hunt.clean_only),"mixed_if_stats":bool(hunt.mixed_if_stats)}
 	if hunt.has("templates"):result.templates = hunt.templates.duplicate()

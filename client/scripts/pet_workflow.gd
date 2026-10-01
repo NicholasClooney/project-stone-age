@@ -106,7 +106,7 @@ func start_cycle(species_key: String="") -> bool:
 	if active():return false
 	if world.battle_session.snapshot().get("active",false) or world.battle_view.visible or world.moving or world.area_transition_busy:
 		world.message.text="请先结束战斗或移动，再开始一轮找宠。";return false
-	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
+	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY and not bool(world.automation_settings().hunt.get("capture_only",false)):
 		world.message.text="宠物栏已满，请自行存放伙伴后再开始。";return false
 	world.pet_hunt_menu.commit_stat_settings()
 	world.adventure_menu.hide();world.paused_input=false

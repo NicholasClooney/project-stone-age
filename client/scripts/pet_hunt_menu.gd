@@ -54,6 +54,7 @@ var capture_page: Control
 ## 找到N只后停止 (hunt.stop_after) on 抓宠设置: one count for the whole find-pet run.
 var stop_after: SpinBox
 var train_after_capture: CheckBox
+var capture_only: CheckBox
 var world: Node
 var panel: Panel
 const TARGET_ALL := 2147483646
@@ -230,6 +231,13 @@ func _ready() -> void:
 		if enabled:auto_capture.button_pressed=true
 		refresh_ready_status()
 		_settings_changed(true))
+	capture_only=CheckBox.new();capture_only.name="CaptureOnlyMode";capture_only.text="只抓不练（非原版）· Lv.1直接存仓，直到手动停止";capture_only.position=Vector2(24,475)
+	capture_only.tooltip_text="按原物种条件、每种排队上限轮流捕获，保持真实Lv.1，直接进仓库；忽略找到N只后停止。开启后强制只找Lv.1及后台队列，覆盖直接升120。自动整理保护此来源，获得手动练级经验后解除；手动放生仍按原规则。运行中的模式已冻结，修改从下一轮开始生效。"
+	capture_page.add_child(capture_only);controls.append(capture_only)
+	capture_only.toggled.connect(func(_enabled):
+		_capture_only_controls()
+		refresh_ready_status()
+		_settings_changed(true))
 	auto_capture.toggled.connect(func(enabled):
 		if not enabled:train_after_capture.button_pressed=false
 		refresh_ready_status()
@@ -321,9 +329,12 @@ func _follow_target(template_id: int) -> void:
 ## What these controls change in the profile (see game.flush_automation_settings).
 func settings_patch() -> Dictionary:
 	var patch := {}
-	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
+	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,"capture_only":capture_only.button_pressed,
 		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value),
 		"resume":resume_after_restart.button_pressed,"clean_only":clean_only.button_pressed,"mixed_if_stats":mixed_if_stats.button_pressed,"stop_after":int(stop_after.value)}
+	# Mode overrides are effective only; retain the other mode's saved preferences.
+	if capture_only.button_pressed or bool(world.automation_settings().hunt.get("capture_only",false)):
+		for key in ["level_one","auto_capture","train_after_capture","showcase"]:wanted.erase(key)
 	# Keep explicit target choices, including choices from another location.
 	if _targets_explicit or world.automation_settings().hunt.has("templates"):wanted.templates=target_ids.duplicate()
 	# Likewise 属性条件's species: a fallback shown here keeps the saved choice.
@@ -356,6 +367,7 @@ func load_settings() -> void:
 	var refresh:=false
 	if _changed(old,hunt,"level_one"):level_one.set_pressed_no_signal(bool(hunt.level_one));refresh=true
 	if _changed(old,hunt,"auto_capture"):auto_capture.set_pressed_no_signal(bool(hunt.auto_capture))
+	if _changed(old,hunt,"capture_only"):capture_only.set_pressed_no_signal(bool(hunt.get("capture_only",false)))
 	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
 	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
 	if _changed(old,hunt,"showcase"):showcase.set_pressed_no_signal(bool(hunt.showcase))
@@ -366,7 +378,8 @@ func load_settings() -> void:
 	if not queue_size.get_line_edit().has_focus():queue_size.set_value_no_signal(int(hunt.queue))
 	showcase_xp.select(maxi(0,[1,2,10,100].find(int(world.automation_settings().training.xp))))
 	showcase_speed.select(maxi(0,[1.0,2.0,4.0,8.0].find(world.playback_speed())))
-	start_button.text="开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"
+	_capture_only_controls()
+	start_button.text="开始只抓不练" if capture_only.button_pressed else ("开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选")
 	var shown:=hunt.duplicate(true)
 	var numbers:={"total":total,"rate":rate,"limit":limit,"stop_after":stop_after}
 	for key in numbers:
@@ -537,6 +550,7 @@ func set_controls(locked: bool) -> void:
 		if control is SpinBox:control.editable=not held
 		elif control is BaseButton:control.disabled=held
 	_show_mixed_option()
+	_capture_only_controls(locked)
 	start_button.disabled=locked
 	stop_button.disabled=not locked
 	minimize_button.disabled=not locked
@@ -577,7 +591,7 @@ func build_filter(for_workflow: bool = false) -> Dictionary:
 		if control is SpinBox and control.get_line_edit().has_focus():control.apply()
 	if running or not visible or world.battle_view.visible or world.area_transition_busy:return {}
 	if not world.world_catalog.field(int(world.data.map_id)):return {}
-	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY:
+	if world.session.snapshot().pets.size()>=world.session.PET_CAPACITY and not capture_only.button_pressed:
 		status.text="宠物栏已满，请先腾出位置再寻找新伙伴。";return {}
 	if int(world.training_helper.capture_hp.value)<100 and level_one.button_pressed and (auto_capture.button_pressed or for_workflow):
 		var profile:Dictionary=world.session.snapshot()
@@ -683,7 +697,8 @@ func on_status(automation: Dictionary) -> void:
 	if is_instance_valid(stop_button):
 		var pending:=str(automation.get("flow",{}).get("stop_pending",""))
 		stop_button.text="立即停止" if not pending.is_empty() else "停止"
-		stop_button.tooltip_text="本只练完后会停止；再按立即停止，正在打的战斗交给你手动完成" if not pending.is_empty() else "正在抓或练的这一只练完后停止"
+		var capture_mode:=bool(automation.get("flow",{}).get("capture_only",false))
+		stop_button.tooltip_text=("本只抓完后停止，再按立即停止" if not pending.is_empty() else "本只捕获直接存仓后停止") if capture_mode else ("本只练完后会停止；再按立即停止，正在打的战斗交给你手动完成" if not pending.is_empty() else "正在抓或练的这一只练完后停止")
 	if visible:_show_threads(automation)
 	if minimized:
 		if _automation_active(automation):_update_chip()
@@ -741,6 +756,20 @@ func install_fallback_controls(attempts: SpinBox, rate: SpinBox, hp: SpinBox)->v
 		input.reparent(capture_page);input.name=entry[1];input.position=Vector2(230,int(entry[3])-10);input.size=Vector2(150,38);controls.append(input)
 		input.tooltip_text="混合敌群先由五人不带出战宠清场，保护全部 Lv.1；难抓时才换随身队伍中存活、非骑乘且符合等级上限的削血宠。血量线取本项与抓宠血量线的较低值。缺少合适宠物会暂停，预演也使用同一策略。"
 		var caption:Label=world.text(entry[2],16);caption.position=Vector2(24,int(entry[3]));capture_page.add_child(caption)
+
+func _capture_only_controls(locked: bool = false)->void:
+	if not is_instance_valid(capture_only):return
+	locked = locked or running or (is_instance_valid(world.pet_workflow) and world.pet_workflow.active())
+	var enabled:=capture_only.button_pressed
+	if enabled:
+		level_one.set_pressed_no_signal(true)
+		auto_capture.set_pressed_no_signal(true)
+		train_after_capture.set_pressed_no_signal(false)
+		showcase.set_pressed_no_signal(true)
+	for control in [level_one,auto_capture,train_after_capture,showcase]:control.disabled=locked or enabled
+	stop_after.editable=not enabled
+	showcase_xp.disabled=enabled
+	start_button.text="开始只抓不练" if enabled else ("开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选")
 
 func showcase_controls()->void:
 	var name_text:=AutomationSettings.SHOWCASE_NAME
@@ -803,10 +832,11 @@ func show_page(which: String)->void:
 		_:show_capture_settings(false)
 
 func start_requested()->void:
-	if train_after_capture.button_pressed:world.pet_workflow.start_cycle()
+	if capture_only.button_pressed or train_after_capture.button_pressed:world.pet_workflow.start_cycle()
 	else:start_hunt()
 
 func ready_description()->String:
+	if capture_only.button_pressed:return "准备就绪：只抓不练（非原版），按原条件轮流抓Lv.1直接存仓；忽略找到N只后停止，直到手动停止。"
 	if train_after_capture.button_pressed:return "准备就绪：自动找宠→捕捉→练到120；属性达标停止比较，未达标存仓继续（无条件仅一轮）。"
 	if auto_capture.button_pressed:return "准备就绪：开始后筛选达标宠物并自动捕捉。"
 	return "准备就绪：筛选达标后进入战斗，由你手动捕捉。"
@@ -834,6 +864,8 @@ func threshold_line()->String:
 	return "门槛 "+text if not text.is_empty() else ""
 
 func _workflow_counts()->String:
+	if bool(world.state.automation.get("flow",{}).get("capture_only",false)):
+		return "只抓不练：本轮Lv.1直接存仓 %d 只 · 不限只数，手动停止 · 未手动练级前自动整理保护\n" % world.pet_workflow.collected_count
 	if is_instance_valid(world.pet_workflow) and (world.pet_workflow.predicted_rejects>0 or world.pet_workflow.kept_count>0):
 		var flow=world.pet_workflow
 		var best_seen:Dictionary=flow.best_predicted
