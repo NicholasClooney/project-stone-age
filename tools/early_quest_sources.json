@@ -10,7 +10,9 @@
     "jaruga/event/20501ev4",
     "jaruga/event/20501ev5",
     "jaruga/event/event01_1",
-    "jaruga/event/event01_2"
+    "jaruga/event/event01_2",
+    "sainasu/event/event15_1",
+    "sainasu/event/event15_2"
   ],
   "items": [
     2414,
@@ -26,7 +28,15 @@
     2484,
     2485,
     2401,
-    2427
+    2427,
+    1350,
+    1351,
+    1352,
+    1354,
+    700,
+    1455,
+    1102,
+    1122
   ],
   "sources": {
     "gmsv/data/npc/sainasu/event/event02.create": "1b0f4e68ad7ddcae43e42192999f8241efb23d2ac6880735f05bfcbb56284254",
@@ -42,12 +52,20 @@
     "gmsv/data/npc/jaruga/event/20501ev5": "091d9c558fe450162de1230817f4ed5f3bebb3386afd8611673f93172c587c85",
     "gmsv/data/npc/jaruga/event/event.create": "c36b440518d37db27083ca3835ea4902b79a0bfcd70e9702457c586bb53682be",
     "gmsv/data/npc/jaruga/event/event01_1": "c680167a7c6783bcf42cfdcfab60840359bf54a7b79db93019e4bb89a4607492",
-    "gmsv/data/npc/jaruga/event/event01_2": "af3721253296a69e87004bdf2ff9e438c49ba11076ac3ce064181257219483bb"
+    "gmsv/data/npc/jaruga/event/event01_2": "af3721253296a69e87004bdf2ff9e438c49ba11076ac3ce064181257219483bb",
+    "gmsv/data/npc/sainasu/event/event15.create": "1c4cbcc3c51fe33393f13712eb3754214605807ededf8892057069a0d9b51c64",
+    "gmsv/data/npc/sainasu/event/event15_1": "bdd68415498806f66ea795da05ac52f9c5122ade98df21581e63859515e77042",
+    "gmsv/data/npc/sainasu/event/event15_2": "d154e5752aa2ea862f8e6d6ad09ff9597557cf64f643a0835769b8c1cf5ada9f",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/char/enemy.c": "fecfedd35d6323c1112fd164a4f4636618c943debb0917781abc2f58b806ed1a",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435"
   },
   "creates": [
     "gmsv/data/npc/sainasu/event/event02.create",
     "gmsv/data/npc/jaruga/event/20501ev.create",
-    "gmsv/data/npc/jaruga/event/event.create"
+    "gmsv/data/npc/jaruga/event/event.create",
+    "gmsv/data/npc/sainasu/event/event15.create"
   ],
   "script_events": {
     "sainasu/event/event02_1": [
@@ -81,6 +99,14 @@
     ],
     "jaruga/event/event01_2": [
       1
+    ],
+    "sainasu/event/event15_1": [
+      15,
+      16
+    ],
+    "sainasu/event/event15_2": [
+      15,
+      16
     ]
   },
   "client_sources": {
@@ -125,5 +151,8 @@
     "jaruga/event/event01_2": {
       "3": "NOWEV=1&ITEM!=2401"
     }
-  }
+  },
+  "reward_enemies": [
+    95
+  ]
 }

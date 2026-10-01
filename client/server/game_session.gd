@@ -449,6 +449,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 			captured = {"species":species,"name":base.name,"sprite":base.sprite,"level":1,"xp":0,"skill_unlocked":false}
 			var native := Progression.species_actor(species,1,int(_profile.next_battle)*7919+_profile.pets.size()*97)
 			captured.merge(native)
+		captured.original_end_event = 0
 		_assign_pet_id(captured)
 		Loyalty.stamp_modai(captured)
 		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured))
@@ -758,6 +759,10 @@ func _recover() -> void:
 
 
 # Stable identity distinguishes same-name pets across carried and warehouse lists.
+static func original_pet_event(pet: Dictionary) -> int:
+	if pet.has("original_end_event"):return int(pet.original_end_event)
+	return 0 if int(pet.get("source_enemy_id",-1))>0 and str(pet.get("species","")).begins_with("original_") else 1
+
 func _assign_pet_id(pet: Dictionary) -> void:
 	if not pet.has("favorite"):pet.favorite=false
 	pet.pet_id="pet-%d"%int(_profile.get("next_pet_id",1))
@@ -770,6 +775,7 @@ func _ensure_pet_ids() -> void:
 		if pet.has("pet_id"):next=maxi(next,int(str(pet.pet_id).trim_prefix("pet-"))+1)
 	_profile.next_pet_id=next
 	for pet in _profile.pets+_profile.pet_storage:
+		if not pet.has("original_end_event"):pet.original_end_event=original_pet_event(pet)
 		if not pet.has("pet_id"):_assign_pet_id(pet)
 		if not pet.has("favorite"):pet.favorite=false
 
@@ -1219,6 +1225,7 @@ func load_game(path: String) -> bool:
 			var all_pets: Array=_profile.pets+_profile.pet_storage
 			for i in range(all_pets.size()):
 				var pet: Dictionary=all_pets[i]
+				if not pet.has("original_end_event"):pet.original_end_event = original_pet_event(pet)
 				Progression.migrate_pet(pet,int(pet.sprite)+i*7919)
 				if not pet.has("learned_skills"):pet.learned_skills = []
 				pet.skill_unlocked = not pet.learned_skills.is_empty()
@@ -1314,6 +1321,7 @@ func _valid_profile(value: Variant) -> bool:
 		var definition: Dictionary = SPECIES.get(pet.species,Progression.species_definition(pet.species))
 		if pet.get("sprite") != definition.get("sprite",-1):
 			return false
+		if pet.has("original_end_event") and not _integer(pet.original_end_event,0,1):return false
 		if pet.has("variable_ai") and not _integer(pet.variable_ai,Loyalty.VARIABLE_MIN,Loyalty.VARIABLE_MAX):return false
 		if pet.has("modai") and not _integer(pet.modai,0,1000000000):return false
 		if pet.has("loyalty") and not _integer(pet.loyalty,0,100):return false
@@ -1609,6 +1617,7 @@ func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:
 	var pet := Progression.species_actor(species,1,randi(),[2,2,2,2] if full_grade else [])
 	pet.merge({"species":species,"template_id":int(template),"name":str(data.name),"sprite":int(data.sprite),"level":1,"xp":0,"skill_unlocked":false,"elements":data.get("elements",[0,0,0,0]).duplicate(),"size":int(data.get("size",1))})
 	# GM petmake (chatmagic.c:1487) gives the pet CHAR_VARIABLEAI 10000: loyalty 100.
+	pet.original_end_event = 0
 	pet.variable_ai = Loyalty.AI_GM_PET
 	Loyalty.stamp_modai(pet)
 	_assign_pet_id(pet)

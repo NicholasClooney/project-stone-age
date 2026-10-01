@@ -4,6 +4,7 @@ const ROOT := "res://assets/legacy/"
 var items: Dictionary = {}
 var npcs: Array = []
 var jobs: Array = []
+var reward_pets: Dictionary = {}
 var enabled_events: Array = []
 func _init() -> void:
  var config = JSON.parse_string(FileAccess.get_file_as_string("res://data/early-quests.json"))
@@ -17,6 +18,7 @@ func _init() -> void:
  items = data.get("items", {})
  npcs = data.get("npcs", [])
  jobs = data.get("jobs", [])
+ reward_pets = data.get("reward_pets", {})
 func active_npcs() -> Array:
  var result: Array = []
  for npc in npcs:

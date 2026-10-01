@@ -1,6 +1,8 @@
 extends RefCounted
 ## Source-script interpreter. Pending dialogues are server-owned and single use.
 const Session = preload("res://server/game_session.gd")
+const Progression = preload("res://server/progression.gd")
+const Loyalty = preload("res://server/loyalty.gd")
 var catalog
 var pending := {}
 var serial := 0
@@ -22,6 +24,9 @@ static func matches(profile: Dictionary, condition: String) -> bool:
 	for alternative in condition.split(","):
 		var accepted := true
 		for predicate in alternative.split("&"):
+			if predicate.begins_with("PET"):
+				if pet_index(profile,predicate)<0:accepted=false;break
+				continue
 			var regex := RegEx.new()
 			regex.compile("^(NOWEV|ENDEV|ITEM|SP|LV)(!=|=|>)([0-9]+)(?:\\*([0-9]+))?$")
 			var found := regex.search(predicate.strip_edges())
@@ -40,6 +45,16 @@ static func matches(profile: Dictionary, condition: String) -> bool:
 			if not result:accepted=false;break
 		if accepted:return true
 	return false
+
+static func pet_index(profile: Dictionary, predicate: String) -> int:
+	var regex := RegEx.new()
+	regex.compile("^PET>([0-9]+)-([0-9]+)(?:\\*1)?$")
+	var found := regex.search(predicate)
+	if found==null:return -1
+	for index in range(profile.pets.size()):
+		var pet: Dictionary=profile.pets[index]
+		if str(pet.get("species",""))=="original_%d"%int(found.get_string(2)) and int(pet.level)>int(found.get_string(1)) and Session.original_pet_event(pet)==0:return index
+	return -1
 
 func npc_by_id(id: String) -> Dictionary:
 	for npc in catalog.active_npcs():
@@ -80,7 +95,7 @@ func talk(backend, id: String) -> Dictionary:
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
-		if action not in ["GetItem","DelItem","GetStone","EndSetFlg","CleanFlg"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
+		if action not in ["GetItem","DelItem","GetStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
 	var phase: String=str(branch.type)
 	if phase=="MESSAGE":
 		var result := transact(backend,profile,branch,"MESSAGE")
@@ -89,7 +104,12 @@ func talk(backend, id: String) -> Dictionary:
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
 	var keys := {"REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
-	return window(npc,branch,phase,message(branch.texts,keys[phase]),true)
+	var reply := window(npc,branch,phase,message(branch.texts,keys[phase]),true)
+	if phase=="ACCEPT" and branch.actions.has("DelPet"):
+		var index := pet_index(profile,str(branch.actions.DelPet))
+		if index<0:return {"ok":false,"reason":"交付宠物已经改变。"}
+		pending.pet_id=str(profile.pets[index].pet_id)
+	return reply
 
 func choose(backend, token: String, choice: String) -> Dictionary:
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
@@ -106,7 +126,13 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
-	if phase=="ACCEPT" and choice=="yes":return window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
+	if current.has("pet_id"):
+		var index := pet_index(profile,str(branch.actions.DelPet))
+		if index<0 or str(profile.pets[index].pet_id)!=str(current.pet_id):return {"ok":false,"reason":"交付宠物已经改变，请重新确认。"}
+	if phase=="ACCEPT" and choice=="yes":
+		var reply := window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
+		if current.has("pet_id"):pending.pet_id=current.pet_id
+		return reply
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
 	var result := transact(backend,profile,branch,phase)
 	if not result.ok:return result
@@ -126,6 +152,20 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 		clear_flags(candidate,str(branch.actions.get("CleanFlg","")))
 	else:
 		var received := item_list(str(branch.actions.get("GetItem","")))
+		var random_items := item_list(str(branch.actions.get("GetRandItem","")))
+		var reward_count := received.size()+(1 if not random_items.is_empty() else 0)
+		var consumed := -1
+		if branch.actions.has("DelPet"):
+			consumed=pet_index(candidate,str(branch.actions.DelPet))
+			if consumed<0:return {"ok":false,"reason":"交付宠物不符合原条件。"}
+		var reward_pet: Dictionary={}
+		if branch.actions.has("GetPet"):
+			if candidate.pets.size()-(1 if consumed>=0 else 0)+1>Session.PET_CAPACITY:return {"ok":false,"reason":str(branch.texts.get("PetFullMsg","宠物栏已满。"))}
+			var definition: Dictionary=catalog.reward_pets.get(str(branch.actions.GetPet),{})
+			if definition.is_empty() or not Session.TroopArt.can_render([{"sprite":int(definition.get("sprite",0))}]):return {"ok":false,"reason":"原奖励宠物来源或图像尚未导入。"}
+			reward_pet=Progression.species_actor(str(definition.species),int(definition.level),randi(),[],definition)
+			reward_pet.merge({"species":definition.species,"template_id":definition.template_id,"name":definition.name,"sprite":definition.sprite,"level":definition.level,"xp":0,"skill_unlocked":false,"elements":definition.elements.duplicate(),"size":definition.size,"modai":definition.modai,"variable_ai":0,"original_end_event":0,"source_enemy_id":definition.enemy_id,"quest_reward_event":event,"skill_slots":definition.skill_slots})
+			Loyalty.refresh(reward_pet,candidate.player)
 		# REQUEST has an additional pre-deletion capacity check in the original
 		# NPC callback. Keep the established event2 net-capacity compatibility.
 		if phase=="REQUEST" and event!=2 and Session.bag_slots(profile)+received.size()>15:
@@ -140,8 +180,25 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 		# consume the script's count (fixing the reference C's empty *n branch).
 		var capacity := candidate.duplicate(true)
 		remove_items(capacity,str(branch.actions.get("DelItem","")))
-		if Session.bag_slots(capacity)+received.size()>15:
+		if Session.bag_slots(capacity)+reward_count>15:
 			return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
+		if consumed>=0:
+			candidate.pets.remove_at(consumed)
+			for field in ["active_pet","ride_pet"]:
+				var index := int(candidate.get(field,-1))
+				candidate[field]=-1 if index==consumed else (index-1 if index>consumed else index)
+			# Selected capture helpers use UID plus a slot; reset the removed UID
+			# and rebase surviving slots together in the persisted settings.
+			var capture: Dictionary=candidate.get("automation_settings",{}).get("capture",{})
+			var old_id := str(profile.pets[consumed].pet_id)
+			if str(capture.get("pet_id",""))==old_id or int(capture.get("pet",-2))==consumed:
+				capture.pet_id="";capture.pet=-2
+			elif int(capture.get("pet",-2))>consumed:capture.pet=int(capture.pet)-1
+		if not reward_pet.is_empty():
+			reward_pet.pet_id="pet-%d"%int(candidate.next_pet_id)
+			candidate.next_pet_id+=1
+			candidate.pets.append(reward_pet)
+		if not random_items.is_empty():received.append(random_items[randi_range(0,random_items.size()-1)])
 		remove_items(candidate,str(branch.actions.get("DelItem","")))
 		for item in received:candidate.original_items.append(item)
 		set_flag(candidate,"now",event,true)
@@ -154,6 +211,10 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 	if not backend.save():
 		backend.session._profile=profile
 		return {"ok":false,"reason":"save_failed"}
+	if branch.actions.has("DelPet") and phase not in ["cancel","CLEAN"]:
+		var fresh: Dictionary=backend.automation.profile_settings()
+		for key in ["capture_pet","capture_pet_id"]:backend.automation.settings[key]=fresh[key]
+		if not candidate.pets.any(func(pet):return str(pet.pet_id)==backend.automation.training_pet_id):backend.automation.training_pet_id=""
 	backend.publish()
 	return {"ok":true}
 

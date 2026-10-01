@@ -13,7 +13,7 @@ func snapshot(backend) -> Dictionary:
  # not need to copy a potentially large pet warehouse or rebuild task recipes.
  var profile: Dictionary = backend.session._profile
  var catalog = backend.quest_catalog
- var key := JSON.stringify([catalog.get_instance_id(),catalog.enabled_events,profile.original_events,profile.original_items,profile.original_savepoint_bits,profile.player.level])
+ var key := JSON.stringify([catalog.get_instance_id(),catalog.enabled_events,profile.original_events,profile.original_items,profile.original_savepoint_bits,profile.player.level,profile.pets.map(func(pet):return [pet.get("pet_id",""),pet.get("species",""),pet.get("level",0),Rules.Session.original_pet_event(pet)]),Rules.Session.bag_slots(profile)])
  if key == cached_key:return cached_snapshot.duplicate(true)
  var quests: Array = []
  for job in catalog.jobs:
@@ -24,6 +24,7 @@ func snapshot(backend) -> Dictionary:
   if enabled:
    if event==1:herb_steps(backend,profile,quest)
    elif event==2:shell_steps(backend,profile,quest)
+   elif event in [15,16]:doctor_steps(backend,profile,quest)
    elif event==18:wood_steps(backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
@@ -65,6 +66,10 @@ func add_step(backend,profile:Dictionary,quest:Dictionary,id:String,entry:Dictio
    source=selected
    blocked=str(selected.texts.get("NomalWindowMsg","当前原分支无法推进此步骤"))
   else:blocked="尚未满足原任务条件"
+ if current and actionable and branch.actions.has("GetRandItem") and Rules.Session.bag_slots(profile)>=15:
+  actionable=false;blocked="道具栏已满；需要一个空格领取随机谢礼"
+ if current and actionable and branch.actions.has("GetPet") and profile.pets.size()-(1 if Rules.pet_index(profile,str(branch.actions.get("DelPet","")))>=0 else 0)+1>Rules.Session.PET_CAPACITY:
+  actionable=false;blocked="宠物栏已满"
  if current and cancellation:blocked="已领取；请继续下一步骤"
  var caption:String=label if not label.is_empty() else label_for(backend.quest_catalog,npc,branch)
  if not blocked.is_empty():caption+="（"+blocked+"）"
@@ -103,6 +108,63 @@ func herb_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  add_step(backend,profile,quest,"herb:request",request,not started and not ended,started or ended,"向村庄小姑娘领取药草委托")
  add_step(backend,profile,quest,"herb:medicine",pick(backend,profile,candidates(backend,1,"GetItem",2401)),started and not held and not ended,held or ended,"向哈罗山医生领取哈罗的香草")
  add_step(backend,profile,quest,"herb:return",pick(backend,profile,candidates(backend,1,"DelItem",2401)),started and held and not ended,ended,"回村交付香草，领取老爷爷的护身符")
+
+func doctor_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
+ var event:=int(quest.event)
+ var prefix:="doctor%d:"%event
+ var ended:=Rules.flag(profile,"ended",event)
+ var started:=Rules.flag(profile,"now",event)
+ var species:=74 if event==15 else 191
+ var level:=15 if event==15 else 30
+ var name:="鲁尼帖斯" if event==15 else "贝鲁卡"
+ var predicate:="PET>%d-%d"%[level-1,species]
+ var eligible:=Rules.pet_index(profile,predicate)
+ var request:Dictionary={}
+ var exchange:Dictionary={}
+ var assistant:Dictionary={}
+ for npc in backend.quest_catalog.active_npcs():
+  for branch in npc.branches:
+   if int(branch.event)==event and str(branch.type)=="REQUEST":request={"npc":npc,"branch":branch}
+   if int(branch.event)==event and str(branch.type)=="ACCEPT":exchange={"npc":npc,"branch":branch}
+   if event==15 and str(npc.id)=="sainasu/event/event15_2":assistant={"npc":npc,"branch":branch}
+ add_step(backend,profile,quest,prefix+"request",request,not started and not ended,started or ended,"向恐龙博士哈鲁领取委托（角色%d级%s）"%[10 if event==15 else 16,"" if event==15 else "，先完成鲁尼帖斯委托"])
+ if not assistant.is_empty():
+  add_step(backend,profile,quest,prefix+"assistant",assistant,started and not ended,false,"向助手吉鲁了解原版捕获与培养说明")
+  if not quest.steps.is_empty() and quest.steps[-1].id==prefix+"assistant":quest.steps[-1].optional=true
+ var target:=capture_step(backend,species)
+ var held:Array=[]
+ for pet in profile.pets:
+  if str(pet.species)=="original_%d"%species:held.append("%s Lv.%d%s"%[str(pet.get("pet_id","")),int(pet.level),"（事件或来源不明，不可交付）" if Rules.Session.original_pet_event(pet)!=0 else ""])
+ var detail:="捕获普通%s并培养至%d级；只交随身栏首个符合宠物%s"%[name,level,"；当前："+"、".join(held) if not held.is_empty() else "；尚未持有"]
+ if target.is_empty():
+  quest.steps.append({"id":prefix+"capture","npc_id":"","current":started and eligible<0 and not ended,"done":eligible>=0 or ended,"actionable":false,"label":detail+"（尚无已导入捕获地点）","source":{"type":"pet_requirement","species":species,"level":level,"original_end_event":0}})
+ else:
+  target.id=prefix+"capture";target.current=started and eligible<0 and not ended;target.done=eligible>=0 or ended;target.actionable=target.current
+  target.label=detail+" · %s (%d,%d)"%[places.map_name(int(target.map_id)),int(target.cell[0]),int(target.cell[1])]
+  quest.steps.append(target)
+ add_step(backend,profile,quest,prefix+"return",exchange,started and eligible>=0 and not ended,ended,"交付%s%s，领取%s"%[name,"（"+str(profile.pets[eligible].pet_id)+"）" if eligible>=0 else "", "八种原物品之一" if event==15 else "1级布克布克"])
+ if started and eligible<0 and not ended:quest.blocked_reason="需要普通%s至少%d级；事件宠和来源不明宠不能交付"%[name,level]
+ quest.completion_detail="原任务无重做入口；博士自动任务尚未开放"
+
+func capture_step(backend,species:int) -> Dictionary:
+ var data:Dictionary=backend.encounter_catalog.data
+ for area in data.get("areas",[]):
+  if int(area.map_id)!=(100 if species==74 else 200) or places.info(int(area.map_id)).is_empty():continue
+  if area.get("invalid_weights",false) or int(area.get("event_now",-1))>0 or int(area.get("event_end",-1))>0:continue
+  for choice in area.groups:
+   var group:Dictionary=data.get("groups",{}).get(str(int(choice.id)),{})
+   if group.get("invalid_weights",false) or int(group.get("requires_item",-1))>=0 or int(group.get("excludes_item",-1))>=0:continue
+   for member in group.get("enemies",[]):
+    var enemy:Dictionary=data.get("enemies",{}).get(str(int(member.id)),{})
+    if int(enemy.get("template_id",-1))!=species or int(enemy.get("pet_flag",0))!=1:continue
+    var rect:Array=area.rect
+    var point:=[(int(rect[0])+int(rect[2]))/2,(int(rect[1])+int(rect[3]))/2]
+    var target:=destination(backend,{"id":"","map_id":int(area.map_id),"cell":point,"area_rect":rect},"near")
+    if target.is_empty():continue
+    var actual:Dictionary=backend.encounter_catalog.area_at(int(area.map_id),Vector2i(int(target.cell[0]),int(target.cell[1])))
+    if int(actual.get("id",-1))!=int(area.id):continue
+    return {"id":"","npc_id":"","map_id":int(area.map_id),"cell":target.cell,"current":false,"done":false,"actionable":false,"source":{"type":"encounter","area_id":int(area.id),"area_rect":rect.duplicate(),"area_source_line":int(area.get("source_line",0)),"enemy_id":int(enemy.id),"species":species,"level_min":int(enemy.level_min),"level_max":int(enemy.level_max),"original_end_event":0}}
+ return {}
 
 func wood_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var items:Array=profile.original_items
@@ -159,6 +221,7 @@ func harvest_step(backend) -> Dictionary:
  for area in data.get("areas",[]):
   if int(area.id) not in [88,267] or places.info(int(area.map_id)).is_empty():continue
   var eligible:=false
+  if area.get("invalid_weights",false) or int(area.get("event_now",-1))>0 or int(area.get("event_end",-1))>0:continue
   for choice in area.groups:
    var group:Dictionary=data.get("groups",{}).get(str(int(choice.id)),{})
    if int(group.get("requires_item",-1))==2478 and group.get("enemies",[]).any(func(entry):return int(entry.id)==563):eligible=true

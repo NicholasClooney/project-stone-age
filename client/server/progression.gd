@@ -50,10 +50,10 @@ static func _preserve(actor: Dictionary) -> void:
 	for key in DERIVED:actor.legacy_stat_offset[key] = int(actor[key])-int(result[key])
 ## offsets fixes the four birth grades (-2..+2 each; [2,2,2,2] is 满档)
 ## instead of rolling them; everything else is rolled as usual.
-static func species_actor(species: String, level: int, seed_value: int, offsets: Array = []) -> Dictionary:
+static func species_actor(species: String, level: int, seed_value: int, offsets: Array = [], source_definition: Dictionary = {}) -> Dictionary:
 	var rng := RandomNumberGenerator.new()
 	rng.seed = seed_value
-	var data: Dictionary = species_definition(species)
+	var data: Dictionary = source_definition if not source_definition.is_empty() else species_definition(species)
 	if data.is_empty():return {}
 	var weights: Array = data.weights.duplicate()
 	for i in range(4):

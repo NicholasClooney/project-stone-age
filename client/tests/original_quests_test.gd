@@ -23,7 +23,7 @@ func fresh():
 	return b
 func run() -> void:
 	var public_backend=Backend.new()
-	check(public_backend.quest_catalog.enabled_events==[1,2,18,19] and public_backend.quest_catalog.active_npcs().size()==9,"public catalog exposes herb, shell and wood chain NPCs")
+	check(public_backend.quest_catalog.enabled_events==[1,2,15,16,18,19] and public_backend.quest_catalog.active_npcs().size()==11,"public catalog exposes herb, shell and wood chain NPCs")
 	public_backend.free()
 	migration()
 	for bit in range(4):direction(bit)

@@ -1,14 +1,14 @@
 # 原版任务解释器与已知偏差
 
 已开放 `sainasu/event/event02_1`、`event02_2` 的不可思议的贝壳任务。
-公开目录 `client/data/early-quests.json` 启用事件 1、2、18、19。玩家可点击日美子
+公开目录 `client/data/early-quests.json` 启用事件 1、2、15、16、18、19。玩家可点击日美子
 （萨姆吉尔 1000，57/124）与弥生（玛丽娜丝 2000，55/92）。
 测试使用真实 QuestCatalog 和原分支，不伪造对白或奖励。
 伐木扩展按地图与数据、战斗掉物、完整事件链分别提交；仅启用目录中的事件才公开 NPC。
 
 原参考 `gmsv/npc/npc_exchangeman.c` 保留文件分支顺序，EventNo 正数且
 ENDEV 已置位时跳过该分支。EVENT 逗号为 OR、`&` 为 AND。解释器只支持
-本期所需 LV、SP、ITEM、NOWEV、ENDEV，其他谓词/动作失败关闭。
+本期所需 LV、SP、ITEM、NOWEV、ENDEV、严格 PET>等级-原物种，其他谓词/动作失败关闭。
 SP 来自原 CHAR_SAVEPOINT 累积位集合，不能把当前地图当出生村。
 新角色与旧 prototype 存档明确默认萨姆吉尔初始位 0，origin 标注
 `prototype_default`，不冒充原版出生数据导入。
@@ -54,10 +54,10 @@ Headless 测试不验证渲染像素。
 原重复入口到 (8,24) 保留审查记录，采用先列出的 (7,24)。
 全 70 图块、60 物件均可用 2.5 图形，哈恩 (12,11) 邻格从入口可达。
 
-完整目录含贝壳 2 NPC、伐木 5 NPC 与药草 2 NPC、14 件原道具。NPC 与 branch 的 `events`
+完整目录含贝壳 2 NPC、伐木 5 NPC 、药草 2 NPC 与博士 2 NPC、22 件原道具。NPC 与 branch 的 `events`
 记录审核链关联，EventNo 原值保留，不能用正数 EventNo 筛掉科巴尔特、赛尚等
 无自身事件号的分支。哈恩 1837/1838 钥匙旁支 `enabled=false`，不公开。
-当前导入的原 jobdaily 有 event1、event2、event18 标题，event19 不捏造日志标题。
+当前导入的原 jobdaily 有 event1、event2、event15、event16、event18 标题，event19 不捏造日志标题。
 
 ## 已开放伐木链
 
@@ -101,3 +101,35 @@ ThanksMsg1..4 按序合并成完整原对白；兼容 NomalMsg 与 NomalWindowMs
 near/arrival 安全落点与真实导航网格可达，远程无 backend 客户端按原按钮交付。
 香草的原 ITEM_useRecovery 体100和护身符装备属性仅保存原道具说明，功能尚未实现。
 药草助手只提供三步导航；自动执行仍仅贝壳。
+
+## 已开放恐龙博士（event15/job6、event16/job7）
+
+`sainasu/event/event15.create` 的博士哈鲁位于11006(11,11)、graphic16024，
+助手吉鲁位于(11,7)、graphic16046。保留两个脚本全部原对白和分支先后顺序。
+角色LV>9领取第一阶段，NOW15且普通species74鲁尼帖斯LV>14可交；删除随身
+栏首个符合宠物一只，1350/1351/1352/1354/700/1455/1102/1122等概率八选一并END15。
+角色LV>15且END15领取第二阶段，NOW16且普通species191贝鲁卡LV>29可交。
+无SP、ENDEV4成人门槛，也无CLEAN；原未成年提示位于更早ACCEPT之后，不可达。
+
+`GetPet:95` 是enemy ID，enemy.txt:60映射species173布克布克Lv1。
+奖励使用enemybase:173的INITNUM25、LVUPPOINT4.50、V/S/T/D=26/26/26/17、
+modai270、variable_ai0、水50火50、技能槽5、graphic100321；四档[-2,+2]后保存
+成长权重，初始值再随机分配10点，沿已有固定点成长规则培养。不是species95、
+不是满档GM宠。目录保存enemy与enemybase原行号，来源与enemy.c/npc_exchangeman.c
+原字节SHA256均锁定。现有技能学习界面仍使用已实现的技能集合，未随任务扩展。
+
+`PET` 和 `DelPet` 精确要求CHAR_ENDEVENT==0。持久字段`original_end_event`只接受0/1，
+普通捕获和新GM原表发宠明确为0（原GM便利，不是任务功能）。旧存档仅有原遇敌
+`source_enemy_id`且原物种的宠默认为0，来源不明默认1；不按昵称、贴图或等级推断。
+字段为兼容可选字段，版本仍5，不改变旧宠数值、UID及仓库归属。
+
+服务器两次确认绑定首个符合宠物UID；宠物或顺序改变后拒绝旧确认，避免删错同名宠。
+最后OK才抽一次奖，token消耗后重试不能重抽；原子候选profile先检查净物品/宠物
+容量，交宠修复出战、骑宠和削血宠选择，存档失败恢复全部候选修改且不发布成功。
+满包阻止随机物品；满宠允许第二阶段一换一，未向仓库挪奖励或自动放生。
+
+助手列领取、原助手说明、真实已导入捕获地点与培养条件、交宠奖励步骤；普通捕获
+地点只从萨伊那斯100/加鲁卡200的真实普通遇敌查找，不新增稀有遇敌。宠物UID、
+原物种、等级、来源与背包格数加入缓存签名。两种瞬移和远程原NPC点击沿统一协议。
+博士自动任务尚未开放；贝壳自动逻辑保持。此博士提交尚未启用成人仪式，10204
+长通道和沿途遇敌依赖由后续独立切片处理；原差使直接给15颗仪的玉，不能造击杀掉落。

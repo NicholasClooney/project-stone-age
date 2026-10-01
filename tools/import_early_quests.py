@@ -35,12 +35,18 @@ def parse_script(text):
             if current['TYPE'] not in ('REQUEST', 'ACCEPT', 'MESSAGE', 'CLEAN'):
                 raise ValueError('Unsupported branch type')
             for clause in re.split('[,&]', current['EVENT']):
-                if not re.fullmatch(r'(?:ENDEV|NOWEV|ITEM|SP|LV)(?:!=|=|>|<)\d+(?:\*\d+)?', clause):
+                if not (re.fullmatch(r'(?:ENDEV|NOWEV|ITEM|SP|LV)(?:!=|=|>|<)\d+(?:\*\d+)?', clause) or re.fullmatch(r'PET>\d+-\d+', clause)):
                     raise ValueError(f'Unsupported predicate: {clause}')
             texts = {k: v.replace('\\n', '\n') for k, v in current.items() if 'Msg' in k}
             actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
-            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'EndSetFlg', 'CleanFlg'}:
+            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem'}:
                 raise ValueError('Unsupported quest action')
+            for key in ('DelPet', 'GetPet', 'GetRandItem'):
+                if key not in actions:
+                    continue
+                pattern = r'PET>\d+-\d+\*1' if key == 'DelPet' else (r'\d+' if key == 'GetPet' else r'\d+(?:,\d+)+')
+                if not re.fullmatch(pattern, actions[key]):
+                    raise ValueError(f'Unsupported {key}: {actions[key]}')
             branches.append(dict(event=int(current['EventNo']), type=current['TYPE'], condition=current['EVENT'], texts=texts, actions=actions))
             current = None
             continue
@@ -94,8 +100,10 @@ def catalog(reference, spec=None):
                 branch['condition'] = restriction
             # Keep unrelated key-repair dialogue as provenance, never activate it.
             item_ids = {int(i) for i in re.findall(r'ITEM(?:!=|=)(\d+)', branch['condition'])}
-            for key in ('GetItem', 'DelItem'):
+            for key in ('GetItem', 'DelItem', 'GetRandItem'):
                 item_ids.update(int(i.split('*')[0]) for i in branch['actions'].get(key, '').split(',') if i)
+            if 'GetPet' in branch['actions'] and int(branch['actions']['GetPet']) not in spec.get('reward_enemies', []):
+                raise ValueError('Unreviewed reward enemy')
             branch['enabled'] = item_ids <= set(spec['items'])
             branch['events'] = list(events) if branch['enabled'] else []
         npcs.append(dict(events=events, id=ident, name=fields['name'], map_id=int(fields['floorid']), cell=[x, y], graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches))
@@ -130,7 +138,19 @@ def catalog(reference, spec=None):
         if not completed or len(rows[1]) != 4 or rows[1][1] != 'NOWEV='+completed[1] or rows[0][2] != rows[1][2]:
             raise ValueError('Unsupported journal definition')
         jobs.append(dict(id=ident, event=int(completed[1]), title=rows[0][2], completed_label=rows[0][3], active_label=rows[1][3]))
-    return dict(version=1, items=items, npcs=npcs, jobs=jobs, provenance=dict(reference_revision=spec['reference_revision'], sources=spec['sources'], client='StoneAge 2.5; logical static graphics, no fallback'))
+    reward_pets = {}
+    bases = {int(row[6]): (line, row) for line, row in enumerate(csv.reader(texts.get('gmsv/data/enemybase.txt', '').splitlines()), 1) if len(row) > 36 and row[6].isdigit()}
+    for line, row in enumerate(csv.reader(texts.get('gmsv/data/enemy.txt', '').splitlines()), 1):
+        if len(row) < 7 or not row[3].isdigit() or int(row[3]) not in spec.get('reward_enemies', []):
+            continue
+        ident, species, low, high = map(int, row[3:7])
+        if low != high or low != 1:
+            raise ValueError('Unreviewed reward level')
+        base_line, base = bases[species]
+        reward_pets[str(ident)] = dict(enemy_id=ident, template_id=species, species=f'original_{species}', level=low, name=base[0], initial=int(base[7]), wild_growth=float(base[8]), weights=list(map(int,base[9:13])), modai=int(base[13]), variable_ai=0, elements=list(map(int,base[15:19])), skill_slots=int(base[34]), sprite=int(base[36]), size=int(base[38]), source='gmsv/data/enemy.txt', source_line=line, base_source='gmsv/data/enemybase.txt', base_source_line=base_line)
+    if set(reward_pets) != set(map(str, spec.get('reward_enemies', []))):
+        raise ValueError('Missing reviewed reward enemy')
+    return dict(version=1, items=items, npcs=npcs, jobs=jobs, reward_pets=reward_pets, provenance=dict(reference_revision=spec['reference_revision'], sources=spec['sources'], client='StoneAge 2.5; logical static graphics, no fallback'))
 
 
 def run(source, reference, output):

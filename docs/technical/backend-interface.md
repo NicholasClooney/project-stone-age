@@ -268,6 +268,16 @@ ProfileHub 绑定独立纯 `quest_visit_guard`，组队拒绝不会调用治疗�
 约束。ProfileHub 按角色打开各自检查点，无登录也可续跑；恢复开关关闭时不恢复。
 周期意图最多滞后 10 秒；重启前已经同步提交的原交易以角色存档为准。
 
+博士 event15/job6 与 event16/job7 的 `doctor15:*` / `doctor16:*` 包括 `request`、
+`capture`、`return`，第一阶段另有原助手 `assistant`。宠物条件由服务器原PET谓词
+（物种、严格等级、`original_end_event==0`、随身栏首个）派生，缓存同时跟踪宠物UID/
+等级/来源与物品格数。真实捕获步骤的 `source.type=encounter` 携带原area/enemy行号，
+两种 `quest_visit` 模式沿现有安全落点协议；未导入地点显示限制，不制造NPC。
+`quest_talk` 和两次 `quest_choose` 都绑定同一交付UID；末次OK交换净容量、随机奖励与
+NOW/END，save失败恢复整个profile。旧token不可重采奖励，UI不接收奖励指定参数。
+宠物兼容可选字段 `original_end_event` 为0/1；旧宠无字段时按捕获来源保守迁移。
+博士无成人仪式门槛，无CLEAN或自动执行入口。
+
 ## Random encounter helper
 
 `no_random_encounters {enabled: bool}` saves a per-character helper preference,

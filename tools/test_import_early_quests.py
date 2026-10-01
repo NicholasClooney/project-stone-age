@@ -13,19 +13,19 @@ REFERENCE = Path(__file__).resolve().parents[1]/'references/chenmingbiao-stone-a
 class EarlyQuestTests(unittest.TestCase):
     def test_real_packet(self):
         data = quests.catalog(REFERENCE)
-        self.assertEqual(set(data['items']), {'2401', '2427', '2414', '2415', '2463', '2464', '2465', '2466', '2467', '2468', '2478', '2481', '2484', '2485'})
+        self.assertEqual(set(data['items']), {'1350', '1351', '1352', '1354', '700', '1455', '1102', '1122', '2401', '2427', '2414', '2415', '2463', '2464', '2465', '2466', '2467', '2468', '2478', '2481', '2484', '2485'})
         self.assertEqual(data['items']['2414']['logical_icon'], 24130)
         self.assertEqual(data['items']['2415']['name'], '仙尼亚的花')
         self.assertFalse(data['items']['2415']['stackable'])
         self.assertEqual(data['items']['2414']['source_line'], 1997)
         self.assertEqual(data['items']['2468']['raw_columns'][24:26], ['', ''])
-        self.assertEqual([(n['map_id'], n['cell']) for n in data['npcs']], [(2000, [55,92]), (1000, [57,124]), (20508, [12,11]), (20507, [32,29]), (3300, [60,75]), (3300, [46,55]), (3000, [114,69]), (3110, [16,15]), (20105, [16,20])])
+        self.assertEqual([(n['map_id'], n['cell']) for n in data['npcs']], [(2000, [55,92]), (1000, [57,124]), (20508, [12,11]), (20507, [32,29]), (3300, [60,75]), (3300, [46,55]), (3000, [114,69]), (3110, [16,15]), (20105, [16,20]), (11006, [11,11]), (11006, [11,7])])
         npc = data['npcs'][0]
         self.assertEqual([b['type'] for b in npc['branches']], ['CLEAN', 'ACCEPT', 'REQUEST'])
         self.assertEqual(npc['branches'][1]['actions'], {'GetItem':'2414','DelItem':'2415','EndSetFlg':'2'})
         self.assertIn('\n', npc['branches'][2]['texts']['ThanksMsg'])
         self.assertNotIn('\\n', npc['branches'][2]['texts']['ThanksMsg'])
-        self.assertEqual(data['jobs'][0]['title'], '不可思议的贝壳')
+        self.assertEqual(next(j for j in data['jobs'] if j['event'] == 2)['title'], '不可思议的贝壳')
 
     def test_wood_branch_order_and_journal(self):
         data = quests.catalog(REFERENCE)
@@ -44,11 +44,11 @@ class EarlyQuestTests(unittest.TestCase):
         self.assertEqual(exchanges[2]['actions']['DelItem'], '2468,2478')
         self.assertEqual(exchanges[-1]['actions']['DelItem'], '2478')
         self.assertEqual([(j['id'], j['event'], j['title']) for j in data['jobs']],
-                         [(11, 2, '不可思议的贝壳'), (22, 18, '伐木任务'), (30, 1, '塔姆塔姆村的药草')])
+                         [(6, 15, '恐龙博士 抓鲁尼帖斯'), (7, 16, '恐龙博士 抓贝鲁卡'), (11, 2, '不可思议的贝壳'), (22, 18, '伐木任务'), (30, 1, '塔姆塔姆村的药草')])
 
     def test_herb_review_boundaries(self):
         data = quests.catalog(REFERENCE)
-        girl, doctor = data['npcs'][-2:]
+        girl, doctor = data['npcs'][7:9]
         self.assertEqual((girl['graphic'], doctor['graphic']), (16065, 16024))
         self.assertEqual([b['enabled'] for b in doctor['branches']], [True, False, False, True])
         medicine = doctor['branches'][3]
@@ -63,6 +63,30 @@ class EarlyQuestTests(unittest.TestCase):
         spec['excluded_scripts'] = []
         with self.assertRaisesRegex(ValueError, 'Unreviewed NPC'):
             quests.catalog(REFERENCE, spec)
+
+    def test_doctor_source_and_strict_pet_language(self):
+        data = quests.catalog(REFERENCE)
+        doctor, assistant = data['npcs'][9:11]
+        self.assertEqual((doctor['graphic'], assistant['graphic']), (16024, 16046))
+        self.assertEqual(doctor['branches'][0]['condition'], 'NOWEV=15&PET>14-74')
+        self.assertEqual(doctor['branches'][1]['condition'], 'ENDEV=15&NOWEV=16&PET>29-191')
+        self.assertEqual(doctor['branches'][0]['actions']['DelPet'], 'PET>14-74*1')
+        self.assertEqual(doctor['branches'][0]['actions']['GetRandItem'], '1350,1351,1352,1354,700,1455,1102,1122')
+        self.assertEqual(doctor['branches'][1]['actions']['GetPet'], '95')
+        self.assertEqual(doctor['branches'][2]['condition'], 'LV>9')
+        self.assertEqual(doctor['branches'][3]['condition'], 'LV>15&ENDEV=15')
+        self.assertFalse(any('CleanFlg' in b['actions'] or 'ENDEV=4' in b['condition'] for b in doctor['branches']))
+        reward = data['reward_pets']['95']
+        self.assertEqual((reward['template_id'], reward['level'], reward['sprite'], reward['source_line'], reward['base_source_line']), (173,1,100321,60,173))
+        self.assertEqual((reward['weights'], reward['initial'], reward['skill_slots'], reward['modai']), ([26,26,26,17],25,5,270))
+        spec = json.loads(quests.SPEC.read_text())
+        for source in ['gmsv/data/enemy.txt', 'gmsv/data/enemybase.txt', 'gmsv/char/enemy.c', 'gmsv/npc/npc_exchangeman.c']:
+            changed = json.loads(json.dumps(spec)); changed['sources'][source] = '0'*64
+            with self.assertRaisesRegex(ValueError, 'Unreviewed source'):
+                quests.catalog(REFERENCE, changed)
+        for field in ['EVENT:PET=74', 'EVENT:PET>14-74*2', 'EVENT:PET>14-74EV', 'EVENT:LV>9\nDelPet:PET>14-74*2', 'EVENT:LV>9\nGetPet:95,96', 'EVENT:LV>9\nGetRandItem:700*2,700', 'EVENT:LV>9\nGetRandItem:700']:
+            with self.subTest(field=field), self.assertRaises(ValueError):
+                quests.parse_script('EventNo:15\nTYPE:ACCEPT\n'+field+'\nEventEnd')
 
     def test_changed_sources_rejected(self):
         spec = json.loads(quests.SPEC.read_text())
