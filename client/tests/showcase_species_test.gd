@@ -167,6 +167,20 @@ func run() -> void:
 		taken.append(int(entry.actor.template_id))
 	check(taken==expected,"captures go round the species with hits: %s" % str(taken))
 	check(best_first,"each takes its species' best hit")
+	# The queue may hold the species in any order (a resumed file, an insert):
+	# after the highest id the turn wraps to the lowest, so none is starved.
+	var shuffled: Array = []
+	for id in [species[1],species[2],species[0]]:
+		for n in range(2):
+			var hit: Dictionary = {"index":900+shuffled.size(),"slot":0,"actor":{"template_id":id,"name":"x"},"prediction":{"attack":100-n,"defence":1,"speed":1,"max_hp":1}}
+			shuffled.append(hit)
+	automation.showcase_queue = shuffled
+	automation.showcase_last_template = species[1]
+	var order: Array = []
+	while not automation.showcase_queue.is_empty():order.append(int(automation._take_queued().actor.template_id))
+	var sorted_ids: Array = species.duplicate();sorted_ids.sort()
+	var after: Array = sorted_ids.filter(func(id):return id>species[1])+sorted_ids.filter(func(id):return id<=species[1])
+	check(order==after+after,"an unsorted queue still goes round every species: %s" % str(order))
 	fresh.handle({"type":"auto_stop"})
 	fresh.queue_free()
 	await process_frame

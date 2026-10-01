@@ -2039,6 +2039,9 @@ func _queue_templates() -> Array:
 	var result: Array = []
 	for entry in showcase_queue:
 		if not result.has(_template_of(entry)):result.append(_template_of(entry))
+	# Ascending, whatever order the queue is in: _take_queued's round-robin
+	# wraps from the highest id back to the lowest.
+	result.sort()
 	return result
 
 ## One species' queue, best first.
