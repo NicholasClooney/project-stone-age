@@ -151,7 +151,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 			var item := action.trim_prefix("buy_").trim_prefix("sell_").trim_prefix("equip_")
 			if action.begins_with("buy_"):success = at_shop and game.session.buy_item(item)
 			elif action.begins_with("sell_"):success = at_shop and game.session.sell_item(item)
-			elif action.begins_with("equip_") and item in Spirits.SPIRIT_ITEMS:
+			elif action.begins_with("equip_") and (item in Spirits.SPIRIT_ITEMS or item.begins_with("original:")):
 				success = game.session.equip_item(item)
 				if not success:note = game.session.last_error
 	if success:

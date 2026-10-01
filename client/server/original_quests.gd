@@ -145,7 +145,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 	if phase=="cancel":
 		# Cancellation removes all copies, including quantified GetItem entries.
 		for id in item_list(str(branch.actions.get("GetItem",""))):
-			while id in candidate.original_items:candidate.original_items.erase(id)
+			while id in candidate.original_items:Session.OriginalEquipment.remove(candidate,id)
 		set_flag(candidate,"now",event,false)
 		candidate.player.charm=maxi(0,int(candidate.player.get("charm",0))-1)
 	elif phase=="CLEAN":
@@ -200,7 +200,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 			candidate.pets.append(reward_pet)
 		if not random_items.is_empty():received.append(random_items[randi_range(0,random_items.size()-1)])
 		remove_items(candidate,str(branch.actions.get("DelItem","")))
-		for item in received:candidate.original_items.append(item)
+		for item in received:Session.OriginalEquipment.add(candidate,item)
 		set_flag(candidate,"now",event,true)
 		var ended: String=str(branch.actions.get("EndSetFlg",""))
 		if not ended.is_empty():
@@ -232,9 +232,9 @@ static func remove_items(profile: Dictionary, raw: String) -> void:
 		var parts := entry.split("*")
 		var id := int(parts[0])
 		if parts.size()>1:
-			for i in range(int(parts[1])):profile.original_items.erase(id)
+			for i in range(int(parts[1])):Session.OriginalEquipment.remove(profile,id)
 		else:
-			while id in profile.original_items:profile.original_items.erase(id)
+			while id in profile.original_items:Session.OriginalEquipment.remove(profile,id)
 
 static func clear_flags(profile: Dictionary, raw: String) -> void:
 	if raw.is_empty():return

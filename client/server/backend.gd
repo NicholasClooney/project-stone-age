@@ -969,7 +969,15 @@ func _cmd_quest_discard(command: Dictionary) -> Dictionary:
 	var item = command.get("item_id")
 	if not item is int and not item is float:return _reject("无效物品。")
 	if float(item)!=floor(float(item)) or not int(item) in before.original_items:return _reject("没有这个物品。")
-	session._profile.original_items.erase(int(item))
+	var uid = command.get("instance_uid")
+	if uid!=null:
+		if not GameSession.OriginalEquipment.integer(uid,1,2147483647):return _reject("无效物品。")
+		var index: int=-1
+		for i in range(before.original_instances.size()):
+			if int(before.original_instances[i].uid)==int(uid) and int(before.original_items[i])==int(item):index=i;break
+		if index<0:return _reject("没有这个物品。")
+		GameSession.OriginalEquipment.remove_at(session._profile,index)
+	else:GameSession.OriginalEquipment.remove_at(session._profile,before.original_items.find(int(item)))
 	if not save():session._profile=before;return _reject("save_failed")
 	_publish()
 	return {"ok":true}
@@ -1005,12 +1013,14 @@ func _restore_wood_battle(saved: Dictionary) -> bool:
 	for item in enemy.get("generated_drops",[]):
 		if int(item) not in allowed:return false
 	if not GameSession._original_integer(live.enemies[0].get("hp"),0,int(enemy.max_hp)) or live.enemies[0].get("species")!=enemy.species:return false
+	if not GameSession.OriginalEquipment.result_valid(config.get("original_equipment_items",[]),live.get("original_equipment_items",[])):return false
 	session._profile = profile.duplicate(true)
 	session._pending = config.duplicate(true)
 	battle = BattleSession.new()
 	battle.rng_seed = int(saved.get("rng_seed",42))
 	battle.start_battle(config)
 	battle._state = live.duplicate(true)
+	battle.restore_original_equipment()
 	battle._rng.state = int(saved.get("rng_state",battle._rng.state))
 	battle._escape_attempts = int(saved.get("escape_attempts",0))
 	battle._skill_used = bool(saved.get("skill_used",false))

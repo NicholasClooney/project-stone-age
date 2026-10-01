@@ -29,10 +29,10 @@ static func odds(a: Dictionary, d: Dictionary, mode: String) -> float:
 	if mode == "miss": percent += float(d.get("luck",0)) if dk == "player" else 0.0
 	elif mode == "critical": percent += float(a.get("luck",0)) + float(a.get("critical",0))*0.5*ratio
 	elif ak == "player":
-		# CounterTbl fist/fist9, club/fist8, fist/club7, club/club10.
-		var club := str(a.get("weapon","")) == "club"
-		var other_club := str(d.get("weapon","")) == "club"
-		percent *= (10.0 if other_club else 8.0) * 0.1 if club else (7.0 if other_club else 9.0)*0.1
+		# CounterTbl CLAW=1, AXE=2, CLUB=3 (battle_event.c:2756).
+		var types: Dictionary={"":0,"axe":1,"club":2}
+		var table: Array=[[9,7,7],[8,10,10],[8,10,10]]
+		percent *= float(table[int(types.get(str(a.get("weapon","")),0))][int(types.get(str(d.get("weapon","")),0))])*0.1
 		percent += float(a.get("luck",0))
 	return clampf(percent,0.01,75.0 if mode == "miss" else 100.0)
 

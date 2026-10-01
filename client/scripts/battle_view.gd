@@ -389,7 +389,8 @@ func required_art(next_state: Dictionary) -> Dictionary:
 	if is_instance_valid(world):
 		var ident := str(world.player.character_id)
 		sprites[ident] = true
-		sprites[str(manifest.get("equipment_variants",{}).get("club",{}).get(ident,ident))] = true
+		var weapon:=str(next_state.get("player_weapon","club" if bool(world.session.snapshot().get("equipped",false)) else ""))
+		sprites[str(manifest.get("equipment_variants",{}).get(weapon,{}).get(ident,ident))] = true
 	if int(next_state.get("mounted_sprite",-1)) >= 0:riding[str(next_state.mounted_sprite)] = true
 	sprites[str(next_state.get("enemy_sprite",SPECIES_ART.get(str(next_state.get("enemy_species","wooli")),"100250")))] = true
 	for actor in enemies_of(next_state)+next_state.get("pets",[])+next_state.get("ally_pets",[])+[next_state.get("pet",{})]:
@@ -434,8 +435,8 @@ func open_battle(next_state: Dictionary) -> void:
 	feedback_until = 0.0
 	if actors.size() > 0:
 		var ident: String = str(world.player.character_id) if is_instance_valid(world) else unmounted_player_art
-		if is_instance_valid(world) and world.get("session")!=null and bool(world.session.snapshot().get("equipped",false)):
-			ident = str(manifest.get("equipment_variants",{}).get("club",{}).get(ident,ident))
+		var weapon:=str(next_state.get("player_weapon","club" if is_instance_valid(world) and bool(world.session.snapshot().get("equipped",false)) else ""))
+		ident = str(manifest.get("equipment_variants",{}).get(weapon,{}).get(ident,ident))
 		unmounted_player_art = ident
 		var mounted := int(next_state.get("mounted_sprite",-1))
 		if mounted >= 0 and ensure_riding_art(str(mounted)): ident = str(mounted)
