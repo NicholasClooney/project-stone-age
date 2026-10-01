@@ -42,9 +42,9 @@ func start() -> Error:
 	return error
 
 func stop() -> void:
-	if backend!=null:backend.quest_auto.stop(backend,"服务器已停止。")
+	if backend!=null:backend.quest_auto.suspend(backend)
 	if hub!=null:
-		for profile_backend in hub.backends.values():profile_backend.quest_auto.stop(profile_backend,"服务器已停止。")
+		for profile_backend in hub.backends.values():profile_backend.quest_auto.suspend(profile_backend)
 	for peer in _pending:peer.close()
 	for peer in _clients:peer.close()
 	_server.stop()

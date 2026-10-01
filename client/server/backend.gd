@@ -213,6 +213,7 @@ func record_shutdown() -> void:
 	# automation shutdown path (which would record its id as completed).
 	if not wood.is_empty():battle_open = false
 	var state: Dictionary = automation.record_shutdown()
+	state = _quest_resume_state(state)
 	if not wood.is_empty():
 		battle_open = true
 		state.wood_battle = wood
@@ -225,11 +226,11 @@ func record_shutdown() -> void:
 ## A graceful stop (server_main.gd, on a shutdown request or a normal quit):
 ## nothing runs any more, the run is written down, the profile saved.
 func shut_down() -> void:
-	quest_auto.stop(self,"服务器已停止。")
 	keep_resume_current = false
 	set_process(false)
 	var wood := _wood_battle_resume()
 	record_shutdown()
+	quest_auto.stop(self,"服务器已停止。",false)
 	if not wood.is_empty():
 		# The checkpoint contains the pending battle. Save its pre-settlement
 		# profile normally; this process is stopping and will run no more turns.
@@ -244,12 +245,13 @@ func keep_resume_file() -> void:
 	if path.is_empty():return
 	var now := int(resume_clock.call())
 	var wood := _wood_battle_resume()
-	var key: String = automation.resume_key()+str(wood.get("battle_id",""))+str(wood.get("turn",0))
+	var key: String = automation.resume_key()+str(wood.get("battle_id",""))+str(wood.get("turn",0))+str(quest_auto.resume_state())
 	if key==_resume_key and _resume_written_msec>=0 and now-_resume_written_msec<RESUME_INTERVAL_MSEC:return
 	_resume_key = key
 	_resume_written_msec = now
 	var state: Dictionary = automation.resume_state() if automation.resume_wanted() else {}
 	if not wood.is_empty():state.wood_battle = wood
+	state = _quest_resume_state(state)
 	if state.is_empty():
 		_remove_resume_file(path)
 		return
@@ -264,6 +266,14 @@ func keep_resume_file() -> void:
 			_resume_written_msec = -1
 			return
 	_write_resume_file(path,state)
+
+## Quest checkpoints contain intent only; original transactions already save flags/items.
+func _quest_resume_state(state: Dictionary) -> Dictionary:
+	if automation.resume_wanted() and not quest_auto.resume_state().is_empty():
+		state.quest_auto = quest_auto.resume_state()
+		state.map_id = automation.position_map
+		state.cell = [automation.position_cell.x,automation.position_cell.y]
+	return state
 
 ## Written to a temporary file and renamed over the old one, so a kill leaves
 ## either the previous or the new file, never half of one.
@@ -299,6 +309,7 @@ func load_resume() -> void:
 	if state is Dictionary:
 		if state.get("wood_battle") is Dictionary:_restore_wood_battle(state.wood_battle)
 		if state.has("kind"):automation.load_resume(state)
+		if state.get("quest_auto") is Dictionary and automation.resume_wanted():quest_auto.load_resume(self,state.quest_auto)
 
 ## 重启后自动恢复's file: <save>.resume.json, or tests' resume_path.
 func _resume_file() -> String:

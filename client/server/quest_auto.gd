@@ -13,14 +13,49 @@ var clean_authorized:=false
 var elapsed:=0.0
 var waited:=0.0
 var internal:=false
+## Only a restart-restored intent may continue without the initiating socket.
+var restored:=false
+var shutdown_intent:Dictionary={}
 func snapshot() -> Dictionary:
  return {"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client}
-func stop(b, reason:String="已停止自动任务。") -> void:
- if not running:return
+func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
+ var had_shutdown_intent:=not shutdown_intent.is_empty()
+ if persist:shutdown_intent={}
+ if not running:
+  if persist and had_shutdown_intent:b.keep_resume_file()
+  return
+ if not persist:shutdown_intent=resume_state()
  running=false
  phase="stopped"
  message=reason
  b.original_quests.pending={}
+ if persist:b.keep_resume_file()
+ b.publish()
+func resume_state() -> Dictionary:
+ if not running:return shutdown_intent.duplicate(true)
+ return {"version":1,"quest_id":quest_id,"clean_authorized":clean_authorized}
+func suspend(b) -> void:
+ # Transport shutdown must checkpoint before clearing the running intent.
+ if running:
+  shutdown_intent=resume_state()
+  b.keep_resume_file()
+ stop(b,"服务器已停止。",false)
+func load_resume(b,state:Dictionary) -> void:
+ if int(state.get("version",0))!=1 or int(state.get("quest_id",-1))!=11:return
+ if not 2 in b.quest_catalog.enabled_events:return
+ quest_id=int(state.quest_id)
+ clean_authorized=bool(state.get("clean_authorized",false))
+ b.original_quests.pending={}
+ step=select(b)
+ if step.is_empty():return
+ client=""
+ connection=-1
+ restored=true
+ running=true
+ phase="travel"
+ elapsed=0.0
+ waited=0.0
+ message="服务器重启后已恢复贝壳自动任务。"
  b.publish()
 func row(b,id:int) -> Dictionary:
  for quest in b.quest_helper.snapshot(b).quests:
@@ -51,6 +86,8 @@ func start(b,command:Dictionary) -> Dictionary:
  clean_authorized=bool(quest.get("can_restart",false))
  step=select(b)
  if step.is_empty():return b._reject(str(quest.get("blocked_reason",""))+" 当前没有可自动执行的原任务步骤。")
+ shutdown_intent={}
+ restored=false
  client=str(command.client)
  connection=int(command.get("_quest_connection",-1))
  running=true
@@ -91,9 +128,9 @@ func advance(b) -> void:
   if npc.is_empty() or b.original_quests.branch_for(npc,b.session._profile)!=step.source.branch_data:stop(b,"原任务分支已变化。");return
   target=b.quest_helper.destination(b,npc,"near")
   if target.is_empty():stop(b,"找不到安全 NPC 落点。");return
-  phase="landing"
+  phase="talk" if restored else "landing"
   waited=0.0
-  message="等待发起设备加载任务地图。"
+  message="准备原任务对话。" if restored else "等待发起设备加载任务地图。"
   b.automation.position_changed(int(target.map_id),Vector2i(int(target.cell[0]),int(target.cell[1])),int(target.map_id)!=b.automation.position_map)
   b._emit({"type":"position","map_id":target.map_id,"cell":target.cell,"client":"quest_auto"})
   b.publish()
