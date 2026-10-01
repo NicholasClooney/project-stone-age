@@ -1,4 +1,5 @@
 extends SceneTree
+const Wait=preload("res://tests/support/wait.gd")
 var failures:=0
 func _initialize() -> void:call_deferred("run")
 func check(ok: bool,note: String) -> void:
@@ -32,7 +33,15 @@ func run() -> void:
 	helper.set_process(false)
 	helper.open_menu();helper.compact.button_pressed=true;helper.hp_floor.value=1;helper.battle_limit.value=1;helper.start_training()
 	game.encounter_rng.seed=0
-	helper.advance()
+	check(helper.select_troops.button_pressed,"mirror regression exercises default-on local troop selection")
+	var entered: bool=await Wait.until(self,func():
+		if game.battle_session.snapshot().active:return true
+		if helper.running:helper.advance()
+		return bool(game.battle_session.snapshot().active))
+	check(entered and game.backend.automation.training_selection.ready and int(game.session._pending.get("group_id",-1)) in game.backend.automation.training_selection.allowed,"default-on scoring continuation enters a real accepted local troop")
+	if not entered:
+		helper.stop_training("entry failed");game.queue_free();await process_frame
+		print("CLONE GAME INTEGRATION: %d failures"%failures);quit(1);return
 	check(helper.compact_active and game.battle_session.snapshot().allies.size()==4,"map-only automation also uses five real fighters")
 	check(game.backend.battle.get_script().resource_path.ends_with("squad_battle_session.gd"),"map-only automation selects the same squad authority")
 	helper.stop_training("test stop")
