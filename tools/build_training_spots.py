@@ -91,7 +91,7 @@ def build(root):
     available = renderable_sprites(root)
     spots = []
     for key, info in world['maps'].items():
-        if int(key) not in (100, 200) and info['kind'] != 'training':
+        if int(key) not in (100, 200) and info['kind'] not in ('training', 'dungeon'):
             continue
         collision = load_map(root/info['path'])
         ground = ground_cells(collision)

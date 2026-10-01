@@ -3,6 +3,21 @@
   "method": "Positive ordinary encounter weights, capture flag, actual enemy row includes Lv.1; source-priority safe landing. Encounter chance is not guaranteed. origin marks rows added by client/data/rare-encounters.json (original_area: 补充 in an area the pet has at a higher level; added: 非原版).",
   "spots": [
     {
+      "map_id": 41,
+      "area_id": 408,
+      "cell": [
+        47,
+        54
+      ],
+      "map_name": "梦幻的洞窟",
+      "name": "柏克尔",
+      "enemy_id": 1092,
+      "template_id": 65,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
       "map_id": 100,
       "area_id": 21,
       "cell": [
@@ -1133,6 +1148,471 @@
       "level_max": 1,
       "dev_only": true,
       "origin": "original_area"
+    },
+    {
+      "map_id": 10101,
+      "area_id": 79,
+      "cell": [
+        21,
+        21
+      ],
+      "map_name": "往柯尔克的道路１楼",
+      "name": "贝洛洛克",
+      "enemy_id": 271,
+      "template_id": 42,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10101,
+      "area_id": 79,
+      "cell": [
+        21,
+        21
+      ],
+      "map_name": "往柯尔克的道路１楼",
+      "name": "贝洛恩",
+      "enemy_id": 266,
+      "template_id": 41,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10201,
+      "area_id": 207,
+      "cell": [
+        22,
+        32
+      ],
+      "map_name": "海底通路地下１楼",
+      "name": "加克拉",
+      "enemy_id": 442,
+      "template_id": 222,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10203,
+      "area_id": 206,
+      "cell": [
+        12,
+        31
+      ],
+      "map_name": "海底通路地下１楼",
+      "name": "加格",
+      "enemy_id": 446,
+      "template_id": 223,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10406,
+      "area_id": 252,
+      "cell": [
+        23,
+        23
+      ],
+      "map_name": "迷幻洞窟",
+      "name": "贝洛宝利",
+      "enemy_id": 530,
+      "template_id": 44,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10407,
+      "area_id": 253,
+      "cell": [
+        23,
+        23
+      ],
+      "map_name": "迷幻洞窟",
+      "name": "多洛加",
+      "enemy_id": 534,
+      "template_id": 174,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10601,
+      "area_id": 237,
+      "cell": [
+        24,
+        24
+      ],
+      "map_name": "东柯尔克的坑道１楼",
+      "name": "卡达鲁卡斯",
+      "enemy_id": 505,
+      "template_id": 81,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10602,
+      "area_id": 238,
+      "cell": [
+        25,
+        21
+      ],
+      "map_name": "东柯尔克的坑道２楼",
+      "name": "柯伊达",
+      "enemy_id": 509,
+      "template_id": 82,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10702,
+      "area_id": 243,
+      "cell": [
+        22,
+        26
+      ],
+      "map_name": "盗贼的洞窟地下２楼",
+      "name": "兰贝鲁斯",
+      "enemy_id": 523,
+      "template_id": 332,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 10704,
+      "area_id": 245,
+      "cell": [
+        24,
+        24
+      ],
+      "map_name": "盗贼的洞窟地下４楼",
+      "name": "柯洛加斯",
+      "enemy_id": 520,
+      "template_id": 83,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 11003,
+      "area_id": 234,
+      "cell": [
+        21,
+        21
+      ],
+      "map_name": "柯奥山的小洞窟３楼",
+      "name": "卡梅兰恩",
+      "enemy_id": 499,
+      "template_id": 53,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 11004,
+      "area_id": 235,
+      "cell": [
+        19,
+        19
+      ],
+      "map_name": "柯奥山的小洞窟４楼",
+      "name": "石龟",
+      "enemy_id": 502,
+      "template_id": 54,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20102,
+      "area_id": 212,
+      "cell": [
+        17,
+        32
+      ],
+      "map_name": "森林洞窟２楼",
+      "name": "鲍",
+      "enemy_id": 459,
+      "template_id": 183,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20104,
+      "area_id": 214,
+      "cell": [
+        19,
+        19
+      ],
+      "map_name": "森林洞窟４楼",
+      "name": "卡拉卡利",
+      "enemy_id": 462,
+      "template_id": 184,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20301,
+      "area_id": 210,
+      "cell": [
+        174,
+        76
+      ],
+      "map_name": "拉多拉的回廊",
+      "name": "加美",
+      "enemy_id": 455,
+      "template_id": 21,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20301,
+      "area_id": 210,
+      "cell": [
+        174,
+        76
+      ],
+      "map_name": "拉多拉的回廊",
+      "name": "加比",
+      "enemy_id": 457,
+      "template_id": 22,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20307,
+      "area_id": 501,
+      "cell": [
+        52,
+        46
+      ],
+      "map_name": "拉多拉洞窟３楼",
+      "name": "加比奥",
+      "enemy_id": 1230,
+      "template_id": 23,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20308,
+      "area_id": 502,
+      "cell": [
+        52,
+        46
+      ],
+      "map_name": "拉多拉洞窟３楼",
+      "name": "加斯",
+      "enemy_id": 1231,
+      "template_id": 24,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20404,
+      "area_id": 219,
+      "cell": [
+        24,
+        24
+      ],
+      "map_name": "哥亚山洞窟４楼",
+      "name": "卡拉宝斯",
+      "enemy_id": 465,
+      "template_id": 172,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20405,
+      "area_id": 220,
+      "cell": [
+        24,
+        24
+      ],
+      "map_name": "哥亚山洞窟５楼",
+      "name": "可利多洛斯",
+      "enemy_id": 469,
+      "template_id": 333,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 20507,
+      "area_id": 274,
+      "cell": [
+        29,
+        29
+      ],
+      "map_name": "阿鲁姆山的洞窟地下７楼",
+      "name": "贝洛宝克尔",
+      "enemy_id": 726,
+      "template_id": 43,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 21013,
+      "area_id": 447,
+      "cell": [
+        20,
+        21
+      ],
+      "map_name": "琉璃的洞窟１３楼",
+      "name": "洛奇安",
+      "enemy_id": 1136,
+      "template_id": 84,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 21013,
+      "area_id": 447,
+      "cell": [
+        20,
+        21
+      ],
+      "map_name": "琉璃的洞窟１３楼",
+      "name": "利则诺顿",
+      "enemy_id": 1138,
+      "template_id": 91,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 21308,
+      "area_id": 595,
+      "cell": [
+        19,
+        19
+      ],
+      "map_name": "水苍的洞窟 地下8楼",
+      "name": "邦奇",
+      "enemy_id": 1346,
+      "template_id": 241,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 30010,
+      "area_id": 489,
+      "cell": [
+        14,
+        24
+      ],
+      "map_name": "深红的洞窟地下６楼",
+      "name": "阿哥亚",
+      "enemy_id": 1203,
+      "template_id": 61,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 30702,
+      "area_id": 605,
+      "cell": [
+        27,
+        27
+      ],
+      "map_name": "地下２楼",
+      "name": "加宝格恩",
+      "enemy_id": 1368,
+      "template_id": 273,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 31401,
+      "area_id": 337,
+      "cell": [
+        48,
+        31
+      ],
+      "map_name": "奇努伊的海底通路",
+      "name": "姆伊",
+      "enemy_id": 1009,
+      "template_id": 242,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 31806,
+      "area_id": 362,
+      "cell": [
+        5,
+        7
+      ],
+      "map_name": "阿斯玛鲁矿山６楼",
+      "name": "奇卡宝斯",
+      "enemy_id": 1035,
+      "template_id": 233,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 31806,
+      "area_id": 363,
+      "cell": [
+        37,
+        37
+      ],
+      "map_name": "阿斯玛鲁矿山６楼",
+      "name": "奥卡洛斯",
+      "enemy_id": 1037,
+      "template_id": 301,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 31904,
+      "area_id": 381,
+      "cell": [
+        21,
+        16
+      ],
+      "map_name": "吉鲁采石场３楼",
+      "name": "玛恩摩",
+      "enemy_id": 1052,
+      "template_id": 261,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
+    },
+    {
+      "map_id": 31906,
+      "area_id": 380,
+      "cell": [
+        25,
+        29
+      ],
+      "map_name": "吉鲁采石场５楼",
+      "name": "恩摩摩",
+      "enemy_id": 1056,
+      "template_id": 262,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false
     },
     {
       "map_id": 32005,

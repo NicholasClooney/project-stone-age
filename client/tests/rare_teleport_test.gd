@@ -144,7 +144,11 @@ func run() -> void:
 	check(nav.select_poi(target) and nav.note.text.contains("正在下载地图"),"地图导航 waits for the map's download before checking the landing")
 	finish_download(game,true)
 	check(await until(func():return nav.current_map == 500),"then browses the downloaded map to travel there")
+	# Stop the route it started, and let any map change finish before closing.
+	game.travel_router.cancel("测试结束。")
 	nav.close_map()
+	await until(func():return not game.area_transition_busy)
+	await Wait.settle(self,game)
 	finish(game,backend,server)
 
 func finish(game, backend, server) -> void:

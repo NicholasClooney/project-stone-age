@@ -3,6 +3,420 @@
   "method": "Match ordinary enemy mean level; not a measured XP/minute optimum. Source gates and missing art excluded.",
   "spots": [
     {
+      "map_id": 41,
+      "area_id": 406,
+      "name": "梦幻的洞窟",
+      "cell": [
+        22,
+        8
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 407,
+      "name": "梦幻的洞窟",
+      "cell": [
+        7,
+        23
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 408,
+      "name": "梦幻的洞窟",
+      "cell": [
+        47,
+        54
+      ],
+      "level_min": 1,
+      "level_max": 45,
+      "mean_level": 40.18,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 409,
+      "name": "梦幻的洞窟",
+      "cell": [
+        55,
+        46
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 410,
+      "name": "梦幻的洞窟",
+      "cell": [
+        9,
+        40
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 411,
+      "name": "梦幻的洞窟",
+      "cell": [
+        25,
+        55
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 412,
+      "name": "梦幻的洞窟",
+      "cell": [
+        41,
+        10
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 413,
+      "name": "梦幻的洞窟",
+      "cell": [
+        58,
+        27
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 414,
+      "name": "梦幻的洞窟",
+      "cell": [
+        11,
+        56
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "卡比特",
+        "呼拔拔",
+        "旅人"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 415,
+      "name": "梦幻的洞窟",
+      "cell": [
+        59,
+        11
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "卡比特",
+        "呼拔拔",
+        "旅人"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 41,
+      "area_id": 416,
+      "name": "梦幻的洞窟",
+      "cell": [
+        34,
+        35
+      ],
+      "level_min": 40,
+      "level_max": 42,
+      "mean_level": 41.0,
+      "monsters": [
+        "卡比特",
+        "呼拔拔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 417,
+      "name": "梦幻的洞窟",
+      "cell": [
+        22,
+        8
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 418,
+      "name": "梦幻的洞窟",
+      "cell": [
+        7,
+        23
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 419,
+      "name": "梦幻的洞窟",
+      "cell": [
+        47,
+        54
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 420,
+      "name": "梦幻的洞窟",
+      "cell": [
+        55,
+        46
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "凯比特",
+        "旅人",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 421,
+      "name": "梦幻的洞窟",
+      "cell": [
+        9,
+        41
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 422,
+      "name": "梦幻的洞窟",
+      "cell": [
+        25,
+        55
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 423,
+      "name": "梦幻的洞窟",
+      "cell": [
+        41,
+        10
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 424,
+      "name": "梦幻的洞窟",
+      "cell": [
+        58,
+        27
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "旅人",
+        "特洛昆",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 425,
+      "name": "梦幻的洞窟",
+      "cell": [
+        10,
+        57
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "卡比特",
+        "呼拔拔",
+        "旅人"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 426,
+      "name": "梦幻的洞窟",
+      "cell": [
+        57,
+        13
+      ],
+      "level_min": 35,
+      "level_max": 45,
+      "mean_level": 40.83,
+      "monsters": [
+        "冒险者",
+        "卡比特",
+        "呼拔拔",
+        "旅人"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 42,
+      "area_id": 427,
+      "name": "梦幻的洞窟",
+      "cell": [
+        34,
+        35
+      ],
+      "level_min": 40,
+      "level_max": 42,
+      "mean_level": 41.0,
+      "monsters": [
+        "卡比特",
+        "呼拔拔"
+      ],
+      "dev_only": false
+    },
+    {
       "map_id": 100,
       "area_id": 21,
       "name": "萨伊那斯",
@@ -3509,6 +3923,3596 @@
       "dev_only": true
     },
     {
+      "map_id": 10101,
+      "area_id": 79,
+      "name": "往柯尔克的道路１楼",
+      "cell": [
+        21,
+        21
+      ],
+      "level_min": 1,
+      "level_max": 23,
+      "mean_level": 19.85,
+      "monsters": [
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10102,
+      "area_id": 80,
+      "name": "往柯尔克的道路２楼",
+      "cell": [
+        25,
+        25
+      ],
+      "level_min": 21,
+      "level_max": 25,
+      "mean_level": 22.6,
+      "monsters": [
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10103,
+      "area_id": 81,
+      "name": "往柯尔克的道路３楼",
+      "cell": [
+        25,
+        25
+      ],
+      "level_min": 23,
+      "level_max": 26,
+      "mean_level": 24.5,
+      "monsters": [
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10201,
+      "area_id": 203,
+      "name": "海底通路地下１楼",
+      "cell": [
+        17,
+        27
+      ],
+      "level_min": 18,
+      "level_max": 22,
+      "mean_level": 20.0,
+      "monsters": [
+        "加克拉",
+        "加格"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10201,
+      "area_id": 207,
+      "name": "海底通路地下１楼",
+      "cell": [
+        22,
+        32
+      ],
+      "level_min": 1,
+      "level_max": 22,
+      "mean_level": 19.54,
+      "monsters": [
+        "加克拉",
+        "加格"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10202,
+      "area_id": 204,
+      "name": "海底通路地下２楼",
+      "cell": [
+        19,
+        29
+      ],
+      "level_min": 18,
+      "level_max": 22,
+      "mean_level": 20.0,
+      "monsters": [
+        "加克拉",
+        "加格"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10203,
+      "area_id": 205,
+      "name": "海底通路地下１楼",
+      "cell": [
+        21,
+        26
+      ],
+      "level_min": 18,
+      "level_max": 22,
+      "mean_level": 20.0,
+      "monsters": [
+        "加克拉",
+        "加格"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10203,
+      "area_id": 206,
+      "name": "海底通路地下１楼",
+      "cell": [
+        12,
+        31
+      ],
+      "level_min": 1,
+      "level_max": 22,
+      "mean_level": 19.54,
+      "monsters": [
+        "加克拉",
+        "加格"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10204,
+      "area_id": 208,
+      "name": "海底通路地下２楼",
+      "cell": [
+        99,
+        24
+      ],
+      "level_min": 20,
+      "level_max": 30,
+      "mean_level": 25.0,
+      "monsters": [
+        "乌力乌力",
+        "克克尔",
+        "凯比",
+        "威伯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10402,
+      "area_id": 248,
+      "name": "迷幻洞窟",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 30,
+      "level_max": 31,
+      "mean_level": 30.5,
+      "monsters": [
+        "多洛加",
+        "贝洛宝利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10403,
+      "area_id": 249,
+      "name": "迷幻洞窟",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 30,
+      "level_max": 31,
+      "mean_level": 30.5,
+      "monsters": [
+        "多洛加",
+        "贝洛宝利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10406,
+      "area_id": 252,
+      "name": "迷幻洞窟",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 1,
+      "level_max": 35,
+      "mean_level": 33.42,
+      "monsters": [
+        "多洛加",
+        "贝洛宝利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10407,
+      "area_id": 253,
+      "name": "迷幻洞窟",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 1,
+      "level_max": 35,
+      "mean_level": 33.42,
+      "monsters": [
+        "多洛加",
+        "贝洛宝利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10601,
+      "area_id": 237,
+      "name": "东柯尔克的坑道１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 11,
+      "mean_level": 10.13,
+      "monsters": [
+        "卡达鲁卡斯",
+        "柯伊达"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10602,
+      "area_id": 238,
+      "name": "东柯尔克的坑道２楼",
+      "cell": [
+        25,
+        21
+      ],
+      "level_min": 1,
+      "level_max": 11,
+      "mean_level": 10.05,
+      "monsters": [
+        "卡达鲁卡斯",
+        "柯伊达"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10603,
+      "area_id": 239,
+      "name": "东柯尔克的坑道３楼",
+      "cell": [
+        25,
+        25
+      ],
+      "level_min": 11,
+      "level_max": 13,
+      "mean_level": 12.19,
+      "monsters": [
+        "卡达鲁卡斯",
+        "柯伊达"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10604,
+      "area_id": 240,
+      "name": "东柯尔克的坑道４楼",
+      "cell": [
+        27,
+        22
+      ],
+      "level_min": 11,
+      "level_max": 13,
+      "mean_level": 12.31,
+      "monsters": [
+        "卡达鲁卡斯",
+        "柯伊达"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10605,
+      "area_id": 241,
+      "name": "东柯尔克的坑道５楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 14,
+      "level_max": 15,
+      "mean_level": 14.5,
+      "monsters": [
+        "卡达鲁卡斯",
+        "柯伊达"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10701,
+      "area_id": 242,
+      "name": "盗贼的洞窟地下１楼",
+      "cell": [
+        41,
+        39
+      ],
+      "level_min": 25,
+      "level_max": 28,
+      "mean_level": 26.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "柯洛加斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10702,
+      "area_id": 243,
+      "name": "盗贼的洞窟地下２楼",
+      "cell": [
+        22,
+        26
+      ],
+      "level_min": 1,
+      "level_max": 30,
+      "mean_level": 27.25,
+      "monsters": [
+        "兰贝鲁斯",
+        "柯洛加斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10703,
+      "area_id": 244,
+      "name": "盗贼的洞窟地下３楼",
+      "cell": [
+        35,
+        41
+      ],
+      "level_min": 25,
+      "level_max": 28,
+      "mean_level": 26.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "柯洛加斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10704,
+      "area_id": 245,
+      "name": "盗贼的洞窟地下４楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 30,
+      "mean_level": 27.9,
+      "monsters": [
+        "兰贝鲁斯",
+        "柯洛加斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10705,
+      "area_id": 246,
+      "name": "盗贼的洞窟地下５楼",
+      "cell": [
+        39,
+        38
+      ],
+      "level_min": 25,
+      "level_max": 28,
+      "mean_level": 26.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "柯洛加斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10901,
+      "area_id": 283,
+      "name": "柯尔克的大坑道１楼",
+      "cell": [
+        25,
+        23
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10912,
+      "area_id": 284,
+      "name": "柯尔克的大坑道２楼",
+      "cell": [
+        19,
+        19
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10913,
+      "area_id": 285,
+      "name": "柯尔克的大坑道３楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10914,
+      "area_id": 286,
+      "name": "柯尔克的大坑道４楼",
+      "cell": [
+        22,
+        26
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10915,
+      "area_id": 287,
+      "name": "柯尔克的大坑道５楼",
+      "cell": [
+        29,
+        19
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10916,
+      "area_id": 288,
+      "name": "柯尔克的大坑道６楼",
+      "cell": [
+        9,
+        39
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10917,
+      "area_id": 289,
+      "name": "柯尔克的大坑道７楼",
+      "cell": [
+        49,
+        14
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 10918,
+      "area_id": 290,
+      "name": "柯尔克的大坑道８楼",
+      "cell": [
+        14,
+        14
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11001,
+      "area_id": 232,
+      "name": "柯奥山的小洞窟１楼",
+      "cell": [
+        23,
+        30
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.33,
+      "monsters": [
+        "卡梅兰恩",
+        "石龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11002,
+      "area_id": 233,
+      "name": "柯奥山的小洞窟２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.67,
+      "monsters": [
+        "卡梅兰恩",
+        "石龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11003,
+      "area_id": 234,
+      "name": "柯奥山的小洞窟３楼",
+      "cell": [
+        21,
+        21
+      ],
+      "level_min": 1,
+      "level_max": 14,
+      "mean_level": 11.7,
+      "monsters": [
+        "卡梅兰恩",
+        "石龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11004,
+      "area_id": 235,
+      "name": "柯奥山的小洞窟４楼",
+      "cell": [
+        19,
+        19
+      ],
+      "level_min": 1,
+      "level_max": 14,
+      "mean_level": 11.31,
+      "monsters": [
+        "卡梅兰恩",
+        "石龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11005,
+      "area_id": 236,
+      "name": "柯奥山的小洞窟５楼",
+      "cell": [
+        20,
+        20
+      ],
+      "level_min": 12,
+      "level_max": 15,
+      "mean_level": 13.5,
+      "monsters": [
+        "卡梅兰恩",
+        "石龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11101,
+      "area_id": 225,
+      "name": "盗贼的基地地下１楼",
+      "cell": [
+        34,
+        34
+      ],
+      "level_min": 40,
+      "level_max": 48,
+      "mean_level": 44.1,
+      "monsters": [
+        "盗贼",
+        "盗贼呼拔拔",
+        "盗贼拉奇鲁哥",
+        "盗贼鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11102,
+      "area_id": 226,
+      "name": "盗贼的基地地下２楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 40,
+      "level_max": 48,
+      "mean_level": 44.35,
+      "monsters": [
+        "盗贼",
+        "盗贼呼拔拔",
+        "盗贼拉奇鲁哥",
+        "盗贼鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11103,
+      "area_id": 227,
+      "name": "盗贼的基地地下３楼",
+      "cell": [
+        23,
+        25
+      ],
+      "level_min": 40,
+      "level_max": 48,
+      "mean_level": 44.6,
+      "monsters": [
+        "盗贼",
+        "盗贼呼拔拔",
+        "盗贼拉奇鲁哥",
+        "盗贼鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11104,
+      "area_id": 228,
+      "name": "盗贼的基地地下４楼",
+      "cell": [
+        22,
+        22
+      ],
+      "level_min": 42,
+      "level_max": 48,
+      "mean_level": 45.83,
+      "monsters": [
+        "盗贼",
+        "盗贼呼拔拔",
+        "盗贼拉奇鲁哥",
+        "盗贼鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11105,
+      "area_id": 229,
+      "name": "盗贼的基地地下５楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 42,
+      "level_max": 48,
+      "mean_level": 45.83,
+      "monsters": [
+        "盗贼",
+        "盗贼呼拔拔",
+        "盗贼拉奇鲁哥",
+        "盗贼鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11106,
+      "area_id": 230,
+      "name": "盗贼的基地地下６楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 44,
+      "level_max": 48,
+      "mean_level": 46.77,
+      "monsters": [
+        "盗贼",
+        "盗贼呼拔拔",
+        "盗贼拉奇鲁哥",
+        "盗贼鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11201,
+      "area_id": 504,
+      "name": "玄黄的洞窟地下１楼",
+      "cell": [
+        34,
+        34
+      ],
+      "level_min": 54,
+      "level_max": 55,
+      "mean_level": 54.5,
+      "monsters": [
+        "乌宝宝",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11202,
+      "area_id": 505,
+      "name": "玄黄的洞窟地下２楼",
+      "cell": [
+        39,
+        39
+      ],
+      "level_min": 54,
+      "level_max": 55,
+      "mean_level": 54.5,
+      "monsters": [
+        "乌宝宝",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11203,
+      "area_id": 506,
+      "name": "玄黄的洞窟地下３楼",
+      "cell": [
+        37,
+        34
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "乌宝宝",
+        "柏克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11204,
+      "area_id": 507,
+      "name": "玄黄的洞窟地下４楼",
+      "cell": [
+        32,
+        32
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "加斯",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11205,
+      "area_id": 508,
+      "name": "玄黄的洞窟地下５楼",
+      "cell": [
+        33,
+        33
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "加斯",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11206,
+      "area_id": 509,
+      "name": "玄黄的洞窟地下６楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "加斯",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11207,
+      "area_id": 510,
+      "name": "玄黄的洞窟地下７楼",
+      "cell": [
+        31,
+        27
+      ],
+      "level_min": 57,
+      "level_max": 58,
+      "mean_level": 57.5,
+      "monsters": [
+        "加斯",
+        "龟之盾"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11208,
+      "area_id": 511,
+      "name": "玄黄的洞窟地下８楼",
+      "cell": [
+        31,
+        27
+      ],
+      "level_min": 57,
+      "level_max": 60,
+      "mean_level": 58.5,
+      "monsters": [
+        "克克洛斯",
+        "凯比特",
+        "加比奥"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11209,
+      "area_id": 512,
+      "name": "玄黄的洞窟地下９楼",
+      "cell": [
+        27,
+        25
+      ],
+      "level_min": 57,
+      "level_max": 60,
+      "mean_level": 58.5,
+      "monsters": [
+        "克克洛斯",
+        "凯比特",
+        "加比奥"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11210,
+      "area_id": 513,
+      "name": "玄黄的洞窟地下１０楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 59,
+      "level_max": 62,
+      "mean_level": 60.5,
+      "monsters": [
+        "克克洛斯",
+        "凯比特",
+        "加比奥"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11211,
+      "area_id": 514,
+      "name": "玄黄的洞窟地下１１楼",
+      "cell": [
+        26,
+        26
+      ],
+      "level_min": 59,
+      "level_max": 62,
+      "mean_level": 60.5,
+      "monsters": [
+        "克克洛斯",
+        "凯比特",
+        "加比奥"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11212,
+      "area_id": 515,
+      "name": "玄黄的洞窟地下１２楼",
+      "cell": [
+        22,
+        24
+      ],
+      "level_min": 57,
+      "level_max": 63,
+      "mean_level": 61.0,
+      "monsters": [
+        "克克洛斯",
+        "凯比特",
+        "加比奥"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11213,
+      "area_id": 516,
+      "name": "玄黄的洞窟地下１３楼",
+      "cell": [
+        26,
+        26
+      ],
+      "level_min": 62,
+      "level_max": 64,
+      "mean_level": 63.0,
+      "monsters": [
+        "贝鲁伊卡",
+        "鲍"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 11214,
+      "area_id": 517,
+      "name": "玄黄的洞窟地下１４楼",
+      "cell": [
+        18,
+        18
+      ],
+      "level_min": 64,
+      "level_max": 66,
+      "mean_level": 65.0,
+      "monsters": [
+        "贝鲁伊卡",
+        "鲍"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20101,
+      "area_id": 211,
+      "name": "森林洞窟１楼",
+      "cell": [
+        22,
+        32
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "卡拉卡利",
+        "鲍"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20102,
+      "area_id": 212,
+      "name": "森林洞窟２楼",
+      "cell": [
+        17,
+        32
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 12.22,
+      "monsters": [
+        "卡拉卡利",
+        "鲍"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20103,
+      "area_id": 213,
+      "name": "森林洞窟３楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "卡拉卡利",
+        "鲍"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20104,
+      "area_id": 214,
+      "name": "森林洞窟４楼",
+      "cell": [
+        19,
+        19
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 12.71,
+      "monsters": [
+        "卡拉卡利",
+        "鲍"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20301,
+      "area_id": 209,
+      "name": "拉多拉的回廊",
+      "cell": [
+        139,
+        68
+      ],
+      "level_min": 25,
+      "level_max": 28,
+      "mean_level": 26.5,
+      "monsters": [
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20301,
+      "area_id": 210,
+      "name": "拉多拉的回廊",
+      "cell": [
+        174,
+        76
+      ],
+      "level_min": 1,
+      "level_max": 30,
+      "mean_level": 25.57,
+      "monsters": [
+        "加比",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20302,
+      "area_id": 496,
+      "name": "拉多拉洞窟１楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 51,
+      "level_max": 55,
+      "mean_level": 53.0,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20303,
+      "area_id": 497,
+      "name": "拉多拉洞窟２楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 53,
+      "level_max": 57,
+      "mean_level": 55.0,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20304,
+      "area_id": 498,
+      "name": "拉多拉洞窟３楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 55,
+      "level_max": 59,
+      "mean_level": 57.0,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20305,
+      "area_id": 499,
+      "name": "拉多拉洞窟３楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 55,
+      "level_max": 59,
+      "mean_level": 57.0,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20306,
+      "area_id": 500,
+      "name": "拉多拉洞窟２楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 55,
+      "level_max": 59,
+      "mean_level": 57.0,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20307,
+      "area_id": 501,
+      "name": "拉多拉洞窟３楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 1,
+      "level_max": 59,
+      "mean_level": 56.91,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20308,
+      "area_id": 502,
+      "name": "拉多拉洞窟３楼",
+      "cell": [
+        52,
+        46
+      ],
+      "level_min": 1,
+      "level_max": 59,
+      "mean_level": 56.91,
+      "monsters": [
+        "加斯",
+        "加比",
+        "加比奥",
+        "加美"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20401,
+      "area_id": 216,
+      "name": "哥亚山洞窟１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 10,
+      "level_max": 13,
+      "mean_level": 11.5,
+      "monsters": [
+        "卡拉宝斯",
+        "可利多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20402,
+      "area_id": 217,
+      "name": "哥亚山洞窟２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 10,
+      "level_max": 14,
+      "mean_level": 12.5,
+      "monsters": [
+        "卡拉宝斯",
+        "可利多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20403,
+      "area_id": 218,
+      "name": "哥亚山洞窟３楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 12,
+      "level_max": 14,
+      "mean_level": 13.0,
+      "monsters": [
+        "卡拉宝斯",
+        "可利多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20404,
+      "area_id": 219,
+      "name": "哥亚山洞窟４楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 12.95,
+      "monsters": [
+        "卡拉宝斯",
+        "可利多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20405,
+      "area_id": 220,
+      "name": "哥亚山洞窟５楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 15,
+      "mean_level": 13.68,
+      "monsters": [
+        "卡拉宝斯",
+        "可利多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20501,
+      "area_id": 268,
+      "name": "阿鲁姆山的洞窟地下１楼",
+      "cell": [
+        27,
+        26
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 13.0,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20502,
+      "area_id": 269,
+      "name": "阿鲁姆山的洞窟地下２楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 10,
+      "level_max": 15,
+      "mean_level": 12.0,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20503,
+      "area_id": 270,
+      "name": "阿鲁姆山的洞窟地下３楼",
+      "cell": [
+        27,
+        26
+      ],
+      "level_min": 12,
+      "level_max": 15,
+      "mean_level": 13.67,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20504,
+      "area_id": 271,
+      "name": "阿鲁姆山的洞窟地下４楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 12,
+      "level_max": 15,
+      "mean_level": 13.33,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20505,
+      "area_id": 272,
+      "name": "阿鲁姆山的洞窟地下５楼",
+      "cell": [
+        27,
+        26
+      ],
+      "level_min": 14,
+      "level_max": 17,
+      "mean_level": 15.67,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20506,
+      "area_id": 273,
+      "name": "阿鲁姆山的洞窟地下６楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 14,
+      "level_max": 17,
+      "mean_level": 15.33,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20507,
+      "area_id": 274,
+      "name": "阿鲁姆山的洞窟地下７楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 19,
+      "mean_level": 16.48,
+      "monsters": [
+        "尼可斯",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20601,
+      "area_id": 276,
+      "name": "强恩一族的洞窟１楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 30,
+      "level_max": 40,
+      "mean_level": 36.07,
+      "monsters": [
+        "山贼",
+        "山贼格尔顿",
+        "山贼格鲁西斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20602,
+      "area_id": 277,
+      "name": "强恩一族的洞窟２楼",
+      "cell": [
+        34,
+        24
+      ],
+      "level_min": 30,
+      "level_max": 40,
+      "mean_level": 36.07,
+      "monsters": [
+        "山贼",
+        "山贼格尔顿",
+        "山贼格鲁西斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20603,
+      "area_id": 278,
+      "name": "强恩一族的洞窟３楼",
+      "cell": [
+        17,
+        41
+      ],
+      "level_min": 30,
+      "level_max": 40,
+      "mean_level": 36.07,
+      "monsters": [
+        "山贼",
+        "山贼格尔顿",
+        "山贼格鲁西斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20701,
+      "area_id": 293,
+      "name": "拉多拉的大洞窟１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20702,
+      "area_id": 294,
+      "name": "拉多拉的大洞窟２楼",
+      "cell": [
+        24,
+        33
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20703,
+      "area_id": 295,
+      "name": "拉多拉的大洞窟３楼",
+      "cell": [
+        11,
+        11
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20704,
+      "area_id": 296,
+      "name": "拉多拉的大洞窟３楼",
+      "cell": [
+        7,
+        7
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20705,
+      "area_id": 297,
+      "name": "拉多拉的大洞窟３楼",
+      "cell": [
+        9,
+        19
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20706,
+      "area_id": 298,
+      "name": "拉多拉的大洞窟４楼",
+      "cell": [
+        21,
+        21
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20707,
+      "area_id": 299,
+      "name": "拉多拉的大洞窟５楼",
+      "cell": [
+        28,
+        20
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20708,
+      "area_id": 300,
+      "name": "拉多拉的大洞窟６楼",
+      "cell": [
+        16,
+        31
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20709,
+      "area_id": 301,
+      "name": "拉多拉的大洞窟７楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20710,
+      "area_id": 302,
+      "name": "拉多拉的大洞窟８楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 1,
+      "mean_level": 1.0,
+      "monsters": [
+        "乌力"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20801,
+      "area_id": 258,
+      "name": "龙的巢穴１楼",
+      "cell": [
+        33,
+        33
+      ],
+      "level_min": 25,
+      "level_max": 30,
+      "mean_level": 26.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "可利多洛斯",
+        "邦洛洛克斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20802,
+      "area_id": 259,
+      "name": "龙的巢穴２楼",
+      "cell": [
+        25,
+        24
+      ],
+      "level_min": 25,
+      "level_max": 30,
+      "mean_level": 26.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "可利多洛斯",
+        "邦洛洛克斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20803,
+      "area_id": 260,
+      "name": "龙的巢穴３楼",
+      "cell": [
+        22,
+        26
+      ],
+      "level_min": 25,
+      "level_max": 30,
+      "mean_level": 27.3,
+      "monsters": [
+        "兰贝鲁斯",
+        "可利多洛斯",
+        "邦洛洛克斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20804,
+      "area_id": 261,
+      "name": "龙的巢穴４楼",
+      "cell": [
+        27,
+        26
+      ],
+      "level_min": 25,
+      "level_max": 30,
+      "mean_level": 28.4,
+      "monsters": [
+        "兰贝鲁斯",
+        "可利多洛斯",
+        "邦洛洛克斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20805,
+      "area_id": 262,
+      "name": "龙的巢穴５楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 25,
+      "level_max": 30,
+      "mean_level": 28.1,
+      "monsters": [
+        "兰贝鲁斯",
+        "可利多洛斯",
+        "邦洛洛克斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20806,
+      "area_id": 263,
+      "name": "龙的巢穴６楼",
+      "cell": [
+        22,
+        22
+      ],
+      "level_min": 25,
+      "level_max": 30,
+      "mean_level": 27.8,
+      "monsters": [
+        "兰贝鲁斯",
+        "可利多洛斯",
+        "邦洛洛克斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20901,
+      "area_id": 399,
+      "name": "卡鲁它那的洞窟１楼",
+      "cell": [
+        34,
+        34
+      ],
+      "level_min": 6,
+      "level_max": 14,
+      "mean_level": 10.0,
+      "monsters": [
+        "卡梅兰恩",
+        "绿龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20902,
+      "area_id": 400,
+      "name": "卡鲁它那的洞窟２楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 15,
+      "level_max": 22,
+      "mean_level": 18.5,
+      "monsters": [
+        "多利凯拉",
+        "贝恩达斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 20903,
+      "area_id": 401,
+      "name": "卡鲁它那的洞窟２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 23,
+      "level_max": 30,
+      "mean_level": 26.5,
+      "monsters": [
+        "奇宝",
+        "火鸡"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21001,
+      "area_id": 435,
+      "name": "琉璃的洞窟１楼",
+      "cell": [
+        45,
+        39
+      ],
+      "level_min": 53,
+      "level_max": 54,
+      "mean_level": 53.5,
+      "monsters": [
+        "克雷尔",
+        "绿龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21002,
+      "area_id": 436,
+      "name": "琉璃的洞窟２楼",
+      "cell": [
+        37,
+        37
+      ],
+      "level_min": 54,
+      "level_max": 55,
+      "mean_level": 54.5,
+      "monsters": [
+        "克雷尔",
+        "绿龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21003,
+      "area_id": 437,
+      "name": "琉璃的洞窟３楼",
+      "cell": [
+        34,
+        34
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "克雷尔",
+        "绿龟"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21004,
+      "area_id": 438,
+      "name": "琉璃的洞窟４楼",
+      "cell": [
+        33,
+        35
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "多利凯拉",
+        "特洛昆"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21005,
+      "area_id": 439,
+      "name": "琉璃的洞窟５楼",
+      "cell": [
+        31,
+        31
+      ],
+      "level_min": 57,
+      "level_max": 58,
+      "mean_level": 57.5,
+      "monsters": [
+        "多利凯拉",
+        "特洛昆"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21006,
+      "area_id": 440,
+      "name": "琉璃的洞窟６楼",
+      "cell": [
+        30,
+        34
+      ],
+      "level_min": 58,
+      "level_max": 59,
+      "mean_level": 58.5,
+      "monsters": [
+        "多利凯拉",
+        "特洛昆"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21007,
+      "area_id": 441,
+      "name": "琉璃的洞窟７楼",
+      "cell": [
+        30,
+        28
+      ],
+      "level_min": 59,
+      "level_max": 60,
+      "mean_level": 59.5,
+      "monsters": [
+        "卡拉卡利",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21008,
+      "area_id": 442,
+      "name": "琉璃的洞窟８楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 60,
+      "level_max": 61,
+      "mean_level": 60.5,
+      "monsters": [
+        "卡拉卡利",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21009,
+      "area_id": 443,
+      "name": "琉璃的洞窟９楼",
+      "cell": [
+        27,
+        27
+      ],
+      "level_min": 61,
+      "level_max": 62,
+      "mean_level": 61.5,
+      "monsters": [
+        "卡拉卡利",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21010,
+      "area_id": 444,
+      "name": "琉璃的洞窟１０楼",
+      "cell": [
+        30,
+        29
+      ],
+      "level_min": 62,
+      "level_max": 63,
+      "mean_level": 62.5,
+      "monsters": [
+        "利则诺顿",
+        "洛奇安"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21011,
+      "area_id": 445,
+      "name": "琉璃的洞窟１１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 63,
+      "level_max": 64,
+      "mean_level": 63.5,
+      "monsters": [
+        "利则诺顿",
+        "洛奇安"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21012,
+      "area_id": 446,
+      "name": "琉璃的洞窟１２楼",
+      "cell": [
+        17,
+        21
+      ],
+      "level_min": 64,
+      "level_max": 65,
+      "mean_level": 64.5,
+      "monsters": [
+        "利则诺顿",
+        "洛奇安"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21013,
+      "area_id": 447,
+      "name": "琉璃的洞窟１３楼",
+      "cell": [
+        20,
+        21
+      ],
+      "level_min": 1,
+      "level_max": 66,
+      "mean_level": 64.77,
+      "monsters": [
+        "利则诺顿",
+        "洛奇安"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21016,
+      "area_id": 450,
+      "name": "琉璃的洞窟１２楼",
+      "cell": [
+        20,
+        21
+      ],
+      "level_min": 64,
+      "level_max": 65,
+      "mean_level": 64.5,
+      "monsters": [
+        "利则诺顿",
+        "洛奇安"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21201,
+      "area_id": 573,
+      "name": "碧青的洞窟地下１楼",
+      "cell": [
+        59,
+        59
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21202,
+      "area_id": 574,
+      "name": "碧青的洞窟地下２楼",
+      "cell": [
+        59,
+        59
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21203,
+      "area_id": 575,
+      "name": "碧青的洞窟地下３楼",
+      "cell": [
+        59,
+        59
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21204,
+      "area_id": 576,
+      "name": "碧青的洞窟地下４楼",
+      "cell": [
+        30,
+        28
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 56.83,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21205,
+      "area_id": 577,
+      "name": "碧青的洞窟地下５楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 57.17,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21206,
+      "area_id": 578,
+      "name": "碧青的洞窟地下６楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 59,
+      "level_max": 60,
+      "mean_level": 59.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21207,
+      "area_id": 579,
+      "name": "碧青的洞窟地下７楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 59,
+      "level_max": 61,
+      "mean_level": 60.0,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21208,
+      "area_id": 580,
+      "name": "碧青的洞窟地下８楼",
+      "cell": [
+        30,
+        28
+      ],
+      "level_min": 60,
+      "level_max": 61,
+      "mean_level": 60.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21209,
+      "area_id": 581,
+      "name": "碧青的洞窟地下９楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 60,
+      "level_max": 62,
+      "mean_level": 61.0,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21210,
+      "area_id": 582,
+      "name": "碧青的洞窟地下１０楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 61,
+      "level_max": 62,
+      "mean_level": 61.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21211,
+      "area_id": 583,
+      "name": "碧青的洞窟地下１１楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 62,
+      "level_max": 63,
+      "mean_level": 62.5,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21212,
+      "area_id": 584,
+      "name": "碧青的洞窟地下１２楼",
+      "cell": [
+        29,
+        28
+      ],
+      "level_min": 62,
+      "level_max": 64,
+      "mean_level": 63.0,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21213,
+      "area_id": 585,
+      "name": "碧青的洞窟地下１３楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 63,
+      "level_max": 64,
+      "mean_level": 63.5,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21214,
+      "area_id": 586,
+      "name": "碧青的洞窟地下１４楼",
+      "cell": [
+        32,
+        31
+      ],
+      "level_min": 63,
+      "level_max": 65,
+      "mean_level": 64.0,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21301,
+      "area_id": 588,
+      "name": "水苍的洞窟 地下1楼",
+      "cell": [
+        17,
+        17
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21302,
+      "area_id": 589,
+      "name": "水苍的洞窟 地下2楼",
+      "cell": [
+        19,
+        19
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21303,
+      "area_id": 590,
+      "name": "水苍的洞窟 地下3楼",
+      "cell": [
+        18,
+        18
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 57.17,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21304,
+      "area_id": 591,
+      "name": "水苍的洞窟 地下4楼",
+      "cell": [
+        19,
+        19
+      ],
+      "level_min": 59,
+      "level_max": 60,
+      "mean_level": 59.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21305,
+      "area_id": 592,
+      "name": "水苍的洞窟 地下5楼",
+      "cell": [
+        18,
+        19
+      ],
+      "level_min": 60,
+      "level_max": 61,
+      "mean_level": 60.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21306,
+      "area_id": 593,
+      "name": "水苍的洞窟 地下6楼",
+      "cell": [
+        16,
+        16
+      ],
+      "level_min": 61,
+      "level_max": 62,
+      "mean_level": 61.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21307,
+      "area_id": 594,
+      "name": "水苍的洞窟 地下7楼",
+      "cell": [
+        18,
+        18
+      ],
+      "level_min": 62,
+      "level_max": 63,
+      "mean_level": 62.5,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21308,
+      "area_id": 595,
+      "name": "水苍的洞窟 地下8楼",
+      "cell": [
+        19,
+        19
+      ],
+      "level_min": 1,
+      "level_max": 65,
+      "mean_level": 63.85,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21309,
+      "area_id": 596,
+      "name": "水苍的洞窟 地下9楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 62,
+      "level_max": 63,
+      "mean_level": 62.5,
+      "monsters": [
+        "加格",
+        "史多拉奇顿",
+        "邦奇"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21310,
+      "area_id": 597,
+      "name": "水苍的洞窟 地下10楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 61,
+      "level_max": 62,
+      "mean_level": 61.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21311,
+      "area_id": 598,
+      "name": "水苍的洞窟 地下11楼",
+      "cell": [
+        28,
+        28
+      ],
+      "level_min": 60,
+      "level_max": 61,
+      "mean_level": 60.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21312,
+      "area_id": 599,
+      "name": "水苍的洞窟 地下12楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 59,
+      "level_max": 60,
+      "mean_level": 59.5,
+      "monsters": [
+        "兰贝鲁斯",
+        "卡克尔",
+        "贝洛宝克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21313,
+      "area_id": 600,
+      "name": "水苍的洞窟 地下13楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 57.17,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21314,
+      "area_id": 601,
+      "name": "水苍的洞窟 地下14楼",
+      "cell": [
+        28,
+        29
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 21315,
+      "area_id": 602,
+      "name": "水苍的洞窟 地下15楼",
+      "cell": [
+        28,
+        29
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "贝恩达斯",
+        "贝洛恩",
+        "里斯基"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30001,
+      "area_id": 480,
+      "name": "深红的洞窟地下１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "卡梅兰恩",
+        "卡比特",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30002,
+      "area_id": 481,
+      "name": "深红的洞窟地下２楼",
+      "cell": [
+        14,
+        24
+      ],
+      "level_min": 57,
+      "level_max": 58,
+      "mean_level": 57.5,
+      "monsters": [
+        "卡梅兰恩",
+        "卡比特",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30003,
+      "area_id": 482,
+      "name": "深红的洞窟地下３楼",
+      "cell": [
+        18,
+        29
+      ],
+      "level_min": 58,
+      "level_max": 59,
+      "mean_level": 58.5,
+      "monsters": [
+        "卡梅兰恩",
+        "卡比特",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30004,
+      "area_id": 483,
+      "name": "深红的洞窟地下４楼",
+      "cell": [
+        29,
+        9
+      ],
+      "level_min": 59,
+      "level_max": 60,
+      "mean_level": 59.5,
+      "monsters": [
+        "加美",
+        "贝洛宝利",
+        "阿哥亚"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30005,
+      "area_id": 484,
+      "name": "深红的洞窟地下５楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 60,
+      "level_max": 61,
+      "mean_level": 60.5,
+      "monsters": [
+        "加美",
+        "贝洛宝利",
+        "阿哥亚"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30006,
+      "area_id": 485,
+      "name": "深红的洞窟地下６楼",
+      "cell": [
+        15,
+        15
+      ],
+      "level_min": 61,
+      "level_max": 62,
+      "mean_level": 61.5,
+      "monsters": [
+        "加美",
+        "贝洛宝利",
+        "阿哥亚"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30007,
+      "area_id": 486,
+      "name": "深红的洞窟地下７楼",
+      "cell": [
+        6,
+        6
+      ],
+      "level_min": 62,
+      "level_max": 63,
+      "mean_level": 62.5,
+      "monsters": [
+        "多洛加",
+        "拉奇鲁哥",
+        "格鲁西斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30008,
+      "area_id": 487,
+      "name": "深红的洞窟地下８楼",
+      "cell": [
+        46,
+        46
+      ],
+      "level_min": 63,
+      "level_max": 64,
+      "mean_level": 63.5,
+      "monsters": [
+        "多洛加",
+        "拉奇鲁哥",
+        "格鲁西斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30009,
+      "area_id": 488,
+      "name": "深红的洞窟地下７楼",
+      "cell": [
+        21,
+        11
+      ],
+      "level_min": 62,
+      "level_max": 63,
+      "mean_level": 62.5,
+      "monsters": [
+        "多洛加",
+        "拉奇鲁哥",
+        "格鲁西斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30010,
+      "area_id": 489,
+      "name": "深红的洞窟地下６楼",
+      "cell": [
+        14,
+        24
+      ],
+      "level_min": 1,
+      "level_max": 62,
+      "mean_level": 61.35,
+      "monsters": [
+        "加美",
+        "贝洛宝利",
+        "阿哥亚"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30011,
+      "area_id": 490,
+      "name": "深红的洞窟地下５楼",
+      "cell": [
+        31,
+        17
+      ],
+      "level_min": 60,
+      "level_max": 61,
+      "mean_level": 60.5,
+      "monsters": [
+        "加美",
+        "贝洛宝利",
+        "阿哥亚"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30012,
+      "area_id": 491,
+      "name": "深红的洞窟地下４楼",
+      "cell": [
+        19,
+        29
+      ],
+      "level_min": 59,
+      "level_max": 60,
+      "mean_level": 59.5,
+      "monsters": [
+        "加美",
+        "贝洛宝利",
+        "阿哥亚"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30013,
+      "area_id": 492,
+      "name": "深红的洞窟地下３楼",
+      "cell": [
+        7,
+        32
+      ],
+      "level_min": 58,
+      "level_max": 59,
+      "mean_level": 58.5,
+      "monsters": [
+        "卡梅兰恩",
+        "卡比特",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30014,
+      "area_id": 493,
+      "name": "深红的洞窟地下２楼",
+      "cell": [
+        31,
+        6
+      ],
+      "level_min": 57,
+      "level_max": 58,
+      "mean_level": 57.5,
+      "monsters": [
+        "卡梅兰恩",
+        "卡比特",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30015,
+      "area_id": 494,
+      "name": "深红的洞窟地下１楼",
+      "cell": [
+        40,
+        48
+      ],
+      "level_min": 56,
+      "level_max": 57,
+      "mean_level": 56.5,
+      "monsters": [
+        "卡梅兰恩",
+        "卡比特",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30101,
+      "area_id": 389,
+      "name": "东吉鲁山岭１楼",
+      "cell": [
+        54,
+        46
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30102,
+      "area_id": 390,
+      "name": "东吉鲁山岭２楼",
+      "cell": [
+        21,
+        20
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30103,
+      "area_id": 391,
+      "name": "东吉鲁山岭地下１楼",
+      "cell": [
+        27,
+        27
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30104,
+      "area_id": 392,
+      "name": "东吉鲁山岭１楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30105,
+      "area_id": 393,
+      "name": "东吉鲁山岭１楼",
+      "cell": [
+        14,
+        14
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30106,
+      "area_id": 394,
+      "name": "东吉鲁山岭１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30107,
+      "area_id": 395,
+      "name": "东吉鲁山岭地下１楼",
+      "cell": [
+        18,
+        33
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30108,
+      "area_id": 396,
+      "name": "东吉鲁山岭１楼",
+      "cell": [
+        14,
+        14
+      ],
+      "level_min": 44,
+      "level_max": 46,
+      "mean_level": 45.0,
+      "monsters": [
+        "贝洛宝克尔",
+        "贝洛宝利",
+        "贝洛恩",
+        "贝洛洛克"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30201,
+      "area_id": 384,
+      "name": "北吉鲁的通路地下１楼",
+      "cell": [
+        22,
+        25
+      ],
+      "level_min": 46,
+      "level_max": 48,
+      "mean_level": 47.0,
+      "monsters": [
+        "卡拉宝斯",
+        "多洛加"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30202,
+      "area_id": 385,
+      "name": "北吉鲁的通路地下2楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 46,
+      "level_max": 48,
+      "mean_level": 47.0,
+      "monsters": [
+        "卡拉宝斯",
+        "多洛加"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30203,
+      "area_id": 386,
+      "name": "北吉鲁的通路地下３楼",
+      "cell": [
+        49,
+        49
+      ],
+      "level_min": 46,
+      "level_max": 48,
+      "mean_level": 47.0,
+      "monsters": [
+        "卡拉宝斯",
+        "多洛加"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30204,
+      "area_id": 387,
+      "name": "北吉鲁的通路地下２楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 46,
+      "level_max": 48,
+      "mean_level": 47.0,
+      "monsters": [
+        "卡拉宝斯",
+        "多洛加"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30205,
+      "area_id": 388,
+      "name": "北吉鲁的通路地下１楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 46,
+      "level_max": 48,
+      "mean_level": 47.0,
+      "monsters": [
+        "卡拉宝斯",
+        "多洛加"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30301,
+      "area_id": 565,
+      "name": "地下1楼",
+      "cell": [
+        22,
+        26
+      ],
+      "level_min": 80,
+      "level_max": 82,
+      "mean_level": 81.0,
+      "monsters": [
+        "卡达鲁卡斯",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30302,
+      "area_id": 566,
+      "name": "地下2楼",
+      "cell": [
+        26,
+        23
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "格尔格",
+        "格尔顿"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30303,
+      "area_id": 567,
+      "name": "地下1楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 80,
+      "level_max": 82,
+      "mean_level": 81.0,
+      "monsters": [
+        "卡达鲁卡斯",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30304,
+      "area_id": 568,
+      "name": "地下2楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "格尔格",
+        "格尔顿"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30305,
+      "area_id": 569,
+      "name": "地下3楼",
+      "cell": [
+        44,
+        23
+      ],
+      "level_min": 83,
+      "level_max": 85,
+      "mean_level": 84.0,
+      "monsters": [
+        "利则诺顿",
+        "邦奇诺"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30306,
+      "area_id": 571,
+      "name": "地下2楼",
+      "cell": [
+        27,
+        21
+      ],
+      "level_min": 82,
+      "level_max": 84,
+      "mean_level": 83.0,
+      "monsters": [
+        "格尔格",
+        "格尔顿"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30307,
+      "area_id": 572,
+      "name": "地下1楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 80,
+      "level_max": 82,
+      "mean_level": 81.0,
+      "monsters": [
+        "卡达鲁卡斯",
+        "诺斯多洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30401,
+      "area_id": 467,
+      "name": "北吉鲁山岭地下１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 51,
+      "level_max": 52,
+      "mean_level": 51.5,
+      "monsters": [
+        "呼拔拔",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30402,
+      "area_id": 468,
+      "name": "北吉鲁山岭地下２楼",
+      "cell": [
+        27,
+        23
+      ],
+      "level_min": 53,
+      "level_max": 54,
+      "mean_level": 53.5,
+      "monsters": [
+        "呼拔拔",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30403,
+      "area_id": 469,
+      "name": "北吉鲁山岭地下１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 55,
+      "level_max": 56,
+      "mean_level": 55.5,
+      "monsters": [
+        "呼拔拔",
+        "鲁尼帖斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30501,
+      "area_id": 456,
+      "name": "巴那姆的洞窟地下１楼",
+      "cell": [
+        16,
+        16
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30502,
+      "area_id": 457,
+      "name": "巴那姆的洞窟地下２楼",
+      "cell": [
+        28,
+        29
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30503,
+      "area_id": 458,
+      "name": "巴那姆的洞窟地下２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30504,
+      "area_id": 459,
+      "name": "巴那姆的洞窟地下１楼",
+      "cell": [
+        14,
+        14
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30505,
+      "area_id": 460,
+      "name": "巴那姆的洞窟１楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30506,
+      "area_id": 461,
+      "name": "巴那姆的洞窟地下１楼",
+      "cell": [
+        23,
+        23
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30507,
+      "area_id": 462,
+      "name": "巴那姆的洞窟地下２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30508,
+      "area_id": 463,
+      "name": "巴那姆的洞窟地下３楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 57.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30509,
+      "area_id": 464,
+      "name": "巴那姆的洞窟地下２楼",
+      "cell": [
+        48,
+        23
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30510,
+      "area_id": 465,
+      "name": "巴那姆的洞窟地下３楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 57.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30511,
+      "area_id": 466,
+      "name": "巴那姆的洞窟地下３楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 56,
+      "level_max": 58,
+      "mean_level": 57.0,
+      "monsters": [
+        "加克拉",
+        "石龟",
+        "阿利给洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30701,
+      "area_id": 604,
+      "name": "地下１楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 80,
+      "level_max": 81,
+      "mean_level": 80.5,
+      "monsters": [
+        "加宝格恩",
+        "帖拉格恩",
+        "迪布恩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30702,
+      "area_id": 605,
+      "name": "地下２楼",
+      "cell": [
+        27,
+        27
+      ],
+      "level_min": 1,
+      "level_max": 82,
+      "mean_level": 80.9,
+      "monsters": [
+        "加宝格恩",
+        "帖拉格恩",
+        "迪布恩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 30703,
+      "area_id": 606,
+      "name": "地下１楼",
+      "cell": [
+        28,
+        30
+      ],
+      "level_min": 80,
+      "level_max": 81,
+      "mean_level": 80.5,
+      "monsters": [
+        "加宝格恩",
+        "帖拉格恩",
+        "迪布恩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31301,
+      "area_id": 334,
+      "name": "吉鲁的海底通路",
+      "cell": [
+        19,
+        59
+      ],
+      "level_min": 35,
+      "level_max": 38,
+      "mean_level": 36.5,
+      "monsters": [
+        "克邦凯斯",
+        "加克拉",
+        "加格",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31302,
+      "area_id": 603,
+      "name": "吉鲁的海底通道",
+      "cell": [
+        28,
+        30
+      ],
+      "level_min": 35,
+      "level_max": 38,
+      "mean_level": 36.5,
+      "monsters": [
+        "克邦凯斯",
+        "加克拉",
+        "加格",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31401,
+      "area_id": 336,
+      "name": "奇努伊的海底通路",
+      "cell": [
+        59,
+        19
+      ],
+      "level_min": 38,
+      "level_max": 40,
+      "mean_level": 39.0,
+      "monsters": [
+        "姆伊",
+        "海主人"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31401,
+      "area_id": 337,
+      "name": "奇努伊的海底通路",
+      "cell": [
+        48,
+        31
+      ],
+      "level_min": 1,
+      "level_max": 40,
+      "mean_level": 38.17,
+      "monsters": [
+        "姆伊",
+        "海主人"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31501,
+      "area_id": 335,
+      "name": "奇努伊的海底通路",
+      "cell": [
+        16,
+        56
+      ],
+      "level_min": 35,
+      "level_max": 38,
+      "mean_level": 36.5,
+      "monsters": [
+        "克邦凯斯",
+        "加克拉",
+        "加格",
+        "邦恩吉"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31601,
+      "area_id": 346,
+      "name": "方位的祠",
+      "cell": [
+        31,
+        31
+      ],
+      "level_min": 45,
+      "level_max": 48,
+      "mean_level": 46.5,
+      "monsters": [
+        "尼可斯",
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31602,
+      "area_id": 347,
+      "name": "方位的祠",
+      "cell": [
+        34,
+        34
+      ],
+      "level_min": 45,
+      "level_max": 48,
+      "mean_level": 46.5,
+      "monsters": [
+        "尼可斯",
+        "特洛昆",
+        "达克尔"
+      ],
+      "dev_only": false
+    },
+    {
       "map_id": 31701,
       "area_id": 338,
       "name": "五兄弟的山寨地下１楼",
@@ -3651,6 +7655,278 @@
         "布比"
       ],
       "dev_only": true
+    },
+    {
+      "map_id": 31801,
+      "area_id": 356,
+      "name": "阿斯玛鲁矿山１楼",
+      "cell": [
+        22,
+        22
+      ],
+      "level_min": 50,
+      "level_max": 53,
+      "mean_level": 51.5,
+      "monsters": [
+        "卡克尔",
+        "卡拉卡利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31802,
+      "area_id": 357,
+      "name": "阿斯玛鲁矿山２楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 50,
+      "level_max": 53,
+      "mean_level": 51.5,
+      "monsters": [
+        "卡克尔",
+        "卡拉卡利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31803,
+      "area_id": 358,
+      "name": "阿斯玛鲁矿山３楼",
+      "cell": [
+        24,
+        24
+      ],
+      "level_min": 53,
+      "level_max": 55,
+      "mean_level": 54.0,
+      "monsters": [
+        "卡克尔",
+        "卡拉卡利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31804,
+      "area_id": 359,
+      "name": "阿斯玛鲁矿山４楼",
+      "cell": [
+        21,
+        27
+      ],
+      "level_min": 53,
+      "level_max": 55,
+      "mean_level": 54.0,
+      "monsters": [
+        "卡克尔",
+        "卡拉卡利"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31806,
+      "area_id": 361,
+      "name": "阿斯玛鲁矿山６楼",
+      "cell": [
+        21,
+        24
+      ],
+      "level_min": 60,
+      "level_max": 63,
+      "mean_level": 61.5,
+      "monsters": [
+        "奇卡宝斯",
+        "奥卡洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31806,
+      "area_id": 362,
+      "name": "阿斯玛鲁矿山６楼",
+      "cell": [
+        5,
+        7
+      ],
+      "level_min": 1,
+      "level_max": 63,
+      "mean_level": 60.9,
+      "monsters": [
+        "奇卡宝斯",
+        "奥卡洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31806,
+      "area_id": 363,
+      "name": "阿斯玛鲁矿山６楼",
+      "cell": [
+        37,
+        37
+      ],
+      "level_min": 1,
+      "level_max": 63,
+      "mean_level": 60.31,
+      "monsters": [
+        "奇卡宝斯",
+        "奥卡洛斯"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31901,
+      "area_id": 367,
+      "name": "吉鲁采石场１楼",
+      "cell": [
+        38,
+        38
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31903,
+      "area_id": 369,
+      "name": "吉鲁采石场２楼",
+      "cell": [
+        43,
+        35
+      ],
+      "level_min": 55,
+      "level_max": 57,
+      "mean_level": 56.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31904,
+      "area_id": 370,
+      "name": "吉鲁采石场３楼",
+      "cell": [
+        26,
+        31
+      ],
+      "level_min": 57,
+      "level_max": 59,
+      "mean_level": 58.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31904,
+      "area_id": 381,
+      "name": "吉鲁采石场３楼",
+      "cell": [
+        21,
+        16
+      ],
+      "level_min": 1,
+      "level_max": 59,
+      "mean_level": 57.44,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31905,
+      "area_id": 371,
+      "name": "吉鲁采石场４楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 57,
+      "level_max": 59,
+      "mean_level": 58.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31906,
+      "area_id": 372,
+      "name": "吉鲁采石场５楼",
+      "cell": [
+        30,
+        33
+      ],
+      "level_min": 59,
+      "level_max": 61,
+      "mean_level": 60.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31906,
+      "area_id": 380,
+      "name": "吉鲁采石场５楼",
+      "cell": [
+        25,
+        29
+      ],
+      "level_min": 1,
+      "level_max": 61,
+      "mean_level": 59.42,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31907,
+      "area_id": 373,
+      "name": "吉鲁采石场６楼",
+      "cell": [
+        29,
+        24
+      ],
+      "level_min": 59,
+      "level_max": 61,
+      "mean_level": 60.0,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
+    },
+    {
+      "map_id": 31908,
+      "area_id": 374,
+      "name": "吉鲁采石场７楼",
+      "cell": [
+        29,
+        29
+      ],
+      "level_min": 55,
+      "level_max": 61,
+      "mean_level": 57.33,
+      "monsters": [
+        "恩摩摩",
+        "玛恩摩"
+      ],
+      "dev_only": false
     },
     {
       "map_id": 32001,

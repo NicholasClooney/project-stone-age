@@ -101,6 +101,8 @@ func run() -> void:
 	var classic := 0
 	for pet in read_json("res://data/classic-pets.json").get("pets",[]):
 		if pet.template_id == null or not wild.has(str(data.templates[str(int(pet.template_id))].name)):continue
+		# 乌力乌力 is the grown 乌力 (met from Lv.20); its Lv.1 is the 乌力 itself.
+		if str(pet.name) == "乌力乌力":continue
 		classic += 1
 		if not level_one.has(int(pet.template_id)):missing.append(str(pet.name))
 	check(missing.is_empty(),"all %d classic pets with a wild spot also have a Lv.1 spot%s" % [classic,"" if missing.is_empty() else "; missing: "+"、".join(missing)])
