@@ -11,7 +11,10 @@ func _initialize():
   var ok: bool = not original_area.is_empty() and catalog.info(id).get("kind","")=="dungeon" and catalog.field(id) and not catalog.links(id).is_empty()
   print(("PASS: " if ok else "FAIL: ")+"scenic map %d retains original encounter area, field eligibility and doors" % id)
   if not ok: failures+=1
- for id in [20508,20608,20711,20712,20001,21103]:
+ var forge_ok: bool = not catalog.info(20508).is_empty() and not catalog.links(20508).is_empty()
+ print(("PASS: " if forge_ok else "FAIL:")+"original Hahn forge is now explicitly reviewed and connected")
+ if not forge_ok: failures+=1
+ for id in [20608,20711,20712,20001,21103]:
   if not catalog.info(id).is_empty():
    print("FAIL: unconnected/service map %d must remain excluded" % id)
    failures+=1

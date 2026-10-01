@@ -43,6 +43,19 @@ func run() -> void:
 	FastHunt.threads = 2
 	check(FastHunt.available(),"the helper is built (%s)" % FastHunt.unavailable_reason())
 
+	# The helper gets only this server profile's inventory and restarts when it changes.
+	var inventory_hunt = new_backend()
+	inventory_hunt.session._profile.original_items = [2478]
+	check(dragon_hunt(inventory_hunt,true).ok,"an item-owning profile starts a fast hunt")
+	inventory_hunt.automation._fast_process()
+	var inventory_pid: int = inventory_hunt.automation.fast_hunt.pid
+	check(inventory_pid>0 and inventory_hunt.automation._fast_held_items==[2478],"helper launch reads the owning server profile's original items")
+	inventory_hunt.session._profile.original_items = []
+	inventory_hunt.automation._fast_process()
+	check(inventory_hunt.automation.fast_hunt.pid>0 and inventory_hunt.automation.fast_hunt.pid!=inventory_pid and inventory_hunt.automation._fast_held_items.is_empty(),"inventory changes restart the helper with current item gates")
+	inventory_hunt.handle({"type":"auto_stop"})
+	inventory_hunt.queue_free()
+
 	# The GDScript scan and the helper find the same roll.
 	var slow = new_backend()
 	var started: Dictionary = dragon_hunt(slow,false)

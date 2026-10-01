@@ -529,11 +529,12 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	if str(config.get("battle_id",""))!=str(session._pending.get("battle_id","-")):return _reject("stale battle config")
 	# Freeze source loot metadata from the config issued by this authority.
 	config = config.duplicate(true)
-	if config.get("enemies",[]).size()!=session._pending.get("enemies",[]).size():return _reject("stale battle troop")
+	var source_encounter := bool(session._pending.get("source_encounter",false))
+	if source_encounter and config.get("enemies",[]).size()!=session._pending.get("enemies",[]).size():return _reject("stale battle troop")
 	for i in range(config.get("enemies",[]).size()):
 		for key in ["generated_drops","source_enemy_id","source_wait_only"]:
 			config.enemies[i].erase(key)
-			if session._pending.enemies[i].has(key):config.enemies[i][key] = session._pending.enemies[i][key]
+			if source_encounter and session._pending.enemies[i].has(key):config.enemies[i][key] = session._pending.enemies[i][key]
 	return {"ok":true,"state":open_battle(config)}
 
 func _cmd_begin_battle(command: Dictionary) -> Dictionary:

@@ -15,7 +15,9 @@
  * tools/fast_hunt tests compare this program with GDScript roll by roll.
  *
  * Usage: fast_hunt INPUT STATUS
- *   INPUT   written by automation.gd (format in write_fast_hunt_input there)
+ *   INPUT   written by fast_hunt.gd _input (fasthunt 2). Groups are filtered
+ *           against the owning server profile's original_items before writing;
+ *           enemy rows include enabled drop RNG draw counts.
  *   STATUS  rewritten atomically about ten times a second, one line:
  *     KIND INDEX SLOT INSPECTED BEST PRED_REJECTS BEST_SUM BEST_ATTACK
  *   KIND is progress (INDEX = next roll to commit), then finally one of
@@ -148,7 +150,7 @@ static inline uint64_t roll_seed(uint64_t run_seed, uint64_t index) {
 /* ---- input ---------------------------------------------------------------- */
 #define MAXE 64
 typedef struct { int id, weight, invalid, n; int enemy[MAXE], eweight[MAXE]; } Group;
-typedef struct { int id, template_id, level_min, level_max, max_count, pet_flag, t; } Enemy;
+typedef struct { int id, template_id, level_min, level_max, max_count, pet_flag, t, drop_draws; } Enemy;
 typedef struct { int id, initial, wild_growth, size, w[4], rank; } Template;
 typedef struct { int enabled, any; int on[4]; double value[4]; int strict[4]; } StatFilter;
 
@@ -182,7 +184,7 @@ static void read_stat(FILE *f, StatFilter *s) {
 static void load(const char *path) {
     FILE *f = open_file(path, "r");
     if (!f) { perror(path); exit(2); }
-    need(f, "fasthunt"); if (num(f) != 1) { fprintf(stderr, "input: version\n"); exit(2); }
+    need(f, "fasthunt"); if (num(f) != 2) { fprintf(stderr, "input: version\n"); exit(2); }
     need(f, "run_seed"); run_seed = (uint64_t)num(f);
     need(f, "start"); start_index = num(f);
     need(f, "limit"); limit_index = num(f);
@@ -199,7 +201,7 @@ static void load(const char *path) {
     for (int i = 0; i < nenemies; i++) {
         Enemy *e = &enemies[i];
         e->id = (int)num(f); e->template_id = (int)num(f); e->level_min = (int)num(f); e->level_max = (int)num(f);
-        e->max_count = (int)num(f); e->pet_flag = (int)num(f);
+        e->max_count = (int)num(f); e->pet_flag = (int)num(f); e->drop_draws = (int)num(f);
     }
     need(f, "templates"); ntemplates = (int)num(f); templates = calloc(ntemplates + 1, sizeof *templates);
     for (int i = 0; i < ntemplates; i++) {
@@ -309,6 +311,8 @@ static int roll(Rng *r, Troop *troop) {
         for (int i = 0; i < 4; i++) { a->weights[i] = t->w[i] + (int)randi_range(r, -2, 2); initial[i] = a->weights[i]; }
         for (int i = 0; i < 10; i++) initial[randi_range(r, 0, 3)]++;
         a->growth_seed = rng_next(r);
+        /* actor() generates enabled original drops before the next actor. */
+        for (int i = 0; i < e->drop_draws; i++) (void)randi_range(r, 0, 999);
         for (int i = 0; i < 4; i++) a->base[i] = (int64_t)initial[i] * (t->initial + (int64_t)(a->level - 1) * t->wild_growth);
     }
     return 0;

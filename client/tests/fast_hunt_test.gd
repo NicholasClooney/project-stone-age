@@ -86,7 +86,7 @@ func run_area(backend, catalog: Dictionary, label: String, map_id: int, cell: Ve
 	# Named per process: another run of this suite must never replace or remove it.
 	var input := ProjectSettings.globalize_path("user://fast-hunt-test-%d.in" % OS.get_process_id())
 	var file := FileAccess.open(input,FileAccess.WRITE)
-	file.store_string(helper._input(automation.hunt_catalog.data,area,filter,flow,automation.filter_for,automation.hunt_run_seed,0))
+	file.store_string(helper._input(automation.hunt_catalog.data,area,filter,flow,automation.filter_for,automation.hunt_run_seed,0,0,{},backend.session.snapshot().get("original_items",[])))
 	file.close()
 	var output := []
 	var code := OS.execute(FastHunt.helper_path(),[input,"--roll","0",str(count)],output)
@@ -174,6 +174,32 @@ func run() -> void:
 		total_enemies += int(part.enemies)
 		areas += 1
 	check(areas==60 and total_different==0,"60 random areas, 9000 rolls and %d enemies identical in C and GDScript" % total_enemies)
+
+	# Real source item gates, including all-gated empty rolls and wood drop RNG.
+	for area_id in [88,267,436,453,56]:
+		var group_id: int = {88:414,267:414,436:605,453:607,56:711}[area_id]
+		var gate_area: Dictionary = {}
+		var gate_cell := Vector2i.ZERO
+		for area in catalog.areas:
+			if int(area.id)!=area_id:continue
+			for x in range(int(area.rect[0]),int(area.rect[2])+1):
+				for y in range(int(area.rect[1]),int(area.rect[3])+1):
+					var cell := Vector2i(x,y)
+					if int(backend.encounter_catalog.area_at(int(area.map_id),cell).get("id",-1))==area_id:
+						gate_area = area;gate_cell = cell;break
+				if not gate_area.is_empty():break
+			break
+		check(not gate_area.is_empty(),"real source area for gate %d exists" % group_id)
+		if gate_area.is_empty():continue
+		var gate: Dictionary = catalog.groups[str(group_id)]
+		var inventories: Array = [[],[int(gate.requires_item)] if int(gate.requires_item)>=0 else [int(gate.excludes_item)]]
+		if int(gate.requires_item)>=0 and int(gate.excludes_item)>=0:inventories.append([int(gate.requires_item),int(gate.excludes_item)])
+		for items in inventories:
+			backend.session._profile.original_items = items.duplicate()
+			var gate_filter := {"template":-1,"level_one":false,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":area_templates(catalog,gate_area)}
+			var part := run_area(backend,catalog,"gate %d items %s" % [group_id,items],int(gate_area.map_id),gate_cell,gate_filter,false,3000)
+			check(part.get("different",-1)==0,"gate %d held %s: 3000 fixed-seed rolls identical" % [group_id,items])
+	backend.session._profile.original_items = []
 
 	backend.queue_free()
 	await process_frame
