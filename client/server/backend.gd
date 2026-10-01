@@ -1041,12 +1041,15 @@ func _restore_wood_battle(saved: Dictionary) -> bool:
 		if int(item) not in allowed:return false
 	if not GameSession._original_integer(live.enemies[0].get("hp"),0,int(enemy.max_hp)) or live.enemies[0].get("species")!=enemy.species:return false
 	if not GameSession.OriginalEquipment.result_valid(config.get("original_equipment_items",[]),live.get("original_equipment_items",[])):return false
-	session._profile = profile.duplicate(true)
+	session._profile = session._normalize_numbers(profile)
+	GameSession.OriginalEquipment.migrate(session._profile)
 	session._pending = config.duplicate(true)
+	session._pending.original_equipment_items = session._normalize_numbers(config.get("original_equipment_items",[]))
 	battle = BattleSession.new()
 	battle.rng_seed = int(saved.get("rng_seed",42))
-	battle.start_battle(config)
+	battle.start_battle(session._pending)
 	battle._state = live.duplicate(true)
+	battle._state.original_equipment_items = session._normalize_numbers(live.get("original_equipment_items",[]))
 	battle.restore_original_equipment()
 	battle._rng.state = int(saved.get("rng_state",battle._rng.state))
 	battle._escape_attempts = int(saved.get("escape_attempts",0))
