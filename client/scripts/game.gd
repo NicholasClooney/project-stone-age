@@ -223,7 +223,7 @@ var target_cell := SPAWN
 var moving := false
 var step_progress := 0.0
 var path: Array[Vector2i] = []
-var navigation := AStarGrid2D.new()
+var navigation := preload("res://scripts/nav_grid.gd").new()
 var held: Array[String] = []
 var music: AudioStreamPlayer
 var effect: AudioStreamPlayer

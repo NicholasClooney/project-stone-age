@@ -316,3 +316,8 @@ The wasm heap after the first map switch drops by 214 MB; after the tour it is 6
 - Desktop: the command above; compare the step table (`static_mb`, `static_max_mb`, `texture_mb`, `footprint_mb`) and the JSON costs printed at the end.
 - Web: build, serve on your own ports, run the probe; compare `wasm_heap_mb`, `audio.alive_mb`, the page renderer's `largest_footprint_mb` and the reload row. Start the backend with a new save each time, and compare from step 02: a new character does not always start in the village.
 - Results go to `build/` (ignored). Footprint numbers vary by 10 to 20% between runs (allocator caching, other processes); static memory and the wasm heap are exact.
+
+## After the byte navigation grid (optimization 5)
+
+`scripts/nav_grid.gd` replaces the whole-map `AStarGrid2D` (about 62 bytes a cell) with one byte a cell plus, for each search, a temporary AStarGrid2D over the cells between the two ends with a margin (widened until the route provably cannot be shorter outside it; the last window up to 320×320 is kept for the next search). Measured headless: map 100 41.7 → 0.6 MB, map 200 61.9 → about 1 MB, map 300 22.6 → 0.4 MB. `nav_grid_test` compares 143 random routes on maps 1000/100/300 against the whole-map grid: all the same length. Cost: a first cross-island search builds a large window (156 ms worst on map 100 on an M-series Mac; short clicks take a few ms).
+
