@@ -2,16 +2,30 @@ extends SceneTree
 ## Real source catalog, backend commands and game UI; no scripted quest fixtures.
 const Catalog=preload("res://scripts/quest_catalog.gd")
 const Wait=preload("res://tests/support/wait.gd")
+const QUEST_IDS=["sainasu/event/event02_1","sainasu/event/event02_2","jaruga/event/20501ev1","jaruga/event/20501ev2","jaruga/event/20501ev3","jaruga/event/20501ev4","jaruga/event/20501ev5","jaruga/event/event01_1","jaruga/event/event01_2","jaruga/event/event04_1","jaruga/event/event04_2","sainasu/event/event15_1","sainasu/event/event15_2"]
+const SERVICE_IDS=["original/charm/1005","original/charm/2005"]
 var failures:=0
+func sorted_ids(entries:Array) -> Array:
+	var result:Array=entries.map(func(npc):return str(npc.id))
+	result.sort()
+	return result
+func sorted_values(values:Array) -> Array:
+	var result:Array=values.duplicate()
+	result.sort()
+	return result
 func _initialize() -> void:call_deferred("run")
 func check(value: bool, message: String) -> void:
 	if not value:failures+=1;push_error(message)
 
 func run() -> void:
 	var source=Catalog.new()
-	check(source.npcs.size()==13,"Real reviewed shell, wood, herb, doctor and adult quest NPC data exists")
+	check(sorted_ids(source.npcs)==sorted_values(QUEST_IDS) and sorted_ids(source.service_npcs)==sorted_values(SERVICE_IDS),"Exact audited quest and service IDs exist")
+	check(sorted_ids(source.active_npcs())==sorted_values(QUEST_IDS+SERVICE_IDS),"Public catalog activates all 13 reviewed quests and two independent services")
 	check(source.active_npcs().filter(func(npc):return str(npc.id).begins_with("sainasu/event/event02_")).size()==(2 if 2 in source.enabled_events else 0),"Public shell NPC activation follows tracked enabled events")
+	source.enabled_events=[]
+	check(sorted_ids(source.active_npcs())==sorted_values(SERVICE_IDS),"Services remain active without enabled quest events")
 	source.enabled_events=[2]
+	check(sorted_ids(source.active_npcs())==sorted_values(["sainasu/event/event02_1","sainasu/event/event02_2"]+SERVICE_IDS),"Shell-only fixture keeps exactly shell NPCs and independent services")
 	var world=load("res://scenes/main.tscn").instantiate()
 	world.profile_persistence=false
 	world.world_catalog.set_quest_catalog(source)

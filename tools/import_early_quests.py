@@ -9,6 +9,7 @@ import json
 import re
 from pathlib import Path
 from import_legacy import Archive
+from import_original_charm import catalog as charm_catalog
 
 SPEC = Path(__file__).with_name('early_quest_sources.json')
 
@@ -162,6 +163,7 @@ def catalog(reference, spec=None):
 def run(source, reference, output):
     spec = json.loads(SPEC.read_text())
     result = catalog(reference, spec)
+    result["service_npcs"], result["provenance"]["charm_sources"] = charm_catalog(reference)
     for relative, expected in spec['client_sources'].items():
         if hashlib.sha256((Path(source)/relative).read_bytes()).hexdigest() != expected:
             raise ValueError(f'Unreviewed client source change: {relative}')
@@ -170,10 +172,10 @@ def run(source, reference, output):
         "data/adrn_15.bin": hashlib.sha256((Path(source)/"data/adrn_15.bin").read_bytes()).hexdigest()}
     root = Path(output)
     # Validate all graphics before writing any catalog or art.
-    graphics = [n['graphic'] for n in result['npcs']] + [i['logical_icon'] for i in result['items'].values()]
+    graphics = [n['graphic'] for n in result['npcs'] + result['service_npcs']] + [i['logical_icon'] for i in result['items'].values()]
     if any(g not in archive.map_ids for g in graphics):
         raise ValueError('Reviewed static graphics missing from 2.5 client')
-    for npc in result['npcs']:
+    for npc in result['npcs'] + result['service_npcs']:
         bitmap = archive.map_ids[npc['graphic']]
         entry = archive.entries[bitmap]
         npc.update(path=f"quests/npcs/{npc['id'].replace('/', '-')}.png", offset=[entry['x'], entry['y']], bitmap_id=bitmap)

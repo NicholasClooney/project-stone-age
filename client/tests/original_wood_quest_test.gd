@@ -43,12 +43,12 @@ func run() -> void:
 	quit(1 if failures else 0)
 func catalog_checks() -> void:
 	var b=fresh()
-	check(b.quest_catalog.active_npcs().size()==7,"fixture enables seven original NPCs including EventNo=-1")
+	check(b.quest_catalog.active_npcs().size()==9,"fixture enables seven quest NPCs plus two independent beauticians")
 	check(b.original_quests.npc_by_id(HAHN).branches.size()==8,"unreviewed key branches disabled")
 	b.quest_catalog.enabled_events=[18]
-	check(b.quest_catalog.active_npcs().size()==5,"event18 activates whole reviewed wood chain")
+	check(b.quest_catalog.active_npcs().size()==7,"event18 activates wood chain while independent services stay available")
 	b.quest_catalog.enabled_events=[2]
-	check(b.quest_catalog.active_npcs().size()==2 and b.original_quests.npc_by_id(WATER).is_empty(),"shell-only fixture excludes wood")
+	check(b.quest_catalog.active_npcs().size()==4 and b.original_quests.npc_by_id(WATER).is_empty(),"shell-only fixture excludes wood")
 	b.free()
 func chain() -> void:
 	var b=fresh()
