@@ -135,7 +135,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 ## Packs a map needs: its data, tiles, residents and music.
 func area_packs(map_id: int) -> Array:
 	var packs: Array = game.asset_packs.map_packs(map_id).duplicate()
-	var music_path := str(game.world_catalog.info(map_id).get("music",""))
+	var music_path: String = game._audio.map_music(map_id)
 	if not music_path.is_empty():
 		var pack: String = game.asset_packs.file_pack(MusicTracks.path("res://assets/legacy/"+music_path))
 		if not pack.is_empty() and not packs.has(pack):packs.append(pack)

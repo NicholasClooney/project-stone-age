@@ -200,6 +200,9 @@ func _main_page() -> void:
 	var background := _check("切到后台时继续播放","SettingsBackgroundAudio",world.background_audio,world.set_background_audio)
 	background.tooltip_text = "关（默认）：网页切到后台、锁屏或切去别的 App 时暂停声音，浏览器才会让网页休眠，手机不发热。开：后台继续听，但浏览器会一直让网页运行，更耗电。"
 	background_row.add_child(background)
+	var cave := _check("洞穴默认放洞窟音乐（非原版）","SettingsCaveMusic",world.cave_music,world.set_cave_music)
+	cave.tooltip_text = "开（默认）：没有自己音乐的洞穴放洞窟曲。关：按原版，继续放进洞前的音乐（原版只在地图上的音乐标记处换曲）。"
+	background_row.add_child(cave)
 	var radio: Button = world.button("电台",func(): close_menu();world.toggle_radio())
 	radio.name = "SettingsRadio"
 	radio.tooltip_text = "原版配乐电台、收藏、歌单、随机和单曲循环"

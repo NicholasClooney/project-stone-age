@@ -246,6 +246,10 @@ var taskbar_pinned := false
 ## (off: a hidden page pauses every sound so the browser can freeze it).
 var max_fps := 60
 var background_audio := false
+## 洞穴默认音乐 (this device, on unless turned off; not the original): a cave
+## without its own music markers plays the cave track instead of going on
+## with the previous map's.
+var cave_music := true
 ## Extra players that finish a sound the next one would cut off
 ## (scripts/game/game_audio.gd play_effect).
 var effect_voices: Array[AudioStreamPlayer] = []
@@ -583,6 +587,7 @@ func set_taskbar_pinned(on: bool) -> void:_device.set_taskbar_pinned(on)
 func touch_device() -> bool:return _device.touch_device()
 func set_max_fps(value: int) -> void:_device.set_max_fps(value)
 func set_background_audio(on: bool) -> void:_device.set_background_audio(on)
+func set_cave_music(on: bool) -> void:_device.set_cave_music(on)
 func on_page_hidden(hidden: bool) -> void:_device.on_page_hidden(hidden)
 func viewer_pref(key: String, fallback: Variant = false) -> Variant:return _device.viewer_pref(key,fallback)
 func set_viewer_pref(key: String, value: Variant) -> void:_device.set_viewer_pref(key,value)

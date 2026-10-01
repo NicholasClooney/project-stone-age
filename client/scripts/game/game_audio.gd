@@ -17,12 +17,27 @@ func _init(owner: GameScene) -> void:
 ## the next map's starts); only paths are kept for the village and wilderness.
 func exploration_music() -> AudioStream:
 	var info: Dictionary = game.world_catalog.info(int(game.data.map_id))
-	if info.get("music") is String and not str(info.music).is_empty():
-		var stream := MusicTracks.load_track("res://assets/legacy/"+str(info.music))
+	var own := map_music(int(game.data.map_id))
+	if not own.is_empty():
+		var stream := MusicTracks.load_track("res://assets/legacy/"+own)
 		if stream!=null:return stream
-	if str(info.get("kind",""))=="interior" and game.area_music!=null:return game.area_music
+	# A map without music markers keeps the track before it (original
+	# play_map_bgm only changes the music at a marker).
+	if str(info.get("kind","")) in ["interior","dungeon","training"] and game.area_music!=null:return game.area_music
 	var wilderness := MusicTracks.load_track(game.wilderness_music) if int(game.data.map_id)==100 and not game.wilderness_music.is_empty() else null
 	return wilderness if wilderness!=null else MusicTracks.load_track(game.village_music)
+
+## The cave track caves without their own markers play (洞穴默认音乐).
+const CAVE_MUSIC := "world/audio/sabgm_d2.wav"
+
+## The music a map plays, relative to assets/legacy: its markers' track, or
+## for a cave (dungeon) without markers the cave track while 洞穴默认音乐 is
+## on (not the original: there the previous track goes on), else "".
+func map_music(map_id: int) -> String:
+	var info: Dictionary = game.world_catalog.info(map_id)
+	if info.get("music") is String and not str(info.music).is_empty():return str(info.music)
+	if game.cave_music and str(info.get("kind","")) in ["dungeon","training"] and map_id not in [100,200,300,500]:return CAVE_MUSIC
+	return ""
 
 ## A music track by any of its paths (scripts/music_tracks.gd).
 func music_track(path: String) -> AudioStream:

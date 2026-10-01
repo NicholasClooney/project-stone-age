@@ -47,6 +47,7 @@ func restore_device_settings() -> void:
 	game.taskbar_pinned = bool(viewer_pref("taskbar_pinned",touch))
 	game.max_fps = clampi(int(viewer_pref("max_fps",30 if touch else 60)),FPS_MIN,FPS_MAX)
 	game.background_audio = bool(viewer_pref("background_audio",false))
+	game.cave_music = bool(viewer_pref("cave_music",true))
 	apply_view()
 	watch_page_visibility()
 	if not game.get_viewport().size_changed.is_connected(_on_screen_resized):
@@ -111,6 +112,12 @@ func set_max_fps(value: int) -> void:
 	game.max_fps = clampi(value,FPS_MIN,FPS_MAX)
 	_save_device("max_fps",game.max_fps)
 	apply_view()
+
+func set_cave_music(on: bool) -> void:
+	game.cave_music = on
+	_save_device("cave_music",on)
+	# The current map's music follows at once.
+	if not game.data.is_empty() and not game.battle_view.visible:game.set_music(game.exploration_music())
 
 func set_background_audio(on: bool) -> void:
 	game.background_audio = on
