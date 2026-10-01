@@ -9,6 +9,7 @@ extends PanelContainer
 ## device's own (viewer.cfg), see game.gd's device settings.
 const WIDTH := 560.0
 const Shortcuts = preload("res://scripts/shortcuts.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 var world: Node
 ## "main", "help" (操作说明) or "keys" (快捷键).
 var page := "main"
@@ -167,6 +168,9 @@ func _main_page() -> void:
 	var pinned := _check("底栏常驻","SettingsTaskbarPinned",world.taskbar_pinned,world.set_taskbar_pinned)
 	pinned.tooltip_text = "底部的 地图 / 状态 / 宠物 / 道具 / 系统 按钮一直显示，不用把鼠标移到底部。手机上默认打开。"
 	layout_row.add_child(pinned)
+	var palette := _check("调色板贴图（省显存）","SettingsPaletteTextures",PaletteSheet.user_on,world.set_palette_textures)
+	palette.tooltip_text = "开（默认）：人物、骑宠和战斗图按原版 256 色存进显卡，显存只用四分之一，画面逐像素不变。关：按以前的方式（每像素 4 字节）显示。切换后，画面上的人物换到下一帧时生效。"
+	layout_row.add_child(palette)
 	# 声音
 	var sound := _section("声音")
 	sound.add_child(_check("音乐","SettingsSound",not world.muted,func(on: bool):

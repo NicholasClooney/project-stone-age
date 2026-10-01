@@ -26,6 +26,10 @@ For a listed kind:
 - the game loads the sheet PNG itself (`PaletteSheet.load_texture`) instead of the imported texture;
 - `client/tools/build_web_packs.gd` ships the sheet's PNG as it is, without the `.import` remap and the imported RGBA copy, so the web build downloads the smaller palette PNG and reads it with `FileAccess`.
 
+## Player switch
+
+设置 → 画面 → **调色板贴图（省显存）** (`SettingsPaletteTextures`, on by default) is saved per device in `viewer.cfg` (`palette_textures`) and read by `game_device.gd` when the device settings are restored. Off sets `PaletteSheet.user_on = false`: `PaletteSheet.load_any` then gives the imported RGBA texture, or, on the web, where a pack of an enabled kind holds only the PNG, an RGBA texture decoded from that PNG (`load_rgba`), so a sheet is always drawn. The switch applies live: it empties `SheetFrames` and the frames of every cached sprite entry, and each sprite on screen takes the new kind of texture at its next frame (`apply` removes the material for an RGBA frame). On the web `window.stoneAgeDev("palette_on")` / `("palette_off")` flip it from the console.
+
 ## Where it is on
 
 | Kind | On since | Drawn by |
@@ -38,14 +42,21 @@ Every node that shows a `SpriteArt.texture` frame calls `PaletteSheet.apply` aft
 
 ## Tests
 
+- `client/tests/settings_menu_test.gd`: the switch is on by default, off draws the player's next frame from an RGBA sheet without the material, the choice is saved and restored, and on draws the palette sheet again.
 - `client/tests/palette_sheet_test.gd` (headless suite): indices plus palette reproduce Godot's own RGBA decode of sample sheets of every kind byte for byte, and the imported texture's visible pixels (`fix_alpha_border` recolours hidden ones); the texture and material layout; `apply`; the setting being off by default. It also prints the expected texture memory of every sheet.
-- `tools/palette_web_check.py`: the shader on a real GPU without opening a window. It builds a small web export holding `palette_sheet.gd`, `client/tests/perf/palette_render_check.gd` and sample sheets, and runs it in headless Chromium (WebGL 2, the renderer phones and Vision Pro use). Each sheet is drawn as RGBA and through the shader in 16 views (plain, modulated, flipped, scaled by 2, 1.37 and 0.75, at a fractional position, as a scaled `TextureRect`; at both ends of the sheet) and the pixels read back must be equal byte for byte.
+- `tools/palette_web_check.py`: the shader on a real GPU without opening a window. It builds a small web export holding `palette_sheet.gd`, `client/tests/perf/palette_render_check.gd` and sample sheets, and runs it in headless Chromium (WebGL 2, the renderer phones and Vision Pro use). Each sheet is drawn as RGBA and through the shader in 24 views (plain, modulated, flipped, scaled by 2, 1.37 and 0.75, at a fractional position, as a scaled `TextureRect`, and as the field draws an actor: a sprite inheriting nearest filtering from its actor under a `Camera2D` zoomed to 1, 0.5, 0.73 and 1.6 in a viewport with the project's linear default; at both ends of the sheet) and the pixels read back must be equal byte for byte. `--gpu` runs it on the Mac's GPU through ANGLE on Metal, the way Safari (Mac, iPhone, Vision Pro) draws WebGL, instead of SwiftShader; it prints the WebGL renderer it got.
 
 ```sh
 npm install --prefix <scratch> playwright-core
 python3 tools/palette_web_check.py --modules <scratch> \
   --chrome ~/Library/Caches/ms-playwright/chromium_headless_shell-<rev>/chrome-headless-shell-mac-arm64/chrome-headless-shell
+# On the real GPU (needs the full Chrome for Testing, not the headless shell):
+python3 tools/palette_web_check.py --gpu --modules <scratch> \
+  --chrome ~/Library/Caches/ms-playwright/chromium-<rev>/chrome-mac-arm64/'Google Chrome for Testing.app'/Contents/MacOS/'Google Chrome for Testing' \
+  client/assets/legacy/riding/sheets/101317.png
 ```
+
+Checked against a report that a rider looked worse (character 100030 on 扬奇洛斯, composite 101317, a lossless 214-colour sheet): byte-identical in all 24 views on SwiftShader and on an Apple M4 Max through ANGLE Metal, and in the running web client with that save, switch on against switch off (screenshots of the rider, 0 pixels differ). The solid black shadow under that mount is in the RGBA sheet as well.
 
 ## Measured
 

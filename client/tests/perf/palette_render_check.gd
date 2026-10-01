@@ -35,7 +35,7 @@ func palette_texture(png: PackedByteArray) -> Texture2D:
 
 ## The picture a node of this texture draws into a transparent viewport.
 func render(texture: Texture2D, region: Rect2, palette: bool, look: Dictionary) -> Image:
-	var scale: float = look.get("scale",1.0)
+	var scale: float = look.get("scale",look.get("zoom",1.0))
 	var viewport := SubViewport.new()
 	viewport.size = Vector2i((region.size*scale).ceil())+Vector2i(2,2)
 	viewport.transparent_bg = true
@@ -44,7 +44,25 @@ func render(texture: Texture2D, region: Rect2, palette: bool, look: Dictionary) 
 	frame.atlas = texture
 	frame.region = region
 	var item: CanvasItem
-	if look.get("rect",false):
+	var holder: Node = null
+	if look.has("zoom"):
+		# As the field draws an actor (legacy_actor.gd): the actor node is
+		# nearest, its sprite inherits that, under a zoomed Camera2D in a
+		# viewport whose default filter is the project's (linear).
+		var actor := Node2D.new()
+		actor.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+		actor.position = Vector2(1,1)/scale+Vector2(look.get("offset",Vector2.ZERO))
+		var sprite := Sprite2D.new()
+		sprite.centered = false
+		sprite.texture = frame
+		actor.add_child(sprite)
+		var camera := Camera2D.new()
+		camera.anchor_mode = Camera2D.ANCHOR_MODE_FIXED_TOP_LEFT
+		camera.zoom = Vector2(scale,scale)
+		viewport.add_child(camera)
+		holder = actor
+		item = sprite
+	elif look.get("rect",false):
 		var rect := TextureRect.new()
 		rect.texture = frame
 		rect.position = Vector2(1,1)
@@ -60,10 +78,10 @@ func render(texture: Texture2D, region: Rect2, palette: bool, look: Dictionary) 
 		sprite.scale = Vector2(scale,scale)
 		sprite.flip_h = look.get("flip",false)
 		item = sprite
-	item.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
+	if holder == null:item.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	item.modulate = look.get("modulate",Color.WHITE)
 	if palette:PaletteSheet.apply(item,frame)
-	viewport.add_child(item)
+	viewport.add_child(holder if holder != null else item)
 	add_child(viewport)
 	for i in range(3):await get_tree().process_frame
 	await RenderingServer.frame_post_draw
@@ -85,7 +103,7 @@ func first_difference(a: Image, b: Image) -> String:
 	return "%s (%d pixels)" % [first,count]
 
 func run() -> void:
-	var looks := [{},{"modulate":Color(1,0.4,0.4,0.6)},{"flip":true},{"scale":2.0},{"scale":1.37},{"modulate":Color(0,0,0,0.5),"scale":0.75},{"offset":Vector2(0.4,0.6)},{"rect":true,"scale":1.5}]
+	var looks := [{},{"modulate":Color(1,0.4,0.4,0.6)},{"flip":true},{"scale":2.0},{"scale":1.37},{"modulate":Color(0,0,0,0.5),"scale":0.75},{"offset":Vector2(0.4,0.6)},{"rect":true,"scale":1.5},{"zoom":1.0},{"zoom":0.5},{"zoom":0.73,"offset":Vector2(0.3,0.6)},{"zoom":1.6}]
 	var paths := FileAccess.get_file_as_string(SHEETS_FILE).split("\n",false)
 	check(not paths.is_empty(),"sample sheets listed")
 	var largest := {}

@@ -110,6 +110,9 @@ func _on_web_dev(arguments: Array) -> void:
 			if game.radio.on:game.radio.next()
 			else:game.radio.turn_on()
 		"radio_off":game.radio.turn_off()
+		# 设置 → 调色板贴图 (comparing the two in a browser).
+		"palette_on":game.set_palette_textures(true)
+		"palette_off":game.set_palette_textures(false)
 
 func _build_waiting_screen() -> void:
 	if OS.has_feature("web"):

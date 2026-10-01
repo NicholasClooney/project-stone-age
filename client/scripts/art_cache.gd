@@ -51,6 +51,11 @@ func keys() -> Array:
 func size() -> int:
 	return _entries.size()
 
+## Drops the frames every cached entry made (SpriteArt.texture), so they are
+## cut again from freshly loaded sheets.
+func forget_frames() -> void:
+	for entry in _entries.values():entry.textures.clear()
+
 func clear() -> void:
 	_entries.clear()
 	_report()

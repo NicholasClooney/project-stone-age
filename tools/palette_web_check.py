@@ -48,11 +48,12 @@ PRESET_KEYS = ("include_filter", "exclude_filter", "export_path", "html/head_inc
 
 RUNNER = r"""
 const { createRequire } = require("node:module");
-const [modules, chrome, url] = process.argv.slice(2);
+const [modules, chrome, url, angle] = process.argv.slice(2);
 const { chromium } = createRequire(modules + "/package.json")("playwright-core");
 (async () => {
   const browser = await chromium.launch({ executablePath: chrome, headless: true,
-    args: ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
+    args: angle === "metal" ? ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"]
+      : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
   const page = await browser.newPage();
   let done;
   const finished = new Promise((resolve) => (done = resolve));
@@ -63,6 +64,11 @@ const { chromium } = createRequire(modules + "/package.json")("playwright-core")
   });
   page.on("pageerror", (error) => console.log("PAGE ERROR " + error));
   await page.goto(url);
+  console.log("WebGL renderer: " + await page.evaluate(() => {
+    const gl = document.createElement("canvas").getContext("webgl2");
+    const info = gl && gl.getExtension("WEBGL_debug_renderer_info");
+    return info ? gl.getParameter(info.UNMASKED_RENDERER_WEBGL) : "unknown";
+  }));
   const timeout = new Promise((resolve) => setTimeout(() => resolve("timeout"), 600000));
   const result = await Promise.race([finished, timeout]);
   await browser.close();
@@ -142,6 +148,8 @@ def main():
     parser.add_argument("--modules", required=True, help="folder playwright-core was installed into")
     parser.add_argument("--chrome", required=True, help="Chromium executable")
     parser.add_argument("--keep", action="store_true", help="keep the temporary project")
+    parser.add_argument("--gpu", action="store_true",
+                        help="the Mac's GPU through ANGLE on Metal (as Safari draws WebGL) instead of SwiftShader")
     parser.add_argument("sheets", nargs="*", type=Path)
     args = parser.parse_args()
     sheets = [p.resolve() for p in args.sheets] or samples()
@@ -154,7 +162,8 @@ def main():
         runner = project / "runner.cjs"
         runner.write_text(RUNNER)
         url = f"http://127.0.0.1:{server.server_address[1]}/index.html"
-        code = subprocess.run(["node", str(runner), args.modules, args.chrome, url]).returncode
+        code = subprocess.run(["node", str(runner), args.modules, args.chrome, url,
+                               "metal" if args.gpu else "swiftshader"]).returncode
         server.shutdown()
         return code
     finally:

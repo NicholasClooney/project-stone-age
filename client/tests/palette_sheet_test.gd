@@ -110,7 +110,22 @@ func run() -> void:
 	expanded.load_png_from_buffer(FileAccess.get_file_as_bytes(sample))
 	expanded.convert(Image.FORMAT_RGBA8)
 	check(PaletteSheet.picture(sample).get_data()==expanded.get_data() and PaletteSheet.exists(sample) and not PaletteSheet.exists(ROOT+"battle/sheets/missing.png"),"on, a sheet's picture and presence come from its PNG")
-	SheetFrames._sheets.clear()
+	# The player's switch off: the old RGBA textures, also where only the PNG
+	# is here (a web pack of an enabled kind).
+	SheetFrames.flush()
+	PaletteSheet.user_on = false
+	var rgba_sheet := SheetFrames.sheet(sample)
+	check(PaletteSheet.wanted(sample) and not PaletteSheet.draws(sample) and not PaletteSheet.is_palette(rgba_sheet) and rgba_sheet.get_size()==Vector2(indices.get_size()),"switched off, an enabled kind draws its imported RGBA sheet")
+	var copy := "user://palette-sheet-test-copy.png"
+	var out := FileAccess.open(copy,FileAccess.WRITE)
+	out.store_buffer(FileAccess.get_file_as_bytes(sample))
+	out.close()
+	var from_png := PaletteSheet.load_any(copy)
+	var from_png_image := from_png.get_image()
+	from_png_image.convert(Image.FORMAT_RGBA8)
+	check(not PaletteSheet.is_palette(from_png) and from_png_image.get_data()==expanded.get_data(),"without an imported copy, an RGBA texture is decoded from the PNG")
+	PaletteSheet.user_on = true
+	SheetFrames.flush()
 	PaletteSheet.set_kinds(null)
 	check(PaletteSheet.load_texture(ROOT+"battle/sheets/missing.png")==null,"a missing sheet loads as null")
 	# Not palette PNGs: RGBA and greyscale stay out.

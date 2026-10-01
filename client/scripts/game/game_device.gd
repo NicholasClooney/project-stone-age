@@ -5,6 +5,8 @@ extends RefCounted
 ## game (game.volume, game.dev_blink_mode, game.viewer_prefs_path and so on);
 ## see docs/technical/game-scripts.md.
 var game: GameScene
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
+const SheetFrames = preload("res://scripts/sheet_frames.gd")
 
 func _init(owner: GameScene) -> void:
 	game = owner
@@ -48,6 +50,7 @@ func restore_device_settings() -> void:
 	game.max_fps = clampi(int(viewer_pref("max_fps",30 if touch else 60)),FPS_MIN,FPS_MAX)
 	game.background_audio = bool(viewer_pref("background_audio",false))
 	game.cave_music = bool(viewer_pref("cave_music",true))
+	set_palette_textures(bool(viewer_pref("palette_textures",true)))
 	apply_view()
 	watch_page_visibility()
 	if not game.get_viewport().size_changed.is_connected(_on_screen_resized):
@@ -118,6 +121,17 @@ func set_cave_music(on: bool) -> void:
 	_save_device("cave_music",on)
 	# The current map's music follows at once.
 	if not game.data.is_empty() and not game.battle_view.visible:game.set_music(game.exploration_music())
+
+## 调色板贴图: sprite sheets as 256-colour textures (a quarter of the video
+## memory) or RGBA as before. Sheets load again the next time they are drawn,
+## so the change shows as soon as each sprite moves to its next frame.
+func set_palette_textures(on: bool) -> void:
+	_save_device("palette_textures",on)
+	if PaletteSheet.user_on == on:return
+	PaletteSheet.user_on = on
+	SheetFrames.flush()
+	for loader in [preload("res://scripts/battle_art.gd"),preload("res://scripts/riding.gd"),preload("res://scripts/character_art.gd")]:
+		if loader._cache != null:loader._cache.forget_frames()
 
 func set_background_audio(on: bool) -> void:
 	game.background_audio = on

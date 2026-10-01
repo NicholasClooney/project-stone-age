@@ -5,6 +5,7 @@ extends SceneTree
 ## 自动练级, and this device's settings saved and restored (only once they are
 ## restored, so tests never write the real viewer.cfg).
 const PREFS := "user://settings-menu-test.cfg"
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -98,6 +99,14 @@ func run() -> void:
 	var zoom: float = game.camera.zoom.x
 	check(is_equal_approx(game.volume,0.3) and not game.effects_on and game.dev_blink_mode and game.muted and is_equal_approx(zoom,0.35),"设置 changes volume, effects, music, 瞬移 and zoom")
 	check(is_equal_approx(game.effect.volume_db,-80.0) and is_equal_approx(game.music.volume_db,-80.0),"the players follow the new sound settings")
+	# 调色板贴图: on by default; off draws the old RGBA textures at once.
+	var palette_box: CheckBox = menu.find_child("SettingsPaletteTextures",true,false)
+	check(palette_box!=null and palette_box.button_pressed and PaletteSheet.user_on and _drawn_palette(game),"调色板贴图 starts on and the player is drawn from a palette sheet")
+	palette_box.button_pressed = false
+	check(not PaletteSheet.user_on and _saved("palette_textures") and not _drawn_palette(game) and game.player.sprite.material==null,"turning it off saves it on this device and the player's next frame is RGBA again")
+	palette_box.button_pressed = true
+	check(PaletteSheet.user_on and _drawn_palette(game),"turning it on draws the palette sheet again")
+	palette_box.button_pressed = false
 	check(_saved("zoom") and _saved("music_on"),"the zoom and the music switch are saved on this device")
 	# 画面 on a desktop: fixed aspect, 100% interface, the bar on hover.
 	check(game.fixed_aspect and is_equal_approx(game.ui_scale,100.0) and not game.taskbar_pinned and game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_KEEP and is_equal_approx(game.get_window().content_scale_factor,1.0),"a desktop keeps the fixed aspect, 100% and the hover bar by default")
@@ -282,6 +291,8 @@ func run() -> void:
 	check(is_equal_approx(again.volume,0.55) and again.effects_on and not again.dev_blink_mode and again.shortcuts.map[0]==KEY_M and is_equal_approx(again.camera.zoom.x,1.0),"a test game keeps the defaults (100% zoom) until it restores")
 	again.restore_device_settings()
 	check(is_equal_approx(again.effects_volume,0.5),"restoring brings back the effects volume")
+	check(not PaletteSheet.user_on and not _drawn_palette(again),"restoring brings back 调色板贴图 off")
+	again.set_palette_textures(true)
 	check(is_equal_approx(again.volume,0.8) and not again.muted and not again.effects_on and again.dev_blink_mode and is_equal_approx(again.camera.zoom.x,zoom),"restoring brings back volume, music, effects, 瞬移 and zoom")
 	check(again.shortcuts.map[0]==KEY_G and again.shortcuts.helper[0]==KEY_K and again.shortcuts.radio[0]==KEY_F6 and again.shortcuts.wave[0]==0,"and the keys")
 	check(InputMap.action_get_events("helper").any(func(e): return e is InputEventKey and e.physical_keycode==KEY_K),"applied to the InputMap at startup")
@@ -295,6 +306,14 @@ func run() -> void:
 	await create_timer(0.3).timeout
 	print("SETTINGS MENU: %d failures" % failures)
 	quit(1 if failures else 0)
+
+## Whether the player's sprite shows a palette sheet with its material, after
+## drawing its current frame again.
+func _drawn_palette(game) -> bool:
+	game.player.current_image = -1
+	game.player._process(0.0)
+	var texture: Texture2D = game.player.sprite.texture
+	return PaletteSheet.is_palette(texture) and game.player.sprite.material==PaletteSheet.material_of(texture)
 
 func _has_overrides() -> bool:
 	var config := ConfigFile.new()

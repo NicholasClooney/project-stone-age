@@ -28,10 +28,8 @@ static func sheet(path: String) -> Texture2D:
 		return atlas
 	# A palette sheet (scripts/palette_sheet.gd) when they are on for this
 	# kind of art: one byte a pixel; nodes drawing it take its material.
-	if PaletteSheet.wanted(path):atlas = PaletteSheet.load_texture(path)
-	if atlas == null:
-		if not ResourceLoader.exists(path): return null
-		atlas = load(path)
+	atlas = PaletteSheet.load_any(path)
+	if atlas == null: return null
 	_sheets[path] = atlas
 	PerfRegistry.track_texture(PerfRegistry.folder_category(path.get_base_dir()+"/"),path,atlas)
 	while _sheets.size() > SHEETS:_sheets.erase(_sheets.keys()[0])
@@ -39,6 +37,12 @@ static func sheet(path: String) -> Texture2D:
 
 static func held() -> int:
 	return _sheets.size()
+
+## Lets go of every sheet and frame, so the next draw loads them again (the
+## palette switch changed how sheets are loaded).
+static func flush() -> void:
+	_sheets.clear()
+	_frames.clear()
 
 ## A new AtlasTexture of the sheet's rectangle, or null when the sheet is not
 ## available yet. The caller caches it.

@@ -53,6 +53,11 @@ void fragment() {
 
 ## The kinds palette sheets are on for (the setting, or an override).
 static var _kinds: Variant = null
+## The player's switch (设置 → 画面 → 调色板贴图, this device's viewer.cfg).
+## Off draws every sheet from RGBA textures as before the palette sheets:
+## the imported texture, or on the web, where a pack holds only the PNG, an
+## RGBA texture decoded from it.
+static var user_on := true
 static var _shader: Shader
 
 ## Overrides the setting for this run (tests); null goes back to it.
@@ -70,10 +75,15 @@ static func kind_of(path: String) -> String:
 		if path.begins_with(folder) and path.get_extension()=="png" and not path.substr(folder.length()).contains("/"):return kind
 	return ""
 
-## Whether the sheet at path is drawn from its palette PNG.
+## Whether the project uses palette sheets for this kind of art (so a web
+## pack holds the sheet as its PNG).
 static func wanted(path: String) -> bool:
 	var kind := kind_of(path)
 	return not kind.is_empty() and kinds().has(kind)
+
+## Whether the sheet at path is drawn from its palette PNG right now.
+static func draws(path: String) -> bool:
+	return user_on and wanted(path)
 
 static func shader() -> Shader:
 	if _shader == null:
@@ -147,6 +157,26 @@ static func load_texture(path: String) -> Texture2D:
 	var decoded := decode(FileAccess.get_file_as_bytes(path))
 	if decoded.is_empty():return null
 	return texture_of(decoded)
+
+## The texture at path: its palette texture when palette sheets are on for
+## it (and the player's switch is on) and it is a palette PNG, else the
+## imported texture, else an RGBA texture decoded from the PNG; null when
+## none is here (a web pack still downloading).
+static func load_any(path: String) -> Texture2D:
+	if draws(path):
+		var texture := load_texture(path)
+		if texture != null:return texture
+	if ResourceLoader.exists(path):return load(path)
+	return load_rgba(path)
+
+## An RGBA texture decoded from the PNG at path (a web pack holds only the
+## PNG of an enabled kind), or null when the file is not here.
+static func load_rgba(path: String) -> Texture2D:
+	if not FileAccess.file_exists(path):return null
+	var image := Image.new()
+	if image.load_png_from_buffer(FileAccess.get_file_as_bytes(path)) != OK:return null
+	image.convert(Image.FORMAT_RGBA8)
+	return ImageTexture.create_from_image(image)
 
 ## Whether the sheet at path can be drawn: its PNG when palette sheets are on
 ## for it (a web pack then holds only the PNG), else the imported texture.
