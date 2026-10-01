@@ -44,6 +44,7 @@ func run()->void:
 	for page in ["capture","stats","filters","capture","filters"]:menu.show_page(page)
 	check(single_caption(menu),"page switching never reveals legacy dropdown")
 	menu._target_pressed(-3)
+	check(not menu.target_button.flat and menu.target_button.icon!=null and menu.target_button.get_theme_stylebox("normal")==menu.target_button.get_theme_stylebox("normal","OptionButton"),"the target selector looks like a dropdown (box and arrow)")
 	check(menu.target_button.text=="未选","none updates caption immediately")
 	check(await Wait.settle(self,a) and await Wait.until(self,func():return other.target_ids.is_empty()),"none persists and reaches second snapshot")
 	menu._target_pressed(-2)

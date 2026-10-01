@@ -1,9 +1,18 @@
 {
-  "version": "v0.161.4",
-  "count": 236,
+  "version": "v0.161.5",
+  "count": 237,
   "feature_count": 145,
-  "fix_count": 91,
+  "fix_count": 92,
   "entries": [
+    {
+      "version": "v0.161.5",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "目标宠物选择看起来可以点",
+      "details": [
+        "自动抓宠「目标宠物」改成和其他下拉框一样有边框和下拉箭头，不再像一行普通文字。"
+      ]
+    },
     {
       "version": "v0.161.4",
       "date": "2026-10-01",

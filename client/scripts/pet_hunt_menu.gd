@@ -169,6 +169,12 @@ func _ready() -> void:
 	target_button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
 	target_button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 	panel.add_child(target_button);controls.append(target_button)
+	# Looks like the other dropdowns (box and ▾), not plain text: a MenuButton is flat.
+	target_button.flat=false
+	for state in ["normal","hover","pressed","focus","disabled"]:
+		target_button.add_theme_stylebox_override(state,target_button.get_theme_stylebox(state,"OptionButton"))
+	target_button.icon=target_button.get_theme_icon("arrow","OptionButton")
+	target_button.icon_alignment=HORIZONTAL_ALIGNMENT_RIGHT
 	target_button.get_popup().hide_on_checkable_item_selection=false
 	target_button.get_popup().max_size=Vector2i(600,360)
 	target_button.get_popup().id_pressed.connect(_target_pressed)
