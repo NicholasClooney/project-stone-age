@@ -18,7 +18,8 @@
   "clones": [
     {"id": 90001, "from": 1645, "template_id": 812, "reason": "原表 Lv1 斑尼迪克（1645）不可捕捉（pet_flag 0），复制为可捕捉"},
     {"id": 90014, "from": 1946, "template_id": 968, "reason": "原表 Lv1 艾迪希洛（1946）不可捕捉，复制为可捕捉"},
-    {"id": 90015, "from": 539, "template_id": 524, "reason": "原表只有任务遇敌 Lv15 卡特利奴（539），复制为 Lv1"}
+    {"id": 90015, "from": 539, "template_id": 524, "reason": "原表只有任务遇敌 Lv15 卡特利奴（539），复制为 Lv1"},
+    {"id": 90101, "from": 1947, "template_id": 969, "reason": "原表 Lv1 蒙奇（1947）不可捕捉（pet_flag 0），复制为可捕捉（id 90015 已是原表的行）"}
   ],
   "encounters": [
     {"group_id": 91001, "template_id": 303, "name": "巴朵兰恩", "enemy_id": 352, "companion_id": 1473, "map_id": 500, "area_id": 639, "weight": 1, "origin": "original_area", "reason": "原版在此区有 Lv90–95 红暴（1473）；用原表未使用的 Lv1 红暴（352）"},
@@ -49,6 +50,12 @@
     {"group_id": 91041, "template_id": 95, "name": "布鲁顿", "enemy_id": 981, "companion_id": 982, "map_id": 300, "area_id": 311, "weight": 1, "origin": "original_area", "reason": "黄人龙：原版在此区有 Lv43–45（982）；用原版吉鲁岛小区 333 的 Lv1 行（981），那个小区在本作被同优先级的本区盖住"},
     {"group_id": 91042, "template_id": 223, "name": "加格", "enemy_id": 446, "companion_id": 1491, "map_id": 500, "area_id": 659, "weight": 1, "origin": "original_area", "reason": "白鲨：原版在此区有 Lv90–95（1491），是已导入地图里唯一的野外；用原版未导入迷宫（10203）的 Lv1 行（446）"},
     {"group_id": 91043, "template_id": 41, "name": "贝洛恩", "enemy_id": 266, "companion_id": 278, "map_id": 10004, "area_id": 76, "weight": 1, "origin": "original_area", "reason": "原版在阿布的洞窟地下3/4楼有 Lv22–24（278），是已导入地图里最低的；用原版未导入迷宫（10101）的 Lv1 行（266）"},
-    {"group_id": 91044, "template_id": 144, "name": "格尔格", "enemy_id": 994, "companion_id": 1384, "map_id": 32005, "area_id": 615, "weight": 1, "origin": "original_area", "reason": "红猩猩：原版在漆黑的洞窟地下5楼有 Lv85–87（1384），本层原版也有权重 1 的 Lv1 组（736）；用原版未导入迷宫（31204）的 Lv1 行（994）"}
+    {"group_id": 91044, "template_id": 144, "name": "格尔格", "enemy_id": 994, "companion_id": 1384, "map_id": 32005, "area_id": 615, "weight": 1, "origin": "original_area", "reason": "红猩猩：原版在漆黑的洞窟地下5楼有 Lv85–87（1384），本层原版也有权重 1 的 Lv1 组（736）；用原版未导入迷宫（31204）的 Lv1 行（994）"},
+    {"group_id": 91045, "template_id": 234, "name": "卡卡金宝", "enemy_id": 1682, "companion_id": 1036, "map_id": 31806, "area_id": 362, "weight": 1, "origin": "added", "reason": "红蛙：原版只在未导入的吉鲁迷宫（30601–30606）有 Lv1 和 Lv38–42；放进阿斯玛鲁矿山6楼，和同系的奇卡宝斯（原版此处有 Lv1 和 Lv60–63）同区，用原版 Lv1 行 1682"},
+    {"group_id": 91046, "template_id": 910, "name": "吉比", "enemy_id": 1804, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "小GP：原版来自卡包，无野外；相簿与年兽同组，放在霍特尔村门口和年兽同区，单独出现，用原版 Lv1 行 1804"},
+    {"group_id": 91047, "template_id": 965, "name": "鲁比", "enemy_id": 1926, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "大GP：原版来自卡包，无野外；和吉比成对，同上，用原版 Lv1 行 1926"},
+    {"group_id": 91048, "template_id": 969, "name": "蒙奇", "enemy_id": 90101, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "蒙奇：原版来自卡包，无野外；和吉比、鲁比同区，用复制为可捕捉的 Lv1 行 90101（原 1947）"},
+    {"group_id": 91049, "template_id": 312, "name": "摩娜西普", "enemy_id": 355, "companion_id": 1463, "map_id": 500, "area_id": 652, "weight": 1, "origin": "added", "reason": "金羊：原版任务宠，无野外；和同系的黑羊同放五十年前波拉岛龙穴，用原版 Lv1 行 355"},
+    {"group_id": 91050, "template_id": 170, "name": "乌力王", "enemy_id": 2492, "companion_id": 255, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "乌力王：原版野外没有；和黑猪同放萨伊那斯的乌力草原，用原版 Lv1 行 2492"}
   ]
 }

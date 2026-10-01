@@ -308,6 +308,54 @@
     },
     {
       "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "吉比",
+      "enemy_id": 1804,
+      "template_id": 910,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "鲁比",
+      "enemy_id": 1926,
+      "template_id": 965,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "蒙奇",
+      "enemy_id": 90101,
+      "template_id": 969,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
       "area_id": 47,
       "cell": [
         490,
@@ -377,6 +425,22 @@
       "name": "黑乌力",
       "enemy_id": 475,
       "template_id": 5,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
+      "area_id": 56,
+      "cell": [
+        633,
+        376
+      ],
+      "map_name": "萨伊那斯",
+      "name": "乌力王",
+      "enemy_id": 2492,
+      "template_id": 170,
       "level_min": 1,
       "level_max": 1,
       "dev_only": false,
@@ -1119,6 +1183,22 @@
     },
     {
       "map_id": 500,
+      "area_id": 652,
+      "cell": [
+        532,
+        500
+      ],
+      "map_name": "五十年前波拉岛",
+      "name": "摩娜西普",
+      "enemy_id": 355,
+      "template_id": 312,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
+      "map_id": 500,
       "area_id": 659,
       "cell": [
         218,
@@ -1568,6 +1648,22 @@
       "level_min": 1,
       "level_max": 1,
       "dev_only": false
+    },
+    {
+      "map_id": 31806,
+      "area_id": 362,
+      "cell": [
+        5,
+        7
+      ],
+      "map_name": "阿斯玛鲁矿山６楼",
+      "name": "卡卡金宝",
+      "enemy_id": 1682,
+      "template_id": 234,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
     },
     {
       "map_id": 31806,

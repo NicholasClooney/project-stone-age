@@ -39,8 +39,8 @@ func core() -> void:
 	check(book.entry_for(586).id == book.entry_for(3).id and book.entry_for(6).id != book.entry_for(3).id,"乌力斯坦 586 merges with 3; template 6 has other stats and stays separate")
 	var ram: Dictionary = book.entry_for(313)
 	check(int(ram.wild_lowest) == int(ram.wild_potential.level) and int(ram.wild_lowest) > 1,"卡伊霍恩 is caught from Lv.%d in the wild and has that second prediction" % int(ram.wild_lowest))
-	var gold: Dictionary = book.entry_for(312)
-	check(gold.locations.is_empty() and Encyclopedia.where_text(gold) == "无野外出现" and not gold.catchable and gold.name == "摩娜西普","金羊 (312): no wild spawn, shown as 无野外出现")
+	var gold: Dictionary = book.entry_for(178)
+	check(gold.locations.is_empty() and Encyclopedia.where_text(gold) == "无野外出现" and not gold.catchable and gold.name == "莱恩奇夫","莱恩奇夫 (178): no wild spawn, shown as 无野外出现")
 	check(Encyclopedia.best_location(gold).is_empty(),"no 瞬移去抓 target without a wild spawn")
 	rare_places(book)
 	var kuni: Dictionary = book.entry_for(113)
@@ -74,7 +74,7 @@ func core() -> void:
 	check(book.species[book.families.filter(func(f):return f.species.has(10417))[0].species[0]].family_name == "沃斯姆系","and it joins its album page's family")
 	var unknown: Array = book.order.filter(func(id):return not book.species[id].stats_known)
 	check(unknown.size() == 131 and unknown.all(func(id):return int(id) >= 10000),"131 stat-less 8.0 species, template 10000 + album number")
-	check(book.filtered("人龙").has(92) and not book.filtered("",true).has(312) and book.filtered("",true).has(113),"search by family name; 只看野外可抓 drops 金羊")
+	check(book.filtered("人龙").has(92) and not book.filtered("",true).has(178) and book.filtered("",true).has(113),"search by family name; 只看野外可抓 drops 莱恩奇夫")
 	# The shipped JSON against the project's own GDScript rules: 200 full-grade
 	# blue dragons caught at Lv.1 and grown to 120.
 	var total := 0.0
@@ -155,7 +155,7 @@ func classic(book, catalog: Dictionary, profile: Dictionary) -> void:
 	var shown: Array = book.filtered("",false,true)
 	check(shown.size() == pets.size()-1 and shown.all(func(id):return book.species[id].has("classic")),"经典宠物 filter shows the %d classic species" % shown.size())
 	var wild: Dictionary = book.entry_for(94)
-	check(Encyclopedia.classic_where_text(book.entry_for(312).classic,book.entry_for(312)).begins_with("原版不能野外捕捉") and Encyclopedia.classic_where_text(book.entry_for(304).classic,book.entry_for(304)).ends_with("非原版") and Encyclopedia.classic_where_text(missing[0],{}) == "资料里没有这只宠物" and Encyclopedia.classic_where_text(wild.classic,wild) == Encyclopedia.where_text(wild),"这里能不能抓: 红人龙 where it lives, 金羊 原版不能野外捕捉, 机暴 only at a 非原版 spot, 摩卡 not in the data")
+	check(Encyclopedia.classic_where_text(book.entry_for(312).classic,book.entry_for(312)).ends_with("非原版") and Encyclopedia.classic_where_text(book.entry_for(304).classic,book.entry_for(304)).ends_with("非原版") and Encyclopedia.classic_where_text(missing[0],{}) == "资料里没有这只宠物" and Encyclopedia.classic_where_text(wild.classic,wild) == Encyclopedia.where_text(wild),"这里能不能抓: 红人龙 where it lives, 金羊 and 机暴 only at a 非原版 spot, 摩卡 not in the data")
 	# Ownership: 甲 (carried) and 乙 (stored) are 扬奇洛斯, 丙 (stored) 昆伊.
 	var owned: Dictionary = book.owned_counts(profile)
 	check(book.filtered("",false,false,"owned",owned) == [92,113] and book.filtered("",false,false,"unowned",owned).size() == book.order.size()-2,"已拥有 lists 扬奇洛斯 and 昆伊 (carried and stored), 未拥有 the other %d" % (book.order.size()-2))
@@ -191,9 +191,9 @@ func window() -> void:
 	await process_frame
 	check(menu.view == "detail" and menu.body.find_child("SpeciesName",true,false).text == "扬奇洛斯" and menu.body.find_child("PotentialLv1",true,false) != null,"clicking a cell opens its page with the Lv.120 prediction")
 	check(menu.body.find_child("SpeciesVariants",true,false).get_child_count() == menu.book.families.filter(func(f):return f.name == "人龙系")[0].species.size(),"the page lists the family's species")
-	menu.show_species(312)
+	menu.show_species(178)
 	await process_frame
-	check(menu.body.find_child("NoWildSpawn",true,false) != null,"金羊's page says 无野外出现")
+	check(menu.body.find_child("NoWildSpawn",true,false) != null,"莱恩奇夫's page says 无野外出现")
 	menu.show_species(304)
 	await process_frame
 	var added = menu.body.find_child("Place32020_630_added",true,false)
@@ -229,11 +229,11 @@ func window() -> void:
 	menu.body.find_child("Sort_name",true,false).pressed.emit()
 	await process_frame
 	check(menu.sort_key == "name" and menu.body.find_children("Row*","PanelContainer",true,false)[0].name == "Row%d" % int(Encyclopedia.ranked(menu.book.species,menu.book.order,"name")[0]),"a column header sorts by that column")
-	menu.search.text = "摩娜西普"
+	menu.search.text = "莱恩奇夫"
 	menu.search.text_changed.emit(menu.search.text)
 	await process_frame
-	var go = menu.body.find_child("Go312",true,false)
-	check(go != null and go.disabled,"金羊's row cannot 瞬移去抓")
+	var go = menu.body.find_child("Go178",true,false)
+	check(go != null and go.disabled,"莱恩奇夫's row cannot 瞬移去抓")
 	menu.search.text = ""
 	menu.search.text_changed.emit("")
 	# 经典宠物: the list in data order with 俗称 and 这里能不能抓, then the grid.
@@ -242,8 +242,8 @@ func window() -> void:
 	var first_classic: Dictionary = menu.book.classic[0]
 	var classic_rows: Array = menu.body.find_children("Row*","PanelContainer",true,false)
 	check(menu.view == "list" and classic_rows[0].name == "Row%d" % int(first_classic.entry_id) and menu.body.find_child("Sort_sum",true,false) == null,"经典宠物 list starts with %s in the file's order, without sorting" % first_classic.name)
-	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where910",true,false).text.begins_with("原版不能野外捕捉") and menu.body.find_child("Where304",true,false).text.ends_with("非原版"),"红人龙 says where it lives here; 吉比 says 原版不能野外捕捉; 机暴's spot is 非原版")
-	check(menu.body.find_child("Go94",true,false) != null and not menu.body.find_child("Go94",true,false).disabled and menu.body.find_child("Go910",true,false).disabled,"红人龙's row has 瞬移去抓, 吉比's does not")
+	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where910",true,false).text.ends_with("非原版") and menu.body.find_child("Where304",true,false).text.ends_with("非原版"),"红人龙 says where it lives here; 吉比 and 机暴 only at 非原版 spots")
+	check(menu.body.find_child("Go94",true,false) != null and not menu.body.find_child("Go94",true,false).disabled and not menu.body.find_child("Go910",true,false).disabled,"红人龙 and 吉比 (at its 非原版 spot) both have 瞬移去抓")
 	menu.list_page = 1
 	menu.rebuild()
 	check(menu.body.find_child("Missing_摩卡",true,false) != null,"摩卡, not in the data, is listed as 资料里没有")
