@@ -227,6 +227,18 @@ func helper_caption() -> String:
 			if code!=0:return "游戏助手 [%s]" % OS.get_keycode_string(code)
 	return "游戏助手"
 
+## The original box is 384 x 192 at x1.25, centred and at y 450 of 800.
+## On another screen it keeps that scale while it fits (16 px either side),
+## shrinks on a narrow one, and keeps the same share of the height above the
+## bottom bar.
+func place_dialogue(panel: Control) -> void:
+	var screen: Vector2 = game.dialogue.size if game.dialogue.size.x > 0 else Vector2(1280,800)
+	var scale := minf(game.classic_hud.SCALE,(screen.x-32)/384.0)
+	panel.scale = Vector2.ONE*scale
+	var bottom: float = game.classic_hud.bar.size.y if is_instance_valid(game.classic_hud) and is_instance_valid(game.classic_hud.bar) else 30.0
+	var top := minf(screen.y*450.0/800.0,screen.y-bottom-8-192*scale)
+	panel.position = Vector2((screen.x-384*scale)/2,maxf(8,top))
+
 func build_dialogue(root: Control) -> void:
 	game.dialogue = Control.new()
 	game.dialogue.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -235,9 +247,11 @@ func build_dialogue(root: Control) -> void:
 	var panel := Control.new()
 	panel.name = "OriginalDialogue"
 	panel.size = Vector2(384,192)
-	panel.scale = Vector2.ONE*game.classic_hud.SCALE
-	panel.position = Vector2((1280-384*game.classic_hud.SCALE)/2,450)
 	game.dialogue.add_child(panel)
+	# Placed for the screen it is on (a phone in portrait, 界面大小): centred,
+	# where the original puts it on 1280 x 800, and smaller on a narrow screen.
+	game.dialogue.resized.connect(func():place_dialogue(panel))
+	place_dialogue(panel)
 	# WindowDisp composes a stone frame from the original 64×48 tiles.
 	for y in range(4):
 		for x in range(6):

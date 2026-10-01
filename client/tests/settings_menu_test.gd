@@ -111,6 +111,14 @@ func run() -> void:
 	var screen: Vector2 = game.get_viewport_rect().size
 	check(menu.position.distance_to(((screen-menu.size)/2).max(Vector2(8,8)))<1.0,"设置 is centred again on the rescaled screen (%s, screen %s)" % [str(menu.position),str(screen)])
 	check(is_equal_approx(game.classic_hud.bar.size.x,game.classic_hud.size.x),"the bottom bar still spans the screen")
+	var box: Control = game.dialogue.get_node("OriginalDialogue")
+	check(box.position.x >= 8 and box.position.x+384*box.scale.x <= screen.x-8 and box.position.y+192*box.scale.y <= screen.y,"the NPC dialogue box fits the rescaled screen (%s x%.2f on %s)" % [str(box.position),box.scale.x,str(screen)])
+	var narrow := Vector2(420,900)
+	game.dialogue.size = narrow
+	game._ui.place_dialogue(box)
+	check(box.scale.x < game.classic_hud.SCALE and is_equal_approx(box.position.x+384*box.scale.x/2,narrow.x/2) and box.position.x >= 15,"on a narrow phone screen it shrinks to fit and stays centred")
+	game.dialogue.size = screen
+	game._ui.place_dialogue(box)
 	(menu.find_child("SettingsFixedAspect",true,false) as CheckBox).button_pressed = false
 	check(game.get_window().content_scale_aspect==Window.CONTENT_SCALE_ASPECT_EXPAND and _saved("fixed_aspect"),"unticking 固定横屏比例 lets the view fill the screen")
 	(menu.find_child("SettingsTaskbarPinned",true,false) as CheckBox).button_pressed = true
