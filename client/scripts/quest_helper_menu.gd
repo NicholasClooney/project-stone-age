@@ -27,10 +27,18 @@ func relayout() -> void:
 	position=((world.get_viewport_rect().size-size)/2).max(Vector2(8,8))
 func model() -> Dictionary:
 	return world.state.derived.get("quest_helper",{})
+func refresh_key() -> String:
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1)])
 func _process(_delta: float) -> void:
-	if visible and JSON.stringify([model(),world.state.derived.get("quest_auto",{})])!=last_model:rebuild()
+	if not visible:return
+	if refresh_key()!=last_model:rebuild()
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	for quest_id in [1,11]:
+		var label=find_child("QuestAutoMessage_%d" % quest_id,true,false)
+		if label is Label:label.text=str(auto.get("message",""))
 func rebuild() -> void:
-	last_model=JSON.stringify([model(),world.state.derived.get("quest_auto",{})])
+	last_model=refresh_key()
 	for child in get_children():remove_child(child);child.queue_free()
 	body=VBoxContainer.new()
 	body.add_theme_constant_override("separation",8)
@@ -43,7 +51,7 @@ func rebuild() -> void:
 	var close: Button=world.button("关闭 · Esc",close_menu)
 	close.name="QuestHelperClose"
 	header.add_child(close)
-	body.add_child(world.text("本项目助手：贝壳可自动确认原交易；按停止、关闭或 Esc 可停止。",12))
+	body.add_child(world.text("本项目助手：贝壳与成人仪式可自动确认原交易；按停止、关闭或 Esc 可停止。",12))
 	var scroll:=ScrollContainer.new()
 	scroll.custom_minimum_size=Vector2(690,430)
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
@@ -57,18 +65,25 @@ func rebuild() -> void:
 		label.name="QuestHelper_%s" % str(quest.id)
 		list.add_child(label)
 		if not str(quest.get("blocked_reason","")).is_empty():list.add_child(world.text(str(quest.blocked_reason),12))
-		if not str(quest.get("completion_detail","")).is_empty():list.add_child(world.text(str(quest.completion_detail),12))
+		if not str(quest.get("completion_detail","")).is_empty():
+			var detail:Label=world.text(str(quest.completion_detail),12)
+			detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+			detail.custom_minimum_size.x=640
+			list.add_child(detail)
 		if bool(quest.get("can_restart",false)):list.add_child(world.text("可重做：请与原 NPC 对话确认。",12))
-		if int(quest.event)==2:
+		if int(quest.event) in [2,4]:
 			var auto:Dictionary=world.state.derived.get("quest_auto",{})
 			var running:bool=bool(auto.get("running",false))
-			var action:Button=world.button("停止自动任务" if running else ("自动重做贝壳任务" if quest.get("can_restart",false) else "自动完成贝壳任务"),func():
+			var action:Button=world.button("停止自动任务" if running else ("自动重做贝壳任务" if quest.get("can_restart",false) else "自动完成"+str(quest.title)),func():
 				if running:world.quest_helper_travel.cancel()
 				else:world.quest_helper_travel.start_auto(int(quest.id)))
 			action.name="QuestAutoStop" if running else "QuestAutoStart_%s" % quest.id
 			action.disabled=not running and ((str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty())
 			list.add_child(action)
-			if not str(auto.get("message","")).is_empty():list.add_child(world.text(str(auto.message),12))
+			var status:Label=world.text(str(auto.get("message","")),12)
+			status.name="QuestAutoMessage_%s" % quest.id
+			status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+			list.add_child(status)
 		for step in quest.get("steps",[]):
 			var row:=HBoxContainer.new()
 			list.add_child(row)

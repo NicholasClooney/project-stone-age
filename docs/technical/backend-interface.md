@@ -302,3 +302,16 @@ convenience, not an original game rule.
 消费只改HP和一个2401实例，不改原任务flags或宠物PET来源；助手读服务器库存更新。
 此接口不接入原战斗道具回合，不支持其他玩家/仓库目标，原道具装备元数据由独立
 装备切片同步。普通 `item="potion"` 仍按旧自己回复30/满血拒绝规则。
+
+
+`quest_auto_start {quest_id: 1}` runs the original adult delivery chain. Initial
+helper travel explicitly bypasses the original level30 entrance; NPC REQUEST is
+still LV>0. Inside10204 the server walks one original safe cell per tick, calls
+field_step and pauses for the existing single-battle runner. Normal entrance
+check_passage/report_position enforce level30. Server quest_position_seq receipts
+match the initiating device/connection and at most16 issued positions, acknowledge
+without rewinding, and never accept a different cell for that sequence.
+AdultCheckpoint v1 restores only source450–453 solo battles, their exact pending
+rewards/turn/RNG, and rejects already committed battle IDs; no party restoration
+is included. The integrated v6 authority migrates v5 embedded profiles using
+original-equipment migration and preserves validated v6 UIDs/durability.

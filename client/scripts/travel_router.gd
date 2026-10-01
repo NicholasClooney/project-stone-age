@@ -33,6 +33,7 @@ func _map_route(origin: int, target: int, permit: bool, seimu: bool) -> Array[in
 		for link in world.world_catalog.links(current).values():
 			var next:=int(link.to_map)
 			var sea_gate: bool = preload("res://scripts/passage_rules.gd").requires_permit(current,next) or bool(link.get("requires_travel_pass",false))
+			if int(link.get("requires_level",0))>int(world.state.profile.player.level):continue
 			if previous.has(next) or (sea_gate and (not permit or not seimu)) or (not permit and next==10202 and next!=target):continue
 			previous[next]=current
 			if next==target:

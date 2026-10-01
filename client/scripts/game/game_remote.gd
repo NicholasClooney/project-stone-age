@@ -25,7 +25,10 @@ func _server_url() -> String:
 	return ""
 
 func report_position() -> void:
-	game.link.request({"type":"report_position","map_id":int(game.data.map_id),"cell":[game.cell.x,game.cell.y],"client":game._client_id})
+	var command:Dictionary={"type":"report_position","map_id":int(game.data.map_id),"cell":[game.cell.x,game.cell.y],"client":game._client_id}
+	var receipt:Dictionary=game.get_meta("quest_position_receipt",{})
+	if receipt.get("map_id",-1)==int(game.data.map_id) and receipt.get("cell",[])==command.cell and game._followed==[int(game.data.map_id),game.cell]:command.quest_position_seq=receipt.get("seq",-1)
+	game.link.request(command)
 
 ## Walks (one cell) or jumps to where another device put the character, and
 ## loads its map when that differs. Returns true while a mirrored move runs.
@@ -253,6 +256,7 @@ func _on_backend_message(event: Dictionary) -> void:
 			var reason := str(event.get("reason",""))
 			if not reason.is_empty():game.message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
 		"position":
+			if event.has("quest_position_seq"):game.set_meta("quest_position_receipt",{"seq":event.quest_position_seq,"map_id":int(event.map_id),"cell":event.cell.duplicate()})
 			if str(event.get("client",""))!=game._client_id:
 				game._follow = [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
 				game.pending_talk = false

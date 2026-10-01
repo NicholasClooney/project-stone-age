@@ -13,13 +13,13 @@ REFERENCE = Path(__file__).resolve().parents[1]/'references/chenmingbiao-stone-a
 class EarlyQuestTests(unittest.TestCase):
     def test_real_packet(self):
         data = quests.catalog(REFERENCE)
-        self.assertEqual(set(data['items']), {'1350', '1351', '1352', '1354', '700', '1455', '1102', '1122', '2401', '2427', '2414', '2415', '2463', '2464', '2465', '2466', '2467', '2468', '2478', '2481', '2484', '2485'})
+        self.assertEqual(set(data['items']), {'2417', '2418', '1350', '1351', '1352', '1354', '700', '1455', '1102', '1122', '2401', '2427', '2414', '2415', '2463', '2464', '2465', '2466', '2467', '2468', '2478', '2481', '2484', '2485'})
         self.assertEqual(data['items']['2414']['logical_icon'], 24130)
         self.assertEqual(data['items']['2415']['name'], '仙尼亚的花')
         self.assertFalse(data['items']['2415']['stackable'])
         self.assertEqual(data['items']['2414']['source_line'], 1997)
         self.assertEqual(data['items']['2468']['raw_columns'][24:26], ['', ''])
-        self.assertEqual([(n['map_id'], n['cell']) for n in data['npcs']], [(2000, [55,92]), (1000, [57,124]), (20508, [12,11]), (20507, [32,29]), (3300, [60,75]), (3300, [46,55]), (3000, [114,69]), (3110, [16,15]), (20105, [16,20]), (11006, [11,11]), (11006, [11,7])])
+        self.assertEqual([(n['map_id'], n['cell']) for n in data['npcs']], [(2000, [55,92]), (1000, [57,124]), (20508, [12,11]), (20507, [32,29]), (3300, [60,75]), (3300, [46,55]), (3000, [114,69]), (3110, [16,15]), (20105, [16,20]), (10204,[14,6]), (10204,[188,13]), (11006, [11,11]), (11006, [11,7])])
         npc = data['npcs'][0]
         self.assertEqual([b['type'] for b in npc['branches']], ['CLEAN', 'ACCEPT', 'REQUEST'])
         self.assertEqual(npc['branches'][1]['actions'], {'GetItem':'2414','DelItem':'2415','EndSetFlg':'2'})
@@ -44,7 +44,7 @@ class EarlyQuestTests(unittest.TestCase):
         self.assertEqual(exchanges[2]['actions']['DelItem'], '2468,2478')
         self.assertEqual(exchanges[-1]['actions']['DelItem'], '2478')
         self.assertEqual([(j['id'], j['event'], j['title']) for j in data['jobs']],
-                         [(6, 15, '恐龙博士 抓鲁尼帖斯'), (7, 16, '恐龙博士 抓贝鲁卡'), (11, 2, '不可思议的贝壳'), (22, 18, '伐木任务'), (30, 1, '塔姆塔姆村的药草')])
+                         [(1, 4, '成人仪式'), (6, 15, '恐龙博士 抓鲁尼帖斯'), (7, 16, '恐龙博士 抓贝鲁卡'), (11, 2, '不可思议的贝壳'), (22, 18, '伐木任务'), (30, 1, '塔姆塔姆村的药草')])
 
     def test_herb_review_boundaries(self):
         data = quests.catalog(REFERENCE)
@@ -58,15 +58,15 @@ class EarlyQuestTests(unittest.TestCase):
         self.assertIn('NomalMsg', girl['branches'][-1]['texts'])
         self.assertEqual(data['items']['2401']['logical_icon'], 23030)
         self.assertEqual(data['items']['2427']['logical_icon'], 22002)
-        self.assertFalse(any(n['id'].startswith('jaruga/event/event04') for n in data['npcs']))
+        self.assertTrue(any(n['id'].startswith('jaruga/event/event04') for n in data['npcs']))
         spec = json.loads(quests.SPEC.read_text())
-        spec['excluded_scripts'] = []
+        spec['scripts'].remove('jaruga/event/event04_1')
         with self.assertRaisesRegex(ValueError, 'Unreviewed NPC'):
             quests.catalog(REFERENCE, spec)
 
     def test_doctor_source_and_strict_pet_language(self):
         data = quests.catalog(REFERENCE)
-        doctor, assistant = data['npcs'][9:11]
+        doctor, assistant = [next(n for n in data['npcs'] if n['id'] == key) for key in ['sainasu/event/event15_1','sainasu/event/event15_2']]
         self.assertEqual((doctor['graphic'], assistant['graphic']), (16024, 16046))
         self.assertEqual(doctor['branches'][0]['condition'], 'NOWEV=15&PET>14-74')
         self.assertEqual(doctor['branches'][1]['condition'], 'ENDEV=15&NOWEV=16&PET>29-191')

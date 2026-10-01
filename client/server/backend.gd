@@ -77,6 +77,7 @@ var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 ## Pure travel refusal hook supplied by a multi-profile host (party lock).
 var quest_visit_guard: Callable
 var quest_helper = preload("res://server/quest_helper.gd").new()
+const AdultCheckpoint=preload("res://server/adult_battle_checkpoint.gd")
 var quest_auto = preload("res://server/quest_auto.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
 var session = GameSession.new()
@@ -208,15 +209,19 @@ func _release_log_file() -> void:
 ## and with 重启后自动恢复 on what it needs to go on is written to the resume
 ## file (automation.gd record_shutdown). Call save() after this.
 func record_shutdown() -> void:
+	var adult := AdultCheckpoint.snapshot(self)
 	var wood := _wood_battle_resume()
 	# A saved wood battle resumes in place rather than being abandoned by the
 	# automation shutdown path (which would record its id as completed).
-	if not wood.is_empty():battle_open = false
+	if not wood.is_empty() or not adult.is_empty():battle_open = false
 	var state: Dictionary = automation.record_shutdown()
 	state = _quest_resume_state(state)
 	if not wood.is_empty():
 		battle_open = true
 		state.wood_battle = wood
+	if not adult.is_empty():
+		battle_open=true
+		state.adult_battle=adult
 	_record_releases()
 	var path := _resume_file()
 	if path.is_empty():return
@@ -228,10 +233,11 @@ func record_shutdown() -> void:
 func shut_down() -> void:
 	keep_resume_current = false
 	set_process(false)
+	var adult := AdultCheckpoint.snapshot(self)
 	var wood := _wood_battle_resume()
 	record_shutdown()
 	quest_auto.stop(self,"服务器已停止。",false)
-	if not wood.is_empty():
+	if not wood.is_empty() or not adult.is_empty():
 		# The checkpoint contains the pending battle. Save its pre-settlement
 		# profile normally; this process is stopping and will run no more turns.
 		session._pending.clear()
@@ -244,13 +250,15 @@ func keep_resume_file() -> void:
 	var path := _resume_file()
 	if path.is_empty():return
 	var now := int(resume_clock.call())
+	var adult := AdultCheckpoint.snapshot(self)
 	var wood := _wood_battle_resume()
-	var key: String = automation.resume_key()+str(wood.get("battle_id",""))+str(wood.get("turn",0))+str(quest_auto.resume_state())
+	var key: String = automation.resume_key()+str(wood.get("battle_id",""))+str(wood.get("turn",0))+str(quest_auto.resume_state())+str(adult.get("battle_id",""))+str(adult.get("turn",0))
 	if key==_resume_key and _resume_written_msec>=0 and now-_resume_written_msec<RESUME_INTERVAL_MSEC:return
 	_resume_key = key
 	_resume_written_msec = now
 	var state: Dictionary = automation.resume_state() if automation.resume_wanted() else {}
 	if not wood.is_empty():state.wood_battle = wood
+	if not adult.is_empty():state.adult_battle = adult
 	state = _quest_resume_state(state)
 	if state.is_empty():
 		_remove_resume_file(path)
@@ -307,6 +315,8 @@ func load_resume() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var state = JSON.to_native(parsed) if parsed!=null else null
 	if state is Dictionary:
+		if state.get("adult_battle") is Dictionary:
+			if not AdultCheckpoint.restore(self,state.adult_battle) and str(state.adult_battle.get("battle_id","")) not in session._profile.completed_battles:return
 		if state.get("wood_battle") is Dictionary:_restore_wood_battle(state.wood_battle)
 		if state.has("kind"):automation.load_resume(state)
 		if state.get("quest_auto") is Dictionary and automation.resume_wanted():quest_auto.load_resume(self,state.quest_auto)
@@ -768,7 +778,8 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 						state.events.append("可以向饲育员学习伙伴技能。")
 		elif state.outcome=="captured":
 			state.events.append("伙伴已加入宠物栏，可为它取名并选择出战。")
-		save()
+		var saved_ok := save()
+		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.stop(self,"沿途战斗保存失败，停止自动任务。")
 		_publish()
 	state.capture_assist = battle.capture_assist
 	_publish_battle_pets()
@@ -838,6 +849,7 @@ func _cmd_presented(command: Dictionary) -> Dictionary:
 
 ## Authorize the guarded sea portal using this backend's current map and permit.
 func _cmd_check_passage(command: Dictionary) -> Dictionary:
+	if int(command.get("to_map",-1))==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30；任务助手瞬移为项目便利。")
 	if int(command.get("from_map",-1))!=automation.position_map:return _reject("位置已经改变。")
 	if preload("res://scripts/passage_rules.gd").requires_permit(automation.position_map,int(command.get("to_map",-1))) and not session.has_travel_pass():
 		return _reject("穿过海底关卡需要通行证。")
@@ -846,7 +858,8 @@ func _cmd_check_passage(command: Dictionary) -> Dictionary:
 ## Positions are reported by whichever client walks; every other client
 ## follows the broadcast (the reporter recognises its own client id).
 func _cmd_report_position(command: Dictionary) -> Dictionary:
-	quest_auto.report(self,command)
+	if quest_auto.accept_report(self,command):return {"ok":true}
+	if int(command.map_id)==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30。")
 	var origin: int = automation.position_map
 	if preload("res://scripts/passage_rules.gd").requires_permit(origin,int(command.map_id)) and not session.has_travel_pass():
 		return _reject("穿过海底关卡需要通行证。")
