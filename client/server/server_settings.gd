@@ -16,6 +16,15 @@ static var threads_override := 0
 static func _path() -> String:
 	return path_override if not path_override.is_empty() else PATH
 
+## Optional authority-only warehouse bound. Existing servers remain unlimited.
+## [pet_storage] capacity=0 (unlimited), or a positive integer in server-settings.cfg.
+static func pet_storage_capacity() -> int:
+	var config := ConfigFile.new()
+	if config.load(_path())!=OK:return 0
+	var value = config.get_value("pet_storage","capacity",0)
+	if not (value is int or (value is float and is_finite(value) and value==floorf(value))):return 0
+	return maxi(0,int(value))
+
 static func cores() -> int:
 	return maxi(1,OS.get_processor_count())
 

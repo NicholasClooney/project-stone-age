@@ -32,6 +32,7 @@
     "level_one": true,
     "auto_capture": true,
     "train_after_capture": true,
+    "capture_only": false,
     "total": 8,
     "offsets": [2, 2, 2, 2],
     "rate": 0,

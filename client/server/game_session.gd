@@ -265,8 +265,9 @@ func preview_wild_battle_config(troop: Dictionary) -> Dictionary:
 	preview.protect_pets=protect_pets
 	return preview.start_wild_battle_config(troop)
 
-func start_wild_battle_config(troop: Dictionary, clear_target: int = -1) -> Dictionary:
+func start_wild_battle_config(troop: Dictionary, clear_target: int = -1, capture_only: bool = false) -> Dictionary:
 	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}
+	if capture_only and not storage_capture_room(1):return {}
 	var enemies: Array = troop.enemies.duplicate(true)
 	if enemies.is_empty() or enemies.size()>10:return {}
 	for enemy in enemies:
@@ -301,6 +302,10 @@ func start_wild_battle_config(troop: Dictionary, clear_target: int = -1) -> Dict
 	config.reward_xp = first.reward_xp
 	config.reward_gold = first.reward_gold
 	config.source_encounter = true
+	if capture_only:
+		config.capture_only = true
+		config.can_capture = true
+		config.capture_slots = 1
 	# Pinned gmsv setup.cf BATTLEGOLD=10; battle.c BATTLE_GetExp pays
 	# once for the player before level-up, not once per defeated enemy.
 	config.battle_gold = int(_profile.player.level)*10
@@ -338,6 +343,7 @@ func start_party_config(party_battle_id: String, enemies: Array = [], battle_gol
 	config.ally_pets = []
 	config.can_capture = false
 	config.capture_slots = 0
+	config.erase("capture_only")
 	config.party = true
 	config.party_battle_id = party_battle_id
 	config.protect_pets = protect_pets
@@ -365,7 +371,12 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	if mp < 0 or mp > mp_start:return false
 	var captures: Array = result.get("captured_species_list",[])
 	var enemies: Array = result.get("enemies",[])
-	if enemies.size() != _pending.enemies.size() or _profile.pets.size()+captures.size()>PET_CAPACITY:return false
+	var direct_storage := bool(_pending.get("capture_only",false)) and not bool(_pending.get("party",false))
+	if enemies.size() != _pending.enemies.size():return false
+	if direct_storage:
+		if captures.size()>int(_pending.get("capture_slots",0)) or not storage_capture_room(captures.size()):return false
+	else:
+		if _profile.pets.size()+captures.size()>PET_CAPACITY:return false
 	# The result's pet indices are slots of the battle's start roster. Pets that
 	# are not in the battle can be stored, withdrawn or released meanwhile, so
 	# each slot is matched to the party by pet id (-1: no longer carried).
@@ -391,6 +402,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		if foe.get("captured",false):
 			if _pending.boss or not _pending.can_capture or not original.get("can_capture",true) or foe.hp != 0:return false
 			verified_captures.append(original.species)
+			if direct_storage and int(original.get("level",0))!=1:return false
 			captured_actors.append(original.duplicate(true))
 		elif foe.hp == 0:
 			var enemy_xp := 0 if party else int(original.reward_xp)*multiplier
@@ -521,9 +533,14 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		_assign_pet_id(captured)
 		Loyalty.stamp_modai(captured)
 		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured))
+		if direct_storage:
+			captured.capture_only = true
+			captured.capture_only_untrained = true
 		_record_capture(captured,"")
-		_profile.pets.append(captured)
-		if _profile.pets.size() == 1:_profile.active_pet = 0
+		if direct_storage:_profile.pet_storage.append(captured)
+		else:
+			_profile.pets.append(captured)
+			if _profile.pets.size() == 1:_profile.active_pet = 0
 	if outcome == "defeat" and party and bool(result.get("party_stay",false)):
 		# The party won without this fallen member: as battle.c BATTLE_Exit,
 		# it gets up with 1 HP where it stands (so do its fallen pets), keeps
@@ -581,6 +598,7 @@ func _refresh_loyalty() -> void:
 		if pet.has("variable_ai"):Loyalty.refresh(pet,owner)
 
 func _gain_xp(actor: Dictionary, amount: int) -> void:
+	if amount>0 and actor.get("capture_only_untrained",false):actor.capture_only_untrained = false
 	actor.xp += amount
 	while actor.level < MAX_LEVEL and actor.xp >= actor.level * 30:
 		actor.xp -= actor.level * 30
@@ -971,6 +989,7 @@ func battle_refusal(pet_id: String, what: String) -> String:
 
 ## Party slots the open battle may still fill with captures (0 without one).
 func _capture_room() -> int:
+	if bool(_pending.get("capture_only",false)):return 0
 	if _pending.is_empty() or bool(_pending.get("boss",false)) or not bool(_pending.get("can_capture",true)):return 0
 	return mini(int(_pending.get("capture_slots",0)),_pending.get("enemies",[]).size())
 
@@ -986,8 +1005,20 @@ func _battle_slots() -> Array:
 	for pet in _pending.pets:slots.append(int(where.get(str(pet.get("pet_id","")),-1)))
 	return slots
 
-## auto_hunt marks a stored reject the rolling keep may prune; qualified marks a
-## qualifying pet the find-pet cycle stored (shown as 达标; cleared on retrieval).
+## Capacity checks are shared by preflight and settlement, before any mutation.
+func storage_capture_room(count: int) -> bool:
+	last_error = ""
+	var capacity := preload("res://server/server_settings.gd").pet_storage_capacity()
+	if capacity>0 and _profile.get("pet_storage",[]).size()+count>capacity:
+		last_error = "仓库已满；只抓不练已暂停，请先腾出仓库位置。"
+		return false
+	return true
+
+static func capture_only_protected(pet: Dictionary) -> bool:
+	return bool(pet.get("capture_only",false)) and bool(pet.get("capture_only_untrained",false))
+
+## auto_hunt marks a stored reject the rolling keep may prune; qualified marks
+## a qualifying pet (shown as 达标; cleared on retrieval).
 func store_pet(index: int, auto_hunt: bool=false, qualified: bool=false) -> bool:
 	last_error=""
 	if index<0 or index>=_profile.pets.size():last_error="请选择随身宠物。";return false
@@ -996,6 +1027,7 @@ func store_pet(index: int, auto_hunt: bool=false, qualified: bool=false) -> bool
 	if index==int(_profile.get("ride_pet",-1)):
 		last_error="请先取消这只宠物的骑乘状态。";return false
 	_ensure_pet_ids()
+	if not storage_capture_room(1):return false
 	if auto_hunt:_profile.pets[index].auto_hunt=true
 	if qualified:_profile.pets[index].auto_qualified=true
 	_profile.pet_storage.append(_profile.pets[index])
@@ -1032,7 +1064,7 @@ func prune_hunt_pets(template_id: int, keep: Dictionary, ids: Array) -> int:
 	for id in ids:allowed[str(id)]=true
 	var candidates:=[]
 	for pet in _profile.get("pet_storage",[]):
-		if allowed.has(str(pet.get("pet_id",""))) and (pet.get("auto_hunt",false) or pet.get("auto_reject",false)) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
+		if not capture_only_protected(pet) and allowed.has(str(pet.get("pet_id",""))) and (pet.get("auto_hunt",false) or pet.get("auto_reject",false)) and not pet.get("favorite",false) and int(pet.get("template_id",-1))==template_id:candidates.append(pet)
 	if candidates.size()<=total_keep:return 0
 	var kept:={}
 	for metric in ["sum","attack","defence","speed"]:
@@ -1078,6 +1110,9 @@ func apply_keep_rule(template_id: int, rule: Dictionary, protected: Dictionary =
 	# During a battle its participants stay as well.
 	kept.merge(battle_pets(),false)
 	var pets:=KeepRule.species_pets(_profile,template_id)
+	if source=="自动整理":
+		for pet in pets:
+			if capture_only_protected(pet):kept[str(pet.pet_id)] = "只抓不练，尚未手动练级"
 	var verdict:=KeepRule.evaluate(pets,rule,kept)
 	if verdict.release.is_empty():return []
 	var summary:=release_pets(verdict.release,source,keep_rule_notes(pets,verdict))
@@ -1149,7 +1184,8 @@ func release_pets(ids: Array, source: String = "手动", notes: Dictionary = {})
 		var identifier:=str(pet.get("pet_id",""))
 		if not wanted.has(identifier):continue
 		found[identifier]=true
-		if pet.get("favorite",false):result.skipped.append({"id":identifier,"reason":"收藏"})
+		if source in ["自动整理","未达标整理"] and capture_only_protected(pet):result.skipped.append({"id":identifier,"reason":"只抓不练，尚未手动练级"})
+		elif pet.get("favorite",false):result.skipped.append({"id":identifier,"reason":"收藏"})
 		elif busy.has(identifier):result.skipped.append({"id":identifier,"reason":"战斗中"})
 		elif identifier==ride_id:result.skipped.append({"id":identifier,"reason":"骑乘中"})
 		elif identifier==active_id:result.skipped.append({"id":identifier,"reason":"出战中"})
@@ -1485,6 +1521,8 @@ func _valid_profile(value: Variant) -> bool:
 		if pet.get("sprite") != definition.get("sprite",-1):
 			return false
 		if pet.has("original_end_event") and not _integer(pet.original_end_event,0,1):return false
+		for flag in ["capture_only","capture_only_untrained"]:
+			if pet.has(flag) and not pet[flag] is bool:return false
 		if pet.has("variable_ai") and not _integer(pet.variable_ai,Loyalty.VARIABLE_MIN,Loyalty.VARIABLE_MAX):return false
 		if pet.has("modai") and not _integer(pet.modai,0,1000000000):return false
 		if pet.has("loyalty") and not _integer(pet.loyalty,0,100):return false

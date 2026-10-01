@@ -190,6 +190,7 @@ const SHOWCASE_LOG_MAX := 8
 ## for its turn to finish playing up to this long (a 1x group turn is long).
 const SHOWN_PRESENT_TIMEOUT_MSEC := 60000
 var flow_showcase := false
+var flow_capture_only := false
 ## Found hits waiting for their turn: {index, slot, run_seed, actor, troop,
 ## prediction, quality}. Every species has its own queue: kept as one array
 ## grouped by species (template id, ascending), each group best first by the
@@ -261,6 +262,7 @@ func _init(owner) -> void:
 # ---- commands --------------------------------------------------------------
 
 func start(command: Dictionary) -> Dictionary:
+	if command.get("filter") is Dictionary and command.filter.has("capture_only") and not command.filter.capture_only is bool:return _reply(false,"capture_only must be boolean")
 	for flag in ["select_troops","borrow_troops"]:
 		if command.get("settings") is Dictionary and command.settings.has(flag) and not command.settings[flag] is bool:return _reply(false,"%s must be bool"%flag)
 	_set_position(command)
@@ -286,6 +288,7 @@ func start(command: Dictionary) -> Dictionary:
 			flow_stat_filters.merge(_int_keys(command.get("stat_filters",{})),true)
 			for id in flow_stat_filters:flow_stat_filters[id].erase("keep_rule")
 			flow_hunt_request = hunt_request(command)
+			flow_capture_only = bool(flow_hunt_request.get("capture_only",false))
 			_load_settings(command)
 			return _reply(start_cycle(false),flow_reason)
 	return {"ok":false,"reason":"unknown automation"}
@@ -318,6 +321,9 @@ func hunt_request(command: Dictionary = {}) -> Dictionary:
 			given.templates = checked.overrides.hunt.templates
 		elif given.has("template"):filter.erase("templates")
 		filter.merge(given,true)
+	filter.capture_only = bool(AutomationSettings.effective(backend.session.automation_settings()).hunt.get("capture_only",false))
+	if filter.capture_only:
+		filter.merge({"capture_only":true,"level_one":true,"auto_capture":true,"showcase":true},true)
 	var actual := usable_templates(bool(filter.level_one))
 	filter.usable = actual.filter(func(id):return not filter.has("usable") or id in filter.usable)
 	return filter
@@ -502,6 +508,8 @@ func step() -> void:
 	if backend.battle_open:
 		if not compact_active and not _presentation_done(state):return
 		if not state.active:
+			if bool(backend.session._pending.get("capture_only",false)) and not bool(backend.battle_state.get("settled",false)):
+				stop(str(backend.battle_state.get("settlement_error","捕获结果未保存，已暂停；请处理仓库容量后再结束战斗。")));return
 			battles += 1
 			turns = 0
 			var outcome: String = state.outcome
@@ -570,7 +578,7 @@ func step() -> void:
 		if not reason.is_empty() and bool(settings.get("spirit",true)):reason += spirit_note(reason,state)
 		if not reason.is_empty():stop(reason);return
 		if turns >= 200:stop("单场超过200回合，请手动处理");return
-		if str(settings.preset)=="capture" and backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
+		if str(settings.preset)=="capture" and backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY and not (flow_active() and bool(backend.session._pending.get("capture_only",false))):
 			stop("宠物栏已满，请先腾出位置");return
 		var decision: Dictionary
 		# After the catch the run leaves: no enemy is defeated, so the weaken
@@ -877,8 +885,10 @@ func start_hunt(filter: Dictionary) -> bool:
 	if hunt_running or backend.battle_open:return false
 	if not backend.session.world_catalog.field(position_map):return false
 	var profile: Dictionary = backend.session.snapshot()
-	if profile.pets.size()>=GameSession.PET_CAPACITY:
+	if profile.pets.size()>=GameSession.PET_CAPACITY and not (flow_active() and flow_capture_only):
 		hunt_status = "宠物栏已满，请先腾出位置再寻找新伙伴。";return false
+	if flow_active() and flow_capture_only and not backend.session.storage_capture_room(1):
+		hunt_status = backend.session.last_error;return false
 	if int(settings.get("capture_hp",100))<100 and bool(filter.get("level_one",true)) and (bool(filter.get("auto_capture",false)) or flow_phase=="hunt"):
 		var choice: Dictionary = Policy.capture_pet_choice(profile,settings,1)
 		if choice.has("stop"):
@@ -1222,7 +1232,7 @@ func shared_keep_rule() -> Dictionary:
 ## Lv.120) before it stops; 0 never stops, 1 stops at the first to compare.
 ## Read from the run's settings snapshot, which follows the player's edits.
 func run_stop_after() -> int:
-	return int(AutomationSettings.effective(flow_settings_overrides).hunt.get("stop_after",1))
+	return 0 if flow_capture_only else int(AutomationSettings.effective(flow_settings_overrides).hunt.get("stop_after",1))
 
 func collect_target_text() -> String:
 	var stop_after := run_stop_after()
@@ -1502,7 +1512,7 @@ func start_cycle(continuing: bool) -> bool:
 	if flow_active():return false
 	if backend.battle.snapshot().get("active",false) or backend.battle_open:
 		flow_reason = "请先结束战斗或移动，再开始一轮找宠。";return false
-	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
+	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY and not flow_capture_only:
 		flow_reason = "宠物栏已满，请自行存放伙伴后再开始。";return false
 	if not continuing or flow_run_id.is_empty():
 		_flow_run_serial += 1
@@ -1512,6 +1522,8 @@ func start_cycle(continuing: bool) -> bool:
 		flow_skip_kind = "";flow_skip_streak = 0;flow_skipped_count = 0;flow_skip_note = ""
 		survey = {};survey_picks = [];survey_last = {};flow_target_survey = false;_pets_key = ""
 		start_timer()
+	if flow_capture_only and not backend.session.storage_capture_room(1):
+		flow_reason = backend.session.last_error;return false
 	flow_map = position_map
 	flow_cell = position_cell
 	flow_known_ids.clear();flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_matched_roll = {};flow_capture_battle_id = "";flow_reason = ""
@@ -1519,7 +1531,7 @@ func start_cycle(continuing: bool) -> bool:
 	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
 	flow_phase = "hunt"
 	if not continuing:
-		flow_showcase = bool(flow_hunt_request.get("showcase",false))
+		flow_showcase = flow_capture_only or bool(flow_hunt_request.get("showcase",false))
 		showcase_queue = [];showcase_current = {};showcase_log = [];showcase_last_template = -1
 	_emit_event({"kind":"flow_hunt"})
 	if not start_hunt(flow_hunt_request):
@@ -1548,9 +1560,9 @@ func request_stop_cycle(message: String) -> void:
 		stop_cycle(message);return
 	flow_stop_pending = message
 	if not showcase_queue.is_empty():
-		_showcase_line("dropped","停止：排队的 %d 只已放弃，本只练完后停止" % showcase_queue.size())
+		_showcase_line("dropped",("停止：排队的 %d 只已放弃，本只抓完直接存仓后停止" if flow_capture_only else "停止：排队的 %d 只已放弃，本只练完后停止") % showcase_queue.size())
 		showcase_queue = []
-	else:_showcase_line("dropped","停止：本只练完后停止（再按一次立即停止）")
+	else:_showcase_line("dropped","停止：本只抓完直接存仓后停止（再按一次立即停止）" if flow_capture_only else "停止：本只练完后停止（再按一次立即停止）")
 	if hunt_running:
 		_stopping_cycle = true
 		stop_hunt(message)
@@ -1587,7 +1599,7 @@ func flow_step() -> void:
 		_showcase_step()
 		return
 	if not flow_stop_pending.is_empty() and flow_phase in ["restart","hunt"]:
-		stop_cycle("本只练完，已停止：%s" % flow_stop_pending);return
+		stop_cycle(("本只抓完直接存仓，已停止：%s" if flow_capture_only else "本只练完，已停止：%s") % flow_stop_pending);return
 	if flow_phase=="restart":
 		flow_phase = "idle"
 		if not start_cycle(true):stop_cycle(flow_reason)
@@ -1730,13 +1742,13 @@ static func same_capture(pet: Dictionary, actor: Dictionary) -> bool:
 ## 完成 or 找到 (a scan on its own found its pet). Counts are the run's so far.
 func _record_stop(scope: String, outcome: String, reason: String, pet: Dictionary = {}) -> void:
 	var entry := {"time":int(Time.get_unix_time_from_system()),"scope":scope,"outcome":outcome,"reason":reason,
-		"phase":flow_phase if scope=="flow" else "hunt","run":flow_run_id if scope=="flow" else "",
+		"capture_only":flow_capture_only if scope=="flow" else false,"phase":flow_phase if scope=="flow" else "hunt","run":flow_run_id if scope=="flow" else "",
 		"rolls":hunt_rolls,"collected":flow_collected_count,"stored":flow_stored_count,"skipped":flow_skipped_count,"released":flow_released_count,
 		"map_id":position_map,"map_name":backend.map_name(position_map) if position_map>=0 else "","cell":[position_cell.x,position_cell.y],"pet_id":str(pet.get("pet_id","")),"name":str(pet.get("name",""))}
 	stop_events.append(entry)
 	var who := ""
 	if not str(entry.name).is_empty():who = " · %s%s" % [entry.name," "+str(entry.pet_id) if not str(entry.pet_id).is_empty() else ""]
-	log_line("[%s] %s：%s%s · 已遇敌 %d 组 · 达标 %d · 存仓 %d · 跳过 %d" % ["找宠流程" if scope=="flow" else "自动抓极品",outcome,reason.replace("\n"," "),who,hunt_rolls,flow_collected_count,flow_stored_count,flow_skipped_count])
+	log_line("[%s] %s：%s%s · 已遇敌 %d 组 · %s %d · 存仓 %d · 跳过 %d" % ["找宠流程" if scope=="flow" else "自动抓极品",outcome,reason.replace("\n"," "),who,hunt_rolls,"抓到Lv.1" if flow_capture_only and scope=="flow" else "达标",flow_collected_count,flow_stored_count,flow_skipped_count])
 
 func take_stop_events() -> Array:
 	var result := stop_events
@@ -1779,7 +1791,7 @@ const RESUME_KINDS := ["flow","hunt","training"]
 const RESUME_FLOW_FIELDS := ["flow_phase","flow_reason","flow_pet_id","flow_known_ids","flow_matched_actor","flow_matched_index","flow_matched_roll",
 	"flow_stat_filters","flow_settings_overrides","flow_target_filter","flow_hunt_request","flow_stored_count","flow_last_result","flow_last_stored_id",
 	"flow_last_stored_total","flow_kept_count","flow_collected_count","flow_pruned_count","flow_run_reject_ids","flow_released_count","flow_held_count",
-	"flow_predicted_rejects","flow_run_id","flow_showcase","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","flow_skip_kind",
+	"flow_predicted_rejects","flow_run_id","flow_showcase","flow_capture_only","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","flow_skip_kind",
 	"flow_skip_streak","flow_skipped_count","flow_skip_note","flow_best_predicted","survey_picks","survey_last","flow_target_survey"]
 const RESUMED := "服务器重启后已恢复"
 ## Read back at startup (load_resume) and applied by try_resume.
@@ -1966,6 +1978,11 @@ func _caught_index() -> int:
 ## 后台搜宠 its queued hit goes back to the front of the queue (replayed and
 ## checked before the battle), else its roll is replayed here.
 func _resume_capture() -> String:
+	if flow_capture_only:
+		var stored: Array = backend.session.snapshot().get("pet_storage",[]).filter(func(pet):return not flow_known_ids.has(str(pet.get("pet_id",""))) and same_capture(pet,flow_matched_actor))
+		if not stored.is_empty():
+			_complete_capture_only()
+			return "重启前已捕获，只抓不练继续找宠"
 	if not HuntRules.selected(hunt_filter,int(flow_matched_actor.get("template_id",-1))) and _caught_index()<0:
 		flow_phase="restart"
 		showcase_current={}
@@ -2319,7 +2336,7 @@ static func _stat_text(stats: Dictionary) -> String:
 ## One find-pet step while searching in the background.
 func _showcase_step() -> void:
 	if not flow_stop_pending.is_empty() and flow_phase in ["restart","hunt"]:
-		stop_cycle("本只练完，已停止：%s" % flow_stop_pending);return
+		stop_cycle(("本只抓完直接存仓，已停止：%s" if flow_capture_only else "本只练完，已停止：%s") % flow_stop_pending);return
 	match flow_phase:
 		"hunt":
 			if not showcase_queue.is_empty():_showcase_capture()
@@ -2378,10 +2395,12 @@ func _showcase_capture() -> void:
 	var troop: Dictionary = hunt_catalog.roll(flow_map,flow_cell,rng,backend.session._profile.get("original_items",[])) if hunt_catalog!=null else {}
 	if troop.is_empty() or JSON.stringify(troop)!=JSON.stringify(entry.troop):
 		_skip_hit("复核不一致","排队的第 %d 组复核不一致，没有进入战斗。" % (int(entry.index)+1));return
-	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
+	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY and not flow_capture_only:
 		stop_cycle("宠物栏已满，请自行存放伙伴后再开始。");return
+	if flow_capture_only and not backend.session.storage_capture_room(1):
+		stop_cycle(backend.session.last_error);return
 	_protect_pets()
-	var config: Dictionary = backend.session.start_wild_battle_config(troop,_mixed_clear_target(troop,int(entry.slot)))
+	var config: Dictionary = backend.session.start_wild_battle_config(troop,_mixed_clear_target(troop,int(entry.slot)),flow_capture_only)
 	if config.is_empty():stop_cycle("战斗校验未通过，已停止。");return
 	var refusal := mixed_refusal(troop,int(entry.slot),config)
 	if not refusal.is_empty():
@@ -2408,6 +2427,8 @@ func _showcase_capture() -> void:
 func _showcase_captured() -> void:
 	showcase_show_battle = false
 	if _capture_failed():return
+	if flow_capture_only:
+		_complete_capture_only();return
 	var fresh: Array = []
 	var pets: Array = backend.session.snapshot().pets
 	for i in range(pets.size()):
@@ -2423,10 +2444,28 @@ func _showcase_captured() -> void:
 	flow_phase = "train"
 	_showcase_train()
 
-## 自动练级 for the caught pet: the player's own 经验倍率 (training.xp), every
-## battle shown at this device's 战斗速度, the pet active and the 五人镜像队 made
-## of the player's other best pets. The runner stops only between battles,
-## once the pet reaches Lv.120.
+## The captured actor was added directly to storage by GameSession, never
+## temporarily to the carried roster. Match its UID/seed, including on resume.
+func _complete_capture_only() -> void:
+	var fresh: Array = backend.session.snapshot().get("pet_storage",[]).filter(func(pet):return not flow_known_ids.has(str(pet.get("pet_id",""))) and same_capture(pet,flow_matched_actor))
+	if fresh.size()!=1 or not GameSession.capture_only_protected(fresh[0]) or int(fresh[0].level)!=1:
+		stop_cycle("无法唯一确认只抓不练的Lv.1仓库伙伴，请检查仓库。")
+		return
+	flow_pet_id = str(fresh[0].pet_id)
+	_capture_succeeded()
+	flow_collected_count += 1
+	flow_kept_count += 1
+	flow_stored_count += 1
+	flow_last_stored_id = flow_pet_id
+	flow_last_result = "只抓不练：%s %s 保持真实Lv.1，已直接存仓" % [str(fresh[0].get("name","")),flow_pet_id]
+	flow_reason = flow_last_result
+	_showcase_line("captured",flow_last_result)
+	flow_phase = "restart"
+	backend.publish()
+	_emit_status()
+
+## 自动练级 for the caught pet uses the player's training.xp and 战斗速度,
+## stopping between battles when Lv.120 is reached.
 func _showcase_train() -> void:
 	if _flow_pet().is_empty():stop_cycle("目标宠物不在随身队伍");return
 	# Set before the first battle opens: with a high 经验倍率 that battle may
@@ -2479,7 +2518,7 @@ func _showcase_restore() -> void:
 ## Back to searching: the next queued hit is taken on the following step.
 func _showcase_resume() -> void:
 	if not flow_stop_pending.is_empty():
-		stop_cycle("本只练完，已停止：%s" % flow_stop_pending);return
+		stop_cycle(("本只抓完直接存仓，已停止：%s" if flow_capture_only else "本只练完，已停止：%s") % flow_stop_pending);return
 	showcase_current = {}
 	flow_pet_id = "";flow_matched_actor = {};flow_matched_index = -1;flow_capture_battle_id = ""
 	flow_phase = "hunt"
@@ -2507,7 +2546,7 @@ func status() -> Dictionary:
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(shared_keep_rule().get("auto",false)),"predicted_rejects":flow_predicted_rejects,
-			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
+			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"capture_only":flow_capture_only,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
 			"survey":survey_status(),"thresholds":thresholds_text(),
 			"log":showcase_log.duplicate(true),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}
@@ -2592,7 +2631,7 @@ func capture_decision(pet: Dictionary, source: String) -> Dictionary:
 			if v>value:higher+=1
 			if v==value:tied+=1
 		metrics.append({"key":key,"value":value,"rank":1+higher,"ties":tied,"original_max":original_max})
-	var tags: Array = []
+	var tags: Array = ["capture_only"] if pet.get("capture_only",false) else []
 	var thresholds: Dictionary = {}
 	if source=="找宠流程":
 		thresholds = flow_target_filter.duplicate(true)

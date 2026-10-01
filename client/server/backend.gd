@@ -581,6 +581,9 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	# Freeze source loot metadata from the config issued by this authority.
 	config = config.duplicate(true)
 	# Borrowed source presentation is issued only by this authority.
+	for key in ["capture_only","capture_slots","can_capture"]:
+		config.erase(key)
+		if session._pending.has(key):config[key] = session._pending[key]
 	config.erase("training_borrow")
 	if session._pending.get("training_borrow") is Dictionary:config.training_borrow=session._pending.training_borrow.duplicate(true)
 	var source_encounter := bool(session._pending.get("source_encounter",false))
@@ -801,10 +804,23 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 		return battle_state.duplicate(true)
 	if settle.is_empty() and battle_open and not party_battle():session._pending.loot_claims = battle.drop_claims_for()
 	var before: Dictionary = session.snapshot()
+	var capture_only := bool(session._pending.get("capture_only",false)) and not party_battle()
+	var pending_before: Dictionary = session._pending.duplicate(true) if capture_only and not bool(state.active) else {}
+	var capture_events_before: Array = session.capture_events.duplicate(true) if capture_only and not bool(state.active) else []
 	# A party battle settles this player's own slice (its own battle id and
 	# rewards); the state its devices see stays the shared battle.
 	var result: Dictionary = settle if not settle.is_empty() else state
 	if not bool(state.active) and session.apply_battle_result(result,drop_claims):
+		if capture_only and not save():
+			session._profile = before
+			session._pending = pending_before
+			session.capture_events = capture_events_before
+			state.settled = false
+			state.settlement_error = "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
+			state.xp = 0;state.gold = 0;state.result_summary = []
+			battle_state = state
+			_emit({"type":"battle_turn","state":state.duplicate(true)})
+			return state.duplicate(true)
 		if not settle.is_empty():
 			for key in ["xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:state[key] = result.get(key,0)
 		state.settled = true
@@ -829,10 +845,13 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 					if int(after.pets[index].level) == 2:
 						state.events.append("可以向饲育员学习伙伴技能。")
 		elif state.outcome=="captured":
-			state.events.append("伙伴已加入宠物栏，可为它取名并选择出战。")
+			state.events.append("只抓不练：Lv.1伙伴已直接存入仓库。" if capture_only else "伙伴已加入宠物栏，可为它取名并选择出战。")
 		var saved_ok := save()
 		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.stop(self,"沿途战斗保存失败，停止自动任务。")
 		_publish()
+	if capture_only and not bool(state.get("active",true)) and not bool(state.get("settled",false)):
+		state.settlement_error = session.last_error if not session.last_error.is_empty() else "只抓不练捕获结算校验失败，已暂停，未发放奖励。"
+		state.xp = 0;state.gold = 0;state.result_summary = []
 	state.capture_assist = battle.capture_assist
 	_publish_battle_pets()
 	battle_state = state
@@ -845,6 +864,9 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	# 自动练级 met the next troop, LAN phase 4c) is not an error.
 	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
+	if bool(session._pending.get("capture_only",false)):
+		var retried := _after_turn(battle.snapshot())
+		if not bool(retried.get("settled",false)):return _reject(str(retried.get("settlement_error","捕获未结算")))
 	return {"ok":true,"outcome":close_battle()}
 
 func close_battle() -> String:
@@ -871,7 +893,7 @@ func _publish_battle_pets() -> void:
 func _live_battle_state() -> Dictionary:
 	if battle_state.is_empty():return {}
 	var live: Dictionary = battle.snapshot()
-	for key in ["settled","result_summary","xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:
+	for key in ["settled","settlement_error","result_summary","xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:
 		if battle_state.has(key) and not live.get("active",false):live[key] = battle_state[key]
 	if not live.get("active",false) and battle_state.has("events") and str(battle_state.get("outcome",""))==str(live.get("outcome","")):live.events = battle_state.events
 	live.capture_assist = battle.capture_assist
