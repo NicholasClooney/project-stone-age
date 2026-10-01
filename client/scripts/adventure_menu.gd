@@ -65,6 +65,8 @@ var _records_prefs_loaded := false
 ## 收藏优先, this device's (viewer.cfg), loaded with the comparison prefs.
 var storage_order := ""
 var storage_favorites_first := true
+var storage_ascending := false
+var storage_species := ""
 const PetStatFilter=preload("res://scripts/pet_stat_filter.gd")
 const PetGrowth = preload("res://scripts/pet_growth.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
@@ -199,15 +201,33 @@ func choice(caption: String, point: Vector2, action: String, value: Variant = nu
 ## player left them, as long as the same view and page stay on screen.
 func rebuild() -> void:
 	if world==null or not visible:return
-	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_records_open,records_tab,records_page,records_template,records_run,storage_order,storage_favorites_first,records_sorts.get(records_tab,[]),records_uncaught]
+	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_records_open,records_tab,records_page,records_template,records_run,storage_order,storage_favorites_first,storage_ascending,storage_species,records_sorts.get(records_tab,[]),records_uncaught]
 	if kind=="pets" and pet_records_open and is_instance_valid(panel) and panel.find_child("PetRecordsPanel",false,false)!=null:
 		_refresh_records_panel(view)
+		return
+	if kind=="pets" and pet_storage_open and not pet_compare_open and is_instance_valid(panel) and panel.find_child("PetStoragePanel",false,false)!=null:
+		_refresh_storage_panel(view)
 		return
 	var before: Array[Vector2i] = world.capture_scroll(self) if view==_built_view else ([] as Array[Vector2i])
 	_rebuild_panel()
 	_built_view = view.duplicate(true)
 	_records_drawn = [records_data.duplicate(true),records_loading] if pet_records_open else []
 	world.restore_scroll(self,before)
+
+## Reuse the warehouse controls on state pushes, just as records do.
+func _refresh_storage_panel(view:Array)->void:
+	var select:=panel.find_child("StorageSpecies",true,false) as OptionButton
+	if select!=null and select.get_popup().visible:return
+	var live:=panel
+	panel=Control.new()
+	pet_storage_panel(world.session.snapshot())
+	var draft:=panel
+	panel=live
+	_sync_records_controls(live.get_child(0),draft.get_child(0))
+	if view!=_built_view:
+		(live.find_child("StorageScroll",true,false) as ScrollContainer).scroll_vertical=0
+	draft.free()
+	_built_view=view.duplicate(true)
 
 ## State pushes do not replace an open records window. Build a detached
 ## description only when its data/view changes, then reconcile reusable controls.
@@ -287,6 +307,12 @@ func _sync_records_controls(live:Control,draft:Control)->void:
 	var children:=draft.get_children()
 	for i in range(children.size()):
 		var next:Control=children[i]
+		if str(next.name).begins_with("StorageRow_"):
+			var same:=live.get_node_or_null(NodePath(str(next.name)))
+			if same!=null:live.move_child(same,i)
+			else:
+				draft.remove_child(next);live.add_child(next);live.move_child(next,i)
+				continue
 		if i<live.get_child_count() and live.get_child(i).get_class()==next.get_class():
 			var existing:Control=live.get_child(i)
 			existing.name=next.name
@@ -1174,8 +1200,13 @@ func load_compare_prefs()->void:
 	pet_compare_favorites_first=bool(world.viewer_pref("compare_favorites_first",true))
 	pet_compare_carried_first=bool(world.viewer_pref("compare_carried_first",true))
 	storage_order=str(world.viewer_pref("storage_order",""))
-	if not storage_order in ["","caught_new","caught_old"]:storage_order=""
-	storage_favorites_first=bool(world.viewer_pref("storage_favorites_first",true))
+	if not storage_order in PetComparison.STORAGE_KEYS:storage_order=""
+	var direction=world.viewer_pref("storage_ascending",false)
+	storage_ascending=direction if direction is bool else false
+	var species=world.viewer_pref("storage_species","")
+	storage_species=species if species is String else ""
+	var favorites=world.viewer_pref("storage_favorites_first",true)
+	storage_favorites_first=favorites if favorites is bool else true
 
 ## Sets the 同种比较 order (repeats dropped, at least one key) and remembers it on this device.
 func set_compare_order(order:Array)->void:
@@ -1325,9 +1356,17 @@ func open_pet_comparison(pet_id:String)->bool:
 const STORAGE_LEAD:=204.0 # ★ 26 + name 172 + one separator
 const STORAGE_NAME:=172.0
 
+func set_storage_sort(key:String)->void:
+	storage_ascending=not storage_ascending if storage_order==key else false
+	storage_order=key
+	world.set_viewer_pref("storage_order",key)
+	world.set_viewer_pref("storage_ascending",storage_ascending)
+	pet_storage_page=0
+	rebuild()
+
 func pet_storage_panel(profile:Dictionary)->void:
 	var storage:Array=profile.get("pet_storage",[])
-	var overlay:=pet_overlay("PetStoragePanel","宠物仓库","%d只 · 携带%d/%d" % [storage.size(),profile.pets.size(),world.session.PET_CAPACITY],Vector2(820,mini(650,190+maxi(1,mini(20,storage.size()))*44)))
+	var overlay:=pet_overlay("PetStoragePanel","宠物仓库","%d只 · 携带%d/%d" % [storage.size(),profile.pets.size(),world.session.PET_CAPACITY],Vector2(820,mini(650,226+maxi(1,mini(20,storage.size()))*44)))
 	overlay_button(overlay,"关闭",752,func():pet_storage_open=false;pet_view="list";rebuild())
 	overlay_button(overlay,"宠物记录",656,func():open_pet_records("",-1),"StorageRecords")
 	var store_index:=-1
@@ -1341,22 +1380,41 @@ func pet_storage_panel(profile:Dictionary)->void:
 	if not store_lock.is_empty():store.disabled=true;store.tooltip_text=store_lock
 	load_compare_prefs()
 	var sort:=OptionButton.new();sort.name="StorageSort";sort.position=Vector2(250,46);sort.focus_mode=Control.FOCUS_NONE;sort.tooltip_text="仓库排序（这台设备记住）"
-	var orders:=["","caught_new","caught_old"]
-	for caption in ["现有顺序","最新抓到","最早抓到"]:sort.add_item(caption)
+	var orders:=PetComparison.STORAGE_KEYS
+	for caption in ["现有顺序","最新抓到","最早抓到","等级","三围合","攻击","防御","敏捷","体力"]:sort.add_item(caption)
 	sort.select(maxi(0,orders.find(storage_order)))
-	sort.item_selected.connect(func(index:int):storage_order=orders[index];world.set_viewer_pref("storage_order",storage_order);pet_storage_page=0;rebuild())
+	sort.item_selected.connect(func(index:int):set_storage_sort(orders[index]))
 	overlay.add_child(sort)
 	var favorites:=CheckBox.new();favorites.name="StorageFavoritesFirst";favorites.text="收藏优先";favorites.position=Vector2(380,48);favorites.focus_mode=Control.FOCUS_NONE;favorites.tooltip_text="收藏的宠物排在最前面"
 	favorites.button_pressed=storage_favorites_first
 	favorites.toggled.connect(func(on:bool):storage_favorites_first=on;world.set_viewer_pref("storage_favorites_first",on);rebuild())
 	overlay.add_child(favorites)
-	var count:int=storage.size();var pages:=maxi(1,ceili(count/20.0));pet_storage_page=clampi(pet_storage_page,0,pages-1)
+	var species_names:={}
+	for pet in storage:
+		var key:=PetComparison.species_key(pet)
+		species_names[key]=str(PetComparison.Rules.species_definition(key).get("name",pet.name))
+	if not storage_species.is_empty() and not species_names.has(storage_species):storage_species=""
+	var species_keys:Array=species_names.keys();species_keys.sort();species_keys.push_front("")
+	var picker:=OptionButton.new();picker.name="StorageSpecies";picker.position=Vector2(14,82);picker.size=Vector2(220,28);picker.clip_text=true;picker.focus_mode=Control.FOCUS_NONE
+	for key in species_keys:picker.add_item("全部品种" if key=="" else str(species_names[key]))
+	picker.select(species_keys.find(storage_species))
+	picker.item_selected.connect(func(index:int):storage_species=species_keys[index];world.set_viewer_pref("storage_species",storage_species);pet_storage_page=0;rebuild())
+	overlay.add_child(picker)
+	var explanation:=PetTable.text("当前属性排序 · 三围合＝攻＋防＋敏 · 再点列名切换升降","meta");explanation.position=Vector2(250,88);overlay.add_child(explanation)
+	var rows:=PetComparison.storage_rows(profile,storage_order,storage_favorites_first,storage_ascending,storage_species)
+	var count:int=rows.size();var pages:=maxi(1,ceili(count/20.0));pet_storage_page=clampi(pet_storage_page,0,pages-1)
 	var previous:Button=world.button("◀",func():pet_storage_page=maxi(0,pet_storage_page-1);rebuild());previous.position=Vector2(620,46);overlay.add_child(previous)
 	var page:=PetTable.text("%d / %d 页"%[pet_storage_page+1,pages],"meta");page.position=Vector2(662,52);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
 	var next:Button=world.button("▶",func():pet_storage_page=mini(pages-1,pet_storage_page+1);rebuild());next.position=Vector2(772,46);overlay.add_child(next)
-	var note:=PetTable.text(feedback if not feedback.is_empty() else "出战宠存入时自动撤回；骑乘宠须先下骑。存取保留属性；收藏的排在前面。","meta",PetTable.TEXT if not feedback.is_empty() else null);note.position=Vector2(14,84);overlay.add_child(note)
-	var header:=PetTable.header(STORAGE_LEAD,["操作"]);header.position=Vector2(18,108);overlay.add_child(header)
-	var scroll:=ScrollContainer.new();scroll.name="StorageScroll";scroll.position=Vector2(12,130);scroll.size=Vector2(796,maxf(40,overlay.size.y-144));scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var note:=PetTable.text(feedback if not feedback.is_empty() else "出战宠存入时自动撤回；骑乘宠须先下骑。存取保留属性；收藏的排在前面。","meta",PetTable.TEXT if not feedback.is_empty() else null);note.position=Vector2(14,118);overlay.add_child(note)
+	var header:=PetTable.header(STORAGE_LEAD,["操作"]);header.position=Vector2(18,142);overlay.add_child(header)
+	for i in range(PetTable.COLUMNS.size()):
+		var column:Array=PetTable.COLUMNS[i]
+		var key:String="stat_total" if column[0]=="sum" else column[0]
+		var old:Control=header.get_child(i+1);header.remove_child(old);old.free()
+		var button:Button=world.button(str(column[1])+("↑" if storage_ascending else "↓") if storage_order==key else str(column[1]),func():set_storage_sort(key))
+		button.name="StorageSort_"+key;button.custom_minimum_size.x=column[2];button.set_meta("compact",true);header.add_child(button);header.move_child(button,i+1)
+	var scroll:=ScrollContainer.new();scroll.name="StorageScroll";scroll.position=Vector2(12,170);scroll.size=Vector2(796,maxf(40,overlay.size.y-184));scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
 	# Gold marks the best of each column within the same species.
 	var by_species:={}
@@ -1367,7 +1425,7 @@ func pet_storage_panel(profile:Dictionary)->void:
 	var best:={}
 	for key in by_species:best[key]=PetTable.best_values(by_species[key]) if by_species[key].size()>1 else {}
 	var shade:=0
-	for entry in PetComparison.storage_rows(profile,storage_order,storage_favorites_first).slice(pet_storage_page*20,(pet_storage_page+1)*20):
+	for entry in rows.slice(pet_storage_page*20,(pet_storage_page+1)*20):
 		var index:int=entry.index
 		var pet:Dictionary=entry.pet
 		var identifier:=str(pet.pet_id)

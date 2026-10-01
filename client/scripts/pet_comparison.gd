@@ -93,13 +93,20 @@ static func rows(profile:Dictionary,selected:Dictionary,order:Variant=DEFAULT_OR
 
 ## 宠物仓库 order: favourites first when favorites_first, then order: "" the
 ## warehouse's own order, caught_new newest first, caught_old oldest first.
-static func storage_rows(profile:Dictionary,order:String="",favorites_first:bool=true)->Array:
+## Stat sorts use current displayed values; equal values retain storage order.
+## Filtering uses the canonical species key, before favourites and sorting.
+const STORAGE_KEYS:=["","caught_new","caught_old","level","stat_total","attack","defence","speed","max_hp"]
+static func storage_rows(profile:Dictionary,order:String="",favorites_first:bool=true,ascending:bool=false,species:String="")->Array:
  var result:=[]
  var pets:Array=profile.get("pet_storage",[])
- for index in range(pets.size()):result.append({"pet":pets[index],"index":index})
+ for index in range(pets.size()):
+  if species.is_empty() or species_key(pets[index])==species:result.append({"pet":pets[index],"index":index})
  result.sort_custom(func(a,b):
   if favorites_first and bool(a.pet.get("favorite",false))!=bool(b.pet.get("favorite",false)):return bool(a.pet.get("favorite",false))
   if order in ["caught_new","caught_old"] and _id_number(a.pet)!=_id_number(b.pet):return (_id_number(a.pet)>_id_number(b.pet))==(order=="caught_new")
+  if order in STORAGE_KEYS and order not in ["","caught_new","caught_old"]:
+   var x:=sort_value(a.pet,order);var y:=sort_value(b.pet,order)
+   if x!=y:return (x<y) if ascending else (x>y)
   return int(a.index)<int(b.index))
  return result
 
