@@ -20,11 +20,18 @@ func _init() -> void:
 func active_npcs() -> Array:
  var result: Array = []
  for npc in npcs:
+  if not _enabled(npc.get("events", [])): continue
+  var active: Dictionary = npc.duplicate(true)
+  active.branches = []
   for branch in npc.get("branches", []):
-   if int(branch.get("event", -1)) > 0 and int(branch.event) in enabled_events:
-    result.append(npc.duplicate(true))
-    break
+   if branch.get("enabled", false) and _enabled(branch.get("events", [])):
+    active.branches.append(branch.duplicate(true))
+  if not active.branches.is_empty(): result.append(active)
  return result
+func _enabled(events: Array) -> bool:
+ for event in events:
+  if int(event) in enabled_events: return true
+ return false
 func journal(profile: Dictionary) -> Array:
  var result: Array = []
  var events: Dictionary = profile.get("original_events", {})

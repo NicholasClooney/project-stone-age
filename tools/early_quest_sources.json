@@ -1,23 +1,106 @@
 {
   "version": 1,
   "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
-  "create": "gmsv/data/npc/sainasu/event/event02.create",
   "scripts": [
     "sainasu/event/event02_1",
-    "sainasu/event/event02_2"
+    "sainasu/event/event02_2",
+    "jaruga/event/20501ev1",
+    "jaruga/event/20501ev2",
+    "jaruga/event/20501ev3",
+    "jaruga/event/20501ev4",
+    "jaruga/event/20501ev5"
   ],
   "items": [
     2414,
-    2415
-  ],
-  "jobs": [
-    11
+    2415,
+    2463,
+    2464,
+    2465,
+    2466,
+    2467,
+    2468,
+    2478,
+    2481,
+    2484,
+    2485
   ],
   "sources": {
     "gmsv/data/npc/sainasu/event/event02.create": "1b0f4e68ad7ddcae43e42192999f8241efb23d2ac6880735f05bfcbb56284254",
     "gmsv/data/npc/sainasu/event/event02_1": "9ec1284b921ed8f76d21ace9915f89b1376fee74b9eae0652c9c7f6d78be82b0",
     "gmsv/data/npc/sainasu/event/event02_2": "a6314f5110f645b7bbbd0929d89d0e43ff9574b56ccfe50f1be70a64df1a183c",
     "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
-    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/npc/jaruga/event/20501ev.create": "9956eaf25f0ec4f6c126aee2086014ec98de2cdf7b7c1a39a1f3acee76fdc5d5",
+    "gmsv/data/npc/jaruga/event/20501ev1": "aee96c9f2db7134e3b30ce2d3d372776ecb45d5bfc2c0b51e425e87b1f7dc225",
+    "gmsv/data/npc/jaruga/event/20501ev2": "6edd9bf9abe39b75234a06a3affe4c16d3487a5a36a8657d53c8c59eda9450c4",
+    "gmsv/data/npc/jaruga/event/20501ev3": "a617d09f9cf1b4983d2665ecefcd42b4ab85f673ed26e886f54a79f73e7e34de",
+    "gmsv/data/npc/jaruga/event/20501ev4": "3431c172fb7784931f9b62791752eb40f2af240407a804c10ff66d9f1a0f3704",
+    "gmsv/data/npc/jaruga/event/20501ev5": "091d9c558fe450162de1230817f4ed5f3bebb3386afd8611673f93172c587c85"
+  },
+  "creates": [
+    "gmsv/data/npc/sainasu/event/event02.create",
+    "gmsv/data/npc/jaruga/event/20501ev.create"
+  ],
+  "script_events": {
+    "sainasu/event/event02_1": [
+      2
+    ],
+    "sainasu/event/event02_2": [
+      2
+    ],
+    "jaruga/event/20501ev1": [
+      18,
+      19
+    ],
+    "jaruga/event/20501ev2": [
+      18,
+      19
+    ],
+    "jaruga/event/20501ev3": [
+      18,
+      19
+    ],
+    "jaruga/event/20501ev4": [
+      18,
+      19
+    ],
+    "jaruga/event/20501ev5": [
+      18,
+      19
+    ]
+  },
+  "client_sources": {
+    "data/adrn_15.bin": "1cb73d281cb6519f5edd12bcfb6fae8fb803f084ce0b0d4e48f8fa6e4a544060"
+  },
+  "world_review": {
+    "maps": [
+      20508
+    ],
+    "interiors": [
+      20508
+    ],
+    "map_sources": {
+      "20508": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-05-08",
+        "sha256": "d0dc40863d36c148998e391601821d119db28c21517a15d215f4f123d9954b4c"
+      }
+    },
+    "portal_sources": {
+      "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c"
+    },
+    "door_choices": [
+      {
+        "from": [
+          20501,
+          8,
+          53
+        ],
+        "to": [
+          20508,
+          7,
+          24
+        ]
+      }
+    ]
   }
 }
