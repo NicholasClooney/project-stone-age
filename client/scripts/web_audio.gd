@@ -55,6 +55,19 @@ func on_context_state(state: String) -> void:
 	interrupted = true
 	if is_instance_valid(world) and is_instance_valid(world.radio):world.radio.interrupt(INTERRUPTED_NOTE)
 
+## 与其他声音同时播放 (web/audio_session.js setMix): whether the page's audio
+## session mixes with other apps' sound ("ambient") or plays like a music app
+## through the iPhone's silent switch ("playback"). Only where Safari has
+## navigator.audioSession; the page remembers the choice.
+func mix_supported() -> bool:
+	return _js != null and bool(_js.sessionSupported)
+
+func mix_on() -> bool:
+	return mix_supported() and bool(_js.mix)
+
+func set_mix(on: bool) -> void:
+	if mix_supported():_js.setMix(on)
+
 ## Asks the page to resume the AudioContext; call from a user action (the
 ## radio's 播放). Every tap already does this in the page script.
 func resume_context() -> void:

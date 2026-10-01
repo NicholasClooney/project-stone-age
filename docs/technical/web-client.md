@@ -126,6 +126,7 @@ Fix: `web/audio_session.js`, copied next to `index.html` by `scripts/build-web.s
 - on every tap, click or key press while the context is not running: plays a short silent media element (reactivates the page's audio session in WebKit), calls `resume()` and plays a one-sample buffer; a failed resume is retried on the next gesture;
 - after the page was hidden, the first gesture also plays the one-sample buffer, for a context that reports running but went silent;
 - Media Session: system play/pause controls pause and resume the radio, and Now Playing shows the track as `石器时代 电台`.
+- Audio session (Safari 16.4+ `navigator.audioSession`): `ambient` mixes with other apps' audio and video but is silenced by the iPhone's silent switch; `playback` plays through silent mode like a music app but stops other apps' sound. 游戏设定 「与其他声音同时播放」 picks it (`setMix`, kept in `localStorage` as `stoneAgeAudioMix`). The default is `playback` on iPhone and `ambient` everywhere else, so Vision Pro mixes with other media again (a fixed `playback` session, added for iPhone silent mode, had stopped that).
 
 `client/scripts/web_audio.gd` makes the decisions: once the sound has run, any state other than `running` counts as an interruption and pauses the radio (`radio.interrupt`) with the note 系统暂停了声音，按播放继续。 播放 (a gesture) resumes the context and the radio. With the radio off, scene music simply continues once the context runs. It does nothing off the web.
 

@@ -29,13 +29,20 @@ class FakeContext {
   createBufferSource() { return {connect() {}, start() { sources++; }}; }
 }
 const handlers = {};
-const nav = {audioSession: {type: "auto"}, mediaSession: {metadata: null, playbackState: "none", setActionHandler(name, fn) { handlers[name] = fn; }}};
-const win = {AudioContext: FakeContext, addEventListener: on(listeners.win), btoa: (s) => Buffer.from(s, "binary").toString("base64"),
+const store = {};
+const nav = {userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_0 like Mac OS X)", audioSession: {type: "auto"}, mediaSession: {metadata: null, playbackState: "none", setActionHandler(name, fn) { handlers[name] = fn; }}};
+const win = {localStorage: {getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }}, AudioContext: FakeContext, addEventListener: on(listeners.win), btoa: (s) => Buffer.from(s, "binary").toString("base64"),
   MediaMetadata: function (m) { Object.assign(this, m); }};
 const doc = {hidden: false, addEventListener: on(listeners.doc),
   createElement: () => ({setAttribute() {}, play() { played++; return Promise.resolve(); }})};
 const api = install(win, doc, nav);
-const playbackSession = nav.audioSession.type === "playback" && api.session === "playback";
+const playbackSession = nav.audioSession.type === "playback" && api.session === "playback" && api.mix === false;
+api.setMix(true);
+const mixes = nav.audioSession.type === "ambient" && store.stoneAgeAudioMix === "1";
+const remembered = install({AudioContext: FakeContext, addEventListener() {}, localStorage: win.localStorage}, doc, {userAgent: nav.userAgent, audioSession: {type: "auto"}}).mix === true;
+const visionNav = {userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) Safari", audioSession: {type: "auto"}};
+const visionMixes = install({AudioContext: FakeContext, addEventListener() {}}, doc, visionNav).mix === true && visionNav.audioSession.type === "ambient";
+api.setMix(false);
 const events = [];
 api.listener = (e) => events.push(e);
 
@@ -75,6 +82,8 @@ Promise.resolve().then(() => new Promise((r) => setTimeout(r, 0))).then(() => {
   results.clearsNowPlaying = nav.mediaSession.metadata === null && nav.mediaSession.playbackState === "none";
   results.silentWav = api.silentWav(800).startsWith("data:audio/wav;base64,UklGR");
   results.playbackSession = playbackSession;
+  results.mixSwitch = mixes && remembered && nav.audioSession.type === "playback";
+  results.otherDevicesMix = visionMixes;
   console.log(JSON.stringify(results));
 });
 """

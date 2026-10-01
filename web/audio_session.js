@@ -24,15 +24,33 @@
     var Native = win.AudioContext || win.webkitAudioContext;
     var api = {contexts: [], listener: null, returned: false, log: [], resumes: 0, session: ""};
     win.stoneAgeAudio = api;
-    // iOS / iPadOS 16.4+ Safari: a "playback" audio session plays through the
-    // ring/silent switch, like a music app (the default "auto" session is
-    // silenced in silent mode). Set before any AudioContext is created.
-    try {
-      if (nav && nav.audioSession && "type" in nav.audioSession) {
-        nav.audioSession.type = "playback";
-        api.session = String(nav.audioSession.type);
-      }
-    } catch (error) { api.session = "unavailable"; }
+    // Audio session (Safari 16.4+): "playback" plays through the iPhone's
+    // ring/silent switch like a music app, but it stops other apps' sound;
+    // "ambient" mixes with other audio and video (as on Vision Pro before) but
+    // is silenced in silent mode. The player picks it in 游戏设定 (setMix,
+    // remembered in localStorage); by default iPhone plays through silent mode
+    // and everything else mixes. Set before any AudioContext is created.
+    var MIX_KEY = "stoneAgeAudioMix";
+    var phone = /iPhone|iPod/.test(String((nav && nav.userAgent) || ""));
+    var stored = null;
+    try { stored = win.localStorage ? win.localStorage.getItem(MIX_KEY) : null; } catch (error) { stored = null; }
+    api.mix = stored === null ? !phone : stored === "1";
+    api.sessionSupported = !!(nav && nav.audioSession && "type" in nav.audioSession);
+    function applySession() {
+      try {
+        if (api.sessionSupported) {
+          nav.audioSession.type = api.mix ? "ambient" : "playback";
+          api.session = String(nav.audioSession.type);
+        }
+      } catch (error) { api.session = "unavailable"; }
+    }
+    api.setMix = function (on) {
+      api.mix = !!on;
+      try { if (win.localStorage) win.localStorage.setItem(MIX_KEY, api.mix ? "1" : "0"); } catch (error) { /* private mode */ }
+      applySession();
+      return api.session;
+    };
+    applySession();
     if (!Native) return api;
 
     function note(what) {

@@ -6,6 +6,14 @@ extends SceneTree
 const PREFS := "user://web-audio-test.cfg"
 var failures := 0
 
+## The page's stoneAgeAudio as the settings switch sees it.
+class FakePage:
+	var sessionSupported := true
+	var mix := false
+	func setMix(on: bool) -> String:
+		mix = on
+		return "ambient" if on else "playback"
+
 func _initialize() -> void:call_deferred("run")
 
 func check(ok: bool, note: String) -> void:
@@ -72,6 +80,25 @@ func run() -> void:
 	var chosen: String = radio.status
 	audio.on_context_state("interrupted")
 	check(radio.paused and radio.status==chosen,"an interruption does not touch a radio the player paused")
+
+	# 与其他声音同时播放: only where the page has an audio session.
+	game.settings_menu.open_menu()
+	await process_frame
+	check(game.settings_menu.find_child("SettingsMixAudio",true,false) == null,"no mix switch without a page audio session")
+	game.settings_menu.close_menu()
+	var page := FakePage.new()
+	audio._js = page
+	game.settings_menu.open_menu()
+	await process_frame
+	var mix: CheckBox = game.settings_menu.find_child("SettingsMixAudio",true,false)
+	check(mix != null and not mix.button_pressed,"游戏设定 shows 与其他声音同时播放, off as the page reports")
+	if mix != null:
+		mix.button_pressed = true
+		check(page.mix and audio.mix_on(),"turning it on asks the page to mix with other audio")
+		var viewport: Rect2 = game.get_viewport().get_visible_rect()
+		check(viewport.encloses(mix.get_global_rect()),"the switch fits on screen")
+	game.settings_menu.close_menu()
+	audio._js = null
 
 	game.process_mode = Node.PROCESS_MODE_DISABLED
 	game.music.stop();game.effect.stop();game.queue_free()

@@ -203,6 +203,10 @@ func _main_page() -> void:
 	var cave := _check("洞穴默认放洞窟音乐（非原版）","SettingsCaveMusic",world.cave_music,world.set_cave_music)
 	cave.tooltip_text = "开（默认）：没有自己音乐的洞穴放洞窟曲。关：按原版，继续放进洞前的音乐（原版只在地图上的音乐标记处换曲）。"
 	background_row.add_child(cave)
+	if is_instance_valid(world.web_audio) and world.web_audio.mix_supported():
+		var mix := _check("与其他声音同时播放","SettingsMixAudio",world.web_audio.mix_on(),world.web_audio.set_mix)
+		mix.tooltip_text = "开（除 iPhone 外默认）：和其他 App 的音乐、视频一起播放，但 iPhone 静音模式下没声音。关（iPhone 默认）：像音乐 App 一样，静音模式也有声音，但会让其他 App 的声音停下。"
+		_section("").add_child(mix)
 	var radio: Button = world.button("电台",func(): close_menu();world.toggle_radio())
 	radio.name = "SettingsRadio"
 	radio.tooltip_text = "原版配乐电台、收藏、歌单、随机和单曲循环"
