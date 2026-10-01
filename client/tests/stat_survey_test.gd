@@ -74,6 +74,9 @@ func choose() -> void:
 ## to every candidate the GDScript scan sees on the same rolls.
 func helper_pool() -> void:
 	var backend = new_backend()
+	backend.handle({"type":"set_automation_settings","settings":{"hunt":{"keep_rule":{"per_tier":2,"order":["max_hp","speed"],"champions":1,"champion_stats":["defence"]}}}})
+	backend.automation.flow_settings_overrides=backend.session.automation_settings()
+	var pool_rule:Dictionary=backend.automation.shared_keep_rule()
 	var catalog: Dictionary = backend.encounter_catalog.data
 	var area: Dictionary = backend.encounter_catalog.area_at(MAP,Vector2i(CELL[0],CELL[1]))
 	var data: Dictionary = catalog.duplicate();data.areas = [area]
@@ -84,7 +87,7 @@ func helper_pool() -> void:
 	FastHunt.threads = 2
 	var helper := FastHunt.new()
 	var survey_filter := func(_id):return StatFilter.defaults(92)
-	check(helper.launch(catalog,area,filter,true,survey_filter,run_seed,0,2,{92:RULE}),"the helper starts a survey")
+	check(helper.launch(catalog,area,filter,true,survey_filter,run_seed,0,2,{92:pool_rule}),"the helper starts a survey")
 	var report := {}
 	var deadline := Time.get_ticks_msec()+30000
 	while Time.get_ticks_msec()<deadline:
@@ -102,7 +105,7 @@ func helper_pool() -> void:
 			if not actor.can_capture or int(actor.template_id)!=92 or int(actor.level)!=1:continue
 			var p := Progression.project_pet(actor,120)
 			expected.append({"serial":i*16+slot,"index":i,"slot":slot,"template_id":92,"prediction":{"attack":int(p.attack),"defence":int(p.defence),"speed":int(p.speed),"max_hp":int(p.max_hp)}})
-	var wanted: Array = Automation.choose_by_rule(expected,RULE).map(key)
+	var wanted: Array = Automation.choose_by_rule(expected,pool_rule).map(key)
 	var got: Array = report.get("candidates",[]).map(key)
 	wanted.sort();got.sort()
 	check(expected.size()>50 and got==wanted,"the pool (%d of %d candidates) is exactly what the keep rule keeps" % [got.size(),expected.size()])
@@ -191,7 +194,7 @@ func cycle() -> void:
 		session._profile[list] = session._profile[list].filter(func(pet):return KeepRule.species_pets({"pets":[pet]},92).is_empty())
 	session._profile.active_pet = 0 if not session._profile.pets.is_empty() else -1
 	session._profile.ride_pet = -1
-	backend.handle({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"keep_rule":RULE}}}})
+	backend.handle({"type":"set_automation_settings","settings":{"hunt":{"keep_rule":RULE}}})
 	var filter := {"template":92,"level_one":true,"total":-8,"offsets":[-2,-2,-2,-2],"auto_capture":false,"limit":0,"rate":0,"fast":false,"showcase":true}
 	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL,"filter":filter,"settings":{"capture_hp":100}})
 	check(reply.ok and automation.flow_phase=="hunt","a find-pet cycle starts (%s)" % str(reply))
@@ -320,7 +323,8 @@ func absolute_mode() -> void:
 		session._profile[list] = session._profile[list].filter(func(pet):return KeepRule.species_pets({"pets":[pet]},92).is_empty())
 	session._profile.active_pet = 0 if not session._profile.pets.is_empty() else -1
 	session._profile.ride_pet = -1
-	set_filter(backend,{"keep_rule":RULE,"threshold_mode":"absolute"})
+	backend.handle({"type":"set_automation_settings","settings":{"hunt":{"keep_rule":RULE}}})
+	set_filter(backend,{"threshold_mode":"absolute"})
 	var filter := {"template":92,"level_one":true,"total":-8,"offsets":[-2,-2,-2,-2],"auto_capture":false,"limit":0,"rate":0,"fast":false,"showcase":true}
 	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL,"filter":filter,"settings":{"capture_hp":100}})
 	check(reply.ok and automation.flow_phase=="hunt","an absolute find-pet cycle starts (%s)" % str(reply))

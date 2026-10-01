@@ -13,7 +13,7 @@ extends RefCounted
 ##
 ## Pets under Lv120 are judged by their exact Lv120 stats (the growth-seed
 ## projection 同种比较 shows). Identical stats resolve to the older pet id, so
-## duplicates beyond a quota are released. Settings: stat_filters.<id>.keep_rule
+## duplicates beyond a quota are released. Settings: hunt.keep_rule (shared across species; evaluate each species separately)
 ## (automation_settings.gd); used by 同种比较's 按保留规则选中 and, when `auto`
 ## is on, by the find-pet cycle after each stored pet.
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")

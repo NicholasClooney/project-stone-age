@@ -171,7 +171,7 @@ var flow_collected_count := 0
 var flow_pruned_count := 0
 # Rejects stored by this run; rolling keep only ever prunes among these.
 var flow_run_reject_ids: Array = []
-# 保留规则 with 找宠时自动整理 (the filter's keep_rule.auto): pets it released
+# 保留规则 with 找宠时自动整理 (hunt.keep_rule.auto): pets it released
 # this run, and how many of the species remain after the last tidy.
 var flow_released_count := 0
 var flow_held_count := 0
@@ -284,6 +284,7 @@ func start(command: Dictionary) -> Dictionary:
 			flow_settings_overrides = backend.session.automation_settings()
 			flow_stat_filters = AutomationSettings.stat_filters(flow_settings_overrides)
 			flow_stat_filters.merge(_int_keys(command.get("stat_filters",{})),true)
+			for id in flow_stat_filters:flow_stat_filters[id].erase("keep_rule")
 			flow_hunt_request = hunt_request(command)
 			_load_settings(command)
 			return _reply(start_cycle(false),flow_reason)
@@ -385,7 +386,8 @@ func apply_stat_filters(overrides: Dictionary) -> void:
 		if JSON.stringify(now)==JSON.stringify(AutomationSettings.stat_filter(before,id)):continue
 		flow_stat_filters[id] = now
 		changed.append(id)
-	if changed.is_empty():return
+	if changed.is_empty() and AutomationSettings.keep_rule(before)==AutomationSettings.keep_rule(overrides):return
+	_sort_queue()
 	refresh_maxima()
 	if not survey.is_empty():
 		var still: Array = survey.templates.filter(func(id):return StatFilter.needs_survey(raw_filter_for(int(id)),species_maxima(int(id))))
@@ -1108,7 +1110,7 @@ func _fast_process() -> bool:
 		_fast_held_items = backend.session._profile.get("original_items",[]).duplicate()
 		var rules := {}
 		if _predicting():
-			for id in survey.get("templates",[]):rules[int(id)] = raw_filter_for(int(id)).get("keep_rule",{})
+			for id in survey.get("templates",[]):rules[int(id)] = shared_keep_rule()
 		_fast_launched_threads = fast_threads_now()
 		if fast_share!=null:_fast_launched_at = float(fast_share.clock.call())
 		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,_fast_launched_threads,rules,backend.session._profile.get("original_items",[])):
@@ -1210,6 +1212,10 @@ func start_timer() -> void:
 
 func freeze_timer() -> void:
 	timer_frozen_seconds = elapsed_seconds();timer_running = false
+
+## Shared rule follows live profile edits, including the pet currently training.
+func shared_keep_rule() -> Dictionary:
+	return AutomationSettings.keep_rule(flow_settings_overrides)
 
 ## 找到N只后停止 (hunt.stop_after) for the whole run, every species alike:
 ## pets this run keeps (qualifiers, or with no 属性条件 every pet trained to
@@ -1324,7 +1330,7 @@ func _hunt_templates() -> Array:
 ## The resolved thresholds of every species the hunt may take, and which are
 ## being surveyed: when this changes the native helper restarts.
 func threshold_key() -> String:
-	var parts: Array = []
+	var parts: Array = [shared_keep_rule()]
 	for id in _hunt_templates():
 		var chosen := filter_for(id)
 		parts.append([id,surveying(id),chosen.get("mode",""),chosen.get("conditions",{}).values().map(func(c):return [c.get("enabled",false),c.get("value",null)])])
@@ -1411,7 +1417,7 @@ func survey_choose(candidates: Array) -> Array:
 		by_template[int(c.template_id)].append(c)
 	var result: Array = []
 	for id in by_template:
-		var rule: Dictionary = raw_filter_for(int(id)).get("keep_rule",{})
+		var rule: Dictionary = shared_keep_rule()
 		result.append_array(choose_by_rule(by_template[id],rule))
 	return result
 
@@ -1698,7 +1704,7 @@ func complete_trained_pet(found: Dictionary) -> void:
 ## (carried and warehouse) is tidied; favourites, the active pet, the mount and
 ## the capture helper stay. Returns the released ids.
 func _tidy_species(found: Dictionary) -> Array:
-	var rule: Dictionary = flow_target_filter.get("keep_rule",{})
+	var rule: Dictionary = shared_keep_rule()
 	if not bool(rule.get("auto",false)):return []
 	var template := int(found.get("template_id",-1))
 	var released: Array = backend.session.apply_keep_rule(template,rule,capture_helpers())
@@ -1898,6 +1904,9 @@ func _resume_flow(state: Dictionary) -> void:
 	var saved: Dictionary = state.get("flow",{})
 	for field in RESUME_FLOW_FIELDS:
 		if saved.has(field):set(field,saved[field])
+	flow_settings_overrides = AutomationSettings.sanitize(flow_settings_overrides)
+	flow_target_filter.erase("keep_rule")
+	for id in flow_stat_filters:flow_stat_filters[id].erase("keep_rule")
 	showcase_last_template = int(showcase_last_template)
 	# A file from before per-species queues holds one shared queue: grouping
 	# splits it into each species' queue, in the same order within a species.
@@ -2094,11 +2103,11 @@ func _skip_hit(kind: String, reason: String) -> void:
 # played in full. Hits found meanwhile wait in showcase_queue. The name the
 # player sees is AutomationSettings.SHOWCASE_NAME.
 
-## Two hits of one species, best first by the species' 保留规则 order (第一/第二/第三,
+## Two hits of one species, best first by the shared 保留规则 order (第一/第二/第三,
 ## default 攻击 → 敏捷 → 血), then the other keys (三围合 first), then the
 ## earlier roll. A full queue lets the last one go.
 func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
-	var rule: Dictionary = raw_filter_for(int(a.actor.get("template_id",-1))).get("keep_rule",{})
+	var rule: Dictionary = shared_keep_rule()
 	for key in StatFilter.rank_order(Array(rule.get("order",["attack","speed","max_hp"]))):
 		var va := StatFilter.rank_value(a.prediction,key)
 		var vb := StatFilter.rank_value(b.prediction,key)
@@ -2227,7 +2236,7 @@ const STAT_NAMES := {"sum":"三围合","attack":"攻","defence":"防","speed":"�
 
 ## The comparison order the queue ranks this hit's species by (_showcase_better).
 func _rank_keys(entry: Dictionary) -> Array:
-	var rule: Dictionary = raw_filter_for(_template_of(entry)).get("keep_rule",{})
+	var rule: Dictionary = shared_keep_rule()
 	return StatFilter.rank_order(Array(rule.get("order",["attack","speed","max_hp"])))
 
 static func _rank_text(prediction: Dictionary, keys: Array) -> String:
@@ -2450,7 +2459,7 @@ func _showcase_finished() -> void:
 	for event in backend.session.release_events:
 		if str(event.get("pet_id",""))==pet_id:outcome = "放生：%s" % str(event.get("reason",""))
 	if outcome.is_empty():
-		var reasons: Array = KeepRule.evaluate(KeepRule.species_pets(backend.session.snapshot(),template),flow_target_filter.get("keep_rule",{}),KeepRule.always_kept(backend.session.snapshot())).get("reasons",{}).get(pet_id,[])
+		var reasons: Array = KeepRule.evaluate(KeepRule.species_pets(backend.session.snapshot(),template),shared_keep_rule(),KeepRule.always_kept(backend.session.snapshot())).get("reasons",{}).get(pet_id,[])
 		outcome = "留下：%s" % ("、".join(reasons) if not reasons.is_empty() else "已存入仓库")
 		if flow_last_result.begins_with("未达标"):outcome = "未达标，"+outcome
 	_showcase_line("released" if outcome.begins_with("放生") else "kept","%s %s %s" % [str(found.get("name","")),pet_id,outcome])
@@ -2497,7 +2506,7 @@ func status() -> Dictionary:
 			"budget":threads_used(fast_threads),"hunters":fast_hunters()},
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
-			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
+			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(shared_keep_rule().get("auto",false)),"predicted_rejects":flow_predicted_rejects,
 			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
 			"survey":survey_status(),"thresholds":thresholds_text(),
 			"log":showcase_log.duplicate(true),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
@@ -2571,7 +2580,8 @@ func capture_decision(pet: Dictionary, source: String) -> Dictionary:
 		if not uid.is_empty():seen[uid]=true
 		peers.append(entry.prediction)
 	var metrics: Array = []
-	for key in StatFilter.rank_order(raw.get("keep_rule",{}).get("order",["attack","speed","max_hp"])):
+	var rule: Dictionary = shared_keep_rule() if source=="找宠流程" else AutomationSettings.keep_rule(backend.session.automation_settings())
+	for key in StatFilter.rank_order(rule.get("order",["attack","speed","max_hp"])):
 		var value := StatFilter.rank_value(mine,key)
 		var higher := 0
 		var tied := 0

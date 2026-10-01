@@ -42,7 +42,7 @@ func keep_rule_reasons() -> void:
 	check(verdict.why["pet-6"].reason=="625档第5名，每档只留3只" and verdict.why["pet-6"].beaten_by==["pet-3","pet-4","pet-5"],"a pet past the tier quota names its place and the three quota holders")
 	check(verdict.why["pet-7"].reason=="与 pet-5 属性完全相同，保留较早的" and verdict.why["pet-7"].beaten_by==["pet-5"],"a duplicate names the older identical pet that stays")
 	check(verdict.why["pet-8"].reason=="三围合620，不在最高2档（626、625）" and verdict.why["pet-8"].beaten_by==["pet-1"],"a pet below the top tiers names the best kept pet at least as good in every stat")
-	var with_champions := KeepRule.evaluate(herd(),Settings.default_stat_filter(92).keep_rule)
+	var with_champions := KeepRule.evaluate(herd(),Settings.keep_rule({}))
 	check(with_champions.why.values().all(func(why):return str(why.reason).ends_with("单项未进前2")),"with single-stat champions on, each reason adds 单项未进前2")
 
 func session_paths() -> void:
@@ -102,7 +102,7 @@ func backend_file() -> void:
 	check(not FileAccess.get_file_as_string(SAVE).contains("手动放生"),"the save itself holds no log")
 	# 按保留规则选中 then 放生所选: the backend re-evaluates the rule for the reasons.
 	var profile: Dictionary = backend.session.snapshot()
-	var rule: Dictionary = Settings.stat_filter(backend.session.automation_settings(),92).keep_rule
+	var rule: Dictionary = Settings.keep_rule(backend.session.automation_settings())
 	var protected: Dictionary = KeepRule.always_kept(profile)
 	protected.merge(backend.automation.capture_helpers(),true)
 	var verdict := KeepRule.evaluate(KeepRule.species_pets(profile,92),rule,protected)

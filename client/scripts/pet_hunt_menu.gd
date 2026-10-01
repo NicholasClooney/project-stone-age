@@ -21,6 +21,7 @@ var _stat_species_fallback := false
 var page := "filters"
 var _built := false
 var _stat_loaded: Dictionary = {}
+var window_scroll: ScrollContainer
 var stat_page: Control
 var stat_species: OptionButton
 var stat_mode: OptionButton
@@ -145,7 +146,11 @@ func _ready() -> void:
 	panel.position=Vector2(90,110)
 	panel.size=Vector2(1100,620)
 	panel.add_theme_stylebox_override("panel",world.box(Color("20292f"),Color("b29b65")))
-	add_child(panel)
+	panel.custom_minimum_size=Vector2(1100,620)
+	window_scroll=ScrollContainer.new();window_scroll.name="HuntWindowScroll"
+	add_child(window_scroll);window_scroll.add_child(panel)
+	panel.position=Vector2.ZERO
+	relayout()
 	label("轻松助手 · 自动抓极品",Vector2(24,18),24)
 	label("直接检查隐藏成长档。按当地原表遇敌；未达标跳过，不战斗、不捕获、不发奖励。",Vector2(24,58),16)
 	location_label=label("",Vector2(24,92),16)
@@ -327,7 +332,11 @@ func settings_patch() -> Dictionary:
 			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value),"keep":int(stat_keeps[metric].value)}
 		var chosen_stats:=KeepRule.STATS.filter(func(stat):return rule_stats[stat].button_pressed)
 		var keep_rule:={"tiers":int(rule_tiers.value),"per_tier":int(rule_per_tier.value),"order":rank_choice(),"champions":int(rule_champions.value),"champion_stats":chosen_stats,"auto":rule_auto.button_pressed}
-		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","threshold_mode":_threshold_mode_shown(),"keep_rule":keep_rule,"conditions":conditions}
+		var shared_change:=AutomationSettings.diff(world.automation_settings().hunt.keep_rule,keep_rule)
+		if not shared_change.is_empty():
+			if not patch.has("hunt"):patch.hunt={}
+			patch.hunt.keep_rule=shared_change
+		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","threshold_mode":_threshold_mode_shown(),"conditions":conditions}
 		var changed:=AutomationSettings.diff(world.stat_filter(_stat_species_shown),wanted_filter)
 		if not changed.is_empty():patch.stat_filters={str(_stat_species_shown):changed}
 	return patch
@@ -445,7 +454,14 @@ func _update_target_checks() -> void:
 			if id in target_ids and not popup.is_item_disabled(index):count+=1
 	target_button.text="目标宠物：已选 %d 种 · 点击勾选" % count
 
+func relayout() -> void:
+	if not is_instance_valid(window_scroll):return
+	var available:=get_viewport_rect().size-Vector2(24,24)
+	window_scroll.size=Vector2(minf(1100,maxf(1,available.x)),minf(620,maxf(1,available.y)))
+	window_scroll.position=(get_viewport_rect().size-window_scroll.size)/2
+
 func open_menu() -> void:
+	relayout()
 	if minimized:restore();return
 	if visible:close_menu();return
 	if world.paused_input or world.area_transition_busy or world.battle_view.visible:return
@@ -816,7 +832,21 @@ func build_stat_page()->void:
 		check.toggled.connect(func(_on):save_stat_settings(true));input.value_changed.connect(func(_value):save_stat_settings();refresh_stat_thresholds(true));keep.value_changed.connect(func(_value):save_stat_settings())
 	# The shared status line starts at y 478, so the page ends above it; the notes
 	# are tooltips. 找到N只后停止 is on 抓宠设置, one for the whole run.
-	build_keep_rule(340)
+	var scope:Label=world.text("保留规则（所有品种共用，按同种分别排名）",16)
+	scope.name="SharedKeepRuleScope";scope.position=Vector2(24,327);stat_page.add_child(scope)
+	build_keep_rule(352)
+	# Fixed viewport prevents settings from covering the status and action rows.
+	# Horizontal scrolling also keeps full controls reachable on narrow layouts.
+	var scroll:=ScrollContainer.new();scroll.name="StatSettingsScroll"
+	scroll.position=Vector2(16,126);scroll.size=Vector2(1068,336)
+	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO
+	scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO
+	var content:=Control.new();content.name="StatSettingsContent"
+	content.custom_minimum_size=Vector2(1040,318)
+	var nodes:=stat_page.get_children()
+	stat_page.add_child(scroll);scroll.add_child(content)
+	for node in nodes:
+		node.reparent(content);node.position-=Vector2(16,126)
 	refresh_stat_species()
 
 ## 保留规则 rows: 看最高[T]档，每档留[K]只，档内排序[第一][第二][第三];
@@ -827,7 +857,7 @@ func build_keep_rule(top: float)->void:
 		return label
 	var heading:Label=add_label.call("保留规则：看最高",24,top)
 	heading.mouse_filter=Control.MOUSE_FILTER_PASS
-	heading.tooltip_text="按现有同种宠物滚动比较：最高几档三围合各留前几只，加上勾选单项的前几名，收藏、出战、骑乘和削血宠永远保留，其余可放生。同种比较里「按保留规则选中」可先预览；勾选「找宠时自动整理」后每存入一只就自动整理。"
+	heading.tooltip_text="所有品种共用此规则，分别按同种宠物排名。按现有同种宠物滚动比较：最高几档三围合各留前几只，加上勾选单项的前几名，收藏、出战、骑乘和削血宠永远保留，其余可放生。同种比较里「按保留规则选中」可先预览；勾选「找宠时自动整理」后每存入一只就自动整理。"
 	rule_tiers=number(Vector2(168,top),0,20,2);rule_tiers.name="KeepRuleTiers";rule_tiers.size.x=90;rule_tiers.reparent(stat_page)
 	rule_tiers.tooltip_text="按三围合分档，只看最高的几档（例如626和625两档）。0＝不按档保留，只留单项前几名。"
 	add_label.call("档，每档留",264,top)
@@ -904,7 +934,7 @@ func load_stat_settings()->void:
 	var switching:=template_id!=_stat_species_shown
 	_stat_species_shown=template_id
 	var settings:Dictionary=world.stat_filter(template_id)
-	var rule:Dictionary=settings.get("keep_rule",{})
+	var rule:Dictionary=world.automation_settings().hunt.keep_rule
 	var flat:={"mode":str(settings.mode),"threshold_mode":str(settings.get("threshold_mode","relative")),"tiers":int(rule.get("tiers",2)),"per_tier":int(rule.get("per_tier",3)),"champions":int(rule.get("champions",2)),
 		"rank":rule.get("order",["attack","speed","max_hp"]).duplicate(),"champion_stats":rule.get("champion_stats",KeepRule.STATS).duplicate(),"auto":bool(rule.get("auto",false))}
 	for metric in StatFilter.METRICS:
@@ -952,12 +982,12 @@ func refresh_stat_thresholds(now: bool = false) -> void:
 		stat_numbers[metric].visible=not fixed;stat_values[metric].visible=fixed
 		if fixed:
 			stat_checks[metric].text="%s ≥" % name
-			result.position.x=240+(i%2)*470
+			result.position.x=224+(i%2)*470
 			result.text="（现有最高%d）" % int(best[metric]) if best.has(metric) else ""
 			result.modulate.a=0.55
 		else:
 			stat_checks[metric].text="%s ≥ 最高%s −" % [name,str(best[metric]) if best.has(metric) else ""]
-			result.position.x=284+(i%2)*470
+			result.position.x=268+(i%2)*470
 			result.text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "摸底"
 			result.modulate.a=1.0
 		var sentence:=StatFilter.describe_condition(metric,condition,best,fixed)

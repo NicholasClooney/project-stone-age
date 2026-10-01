@@ -25,7 +25,7 @@ func kept(verdict: Dictionary) -> Array:
 	return result
 
 func default_rule() -> Dictionary:
-	return Settings.default_stat_filter(92).keep_rule
+	return Settings.keep_rule({})
 
 func rules() -> void:
 	# The reference split: 65 real dragons, the reference script's answer.
@@ -71,17 +71,17 @@ func rules() -> void:
 func settings() -> void:
 	var rule:=default_rule()
 	check(rule=={"tiers":2,"per_tier":3,"order":["attack","speed","max_hp"],"champions":2,"champion_stats":["attack","defence","speed","max_hp"],"auto":false},"defaults: 2 tiers x 3, 攻击 → 敏捷 → 血, top 2 of all four stats, auto tidy off")
-	var good:=Settings.apply_patch({},{"stat_filters":{"92":{"keep_rule":{"tiers":1,"champion_stats":["attack"],"auto":true}}}})
-	check(good.ok and good.overrides.stat_filters["92"].keep_rule=={"tiers":1,"champion_stats":["attack"],"auto":true},"a partial rule is stored")
-	check(Settings.stat_filter(good.overrides,92).keep_rule.per_tier==3,"unset parts keep their defaults")
+	var good:=Settings.apply_patch({},{"hunt":{"keep_rule":{"tiers":1,"champion_stats":["attack"],"auto":true}}})
+	check(good.ok and good.overrides.hunt.keep_rule=={"tiers":1,"champion_stats":["attack"],"auto":true},"a partial rule is stored")
+	check(Settings.keep_rule(good.overrides).per_tier==3,"unset parts keep their defaults")
 	for bad in [{"tiers":21},{"per_tier":-1},{"order":[]},{"order":["luck"]},{"champion_stats":["luck"]},{"champion_stats":["attack","attack"]},{"auto":1},{"bogus":1}]:
-		check(not Settings.apply_patch({},{"stat_filters":{"92":{"keep_rule":bad}}}).ok,"an invalid rule is refused: %s" % str(bad))
+		check(not Settings.apply_patch({},{"hunt":{"keep_rule":bad}}).ok,"an invalid rule is refused: %s" % str(bad))
 	check(not Settings.apply_patch({},{"stat_filters":{"92":{"keep_qualified":3}}}).ok,"the replaced keep_qualified setting is no longer accepted")
 	var migrated:=Settings.sanitize({"stat_filters":{"92":{"keep_qualified":5,"rank":["speed","sum","attack"],"mode":"all"}}})
 	var filter:=Settings.stat_filter(migrated,92)
-	check(filter.keep_rule.order==["speed","attack"] and not filter.has("keep_qualified") and not filter.has("rank") and str(filter.mode)=="all","an older save's chosen rank becomes the tier order (三围合 dropped); keep_qualified goes")
+	check(Settings.keep_rule(migrated).order==["speed","attack"] and not filter.has("keep_qualified") and not filter.has("rank") and str(filter.mode)=="all","an older save's chosen rank becomes the tier order (三围合 dropped); keep_qualified goes")
 	var untouched:=Settings.sanitize({"stat_filters":{"92":{"keep_qualified":5}}})
-	check(Settings.stat_filter(untouched,92).keep_rule==default_rule(),"an older save without a rank gets the default rule")
+	check(Settings.keep_rule(untouched)==default_rule(),"an older save without a rank gets the default rule")
 
 func run()->void:
 	rules()
@@ -138,7 +138,7 @@ func run()->void:
 	var stored:Array=session._profile.pet_storage.filter(func(p):return str(p.pet_id).begins_with("pet-7"))
 	check(stored.size()==7 and flow.released_count==0 and not flow.keep_auto,"auto tidy off (the default): every qualifier is stored")
 	session._profile.pet_storage=session._profile.pet_storage.filter(func(p):return not str(p.pet_id).begins_with("pet-7"))
-	target.keep_rule=target.keep_rule.duplicate(true);target.keep_rule.merge({"tiers":1,"per_tier":2,"champions":1,"champion_stats":["attack","defence"],"auto":true},true)
+	game.backend.automation.flow_settings_overrides.hunt.keep_rule={"tiers":1,"per_tier":2,"champions":1,"champion_stats":["attack","defence"],"auto":true}
 	var results:Array=cycle.call(target,800)
 	var species_left:Array=KeepRule.species_pets(session.snapshot(),92).map(func(p):return str(p.pet_id))
 	# Found: 800 624/292, 801 625/293, 802 625/290, 803 624/294, 804 626/288, 805 626/293, 806 600/280.
@@ -152,20 +152,20 @@ func run()->void:
 	check(status.contains("保留规则自动整理") and status.contains("已放生"),"the hunt window reports the tidy")
 
 	# UI: the 属性条件 page edits the rule and saves it.
-	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":null}});game.sync_state()
+	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":null,"hunt":{"keep_rule":null}}});game.sync_state()
 	hunt.open_menu();hunt.show_stat_settings()
 	check(int(hunt.rule_tiers.value)==2 and int(hunt.rule_per_tier.value)==3 and int(hunt.rule_champions.value)==2 and hunt.rank_choice()==["attack","speed","max_hp"] and not hunt.rule_auto.button_pressed and hunt.rule_stats.defence.button_pressed,"the page shows the default rule")
 	hunt.rule_tiers.value=1;hunt.rule_champions.value=3;hunt.rule_stats.max_hp.button_pressed=false;hunt.rule_auto.button_pressed=true
 	hunt.stat_rank[1].select(hunt.stat_rank[1].get_item_index(Filter.RANK_KEYS.find("max_hp")+1))
 	hunt.stat_rank[2].select(0)
 	hunt.save_stat_settings(true);game.flush_automation_settings()
-	var saved:Dictionary=game.stat_filter(92).keep_rule
+	var saved:Dictionary=game.automation_settings().hunt.keep_rule
 	check(saved.tiers==1 and saved.champions==3 and saved.champion_stats==["attack","defence","speed"] and saved.order==["attack","max_hp"] and saved.auto,"the page saves tiers, champions, stats, order and auto tidy")
-	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{"92":{"keep_rule":{"per_tier":5,"auto":false}}}}})
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"keep_rule":{"per_tier":5,"auto":false}}}})
 	hunt.load_stat_settings()
 	check(int(hunt.rule_per_tier.value)==5 and not hunt.rule_auto.button_pressed,"a change from elsewhere shows on the page")
 	hunt.hide();game.paused_input=false
-	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":null}});game.sync_state()
+	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":null,"hunt":{"keep_rule":null}}});game.sync_state()
 
 	# 同种比较: 按保留规则选中 selects exactly the rule's releases, releases nothing.
 	session._profile.pet_storage=session._profile.pet_storage.filter(func(p):return not str(p.pet_id).begins_with("pet-8"))

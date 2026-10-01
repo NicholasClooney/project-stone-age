@@ -1272,7 +1272,7 @@ func select_by_keep_rule(profile:Dictionary)->void:
 	if not key.begins_with("original_") or not key.trim_prefix("original_").is_valid_int():
 		feedback="这个品种没有原版编号，不能按保留规则选择。";return
 	var template:=int(key.trim_prefix("original_"))
-	var rule:Dictionary=world.stat_filter(template).get("keep_rule",{})
+	var rule:Dictionary=world.automation_settings().hunt.keep_rule
 	var protected:=KeepRule.always_kept(profile)
 	protected.merge(KeepRule.capture_helpers(profile,world.automation_settings().get("capture",{})))
 	# During a battle its participants stay too (the backend would skip them).

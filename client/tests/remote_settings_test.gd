@@ -120,9 +120,28 @@ func run() -> void:
 	hunt_a.rule_auto.button_pressed = true
 	hunt_a.save_stat_settings(true)
 	check(await until(func():
-		var rule: Dictionary = backend.session.automation_settings().get("stat_filters",{}).get(shown,{}).get("keep_rule",{})
+		var rule: Dictionary = backend.session.automation_settings().get("hunt",{}).get("keep_rule",{})
 		return int(rule.get("per_tier",0))==4 and rule.get("order",[])==["attack","max_hp"] and bool(rule.get("auto",false))),"the keep rule reaches the profile")
 	check(await until(func():return int(hunt_b.rule_per_tier.value)==4 and hunt_b.rank_choice()==["attack","max_hp"] and hunt_b.rule_auto.button_pressed),"device B's attribute tab shows it")
+
+
+	# Choose a different species on device B; only conditions switch.
+	var other:=-1
+	for i in range(hunt_b.stat_species.item_count):
+		if not hunt_b.stat_species.is_item_disabled(i) and hunt_b.stat_species.get_item_id(i)!=int(shown):other=i;break
+	check(other>=0,"hunting ground exposes another species")
+	if other>=0:
+		hunt_b.stat_species.select(other);hunt_b.stat_species.item_selected.emit(other)
+		check(await until(func():return int(hunt_b.rule_per_tier.value)==4 and hunt_b.rule_auto.button_pressed),"another species shows the same shared rule")
+		hunt_b.rule_champions.value=5;hunt_b.save_stat_settings(true)
+		check(await until(func():return int(hunt_a.rule_champions.value)==5),"shared rule change from another species synchronizes original device")
+	check(a.backend==null and b.backend==null,"remote rule clicks use no local backend")
+	await process_frame
+	var bounded:ScrollContainer=hunt_b.stat_page.get_node("StatSettingsScroll")
+	check(bounded.get_global_rect().end.y<=hunt_b.status.get_global_rect().position.y,"stat settings viewport ends above status")
+	check(not hunt_b.rule_tiers.get_global_rect().intersects(hunt_b.rule_per_tier.get_global_rect()) and not hunt_b.rule_champions.get_global_rect().intersects(hunt_b.rule_auto.get_global_rect()),"keep control rows have separate rectangles")
+	var outer:ScrollContainer=hunt_b.window_scroll
+	check(outer.get_rect().size.x<=b.get_viewport_rect().size.x and outer.get_rect().size.y<=b.get_viewport_rect().size.y,"hunt scroll viewport fits screen")
 
 	# Training settings: per character, except the playback speed.
 	var helper_a = a.training_helper
@@ -144,7 +163,7 @@ func run() -> void:
 	hunt_c.open_menu()
 	check(int(hunt_c.rate.value)==40 and int(hunt_c.limit.value)==500 and int(hunt_c.total.value)==6 and not hunt_c.level_one.button_pressed and hunt_c.preset.selected==4,"a reloaded page shows the saved hunt settings")
 	hunt_c.show_stat_settings()
-	check(int(hunt_c.stat_numbers.sum.value)==4,"and the saved stat conditions")
+	check(int(hunt_c.stat_numbers.sum.value)==int(preload("res://scripts/automation_settings.gd").stat_filter(backend.session.automation_settings(),hunt_c.stat_species.get_selected_id()).conditions.sum.minus) and int(preload("res://scripts/automation_settings.gd").stat_filter(backend.session.automation_settings(),int(shown)).conditions.sum.minus)==4,"saved species choice reloads its independent conditions without changing original species")
 	check(int(c.training_helper.hp_floor.value)==33 and not c.training_helper.compact.button_pressed and c.training_helper.speed.selected==3,"and the saved training settings, with this device's own speed")
 	hunt_c.close_menu()
 

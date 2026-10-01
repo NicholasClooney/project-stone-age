@@ -60,7 +60,7 @@ var held_count: int:
 		return int(_live("flow_held_count","held_count"))
 var keep_auto: bool:
 	get:
-		if world.link.is_local():return bool(world.backend.automation.flow_target_filter.get("keep_rule",{}).get("auto",false))
+		if world.link.is_local():return bool(world.backend.automation.shared_keep_rule().get("auto",false))
 		return bool(_flow().get("keep_auto",false))
 ## Hits the cycle stepped past (capture failed, a queued roll no longer
 ## verified) and the latest such note; see 停止记录 in 宠物记录.

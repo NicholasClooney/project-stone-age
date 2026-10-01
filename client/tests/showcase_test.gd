@@ -90,7 +90,7 @@ func run() -> void:
 	var target := int(fixture.troop.enemies[0].template_id)
 	# Qualifiers of this species are stored and the cycle goes on (stop_after 0);
 	# auto tidy with a rule that keeps nothing releases each one after Lv120.
-	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"stop_after":0},"stat_filters":{str(target):{"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":1}},"keep_rule":{"tiers":0,"champions":0,"auto":true}}}}})
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"stop_after":0,"keep_rule":{"tiers":0,"champions":0,"auto":true}},"stat_filters":{str(target):{"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":1}}}}}})
 	hunt.apply_preset(0)
 	# The radio plays before the run; the watched battles set it aside.
 	var radio = game.radio

@@ -54,6 +54,7 @@ func restart(old):
 	old.queue_free()
 	var fresh = new_backend(true)
 	fresh.load_resume()
+	check(AutomationSettings.keep_rule(fresh.session.automation_settings()).per_tier==4,"profile and resumed cycle share the same saved rule")
 	check(not FileAccess.file_exists(base()+".resume.json"),"the resume file is used once")
 	return fresh
 
@@ -61,7 +62,7 @@ func prepare(backend, extra: Dictionary = {}) -> void:
 	backend.handle({"type":"grant_starter_pets"})
 	for command in [{"type":"gm_raise_level","index":-1,"target":120},{"type":"gm_set_base_stat","index":-1,"stat":"toughness","value":500},{"type":"gm_set_base_stat","index":-1,"stat":"strength","value":300},{"type":"gm_heal"}]:
 		backend.handle(command)
-	var hunt := {"fast":false,"total":-8,"offsets":[-2,-2,-2,-2],"showcase":true,"queue":10,"auto_capture":true,"train_after_capture":true}
+	var hunt := {"fast":false,"total":-8,"offsets":[-2,-2,-2,-2],"showcase":true,"queue":10,"auto_capture":true,"train_after_capture":true,"keep_rule":{"per_tier":4,"order":["attack","max_hp"]}}
 	hunt.merge(extra,true)
 	# The hunting ground's species have the general 三围合 / 攻击 default off
 	# (no 摸底 first); one with its own default (the blue dragon) keeps it.
@@ -142,6 +143,7 @@ func showcase_cycle() -> void:
 	check(automation.position_map==MAP and automation.position_cell==CELL,"until a device reports, the character is where the cycle ran")
 	automation.try_resume();automation.backend._record_releases()
 	check(automation.flow_active() and automation.flow_phase=="hunt" and automation.hunt_running,"the cycle goes on after the restart")
+	check(automation.shared_keep_rule().per_tier==4 and automation.shared_keep_rule().order==["attack","max_hp"],"resumed cycle uses the shared saved rule")
 	check(automation.flow_run_id==run_id and automation.flow_showcase and automation.flow_skipped_count==2,"with the same run and counters")
 	check(automation.hunt_run_seed==seed_value and automation.hunt_rolls==rolls and JSON.stringify(automation.roll_at(rolls))==next_troop,"the hunt continues the same run from the same roll")
 	check(queue_rolls(automation)==queued,"the queue is kept, best first (%s)" % str(queue_rolls(automation)))

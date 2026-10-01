@@ -53,6 +53,8 @@ func run():
  check(second.capture_decision.tags==["stats"] and second.capture_decision.threshold_text.contains("满足"),"relative threshold stores its actual passing value")
  check(second.capture_decision.metrics.all(func(m):return int(m.rank)==1 and int(m.ties)==1 and int(m.original_max)==int(m.value)),"competition ties exclude current/queue duplicate and candidate itself")
  var saved:Dictionary=second.capture_decision.duplicate(true)
+ backend.handle({"type":"set_automation_settings","settings":{"hunt":{"keep_rule":{"order":["speed","attack"]}}}})
+ check(backend.capture_log.entries().back().capture_decision==saved,"changing shared rule keeps historical capture decisions frozen")
  check(backend.session.gm_grant_pet(template,true),"real same-species full-grade pet supplies higher comparisons")
  backend.handle({"type":"ping"})
  var owned:Array=backend.session.snapshot().pets
@@ -60,6 +62,7 @@ func run():
  var repeated:Dictionary=hit.duplicate(true);repeated.index=11;repeated.actor=owned.back().duplicate(true);repeated.prediction=Progression.project_pet(repeated.actor,120)
  auto.showcase_queue=[hit.duplicate(true),repeated,repeated.duplicate(true)]
  var ranked:=capture(backend,troop)
+ check(ranked.capture_decision.metrics[0].key=="speed" and ranked.capture_decision.metrics[1].key=="attack","new captures rank metrics by shared order")
  var expected:Array=owned.map(func(p):return Progression.project_pet(p,120))
  for metric in ranked.capture_decision.metrics:
   var higher:int=expected.filter(func(p):return Filter.rank_value(p,str(metric.key))>int(metric.value)).size()

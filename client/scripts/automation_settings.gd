@@ -16,6 +16,7 @@ extends RefCounted
 ##                 (LAN phase 4c, docs/development/lan-profiles.md)
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue,
 ##                 resume (重启后自动恢复), stat_species (属性条件 shows it; -1 follows the target),
+##                 keep_rule (one shared 保留规则 for every species),
 ##                 stop_after (找到N只后停止, one for the whole find-pet run:
 ##                 pets it keeps, qualifiers or with no 属性条件 every Lv.120
 ##                 pet, before it stops; 0 never stops, 1 stops to compare),
@@ -24,13 +25,13 @@ extends RefCounted
 ##                 mixed_if_stats (still take such a troop in a find-pet cycle
 ##                 when the pet meets its enabled 属性条件, after a battle
 ##                 forecast: server/battle_forecast.gd)}
-##   stat_filters {"<template id>": {mode, threshold_mode, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
+##   stat_filters {"<template id>": {mode, threshold_mode, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
 ##     threshold_mode "relative" (default): a condition asks for 最高 − minus,
 ##     the best Lv120 value of that metric among the player's own pets of the
 ##     species less `minus`; "absolute": at least `value`
 ##     (pet_stat_filter.gd resolve). Both numbers are kept, so switching loses
 ##     neither. An old fixed threshold saved with strict (>) becomes value + 1.
-##     keep_rule: 保留规则 (scripts/keep_rule.gd) {tiers, per_tier, order,
+##     hunt.keep_rule: all species share 保留规则 (scripts/keep_rule.gd) {tiers, per_tier, order,
 ##     champions, champion_stats, auto}: order is 1 to 5 distinct keys of sum,
 ##     attack, defence, speed, max_hp (pet_stat_filter.gd RANK_KEYS);
 ##     champion_stats any of attack, defence, speed, max_hp; auto tidies the
@@ -50,13 +51,13 @@ const SURVEY_SECONDS := 120
 const METRICS := ["sum","attack","defence","speed"]
 const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",-100,1000],"value":["int",0,3000],"keep":["int",0,1000]}
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
-const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],"keep_rule":KEEP_RULE_SPEC,
+const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"protect":["bool"],"select_troops":["bool"],"borrow_troops":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120],"fallback_attempts":["int",1,30],"fallback_rate":["int",0,98],"fallback_hp":["int",1,99]},
-	"hunt":{"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
+	"hunt":{"keep_rule":KEEP_RULE_SPEC,"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
 }
 static var _defaults: Dictionary = {}
 
@@ -133,9 +134,9 @@ static func apply_patch(overrides: Dictionary, patch: Variant) -> Dictionary:
 				if not id.is_valid_int() or int(id)<0:return _fail("invalid stat_filters key "+id)
 				id = str(int(id))
 				var given = value[template]
-				# Older clients still send the per-species 找到N只后停止: ignored.
-				if given is Dictionary and given.has("stop_after"):
-					given = given.duplicate();given.erase("stop_after")
+				# Older clients still send per-species stop_after and keep_rule: ignored.
+				if given is Dictionary:
+					given = given.duplicate();given.erase("stop_after");given.erase("keep_rule")
 				var reply := _merge(_dict(filters.get(id,{})),given,FILTER_SPEC,"stat_filters."+id)
 				if not reply.ok:return reply
 				filters[id] = reply.value
@@ -173,6 +174,7 @@ static func sanitize(stored: Variant) -> Dictionary:
 		var kept := _valid_part(stored.get(section),SPEC[section])
 		if not kept.is_empty():result[section] = kept
 	_migrate_stop_after(stored,result)
+	_migrate_keep_rule(stored,result)
 	var filters := {}
 	for id in _dict(stored.get("stat_filters",{})):
 		if not str(id).is_valid_int() or int(str(id))<0:continue
@@ -180,6 +182,29 @@ static func sanitize(stored: Variant) -> Dictionary:
 		if not kept.is_empty():filters[str(int(str(id)))] = kept
 	if not filters.is_empty():result.stat_filters = filters
 	return prune(result)
+
+## One shared rule; callers still group pets by species before evaluating it.
+static func keep_rule(overrides: Dictionary) -> Dictionary:
+	return effective(overrides).hunt.keep_rule.duplicate(true)
+
+## Save migration only. Network patches never promote deprecated species rules.
+## An explicit shared rule wins even when invalid (valid leaves or defaults).
+static func _migrate_keep_rule(stored: Dictionary, result: Dictionary) -> void:
+	if _dict(stored.get("hunt",{})).has("keep_rule"):return
+	var filters := {}
+	for id in _dict(stored.get("stat_filters",{})):
+		if str(id).is_valid_int() and int(str(id))>=0:filters[str(int(str(id)))]=stored.stat_filters[id]
+	var hunt := _dict(result.get("hunt",{}))
+	var candidates: Array = [str(int(hunt.get("stat_species",-1))),str(int(hunt.get("template",-1)))]
+	for id in filters:
+		if str(id).is_valid_int() and int(str(id))>=0 and not str(id) in candidates:candidates.append(str(id))
+	for id in candidates:
+		var old := _dict(_migrate_filter(filters.get(id,{})))
+		if not old.has("keep_rule"):continue
+		var section := _dict(result.get("hunt",{}))
+		section.keep_rule = _valid_part(old.keep_rule,KEEP_RULE_SPEC)
+		result.hunt = section
+		return
 
 ## 找到N只后停止 was per species (stat_filters.<id>.stop_after); now it is
 ## hunt.stop_after for the whole run. An old save takes the value of the

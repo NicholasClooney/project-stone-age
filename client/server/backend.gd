@@ -546,7 +546,7 @@ func _cmd_release_pets(command: Dictionary) -> Dictionary:
 		var protected: Dictionary = KeepRule.always_kept(profile)
 		protected.merge(automation.capture_helpers(),true)
 		protected.merge(session.battle_pets(),false)
-		var rule: Dictionary = AutomationSettings.stat_filter(session.automation_settings(),template).get("keep_rule",{})
+		var rule: Dictionary = AutomationSettings.keep_rule(session.automation_settings())
 		var pets: Array = KeepRule.species_pets(profile,template)
 		notes = session.keep_rule_notes(pets,KeepRule.evaluate(pets,rule,protected))
 	var result: Dictionary = session.release_pets(command.get("ids",[]),source if source in ["手动","保留规则"] else "手动",notes)
