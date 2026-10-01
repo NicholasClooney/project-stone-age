@@ -147,7 +147,9 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 				if reply.is_empty():
 					var leading: bool = type=="report_position" and party.is_leader(id)
 					var before := [backend.automation.position_map,backend.automation.position_cell]
-					var result: Dictionary = backend.handle(command)
+					var trusted:=command.duplicate(true)
+					trusted["_quest_connection"]=connection
+					var result: Dictionary = backend.handle(trusted)
 					if leading:_party_follow(id,before)
 					return result
 	reply.seq = command.get("seq",0)
@@ -158,6 +160,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 ## A connection closed.
 func disconnect_connection(connection: int) -> void:
 	var id := profile_of(connection)
+	if backends.has(id) and backends[id].quest_auto.connection==connection:backends[id].quest_auto.stop(backends[id],"发起设备已断线。")
 	_connections.erase(connection)
 	presence.forget(connection)
 	_party_sent.erase(connection)
@@ -215,6 +218,7 @@ func _enter(connection: int, entry: Dictionary, token: String) -> Dictionary:
 	presence.forget(connection)
 	_party_sent.erase(connection)
 	if previous!=id:
+		if backends.has(previous) and backends[previous].quest_auto.connection==connection:backends[previous].quest_auto.stop(backends[previous],"发起设备已切换角色。")
 		_attach(previous)
 		_party_gone(previous)
 	_attach(id)
@@ -278,6 +282,7 @@ func party_tick(profiles: Array = []) -> int:
 	for connection in _connections:
 		var id := profile_of(connection)
 		var view: Dictionary = party.view(id,by_id)
+		if backends.has(id) and party.in_party(id):backends[id].quest_auto.stop(backends[id],"组队变化停止了自动任务。")
 		var key := JSON.stringify(view)
 		if _party_sent.get(connection,"")==key:continue
 		_party_sent[connection] = key

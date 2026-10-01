@@ -244,3 +244,14 @@ ACCEPT capacity accounts for removed items before adding rewards.
 权威位置并返回 `target {map_id,cell,npc_id}`。客户端先下载素材，再发请求，
 等待地图加载和服务器位置报告确认后走路；采木目标没有 NPC，不发起对白。
 ProfileHub 绑定独立纯 `quest_visit_guard`，组队拒绝不会调用治疗钩子。
+## 自动贝壳交付
+
+`quest_auto_start {quest_id,client}` 仅允许事件2的 job11；`quest_auto_stop` 停止
+当前角色流程。`derived.quest_auto` 发布 running/quest_id/phase/message/target。
+服务器按真实分支执行，内部限定授权调用原解释器，不开放客户端分支或奖励参数。
+安全传送后等待发起设备的位置确认，再进入 talk/yes/ok，确认超时停止。
+`_quest_connection` 为服务器运输层绑定标识，覆盖任何客户端字段，不能伪造。
+发起连接断线停止；同角色其他设备断线不影响流程，仍可显式停止；其他角色隔离。
+手动移动、组队、战斗或其他自动化停止，普通对话/旅行冲突拒绝。
+停止保留已提交交易，仅清待确认 token；失败使用原同步保存回滚。运行状态不跨
+服务器重启恢复，原事件位和道具继续保存在角色存档。
