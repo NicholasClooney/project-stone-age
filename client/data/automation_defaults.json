@@ -6,6 +6,7 @@
     "spirit": true,
     "protect": true,
     "select_troops": true,
+    "borrow_troops": true,
     "side_heal": 50,
     "hp": 10,
     "level": 120,

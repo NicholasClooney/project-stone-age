@@ -1,0 +1,191 @@
+{
+  "schema": 1,
+  "source_root": "references/chenmingbiao-stone-age/gmsv/data",
+  "rule": "Audited ordinary imported groups; Lv80–105 subset optimized for expected XP. No rare, event, quest or material groups. Independent convenience, not natural local encounters.",
+  "groups": [
+    {
+      "map_id": 500,
+      "map_name": "五十年前波拉岛",
+      "area_id": 652,
+      "group_id": 767,
+      "cell": [
+        537,
+        500
+      ],
+      "source": {
+        "encount_line": 617,
+        "group_line": 643
+      },
+      "enemies": [
+        {
+          "id": 1464,
+          "name": "拉伊霍恩",
+          "level_min": 95,
+          "level_max": 105,
+          "enemy_line": 1089,
+          "template_id": 314,
+          "enemybase_line": 240,
+          "sprite": 100378
+        },
+        {
+          "id": 1463,
+          "name": "卡伊霍恩",
+          "level_min": 95,
+          "level_max": 105,
+          "enemy_line": 1088,
+          "template_id": 313,
+          "enemybase_line": 239,
+          "sprite": 100377
+        }
+      ]
+    },
+    {
+      "map_id": 500,
+      "map_name": "五十年前波拉岛",
+      "area_id": 659,
+      "group_id": 779,
+      "cell": [
+        218,
+        320
+      ],
+      "source": {
+        "encount_line": 623,
+        "group_line": 655
+      },
+      "enemies": [
+        {
+          "id": 1491,
+          "name": "加格",
+          "level_min": 90,
+          "level_max": 95,
+          "enemy_line": 1113,
+          "template_id": 223,
+          "enemybase_line": 203,
+          "sprite": 100341
+        },
+        {
+          "id": 1492,
+          "name": "邦恩吉",
+          "level_min": 90,
+          "level_max": 95,
+          "enemy_line": 1114,
+          "template_id": 224,
+          "enemybase_line": 204,
+          "sprite": 100342
+        },
+        {
+          "id": 1490,
+          "name": "加克拉",
+          "level_min": 90,
+          "level_max": 95,
+          "enemy_line": 1112,
+          "template_id": 222,
+          "enemybase_line": 202,
+          "sprite": 100340
+        },
+        {
+          "id": 1489,
+          "name": "克邦凯斯",
+          "level_min": 90,
+          "level_max": 95,
+          "enemy_line": 1111,
+          "template_id": 221,
+          "enemybase_line": 201,
+          "sprite": 100339
+        }
+      ]
+    },
+    {
+      "map_id": 500,
+      "map_name": "五十年前波拉岛",
+      "area_id": 659,
+      "group_id": 781,
+      "cell": [
+        218,
+        320
+      ],
+      "source": {
+        "encount_line": 623,
+        "group_line": 657
+      },
+      "enemies": [
+        {
+          "id": 1486,
+          "name": "拉可拉斯",
+          "level_min": 100,
+          "level_max": 105,
+          "enemy_line": 1109,
+          "template_id": 325,
+          "enemybase_line": 246,
+          "sprite": 100383
+        },
+        {
+          "id": 1485,
+          "name": "萨美洛斯",
+          "level_min": 100,
+          "level_max": 105,
+          "enemy_line": 1108,
+          "template_id": 322,
+          "enemybase_line": 243,
+          "sprite": 100380
+        },
+        {
+          "id": 1484,
+          "name": "史多拉奇顿",
+          "level_min": 100,
+          "level_max": 105,
+          "enemy_line": 1107,
+          "template_id": 321,
+          "enemybase_line": 242,
+          "sprite": 100379
+        }
+      ]
+    },
+    {
+      "map_id": 32016,
+      "map_name": "漆黑的洞窟 地下16楼",
+      "area_id": 626,
+      "group_id": 753,
+      "cell": [
+        29,
+        29
+      ],
+      "source": {
+        "encount_line": 591,
+        "group_line": 630
+      },
+      "enemies": [
+        {
+          "id": 1394,
+          "name": "邦浦洛斯",
+          "level_min": 93,
+          "level_max": 95,
+          "enemy_line": 1026,
+          "template_id": 93,
+          "enemybase_line": 93,
+          "sprite": 100289
+        },
+        {
+          "id": 1396,
+          "name": "拉可拉斯",
+          "level_min": 93,
+          "level_max": 95,
+          "enemy_line": 1028,
+          "template_id": 325,
+          "enemybase_line": 246,
+          "sprite": 100383
+        },
+        {
+          "id": 1398,
+          "name": "布林帖斯",
+          "level_min": 93,
+          "level_max": 95,
+          "enemy_line": 1030,
+          "template_id": 252,
+          "enemybase_line": 214,
+          "sprite": 100352
+        }
+      ]
+    }
+  ]
+}

@@ -88,6 +88,7 @@ var battle_state: Dictionary = {}
 var battle_open := false
 var encounter_catalog = EncounterCatalog.new()
 var encounter_rng := RandomNumberGenerator.new()
+var training_pool_rng := RandomNumberGenerator.new()
 var encounter_serial := 0
 var save_path := ""
 ## 放生记录 (server/release_log.gd): its own file next to the save,
@@ -135,6 +136,7 @@ var _queue: Array[Dictionary] = []
 func _init() -> void:
 	original_quests.catalog = quest_catalog
 	encounter_rng.randomize()
+	training_pool_rng.randomize()
 	session.battle_pets_hook = _live_battle_pets
 	session.capture_entry_hook = _capture_entry
 
@@ -578,6 +580,9 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	if str(config.get("battle_id",""))!=str(session._pending.get("battle_id","-")):return _reject("stale battle config")
 	# Freeze source loot metadata from the config issued by this authority.
 	config = config.duplicate(true)
+	# Borrowed source presentation is issued only by this authority.
+	config.erase("training_borrow")
+	if session._pending.get("training_borrow") is Dictionary:config.training_borrow=session._pending.training_borrow.duplicate(true)
 	var source_encounter := bool(session._pending.get("source_encounter",false))
 	if source_encounter and config.get("enemies",[]).size()!=session._pending.get("enemies",[]).size():return _reject("stale battle troop")
 	for i in range(config.get("enemies",[]).size()):
@@ -641,6 +646,36 @@ func wild_encounter(map_id: int, cell: Vector2i, training_groups: Variant = null
 	encounter_catalog.pressure = int(encounter_catalog.area_at(map_id,cell).get("probability_min",0))
 	return {"ok":true,"state":state,"troop":troop}
 
+## Dedicated server stream; persist the fully consumed roll before any battle
+## or forecast. It never touches encounter pressure, walking or hunt streams.
+func prepare_training_borrow() -> Dictionary:
+	if battle_open or not session._pending.is_empty():return _reject("battle active")
+	var Borrow=preload("res://server/training_borrow.gd")
+	var candidates: Array=Borrow.available(encounter_catalog,session.world_catalog,session.snapshot())
+	if candidates.is_empty():return _reject("没有可用的已审核高等级敌群，请检查素材和进场条件，或关闭借用。")
+	var saved: Dictionary=session.training_borrow_rng()
+	if Borrow.valid_rng(saved):training_pool_rng.seed=int(saved.seed);training_pool_rng.state=int(saved.state)
+	var troop: Dictionary=Borrow.roll(encounter_catalog,candidates,training_pool_rng,session.snapshot().get("original_items",[]))
+	session.set_training_borrow_rng({"seed":str(training_pool_rng.seed),"state":str(training_pool_rng.state)})
+	if not save():return _reject("无法保存借用敌群随机进度，已暂停，没有进入战斗。")
+	if troop.is_empty() or not TroopArt.can_render(troop.get("enemies",[])):return _reject("借用敌群的真实队形或素材不可用，已暂停。")
+	var config:=training_borrow_config(troop)
+	if config.is_empty():return _reject("借用敌群战斗配置无法通过原规则校验，已暂停。")
+	return {"ok":true,"troop":troop,"config":config}
+
+func valid_training_borrow(troop: Dictionary) -> bool:
+	var meta: Dictionary=troop.get("training_borrow",{})
+	if meta.is_empty():return false
+	for row in preload("res://server/training_borrow.gd").available(encounter_catalog,session.world_catalog,session.snapshot()):
+		if int(row.map_id)==int(meta.map_id) and int(row.area_id)==int(meta.area_id) and int(row.group_id)==int(meta.group_id) and row.cell==meta.cell:return true
+	return false
+
+func training_borrow_config(troop: Dictionary) -> Dictionary:
+	var config: Dictionary=session.preview_wild_battle_config(troop)
+	if config.is_empty():return {}
+	if training_borrow_preview.is_valid():config=training_borrow_preview.call(config)
+	return config
+
 func open_battle(config: Dictionary) -> Dictionary:
 	session.battle_pets_hook = _live_battle_pets
 	session.capture_entry_hook = _capture_entry
@@ -667,6 +702,7 @@ var party_battle_hook: Callable
 var party_guard: Callable
 ## Read-only roster/experience mode of the party the next encounter will open.
 var training_reward_context: Callable
+var training_borrow_preview: Callable
 
 ## This profile joins a party battle (its pending record is already set):
 ## `view` is its window on it (server/party_battles.gd SlotView).

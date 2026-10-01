@@ -67,7 +67,31 @@ func training_context(leader_id: String) -> Dictionary:
 		var profile: Dictionary=hub.backends[id].session.snapshot()
 		var active:=int(profile.get("active_pet",-1))
 		if active>=0 and active<profile.pets.size() and active!=int(profile.get("ride_pet",-1)) and int(profile.pets[active].get("hp",0))>0:pets+=1
-	return {"party":true,"share_exp":hub.party.shares_exp(leader_id),"players":ids.size(),"active_pets":pets}
+	return {"party":true,"share_exp":hub.party.shares_exp(leader_id),"players":ids.size(),"active_pets":pets,"member_ids":ids.duplicate()}
+
+## Same admission and per-member config as open(), read-only for a borrowed
+## training forecast. No member pending record is allocated during planning.
+func training_preview(config: Dictionary, leader_id: String) -> Dictionary:
+	var context:=training_context(leader_id)
+	if not bool(context.get("party",false)):return config.duplicate(true)
+	var ids: Array=context.member_ids
+	var start:=config.duplicate(true)
+	var slots: Array=[_slot_info(leader_id,hub.backends[leader_id],config)]
+	var members:=[]
+	var policies:={}
+	for id in ids.slice(1):
+		var backend=hub.backends[id]
+		var member: Dictionary=backend.session.preview_wild_battle_config({"enemies":config.enemies})
+		if member.is_empty():return {}
+		member.allies=[];member.ally_pets=[]
+		slots.append(_slot_info(id,backend,member))
+		members.append(_member_entry(slots.back(),member))
+		var policy: Dictionary=hub.party_auto(id)
+		if not policy.is_empty():policies[slots.size()-1]=policy
+	start.training_party_policies=policies
+	start.allies=[];start.ally_pets=[];start.can_capture=false
+	start.party_members=members;start.party_slots=slots;start.share_exp=bool(context.share_exp)
+	return start
 
 func open(config: Dictionary, rng_seed: int, leader_id: String):
 	if not hub.party.is_leader(leader_id) or fighting.has(leader_id):return null

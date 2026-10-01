@@ -103,6 +103,7 @@ func party_hub(names: Array = ["Alice","Bob","Cid"]) -> Array:
 	return [server,wire]
 
 func setup(server, id: String, hp: int = 5000) -> void:
+	server.backends[id].session.set_automation_settings({"training":{"borrow_troops":false}}) # Local turn/healing fixtures; borrowed LAN is tested separately.
 	var session = server.backends[id].session
 	var player: Dictionary = session._profile.player
 	player.level = 5
@@ -298,6 +299,7 @@ func healing() -> void:
 
 ## A pet (the starter's first) as the battle pet, 500 hp, and a 恢复护符 or none.
 func give_pet(server, id: String, charm: bool) -> void:
+	server.backends[id].session.set_automation_settings({"training":{"borrow_troops":false}}) # Local turn/healing fixtures; borrowed LAN is tested separately.
 	var session = server.backends[id].session
 	session.grant_starter_pets()
 	session.select_pet(0)

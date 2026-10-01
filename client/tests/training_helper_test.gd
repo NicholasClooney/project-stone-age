@@ -27,7 +27,7 @@ func run() -> void:
 	check(not game.training_helper.running and not game.battle_session.snapshot().active,"village refuses automation")
 	game.training_helper.close_menu()
 	# These pacing/takeover fixtures intentionally use the first original roll.
-	game.link.request({"type":"set_automation_settings","settings":{"training":{"select_troops":false}}})
+	game.link.request({"type":"set_automation_settings","settings":{"training":{"select_troops":false,"borrow_troops":false}}})
 	game.load_area_id(100,Vector2i(637,493))
 	game.session.gm_raise_level(-1,10)
 	game.session.gm_set_base_stat(-1,"strength",100)

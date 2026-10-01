@@ -46,7 +46,7 @@ func run() -> void:
 	backend.encounter_rng.seed = seed_value
 	backend.automation.client_attached = false
 	var before: Dictionary = backend.session.snapshot()
-	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":CELL,"settings":{"select_troops":false,"compact":false,"limit":2,"hp":1,"xp":100,"speed":8.0,"preset":"attack","level":120}})
+	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":CELL,"settings":{"select_troops":false,"borrow_troops":false,"compact":false,"limit":2,"hp":1,"xp":100,"speed":8.0,"preset":"attack","level":120}})
 	check(reply.ok and backend.automation.running,"backend accepts an automation start with no client")
 	for i in range(5000):
 		if not backend.automation.running:break
@@ -64,7 +64,7 @@ func run() -> void:
 	# ---- attached: presentation paces turns, but only up to the ceiling ----
 	backend = strong_backend()
 	backend.encounter_rng.seed = seed_value
-	backend.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":CELL,"settings":{"select_troops":false,"compact":false,"limit":1,"hp":1,"speed":8.0,"preset":"attack","level":120}})
+	backend.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":CELL,"settings":{"select_troops":false,"borrow_troops":false,"compact":false,"limit":1,"hp":1,"speed":8.0,"preset":"attack","level":120}})
 	backend.handle({"type":"auto_step"})
 	check(backend.battle_open and int(backend.battle.snapshot().turn)==0,"attached runner opens a battle")
 	backend.handle({"type":"auto_step"})

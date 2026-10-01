@@ -24,6 +24,7 @@ var compact: CheckBox
 var spirit: CheckBox
 ## 练级保护 (training.protect): fallen pets still earn experience in runs.
 var select_troops: CheckBox
+var borrow_troops: CheckBox
 var protect: CheckBox
 ## 全体补血 threshold in percent (training.side_heal, 0 off).
 var side_heal: SpinBox
@@ -106,6 +107,10 @@ func _ready() -> void:
 	select_troops.toggled.connect(func(_value):
 		if not _loading:
 			world.link.request({"type":"set_automation_settings","settings":{"training":{"select_troops":select_troops.button_pressed}}}))
+	borrow_troops=CheckBox.new();borrow_troops.name="BorrowTrainingTroops";borrow_troops.text="借用高等级敌群练宠（非原版）";borrow_troops.position=Vector2(500,445);panel.add_child(borrow_troops)
+	borrow_troops.tooltip_text="默认开，与练级挑敌群独立：目标宠物剩余经验÷当地最佳组预计经验严格大于5时，每场均匀借用已审核的原版Lv90–105敌群。每场重新判断，接近目标回本地。使用来源地图地面背景，不搬动角色；独立随机流可随存档恢复。战力预测不通过会暂停，保护仍按当前设置。找宠、捕获和手动战斗不借用。不能保证所有随机场次都在3–5场升满。"
+	borrow_troops.toggled.connect(func(_value):
+		if not _loading:world.link.request({"type":"set_automation_settings","settings":{"training":{"borrow_troops":borrow_troops.button_pressed}}}))
 	spirit.tooltip_text="到停机线时先用身上装备的补血精灵（治愈／滋润／恩惠，队伍里倒下的队友用复活精灵），气力不够再喝回复药或停机。气力只在村里休息时恢复。"
 	label_at(panel,"低于此血量停机 %",Vector2(24,223),17);hp_floor=number(Vector2(230,213),1,100,10)
 	label_at(panel,"角色等级（0不限）",Vector2(430,223),16);target_level=number(Vector2(610,213),0,120,120)
@@ -174,6 +179,7 @@ func load_settings() -> void:
 	if _changed(old_training,training,"xp"):multiplier.select(maxi(0,[1,2,10,100].find(int(training.xp))))
 	if _changed(old_training,training,"compact"):compact.set_pressed_no_signal(bool(training.compact))
 	if _changed(old_training,training,"spirit"):spirit.set_pressed_no_signal(bool(training.get("spirit",true)))
+	if _changed(old_training,training,"borrow_troops"):borrow_troops.set_pressed_no_signal(bool(training.get("borrow_troops",true)))
 	if _changed(old_training,training,"select_troops"):select_troops.set_pressed_no_signal(bool(training.get("select_troops",true)))
 	if _changed(old_training,training,"protect"):protect.set_pressed_no_signal(bool(training.get("protect",true)))
 	var shown:=all.duplicate(true)
@@ -214,7 +220,7 @@ static func _sync_spin(input: SpinBox, old_value: Variant, new_value: Variant, f
 
 ## Every choice in these controls, in the runner's flat settings shape.
 func current_settings() -> Dictionary:
-	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"protect":protect.button_pressed,"select_troops":select_troops.button_pressed,"side_heal":int(side_heal.value),"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
+	var result:={"speed":[1.0,2.0,4.0,8.0][maxi(0,speed.selected)],"xp":[1,2,10,100][maxi(0,multiplier.selected)],"compact":compact.button_pressed,"spirit":spirit.button_pressed,"protect":protect.button_pressed,"select_troops":select_troops.button_pressed,"borrow_troops":borrow_troops.button_pressed,"side_heal":int(side_heal.value),"hp":int(hp_floor.value),"level":int(target_level.value),"limit":int(battle_limit.value),"level_explicit":level_explicit,"preset":["attack","capture","train_pet"][maxi(0,preset.selected)],"capture_hp":int(capture_hp.value),"capture_pet":capture_pet.get_selected_id(),"capture_pet_max_level":int(capture_pet_max_level.value)}
 	result.capture_pet_id=_selected_pet_id()
 	return result
 
@@ -232,7 +238,7 @@ func settings_patch() -> Dictionary:
 	if _training_applied:
 		_training_applied=false
 		var chosen: Dictionary=current_settings()
-		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"protect":chosen.protect,"select_troops":chosen.select_troops,"side_heal":chosen.side_heal,
+		var wanted:={"xp":chosen.xp,"compact":chosen.compact,"spirit":chosen.spirit,"protect":chosen.protect,"select_troops":chosen.select_troops,"borrow_troops":chosen.borrow_troops,"side_heal":chosen.side_heal,
 "hp":chosen.hp,"limit":chosen.limit,"preset":chosen.preset,"level_explicit":level_explicit}
 		if level_explicit:wanted.level=chosen.level
 		var training:=AutomationSettings.diff(all.training,wanted)
@@ -335,7 +341,7 @@ func update_status() -> void:
 	if is_instance_valid(workflow) and workflow.active():status.text="找宠流程 · "+("抓宠 · " if str(used.get("preset",""))=="capture" else "练宠 · ")+status.text
 	if world.session.clone_squad_enabled:status.text+=" · 五人镜像队"
 	status.text+=" · 获得经验 %d（宠物 %d） · 缺素材跳过 %d 组"%[earned_xp,earned_pet_xp,skipped]
-	status.text+=" · 挑群跳过 %d 组" % int(automation.get("training_skipped",0))
+	status.text+=" · 挑群跳过 %d 组 · 借用 %d 场" % [int(automation.get("training_skipped",0)),int(automation.get("training_borrowed",0))]
 	if not str(automation.get("turn_text","")).is_empty():result.text=str(automation.turn_text)
 
 ## Backend status: show progress while running and mirror the active settings.

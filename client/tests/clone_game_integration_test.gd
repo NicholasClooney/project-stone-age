@@ -28,17 +28,23 @@ func run() -> void:
 	game.return_from_battle()
 	game.session.gm_heal()
 	check(game.session.grant_starter_pets() and game.session.select_pet(0) and game.session.set_character("100010") and game.session.mount_pet(1),"configure real blue dragon and tiger mount before mirror battle")
+	# Default borrowing requires real combat strength, including the mount.
+	game.session.gm_raise_level(-1,120);game.session.gm_raise_level(1,120)
+	game.session.gm_set_base_stat(-1,"strength",500);game.session.gm_set_base_stat(-1,"toughness",500);game.session.gm_heal()
 	var real_roster: Array=game.session.snapshot().pets.duplicate(true)
 	var helper=game.training_helper
 	helper.set_process(false)
 	helper.open_menu();helper.compact.button_pressed=true;helper.hp_floor.value=1;helper.battle_limit.value=1;helper.start_training()
 	game.encounter_rng.seed=0
-	check(helper.select_troops.button_pressed,"mirror regression exercises default-on local troop selection")
+	check(helper.select_troops.button_pressed and helper.borrow_troops.button_pressed,"mirror regression exercises default-on local troop selection")
 	var entered: bool=await Wait.until(self,func():
 		if game.battle_session.snapshot().active:return true
 		if helper.running:helper.advance()
 		return bool(game.battle_session.snapshot().active))
-	check(entered and game.backend.automation.training_selection.ready and int(game.session._pending.get("group_id",-1)) in game.backend.automation.training_selection.allowed,"default-on scoring continuation enters a real accepted local troop")
+	var actual: Dictionary=game.battle_session.snapshot().get("training_borrow",{})
+	var admitted:=preload("res://server/training_borrow.gd").available(game.backend.encounter_catalog,game.world_catalog,game.session.snapshot())
+	var accepted_pool: bool=not actual.is_empty() and admitted.any(func(row):return int(row.group_id)==int(actual.group_id) and int(row.map_id)==int(actual.map_id))
+	check(entered and game.backend.automation.training_selection.ready and (accepted_pool or (actual.is_empty() and int(game.session._pending.get("group_id",-1)) in game.backend.automation.training_selection.allowed)),"default-on scoring enters an accepted local or fully audited pool troop")
 	if not entered:
 		helper.stop_training("entry failed");game.queue_free();await process_frame
 		print("CLONE GAME INTEGRATION: %d failures"%failures);quit(1);return
@@ -46,6 +52,7 @@ func run() -> void:
 	check(game.backend.battle.get_script().resource_path.ends_with("squad_battle_session.gd"),"map-only automation selects the same squad authority")
 	helper.stop_training("test stop")
 	check(game.battle_view.visible and game.battle_view.actors.size()==20,"manual takeover restores five mounted fighters and five pets")
+	if accepted_pool:check(game.battle_view.battlefield.texture.resource_path==str(actual.texture),"manual takeover renders authoritative source-map battlefield")
 	var mirrored: Dictionary=game.battle_session.snapshot()
 	check(mirrored.get("ally_pets",[]).size()==4,"compact authority clones all four fighting pets")
 	for i in range(4):
