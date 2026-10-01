@@ -267,3 +267,16 @@ ProfileHub 绑定独立纯 `quest_visit_guard`，组队拒绝不会调用治疗�
 运输层绑定的地图确认与断线停止规则。恢复仍受手动移动、组队、战斗和其他自动化
 约束。ProfileHub 按角色打开各自检查点，无登录也可续跑；恢复开关关闭时不恢复。
 周期意图最多滞后 10 秒；重启前已经同步提交的原交易以角色存档为准。
+
+## Random encounter helper
+
+`no_random_encounters {enabled: bool}` saves a per-character helper preference,
+published as `derived.no_random_encounters`. It can change during any activity.
+During a pending battle it stays in the authoritative profile and is saved by
+normal settlement, which preserves the existing prohibition on mid-battle saves.
+Missing fields in older saves migrate to `false`, preserving original encounters;
+non-boolean persisted values are rejected. UI uses `link.request` and reads derived
+state. `field_step` checks this preference before rolling walking randomness, so
+clients cannot override it with `encounter: true`. Explicit `wild_encounter`,
+automatic training/hunting and NPC battles remain available. This is a project
+convenience, not an original game rule.

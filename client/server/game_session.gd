@@ -60,7 +60,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0,"haru_armor":0,"freya_robe":0,"teo_robe":0,"koyala_charm":0},"equipped_mirror":false,"equipment":{"body":"","amulet":""},"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0,"haru_armor":0,"freya_robe":0,"teo_robe":0,"koyala_charm":0},"equipped_mirror":false,"equipment":{"body":"","amulet":""},"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"no_random_encounters":false,"automation_settings":{},"music":MusicLibrary.empty()}
 	_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
 
 	_profile.player.base_stats = Progression.START.duplicate()
@@ -1199,6 +1199,7 @@ func load_game(path: String) -> bool:
 			if not _profile.has("travel_pass"):
 				_profile.travel_pass = false
 			# Saves before automation settings get the defaults; invalid parts are dropped.
+			if not _profile.has("no_random_encounters"):_profile.no_random_encounters=false
 			_profile.automation_settings = AutomationSettings.sanitize(_profile.get("automation_settings",{}))
 			# Saves before the radio get an empty library; malformed parts are dropped.
 			_profile.music = MusicLibrary.sanitize(_profile.get("music"))
@@ -1235,6 +1236,7 @@ func load_game(path: String) -> bool:
 	return false
 
 func _valid_profile(value: Variant) -> bool:
+	if value is Dictionary and value.has("no_random_encounters") and not value.no_random_encounters is bool:return false
 	if value is Dictionary and value.has("default_companions_claimed") and not value.default_companions_claimed is bool:return false
 	if value is Dictionary and value.has("gm_modified") and not value.gm_modified is bool:return false
 	if value is Dictionary and value.has("gm_bonus_points") and not _integer(value.gm_bonus_points,0,100000):return false

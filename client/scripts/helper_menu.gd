@@ -96,11 +96,21 @@ func rebuild() -> void:
 	var note: Label = world.text("本项目加入的功能，原版没有。",12)
 	note.add_theme_color_override("font_color",Color("b6aa8a"))
 	body.add_child(note)
+	var encounters := CheckButton.new()
+	encounters.name = "HelperNoRandomEncounters"
+	encounters.text = "不遇敌 · 地图随机遇敌"
+	encounters.tooltip_text = "按角色保存；主动刷怪、搜宠和剧情战斗照常。"
+	encounters.button_pressed = bool(world.state.derived.get("no_random_encounters",false))
+	encounters.toggled.connect(func(enabled: bool):
+		encounters.disabled = true
+		world.link.request({"type":"no_random_encounters","enabled":enabled},func(_reply: Dictionary):
+			if visible:rebuild();_center()))
+	body.add_child(encounters)
 	var scroll := ScrollContainer.new()
 	scroll.name = "HelperScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
-	scroll.custom_minimum_size.y = minf(480,maxf(80,screen.y-185))
+	scroll.custom_minimum_size.y = minf(480,maxf(80,screen.y-220))
 	body.add_child(scroll)
 	content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -134,6 +144,9 @@ func rebuild() -> void:
 
 func _process(_delta: float) -> void:
 	if not visible:return
+	var toggle = find_child("HelperNoRandomEncounters",true,false)
+	if toggle is CheckButton and not toggle.disabled:
+		toggle.set_pressed_no_signal(bool(world.state.derived.get("no_random_encounters",false)))
 	var target: Control = world.gamepad.target
 	if is_instance_valid(target) and is_ancestor_of(target):
 		var scroll: ScrollContainer = find_child("HelperScroll",true,false)
