@@ -126,5 +126,10 @@ func _on_outgoing(connection: int, message: Dictionary) -> void:
 	for peer in _clients:
 		if peer.get_instance_id()==connection and peer.get_ready_state()==WebSocketPeer.STATE_OPEN:_send(peer,message)
 
+## A client that stopped reading (a suspended page) fills its 8 MB outbound
+## queue; later messages would be dropped and its view would silently fall
+## behind. Close it instead: the client reconnects and resyncs from a snapshot.
 func _send(peer: WebSocketPeer, message: Dictionary) -> void:
-	peer.send_text(Codec.encode(message))
+	if peer.send_text(Codec.encode(message))!=OK and peer.get_ready_state()==WebSocketPeer.STATE_OPEN:
+		push_warning("closing a client whose outbound queue is full")
+		peer.close(1013,"backlog")
