@@ -111,3 +111,5 @@ python3 tools/special_pet_projection.py 92 303 304 --full 30000 --random 10000
 - [巴哈姆特 認識石器時代騎乘統合](https://forum.gamer.com.tw/C.php?bsn=1571&snA=76209)
 - [游侠 觉醒机豹](https://m.ali213.net/news/240809/214485.html)
 - 只有搜索摘要、未能打开原文：[腾讯新闻 红暴削暴包](https://new.qq.com/omn/20210524/20210524A099T600.html)、[知乎 华义编年史](https://zhuanlan.zhihu.com/p/622127590)、[shiqi.club 暴龙娃娃](https://www.shiqi.club/shiqi3918.html)、[bbs.shiqi.co 金暴捕捉](https://bbs.shiqi.co/sa-332-1-1.html)
+
+年兽图像导入的重复索引优先级、原版外观与局部更新验证，见 [年兽重复索引](nianshou-sprite-index.md)。

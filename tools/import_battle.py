@@ -10,32 +10,12 @@ import shutil
 import struct
 from pathlib import Path
 from PIL import Image
-from import_legacy import Archive
+from import_legacy import Archive, sprite_animations
 
 
 def animations(archive, sprite):
     """Read battle actions omitted by the exploration-only decoder's filter."""
-    index, raw = archive.sprite_bytes()
-    for offset in range(0, len(index), 12):
-        number, at, count = struct.unpack_from('<IIH', index, offset)
-        if number == sprite:
-            break
-    else:
-        raise ValueError(f'Missing sprite {sprite}')
-    result = {}
-    for _ in range(count):
-        direction, action, duration, count_frames = struct.unpack_from('<HHII', raw, at)
-        at += 12
-        if count_frames > 1000 or at + count_frames * 10 > len(raw):
-            raise ValueError('Invalid sprite frame count')
-        frames = []
-        for _ in range(count_frames):
-            bitmap, x, y, sound = struct.unpack_from('<IhhH', raw, at)
-            at += 10
-            frames.append(dict(image=bitmap, x=x, y=y, sound=sound))
-        if action in (0, 1, 2, 3, 4, 7, 8, 9, 10):
-            result[f'{action}_{direction}'] = dict(duration_ms=duration, frames=frames)
-    return result
+    return sprite_animations(archive, sprite, (0, 1, 2, 3, 4, 7, 8, 9, 10))
 
 
 def run(source, output):

@@ -63,13 +63,15 @@ def to_palette(sheet):
     if not opaque or len(opaque) > 255:
         return sheet
     key = next(c for c in [(255, 0, 255), (0, 255, 255), (1, 2, 3)] + [(i, 7, 11) for i in range(256)] if c not in opaque)
-    rgb = Image.new('RGB', sheet.size, key)
-    rgb.paste(sheet.convert('RGB'), mask=sheet.getchannel('A'))
     entries = [key] + opaque
     entries += [opaque[0]] * (256 - len(entries))
-    palette = Image.new('P', (1, 1))
-    palette.putpalette([v for c in entries for v in c])
-    result = rgb.quantize(palette=palette, dither=Image.Dither.NONE)
+    # Pillow quantize(palette=...) uses an approximate colour lookup, even
+    # without dithering: nearby original colours can collapse to one index.
+    # These pixels already belong to this exact palette; map them directly.
+    lookup = {color: i + 1 for i, color in enumerate(opaque)}
+    indices = bytes(lookup[pixel[:3]] if pixel[3] else 0 for pixel in sheet.getdata())
+    result = Image.frombytes('P', sheet.size, indices)
+    result.putpalette([v for color in entries for v in color])
     result.info['transparency'] = 0
     return result
 

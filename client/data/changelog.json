@@ -1,9 +1,18 @@
 {
-  "version": "v0.154.0",
-  "count": 219,
+  "version": "v0.154.1",
+  "count": 220,
   "feature_count": 138,
-  "fix_count": 81,
+  "fix_count": 82,
   "entries": [
+    {
+      "version": "v0.154.1",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "修正四种年兽的原版外观",
+      "details": [
+        "地、水、火、风年兽在战斗、跟随、宠物立绘和宠物大全中显示各自的原版图像，修正火年兽与风年兽同图。"
+      ]
+    },
     {
       "version": "v0.154.0",
       "date": "2026-10-01",
