@@ -24,6 +24,9 @@ func _initialize()->void:
 	check(10201 in route and 10202 in route and 10203 in route,"crossislandroute usesall originalunderseafloors")
 	check(not router.map_route(1000,10202,false).is_empty(),"walking up to permitguard doesnotrequirepermit")
 	check(router.map_route(1002,1000,false)==[1002,1000],"shopdoor route uses originalpair")
+	check(router.map_route(10202,10204,true).is_empty(),"adult entrance remains unavailable below source level30")
+	world.state.profile.player.level=30
+	check(router.map_route(10202,10204,true)==[10202,10204],"source level30 enables original adult entrance route")
 	world.world_catalog.portals={"1002":{Vector2i(2,1):{"to_map":99}}}
 	world.navigation.region=Rect2i(0,0,5,5)
 	world.navigation.diagonal_mode=AStarGrid2D.DIAGONAL_MODE_NEVER

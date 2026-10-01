@@ -317,3 +317,13 @@ is included. The integrated v6 authority migrates v5 embedded profiles using
 original-equipment migration and preserves validated v6 UIDs/durability.
 
 自动交付任务共享 `quest_auto_policy.gd` 的 job/event 映射 `{1:4,11:2,30:1}`；服务端启动及resume、客户端按钮和地图下载一致校验。药草job30预下载3110/20105，复用原交易token与保存，不改变SAVE_VERSION，不开放博士捕宠自动。重新启动先按当前旗标和持有药品derive步骤，旧对白token不可恢复。
+
+### 原版美容师对话
+
+`quest_talk {npc_id: "original/charm/1005"}`（或 `original/charm/2005`）
+打开医院美容师。`quest_choose {token, choice: "charm"}` 请求收费确认，
+`leave` 退出；确认窗 `yes` 提交、`no` 退出，结果窗 `ok` 关闭。
+服务器验证同地图、距离≤2格、非战斗及非自动活动，每个 token 只用一次。
+客户端显示服务器台词及选项，远程客户端无 backend。费用和基础魅力重新读取
+服务器存档，保存失败整体回滚，玩家参数和原版 C int 费用须有效。
+可选 `player.transmigration` 默认0，只保留原版收费兼容，不提供转生玩法。

@@ -3,6 +3,7 @@ extends RefCounted
 const ROOT := "res://assets/legacy/"
 var items: Dictionary = {}
 var npcs: Array = []
+var service_npcs: Array = []
 var jobs: Array = []
 var reward_pets: Dictionary = {}
 var enabled_events: Array = []
@@ -17,6 +18,7 @@ func _init() -> void:
  if not data is Dictionary or int(data.get("version", 0)) != 1: return
  items = data.get("items", {})
  npcs = data.get("npcs", [])
+ service_npcs = data.get("service_npcs", []).filter(func(npc):return str(npc.get("handler",""))=="Charm" and str(npc.get("id","")) in ["original/charm/1005","original/charm/2005"])
  jobs = data.get("jobs", [])
  reward_pets = data.get("reward_pets", {})
 func active_npcs() -> Array:
@@ -29,6 +31,7 @@ func active_npcs() -> Array:
    if branch.get("enabled", false) and _enabled(branch.get("events", [])):
     active.branches.append(branch.duplicate(true))
   if not active.branches.is_empty(): result.append(active)
+ result.append_array(service_npcs.duplicate(true))
  return result
 func _enabled(events: Array) -> bool:
  for event in events:
