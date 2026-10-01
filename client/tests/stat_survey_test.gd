@@ -160,19 +160,20 @@ func plus_n(automation, session, actor92: Dictionary) -> void:
 	# Two equal best hits: the earlier roll stays, never both dropped.
 	automation._showcase_add({"index":12,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":edge2.duplicate()})
 	check(automation.showcase_queue.size()==1 and int(automation.showcase_queue[0].index)==11 and uncaught(session,13).size()==1,"of two equal best hits the earlier one stays")
-	# At its turn the best queued hit is judged without itself (and without
-	# the kept hits ranked below it): A leads by 三围合 but B, below it, has the
-	# higher 攻击; A still beats the owned best by 1 and is not let go.
+	# The queue ranks by the 保留规则 order (攻击 first by default), not by
+	# 三围合: B, with the higher 攻击 but the lower 三围合, leads, and A, which no
+	# longer beats B's 攻击 by 1, is let go. At its turn B is judged without
+	# itself, against owned pets only.
 	automation.showcase_queue = []
 	var low_sum := int(owned.sum)-20
 	var a := {"attack":int(owned.attack)+1,"defence":low_sum-int(owned.attack)-2,"speed":1,"max_hp":1}
 	var b := {"attack":int(owned.attack)+5,"defence":low_sum-int(owned.attack)-10,"speed":1,"max_hp":1}
 	automation._showcase_add({"index":20,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":a})
 	automation._showcase_add({"index":21,"slot":0,"run_seed":1,"actor":actor92,"troop":{},"quality":{},"prediction":b})
-	check(automation.showcase_queue.size()==2 and automation.showcase_queue[0].prediction==a,"both queue, the higher 三围合 first")
+	check(automation.showcase_queue.size()==1 and automation.showcase_queue[0].prediction==b and uncaught(session,21).size()==1,"the higher 攻击 leads though its 三围合 is lower; the other no longer qualifies")
 	automation.flow_phase = "hunt"
 	automation._showcase_capture()
-	check(uncaught(session,21).is_empty() and int(automation.flow_target_filter.conditions.attack.value)==int(owned.attack)+1,"at its turn the best is judged against owned pets only: 攻击 ≥ %s" % str(automation.flow_target_filter.conditions.attack.get("value")))
+	check(uncaught(session,22).is_empty() and int(automation.flow_target_filter.conditions.attack.value)==int(owned.attack)+1,"at its turn the best is judged against owned pets only: 攻击 ≥ %s" % str(automation.flow_target_filter.conditions.attack.get("value")))
 	check(not str(automation.showcase_log.back().text).begins_with("门槛已提高"),"and not let go: %s" % automation.showcase_log.back().text)
 	automation.showcase_current = {}
 	automation.showcase_queue = []

@@ -1907,11 +1907,12 @@ func _skip_hit(kind: String, reason: String) -> void:
 # played in full. Hits found meanwhile wait in showcase_queue. The name the
 # player sees is AutomationSettings.SHOWCASE_NAME.
 
-## Queued hits best first, as the keep rule ranks pets: 三围合, then the
-## species' 保留规则 order, then the earlier roll.
+## Queued hits best first by the species' 保留规则 order (第一/第二/第三,
+## default 攻击 → 敏捷 → 血), then the other keys (三围合 first), then the
+## earlier roll. A full queue lets the last one go.
 func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
 	var rule: Dictionary = raw_filter_for(int(a.actor.get("template_id",-1))).get("keep_rule",{})
-	for key in StatFilter.rank_order(["sum"]+Array(rule.get("order",["attack","speed","max_hp"]))):
+	for key in StatFilter.rank_order(Array(rule.get("order",["attack","speed","max_hp"]))):
 		var va := StatFilter.rank_value(a.prediction,key)
 		var vb := StatFilter.rank_value(b.prediction,key)
 		if va!=vb:return va>vb

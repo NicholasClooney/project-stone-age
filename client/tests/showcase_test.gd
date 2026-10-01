@@ -111,11 +111,13 @@ func run() -> void:
 		actor.growth_seed = 7000+i*37
 		variants.append(actor)
 		automation._showcase_enqueue(100+i,0,{"enemies":[actor]},{"offsets":[0,0,0,0],"total_offset":0})
-	var sums: Array = variants.map(func(actor): var p := Progression.project_pet(actor,120);return int(p.attack)+int(p.defence)+int(p.speed))
-	var kept_sums: Array = automation.showcase_queue.map(func(e):return int(e.prediction.attack)+int(e.prediction.defence)+int(e.prediction.speed))
-	var sorted_sums := sums.duplicate();sorted_sums.sort();sorted_sums.reverse()
+	# The default 保留规则 order: 攻击, 敏捷, 血, then 三围合 and 防御.
+	var rank := func(p: Dictionary) -> Array:return [int(p.attack),int(p.speed),int(p.max_hp),int(p.attack)+int(p.defence)+int(p.speed),int(p.defence)]
+	var ranks: Array = variants.map(func(actor):return rank.call(Progression.project_pet(actor,120)))
+	var kept_ranks: Array = automation.showcase_queue.map(func(e):return rank.call(e.prediction))
+	var sorted_ranks := ranks.duplicate();sorted_ranks.sort();sorted_ranks.reverse()
 	check(automation.showcase_queue.size()==10,"the queue keeps at most 10")
-	check(kept_sums==sorted_sums.slice(0,10),"best first by predicted 三围合; the lowest is dropped (%s)" % str(kept_sums))
+	check(kept_ranks==sorted_ranks.slice(0,10),"best first by the 保留规则 order (攻击 first); the last is dropped (%s)" % str(kept_ranks))
 	var dropped: Array = game.backend.session.release_events.filter(func(e):return str(e.get("source",""))=="排队已满")
 	check(dropped.size()==1 and bool(dropped[0].get("uncaught",false)) and str(dropped[0].where)=="未捕获","the dropped hit goes to 放生记录 as 未捕获·排队已满")
 	check(dropped.size()==1 and str(dropped[0].reason)=="排队已满（上限10），排在第11" and not dropped[0].beaten_by.is_empty() and int(dropped[0].lv120.attack)>0,"with its reason, the hits that beat it and its predicted Lv120 stats")
