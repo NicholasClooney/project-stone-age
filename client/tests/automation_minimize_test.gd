@@ -4,6 +4,8 @@ extends SceneTree
 ## current, and restoring shows the backend's live progress.
 var failures:=0
 const PREFS:="user://automation-minimize-test-viewer.cfg"
+const Wait=preload("res://tests/support/wait.gd")
+const Warehouse=preload("res://tests/support/warehouse.gd")
 const ConditionsOff=preload("res://tests/support/conditions_off.gd")
 class FixedTroop extends RefCounted:
 	var troop: Dictionary
@@ -106,14 +108,21 @@ func training(game) -> void:
 	if retrieve!=null:
 		retrieve.pressed.emit();await process_frame
 	check(game.session.snapshot().pet_storage.size()==stored_before,"retrieving it back works too")
+	# Keep one pet stored so automation pushes must reconcile actual row content.
+	menu.pet_storage_target_id=pet_id;menu.rebuild()
+	menu.panel.get_node("PetStoragePanel/StoreSelectedPet").pressed.emit()
+	await process_frame
 	var drawn: Control=menu.panel
+	var scroll: Control=menu.panel.find_child("StorageScroll",true,false)
+	var row: Control=menu.panel.find_child("StorageRow_"+pet_id,true,false)
+	var exp_before: int=game.session.snapshot().player.xp
 	var battles: int=helper.battles
 	for i in range(60):
 		if helper.battles>battles:break
 		helper.advance()
-	await create_timer(0.5).timeout
-	await frames(3)
-	check(helper.battles>battles and menu.visible and menu.panel!=drawn,"open warehouse redraws as automation changes the profile")
+	check(await Wait.until(self,func():return helper.battles>battles and int(game.session.snapshot().player.xp)!=exp_before and Warehouse.matches(menu,game.session.snapshot())),"automation pushes its changed profile and warehouse content within the refresh deadline")
+	check(helper.battles>battles and int(game.session.snapshot().player.xp)!=exp_before and menu.visible and menu.panel==drawn and menu.panel.find_child("StorageScroll",true,false)==scroll,"automation changes the real profile while the open warehouse keeps its panel and scroll")
+	check(Warehouse.matches(menu,game.session.snapshot()) and menu.panel.find_child("StorageRow_"+pet_id,true,false)==row,"automation pushes keep warehouse counts, stats, tooltips and UID rows current")
 	check(chip.visible and chip.get_index()>menu.get_index(),"progress bar stays above the open menu")
 	await key(KEY_ESCAPE)
 	check(not menu.visible and helper.running and game.paused_input,"Esc closes the menu, not the automation; the map stays held")

@@ -50,9 +50,12 @@ func release_input() -> void:
 ## Rebuilds a panel for new data without moving the player's place in its
 ## lists: scroll areas are matched by order and restored once laid out.
 func rebuild_keeping_scroll(panel: Control) -> void:
+	var controls := _scroll_areas(panel)
 	var before := capture_scroll(panel)
 	panel.rebuild()
-	restore_scroll(panel,before)
+	# Reconciled warehouses/records retain their scroll controls and handle
+	# layout themselves. A deferred restore would overwrite a later user scroll.
+	if controls!=_scroll_areas(panel):restore_scroll(panel,before)
 
 ## Scroll positions of every scroll area under root, in tree order.
 func capture_scroll(root: Node) -> Array[Vector2i]:
