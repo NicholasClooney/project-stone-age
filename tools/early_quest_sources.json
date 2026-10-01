@@ -10,7 +10,9 @@
     "jaruga/event/20501ev4",
     "jaruga/event/20501ev5",
     "jaruga/event/event01_1",
-    "jaruga/event/event01_2"
+    "jaruga/event/event01_2",
+    "jaruga/event/event04_1",
+    "jaruga/event/event04_2"
   ],
   "items": [
     2414,
@@ -26,7 +28,9 @@
     2484,
     2485,
     2401,
-    2427
+    2427,
+    2417,
+    2418
   ],
   "sources": {
     "gmsv/data/npc/sainasu/event/event02.create": "1b0f4e68ad7ddcae43e42192999f8241efb23d2ac6880735f05bfcbb56284254",
@@ -42,7 +46,9 @@
     "gmsv/data/npc/jaruga/event/20501ev5": "091d9c558fe450162de1230817f4ed5f3bebb3386afd8611673f93172c587c85",
     "gmsv/data/npc/jaruga/event/event.create": "c36b440518d37db27083ca3835ea4902b79a0bfcd70e9702457c586bb53682be",
     "gmsv/data/npc/jaruga/event/event01_1": "c680167a7c6783bcf42cfdcfab60840359bf54a7b79db93019e4bb89a4607492",
-    "gmsv/data/npc/jaruga/event/event01_2": "af3721253296a69e87004bdf2ff9e438c49ba11076ac3ce064181257219483bb"
+    "gmsv/data/npc/jaruga/event/event01_2": "af3721253296a69e87004bdf2ff9e438c49ba11076ac3ce064181257219483bb",
+    "gmsv/data/npc/jaruga/event/event04_1": "fcba69368d1f849cb8a22dbc5e1503ca89515698424f7f710844197a353ec570",
+    "gmsv/data/npc/jaruga/event/event04_2": "5b4bea387c16efa89d72072e82fa1e3fb4c071d8606767c8b33c08481832992b"
   },
   "creates": [
     "gmsv/data/npc/sainasu/event/event02.create",
@@ -81,6 +87,12 @@
     ],
     "jaruga/event/event01_2": [
       1
+    ],
+    "jaruga/event/event04_1": [
+      4
+    ],
+    "jaruga/event/event04_2": [
+      4
     ]
   },
   "client_sources": {
@@ -88,7 +100,8 @@
   },
   "world_review": {
     "maps": [
-      20508
+      20508,
+      10204
     ],
     "interiors": [
       20508
@@ -97,10 +110,17 @@
       "20508": {
         "path": "gmsv/data/map/jyaruga/dungeon/dan_2-05-08",
         "sha256": "d0dc40863d36c148998e391601821d119db28c21517a15d215f4f123d9954b4c"
+      },
+      "10204": {
+        "path": "gmsv/data/map/sainasu/dungeon/dan_1-02-04",
+        "sha256": "e1941d76a9e3555839313ce320b340bd4544ea91c11345849ae6eb7f0d40a08b"
       }
     },
     "portal_sources": {
-      "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c"
+      "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+      "gmsv/data/npc/genout/dungeon00.create": "1b3d189ea8ae5e42de4321efce19d3fb9517f0b25b6130ff0cb73761cd62514b",
+      "gmsv/data/npc/genout/event04n.create": "eb6715d3c5aeabdd1467f44d1f1bf32d570039c29ece4604e182538e0540b1a9",
+      "gmsv/data/npc/genout/wpm_10202_31_13": "c0f6574f34fd32b19de3b4bc4fd268c16191e52b4bf7c23956e85e748daea120"
     },
     "door_choices": [
       {
@@ -115,12 +135,12 @@
           24
         ]
       }
+    ],
+    "gate_scripts": [
+      "genout/wpm_10202_31_13"
     ]
   },
-  "excluded_scripts": [
-    "jaruga/event/event04_1",
-    "jaruga/event/event04_2"
-  ],
+  "excluded_scripts": [],
   "restricted_conditions": {
     "jaruga/event/event01_2": {
       "3": "NOWEV=1&ITEM!=2401"

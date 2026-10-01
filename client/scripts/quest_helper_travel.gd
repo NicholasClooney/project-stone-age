@@ -88,10 +88,10 @@ func start_auto(quest_id: int) -> void:
 	phase="auto_download"
 	var ticket:=generation
 	var needed:Array=[]
-	for map_id in [1000,2000]:
+	for map_id in ([10204] if quest_id==1 else [1000,2000]):
 		for pack in world._areas.area_packs(map_id):
 			if not pack in needed:needed.append(pack)
-	var ready:bool=await world.await_packs(needed,"贝壳自动任务地图")
+	var ready:bool=await world.await_packs(needed,"自动任务地图")
 	if not valid(ticket):return
 	if not ready:cancel("地图素材下载失败，请稍后再试。");return
 	phase="auto_request"
@@ -107,7 +107,7 @@ func _process(_delta: float) -> void:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false):
 		world.last_adventure_message=str(auto.get("message",""))
-		if not (world.link.is_local() or world.link.online) or world.battle_view.visible or world.party_locked():cancel("自动任务已停止。")
+		if not (world.link.is_local() or world.link.online) or (world.battle_view.visible and str(auto.get("phase",""))!="battle") or world.party_locked():cancel("自动任务已停止。")
 		var landing:bool=str(auto.get("phase",""))=="landing"
 		if not landing:auto_reported=false
 		var destination:Dictionary=auto.get("target",{})

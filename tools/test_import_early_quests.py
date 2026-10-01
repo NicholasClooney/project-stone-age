@@ -13,19 +13,19 @@ REFERENCE = Path(__file__).resolve().parents[1]/'references/chenmingbiao-stone-a
 class EarlyQuestTests(unittest.TestCase):
     def test_real_packet(self):
         data = quests.catalog(REFERENCE)
-        self.assertEqual(set(data['items']), {'2401', '2427', '2414', '2415', '2463', '2464', '2465', '2466', '2467', '2468', '2478', '2481', '2484', '2485'})
+        self.assertEqual(set(data['items']), {'2417', '2418', '2401', '2427', '2414', '2415', '2463', '2464', '2465', '2466', '2467', '2468', '2478', '2481', '2484', '2485'})
         self.assertEqual(data['items']['2414']['logical_icon'], 24130)
         self.assertEqual(data['items']['2415']['name'], '仙尼亚的花')
         self.assertFalse(data['items']['2415']['stackable'])
         self.assertEqual(data['items']['2414']['source_line'], 1997)
         self.assertEqual(data['items']['2468']['raw_columns'][24:26], ['', ''])
-        self.assertEqual([(n['map_id'], n['cell']) for n in data['npcs']], [(2000, [55,92]), (1000, [57,124]), (20508, [12,11]), (20507, [32,29]), (3300, [60,75]), (3300, [46,55]), (3000, [114,69]), (3110, [16,15]), (20105, [16,20])])
+        self.assertEqual([(n['map_id'], n['cell']) for n in data['npcs']], [(2000, [55,92]), (1000, [57,124]), (20508, [12,11]), (20507, [32,29]), (3300, [60,75]), (3300, [46,55]), (3000, [114,69]), (3110, [16,15]), (20105, [16,20]), (10204,[14,6]), (10204,[188,13])])
         npc = data['npcs'][0]
         self.assertEqual([b['type'] for b in npc['branches']], ['CLEAN', 'ACCEPT', 'REQUEST'])
         self.assertEqual(npc['branches'][1]['actions'], {'GetItem':'2414','DelItem':'2415','EndSetFlg':'2'})
         self.assertIn('\n', npc['branches'][2]['texts']['ThanksMsg'])
         self.assertNotIn('\\n', npc['branches'][2]['texts']['ThanksMsg'])
-        self.assertEqual(data['jobs'][0]['title'], '不可思议的贝壳')
+        self.assertEqual(data['jobs'][1]['title'], '不可思议的贝壳')
 
     def test_wood_branch_order_and_journal(self):
         data = quests.catalog(REFERENCE)
@@ -44,11 +44,11 @@ class EarlyQuestTests(unittest.TestCase):
         self.assertEqual(exchanges[2]['actions']['DelItem'], '2468,2478')
         self.assertEqual(exchanges[-1]['actions']['DelItem'], '2478')
         self.assertEqual([(j['id'], j['event'], j['title']) for j in data['jobs']],
-                         [(11, 2, '不可思议的贝壳'), (22, 18, '伐木任务'), (30, 1, '塔姆塔姆村的药草')])
+                         [(1, 4, '成人仪式'), (11, 2, '不可思议的贝壳'), (22, 18, '伐木任务'), (30, 1, '塔姆塔姆村的药草')])
 
     def test_herb_review_boundaries(self):
         data = quests.catalog(REFERENCE)
-        girl, doctor = data['npcs'][-2:]
+        girl, doctor = data['npcs'][7:9]
         self.assertEqual((girl['graphic'], doctor['graphic']), (16065, 16024))
         self.assertEqual([b['enabled'] for b in doctor['branches']], [True, False, False, True])
         medicine = doctor['branches'][3]
@@ -58,11 +58,13 @@ class EarlyQuestTests(unittest.TestCase):
         self.assertIn('NomalMsg', girl['branches'][-1]['texts'])
         self.assertEqual(data['items']['2401']['logical_icon'], 23030)
         self.assertEqual(data['items']['2427']['logical_icon'], 22002)
-        self.assertFalse(any(n['id'].startswith('jaruga/event/event04') for n in data['npcs']))
-        spec = json.loads(quests.SPEC.read_text())
-        spec['excluded_scripts'] = []
-        with self.assertRaisesRegex(ValueError, 'Unreviewed NPC'):
-            quests.catalog(REFERENCE, spec)
+        judge, messenger = data['npcs'][-2:]
+        self.assertEqual((judge['graphic'],messenger['graphic']), (16001,16203))
+        self.assertEqual(judge['branches'][1]['condition'], 'LV>0')
+        self.assertEqual(messenger['branches'][0]['actions'], {'GetItem':'2417*15'})
+        self.assertEqual(judge['branches'][0]['actions'], {'GetItem':'2418','DelItem':'2417*15','EndSetFlg':'4'})
+        self.assertFalse(data['items']['2417']['stackable'])
+        self.assertEqual(data['items']['2418']['raw_columns'][22],'30')
 
     def test_changed_sources_rejected(self):
         spec = json.loads(quests.SPEC.read_text())

@@ -338,6 +338,10 @@ def run(source, reference, output, fallback_source=None):
     # Preserve the existing exploration graph. Extra areas are DEV-only until
     # their entrances, quest gates and progression are restored explicitly.
     portals=ordinary_portals(all_portals, ordinary)
+    for portal in portals:
+        if portal.get("gate_source")=="genout/wpm_10202_31_13":
+            portal["requires_level"]=30
+            portal.pop("convenience",None)
     require_seimu_permits(portals)
     disable_conflicting_portals(portals)
     review_scenic_doors(portals)

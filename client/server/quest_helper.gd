@@ -23,6 +23,7 @@ func snapshot(backend) -> Dictionary:
   var quest := {"id":int(job.id),"event":event,"title":str(job.title),"status":"已完成" if ended else ("进行中" if Rules.flag(profile,"now",event) else "未开始"),"repeatable":false,"can_restart":false,"blocked_reason":"" if enabled else "尚未开放","steps":[]}
   if enabled:
    if event==1:herb_steps(backend,profile,quest)
+   elif event==4:adult_steps(backend,profile,quest)
    elif event==2:shell_steps(backend,profile,quest)
    elif event==18:wood_steps(backend,profile,quest)
    restart_steps(backend,profile,quest)
@@ -103,6 +104,19 @@ func herb_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  add_step(backend,profile,quest,"herb:request",request,not started and not ended,started or ended,"向村庄小姑娘领取药草委托")
  add_step(backend,profile,quest,"herb:medicine",pick(backend,profile,candidates(backend,1,"GetItem",2401)),started and not held and not ended,held or ended,"向哈罗山医生领取哈罗的香草")
  add_step(backend,profile,quest,"herb:return",pick(backend,profile,candidates(backend,1,"DelItem",2401)),started and held and not ended,ended,"回村交付香草，领取老爷爷的护身符")
+
+func adult_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
+ var ended:=Rules.flag(profile,"ended",4)
+ var started:=Rules.flag(profile,"now",4)
+ var held:int=profile.original_items.count(2417)
+ var request:Dictionary={}
+ for npc in backend.quest_catalog.active_npcs():
+  for branch in npc.branches:
+   if int(branch.event)==4 and str(branch.type)=="REQUEST":request={"npc":npc,"branch":branch}
+ add_step(backend,profile,quest,"adult:request",request,not started and not ended,started or ended,"向审判领取成人仪式")
+ add_step(backend,profile,quest,"adult:jade",pick(backend,profile,candidates(backend,4,"GetItem",2417)),started and held==0 and not ended,held>=15 or ended,"向通道尽头差使领取十五个仪玉（需十五空格）")
+ add_step(backend,profile,quest,"adult:return",pick(backend,profile,candidates(backend,4,"DelItem",2417)),started and held>0 and not ended,ended,"返回审判交付十五个仪玉，领取仪之兜")
+ quest.completion_detail="助手传送绕过原入口等级30，是项目便利；接任务仍按原LV>0。仪玉由差使发放，非战斗掉落。"
 
 func wood_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var items:Array=profile.original_items
