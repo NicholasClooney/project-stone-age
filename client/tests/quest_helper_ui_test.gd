@@ -52,8 +52,8 @@ func click(button: Control) -> bool:
 		event.global_position=point
 		root.push_input(event,true)
 	return true
-func visit_button(id: String, mode: String) -> Button:
-	return world.quest_helper_menu.find_child(("QuestVisit_11_%s_%s" % [id,mode]).validate_node_name(),true,false)
+func visit_button(id: String, mode: String, job:int=11) -> Button:
+	return world.quest_helper_menu.find_child(("QuestVisit_%s_%s_%s" % [job,id,mode]).validate_node_name(),true,false)
 func choose(id: String) -> bool:
 	var dialogue=world.world_travel.quest_dialogue
 	if not await ready(func():return dialogue.active and not dialogue.busy,"Original dialogue reply arrives"):return false
@@ -63,7 +63,7 @@ func choose(id: String) -> bool:
 	return check(await Wait.settle(self,world),"Original choice settles")
 func run() -> void:
 	var backend=preload("res://server/backend.gd").new()
-	backend.quest_catalog.enabled_events=[2]
+	backend.quest_catalog.enabled_events=[1,2]
 	root.add_child(backend)
 	var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1")
 	root.add_child(server)
@@ -75,7 +75,7 @@ func run() -> void:
 	world.profile_persistence=false
 	world.viewer_prefs_path="user://quest-helper-ui.cfg"
 	var catalog=preload("res://scripts/quest_catalog.gd").new()
-	catalog.enabled_events=[2]
+	catalog.enabled_events=[1,2]
 	world.world_catalog.set_quest_catalog(catalog)
 	root.add_child(world)
 	if not await ready(func():return not world.data.is_empty() and world.link.online,"Remote startup connects"):return
@@ -115,6 +115,34 @@ func run() -> void:
 	if not check(world.session.snapshot().original_items==[2414],"OK grants original shell"):return
 	world.quest_helper_menu.open_menu()
 	if not check(world.quest_helper_menu.find_child("QuestHelper_11",true,false).text.ends_with("已完成"),"Completed quest remains visible"):return
+	# New herb quest uses the same remote-only real viewport controls.
+	if not await click(visit_button("herb:request","near",30)):return
+	if not await ready(func():return not world.quest_helper_travel.active,"Herb safe teleport completes"):return
+	if not check(await Wait.settle(self,world),"Herb position settles"):return
+	if not check(int(world.data.map_id)==3110 and world.cell.distance_to(Vector2i(16,15))==1,"Herb teleport lands beside girl on downloaded map"):return
+	world.world_travel.quest_dialogue.open("jaruga/event/event01_1")
+	if not await choose("yes"):return
+	if not await choose("ok"):return
+	world.quest_helper_menu.open_menu()
+	if not await click(visit_button("herb:medicine","arrival",30)):return
+	if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Mountain arrival walks to doctor and opens original dialogue"):return
+	if not check(int(world.data.map_id)==20105 and world.backend==null,"Doctor reached through remote map download and server-owned position"):return
+	if not await choose("yes"):return
+	if not check(world.world_travel.body.text.contains("这可是医生的职责所在呢") and not 2401 in world.session.snapshot().original_items,"Numbered doctor thanks visible before receipt"):return
+	if not await choose("ok"):return
+	if not check(2401 in world.session.snapshot().original_items,"Remote doctor gives original medicine"):return
+	world.quest_helper_menu.open_menu()
+	if not await click(visit_button("herb:return","arrival",30)):return
+	if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Return arrival walks back to original girl"):return
+	if not await choose("yes"):return
+	if not await choose("ok"):return
+	if not check(2427 in world.session.snapshot().original_items and not 2401 in world.session.snapshot().original_items,"Remote return grants original amulet"):return
+	world.quest_helper_menu.open_menu()
+	if not check(world.quest_helper_menu.find_child("QuestHelper_30",true,false).text.ends_with("已完成"),"Herb completed row retained"):return
+	# Restore the shell receiver map for the existing cancellation assertions.
+	if not await click(visit_button("shell:exchange","near")):return
+	if not await ready(func():return not world.quest_helper_travel.active,"Return to shell map"):return
+	world.quest_helper_menu.open_menu()
 	var journey=world.quest_helper_travel
 	# Exercise actual download failure and close while download completion waits.
 	world.asset_packs=gate

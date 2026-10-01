@@ -1,7 +1,7 @@
 # 原版任务解释器与已知偏差
 
 已开放 `sainasu/event/event02_1`、`event02_2` 的不可思议的贝壳任务。
-公开目录 `client/data/early-quests.json` 启用事件 2、18、19。玩家可点击日美子
+公开目录 `client/data/early-quests.json` 启用事件 1、2、18、19。玩家可点击日美子
 （萨姆吉尔 1000，57/124）与弥生（玛丽娜丝 2000，55/92）。
 测试使用真实 QuestCatalog 和原分支，不伪造对白或奖励。
 伐木扩展按地图与数据、战斗掉物、完整事件链分别提交；仅启用目录中的事件才公开 NPC。
@@ -54,10 +54,10 @@ Headless 测试不验证渲染像素。
 原重复入口到 (8,24) 保留审查记录，采用先列出的 (7,24)。
 全 70 图块、60 物件均可用 2.5 图形，哈恩 (12,11) 邻格从入口可达。
 
-完整目录含贝壳 2 NPC 与伐木 5 NPC、12 件原道具。NPC 与 branch 的 `events`
+完整目录含贝壳 2 NPC、伐木 5 NPC 与药草 2 NPC、14 件原道具。NPC 与 branch 的 `events`
 记录审核链关联，EventNo 原值保留，不能用正数 EventNo 筛掉科巴尔特、赛尚等
 无自身事件号的分支。哈恩 1837/1838 钥匙旁支 `enabled=false`，不公开。
-原 jobdaily 只有 event2、event18 标题，event19 不捏造日志标题。
+当前导入的原 jobdaily 有 event1、event2、event18 标题，event19 不捏造日志标题。
 
 ## 已开放伐木链
 
@@ -79,3 +79,25 @@ GetStone 使用 `player.gold`；原 `_FIX_MAX_GOLD` 启用，未转生上限1000
 目前无转生系统，不假装复现该扩展。数据依据 `char_base.c:2668–2678`、
 `npc_exchangeman.c:2584–2595`。采木与组队/恢复范围见
 [木材掉落](original-wood-drops.md)。
+
+## 已开放药草（event1 / job30）
+
+原 `jaruga/event/event.create:4–25`：村庄小姑娘在塔姆塔姆村3110(16,15)，
+graphic16065/dir6；咍罗山的医生在山顶20105(16,20)，graphic16024/dir6。
+共享 create 的成人礼两个 NPC 明确排除于已审核白名单，不能顺便开放。
+`event01_1` 的 REQUEST 仅要求 LV>0，无 SP 限制，置 NOW1；医生 NOW1
+且无2401给哈罗的香草2401；小姑娘 NOW1&ITEM=2401 收药给2427并置 END1。
+jobdaily 原标题为「塔姆塔姆村的药草」。无 CLEAN，完成后不重做；进行中丢药
+可向医生补领。取消沿原 REQUEST 行为扣魅力一，GetItem 为空不另删药。
+
+医生 ITEM1984 提示与1982/1983磨药分支保留完整来源但 disabled；取药分支
+原条件含 NOW87/END87，保留于 `source_condition` 和 `disabled_conditions`，
+有效 `condition` 只选原 NOW1 子句，不导出或激活 event87。编号 AcceptMsg1/2、
+ThanksMsg1..4 按序合并成完整原对白；兼容 NomalMsg 与 NomalWindowMsg。
+交易在最后 OK 才提交，满包取药拒绝，满包交药按净容量交换，保存失败回滚。
+
+物品2401使用2.5 logical icon23030；2427使用22002。NPC图各归map3110/map20105，
+目录与物品图归core。现有两图及原门已导入，无需重导世界或遇敌；测试验证
+near/arrival 安全落点与真实导航网格可达，远程无 backend 客户端按原按钮交付。
+香草的原 ITEM_useRecovery 体100和护身符装备属性仅保存原道具说明，功能尚未实现。
+药草助手只提供三步导航；自动执行仍仅贝壳。

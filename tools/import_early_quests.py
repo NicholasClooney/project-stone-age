@@ -75,6 +75,8 @@ def catalog(reference, spec=None):
         if not script.startswith('changeevent|file:'):
             raise ValueError('Unsupported NPC handler')
         ident = script.split('file:', 1)[1]
+        if ident in spec.get('excluded_scripts', []):
+            continue
         if ident not in spec['scripts']:
             raise ValueError(f'Unreviewed NPC: {ident}')
         x, y, x2, y2 = map(int, fields['borncorner'].split(','))
@@ -82,7 +84,14 @@ def catalog(reference, spec=None):
             raise ValueError('Unsupported moving/multiple NPC')
         default, branches = parse_script(texts['gmsv/data/npc/' + ident])
         events = spec['script_events'][ident]
-        for branch in branches:
+        for index, branch in enumerate(branches):
+            restriction = spec.get('restricted_conditions', {}).get(ident, {}).get(str(index))
+            if restriction:
+                if restriction not in branch['condition'].split(','):
+                    raise ValueError('Restriction must select a reviewed original alternative')
+                branch['source_condition'] = branch['condition']
+                branch['disabled_conditions'] = [c for c in branch['condition'].split(',') if c != restriction]
+                branch['condition'] = restriction
             # Keep unrelated key-repair dialogue as provenance, never activate it.
             item_ids = {int(i) for i in re.findall(r'ITEM(?:!=|=)(\d+)', branch['condition'])}
             for key in ('GetItem', 'DelItem'):

@@ -64,6 +64,14 @@ func window(npc: Dictionary, branch: Dictionary, phase: String, text: String, co
 	pending={"token":token,"npc":npc,"branch":branch,"phase":phase}
 	return {"ok":true,"dialogue":{"token":token,"npc_id":npc.id,"name":npc.name,"text":text,"choices":[{"id":"yes","text":"是"},{"id":"no","text":"否"}] if confirm else [{"id":"ok","text":"确定"}]}}
 
+static func message(texts: Dictionary, key: String) -> String:
+	# Original scripts use both unnumbered and ordered numbered message fields.
+	var parts: Array[String] = []
+	if texts.has(key):parts.append(str(texts[key]))
+	for index in range(1,5):
+		if texts.has(key+str(index)):parts.append(str(texts[key+str(index)]))
+	return "\n".join(parts)
+
 func talk(backend, id: String) -> Dictionary:
 	pending={}
 	var npc := npc_by_id(id)
@@ -77,11 +85,11 @@ func talk(backend, id: String) -> Dictionary:
 	if phase=="MESSAGE":
 		var result := transact(backend,profile,branch,"MESSAGE")
 		if not result.ok:return result
-		return window(npc,branch,"end",str(branch.texts.get("NomalWindowMsg","")),false)
+		return window(npc,branch,"end",message(branch.texts,"NomalWindowMsg") if branch.texts.has("NomalWindowMsg") else message(branch.texts,"NomalMsg"),false)
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
 	var keys := {"REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
-	return window(npc,branch,phase,str(branch.texts.get(keys[phase],"")),true)
+	return window(npc,branch,phase,message(branch.texts,keys[phase]),true)
 
 func choose(backend, token: String, choice: String) -> Dictionary:
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
@@ -98,12 +106,12 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
-	if phase=="ACCEPT" and choice=="yes":return window(npc,branch,"reward",str(branch.texts.get("ThanksMsg","")),false)
+	if phase=="ACCEPT" and choice=="yes":return window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
 	var result := transact(backend,profile,branch,phase)
 	if not result.ok:return result
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
-	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",str(branch.texts.get(key,"")),false)
+	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
 func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -> Dictionary:
 	var candidate := profile.duplicate(true)

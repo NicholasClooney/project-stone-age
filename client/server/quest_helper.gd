@@ -22,7 +22,8 @@ func snapshot(backend) -> Dictionary:
   var ended := Rules.flag(profile,"ended",event)
   var quest := {"id":int(job.id),"event":event,"title":str(job.title),"status":"已完成" if ended else ("进行中" if Rules.flag(profile,"now",event) else "未开始"),"repeatable":false,"can_restart":false,"blocked_reason":"" if enabled else "尚未开放","steps":[]}
   if enabled:
-   if event==2:shell_steps(backend,profile,quest)
+   if event==1:herb_steps(backend,profile,quest)
+   elif event==2:shell_steps(backend,profile,quest)
    elif event==18:wood_steps(backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
@@ -90,6 +91,18 @@ func shell_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var started:bool=Rules.flag(profile,"now",2) or item in profile.original_items
  add_step(backend,profile,quest,"shell:request",request,not started and not ended,started or ended)
  add_step(backend,profile,quest,"shell:exchange",exchange,started and not ended,ended)
+
+func herb_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
+ var ended:=Rules.flag(profile,"ended",1)
+ var started:=Rules.flag(profile,"now",1)
+ var held:bool=2401 in profile.original_items
+ var request:Dictionary={}
+ for npc in backend.quest_catalog.active_npcs():
+  for branch in npc.branches:
+   if int(branch.event)==1 and str(branch.type)=="REQUEST":request={"npc":npc,"branch":branch}
+ add_step(backend,profile,quest,"herb:request",request,not started and not ended,started or ended,"向村庄小姑娘领取药草委托")
+ add_step(backend,profile,quest,"herb:medicine",pick(backend,profile,candidates(backend,1,"GetItem",2401)),started and not held and not ended,held or ended,"向哈罗山医生领取哈罗的香草")
+ add_step(backend,profile,quest,"herb:return",pick(backend,profile,candidates(backend,1,"DelItem",2401)),started and held and not ended,ended,"回村交付香草，领取老爷爷的护身符")
 
 func wood_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var items:Array=profile.original_items

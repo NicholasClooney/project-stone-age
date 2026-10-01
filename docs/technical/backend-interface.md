@@ -237,6 +237,9 @@ ACCEPT capacity accounts for removed items before adding rewards.
 每项含 `id`、`title`、`status`、`repeatable`、`can_restart`、`blocked_reason` 和
 `steps`；步骤含稳定 `id`、`quest_id`、原 `npc_id`、`map_id`、`cell`、`label`、
 `current`、`done`、`actionable`，以及可审查的原分支来源。UI 不自行判断奖励或旗标。
+药草 event1/job30 的 `herb:request`、`herb:medicine`、`herb:return` 从 NOW1/END1
+和2401派生；无 CLEAN 不标重做。医生 event87 与磨药来源保留但未启用，
+编号原对白按序显示，确认后服务器原交易统一处理。
 
 `quest_visit {quest_id,step_id,mode,client}` 从服务器当前步骤解析地点；兼容原
 `npc_id` 参数，但不接受客户端提供落点。`mode` 为 `near` 或 `arrival`。
