@@ -175,9 +175,9 @@ func hunting(game) -> void:
 	check(hunt.minimized and not hunt.visible and chip.visible and game.gamepad.panel()==null,"hunt window collapses to its bar")
 	hunt.set_process(true)
 	game.show_adventure_menu("pets")
-	await frames(20)
-	check(hunt.running and hunt.rolls>0,"scan keeps running behind the pet menu")
-	check(chip.detail.text.begins_with("遇敌 %d 组"%hunt.rolls),"bar shows live encounter count")
+	var core=game.backend.automation
+	check(await Wait.until(self,func():return core.hunt_rolls>0),"real scan keeps running behind the pet menu")
+	check(await Wait.until(self,func():return hunt.running and hunt.rolls>0 and chip.detail.text.begins_with("遇敌 %d 组"%hunt.rolls)),"bar shows published encounter count within the progress refresh deadline")
 	# Warehouse work beside the scan: store a pet, then release it for good.
 	var menu=game.adventure_menu
 	var pet_id:=pet_id_not_active(game)
