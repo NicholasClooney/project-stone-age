@@ -8,6 +8,9 @@ const AutomationSettings = preload("res://scripts/automation_settings.gd")
 var preset: OptionButton
 var capture_hp: SpinBox
 var capture_pet: OptionButton
+var capture_fallback_attempts: SpinBox
+var capture_fallback_rate: SpinBox
+var capture_fallback_hp: SpinBox
 var capture_pet_max_level: SpinBox
 var world: Node
 var panel: Panel
@@ -109,6 +112,9 @@ func _ready() -> void:
 	capture_hp=number(Vector2(610,356),1,100,100)
 	capture_pet=options(["自动最低等级"],Vector2(180,406));capture_pet.set_item_id(0,-1)
 	capture_pet_max_level=number(Vector2(610,406),1,120,10)
+	capture_fallback_attempts=number(Vector2(230,289),1,30,5)
+	capture_fallback_rate=number(Vector2(230,339),0,98,20)
+	capture_fallback_hp=number(Vector2(230,389),1,99,50)
 	label_at(panel,"抓宠血量线与削血宠设置统一在「自动抓极品 → 抓宠设置」。",Vector2(24,416),16)
 	target_note=label_at(panel,"抓宠锁定目标；带宠升级需遇敌前启用。攻击或反击仍可能击倒目标。",Vector2(24,490),16)
 	progress=Panel.new();progress.position=Vector2(100,600);progress.size=Vector2(1080,145)
@@ -125,6 +131,8 @@ func _ready() -> void:
 	target_level.value_changed.connect(func(_value):if not _loading:level_explicit=true)
 	target_level.get_line_edit().text_submitted.connect(func(_text):level_explicit=true)
 	world.pet_hunt_menu.install_capture_controls(capture_hp,capture_pet,capture_pet_max_level)
+	world.pet_hunt_menu.install_fallback_controls(capture_fallback_attempts,capture_fallback_rate,capture_fallback_hp)
+	for input in [capture_fallback_attempts,capture_fallback_rate,capture_fallback_hp]:input.value_changed.connect(func(_value):save_capture_settings(false))
 	capture_hp.value_changed.connect(func(_value):save_capture_settings(false))
 	capture_pet.item_selected.connect(func(_index):save_capture_settings(true))
 	capture_pet_max_level.value_changed.connect(func(_value):save_capture_settings(false))
@@ -170,6 +178,8 @@ func load_settings() -> void:
 			else:_sync_default_level()
 	if not _sync_spin(capture_hp,old_capture.get("hp"),capture.hp):shown.capture.hp=old_capture.hp
 	if not _sync_spin(capture_pet_max_level,old_capture.get("pet_max_level"),capture.pet_max_level):shown.capture.pet_max_level=old_capture.pet_max_level
+	for entry in [[capture_fallback_attempts,"fallback_attempts"],[capture_fallback_rate,"fallback_rate"],[capture_fallback_hp,"fallback_hp"]]:
+		if not _sync_spin(entry[0],old_capture.get(entry[1]),capture[entry[1]]):shown.capture[entry[1]]=old_capture[entry[1]]
 	if _changed(old_capture,capture,"pet") or _changed(old_capture,capture,"pet_id"):_refresh_pet_choices()
 	_loading=false
 	_loaded=shown
@@ -205,7 +215,7 @@ func _selected_pet_id() -> String:
 func settings_patch() -> Dictionary:
 	var all: Dictionary=world.automation_settings()
 	var patch := {}
-	var capture:=AutomationSettings.diff(all.capture,{"hp":int(capture_hp.value),"pet":capture_pet.get_selected_id(),"pet_id":_selected_pet_id(),"pet_max_level":int(capture_pet_max_level.value)})
+	var capture:=AutomationSettings.diff(all.capture,{"hp":int(capture_hp.value),"pet":capture_pet.get_selected_id(),"pet_id":_selected_pet_id(),"pet_max_level":int(capture_pet_max_level.value),"fallback_attempts":int(capture_fallback_attempts.value),"fallback_rate":int(capture_fallback_rate.value),"fallback_hp":int(capture_fallback_hp.value)})
 	if not capture.is_empty():patch.capture=capture
 	if _training_applied:
 		_training_applied=false
@@ -269,7 +279,7 @@ func close_menu() -> void:
 ## Saves these choices to the profile and applies this device's playback speed
 ## and the live experience multiplier.
 func apply_settings() -> void:
-	for input in [capture_hp,capture_pet_max_level,hp_floor,target_level,battle_limit,side_heal]:
+	for input in [capture_hp,capture_pet_max_level,capture_fallback_attempts,capture_fallback_rate,capture_fallback_hp,hp_floor,target_level,battle_limit,side_heal]:
 		if input.get_line_edit().has_focus():input.apply()
 	var chosen: Dictionary=current_settings()
 	world.set_battle_speed(float(chosen.speed))

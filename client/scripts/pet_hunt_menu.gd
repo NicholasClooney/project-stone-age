@@ -602,13 +602,20 @@ func on_event(detail: Dictionary) -> void:
 func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->void:
 	for control in [hp,pet,max_level]:control.reparent(capture_page);controls.append(control)
 	hp.position=Vector2(230,139);hp.size=Vector2(150,38);hp.name="CaptureHp"
-	pet.position=Vector2(230,209);pet.size=Vector2(470,38);pet.name="CapturePet"
-	max_level.position=Vector2(230,279);max_level.size=Vector2(150,38);max_level.name="CapturePetMaxLevel"
-	for entry in [["抓宠血量线 %",Vector2(24,149)],["削血宠物",Vector2(24,219)],["削血宠等级上限",Vector2(24,289)],["自动选择最低等级存活宠，且等级不高于目标；手选宠受等级上限限制。",Vector2(24,349)],["默认100%时即可尝试捕捉，满血不保证成功；低于100%才需要削血宠。两种抓宠流程共用设置。",Vector2(24,389)]]:
+	pet.position=Vector2(230,189);pet.size=Vector2(470,38);pet.name="CapturePet"
+	max_level.position=Vector2(230,239);max_level.size=Vector2(150,38);max_level.name="CapturePetMaxLevel"
+	for entry in [["抓宠血量线 %",Vector2(24,149)],["削血宠物",Vector2(24,199)],["削血宠等级上限",Vector2(24,249)]]:
 		var caption:Label=world.text(str(entry[0]),16);caption.position=entry[1];capture_page.add_child(caption)
 
 ## 抓宠设置's right column: the 后台搜宠 switch, 排队上限, and the 自动练级
 ## 经验倍率 / 战斗速度 its training uses (the same values as 自动练级's own).
+func install_fallback_controls(attempts: SpinBox, rate: SpinBox, hp: SpinBox)->void:
+	for entry in [[attempts,"CaptureFallbackAttempts","难抓：失败次数",299],[rate,"CaptureFallbackRate","难抓：成功率低于 %",349],[hp,"CaptureFallbackHp","难抓：削血到 %",399]]:
+		var input: SpinBox=entry[0]
+		input.reparent(capture_page);input.name=entry[1];input.size=Vector2(150,38);controls.append(input)
+		input.tooltip_text="混合敌群先由五人不带出战宠清场，保护全部 Lv.1；难抓时才换随身队伍中存活、非骑乘且符合等级上限的削血宠。血量线取本项与抓宠血量线的较低值。缺少合适宠物会暂停，预演也使用同一策略。"
+		var caption:Label=world.text(entry[2],16);caption.position=Vector2(24,int(entry[3]));capture_page.add_child(caption)
+
 func showcase_controls()->void:
 	var name_text:=AutomationSettings.SHOWCASE_NAME
 	showcase=CheckBox.new();showcase.name="ShowcaseMode";showcase.text=name_text;showcase.button_pressed=true;showcase.position=Vector2(760,139)
@@ -643,7 +650,7 @@ func showcase_controls()->void:
 		_show_mixed_option()
 		_settings_changed(true))
 	mixed_if_stats=CheckBox.new();mixed_if_stats.name="MixedIfStats";mixed_if_stats.text="属性达标仍进混合遇敌";mixed_if_stats.position=Vector2(760,429)
-	mixed_if_stats.tooltip_text="找宠流程里，这只 Lv.1 预测的120级属性达到已启用的属性条件时，即使同组有高等级敌人也去抓。进战斗前先按现在的人物和出战宠模拟这场捕捉，打不赢就暂停并说明，不进入战斗。"
+	mixed_if_stats.tooltip_text="找宠流程里，这只 Lv.1 预测的120级属性达到已启用的属性条件时，即使同组有高等级敌人也去抓。进战斗前用真实战斗核心预演五次：五人先不带出战宠清掉高等级敌人，保护所有 Lv.1，之后主角抓、队友等待；难抓才换合适削血宠。打不赢就暂停并说明。"
 	capture_page.add_child(mixed_if_stats);controls.append(mixed_if_stats)
 	mixed_if_stats.toggled.connect(func(_value):_settings_changed(true))
 

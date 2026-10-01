@@ -19,7 +19,10 @@
     "hp": 100,
     "pet": -1,
     "pet_id": "",
-    "pet_max_level": 10
+    "pet_max_level": 10,
+    "fallback_attempts": 5,
+    "fallback_rate": 20,
+    "fallback_hp": 50
   },
   "hunt": {
     "template": -1,

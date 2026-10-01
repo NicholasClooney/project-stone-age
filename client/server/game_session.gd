@@ -233,7 +233,7 @@ func best_other_pets(count: int) -> Array:
 func cancel_pending_battle(battle_id: String) -> void:
 	if str(_pending.get("battle_id",""))==battle_id:_pending.clear()
 
-func start_wild_battle_config(troop: Dictionary) -> Dictionary:
+func start_wild_battle_config(troop: Dictionary, clear_target: int = -1) -> Dictionary:
 	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}
 	var enemies: Array = troop.enemies.duplicate(true)
 	if enemies.is_empty() or enemies.size()>10:return {}
@@ -248,8 +248,18 @@ func start_wild_battle_config(troop: Dictionary) -> Dictionary:
 		if not enemy.get("name") is String or enemy.name.is_empty():return {}
 		if not _generated_drops_valid(enemy):return {}
 		if not enemy.has("growth_weights") or not enemy.has("base_stats"):return {}
+	var previous_clone := clone_squad_enabled
+	if clear_target>=0:clone_squad_enabled = true
 	var config := start_battle_config()
+	clone_squad_enabled = previous_clone
 	if config.is_empty():return {}
+	if clear_target>=0:
+		if clear_target>=enemies.size() or int(enemies[clear_target].level)!=1:
+			cancel_pending_battle(str(config.battle_id));return {}
+		config.clear_capture_target = clear_target
+		config.active_pet = -1
+		config.pet = {}
+		config.ally_pets = [{},{},{},{}]
 	var first: Dictionary = enemies[0]
 	config.enemies = enemies
 	config.enemy_species = first.species

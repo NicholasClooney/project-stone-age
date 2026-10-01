@@ -151,7 +151,7 @@ func _live_battle_pets() -> Dictionary:
 	for enemy in live.get("enemies",[]):slots.append(int(enemy.get("defeated_by_pet_index",-1)))
 	for slot in slots:
 		if slot>=0 and slot<pets.size():busy[str(pets[slot].get("pet_id",""))] = "出战中"
-	if battle.capture_assist:busy.merge(automation.capture_helpers(),false)
+	if battle.capture_assist or int(live.get("clear_capture_target",-1))>=0:busy.merge(automation.capture_helpers(),false)
 	return busy
 
 func _process(delta: float) -> void:

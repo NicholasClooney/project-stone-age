@@ -3,6 +3,7 @@ extends RefCounted
 const MIN_CAPTURE_ODDS := 10
 ## Single-player convenience decisions; never mutate battle state or grant rewards.
 static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dictionary:
+ if int(state.get("clear_capture_target",-1))>=0:return clear_capture_decision(state,settings,target)
  if state.get("healing_available",false) and int(state.get("pet_hp",0))>0 and int(state.get("pet_hp",0))*2<=int(state.get("pet_max_hp",0)):
   return {"action":"heal_pet","pet":"defend","target":maxi(0,target)}
  var enemies: Array=state.get("enemies",[])
@@ -148,3 +149,28 @@ static func side_below(state: Dictionary, percent: int) -> bool:
 ## Standing, hurt and at or below the 停机线 (`line` percent).
 static func _at_line(hp: int, max_hp: int, line: int) -> bool:
  return hp>0 and hp<max_hp and hp*100<=max_hp*line
+
+## Shared by live automation and the five real-core forecast trials. The
+## battle pins the slot; changing settings never changes that identity.
+static func clear_capture_decision(state: Dictionary, settings: Dictionary, target: int) -> Dictionary:
+ var pinned := int(state.clear_capture_target)
+ var enemies: Array = state.get("enemies",[])
+ if target!=pinned or target<0 or target>=enemies.size():return {"stop":"捕捉目标引用已失效"}
+ var enemy: Dictionary = enemies[target]
+ if str(enemy.get("battle_uid",""))!=str(state.get("clear_capture_uid","")):return {"stop":"捕捉目标引用已失效"}
+ if bool(enemy.get("captured",false)):return {"action":"escape","pet":"defend","target":target,"assist":true}
+ if int(enemy.hp)<=0:return {"stop":"捕捉目标已倒下，已停止；不会改抓其他敌人"}
+ if not bool(state.get("can_capture",true)) or not bool(enemy.get("can_capture",false)):return {"stop":"当前战斗不可继续捕捉，可能已达捕获数量上限"}
+ for i in range(enemies.size()):
+  if int(enemies[i].hp)>0 and int(enemies[i].get("level",0))!=1:
+   return {"action":"attack","pet":"defend","target":i,"assist":false}
+ var attempts := int(state.get("capture_attempts",0))
+ var evaluation: Dictionary = preload("res://server/capture_rules.gd").evaluate(state.get("capture_player",{}),enemy)
+ var hard := attempts>=clampi(int(settings.get("capture_fallback_attempts",5)),1,30) or int(evaluation.get("winning_rolls",0))<clampi(int(settings.get("capture_fallback_rate",20)),0,98)
+ var line := mini(int(settings.get("capture_hp",100)),clampi(int(settings.get("capture_fallback_hp",50)),1,99))
+ if hard and int(enemy.hp)*100>int(enemy.get("max_hp",1))*line:
+  var choice := capture_pet_choice(state,settings,int(enemy.get("level",1)))
+  if choice.has("stop"):return choice
+  if int(choice.index)!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":int(choice.index),"assist":true}
+  return {"action":"defend","pet":"attack","target":target,"assist":true}
+ return {"action":"capture","pet":"defend","target":target,"assist":true}

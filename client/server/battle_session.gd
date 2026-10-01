@@ -90,15 +90,22 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	_state["player_elements"] = config.get("player_elements",[0,0,0,0]).duplicate()
 	_state["last_pet_command"] = "attack"
 	_state["enemy_target"] = ""
+	_state["clear_capture_target"] = int(config.get("clear_capture_target",-1))
+	_state["capture_attempts"] = 0
+	_state["capture_player"] = _capture_player()
 	_state["can_capture"] = bool(config.get("can_capture",true)) and not bool(config.get("boss",false))
 	var enemies: Array = config.get("enemies", []).duplicate(true)
 	if enemies.is_empty():
 		enemies.append({"name":_state.enemy_name,"species":_state.enemy_species,"sprite":_state.enemy_sprite,"max_hp":_state.enemy_max_hp,"attack":config.get("enemy_attack",7),"defence":config.get("enemy_defence",0),"speed":config.get("enemy_speed",7),"reward_xp":config.get("reward_xp",20),"reward_gold":config.get("reward_gold",10)})
-	for enemy in enemies:
+	for index in range(enemies.size()):
+		var enemy: Dictionary = enemies[index]
+		enemy["battle_uid"] = "%s:%d:%s" % [str(config.get("battle_id","")),index,str(enemy.get("growth_seed",0))]
 		enemy["hp"] = enemy.get("hp",enemy.get("max_hp",32))
 		enemy["max_hp"] = enemy.get("max_hp",32)
 		enemy["captured"] = false
 	_state["enemies"] = enemies.slice(0,10)
+	var pinned := int(_state.clear_capture_target)
+	_state["clear_capture_uid"] = str(enemies[pinned].battle_uid) if pinned>=0 and pinned<enemies.size() else ""
 	_state["pets"] = config.get("pets", [pet] if not pet.is_empty() else []).duplicate(true)
 	_state["active_pet"] = int(config.get("active_pet",0 if not _state.pets.is_empty() else -1))
 	_state["ride_pet"] = int(config.get("ride_pet_index",-1))
@@ -154,6 +161,8 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 	if action == "switch" and pet_index >= 0 and int(_state.pets[pet_index].get("hp",0)) <= 0:
 		return snapshot()
 	_target = target if target >= 0 else int(_state.selected_target)
+	if action=="capture" and int(_state.get("clear_capture_target",-1))>=0:
+		if _target!=int(_state.clear_capture_target) or not _enemy_alive(_target):return snapshot()
 	if _target >= _state.enemies.size() or _target < 0 or not _enemy_alive(_target):
 		_target = _first_enemy()
 	if action == "capture" and not _state.enemies[_target].get("can_capture",true):return snapshot()
@@ -261,7 +270,8 @@ func _player_action(action: String) -> void:
 			else:
 				_state.events.append("逃跑失败！下次机会增加了。")
 		"capture":
-			var capture_player := {"level":_config.get("player_level",1),"speed":_config.get("player_speed",10),"charm":_config.get("player_charm",60),"luck":_config.get("player_luck",0),"capture_bonus":_config.get("capture_bonus",0)}
+			_state.capture_attempts += 1
+			var capture_player := _capture_player()
 			var evaluation := CaptureRules.evaluate(capture_player,_state.enemies[_target])
 			_config["capture_bonus"]=0 # Consumed after every attempt, including failures.
 			_state["capture_evaluation"]=evaluation
@@ -394,6 +404,9 @@ func _pet_perform(command: String, skill_id: int, target: int) -> void:
 		return
 	_attack_enemy(stats,str(stats.get("name","伙伴")))
 
+func _capture_player() -> Dictionary:
+	return {"level":_config.get("player_level",1),"speed":_config.get("player_speed",10),"charm":_config.get("player_charm",60),"luck":_config.get("player_luck",0),"capture_bonus":_config.get("capture_bonus",0)}
+
 func _player_stats(defending: bool = false) -> Dictionary:
 	var stats := {"kind":"player","attack":_config.get("player_attack",10),"defence":_config.get("player_defence",0),"speed":_config.get("player_speed",10),"level":_config.get("player_level",1),"vital":_config.get("player_vital",0),"luck":_config.get("player_luck",0),"weapon":_config.get("player_weapon",""),"elements":_config.get("player_elements",[0,0,0,0])}
 
@@ -403,9 +416,20 @@ func _player_stats(defending: bool = false) -> Dictionary:
 		return preload("res://scripts/riding.gd").adjusted_stats(stats,_state.pets[index],str(_config.get("combat_profile","classic")),defending)
 	return stats
 
+func _protected_capture_enemy(index: int) -> bool:
+	return int(_state.get("clear_capture_target",-1))>=0 and index>=0 and index<_state.enemies.size() and int(_state.enemies[index].get("level",0))==1
+
+func _first_clear_enemy() -> int:
+	for index in range(_state.enemies.size()):
+		if _enemy_alive(index) and not _protected_capture_enemy(index):return index
+	return -1
+
 func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 	_pending_counter = {}
-	if not _enemy_alive(_target):
+	if int(_state.get("clear_capture_target",-1))>=0:
+		var chip := str(stats.get("kind",""))=="pet" and _target==int(_state.clear_capture_target) and _first_clear_enemy()<0
+		if not chip and (not _enemy_alive(_target) or _protected_capture_enemy(_target)):_target = _first_clear_enemy()
+	elif not _enemy_alive(_target):
 		_target = _first_enemy()
 	if _target < 0:
 		return
@@ -451,7 +475,7 @@ func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 		_apply_player_damage(int(result.damage))
 	_state.events.append("对手攻击%s：%s %d。" % [str(_state.pet_name) if target_pet else "你",_last_outcome,_last_damage])
 	var can_counter: bool = _state.pet_hp > 0 and _state.last_pet_command == "attack" if target_pet else _state.player_hp > 0 and _player_command == "attack"
-	if can_counter and _rng.randi_range(1,10000) < int(CombatRules.odds(defender,_state.enemies[_acting_enemy],"counter")*100):
+	if can_counter and not _protected_capture_enemy(_acting_enemy) and _rng.randi_range(1,10000) < int(CombatRules.odds(defender,_state.enemies[_acting_enemy],"counter")*100):
 		_pending_counter = {"actor":"pet" if target_pet else "player","enemy_index":_acting_enemy,"target":"enemy"}
 	if _state.player_hp == 0:
 		_finish("defeat","你暂时落败，回村恢复体力。")
@@ -460,7 +484,7 @@ func _reflect_incoming(damage: int, target_pet: bool) -> bool:
 	# battle_event.c BATTLE_DamageSub: positive direct damage reflects once,
 	# before rider/pet splitting; reflection itself never generates a counter.
 	var charges:=int(_state.mirror_pets.get(_state.active_pet,0)) if target_pet else int(_state.mirror_self)
-	if damage<=0 or charges<=0:return false
+	if damage<=0 or charges<=0 or _protected_capture_enemy(_acting_enemy):return false
 	if target_pet:_state.mirror_pets[_state.active_pet]=0
 	else:_state.mirror_self=0
 	_pending_counter={}
@@ -505,12 +529,12 @@ func _sync_pet() -> void:
 ## a capture would have now (CaptureRules), so the capture policy can weaken
 ## a target first when throwing at it cannot work yet.
 func snapshot() -> Dictionary:
+	_state["capture_player"] = _capture_player()
 	var view := _state.duplicate(true)
 	if bool(view.get("active",false)) and bool(view.get("can_capture",false)):
-		var capture_player := {"level":_config.get("player_level",1),"speed":_config.get("player_speed",10),"charm":_config.get("player_charm",60),"luck":_config.get("player_luck",0),"capture_bonus":_config.get("capture_bonus",0)}
 		for enemy in view.get("enemies",[]):
 			if bool(enemy.get("can_capture",false)) and not bool(enemy.get("captured",false)) and int(enemy.get("hp",0))>0:
-				var evaluation := CaptureRules.evaluate(capture_player,enemy)
+				var evaluation := CaptureRules.evaluate(view.capture_player,enemy)
 				if bool(evaluation.get("eligible",false)):enemy["capture_odds"] = int(evaluation.winning_rolls)
 	return view
 
@@ -547,6 +571,7 @@ func _resolve_counter() -> void:
 	var counter: Dictionary = _pending_counter
 	_pending_counter = {}
 	var actor := str(counter.actor)
+	if actor!="enemy" and _protected_capture_enemy(int(counter.enemy_index)):return
 	_acting_enemy = int(counter.enemy_index)
 	_target = _acting_enemy
 	var attacker: Dictionary = _state.enemies[_acting_enemy] if actor == "enemy" else _player_stats() if actor == "player" else _state.pet.duplicate(true)

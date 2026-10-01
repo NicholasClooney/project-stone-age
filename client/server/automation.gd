@@ -313,7 +313,7 @@ func usable_templates(level_one: bool) -> Array:
 func profile_settings_changed() -> void:
 	if not (running or hunt_running or flow_active()):return
 	var fresh := profile_settings()
-	for key in ["capture_hp","capture_pet","capture_pet_id","capture_pet_max_level"]:settings[key] = fresh[key]
+	for key in ["capture_hp","capture_pet","capture_pet_id","capture_pet_max_level","capture_fallback_attempts","capture_fallback_rate","capture_fallback_hp"]:settings[key] = fresh[key]
 	if flow_active():apply_stat_filters(backend.session.automation_settings())
 	_emit_status()
 
@@ -467,10 +467,13 @@ func step() -> void:
 				_emit_status()
 				return
 			_emit_status()
-			if outcome not in ["win","captured"]:stop("战斗未获胜");return
+			var clear_caught := int(state.get("clear_capture_target",-1))>=0 and bool(state.enemies[int(state.clear_capture_target)].get("captured",false))
+			if outcome not in ["win","captured"] and not (outcome=="escaped" and clear_caught):stop("战斗未获胜");return
 			if single_battle:stop("本场自动战斗已完成");return
 			return
 		if party_waiting():return
+		# Reset before healing too, matching the forecast turn for turn.
+		backend.set_capture_assist(str(settings.preset)=="capture")
 		# 用精灵补血: a healing 精灵 while the 气力 lasts, before a 回复药 or a
 		# stop (the player, its pet or mount at the line; in a party battle a
 		# teammate too, or a fallen one with 复活精灵).
@@ -502,11 +505,11 @@ func step() -> void:
 		if turns >= 200:stop("单场超过200回合，请手动处理");return
 		if str(settings.preset)=="capture" and backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 			stop("宠物栏已满，请先腾出位置");return
-		if str(settings.preset)=="capture" and finish_after_capture and capture_target>=0 and capture_target<state.enemies.size() and state.enemies[capture_target].get("captured",false):
+		if str(settings.preset)=="capture" and finish_after_capture and capture_target>=0 and capture_target<state.enemies.size() and state.enemies[capture_target].get("captured",false) and int(state.get("clear_capture_target",-1))<0:
 			settings.preset = "attack"
 		var decision: Dictionary = Policy.decide(state,settings,capture_target)
 		if decision.has("stop"):stop(str(decision.stop));return
-		backend.set_capture_assist(str(settings.preset)=="capture")
+		backend.set_capture_assist(bool(decision.get("assist",str(settings.preset)=="capture")))
 		# A disobeying pet only skips its action in a run (battle_session.gd).
 		backend.battle.automated = true
 		backend.battle.set_pet_command(str(decision.pet))
@@ -847,7 +850,7 @@ func _open_hit(troop: Dictionary, i: int, quality: Dictionary, roll: Dictionary 
 	var found := "找到达标个体：%s Lv.%d，总成长档 %+d。" % [actor.name,actor.level,quality.total_offset]
 	if not TroopArt.can_render(troop.enemies):
 		stop_hunt(found+"\n敌群原版素材不可用，保留本次结果并停止，未进入战斗。");return
-	var config: Dictionary = backend.session.start_wild_battle_config(troop)
+	var config: Dictionary = backend.session.start_wild_battle_config(troop,_mixed_clear_target(troop,i))
 	if config.is_empty():
 		stop_hunt(found+"\n战斗校验未通过，已停止。");return
 	var refusal := mixed_refusal(troop,i,config)
@@ -904,6 +907,10 @@ func first_match(troop: Dictionary) -> int:
 			return i
 	return -1
 
+func _mixed_clear_target(troop: Dictionary, slot: int) -> int:
+	if slot<0 or slot>=troop.enemies.size():return -1
+	return slot if HuntRules.wants_clean(hunt_filter) and not HuntRules.clean_troop(troop) and mixed_allowed(int(troop.enemies[slot].template_id)) else -1
+
 ## Before a troop with enemies above Lv.1 is entered under mixed_if_stats:
 ## "" when the capture battle forecast (server/battle_forecast.gd, from this
 ## battle's own seed) says the run can plausibly win, else the reason to
@@ -915,7 +922,7 @@ func mixed_refusal(troop: Dictionary, slot: int, config: Dictionary) -> String:
 	if bool(result.ok):return ""
 	backend.session.cancel_pending_battle(str(config.get("battle_id","")))
 	var actor: Dictionary = troop.enemies[slot]
-	return "%s Lv.1 达到属性条件，但同组还有 %s。按现在的人物和出战宠模拟这场捕捉 %d 次只赢 %d 次（%s），为免战败扣魅力和宠物忠诚，已暂停，没有进入战斗。可以换更强的出战宠、练级后再开始，或在「抓宠设置」关掉「属性达标仍进混合遇敌」。" % [
+	return "%s Lv.1 达到属性条件，但同组还有 %s。按五人先清场、难抓再换削血宠的策略模拟这场捕捉 %d 次只赢 %d 次（%s），为免战败扣魅力和宠物忠诚，已暂停，没有进入战斗。可以提升人物战力、准备合适削血宠后再开始，或在「抓宠设置」关掉「属性达标仍进混合遇敌」。" % [
 		str(actor.get("name","")),BattleForecast.stronger_enemies(troop),int(result.trials),int(result.wins),str(result.reason)]
 
 ## A Lv.1 pet in a troop with stronger enemies is still taken (after a battle
@@ -2163,7 +2170,7 @@ func _showcase_capture() -> void:
 		_skip_hit("复核不一致","排队的第 %d 组复核不一致，没有进入战斗。" % (int(entry.index)+1));return
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 		stop_cycle("宠物栏已满，请自行存放伙伴后再开始。");return
-	var config: Dictionary = backend.session.start_wild_battle_config(troop)
+	var config: Dictionary = backend.session.start_wild_battle_config(troop,_mixed_clear_target(troop,int(entry.slot)))
 	if config.is_empty():stop_cycle("战斗校验未通过，已停止。");return
 	var refusal := mixed_refusal(troop,int(entry.slot),config)
 	if not refusal.is_empty():

@@ -57,8 +57,8 @@ func _before_actor(actor: Dictionary) -> void:
 
 func _extra_action(actor: Dictionary, action: String) -> void:
 	if actor.actor not in ["ally","ally_pet"]:return
-	if capture_assist or action in ["capture","escape"]:
-		_last_outcome="defend"
+	if capture_assist or action in ["capture","escape"] or (int(_state.get("clear_capture_target",-1))>=0 and _first_clear_enemy()<0):
+		_last_outcome="wait" if int(_state.get("clear_capture_target",-1))>=0 else "defend"
 		return
 	_target=int(_state.selected_target)
 	_attack_enemy(_stats(_acting_ally,_acting_kind),str(_member(_acting_ally,_acting_kind).name))
@@ -108,7 +108,7 @@ func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
 	_last_outcome=result.outcome
 	_apply_member_damage(index,kind,int(result.damage))
 	_state.events.append("对手攻击%s：%s %d。" % [str(ally.name),_last_outcome,_last_damage])
-	if _ally_alive(index,kind) and not ally.get("defending",false) and _rng.randi_range(1,10000)<int(CombatRules.odds(ally,enemy,"counter")*100):
+	if _ally_alive(index,kind) and not ally.get("defending",false) and not _protected_capture_enemy(_acting_enemy) and _rng.randi_range(1,10000)<int(CombatRules.odds(ally,enemy,"counter")*100):
 		_pending_counter={"actor":kind,"enemy_index":_acting_enemy,"target":"enemy","ally_index":index}
 
 func _resolve_counter() -> void:
@@ -126,6 +126,7 @@ func _resolve_counter() -> void:
 	var ally: Dictionary=_member(index,kind)
 	var enemy: Dictionary=_state.enemies[_acting_enemy]
 	var from_ally: bool=counter.actor!="enemy"
+	if from_ally and _protected_capture_enemy(_acting_enemy):return
 	var attacker: Dictionary=_stats(index,kind) if from_ally else enemy
 	var defender: Dictionary=enemy if from_ally else _stats(index,kind,true)
 	var result: Dictionary=CombatRules.resolve(attacker,defender,_rng,false,str(_config.get("combat_profile","classic")))
