@@ -1879,7 +1879,8 @@ static func capture_reason_summary(item:Dictionary)->String:
 	var decision:Dictionary=item.get("capture_decision",{})
 	var names:={"capture_only":"只抓不练","stats":"属性达标","survey":"摸底挑选","unconditional":"未设条件，每只都抓","mixed_if_stats":"混合遇敌例外","manual":"手动捕获","gm":"GM发放","automatic":"自动抓宠"}
 	var tags:Array=decision.get("tags",[])
-	return "为什么抓："+(" · ".join(tags.map(func(tag):return names.get(tag,str(tag)))) if not tags.is_empty() else "—")+" · 点开详情"
+	var destination := str(decision.get("destination_text",""))
+	return "为什么抓："+(" · ".join(tags.map(func(tag):return names.get(tag,str(tag)))) if not tags.is_empty() else "—")+(" · "+destination if not destination.is_empty() else "")+" · 点开详情"
 
 static func capture_reason_details(item:Dictionary)->String:
 	var decision:Dictionary=item.get("capture_decision",{})

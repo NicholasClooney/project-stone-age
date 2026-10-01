@@ -37,7 +37,7 @@ func run():
 	await click(menu.capture_only)
 	check(await Wait.until(self,func():return bool(backend.session.automation_settings().get("hunt",{}).get("capture_only",false))) and await Wait.settle(self,game),"actual remote checkbox click writes strict character preference")
 	check(menu.level_one.button_pressed and menu.level_one.disabled and menu.showcase.button_pressed and menu.showcase.disabled and not menu.train_after_capture.button_pressed and menu.train_after_capture.disabled,"remote UI prevents contradictory Lv1/showcase/training choices")
-	check(not menu.stop_after.editable and menu.start_button.text=="开始只抓不练" and menu.ready_description().contains("忽略"),"remote UI explains unlimited storage collection")
+	check(not menu.stop_after.editable and menu.start_button.text=="开始只抓不练" and menu.ready_description().contains("忽略"),"remote UI explains carried capture limits")
 	for bad in ["true",1]:
 		var reply:Dictionary={}
 		game.link.request({"type":"set_automation_settings","settings":{"hunt":{"capture_only":bad}}},func(result):reply.merge(result,true))

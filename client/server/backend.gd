@@ -581,7 +581,7 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	# Freeze source loot metadata from the config issued by this authority.
 	config = config.duplicate(true)
 	# Borrowed source presentation is issued only by this authority.
-	for key in ["capture_only","capture_slots","can_capture"]:
+	for key in ["capture_only","capture_destination","capture_slots","can_capture"]:
 		config.erase(key)
 		if session._pending.has(key):config[key] = session._pending[key]
 	config.erase("training_borrow")
@@ -845,7 +845,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 					if int(after.pets[index].level) == 2:
 						state.events.append("可以向饲育员学习伙伴技能。")
 		elif state.outcome=="captured":
-			state.events.append("只抓不练：Lv.1伙伴已直接存入仓库。" if capture_only else "伙伴已加入宠物栏，可为它取名并选择出战。")
+			state.events.append((("随身已满，已存仓" if pending_before.has("capture_destination") else "只抓不练：Lv.1伙伴已留在旧仓库。") if str(pending_before.get("capture_destination","storage"))=="storage" else "只抓不练：Lv.1伙伴已加入随身。") if capture_only else "伙伴已加入宠物栏，可为它取名并选择出战。")
 		var saved_ok := save()
 		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.stop(self,"沿途战斗保存失败，停止自动任务。")
 		_publish()

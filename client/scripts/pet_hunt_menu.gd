@@ -231,8 +231,8 @@ func _ready() -> void:
 		if enabled:auto_capture.button_pressed=true
 		refresh_ready_status()
 		_settings_changed(true))
-	capture_only=CheckBox.new();capture_only.name="CaptureOnlyMode";capture_only.text="只抓不练（非原版）· Lv.1直接存仓，直到手动停止";capture_only.position=Vector2(24,475)
-	capture_only.tooltip_text="按原物种条件、每种排队上限轮流捕获，保持真实Lv.1，直接进仓库；忽略找到N只后停止。开启后强制只找Lv.1及后台队列，覆盖直接升120。自动整理保护此来源，获得手动练级经验后解除；手动放生仍按原规则。运行中的模式已冻结，修改从下一轮开始生效。"
+	capture_only=CheckBox.new();capture_only.name="CaptureOnlyMode";capture_only.text="只抓不练（非原版）· Lv.1先留随身，满了自动存仓继续抓，直到手动停止";capture_only.position=Vector2(24,475)
+	capture_only.tooltip_text="按原物种条件、每种排队上限轮流捕获，保持真实Lv.1，先留随身，满30只后新捕获本人自动存仓并继续抓；忽略找到N只后停止。开启后强制只找Lv.1及后台队列，覆盖直接升120。自动整理保护此来源，获得手动练级经验后解除；手动放生仍按原规则。运行中的模式已冻结，修改从下一轮开始生效。"
 	capture_page.add_child(capture_only);controls.append(capture_only)
 	capture_only.toggled.connect(func(_enabled):
 		_capture_only_controls()
@@ -698,7 +698,7 @@ func on_status(automation: Dictionary) -> void:
 		var pending:=str(automation.get("flow",{}).get("stop_pending",""))
 		stop_button.text="立即停止" if not pending.is_empty() else "停止"
 		var capture_mode:=bool(automation.get("flow",{}).get("capture_only",false))
-		stop_button.tooltip_text=("本只抓完后停止，再按立即停止" if not pending.is_empty() else "本只捕获直接存仓后停止") if capture_mode else ("本只练完后会停止；再按立即停止，正在打的战斗交给你手动完成" if not pending.is_empty() else "正在抓或练的这一只练完后停止")
+		stop_button.tooltip_text=("本只抓完后停止，再按立即停止" if not pending.is_empty() else "本只捕获后停止") if capture_mode else ("本只练完后会停止；再按立即停止，正在打的战斗交给你手动完成" if not pending.is_empty() else "正在抓或练的这一只练完后停止")
 	if visible:_show_threads(automation)
 	if minimized:
 		if _automation_active(automation):_update_chip()
@@ -836,7 +836,7 @@ func start_requested()->void:
 	else:start_hunt()
 
 func ready_description()->String:
-	if capture_only.button_pressed:return "准备就绪：只抓不练（非原版），按原条件轮流抓Lv.1直接存仓；忽略找到N只后停止，直到手动停止。"
+	if capture_only.button_pressed:return "准备就绪：只抓不练（非原版），按原条件轮流抓Lv.1先留随身，满了自动存仓继续抓；忽略找到N只后停止，直到手动停止。"
 	if train_after_capture.button_pressed:return "准备就绪：自动找宠→捕捉→练到120；属性达标停止比较，未达标存仓继续（无条件仅一轮）。"
 	if auto_capture.button_pressed:return "准备就绪：开始后筛选达标宠物并自动捕捉。"
 	return "准备就绪：筛选达标后进入战斗，由你手动捕捉。"
@@ -865,7 +865,7 @@ func threshold_line()->String:
 
 func _workflow_counts()->String:
 	if bool(world.state.automation.get("flow",{}).get("capture_only",false)):
-		return "只抓不练：本轮Lv.1直接存仓 %d 只 · 不限只数，手动停止 · 未手动练级前自动整理保护\n" % world.pet_workflow.collected_count
+		return "只抓不练：本轮抓到Lv.1 %d 只 · 先留随身，满员存仓继续 · 不限只数，手动停止 · 未手动练级前自动整理保护\n" % world.pet_workflow.collected_count
 	if is_instance_valid(world.pet_workflow) and (world.pet_workflow.predicted_rejects>0 or world.pet_workflow.kept_count>0):
 		var flow=world.pet_workflow
 		var best_seen:Dictionary=flow.best_predicted
