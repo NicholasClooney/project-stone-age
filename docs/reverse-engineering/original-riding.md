@@ -95,3 +95,37 @@ Muted graphical runs write `/tmp/original-gold-tiger-riding.png` and `/tmp/origi
 The source applies no over-level reduction through a level gap of five. For larger gaps it computes `max(1, trunc(base × max(0, 20 − gap) / 15))`, then truncates 60% of that integer. A one-point intermediate reward therefore gives the mount zero XP. `BATTLE_AddExpItem` derives recipients from the attacking list; this implementation supports individual attacks and counters, not combined-party attacks.
 
 `battle_event.c:3613–3615` exits an escaping actor without calling profit settlement. Normal completion settles living pets (`battle.c:3189–3192`); defeated mounts receive no experience. Captures are not kills. Settlement tests cover a rider kill followed by capture, capture-only completion, partial-kill escape, defeat, mount knockout, a separate pet kill, and exact threshold rounding.
+
+### Golden rex supplemental mapping
+
+The gold rex is the current C enemybase template 812 (also catchable template
+1036), 斑尼迪克, sprite 100907. The minimal supplemental mapping comes from
+`references/anson1788-stoneage/服务器端lua文件/ablua/familyridefunction.lua:249,252–263`
+and the matching 8.5 client `systeminc/anim_tbl.h:2278–2290`. Body rows 0–11 use
+103266,103262,103263,103264,103272,103273,103265,103267,103269,103268,103271,103270.
+All four classic colour variants share each original composite; its fixed
+rider colours are preserved. The selectable catalog excludes 100100: 47 pairs
+are added, including 100030 → 103262. Family leaders and other shapes receive
+no supplemental mapping. All original C pairs retain lookup priority.
+
+These twelve composites fall back to complete 8.0 originals through
+`import_riding.py --extra-source`; every original action 0–12 and all eight
+directions are imported, including action 11/12 that the general battle
+filter omits. The native frame bitmaps already contain rider and pet; no
+painted colour changes or runtime rider overlays are added. Palette PNGs use
+the established lossless sheet encoder and `PaletteSheet` runtime/web path.
+
+Lua uses learned bit 13 for gold rex; the selected C reference uses bit 13 for
+霍尔克. Supplemental metadata therefore records `source_certificate_namespace`
+`anson1788-lua` and `source_certificate_bit` 13 without writing the C
+`certificate` field or teaching any bit. Gold rex follows the existing
+`REQUIRE_RIDING_CERTIFICATES=false` developer convenience policy alongside
+all current loyalty, health, level and active-pet restrictions. Its original
+certificate item ID and NPC source remain unconfirmed and unimplemented.
+
+For a local refresh use `import_riding.py ... --extra-source ... --sprites
+103262 103263 103264 103265 103266 103267 103268 103269 103270 103271 103272
+103273`, followed by `pack_frame_sheets.py riding --sprites ...` and
+`split_manifests.py riding`. Unselected sheets and import sidecars remain
+untouched. Full setup also imports the supplemental table. Pet thumbnails do
+not change because the pet catalog and unmounted 100907 art are unchanged.

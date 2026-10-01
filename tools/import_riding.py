@@ -15,7 +15,7 @@ import json
 import re
 import shutil
 from pathlib import Path
-from import_legacy import Archive
+from import_legacy import Archive, sprite_animations
 from sprite_sheets import save_sheets
 from split_manifests import split_riding
 from import_battle import animations
@@ -44,6 +44,21 @@ def mappings(source):
     for key, pair in leaders.items():
         result.setdefault(key, pair)
     return result
+
+
+# anson1788 familyridefunction.lua:249,252-263 and 8.5 anim_tbl.h:
+# RIDE_PET13 in that Lua namespace means gold rex, unlike the C table's
+# Holk bit 13. Keep provenance separate; no C learned bit is assigned.
+GOLD_REX_BODIES = (103266,103262,103263,103264,103272,103273,
+                   103265,103267,103269,103268,103271,103270)
+GOLD_REX_SOURCE = 'anson1788 familyridefunction.lua:249,252-263; 8.5 systeminc/anim_tbl.h:2278-2290'
+
+def supplemental_mounts():
+    return {f'{100000+20*body+5*colour}:100907': dict(
+        sprite=sprite, rider=100000+20*body+5*colour, pet=100907,
+        mapping_source=GOLD_REX_SOURCE, source_certificate_namespace='anson1788-lua',
+        source_certificate_bit=13)
+        for body, sprite in enumerate(GOLD_REX_BODIES) for colour in range(4)}
 
 
 def block(text, declaration):
@@ -167,7 +182,7 @@ def select(pairs, riders):
 
 
 MISSING = 'mounted sprite missing from original pack'
-INCOMPLETE = 'mounted sprite lacks stand/walk in all directions'
+INCOMPLETE = 'mounted sprite lacks required actions in all directions'
 
 
 def complete(data):
@@ -181,10 +196,13 @@ def find_composite(archives, sprite):
     reason = MISSING
     for archive in archives:
         try:
-            data = animations(archive, sprite)
+            data = (sprite_animations(archive, sprite, tuple(range(13)))
+                    if sprite in GOLD_REX_BODIES else animations(archive, sprite))
         except ValueError:
             continue
-        if complete(data):
+        if complete(data) and (sprite not in GOLD_REX_BODIES or all(
+                data.get(f'{action}_{direction}', {}).get('frames')
+                for action in range(13) for direction in range(8))):
             return archive, data
         reason = INCOMPLETE
     if reason == MISSING and len(archives) == 1:
@@ -192,7 +210,7 @@ def find_composite(archives, sprite):
     return None, reason
 
 
-def write_sheets(output, composites, decoded):
+def write_sheets(output, composites, decoded, incremental=False):
     """One sprite sheet (rarely two) per rider+mount composite in output/sheets.
 
     A composite's hundreds of frames were separate PNGs; one sheet each keeps
@@ -200,8 +218,9 @@ def write_sheets(output, composites, decoded):
     manifest's `sheets`: composite -> {files, frames: bitmap -> [sheet, x, y, w, h]}.
     """
     folder = output / 'sheets'
-    shutil.rmtree(folder, ignore_errors=True)
-    folder.mkdir(parents=True)
+    if not incremental:
+        shutil.rmtree(folder, ignore_errors=True)
+    folder.mkdir(parents=True, exist_ok=True)
     result = {}
     for sprite in sorted(composites, key=int):
         used = sorted({f['image'] for a in composites[sprite].values() for f in a['frames']})
@@ -211,17 +230,29 @@ def write_sheets(output, composites, decoded):
     return result
 
 
-def run(source, table, output, reference, characters, extra_source=None):
+def run(source, table, output, reference, characters, extra_source=None, sprites=None):
     archive = Archive(source)
     archives = [archive] + ([Archive(extra_source)] if extra_source else [])
     output = Path(output)
     output.mkdir(parents=True, exist_ok=True)
     # Earlier imports wrote one PNG per frame; sheets replace them.
-    shutil.rmtree(output/'images', ignore_errors=True)
+    if sprites is None:
+        shutil.rmtree(output/'images', ignore_errors=True)
     pairs = mappings(table)
+    for key, pair in supplemental_mounts().items():
+        pairs.setdefault(key, pair)
     notes = {pet: note for pet, _, note in ride_codes(Path(table).read_bytes().decode('gb18030', errors='replace'))}
     names = species_names(reference, pairs, notes)
     pairs, unavailable = select(pairs, playable(characters))
+    baseline = {}
+    if sprites is not None:
+        baseline = json.loads((output/'manifest.json').read_text())
+        selected = set(sprites)
+        known = {p['sprite'] for p in pairs.values()}
+        if selected - known:
+            raise ValueError('Unknown selectable composites: ' + ', '.join(map(str, sorted(selected - known))))
+        pairs = {key: pair for key, pair in pairs.items() if pair['sprite'] in selected}
+        unavailable = [pair for pair in unavailable if pair['sprite'] in selected]
     composites, owner, missing = {}, {}, {}
     for pair in pairs.values():
         sprite = str(pair['sprite'])
@@ -232,6 +263,8 @@ def run(source, table, output, reference, characters, extra_source=None):
             missing[sprite] = data
         else:
             composites[sprite], owner[sprite] = data, found
+    if sprites is not None and missing:
+        raise ValueError(f'Selected composites unavailable; original import preserved: {missing}')
     for key, pair in list(pairs.items()):
         if str(pair['sprite']) in missing:
             unavailable.append(dict(pair, reason=missing[str(pair['sprite'])]))
@@ -251,6 +284,8 @@ def run(source, table, output, reference, characters, extra_source=None):
                 raise ValueError(f'Bitmap {ident} differs between the two clients')
             decoded.setdefault(ident, (image, owner[sprite]))
     broken = {sprite for sprite, actions in composites.items() if any(f['image'] in invalid for a in actions.values() for f in a['frames'])}
+    if sprites is not None and broken:
+        raise ValueError(f'Selected composites have invalid bitmaps; original import preserved: {sorted(broken)}')
     for key, pair in list(pairs.items()):
         if str(pair['sprite']) in broken:
             unavailable.append(dict(pair, reason='invalid bitmap in original pack'))
@@ -262,7 +297,7 @@ def run(source, table, output, reference, characters, extra_source=None):
     for ident in sorted(used):
         found = decoded[ident][1]
         images[str(ident)] = {k: found.entries[ident][k] for k in ['x', 'y', 'w', 'h']}
-    sheets = write_sheets(output, composites, decoded)
+    sheets = write_sheets(output, composites, decoded, sprites is not None)
     pets = sorted({p['pet'] for p in pairs.values()})
     manifest = dict(pairs=pairs, characters=composites, images=images, sheets=sheets, unavailable=unavailable,
                     source='gmsv/char/char_base.c:50 ridePetTable, char.c:3065 exact rider+pet lookup',
@@ -272,6 +307,14 @@ def run(source, table, output, reference, characters, extra_source=None):
         manifest['certificate_source'] = 'gmsv/char/family.c:2376 _NEW_RIDEPETS: RideNoList[RPlistMode row][RideCodeMode index] (char_base.c:500-560); RIDE_PETn learned by item_event.c:3096 ITEM_useLearnRideCode'
     if extra_source:
         manifest['extra_source'] = dict(client=Path(extra_source).name, data=[p.name for p in (archives[1].adrn_path, archives[1].real_path, archives[1].spradrn_path, archives[1].spr_path)], composites=extra)
+    if baseline:
+        for key in ['pairs','characters','images','sheets','names']:
+            manifest[key] = {**baseline.get(key, {}), **manifest[key]}
+        manifest['unavailable'] = [p for p in baseline.get('unavailable', []) if p['sprite'] not in selected] + unavailable
+        if 'certificate_source' in baseline:
+            manifest['certificate_source'] = baseline['certificate_source']
+        if extra_source:
+            manifest['extra_source']['composites'] = sorted(set(baseline.get('extra_source', {}).get('composites', [])) | set(extra))
     add_audio(archive.data, output, manifest)
     (output/'manifest.json').write_text(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')))
     print(f'Imported {len(pairs)} native riding pairs for {len(pets)} pet species, {len(composites)} composites ({len(extra)} from the extra source), {len(used)} images in {sum(len(s["files"]) for s in sheets.values())} sheets; {len(unavailable)} pairs excluded')
@@ -302,7 +345,8 @@ if __name__ == '__main__':
     p.add_argument('--characters', default='client/assets/legacy/characters/catalog.json', help='imported player characters; riders outside it are skipped')
     p.add_argument('--output', default='client/assets/legacy/riding')
     p.add_argument('--extra-source', help='a later client whose data/ has the composites the source lacks, for example .tools/legacy/extracted/SA8.0-20260803')
+    p.add_argument('--sprites', type=int, nargs='+', help='refresh only selected composites; requires an existing manifest')
     a = p.parse_args()
-    run(a.source, a.table, a.output, a.reference, a.characters, a.extra_source)
+    run(a.source, a.table, a.output, a.reference, a.characters, a.extra_source, a.sprites)
     # The game reads riding/index.json and one file per composite (split_manifests.py).
     split_riding(Path(a.output).parent)
