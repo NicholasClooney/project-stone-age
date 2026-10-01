@@ -208,11 +208,10 @@ var save_elapsed := 0.0
 var mvp_manifest: Dictionary = {}
 var last_adventure_message := ""
 var data: Dictionary
-## Map art by image id, loaded when first drawn and kept across map changes
-## (maps share most tiles). Cleared on a map change once it grows past
-## TEXTURE_CACHE_LIMIT, so memory stays bounded on the web client.
+## Map art by image id, loaded when first drawn. A map change keeps only the
+## tiles the next map uses (maps share many), so memory follows the current
+## map instead of every map visited (game_areas.gd).
 var textures: Dictionary = {}
-const TEXTURE_CACHE_LIMIT := 4000
 var player: Node2D
 var actors: Node2D
 var camera: Camera2D

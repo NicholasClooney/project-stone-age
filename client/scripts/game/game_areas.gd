@@ -97,7 +97,14 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 		game.remove_child(node)
 		node.queue_free()
 	game.data = next_data
-	if game.textures.size() > GameScene.TEXTURE_CACHE_LIMIT:game.textures.clear()
+	# Map tiles and props the next map does not draw are let go (a texture
+	# still on screen stays alive through its node until that is freed); the
+	# few others, like actor frames, load again when next drawn.
+	var keep: Dictionary = next_data.get("images",{})
+	for key in game.textures.keys():
+		if not keep.has(key):
+			game.textures.erase(key)
+			preload("res://scripts/perf_registry.gd").forget("map",key)
 	game.world_travel = null
 	game.npc_data.clear()
 	game.npc_cell = Vector2i(-1,-1)

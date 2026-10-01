@@ -321,3 +321,8 @@ The wasm heap after the first map switch drops by 214 MB; after the tour it is 6
 
 `scripts/nav_grid.gd` replaces the whole-map `AStarGrid2D` (about 62 bytes a cell) with one byte a cell plus, for each search, a temporary AStarGrid2D over the cells between the two ends with a margin (widened until the route provably cannot be shorter outside it; the last window up to 320×320 is kept for the next search). Measured headless: map 100 41.7 → 0.6 MB, map 200 61.9 → about 1 MB, map 300 22.6 → 0.4 MB. `nav_grid_test` compares 143 random routes on maps 1000/100/300 against the whole-map grid: all the same length. Cost: a first cross-island search builds a large window (156 ms worst on map 100 on an M-series Mac; short clicks take a few ms).
 
+## Bounded texture caches (optimization 6)
+
+- `SheetFrames` keeps the last 24 sprite sheets used (`SHEETS`); an older one is released from the cache and freed once no sprite on screen holds its frames. Before, every sheet ever drawn stayed (about 10 MB each as RGBA), so a long 后台搜宠 across many species grew without bound.
+- `game.textures` (map tiles and props) keeps, on a map change, only the images the next map uses, instead of everything until 4,000 entries. Walking from Samgir village into a shop drops all 533 village-only tiles (`texture_cache_test`).
+

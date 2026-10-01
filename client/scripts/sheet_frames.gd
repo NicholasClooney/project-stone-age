@@ -8,19 +8,32 @@ extends RefCounted
 
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
 
+## The sheets used most recently, at most SHEETS of them (a sheet is about
+## 10 MB as RGBA). An older one is let go here; it stays alive only while a
+## sprite still on screen (its art entry's frames) holds it, so a long hunt
+## across many species no longer keeps every sheet it ever drew.
+const SHEETS := 24
 static var _sheets: Dictionary = {}
 static var _frames: Dictionary = {}
 
-## The sheet texture, loaded once, or null when it is not available yet (a
-## web pack still downloading).
+## The sheet texture, or null when it is not available yet (a web pack still
+## downloading).
 static func sheet(path: String) -> Texture2D:
 	var atlas: Texture2D = _sheets.get(path)
-	if atlas == null:
-		if not ResourceLoader.exists(path): return null
-		atlas = load(path)
+	if atlas != null:
+		# Most recently used last.
+		_sheets.erase(path)
 		_sheets[path] = atlas
-		PerfRegistry.track_texture(PerfRegistry.folder_category(path.get_base_dir()+"/"),path,atlas)
+		return atlas
+	if not ResourceLoader.exists(path): return null
+	atlas = load(path)
+	_sheets[path] = atlas
+	PerfRegistry.track_texture(PerfRegistry.folder_category(path.get_base_dir()+"/"),path,atlas)
+	while _sheets.size() > SHEETS:_sheets.erase(_sheets.keys()[0])
 	return atlas
+
+static func held() -> int:
+	return _sheets.size()
 
 ## A new AtlasTexture of the sheet's rectangle, or null when the sheet is not
 ## available yet. The caller caches it.
