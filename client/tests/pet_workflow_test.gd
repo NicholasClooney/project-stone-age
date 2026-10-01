@@ -69,6 +69,24 @@ func run() -> void:
 	helper.stop_training("已手动停止");flow.advance()
 	check(flow.phase=="paused" and game.battle_session.snapshot().active and game.battle_session.snapshot().battle_id==battle_id,"capture stop preserves same live battle for takeover and never starts training")
 	check(game.session.snapshot().pets.size()==count,"capture stop grants no pet or duplicate reward")
+	# (End the takeover battle first: no window opens over a battle.)
+	game.battle_action("developer_escape")
+	for i in range(100):game.battle_view._process(0.2)
+	game.return_from_battle()
+	await process_frame
+	# A new round never closes a window the player opened between rounds, and
+	# brings the hunt window back only when nothing else is open.
+	hunt.hide();hunt.minimized=false
+	game.adventure_menu.open_pet_records("caught",-1)
+	await process_frame
+	flow.on_event({"kind":"flow_hunt"})
+	check(game.adventure_menu.visible and not hunt.visible,"a new round leaves the open 宠物记录 alone")
+	game.close_adventure_menu()
+	if helper.visible:helper.hide()
+	await process_frame
+	check(not game._panel_open(),"nothing else is open")
+	flow.on_event({"kind":"flow_hunt"})
+	check(hunt.visible,"with nothing open, the hunt window comes back")
 	game.process_mode=Node.PROCESS_MODE_DISABLED;game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame
 	print("PET WORKFLOW: %d failures"%failures);quit(1 if failures else 0)

@@ -175,10 +175,15 @@ func on_status(automation: Dictionary) -> void:
 func on_event(detail: Dictionary) -> void:
 	match str(detail.kind):
 		"flow_hunt":
-			# Minimized, each new round keeps going behind whatever the player has open.
-			if world.pet_hunt_menu.minimized:return
-			world.adventure_menu.hide();world.paused_input=false
-			if not world.pet_hunt_menu.visible:world.pet_hunt_menu.open_menu()
+			# Each new round keeps going behind whatever the player has open: a
+			# window they opened between rounds (宠物, 宠物记录, 仓库, 大全…) is
+			# never closed, and the hunt window only comes back when nothing
+			# else is open. (Closing their window every round made the UI
+			# unusable when rounds follow each other quickly.)
+			if world.pet_hunt_menu.minimized or world.pet_hunt_menu.visible:return
+			if world._panel_open():return
+			world.paused_input=false
+			world.pet_hunt_menu.open_menu()
 			world.clear_input();world.paused_input=true
 		"flow_reveal":
 			# 后台搜宠 clears the stage: the hunt window folds to its progress bar
