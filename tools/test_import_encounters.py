@@ -117,6 +117,23 @@ class EncounterImportTests(unittest.TestCase):
         self.assertEqual(data['enemies']['13']['pet_flag'], 0)
         self.assertEqual(data['provenance']['rare_encounters']['encounters'], 2)
 
+    def test_rare_encounters_add_an_alone_lv1_group(self):
+        data = self.rare_fixture()
+        entry = dict(group_id=900, alone_group_id=950, template_id=101, name='稀', enemy_id=12, companion_id=10, map_id=9, area_id=5, weight=1, origin='original_area', reason='r')
+        with tempfile.TemporaryDirectory() as folder:
+            add_rare_encounters(data, self.write_rare(folder, encounters=[entry]))
+        self.assertEqual(data['areas'][0]['groups'][-2:], [dict(id=900, weight=1), dict(id=950, weight=1)])
+        self.assertEqual(data['groups']['900']['enemies'], [dict(id=12, weight=1), dict(id=10, weight=1)])
+        self.assertEqual(data['groups']['950']['enemies'], [dict(id=12, weight=1)])
+        rare = data['groups']['950']['rare']
+        self.assertEqual((rare['origin'], rare['enemy_id'], rare['template_id'], rare['alone']), ('original_area', 12, 101, True))
+        self.assertNotIn('alone', data['groups']['900']['rare'])
+        self.assertEqual(data['provenance']['rare_encounters']['alone'], 1)
+        with tempfile.TemporaryDirectory() as folder:
+            for row in [dict(entry, alone_group_id=1), dict(entry, companion_id=None)]:
+                with self.assertRaises(ValueError, msg=row):
+                    add_rare_encounters(self.rare_fixture(), self.write_rare(folder, encounters=[row]))
+
     def test_rare_encounters_refuse_bad_rows(self):
         entry = dict(group_id=900, template_id=101, name='稀', enemy_id=12, companion_id=10, map_id=9, area_id=5, weight=1, origin='added', reason='r')
         bad = [dict(entry, enemy_id=10, template_id=100, name='高'),  # not Lv1
@@ -134,7 +151,10 @@ class EncounterImportTests(unittest.TestCase):
 
     def test_shipped_rare_encounters_are_level_one_near_one_percent(self):
         spec = json.loads(RARE.read_text())
-        self.assertEqual(len({e['group_id'] for e in spec['encounters']}), len(spec['encounters']))
+        ids = [e['group_id'] for e in spec['encounters']]+[e['alone_group_id'] for e in spec['encounters'] if 'alone_group_id' in e]
+        self.assertEqual(len(set(ids)), len(ids))
+        # Every pet hunted at Lv1 has a group with no other enemy.
+        self.assertTrue(all(('alone_group_id' in e) == (e['companion_id'] is not None) for e in spec['encounters']))
         self.assertTrue(all(e['weight'] == 1 and e['origin'] in ('original_area', 'added') and e['reason'] for e in spec['encounters']))
         if not ROOT.exists():
             return

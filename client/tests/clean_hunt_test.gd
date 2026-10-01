@@ -84,13 +84,20 @@ func run() -> void:
 
 	# The GDScript hunt: every pet it takes comes from a clean troop, the mixed
 	# ones are counted and reported.
-	var hunt = new_backend(4242)
-	check(hunt.handle({"type":"auto_start","kind":"hunt","map_id":MAP,"cell":CELL,"filter":rex_filter()}).ok,"a 左迪洛斯 hunt starts")
-	await tick_until(hunt,func():return not hunt.automation.hunt_running)
-	var hit: Dictionary = hunt.automation.hunt_last_hit
-	check(not hit.is_empty() and HuntRules.clean_troop(hit.troop) and hunt.battle_open,"the hunt enters a troop with only Lv.1 enemies after %d rolls" % hunt.automation.hunt_rolls)
-	check(hunt.automation.hunt_mixed_skips>0 and int(hunt.automation.status().hunt.mixed)==hunt.automation.hunt_mixed_skips,"and passed over %d pets in mixed troops, shown in the status" % hunt.automation.hunt_mixed_skips)
-	hunt.queue_free()
+	# Seeds until a run's first hit came after passing over a mixed troop.
+	var all_clean := true
+	var passed := -1
+	for candidate in range(20):
+		var hunt = new_backend(4242+candidate)
+		if not hunt.handle({"type":"auto_start","kind":"hunt","map_id":MAP,"cell":CELL,"filter":rex_filter()}).ok:check(false,"a 左迪洛斯 hunt starts")
+		await tick_until(hunt,func():return not hunt.automation.hunt_running)
+		var hit: Dictionary = hunt.automation.hunt_last_hit
+		all_clean = all_clean and not hit.is_empty() and HuntRules.clean_troop(hit.troop) and hunt.battle_open
+		if hunt.automation.hunt_mixed_skips>0 and int(hunt.automation.status().hunt.mixed)==hunt.automation.hunt_mixed_skips:passed = hunt.automation.hunt_mixed_skips
+		hunt.queue_free()
+		if passed>0:break
+	check(all_clean,"every hunt enters a troop with only Lv.1 enemies")
+	check(passed>0,"one passed over %d pets in mixed troops first, shown in the status" % passed)
 
 	# The forecast, on the real battle core.
 	var weak = new_backend(1)

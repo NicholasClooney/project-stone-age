@@ -133,6 +133,35 @@ func run() -> void:
 		if not met:unmet.append(str(item.name))
 	check(unmet.is_empty(),"seeded rolls meet every added Lv.1 pet (%d rolls in all)%s" % [rolls,"" if unmet.is_empty() else "; never met: "+"、".join(unmet)])
 
+	# Each addition with a companion also has a group of the Lv.1 pet alone, so
+	# 只进无其他敌人的遇敌 (troops of Lv.1 enemies only) meets it too.
+	var lonely: Array = []
+	var alone_count := 0
+	for item in spec.encounters:
+		if item.companion_id == null:
+			if item.has("alone_group_id"):lonely.append("%s: alone already" % item.name)
+			continue
+		alone_count += 1
+		var cell: Vector2i = landing["%d/%d" % [int(item.map_id),int(item.area_id)]]
+		var area: Dictionary = catalog.area_at(int(item.map_id),cell)
+		var choices: Array = area.groups.filter(func(choice):return int(choice.id) == int(item.get("alone_group_id",-1)))
+		var group: Dictionary = data.groups.get(str(int(item.get("alone_group_id",-1))),{})
+		var rare: Dictionary = group.get("rare",{})
+		if choices.size() != 1 or int(choices[0].weight) != 1 or group.get("enemies",[]).map(func(member):return [int(member.id),int(member.weight)]) != [[int(item.enemy_id),1]] or not bool(rare.get("alone",false)) or str(rare.get("origin","")) != str(item.origin):
+			lonely.append("%s: group" % item.name);continue
+		var rng := RandomNumberGenerator.new()
+		rng.seed = 8000+int(item.group_id)
+		var met := false
+		for attempt in range(3000):
+			var troop: Dictionary = catalog.roll(int(item.map_id),cell,rng)
+			if int(troop.get("group_id",-1)) != int(item.alone_group_id):continue
+			var enemies: Array = troop.get("enemies",[])
+			met = not enemies.is_empty() and enemies.size() <= 3 and enemies.all(func(actor):return int(actor.level) == 1 and int(actor.template_id) == int(item.template_id))
+			if not met:lonely.append("%s: troop %s" % [item.name,enemies.size()])
+			break
+		if not met and not lonely.has("%s: troop" % item.name):lonely.append("%s: never met" % item.name)
+	check(lonely.is_empty(),"%d added pets also come alone (only Lv.1 copies of the pet), area weight 1, marked%s" % [alone_count,"" if lonely.is_empty() else ": "+"；".join(lonely)])
+
 	# A seeded 自动抓宠 hunt (GDScript scan) finds a Lv.1 左迪洛斯 in 五十年前波拉岛 ...
 	var backend = Backend.new()
 	backend.set_process(false)

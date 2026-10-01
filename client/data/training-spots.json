@@ -915,7 +915,7 @@
       ],
       "level_min": 1,
       "level_max": 20,
-      "mean_level": 17.33,
+      "mean_level": 17.0,
       "monsters": [
         "乌力",
         "乌力斯坦",
@@ -1941,7 +1941,7 @@
       ],
       "level_min": 1,
       "level_max": 17,
-      "mean_level": 14.92,
+      "mean_level": 14.78,
       "monsters": [
         "克克洛斯",
         "卡克尔",
@@ -2102,7 +2102,7 @@
       ],
       "level_min": 1,
       "level_max": 18,
-      "mean_level": 16.54,
+      "mean_level": 16.37,
       "monsters": [
         "克克洛斯",
         "卡克尔",
@@ -2124,7 +2124,7 @@
       ],
       "level_min": 1,
       "level_max": 20,
-      "mean_level": 18.22,
+      "mean_level": 17.58,
       "monsters": [
         "佩露夏",
         "卡克尔",
@@ -3194,7 +3194,7 @@
       ],
       "level_min": 1,
       "level_max": 45,
-      "mean_level": 43.57,
+      "mean_level": 42.75,
       "monsters": [
         "布鲁顿",
         "邦浦洛斯"
@@ -3449,7 +3449,7 @@
       ],
       "level_min": 1,
       "level_max": 54,
-      "mean_level": 52.0,
+      "mean_level": 51.5,
       "monsters": [
         "利则诺顿",
         "齐尔格尔顿"
@@ -3681,7 +3681,7 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 84.55,
+      "mean_level": 83.67,
       "monsters": [
         "布拉奇多斯",
         "布洛多斯",
@@ -3700,7 +3700,7 @@
       ],
       "level_min": 1,
       "level_max": 95,
-      "mean_level": 91.31,
+      "mean_level": 89.01,
       "monsters": [
         "可利多洛斯",
         "奥卡洛斯",
@@ -3725,7 +3725,7 @@
       ],
       "level_min": 1,
       "level_max": 105,
-      "mean_level": 92.37,
+      "mean_level": 89.1,
       "monsters": [
         "卡伊霍恩",
         "可利多洛斯",
@@ -3752,7 +3752,7 @@
       ],
       "level_min": 1,
       "level_max": 105,
-      "mean_level": 97.0,
+      "mean_level": 96.06,
       "monsters": [
         "克邦凯斯",
         "加克拉",
@@ -3886,7 +3886,7 @@
       ],
       "level_min": 1,
       "level_max": 24,
-      "mean_level": 22.88,
+      "mean_level": 22.64,
       "monsters": [
         "贝洛恩",
         "贝洛洛克"
@@ -7756,7 +7756,7 @@
       ],
       "level_min": 1,
       "level_max": 63,
-      "mean_level": 60.61,
+      "mean_level": 60.03,
       "monsters": [
         "卡卡金宝",
         "奇卡宝斯",
@@ -8020,7 +8020,7 @@
       ],
       "level_min": 1,
       "level_max": 87,
-      "mean_level": 85.17,
+      "mean_level": 84.35,
       "monsters": [
         "扬奇洛斯",
         "朵洛将恩",
@@ -8038,7 +8038,7 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 83.04,
+      "mean_level": 82.22,
       "monsters": [
         "加宝格恩",
         "大地守护兽",
@@ -8061,7 +8061,7 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 88.57,
+      "mean_level": 87.73,
       "monsters": [
         "加宝格恩",
         "布鲁顿",
@@ -8080,7 +8080,7 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 83.04,
+      "mean_level": 82.22,
       "monsters": [
         "加宝格恩",
         "大地守护兽",
@@ -8103,7 +8103,7 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 88.14,
+      "mean_level": 87.29,
       "monsters": [
         "加宝格恩",
         "布鲁顿",
@@ -8287,7 +8287,7 @@
       ],
       "level_min": 1,
       "level_max": 95,
-      "mean_level": 93.09,
+      "mean_level": 92.19,
       "monsters": [
         "布林帖斯",
         "拉可拉斯",
@@ -8306,7 +8306,7 @@
       ],
       "level_min": 1,
       "level_max": 95,
-      "mean_level": 93.62,
+      "mean_level": 92.86,
       "monsters": [
         "布林帖斯",
         "帖拉所伊朵",
