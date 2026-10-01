@@ -24,7 +24,7 @@ func _initialize() -> void:
 	var blue:=Filter.defaults(92)
 	check(blue.mode=="any" and blue.conditions.sum.enabled and int(blue.conditions.sum.minus)==1 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1 and not Filter.absolute(blue) and str(blue.threshold_mode)=="relative","blue defaults to 三围合 ≥ 最高−1 OR 攻击 ≥ 最高−1 (relative)")
 	check(int(blue.conditions.sum.value)==624 and int(blue.conditions.attack.value)==293 and int(blue.conditions.defence.value)==179 and int(blue.conditions.speed.value)==151,"each condition also keeps its fixed default: 624 / 293 / 179 / 151")
-	check(blue.stop_after==0 and blue.conditions.sum.keep==15 and blue.conditions.attack.keep==10,"blue defaults never stop and keep 15 by sum plus 10 by attack")
+	check(blue.conditions.sum.keep==15 and blue.conditions.attack.keep==10,"blue defaults keep 15 by sum plus 10 by attack")
 	check(not Filter.enabled(Filter.defaults(194)),"other species default to no enabled thresholds")
 	# 最高 − x: the best of the player's own pets, each metric on its own.
 	var owned := [{"attack":301,"defence":170,"speed":150,"max_hp":900},{"attack":290,"defence":185,"speed":152,"max_hp":950}]

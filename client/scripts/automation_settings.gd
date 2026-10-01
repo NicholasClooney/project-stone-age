@@ -16,12 +16,15 @@ extends RefCounted
 ##                 (LAN phase 4c, docs/development/lan-profiles.md)
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue,
 ##                 resume (重启后自动恢复), stat_species (属性条件 shows it; -1 follows the target),
+##                 stop_after (找到N只后停止, one for the whole find-pet run:
+##                 pets it keeps, qualifiers or with no 属性条件 every Lv.120
+##                 pet, before it stops; 0 never stops, 1 stops to compare),
 ##                 clean_only (只进无其他敌人的遇敌: a Lv.1 hunt skips troops with
 ##                 any enemy above Lv.1, pet_hunt_rules.gd clean_troop),
 ##                 mixed_if_stats (still take such a troop in a find-pet cycle
 ##                 when the pet meets its enabled 属性条件, after a battle
 ##                 forecast: server/battle_forecast.gd)}
-##   stat_filters {"<template id>": {mode, threshold_mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
+##   stat_filters {"<template id>": {mode, threshold_mode, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
 ##     threshold_mode "relative" (default): a condition asks for 最高 − minus,
 ##     the best Lv120 value of that metric among the player's own pets of the
 ##     species less `minus`; "absolute": at least `value`
@@ -33,6 +36,8 @@ extends RefCounted
 ##     champion_stats any of attack, defence, speed, max_hp; auto tidies the
 ##     whole species after each pet the find-pet cycle stores. It replaced
 ##     keep_qualified/rank (达标只保留前 N 只); a stored rank becomes the order.
+##     A per-species stop_after (older saves and clients) is accepted and
+##     dropped; an old save's becomes hunt.stop_after (_migrate_stop_after).
 ## Per-device choices (battle playback speed, minimized windows) are not here.
 const PATH := "res://data/automation_defaults.json"
 ## What players call hunt.showcase: keep searching in the background while
@@ -45,13 +50,13 @@ const SURVEY_SECONDS := 120
 const METRICS := ["sum","attack","defence","speed"]
 const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",-100,1000],"value":["int",0,3000],"keep":["int",0,1000]}
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
-const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],"stop_after":["int",0,100000],"keep_rule":KEEP_RULE_SPEC,
+const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],"keep_rule":KEEP_RULE_SPEC,
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
 const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120],"fallback_attempts":["int",1,30],"fallback_rate":["int",0,98],"fallback_hp":["int",1,99]},
-	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000]},
+	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
 }
 static var _defaults: Dictionary = {}
 
@@ -124,7 +129,11 @@ static func apply_patch(overrides: Dictionary, patch: Variant) -> Dictionary:
 				var id := str(template)
 				if not id.is_valid_int() or int(id)<0:return _fail("invalid stat_filters key "+id)
 				id = str(int(id))
-				var reply := _merge(_dict(filters.get(id,{})),value[template],FILTER_SPEC,"stat_filters."+id)
+				var given = value[template]
+				# Older clients still send the per-species 找到N只后停止: ignored.
+				if given is Dictionary and given.has("stop_after"):
+					given = given.duplicate();given.erase("stop_after")
+				var reply := _merge(_dict(filters.get(id,{})),given,FILTER_SPEC,"stat_filters."+id)
 				if not reply.ok:return reply
 				filters[id] = reply.value
 			result.stat_filters = filters
@@ -158,6 +167,7 @@ static func sanitize(stored: Variant) -> Dictionary:
 	for section in SPEC:
 		var kept := _valid_part(stored.get(section),SPEC[section])
 		if not kept.is_empty():result[section] = kept
+	_migrate_stop_after(stored,result)
 	var filters := {}
 	for id in _dict(stored.get("stat_filters",{})):
 		if not str(id).is_valid_int() or int(str(id))<0:continue
@@ -165,6 +175,23 @@ static func sanitize(stored: Variant) -> Dictionary:
 		if not kept.is_empty():filters[str(int(str(id)))] = kept
 	if not filters.is_empty():result.stat_filters = filters
 	return prune(result)
+
+## 找到N只后停止 was per species (stat_filters.<id>.stop_after); now it is
+## hunt.stop_after for the whole run. An old save takes the value of the
+## species the player last edited (hunt.stat_species, or the hunt target when
+## it follows the target) if that one had its own, else 1.
+static func _migrate_stop_after(stored: Dictionary, result: Dictionary) -> void:
+	var filters := _dict(stored.get("stat_filters",{}))
+	var old := false
+	for id in filters:old = old or (filters[id] is Dictionary and filters[id].has("stop_after"))
+	if not old or _dict(result.get("hunt",{})).has("stop_after"):return
+	var hunt: Dictionary = merged(defaults().get("hunt",{}),_dict(result.get("hunt",{})))
+	var species := int(hunt.get("stat_species",-1))
+	if species<0:species = int(hunt.get("template",-1))
+	var checked := _leaf(SPEC.hunt.stop_after,_dict(filters.get(str(species),{})).get("stop_after"))
+	var section := _dict(result.get("hunt",{}))
+	section.stop_after = checked[0] if not checked.is_empty() else 1
+	result.hunt = section
 
 ## 达标只保留前 N 只 (keep_qualified, rank) became keep_rule: a rank the player
 ## chose becomes the tier order (三围合 is what tiers group by, so it is dropped).

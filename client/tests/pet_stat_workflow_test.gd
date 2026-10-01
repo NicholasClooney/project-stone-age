@@ -10,6 +10,9 @@ func _initialize()->void:call_deferred("run")
 ## fixed thresholds: 三围合 ≥ 625−1 = 624, 攻击 ≥ 294−1 = 293 (and so on).
 func blue_filter()->Dictionary:
 	return Filter.resolve(Filter.defaults(92),{"sum":625,"attack":294,"defence":180,"speed":152})
+## 找到N只后停止 is the run's hunt.stop_after, read from its settings snapshot.
+func run_stop_after(game, count: int)->void:
+	game.backend.automation.flow_settings_overrides={"hunt":{"stop_after":count}}
 func run()->void:
 	var game=load("res://scenes/main.tscn").instantiate();game.profile_persistence=false;root.add_child(game);await process_frame
 	game.session.grant_starter_pets();game.load_area_id(300,Vector2i(509,90));game.session.gm_heal()
@@ -118,7 +121,7 @@ func run()->void:
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not (str(pet.pet_id).begins_with("pet-hunt-") or str(pet.pet_id) in ["pet-manual-low","pet-fav-low","pet-earlier-low"]))
 	var keeper:Dictionary=source.duplicate(true);keeper.pet_id="pet-keep-0";keeper.species="original_92";keeper.template_id=92;keeper.level=120;keeper.attack=288;keeper.defence=184;keeper.speed=152;keeper.erase("gm_modified")
 	var keep_ids:=[]
-	var ten:=blue_filter();ten.stop_after=10
+	var ten:=blue_filter();run_stop_after(game,10)
 	flow.kept_count=0;flow.collected_count=0;flow.target_stat_filter=ten
 	for turn in range(10):
 		var found:Dictionary=keeper.duplicate(true);found.pet_id="pet-keep-%d"%turn;keep_ids.append(found.pet_id)
@@ -133,7 +136,7 @@ func run()->void:
 	game.adventure_menu.hide();game.paused_input=false
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not str(pet.pet_id) in keep_ids)
 	flow.phase="idle"
-	var endless:=blue_filter();endless.stop_after=0
+	var endless:=blue_filter();run_stop_after(game,0)
 	flow.collected_count=0;flow.target_stat_filter=endless
 	var endless_ids:=[]
 	for turn in range(12):
@@ -145,15 +148,28 @@ func run()->void:
 	check(flow.collected_count==12 and flow.phase=="idle" and flow.collect_target_text()=="不限","stop_after 0 keeps storing matches without stopping")
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not str(pet.pet_id) in endless_ids)
 	hunt.show_stat_settings();hunt.stat_species.select(hunt.stat_species.get_item_index(92));hunt.load_stat_settings()
-	check(hunt.stat_stop_after.value==0 and hunt.stat_keeps.sum.value==15 and hunt.stat_keeps.attack.value==10,"attribute tab shows blue dragon defaults: never stop, keep 15 by sum and 10 by attack")
-	hunt.stat_stop_after.get_line_edit().grab_focus();hunt.stat_stop_after.get_line_edit().text="7";hunt.commit_stat_settings()
-	check(int(game.stat_filter(92).stop_after)==7,"typed stop-after commits to the species filter")
-	hunt.stat_stop_after.get_line_edit().release_focus();hunt.stat_stop_after.value=0;hunt.save_stat_settings();game.flush_automation_settings();hunt.hide();game.paused_input=false
+	check(hunt.stat_keeps.sum.value==15 and hunt.stat_keeps.attack.value==10 and hunt.stat_page.find_child("StatStopAfter",true,false)==null,"attribute tab shows blue dragon defaults (keep 15 by sum and 10 by attack) and no per-species stop count")
+	hunt.show();hunt.show_capture_settings(true);await process_frame
+	check(hunt.stop_after.get_parent()==hunt.capture_page and hunt.stop_after.is_visible_in_tree() and int(hunt.stop_after.value)==1,"找到N只后停止 is on 抓宠设置, 1 by default")
+	var note:Control=hunt.capture_page.get_node("HuntStopAfterNote")
+	var stop_rect:Rect2=hunt.stop_after.get_global_rect().merge(note.get_global_rect())
+	check(hunt.panel.get_global_rect().encloses(stop_rect) and note.get_global_rect().end.x<=hunt.showcase.get_global_rect().position.x and hunt.stop_after.size.y>=38,"the stop count row fits the panel's left column at touch height")
+	var neighbours:=[hunt.status]
+	for child in hunt.capture_page.get_children():
+		if child is Control and child!=note and child!=hunt.stop_after:neighbours.append(child)
+	check(neighbours.all(func(other):return other==hunt.stop_after or not (other.get_global_rect().intersects(hunt.stop_after.get_global_rect()) or other.get_global_rect().intersects(note.get_global_rect()))),"and overlaps no other capture setting")
+	hunt.stop_after.get_line_edit().grab_focus();hunt.stop_after.get_line_edit().text="7";hunt.commit_stat_settings()
+	check(int(game.automation_settings().hunt.stop_after)==7 and not game.automation_settings().get("stat_filters",{}).get("92",{}).has("stop_after"),"typed stop count commits to hunt.stop_after, for the whole run")
+	hunt.stop_after.get_line_edit().release_focus();hunt.stop_after.value=1;game.flush_automation_settings()
+	check(int(game.automation_settings().hunt.stop_after)==1,"and back to 1")
+	hunt.set_controls(true)
+	check(hunt.stop_after.editable and not game.training_helper.capture_hp.editable,"it stays editable during a run, which follows it at once")
+	hunt.set_controls(false);hunt.hide();game.paused_input=false
 	flow.phase="idle"
 	var good:Dictionary=source.duplicate(true);good.pet_id="pet-filter-good";good.level=120;good.attack=292;good.defence=181;good.speed=151
 	game.session._profile.pets.append(good);game.session._profile.active_pet=game.session._profile.pets.size()-1
 	var storage_before_good:int=game.session.snapshot().pet_storage.size()
-	var single:=blue_filter();single.stop_after=1
+	var single:=blue_filter();run_stop_after(game,1)
 	flow.pet_id=good.pet_id;flow.phase="train";flow.target_stat_filter=single;flow.complete_trained_pet(good)
 	fake_msec+=5000
 	check(flow.elapsed_seconds()==150.0,"successful comparison freezes whole workflow elapsed time")

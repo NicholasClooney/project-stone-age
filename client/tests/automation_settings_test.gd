@@ -33,9 +33,9 @@ func run() -> void:
 	var defaults: Dictionary = Settings.defaults()
 	check(int(defaults.training.hp)==10 and int(defaults.training.limit)==1000 and int(defaults.hunt.total)==8 and not defaults.has("comment"),"defaults load from data/automation_defaults.json without notes")
 	var blue := StatFilter.defaults(92)
-	check(blue.mode=="any" and int(blue.stop_after)==0 and blue.conditions.sum.enabled and int(blue.conditions.sum.keep)==15 and int(blue.conditions.attack.keep)==10 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1,"blue dragon keeps its per-species defaults")
+	check(blue.mode=="any" and not blue.has("stop_after") and blue.conditions.sum.enabled and int(blue.conditions.sum.keep)==15 and int(blue.conditions.attack.keep)==10 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1,"blue dragon keeps its per-species defaults")
 	var other := StatFilter.defaults(194)
-	check(int(other.stop_after)==1 and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (relative, fixed values kept for 绝对)")
+	check(int(defaults.hunt.stop_after)==1 and not other.has("stop_after") and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (relative, fixed values kept for 绝对); 找到N只后停止 is hunt.stop_after, 1 by default")
 
 	var backend = Backend.new()
 	backend.set_process(false)
@@ -53,7 +53,7 @@ func run() -> void:
 	var stored := overrides(backend)
 	check(reply.ok and int(stored.training.hp)==35 and int(stored.training.limit)==7 and int(stored.hunt.rate)==250,"a second update deep-merges with the first")
 	var effective: Dictionary = Settings.stat_filter(stored,92)
-	check(int(effective.conditions.sum.minus)==3 and int(effective.conditions.sum.keep)==15 and int(effective.stop_after)==0,"a stat override merges over the species defaults")
+	check(int(effective.conditions.sum.minus)==3 and int(effective.conditions.sum.keep)==15,"a stat override merges over the species defaults")
 	check(stored.stat_filters.keys()==["92"] and stored.stat_filters["92"]=={"conditions":{"sum":{"minus":3}}},"stat filters are keyed by template id")
 	check(not bool(set_settings(backend,{"stat_filters":{"92":{"conditions":{"sum":{"minus":1001}}}}}).get("ok",true)),"x is at most 1000")
 	reply = set_settings(backend,{"stat_filters":{"92":{"threshold_mode":"absolute","conditions":{"sum":{"value":630}}}}})
@@ -89,7 +89,7 @@ func run() -> void:
 	check(reply.ok and not overrides(backend).has("hunt") and not overrides(backend).has("stat_filters"),"null resets a whole section or nested group")
 
 	# ---- persistence ----
-	set_settings(backend,{"capture":{"hp":40,"pet_max_level":3},"stat_filters":{"194":{"stop_after":4}}})
+	set_settings(backend,{"capture":{"hp":40,"pet_max_level":3},"hunt":{"stop_after":4},"stat_filters":{"194":{"mode":"all"}}})
 	var saved: Dictionary = overrides(backend)
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(SAVE))
 	check(parsed is Dictionary and parsed.has("automation_settings") and int(parsed.automation_settings.capture.hp)==40,"the backend saves the settings with the character")
@@ -97,7 +97,7 @@ func run() -> void:
 	reloaded.set_process(false)
 	root.add_child(reloaded)
 	check(reloaded.load_profile(SAVE) and overrides(reloaded)==saved,"loading the save restores the same overrides")
-	check(int(Settings.stat_filter(overrides(reloaded),194).stop_after)==4,"per-species settings survive a reload")
+	check(int(Settings.effective(overrides(reloaded)).hunt.stop_after)==4 and str(Settings.stat_filter(overrides(reloaded),194).mode)=="all","the run-wide stop count and per-species settings survive a reload")
 	reloaded.queue_free()
 
 	# ---- migration: older saves have no settings, or broken ones ----
@@ -115,7 +115,21 @@ func run() -> void:
 	old.automation_settings = {"training":{"hp":55,"xp":7},"hunt":"junk","stat_filters":{"92":{"mode":"any","stop_after":3},"x":{}},"extra":1}
 	file = FileAccess.open(SAVE,FileAccess.WRITE);file.store_string(JSON.stringify(old));file.close()
 	session = GameSession.new()
-	check(session.load_game(SAVE) and session.automation_settings()=={"training":{"hp":55},"stat_filters":{"92":{"stop_after":3}}},"invalid stored settings are dropped and valid ones kept")
+	check(session.load_game(SAVE) and session.automation_settings()=={"training":{"hp":55}},"invalid stored settings are dropped and valid ones kept (%s)" % JSON.stringify(session.automation_settings()))
+	# ---- migration: 找到N只后停止 was per species, now hunt.stop_after ----
+	var edited := Settings.sanitize({"hunt":{"stat_species":194,"template":92},"stat_filters":{"92":{"stop_after":5},"194":{"stop_after":0,"mode":"all"}}})
+	check(edited=={"hunt":{"stat_species":194,"template":92,"stop_after":0},"stat_filters":{"194":{"mode":"all"}}},"an old save takes the stop count of the species last edited on 属性条件 and drops the per-species ones (%s)" % JSON.stringify(edited))
+	var following := Settings.sanitize({"hunt":{"template":92},"stat_filters":{"92":{"stop_after":5}}})
+	check(int(Settings.effective(following).hunt.stop_after)==5,"属性条件 following the target: the target species' count")
+	var unset := Settings.sanitize({"hunt":{"stat_species":194},"stat_filters":{"92":{"stop_after":5}}})
+	check(int(Settings.effective(unset).hunt.stop_after)==1,"the species last edited had none of its own: 1, the classic stop")
+	var kept := Settings.sanitize({"hunt":{"stop_after":7,"stat_species":92},"stat_filters":{"92":{"stop_after":5}}})
+	check(int(kept.hunt.stop_after)==7,"a save that already has hunt.stop_after keeps it")
+	check(Settings.sanitize({"hunt":{"stat_species":92}})=={"hunt":{"stat_species":92}},"a new save without per-species counts is left alone")
+	var older_client := Settings.apply_patch({},{"stat_filters":{"92":{"stop_after":3,"mode":"all"}}})
+	check(older_client.ok and older_client.overrides=={"stat_filters":{"92":{"mode":"all"}}},"an older client's per-species stop count is accepted and ignored")
+	check(Settings.apply_patch({},{"stat_filters":{"92":{"stop_after":3}}}).overrides=={},"even on its own")
+	check(not Settings.apply_patch({},{"hunt":{"stop_after":100001}}).ok and Settings.apply_patch({},{"hunt":{"stop_after":0}}).ok,"hunt.stop_after is 0 to 100000")
 
 	# ---- runs use the profile ----
 	var runner = Backend.new()

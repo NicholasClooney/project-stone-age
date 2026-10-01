@@ -39,13 +39,13 @@
     "resume": true,
     "clean_only": true,
     "mixed_if_stats": false,
-    "stat_species": -1
+    "stat_species": -1,
+    "stop_after": 1
   },
   "stat_filter": {
     "comment": "threshold_mode relative: each condition is 最高 − minus, at least the best Lv120 value of that metric among the player's own pets of the species minus `minus`; with none of the species yet the find-pet cycle surveys first (摸底). absolute: at least `value` (the former fixed defaults).",
     "mode": "any",
     "threshold_mode": "relative",
-    "stop_after": 1,
     "keep_rule": {"tiers": 2, "per_tier": 3, "order": ["attack", "speed", "max_hp"], "champions": 2, "champion_stats": ["attack", "defence", "speed", "max_hp"], "auto": false},
     "conditions": {
       "sum": {"enabled": false, "minus": 1, "value": 624, "keep": 0},
@@ -56,9 +56,8 @@
   },
   "species": {
     "92": {
-      "comment": "扬奇洛斯（蓝人龙）: keep collecting; 三围合 ≥ 最高 − 1 OR 攻击 ≥ 最高 − 1.",
+      "comment": "扬奇洛斯（蓝人龙）: 三围合 ≥ 最高 − 1 OR 攻击 ≥ 最高 − 1.",
       "stat_filter": {
-        "stop_after": 0,
         "conditions": {
           "sum": {"enabled": true, "keep": 15},
           "attack": {"enabled": true, "keep": 10}

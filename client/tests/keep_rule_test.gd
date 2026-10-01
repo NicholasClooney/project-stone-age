@@ -77,9 +77,9 @@ func settings() -> void:
 	for bad in [{"tiers":21},{"per_tier":-1},{"order":[]},{"order":["luck"]},{"champion_stats":["luck"]},{"champion_stats":["attack","attack"]},{"auto":1},{"bogus":1}]:
 		check(not Settings.apply_patch({},{"stat_filters":{"92":{"keep_rule":bad}}}).ok,"an invalid rule is refused: %s" % str(bad))
 	check(not Settings.apply_patch({},{"stat_filters":{"92":{"keep_qualified":3}}}).ok,"the replaced keep_qualified setting is no longer accepted")
-	var migrated:=Settings.sanitize({"stat_filters":{"92":{"keep_qualified":5,"rank":["speed","sum","attack"],"stop_after":2}}})
+	var migrated:=Settings.sanitize({"stat_filters":{"92":{"keep_qualified":5,"rank":["speed","sum","attack"],"mode":"all"}}})
 	var filter:=Settings.stat_filter(migrated,92)
-	check(filter.keep_rule.order==["speed","attack"] and not filter.has("keep_qualified") and not filter.has("rank") and int(filter.stop_after)==2,"an older save's chosen rank becomes the tier order (三围合 dropped); keep_qualified goes")
+	check(filter.keep_rule.order==["speed","attack"] and not filter.has("keep_qualified") and not filter.has("rank") and str(filter.mode)=="all","an older save's chosen rank becomes the tier order (三围合 dropped); keep_qualified goes")
 	var untouched:=Settings.sanitize({"stat_filters":{"92":{"keep_qualified":5}}})
 	check(Settings.stat_filter(untouched,92).keep_rule==default_rule(),"an older save without a rank gets the default rule")
 
@@ -131,7 +131,9 @@ func run()->void:
 			flow.phase="idle"
 		return results
 	# 三围合 ≥ 625−1 or 攻击 ≥ 294−1, as the cycle resolves 最高 − 1.
-	var target:=Filter.resolve(Settings.default_stat_filter(92),{"sum":625,"attack":294});target.stop_after=0
+	var target:=Filter.resolve(Settings.default_stat_filter(92),{"sum":625,"attack":294})
+	# 找到0只后停止 (hunt.stop_after, the whole run): every qualifier is stored.
+	game.backend.automation.flow_settings_overrides={"hunt":{"stop_after":0}}
 	cycle.call(target,700)
 	var stored:Array=session._profile.pet_storage.filter(func(p):return str(p.pet_id).begins_with("pet-7"))
 	check(stored.size()==7 and flow.released_count==0 and not flow.keep_auto,"auto tidy off (the default): every qualifier is stored")

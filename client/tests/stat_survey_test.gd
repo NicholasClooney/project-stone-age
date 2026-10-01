@@ -292,6 +292,8 @@ func cycle() -> void:
 	automation.flow_pet_id = "pet-survey";automation.flow_phase = "train"
 	automation.flow_target_filter = StatFilter.resolve(automation.raw_filter_for(92),{"sum":999,"attack":999})
 	automation.flow_target_survey = true
+	# 找到0只后停止 (hunt.stop_after, the whole run): the pick is stored and counted.
+	automation.flow_settings_overrides = AutomationSettings.merged(automation.flow_settings_overrides,{"hunt":{"stop_after":0}})
 	var collected: int = automation.flow_collected_count
 	automation.complete_trained_pet(caught)
 	check(automation.flow_collected_count==collected+1 and automation.flow_last_result.contains("摸底选中"),"a survey pick is stored as found: %s" % automation.flow_last_result)

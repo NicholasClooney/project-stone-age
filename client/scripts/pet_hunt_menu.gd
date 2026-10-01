@@ -36,7 +36,6 @@ var stat_values: Dictionary = {}
 var stat_results: Dictionary = {}
 var _thresholds_key := ""
 var _thresholds_msec := -100000
-var stat_stop_after: SpinBox
 var stat_keeps: Dictionary = {}
 ## 保留规则 (scripts/keep_rule.gd): tiers, pets per tier, the tier order
 ## (第一/第二/第三), single-stat champions and 找宠时自动整理.
@@ -51,6 +50,8 @@ const CapturePolicy=preload("res://scripts/battle_auto_policy.gd")
 const Rules = preload("res://scripts/pet_hunt_rules.gd")
 var filter_nodes: Array[Control] = []
 var capture_page: Control
+## 找到N只后停止 (hunt.stop_after) on 抓宠设置: one count for the whole find-pet run.
+var stop_after: SpinBox
 var train_after_capture: CheckBox
 var world: Node
 var panel: Panel
@@ -200,7 +201,8 @@ func _ready() -> void:
 	var filters_tab:Button=world.button("筛选条件",func():show_capture_settings(false));filters_tab.name="HuntFilterTab";filters_tab.position=Vector2(585,18);panel.add_child(filters_tab)
 	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(740,18);panel.add_child(capture_tab)
 	showcase_controls()
-	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级 · 按属性条件留存 · 无动画抓宠";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。有属性条件：达标则停止比较，未达标存仓并继续；无条件则升完一只停止。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
+	stop_after_controls()
+	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级 · 按属性条件留存 · 无动画抓宠";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。达标（无属性条件时每只升满的）按「找到N只后停止」存仓或停下比较，未达标存仓并继续。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
 	train_after_capture.toggled.connect(func(enabled):
 		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
 		if enabled:auto_capture.button_pressed=true
@@ -297,7 +299,7 @@ func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
 		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value),
-		"resume":resume_after_restart.button_pressed,"clean_only":clean_only.button_pressed,"mixed_if_stats":mixed_if_stats.button_pressed}
+		"resume":resume_after_restart.button_pressed,"clean_only":clean_only.button_pressed,"mixed_if_stats":mixed_if_stats.button_pressed,"stop_after":int(stop_after.value)}
 	# 任何 shown only because the saved species is not found here keeps the saved one.
 	if species.item_count>0 and not _template_fallback:wanted.template=species.get_selected_id()
 	# Likewise 属性条件's species: a fallback shown here keeps the saved choice.
@@ -312,7 +314,7 @@ func settings_patch() -> Dictionary:
 			conditions[metric]={"enabled":stat_checks[metric].button_pressed,"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value),"keep":int(stat_keeps[metric].value)}
 		var chosen_stats:=KeepRule.STATS.filter(func(stat):return rule_stats[stat].button_pressed)
 		var keep_rule:={"tiers":int(rule_tiers.value),"per_tier":int(rule_per_tier.value),"order":rank_choice(),"champions":int(rule_champions.value),"champion_stats":chosen_stats,"auto":rule_auto.button_pressed}
-		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","threshold_mode":_threshold_mode_shown(),"stop_after":int(stat_stop_after.value),"keep_rule":keep_rule,"conditions":conditions}
+		var wanted_filter:={"mode":"any" if stat_mode.selected==1 else "all","threshold_mode":_threshold_mode_shown(),"keep_rule":keep_rule,"conditions":conditions}
 		var changed:=AutomationSettings.diff(world.stat_filter(_stat_species_shown),wanted_filter)
 		if not changed.is_empty():patch.stat_filters={str(_stat_species_shown):changed}
 	return patch
@@ -338,7 +340,7 @@ func load_settings() -> void:
 	showcase_speed.select(maxi(0,[1.0,2.0,4.0,8.0].find(world.playback_speed())))
 	start_button.text="开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"
 	var shown:=hunt.duplicate(true)
-	var numbers:={"total":total,"rate":rate,"limit":limit}
+	var numbers:={"total":total,"rate":rate,"limit":limit,"stop_after":stop_after}
 	for key in numbers:
 		if not _sync_spin(numbers[key],old.get(key),hunt[key]):shown[key]=old[key]
 	var old_offsets: Array=old.get("offsets",[null,null,null,null])
@@ -422,8 +424,8 @@ func open_records() -> void:
 
 func set_controls(locked: bool) -> void:
 	for control in controls:
-		# 属性条件 stays editable: a running cycle follows it at once.
-		var held:=locked and not (is_instance_valid(stat_page) and stat_page.is_ancestor_of(control))
+		# 属性条件 and 找到N只后停止 stay editable: a running cycle follows them at once.
+		var held:=locked and control!=stop_after and not (is_instance_valid(stat_page) and stat_page.is_ancestor_of(control))
 		if control is SpinBox:control.editable=not held
 		elif control is BaseButton:control.disabled=held
 	_show_mixed_option()
@@ -607,6 +609,17 @@ func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->vo
 	for entry in [["抓宠血量线 %",Vector2(24,149)],["削血宠物",Vector2(24,199)],["削血宠等级上限",Vector2(24,249)]]:
 		var caption:Label=world.text(str(entry[0]),16);caption.position=entry[1];capture_page.add_child(caption)
 
+## 抓宠设置: 找到[N]只后停止（0＝不停）, beside the 难抓 rows, above the 抓到后直接升至120级 switch.
+func stop_after_controls()->void:
+	var tip:="整轮找宠共用，不分品种：本轮留下的宠物数到这个数就停止并打开比较。有属性条件时算达标的（摸底选中的也算）；没有启用条件时每只升到120级的都算。0＝不停，一直找到手动停止；1＝找到第一只就停下比较。未达标存仓的不算。仅在「抓到后直接升至120级」时生效。低血量、缺少削血宠或存仓失败仍会暂停。"
+	var before:Label=world.text("找到",17);before.position=Vector2(410,399);before.mouse_filter=Control.MOUSE_FILTER_PASS;before.tooltip_text=tip;capture_page.add_child(before)
+	stop_after=SpinBox.new();stop_after.name="HuntStopAfter";stop_after.min_value=0;stop_after.max_value=100000;stop_after.step=1;stop_after.value=1
+	stop_after.position=Vector2(455,389);stop_after.size=Vector2(100,38);stop_after.tooltip_text=tip
+	stop_after.get_line_edit().focus_exited.connect(func():call_deferred("load_settings"))
+	stop_after.value_changed.connect(func(_value):_settings_changed(false))
+	capture_page.add_child(stop_after);controls.append(stop_after)
+	var after:Label=world.text("只后停止（0＝不停）",17);after.name="HuntStopAfterNote";after.position=Vector2(563,399);after.mouse_filter=Control.MOUSE_FILTER_PASS;after.tooltip_text=tip;capture_page.add_child(after)
+
 ## 抓宠设置's right column: the 后台搜宠 switch, 排队上限, and the 自动练级
 ## 经验倍率 / 战斗速度 its training uses (the same values as 自动练级's own).
 func install_fallback_controls(attempts: SpinBox, rate: SpinBox, hp: SpinBox)->void:
@@ -747,14 +760,9 @@ func build_stat_page()->void:
 		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(344+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
 		var keep:=number(Vector2(384+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=84;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
 		check.toggled.connect(func(_on):save_stat_settings(true));input.value_changed.connect(func(_value):save_stat_settings();refresh_stat_thresholds(true));keep.value_changed.connect(func(_value):save_stat_settings())
-	var stop_label:Label=world.text("找到",17);stop_label.position=Vector2(24,348);stat_page.add_child(stop_label)
-	stat_stop_after=number(Vector2(80,338),0,100000,0);stat_stop_after.name="StatStopAfter";stat_stop_after.reparent(stat_page)
-	stat_stop_after.value_changed.connect(func(_value):save_stat_settings())
-	var stop_note:Label=world.text("只达标宠物后停止（0＝不停止，1＝找到即停并比较）",17);stop_note.position=Vector2(230,348);stat_page.add_child(stop_note)
-	# The shared status line starts at y 478, so the page ends above it; the notes are tooltips.
-	stop_note.mouse_filter=Control.MOUSE_FILTER_PASS
-	stop_note.tooltip_text="仅在「抓到后直接升至120级」时生效；每个品种独立设置，随角色保存。预测不达标直接跳过；达标则抓到、升至120并存仓，数量到上限停止并打开比较。摸底选中的也算达标。未启用任何条件：升完一只即停止。低血量、缺少削血宠或存仓失败仍会暂停。"
-	build_keep_rule(385)
+	# The shared status line starts at y 478, so the page ends above it; the notes
+	# are tooltips. 找到N只后停止 is on 抓宠设置, one for the whole run.
+	build_keep_rule(340)
 	refresh_stat_species()
 
 ## 保留规则 rows: 看最高[T]档，每档留[K]只，档内排序[第一][第二][第三];
@@ -843,7 +851,7 @@ func load_stat_settings()->void:
 	_stat_species_shown=template_id
 	var settings:Dictionary=world.stat_filter(template_id)
 	var rule:Dictionary=settings.get("keep_rule",{})
-	var flat:={"mode":str(settings.mode),"threshold_mode":str(settings.get("threshold_mode","relative")),"stop_after":int(settings.stop_after),"tiers":int(rule.get("tiers",2)),"per_tier":int(rule.get("per_tier",3)),"champions":int(rule.get("champions",2)),
+	var flat:={"mode":str(settings.mode),"threshold_mode":str(settings.get("threshold_mode","relative")),"tiers":int(rule.get("tiers",2)),"per_tier":int(rule.get("per_tier",3)),"champions":int(rule.get("champions",2)),
 		"rank":rule.get("order",["attack","speed","max_hp"]).duplicate(),"champion_stats":rule.get("champion_stats",KeepRule.STATS).duplicate(),"auto":bool(rule.get("auto",false))}
 	for metric in StatFilter.METRICS:
 		for field in ["enabled","minus","value","keep"]:flat[metric+"."+field]=settings.conditions[metric].get(field,0)
@@ -855,7 +863,6 @@ func load_stat_settings()->void:
 		if _changed(old,flat,metric+".enabled"):stat_checks[metric].set_pressed_no_signal(bool(flat[metric+".enabled"]))
 		for entry in [[stat_numbers[metric],metric+".minus"],[stat_values[metric],metric+".value"],[stat_keeps[metric],metric+".keep"]]:
 			if not _sync_spin(entry[0],old.get(entry[1]),flat[entry[1]],switching):shown[entry[1]]=old[entry[1]]
-	if not _sync_spin(stat_stop_after,old.get("stop_after"),flat.stop_after,switching):shown.stop_after=old.stop_after
 	for entry in [[rule_tiers,"tiers"],[rule_per_tier,"per_tier"],[rule_champions,"champions"]]:
 		if not _sync_spin(entry[0],old.get(entry[1]),flat[entry[1]],switching):shown[entry[1]]=old[entry[1]]
 	if switching or not AutomationSettings._same(old.get("rank"),flat.rank):_show_rank(flat.rank)
@@ -951,7 +958,7 @@ func save_stat_settings(now: bool = false)->void:
 
 ## Saves typed numbers and pending changes now (before a find-pet cycle).
 func commit_stat_settings()->void:
-	for input in stat_numbers.values()+stat_values.values()+stat_keeps.values()+[stat_stop_after,rule_tiers,rule_per_tier,rule_champions]:
+	for input in stat_numbers.values()+stat_values.values()+stat_keeps.values()+[stop_after,rule_tiers,rule_per_tier,rule_champions]:
 		if input.get_line_edit().has_focus():input.apply()
 	world.mark_settings_dirty(self)
 	world.flush_automation_settings()

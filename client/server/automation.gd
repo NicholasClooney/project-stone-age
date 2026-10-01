@@ -152,8 +152,8 @@ var flow_stored_count := 0
 var flow_last_result := ""
 var flow_last_stored_id := ""
 var flow_last_stored_total := 0
-# With a filter's stop_after other than 1, matches are stored and the hunt goes
-# on until this run keeps stop_after of them (0 = until stopped manually).
+# With hunt.stop_after other than 1 (run_stop_after), kept pets are stored and
+# the hunt goes on until this run keeps that many (0 = until stopped manually).
 var flow_kept_count := 0
 var flow_collected_count := 0
 var flow_pruned_count := 0
@@ -1059,8 +1059,15 @@ func start_timer() -> void:
 func freeze_timer() -> void:
 	timer_frozen_seconds = elapsed_seconds();timer_running = false
 
+## 找到N只后停止 (hunt.stop_after) for the whole run, every species alike:
+## pets this run keeps (qualifiers, or with no 属性条件 every pet trained to
+## Lv.120) before it stops; 0 never stops, 1 stops at the first to compare.
+## Read from the run's settings snapshot, which follows the player's edits.
+func run_stop_after() -> int:
+	return int(AutomationSettings.effective(flow_settings_overrides).hunt.get("stop_after",1))
+
 func collect_target_text() -> String:
-	var stop_after := int(flow_target_filter.get("stop_after",1))
+	var stop_after := run_stop_after()
 	return "不限" if stop_after<=0 else str(stop_after)
 
 ## The cycle's stat filter for a species as saved (最高 − x or fixed values, unresolved).
@@ -1502,23 +1509,25 @@ func complete_trained_pet(found: Dictionary) -> void:
 		_emit_status()
 		_emit_event({"kind":"flow_stored","result":flow_last_result})
 		return
-	var stop_after := int(flow_target_filter.get("stop_after",1))
-	if filtered and stop_after!=1:
-		# Keep the qualifier in the warehouse (never pruned as a reject) and continue.
-		if not _store_hunt_pet(flow_pet_id,false,true):
-			stop_cycle("达标但无法存仓："+str(backend.session.last_error));return
+	var stop_after := run_stop_after()
+	if stop_after!=1:
+		# Keep the pet in the warehouse (never pruned as a reject) and continue.
+		if not _store_hunt_pet(flow_pet_id,false,filtered):
+			stop_cycle(("达标" if filtered else "新伙伴")+"但无法存仓："+str(backend.session.last_error));return
 		flow_kept_count += 1
 		flow_collected_count += 1
 		var released := _tidy_species(found)
 		backend.save()
 		backend.publish()
-		if released.has(flow_pet_id):flow_last_result = "达标但不在保留规则内，已放生 · "+flow_last_result
-		else:flow_last_result = "达标已存仓 · "+flow_last_result
+		var kept := "达标" if filtered else "已满120级"
+		if released.has(flow_pet_id):flow_last_result = kept+"但不在保留规则内，已放生 · "+flow_last_result
+		else:flow_last_result = kept+"已存仓 · "+flow_last_result
 		if stop_after>0 and flow_collected_count>=stop_after:
 			freeze_timer()
-			_record_stop("flow","完成","收集完成：本轮找到%d只达标宠物" % flow_collected_count,_involved_pet())
+			var done := "收集完成：本轮找到%d只%s宠物" % [flow_collected_count,"达标" if filtered else ""]
+			_record_stop("flow","完成",done,_involved_pet())
 			flow_phase = "compare"
-			flow_reason = "收集完成：本轮找到%d只达标宠物 · %s" % [flow_collected_count,flow_last_result]
+			flow_reason = "%s · %s" % [done,flow_last_result]
 			_emit_status()
 			_emit_event({"kind":"flow_compare","pet_id":flow_pet_id,"reason":flow_reason})
 			return

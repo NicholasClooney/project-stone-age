@@ -70,7 +70,7 @@ func local() -> void:
 	var actor := newborn(game)
 	check(not actor.is_empty(),"a real local newborn is the fixture")
 	var target := int(actor.template_id)
-	game.link.request({"type":"set_automation_settings","settings":{"stat_filters":{str(target):{"stop_after":0,"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":1}},"keep_rule":{"tiers":0,"champions":0,"auto":true}}}}})
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"stop_after":0},"stat_filters":{str(target):{"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":1}},"keep_rule":{"tiers":0,"champions":0,"auto":true}}}}})
 	hunt.apply_preset(0)
 	check(flow.start_cycle(),"a find-pet cycle starts with 后台搜宠")
 	var fixture := FixedTroop.new();fixture.troop = {"enemies":[actor]}

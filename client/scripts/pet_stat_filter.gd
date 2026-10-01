@@ -134,7 +134,6 @@ static func describe_thresholds(settings: Dictionary, best: Dictionary) -> Strin
 	return ("，或 " if settings.get("mode", "all") == "any" else "，且 ").join(parts)
 
 static func defaults(template_id: int) -> Dictionary:
-	# stop_after: matches to keep before the loop stops; 0 never stops, 1 is the classic single stop.
 	# Values (and per-species overrides) come from res://data/automation_defaults.json.
 	return preload("res://scripts/automation_settings.gd").default_stat_filter(template_id)
 
