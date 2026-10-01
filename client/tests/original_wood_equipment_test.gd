@@ -142,7 +142,7 @@ func saves() -> void:
 		check(migrated.load_game(path),"actual version5 equipment profile migrates")
 		var after: Dictionary=migrated.snapshot()
 		check(after.inventory==data.inventory and after.equipment==data.equipment and after.equipped==data.equipped and after.equipped_mirror==data.equipped_mirror and after.original_items==data.original_items,"v5 preserves club/mirror/body/amulet and all quantities without gifts")
-		check(after.original_instances.size()==3 and after.original_equipment=={"arm":0,"bracelet":0,"amulet":0} and int(after.original_instances[1].durability)==300000 and int(after.version)==Session.SAVE_VERSION,"v5 original copies initialized once and remain in bag")
+		check(after.original_instances.size()==3 and after.original_equipment=={"arm":0,"bracelet":0,"amulet":0,"head":0} and int(after.original_instances[1].durability)==300000 and int(after.version)==Session.SAVE_VERSION,"v5 original copies initialized once and remain in bag")
 		check(migrated.save_game(path) and Session.new().load_game(path),"migrated v6 save valid for next login")
 		remove_files(path)
 func battle() -> void:

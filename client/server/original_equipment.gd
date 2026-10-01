@@ -1,8 +1,10 @@
 extends RefCounted
-## Pinned itemset.txt; only the reviewed wood/herb equipment is wearable here.
-## Legacy equipment keeps its existing ownership fields. arm / bracelet are
+## Pinned itemset.txt; only reviewed wood/herb/adult equipment is wearable here.
+## HEAD is independent of legacy BODY. Legacy ownership fields stay intact.
+## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	2418:{"name":"仪之兜","type":6,"slot":"head","level":30,"attack":0,"defence":15,"speed":-3,"charm":0,"durability":2500000,"resistances":[3,3,3,3,3,3]},
 	2427:{"name":"老爷爷的护身符","type":15,"slot":"amulet","level":10,"attack":0,"defence":0,"speed":0,"charm":-1,"durability":2500000,"resistances":[2,2,2,2,2,2]},
 	2465:{"name":"哈恩的斧头","type":1,"slot":"arm","level":25,"attack":35,"defence":-15,"speed":-15,"charm":0,"durability":0},
 	2485:{"name":"哈恩改造的斧头","type":1,"slot":"arm","level":25,"attack":33,"defence":-10,"speed":-10,"charm":0,"durability":300000},
@@ -16,6 +18,12 @@ static func instance(id: int, uid: int) -> Dictionary:
 
 static func migrate(profile: Dictionary) -> void:
 	if profile.has("original_instances"):
+		# Version 6 used no HEAD field: 2418 was an unworn story instance
+		# with zero durability. Initialize that newly supported item only once.
+		if not profile.original_equipment.has("head"):
+			profile.original_equipment.head=0
+			for entry in profile.original_instances:
+				if int(entry.item_id)==2418 and int(entry.durability)==0:entry.durability=2500000
 		# original_items remains the canonical compatibility projection. Old
 		# authority tools may append it directly; retain existing copies in order
 		# and initialize only newly acquired entries, never re-roll durability.
@@ -40,7 +48,7 @@ static func migrate(profile: Dictionary) -> void:
 			if int(profile.original_equipment[slot]) not in uids:profile.original_equipment[slot]=0
 		return
 	profile.original_instances=[]
-	profile.original_equipment={"arm":0,"bracelet":0,"amulet":0}
+	profile.original_equipment={"arm":0,"bracelet":0,"amulet":0,"head":0}
 	profile.next_original_uid=1
 	for id in profile.get("original_items",[]):
 		profile.original_instances.append(instance(int(id),int(profile.next_original_uid)))
@@ -104,7 +112,9 @@ static func integer(value: Variant, low: int, high: int) -> bool:
 static func valid(profile: Dictionary) -> bool:
 	if profile.has("equipment") and not profile.equipment is Dictionary:return false
 	if not profile.get("original_instances") is Array or profile.original_instances.size()!=profile.original_items.size():return false
-	if not profile.get("original_equipment") is Dictionary or profile.original_equipment.size()!=3:return false
+	if not profile.get("original_equipment") is Dictionary:return false
+	var has_head: bool=profile.original_equipment.has("head")
+	if profile.original_equipment.size()!=(4 if has_head else 3):return false
 	if not integer(profile.get("next_original_uid"),1,2147483647):return false
 	var seen: Array=[]
 	for i in range(profile.original_instances.size()):
@@ -112,9 +122,11 @@ static func valid(profile: Dictionary) -> bool:
 		if not entry is Dictionary or entry.size()!=3 or not integer(entry.get("uid"),1,int(profile.next_original_uid)-1) or entry.uid in seen:return false
 		if not integer(entry.get("item_id"),1,2147483647) or int(entry.item_id)!=int(profile.original_items[i]):return false
 		if not integer(entry.get("durability"),0,int(ITEMS.get(int(entry.item_id),{}).get("durability",0))):return false
-		if ITEMS.has(int(entry.item_id)) and int(ITEMS[int(entry.item_id)].durability)>0 and int(entry.durability)==0:return false
+		var legacy_helmet: bool=int(entry.item_id)==2418 and not has_head
+		if legacy_helmet and int(entry.durability)!=0:return false
+		if not legacy_helmet and ITEMS.has(int(entry.item_id)) and int(ITEMS[int(entry.item_id)].durability)>0 and int(entry.durability)==0:return false
 		seen.append(entry.uid)
-	for slot in ["arm","bracelet","amulet"]:
+	for slot in (["arm","bracelet","amulet","head"] if has_head else ["arm","bracelet","amulet"]):
 		var uid=profile.original_equipment.get(slot)
 		if not integer(uid,0,int(profile.next_original_uid)-1):return false
 		if int(uid)==0:continue

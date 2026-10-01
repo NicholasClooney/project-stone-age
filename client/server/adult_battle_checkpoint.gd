@@ -23,6 +23,7 @@ static func restore(b,saved:Dictionary) -> bool:
   for key in ["original_instances","original_equipment","next_original_uid"]:restored_profile.erase(key)
   Session.OriginalEquipment.migrate(restored_profile)
   restored_profile.version=Session.SAVE_VERSION
+ Session.OriginalEquipment.migrate(restored_profile)
  for pet in restored_profile.pets+restored_profile.get("pet_storage",[]):
   if not pet.has("original_end_event"):pet.original_end_event=Session.original_pet_event(pet)
  if not b.session._valid_profile(restored_profile):return false
@@ -42,6 +43,7 @@ static func restore(b,saved:Dictionary) -> bool:
   if source.is_empty() or str(enemy.species)!="original_"+str(int(source.template_id)) or int(enemy.level)<int(source.get("level_min",20)) or int(enemy.level)>int(source.get("level_max",30)):return false
   if not enemy.get("generated_drops",[]).is_empty():return false # These ordinary drops remain inactive.
   if actor.get("species")!=enemy.species or not Session._original_integer(actor.get("hp"),0,int(enemy.max_hp)):return false
+ if not Session.OriginalEquipment.result_valid(pending.get("original_equipment_items",[]),live.get("original_equipment_items",[])):return false
  if not Session._original_integer(live.get("turn"),0,10000) or int(live.turn)!=int(saved.get("turn",-1)):return false
  if int(saved.get("map_id",-1))!=10204 or not saved.get("cell") is Array or saved.cell.size()!=2:return false
  var map_data:Dictionary=preload("res://scripts/map_file.gd").load_map(b.quest_helper.places.file(10204))
@@ -50,11 +52,15 @@ static func restore(b,saved:Dictionary) -> bool:
  b.automation.position_map=10204
  b.automation.position_cell=Vector2i(saved.cell[0],saved.cell[1])
  b.session._profile=restored_profile
+ # Normalize equipment integers only; combat parameters may be fractional.
  b.session._pending=pending.duplicate(true)
+ b.session._pending.original_equipment_items=b.session._normalize_numbers(pending.get("original_equipment_items",[]))
  b.battle=Battle.new()
  b.battle.rng_seed=int(saved.get("rng_seed",42))
- b.battle.start_battle(pending)
+ b.battle.start_battle(b.session._pending)
  b.battle._state=live.duplicate(true)
+ b.battle._state.original_equipment_items=b.session._normalize_numbers(live.get("original_equipment_items",[]))
+ b.battle.restore_original_equipment()
  b.battle._rng.state=int(saved.get("rng_state",b.battle._rng.state))
  b.battle._escape_attempts=int(saved.get("escape_attempts",0))
  b.battle._skill_used=bool(saved.get("skill_used",false))

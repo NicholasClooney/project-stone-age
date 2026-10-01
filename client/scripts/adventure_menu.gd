@@ -518,7 +518,7 @@ func inventory_panel(profile: Dictionary) -> void:
 		var icon_path: String="res://assets/legacy/"+str(data.get("icon_path",""))
 		if ResourceLoader.exists(icon_path):icon.texture=load(icon_path)
 		icon.name="OriginalItemIcon_%d" % index
-		var center:=Vector2(61,129) if int(ident) in [2465,2485] else Vector2(32,68) if ident==2427 else Vector2(83,68)
+		var center:=Vector2(136,59) if ident==2418 else Vector2(61,129) if int(ident) in [2465,2485] else Vector2(32,68) if ident==2427 else Vector2(83,68)
 		icon.position=(center if equipped else Vector2(32,200)+cell)-(icon.texture.get_size()/2 if icon.texture!=null else Vector2.ZERO)
 		icon.mouse_filter=Control.MOUSE_FILTER_IGNORE
 		panel.add_child(icon)
@@ -561,13 +561,13 @@ func inventory_panel(profile: Dictionary) -> void:
 			var spec: Dictionary=OriginalEquipment.ITEMS[ident]
 			var details:=label("等级 %d · 攻 %+d 防 %+d 敏 %+d 魅 %+d\n%s" % [int(spec.level),int(spec.attack),int(spec.defence),int(spec.speed),int(spec.charm),"无战斗磨损" if int(spec.durability)==0 else "耐久 %d / %d · %s" % [int(entry.durability),int(spec.durability),OriginalEquipment.STAGES[OriginalEquipment.stage(entry)]]],Vector2(15,374),246,11)
 			details.name="OriginalEquipmentDetails"
-			if ident==2427:
-				var resistance:=label("六状态耐性 +2 尚未生效",Vector2(90,410),174,10)
+			if ident in [2418,2427]:
+				var resistance:=label("六状态耐性 +%d 尚未生效" % (3 if ident==2418 else 2),Vector2(90,410),174,10)
 				resistance.name="OriginalResistanceUnavailable"
-				resistance.tooltip_text="六状态耐性 +2：状态战斗尚未实现，未生效"
+				resistance.tooltip_text="毒、麻痹、睡眠、石化、酒醉、混乱耐性各 +%d：状态战斗尚未实现，未生效" % (3 if ident==2418 else 2)
 			var equip:=choice("卸下" if worn else "装备",Vector2(14,404),"equip_original:%d" % int(entry.uid),not worn)
 			equip.name="EquipOriginalItem"
-			if ident==2427:equip.size.x=70
+			if ident in [2418,2427]:equip.size.x=70
 		return
 	selected_original_item=-1
 	var potion := selected_item=="potion"

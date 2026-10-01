@@ -654,7 +654,7 @@ func _wear_equipment(damage: int, arm: bool, member: Dictionary = {}) -> void:
 		if not found:return
 	for entry in entries:
 		var data: Dictionary=OriginalEquipment.ITEMS[int(entry.item_id)]
-		if (2 if str(data.slot)=="arm" else 3 if str(data.slot)=="amulet" else 4)!=selected or int(data.durability)<1 or int(entry.durability)<=0:continue
+		if (0 if str(data.slot)=="head" else 2 if str(data.slot)=="arm" else 3 if str(data.slot)=="amulet" else 4)!=selected or int(data.durability)<1 or int(entry.durability)<=0:continue
 		var before:=OriginalEquipment.stage(entry)
 		entry.durability=maxi(0,int(entry.durability)-OriginalEquipment.wear_amount(damage,arm,_rng))
 		if int(entry.durability)==0:

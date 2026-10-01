@@ -104,7 +104,10 @@ static func original_state_valid(value: Dictionary) -> bool:
 		if not words is Array or words.size()!=6:return false
 		for word in words:
 			if not (word is int or word is float) or float(word)!=floor(float(word)) or word<0 or word>4294967295:return false
-	if not value.get("original_items") is Array or value.original_items.size()>(18 if int(value.get("version",5))>=6 else 15):return false
+	var original_limit:=15
+	if int(value.get("version",5))>=6:
+		original_limit=19 if value.get("original_equipment") is Dictionary and value.original_equipment.has("head") else 18
+	if not value.get("original_items") is Array or value.original_items.size()>original_limit:return false
 	for item in value.original_items:
 		if not (item is int or item is float) or float(item)!=floor(float(item)) or item<=0 or item>2147483647:return false
 	var origin = value.get("origin")
@@ -173,7 +176,7 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.equipment_base = {}
 	var original_mods:=OriginalEquipment.mods(_profile)
 	for stat in OriginalEquipment.STATS:config.equipment_base[stat]=int(player.get(stat,60 if stat=="charm" else 0))+int(armour[stat])-int(original_mods[stat])
-	config.equipment_occupied = [false,not str(_equipment().body).is_empty(),bool(_profile.equipped) or int(_profile.original_equipment.arm)>0,bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty() or int(_profile.original_equipment.amulet)>0,int(_profile.original_equipment.bracelet)>0]
+	config.equipment_occupied = [int(_profile.original_equipment.head)>0,not str(_equipment().body).is_empty(),bool(_profile.equipped) or int(_profile.original_equipment.arm)>0,bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty() or int(_profile.original_equipment.amulet)>0,int(_profile.original_equipment.bracelet)>0]
 	config.player_luck = int(player.get("luck",0))
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "axe" if int(_profile.original_equipment.arm)>0 else "club" if _profile.equipped else ""
