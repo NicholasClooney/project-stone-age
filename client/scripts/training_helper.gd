@@ -353,7 +353,9 @@ func on_status(automation: Dictionary) -> void:
 	# A find-pet cycle minimized from 自动抓极品 keeps its capture battles out of
 	# sight too, and 后台搜宠 shows its battles with the info block instead:
 	# a progress window already up gives way.
-	if world.pet_hunt_menu.minimized or bool(automation.get("flow",{}).get("showcase",false)):
+	# Any find-pet cycle (后台搜宠 or not) runs its capture battles behind the
+	# hunt window: this progress window never pops up for them.
+	if world.pet_hunt_menu.minimized or bool(automation.get("flow",{}).get("showcase",false)) or _flow_running(automation):
 		if visible:hide()
 		return
 	if not visible:
@@ -373,6 +375,11 @@ func on_event(detail: Dictionary) -> void:
 	# reports them.
 	var flow: Dictionary=world.state.automation.get("flow",{})
 	if bool(flow.get("showcase",false)) and str(flow.get("phase","")) in ["capture","train"] and str(detail.get("reason","")) in ["本场自动战斗已完成","目标宠物已达到等级目标"]:return
+	# A find-pet cycle's own capture/training runs end here every few seconds:
+	# leave the player's windows and input alone (the hunt window reports them).
+	if _flow_running(world.state.automation) and not bool(detail.get("takeover",false)):
+		if visible:hide()
+		return
 	_end_minimized()
 	if bool(detail.get("takeover",false)) and world.battle_session.snapshot().active:
 		if world.adventure_menu.visible:world.adventure_menu.hide()
@@ -464,3 +471,7 @@ func _update_chip() -> void:
 	var level:=int(world.session.snapshot().player.level)
 	chip.present("自动练级 · %s · %s"%[mode,"战斗中" if world.state.battle_open else "遇敌中"],
 		"%d 场 · Lv.%d → %d · 经验 +%d"%[battles,int(automation.get("initial_level",level)),level,earned_xp])
+
+## Whether a find-pet cycle (自动抓极品's workflow) is running its phases.
+func _flow_running(automation: Dictionary) -> bool:
+	return str(automation.get("flow",{}).get("phase","idle")) in ["hunt","capture","train","restart"]

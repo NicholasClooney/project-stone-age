@@ -133,6 +133,18 @@ func run() -> void:
 	helper.advance()
 	check(int(game.data.map_id)==1000 and not game.training_helper.running and game.session._pending.is_empty(),"defeat settles once and returns to village without restarting")
 	check(game.training_helper.multiplier.selected==3 and game.battle_view.playback_speed==8,"helper choices survive map rebuild")
+	# A find-pet cycle's capture runs never pop this progress window up, and
+	# their end leaves the player's open windows and input alone.
+	helper.hide();game.pet_hunt_menu.minimized=false
+	game.show_adventure_menu("pets")
+	var flow_status:={"running":true,"flow":{"phase":"capture","showcase":false}}
+	helper.on_status(flow_status)
+	check(not helper.visible,"a find-pet capture run does not show the progress window")
+	game.state.automation["flow"]={"phase":"capture","showcase":false}
+	helper.on_event({"kind":"battle_stopped","reason":"本场自动战斗已完成"})
+	check(game.adventure_menu.visible and not helper.visible,"its end leaves the open pet window as it was")
+	game.state.automation["flow"]={"phase":"idle"}
+	game.close_adventure_menu()
 	game.process_mode=Node.PROCESS_MODE_DISABLED
 	game.music.stop();game.effect.stop();game.music.stream=null;game.effect.stream=null;game.queue_free()
 	await process_frame
