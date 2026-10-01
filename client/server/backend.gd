@@ -568,7 +568,20 @@ func _cmd_begin_battle(command: Dictionary) -> Dictionary:
 	return {"ok":true,"state":open_battle(config)}
 
 ## One step on a field cell. With encounter, a hit also opens the wild battle.
+func _cmd_no_random_encounters(command: Dictionary) -> Dictionary:
+	if not command.get("enabled") is bool:return _reject("开关必须为布尔值。")
+	var previous: bool = session._profile.get("no_random_encounters",false)
+	session._profile.no_random_encounters = command.enabled
+	# Battle settlement saves the changed preference with its committed rewards.
+	if session._pending.is_empty() and not save():
+		session._profile.no_random_encounters = previous
+		return _reject("保存助手设置失败。")
+	publish()
+	return {"ok":true,"enabled":command.enabled}
+
 func _cmd_field_step(command: Dictionary) -> Dictionary:
+	# Only walking randomness is disabled. Explicit battles/hunting keep their authority.
+	if session._profile.get("no_random_encounters",false):return {"ok":true,"hit":false,"battle":false}
 	var hit: bool = encounter_catalog.step(int(command.map_id),_cell(command),encounter_rng)
 	if not hit or not bool(command.get("encounter",false)):return {"ok":true,"hit":hit,"battle":false}
 	var opened := wild_encounter(int(command.map_id),_cell(command))
@@ -894,7 +907,7 @@ func _derived() -> Dictionary:
 	# battle_pets: pet_id -> reason for the open battle's participants, which
 	# release, store, deploy and ride refuse until it ends.
 	_published_battle_pets = session.battle_pets()
-	return {"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
+	return {"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
 	var options := {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier,"admin":admin}
