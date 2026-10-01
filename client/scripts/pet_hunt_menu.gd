@@ -147,9 +147,9 @@ func _ready() -> void:
 	z_index=250
 	panel=Panel.new()
 	panel.position=Vector2(90,110)
-	panel.size=Vector2(1100,620)
+	panel.size=Vector2(1100,700)
 	panel.add_theme_stylebox_override("panel",world.box(Color("20292f"),Color("b29b65")))
-	panel.custom_minimum_size=Vector2(1100,620)
+	panel.custom_minimum_size=Vector2(1100,700)
 	window_scroll=ScrollContainer.new();window_scroll.name="HuntWindowScroll"
 	add_child(window_scroll);window_scroll.add_child(panel)
 	panel.position=Vector2.ZERO
@@ -163,7 +163,7 @@ func _ready() -> void:
 	panel.add_child(species);controls.append(species)
 	species.hide()
 	target_button=MenuButton.new();target_button.name="HuntTargets"
-	target_button.position=Vector2(140,129);target_button.size=Vector2(380,38)
+	target_button.position=Vector2(140,129);target_button.size=Vector2(330,38)
 	target_button.text="未选"
 	target_button.clip_text=true
 	target_button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
@@ -181,7 +181,7 @@ func _ready() -> void:
 	auto_capture=CheckBox.new();auto_capture.text="达标后自动抓宠";auto_capture.position=Vector2(760,132)
 	panel.add_child(auto_capture);controls.append(auto_capture)
 	label("成长档预设",Vector2(24,194),17)
-	preset=OptionButton.new();preset.position=Vector2(140,184);preset.size=Vector2(480,38)
+	preset=OptionButton.new();preset.position=Vector2(140,184);preset.size=Vector2(330,38)
 	for title in ["不限品质 · 快速试用","优秀：总成长档 +4 或更高","极品：总成长档 +6 或更高","满档：四项成长档均 +2","自定义"]:preset.add_item(title)
 	preset.select(3);preset.item_selected.connect(func(index):
 		apply_preset(index)
@@ -204,19 +204,19 @@ func _ready() -> void:
 	fast.tooltip_text="服务器所在电脑用全部 CPU 核心筛选，遇到的敌群和结果与普通筛选完全相同，只是快得多；「每秒遇敌」填了限速时按限速用普通筛选；无法使用时也自动改用普通筛选。"
 	panel.add_child(fast);controls.append(fast)
 	fast.toggled.connect(func(_value):_settings_changed(true))
-	label("线程数",Vector2(852,470),15)
-	thread_count=SpinBox.new();thread_count.name="FastHuntThreads";thread_count.position=Vector2(905,462);thread_count.size=Vector2(100,34)
+	label("线程数",Vector2(852,514),15)
+	thread_count=SpinBox.new();thread_count.name="FastHuntThreads";thread_count.position=Vector2(905,506);thread_count.size=Vector2(100,34)
 	thread_count.min_value=0;thread_count.max_value=64;thread_count.step=1;thread_count.value=0
 	thread_count.value_changed.connect(func(value):world.link.request({"type":"set_fast_hunt_threads","threads":int(value)}))
 	panel.add_child(thread_count)
-	cores_label=label("",Vector2(1012,470),14)
-	status=label("",Vector2(24,478),14);status.size=Vector2(830,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,560);panel.add_child(start_button)
-	stop_button=world.button("停止",func():stop_all("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,560);panel.add_child(stop_button)
-	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,560);panel.add_child(close)
-	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizePetHunt";minimize_button.position=Vector2(760,560);minimize_button.disabled=true
+	cores_label=label("",Vector2(1012,514),14)
+	status=label("",Vector2(24,548),14);status.name="HuntStatus";status.size=Vector2(1040,80);status.clip_text=true;status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	start_button=world.button("开始筛选",start_requested);start_button.name="StartPetHunt";start_button.position=Vector2(24,640);panel.add_child(start_button)
+	stop_button=world.button("停止",func():stop_all("已停止，可调整条件后重新开始。"));stop_button.name="StopPetHunt";stop_button.position=Vector2(220,640);panel.add_child(stop_button)
+	var close: Button=world.button("关闭 · Esc",close_menu);close.position=Vector2(900,640);panel.add_child(close)
+	minimize_button=world.button("最小化",minimize);minimize_button.name="MinimizePetHunt";minimize_button.position=Vector2(760,640);minimize_button.disabled=true
 	minimize_button.tooltip_text="收起为右下角进度条；筛选或找宠流程继续，可同时整理宠物与仓库";panel.add_child(minimize_button)
-	var records: Button=world.button("宠物记录",open_records);records.name="PetHuntRecords";records.position=Vector2(600,560)
+	var records: Button=world.button("宠物记录",open_records);records.name="PetHuntRecords";records.position=Vector2(600,640)
 	records.tooltip_text="抓到、放生和停止记录。筛选或找宠流程进行中会先收起本窗口，流程继续。";panel.add_child(records)
 	for child in panel.get_children():
 		if child is Control and child!=species and child.position.y>=129 and child.position.y<=460:filter_nodes.append(child)
@@ -225,15 +225,17 @@ func _ready() -> void:
 	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(740,18);panel.add_child(capture_tab)
 	showcase_controls()
 	stop_after_controls()
-	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级 · 按属性条件留存 · 无动画抓宠";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。达标（无属性条件时每只升满的）按「找到N只后停止」存仓或停下比较，未达标存仓并继续。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,430);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
+	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。达标（无属性条件时每只升满的）按「找到N只后停止」存仓或停下比较，未达标存仓并继续。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,450);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
 	train_after_capture.toggled.connect(func(enabled):
 		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
 		if enabled:auto_capture.button_pressed=true
 		refresh_ready_status()
 		_settings_changed(true))
-	capture_only=CheckBox.new();capture_only.name="CaptureOnlyMode";capture_only.text="只抓不练（非原版）· Lv.1先留随身，满了自动存仓继续抓，直到手动停止";capture_only.position=Vector2(24,475)
+	capture_only=CheckBox.new();capture_only.name="CaptureOnlyMode";capture_only.text="只抓不练（非原版）";capture_only.position=Vector2(24,496)
 	capture_only.tooltip_text="按原物种条件、每种排队上限轮流捕获，保持真实Lv.1，先留随身，满30只后新捕获本人自动存仓并继续抓；忽略找到N只后停止。开启后强制只找Lv.1及后台队列，覆盖直接升120。自动整理保护此来源，获得手动练级经验后解除；手动放生仍按原规则。运行中的模式已冻结，修改从下一轮开始生效。"
 	capture_page.add_child(capture_only);controls.append(capture_only)
+	for entry in [["按属性条件留存 · 无动画抓宠",460],["Lv.1先留随身，满了自动存仓继续抓",506]]:
+		var note:Label=world.text(entry[0],15);note.position=Vector2(340,entry[1]);note.size=Vector2(340,34);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;capture_page.add_child(note)
 	capture_only.toggled.connect(func(_enabled):
 		_capture_only_controls()
 		refresh_ready_status()
@@ -513,8 +515,9 @@ func _update_target_checks() -> void:
 func relayout() -> void:
 	if not is_instance_valid(window_scroll):return
 	var available:=get_viewport_rect().size-Vector2(24,24)
-	window_scroll.size=Vector2(minf(1100,maxf(1,available.x)),minf(620,maxf(1,available.y)))
+	window_scroll.size=Vector2(minf(1100,maxf(1,available.x)),minf(700,maxf(1,available.y)))
 	window_scroll.position=(get_viewport_rect().size-window_scroll.size)/2
+	if is_instance_valid(status):status.size.x=minf(1040,maxf(1,available.x-48))
 
 func open_menu() -> void:
 	relayout()
@@ -730,7 +733,7 @@ func on_event(detail: Dictionary) -> void:
 func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->void:
 	for control in [hp,pet,max_level]:control.reparent(capture_page);controls.append(control)
 	hp.position=Vector2(230,139);hp.size=Vector2(150,38);hp.name="CaptureHp"
-	pet.position=Vector2(230,189);pet.size=Vector2(470,38);pet.name="CapturePet"
+	pet.position=Vector2(230,189);pet.size=Vector2(330,38);pet.name="CapturePet"
 	max_level.position=Vector2(230,239);max_level.size=Vector2(150,38);max_level.name="CapturePetMaxLevel"
 	for entry in [["抓宠血量线 %",Vector2(24,149)],["削血宠物",Vector2(24,199)],["削血宠等级上限",Vector2(24,249)]]:
 		var caption:Label=world.text(str(entry[0]),16);caption.position=entry[1];capture_page.add_child(caption)
@@ -794,17 +797,17 @@ func showcase_controls()->void:
 	showcase_speed.tooltip_text="与自动练级的战斗速度是同一个设置，由这台设备记住。"
 	showcase_speed.item_selected.connect(func(index):world.set_battle_speed([1.0,2.0,4.0,8.0][index]))
 	capture_page.add_child(showcase_speed)
-	resume_after_restart=CheckBox.new();resume_after_restart.name="ResumeAfterRestart";resume_after_restart.text="重启后自动恢复";resume_after_restart.button_pressed=true;resume_after_restart.position=Vector2(760,369)
+	resume_after_restart=CheckBox.new();resume_after_restart.name="ResumeAfterRestart";resume_after_restart.text="重启后自动恢复";resume_after_restart.button_pressed=true;resume_after_restart.position=Vector2(760,349)
 	resume_after_restart.tooltip_text="服务器重启时记下正在运行的找宠流程、筛选或自动练级（设置、排队的宠物、已遇敌组数和本轮计数），重启后角色还在原地就自动接着运行，停止记录和信息框写「服务器重启后已恢复」。重启时正在打的捕获或练级战斗按逃跑结束，重启后按原种子重新抓或接着练。摸底要重新开始。"
 	capture_page.add_child(resume_after_restart);controls.append(resume_after_restart)
 	resume_after_restart.toggled.connect(func(_value):_settings_changed(true))
-	clean_only=CheckBox.new();clean_only.name="CleanOnly";clean_only.text="只进无其他敌人的遇敌";clean_only.button_pressed=true;clean_only.position=Vector2(760,399)
+	clean_only=CheckBox.new();clean_only.name="CleanOnly";clean_only.text="只进无其他敌人的遇敌";clean_only.button_pressed=true;clean_only.position=Vector2(760,394)
 	clean_only.tooltip_text="找 Lv.1 时，敌群里只要有高于 Lv.1 的敌人就跳过不进（同组别的 Lv.1 宠物不算，打不过人也伤不了队伍）。抓宠时不打其他敌人，混进高等级敌人容易战败，扣魅力和宠物忠诚。敌群在进战斗前就已算好，跳过只是多找一会儿。"
 	capture_page.add_child(clean_only);controls.append(clean_only)
 	clean_only.toggled.connect(func(_value):
 		_show_mixed_option()
 		_settings_changed(true))
-	mixed_if_stats=CheckBox.new();mixed_if_stats.name="MixedIfStats";mixed_if_stats.text="属性达标仍进混合遇敌";mixed_if_stats.position=Vector2(760,429)
+	mixed_if_stats=CheckBox.new();mixed_if_stats.name="MixedIfStats";mixed_if_stats.text="属性达标仍进混合遇敌";mixed_if_stats.position=Vector2(760,439)
 	mixed_if_stats.tooltip_text="找宠流程里，这只 Lv.1 预测的120级属性达到已启用的属性条件时，即使同组有高等级敌人也去抓。进战斗前用真实战斗核心预演五次：五人先不带出战宠清掉高等级敌人，保护所有 Lv.1，之后主角抓、队友等待；难抓才换合适削血宠。打不赢就暂停并说明。"
 	capture_page.add_child(mixed_if_stats);controls.append(mixed_if_stats)
 	mixed_if_stats.toggled.connect(func(_value):_settings_changed(true))
@@ -882,7 +885,7 @@ func build_stat_page()->void:
 	var tab:Button=world.button("属性条件",show_stat_settings);tab.position=Vector2(895,18);panel.add_child(tab)
 	stat_heading=world.text("",19);stat_heading.name="StatHeading";stat_heading.position=Vector2(24,130);stat_page.add_child(stat_heading)
 	stat_heading.mouse_filter=Control.MOUSE_FILTER_PASS
-	stat_species=OptionButton.new();stat_species.name="StatFilterSpecies";stat_species.position=Vector2(24,170);stat_species.size=Vector2(370,38);stat_page.add_child(stat_species);controls.append(stat_species)
+	stat_species=OptionButton.new();stat_species.name="StatFilterSpecies";stat_species.position=Vector2(24,170);stat_species.size=Vector2(330,38);stat_page.add_child(stat_species);controls.append(stat_species)
 	stat_species.item_selected.connect(func(_i):
 		# Changes to the species shown until now are saved before switching.
 		world.flush_automation_settings()
@@ -905,7 +908,7 @@ func build_stat_page()->void:
 		var keep_label:Label=world.text("留前",16);keep_label.position=Vector2(344+(i%2)*470,238+(i/2)*55);stat_page.add_child(keep_label)
 		var keep:=number(Vector2(384+(i%2)*470,228+(i/2)*55),0,1000,0);keep.name="StatKeep_"+metric;keep.size.x=84;keep.tooltip_text="仓库滚动保留：按此项排名保留前N只自动找宠存入的宠物，其余删除。0＝此项不保留名额；四项全0＝不删除。";keep.reparent(stat_page);stat_keeps[metric]=keep
 		check.toggled.connect(func(_on):save_stat_settings(true));input.value_changed.connect(func(_value):save_stat_settings();refresh_stat_thresholds(true));keep.value_changed.connect(func(_value):save_stat_settings())
-	# The shared status line starts at y 478, so the page ends above it; the notes
+	# Settings end above the separate status and action regions; the notes
 	# are tooltips. 找到N只后停止 is on 抓宠设置, one for the whole run.
 	var scope:Label=world.text("保留规则（所有品种共用，按同种分别排名）",16)
 	scope.name="SharedKeepRuleScope";scope.position=Vector2(24,327);stat_page.add_child(scope)
@@ -917,11 +920,13 @@ func build_stat_page()->void:
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO
 	scroll.vertical_scroll_mode=ScrollContainer.SCROLL_MODE_AUTO
 	var content:=Control.new();content.name="StatSettingsContent"
-	content.custom_minimum_size=Vector2(1040,318)
+	content.custom_minimum_size=Vector2(1040,360)
 	var nodes:=stat_page.get_children()
 	stat_page.add_child(scroll);scroll.add_child(content)
 	for node in nodes:
-		node.reparent(content);node.position-=Vector2(16,126)
+		# Keep page-local coordinates: retaining global coordinates here would
+		# already subtract the scroll origin, then subtract it a second time.
+		node.reparent(content,false);node.position-=Vector2(16,126)
 	refresh_stat_species()
 
 ## 保留规则 rows: 看最高[T]档，每档留[K]只，档内排序[第一][第二][第三];
@@ -1058,13 +1063,15 @@ func refresh_stat_thresholds(now: bool = false) -> void:
 		if fixed:
 			stat_checks[metric].text="%s ≥" % name
 			result.position.x=224+(i%2)*470
-			result.text="（现有最高%d）" % int(best[metric]) if best.has(metric) else ""
+			result.text="最高%d" % int(best[metric]) if best.has(metric) else ""
 			result.modulate.a=0.55
 		else:
 			stat_checks[metric].text="%s ≥ 最高%s −" % [name,str(best[metric]) if best.has(metric) else ""]
 			result.position.x=268+(i%2)*470
 			result.text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "摸底"
 			result.modulate.a=1.0
+		# Shorter fixed-mode text must shrink the checkbox hit rectangle too.
+		stat_checks[metric].size=stat_checks[metric].get_combined_minimum_size()
 		var sentence:=StatFilter.describe_condition(metric,condition,best,fixed)
 		stat_checks[metric].tooltip_text=sentence;result.tooltip_text=sentence
 
