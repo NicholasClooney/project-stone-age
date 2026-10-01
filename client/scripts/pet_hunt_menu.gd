@@ -55,6 +55,8 @@ var stop_after: SpinBox
 var train_after_capture: CheckBox
 var world: Node
 var panel: Panel
+const TARGET_ALL := 2147483646
+const TARGET_NONE := 2147483645
 var target_button: MenuButton
 var target_ids: Array = []
 var _targets_explicit := false
@@ -150,17 +152,21 @@ func _ready() -> void:
 	label("直接检查隐藏成长档。按当地原表遇敌；未达标跳过，不战斗、不捕获、不发奖励。",Vector2(24,58),16)
 	location_label=label("",Vector2(24,92),16)
 	label("目标宠物",Vector2(24,139),17)
-	species=OptionButton.new()
+	species=OptionButton.new();species.name="LegacyHuntSpecies"
 	species.position=Vector2(140,129);species.size=Vector2(380,38)
 	panel.add_child(species);controls.append(species)
 	species.hide()
 	target_button=MenuButton.new();target_button.name="HuntTargets"
 	target_button.position=Vector2(140,129);target_button.size=Vector2(380,38)
-	target_button.text="勾选目标宠物"
+	target_button.text="未选"
+	target_button.clip_text=true
+	target_button.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	target_button.alignment=HORIZONTAL_ALIGNMENT_LEFT
 	panel.add_child(target_button);controls.append(target_button)
 	target_button.get_popup().hide_on_checkable_item_selection=false
 	target_button.get_popup().max_size=Vector2i(600,360)
 	target_button.get_popup().id_pressed.connect(_target_pressed)
+	target_button.get_popup().about_to_popup.connect(_fit_target_popup)
 	level_one=CheckBox.new();level_one.text="只找 Lv.1";level_one.button_pressed=true
 	level_one.position=Vector2(555,132);panel.add_child(level_one);controls.append(level_one)
 	level_one.toggled.connect(func(_value):
@@ -207,7 +213,7 @@ func _ready() -> void:
 	var records: Button=world.button("宠物记录",open_records);records.name="PetHuntRecords";records.position=Vector2(600,560)
 	records.tooltip_text="抓到、放生和停止记录。筛选或找宠流程进行中会先收起本窗口，流程继续。";panel.add_child(records)
 	for child in panel.get_children():
-		if child is Control and child.position.y>=129 and child.position.y<=460:filter_nodes.append(child)
+		if child is Control and child!=species and child.position.y>=129 and child.position.y<=460:filter_nodes.append(child)
 	capture_page=Control.new();capture_page.name="CaptureSettingsPage";capture_page.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(capture_page)
 	var filters_tab:Button=world.button("筛选条件",func():show_capture_settings(false));filters_tab.name="HuntFilterTab";filters_tab.position=Vector2(585,18);panel.add_child(filters_tab)
 	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(740,18);panel.add_child(capture_tab)
@@ -412,20 +418,41 @@ func refresh_candidates() -> void:
 		for item in candidates:
 			if not species.is_item_disabled(species.get_item_index(int(item.id))):target_ids.append(int(item.id))
 	var popup:=target_button.get_popup()
-	popup.clear();popup.add_item("全选",-2);popup.set_item_id(0,-2)
-	popup.add_item("全不选",-3);popup.set_item_id(1,-3)
+	popup.clear();popup.add_item("全选",TARGET_ALL)
+	popup.add_item("全不选",TARGET_NONE)
 	popup.add_separator()
 	for item in candidates:
 		popup.add_check_item("%s · Lv.%d–%d" % [item.name,item.level_min,item.level_max],int(item.id))
+		popup.set_item_tooltip(popup.item_count-1,popup.get_item_text(popup.item_count-1))
 		popup.set_item_disabled(popup.item_count-1,species.is_item_disabled(species.get_item_index(int(item.id))))
 	_update_target_checks()
 	start_button.disabled=available==0 or not world.world_catalog.field(int(world.data.map_id))
 	location_label.text="当前位置：%s (%d, %d) · 只使用此处原版敌群，不改种类、等级或成长随机值。" % [world.data.name,world.cell.x,world.cell.y]
 	status.text="这里没有可用的目标。可到萨姆吉尔西门外筛选 Lv.1 昆依，或关闭 Lv.1 限制。" if start_button.disabled else ready_description()
+func _fit_target_popup() -> void:
+	# Popup windows use window coordinates, including on a scaled phone canvas.
+	var bounds:=get_window().size-Vector2i(24,24)
+	var popup:=target_button.get_popup()
+	popup.max_size=Vector2i(mini(600,maxi(1,bounds.x)),mini(360,maxi(1,bounds.y)))
+	# PopupMenu's minimum width wins over max_size. Bound each caption with
+	# the actual menu font, keeping the original caption in its tooltip.
+	var font:=popup.get_theme_font("font")
+	var font_size:=popup.get_theme_font_size("font_size")
+	var width:=maxi(1,popup.max_size.x-72)
+	for index in range(3,popup.item_count):
+		var full:String=str(popup.get_item_metadata(index)) if popup.get_item_metadata(index)!=null else popup.get_item_text(index)
+		popup.set_item_metadata(index,full);popup.set_item_tooltip(index,full)
+		var shown:=full
+		if font.get_string_size(shown,HORIZONTAL_ALIGNMENT_LEFT,-1,font_size).x>width:
+			while not shown.is_empty() and font.get_string_size(shown+"…",HORIZONTAL_ALIGNMENT_LEFT,-1,font_size).x>width:shown=shown.left(shown.length()-1)
+			shown+="…"
+		popup.set_item_text(index,shown)
+	popup.size=Vector2i.ZERO
+
 func _target_pressed(id: int) -> void:
 	_targets_explicit=true
-	if id==-3:target_ids=[]
-	elif id==-2:
+	if id in [-3,TARGET_NONE]:target_ids=[]
+	elif id in [-2,TARGET_ALL]:
 		target_ids=[]
 		for index in range(1,species.item_count):
 			if not species.is_item_disabled(index):target_ids.append(species.get_item_id(index))
@@ -437,13 +464,29 @@ func _target_pressed(id: int) -> void:
 
 func _update_target_checks() -> void:
 	var popup:=target_button.get_popup()
-	var count:=0
+	var names:=[]
+	var available:=0
+	var local_ids:=[]
 	for index in range(popup.item_count):
 		var id:=popup.get_item_id(index)
-		if id>=0:
+		if index>=3 and id>=0:
 			popup.set_item_checked(index,id in target_ids)
-			if id in target_ids and not popup.is_item_disabled(index):count+=1
-	target_button.text="目标宠物：已选 %d 种 · 点击勾选" % count
+			if not popup.is_item_disabled(index):
+				available+=1
+				if id in target_ids:
+					local_ids.append(id)
+					for item in candidates:
+						if int(item.id)==id:names.append(str(item.name));break
+	var summary:="未选" if names.is_empty() else ("全部 %d 种" % available if names.size()==available else "已选 %d 种：%s" % [names.size(),"、".join(names)])
+	target_button.text=summary
+	target_button.tooltip_text="当前地点："+summary+("（"+"、".join(names)+"）" if names.size()==available and available>0 else "")
+	var elsewhere:=[]
+	for id in target_ids:
+		if id not in local_ids:
+			var definition:Dictionary=world.encounter_catalog.data.templates.get(str(id),{})
+			elsewhere.append(str(definition.get("name","品种 %d" % int(id))))
+	if not elsewhere.is_empty():target_button.tooltip_text+="\n已保存但此处不可抓："+"、".join(elsewhere)+"。保留这些目标，换地点后继续使用。"
+	target_button.tooltip_text+="\n点击勾选当前地点的目标宠物。"
 
 func open_menu() -> void:
 	if minimized:restore();return

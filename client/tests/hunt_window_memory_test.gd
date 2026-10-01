@@ -88,7 +88,7 @@ func run() -> void:
 	game.load_area_id(other_map,other_cell)
 	menu.open_menu()
 	var intersection: Array=chosen.filter(func(id):return id in elsewhere)
-	check(menu.target_ids==chosen and menu.target_button.text.contains("已选 %d 种" % intersection.size()),"another place retains choices and shows only the local selected count")
+	check(menu.target_ids==chosen and (menu.target_button.text=="未选" if intersection.is_empty() else menu.target_button.text.contains("%d 种" % intersection.size())),"another place retains choices and shows only the local selected count")
 	menu.level_one.button_pressed = false;menu.level_one.button_pressed = true
 	game.flush_automation_settings()
 	check(hunt_settings(game).templates==chosen and int(hunt_settings(game).stat_species)==other,"other controls preserve explicit multi-target preferences")
@@ -100,7 +100,7 @@ func run() -> void:
 	menu.close_menu()
 	game.load_area_id(MAP,CELL)
 	menu.open_menu()
-	check(menu.target_ids==chosen and menu.target_button.text.contains("已选 2 种"),"returning restores both checked local species")
+	check(menu.target_ids==chosen and menu.target_button.text.contains("2 种"),"returning restores both checked local species")
 	# Explicit none must also survive reopening and unrelated changes.
 	menu.target_button.get_popup().id_pressed.emit(-3)
 	menu.close_menu();menu.open_menu()
