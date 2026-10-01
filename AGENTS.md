@@ -19,7 +19,7 @@ Subagents working in their own worktrees don't relaunch; they test and commit, a
 ## Testing budget (agents in worktrees)
 
 - While working, run only the suites your change touches (`./scripts/run.sh --headless --script res://tests/<name>.gd`). Run the full `./scripts/test-all.sh` **once**, at the end.
-- After rebasing onto a moved `main`, rerun the full suite only if the rebase touched code; a rebase whose only conflicts were `changelog-notes.json` / generated changelog files needs just `python3 tools/build_changelog.py --check` and your own suites. The main session runs the full suite after merging.
+- After rebasing onto a moved `main`, rerun the full suite only if the rebase touched code; a rebase whose only conflicts were Markdown notes / generated changelog files needs just `python3 tools/build_changelog.py --check` and your own suites. The main session runs the full suite after merging.
 - `./scripts/test-all.sh --only a_test,b_test` runs a few suites in parallel, reported like the full run.
 - No suite is known to be flaky. If one fails under load, don't just rerun it: find what it waits on. Suites wait for a condition with a generous deadline (`res://tests/support/wait.gd`), never a fixed number of frames or a short wall-clock timeout; clients over WebSocket `settle` (one round trip) before another device acts; servers listen on port 0.
 - Tests never use the game's real user:// folder. `scripts/run.sh --script res://tests/…` points user:// at `…/Godot/app_userdata/Stone Age tests/<checkout>-<cksum>/` (the `TestUserDir` autoload reads `STONE_AGE_TEST_USER_DIR`), and `test-all.sh` gives every suite its own folder per run, deleted when it passes. Fixed fixture names like `user://x-test.json` are safe as long as tests reach files through user://, never an absolute path into the real app-data folder.
@@ -35,7 +35,7 @@ Game versions are **v0.MINOR.PATCH** while the game is in beta; the `0` major me
 
 For every feature/fix:
 
-1. Add concise player-facing notes to `docs/development/changelog-notes.json`, keyed by the exact conventional commit subject. Describe visible behavior and where to find it; distinguish developer conveniences from original features. Keep unavailable/incomplete behavior explicit.
+1. Add one Markdown file per commit to `docs/development/changelog-notes/<YYYYMMDDTHHMMSSZ>-<slug>.md`, with JSON-quoted `subject` (exact conventional commit subject) and `title` frontmatter fields and an ordered Markdown bullet list. See [note format](docs/versioning/version-system.md#changelog-notes). Describe visible behavior and where to find it; distinguish developer conveniences from original features. Keep unavailable/incomplete behavior explicit.
 2. Test the change, then commit normally.
 3. Immediately run `./scripts/refresh-changelog.sh`. It regenerates the in-game JSON and `config/version`, then amends **only those two generated files** into the commit just created. Run it only for your own fresh, unpushed commit. If that commit is already shared, regenerate and make a separate `chore(changelog)` commit instead.
 4. Run `python3 tools/build_changelog.py --check` (also enforced by `scripts/test.sh`). Never manually invent version numbers or edit generated entries. No commit hashes are embedded, so the amend is stable.
