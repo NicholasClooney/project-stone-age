@@ -83,12 +83,10 @@
           request.onsuccess = function () { set(request.result); };
         });
       },
+      // Stored as an ArrayBuffer, not a Blob: Safari reported Blobs stored
+      // without error that were gone after a reload (hits 0, stored 676).
       put: function (key, blob) {
-        return put(key, blob).catch(function (error) {
-          // Some WebKit versions cannot store Blobs in IndexedDB.
-          if (!error || error.name !== "DataCloneError" || !blob.arrayBuffer) throw error;
-          return blob.arrayBuffer().then(function (buffer) { return put(key, buffer); });
-        });
+        return (blob && blob.arrayBuffer ? blob.arrayBuffer() : Promise.resolve(blob)).then(function (buffer) { return put(key, buffer); });
       },
       keys: function () {
         return transact("readonly", function (store, set) {
@@ -140,7 +138,9 @@
   }
 
   function install(win, backend) {
-    var api = {hits: 0, misses: 0, stored: 0, errors: 0, oldDropped: 0, lastError: ""};
+    // keysAtStart: packs the store held when the page opened (-1 until
+    // read); persisted: whether the browser granted persistent storage.
+    var api = {hits: 0, misses: 0, stored: 0, errors: 0, oldDropped: 0, lastError: "", keysAtStart: -1, persisted: null};
     win.stoneAgePackStore = api;
     var nativeFetch = win.fetch;
     if (!nativeFetch) return api;
@@ -157,6 +157,13 @@
       ? backend.dropOld().then(function (count) { api.oldDropped = count; }, fail)
       : Promise.resolve();
     api.available = !!backend;
+    if (backend) api.ready.then(function () { return backend.keys(); }).then(function (keys) { api.keysAtStart = (keys || []).length; }, fail);
+    // Ask the browser not to evict the cache under storage pressure.
+    try {
+      if (win.navigator && win.navigator.storage && win.navigator.storage.persist) {
+        win.navigator.storage.persist().then(function (granted) { api.persisted = !!granted; }, function () { api.persisted = false; });
+      }
+    } catch (error) { api.persisted = false; }
     function lookup(file) {
       return backend ? api.ready.then(function () { return backend.get(file); }) : Promise.resolve(null);
     }

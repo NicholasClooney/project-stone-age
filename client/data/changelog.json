@@ -1,9 +1,18 @@
 {
-  "version": "v0.128.1",
-  "count": 175,
+  "version": "v0.128.2",
+  "count": 176,
   "feature_count": 112,
-  "fix_count": 63,
+  "fix_count": 64,
   "entries": [
+    {
+      "version": "v0.128.2",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "Safari 刷新后不用再重新下载素材",
+      "details": [
+        "网页版：缓存的素材包改为直接存字节数据，不再存 Blob。Safari 存进去的 Blob 刷新后会读不回来，导致每次刷新都重新下载音乐和起始地图。同时向浏览器申请持久存储，减少被自动清理。"
+      ]
+    },
     {
       "version": "v0.128.1",
       "date": "2026-10-01",
