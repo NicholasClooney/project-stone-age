@@ -439,6 +439,8 @@ static int evaluate(const StatFilter *s, const int st[4]) {
     return count == 0 || (s->any ? any : all);
 }
 
+/* The wire usable list is the authoritative selected/location intersection.
+ * An empty list is none; legacy f_template remains accepted by the helper. */
 static int is_usable(int template_id) { for (int i = 0; i < nusable; i++) if (usable[i] == template_id) return 1; return 0; }
 
 /* scan_once for roll `index`: the hit slot, -1 for no hit, -2 for an empty troop. */

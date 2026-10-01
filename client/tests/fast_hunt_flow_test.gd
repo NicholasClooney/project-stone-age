@@ -56,6 +56,17 @@ func run() -> void:
 	inventory_hunt.handle({"type":"auto_stop"})
 	inventory_hunt.queue_free()
 
+	var multi_hits: Array=[]
+	for native in [false,true]:
+		var multi=new_backend()
+		multi.session._profile.original_items=[2478]
+		check(multi.handle({"type":"auto_start","kind":"hunt","map_id":100,"cell":[637,493],"filter":{"templates":[113,114],"level_one":true,"total":-8,"offsets":[],"auto_capture":false,"fast":native,"clean_only":false}}).ok,"multi-species end-to-end hunt starts with inventory gates")
+		var multi_run: Dictionary=await hunt_until_stopped(multi)
+		var hit: Dictionary=multi.automation.hunt_last_hit
+		check(multi_run.stopped and multi.battle_open and not hit.is_empty() and int(hit.actor.template_id) in [113,114],"multi-species real hit enters ordinary battle")
+		multi_hits.append([multi.automation.hunt_rolls,hit.get("index",-1),hit.get("actor",{}).get("growth_seed",0)])
+		multi.queue_free();await process_frame
+	check(multi_hits[0]==multi_hits[1],"multi-species helper/slow capture handoff preserves RNG with inventory")
 	# The GDScript scan and the helper find the same roll.
 	var slow = new_backend()
 	var started: Dictionary = dragon_hunt(slow,false)

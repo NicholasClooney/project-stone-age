@@ -56,7 +56,7 @@ const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"protect":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120],"fallback_attempts":["int",1,30],"fallback_rate":["int",0,98],"fallback_hp":["int",1,99]},
-	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
+	"hunt":{"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
 }
 static var _defaults: Dictionary = {}
 
@@ -105,9 +105,12 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 ## Hunt scan filter without the location-dependent `usable` list.
 static func hunt_filter(overrides: Dictionary) -> Dictionary:
 	var hunt: Dictionary = effective(overrides).hunt
-	return {"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
+	var result := {"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
 		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"queue":int(hunt.queue),
 		"clean_only":bool(hunt.clean_only),"mixed_if_stats":bool(hunt.mixed_if_stats)}
+	if hunt.has("templates"):result.templates = hunt.templates.duplicate()
+	elif int(hunt.template)>=0:result.templates = [int(hunt.template)]
+	return result
 
 static func device_default(key: String, fallback: Variant) -> Variant:
 	return defaults().get("device",{}).get(key,fallback)
@@ -142,6 +145,8 @@ static func apply_patch(overrides: Dictionary, patch: Variant) -> Dictionary:
 			var reply := _merge(_dict(result.get(section,{})),value,SPEC[section],section)
 			if not reply.ok:return reply
 			result[section] = reply.value
+			if section=="hunt" and value is Dictionary and value.has("template") and not value.has("templates"):
+				result[section].erase("templates")
 		else:return _fail("unknown setting "+section)
 	return {"ok":true,"overrides":prune(result)}
 
@@ -292,6 +297,15 @@ static func _leaf(spec: Array, value: Variant) -> Array:
 				if not item is String or not item in ["attack","defence","speed","max_hp"] or item in chosen:return []
 				chosen.append(item)
 			return [chosen]
+		"templates":
+			if not value is Array or value.size()>10000:return []
+			var ids := []
+			for item in value:
+				var number = _int(item)
+				if number==null or number<0 or number>1000000:return []
+				if not number in ids:ids.append(number)
+			ids.sort()
+			return [ids]
 		"offsets":
 			if not value is Array or value.size()!=4:return []
 			var result := []

@@ -10,7 +10,7 @@ const AutomationSettings=preload("res://scripts/automation_settings.gd")
 ## Profile hunt settings last shown; only values that change are rewritten.
 var _loaded: Dictionary = {}
 var _loading := false
-## The saved target species is not available here, so the list shows 任何.
+## Legacy compatibility dropdown; the visible target control is a checklist.
 var _template_fallback := false
 ## Species whose stat conditions the 属性条件 page shows.
 var _stat_species_shown := -1
@@ -55,6 +55,9 @@ var stop_after: SpinBox
 var train_after_capture: CheckBox
 var world: Node
 var panel: Panel
+var target_button: MenuButton
+var target_ids: Array = []
+var _targets_explicit := false
 var species: OptionButton
 var auto_capture: CheckBox
 ## 本机极速模式 (hunt.fast): the backend scans with the native helper on every
@@ -150,6 +153,14 @@ func _ready() -> void:
 	species=OptionButton.new()
 	species.position=Vector2(140,129);species.size=Vector2(380,38)
 	panel.add_child(species);controls.append(species)
+	species.hide()
+	target_button=MenuButton.new();target_button.name="HuntTargets"
+	target_button.position=Vector2(140,129);target_button.size=Vector2(380,38)
+	target_button.text="勾选目标宠物"
+	panel.add_child(target_button);controls.append(target_button)
+	target_button.get_popup().hide_on_checkable_item_selection=false
+	target_button.get_popup().max_size=Vector2i(600,360)
+	target_button.get_popup().id_pressed.connect(_target_pressed)
 	level_one=CheckBox.new();level_one.text="只找 Lv.1";level_one.button_pressed=true
 	level_one.position=Vector2(555,132);panel.add_child(level_one);controls.append(level_one)
 	level_one.toggled.connect(func(_value):
@@ -268,11 +279,9 @@ func commit_settings() -> void:
 	world.mark_settings_dirty(self)
 	world.flush_automation_settings()
 
-## Run-only filter fields a start command carries: 任何 shown only because the
-## saved species does not live here hunts any species now, while the profile
-## keeps the species the player last chose for next time.
+## Targets are saved with the character; location never supplies a wildcard.
 func start_filter() -> Dictionary:
-	return {"template":-1} if _template_fallback else {}
+	return {}
 
 ## Picks the target species (瞬移去抓, a comparison's 找这种): it is saved, and
 ## 属性条件 shows the same species. False when it is not available here.
@@ -280,7 +289,11 @@ func choose_target(template_id: int) -> bool:
 	var index:=species.get_item_index(template_id)
 	if index<0 or species.is_item_disabled(index):return false
 	species.select(index)
+	_targets_explicit=true
+	target_ids=[template_id]
+	_update_target_checks()
 	_template_fallback=false
+	_settings_changed(true)
 	_follow_target(template_id)
 	return true
 
@@ -300,8 +313,8 @@ func settings_patch() -> Dictionary:
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
 		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value),
 		"resume":resume_after_restart.button_pressed,"clean_only":clean_only.button_pressed,"mixed_if_stats":mixed_if_stats.button_pressed,"stop_after":int(stop_after.value)}
-	# 任何 shown only because the saved species is not found here keeps the saved one.
-	if species.item_count>0 and not _template_fallback:wanted.template=species.get_selected_id()
+	# Keep explicit target choices, including choices from another location.
+	if _targets_explicit or world.automation_settings().hunt.has("templates"):wanted.templates=target_ids.duplicate()
 	# Likewise 属性条件's species: a fallback shown here keeps the saved choice.
 	if is_instance_valid(stat_species) and stat_species.item_count>0 and not _stat_species_fallback:wanted.stat_species=stat_species.get_selected_id()
 	var hunt:=AutomationSettings.diff(world.automation_settings().hunt,wanted)
@@ -347,7 +360,7 @@ func load_settings() -> void:
 	for i in range(4):
 		if not _sync_spin(offsets[i],old_offsets[i],hunt.offsets[i]):shown.offsets[i]=old_offsets[i]
 	preset.select(_preset_index())
-	if _changed(old,hunt,"template"):refresh=true
+	if _changed(old,hunt,"template") or old.get("templates")!=hunt.get("templates"):refresh=true
 	_loaded=shown
 	if refresh and visible:refresh_candidates()
 	applying=false;_loading=false
@@ -378,7 +391,9 @@ func update_explanation() -> void:
 	var probability: float=Rules.tail_probability(int(total.value),min_offsets())
 	explanation.text="同种自然出生个体中，约 %.2f%% 的成长档符合此条件（不是每次遇敌的命中率）。\n+2 是该项出生档上限；四项均 +2 为满档，可真实出现，不保证未来每级都长到最大值。" % (probability*100.0)
 func refresh_candidates() -> void:
-	var selected:=int(world.automation_settings().hunt.template)
+	var hunt: Dictionary=world.automation_settings().hunt
+	var selected:=int(hunt.template)
+	target_ids=hunt.templates.duplicate() if hunt.has("templates") else ([selected] if selected>=0 else [])
 	species.clear();species.add_item("任何本地可用宠物",-1)
 	# OptionButton uses -1 for auto IDs; set it explicitly for the wildcard.
 	species.set_item_id(0,-1)
@@ -392,10 +407,44 @@ func refresh_candidates() -> void:
 		if renderable:
 			available+=1
 			if int(item.id)==selected:species.select(species.item_count-1)
-	_template_fallback=selected>=0 and species.get_selected_id()!=selected
+	_template_fallback=false
+	if not hunt.has("templates") and selected<0:
+		for item in candidates:
+			if not species.is_item_disabled(species.get_item_index(int(item.id))):target_ids.append(int(item.id))
+	var popup:=target_button.get_popup()
+	popup.clear();popup.add_item("全选",-2);popup.set_item_id(0,-2)
+	popup.add_item("全不选",-3);popup.set_item_id(1,-3)
+	popup.add_separator()
+	for item in candidates:
+		popup.add_check_item("%s · Lv.%d–%d" % [item.name,item.level_min,item.level_max],int(item.id))
+		popup.set_item_disabled(popup.item_count-1,species.is_item_disabled(species.get_item_index(int(item.id))))
+	_update_target_checks()
 	start_button.disabled=available==0 or not world.world_catalog.field(int(world.data.map_id))
 	location_label.text="当前位置：%s (%d, %d) · 只使用此处原版敌群，不改种类、等级或成长随机值。" % [world.data.name,world.cell.x,world.cell.y]
 	status.text="这里没有可用的目标。可到萨姆吉尔西门外筛选 Lv.1 昆依，或关闭 Lv.1 限制。" if start_button.disabled else ready_description()
+func _target_pressed(id: int) -> void:
+	_targets_explicit=true
+	if id==-3:target_ids=[]
+	elif id==-2:
+		target_ids=[]
+		for index in range(1,species.item_count):
+			if not species.is_item_disabled(index):target_ids.append(species.get_item_id(index))
+	elif id in target_ids:target_ids.erase(id)
+	else:target_ids.append(id)
+	target_ids.sort()
+	_update_target_checks()
+	_settings_changed(true)
+
+func _update_target_checks() -> void:
+	var popup:=target_button.get_popup()
+	var count:=0
+	for index in range(popup.item_count):
+		var id:=popup.get_item_id(index)
+		if id>=0:
+			popup.set_item_checked(index,id in target_ids)
+			if id in target_ids and not popup.is_item_disabled(index):count+=1
+	target_button.text="目标宠物：已选 %d 种 · 点击勾选" % count
+
 func open_menu() -> void:
 	if minimized:restore();return
 	if visible:close_menu();return
@@ -487,9 +536,12 @@ func build_filter(for_workflow: bool = false) -> Dictionary:
 	var usable:=[]
 	for index in range(1,species.item_count):
 		if not species.is_item_disabled(index):usable.append(species.get_item_id(index))
-	if usable.is_empty() or (species.get_selected_id()>=0 and not species.get_selected_id() in usable):
+	var saved_hunt: Dictionary=world.automation_settings().hunt
+	if not _targets_explicit and not saved_hunt.has("templates"):
+		target_ids=usable.duplicate() if int(saved_hunt.template)<0 else [int(saved_hunt.template)]
+	if usable.is_empty() or not usable.any(func(id):return id in target_ids):
 		status.text="当前没有素材齐全的目标宠物。";return {}
-	return {"usable":usable,"template":species.get_selected_id(),"level_one":level_one.button_pressed,"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"auto_capture":auto_capture.button_pressed}
+	return {"usable":usable,"template":-1,"templates":target_ids.duplicate(),"level_one":level_one.button_pressed,"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"auto_capture":auto_capture.button_pressed}
 
 func start_hunt() -> void:
 	var chosen:=build_filter()

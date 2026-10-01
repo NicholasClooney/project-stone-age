@@ -135,6 +135,11 @@ func run() -> void:
 	for id in templates:backend.automation.flow_stat_filters[int(id)] = lax
 	result = run_area(backend,catalog,"level-one spot",int(spot.map_id),spot_cell,newborn,true,3000)
 	check(result.get("different",-1)==0 and int(result.matches)>0 and int(backend.automation.flow_predicted_rejects)>0,"%s: 3000 rolls identical, %d taken after Lv120 prediction, %d predictions rejected" % [spot.name,int(result.get("matches",0)),int(backend.automation.flow_predicted_rejects)])
+	for selection in [[],templates.slice(0,1),templates]:
+		var multi: Dictionary=newborn.duplicate(true)
+		multi.templates=selection
+		var parity := run_area(backend,catalog,"selected newborns "+str(selection),int(spot.map_id),spot_cell,multi,true,1000)
+		check(parity.get("different",-1)==0 and (not selection.is_empty() or int(parity.get("matches",-1))==0),"none/some/all target sets preserve native RNG and prediction parity")
 	backend.automation.flow_stat_filters.clear()
 
 	# Lv90-95 wild red rex on map 500: levels above 1 and larger monsters.
@@ -219,7 +224,7 @@ func run() -> void:
 		if int(gate.requires_item)>=0 and int(gate.excludes_item)>=0:inventories.append([int(gate.requires_item),int(gate.excludes_item)])
 		for items in inventories:
 			backend.session._profile.original_items = items.duplicate()
-			var gate_filter := {"template":-1,"level_one":false,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":area_templates(catalog,gate_area)}
+			var gate_filter := {"templates":area_templates(catalog,gate_area),"template":-1,"level_one":false,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":area_templates(catalog,gate_area)}
 			var part := run_area(backend,catalog,"gate %d items %s" % [group_id,items],int(gate_area.map_id),gate_cell,gate_filter,false,3000)
 			check(part.get("different",-1)==0,"gate %d held %s: 3000 fixed-seed rolls identical" % [group_id,items])
 	backend.session._profile.original_items = []

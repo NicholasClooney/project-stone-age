@@ -69,6 +69,12 @@ func run() -> void:
 	hunt_a.open_menu();hunt_b.open_menu()
 	check(hunt_a.visible and hunt_b.visible and hunt_b.rate.value==0 and hunt_b.level_one.button_pressed,"both hunt windows open on the defaults")
 
+	hunt_a.target_button.get_popup().id_pressed.emit(-3)
+	check(await until(func():return hunt_settings(backend).get("templates",null)==[]) and await until(func():return hunt_b.target_ids.is_empty()),"remote checklist all-none saves through server and snapshots")
+	hunt_a.target_button.get_popup().id_pressed.emit(113)
+	check(await until(func():return hunt_settings(backend).get("templates",[])==[113]) and await until(func():return hunt_b.target_ids==[113]),"remote actual checklist click selects one species without a local backend")
+	hunt_a.target_button.get_popup().id_pressed.emit(-2)
+	check(await until(func():return hunt_settings(backend).get("templates",[]).size()>=1),"remote all-select reaches authoritative profile")
 	# A choice is saved at once; typed numbers once the player pauses.
 	hunt_a.level_one.button_pressed = false
 	check(await until(func():return hunt_settings(backend).get("level_one",true)==false),"device A's choice reaches the profile")

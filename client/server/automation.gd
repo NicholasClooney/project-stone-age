@@ -99,6 +99,7 @@ var _shown_msec := 0
 # ---- hunt scanning ---------------------------------------------------------
 var hunt_running := false
 var hunt_filter: Dictionary = {}
+var _hunt_profile_targets_key := ""
 var hunt_catalog
 var hunt_map := -1
 var hunt_cell := Vector2i.ZERO
@@ -300,8 +301,16 @@ func _set_speed(command: Dictionary) -> void:
 func hunt_request(command: Dictionary = {}) -> Dictionary:
 	var filter: Dictionary = AutomationSettings.hunt_filter(backend.session.automation_settings())
 	var given = command.get("filter",{})
-	if given is Dictionary:filter.merge(given,true)
-	if not filter.has("usable"):filter.usable = usable_templates(bool(filter.level_one))
+	if given is Dictionary:
+		if given.has("templates"):
+			var checked := AutomationSettings.apply_patch({}, {"hunt":{"templates":given.templates}})
+			if not checked.ok or not checked.overrides.get("hunt",{}).has("templates"):return {"usable":[],"templates":[]}
+			given = given.duplicate(true)
+			given.templates = checked.overrides.hunt.templates
+		elif given.has("template"):filter.erase("templates")
+		filter.merge(given,true)
+	var actual := usable_templates(bool(filter.level_one))
+	filter.usable = actual.filter(func(id):return not filter.has("usable") or id in filter.usable)
 	return filter
 
 ## Capturable templates at the reported position whose art this backend has.
@@ -319,8 +328,35 @@ func profile_settings_changed() -> void:
 	if not (running or hunt_running or flow_active()):return
 	var fresh := profile_settings()
 	for key in ["capture_hp","capture_pet","capture_pet_id","capture_pet_max_level","capture_fallback_attempts","capture_fallback_rate","capture_fallback_hp"]:settings[key] = fresh[key]
+	if (hunt_running or flow_active()) and _profile_targets_key()!=_hunt_profile_targets_key:
+		_hunt_profile_targets_key=_profile_targets_key()
+		_apply_hunt_targets()
 	if flow_active():apply_stat_filters(backend.session.automation_settings())
 	_emit_status()
+
+func _profile_targets_key() -> String:
+	var hunt: Dictionary=AutomationSettings.effective(backend.session.automation_settings()).hunt
+	return JSON.stringify(hunt.get("templates",hunt.get("template",-1)))
+
+func _apply_hunt_targets() -> void:
+	var fresh_filter := hunt_request()
+	hunt_filter.merge({"templates":HuntRules.targets(fresh_filter)},true)
+	flow_hunt_request.merge({"templates":hunt_filter.templates.duplicate()},true)
+	fast_hunt.stop()
+	_discard_unselected_targets()
+
+func _discard_unselected_targets() -> void:
+	for entry in showcase_queue.duplicate():
+		if not HuntRules.selected(hunt_filter,_template_of(entry)):
+			showcase_queue.erase(entry)
+			_log_uncaught(entry,"目标取消","该品种已取消勾选",[])
+	for entry in survey_picks.duplicate():
+		if not HuntRules.selected(hunt_filter,_template_of(entry)):
+			survey_picks.erase(entry)
+			_log_uncaught(entry,"目标取消","该品种已取消勾选",[])
+	if not survey.is_empty():
+		survey.templates = survey.templates.filter(func(id):return HuntRules.selected(hunt_filter,int(id)))
+		if survey.templates.is_empty():survey = {}
 
 ## A running cycle takes the species' 属性条件 the player just changed
 ## (threshold mode, x, fixed values, 任一/全部, 保留规则 …): the hunt judges
@@ -774,6 +810,12 @@ func release_clone_override() -> void:
 ## Validates and starts a scan at the reported position. The filter carries the
 ## client's chosen species set, thresholds, rate and limit.
 func start_hunt(filter: Dictionary) -> bool:
+	if filter.has("templates"):
+		var checked := AutomationSettings.apply_patch({}, {"hunt":{"templates":filter.templates}})
+		if not checked.ok or not checked.overrides.get("hunt",{}).has("templates"):
+			hunt_status="目标宠物列表无效。";return false
+		filter=filter.duplicate(true)
+		filter.templates=checked.overrides.hunt.templates
 	if hunt_running or backend.battle_open:return false
 	if not backend.session.world_catalog.field(position_map):return false
 	var profile: Dictionary = backend.session.snapshot()
@@ -791,8 +833,9 @@ func start_hunt(filter: Dictionary) -> bool:
 	if HuntRules.candidates(backend.encounter_catalog,position_map,position_cell,bool(filter.get("level_one",true))).is_empty():
 		hunt_status = "当前区域不会出现符合种类／等级条件的宠物。";return false
 	var usable: Array = filter.get("usable",[])
-	if usable.is_empty() or (int(filter.get("template",-1))>=0 and not int(filter.template) in usable):
+	if usable.is_empty() or HuntRules.targets(filter).is_empty():
 		hunt_status = "当前没有素材齐全的目标宠物。";return false
+	_hunt_profile_targets_key=_profile_targets_key()
 	_prepare_catalog(filter)
 	hunt_rolls = 0;hunt_inspected = 0;hunt_best = -9;hunt_mixed_skips = 0;hunt_elapsed = 0;hunt_credit = 0;hunt_last_hit = {}
 	# Two draws from the walking encounter stream seed this run's rolls.
@@ -939,12 +982,12 @@ func first_match(troop: Dictionary) -> int:
 		var actor: Dictionary = troop.enemies[i]
 		if not actor.get("can_capture",false):continue
 		if not int(actor.template_id) in filter.usable:continue
-		if int(filter.template)>=0 and int(actor.template_id)!=int(filter.template):continue
+		if not HuntRules.selected(filter,int(actor.template_id)):continue
 		if filter.level_one and int(actor.level)!=1:continue
 		hunt_inspected += 1
 		var quality: Dictionary = HuntRules.quality(actor,backend.encounter_catalog.data)
 		if quality.valid:hunt_best = maxi(hunt_best,int(quality.total_offset))
-		if HuntRules.matches(actor,int(filter.template),bool(filter.level_one),int(filter.total),filter.offsets,backend.encounter_catalog.data):
+		if HuntRules.matches(actor,-1,bool(filter.level_one),int(filter.total),filter.offsets,backend.encounter_catalog.data):
 			if _predicting() and surveying(int(actor.template_id)):
 				# 摸底: a candidate, not a hit (the helper does the same). With
 				# no threshold yet, a mixed troop's pet is never one.
@@ -1220,10 +1263,7 @@ func _pending_picks() -> Array:
 
 ## The species this hunt may take: its usable ones, or the one chosen.
 func _hunt_templates() -> Array:
-	var result: Array = []
-	for id in hunt_filter.get("usable",[]):
-		if int(hunt_filter.get("template",-1))<0 or int(id)==int(hunt_filter.template):result.append(int(id))
-	return result
+	return HuntRules.targets(hunt_filter)
 
 ## The resolved thresholds of every species the hunt may take, and which are
 ## being surveyed: when this changes the native helper restarts.
@@ -1377,8 +1417,9 @@ func _replay_candidate(c: Dictionary) -> Dictionary:
 	var enemies: Array = troop.get("enemies",[])
 	if int(c.slot)<0 or int(c.slot)>=enemies.size():return {}
 	var actor: Dictionary = enemies[int(c.slot)]
+	if not HuntRules.selected(hunt_filter,int(c.template_id)):return {}
 	if int(actor.get("template_id",-1))!=int(c.template_id) or not actor.get("can_capture",false):return {}
-	if not HuntRules.matches(actor,int(hunt_filter.template),bool(hunt_filter.level_one),int(hunt_filter.total),hunt_filter.offsets,backend.encounter_catalog.data):return {}
+	if not HuntRules.matches(actor,-1,bool(hunt_filter.level_one),int(hunt_filter.total),hunt_filter.offsets,backend.encounter_catalog.data):return {}
 	var prediction := _prediction(Progression.project_pet(actor,120))
 	if prediction!=c.prediction or not TroopArt.can_render(enemies):return {}
 	return {"index":int(c.index),"slot":int(c.slot),"run_seed":int(c.run_seed),"serial":int(c.serial),"template_id":int(c.template_id),"actor":actor.duplicate(true),
@@ -1822,6 +1863,7 @@ func _resume_flow(state: Dictionary) -> void:
 		# Queued hits and survey picks replay from this place's encounters.
 		_prepare_catalog(flow_hunt_request)
 		if phase=="hunt" and not flow_showcase:phase = "restart"
+	_discard_unselected_targets()
 	if bool(saved.get("survey",false)):notes.append("摸底进度没有保存，重新摸底")
 	match phase:
 		"hunt":pass
@@ -1856,6 +1898,10 @@ func _caught_index() -> int:
 ## 后台搜宠 its queued hit goes back to the front of the queue (replayed and
 ## checked before the battle), else its roll is replayed here.
 func _resume_capture() -> String:
+	if not HuntRules.selected(hunt_filter,int(flow_matched_actor.get("template_id",-1))) and _caught_index()<0:
+		flow_phase="restart"
+		showcase_current={}
+		return "重启时正在抓的品种已取消勾选，已跳过"
 	var caught := _caught_index()
 	var name := str(flow_matched_actor.get("name",""))
 	if caught>=0:
@@ -2238,6 +2284,10 @@ func _showcase_capture() -> void:
 	showcase_current = _take_queued()
 	var entry := showcase_current
 	var actor: Dictionary = entry.actor
+	if not HuntRules.selected(hunt_filter,int(actor.template_id)):
+		_log_uncaught(entry,"目标取消","该品种已取消勾选",[])
+		showcase_current = {}
+		return
 	flow_target_survey = bool(entry.get("survey",false))
 	# Judged without itself: it is the best queued hit, so only owned pets and
 	# picks count (entry_maxima).

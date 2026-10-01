@@ -185,10 +185,10 @@ func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 	lines.append_array(templates)
 	var offsets: Array = filter.get("offsets",[])
 	var has_offsets := offsets.size()==4
-	var usable: Array = filter.get("usable",[])
+	var usable: Array = preload("res://scripts/pet_hunt_rules.gd").targets(filter)
 	var usable_text: PackedStringArray = []
 	for id in usable:usable_text.append(str(int(id)))
-	lines.append("filter %d %d %d %d %d %d %d %d %d %s" % [int(filter.get("template",-1)),1 if bool(filter.get("level_one",true)) else 0,int(filter.get("total",-8)),
+	lines.append("filter %d %d %d %d %d %d %d %d %d %s" % [-1,1 if bool(filter.get("level_one",true)) else 0,int(filter.get("total",-8)),
 		1 if has_offsets else 0,int(offsets[0]) if has_offsets else 0,int(offsets[1]) if has_offsets else 0,int(offsets[2]) if has_offsets else 0,int(offsets[3]) if has_offsets else 0,
 		usable.size()," ".join(usable_text)])
 	lines.append("flow %d" % (1 if flow else 0))

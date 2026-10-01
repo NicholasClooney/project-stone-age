@@ -21,6 +21,14 @@ static func quality(actor: Dictionary, catalog: Dictionary) -> Dictionary:
 	result.valid = true
 	return result
 
+## Missing templates retains the legacy wildcard; an explicit empty set never matches.
+static func selected(filter: Dictionary, template_id: int) -> bool:
+	if filter.has("templates"):return filter.templates is Array and template_id in filter.templates
+	return int(filter.get("template",-1))<0 or int(filter.template)==template_id
+
+static func targets(filter: Dictionary) -> Array:
+	return filter.get("usable",[]).filter(func(id):return selected(filter,int(id)))
+
 static func matches(actor: Dictionary, template_id: int, level_one: bool, min_total: int, min_offsets: Array, catalog: Dictionary) -> bool:
 	if not actor.get("can_capture", false): return false
 	if template_id >= 0 and int(actor.get("template_id", -1)) != template_id: return false
