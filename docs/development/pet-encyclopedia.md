@@ -53,3 +53,13 @@ Test: `pet_encyclopedia_test` (real catalog and data files; fake teleport and hu
 ## Thumbnails
 
 The grid and list pictures are pre-cut at import time by `tools/build_pet_thumbs.py`: each battle sprite's first standing frame (animation 3, facing 1, else 0), at most 128 px, packed into 1024 px atlases under `assets/legacy/thumbs/` (`index.json` maps sprite → atlas and region; 641 sprites, 5 atlases, about 4 MB). `scripts/pet_thumbnails.gd` serves them as `AtlasTexture`s and only falls back to cutting a sprite's sheet for a sprite missing from the index. On the web each atlas is its own pack (`thumbs-<n>`): the game prefetches them quietly after the start area, and 宠物大全 shows a non-blocking 「宠物图 x / y MB」 bar while any is still downloading; pictures appear as their atlas arrives. Re-run the tool after changing battle sheets (`scripts/setup-original-data.sh` does).
+
+## 已拥有个体与仓库取出
+
+品种详情的「我的」卡片逐只显示随身与仓库宠物的当前等级、攻防敏、三围合、当前／最大血量及稳定 `pet_id`。位置为随身或仓库；随身宠物按快照的索引补充出战和骑乘，同一只宠物可同时标注两种状态。匹配沿用 `entry_for_pet` 的真实模板／`species_key`，不会把改成同名的其他品种算进来。
+
+仓库个体的「移到随身」通过 `world.link.request` 发送既有 `retrieve_pet_by_id` 命令。客户端先在当前快照确认 UID 仍在仓库，服务器再按 UID 查找当前索引；不复制个体，不改 UID，也不增加新的战斗或组队规则。服务器满栏、捕捉预留栏位及其他拒绝原因显示在窗口反馈区。远端界面不依赖本地 backend。
+
+打开的详情按 UID 保留个体行和按钮，快照更新只改资料与位置，保留悬停对象与滚动偏移；只有所选品种变化才创建该品种的新内容。列表的统计刷新保留当前页和行，所有权过滤的品种集合变化时才重新筛选。详情使用统一的有界滚动区，窄屏纵向排列资料与地点，缩略图仍走原 atlas、调色板和素材下载流程。
+
+`encyclopedia_owned_pets_test` 使用真实本机 GameScene、backend/session 与端口 0 WebSocket，两台无本地 backend 的远端设备；通过实际鼠标输入验证取出、UID 与属性保留、位置同步、满栏及战斗捕捉空位拒绝，并检查 390×844 布局几何。无窗口测试不验证渲染像素。
