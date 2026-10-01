@@ -70,9 +70,15 @@ var _thumbs: Array = []
 var _pictures: Array = []
 var _thumb_revision := -1
 var _thumb_retry_msec := 0
+var _owned_dirty := true
+var _owned_signature := ""
+var _withdraw_pending := ""
+var _detail_mobile := false
 
 func configure(owner: Node) -> void:
 	world = owner
+	world.state.changed.connect(func(kind: String):
+		if kind in ["snapshot","profile","pet_storage"]:_owned_dirty = true)
 	travel = _travel
 	open_hunt = _open_hunt
 
@@ -88,8 +94,8 @@ func _ready() -> void:
 	var frame := VBoxContainer.new()
 	frame.add_theme_constant_override("separation",8)
 	panel.add_child(frame)
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation",10)
+	var top := HFlowContainer.new()
+	top.add_theme_constant_override("h_separation",10)
 	frame.add_child(top)
 	var title := PetTable.text("宠物大全","title")
 	top.add_child(title)
@@ -191,11 +197,14 @@ func open_menu(template_id: int = -1) -> void:
 	encyclopedia()
 	_restore_place()
 	owned = book.owned_counts(world.session.snapshot())
+	_owned_dirty = true
+	_owned_signature = ""
 	feedback = ""
 	var entry: Dictionary = book.entry_for(template_id) if template_id >= 0 else {}
 	if not entry.is_empty():
 		if view != "detail":back_view = view
 		view = "detail"
+		_scroll_view = ""
 		current = int(entry.id)
 		facing = 1
 	elif view == "detail" and book.entry_for(current).is_empty():
@@ -221,8 +230,11 @@ func _switch(next: String) -> void:
 	rebuild()
 	_save_place()
 
+func _scroll_key(kind: String) -> String:
+	return "detail_%d" % current if kind == "detail" else kind
+
 func _remember_scroll() -> void:
-	if _scroll_view in ["grid","list"] and is_instance_valid(scroll):scroll_of[_scroll_view] = scroll.scroll_vertical
+	if not _scroll_view.is_empty() and is_instance_valid(scroll):scroll_of[_scroll_key(_scroll_view)] = scroll.scroll_vertical
 
 ## The place is saved per device (viewer pref), so it also survives a reload.
 func _save_place() -> void:
@@ -246,6 +258,7 @@ func show_species(id: int) -> void:
 	_remember_scroll()
 	if view != "detail":back_view = view
 	view = "detail"
+	_scroll_view = ""
 	current = id
 	facing = 1
 	rebuild()
@@ -275,7 +288,9 @@ func _place_panel() -> void:
 	panel.position = ((screen-panel.size)/2).max(Vector2(8,8))
 
 func relayout() -> void:
-	if is_instance_valid(panel):_place_panel()
+	if is_instance_valid(panel):
+		_place_panel()
+		if visible and view == "detail" and _detail_mobile != (get_viewport_rect().size.x < 760):rebuild()
 
 func rebuild() -> void:
 	if not is_instance_valid(body) or book == null:return
@@ -292,7 +307,7 @@ func rebuild() -> void:
 		"detail":_build_detail()
 		_:_build_grid()
 	_scroll_view = view
-	if view != "detail" and is_instance_valid(scroll) and int(scroll_of.get(view,0)) > 0:_scroll_back.call_deferred(scroll,int(scroll_of[view]))
+	if is_instance_valid(scroll) and int(scroll_of.get(_scroll_key(view),0)) > 0:_scroll_back.call_deferred(scroll,int(scroll_of[_scroll_key(view)]))
 
 ## Rows are laid out a frame after they are added; scroll once they are.
 func _scroll_back(area: ScrollContainer, value: int) -> void:
@@ -546,6 +561,7 @@ func _refresh_thumb_mode() -> void:
 func _process(_delta: float) -> void:
 	_refresh_thumb_mode()
 	if visible:
+		if _owned_dirty:_refresh_owned()
 		_update_thumbs_progress()
 		if scroll == null:_fill_variant_thumbs()
 		else:_update_thumbs()
@@ -754,8 +770,8 @@ func _build_detail() -> void:
 		view = back_view
 		_build_grid()
 		return
-	var top := HBoxContainer.new()
-	top.add_theme_constant_override("separation",10)
+	var top := HFlowContainer.new()
+	top.add_theme_constant_override("h_separation",10)
 	body.add_child(top)
 	var back: Button = world.button("◀ 返回",func():
 		view = back_view
@@ -770,17 +786,23 @@ func _build_detail() -> void:
 	if bool(entry.get("stats_known",true)):
 		top.add_child(PetTable.text("%s · 原表 #%d%s" % [entry.family_name,int(entry.id),"（同值 #%s）" % "、#".join(same.map(func(id):return str(id))) if not same.is_empty() else ""],"meta"))
 	else:top.add_child(PetTable.text("%s · %s 新宠 · 相簿 #%d（无原表）" % [entry.family_name,entry.source,int(entry.album)],"meta"))
-	var columns := HBoxContainer.new()
+	_detail_mobile = get_viewport_rect().size.x < 760
+	if _detail_mobile:
+		for child in top.get_children():
+			if child is Label:
+				child.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+				child.custom_minimum_size.x = 300
+	var content := _scroll_area()
+	var columns: BoxContainer = VBoxContainer.new() if _detail_mobile else HBoxContainer.new()
 	columns.add_theme_constant_override("separation",12)
-	columns.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	body.add_child(columns)
+	content.add_child(columns)
 	columns.add_child(_detail_art(entry))
 	columns.add_child(_detail_stats(entry))
 	columns.add_child(_detail_places(entry))
 
 func _column(width: float) -> VBoxContainer:
 	var column := VBoxContainer.new()
-	column.custom_minimum_size = Vector2(width,0)
+	column.custom_minimum_size = Vector2(minf(width,320) if _detail_mobile else width,0)
 	column.add_theme_constant_override("separation",8)
 	return column
 
@@ -853,9 +875,7 @@ func _detail_art(entry: Dictionary) -> VBoxContainer:
 		caption.custom_minimum_size = Vector2(68,0)
 		stack.add_child(caption)
 		flow.add_child(pick)
-	# The variants are small; show their pictures without a scroll area.
-	scroll = null
-	call_deferred("_fill_variant_thumbs")
+	# Keep the outer detail scroll; visible thumbnails use the usual budget.
 	return column
 
 func _fill_variant_thumbs() -> void:
@@ -897,7 +917,7 @@ func _detail_stats(entry: Dictionary) -> VBoxContainer:
 				"初始系数、成长、权重、属性和捕获都不知道，所以不预测 120 级，也不能发放。"]:
 			var text := PetTable.text(line,"body")
 			text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			text.custom_minimum_size = Vector2(390,0)
+			text.custom_minimum_size = Vector2(280 if _detail_mobile else 390,0)
 			facts.add_child(text)
 		column.add_child(_owned_card(entry))
 		return column
@@ -908,7 +928,7 @@ func _detail_stats(entry: Dictionary) -> VBoxContainer:
 	var weights := GridContainer.new()
 	weights.name = "SpeciesWeights"
 	weights.columns = 6
-	weights.add_theme_constant_override("h_separation",10)
+	weights.add_theme_constant_override("h_separation",3 if _detail_mobile else 10)
 	facts.add_child(weights)
 	for caption in ["成长权重"]+Encyclopedia.WEIGHT_NAMES+["合计"]:weights.add_child(PetTable.text(caption,"head"))
 	var rows := [["基准",entry.weights],["满档 +2",entry.weights.map(func(value):return int(value)+2)]]
@@ -917,8 +937,8 @@ func _detail_stats(entry: Dictionary) -> VBoxContainer:
 		var total := 0
 		for value in row[1]:
 			total += int(value)
-			weights.add_child(PetTable.cell(value,36))
-		weights.add_child(PetTable.cell(total,36,row[0] != "基准"))
+			weights.add_child(PetTable.cell(value,30 if _detail_mobile else 36))
+		weights.add_child(PetTable.cell(total,30 if _detail_mobile else 36,row[0] != "基准"))
 	var elements: Array = []
 	for i in range(4):
 		if int(entry.elements[i]) > 0:elements.append("%s%d" % [Encyclopedia.ELEMENT_NAMES[i],int(entry.elements[i])])
@@ -938,7 +958,7 @@ func _fact(caption: String, value: String) -> HBoxContainer:
 	row.add_child(head)
 	var text := PetTable.text(value,"body")
 	text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	text.custom_minimum_size = Vector2(300,0)
+	text.custom_minimum_size = Vector2(205 if _detail_mobile else 300,0)
 	row.add_child(text)
 	return row
 
@@ -952,8 +972,8 @@ func _potential_card(title: String, potential: Dictionary, control_name: String)
 	if potential.is_empty():
 		stack.add_child(PetTable.text("没有预测数据（重新生成 species_potential.json）。","meta"))
 		return card
-	var line := HBoxContainer.new()
-	line.add_theme_constant_override("separation",14)
+	var line := HFlowContainer.new()
+	line.add_theme_constant_override("h_separation",14)
 	stack.add_child(line)
 	for pair in [["三围合均值","%.1f" % float(potential.mean_sum),true],["前1%",str(int(potential.top1)),false],["前0.1%",str(int(potential.top01)),false],["样本最高",str(int(potential.max)),false]]:
 		var item := VBoxContainer.new()
@@ -965,30 +985,139 @@ func _potential_card(title: String, potential: Dictionary, control_name: String)
 		line.add_child(item)
 	stack.add_child(PetTable.text("均值 攻 %.1f · 防 %.1f · 敏 %.1f · 血 %.1f · 攻击前1%% %d" % [float(potential.mean_attack),float(potential.mean_defence),float(potential.mean_speed),float(potential.mean_hp),int(potential.top1_attack)],"body"))
 	stack.add_child(PetTable.text("四项+2，Lv.%d捕获后逐级练到120；%s只模拟，固定种子。" % [int(potential.level),_count_text(int(potential.pets))],"meta"))
+	for label in stack.find_children("*","Label",true,false):
+		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	return card
 
 static func _count_text(count: int) -> String:
 	return "%d万" % (count/10000) if count >= 10000 and count % 10000 == 0 else str(count)
 
+## Read only current snapshots; reconcile individual rows by stable ID so
+## a stat refresh does not replace a hovered button or reset the detail scroll.
+func _refresh_owned() -> void:
+	_owned_dirty = false
+	var profile: Dictionary = world.session.snapshot()
+	var signature := JSON.stringify([profile.get("pets",[]),profile.get("pet_storage",[]),profile.get("active_pet",-1),profile.get("ride_pet",-1)])
+	if signature == _owned_signature:
+		if view == "detail":
+			for button in body.find_children("WithdrawOwned_*","Button",true,false):button.disabled = not _withdraw_pending.is_empty()
+		return
+	_owned_signature = signature
+	var previous := owned
+	owned = book.owned_counts(profile)
+	if view == "detail":
+		var card = body.find_child("SpeciesOwned",true,false)
+		if card != null:_update_owned_card(card,book.species.get(current,{}),profile)
+	elif previous != owned and ownership() != "all" and book.filtered(search.text,catchable_box.button_pressed,classic_box.button_pressed,ownership(),previous) != _visible_ids():
+		rebuild()
+	elif view == "list" and ownership() == "owned":
+		for label in body.find_children("Mine*","Label",true,false):
+			var id := int(str(label.name).trim_prefix("Mine"))
+			if book.species.has(id):label.text = _mine_text(book.species[id],profile)
+	elif view == "grid":
+		for cell in body.find_children("Species*","Button",true,false):
+			var id := int(str(cell.name).trim_prefix("Species"))
+			if not book.species.has(id):continue
+			var entry: Dictionary = book.species[id]
+			var mine: Dictionary = owned.get(id,{})
+			var count := int(mine.get("carried",0))+int(mine.get("stored",0))
+			cell.get_child(0).get_child(2).text = ("已有%d" % count) if count > 0 else (str(entry.alias) if not str(entry.alias).is_empty() else (str(entry.tag) if not str(entry.tag).is_empty() else _source_tag(entry)))
+			cell.tooltip_text = _tooltip(entry)
+
+func _mine_text(entry: Dictionary, profile: Dictionary) -> String:
+	var mine: Dictionary = owned.get(int(entry.id),{})
+	var count := int(mine.get("carried",0))+int(mine.get("stored",0))
+	if count <= 0:return "—"
+	var best: Dictionary = book.owned_best(profile,entry)
+	return "%d只 · 最佳120级三围合 %d" % [count,int(best.best_sum)] if int(best.best_sum) >= 0 else "%d只" % count
+
 func _owned_card(entry: Dictionary) -> PanelContainer:
 	var card := PetTable.card()
 	card.name = "SpeciesOwned"
 	var stack := VBoxContainer.new()
-	stack.add_theme_constant_override("separation",2)
+	stack.name = "OwnedStack"
+	stack.add_theme_constant_override("separation",4)
 	card.add_child(stack)
 	stack.add_child(PetTable.text("我的%s" % entry.name,"section"))
-	var mine: Dictionary = owned.get(int(entry.id),{})
-	var count := int(mine.get("carried",0))+int(mine.get("stored",0))
-	if count == 0:
-		stack.add_child(PetTable.text("还没有。","body"))
-		return card
-	var best: Dictionary = book.owned_best(world.session.snapshot(),entry)
-	stack.add_child(PetTable.text("共 %d 只（随身 %d · 仓库 %d）" % [count,int(mine.get("carried",0)),int(mine.get("stored",0))],"body"))
-	var mean := float(entry.get("potential",{}).get("mean_sum",0.0))
-	var compare := "（满档均值 %.1f）" % mean if mean > 0 else ""
-	stack.add_child(PetTable.text("最佳120级三围合 %d · %s%s" % [int(best.best_sum),best.best_sum_pet,compare],"body",PetTable.GOLD if mean > 0 and best.best_sum >= mean else null))
-	stack.add_child(PetTable.text("最佳120级攻击 %d · %s" % [int(best.best_attack),best.best_attack_pet],"body"))
+	var summary := PetTable.text("","body")
+	summary.name = "OwnedSummary"
+	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stack.add_child(summary)
+	var rows := VBoxContainer.new()
+	rows.name = "OwnedIndividuals"
+	stack.add_child(rows)
+	_update_owned_card(card,entry,world.session.snapshot())
 	return card
+
+func _update_owned_card(card: Control, entry: Dictionary, profile: Dictionary) -> void:
+	var stack := card.get_node("OwnedStack")
+	var rows := stack.get_node("OwnedIndividuals")
+	var existing := {}
+	for row in rows.get_children():existing[str(row.get_meta("pet_id"))] = row
+	var individuals := []
+	for location in ["pets","pet_storage"]:
+		var pets: Array = profile.get(location,[])
+		for index in range(pets.size()):
+			var pet: Dictionary = pets[index]
+			var own: Dictionary = book.entry_for_pet(pet)
+			if not own.is_empty() and own.id == entry.id:individuals.append({"pet":pet,"location":location,"index":index})
+	var carried := 0
+	for item in individuals:
+		var pet: Dictionary = item.pet
+		var uid := str(pet.get("pet_id",""))
+		var row: VBoxContainer = existing.get(uid)
+		if row == null:
+			row = VBoxContainer.new()
+			row.name = "OwnedPet_"+uid
+			row.set_meta("pet_id",uid)
+			var label := PetTable.text("","meta",PetTable.TEXT)
+			label.name = "IndividualStats"
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+			row.add_child(label)
+			var button: Button = world.button("移到随身",func():withdraw_owned(uid))
+			button.name = "WithdrawOwned_"+uid
+			row.add_child(button)
+			rows.add_child(row)
+		existing.erase(uid)
+		var position := "仓库"
+		if item.location == "pets":
+			carried += 1
+			position = "随身"
+			if int(item.index) == int(profile.get("active_pet",-1)):position += " · 出战"
+			if int(item.index) == int(profile.get("ride_pet",-1)):position += " · 骑乘"
+		row.get_node("IndividualStats").text = "%s · Lv.%d · %s\n攻 %d 防 %d 敏 %d · 三围合 %d\n血 %d / %d · %s" % [pet.get("name",entry.name),int(pet.get("level",1)),position,int(pet.get("attack",0)),int(pet.get("defence",0)),int(pet.get("speed",0)),int(pet.get("attack",0))+int(pet.get("defence",0))+int(pet.get("speed",0)),int(pet.get("hp",0)),int(pet.get("max_hp",0)),uid]
+		var button: Button = row.get_node("WithdrawOwned_"+uid)
+		button.visible = item.location == "pet_storage"
+		button.disabled = not _withdraw_pending.is_empty()
+	for row in existing.values():
+		rows.remove_child(row)
+		row.queue_free()
+	var text := "还没有。"
+	if not individuals.is_empty():
+		var best: Dictionary = book.owned_best(profile,entry)
+		text = "共 %d 只（随身 %d · 仓库 %d）\n最佳120级三围合 %d · %s\n最佳120级攻击 %d · %s" % [individuals.size(),carried,individuals.size()-carried,int(best.best_sum),best.best_sum_pet,int(best.best_attack),best.best_attack_pet]
+	stack.get_node("OwnedSummary").text = text
+
+## UID is re-resolved at the authority, never an old displayed storage index.
+func withdraw_owned(uid: String) -> void:
+	if not _withdraw_pending.is_empty():return
+	var profile: Dictionary = world.session.snapshot()
+	var stored: Array = profile.get("pet_storage",[])
+	if not stored.any(func(pet):return str(pet.get("pet_id","")) == uid):
+		feedback = "这只宠物已不在仓库，请查看最新位置。"
+		feedback_label.text = feedback
+		feedback_label.show()
+		_owned_dirty = true
+		return
+	_withdraw_pending = uid
+	_owned_dirty = true
+	world.link.request({"type":"retrieve_pet_by_id","pet_id":uid},func(reply: Dictionary):
+		_withdraw_pending = ""
+		feedback = "已移到随身。" if bool(reply.get("ok",false)) else str(reply.get("reason","取出失败，请稍后重试。"))
+		feedback_label.text = feedback
+		feedback_label.show()
+		_owned_dirty = true
+		if bool(reply.get("ok",false)):world.refresh_companion())
 
 ## 经典宠物 on a species page: 俗称, why players remember it and how the
 ## original gave it out.
@@ -1002,7 +1131,7 @@ func _classic_card(record: Dictionary) -> PanelContainer:
 	for line in ["为什么经典：%s" % record.get("reason",""),"原版获得：%s" % record.get("obtained","")]+([] if bool(record.get("original_wild",true)) else ["原版不能野外捕捉。"])+([str(record.note)] if not str(record.get("note","")).is_empty() else []):
 		var text := PetTable.text(line,"body")
 		text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		text.custom_minimum_size = Vector2(400,0)
+		text.custom_minimum_size = Vector2(300 if _detail_mobile else 400,0)
 		stack.add_child(text)
 	return card
 
@@ -1019,28 +1148,24 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 		column.add_child(none)
 		var note := PetTable.text("普通遇敌表里没有它。可能要靠任务、活动、蛋或更高版本才能得到；"+("开发调试可用 GM 调试发放。" if bool(entry.get("stats_known",true)) else "没有原版数值，GM 调试也不能发放。"),"meta")
 		note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		note.custom_minimum_size = Vector2(400,0)
+		note.custom_minimum_size = Vector2(300 if _detail_mobile else 400,0)
 		column.add_child(note)
 		return column
 	var note := PetTable.text("原表普通遇敌区；标「补充」「非原版」的 Lv.1 是本作按原版稀有 Lv.1 的做法加的。随机遇敌不保证每场出现。瞬移去抓：传送到该区，打开自动抓极品并选中它。","meta")
 	note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-	note.custom_minimum_size = Vector2(400,0)
+	note.custom_minimum_size = Vector2(300 if _detail_mobile else 400,0)
 	column.add_child(note)
-	var list_scroll := ScrollContainer.new()
-	list_scroll.size_flags_vertical = Control.SIZE_EXPAND_FILL
-	list_scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
-	column.add_child(list_scroll)
 	var rows := VBoxContainer.new()
 	rows.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	rows.add_theme_constant_override("separation",3)
-	list_scroll.add_child(rows)
+	column.add_child(rows)
 	for i in range(places.size()):
 		var place: Dictionary = places[i]
 		var holder := PetTable.row_panel(i)
 		var suffix := "" if str(place.get("origin","")).is_empty() else "_"+str(place.origin)
 		holder.name = "Place%d_%d%s" % [int(place.map_id),int(place.area_id),suffix]
 		rows.add_child(holder)
-		var row := HBoxContainer.new()
+		var row: BoxContainer = VBoxContainer.new() if _detail_mobile else HBoxContainer.new()
 		row.add_theme_constant_override("separation",8)
 		holder.add_child(row)
 		var words := VBoxContainer.new()
@@ -1056,6 +1181,8 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 			var tag := PetTable.text(origin,"meta",PetTable.MUTED if place.origin == "original_area" else PetTable.GOLD)
 			tag.name = "Origin"
 			words.add_child(tag)
+		for label in words.get_children():
+			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(_go_button(entry,place,"GoPlace%d_%d%s" % [int(place.map_id),int(place.area_id),suffix]))
 	return column
 
