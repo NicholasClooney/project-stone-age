@@ -132,7 +132,7 @@ async function sample(page, browserPid, step) {
   rows.push(row);
   const renderer = row.processes.renderer || {};
   const gpu = row.processes["gpu-process"] || {};
-  console.log(`[web] ${step} | wasm ${(row.wasm_heap_mb || 0).toFixed(0)} MB | idb ${(row.storage_mb || 0).toFixed(0)} MB | js ${(row.js_used_mb || 0).toFixed(0)} MB | audio alive ${row.audio ? row.audio.alive_mb.toFixed(0) : "?"} MB of ${row.audio ? row.audio.created_mb.toFixed(0) : "?"} | page renderer footprint ${(renderer.largest_footprint_mb || 0).toFixed(0)} MB (all renderers rss ${(renderer.rss_mb || 0).toFixed(0)}) | gpu rss ${(gpu.rss_mb || 0).toFixed(0)} fp ${(gpu.footprint_mb || 0).toFixed(0)} | mounted ${row.stoneAge ? row.stoneAge.mounted : "?"} | long tasks ${JSON.stringify(row.long_tasks || {})}`);
+  console.log(`[web] ${step} | wasm ${(row.wasm_heap_mb || 0).toFixed(0)} MB | idb ${(row.storage_mb || 0).toFixed(0)} MB | js ${(row.js_used_mb || 0).toFixed(0)} MB | audio alive ${row.audio ? row.audio.alive_mb.toFixed(0) : "?"} MB of ${row.audio ? row.audio.created_mb.toFixed(0) : "?"} | page renderer footprint ${(renderer.largest_footprint_mb || 0).toFixed(0)} MB (all renderers rss ${(renderer.rss_mb || 0).toFixed(0)}) | gpu rss ${(gpu.rss_mb || 0).toFixed(0)} fp ${(gpu.footprint_mb || 0).toFixed(0)} | textures ${row.stoneAge && row.stoneAge.texture_mb !== undefined ? row.stoneAge.texture_mb : "?"} MB | mounted ${row.stoneAge ? row.stoneAge.mounted : "?"} | long tasks ${JSON.stringify(row.long_tasks || {})}`);
   console.log(`[web]    processes ${JSON.stringify(row.processes)}`);
 }
 

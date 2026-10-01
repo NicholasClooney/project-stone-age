@@ -19,6 +19,7 @@ const FOLDER := "res://assets/legacy/battle/"
 const THUMBS := "res://assets/legacy/thumbs/"
 const BattleArt = preload("res://scripts/battle_art.gd")
 const SpriteArt = preload("res://scripts/sprite_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
 const STAND := 3
 const FACING := 1
@@ -120,9 +121,8 @@ static func texture(sprite: int) -> Texture2D:
 		_made[sprite] = false
 		return null
 	var path: String = spot[0]
-	if not ResourceLoader.exists(path):return null
-	var sheet: Texture2D = load(path)
-	var image: Image = sheet.get_image() if sheet != null else null
+	if not PaletteSheet.exists(path):return null
+	var image := PaletteSheet.picture(path)
 	if image == null or image.is_empty():
 		_made[sprite] = false
 		return null

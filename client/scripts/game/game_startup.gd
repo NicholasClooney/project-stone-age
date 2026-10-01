@@ -72,13 +72,14 @@ func _download_start_area() -> bool:
 	return await await_packs(packs,"起始地图")
 
 ## Web only: window.stoneAge mirrors map, cell, connection and pack state
-## once a second, for Safari's Web Inspector on another device.
+## and texture memory once a second, for Safari's Web Inspector on another device.
 func _publish_web_status() -> void:
 	var status := {"map":int(game.data.get("map_id",-1)),"cell":[game.cell.x,game.cell.y],"online":bool(game.link.get("online")) if not game.link.is_local() else true,
 		"battle":bool(is_instance_valid(game.battle_view) and game.battle_view.visible),"mounted":game.asset_packs._mounted.size(),"cache_hits":game.asset_packs.cache_hits,"downloaded":game.asset_packs.downloaded_count,"pack_cache":bool(game.asset_packs.store.has_method("persistent") and game.asset_packs.store.persistent()),"pending":game.asset_packs._queued.size()+game.asset_packs._active.size(),"downloading":game.asset_packs._active.values(),"queued":game.asset_packs._queued,"waiters":game.asset_packs._waiters.size(),"waiting_screen":is_instance_valid(game.waiting_screen) and game.waiting_screen.visible,
 		"message":str(game.message.text) if is_instance_valid(game.message) else "",
 		"radio":str(game.radio.current) if is_instance_valid(game.radio) and game.radio.on else "","music":str(game.music.stream.resource_path) if is_instance_valid(game.music) and game.music.stream!=null else "",
-		"music_at":snappedf(game.music.get_playback_position(),0.01) if is_instance_valid(game.music) and game.music.playing else -1.0}
+		"music_at":snappedf(game.music.get_playback_position(),0.01) if is_instance_valid(game.music) and game.music.playing else -1.0,
+		"texture_mb":snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)/1048576.0,0.1)}
 	JavaScriptBridge.eval("window.stoneAge = %s" % JSON.stringify(status))
 
 ## Web only: window.stoneAgeDev(name) runs the same actions as the on-screen DEV

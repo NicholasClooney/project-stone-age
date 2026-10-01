@@ -10,6 +10,7 @@ extends Control
 ## See docs/development/pet-encyclopedia.md.
 const Encyclopedia = preload("res://scripts/pet_encyclopedia.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const PetTable = preload("res://scripts/pet_table.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const TroopArt = preload("res://server/troop_art.gd")
@@ -446,7 +447,7 @@ func _update_thumbs() -> void:
 		if texture == null and Thumbs.possible(sprite):
 			var source := Thumbs.atlas_path(sprite)
 			if source.is_empty():source = Thumbs.sheet_path(sprite)
-			if not ResourceLoader.exists(source):
+			if not PaletteSheet.exists(source):
 				# A pre-cut atlas comes with the thumbnail packs (all of them
 				# are being fetched); only a sprite without one needs its sheet.
 				if retry and Thumbs.atlas_path(sprite).is_empty():waiting.append(sprite)

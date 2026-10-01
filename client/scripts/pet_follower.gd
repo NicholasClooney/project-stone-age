@@ -5,6 +5,7 @@ var sprite: Sprite2D
 var art: Dictionary = {}
 var animations: Dictionary = {}
 const SpriteArt = preload("res://scripts/sprite_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 var sprite_id := ""
 var pet_name := ""
 var elapsed := 0.0
@@ -51,4 +52,5 @@ func _process(delta: float) -> void:
 	if count == 0:return
 	var index := int(fmod(elapsed,duration)/duration*count)%count
 	sprite.texture = SpriteArt.texture(art,SpriteArt.image(animation,index))
+	PaletteSheet.apply(sprite,sprite.texture)
 	sprite.position = SpriteArt.offset(art,animation,index)

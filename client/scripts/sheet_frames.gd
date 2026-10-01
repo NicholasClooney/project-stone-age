@@ -7,6 +7,7 @@ extends RefCounted
 ## texture(); file names are relative to the manifest's folder.
 
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 
 ## The sheets used most recently, at most SHEETS of them (a sheet is about
 ## 10 MB as RGBA). An older one is let go here; it stays alive only while a
@@ -25,8 +26,12 @@ static func sheet(path: String) -> Texture2D:
 		_sheets.erase(path)
 		_sheets[path] = atlas
 		return atlas
-	if not ResourceLoader.exists(path): return null
-	atlas = load(path)
+	# A palette sheet (scripts/palette_sheet.gd) when they are on for this
+	# kind of art: one byte a pixel; nodes drawing it take its material.
+	if PaletteSheet.wanted(path):atlas = PaletteSheet.load_texture(path)
+	if atlas == null:
+		if not ResourceLoader.exists(path): return null
+		atlas = load(path)
 	_sheets[path] = atlas
 	PerfRegistry.track_texture(PerfRegistry.folder_category(path.get_base_dir()+"/"),path,atlas)
 	while _sheets.size() > SHEETS:_sheets.erase(_sheets.keys()[0])

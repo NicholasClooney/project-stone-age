@@ -2,10 +2,14 @@ extends SceneTree
 ## Palette sheets (scripts/palette_sheet.gd, docs/technical/palette-textures.md):
 ## indices plus palette reproduce Godot's own RGBA decode of each sample
 ## sheet byte for byte and the imported texture's visible pixels, the
-## textures and material are laid out as the shader expects, the setting is
-## off by default, and the expected video memory of every sheet is reported.
+## textures and material are laid out as the shader expects, SheetFrames
+## follows the setting, and the expected video memory of every sheet is
+## reported.
 ## The shader itself is checked on a GPU by tools/palette_web_check.py.
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
+const SheetFrames = preload("res://scripts/sheet_frames.gd")
+## The kinds the project draws from palette sheets so far.
+const ON := ["battle"]
 const ROOT := "res://assets/legacy/"
 const FOLDERS := ["battle/sheets","riding/sheets","characters/sheets"]
 var failures := 0
@@ -90,12 +94,25 @@ func run() -> void:
 	PaletteSheet.apply(sprite,load(sample))
 	check(given==material and sprite.material==null,"apply gives the sheet's material only while a palette texture is shown")
 	sprite.free()
-	# The setting: off unless a kind is listed.
-	check(PaletteSheet.kinds().is_empty() and not PaletteSheet.wanted(sample),"palette sheets are off by default (%s is empty)" % PaletteSheet.SETTING)
+	# The setting: only the listed kinds.
+	check(PaletteSheet.kinds()==PackedStringArray(ON),"%s lists %s" % [PaletteSheet.SETTING,ON])
+	PaletteSheet.set_kinds([])
+	check(not PaletteSheet.wanted(sample) and PaletteSheet.kind_of(sample)=="battle","an empty setting turns palette sheets off")
+	check(not PaletteSheet.is_palette(SheetFrames.sheet(sample)),"off, SheetFrames loads the imported RGBA sheet")
+	var plain := PaletteSheet.picture(sample)
+	check(plain!=null and plain.get_size()==indices.get_size(),"off, a sheet's picture is read from the imported texture")
+	SheetFrames._sheets.clear()
 	PaletteSheet.set_kinds(["battle"])
-	check(PaletteSheet.wanted(sample) and PaletteSheet.kind_of(sample)=="battle" and not PaletteSheet.wanted(all[FOLDERS[1]][0]) and not PaletteSheet.wanted("res://assets/legacy/battle/images/1.png") and not PaletteSheet.wanted(sample+".import"),"a listed kind turns on its sheets only")
+	check(PaletteSheet.wanted(sample) and not PaletteSheet.wanted(all[FOLDERS[1]][0]) and not PaletteSheet.wanted("res://assets/legacy/battle/images/1.png") and not PaletteSheet.wanted(sample+".import"),"a listed kind turns on its sheets only")
+	var region := SheetFrames.region(sample,Rect2i(0,0,8,8))
+	check(PaletteSheet.is_palette(region) and region.atlas.get_size()==Vector2(indices.get_size()) and not PaletteSheet.is_palette(SheetFrames.sheet(all[FOLDERS[1]][0])),"on, SheetFrames cuts frames from the palette sheet; other kinds stay RGBA")
+	var expanded := Image.new()
+	expanded.load_png_from_buffer(FileAccess.get_file_as_bytes(sample))
+	expanded.convert(Image.FORMAT_RGBA8)
+	check(PaletteSheet.picture(sample).get_data()==expanded.get_data() and PaletteSheet.exists(sample) and not PaletteSheet.exists(ROOT+"battle/sheets/missing.png"),"on, a sheet's picture and presence come from its PNG")
+	SheetFrames._sheets.clear()
 	PaletteSheet.set_kinds(null)
-	check(PaletteSheet.load_texture("res://assets/legacy/battle/sheets/missing.png")==null,"a missing sheet loads as null")
+	check(PaletteSheet.load_texture(ROOT+"battle/sheets/missing.png")==null,"a missing sheet loads as null")
 	# Not palette PNGs: RGBA and greyscale stay out.
 	var rgba := Image.create(4,4,false,Image.FORMAT_RGBA8)
 	var grey := Image.create(4,4,false,Image.FORMAT_L8)

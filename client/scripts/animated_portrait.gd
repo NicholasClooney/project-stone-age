@@ -6,6 +6,7 @@ extends Control
 ## Clicking turns the sprite one facing, like AnimDisp ANIM_DISP_PET (menu.cpp:1177).
 const BattleArt = preload("res://scripts/battle_art.gd")
 const SpriteArt = preload("res://scripts/sprite_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const STAND := 3
 
 var sprite := ""
@@ -61,6 +62,7 @@ func _update(msec: int) -> void:
 	if texture==null:return
 	current_image = image
 	_texture = texture
+	PaletteSheet.apply(self,texture)
 	_offset = SpriteArt.offset(_art,animation,index)
 	queue_redraw()
 

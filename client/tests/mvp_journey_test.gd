@@ -3,6 +3,8 @@ var game
 var failures := 0
 var ticks_done := 0
 const SAVE := "user://mvp-journey-test.json"
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
+var palette_checked := false
 func _initialize() -> void:call_deferred("run")
 func check(ok: bool, description: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+description)
@@ -38,6 +40,11 @@ func fight(capture: bool = false, boss: bool = false) -> String:
 			game.battle_action("item" if s.player_hp<18 and s.potions>0 else "attack")
 	var outcome: String = game.battle_session.snapshot().outcome
 	while game.battle_view.is_animating():game.battle_view._process(0.1)
+	if not palette_checked:
+		palette_checked = true
+		game.battle_view._process(0.1)
+		var drawn: Array = game.battle_view.actors.filter(func(actor):return actor.sprite.texture!=null)
+		check(drawn.any(func(actor):return PaletteSheet.is_palette(actor.sprite.texture)) and drawn.all(func(actor):return actor.sprite.material==PaletteSheet.material_of(actor.sprite.texture)),"battle sprites draw from palette sheets with their sheet's material")
 	game.return_from_battle()
 	await frames()
 	# Player growth is now chosen through the status menu, not automatic.
@@ -95,6 +102,8 @@ func run() -> void:
 	check(int(game.data.map_id)==100,"wilderness reached from village")
 	check(await fight(true)=="captured","capture creates first pet")
 	check(game.session.snapshot().pets.size()==1 and is_instance_valid(game.pet_follower),"captured pet follows player")
+	game.pet_follower._process(0.1)
+	check(PaletteSheet.is_palette(game.pet_follower.sprite.texture) and game.pet_follower.sprite.material==PaletteSheet.material_of(game.pet_follower.sprite.texture),"the following pet draws from its palette sheet")
 	game.show_adventure_menu("pets")
 	await frames()
 	check(game.adventure_menu.visible,"original pet tab opens roster")

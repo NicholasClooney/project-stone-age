@@ -16,6 +16,7 @@ const ROOT := "res://assets/legacy/battle/"
 const INDEX := ROOT+"index.json"
 const LIMIT := 32
 const SpriteArt = preload("res://scripts/sprite_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const ArtCache = preload("res://scripts/art_cache.gd")
 
 static var _index: Dictionary = {}
@@ -86,5 +87,5 @@ static func renderable(ident: Variant, downloadable: bool) -> bool:
 	if not needed is Array:return false
 	if downloadable:return true
 	for file in needed:
-		if not ResourceLoader.exists(ROOT+str(file)):return false
+		if not PaletteSheet.exists(ROOT+str(file)):return false
 	return true

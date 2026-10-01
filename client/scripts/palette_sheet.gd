@@ -148,6 +148,24 @@ static func load_texture(path: String) -> Texture2D:
 	if decoded.is_empty():return null
 	return texture_of(decoded)
 
+## Whether the sheet at path can be drawn: its PNG when palette sheets are on
+## for it (a web pack then holds only the PNG), else the imported texture.
+static func exists(path: String) -> bool:
+	return FileAccess.file_exists(path) if wanted(path) else ResourceLoader.exists(path)
+
+## The sheet's pixels as an RGBA picture on the CPU (thumbnails cut from it),
+## or null when it is not here.
+static func picture(path: String) -> Image:
+	if wanted(path):
+		if not FileAccess.file_exists(path):return null
+		var image := Image.new()
+		if image.load_png_from_buffer(FileAccess.get_file_as_bytes(path)) != OK:return null
+		image.convert(Image.FORMAT_RGBA8)
+		return image
+	if not ResourceLoader.exists(path):return null
+	var sheet: Texture2D = load(path)
+	return sheet.get_image() if sheet != null else null
+
 ## The material a texture (a palette sheet or an AtlasTexture of one) is
 ## drawn with, or null for any other texture.
 static func material_of(texture: Texture2D) -> Material:

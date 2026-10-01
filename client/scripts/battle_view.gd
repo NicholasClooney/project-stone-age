@@ -10,6 +10,7 @@ const Elements = preload("res://server/elements.gd")
 const PetSkills = preload("res://scripts/pet_skills.gd")
 const BattleEffects = preload("res://scripts/battle_effects.gd")
 const SpriteArt = preload("res://scripts/sprite_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const BattleArt = preload("res://scripts/battle_art.gd")
 const Riding = preload("res://scripts/riding.gd")
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
@@ -1336,6 +1337,7 @@ func _advance_playback(delta: float) -> void:
 		var sprite: Sprite2D = actor.sprite
 		sprite.texture = SpriteArt.texture(art,SpriteArt.image(animation,index))
 		if sprite.texture==null: continue
+		PaletteSheet.apply(sprite,sprite.texture)
 		sprite.z_index = clampi(int(actor.point.y),0,599)-600
 		sprite.position = actor.point+SpriteArt.offset(art,animation,index)
 		var target: Button = target_buttons[actor_index]
