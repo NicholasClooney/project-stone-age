@@ -66,6 +66,17 @@ func load_index(done: Callable) -> void:
 		state.index = parsed if parsed is Dictionary else false
 		finish.call())
 
+## True when every pack the player is waiting for is mounted or in this
+## device's cache: the waiting screen then says it reads, not downloads.
+func waiting_from_cache() -> bool:
+	for waiter in _waiters:
+		if str(waiter.label).is_empty():continue
+		for pack in waiter.packs:
+			if _mounted.has(pack):continue
+			if not index.get("packs",{}).has(pack) or not _is_cached(pack):return false
+		return true
+	return false
+
 ## True while a labelled request (one the player is waiting for) is pending.
 func blocking() -> bool:
 	for waiter in _waiters:

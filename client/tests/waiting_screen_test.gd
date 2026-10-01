@@ -70,6 +70,11 @@ func run() -> void:
 	packs.progress.emit("核心素材",6*MB,8*MB)
 	screen.tick(0.1)
 	check(is_equal_approx(screen.bar.value,75.0) and screen.percent.text=="75%" and screen.amount.text=="6.0 / 8.0 MB","the bar advances with the download")
+	check(screen.title.text.begins_with("正在下载"),"a pack not in this device's cache is downloading")
+	packs._cached["core-x.pck"] = true
+	packs.progress.emit("核心素材",7*MB,8*MB)
+	check(screen.title.text=="正在从本地缓存读取核心素材…" and screen.bar.visible,"one in the cache says it is read from the local cache")
+	packs._cached.erase("core-x.pck")
 	check(not screen.hint.visible,"no audio hint outside the browser")
 	packs._waiters.erase(long)
 	screen.tick(0.016)

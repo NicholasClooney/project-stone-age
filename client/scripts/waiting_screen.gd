@@ -159,7 +159,8 @@ func _start_music() -> void:
 
 func _refresh() -> void:
 	var downloading: bool = _total > 0 and not _failed and packs!=null and packs.blocking()
-	title.text = "正在下载%s…" % _label if downloading else _status
+	var from_cache: bool = downloading and packs.has_method("waiting_from_cache") and packs.waiting_from_cache()
+	title.text = ("正在从本地缓存读取%s…" if from_cache else "正在下载%s…") % _label if downloading else _status
 	bar.visible = downloading
 	amount.visible = downloading
 	percent.visible = downloading
