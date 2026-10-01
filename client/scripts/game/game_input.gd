@@ -67,6 +67,7 @@ func on_input(event: InputEvent) -> void:
 	var typing: bool = game.get_viewport().gui_get_focus_owner() is LineEdit
 	for action in ["north","south","west","east"]:
 		if event.is_action_pressed(action) and not event.is_echo() and not game.paused_input and not typing:
+			if is_instance_valid(game.quest_helper_travel):game.quest_helper_travel.cancel()
 			if is_instance_valid(game.travel_router):game.travel_router.cancel("手动移动取消了自动寻路。")
 			game.pending_talk = false
 			game.held.erase(action)
@@ -76,7 +77,11 @@ func on_input(event: InputEvent) -> void:
 			game.held.erase(action)
 
 func on_unhandled_input(event: InputEvent) -> void:
-	for modal in [game.leveling_destinations,game.helper_menu]:
+	if event.is_action_pressed("ui_cancel") and is_instance_valid(game.quest_helper_travel) and game.quest_helper_travel.active:
+		game.quest_helper_travel.cancel("已停止任务导航。")
+		game.get_viewport().set_input_as_handled()
+		return
+	for modal in [game.quest_helper_menu,game.leveling_destinations,game.helper_menu]:
 		if is_instance_valid(modal) and modal.visible:
 			if event.is_action_pressed("ui_cancel"):modal.close_menu()
 			game.get_viewport().set_input_as_handled()
@@ -218,6 +223,7 @@ func handle_world_click(point: Vector2) -> void:
 		return
 	if game.dev_blink_mode:
 		game.blink_to(Vector2i(game.unproject(point).round()));return
+	if is_instance_valid(game.quest_helper_travel):game.quest_helper_travel.cancel()
 	if is_instance_valid(game.travel_router):game.travel_router.cancel("手动点击取消了自动寻路。")
 	if is_instance_valid(game.world_travel) and game.world_travel.handle_click(point):return
 	if is_instance_valid(game.npc_sprite) and game.npc_sprite.get_rect().has_point(game.npc_sprite.to_local(point)):

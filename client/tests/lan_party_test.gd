@@ -188,6 +188,13 @@ func hub() -> void:
 	check(server.handle(1,{"type":"party_switch","on":true}).ok and bool(wire.last_party(1).accept),"Alice switches 组队 on; her devices see it")
 	joined = server.handle(2,{"type":"party_join","facing":EAST})
 	check(joined.ok and joined.leader=="alice","Bob joins Alice, standing next to her and facing her")
+	for connection in [1,2]:
+		var account: String = server.profile_of(connection)
+		var before_quest_visit: Dictionary = server.backends[account].session.snapshot()
+		var before_position: Array = where(server,account)
+		var quest_visit: Dictionary = server.handle(connection,{"type":"quest_visit","npc_id":"sainasu/event/event02_2","mode":"near"})
+		check(not quest_visit.ok and str(quest_visit.reason).contains("组队"),"party leader and member cannot teleport through quest helper")
+		check(server.backends[account].session.snapshot()==before_quest_visit and where(server,account)==before_position,"refused quest travel neither moves nor heals the party profile")
 	check(wire.system(2).has("加入团队！") and wire.system(1).has("Bob 加入团队！"),"both hear it, as the original's system lines")
 	var bob_view: Dictionary = wire.last_party(2)
 	check(bob_view.leader=="alice" and bob_view.members.map(func(m):return m.name)==["Alice","Bob"] and not bob_view.battle,"Bob's view: Alice leads, Alice and Bob")

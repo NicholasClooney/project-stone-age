@@ -105,6 +105,7 @@ func open_profile(id: String) -> String:
 	backend.event.connect(_on_backend_event.bind(id))
 	backend.party_battle_hook = party_battles.open.bind(id)
 	backend.party_guard = _party_guard.bind(id)
+	backend.quest_visit_guard = _quest_visit_guard.bind(id)
 	backends[id] = backend
 	return ""
 
@@ -357,6 +358,9 @@ func party_auto(id: String) -> Dictionary:
 ## 回复药 until above it. The
 ## party keeps going; only someone healing cannot lift (no 回复药 left, no
 ## 恢复护符, a fallen pet) stops the run, saying who and why.
+func _quest_visit_guard(id: String) -> String:
+	return "组队时请先离开队伍再使用任务旅行。" if party.in_party(id) else ""
+
 func _party_guard(leader: String) -> String:
 	if not party.is_leader(leader):return ""
 	for id in party.members(leader):

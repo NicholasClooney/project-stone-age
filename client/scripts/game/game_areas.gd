@@ -70,6 +70,7 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	if game.party_locked() and [map_id,destination]!=game._followed:
 		game.message.text = GameScene.PARTY_LOCKED_TEXT
 		return false
+	if is_instance_valid(game.quest_helper_travel):game.quest_helper_travel.map_loading()
 	var needed := area_packs(map_id)
 	if not game.asset_packs.is_ready(needed):
 		_load_area_after_download(map_id,destination,needed)
@@ -122,7 +123,12 @@ func load_area_id(map_id: int, destination: Vector2i) -> bool:
 	build_world()
 	game.camera.zoom = previous_zoom
 	game.refresh_map_ui()
-	if [int(game.data.map_id),game.cell]!=game._followed:game.link.request({"type":"report_position","map_id":int(game.data.map_id),"cell":[game.cell.x,game.cell.y],"map_changed":true,"client":game._client_id},game._on_map_reported)
+	var helper_ticket: int=game.quest_helper_travel.generation if is_instance_valid(game.quest_helper_travel) else -1
+	var helper_loading: bool=is_instance_valid(game.quest_helper_travel) and game.quest_helper_travel.own_load
+	if helper_loading or [int(game.data.map_id),game.cell]!=game._followed:
+		game.link.request({"type":"report_position","map_id":int(game.data.map_id),"cell":[game.cell.x,game.cell.y],"map_changed":true,"client":game._client_id},func(reply: Dictionary):
+			game._on_map_reported(reply)
+			if helper_loading and is_instance_valid(game.quest_helper_travel):game.quest_helper_travel.map_reported(reply,helper_ticket))
 	game.camera.reset_smoothing()
 	game.area_music = game.exploration_music()
 	game.set_music(game.area_music)

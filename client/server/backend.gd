@@ -74,6 +74,9 @@ var account_name := ""
 const ADMIN_COMMANDS := ["battle_escape_dev","start_battle_config","start_wild_battle_config","open_battle","begin_battle","set_fast_hunt_threads"]
 
 var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
+## Pure travel refusal hook supplied by a multi-profile host (party lock).
+var quest_visit_guard: Callable
+var quest_helper = preload("res://server/quest_helper.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
 var session = GameSession.new()
 var battle = BattleSession.new()
@@ -871,7 +874,7 @@ func _derived() -> Dictionary:
 	# battle_pets: pet_id -> reason for the open battle's participants, which
 	# release, store, deploy and ride refuse until it ends.
 	_published_battle_pets = session.battle_pets()
-	return {"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
+	return {"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
 	var options := {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier,"admin":admin}
@@ -888,6 +891,33 @@ func _reject(reason: String) -> Dictionary:
 ## A command overtaken by another device's: rejected, but not an error to show.
 func _stale(reason: String) -> Dictionary:
 	return {"ok":false,"reason":reason,"stale":true}
+
+func _cmd_quest_visit(command: Dictionary) -> Dictionary:
+	var mode := str(command.get("mode","near"))
+	if mode not in ["near","arrival"]:return _reject("无效的任务旅行方式。")
+	if battle_open or not session._pending.is_empty() or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return _reject("当前正忙。")
+	if quest_visit_guard.is_valid():
+		var reason := str(quest_visit_guard.call())
+		if not reason.is_empty():return _reject(reason)
+	var npc: Dictionary = original_quests.npc_by_id(str(command.get("npc_id","")))
+	if command.has("quest_id") or command.has("step_id"):
+		var quest_id = command.get("quest_id")
+		if not quest_id is int and not quest_id is float:return _reject("无效任务编号。")
+		if float(quest_id)!=floor(float(quest_id)):return _reject("无效任务编号。")
+		var step:Dictionary=quest_helper.resolve_step(self,int(quest_id),str(command.get("step_id","")))
+		if step.is_empty():return _reject("任务步骤尚未开放。")
+		if not str(step.npc_id).is_empty():npc=original_quests.npc_by_id(str(step.npc_id))
+		elif str(step.source.get("type",""))=="encounter":npc={"id":"","map_id":int(step.map_id),"cell":step.cell,"area_rect":step.source.area_rect}
+	if npc.is_empty():return _reject("任务人物尚未开放。")
+	var target: Dictionary = quest_helper.destination(self,npc,mode)
+	if target.is_empty():return _reject("没有安全且可抵达人物的落点。")
+	var map_id := int(target.map_id)
+	var cell := Vector2i(int(target.cell[0]),int(target.cell[1]))
+	original_quests.pending={}
+	automation.position_changed(map_id,cell,map_id!=automation.position_map)
+	_emit({"type":"position","map_id":map_id,"cell":target.cell,"client":str(command.get("client",""))})
+	_publish()
+	return {"ok":true,"target":target}
 
 func _cmd_quest_talk(command: Dictionary) -> Dictionary:
 	return original_quests.talk(self,str(command.get("npc_id","")))

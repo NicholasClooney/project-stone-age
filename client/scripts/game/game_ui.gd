@@ -122,6 +122,12 @@ func build_ui() -> void:
 	root.add_child(game.settings_menu)
 	game.settings_menu.configure(game)
 	game.help = game.settings_menu
+	game.quest_helper_travel=preload("res://scripts/quest_helper_travel.gd").new()
+	game.quest_helper_travel.configure(game)
+	game.add_child(game.quest_helper_travel)
+	game.quest_helper_menu=preload("res://scripts/quest_helper_menu.gd").new()
+	game.quest_helper_menu.configure(game)
+	root.add_child(game.quest_helper_menu)
 	game.helper_menu = preload("res://scripts/helper_menu.gd").new()
 	root.add_child(game.helper_menu)
 	game.helper_menu.configure(game)
@@ -198,7 +204,7 @@ func refresh_map_ui() -> void:
 ## A minimized automation window is hidden, so it does not count; see
 ## automation_minimized() for how it still holds the character in place.
 func _panel_open() -> bool:
-	for node in [game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help,game.helper_menu,game.pet_encyclopedia]:
+	for node in [game.quest_helper_menu,game.leveling_destinations,game.training_helper,game.pet_hunt_menu,game.changelog_menu,game.character_selection,game.dev_gm_menu,game.dev_map_overview,game.pet_training,game.adventure_menu,game.help,game.helper_menu,game.pet_encyclopedia]:
 		if is_instance_valid(node) and node.visible:return true
 	return false
 

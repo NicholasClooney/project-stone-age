@@ -47,6 +47,7 @@ func _center() -> void:
 ## [node name, caption, what it does, shortcut action or "", opener].
 func entries() -> Array:
 	return [
+		["HelperQuest","任务助手","原版任务步骤、进度和 NPC 传送；奖励由原对话确认。","",func(): world.quest_helper_menu.open_menu()],
 		["HelperTraining","自动练级","原地连续遇敌、抓宠或带宠升级；五人镜像队也在这里。","",func(): world.training_helper.open_menu()],
 		["HelperPetHunt","自动抓极品","按先天档位和120级属性找宠，可自动捕获、练级、存仓和按保留规则整理。","",func(): world.pet_hunt_menu.open_menu()],
 		["HelperPets","宠物 · 同种比较","宠物窗口：同种比较、仓库、收藏和放生。","",func(): world.show_adventure_menu("pets")],

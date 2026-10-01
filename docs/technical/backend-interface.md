@@ -231,3 +231,16 @@ ACCEPT capacity accounts for removed items before adding rewards.
 普通包格满时销毁物，不拒绝整场结算。许可证与事件旗标不随采木变化。
 最小重启恢复覆盖单人单木；组队当前逐动作击杀者得物，合击随机名单和组队
 拓扑重启恢复未实现。详见 `docs/reverse-engineering/original-wood-drops.md`。
+# 任务助手与旅行
+
+`derived.quest_helper.quests` 是服务器从原目录和角色原事件位/道具派生的任务列表。
+每项含 `id`、`title`、`status`、`repeatable`、`can_restart`、`blocked_reason` 和
+`steps`；步骤含稳定 `id`、`quest_id`、原 `npc_id`、`map_id`、`cell`、`label`、
+`current`、`done`、`actionable`，以及可审查的原分支来源。UI 不自行判断奖励或旗标。
+
+`quest_visit {quest_id,step_id,mode,client}` 从服务器当前步骤解析地点；兼容原
+`npc_id` 参数，但不接受客户端提供落点。`mode` 为 `near` 或 `arrival`。
+服务器检查忙碌、组队、当前公开目标、真实地图碰撞/占格/原门/连通性，成功设置
+权威位置并返回 `target {map_id,cell,npc_id}`。客户端先下载素材，再发请求，
+等待地图加载和服务器位置报告确认后走路；采木目标没有 NPC，不发起对白。
+ProfileHub 绑定独立纯 `quest_visit_guard`，组队拒绝不会调用治疗钩子。

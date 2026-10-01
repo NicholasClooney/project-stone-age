@@ -108,6 +108,8 @@ var last_party_event: Dictionary = {}
 ## toolbar: our own windows open from 游戏助手, 设置 and shortcuts.
 var ui_root: Control
 ## 游戏助手 (scripts/helper_menu.gd): the list of the windows this project added.
+var quest_helper_menu: PanelContainer
+var quest_helper_travel: Node
 var helper_menu: PanelContainer
 ## The 游戏助手 button on the field (the only button of ours there).
 var helper_button: Button
@@ -683,10 +685,16 @@ func clear_input() -> void:_input_events.clear_input()
 
 # ---- walking (scripts/game/game_movement.gd) ----
 func request_step(destination: Vector2i) -> bool:return _movement.request_step(destination)
-func walk_to(destination: Vector2i) -> void:_movement.walk_to(destination)
-func walk_toward(destination: Vector2i) -> void:_movement.walk_toward(destination)
+func walk_to(destination: Vector2i) -> void:
+	if is_instance_valid(quest_helper_travel):quest_helper_travel.cancel()
+	_movement.walk_to(destination)
+func walk_toward(destination: Vector2i) -> void:
+	if is_instance_valid(quest_helper_travel):quest_helper_travel.cancel()
+	_movement.walk_toward(destination)
 func approach_npc() -> void:_movement.approach_npc()
-func blink_to(destination: Vector2i) -> bool:return _movement.blink_to(destination)
+func blink_to(destination: Vector2i) -> bool:
+	if is_instance_valid(quest_helper_travel):quest_helper_travel.cancel()
+	return _movement.blink_to(destination)
 func reset_player() -> void:_movement.reset_player()
 func _physics_process(delta: float) -> void:_movement.step_frame(delta)
 

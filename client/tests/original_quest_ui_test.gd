@@ -55,9 +55,11 @@ func run() -> void:
 	for node in menu.panel.get_children():
 		if str(node.name).begins_with("ItemSlot_") or str(node.name).begins_with("OriginalItemSlot_") or str(node.name).begins_with("EmptyItemSlot_"):slots+=1
 	check(slots==15,"Positive prototype keys and original instances share exactly 15 bag cells")
-	menu.panel.get_node("QuestJournal").pressed.emit()
-	check(menu.panel.get_node("QuestJournal_11").text=="不可思议的贝壳 · 进行中","Journal uses real original jobdaily title and NOW flag")
+	check(not menu.panel.has_node("QuestJournal"),"Inventory no longer carries helper journal")
 	world.close_adventure_menu()
+	world.quest_helper_menu.open_menu()
+	check(world.quest_helper_menu.find_child("QuestHelper_11",true,false).text=="不可思议的贝壳 · 进行中","Helper reads server title and status")
+	world.quest_helper_menu.close_menu()
 	travel.selected=index;travel._open()
 	var old_token: String=dialogue.token
 	world.cell+=Vector2i.LEFT
@@ -112,9 +114,9 @@ func remote_flow(source) -> void:
 	check(world.session.snapshot().original_items==[2415] and dialogue.buttons.size()==1 and dialogue.buttons[0].name=="QuestChoice_ok","Original ACCEPT thanks waits for OK before exchanging items")
 	dialogue.choose("ok")
 	check(await Wait.until(self,func():return not dialogue.active and world.session.snapshot().original_items==[2414]),"Remote OK commits real shell reward")
-	world.adventure_menu.open_menu("journal")
-	check(world.adventure_menu.panel.get_node("QuestJournal_11").text=="不可思议的贝壳 · 已完成","Remote journal reads ended flag through the real session proxy")
-	world.close_adventure_menu()
+	world.quest_helper_menu.open_menu()
+	check(world.quest_helper_menu.find_child("QuestHelper_11",true,false).text=="不可思议的贝壳 · 已完成","Remote helper retains completed quests")
+	world.quest_helper_menu.close_menu()
 	dialogue.open(str(receiver.id))
 	await Wait.until(self,func():return dialogue.active and not dialogue.busy)
 	world.help.show()

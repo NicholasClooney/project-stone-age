@@ -221,8 +221,6 @@ func _rebuild_panel() -> void:
 			elif pet_compare_open and not pet_compare_subject.is_empty():pet_comparison_panel(profile,pet_compare_subject)
 			elif pet_storage_open:pet_storage_panel(profile)
 			else:pet_panel(profile)
-		"journal":
-			journal_panel(profile)
 		"shop":
 			shop_panel(profile)
 		"quest":
@@ -446,10 +444,6 @@ func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
 	image(26061,Vector2(0,159))
 	label(str(profile.player.gold),Vector2(182,84),75,14)
-	var journal_button:=choice("任务日志",Vector2(158,18),"",null)
-	journal_button.name="QuestJournal";journal_button.size=Vector2(105,28)
-	for connection in journal_button.pressed.get_connections():journal_button.pressed.disconnect(connection.callable)
-	journal_button.pressed.connect(func():open_menu("journal"))
 	# Classic five-slot frame: InitItem menu.cpp8940-8973. Weapon is
 	# CHAR_ARM=2 at(61,129), not the top-left accessory slot. The frame
 	# already contains head/body/hand silhouettes; no invented mannequin.
@@ -1452,15 +1446,3 @@ func add_pet_favorite_button(parent:Control,pet:Dictionary,prefix:String)->void:
 	toggle.custom_minimum_size=Vector2(26,0)
 	if favorite:toggle.modulate=Color("ffe680")
 	parent.add_child(toggle)
-
-func journal_panel(profile: Dictionary) -> void:
-	stone(Rect2(0,0,704,432))
-	label("任务日志",Vector2(24,16),600,21)
-	var entries: Array=quest_catalog.journal(profile)
-	if entries.is_empty():label("尚无原版任务记录。",Vector2(30,68),600,18)
-	for index in range(entries.size()):
-		var entry: Dictionary=entries[index]
-		label(str(entry.title)+" · "+str(entry.state),Vector2(30,68+index*36),600,18).name="QuestJournal_%s" % str(entry.id)
-	var back:=choice("返回物品",Vector2(30,360),"",null)
-	for connection in back.pressed.get_connections():back.pressed.disconnect(connection.callable)
-	back.pressed.connect(func():open_menu("inventory"))

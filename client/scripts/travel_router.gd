@@ -42,6 +42,8 @@ func _map_route(origin: int, target: int, permit: bool, seimu: bool) -> Array[in
 			queue.append(next)
 	return []
 func request(map_id: int, cell: Vector2i) -> bool:
+	var helper=world.get("quest_helper_travel")
+	if is_instance_valid(helper) and not helper.own_route:helper.cancel()
 	cancel()
 	if world.battle_view.visible or world.area_transition_busy:return false
 	if world.world_catalog.info(map_id).is_empty():
