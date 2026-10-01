@@ -1548,22 +1548,33 @@ func sort_button(caption:String,key:String,width:float,align:int,active:bool,asc
 const QUEUE_PHASES:={"capture":"捕获中","train":"练级中","restart":"刚练完"}
 func queue_records(overlay:Control,data:Dictionary)->void:
 	var sort:Array=records_sorts.queue
-	var hint:="名次是后台搜宠排队的顺序（按这个品种保留规则的排序），超过上限时放弃最后一只，记入放生「未捕获」。数字是预测的120级属性。点列名排序，再点反过来，点「名次」回到排队顺序。"
+	var hint:="每个品种各自排队，各自最多%d只；名次按这个品种保留规则的排序，排满后放弃这个品种最后一只（记入放生「未捕获」）。轮流抓：每次抓下一个品种排第一的。数字是预测的120级属性；点列名在每个品种里排序，点「名次」回到排队顺序。"%int(data.get("limit",0))
 	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,46);note.custom_minimum_size=Vector2(870,0);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;overlay.add_child(note)
 	var header:=sort_header("名次",["状态"]);header.position=Vector2(18,108);overlay.add_child(header)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
-	var entries:=sorted_queue(data.get("entries",[]),str(sort[0]),bool(sort[1]))
-	if entries.is_empty() and not records_loading:
+	var rows:=sorted_queue(data.get("entries",[]),data.get("groups",[]),str(sort[0]),bool(sort[1]))
+	if rows.is_empty() and not records_loading:
 		var empty:="没有在进行的后台搜宠。在自动抓极品里开始找宠流程（开着后台搜宠）后，这里显示正在抓或练的这只和排队的宠物。"
 		if bool(data.get("active",false)):empty="排队是空的：后台正在继续找。"
 		elif str(data.get("phase","idle")) in ["hunt","reveal","capture","train","restart"] and not bool(data.get("showcase",false)):empty="这一轮没开后台搜宠：找到就直接抓，不排队。"
 		var label:=PetTable.text(empty,"body");label.name="QueueEmpty";label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.custom_minimum_size.x=840;list.add_child(label)
-	var best:=PetTable.best_values(entries)
-	for i in range(entries.size()):
-		var item:Dictionary=entries[i]
+	# Gold marks the best of each species: stats of different species do not compare.
+	var best_of:={}
+	for id in rows.filter(func(row):return not row.has("group")).map(func(row):return int(row.get("template_id",-1))):
+		if not best_of.has(id):best_of[id]=PetTable.best_values(rows.filter(func(row):return not row.has("group") and int(row.get("template_id",-1))==id))
+	var index:=0
+	for item in rows:
+		if item.has("group"):
+			var group:Dictionary=item.group
+			var title_row:=HBoxContainer.new();title_row.name="QueueGroup_%d"%int(group.get("template_id",-1));title_row.add_theme_constant_override("separation",10)
+			title_row.add_child(PetTable.text(str(group.get("name","")),"section"))
+			var count:=PetTable.text("排队 %d / %d"%[int(group.get("count",0)),int(data.get("limit",0))],"meta",PetTable.BAD if int(group.get("count",0))>=int(data.get("limit",0)) else null);count.size_flags_vertical=Control.SIZE_SHRINK_END;title_row.add_child(count)
+			list.add_child(title_row)
+			continue
 		var current:=bool(item.get("current",false))
-		var holder:=PetTable.row_panel(i,current);holder.name="QueueRow_%d"%i;holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		var holder:=PetTable.row_panel(index,current);holder.name="QueueRow_%d"%index;holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		index+=1
 		holder.tooltip_text=queue_description(item)
 		list.add_child(holder)
 		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);holder.add_child(line)
@@ -1572,7 +1583,7 @@ func queue_records(overlay:Control,data:Dictionary)->void:
 		var who:=VBoxContainer.new();who.custom_minimum_size.x=LOG_NAME;who.add_theme_constant_override("separation",-2);line.add_child(who)
 		var title:=PetTable.text(str(item.get("name","")),"name");title.clip_text=true;title.custom_minimum_size.x=LOG_NAME;who.add_child(title)
 		var meta:=PetTable.text("第%d组"%int(item.get("roll",0))+(" · "+str(item.pet_id) if not str(item.get("pet_id","")).is_empty() else ""),"meta");meta.clip_text=true;meta.custom_minimum_size.x=LOG_NAME;who.add_child(meta)
-		PetTable.stat_cells(line,item,best)
+		PetTable.stat_cells(line,item,{} if current else best_of.get(int(item.get("template_id",-1)),{}))
 		var offsets:Array=item.get("offsets",[])
 		line.add_child(PetTable.grade({} if offsets.size()!=4 else {"offsets":offsets,"total":int(item.get("total_offset",0)),"full":bool(item.get("full",false))}))
 		if current:
@@ -1580,25 +1591,28 @@ func queue_records(overlay:Control,data:Dictionary)->void:
 		if bool(item.get("survey",false)):
 			var survey:=PetTable.badge("摸底",PetTable.GOLD);survey.size_flags_vertical=Control.SIZE_SHRINK_CENTER;survey.tooltip_text="摸底选中：没有门槛时从候选里按保留规则挑出的，一定会抓。";line.add_child(survey)
 
-## The 排队 rows in display order: the current hit first, then the queue in
-## its rank, or by a stat (ties keep the rank).
-static func sorted_queue(entries:Array,key:String,ascending:bool)->Array:
-	var current:=entries.filter(func(item):return bool(item.get("current",false)))
-	var queued:=entries.filter(func(item):return not bool(item.get("current",false)))
-	if key in ReleaseLog.SORT_KEYS:
-		queued.sort_custom(func(a,b):
-			var va:=PetTable.value_of(a,key)
-			var vb:=PetTable.value_of(b,key)
-			if va!=vb:return va<vb if ascending else va>vb
-			return int(a.get("rank",0))<int(b.get("rank",0)))
-	return current+queued
+## The 排队 rows in display order: the current hit first, then each species'
+## queue under a {group} header (groups: the backend's order), in its rank or
+## by a stat within the species (ties keep the rank).
+static func sorted_queue(entries:Array,groups:Array,key:String,ascending:bool)->Array:
+	var result:=entries.filter(func(item):return bool(item.get("current",false)))
+	for group in groups:
+		var queued:=entries.filter(func(item):return not bool(item.get("current",false)) and int(item.get("template_id",-1))==int(group.get("template_id",-1)))
+		if queued.is_empty():continue
+		if key in ReleaseLog.SORT_KEYS:
+			queued.sort_custom(func(a,b):
+				var va:=PetTable.value_of(a,key)
+				var vb:=PetTable.value_of(b,key)
+				if va!=vb:return va<vb if ascending else va>vb
+				return int(a.get("rank",0))<int(b.get("rank",0)))
+		result.append({"group":group})
+		result.append_array(queued)
+	return result
 
 static func queue_description(item:Dictionary)->String:
 	var offsets:Array=item.get("offsets",[])
-	var place:="当前 · %s"%QUEUE_PHASES.get(str(item.get("phase","")),"处理中") if bool(item.get("current",false)) else "排队第%d名"%int(item.get("rank",0))
-	return "%s 第%d组 · Lv.%d · %s%s
-预测120级 血%d 攻%d 防%d 敏%d · 三围合%d
-成长档 %s"%[item.get("name",""),int(item.get("roll",0)),int(item.get("level",1)),place," · 摸底选中" if bool(item.get("survey",false)) else "",
+	var place:="当前 · %s"%QUEUE_PHASES.get(str(item.get("phase","")),"处理中") if bool(item.get("current",false)) else "本品种排队第%d名"%int(item.get("rank",0))
+	return "%s 第%d组 · Lv.%d · %s%s\n预测120级 血%d 攻%d 防%d 敏%d · 三围合%d\n成长档 %s"%[item.get("name",""),int(item.get("roll",0)),int(item.get("level",1)),place," · 摸底选中" if bool(item.get("survey",false)) else "",
 		int(item.get("max_hp",0)),int(item.get("attack",0)),int(item.get("defence",0)),int(item.get("speed",0)),int(item.get("sum",0)),"未知" if offsets.size()!=4 else "%s 总%+d"%[str(offsets),int(item.get("total_offset",0))]]
 
 ## 停止记录: why 自动抓极品 or the find-pet cycle stopped, paused, skipped a

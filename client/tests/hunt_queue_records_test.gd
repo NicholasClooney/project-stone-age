@@ -95,6 +95,8 @@ func local() -> void:
 	menu.open_pet_records("queue",-1)
 	await process_frame
 	check(menu.panel.find_child("RecordsTabQueue",true,false)!=null and shown_rolls(menu)==queued_rolls,"排队 shows every queued hit in rank order")
+	var group_row = menu.panel.find_child("QueueGroup_%d" % target,true,false)
+	check(group_row!=null and group_row.find_children("*","Label",true,false).any(func(label):return label.text=="排队 10 / 10"),"the species has a header with its count and the per-species limit")
 	var row_text: String = menu.panel.find_child("QueueRow_0",true,false).tooltip_text
 	check(row_text.contains("排队第1名") and row_text.contains("攻%d" % int(predicted.attack)),"a row tells its rank and predicted stats (%s)" % row_text.replace("\n"," / "))
 	await press(menu,"RecordsSort_attack")
@@ -138,7 +140,7 @@ func local() -> void:
 	check(await Wait.until(self,func():return int(menu.records_data.get("total",0))==int(uncaught.total) and menu.panel.find_child("ReleaseLogRow_0",true,false)!=null,5.0),"只看未捕获 shows only those")
 	var row = menu.panel.find_child("ReleaseLogRow_0",true,false)
 	var labels: Array = row.find_children("*","Label",true,false).map(func(label):return str(label.text))
-	check(labels.any(func(text):return text.begins_with("排队已满")) and labels.any(func(text):return text.begins_with("被比下去：")),"each shows its reason and who beat it")
+	check(labels.any(func(text):return text.contains("的排队已满（每个品种上限10）")) and labels.any(func(text):return text.begins_with("被比下去：")),"each shows its reason and who beat it")
 	await press(menu,"RecordsSort_sum")
 	check(await Wait.until(self,func():return menu.records_sorts.released==["sum",false] and menu.records_data.get("entries",[]).size()>0,5.0),"三围合 sorts 放生")
 	var sums: Array = menu.records_data.entries.map(func(e):return int(e.lv120.attack)+int(e.lv120.defence)+int(e.lv120.speed))

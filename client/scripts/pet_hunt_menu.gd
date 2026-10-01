@@ -617,7 +617,7 @@ func showcase_controls()->void:
 	showcase.toggled.connect(func(_value):_settings_changed(true))
 	var queue_label:Label=world.text("排队上限",16);queue_label.position=Vector2(760,199);capture_page.add_child(queue_label)
 	queue_size=SpinBox.new();queue_size.name="ShowcaseQueue";queue_size.min_value=1;queue_size.max_value=50;queue_size.step=1;queue_size.value=10
-	queue_size.position=Vector2(880,189);queue_size.size=Vector2(130,38);queue_size.tooltip_text="排满后新找到的和排队的一起比较，按保留规则的排序放弃最差的一只，记入放生记录（未捕获·排队已满）。"
+	queue_size.position=Vector2(880,189);queue_size.size=Vector2(130,38);queue_size.tooltip_text="每个品种各自排队，各自最多这么多只。某个品种排满后，新找到的和这个品种排队的一起比较，按它的保留规则排序放弃最差的一只，记入放生记录（未捕获·排队已满）；不影响其他品种。轮流抓：每次抓下一个品种排第一的。"
 	queue_size.value_changed.connect(func(_value):_settings_changed(false))
 	capture_page.add_child(queue_size);controls.append(queue_size)
 	var xp_label:Label=world.text("经验倍率",16);xp_label.position=Vector2(760,259);capture_page.add_child(xp_label)
