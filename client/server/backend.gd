@@ -202,7 +202,14 @@ func _release_log_file() -> void:
 ## and with 重启后自动恢复 on what it needs to go on is written to the resume
 ## file (automation.gd record_shutdown). Call save() after this.
 func record_shutdown() -> void:
+	var wood := _wood_battle_resume()
+	# A saved wood battle resumes in place rather than being abandoned by the
+	# automation shutdown path (which would record its id as completed).
+	if not wood.is_empty():battle_open = false
 	var state: Dictionary = automation.record_shutdown()
+	if not wood.is_empty():
+		battle_open = true
+		state.wood_battle = wood
 	_record_releases()
 	var path := _resume_file()
 	if path.is_empty():return
@@ -214,7 +221,13 @@ func record_shutdown() -> void:
 func shut_down() -> void:
 	keep_resume_current = false
 	set_process(false)
+	var wood := _wood_battle_resume()
 	record_shutdown()
+	if not wood.is_empty():
+		# The checkpoint contains the pending battle. Save its pre-settlement
+		# profile normally; this process is stopping and will run no more turns.
+		session._pending.clear()
+		battle_open = false
 	if not save():printerr("Could not save %s at shutdown: %s" % [save_path,session.last_error])
 
 ## Keeps the resume file in step with the running automation (see resume_path).
@@ -223,11 +236,13 @@ func keep_resume_file() -> void:
 	var path := _resume_file()
 	if path.is_empty():return
 	var now := int(resume_clock.call())
-	var key: String = automation.resume_key()
+	var wood := _wood_battle_resume()
+	var key: String = automation.resume_key()+str(wood.get("battle_id",""))+str(wood.get("turn",0))
 	if key==_resume_key and _resume_written_msec>=0 and now-_resume_written_msec<RESUME_INTERVAL_MSEC:return
 	_resume_key = key
 	_resume_written_msec = now
 	var state: Dictionary = automation.resume_state() if automation.resume_wanted() else {}
+	if not wood.is_empty():state.wood_battle = wood
 	if state.is_empty():
 		_remove_resume_file(path)
 		return
@@ -274,7 +289,9 @@ func load_resume() -> void:
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var state = JSON.to_native(parsed) if parsed!=null else null
-	if state is Dictionary:automation.load_resume(state)
+	if state is Dictionary:
+		if state.get("wood_battle") is Dictionary:_restore_wood_battle(state.wood_battle)
+		if state.has("kind"):automation.load_resume(state)
 
 ## 重启后自动恢复's file: <save>.resume.json, or tests' resume_path.
 func _resume_file() -> String:
@@ -496,7 +513,11 @@ func _cmd_start_battle_config(command: Dictionary) -> Dictionary:
 	return {"ok":not config.is_empty(),"config":config}
 
 func _cmd_start_wild_battle_config(command: Dictionary) -> Dictionary:
-	var config: Dictionary = session.start_wild_battle_config(command.get("troop",{}))
+	var troop: Dictionary = command.get("troop",{}).duplicate(true)
+	# Even the admin fixture cannot supply pre-rolled profit through a command.
+	for enemy in troop.get("enemies",[]):
+		if enemy is Dictionary:enemy.erase("generated_drops")
+	var config: Dictionary = session.start_wild_battle_config(troop)
 	_publish()
 	return {"ok":not config.is_empty(),"config":config}
 
@@ -506,6 +527,13 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	var config: Dictionary = command.get("config",{})
 	if config.is_empty() or battle.snapshot().active:return _reject("battle unavailable")
 	if str(config.get("battle_id",""))!=str(session._pending.get("battle_id","-")):return _reject("stale battle config")
+	# Freeze source loot metadata from the config issued by this authority.
+	config = config.duplicate(true)
+	if config.get("enemies",[]).size()!=session._pending.get("enemies",[]).size():return _reject("stale battle troop")
+	for i in range(config.get("enemies",[]).size()):
+		for key in ["generated_drops","source_enemy_id","source_wait_only"]:
+			config.enemies[i].erase(key)
+			if session._pending.enemies[i].has(key):config.enemies[i][key] = session._pending.enemies[i][key]
 	return {"ok":true,"state":open_battle(config)}
 
 func _cmd_begin_battle(command: Dictionary) -> Dictionary:
@@ -532,7 +560,7 @@ func _cmd_wild_encounter(command: Dictionary) -> Dictionary:
 
 func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
 	if battle.snapshot().active:return _stale("battle active")
-	var troop: Dictionary = encounter_catalog.roll(map_id,cell,encounter_rng)
+	var troop: Dictionary = encounter_catalog.roll(map_id,cell,encounter_rng,session.snapshot().get("original_items",[]))
 	if troop.is_empty():
 		var reply := _reject(encounter_catalog.last_error)
 		reply.skipped = "data"
@@ -585,9 +613,9 @@ func open_party_battle(view) -> Dictionary:
 
 ## A party battle turn resolved (or this player left it): present it, and
 ## settle `slice` (PartyBattleSession.slice_for) when this player is out.
-func party_turn(state: Dictionary, slice: Dictionary) -> void:
+func party_turn(state: Dictionary, slice: Dictionary, drop_claims: Array = []) -> void:
 	_depth += 1
-	_after_turn(state,slice)
+	_after_turn(state,slice,drop_claims)
 	_depth -= 1
 	_flush()
 
@@ -662,17 +690,22 @@ func _cmd_battle_escape_dev(_command: Dictionary) -> Dictionary:
 
 ## Settles a finished battle exactly once and appends the reward summary that
 ## clients display; the summary compares the profile before and after.
-func _after_turn(state: Dictionary, settle: Dictionary = {}) -> Dictionary:
+func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array = []) -> Dictionary:
 	if not bool(state.active) and bool(battle_state.get("settled",false)) and str(battle_state.get("battle_id",""))==str(state.get("battle_id","")):
 		return battle_state.duplicate(true)
+	if settle.is_empty() and battle_open and not party_battle():session._pending.loot_claims = battle.drop_claims_for()
 	var before: Dictionary = session.snapshot()
 	# A party battle settles this player's own slice (its own battle id and
 	# rewards); the state its devices see stays the shared battle.
 	var result: Dictionary = settle if not settle.is_empty() else state
-	if not bool(state.active) and session.apply_battle_result(result):
+	if not bool(state.active) and session.apply_battle_result(result,drop_claims):
 		if not settle.is_empty():
-			for key in ["xp","gold","pet_reward_xp","experience_multiplier"]:state[key] = result.get(key,0)
+			for key in ["xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:state[key] = result.get(key,0)
 		state.settled = true
+		for drop in state.get("drop_summary",[]):
+			var item_name := str(quest_catalog.items.get(str(int(drop.item_id)),{}).get("name","原版物品 #%d"%int(drop.item_id)))
+			drop.name = item_name
+			state.events.append("获得%s。"%item_name if drop.received else "背包已满，%s已销毁。"%item_name)
 		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
 			var after: Dictionary = session.snapshot()
@@ -731,7 +764,7 @@ func _publish_battle_pets() -> void:
 func _live_battle_state() -> Dictionary:
 	if battle_state.is_empty():return {}
 	var live: Dictionary = battle.snapshot()
-	for key in ["settled","result_summary","xp","gold","pet_reward_xp","experience_multiplier"]:
+	for key in ["settled","result_summary","xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:
 		if battle_state.has(key) and not live.get("active",false):live[key] = battle_state[key]
 	if not live.get("active",false) and battle_state.has("events") and str(battle_state.get("outcome",""))==str(live.get("outcome","")):live.events = battle_state.events
 	live.capture_assist = battle.capture_assist
@@ -876,3 +909,50 @@ func _cmd_quest_discard(command: Dictionary) -> Dictionary:
 	if not save():session._profile=before;return _reject("save_failed")
 	_publish()
 	return {"ok":true}
+
+## Minimal restart support for the original single-enemy wood encounter.
+## The profile and already-created loot travel together; restarting never rolls.
+## Party topology and clone battles are not restored by this solo checkpoint.
+func _wood_battle_resume() -> Dictionary:
+	if not automation.resume_wanted() or not battle_open or party_battle() or session._pending.is_empty():return {}
+	var pending: Dictionary = session._pending
+	if pending.get("enemies",[]).size()!=1 or int(pending.enemies[0].get("source_enemy_id",-1))!=563 or not pending.get("allies",[]).is_empty():return {}
+	var live: Dictionary = battle.snapshot()
+	if not bool(live.get("active",false)):return {}
+	return {"battle_id":str(pending.battle_id),"turn":int(live.turn),"profile":session.snapshot(),"pending":pending.duplicate(true),"state":live,"rng_state":battle._rng.state,"rng_seed":battle.rng_seed,"escape_attempts":battle._escape_attempts,"skill_used":battle._skill_used,"chosen_skill":battle._chosen_skill,"pet_target":battle._pet_target}
+
+func _restore_wood_battle(saved: Dictionary) -> bool:
+	if battle_open or not session._pending.is_empty():return false
+	var profile = saved.get("profile")
+	var config = saved.get("pending")
+	var live = saved.get("state")
+	if not profile is Dictionary or not session._valid_profile(profile) or not config is Dictionary or not live is Dictionary:return false
+	var current: Dictionary = session.snapshot()
+	if str(profile.profile_id)!=str(current.profile_id) or int(profile.next_battle)<int(current.next_battle):return false
+	var id := str(saved.get("battle_id",""))
+	if id.is_empty() or id in current.completed_battles or id in profile.completed_battles or id!=str(config.get("battle_id","")) or id!=str(live.get("battle_id","")):return false
+	if config.get("party",false) or not config.get("allies",[]).is_empty() or config.get("enemies",[]).size()!=1 or live.get("enemies",[]).size()!=1 or not bool(live.get("active",false)):return false
+	var enemy: Dictionary = config.enemies[0]
+	if int(enemy.get("source_enemy_id",-1))!=563 or not session._actor_valid(enemy) or not GameSession._generated_drops_valid(enemy):return false
+	var source: Dictionary = encounter_catalog.data.get("enemies",{}).get("563",{})
+	if source.is_empty() or not bool(source.get("wait_only",false)) or not bool(enemy.get("source_wait_only",false)):return false
+	var allowed := []
+	for drop in source.get("drops",[]):allowed.append(int(drop.item_id))
+	for item in enemy.get("generated_drops",[]):
+		if int(item) not in allowed:return false
+	if not GameSession._original_integer(live.enemies[0].get("hp"),0,int(enemy.max_hp)) or live.enemies[0].get("species")!=enemy.species:return false
+	session._profile = profile.duplicate(true)
+	session._pending = config.duplicate(true)
+	battle = BattleSession.new()
+	battle.rng_seed = int(saved.get("rng_seed",42))
+	battle.start_battle(config)
+	battle._state = live.duplicate(true)
+	battle._rng.state = int(saved.get("rng_state",battle._rng.state))
+	battle._escape_attempts = int(saved.get("escape_attempts",0))
+	battle._skill_used = bool(saved.get("skill_used",false))
+	battle._chosen_skill = int(saved.get("chosen_skill",0))
+	battle._pet_target = int(saved.get("pet_target",-1))
+	battle_state = battle.snapshot()
+	battle_open = true
+	_publish()
+	return true

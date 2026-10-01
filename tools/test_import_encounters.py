@@ -2,7 +2,7 @@ import json
 import tempfile
 import unittest
 from pathlib import Path
-from import_encounters import ALBUM_PETS, RARE, add_album_pets, add_rare_encounters, atoi, build, choices
+from import_encounters import ALBUM_PETS, RARE, add_album_pets, add_rare_encounters, atoi, build, choices, drop_slots, wait_only
 
 ROOT = Path('references/chenmingbiao-stone-age/gmsv/data')
 
@@ -14,6 +14,23 @@ class EncounterImportTests(unittest.TestCase):
 
     def test_weighted_slots_preserve_original_ids(self):
         self.assertEqual(choices(['7','8']+['']*8+['1','0']+['']*8,0,10), [{'id':7,'weight':1},{'id':8,'weight':0}])
+
+    def test_drop_slots_are_aligned_and_blank_probabilities_are_zero(self):
+        row = [''] * 34
+        row[14], row[24] = '2468', '700'
+        row[15] = '17'
+        row[23], row[33] = '18', '999'
+        self.assertEqual(drop_slots(row), [dict(slot=0,item_id=2468,probability=700,denominator=1000),
+            dict(slot=1,item_id=17,probability=0,denominator=1000),
+            dict(slot=9,item_id=18,probability=999,denominator=1000)])
+        self.assertEqual(drop_slots([''] * 14), [])
+
+    def test_wait_only_is_a_conservative_source_subset(self):
+        tactic = 'at:0;1;1|gu:0|es:0|wa:1;0;0;0;0;0;0;'
+        self.assertTrue(wait_only(tactic))
+        for other in [tactic.replace('at:0;', 'at:1;'), tactic.replace('gu:0', 'gu:1'),
+                      tactic.replace('es:0', 'es:1'), tactic.replace('wa:1;', 'wa:0;'), '']:
+            self.assertFalse(wait_only(other))
 
     @unittest.skipUnless(ROOT.exists(), 'local reference required')
     def test_reference_links_and_source_fields(self):
@@ -36,6 +53,20 @@ class EncounterImportTests(unittest.TestCase):
         self.assertTrue(data['groups']['125']['invalid_weights'])
         self.assertTrue(data['groups']['141']['invalid_weights'])
         self.assertFalse(data['groups']['88']['invalid_weights'])
+
+    @unittest.skipUnless(ROOT.exists(), 'local reference required')
+    def test_wood_original_drop_columns_and_wait_tactics(self):
+        data = build(ROOT)
+        enemy = data['enemies']['563']
+        self.assertEqual(enemy['drops'], [dict(slot=0, item_id=2468, probability=700, denominator=1000)])
+        self.assertTrue(enemy['wait_only'])
+        self.assertEqual(enemy['experience'], 0)
+        self.assertEqual(enemy['pet_flag'], 0)
+        self.assertEqual(data['groups']['414']['requires_item'], 2478)
+        self.assertEqual(data['groups']['414']['excludes_item'], -1)
+        area = next(a for a in data['areas'] if a['id'] == 267)
+        self.assertEqual(area['map_id'], 1099)
+        self.assertEqual(area['groups'], [dict(id=414, weight=1)])
 
     def test_album_pets_are_stat_less_templates_that_never_spawn(self):
         data={'templates':{'1':{'id':1,'name':'乌力','sprite':100250}},'provenance':{}}

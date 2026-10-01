@@ -42,6 +42,52 @@ def fake_animations(archive, sprite):
 
 
 class EncounterArtTests(unittest.TestCase):
+    def test_only_audited_wood_is_selected_behind_item_gate(self):
+        catalog = {'areas': [{'map_id': 1099, 'event_now': -1, 'event_end': -1, 'groups': [{'id': 414}]}],
+                   'groups': {'414': {'requires_item': 2478, 'excludes_item': -1,
+                                      'enemies': [{'id': 563}, {'id': 564}]}},
+                   'enemies': {'563': {'template_id': 531}, '564': {'template_id': 532}},
+                   'templates': {'531': {'sprite': 100468}, '532': {'sprite': 100469}}}
+        self.assertEqual(art.required_sprites(catalog, {'1099': {}}), {100468})
+        self.assertEqual(art.required_sprites(catalog, {}), set())
+        catalog['areas'][0]['event_now'] = 18
+        self.assertEqual(art.required_sprites(catalog, {'1099': {}}), set())
+
+    def test_selected_import_preserves_other_art_and_is_renderable(self):
+        from PIL import Image
+        from split_manifests import renderable
+        old = FakeArchive('2.5', {7: b'a'}, {100468: actions(7)})
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for part in ('encounters', 'battle/sheets', 'battle/pets'):
+                (root / part).mkdir(parents=True)
+            unrelated = root / 'battle/sheets/999.png'
+            unrelated.write_bytes(b'unchanged')
+            extra = root / 'battle/pets/999.json'
+            extra.write_text(json.dumps({'characters': {'999': actions(8)}, 'images': {}}))
+            (root / 'battle/manifest.json').write_text(json.dumps({'characters': {}, 'images': {},
+                                                                 'extra_sprites': {'999': 'pets/999.json'}}))
+            (root / 'encounters/art-coverage.json').write_text(json.dumps({
+                'available': [999], 'unavailable': {'100468': 'old missing'},
+                'sources': {'999': '8.0'}, 'extra': [999]}))
+            with mock.patch.object(art, 'Archive', return_value=old), \
+                    mock.patch.object(art, 'animations', side_effect=fake_animations), \
+                    mock.patch.object(old, 'image', return_value=Image.new('RGBA', (1, 1), 'green')), \
+                    mock.patch('builtins.print'):
+                art.run_selected('2.5', root, [100468])
+                art.run_selected('2.5', root, [100468])
+            battle = json.loads((root / 'battle/manifest.json').read_text())
+            self.assertEqual(unrelated.read_bytes(), b'unchanged')
+            self.assertEqual(battle['extra_sprites'], {'999': 'pets/999.json'})
+            self.assertEqual(renderable('100468', battle['characters']['100468'], battle['images'], battle['sheets']),
+                             ['sheets/100468.png'])
+            index = json.loads((root / 'battle/index.json').read_text())
+            self.assertEqual(index['sprites']['100468'], ['sheets/100468.png'])
+            self.assertTrue((root / 'battle/sprites/100468.json').is_file())
+            report = json.loads((root / 'encounters/art-coverage.json').read_text())
+            self.assertEqual(report['sources'], {'999': '8.0', '100468': '2.5'})
+            self.assertNotIn('100468', report['unavailable'])
+
     def test_every_pet_template_is_wanted(self):
         catalog = {'templates': {'1': {'sprite': 100250, 'pet_flag': 1}, '2': {'sprite': 100300, 'pet_flag': 0},
                                  '10417': {'sprite': 101869, 'pet_flag': 1, 'stats_known': False}}}

@@ -65,6 +65,7 @@ var _fallen: Dictionary = {}
 ## Members' pet rosters (slot -> pets at the start), kept outside the ally
 ## dictionaries so turn frames stay small.
 var _rosters: Dictionary = {}
+var _drop_claims: Dictionary = {}
 var _escaping_slot := -1
 
 func start_battle(config: Dictionary = {}) -> Dictionary:
@@ -381,6 +382,9 @@ func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 
 ## Enemies pick any standing player or living pet still in the battle.
 func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
+	if bool(_state.enemies[_acting_enemy].get("source_wait_only",false)):
+		_last_outcome = "wait"
+		return
 	var targets: Array = []
 	if slot_standing(0):targets.append(["player",-1])
 	if slot_in(0) and not _state.pet.is_empty() and int(_state.pet_hp)>0:targets.append(["pet",-1])
@@ -501,6 +505,13 @@ func _credit_kills(actor: String) -> void:
 				elif int(member.get("mount",{}).get("hp",0))>0:ride = int(member.get("ride_pet",-1))
 			_:continue
 		enemy.killer = {"slot":slot,"kind":kind,"pet":pet,"ride":ride}
+		var cache: Array = _drop_claims.get(slot,[])
+		var enemy_index: int = _state.enemies.find(enemy)
+		for item_index in range(enemy.get("generated_drops",[]).size()):
+			var claim := {"enemy":enemy_index,"item":item_index}
+			if cache.size()<3:cache.append(claim)
+			elif _rng.randi_range(0,1)==1:cache[_rng.randi_range(0,2)] = claim
+		_drop_claims[slot] = cache
 
 # ---- rewards and settlement -------------------------------------------------
 
@@ -783,3 +794,7 @@ func _leader_pet_as_ally(source: Dictionary) -> Dictionary:
 	pet.hp = int(source.get("pet_hp",pet.get("hp",0)))
 	pet.defending = str(_last_pet.get(0,""))=="defend"
 	return pet
+
+## Host-only channel; no client result chooses recipients or item ids.
+func drop_claims_for(slot: int = 0) -> Array:
+	return _drop_claims.get(slot,[]).duplicate(true)
