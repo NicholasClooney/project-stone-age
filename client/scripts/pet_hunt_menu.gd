@@ -891,7 +891,7 @@ func refresh_stat_thresholds(now: bool = false) -> void:
 	if key==_thresholds_key and not now:return
 	_thresholds_key=key
 	stat_heading.text="120级属性筛选 · 门槛＝固定数值，不随宠物变化，不摸底" if fixed else "120级属性筛选 · 门槛＝同种现有最高 − x，随更好的宠物提高"
-	stat_heading.tooltip_text=("绝对：每项门槛是填写的固定数值（≥），抓到更好的宠物也不变，也不需要摸底；排队的宠物只按这些数值判断。已有极品后用它放宽门槛。" if fixed else "最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新。\n还没有这个品种时先摸底%d秒：不设门槛找，按保留规则挑出最好的几只抓来，之后按新的最高继续。" % AutomationSettings.SURVEY_SECONDS)+"\n改动立即用于正在进行的找宠（正在抓或练的这只除外）。"
+	stat_heading.tooltip_text=("绝对：每项门槛是填写的固定数值（≥），抓到更好的宠物也不变，也不需要摸底；排队的宠物只按这些数值判断。已有极品后用它放宽门槛。" if fixed else "最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新。\n还没有这个品种时先摸底%d秒：不设门槛找，按保留规则挑出最好的几只抓来，之后按新的最高继续。" % AutomationSettings.SURVEY_SECONDS)+"\n每个品种默认勾三围合和攻击（任一满足，最高 − 1）；全部不勾就不按属性判断，每只升满120级的都算留下。\n改动立即用于正在进行的找宠（正在抓或练的这只除外）。"
 	for i in range(StatFilter.METRICS.size()):
 		var metric:String=StatFilter.METRICS[i]
 		var condition:={"enabled":true,"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value)}

@@ -6,6 +6,7 @@ extends SceneTree
 const Backend = preload("res://server/backend.gd")
 const Battle = preload("res://server/battle_session.gd")
 const Progression = preload("res://server/progression.gd")
+const ConditionsOff = preload("res://tests/support/conditions_off.gd")
 const PetComparison = preload("res://scripts/pet_comparison.gd")
 const PREFS := "user://pet-records-test-viewer.cfg"
 var failures := 0
@@ -40,9 +41,11 @@ func cycle_capture(game, seed_value: int) -> bool:
 	var flow = game.pet_workflow
 	var hunt = game.pet_hunt_menu
 	var helper = game.training_helper
-	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false,"stop_after":1}}}) # 展示模式 off: this suite covers the full-speed find-pet cycle (stop to compare).
-	if not flow.start_cycle():return false
 	var fixture := newborn(game,seed_value)
+	# 展示模式 off: this suite covers the full-speed find-pet cycle (stop to
+	# compare). The newborn's species has no 属性条件, so no 摸底 comes first.
+	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.for_troop(fixture.troop).merged({"hunt":{"showcase":false,"stop_after":1}})})
+	if not flow.start_cycle():return false
 	hunt.hunt_catalog = fixture;hunt.scan_once()
 	for i in range(100):
 		game.battle_view._process(0.2);helper.advance();flow.advance()

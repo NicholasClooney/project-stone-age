@@ -63,10 +63,11 @@ func run() -> void:
 	backend.save_path = SAVE
 	backend.session.grant_starter_pets()
 	var automation = backend.automation
-	# 斑尼迪克 has 属性条件 (攻击 ≥ 290); the other two none.
+	# 斑尼迪克 has 属性条件 (攻击 ≥ 290); the other two have the default 三围合 / 攻击 turned off.
 	set_settings(backend,{"stat_filters":{str(PICKY):{"mode":"any","threshold_mode":"absolute","conditions":{"sum":{"enabled":false},"attack":{"enabled":true,"value":290}}},
-		str(PLAIN):{"conditions":{"sum":{"enabled":false}}},str(OTHER):{"conditions":{"sum":{"enabled":false}}}}})
-	check(not automation.filter_for(PLAIN).conditions.values().any(func(c):return c.enabled) and automation.filter_for(PICKY).conditions.attack.enabled,"the run has one species with conditions and two without")
+		str(PLAIN):{"conditions":{"sum":{"enabled":false},"attack":{"enabled":false}}},str(OTHER):{"conditions":{"sum":{"enabled":false},"attack":{"enabled":false}}}}})
+	begin(backend)
+	check(not automation.filter_for(PLAIN).conditions.values().any(func(c):return c.enabled) and not automation.filter_for(OTHER).conditions.values().any(func(c):return c.enabled) and automation.filter_for(PICKY).conditions.attack.enabled,"the run has one species with conditions and two without")
 
 	# ---- 0: the user's case, a plain species no longer stops the run ----
 	set_settings(backend,{"hunt":{"stop_after":0}})

@@ -22,7 +22,8 @@ func run()->void:
 	var flow=game.pet_workflow;flow.set_process(false);flow.timer_clock=func():return fake_msec
 	game.training_helper.set_process(false);game.training_helper.capture_hp.value=100
 	check(Filter.enabled(Filter.defaults(92)) and int(Filter.defaults(92).conditions.sum.minus)==1 and int(blue_filter().conditions.sum.value)==624,"blue dragon defaults to 三围合 ≥ 最高 − 1")
-	check(not Filter.enabled(Filter.defaults(194)),"blue default does not leak to other species")
+	var other:=Filter.defaults(194)
+	check(other.conditions.sum.enabled and other.conditions.attack.enabled and int(other.conditions.sum.keep)==0 and int(other.conditions.attack.keep)==0,"other species default to 三围合 or 攻击 too, without blue's 留前")
 	hunt.open_menu();hunt.show_stat_settings()
 	check(hunt.stat_page.visible and not hunt.capture_page.visible and not hunt.species.visible,"attribute tab exclusively displays its own controls")
 	var shown_best:=Filter.maxima(preload("res://scripts/keep_rule.gd").species_pets(game.state.profile,92).map(preload("res://scripts/keep_rule.gd").stats_of))
@@ -203,7 +204,9 @@ func run()->void:
 	flow.phase="train";flow.target_stat_filter.conditions.sum.value=999;flow.target_stat_filter.conditions.attack.value=999;flow.complete_trained_pet(good)
 	check(flow.phase=="paused" and game.session.snapshot().pet_storage.size()==stored_before and not hunt.running,"storage rejection pauses without deleting, swapping or restarting")
 	game.session._profile.ride_pet=-1
-	flow.phase="train";flow.target_stat_filter=Filter.defaults(194);flow.complete_trained_pet(good)
+	var unconditioned:=Filter.defaults(194)
+	for condition in unconditioned.conditions.values():condition.enabled=false
+	flow.phase="train";flow.target_stat_filter=unconditioned;flow.complete_trained_pet(good)
 	check(flow.phase=="compare" and game.session.snapshot().pet_storage.size()==stored_before,"no enabled conditions retains legacy single cycle even below blue threshold")
 	game.adventure_menu.hide();game.paused_input=false
 	check(flow.start_cycle(),"fresh user start accepted after comparison")

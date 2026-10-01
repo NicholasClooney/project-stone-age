@@ -1,4 +1,5 @@
 extends SceneTree
+const ConditionsOff=preload("res://tests/support/conditions_off.gd")
 var failures:=0
 class FixedTroop extends RefCounted:
 	var troop: Dictionary
@@ -23,7 +24,6 @@ func run() -> void:
 	flow.stop_cycle();flow.advance()
 	check(flow.phase=="paused" and not hunt.running,"stop cancels hunt without restarting")
 	hunt.close_menu();hunt.apply_preset(0)
-	check(flow.start_cycle(),"new cycle uses current hunt criteria")
 	var fixture=FixedTroop.new()
 	var rng=RandomNumberGenerator.new();rng.seed=1234
 	for i in range(100):
@@ -34,6 +34,10 @@ func run() -> void:
 				fixture.troop={"enemies":[actor]};break
 		if not fixture.troop.is_empty():break
 	check(not fixture.troop.is_empty(),"small fixture uses real local newborn with capture-ready health")
+	# The single capture-and-compare cycle: the newborn's species has its
+	# default 属性条件 turned off, so no 摸底 comes first.
+	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.for_troop(fixture.troop)})
+	check(flow.start_cycle(),"new cycle uses current hunt criteria")
 	hunt.hunt_catalog=fixture;hunt.scan_once()
 	check(flow.phase=="capture" and helper.capture_target==0,"hunt hands exact matched target to capture phase")
 	for i in range(100):

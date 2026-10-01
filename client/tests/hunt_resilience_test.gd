@@ -7,6 +7,7 @@ extends SceneTree
 ## failure three times in a row stops; a shown training battle that ends early
 ## is retried once, then levelled instantly. 宠物记录 opens from the window.
 const Automation = preload("res://server/automation.gd")
+const ConditionsOff = preload("res://tests/support/conditions_off.gd")
 const LOG := "user://hunt-resilience-test.stop-log.jsonl"
 var failures := 0
 
@@ -61,6 +62,9 @@ func run() -> void:
 				fixture.troop = {"enemies":[actor]};break
 		if not fixture.troop.is_empty():break
 	check(not fixture.troop.is_empty(),"a real local newborn is the fixture")
+	# The cycles here test skips and stops, not 属性条件: the fixture's species
+	# has its default conditions off, so no 摸底 or threshold drop gets in the way.
+	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.for_troop(fixture.troop)})
 
 	# ---- stop logging -----------------------------------------------------
 	check(automation.start_hunt(automation.hunt_request()),"a scan on its own starts")

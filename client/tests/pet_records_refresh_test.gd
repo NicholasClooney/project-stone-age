@@ -3,6 +3,7 @@ extends SceneTree
 const Wait=preload("res://tests/support/wait.gd")
 const PetTable=preload("res://scripts/pet_table.gd")
 const Progression=preload("res://server/progression.gd")
+const ConditionsOff=preload("res://tests/support/conditions_off.gd")
 var failures:=0
 func _initialize()->void:call_deferred("run")
 func check(ok:bool,note:String)->void:
@@ -114,6 +115,8 @@ func run()->void:
 		if tab=="released":check(menu.records_sorts.released==["attack",false],"live refresh preserves release sort")
 	var automation=game.backend.automation
 	automation.flow_showcase=true;automation.flow_phase="hunt"
+	# The queued species have their default 属性条件 off: every hit queues.
+	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.patch([1,2,3])})
 	var actor:Dictionary=Progression.species_actor("wooli",1,573)
 	actor.merge({"species":"wooli","name":"乌力","template_id":1,"level":1,"xp":0})
 	for i in range(10):automation._showcase_enqueue(i,0,{"enemies":[actor]},{"valid":true,"offsets":[0,0,0,0],"total_offset":0})

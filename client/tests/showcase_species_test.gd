@@ -9,6 +9,7 @@ extends SceneTree
 ## under another real template id, so their stats compare across species).
 const Backend = preload("res://server/backend.gd")
 const Progression = preload("res://server/progression.gd")
+const ConditionsOff = preload("res://tests/support/conditions_off.gd")
 const SAVE := "user://showcase-species-test.json"
 const MAP := 100
 const CELL := Vector2i(637,493)
@@ -33,9 +34,11 @@ func new_backend(from_save: bool):
 	backend.automation.client_attached = false
 	return backend
 
-func start(backend) -> void:
+## The queued species have their default 属性条件 off: hits queue by the keep
+## rule alone, with no 摸底 or threshold first.
+func start(backend, species: Array) -> void:
 	backend.handle({"type":"grant_starter_pets"})
-	backend.handle({"type":"set_automation_settings","settings":{"hunt":{"fast":false,"total":-8,"offsets":[-2,-2,-2,-2],"showcase":true,"queue":3,"auto_capture":true,"train_after_capture":true}}})
+	backend.handle({"type":"set_automation_settings","settings":ConditionsOff.patch(species).merged({"hunt":{"fast":false,"total":-8,"offsets":[-2,-2,-2,-2],"showcase":true,"queue":3,"auto_capture":true,"train_after_capture":true}})})
 	backend.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	var started: Dictionary = backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	check(bool(started.ok) and backend.automation.flow_showcase and backend.automation.queue_limit()==3,"a find-pet cycle with 后台搜宠 runs, 排队上限 3")
@@ -79,7 +82,6 @@ func grouped(automation) -> bool:
 func run() -> void:
 	clean()
 	var backend = new_backend(false)
-	start(backend)
 	var automation = backend.automation
 	var base := newborn(backend)
 	check(not base.is_empty(),"a real newborn to queue")
@@ -88,6 +90,7 @@ func run() -> void:
 	var a := int(base.template_id)
 	var b := int(ids[0])
 	var c := int(ids[1])
+	start(backend,[a,b,c])
 	backend.session.release_events.clear()
 
 	# Species A fills its queue and overflows; B and C stay untouched.
