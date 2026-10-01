@@ -60,7 +60,18 @@ func roll(map_id: int, cell: Vector2i, rng: RandomNumberGenerator, held_items: A
 		if (requires<0 or requires in held_items) and (excludes<0 or excludes not in held_items):candidates.append(choice)
 	var group_id := _weighted(candidates,rng)
 	if group_id<0:return {}
-	var group: Dictionary = data.groups[str(group_id)]
+	return roll_group(area,group_id,rng,held_items)
+
+## Exact source group, with no weighted area-group draw. Borrowed training
+## calls this directly; ordinary roll retains its original random stream.
+func roll_group(area: Dictionary, group_id: int, rng: RandomNumberGenerator, held_items: Array = []) -> Dictionary:
+	last_error=""
+	if area.is_empty() or int(area.get("probability_max",0))<=0 or bool(area.get("invalid_weights",false)) or int(area.get("event_now",-1))>0 or int(area.get("event_end",-1))>0:return {}
+	if not area.get("groups",[]).any(func(choice):return int(choice.id)==group_id and int(choice.get("weight",0))>0):return {}
+	var group: Dictionary = data.get("groups",{}).get(str(group_id),{})
+	if group.is_empty():return {}
+	var requires:=int(group.get("requires_item",-1));var excludes:=int(group.get("excludes_item",-1))
+	if (requires>=0 and not requires in held_items) or (excludes>=0 and excludes in held_items):return {}
 	if group.get("invalid_weights",false):
 		last_error = "source group %d has missing/negative enemy probabilities"%group_id
 		return {}

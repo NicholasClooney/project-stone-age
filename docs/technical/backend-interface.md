@@ -358,3 +358,15 @@ original-equipment migration and preserves validated v6 UIDs/durability.
 估算在 `TrainingTroops.advance(1000)` 的短帧预算中续算并缓存队形分布，不抽随机数、不改变压力或生成战斗记录。原始 roll 完整生成敌人、成长和掉落后，只有组 id 未达阈值才跳过 `open_battle`；跳过不发经验/石币/物品，仍消费完整原随机流并把 encounter pressure 重置为当地 minimum。compact tick 每次最多跳过一组后让出，下一 tick 继续；素材和战斗保护仍走原路径。
 
 可复用接口：`prepare(catalog,map_id,cell,profile,settings,clones,best_others,party_context)`、`advance(budget_usec)`、`summary()`（group_id、expected_xp、expected_enemies、enemy_counts、entry_probability、allowed、threshold、真实参与者）、`local_best_expected()`（当地组中最高条件期望），以及 `remaining_xp(actor,target_level)`（按当前 `level*30` 升级公式精确剩余经验，Lv.120封顶）。这项不创建额外遇敌池；经验估算和剩余经验接口可供后续功能复用。
+
+### 借用高等级敌群练宠（非原版助手）
+
+角色 `training.borrow_troops` 默认true，布尔校验沿现有协议：非布尔拒绝，null仍是标准“清除覆盖回默认”；旧flat auto_start非bool（含null）拒绝。窗口明确label/help，经link request和snapshot同步，独立于select_troops。只实际训练宠物/后台showcase训练借用；已开首场、捕获、搜宠、手动/NPC/任务不调用池。
+
+触发严格 `remaining_xp > 5*local_best_expected`，每场重算，target cap120。当地0XP且有剩余按无限场处理。池为四个已审核原组，每场按权威item/event/art过滤后均匀抽组，直接 `EncounterCatalog.roll_group(area,group_id,rng,held)`，不从异地图普通roll误抽别组。原roll保留原组加权抽取和RNG顺序，C helper与hunt catalog不改。
+
+权威runner调用 `Backend.prepare_training_borrow()`：完整独立roll先持久化可选v6字段training_borrow_rng的decimal-string seed/state，再返回troop与纯preview config。真实Battle core/训练policy预测按1000μs逐回合续算，实际首seed必须赢且五次至少四赢；同target uid/目标/完整角色clone/member配置/位置才允许原start_wild_battle_config和open_battle。无池、预测不能胜、配置变化或存档失败明确暂停。LAN共享接入真实member preview和gap_exp，未共享沿已有pause，不猜future kill credit。
+
+`battle.training_borrow`携带source map/name/cell/area/group/ground_bitmap/field/texture/source_music。UI（含无backend remote）只读snapshot选择原来源地面背景，不移动角色/huntorigin；仍播原battle音乐，source环境music仅审计metadata。EXP/BATTLEGOLD和原drop白名单、claimed/replay-save不变；池没有已启用enemy563，不新发未审计物品。
+
+resume保存池seed/state，角色最新状态优先，不回滚较旧resume，不重用预测/中断的roll。原Session按已结算battle id拒绝重复收益。旧v6可选字段迁移，不加SAVE_VERSION。[候选池审计](../reverse-engineering/training-borrow-pool.md)完整列出原文件行号、地图/组/敌人、原等级、门控、背景及实测seed场数。

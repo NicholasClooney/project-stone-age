@@ -71,6 +71,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	var pet: Dictionary = config.get("pet", {}).duplicate(true)
 	_state = {"active":true,"outcome":"","battle_id":config.get("battle_id", ""),"player_hp":config.get("player_hp",48),"player_max_hp":config.get("player_max_hp",48),"enemy_hp":config.get("enemy_max_hp",32),"enemy_max_hp":config.get("enemy_max_hp",32),"enemy_name":config.get("enemy_name","乌力"),"enemy_species":config.get("enemy_species","wooli"),"enemy_sprite":config.get("enemy_sprite",100250),"pet_sprite":pet.get("sprite",100250),"pet_name":pet.get("name",""),"skill_unlocked":pet.get("skill_unlocked",false),"boss":config.get("boss",false),"turn":0,"events":["遭遇野生石器伙伴！"],"pet":pet,"pet_command":"attack","pet_hp":pet.get("hp",0),"pet_max_hp":pet.get("max_hp",0),"potions":config.get("potions",0),"captured_species":"","xp":0,"gold":0,"skill_used":false}
 	var initial_order: Array[String] = []
+	if config.get("training_borrow") is Dictionary:_state.training_borrow=config.training_borrow.duplicate(true)
 	_state["player_resistances"]=config.get("player_resistances",[0,0,0,0,0,0]).duplicate()
 	_state["player_weapon"]=config.get("player_weapon","")
 	_state["original_equipment_items"]=config.get("original_equipment_items",[]).duplicate(true)

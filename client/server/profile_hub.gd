@@ -106,6 +106,7 @@ func open_profile(id: String) -> String:
 	backend.party_battle_hook = party_battles.open.bind(id)
 	backend.party_guard = _party_guard.bind(id)
 	backend.training_reward_context = party_battles.training_context.bind(id)
+	backend.training_borrow_preview = party_battles.training_preview.bind(id)
 	backend.quest_visit_guard = _quest_visit_guard.bind(id)
 	backends[id] = backend
 	return ""

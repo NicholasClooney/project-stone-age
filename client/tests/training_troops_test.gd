@@ -14,6 +14,7 @@ func check(ok: bool, label: String) -> void:
 	if not ok:failures+=1
 func fresh():
 	var b=Backend.new();root.add_child(b);b.set_process(false);b.automation.client_attached=false
+	b.handle({"type":"set_automation_settings","settings":{"training":{"borrow_troops":false}}})
 	b.handle({"type":"grant_starter_pets"});b.session.select_pet(0)
 	b.handle({"type":"gm_raise_level","index":-1,"target":20})
 	b.handle({"type":"gm_set_base_stat","index":-1,"stat":"toughness","value":500})
@@ -29,7 +30,7 @@ func row(plan,id: int) -> Dictionary:
 		if int(r.group_id)==id:return r
 	return {}
 func begin(b, enabled: bool=true, preset: String="attack") -> bool:
-	return b.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":[CELL.x,CELL.y],"settings":{"select_troops":enabled,"xp":10,"level":0,"limit":100,"preset":preset,"compact":true,"spirit":false,"hp":1}}).ok
+	return b.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":[CELL.x,CELL.y],"settings":{"select_troops":enabled,"borrow_troops":false,"xp":10,"level":0,"limit":100,"preset":preset,"compact":true,"spirit":false,"hp":1}}).ok
 func same(troop: Dictionary, b) -> bool:
 	var actors: Array=b.session._pending.get("enemies",[])
 	if actors.size()!=troop.get("enemies",[]).size():return false
@@ -134,7 +135,7 @@ func run() -> void:
 	check(manual.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":[CELL.x,CELL.y]}).ok and manual.automation.single_battle,"enabling automation in an already-open battle finishes that battle")
 	manual.handle({"type":"auto_stop"});manual.queue_free();await process_frame
 
-	var prefs=fresh();prefs.handle({"type":"set_automation_settings","settings":{"training":{"select_troops":false}}})
+	var prefs=fresh();prefs.handle({"type":"set_automation_settings","settings":{"training":{"select_troops":false,"borrow_troops":false}}})
 	var save:="user://training-troops.json";check(prefs.session.save_game(save),"selection override saves in real character v6 file")
 	var restored=fresh();check(restored.session.load_game(save) and not Settings.effective(restored.session.automation_settings()).training.select_troops,"selection override survives real save load")
 	var independent=fresh();check(Settings.effective(independent.session.automation_settings()).training.select_troops,"another character retains default selection")

@@ -401,9 +401,16 @@ func required_art(next_state: Dictionary) -> Dictionary:
 		if int(ally.get("mounted_sprite",-1)) >= 0:riding[str(ally.mounted_sprite)] = true
 	var files: Array = []
 	if is_instance_valid(world) and is_instance_valid(battlefield):
-		if next_background.is_empty():next_background = background_selector.choose(_ground_bitmap())
+		if next_background.is_empty():next_background = _choose_background(next_state)
 		files.append(next_background)
 	return {"sprites":sprites.keys(),"riding":riding.keys(),"files":files}
+
+## Authority supplies the audited source ground for a borrowed encounter.
+## Remote clients have no backend; the ordinary scene keeps its own ground.
+func _choose_background(next_state: Dictionary) -> String:
+	var borrowed: Dictionary=next_state.get("training_borrow",{})
+	if not borrowed.is_empty():return str(borrowed.get("texture",""))
+	return background_selector.choose(_ground_bitmap())
 
 func _ground_bitmap() -> String:
 	return world.terrain.ident_at(int(world.cell.y)*int(world.data.width)+int(world.cell.x))
@@ -412,7 +419,7 @@ func open_battle(next_state: Dictionary) -> void:
 	hunt_target_index=-1
 	capture_transition()
 	if is_instance_valid(battlefield) and is_instance_valid(world):
-		battlefield.texture = load(next_background if not next_background.is_empty() else background_selector.choose(_ground_bitmap()))
+		battlefield.texture = load(next_background if not next_background.is_empty() else _choose_background(next_state))
 		PerfRegistry.track_texture("battle",battlefield.texture.resource_path if battlefield.texture!=null else "",battlefield.texture)
 		next_background = ""
 	elapsed = 0.0

@@ -82,6 +82,9 @@ var compact_active := false
 var battles := 0
 var skipped := 0
 var training_skipped := 0
+var training_borrow_pending: Dictionary={}
+var training_borrow_forecast=preload("res://server/training_forecast.gd").new()
+var training_borrowed:=0
 var training_selection = preload("res://server/training_troops.gd").new()
 var _training_yield := false
 var unavailable_streak := 0
@@ -258,7 +261,8 @@ func _init(owner) -> void:
 # ---- commands --------------------------------------------------------------
 
 func start(command: Dictionary) -> Dictionary:
-	if command.get("settings") is Dictionary and command.settings.has("select_troops") and not command.settings.select_troops is bool:return _reply(false,"select_troops must be bool")
+	for flag in ["select_troops","borrow_troops"]:
+		if command.get("settings") is Dictionary and command.settings.has(flag) and not command.settings[flag] is bool:return _reply(false,"%s must be bool"%flag)
 	_set_position(command)
 	match str(command.get("kind","")):
 		"battle":return _start_battle_runner(command)
@@ -331,7 +335,7 @@ func usable_templates(level_one: bool) -> Array:
 func profile_settings_changed() -> void:
 	if not (running or hunt_running or flow_active()):return
 	var fresh := profile_settings()
-	for key in ["select_troops","capture_hp","capture_pet","capture_pet_id","capture_pet_max_level","capture_fallback_attempts","capture_fallback_rate","capture_fallback_hp"]:settings[key] = fresh[key]
+	for key in ["select_troops","borrow_troops","capture_hp","capture_pet","capture_pet_id","capture_pet_max_level","capture_fallback_attempts","capture_fallback_rate","capture_fallback_hp"]:settings[key] = fresh[key]
 	if (hunt_running or flow_active()) and _profile_targets_key()!=_hunt_profile_targets_key:
 		_hunt_profile_targets_key=_profile_targets_key()
 		_apply_hunt_targets()
@@ -488,6 +492,8 @@ func tick_battle(delta: float) -> void:
 ## One battle-runner step.
 func step() -> void:
 	if not running:return
+	if not training_borrow_pending.is_empty():
+		_advance_training_borrow();return
 	if position_map!=origin_map or position_cell!=origin_cell:
 		stop("位置发生变化");return
 	var state: Dictionary = backend.battle.snapshot()
@@ -627,7 +633,7 @@ func step() -> void:
 	_emit_status()
 	backend.session.protect_pets = bool(settings.get("protect",true))
 	var training_groups: Variant=null
-	if bool(settings.get("select_troops",true)) and str(settings.get("preset","attack"))!="capture" and not single_battle:
+	if (bool(settings.get("select_troops",true)) or bool(settings.get("borrow_troops",true))) and str(settings.get("preset","attack"))!="capture" and not single_battle:
 		var reward_settings: Dictionary=settings.duplicate()
 		reward_settings.target_level=training_pet_level if not training_pet_id.is_empty() else (120 if int(settings.get("level",0))<=0 else int(settings.level))
 		var party_rewards: Dictionary=backend.training_reward_context.call() if backend.training_reward_context.is_valid() else {}
@@ -635,8 +641,11 @@ func step() -> void:
 		training_selection.advance(1000)
 		if not training_selection.ready:
 			_training_yield=true;compact_active=false;turn_text="正在计算当地敌群预计经验……";_emit_status();return
-		if training_selection.allowed.is_empty():stop(str(training_selection.participant.get("unavailable","当地没有可进入且能获得经验的练级敌群，请换个位置或关闭挑敌群。")));return
-		training_groups=training_selection.allowed
+		if training_selection.participant.has("unavailable"):stop(str(training_selection.participant.unavailable));return
+		if bool(settings.get("borrow_troops",true)) and preload("res://server/training_borrow.gd").should_borrow(training_selection.participant,training_selection.local_best_expected()):
+			_begin_training_borrow();return
+		if bool(settings.get("select_troops",true)) and training_selection.allowed.is_empty():stop(str(training_selection.participant.get("unavailable","当地没有可进入且能获得经验的练级敌群，请换个位置或关闭挑敌群。")));return
+		if bool(settings.get("select_troops",true)):training_groups=training_selection.allowed
 	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell,training_groups) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
 	if not opened.ok:
 		compact_active = false
@@ -671,6 +680,32 @@ func _presentation_done(state: Dictionary) -> bool:
 		_shown_msec = Time.get_ticks_msec()
 	return Time.get_ticks_msec()-_shown_msec >= (SHOWN_PRESENT_TIMEOUT_MSEC if showcase_show_battle else PRESENT_TIMEOUT_MSEC)
 
+## Planning consumes an independent persisted roll once. Forecast continuations
+## use a pure copy; profile/target/clone/member/config changes cannot open it.
+func _begin_training_borrow() -> void:
+	var prepared: Dictionary=backend.prepare_training_borrow()
+	if not bool(prepared.ok):stop(str(prepared.reason));return
+	training_borrow_pending={"troop":prepared.troop,"config":prepared.config,"settings":settings.duplicate(true),"pet_id":training_pet_id,"target":training_pet_level,"serial":backend.encounter_serial}
+	training_borrow_forecast.begin(prepared.config,settings,42+backend.encounter_serial+1)
+	_advance_training_borrow()
+
+func _advance_training_borrow() -> void:
+	_training_yield=true;compact_active=false
+	var pending:=training_borrow_pending
+	if position_map!=origin_map or position_cell!=origin_cell or backend.battle_open or not backend.valid_training_borrow(pending.troop) or pending.config!=backend.training_borrow_config(pending.troop) or pending.settings!=settings or str(pending.pet_id)!=training_pet_id or int(pending.target)!=training_pet_level or int(pending.serial)!=backend.encounter_serial:
+		stop("借用敌群预测期间目标、设置、镜像或队伍发生变化，已暂停，请重新开始。");return
+	training_borrow_forecast.advance(1000)
+	if not training_borrow_forecast.ready:
+		turn_text="正在按真实战斗规则预测借用敌群……";_emit_status();return
+	var forecast: Dictionary=training_borrow_forecast.summary()
+	if not bool(forecast.ok):stop("借用高等级敌群预测%d次只赢%d次（%s），当前战力或保护设置不能安全练级；已暂停，没有进入战斗。"%[int(forecast.trials),int(forecast.wins),str(forecast.reason)]);return
+	var config: Dictionary=backend.session.start_wild_battle_config(pending.troop)
+	if config.is_empty():stop("借用敌群进战配置已改变或无法通过校验，已暂停。");return
+	training_borrow_pending={};training_borrowed+=1;compact_active=bool(settings.compact)
+	backend.open_battle(config)
+	turn_text="借用 %s · 原敌群 #%d（不移动角色）。"%[str(pending.troop.training_borrow.map_name),int(pending.troop.group_id)]
+	_emit_status()
+
 func _close_battle() -> void:
 	compact_active = false
 	if backend.battle_open:backend.close_battle()
@@ -696,7 +731,7 @@ func start_training() -> void:
 	origin_map = position_map
 	origin_cell = position_cell
 	initial_level = int(backend.session.snapshot().player.level)
-	battles = 0;skipped = 0;training_skipped = 0;unavailable_streak = 0;earned_xp = 0;earned_pet_xp = 0;turns = 0;cooldown = 0;stop_reason = "";starting_ride = -1;turn_text = ""
+	battles = 0;skipped = 0;training_skipped = 0;training_borrowed=0;training_borrow_pending={};unavailable_streak = 0;earned_xp = 0;earned_pet_xp = 0;turns = 0;cooldown = 0;stop_reason = "";starting_ride = -1;turn_text = ""
 	if str(settings.preset)=="train_pet":
 		if single_battle and backend.battle.snapshot().get("allies",[]).is_empty():
 			stop_reason = "带宠升级请在遇敌前开启，以生成完整镜像队。"
@@ -789,6 +824,7 @@ func _protect_pets() -> void:
 	backend.session.protect_pets = bool(profile_settings().get("protect",true))
 
 func stop(reason: String) -> void:
+	training_borrow_pending={}
 	release_clone_override()
 	backend.session.protect_pets = false
 	running = false
@@ -1773,7 +1809,8 @@ func resume_state() -> Dictionary:
 			flow[field] = value.duplicate(true) if value is Dictionary or value is Array else value
 		state.flow = flow
 	elif kind=="training":
-		state.training = {"pet_id":training_pet_id,"level":training_pet_level,"battles":battles,"skipped":skipped,"training_skipped":training_skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,"initial_level":initial_level}
+		state.training = {"borrowed":training_borrowed,"pet_id":training_pet_id,"level":training_pet_level,"battles":battles,"skipped":skipped,"training_skipped":training_skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,"initial_level":initial_level}
+	state.borrow_rng=backend.session.training_borrow_rng()
 	return state
 
 ## Changes whenever the run moves on in a way the resume file must follow at
@@ -1784,7 +1821,7 @@ func resume_key() -> String:
 	var queued := PackedInt64Array()
 	for entry in showcase_queue:queued.append(int(entry.get("index",-1)))
 	return str([flow_phase,flow_stop_pending.is_empty(),hunt_running,running,single_battle,pending_resume.is_empty(),flow_pet_id,
-		flow_stored_count,flow_kept_count,flow_collected_count,flow_skipped_count,flow_released_count,queued,showcase_current.get("index",-1),training_pet_id])
+		flow_stored_count,flow_kept_count,flow_collected_count,flow_skipped_count,flow_released_count,queued,showcase_current.get("index",-1),training_pet_id,backend.session.training_borrow_rng()])
 
 ## A state written by record_shutdown, read at startup. The character is taken
 ## to be where the run was until a client says otherwise.
@@ -1814,6 +1851,7 @@ func try_resume() -> void:
 	pending_resume = {}
 	settings = state.get("settings",{}).duplicate(true)
 	if not settings.has("speed"):settings.speed = DEFAULT_SPEED
+	if backend.session.training_borrow_rng().is_empty() and preload("res://server/training_borrow.gd").valid_rng(state.get("borrow_rng")):backend.session.set_training_borrow_rng(state.borrow_rng)
 	match str(state.kind):
 		"flow":_resume_flow(state)
 		"hunt":_resume_hunt(state)
@@ -1849,6 +1887,7 @@ func _resume_training(state: Dictionary) -> void:
 		settings = kept
 	if not running:
 		log_line("[自动练级] 服务器重启后无法恢复：%s" % stop_reason);return
+	training_borrowed=int(saved.get("borrowed",0))
 	battles = int(saved.get("battles",0));skipped = int(saved.get("skipped",0));training_skipped = int(saved.get("training_skipped",0))
 	earned_xp = int(saved.get("earned_xp",0));earned_pet_xp = int(saved.get("earned_pet_xp",0));initial_level = int(saved.get("initial_level",initial_level))
 	turn_text = RESUMED
@@ -2445,7 +2484,7 @@ func _showcase_resume() -> void:
 func status() -> Dictionary:
 	return {
 		"running":running,"compact":compact_active,"single_battle":single_battle,"capture_target":capture_target,
-		"stop_reason":stop_reason,"battles":battles,"skipped":skipped,"training_skipped":training_skipped,"training_selection":training_selection.summary(),"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,
+		"stop_reason":stop_reason,"battles":battles,"skipped":skipped,"training_skipped":training_skipped,"training_borrowed":training_borrowed,"training_borrow_forecast":training_borrow_forecast.summary(),"training_selection":training_selection.summary(),"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,
 		"turns":turns,"initial_level":initial_level,"settings":settings.duplicate(true),"training_pet_id":training_pet_id,
 		"clone_override":clone_override_active,"previous_clone":previous_clone_enabled,"turn_text":turn_text,
 		"finish_after_capture":finish_after_capture,"origin_map":origin_map,"origin_cell":[origin_cell.x,origin_cell.y],

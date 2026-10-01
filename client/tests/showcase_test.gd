@@ -49,6 +49,9 @@ func run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
 	var game = load("res://scenes/main.tscn").instantiate();game.profile_persistence = false;game.viewer_prefs_path = PREFS;root.add_child(game)
 	await process_frame
+	# This suite deliberately presents several local training battles near120.
+	# Default borrowed showcase training has its own real-capture core coverage.
+	game.link.request({"type":"set_automation_settings","settings":{"training":{"borrow_troops":false}}})
 	game.session.grant_starter_pets()
 	game.load_area_id(100,Vector2i(637,493))
 	game.session.gm_raise_level(-1,120);game.session.gm_set_base_stat(-1,"toughness",500);game.session.gm_heal()

@@ -42,6 +42,7 @@ const SPECIES := {
 }
 var _profile: Dictionary
 var _pending: Dictionary = {}
+var _training_preview
 ## Pets the open battle's live state adds to battle_pets() (pet_id -> reason):
 ## one switched in, one that already has kill credit, the capture helpers.
 ## The backend sets it; without it only the battle's start roster counts.
@@ -240,6 +241,30 @@ func best_other_pets(count: int) -> Array:
 func cancel_pending_battle(battle_id: String) -> void:
 	if str(_pending.get("battle_id",""))==battle_id:_pending.clear()
 
+## Independent authority-only random stream. Decimal strings preserve all
+## 64 bits through JSON. Optional in existing v6 saves; no SaveVersion bump.
+func training_borrow_rng() -> Dictionary:
+	return _profile.get("training_borrow_rng",{}).duplicate(true)
+
+func set_training_borrow_rng(value: Dictionary) -> bool:
+	if not preload("res://server/training_borrow.gd").valid_rng(value):return false
+	_profile.training_borrow_rng=value.duplicate(true)
+	return true
+
+## Pure forecast config: actual authority rules and roster, no pending record,
+## battle id allocation, loyalty mutation or reward in the live session.
+func preview_wild_battle_config(troop: Dictionary) -> Dictionary:
+	if _training_preview==null:_training_preview=get_script().new()
+	var preview=_training_preview
+	preview._pending.clear()
+	preview.world_catalog=world_catalog
+	preview._profile=_profile.duplicate(true)
+	preview.clone_squad_enabled=clone_squad_enabled
+	preview.clone_best_others=clone_best_others
+	preview.experience_multiplier=experience_multiplier
+	preview.protect_pets=protect_pets
+	return preview.start_wild_battle_config(troop)
+
 func start_wild_battle_config(troop: Dictionary, clear_target: int = -1) -> Dictionary:
 	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}
 	var enemies: Array = troop.enemies.duplicate(true)
@@ -281,6 +306,7 @@ func start_wild_battle_config(troop: Dictionary, clear_target: int = -1) -> Dict
 	config.battle_gold = int(_profile.player.level)*10
 	config.area_id = int(troop.get("area_id",-1))
 	config.group_id = int(troop.get("group_id",-1))
+	if troop.has("training_borrow"):config.training_borrow=troop.training_borrow.duplicate(true)
 	config.protect_pets = protect_pets
 	_pending = config.duplicate(true)
 	return config
@@ -1377,6 +1403,7 @@ func load_game(path: String) -> bool:
 	return false
 
 func _valid_profile(value: Variant) -> bool:
+	if value is Dictionary and value.has("training_borrow_rng") and not preload("res://server/training_borrow.gd").valid_rng(value.training_borrow_rng):return false
 	if value is Dictionary and value.has("no_random_encounters") and not value.no_random_encounters is bool:return false
 	if value is Dictionary and value.has("default_companions_claimed") and not value.default_companions_claimed is bool:return false
 	if value is Dictionary and value.has("gm_modified") and not value.gm_modified is bool:return false
