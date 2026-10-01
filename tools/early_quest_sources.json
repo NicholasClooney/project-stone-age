@@ -1,0 +1,23 @@
+{
+  "version": 1,
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "create": "gmsv/data/npc/sainasu/event/event02.create",
+  "scripts": [
+    "sainasu/event/event02_1",
+    "sainasu/event/event02_2"
+  ],
+  "items": [
+    2414,
+    2415
+  ],
+  "jobs": [
+    11
+  ],
+  "sources": {
+    "gmsv/data/npc/sainasu/event/event02.create": "1b0f4e68ad7ddcae43e42192999f8241efb23d2ac6880735f05bfcbb56284254",
+    "gmsv/data/npc/sainasu/event/event02_1": "9ec1284b921ed8f76d21ace9915f89b1376fee74b9eae0652c9c7f6d78be82b0",
+    "gmsv/data/npc/sainasu/event/event02_2": "a6314f5110f645b7bbbd0929d89d0e43ff9574b56ccfe50f1be70a64df1a183c",
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+  }
+}

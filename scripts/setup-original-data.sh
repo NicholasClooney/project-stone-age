@@ -462,6 +462,7 @@ else
   run "$PY" tools/import_battle_backgrounds.py "$CLIENT25"
   run "$PY" tools/import_mvp.py "$CLIENT25"
   run "$PY" tools/import_world.py "$CLIENT25"
+  run "$PY" tools/import_early_quests.py "$CLIENT25" --reference "$SERVER"
   run "$PY" tools/import_pet_training.py "$CLIENT25"
   run "$PY" tools/import_characters.py "$CLIENT25"
   run "$PY" tools/import_faces.py "$CLIENT25"

@@ -81,6 +81,8 @@ const SHOP := ["potion","club","mirror_charm","haru_armor","freya_robe","teo_rob
 var pet_portrait_facing := 1
 var name_edit: LineEdit
 var art: Dictionary = {}
+var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
+var selected_original_item := -1
 var selected_item := "potion"
 var selected_item_slot := "potion"
 const Highlight = preload("res://scripts/legacy_ui_highlight.gd")
@@ -219,6 +221,8 @@ func _rebuild_panel() -> void:
 			elif pet_compare_open and not pet_compare_subject.is_empty():pet_comparison_panel(profile,pet_compare_subject)
 			elif pet_storage_open:pet_storage_panel(profile)
 			else:pet_panel(profile)
+		"journal":
+			journal_panel(profile)
 		"shop":
 			shop_panel(profile)
 		"quest":
@@ -442,6 +446,10 @@ func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
 	image(26061,Vector2(0,159))
 	label(str(profile.player.gold),Vector2(182,84),75,14)
+	var journal_button:=choice("任务日志",Vector2(158,18),"",null)
+	journal_button.name="QuestJournal";journal_button.size=Vector2(105,28)
+	for connection in journal_button.pressed.get_connections():journal_button.pressed.disconnect(connection.callable)
+	journal_button.pressed.connect(func():open_menu("journal"))
 	# Classic five-slot frame: InitItem menu.cpp8940-8973. Weapon is
 	# CHAR_ARM=2 at(61,129), not the top-left accessory slot. The frame
 	# already contains head/body/hand silhouettes; no invented mannequin.
@@ -459,13 +467,16 @@ func inventory_panel(profile: Dictionary) -> void:
 		equipped_slot.tooltip_text=item_name(key)+" · 双击卸下"
 		var selection: String="equipped" if key=="club" else "equipped_mirror" if key=="mirror_charm" else "equipped_"+key
 		Highlight.attach(equipped_slot,Rect2(Vector2(-1,-1),Vector2(50,47)),selected_item_slot==selection)
-		equipped_slot.pressed.connect(func(): selected_item=key;selected_item_slot=selection;rebuild())
+		equipped_slot.pressed.connect(func(): selected_original_item=-1;selected_item=key;selected_item_slot=selection;rebuild())
 		equipped_slot.gui_input.connect(func(event: InputEvent):
 			if event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
 				world.perform_adventure_action(equip_action(key),false)
 		)
-	for i in range(BAG.size()):
-		var key: String = BAG[i]
+	var bag: Array=[]
+	for key in BAG:
+		if int(profile.inventory.get(key,0))-(1 if item_equipped(profile,key) else 0)>0:bag.append(key)
+	for i in range(bag.size()):
+		var key: String = bag[i]
 		var cell := Vector2((i%5)*51,int(i/5)*48)
 		# Authority inventory is total owned; equipment consumes one visible
 		# bag copy without deleting ownership. Spare copies remain in the bag.
@@ -481,12 +492,41 @@ func inventory_panel(profile: Dictionary) -> void:
 		slot.name="ItemSlot_"+key
 		slot.size=Vector2(48,48)
 		slot.tooltip_text=item_name(key)+( "" if key=="potion" else " · 双击装备")
-		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_item_slot==key and bag_count>0)
-		slot.pressed.connect(func(): selected_item=key;selected_item_slot=key;rebuild())
+		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_original_item<0 and selected_item_slot==key and bag_count>0)
+		slot.pressed.connect(func(): selected_original_item=-1;selected_item=key;selected_item_slot=key;rebuild())
 		slot.gui_input.connect(func(event: InputEvent):
 			if key!="potion" and event is InputEventMouseButton and event.button_index==MOUSE_BUTTON_LEFT and event.pressed and event.double_click:
 				if not item_equipped(world.session.snapshot(),key):world.perform_adventure_action(equip_action(key),true)
 		)
+	var originals: Array=profile.get("original_items",[])
+	for index in range(originals.size()):
+		var ident:=int(originals[index])
+		var position_index:=bag.size()+index
+		var cell:=Vector2((position_index%5)*51,int(position_index/5)*48)
+		var data: Dictionary=quest_catalog.items.get(str(ident),{})
+		var icon:=TextureRect.new()
+		var icon_path: String="res://assets/legacy/"+str(data.get("icon_path",""))
+		if ResourceLoader.exists(icon_path):icon.texture=load(icon_path)
+		icon.name="OriginalItemIcon_%d" % index
+		icon.position=Vector2(32,200)+cell-(icon.texture.get_size()/2 if icon.texture!=null else Vector2.ZERO)
+		icon.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		panel.add_child(icon)
+		var slot:=choice("",Vector2(11,175)+cell,"",null)
+		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
+		slot.name="OriginalItemSlot_%d" % index;slot.size=Vector2(48,48)
+		slot.tooltip_text=str(data.get("name",str(ident)))
+		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_original_item==index)
+		slot.pressed.connect(func():selected_original_item=index;selected_item_slot="original_%d" % index;rebuild())
+	for index in range(bag.size()+originals.size(),15):
+		var empty:=choice("",Vector2(11+(index%5)*51,175+int(index/5)*48),"",null,false)
+		empty.name="EmptyItemSlot_%d" % index;empty.size=Vector2(48,48)
+	# Original instances are descriptive quest items, without equipment actions.
+	if selected_original_item>=0 and selected_original_item<originals.size():
+		var data: Dictionary=quest_catalog.items.get(str(int(originals[selected_original_item])),{})
+		label(str(data.get("name","")),Vector2(15,328),240,15).name="OriginalItemName"
+		label(str(data.get("description","")),Vector2(15,354),239,14).name="OriginalItemDescription"
+		return
+	selected_original_item=-1
 	var potion := selected_item=="potion"
 	label(item_name(selected_item),Vector2(15,328),240,15)
 	label(item_description(selected_item),Vector2(15,354),239,12 if selected_item in Spirits.SPIRIT_ITEMS else 14)
@@ -1412,3 +1452,15 @@ func add_pet_favorite_button(parent:Control,pet:Dictionary,prefix:String)->void:
 	toggle.custom_minimum_size=Vector2(26,0)
 	if favorite:toggle.modulate=Color("ffe680")
 	parent.add_child(toggle)
+
+func journal_panel(profile: Dictionary) -> void:
+	stone(Rect2(0,0,704,432))
+	label("任务日志",Vector2(24,16),600,21)
+	var entries: Array=quest_catalog.journal(profile)
+	if entries.is_empty():label("尚无原版任务记录。",Vector2(30,68),600,18)
+	for index in range(entries.size()):
+		var entry: Dictionary=entries[index]
+		label(str(entry.title)+" · "+str(entry.state),Vector2(30,68+index*36),600,18).name="QuestJournal_%s" % str(entry.id)
+	var back:=choice("返回物品",Vector2(30,360),"",null)
+	for connection in back.pressed.get_connections():back.pressed.disconnect(connection.callable)
+	back.pressed.connect(func():open_menu("inventory"))

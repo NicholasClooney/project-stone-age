@@ -2,7 +2,7 @@ extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
-const SAVE_VERSION := 4
+const SAVE_VERSION := 5
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
 const ClassicLuck = preload("res://server/classic_luck.gd")
@@ -58,6 +58,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
 	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0,"haru_armor":0,"freya_robe":0,"teo_robe":0,"koyala_charm":0},"equipped_mirror":false,"equipment":{"body":"","amulet":""},"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"automation_settings":{},"music":MusicLibrary.empty()}
+	_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
 
 	_profile.player.base_stats = Progression.START.duplicate()
 	Progression.refresh(_profile.player)
@@ -82,6 +83,36 @@ func buy_travel_pass() -> bool:
 
 func has_travel_pass() -> bool:
 	return _profile.get("travel_pass",false)
+
+const ORIGINAL_DEFAULT := {"original_events":{"now":[0,0,0,0,0,0],"ended":[0,0,0,0,0,0]},"original_items":[],"origin":{"village_id":1000,"savepoint_bit":0,"provenance":"prototype_default"},"original_savepoint_bits":1}
+
+static func _original_integer(value: Variant, low: int, high: int) -> bool:
+	return (value is int or value is float) and float(value)==floor(float(value)) and value>=low and value<=high
+
+static func original_state_valid(value: Dictionary) -> bool:
+	if not value.get("original_events") is Dictionary:return false
+	for kind in ["now","ended"]:
+		var words = value.original_events.get(kind)
+		if not words is Array or words.size()!=6:return false
+		for word in words:
+			if not (word is int or word is float) or float(word)!=floor(float(word)) or word<0 or word>4294967295:return false
+	if not value.get("original_items") is Array or value.original_items.size()>15:return false
+	for item in value.original_items:
+		if not (item is int or item is float) or float(item)!=floor(float(item)) or item<=0 or item>2147483647:return false
+	var origin = value.get("origin")
+	if not origin is Dictionary or not _original_integer(origin.get("village_id"),1000,4000) or int(origin.village_id) not in [1000,2000,3000,4000] or not _original_integer(origin.get("savepoint_bit"),0,3) or origin.get("provenance") not in ["prototype_default","original_hometown"]:return false
+	if int(origin.village_id)!=1000*(int(origin.savepoint_bit)+1):return false
+	var bits = value.get("original_savepoint_bits")
+	return (bits is int or bits is float) and float(bits)==floor(float(bits)) and bits>=0 and bits<=15
+
+static func bag_slots(profile: Dictionary) -> int:
+	var total: int = profile.get("original_items",[]).size()
+	var worn: Array = profile.get("equipment",{}).values()
+	if profile.get("equipped",false):worn.append("club")
+	if profile.get("equipped_mirror",false):worn.append("mirror_charm")
+	for key in profile.get("inventory",{}):
+		if int(profile.inventory[key])>(1 if key in worn else 0):total+=1
+	return total
 
 func snapshot() -> Dictionary:
 	_ensure_pet_ids()
@@ -469,6 +500,9 @@ func _gain_xp(actor: Dictionary, amount: int) -> void:
 func buy_item(item: String) -> bool:
 	if not _pending.is_empty() or not ITEM_PRICES.has(item) or _profile.player.gold < ITEM_PRICES[item] or int(_profile.inventory.get(item,0)) >= 99:
 		return false
+	var candidate := _profile.duplicate(true)
+	candidate.inventory[item]=int(candidate.inventory.get(item,0))+1
+	if bag_slots(candidate)>15:return false
 	_profile.player.gold -= ITEM_PRICES[item]
 	_profile.inventory[item] = int(_profile.inventory.get(item,0))+1
 	return true
@@ -490,6 +524,15 @@ func use_item(item: String = "potion") -> bool:
 	return true
 
 func equip_item(item: String = "club") -> bool:
+	var before := _profile.duplicate(true)
+	if not _equip_item(item):return false
+	if bag_slots(_profile)>15 and bag_slots(_profile)>bag_slots(before):
+		_profile=before
+		last_error="道具栏已满。"
+		return false
+	return true
+
+func _equip_item(item: String) -> bool:
 	last_error = ""
 	if not _pending.is_empty() or item not in ["club","mirror_charm"]+Spirits.SPIRIT_ITEMS or int(_profile.inventory.get(item,0))<=0:
 		return false
@@ -972,6 +1015,7 @@ func can_fight_boss() -> bool:
 	return _profile.quest.accepted and _profile.quest.wins >= 3 and not _profile.pets.is_empty() and not _profile.quest.boss_defeated
 
 func claim_quest() -> bool:
+	if int(_profile.inventory.potion)==0 and bag_slots(_profile)>=15:return false
 	if not _pending.is_empty() or not _profile.quest.boss_defeated or _profile.quest.claimed:
 		return false
 	_profile.quest.claimed = true
@@ -1153,6 +1197,7 @@ func load_game(path: String) -> bool:
 			Loyalty.migrate_charm(_profile.player)
 			for pet in _profile.pets+_profile.pet_storage:Loyalty.migrate_pet(pet,_profile.player)
 			_refresh_loyalty()
+			if int(_profile.version)<5:_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true
@@ -1169,6 +1214,7 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
+	if int(value.version)>=5 and not original_state_valid(value):return false
 	for key in ["player","inventory","quest","location"]:
 		if not value.get(key) is Dictionary:
 			return false

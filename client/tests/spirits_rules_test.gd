@@ -85,7 +85,7 @@ func mp_and_saves() -> void:
 	file.close()
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path+".bak"))
 	var migrated := Session.new()
-	check(migrated.load_game(path) and int(migrated.snapshot().player.mp)==100 and int(migrated.snapshot().version)==4 and migrated.snapshot().equipment=={"body":"","amulet":""} and int(migrated.snapshot().inventory.teo_robe)==0,"a version 3 save migrates to version 4 with 气力 full")
+	check(migrated.load_game(path) and int(migrated.snapshot().player.mp)==100 and int(migrated.snapshot().version)==Session.SAVE_VERSION and migrated.snapshot().equipment=={"body":"","amulet":""} and int(migrated.snapshot().inventory.teo_robe)==0,"a version 3 save migrates to the current version with 气力 full")
 	var broken: Dictionary = s.snapshot()
 	broken.player.mp = 101
 	file = FileAccess.open(path,FileAccess.WRITE)

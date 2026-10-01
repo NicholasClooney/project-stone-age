@@ -156,6 +156,10 @@ def plan() -> dict:
     for resident in manifest.get("residents", []):
         if resident.get("path"):
             npc_maps[resident["path"]].add(str(int(resident["map_id"])))
+    quest_catalog = LEGACY / "quests/catalog.json"
+    if quest_catalog.exists():
+        for npc in json.loads(quest_catalog.read_text())["npcs"]:
+            npc_maps[npc["path"]].add(str(int(npc["map_id"])))
     for path, users in npc_maps.items():
         if len(users) == 1 and next(iter(users)) in lookups["maps"]:
             assign(f"map-{next(iter(users))}", LEGACY / path)

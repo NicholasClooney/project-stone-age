@@ -73,6 +73,8 @@ var admin := true
 var account_name := ""
 const ADMIN_COMMANDS := ["battle_escape_dev","start_battle_config","start_wild_battle_config","open_battle","begin_battle","set_fast_hunt_threads"]
 
+var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
+var original_quests = preload("res://server/original_quests.gd").new()
 var session = GameSession.new()
 var battle = BattleSession.new()
 ## Augmented copy of the latest battle state (settlement summary included).
@@ -126,6 +128,7 @@ var tick_avg_usec := 0.0
 var _queue: Array[Dictionary] = []
 
 func _init() -> void:
+	original_quests.catalog = quest_catalog
 	encounter_rng.randomize()
 	session.battle_pets_hook = _live_battle_pets
 
@@ -160,6 +163,7 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	original_quests.pending={}
 	if not session.load_game(path):return false
 	last_saved_payload = JSON.stringify(session.snapshot())
 	_publish()
@@ -304,12 +308,17 @@ const TURN_COMMANDS := ["battle_command","battle_pet_command","battle_pet_skill"
 
 func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
+	var before_position := [automation.position_map,automation.position_cell]
 	var reply: Dictionary
+	# Movement/activity invalidates the conversation even if another device
+	# later walks back or stops before confirming the old window.
+	if type in ["warp","auto","auto_start","flow_start","open_battle","begin_battle","start_battle_config","start_wild_battle_config","start_wild_battle"]:original_quests.pending={}
 	if not admin and admin_only(type):reply = _reject("只有管理员角色可以使用 GM 和开发者功能。")
 	elif type in TURN_COMMANDS and command.has("turn") and not _current_turn(command):reply = _stale("battle turn already resolved")
 	elif PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
 	elif has_method("_cmd_"+type):reply = call("_cmd_"+type,command)
 	else:reply = _reject("unknown command "+type)
+	if before_position!=[automation.position_map,automation.position_cell]:original_quests.pending={}
 	reply.seq = command.get("seq",0)
 	reply.type = "ack" if reply.get("ok",false) else "rejected"
 	return reply
@@ -845,3 +854,25 @@ func _reject(reason: String) -> Dictionary:
 ## A command overtaken by another device's: rejected, but not an error to show.
 func _stale(reason: String) -> Dictionary:
 	return {"ok":false,"reason":reason,"stale":true}
+
+func _cmd_quest_talk(command: Dictionary) -> Dictionary:
+	return original_quests.talk(self,str(command.get("npc_id","")))
+
+func _cmd_quest_choose(command: Dictionary) -> Dictionary:
+	return original_quests.choose(self,str(command.get("token","")),str(command.get("choice","")))
+
+func _cmd_quest_close(command: Dictionary) -> Dictionary:
+	if original_quests.pending.is_empty() or str(command.get("token",""))!=str(original_quests.pending.token):return _reject("对话已过期。")
+	original_quests.pending={}
+	return {"ok":true,"closed":true}
+
+func _cmd_quest_discard(command: Dictionary) -> Dictionary:
+	if battle_open or automation.running or automation.hunt_running or automation.flow_active():return _reject("当前正忙。")
+	var before: Dictionary=session.snapshot()
+	var item = command.get("item_id")
+	if not item is int and not item is float:return _reject("无效物品。")
+	if float(item)!=floor(float(item)) or not int(item) in before.original_items:return _reject("没有这个物品。")
+	session._profile.original_items.erase(int(item))
+	if not save():session._profile=before;return _reject("save_failed")
+	_publish()
+	return {"ok":true}

@@ -8,6 +8,7 @@ var selected := -1
 var overlay: Control
 var body: Label
 var choice: Button
+var quest_dialogue: Node
 
 func setup(owner: Node, ui_root: Control, residents: Array) -> void:
 	world = owner
@@ -34,6 +35,9 @@ func setup(owner: Node, ui_root: Control, residents: Array) -> void:
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		actor.add_child(name_label)
 	_build_dialogue(ui_root)
+	quest_dialogue=preload("res://scripts/quest_dialogue.gd").new()
+	add_child(quest_dialogue)
+	quest_dialogue.setup(world,overlay,body)
 
 func blocks(cell: Vector2i) -> bool:
 	for entry in entries:
@@ -80,6 +84,11 @@ func _process(_delta: float) -> void:
 	else:pending=-1
 
 func _open() -> void:
+	var resident: Dictionary=entries[selected]
+	if resident.get("role","")=="quest":
+		choice.hide()
+		quest_dialogue.open(str(resident.id))
+		return
 	world.clear_input()
 	world.paused_input = true
 	world.player.set_action(3)
@@ -119,6 +128,10 @@ func _choose() -> void:
 		world.call_deferred("load_area_id",int(world.data.map_id),Vector2i(destination[0],destination[1]))
 
 func _close() -> void:
+	if is_instance_valid(quest_dialogue) and quest_dialogue.active:
+		quest_dialogue.close()
+		return
+	if not overlay.visible:return
 	overlay.hide()
 	world.paused_input = false
 	world.clear_input()

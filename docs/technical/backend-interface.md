@@ -184,3 +184,41 @@ Tests may still reach authority internals through `world.session._profile`, `_pe
 4. Whole-state events, no diffs: `profile` excludes storage and `pet_storage` is sent only on change. Add diffs only if parse or UI rebuild cost on Vision Pro is measured as a problem.
 
 Differences from the first proposal: the local link replies synchronously (the `done` callback keeps call sites asynchronous-safe); GM tools are flat `gm_*` commands; troop art is checked directly instead of from a generated sprite list; the offline summary is computed by the client from the reconnect snapshot.
+
+### Original quest dialogues
+
+`quest_talk {npc_id}` opens an enabled source-catalog NPC. `quest_choose
+{token,choice}` uses exactly the current server-issued token and one of the
+returned choice ids (`yes`, `no`, `ok`). `quest_close {token}` cancels without a
+profile mutation. `quest_discard {item_id}` discards one carried original item.
+A successful reply contains either `dialogue {token,npc_id,name,text,choices}`
+or `closed:true`. Mutations publish the normal profile event only after a
+synchronous save succeeds. A failed save restores the previous profile and
+returns `save_failed`. Tokens are server-owned, per backend/profile, renewed
+at every phase and invalidated by movement/activity commands; a second device
+opening a window replaces the first device's window. Other profiles cannot use
+its token. Requests carry no client position, branch, reward or flags.
+
+Opening and confirming require the server automation position to be on the
+NPC map within Chebyshev distance 2, with no battle or automation active.
+Conditions and ordered branch priority are checked again before any mutation.
+ACCEPT requires YES followed by the ThanksMsg's OK before exchanging items.
+REQUEST cancellation deletes all original instances named in GetItem, clears
+NOW idempotently and reduces positive charm by one. CLEAN clears both NOW and
+END only after confirmation. Unsupported conditions/actions fail closed.
+
+Save version 5 adds `original_events {now:[6 uint32],ended:[6 uint32]}`,
+`original_items:[positive original item IDs]`, `origin
+{village_id,savepoint_bit,provenance}` and `original_savepoint_bits` (0..15).
+Versions 1–4 receive empty quest flags/items and the documented Samgir prototype
+origin (1000, bit 0, `prototype_default`), independently of current location.
+Existing valid prototype profile data follows its existing migrations. Invalid
+version 5 quest fields reject the save, with the existing validated backup
+fallback; they are not repaired into an empty quest profile.
+
+Original items are nonstack instances and consume one of 15 shared visible bag
+slots each. Positive legacy inventory keys consume one visible slot, excluding
+a worn copy; legacy quantities stay counted stacks. This is an explicit
+prototype deviation from the original unstacked inventory. Migration never
+truncates a legacy bag. New receipts exceeding 15 slots fail atomically;
+ACCEPT capacity accounts for removed items before adding rewards.

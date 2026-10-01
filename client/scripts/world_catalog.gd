@@ -4,6 +4,7 @@ const ROOT := "res://assets/legacy/"
 var maps: Dictionary = {}
 var portals: Dictionary = {}
 var residents: Array = []
+var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 ## Original exits to maps that are not imported yet (caves, mountain passes,
 ## 庄园): from_map -> [portal], from provenance.unsupported_portals.
 var closed_exits: Dictionary = {}
@@ -16,7 +17,8 @@ func _init() -> void:
  preload("res://scripts/perf_registry.gd").track_manifest("world",text.length())
  if not manifest is Dictionary: return
  maps = manifest.get("maps",{})
- residents = manifest.get("residents",[])
+ residents = manifest.get("residents",[]).duplicate(true)
+ residents.append_array(quest_catalog.active_npcs())
  for link in manifest.get("portals",[]):
   if bool(link.get("disabled",false)):continue
   var key := str(int(link.from_map))
@@ -91,3 +93,10 @@ func navigation_maps() -> Array:
   if not is_building(int(key)):result.append(key)
  result.sort_custom(func(a,b):return int(a)<int(b))
  return result
+
+## Test/provider seam: use the real catalog with locally enabled source events.
+func set_quest_catalog(provider) -> void:
+ for entry in quest_catalog.active_npcs():
+  residents = residents.filter(func(resident):return str(resident.get("id",""))!=str(entry.id))
+ quest_catalog=provider
+ residents.append_array(quest_catalog.active_npcs())
