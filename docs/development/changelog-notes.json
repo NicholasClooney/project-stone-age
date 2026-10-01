@@ -1816,5 +1816,17 @@
     "details": [
       "开发验证：属性筛选固定模式逐项核对“最高N”的真实数值、完整提示，以及条件、输入、最高值和留前控件的可见性、顺序与无重叠；适配已有短标题布局。"
     ]
+  },
+  "fix(audio): play the loading music at this device's saved volume": {
+    "title": "载入音乐跟随音量设置",
+    "details": [
+      "开局载入画面的音乐原来固定按默认音量播放；现在按这台设备保存的音乐音量和音乐开关，调小或关掉的就不会突然很响。"
+    ]
+  },
+  "fix(hunt): let the two capture modes switch each other off": {
+    "title": "抓宠两种模式互相切换",
+    "details": [
+      "「抓到后直接升至120级」和「只抓不练」任何时候都能点，点其中一个另一个自动取消。"
+    ]
   }
 }

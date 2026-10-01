@@ -119,6 +119,18 @@ func run() -> void:
 	check(not game_screen.art.visible and not game_screen._backdrop.visible,"in play the map stays visible: no loading image or backdrop")
 	check(game_screen._paused_music==null and not game.music.stream_paused and game.music.playing==was_playing and not game_screen.player.playing,"in play the area music keeps playing and no waiting music starts")
 	check(game_screen._root.mouse_filter==Control.MOUSE_FILTER_IGNORE and not game_screen.hint.visible,"the in-game bar does not block clicks or ask for audio")
+	# The loading music follows this device's saved 音乐音量 / 音乐 switch even
+	# before the device settings are restored for play.
+	var prefs := "user://waiting-volume-test.cfg"
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(prefs))
+	game.viewer_prefs_path = prefs
+	game.set_viewer_pref("volume",0.1)
+	game.set_viewer_pref("music_on",true)
+	game._device_settings_live = false
+	check(is_equal_approx(float(game_screen.music_volume.call()),linear_to_db(0.1)),"before play the waiting music uses the saved volume (%.1f dB)" % float(game_screen.music_volume.call()))
+	game.set_viewer_pref("music_on",false)
+	check(float(game_screen.music_volume.call())<=-79.0,"and is silent when the saved 音乐 switch is off")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(prefs))
 	game.asset_packs._waiters.erase(pending)
 	game_screen.tick(0.016)
 	check(not game_screen.visible,"the bar goes away when the wait ends")

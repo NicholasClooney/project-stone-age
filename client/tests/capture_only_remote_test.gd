@@ -36,14 +36,14 @@ func run():
 	check(menu.capture_only.tooltip_text.contains("非原版") or menu.capture_only.text.contains("非原版"),"non-original convenience is explicitly labelled")
 	await click(menu.capture_only)
 	check(await Wait.until(self,func():return bool(backend.session.automation_settings().get("hunt",{}).get("capture_only",false))) and await Wait.settle(self,game),"actual remote checkbox click writes strict character preference")
-	check(menu.level_one.button_pressed and menu.level_one.disabled and menu.showcase.button_pressed and menu.showcase.disabled and not menu.train_after_capture.button_pressed and menu.train_after_capture.disabled,"remote UI prevents contradictory Lv1/showcase/training choices")
+	check(menu.level_one.button_pressed and menu.level_one.disabled and menu.showcase.button_pressed and menu.showcase.disabled and not menu.train_after_capture.button_pressed and not menu.train_after_capture.disabled,"remote UI keeps Lv1/showcase fixed; 直接升至120级 is off but clickable")
 	check(not menu.stop_after.editable and menu.start_button.text=="开始只抓不练" and menu.ready_description().contains("忽略"),"remote UI explains carried capture limits")
 	for bad in ["true",1]:
 		var reply:Dictionary={}
 		game.link.request({"type":"set_automation_settings","settings":{"hunt":{"capture_only":bad}}},func(result):reply.merge(result,true))
 		check(await Wait.until(self,func():return reply.has("ok")) and not reply.ok,"WebSocket rejects non-boolean capture_only")
 	menu.close_menu();menu.open_menu();menu.show_capture_settings(true)
-	check(menu.capture_only.button_pressed and menu.train_after_capture.disabled,"saved mode survives panel reopen")
+	check(menu.capture_only.button_pressed and not menu.train_after_capture.button_pressed,"saved mode survives panel reopen")
 	await click(menu.capture_only)
 	check(await Wait.until(self,func():return not Settings.effective(backend.session.automation_settings()).hunt.capture_only) and await Wait.settle(self,game),"real second click disables capture-only")
 	check(menu.train_after_capture.button_pressed and not menu.train_after_capture.disabled and not menu.level_one.disabled,"prior training preference returns without ambiguous mode")

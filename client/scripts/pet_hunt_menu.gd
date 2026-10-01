@@ -227,6 +227,9 @@ func _ready() -> void:
 	stop_after_controls()
 	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。达标（无属性条件时每只升满的）按「找到N只后停止」存仓或停下比较，未达标存仓并继续。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,450);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
 	train_after_capture.toggled.connect(func(enabled):
+		if enabled and is_instance_valid(capture_only) and capture_only.button_pressed:
+			capture_only.set_pressed_no_signal(false)
+			_capture_only_controls()
 		start_button.text="开始抓宠并练至120" if enabled else "开始筛选"
 		if enabled:auto_capture.button_pressed=true
 		refresh_ready_status()
@@ -769,7 +772,9 @@ func _capture_only_controls(locked: bool = false)->void:
 		auto_capture.set_pressed_no_signal(true)
 		train_after_capture.set_pressed_no_signal(false)
 		showcase.set_pressed_no_signal(true)
-	for control in [level_one,auto_capture,train_after_capture,showcase]:control.disabled=locked or enabled
+	for control in [level_one,auto_capture,showcase]:control.disabled=locked or enabled
+	# 抓到后直接升至120级 and 只抓不练 stay clickable: choosing one turns the other off.
+	train_after_capture.disabled=locked
 	stop_after.editable=not enabled
 	showcase_xp.disabled=enabled
 	start_button.text="开始只抓不练" if enabled else ("开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选")

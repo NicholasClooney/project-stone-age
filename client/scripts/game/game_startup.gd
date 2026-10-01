@@ -124,7 +124,17 @@ func _build_waiting_screen() -> void:
 		game.add_child(status_timer)
 	game.waiting_screen = WaitingScreen.new()
 	game.add_child(game.waiting_screen)
-	game.waiting_screen.configure(game.asset_packs,func():return game.music,func():return -80.0 if game.muted else linear_to_db(maxf(game.volume,0.0001)))
+	game.waiting_screen.configure(game.asset_packs,func():return game.music,_waiting_volume_db)
+
+## The loading music's volume: this device's saved 音乐 switch and 音乐音量
+## (viewer.cfg) before they are restored for play, the live ones after.
+func _waiting_volume_db() -> float:
+	var on := not game.muted
+	var volume: float = game.volume
+	if not game._device_settings_live:
+		on = bool(game.viewer_pref("music_on",on))
+		volume = clampf(float(game.viewer_pref("volume",volume)),0.0,1.0)
+	return -80.0 if not on else linear_to_db(maxf(volume,0.0001))
 
 func _show_startup_error(text_value: String) -> void:
 	if is_instance_valid(game.waiting_screen):

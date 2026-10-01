@@ -66,6 +66,12 @@ func run()->void:
 	await click(menu.capture_only)
 	check(menu.capture_only.button_pressed,"real click toggles capture-only")
 	await shot("pc-capture-only")
+	# The two modes stay clickable and turn each other off.
+	check(not menu.train_after_capture.disabled,"直接升至120级 stays clickable while 只抓不练 is on")
+	await click(menu.train_after_capture)
+	check(menu.train_after_capture.button_pressed and not menu.capture_only.button_pressed,"clicking 直接升至120级 turns 只抓不练 off")
+	await click(menu.capture_only)
+	check(menu.capture_only.button_pressed and not menu.train_after_capture.button_pressed,"clicking 只抓不练 turns 直接升至120级 off")
 	await click(menu.capture_only)
 	await click(menu.showcase)
 	await shot("pc-capture-background")

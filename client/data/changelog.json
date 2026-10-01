@@ -1,9 +1,18 @@
 {
-  "version": "v0.161.3",
-  "count": 235,
+  "version": "v0.161.4",
+  "count": 236,
   "feature_count": 145,
-  "fix_count": 90,
+  "fix_count": 91,
   "entries": [
+    {
+      "version": "v0.161.4",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "载入音乐跟随音量设置",
+      "details": [
+        "开局载入画面的音乐原来固定按默认音量播放；现在按这台设备保存的音乐音量和音乐开关，调小或关掉的就不会突然很响。"
+      ]
+    },
     {
       "version": "v0.161.3",
       "date": "2026-10-01",
