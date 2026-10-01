@@ -319,7 +319,7 @@ The wasm heap after the first map switch drops by 214 MB; after the tour it is 6
 
 ## After the byte navigation grid (optimization 5)
 
-`scripts/nav_grid.gd` replaces the whole-map `AStarGrid2D` (about 62 bytes a cell) with one byte a cell plus, for each search, a temporary AStarGrid2D over the cells between the two ends with a margin (widened until the route provably cannot be shorter outside it; the last window up to 320×320 is kept for the next search). Measured headless: map 100 41.7 → 0.6 MB, map 200 61.9 → about 1 MB, map 300 22.6 → 0.4 MB. `nav_grid_test` compares 143 random routes on maps 1000/100/300 against the whole-map grid: all the same length. Cost: a first cross-island search builds a large window (156 ms worst on map 100 on an M-series Mac; short clicks take a few ms).
+`scripts/nav_grid.gd` ([navigation grid](navigation-grid.md)) replaces the whole-map `AStarGrid2D` (about 62 bytes a cell) with one byte a cell plus, for each search, a temporary AStarGrid2D over the cells between the two ends with a margin (widened until the route provably cannot be shorter outside it; the last window up to 320×320 is kept for the next search). Measured headless: map 100 41.7 → 0.6 MB, map 200 61.9 → about 1 MB, map 300 22.6 → 0.4 MB. `nav_grid_test` compares 143 random routes on maps 1000/100/300 against the whole-map grid: all the same length. Cost: a first cross-island search builds a large window (156 ms worst on map 100 on an M-series Mac; short clicks take a few ms).
 
 ## Bounded texture caches (optimization 6)
 
