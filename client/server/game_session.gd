@@ -26,6 +26,9 @@ var release_events: Array = []
 ## ({pet, source}; source is "" for a battle capture, whose source the backend
 ## knows, or GM发放).
 var capture_events: Array = []
+## Called synchronously before the new pet joins carried/storage inventory.
+var capture_entry_hook: Callable
+
 const MusicLibrary = preload("res://scripts/music_library.gd")
 ## The spirit equipment sells at its itemset.txt cost (docs/reverse-engineering/magic-and-mp.md).
 const ITEM_PRICES := {"potion":10,"club":30,"mirror_charm":4800,"haru_armor":400,"freya_robe":484,"teo_robe":528,"koyala_charm":1000}
@@ -492,8 +495,8 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		_assign_pet_id(captured)
 		Loyalty.stamp_modai(captured)
 		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured))
+		_record_capture(captured,"")
 		_profile.pets.append(captured)
-		capture_events.append({"pet":captured.duplicate(true),"source":""})
 		if _profile.pets.size() == 1:_profile.active_pet = 0
 	if outcome == "defeat" and party and bool(result.get("party_stay",false)):
 		# The party won without this fallen member: as battle.c BATTLE_Exit,
@@ -1076,6 +1079,12 @@ func take_release_events() -> Array:
 	return result
 
 ## The 抓宠记录 events collected since the last call.
+
+func _record_capture(pet: Dictionary, source: String) -> void:
+	var event := {"pet":pet.duplicate(true),"source":source}
+	if capture_entry_hook.is_valid():event["entry"] = capture_entry_hook.call(event).duplicate(true)
+	capture_events.append(event)
+
 func take_capture_events() -> Array:
 	var result:=capture_events
 	capture_events=[]
@@ -1749,11 +1758,11 @@ func gm_grant_pet(template: Variant, full_grade: bool = false) -> bool:
 	pet.variable_ai = Loyalty.AI_GM_PET
 	Loyalty.stamp_modai(pet)
 	_assign_pet_id(pet)
+	_record_capture(pet,"GM发放")
 	if _profile.pets.size() < PET_CAPACITY:
 		_profile.pets.append(pet)
 		if _profile.pets.size()==1:_profile.active_pet = 0
 	else:_profile.pet_storage.append(pet)
-	capture_events.append({"pet":pet.duplicate(true),"source":"GM发放"})
 	return true
 
 func gm_grant_points(amount: Variant) -> bool:

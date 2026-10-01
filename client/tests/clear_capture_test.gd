@@ -63,7 +63,16 @@ func run():
   if decision.action=="attack":saw_clear=true;clearing=clearing and int(found.troop.enemies[int(decision.target)].level)!=1 and decision.pet=="defend"
   if decision.action=="capture":saw_capture=true
  check(clearing and saw_clear and saw_capture and trial.decisions[0].action=="attack","only stronger enemies are targeted before capture")
+ backend.automation.flow_phase="capture"
+ backend.automation.flow_target_filter={"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":0}}}
+ backend.automation.hunt_filter={"clean_only":true,"level_one":true,"mixed_if_stats":true}
+ backend.automation.hunt_last_hit={"troop":found.troop.duplicate(true)}
  check(backend.session.apply_battle_result(trial.state),"real settlement accepts the real capture outcome")
+ backend.handle({"type":"ping"})
+ var captured_decision:Dictionary=backend.capture_log.entries().back().capture_decision
+ check(captured_decision.tags.has("stats") and captured_decision.tags.has("mixed_if_stats") and captured_decision.threshold_text.contains("满足"),"real mixed squad capture freezes passing stats plus mixed exception reasons")
+ backend.automation.flow_phase=""
+
  check(backend.session.snapshot().pets.size()==2 and backend.session.snapshot().pets[1].growth_seed==found.troop.enemies[slot].growth_seed,"settlement grants the exact target identity")
  # Every seed's forecast executes the same policy and real core as the trace.
  var wins:=0

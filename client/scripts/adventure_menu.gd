@@ -1595,6 +1595,8 @@ func pet_records_panel()->void:
 		for value in offsets:total+=int(value)
 		line.add_child(PetTable.grade({} if offsets.size()!=4 else {"offsets":offsets,"total":total,"full":bool(item.get("full",false))}))
 		if caught:
+			var why:=Button.new();why.name="CaptureReason_%d"%i;why.text=capture_reason_summary(item);why.alignment=HORIZONTAL_ALIGNMENT_LEFT;why.clip_text=true;why.tooltip_text=capture_reason_details(item);stack.add_child(why)
+			why.pressed.connect(func():show_capture_reason_details(item))
 			var released:Dictionary=item.get("released",{})
 			var state:=PetTable.badge("已放生",PetTable.BAD) if not released.is_empty() else PetTable.badge("在",PetTable.GOOD)
 			state.size_flags_vertical=Control.SIZE_SHRINK_CENTER;line.add_child(state)
@@ -1766,6 +1768,7 @@ static func caught_description(item:Dictionary)->String:
 	if not judged.is_empty():text+="\n120级 血%d 攻%d 防%d 敏%d · 三围合%d"%[int(judged.max_hp),int(judged.attack),int(judged.defence),int(judged.speed),int(judged.attack)+int(judged.defence)+int(judged.speed)]
 	var released:Dictionary=item.get("released",{})
 	if not released.is_empty():text+="\n已放生：%s"%released.get("reason","")
+	text+="\n"+capture_reason_details(item)
 	return text
 
 static func release_log_description(item:Dictionary)->String:
@@ -1806,3 +1809,31 @@ func add_pet_favorite_button(parent:Control,pet:Dictionary,prefix:String)->void:
 	toggle.custom_minimum_size=Vector2(26,0)
 	if favorite:toggle.modulate=Color("ffe680")
 	parent.add_child(toggle)
+
+static func capture_reason_summary(item:Dictionary)->String:
+	var decision:Dictionary=item.get("capture_decision",{})
+	var names:={"stats":"属性达标","survey":"摸底挑选","unconditional":"未设条件，每只都抓","mixed_if_stats":"混合遇敌例外","manual":"手动捕获","gm":"GM发放","automatic":"自动抓宠"}
+	var tags:Array=decision.get("tags",[])
+	return "为什么抓："+(" · ".join(tags.map(func(tag):return names.get(tag,str(tag)))) if not tags.is_empty() else "—")+" · 点开详情"
+
+static func capture_reason_details(item:Dictionary)->String:
+	var decision:Dictionary=item.get("capture_decision",{})
+	if decision.is_empty():return "为什么抓：—（旧记录未保存捕获原因）"
+	var lines:Array=[capture_reason_summary(item).trim_suffix(" · 点开详情"),"捕获加入背包前冻结；预测120级，同种随身、仓库和等待队列比较"]
+	var threshold:=str(decision.get("threshold_text",""))
+	if not threshold.is_empty():lines.append(threshold)
+	for metric in decision.get("metrics",[]):
+		lines.append("%s %d · %s第%d · 原最高 %s"%[PetStatFilter.RANK_NAMES.get(str(metric.key),str(metric.key)),int(metric.value),"并列" if int(metric.get("ties",0))>0 else "",int(metric.rank),str(metric.original_max) if metric.get("original_max")!=null else "—"])
+	var queued:Dictionary=decision.get("queue",{})
+	if not queued.is_empty():lines.append("本种排队：入选时第%s · 出队时第%s · 等待%s秒（入选至出队）"%[str(queued.admission_rank) if queued.get("admission_rank")!=null else "—",str(queued.departure_rank) if queued.get("departure_rank")!=null else "—",str(snappedf(float(queued.wait_seconds),0.1)) if queued.has("wait_seconds") else "—"])
+	return "\n".join(lines)
+
+## In the game's scaled canvas, so portrait devices use the same touch flow.
+func show_capture_reason_details(item:Dictionary)->void:
+	var previous:=panel.get_node_or_null("CaptureReasonDetails")
+	if previous!=null:previous.free()
+	var details:=pet_overlay("CaptureReasonDetails","为什么抓这只",str(item.get("name","")),Vector2(900,650))
+	details.z_index=20
+	overlay_button(details,"关闭",832,details.queue_free,"CaptureReasonClose")
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(18,55);scroll.size=Vector2(864,570);details.add_child(scroll)
+	var text:=PetTable.text(capture_reason_details(item),"body");text.name="CaptureReasonText";text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;text.custom_minimum_size.x=840;scroll.add_child(text)

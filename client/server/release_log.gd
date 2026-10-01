@@ -46,12 +46,16 @@ static func entry(pet: Dictionary, where: String, source: String, reason: String
 ## One 抓宠记录 entry: the pet as it joined (level and stats at capture),
 ## its exact Lv120 stats (lv120), where (map id and name, cell), the source
 ## (找宠流程, 自动抓宠, 手动捕获, GM发放) and, for the find-pet cycle, its run id.
-static func capture_entry(pet: Dictionary, lv120: Dictionary, map_id: int, map_name: String, cell: Vector2i, source: String, run: String) -> Dictionary:
+## Optional capture_decision is already frozen by the server before joining:
+## tags, resolved thresholds, per-metric competition ranks/original maxima,
+## and measured queue admission/departure data. Historical entries omit it.
+static func capture_entry(pet: Dictionary, lv120: Dictionary, map_id: int, map_name: String, cell: Vector2i, source: String, run: String, decision: Dictionary = {}) -> Dictionary:
 	var result := entry(pet, "", source, "", [], lv120)
 	result.erase("where")
 	result.erase("reason")
 	result.erase("beaten_by")
 	if int(result.level) >= 120:result.erase("lv120")
+	if not decision.is_empty():result["capture_decision"] = decision.duplicate(true)
 	result.merge({"map_id":map_id, "map_name":map_name, "cell":[cell.x, cell.y], "run":run}, true)
 	return result
 
