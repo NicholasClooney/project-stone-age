@@ -126,6 +126,15 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 		"sell_club":success = at_shop and game.session.sell_item("club")
 		"sell_mirror_charm":success = at_shop and game.session.sell_item("mirror_charm")
 		"use_potion":success = game.session.use_item("potion")
+		"use_original_item":
+			if game.adventure_menu.original_item_busy:return
+			game.adventure_menu.original_item_busy=true
+			success=game.session.use_item(str(value[0]),str(value[1]),func(reply:Dictionary):
+				if not is_instance_valid(game.adventure_menu):return
+				game.adventure_menu.original_item_busy=false
+				game.adventure_menu.refresh(str(reply.get("note","已使用。")) if reply.get("ok",false) else "使用失败："+str(reply.get("reason","")))
+			)
+			note=game.session.last_note if success else game.session.last_error
 		"equip":success = game.session.equip_item("club")
 		"heal_pets":success = game.session.heal_carried_pets()
 		"equip_mirror":success = game.session.equip_item("mirror_charm")
@@ -155,7 +164,7 @@ func perform_adventure_action(action: String, value: Variant = null) -> void:
 				success = game.session.equip_item(item)
 				if not success:note = game.session.last_error
 	if success:
-		game.checkpoint()
+		if action!="use_original_item":game.checkpoint()
 		if note.is_empty():note = "已完成。"
 		if action=="claim_quest":note = "委托完成！获得石币、经验与回复药。"
 		elif action=="heal":note = "你与伙伴恢复了体力。"

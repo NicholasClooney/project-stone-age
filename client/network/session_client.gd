@@ -73,7 +73,16 @@ var experience_multiplier: int:
 
 func buy_item(item: String) -> bool:return request({"type":"buy_item","item":item})
 func sell_item(item: String) -> bool:return request({"type":"sell_item","item":item})
-func use_item(item: String = "potion") -> bool:return request({"type":"use_item","item":item})
+func use_item(item: String = "potion", pet_id: String = "", done: Callable = Callable()) -> bool:
+	var reply: Dictionary=link.request({"type":"use_item","item":item,"pet_id":pet_id},func(answer:Dictionary):
+		last_note=str(answer.get("note","")) if answer.get("ok",false) else ""
+		last_error="" if answer.get("ok",false) else str(answer.get("reason",""))
+		if done.is_valid():done.call(answer)
+	)
+	if reply.get("pending",false):last_error="";last_note="正在使用…";return true
+	last_note=str(reply.get("note","")) if reply.get("ok",false) else ""
+	last_error="" if reply.get("ok",false) else str(reply.get("reason",""))
+	return bool(reply.get("ok",false))
 func equip_item(item: String = "club") -> bool:return request({"type":"equip_item","item":item})
 func buy_travel_pass() -> bool:return request({"type":"buy_travel_pass"})
 func heal() -> bool:return request({"type":"heal"})

@@ -290,3 +290,15 @@ state. `field_step` checks this preference before rolling walking randomness, so
 clients cannot override it with `encounter: true`. Explicit `wild_encounter`,
 automatic training/hunting and NPC battles remain available. This is a project
 convenience, not an original game rule.
+
+## 原香草野外使用
+
+沿 `use_item` 新增可选 `pet_id`：`item="original_2401"`、空UID默认自己，非空只接
+随身宠物UID。未知/仓库/非字符串UID、未知道具、死亡施药者、无2401和开放/待结算
+战斗拒绝，客户端不能指定回复量。审核来源 `ITEM_useRecovery_Field` 按名义体100
+随机回复90～110，截断maxHP/min1，满HP仍扣一份，零HP宠物可回复。返回 `note`
+报告实际回复；`SessionClient.use_item` 可选完成回调在真实回复后更新反馈，UI等待
+期间阻止重复提交。所有 `use_item` 经同步保存，失败恢复profile并返回save_failed。
+消费只改HP和一个2401实例，不改原任务flags或宠物PET来源；助手读服务器库存更新。
+此接口不接入原战斗道具回合，不支持其他玩家/仓库目标，原道具装备元数据由独立
+装备切片同步。普通 `item="potion"` 仍按旧自己回复30/满血拒绝规则。

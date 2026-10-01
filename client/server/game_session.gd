@@ -57,7 +57,11 @@ var experience_multiplier: int = 1:
 	set(value):
 		experience_multiplier = value if value in [1,2,10,100] else 1
 
+var recovery_rng := RandomNumberGenerator.new()
+var original_item_catalog = preload("res://scripts/quest_catalog.gd").new()
+
 func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = null) -> void:
+	recovery_rng.randomize()
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
@@ -568,11 +572,36 @@ func sell_item(item: String) -> bool:
 	_profile.player.gold += int(ITEM_PRICES[item] / 2)
 	return true
 
-func use_item(item: String = "potion") -> bool:
-	if not _pending.is_empty() or item != "potion" or _profile.inventory.potion <= 0 or _profile.player.hp >= _profile.player.max_hp:
-		return false
-	_profile.inventory.potion -= 1
-	_profile.player.hp = mini(_profile.player.max_hp,_profile.player.hp + 30)
+func use_item(item: Variant = "potion", pet_id: Variant = "") -> bool:
+	last_error=""
+	last_note=""
+	if not item is String or not pet_id is String:last_error="无效道具或目标。";return false
+	if not _pending.is_empty():last_error="野外道具不能在战斗中使用；原战斗道具回合尚未接入。";return false
+	if item=="original_2401":return _use_original_herb(str(pet_id))
+	if item!="potion" or not str(pet_id).is_empty() or _profile.inventory.potion<=0 or _profile.player.hp>=_profile.player.max_hp:return false
+	_profile.inventory.potion-=1
+	_profile.player.hp=mini(_profile.player.max_hp,_profile.player.hp+30)
+	return true
+
+func _use_original_herb(pet_id: String) -> bool:
+	var item: Dictionary=original_item_catalog.items.get("2401",{})
+	var use: Dictionary=item.get("use",{})
+	if str(use.get("kind",""))!="hp_recovery" or not use.get("field_supported",false):last_error="原香草使用资料尚未导入。";return false
+	if int(_profile.player.hp)<=0:last_error="施药者已经死亡，不能使用道具。";return false
+	if not 2401 in _profile.original_items:last_error="没有哈罗的香草。";return false
+	var target: Dictionary=_profile.player
+	if not pet_id.is_empty():
+		target={}
+		for pet in _profile.pets:
+			if str(pet.pet_id)==pet_id:target=pet;break
+		if target.is_empty():last_error="目标宠物不在随身队伍。";return false
+	# ITEM_useRecovery_Field: a nominal 体100 rolls 90..110; even a
+	# full or zero-HP target is accepted. The dead owner cannot use it.
+	var power := recovery_rng.randi_range(int(use.roll_min),int(use.roll_max))
+	var before := int(target.hp)
+	target.hp=clampi(before+power,1,int(target.max_hp))
+	OriginalEquipment.remove(_profile,2401)
+	last_note="%s耐久力回复%d，消耗一份哈罗的香草。"%["自己" if pet_id.is_empty() else str(target.name),int(target.hp)-before]
 	return true
 
 func equip_item(item: String = "club") -> bool:

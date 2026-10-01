@@ -117,6 +117,12 @@ def catalog(reference, spec=None):
             raise ValueError('Explicit pile fields require review')
         ident = int(row[16])
         items[str(ident)] = dict(id=ident, name=row[0], description=row[2], logical_icon=int(row[17]), stackable=False, source='gmsv/data/itemset.txt', source_line=source_line, raw_columns=row)
+        if ident in spec.get('recovery_items', []):
+            if ident != 2401 or row[3] != '体100' or row[10] != 'ITEM_useRecovery' or row[19:22] != ['16', '0', '1']:
+                raise ValueError('Unreviewed recovery item')
+            if not re.search(r'^#define\s+_MAGIC_REHPAI\b', texts['gmsv/include/version.h'], re.MULTILINE):
+                raise ValueError('Recovery rate configuration requires review')
+            items[str(ident)]['use'] = dict(kind='hp_recovery', nominal=100, roll_min=90, roll_max=110, consume_at_full=True, zero_hp_target=True, targets=['self', 'carried_pet'], field_supported=True, battle_supported=False, source='gmsv/item/item_event.c', source_lines=[900,905,963,964,1052,1058], battle_source='gmsv/battle/battle_item.c', battle_source_line=224)
     if set(items) != set(map(str, spec['items'])):
         raise ValueError('Missing reviewed item')
     jobs = []

@@ -59,7 +59,11 @@
     "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
     "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
     "gmsv/char/enemy.c": "fecfedd35d6323c1112fd164a4f4636618c943debb0917781abc2f58b806ed1a",
-    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435"
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/item/item_event.c": "33ed3526accf9b0051e08cbe150082056eebd9d36e39faa323d365c855d50d66",
+    "gmsv/battle/battle_item.c": "522c57bb81cf6738e01ab5c5aa28d3cd4c445e0da9d7c9bc2b0d03d30e4bd8c5",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94"
   },
   "creates": [
     "gmsv/data/npc/sainasu/event/event02.create",
@@ -154,5 +158,8 @@
   },
   "reward_enemies": [
     95
+  ],
+  "recovery_items": [
+    2401
   ]
 }

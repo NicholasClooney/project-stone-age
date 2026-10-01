@@ -23,7 +23,7 @@ const DEBUG_SPECIES := ["wooli","wooli_wooli","woolistan"]
 const PROFILE_COMMANDS := {
 	"buy_item":["buy_item",["item"]],
 	"sell_item":["sell_item",["item"]],
-	"use_item":["use_item",["item"]],
+	"use_item":["use_item",["item","pet_id"]],
 	"equip_item":["equip_item",["item"]],
 	"buy_travel_pass":["buy_travel_pass",[]],
 	"heal":["heal",[]],
@@ -418,6 +418,10 @@ func _required_arguments(method: String) -> int:
 	return 0
 
 func _profile_command(type: String, command: Dictionary) -> Dictionary:
+	if type=="use_item":
+		if command.has("pet_id") and not command.has("item"):return _reject("missing item")
+		if battle_open:return _reject("野外道具不能在战斗中使用；原战斗道具回合尚未接入。")
+	var before: Dictionary=session.snapshot() if type=="use_item" else {}
 	var spec: Array = PROFILE_COMMANDS[type]
 	var arguments := []
 	for field in spec[1]:
@@ -429,7 +433,11 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	session.last_note = ""
 	var ok: bool = session.callv(spec[0],arguments)
 	if not ok:return _reject(session.last_error)
-	save()
+	var saved := save()
+	if type=="use_item" and not saved:
+		session._profile=before
+		session.last_note=""
+		return _reject("save_failed")
 	_publish()
 	# What a field 精灵 did (耐久力回复N), for the device that cast it.
 	return {"ok":true,"note":session.last_note} if not session.last_note.is_empty() else {"ok":true}

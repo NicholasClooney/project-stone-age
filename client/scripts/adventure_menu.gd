@@ -85,6 +85,8 @@ var name_edit: LineEdit
 var art: Dictionary = {}
 var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 var selected_original_item := -1
+var original_use_pet_id := ""
+var original_item_busy := false
 var selected_item := "potion"
 var selected_item_slot := "potion"
 const Highlight = preload("res://scripts/legacy_ui_highlight.gd")
@@ -517,7 +519,7 @@ func inventory_panel(profile: Dictionary) -> void:
 		var slot:=choice("",center-Vector2(23,23) if equipped else Vector2(11,175)+cell,"",null)
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
 		slot.name="OriginalItemSlot_%d" % index;slot.size=Vector2(48,48)
-		slot.tooltip_text=str(data.get("name",str(ident)))+(" · 双击卸下" if equipped else " · 双击装备" if OriginalEquipment.ITEMS.has(ident) else "")
+		slot.tooltip_text=str(data.get("name",str(ident)))+(" · 双击卸下" if equipped else " · 双击装备" if OriginalEquipment.ITEMS.has(ident) else "")+(" · 野外可使用，满血仍消耗" if data.has("use") else "")
 		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_original_item==index)
 		slot.pressed.connect(func():selected_original_item=index;selected_item_slot="original_%d" % index;rebuild())
 		if OriginalEquipment.ITEMS.has(ident):
@@ -528,11 +530,19 @@ func inventory_panel(profile: Dictionary) -> void:
 	for index in range(bag.size()+visible_originals,15):
 		var empty:=choice("",Vector2(11+(index%5)*51,175+int(index/5)*48),"",null,false)
 		empty.name="EmptyItemSlot_%d" % index;empty.size=Vector2(48,48)
-	# Story items remain descriptive; reviewed equipment uses instance commands.
+	# Audited equipment and field consumables use server-owned commands.
 	if selected_original_item>=0 and selected_original_item<originals.size():
 		var data: Dictionary=quest_catalog.items.get(str(int(originals[selected_original_item])),{})
 		label(str(data.get("name","")),Vector2(15,328),240,15).name="OriginalItemName"
-		var description:=label(str(data.get("description","")),Vector2(15,354),239,14)
+		var description: Label
+		if int(data.get("id",0))==2401 and data.has("use"):
+			description=label("",Vector2(15,354),239,10)
+			description.add_theme_constant_override("line_spacing",-2)
+			description.text="野外回复90～110（原标示100）\n自己或随身宠物；满血仍消耗\n零HP宠物可回复；战斗道具未接入"
+			description.reset_size()
+			description.tooltip_text=str(data.get("description",""))
+			original_recovery_buttons(profile)
+		else:description=label(str(data.get("description","")),Vector2(15,354),239,14)
 		description.name="OriginalItemDescription"
 		var ident:=int(originals[selected_original_item])
 		if OriginalEquipment.ITEMS.has(ident) and selected_original_item<instances.size():
@@ -559,6 +569,38 @@ func inventory_panel(profile: Dictionary) -> void:
 	label(item_description(selected_item),Vector2(15,354),239,12 if selected_item in Spirits.SPIRIT_ITEMS else 14)
 	var main := choice("使用" if potion else ("恢复宠物" if selected_item=="healing_charm" else "卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
 	spirit_field_buttons(profile,main)
+
+func original_recovery_buttons(profile: Dictionary) -> void:
+	if not original_use_pet_id.is_empty() and not profile.pets.any(func(pet):return str(pet.pet_id)==original_use_pet_id):original_use_pet_id=""
+	var can_use:bool=int(profile.player.hp)>0 and not world.session.in_battle() and not world.battle_view.visible and not original_item_busy
+	var action:=choice("使用",Vector2(14,404),"use_original_item",["original_2401",original_use_pet_id],can_use)
+	action.name="OriginalItemUse";action.size.x=70
+	action.tooltip_text="消耗一份香草；满血仍消耗。施药者死亡时不能使用。"
+	var caption:="目标：自己"
+	for pet in profile.pets:
+		if str(pet.pet_id)==original_use_pet_id:caption="目标："+str(pet.name)
+	var targets:=choice(caption,Vector2(88,404),"",null,not original_item_busy)
+	targets.name="OriginalItemTarget";targets.size=Vector2(168,28)
+	targets.add_theme_font_size_override("font_size",12)
+	for connection in targets.pressed.get_connections():targets.pressed.disconnect(connection.callable)
+	targets.pressed.connect(original_recovery_targets)
+
+func original_recovery_targets() -> void:
+	if original_item_busy or panel.has_node("OriginalRecoveryTargets"):return
+	panel.get_node("OriginalItemUse").disabled=true
+	var overlay:=pet_overlay("OriginalRecoveryTargets","使用目标","",Vector2(272,400))
+	overlay_button(overlay,"返回",194,rebuild,"OriginalRecoveryBack")
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,52);scroll.size=Vector2(248,336)
+	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var rows:=VBoxContainer.new();rows.size_flags_horizontal=Control.SIZE_EXPAND_FILL;scroll.add_child(rows)
+	var choices:Array=[{"pet_id":"","name":"自己","hp":world.session.snapshot().player.hp,"max_hp":world.session.snapshot().player.max_hp}]+world.session.snapshot().pets
+	for target in choices:
+		var uid:String=str(target.pet_id)
+		var button:Button=world.button("%s %d/%d"%[str(target.name),int(target.hp),int(target.max_hp)],func():original_use_pet_id=uid;rebuild())
+		button.name="OriginalRecoveryTarget_"+("self" if uid.is_empty() else uid)
+		button.custom_minimum_size=Vector2(236,32);button.add_theme_font_size_override("font_size",13)
+		button.tooltip_text="自己" if uid.is_empty() else uid
+		rows.add_child(button)
 
 ## The worn healing 精灵 cast outside battle (FIELD_ALL: 治愈, 滋润): on the
 ## player, or with 滋润 on the battle pet (the original's status window 精灵).

@@ -88,6 +88,26 @@ class EarlyQuestTests(unittest.TestCase):
             with self.subTest(field=field), self.assertRaises(ValueError):
                 quests.parse_script('EventNo:15\nTYPE:ACCEPT\n'+field+'\nEventEnd')
 
+    def test_herb_recovery_source_and_review_boundaries(self):
+        data = quests.catalog(REFERENCE)
+        herb = data['items']['2401']
+        self.assertEqual((herb['raw_columns'][3], herb['raw_columns'][10]), ('体100', 'ITEM_useRecovery'))
+        self.assertEqual(herb['raw_columns'][19:22], ['16', '0', '1'])
+        use = herb['use']
+        self.assertEqual((use['nominal'], use['roll_min'], use['roll_max']), (100,90,110))
+        self.assertTrue(use['consume_at_full'] and use['zero_hp_target'] and use['field_supported'])
+        self.assertFalse(use['battle_supported'])
+        self.assertEqual(use['targets'], ['self', 'carried_pet'])
+        self.assertFalse(any('use' in item for key,item in data['items'].items() if key != '2401'))
+        spec = json.loads(quests.SPEC.read_text())
+        for source in ['gmsv/item/item_event.c', 'gmsv/battle/battle_item.c', 'gmsv/char/char_item.c', 'gmsv/include/version.h']:
+            changed = json.loads(json.dumps(spec)); changed['sources'][source] = '0'*64
+            with self.assertRaisesRegex(ValueError, 'Unreviewed source'):
+                quests.catalog(REFERENCE, changed)
+        spec['recovery_items'] = [2414]
+        with self.assertRaisesRegex(ValueError, 'Unreviewed recovery item'):
+            quests.catalog(REFERENCE, spec)
+
     def test_changed_sources_rejected(self):
         spec = json.loads(quests.SPEC.read_text())
         spec['sources'][spec['creates'][0]] = '0'*64
