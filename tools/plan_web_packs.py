@@ -239,6 +239,13 @@ def plan() -> dict:
             assign(pack, path)
             lookups["files"][res(path)] = pack
 
+    # 宠物大全's pre-cut thumbnails (tools/build_pet_thumbs.py): the small
+    # index is in core, the atlases are one quiet background pack each.
+    for path in sorted((LEGACY / "thumbs").glob("atlas-*.png")):
+        pack = f"thumbs-{path.stem.split('-')[-1]}"
+        assign(pack, path)
+        lookups["files"][res(path)] = pack
+
     for path in sorted(files):
         assign("core", path)
     return {"packs": {name: sorted(paths) for name, paths in packs.items()}, **lookups, "skipped": skipped}

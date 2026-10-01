@@ -177,6 +177,11 @@ func window() -> void:
 	var helper_names: Array = game.helper_menu.entries().map(func(entry):return entry[0])
 	check(helper_names.has("HelperEncyclopedia"),"游戏助手 lists 宠物大全")
 	var menu = game.pet_encyclopedia
+	# Pre-cut thumbnails (tools/build_pet_thumbs.py): every picture is a region
+	# of a small atlas, so no sprite sheet is loaded to show the grid.
+	check(Thumbs.atlas_index().get("sprites",{}).size() > 600 and Thumbs.atlas_path(100373).begins_with(Thumbs.THUMBS),"红暴's thumbnail is in a pre-cut atlas")
+	var cut := Thumbs.texture(100373)
+	check(cut is AtlasTexture and cut.region.size.x > 0 and cut.region.size.x <= 128 and cut.region.size.y <= 128,"and the picture is that atlas region, at most 128 px")
 	# A fake picture for 乌力 stands in for the renderer headless runs lack.
 	var picture := ImageTexture.create_from_image(Image.create(8,8,false,Image.FORMAT_RGBA8))
 	Thumbs.set_texture(100250,picture)

@@ -30,6 +30,8 @@ var book
 var panel: PanelContainer
 var body: VBoxContainer
 var feedback_label: Label
+var thumbs_bar: ProgressBar
+var thumbs_caption: Label
 var search: LineEdit
 var catchable_box: CheckBox
 var classic_box: CheckBox
@@ -121,6 +123,21 @@ func _ready() -> void:
 	var spacer := Control.new()
 	spacer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 	top.add_child(spacer)
+	# Web: the thumbnails come in a few small packs; pictures appear as each
+	# arrives, and this bar never blocks the window.
+	thumbs_bar = ProgressBar.new()
+	thumbs_bar.name = "ThumbsProgress"
+	thumbs_bar.custom_minimum_size = Vector2(150,14)
+	thumbs_bar.show_percentage = false
+	thumbs_bar.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	thumbs_bar.size_flags_vertical = Control.SIZE_SHRINK_CENTER
+	thumbs_bar.tooltip_text = "宠物图下载中"
+	thumbs_bar.hide()
+	thumbs_caption = PetTable.text("","meta",PetTable.MUTED)
+	thumbs_caption.name = "ThumbsProgressText"
+	thumbs_caption.hide()
+	top.add_child(thumbs_caption)
+	top.add_child(thumbs_bar)
 	var close: Button = world.button("关闭 · Esc",close_menu)
 	close.name = "EncyclopediaClose"
 	top.add_child(close)
@@ -427,8 +444,12 @@ func _update_thumbs() -> void:
 		var sprite := int(item[1])
 		var texture := Thumbs.cached(sprite)
 		if texture == null and Thumbs.possible(sprite):
-			if not ResourceLoader.exists(Thumbs.sheet_path(sprite)):
-				if retry:waiting.append(sprite)
+			var source := Thumbs.atlas_path(sprite)
+			if source.is_empty():source = Thumbs.sheet_path(sprite)
+			if not ResourceLoader.exists(source):
+				# A pre-cut atlas comes with the thumbnail packs (all of them
+				# are being fetched); only a sprite without one needs its sheet.
+				if retry and Thumbs.atlas_path(sprite).is_empty():waiting.append(sprite)
 				continue
 			if Time.get_ticks_usec()-started > THUMB_BUDGET_USEC:break
 			texture = Thumbs.texture(sprite)
@@ -443,8 +464,29 @@ func _update_thumbs() -> void:
 		_thumb_retry_msec = Time.get_ticks_msec()+800
 		if not waiting.is_empty() and world.asset_packs.enabled:world.asset_packs.prefetch(world.asset_packs.sprite_packs(waiting))
 
+## Starts the thumbnail packs (if the game has not yet) and shows how far
+## they are, without blocking anything.
+func _update_thumbs_progress() -> void:
+	if thumbs_bar == null:return
+	var packs := Thumbs.atlas_packs(world.asset_packs)
+	var progress: Vector2i = world.asset_packs.progress_of(packs) if not packs.is_empty() else Vector2i.ZERO
+	var loading := not packs.is_empty() and progress.y > 0 and progress.x < progress.y
+	if loading and Time.get_ticks_msec() >= _thumb_pack_retry_msec:
+		_thumb_pack_retry_msec = Time.get_ticks_msec()+2000
+		world.asset_packs.prefetch(packs)
+	thumbs_bar.visible = loading
+	thumbs_caption.visible = loading
+	if loading:
+		thumbs_bar.max_value = progress.y
+		thumbs_bar.value = progress.x
+		thumbs_caption.text = "宠物图 %.1f / %.1f MB" % [progress.x/1e6,progress.y/1e6]
+
+var _thumb_pack_retry_msec := 0
+
 func _process(_delta: float) -> void:
-	if visible:_update_thumbs()
+	if visible:
+		_update_thumbs_progress()
+		_update_thumbs()
 	if not pending_hunt.is_empty():_check_arrival()
 
 # ---- 列表 ------------------------------------------------------------------

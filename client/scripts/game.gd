@@ -368,6 +368,9 @@ func _ready() -> void:
 	if asset_packs.enabled and not await _download_start_area():
 		_show_startup_error("起始地图素材下载失败，请检查与 MacBook 的连接后刷新页面。")
 		return
+	# 宠物大全's thumbnails (a few MB): quietly in the background, after
+	# everything the game needs to start.
+	if asset_packs.enabled:asset_packs.prefetch(preload("res://scripts/pet_thumbnails.gd").atlas_packs(asset_packs))
 	data = MapFile.load_map(world_catalog.file(1000))
 	PerfRegistry.track_manifest("当前地图",MapFile.file_size(world_catalog.file(1000)))
 	build_world()

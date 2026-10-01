@@ -486,6 +486,8 @@ else
   # Last: the small per-sprite files and indexes the game reads, from the
   # importers' manifests (the importers above also refresh their own).
   run python3 tools/split_manifests.py
+  # 宠物大全's pre-cut thumbnails, from the sheets above.
+  run "$PY" tools/build_pet_thumbs.py
   echo "$import_key" > "$IMPORT_STAMP"
 fi
 

@@ -129,6 +129,21 @@ func riding_pack(ident: Variant) -> String:
 func character_pack(ident: Variant) -> String:
 	return str(index.get("characters",{}).get(str(ident),""))
 
+## Bytes done and total of some packs (mounted ones count whole), for a
+## progress bar that does not block: Vector2i(done, total).
+func progress_of(packs: Array) -> Vector2i:
+	var total := 0
+	var done := 0
+	for pack in packs:
+		if not index.get("packs",{}).has(pack):continue
+		var bytes := int(index.packs[pack].bytes)
+		total += bytes
+		if _mounted.has(pack):done += bytes
+		else:
+			for request in _active:
+				if _active[request]==pack and request is HTTPRequest:done += request.get_downloaded_bytes()
+	return Vector2i(done,total)
+
 func file_pack(path: String) -> String:
 	return str(index.get("files",{}).get(path,""))
 
