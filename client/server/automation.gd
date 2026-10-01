@@ -170,7 +170,8 @@ var flow_run_id := ""
 ## 后台搜宠 (hunt.showcase, default on; the name players see is
 ## AutomationSettings.SHOWCASE_NAME): the find-pet cycle keeps searching while
 ## the player watches a found pet's capture and 自动练级 to Lv.120; hits wait in
-## `showcase_queue` (hunt.queue long). Off, the cycle runs as before.
+## `showcase_queue`, one queue per species (hunt.queue long each). Off, the
+## cycle runs as before.
 const SHOWCASE_QUEUE_MAX := 10
 const SHOWCASE_LOG_MAX := 8
 ## A watching device plays a shown battle at its own speed; the runner waits
@@ -178,8 +179,13 @@ const SHOWCASE_LOG_MAX := 8
 const SHOWN_PRESENT_TIMEOUT_MSEC := 60000
 var flow_showcase := false
 ## Found hits waiting for their turn: {index, slot, run_seed, actor, troop,
-## prediction, quality}, best first by the species' ranking.
+## prediction, quality}. Every species has its own queue: kept as one array
+## grouped by species (template id, ascending), each group best first by the
+## species' ranking (_sort_queue), so the resume file keeps one list.
 var showcase_queue: Array = []
+## The species whose hit was taken last: the next capture takes the best hit
+## of the next species with hits (round-robin, _take_queued).
+var showcase_last_template := -1
 var showcase_current: Dictionary = {}
 ## The battle now open is one the player watches (not compact).
 var showcase_show_battle := false
@@ -1344,7 +1350,7 @@ func start_cycle(continuing: bool) -> bool:
 	flow_phase = "hunt"
 	if not continuing:
 		flow_showcase = bool(flow_hunt_request.get("showcase",false))
-		showcase_queue = [];showcase_current = {};showcase_log = []
+		showcase_queue = [];showcase_current = {};showcase_log = [];showcase_last_template = -1
 	_emit_event({"kind":"flow_hunt"})
 	if not start_hunt(flow_hunt_request):
 		stop_cycle(hunt_status);return false
@@ -1600,7 +1606,7 @@ const RESUME_KINDS := ["flow","hunt","training"]
 const RESUME_FLOW_FIELDS := ["flow_phase","flow_reason","flow_pet_id","flow_known_ids","flow_matched_actor","flow_matched_index","flow_matched_roll",
 	"flow_stat_filters","flow_settings_overrides","flow_target_filter","flow_hunt_request","flow_stored_count","flow_last_result","flow_last_stored_id",
 	"flow_last_stored_total","flow_kept_count","flow_collected_count","flow_pruned_count","flow_run_reject_ids","flow_released_count","flow_held_count",
-	"flow_predicted_rejects","flow_run_id","flow_showcase","showcase_queue","showcase_current","showcase_log","_showcase_log_serial","flow_skip_kind",
+	"flow_predicted_rejects","flow_run_id","flow_showcase","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","flow_skip_kind",
 	"flow_skip_streak","flow_skipped_count","flow_skip_note","flow_best_predicted","survey_picks","survey_last","flow_target_survey"]
 const RESUMED := "服务器重启后已恢复"
 ## Read back at startup (load_resume) and applied by try_resume.
@@ -1722,6 +1728,10 @@ func _resume_flow(state: Dictionary) -> void:
 	var saved: Dictionary = state.get("flow",{})
 	for field in RESUME_FLOW_FIELDS:
 		if saved.has(field):set(field,saved[field])
+	showcase_last_template = int(showcase_last_template)
+	# A file from before per-species queues holds one shared queue: grouping
+	# splits it into each species' queue, in the same order within a species.
+	_sort_queue()
 	flow_map = int(state.map_id)
 	flow_cell = Vector2i(int(state.cell[0]),int(state.cell[1]))
 	flow_stat_filters = _int_keys(flow_stat_filters)
@@ -1789,8 +1799,10 @@ func _resume_capture() -> String:
 		return "%s 已在重启前抓到，接着练到120级" % name
 	if flow_showcase:
 		if not showcase_current.is_empty():
-			showcase_queue.push_front(showcase_current)
-			showcase_queue.sort_custom(_showcase_better)
+			showcase_queue.append(showcase_current)
+			_sort_queue()
+			# Its species is served next (the smallest species after this).
+			showcase_last_template = _template_of(showcase_current)-1
 		showcase_current = {}
 		flow_matched_actor = {};flow_matched_index = -1;flow_matched_roll = {}
 		flow_phase = "hunt"
@@ -1907,7 +1919,7 @@ func _skip_hit(kind: String, reason: String) -> void:
 # played in full. Hits found meanwhile wait in showcase_queue. The name the
 # player sees is AutomationSettings.SHOWCASE_NAME.
 
-## Queued hits best first by the species' 保留规则 order (第一/第二/第三,
+## Two hits of one species, best first by the species' 保留规则 order (第一/第二/第三,
 ## default 攻击 → 敏捷 → 血), then the other keys (三围合 first), then the
 ## earlier roll. A full queue lets the last one go.
 func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
@@ -1921,26 +1933,67 @@ func _showcase_better(a: Dictionary, b: Dictionary) -> bool:
 func queue_limit() -> int:
 	return clampi(int(flow_hunt_request.get("queue",SHOWCASE_QUEUE_MAX)),1,50)
 
-## A hit found while the player watches (or idle). When the queue is over
-## its limit the lowest ranked hit, possibly this one, is dropped and written
-## to 放生记录 as 未捕获·排队已满.
+## A hit found while the player watches (or idle). When its species' queue is
+## over the limit the lowest ranked hit of that species, possibly this one, is
+## dropped and written to 放生记录 as 未捕获·排队已满; other species' queues
+## are never touched.
 func _showcase_enqueue(index: int, slot: int, troop: Dictionary, quality: Dictionary) -> void:
 	var actor: Dictionary = troop.enemies[slot]
 	var projected: Dictionary = Progression.project_pet(actor,120)
 	_showcase_add({"index":index,"slot":slot,"run_seed":hunt_run_seed,"actor":actor.duplicate(true),"troop":troop.duplicate(true),"quality":quality.duplicate(true),
 		"prediction":_prediction(projected)})
 
-## Queues an entry (a hit, or a survey pick marked survey) best first.
+## Queues an entry (a hit, or a survey pick marked survey) in its species'
+## queue, best first; each species' queue keeps at most queue_limit().
 func _showcase_add(entry: Dictionary) -> void:
 	showcase_queue.append(entry)
-	showcase_queue.sort_custom(_showcase_better)
+	_sort_queue()
 	_prune_below_threshold()
-	while showcase_queue.size()>queue_limit():_drop_queued(showcase_queue.pop_back())
+	for id in _queue_templates():
+		while _species_queue(id).size()>queue_limit():
+			var last: Dictionary = _species_queue(id).back()
+			showcase_queue.erase(last)
+			_drop_queued(last)
 	_emit_status()
 
+static func _template_of(entry: Dictionary) -> int:
+	return int(entry.get("actor",{}).get("template_id",-1))
+
+## Groups the queue by species (template id), each species best first.
+func _sort_queue() -> void:
+	showcase_queue.sort_custom(func(a,b):
+		if _template_of(a)!=_template_of(b):return _template_of(a)<_template_of(b)
+		return _showcase_better(a,b))
+
+## The species with queued hits, in queue order.
+func _queue_templates() -> Array:
+	var result: Array = []
+	for entry in showcase_queue:
+		if not result.has(_template_of(entry)):result.append(_template_of(entry))
+	return result
+
+## One species' queue, best first.
+func _species_queue(template_id: int) -> Array:
+	return showcase_queue.filter(func(e):return _template_of(e)==template_id)
+
+## The next hit to catch: the best of the species after the one taken last
+## (round-robin over the species with hits), so no species waits behind
+## another's. A survey pick is ranked in its species' queue like any hit.
+func _take_queued() -> Dictionary:
+	var templates := _queue_templates()
+	if templates.is_empty():return {}
+	var chosen: int = templates[0]
+	for id in templates:
+		if int(id)>showcase_last_template:
+			chosen = int(id);break
+	var entry: Dictionary = _species_queue(chosen)[0]
+	showcase_queue.erase(entry)
+	showcase_last_template = chosen
+	return entry
+
 ## Queued hits a better one (queued or owned) has put below the thresholds are
-## let go at once, instead of each when its turn comes. The queue is best
-## first, so each hit is judged against owned pets, picks, the hit being
+## let go at once, instead of each when its turn comes. Each species' queue is
+## best first, so each hit is judged against owned pets, picks, the hit being
 ## caught and the kept hits ranked above it (entry_maxima), never itself: the
 ## best hit always survives. Each one let go is written to 放生记录. With fixed
 ## values (absolute mode) better hits raise nothing: only the values count,
@@ -1965,13 +2018,15 @@ func _prune_below_threshold() -> void:
 	var id0 := int(dropped[0].actor.get("template_id",-1))
 	_showcase_line("dropped","门槛已提高（%s），排队中的%s不再够格，已放弃" % [_template_name(id0)+"："+StatFilter.describe_thresholds(raw_filter_for(id0),species_maxima(id0)),"、".join(names)])
 
+## A hit its species' full queue let go (already taken out of the queue).
 func _drop_queued(entry: Dictionary) -> void:
 	var limit := queue_limit()
 	var p: Dictionary = entry.prediction
-	# The hits just above it in the queue, closest first.
-	var above: Array = showcase_queue.slice(maxi(0,showcase_queue.size()-3))
+	# The hits of its species just above it, closest first.
+	var same := _species_queue(_template_of(entry))
+	var above: Array = same.slice(maxi(0,same.size()-3))
 	above.reverse()
-	var reason := "排队已满（上限%d），排在第%d" % [limit,limit+1]
+	var reason := "%s的排队已满（每个品种上限%d），排在第%d" % [_template_name(_template_of(entry)),limit,limit+1]
 	_log_uncaught(entry,"排队已满",reason,above)
 	_showcase_line("dropped","排队已满：放弃第%d组 %s（预测三围合%d），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),int(p.attack)+int(p.defence)+int(p.speed),reason])
 
@@ -2001,8 +2056,9 @@ func _queue_summary() -> Array:
 	return result
 
 ## 宠物记录's 排队 tab (backend hunt_queue): the hit being caught or trained
-## (current, phase capture/train/restart) and every queued hit best first,
-## each with its rank (1-based, 0 for current), Lv, 成长档 and predicted Lv.120
+## (current, phase capture/train/restart) and every species' queue (groups:
+## template_id, name, count; limit is per species) best first, each hit with
+## its rank in its species' queue (1-based, 0 for current), Lv, 成长档 and predicted Lv.120
 ## stats. active: a find-pet cycle is running with 后台搜宠.
 func queue_view() -> Dictionary:
 	var entries: Array = []
@@ -2016,8 +2072,12 @@ func queue_view() -> Dictionary:
 			row.level = int(pet.get("level",row.level))
 			row.pet_id = flow_pet_id
 		entries.append(row)
-	for i in range(showcase_queue.size()):entries.append(_queue_row(showcase_queue[i],i+1))
-	return {"active":flow_active() and flow_showcase,"showcase":flow_showcase,"phase":flow_phase,"limit":queue_limit(),"size":showcase_queue.size(),"entries":entries}
+	var groups: Array = []
+	for id in _queue_templates():
+		var queued := _species_queue(id)
+		groups.append({"template_id":id,"name":_template_name(id),"count":queued.size()})
+		for i in range(queued.size()):entries.append(_queue_row(queued[i],i+1))
+	return {"active":flow_active() and flow_showcase,"showcase":flow_showcase,"phase":flow_phase,"limit":queue_limit(),"size":showcase_queue.size(),"groups":groups,"entries":entries}
 
 static func _queue_row(entry: Dictionary, rank: int) -> Dictionary:
 	var actor: Dictionary = entry.get("actor",{})
@@ -2077,7 +2137,7 @@ func _showcase_step() -> void:
 ## the same troop, and opens its capture battle, presented like any capture.
 func _showcase_capture() -> void:
 	refresh_maxima()
-	showcase_current = showcase_queue.pop_front()
+	showcase_current = _take_queued()
 	var entry := showcase_current
 	var actor: Dictionary = entry.actor
 	flow_target_survey = bool(entry.get("survey",false))
