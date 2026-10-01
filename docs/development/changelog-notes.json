@@ -1619,5 +1619,17 @@
     "details": [
       "「找到N只后停止」新角色默认 0：一直找到手动停止；需要找到一只就停下来比较时设为 1。"
     ]
+  },
+  "fix(hunt): leave the battle after the catch so the weaken pet stays at its level": {
+    "title": "抓到后直接逃跑，削血宠不再升级",
+    "details": [
+      "自动抓宠抓到目标后直接逃离战斗，不再打完剩下的敌人；削血宠拿不到经验，不会升级超过等级上限。逃跑失败就防御并在下回合再逃。"
+    ]
+  },
+  "fix(ui): put each 难抓 box beside its own caption": {
+    "title": "难抓设置对齐",
+    "details": [
+      "抓宠设置里「难抓：失败次数 / 成功率低于 % / 削血到 %」三个输入框原来整体上移了一行，显示在错误的标题旁；现在各自对齐。"
+    ]
   }
 }

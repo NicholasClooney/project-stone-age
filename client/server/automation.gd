@@ -505,9 +505,13 @@ func step() -> void:
 		if turns >= 200:stop("单场超过200回合，请手动处理");return
 		if str(settings.preset)=="capture" and backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:
 			stop("宠物栏已满，请先腾出位置");return
+		var decision: Dictionary
+		# After the catch the run leaves: no enemy is defeated, so the weaken
+		# pet earns no experience and stays under its level cap. A failed
+		# escape guards and tries again next turn.
 		if str(settings.preset)=="capture" and finish_after_capture and capture_target>=0 and capture_target<state.enemies.size() and state.enemies[capture_target].get("captured",false) and int(state.get("clear_capture_target",-1))<0:
-			settings.preset = "attack"
-		var decision: Dictionary = Policy.decide(state,settings,capture_target)
+			decision = {"action":"escape","pet":"defend","target":capture_target,"assist":true}
+		else:decision = Policy.decide(state,settings,capture_target)
 		if decision.has("stop"):stop(str(decision.stop));return
 		backend.set_capture_assist(bool(decision.get("assist",str(settings.preset)=="capture")))
 		# A disobeying pet only skips its action in a run (battle_session.gd).

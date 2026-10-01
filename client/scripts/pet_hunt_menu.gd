@@ -625,7 +625,9 @@ func stop_after_controls()->void:
 func install_fallback_controls(attempts: SpinBox, rate: SpinBox, hp: SpinBox)->void:
 	for entry in [[attempts,"CaptureFallbackAttempts","难抓：失败次数",299],[rate,"CaptureFallbackRate","难抓：成功率低于 %",349],[hp,"CaptureFallbackHp","难抓：削血到 %",399]]:
 		var input: SpinBox=entry[0]
-		input.reparent(capture_page);input.name=entry[1];input.size=Vector2(150,38);controls.append(input)
+		# Placed beside its caption: reparent keeps the global position, which
+		# put each box one row above its own caption.
+		input.reparent(capture_page);input.name=entry[1];input.position=Vector2(230,int(entry[3])-10);input.size=Vector2(150,38);controls.append(input)
 		input.tooltip_text="混合敌群先由五人不带出战宠清场，保护全部 Lv.1；难抓时才换随身队伍中存活、非骑乘且符合等级上限的削血宠。血量线取本项与抓宠血量线的较低值。缺少合适宠物会暂停，预演也使用同一策略。"
 		var caption:Label=world.text(entry[2],16);caption.position=Vector2(24,int(entry[3]));capture_page.add_child(caption)
 

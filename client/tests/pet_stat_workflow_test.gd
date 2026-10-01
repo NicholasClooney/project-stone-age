@@ -158,6 +158,16 @@ func run()->void:
 	for child in hunt.capture_page.get_children():
 		if child is Control and child!=note and child!=hunt.stop_after:neighbours.append(child)
 	check(neighbours.all(func(other):return other==hunt.stop_after or not (other.get_global_rect().intersects(hunt.stop_after.get_global_rect()) or other.get_global_rect().intersects(note.get_global_rect()))),"and overlaps no other capture setting")
+	# 难抓 rows: each box sits beside its own caption, not one row up.
+	var captions:Dictionary={}
+	for child in hunt.capture_page.get_children():
+		if child is Label and str(child.text).begins_with("难抓："):captions[str(child.text)]=child
+	var rows_ok:=captions.size()==3
+	for pair in [["CaptureFallbackAttempts","难抓：失败次数"],["CaptureFallbackRate","难抓：成功率低于 %"],["CaptureFallbackHp","难抓：削血到 %"]]:
+		var box:Control=hunt.capture_page.get_node_or_null(pair[0])
+		var label:Control=captions.get(pair[1])
+		rows_ok=rows_ok and box!=null and label!=null and absf(box.get_global_rect().get_center().y-label.get_global_rect().get_center().y)<=12 and box.get_global_rect().position.x>label.get_global_rect().end.x
+	check(rows_ok,"each 难抓 box is on its caption's row")
 	hunt.stop_after.get_line_edit().grab_focus();hunt.stop_after.get_line_edit().text="7";hunt.commit_stat_settings()
 	check(int(game.automation_settings().hunt.stop_after)==7 and not game.automation_settings().get("stat_filters",{}).get("92",{}).has("stop_after"),"typed stop count commits to hunt.stop_after, for the whole run")
 	hunt.stop_after.get_line_edit().release_focus();hunt.stop_after.value=1;game.flush_automation_settings()
