@@ -1,9 +1,18 @@
 {
-  "version": "v0.156.0",
-  "count": 223,
+  "version": "v0.156.1",
+  "count": 224,
   "feature_count": 140,
-  "fix_count": 83,
+  "fix_count": 84,
   "entries": [
+    {
+      "version": "v0.156.1",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "镜像练级进战检查",
+      "details": [
+        "开发验证：默认开启挑敌群时等待评分和真实进战完成，再检查五名骑乘角色、五只出战宠与手动接管；原战斗配置不变。"
+      ]
+    },
     {
       "version": "v0.156.0",
       "date": "2026-10-01",
