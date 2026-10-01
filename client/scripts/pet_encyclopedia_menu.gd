@@ -985,8 +985,11 @@ func _potential_card(title: String, potential: Dictionary, control_name: String)
 		line.add_child(item)
 	stack.add_child(PetTable.text("均值 攻 %.1f · 防 %.1f · 敏 %.1f · 血 %.1f · 攻击前1%% %d" % [float(potential.mean_attack),float(potential.mean_defence),float(potential.mean_speed),float(potential.mean_hp),int(potential.top1_attack)],"body"))
 	stack.add_child(PetTable.text("四项+2，Lv.%d捕获后逐级练到120；%s只模拟，固定种子。" % [int(potential.level),_count_text(int(potential.pets))],"meta"))
-	for label in stack.find_children("*","Label",true,false):
-		label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	# Only the sentences wrap. The four figures sit in a flow row: a wrapping
+	# label there has no minimum width and broke into one character per line.
+	for label in stack.get_children():
+		if label is Label and label.get_parent()==stack:label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	for label in line.find_children("*","Label",true,false):label.autowrap_mode = TextServer.AUTOWRAP_OFF
 	return card
 
 static func _count_text(count: int) -> String:

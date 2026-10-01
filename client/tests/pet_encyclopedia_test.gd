@@ -195,6 +195,10 @@ func window() -> void:
 	cell.pressed.emit()
 	await process_frame
 	check(menu.view == "detail" and menu.body.find_child("SpeciesName",true,false).text == "扬奇洛斯" and menu.body.find_child("PotentialLv1",true,false) != null,"clicking a cell opens its page with the Lv.120 prediction")
+	await process_frame
+	var potential_card = menu.body.find_child("PotentialLv1",true,false)
+	var figures: Array = potential_card.find_children("*","Label",true,false).filter(func(l):return l.text in ["三围合均值","前1%","前0.1%","样本最高"])
+	check(figures.size()==4 and figures.all(func(l):return l.autowrap_mode==TextServer.AUTOWRAP_OFF and l.get_line_count()==1),"the prediction figures stay on one line each, not one character per line")
 	check(menu.body.find_child("SpeciesVariants",true,false).get_child_count() == menu.book.families.filter(func(f):return f.name == "人龙系")[0].species.size(),"the page lists the family's species")
 	menu.show_species(178)
 	await process_frame
