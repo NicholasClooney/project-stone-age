@@ -143,7 +143,7 @@ func _resolve_counter() -> void:
 	_state.enemy_target="" if from_ally else kind
 	_state.ally_index=index
 	if from_ally and int(enemy.hp)==0:
-		enemy.defeated_by_pet_index=_state.active_pet if (_state.pet_hp>0 or bool(_config.get("protect_pets",false))) else -1
+		enemy.defeated_by_pet_index=_kill_credit()
 		enemy.defeated_with_ride_index=int(_state.get("ride_pet",-1))
 	_sync_enemy(_target)
 	_state.events.append("反击！%d" % _last_damage)

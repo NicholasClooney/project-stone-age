@@ -449,7 +449,7 @@ func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 	enemy.hp -= _last_damage
 	if str(stats.get("kind",""))=="player":_wear_attacker(int(result.damage))
 	if int(enemy.hp) == 0:
-		enemy["defeated_by_pet_index"] = _state.active_pet if (_state.pet_hp > 0 or bool(_config.get("protect_pets",false))) else -1
+		enemy["defeated_by_pet_index"] = _kill_credit()
 		enemy["defeated_with_ride_index"] = int(_state.get("ride_pet",-1)) if stats.kind == "player" else -1
 	_sync_enemy(_target)
 	_state.events.append("%s攻击%s：%s %d。" % [actor_name,str(enemy.get("name","对手")),_last_outcome,_last_damage])
@@ -501,7 +501,7 @@ func _reflect_incoming(damage: int, target_pet: bool) -> bool:
 	_last_damage=mini(damage,int(enemy.hp))
 	enemy.hp-=_last_damage
 	if int(enemy.hp)==0:
-		enemy.defeated_by_pet_index=_state.active_pet if (_state.pet_hp>0 or bool(_config.get("protect_pets",false))) else -1
+		enemy.defeated_by_pet_index=_kill_credit()
 		enemy.defeated_with_ride_index=int(_state.get("ride_pet",-1)) if not target_pet else -1
 	_sync_enemy(_acting_enemy)
 	_state.events.append("镜子的精灵反射攻击！对手受到 %d 伤害。"%_last_damage)
@@ -523,6 +523,14 @@ func _sync_enemy(index: int) -> void:
 	var enemy: Dictionary = _state.enemies[index]
 	for key in ["hp","max_hp","name","species","sprite"]:
 		_state["enemy_" + key] = enemy.get(key,_state.get("enemy_" + key))
+
+## The party slot a defeated enemy's experience goes to, or -1. In a capture
+## run (capture_assist) nobody's kill, a counter or a clone's included, counts
+## for the battle pet: it is the weaken pet and must stay under its level cap.
+## 练级保护 credits a fallen pet too.
+func _kill_credit() -> int:
+	if capture_assist:return -1
+	return _state.active_pet if (_state.pet_hp>0 or bool(_config.get("protect_pets",false))) else -1
 
 func _sync_pet() -> void:
 	var index: int = _state.active_pet
@@ -595,7 +603,7 @@ func _resolve_counter() -> void:
 		_state.enemies[_target].hp -= _last_damage
 		if actor=="player":_wear_equipment(damage,true)
 		if int(_state.enemies[_target].hp) == 0:
-			_state.enemies[_target]["defeated_by_pet_index"] = _state.active_pet if (_state.pet_hp > 0 or bool(_config.get("protect_pets",false))) else -1
+			_state.enemies[_target]["defeated_by_pet_index"] = _kill_credit()
 			_state.enemies[_target]["defeated_with_ride_index"] = int(_state.get("ride_pet",-1)) if actor == "player" else -1
 		_sync_enemy(_target)
 	else:

@@ -71,5 +71,14 @@ func _initialize():
  var strict=Authority.new()
  var plain:Dictionary=strict.start_battle({"player_hp":100,"player_max_hp":100,"enemy_max_hp":30,"pet":{"species":"wooli","name":"乌力","sprite":100250,"hp":0,"max_hp":40,"attack":1,"speed":1}})
  check(int(strict.submit_action("revive_pet",0,int(plain.active_pet)).pets[int(plain.active_pet)].hp)==0,"outside 练级保护 the battle refuses it")
+ # A capture run gives the battle pet (the weaken pet) no kill credit, even
+ # for the player's or a clone's kill or a counter; elsewhere it gets it.
+ for assist in [true,false]:
+  var killer=Authority.new()
+  killer.start_battle({"player_hp":100,"player_max_hp":100,"player_attack":500,"player_speed":50,"enemy_max_hp":5,"enemy_speed":1,"enemy_attack":1,"pet":{"species":"wooli","name":"乌力","sprite":100250,"hp":40,"max_hp":40,"attack":1,"speed":1}})
+  killer.set_capture_assist(assist)
+  var after:Dictionary=killer.submit_action("attack",0)
+  var credit=int(after.enemies[0].get("defeated_by_pet_index",-2))
+  check(int(after.enemies[0].hp)==0 and credit==(-1 if assist else int(after.active_pet)),"%s: the player's kill credits %s (%d)"%["capture run" if assist else "ordinary battle","no pet" if assist else "the battle pet",credit])
  print("BATTLE AUTO POLICY: %d failures"%failures)
  quit(1 if failures else 0)
