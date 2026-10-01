@@ -501,8 +501,18 @@ func _sync_pet() -> void:
 	_state.pet_sprite = _state.pet.get("sprite",100250)
 	_state.skill_unlocked = not _state.pet.get("learned_skills",[]).is_empty()
 
+## Each capturable enemy carries capture_odds: the winning rolls out of 100
+## a capture would have now (CaptureRules), so the capture policy can weaken
+## a target first when throwing at it cannot work yet.
 func snapshot() -> Dictionary:
-	return _state.duplicate(true)
+	var view := _state.duplicate(true)
+	if bool(view.get("active",false)) and bool(view.get("can_capture",false)):
+		var capture_player := {"level":_config.get("player_level",1),"speed":_config.get("player_speed",10),"charm":_config.get("player_charm",60),"luck":_config.get("player_luck",0),"capture_bonus":_config.get("capture_bonus",0)}
+		for enemy in view.get("enemies",[]):
+			if bool(enemy.get("can_capture",false)) and not bool(enemy.get("captured",false)) and int(enemy.get("hp",0))>0:
+				var evaluation := CaptureRules.evaluate(capture_player,enemy)
+				if bool(evaluation.get("eligible",false)):enemy["capture_odds"] = int(evaluation.winning_rolls)
+	return view
 
 func _finish(outcome: String, message: String) -> void:
 	_state.active = false

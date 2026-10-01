@@ -1,4 +1,6 @@
 extends RefCounted
+## A capture is thrown only when it wins at least this many rolls out of 100.
+const MIN_CAPTURE_ODDS := 10
 ## Single-player convenience decisions; never mutate battle state or grant rewards.
 static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dictionary:
  if state.get("healing_available",false) and int(state.get("pet_hp",0))>0 and int(state.get("pet_hp",0))*2<=int(state.get("pet_max_hp",0)):
@@ -14,10 +16,19 @@ static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dict
  if int(enemy.hp)<=0:return {"stop":"捕捉目标已倒下，已停止；不会改抓其他敌人"}
  if not state.get("can_capture",true):return {"stop":"当前战斗不可继续捕捉，可能已达捕获数量上限"}
  if not enemy.get("can_capture",false) or state.get("boss",false):return {"stop":"所选目标不可捕捉"}
- if int(enemy.hp)*100<=int(enemy.get("max_hp",1))*int(settings.get("capture_hp",100)):
+ # capture_odds (battle_session snapshot): rolls out of 100 a capture wins now.
+ # Below MIN_CAPTURE_ODDS the target is weakened first (斑尼迪克 at full HP: 0).
+ var odds:=int(enemy.get("capture_odds",-1))
+ var low_enough:=int(enemy.hp)*100<=int(enemy.get("max_hp",1))*int(settings.get("capture_hp",100))
+ if low_enough and (odds<0 or odds>=MIN_CAPTURE_ODDS):
   return {"action":"capture","pet":"defend","target":target}
  var choice:=capture_pet_choice(state,settings,int(enemy.get("level",1)))
- if choice.has("stop"):return choice
+ if choice.has("stop"):
+  # Weakening only because of the odds: without a weaken pet, keep throwing
+  # while any roll wins, and stop with the reason when none can.
+  if low_enough and odds>0:return {"action":"capture","pet":"defend","target":target}
+  if low_enough and odds==0:return {"stop":"捕获率为0：需要削血宠先削血（%s）"%str(choice.stop)}
+  return choice
  var best:=int(choice.index)
  if best!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":best}
  return {"action":"defend","pet":"attack","target":target}

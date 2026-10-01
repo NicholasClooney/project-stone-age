@@ -34,5 +34,27 @@ func _initialize():
  check(Policy.decide(state,settings,0).has("stop"),"stored selected pet pauses rather than choosing another pet")
  settings.preset="train_pet"
  check(Policy.decide(state,settings,-1).action=="attack","pet training uses ordinary attacking policy")
+ # Capture odds: a target no throw can catch yet is weakened first (斑尼迪克,
+ # capture parameter -5, at full HP against a Lv120 player).
+ var CaptureRules=load("res://server/capture_rules.gd")
+ var player={"level":120,"speed":104,"charm":94,"luck":1}
+ var gold={"hp":72,"max_hp":72,"level":1,"speed":9,"capture_parameter":-5,"can_capture":true}
+ var full_odds=int(CaptureRules.evaluate(player,gold).winning_rolls)
+ gold.hp=50
+ var weak_odds=int(CaptureRules.evaluate(player,gold).winning_rolls)
+ check(full_odds<Policy.MIN_CAPTURE_ODDS and weak_odds>=Policy.MIN_CAPTURE_ODDS,"斑尼迪克 cannot be caught at full HP (%d) but can at 50 HP (%d)"%[full_odds,weak_odds])
+ var odds_state={"enemies":[{"hp":72,"max_hp":72,"level":1,"can_capture":true,"capture_odds":full_odds}],"pets":[{"hp":20,"level":1,"pet_id":"w"}],"active_pet":0,"ride_pet":-1}
+ var odds_settings={"preset":"capture","capture_hp":100,"capture_pet":-1,"capture_pet_max_level":1}
+ var odds_plan=Policy.decide(odds_state,odds_settings,0)
+ check(odds_plan.action=="defend" and odds_plan.pet=="attack","odds below %d%%: the weaken pet attacks instead of throwing"%Policy.MIN_CAPTURE_ODDS)
+ odds_state.enemies[0].capture_odds=weak_odds
+ check(Policy.decide(odds_state,odds_settings,0).action=="capture","enough odds: capture")
+ odds_state.enemies[0].erase("capture_odds")
+ check(Policy.decide(odds_state,odds_settings,0).action=="capture","no odds reported (older state): capture as before")
+ odds_state.enemies[0].capture_odds=0;odds_state.pets[0].level=5
+ var stuck=Policy.decide(odds_state,odds_settings,0)
+ check(stuck.has("stop") and str(stuck.stop).begins_with("捕获率为0"),"odds 0 and no weaken pet: stop with the reason, never throw forever")
+ odds_state.enemies[0].capture_odds=5
+ check(Policy.decide(odds_state,odds_settings,0).action=="capture","some odds and no weaken pet: keep throwing")
  print("BATTLE AUTO POLICY: %d failures"%failures)
  quit(1 if failures else 0)
