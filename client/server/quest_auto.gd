@@ -1,5 +1,6 @@
 extends RefCounted
-## Source-derived delivery runner: shell visits and adult channel walking. Every exchange stays in OriginalQuests/save().
+## Source-derived delivery runner: shell/herb visits and adult channel walking. Every exchange stays in OriginalQuests/save().
+const Policy=preload("res://scripts/quest_auto_policy.gd")
 const Rules=preload("res://server/original_quests.gd")
 var running:=false
 var quest_id:=-1
@@ -98,8 +99,8 @@ func suspend(b) -> void:
   b.keep_resume_file()
  stop(b,"服务器已停止。",false)
 func load_resume(b,state:Dictionary) -> void:
- if int(state.get("version",0))!=1 or int(state.get("quest_id",-1)) not in [1,11]:return
- if (4 if int(state.quest_id)==1 else 2) not in b.quest_catalog.enabled_events:return
+ if int(state.get("version",0))!=1 or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
+ if int(Policy.JOB_EVENTS[int(state.quest_id)]) not in b.quest_catalog.enabled_events:return
  quest_id=int(state.quest_id)
  clean_authorized=bool(state.get("clean_authorized",false))
  b.original_quests.pending={}
@@ -134,7 +135,7 @@ func start(b,command:Dictionary) -> Dictionary:
  var id=command.get("quest_id",-1)
  if not (id is int or id is float) or float(id)!=floor(float(id)):return b._reject("无效任务编号。")
  var quest:=row(b,int(id))
- if quest.is_empty() or int(quest.event) not in [2,4] or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("仅开放贝壳与成人仪式自动任务。")
+ if quest.is_empty() or not Policy.supports(id,int(quest.event)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("仅开放贝壳、药草与成人仪式自动任务。")
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active() or not b.original_quests.pending.is_empty():return b._reject("当前正忙。")
  if b.quest_visit_guard.is_valid():
   var reason:=str(b.quest_visit_guard.call())
@@ -179,6 +180,9 @@ func tick(b,delta:float) -> void:
   path.clear()
   phase="travel"
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():stop(b,"其他活动停止了自动任务。");return
+ if Rules.flag(b.session._profile,"ended",event(b)) and not clean_authorized:
+  stop(b,title(b)+"已完成。")
+  return
  if phase=="landing":
   waited+=delta
   if waited>=30.0:stop(b,"等待地图位置确认超时。")

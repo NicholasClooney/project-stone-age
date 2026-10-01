@@ -1,4 +1,5 @@
 extends Node
+const AutoPolicy=preload("res://scripts/quest_auto_policy.gd")
 ## Client journey only: downloads, server-authorized visit, then original dialogue.
 var world: Node
 var generation:=0
@@ -88,7 +89,7 @@ func start_auto(quest_id: int) -> void:
 	phase="auto_download"
 	var ticket:=generation
 	var needed:Array=[]
-	for map_id in ([10204] if quest_id==1 else [1000,2000]):
+	for map_id in AutoPolicy.JOB_MAPS.get(quest_id,[]):
 		for pack in world._areas.area_packs(map_id):
 			if not pack in needed:needed.append(pack)
 	var ready:bool=await world.await_packs(needed,"自动任务地图")

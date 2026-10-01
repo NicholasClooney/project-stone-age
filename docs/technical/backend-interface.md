@@ -247,9 +247,9 @@ ACCEPT capacity accounts for removed items before adding rewards.
 权威位置并返回 `target {map_id,cell,npc_id}`。客户端先下载素材，再发请求，
 等待地图加载和服务器位置报告确认后走路；采木目标没有 NPC，不发起对白。
 ProfileHub 绑定独立纯 `quest_visit_guard`，组队拒绝不会调用治疗钩子。
-## 自动贝壳交付
+## 自动原交付任务
 
-`quest_auto_start {quest_id,client}` 仅允许事件2的 job11；`quest_auto_stop` 停止
+`quest_auto_start {quest_id,client}` 允许job11/event2、job30/event1和job1/event4；`quest_auto_stop` 停止
 当前角色流程。`derived.quest_auto` 发布 running/quest_id/phase/message/target。
 服务器按真实分支执行，内部限定授权调用原解释器，不开放客户端分支或奖励参数。
 安全传送后等待发起设备的位置确认，再进入 talk/yes/ok，确认超时停止。
@@ -257,7 +257,7 @@ ProfileHub 绑定独立纯 `quest_visit_guard`，组队拒绝不会调用治疗�
 发起连接断线停止；同角色其他设备断线不影响流程，仍可显式停止；其他角色隔离。
 手动移动、组队、战斗或其他自动化停止，普通对话/旅行冲突拒绝。
 停止保留已提交交易，仅清待确认 token；失败使用原同步保存回滚。
-启用「重启后自动恢复」时，自动贝壳任务的继续意图与本次 CLEAN 授权写入
+启用「重启后自动恢复」时，自动交付任务的继续意图与本次 CLEAN 授权写入
 `<save>.resume.json`，与其他自动化共用周期检查点和正常停服路径。停服先保存
 意图再停止 runner（包括运输层先停止的顺序）；显式停止、完成和活动冲突立即清除
 意图，不能被旧检查点复活。原交易仍先同步保存角色事件位和道具。
@@ -315,3 +315,5 @@ AdultCheckpoint v1 restores only source450–453 solo battles, their exact pendi
 rewards/turn/RNG, and rejects already committed battle IDs; no party restoration
 is included. The integrated v6 authority migrates v5 embedded profiles using
 original-equipment migration and preserves validated v6 UIDs/durability.
+
+自动交付任务共享 `quest_auto_policy.gd` 的 job/event 映射 `{1:4,11:2,30:1}`；服务端启动及resume、客户端按钮和地图下载一致校验。药草job30预下载3110/20105，复用原交易token与保存，不改变SAVE_VERSION，不开放博士捕宠自动。重新启动先按当前旗标和持有药品derive步骤，旧对白token不可恢复。

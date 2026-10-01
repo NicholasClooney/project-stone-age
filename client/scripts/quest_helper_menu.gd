@@ -1,4 +1,5 @@
 extends PanelContainer
+const AutoPolicy=preload("res://scripts/quest_auto_policy.gd")
 ## Read-only view of the server's original quest progress.
 var world: Node
 var body: VBoxContainer
@@ -34,7 +35,7 @@ func _process(_delta: float) -> void:
 	if not visible:return
 	if refresh_key()!=last_model:rebuild()
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
-	for quest_id in [1,11]:
+	for quest_id in AutoPolicy.JOB_EVENTS:
 		var label=find_child("QuestAutoMessage_%d" % quest_id,true,false)
 		if label is Label:label.text=str(auto.get("message",""))
 func rebuild() -> void:
@@ -51,7 +52,7 @@ func rebuild() -> void:
 	var close: Button=world.button("关闭 · Esc",close_menu)
 	close.name="QuestHelperClose"
 	header.add_child(close)
-	body.add_child(world.text("本项目助手：贝壳与成人仪式可自动确认原交易；按停止、关闭或 Esc 可停止。",12))
+	body.add_child(world.text("本项目助手：贝壳、药草与成人仪式可自动确认原交易；按停止、关闭或 Esc 可停止。",12))
 	var scroll:=ScrollContainer.new()
 	scroll.custom_minimum_size=Vector2(690,430)
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
@@ -71,7 +72,7 @@ func rebuild() -> void:
 			detail.custom_minimum_size.x=640
 			list.add_child(detail)
 		if bool(quest.get("can_restart",false)):list.add_child(world.text("可重做：请与原 NPC 对话确认。",12))
-		if int(quest.event) in [2,4]:
+		if AutoPolicy.supports(int(quest.id),int(quest.event)):
 			var auto:Dictionary=world.state.derived.get("quest_auto",{})
 			var running:bool=bool(auto.get("running",false))
 			var action:Button=world.button("停止自动任务" if running else ("自动重做贝壳任务" if quest.get("can_restart",false) else "自动完成"+str(quest.title)),func():
