@@ -1,9 +1,16 @@
 {
-  "version": "v0.163.1",
-  "count": 240,
+  "version": "v0.163.2",
+  "count": 241,
   "feature_count": 147,
-  "fix_count": 93,
+  "fix_count": 94,
   "entries": [
+    {
+      "version": "v0.163.2",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "centre the store button's lettering on its stone face",
+      "details": []
+    },
     {
       "version": "v0.163.1",
       "date": "2026-10-01",

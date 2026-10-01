@@ -891,13 +891,21 @@ func pet_panel(profile: Dictionary) -> void:
 	stash.position=Vector2(90,286)-stash.texture_normal.get_size()/2
 	var stash_text:=Label.new()
 	stash_text.text="存入仓库"
-	stash_text.size=stash.texture_normal.get_size()
+	# Centred on the stone face (the art's last 3 rows are its drop shadow);
+	# a 12 px font with a thin outline fits the 13 px face like the original
+	# lettering, without the label's line spacing pushing it down.
+	var face:=stash.texture_normal.get_size()
+	var font:=get_theme_default_font()
+	var line:=font.get_height(12)
+	stash_text.position=Vector2(0,floorf((face.y-3-line)/2.0))
+	stash_text.size=Vector2(face.x,line)
 	stash_text.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER
 	stash_text.vertical_alignment=VERTICAL_ALIGNMENT_CENTER
-	stash_text.add_theme_font_size_override("font_size",13)
+	stash_text.add_theme_constant_override("line_spacing",0)
+	stash_text.add_theme_font_size_override("font_size",12)
 	stash_text.add_theme_color_override("font_color",Color8(40,225,40))
 	stash_text.add_theme_color_override("font_outline_color",Color8(40,35,30))
-	stash_text.add_theme_constant_override("outline_size",4)
+	stash_text.add_theme_constant_override("outline_size",3)
 	stash_text.mouse_filter=Control.MOUSE_FILTER_IGNORE
 	stash.add_child(stash_text)
 	stash.pressed.connect(func():

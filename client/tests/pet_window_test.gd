@@ -91,6 +91,7 @@ func run()->void:
 	var before_pets:int=world.session.snapshot().pets.size()
 	var before_storage:int=world.session.snapshot().get("pet_storage",[]).size()
 	check(stash!=null and not stash.disabled and menu.panel.get_rect().has_point(menu.panel.position+stash.position),"the status page has 存入仓库 beside 宠物技能")
+	await capture("/tmp/pet-window-store.png")
 	if stash!=null:stash.pressed.emit()
 	await process_frame
 	check(world.session.snapshot().pets.size()==before_pets-1 and world.session.snapshot().get("pet_storage",[]).size()==before_storage+1 and world.session.snapshot().pet_storage.back().name=="乌力伙伴4","it stores that pet in the warehouse")
