@@ -39,7 +39,7 @@ def parse_script(text):
                     raise ValueError(f'Unsupported predicate: {clause}')
             texts = {k: v.replace('\\n', '\n') for k, v in current.items() if 'Msg' in k}
             actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
-            if not actions.keys() <= {'GetItem', 'DelItem', 'EndSetFlg', 'CleanFlg'}:
+            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'EndSetFlg', 'CleanFlg'}:
                 raise ValueError('Unsupported quest action')
             branches.append(dict(event=int(current['EventNo']), type=current['TYPE'], condition=current['EVENT'], texts=texts, actions=actions))
             current = None
@@ -68,7 +68,7 @@ def catalog(reference, spec=None):
     spec = spec or json.loads(SPEC.read_text())
     texts = {path: source_text(reference, path, spec) for path in spec['sources']}
     npcs = []
-    create = texts[spec['create']]
+    create = '\n'.join(texts[path] for path in spec['creates'])
     for block in re.findall(r'\{([^}]+)\}', create):
         fields = dict(line.strip().split('=', 1) for line in block.splitlines() if '=' in line and not line.lstrip().startswith('#'))
         script = fields['enemy']
@@ -81,22 +81,42 @@ def catalog(reference, spec=None):
         if (x, y) != (x2, y2) or fields['createnum'] != '1':
             raise ValueError('Unsupported moving/multiple NPC')
         default, branches = parse_script(texts['gmsv/data/npc/' + ident])
-        npcs.append(dict(id=ident, name=fields['name'], map_id=int(fields['floorid']), cell=[x, y], graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches))
+        events = spec['script_events'][ident]
+        for branch in branches:
+            # Keep unrelated key-repair dialogue as provenance, never activate it.
+            item_ids = {int(i) for i in re.findall(r'ITEM(?:!=|=)(\d+)', branch['condition'])}
+            for key in ('GetItem', 'DelItem'):
+                item_ids.update(int(i.split('*')[0]) for i in branch['actions'].get(key, '').split(',') if i)
+            branch['enabled'] = item_ids <= set(spec['items'])
+            branch['events'] = list(events) if branch['enabled'] else []
+        npcs.append(dict(events=events, id=ident, name=fields['name'], map_id=int(fields['floorid']), cell=[x, y], graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches))
     if {n['id'] for n in npcs} != set(spec['scripts']):
         raise ValueError('Missing reviewed NPC')
     items = {}
-    for row in csv.reader(texts['gmsv/data/itemset.txt'].splitlines()):
+    for source_line, row in enumerate(csv.reader(texts['gmsv/data/itemset.txt'].splitlines()), 1):
         if len(row) < 26 or row[16] not in map(str, spec['items']):
             continue
         if row[24].strip() or row[25].strip():
             raise ValueError('Explicit pile fields require review')
         ident = int(row[16])
-        items[str(ident)] = dict(id=ident, name=row[0], description=row[2], logical_icon=int(row[17]), stackable=False)
+        items[str(ident)] = dict(id=ident, name=row[0], description=row[2], logical_icon=int(row[17]), stackable=False, source='gmsv/data/itemset.txt', source_line=source_line, raw_columns=row)
     if set(items) != set(map(str, spec['items'])):
         raise ValueError('Missing reviewed item')
     jobs = []
-    for ident in spec['jobs']:
-        rows = [line.split('|') for line in texts['gmsv/data/jobdaily.txt'].splitlines() if line.startswith(str(ident)+'|')]
+    event_ids = set()
+    for npc in npcs:
+        for branch in npc['branches']:
+            if not branch['enabled']:
+                continue
+            if branch['event'] >= 0:
+                event_ids.add(branch['event'])
+            event_ids.update(int(event) for event in re.findall(r'(?:ENDEV|NOWEV)=(\d+)', branch['condition']))
+            for key in ('EndSetFlg', 'CleanFlg'):
+                event_ids.update(int(event) for event in branch['actions'].get(key, '').split(',') if event)
+    journal_rows = [line.split('|') for line in texts['gmsv/data/jobdaily.txt'].splitlines()]
+    job_ids = sorted({int(row[0]) for row in journal_rows if len(row) == 4 and re.fullmatch(r'ENDEV=(\d+)', row[1]) and int(row[1].split('=')[1]) in event_ids})
+    for ident in job_ids:
+        rows = [row for row in journal_rows if row[0] == str(ident)]
         completed = re.fullmatch(r'ENDEV=(\d+)', rows[0][1]) if len(rows) == 2 and len(rows[0]) == 4 else None
         if not completed or len(rows[1]) != 4 or rows[1][1] != 'NOWEV='+completed[1] or rows[0][2] != rows[1][2]:
             raise ValueError('Unsupported journal definition')
@@ -105,7 +125,11 @@ def catalog(reference, spec=None):
 
 
 def run(source, reference, output):
-    result = catalog(reference)
+    spec = json.loads(SPEC.read_text())
+    result = catalog(reference, spec)
+    for relative, expected in spec['client_sources'].items():
+        if hashlib.sha256((Path(source)/relative).read_bytes()).hexdigest() != expected:
+            raise ValueError(f'Unreviewed client source change: {relative}')
     archive = Archive(source)
     result["provenance"]["client_sources"] = {
         "data/adrn_15.bin": hashlib.sha256((Path(source)/"data/adrn_15.bin").read_bytes()).hexdigest()}

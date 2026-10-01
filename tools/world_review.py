@@ -1,11 +1,14 @@
 """Explicit region reviews and original scenery doors; no invented links."""
+import hashlib
 import json
 import re
 from pathlib import Path
 
 
 def load_reviews():
-    return {p.stem: json.loads(p.read_text()) for p in sorted((Path(__file__).parent/'world_regions').glob('*.json'))}
+    reviews = {p.stem: json.loads(p.read_text()) for p in sorted((Path(__file__).parent/'world_regions').glob('*.json'))}
+    reviews['early_quests'] = json.loads((Path(__file__).parent/'early_quest_sources.json').read_text())['world_review']
+    return reviews
 
 
 def portal_key(p):
@@ -24,6 +27,10 @@ def merge_portals(portals):
 
 
 def read_reviewed_portals(reference, reviews):
+    for review in reviews.values():
+        for relative, expected in review.get('portal_sources', {}).items():
+            if hashlib.sha256((Path(reference)/relative).read_bytes()).hexdigest() != expected:
+                raise ValueError(f'Reviewed portal source changed: {relative}')
     ids = {i for review in reviews.values() for i in review['maps']}
     scripts = {s for review in reviews.values() for s in review.get('gate_scripts',[])}
     root = Path(reference)/'gmsv/data/npc'

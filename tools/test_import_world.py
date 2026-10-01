@@ -31,6 +31,30 @@ class WorldImportTests(unittest.TestCase):
         self.assertIn(20801,selected)
         self.assertNotIn(20711,selected)
 
+    def test_hahn_forge_selected_only_through_original_door(self):
+        from import_world import REVIEWED_INTERIORS
+        self.assertIn(20508, REVIEWED_INTERIORS)
+        paths = {20501: Path('map/jyaruga/dungeon/dan_2-05-01'),
+                 20508: Path('map/jyaruga/dungeon/dan_2-05-08')}
+        self.assertNotIn(20508, select_connected_maps(paths, []))
+        links = [dict(from_map=200, to_map=20501), dict(from_map=20501, to_map=20508)]
+        self.assertIn(20508, select_connected_maps(paths, links))
+        links = [dict(from_map=20501, cell=[8,53], to_map=20508, target=target)
+                 for target in ([7,24], [8,24])]
+        disable_conflicting_portals(links)
+        review_scenic_doors(links)
+        self.assertNotIn('disabled', links[0])
+        self.assertTrue(links[1]['disabled'])
+        self.assertEqual(links[0]['target'], [7,24])
+
+    def test_changed_reviewed_portal_source_rejected(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            (root/'door.create').write_text('changed')
+            with self.assertRaisesRegex(ValueError, 'Reviewed portal source changed'):
+                read_reviewed_portals(root, {'quests': {'maps': [20508],
+                    'portal_sources': {'door.create': '0'*64}}})
+
     def test_reviewed_npc_gate_preserves_original_destination(self):
         with tempfile.TemporaryDirectory() as directory:
             root=Path(directory)

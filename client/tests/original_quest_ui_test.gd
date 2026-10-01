@@ -9,8 +9,8 @@ func check(value: bool, message: String) -> void:
 
 func run() -> void:
 	var source=Catalog.new()
-	check(source.npcs.size()==2,"Real reviewed quest NPC data exists")
-	check(source.active_npcs().is_empty() if not 2 in source.enabled_events else source.active_npcs().size()==2,"Public NPC activation follows tracked enabled events")
+	check(source.npcs.size()==7,"Real reviewed shell and wood quest NPC data exists")
+	check(source.active_npcs().filter(func(npc):return str(npc.id).begins_with("sainasu/event/event02_")).size()==(2 if 2 in source.enabled_events else 0),"Public shell NPC activation follows tracked enabled events")
 	source.enabled_events=[2]
 	var world=load("res://scenes/main.tscn").instantiate()
 	world.profile_persistence=false
