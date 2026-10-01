@@ -2097,7 +2097,28 @@ func _drop_queued(entry: Dictionary) -> void:
 	above.reverse()
 	var reason := "%s的排队已满（每个品种上限%d），排在第%d" % [_template_name(_template_of(entry)),limit,limit+1]
 	_log_uncaught(entry,"排队已满",reason,above)
-	_showcase_line("dropped","排队已满：放弃第%d组 %s（预测三围合%d），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),int(p.attack)+int(p.defence)+int(p.speed),reason])
+	# Say why: its predicted Lv.120 stats in the 保留规则 order, against the
+	# last one kept, and the stat that decided it.
+	var keys := _rank_keys(entry)
+	var line := "排队已满：放弃第%d组 %s（%s），%s" % [int(entry.index)+1,str(entry.actor.get("name","")),_rank_text(p,keys),reason]
+	if not above.is_empty():
+		var last: Dictionary = above[0]
+		var decided := ""
+		for key in keys:
+			if StatFilter.rank_value(last.prediction,key)!=StatFilter.rank_value(p,key):
+				decided = "%s %d > %d" % [STAT_NAMES.get(key,key),StatFilter.rank_value(last.prediction,key),StatFilter.rank_value(p,key)];break
+		line += "；排第%d的第%d组 %s更高（%s）" % [limit,int(last.index)+1,decided if not decided.is_empty() else "同分、更早找到",_rank_text(last.prediction,keys)]
+	_showcase_line("dropped",line)
+
+const STAT_NAMES := {"sum":"三围合","attack":"攻","defence":"防","speed":"敏","max_hp":"血"}
+
+## The comparison order the queue ranks this hit's species by (_showcase_better).
+func _rank_keys(entry: Dictionary) -> Array:
+	var rule: Dictionary = raw_filter_for(_template_of(entry)).get("keep_rule",{})
+	return StatFilter.rank_order(Array(rule.get("order",["attack","speed","max_hp"])))
+
+static func _rank_text(prediction: Dictionary, keys: Array) -> String:
+	return " ".join(keys.map(func(key):return "%s%d" % [STAT_NAMES.get(key,key),StatFilter.rank_value(prediction,key)]))
 
 ## The first three pending entries of a species (the ones that beat a hit).
 static func _same_species(entries: Array, template_id: int) -> Array:

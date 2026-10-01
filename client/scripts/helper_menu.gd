@@ -58,6 +58,7 @@ func entries() -> Array:
 		["HelperPets","宠物 · 同种比较","宠物窗口：同种比较、仓库、收藏和放生。","",func(): world.show_adventure_menu("pets")],
 		["HelperEncyclopedia","宠物大全","每种宠物的原版图、成长资料、满档120级预测排名和野外出现地点；可瞬移去抓。","encyclopedia",func(): world.pet_encyclopedia.open_menu()],
 		["HelperPetRecords","宠物记录","抓到、放生和排队的记录：这一轮找宠抓到了什么，放掉了哪些、为什么、被谁比下去，后台搜宠排队里有哪些。","",func(): world.adventure_menu.open_pet_records("",-1)],
+		["HelperRestore","全队恢复","非原版便利：人物和随身宠物回满体力、满气力，倒下的就地救回，不用回村休息。战斗中不能用。","",restore_party],
 		["HelperRadio","电台","原版配乐：全部曲目、收藏、歌单、随机和单曲循环。","radio",func(): world.toggle_radio()],
 		["HelperMapOverview","地图导航","按地图查看和传送。地图窗口（M）下方也可以打开。","",func(): world.dev_map_overview.open_map()],
 		["HelperTravel","刷怪传送","按练级点传送到原版刷怪位置。地图窗口下方也可以打开。","",func(): world.leveling_destinations.open_menu()],
@@ -226,6 +227,7 @@ func _icon(entry_name: String) -> Texture2D:
 		"HelperRadio":"M12 20h24v20H12z M17 20L33 6 M17 28h2 M25 27h7 M25 33h7",
 		"HelperMapOverview":"M6 12l12-6 12 6 12-6v30l-12 6-12-6-12 6z M18 6v30 M30 12v30",
 		"HelperTravel":"M26 4L12 26h12l-2 18 16-26H26z",
+		"HelperRestore":"M18 6h12v12h12v12H30v12H18V30H6V18h12z",
 		"HelperGM":"M10 10l12 12 M7 7l8 2-6 6z M22 22l18 18 M40 8l-8 2 2 6-24 24 M34 16l6-2 2-8",
 	}
 	var svg := '<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 48 48"><path d="%s" fill="none" stroke="#e6c284" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/></svg>' % paths.get(entry_name,paths.HelperQuest)
@@ -234,3 +236,12 @@ func _icon(entry_name: String) -> Texture2D:
 	var result := ImageTexture.create_from_image(bitmap)
 	icons[entry_name] = result
 	return result
+
+## 全队恢复: the server's 休息 (GameSession.heal: full 耐久力 and 气力, every
+## carried pet back to full, fallen ones too) anywhere outside a battle.
+func restore_party() -> void:
+	world.link.request({"type":"heal"},func(reply: Dictionary):
+		var ok := bool(reply.get("ok",false))
+		var note := "全队已恢复：体力、气力已满，倒下的宠物已救回。" if ok else "现在无法恢复：战斗中或有未结算的战斗。"
+		if is_instance_valid(world.chat_panel):world.chat_panel.add_line(note,Color("e6c284") if ok else Color("ff9d8a"))
+		if ok and visible:close_menu())

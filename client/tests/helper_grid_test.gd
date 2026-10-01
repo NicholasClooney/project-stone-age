@@ -84,6 +84,19 @@ func run() -> void:
 		if game.adventure_menu.visible:game.close_adventure_menu()
 		if game.radio_panel.visible:game.radio_panel.close_panel()
 		await process_frame
+	# 全队恢复: player and carried pets back to full, a fallen pet too, 气力 full.
+	game.session.grant_starter_pets()
+	game.session._profile.player.hp = 1
+	game.session._profile.player.mp = 0
+	game.session._profile.pets[0].hp = 0
+	menu.open_menu()
+	var restore: Button = menu.find_child("HelperRestore",true,false)
+	check(restore!=null and not restore.tooltip_text.is_empty() and not restore.disabled,"全队恢复 is in the helper with its explanation")
+	restore.pressed.emit()
+	await process_frame
+	var after: Dictionary = game.session.snapshot()
+	check(int(after.player.hp)==int(after.player.max_hp) and int(after.player.mp)>0 and after.pets.all(func(pet):return int(pet.hp)==int(pet.max_hp)),"全队恢复 restores 体力, 气力 and revives the fallen pet")
+	check(not menu.visible,"and closes the helper")
 	# A battle shell needs no running combat, only the existing view visibility.
 	game.battle_view.show()
 	for mode in ["grid","list"]:

@@ -1,9 +1,18 @@
 {
-  "version": "v0.151.1",
-  "count": 213,
-  "feature_count": 135,
+  "version": "v0.152.0",
+  "count": 214,
+  "feature_count": 136,
   "fix_count": 78,
   "entries": [
+    {
+      "version": "v0.152.0",
+      "date": "2026-10-01",
+      "kind": "feat",
+      "title": "游戏助手：全队恢复",
+      "details": [
+        "游戏助手新增「全队恢复」（非原版便利）：人物和随身宠物回满体力、满气力，倒下的宠物就地救回，不用回村休息；战斗中不能用。"
+      ]
+    },
     {
       "version": "v0.151.1",
       "date": "2026-10-01",
