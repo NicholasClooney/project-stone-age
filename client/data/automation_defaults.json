@@ -49,15 +49,15 @@
     "threshold_mode": "relative",
     "keep_rule": {"tiers": 2, "per_tier": 3, "order": ["attack", "speed", "max_hp"], "champions": 2, "champion_stats": ["attack", "defence", "speed", "max_hp"], "auto": false},
     "conditions": {
-      "sum": {"enabled": false, "minus": 1, "value": 624, "keep": 0},
-      "attack": {"enabled": false, "minus": 1, "value": 293, "keep": 0},
+      "sum": {"enabled": true, "minus": 1, "value": 624, "keep": 0},
+      "attack": {"enabled": true, "minus": 1, "value": 293, "keep": 0},
       "defence": {"enabled": false, "minus": 1, "value": 179, "keep": 0},
       "speed": {"enabled": false, "minus": 1, "value": 151, "keep": 0}
     }
   },
   "species": {
     "92": {
-      "comment": "扬奇洛斯（蓝人龙）: 三围合 ≥ 最高 − 1 OR 攻击 ≥ 最高 − 1.",
+      "comment": "扬奇洛斯（蓝人龙）: the general 三围合 ≥ 最高 − 1 OR 攻击 ≥ 最高 − 1, keeping 15 by sum and 10 by attack.",
       "stat_filter": {
         "conditions": {
           "sum": {"enabled": true, "keep": 15},

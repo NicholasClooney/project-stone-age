@@ -35,7 +35,7 @@ func run() -> void:
 	var blue := StatFilter.defaults(92)
 	check(blue.mode=="any" and not blue.has("stop_after") and blue.conditions.sum.enabled and int(blue.conditions.sum.keep)==15 and int(blue.conditions.attack.keep)==10 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1,"blue dragon keeps its per-species defaults")
 	var other := StatFilter.defaults(194)
-	check(int(defaults.hunt.stop_after)==0 and not other.has("stop_after") and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (relative, fixed values kept for 绝对); 找到N只后停止 is hunt.stop_after, 0 by default")
+	check(int(defaults.hunt.stop_after)==0 and not other.has("stop_after") and other.conditions.sum.enabled and other.conditions.attack.enabled and not other.conditions.defence.enabled and not other.conditions.speed.enabled and str(other.mode)=="any" and int(other.conditions.sum.minus)==1 and int(other.conditions.attack.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (三围合 or 攻击, 最高 − 1, relative, fixed values kept for 绝对); 找到N只后停止 is hunt.stop_after, 0 by default")
 
 	var backend = Backend.new()
 	backend.set_process(false)

@@ -11,6 +11,8 @@ extends SceneTree
 const Backend = preload("res://server/backend.gd")
 const Automation = preload("res://server/automation.gd")
 const ShutdownRequest = preload("res://server/shutdown_request.gd")
+const AutomationSettings = preload("res://scripts/automation_settings.gd")
+const ConditionsOff = preload("res://tests/support/conditions_off.gd")
 const SAVE := "user://resume-snapshot-test.json"
 const MAP := 100
 const CELL := Vector2i(637,493)
@@ -51,7 +53,10 @@ func prepare(backend, extra: Dictionary = {}) -> void:
 		backend.handle(command)
 	var hunt := {"fast":false,"total":-8,"offsets":[-2,-2,-2,-2],"showcase":true,"queue":10,"auto_capture":true,"train_after_capture":true}
 	hunt.merge(extra,true)
-	backend.handle({"type":"set_automation_settings","settings":{"hunt":hunt,"training":{"xp":100}}})
+	# The hunting ground's species have the general 三围合 / 攻击 default off
+	# (no 摸底 first); one with its own default (the blue dragon) keeps it.
+	var plain := ConditionsOff.area_species(MAP,CELL).filter(func(id):return not AutomationSettings.defaults().species.has(str(id)))
+	backend.handle({"type":"set_automation_settings","settings":ConditionsOff.patch(plain).merged({"hunt":hunt,"training":{"xp":100}})})
 	backend.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y]})
 
 ## One server tick (the fake clock moves on by `msec`).

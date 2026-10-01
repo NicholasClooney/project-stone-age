@@ -25,14 +25,17 @@ func _initialize() -> void:
 	check(blue.mode=="any" and blue.conditions.sum.enabled and int(blue.conditions.sum.minus)==1 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1 and not Filter.absolute(blue) and str(blue.threshold_mode)=="relative","blue defaults to 三围合 ≥ 最高−1 OR 攻击 ≥ 最高−1 (relative)")
 	check(int(blue.conditions.sum.value)==624 and int(blue.conditions.attack.value)==293 and int(blue.conditions.defence.value)==179 and int(blue.conditions.speed.value)==151,"each condition also keeps its fixed default: 624 / 293 / 179 / 151")
 	check(blue.conditions.sum.keep==15 and blue.conditions.attack.keep==10,"blue defaults keep 15 by sum plus 10 by attack")
-	check(not Filter.enabled(Filter.defaults(194)),"other species default to no enabled thresholds")
+	var other:=Filter.defaults(194)
+	check(other.mode=="any" and other.conditions.sum.enabled and int(other.conditions.sum.minus)==1 and other.conditions.attack.enabled and int(other.conditions.attack.minus)==1 and not other.conditions.defence.enabled and not other.conditions.speed.enabled and not Filter.absolute(other) and int(other.conditions.sum.keep)==0,"other species default to 三围合 ≥ 最高−1 OR 攻击 ≥ 最高−1 (relative, no 留前)")
+	var off:=other.duplicate(true)
+	for key in off.conditions:off.conditions[key].enabled=false
 	# 最高 − x: the best of the player's own pets, each metric on its own.
 	var owned := [{"attack":301,"defence":170,"speed":150,"max_hp":900},{"attack":290,"defence":185,"speed":152,"max_hp":950}]
 	var best := Filter.maxima(owned)
 	check(best=={"sum":627,"attack":301,"defence":185,"speed":152},"maxima: sum is the best pet's sum (627), each stat its own best")
 	check(Filter.maxima([])=={} and Filter.maxima([{"attack":305,"defence":170,"speed":150}],best).attack==305 and Filter.maxima([],best)==best,"no pets: no maxima; a base is raised, never lowered")
 	check(not Filter.evaluate({"attack":999,"defence":999,"speed":999},blue),"an unresolved relative condition never passes")
-	check(Filter.needs_survey(blue,{}) and not Filter.needs_survey(blue,best) and not Filter.needs_survey(Filter.defaults(194),{}),"no pet of the species: survey first (only with enabled conditions)")
+	check(Filter.needs_survey(blue,{}) and not Filter.needs_survey(blue,best) and Filter.needs_survey(other,{}) and not Filter.needs_survey(off,{}),"no pet of the species: survey first (only with enabled conditions)")
 	var resolved := Filter.resolve(blue,best)
 	check(int(resolved.conditions.sum.value)==626 and int(resolved.conditions.attack.value)==300 and not resolved.conditions.sum.strict and not resolved.conditions.sum.has("minus") and int(blue.conditions.sum.value)==624 and int(blue.conditions.sum.minus)==1,"resolve: 627−1=626 and 301−1=300 (the saved filter is not changed)")
 	check(not Filter.resolve(blue,{}).conditions.sum.has("value"),"relative without a maximum stays unresolved, ignoring the saved fixed value")

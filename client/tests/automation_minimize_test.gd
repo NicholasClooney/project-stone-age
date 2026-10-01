@@ -4,6 +4,7 @@ extends SceneTree
 ## current, and restoring shows the backend's live progress.
 var failures:=0
 const PREFS:="user://automation-minimize-test-viewer.cfg"
+const ConditionsOff=preload("res://tests/support/conditions_off.gd")
 class FixedTroop extends RefCounted:
 	var troop: Dictionary
 	func roll(_map, _cell, _rng, _held_items: Array = []) -> Dictionary:return troop.duplicate(true)
@@ -193,18 +194,11 @@ func hunting(game) -> void:
 	check(not hunt.running and not hunt.visible and not game.paused_input,"closing still stops the scan")
 
 func find_pet(game) -> void:
-	# 展示模式 off: this suite covers the full-speed find-pet cycle.
-	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false,"stop_after":1}}})
 	game.load_area_id(100,Vector2i(637,493))
 	game.session.gm_raise_level(-1,120);game.session.gm_set_base_stat(-1,"toughness",500);game.session.gm_heal()
 	var flow=game.pet_workflow;flow.set_process(false)
 	var hunt=game.pet_hunt_menu;hunt.set_process(false)
 	var helper=game.training_helper;helper.set_process(false)
-	hunt.open_menu();hunt.apply_preset(0)
-	check(flow.start_cycle(),"find-pet cycle starts")
-	hunt.minimize()
-	check(hunt.minimized and hunt.chip.visible and hunt.chip.title.text.contains("找宠流程"),"cycle minimizes with its own progress heading")
-	game.show_adventure_menu("pets")
 	var fixture=FixedTroop.new()
 	var rng=RandomNumberGenerator.new();rng.seed=1234
 	for i in range(100):
@@ -214,6 +208,14 @@ func find_pet(game) -> void:
 				actor.hp=1
 				fixture.troop={"enemies":[actor]};break
 		if not fixture.troop.is_empty():break
+	# 展示模式 off: this suite covers the full-speed find-pet cycle. The
+	# newborn's species has its default 属性条件 off, so no 摸底 comes first.
+	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.for_troop(fixture.troop).merged({"hunt":{"showcase":false,"stop_after":1}})})
+	hunt.open_menu();hunt.apply_preset(0)
+	check(flow.start_cycle(),"find-pet cycle starts")
+	hunt.minimize()
+	check(hunt.minimized and hunt.chip.visible and hunt.chip.title.text.contains("找宠流程"),"cycle minimizes with its own progress heading")
+	game.show_adventure_menu("pets")
 	hunt.hunt_catalog=fixture;hunt.scan_once()
 	check(flow.phase=="capture" and hunt.minimized and not helper.visible and game.adventure_menu.visible,"capture phase stays minimized behind the open menu")
 	for i in range(100):
