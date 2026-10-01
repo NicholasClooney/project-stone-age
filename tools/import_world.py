@@ -220,6 +220,12 @@ def convert(archive, parsed):
         x,y=i%w,i//w
         blocked[i]=tile in (0,1,2,5,6,9,10) or prop in (1,2,5,6,9,10)
         if prop in MUSIC: tones.append(dict(cell=[x,y],tone=prop,music='world/audio/'+MUSIC[prop]))
+        # Ground 60-79 are invisible walls: never drawn, but their bitmap's
+        # hit flag still counts (client map.cpp readHitMap: tile > CG_INVISIBLE
+        # or 60 <= tile <= 79 reads realGetHitFlag).
+        if 60<=tile<=79:
+            bitmap=archive.map_ids.get(tile)
+            if bitmap is not None and archive.entries[bitmap]['hit'] in (0,2):blocked[i]=archive.entries[bitmap]['hit']==0
         for value,is_prop in ((tile,False),(prop,True)):
             if value<=99: continue
             bitmap=archive.map_ids.get(value)

@@ -227,4 +227,21 @@ class WorldImportTests(unittest.TestCase):
             self.assertEqual(len(read_portals(directory)),1)
 
 
+
+
+class InvisibleWallTest(unittest.TestCase):
+    def test_ground_60_to_79_blocks_by_its_hit_flag_without_drawing(self):
+        import import_world
+
+        class Archive:
+            map_ids = {60: 2, 61: 3, 150: 9}
+            entries = {2: dict(hit=0, ex=1, ey=1), 3: dict(hit=2, ex=1, ey=1), 9: dict(hit=1, ex=1, ey=1)}
+
+        tiles = (60, 61, 150, 64)
+        data, used, missing = import_world.convert(Archive(), (5, 'w', 4, 1, tiles, (0, 0, 0, 0), b''))
+        self.assertEqual(data['blocked'], [1, 0, 0, 0])
+        self.assertEqual([g[2] for g in data['ground']], [9])
+        self.assertEqual(missing, [])
+
+
 if __name__=='__main__':unittest.main()
