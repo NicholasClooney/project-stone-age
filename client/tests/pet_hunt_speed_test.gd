@@ -1,4 +1,5 @@
 extends SceneTree
+const Wait=preload("res://tests/support/wait.gd")
 var failures:=0
 func check(ok:bool,note:String):
  print(("PASS: " if ok else "FAIL: ")+note)
@@ -28,19 +29,36 @@ func run():
   identical=identical and expected==actual and direct.state==prepared.state
  check(identical,"prepared location preserves 100 complete troops and exact RNG states")
  menu.filter.total=9
+ # Freeze automatic scan frames so each budget sample measures only its call;
+ # backend clock flushing and normal on_status UI updates remain enabled.
+ menu.set_process(false)
+ var core=game.backend.automation
+ check(not core.auto_tick,"local client drives scans while backend still flushes progress")
+ var sample_started:=Time.get_ticks_usec()
  menu._process(1.0/60.0)
- check(menu.rolls>0,"real encounter work runs under the frame budget")
- var before_stall:int=menu.rolls
+ var sample_usec:=Time.get_ticks_usec()-sample_started
+ print("REAL SCAN: %d rolls, UI snapshot %d rolls, in %d usec; budget %d usec" % [core.hunt_rolls,menu.rolls,sample_usec,core.frame_budget(core.HUNT_FRAME_BUDGET_USEC)])
+ check(core.hunt_rolls>0,"real encounter work runs under the frame budget")
+ var before_stall:int=core.hunt_rolls
  menu._process(2.0)
- check(menu.credit<=200.0 and menu.rolls-before_stall<=201,"long stall retains at most 100ms of requested work")
+ check(core.hunt_credit<=200.0 and core.hunt_rolls-before_stall<=201,"long stall retains at most 100ms of requested work")
+ var progress_started:=Time.get_ticks_msec()
+ check(await Wait.until(self,func():return menu.rolls==core.hunt_rolls),"one-second progress publishes the real scan count")
+ print("LOCAL PROGRESS FLUSH: core %d, UI %d, waited %d msec" % [core.hunt_rolls,menu.rolls,Time.get_ticks_msec()-progress_started])
  check(menu.status.text.contains("目标 2000") and menu.status.text.contains("实际"),"requested and actual throughput are visible")
- menu.filter.rate=0;var before_unlimited:int=menu.rolls
+ menu.filter.rate=0;var before_unlimited:int=core.hunt_rolls
+ sample_started=Time.get_ticks_usec()
  menu._process(1.0/60.0)
- check(menu.rolls>before_unlimited and menu.status.text.contains("不限速"),"rate 0 scans for the whole frame budget without throttling")
+ sample_usec=Time.get_ticks_usec()-sample_started
+ print("REAL UNLIMITED SCAN: %d additional rolls in %d usec; budget %d usec" % [core.hunt_rolls-before_unlimited,sample_usec,core.frame_budget(core.HUNT_FRAME_BUDGET_USEC)])
+ check(sample_usec>=core.frame_budget(core.HUNT_FRAME_BUDGET_USEC),"unlimited real scan consumes the full frame budget")
+ check(core.hunt_rolls>before_unlimited,"rate 0 scans for the whole frame budget without throttling")
+ check(await Wait.until(self,func():return menu.rolls==core.hunt_rolls and int(menu._hunt().filter.rate)==0),"one-second progress publishes unlimited scan count and rate")
+ check(menu.status.text.contains("不限速"),"unlimited throughput is visible")
  menu.stop_hunt("test")
- var before:int=menu.rolls
+ var before:int=core.hunt_rolls
  menu._process(1)
- check(menu.rolls==before,"cancelled scan performs no more work")
+ check(core.hunt_rolls==before,"cancelled scan performs no more work")
  menu.start_hunt()
  var old_cell:Vector2i=game.cell
  game.cell+=Vector2i(1,0)
