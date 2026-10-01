@@ -9,7 +9,7 @@ func check(value: bool, message: String) -> void:
 
 func run() -> void:
 	var source=Catalog.new()
-	check(source.npcs.size()==11,"Real reviewed herb, shell and wood quest NPC data exists")
+	check(source.npcs.size()==13,"Real reviewed shell, wood, herb, doctor and adult quest NPC data exists")
 	check(source.active_npcs().filter(func(npc):return str(npc.id).begins_with("sainasu/event/event02_")).size()==(2 if 2 in source.enabled_events else 0),"Public shell NPC activation follows tracked enabled events")
 	source.enabled_events=[2]
 	var world=load("res://scenes/main.tscn").instantiate()

@@ -6,6 +6,7 @@ class RouteWorld:
 	var world_catalog=Catalog.new()
 	var navigation=AStarGrid2D.new()
 	var data={"map_id":1002}
+	var state={"profile":{"player":{"level":1}}}
 	var moving=false
 	var cell=Vector2i(1,1)
 	var target_cell=cell
