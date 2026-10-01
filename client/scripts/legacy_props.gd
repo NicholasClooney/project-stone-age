@@ -1,6 +1,7 @@
 extends Node
 ## Keep nearby original objects as Y-sorted sprites, not every tree on an island.
 var world: Node2D
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 var buckets: Dictionary = {}
 var visible_props: Dictionary = {}
 var center := Vector2i(-99999,-99999)
@@ -35,6 +36,7 @@ func _process(_delta: float) -> void:
     pivot.position = world.project(Vector2(entry.x,entry.y))
     var art := Sprite2D.new()
     art.texture=world.texture(id);art.centered=false
+    PaletteSheet.apply(art,art.texture)
     art.position=Vector2(metadata.x,metadata.y)
     pivot.add_child(art)
     world.actors.add_child(pivot)

@@ -19,12 +19,22 @@ Decoding needs no extra files and no GDScript pixel loop: the pixel data of an 8
 
 ## Setting
 
-Project setting `stone_age/rendering/palette_sheets` lists the kinds of art drawn from palette sheets (`PaletteSheet.KINDS`: `battle`, `riding`, `characters`). Empty or missing means everything is drawn from Godot's imported RGBA textures, as before.
+Project setting `stone_age/rendering/palette_sheets` lists the kinds of art drawn from palette sheets (`PaletteSheet.KINDS`: `battle`, `riding`, `characters`, `tiles`). Empty or missing means everything is drawn from Godot's imported RGBA textures, as before.
 
 For a listed kind:
 
 - the game loads the sheet PNG itself (`PaletteSheet.load_texture`) instead of the imported texture;
-- `client/tools/build_web_packs.gd` ships the sheet's PNG as it is, without the `.import` remap and the imported RGBA copy, so the web build downloads the smaller palette PNG and reads it with `FileAccess`.
+- `client/tools/build_web_packs.gd` ships the sheet's PNG as it is, without the `.import` remap and the imported RGBA copy, so the web build downloads the palette PNG and reads it with `FileAccess`. It does so only for a file that is an 8-bit palette PNG (`PaletteSheet.ships_png` reads the header): an image not converted yet keeps its imported copy and is drawn as RGBA.
+
+Materials are cached by palette (`material_for`), so sheets with the same palette share one material. That is what lets one node draw many map tiles.
+
+## Map tiles (`tools/palette_images.py`)
+
+Map tiles and props are single PNGs in `images/` (along with the walking frames maps draw), not sheets, and the ground draws hundreds of them on one node (`legacy_ground.gd` `_draw`), which can have only one material. They fit one palette: all 5,091 images use 238 opaque colours, with no partial alpha. `tools/palette_images.py` (last in `scripts/setup-original-data.sh`, after the importers that write `images/`) rewrites every image as an 8-bit PNG with that shared palette, losslessly: index 0 is transparent (a key colour no image uses), the colours follow sorted. An image with partial alpha or a colour that does not fit stays RGBA, and so does everything if the folder ever needs more than 255 colours. Images that already have the palette are not rewritten, so web packs stay cached. Re-run it after any importer that writes `images/`; until then new images are drawn as RGBA.
+
+- `game.texture(ident)` and the walking frames maps draw (`legacy_actor.gd`, `game.character_frame`) load through `PaletteSheet.load_any`.
+- `legacy_ground.gd` gives itself the shared tile material and draws the palette tiles; any tile that is not one (not converted, or the player's switch is off) goes to a child node without the material (`plain`). `legacy_props.gd` gives each prop sprite its material.
+- The player's switch also empties `game.textures` and redraws the ground at once.
 
 ## Player switch
 
@@ -37,12 +47,15 @@ For a listed kind:
 | `battle` | battle sprites commit | `battle_view.gd` actors (mounted actors draw riding sheets, which follow `riding`), `pet_follower.gd`, `animated_portrait.gd`, `adventure_menu.gd` portraits |
 | `riding` | riding and field characters commit | `legacy_actor.gd` mounted (field), `battle_view.gd` mounted actors |
 | `characters` | riding and field characters commit | `legacy_actor.gd` walking frames from `game.character_frame` (the player, other players, the character chooser's previews when they use sheets) |
+| `tiles` | map tiles commit | `legacy_ground.gd` (one material for the layer), `legacy_props.gd`, `legacy_actor.gd` frames from `images/` |
 
 Every node that shows a `SpriteArt.texture` frame calls `PaletteSheet.apply` after setting it. Code that only needs to know a sheet is here uses `PaletteSheet.exists(path)` (`BattleArt.renderable`, 宠物大全), and code that reads a sheet's pixels on the CPU uses `PaletteSheet.picture(path)` (thumbnails without a pre-cut atlas): on the web an enabled kind's pack holds only the PNG, so `ResourceLoader.exists` and `load()` would not find it.
 
 ## Tests
 
-- `client/tests/settings_menu_test.gd`: the switch is on by default, off draws the player's next frame from an RGBA sheet without the material, the choice is saved and restored, and on draws the palette sheet again.
+- `client/tests/settings_menu_test.gd`: the switch is on by default, off draws the player's next frame from an RGBA sheet without the material and the ground from RGBA tiles at once, the choice is saved and restored, and on draws palette textures again.
+- `client/tests/mvp_journey_test.gd`: battle actors, the following pet, the walking player, the ground and props use their palette material.
+- `tools/test_palette_images.py`: images share one palette and keep every visible pixel; re-runs leave them alone; partial alpha stays RGBA; more than 255 colours keeps everything RGBA.
 - `client/tests/palette_sheet_test.gd` (headless suite): indices plus palette reproduce Godot's own RGBA decode of sample sheets of every kind byte for byte, and the imported texture's visible pixels (`fix_alpha_border` recolours hidden ones); the texture and material layout; `apply`; the setting being off by default. It also prints the expected texture memory of every sheet.
 - `tools/palette_web_check.py`: the shader on a real GPU without opening a window. It builds a small web export holding `palette_sheet.gd`, `client/tests/perf/palette_render_check.gd` and sample sheets, and runs it in headless Chromium (WebGL 2, the renderer phones and Vision Pro use). Each sheet is drawn as RGBA and through the shader in 24 views (plain, modulated, flipped, scaled by 2, 1.37 and 0.75, at a fractional position, as a scaled `TextureRect`, and as the field draws an actor: a sprite inheriting nearest filtering from its actor under a `Camera2D` zoomed to 1, 0.5, 0.73 and 1.6 in a viewport with the project's linear default; at both ends of the sheet) and the pixels read back must be equal byte for byte. `--gpu` runs it on the Mac's GPU through ANGLE on Metal, the way Safari (Mac, iPhone, Vision Pro) draws WebGL, instead of SwiftShader; it prints the WebGL renderer it got.
 
@@ -70,6 +83,6 @@ Texture memory of all sheets as RGBA and as palette sheets (`palette_sheet_test.
 
 WebGL 2 in headless Chromium, `RENDER_TEXTURE_MEM_USED` for one 4091x1213 riding sheet: 25.2 MB as RGBA, 6.3 MB as a palette sheet.
 
-The web build in headless Chromium (`window.stoneAge.texture_mb`, which `tools/web_memory_probe.mjs` now prints), Samgir wilderness (map 100) then a battle: texture memory grew 9.9 MB opening the battle with RGBA battle sheets and 2.9 MB with palette sheets. `window.stoneAge.texture_kinds` (MB of live textures by kind, from `perf_registry.gd`) on fresh saves, all three kinds off and then on: the player's character sheet in Samgir 1.3 to 0.3 MB; battle sheets after one battle 8.9 to 3.6 MB (a different encounter each run, so only roughly comparable). The map's tiles (17 to 20 MB here) are not palette textures yet.
+The web build in headless Chromium (`window.stoneAge.texture_mb`, which `tools/web_memory_probe.mjs` now prints), Samgir wilderness (map 100) then a battle: texture memory grew 9.9 MB opening the battle with RGBA battle sheets and 2.9 MB with palette sheets. `window.stoneAge.texture_kinds` (MB of live textures by kind, from `perf_registry.gd`) on fresh saves, all three kinds off and then on: the player's character sheet in Samgir 1.3 to 0.3 MB; battle sheets after one battle 8.9 to 3.6 MB (a different encounter each run, so only roughly comparable). With tiles on as well: the map's tiles 16.9 to 4.2 MB in Samgir and 20.2 to 5.0 MB in the wilderness (map 100); all textures in the wilderness 42.0 MB with every kind off, 20.6 MB with every kind on. Loading 1,500 tiles takes about the same time either way (desktop, headless: 199 to 295 ms as palette textures, 270 to 682 ms imported). Tile packs stay about the same size (17.6 MB of palette PNGs instead of 16.7 MB of imported copies).
 
 Shipping battle sheets as their PNGs also shrinks their packs: 368 MB of PNGs instead of 454 MB of imported RGBA copies across all 643 sheets.

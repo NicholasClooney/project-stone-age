@@ -129,7 +129,7 @@ Source sizes count what is on disk, `.import` files included. The Godot project 
 
 ## Map tiles and props are not packed
 
-The remaining 4,270 PNGs in `images/` are ground tiles and props, and they were left as single files on purpose:
+The remaining 4,270 PNGs in `images/` are ground tiles and props, and they were left as single files on purpose (they still become 8-bit PNGs with one shared palette, see [palette textures](palette-textures.md#map-tiles-toolspalette_imagespy)):
 
 - **Little to gain.** At the riding import's rate (about 34 ms per file) they cost Godot about 2.5 minutes of first import, against the 40 minutes the frames cost. Their web packs are already grouped: 530 `tiles-<hash>` packs (15 MB, 30 KB average) by the exact set of maps that use them, plus map-only tiles in `map-<id>`.
 - **Coupling.** A tile's sheet would have to follow `plan_web_packs.py`'s grouping by map set, so the importer would depend on the planner and a new map would repack sheets for other maps.

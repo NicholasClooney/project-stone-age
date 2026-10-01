@@ -9,9 +9,9 @@ extends SceneTree
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
 ## The kinds the project draws from palette sheets so far.
-const ON := ["battle","riding","characters"]
+const ON := ["battle","riding","characters","tiles"]
 const ROOT := "res://assets/legacy/"
-const FOLDERS := ["battle/sheets","riding/sheets","characters/sheets"]
+const FOLDERS := ["battle/sheets","riding/sheets","characters/sheets","images"]
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -128,6 +128,16 @@ func run() -> void:
 	SheetFrames.flush()
 	PaletteSheet.set_kinds(null)
 	check(PaletteSheet.load_texture(ROOT+"battle/sheets/missing.png")==null,"a missing sheet loads as null")
+	# Map tiles share one palette (tools/palette_images.py), so one material.
+	var tiles: PackedStringArray = all["images"]
+	var shared := {}
+	for path in tiles.slice(0,40):
+		shared[PaletteSheet.material_of(PaletteSheet.load_texture(path))] = true
+	check(shared.size()==1 and not shared.has(null),"map tiles share one palette material (%d sampled)" % mini(40,tiles.size()))
+	check(PaletteSheet.ships_png(tiles[0]) and PaletteSheet.ships_png(sample) and not PaletteSheet.ships_png(ROOT+"faces/missing.png"),"web packs ship palette PNGs of enabled kinds")
+	var rgba_path := "user://palette-sheet-test-rgba.png"
+	Image.create(2,2,false,Image.FORMAT_RGBA8).save_png(rgba_path)
+	check(not PaletteSheet.is_palette_png(rgba_path) and PaletteSheet.is_palette_png(tiles[0]),"an RGBA PNG is not shipped as a palette PNG")
 	# Not palette PNGs: RGBA and greyscale stay out.
 	var rgba := Image.create(4,4,false,Image.FORMAT_RGBA8)
 	var grey := Image.create(4,4,false,Image.FORMAT_L8)

@@ -55,7 +55,7 @@ func _process(delta: float) -> void:
 			sprite.texture = world.character_frame(rendered_id,ident)
 		else:
 			if not world.textures.has(str(ident)):
-				world.textures[str(ident)] = load("res://assets/legacy/images/"+str(ident)+".png")
+				world.textures[str(ident)] = PaletteSheet.load_any("res://assets/legacy/images/"+str(ident)+".png")
 				preload("res://scripts/perf_registry.gd").track_texture("map",ident,world.textures[str(ident)])
 			sprite.texture = world.textures[str(ident)]
 		PaletteSheet.apply(sprite,sprite.texture)

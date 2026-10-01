@@ -132,6 +132,10 @@ func set_palette_textures(on: bool) -> void:
 	SheetFrames.flush()
 	for loader in [preload("res://scripts/battle_art.gd"),preload("res://scripts/riding.gd"),preload("res://scripts/character_art.gd")]:
 		if loader._cache != null:loader._cache.forget_frames()
+	# Map tiles: the ground draws again now; props keep theirs until they are
+	# made again.
+	game.textures.clear()
+	if is_instance_valid(game.terrain):game.terrain.queue_redraw()
 
 func set_background_audio(on: bool) -> void:
 	game.background_audio = on

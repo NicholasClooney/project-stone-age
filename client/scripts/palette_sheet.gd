@@ -30,6 +30,9 @@ const KINDS := {
 	"battle":"battle/sheets/",
 	"riding":"riding/sheets/",
 	"characters":"characters/sheets/",
+	# Map tiles and props, and the walking frames maps draw: one shared
+	# palette (tools/palette_images.py), so one material draws them all.
+	"tiles":"images/",
 }
 const LEGACY := "res://assets/legacy/"
 
@@ -59,6 +62,9 @@ static var _kinds: Variant = null
 ## RGBA texture decoded from it.
 static var user_on := true
 static var _shader: Shader
+## Palette bytes -> material, so sheets with the same palette (all map tiles)
+## share one material and a node can draw several of them.
+static var _materials: Dictionary = {}
 
 ## Overrides the setting for this run (tests); null goes back to it.
 static func set_kinds(kinds: Variant) -> void:
@@ -92,12 +98,15 @@ static func shader() -> Shader:
 	return _shader
 
 ## The material that draws a sheet with this palette (1024 bytes, RGBA of
-## entries 0..255).
+## entries 0..255), one per distinct palette.
 static func material_for(palette: PackedByteArray) -> ShaderMaterial:
+	var known: ShaderMaterial = _materials.get(palette)
+	if known != null:return known
 	var material := ShaderMaterial.new()
 	material.shader = shader()
 	var image := Image.create_from_data(256,1,false,Image.FORMAT_RGBA8,palette)
 	material.set_shader_parameter("palette",ImageTexture.create_from_image(image))
+	_materials[palette] = material
 	return material
 
 ## {"indices": Image (FORMAT_L8), "palette": PackedByteArray (1024 bytes,
@@ -181,7 +190,23 @@ static func load_rgba(path: String) -> Texture2D:
 ## Whether the sheet at path can be drawn: its PNG when palette sheets are on
 ## for it (a web pack then holds only the PNG), else the imported texture.
 static func exists(path: String) -> bool:
-	return FileAccess.file_exists(path) if wanted(path) else ResourceLoader.exists(path)
+	return (wanted(path) and FileAccess.file_exists(path)) or ResourceLoader.exists(path)
+
+## Whether the file at path is an 8-bit palette PNG (from its header).
+static func is_palette_png(path: String) -> bool:
+	var file := FileAccess.open(path,FileAccess.READ)
+	if file == null:return false
+	var header := file.get_buffer(26)
+	if header.size() < 26:return false
+	for i in range(8):
+		if header[i] != _SIGNATURE[i]:return false
+	return header[24] == 8 and header[25] == 3
+
+## Whether a web pack ships the file as its PNG instead of the imported
+## RGBA copy: palette sheets are on for it and it is a palette PNG. An image
+## not converted yet keeps its imported copy, and load_any() draws it.
+static func ships_png(path: String) -> bool:
+	return wanted(path) and is_palette_png(path)
 
 ## The sheet's pixels as an RGBA picture on the CPU (thumbnails cut from it),
 ## or null when it is not here.

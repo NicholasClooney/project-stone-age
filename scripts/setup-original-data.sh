@@ -484,6 +484,8 @@ else
   run "$PY" tools/import_battle_sounds.py "$CLIENT25" --table "$CLIENT_SOURCE/石器时代8.5客户端最新源代码/石器源码/systeminc/sndcnf.h"
   # Packs the per-frame PNGs the importers above wrote into sprite sheets.
   run "$PY" tools/pack_frame_sheets.py
+  # Map tiles and props share one 256-colour palette (palette textures).
+  run "$PY" tools/palette_images.py
   # Last: the small per-sprite files and indexes the game reads, from the
   # importers' manifests (the importers above also refresh their own).
   run python3 tools/split_manifests.py

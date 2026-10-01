@@ -101,11 +101,15 @@ func run() -> void:
 	check(is_equal_approx(game.effect.volume_db,-80.0) and is_equal_approx(game.music.volume_db,-80.0),"the players follow the new sound settings")
 	# 调色板贴图: on by default; off draws the old RGBA textures at once.
 	var palette_box: CheckBox = menu.find_child("SettingsPaletteTextures",true,false)
-	check(palette_box!=null and palette_box.button_pressed and PaletteSheet.user_on and _drawn_palette(game),"调色板贴图 starts on and the player is drawn from a palette sheet")
+	await process_frame
+	check(palette_box!=null and palette_box.button_pressed and PaletteSheet.user_on and _drawn_palette(game) and game.terrain.material!=null,"调色板贴图 starts on and the player and the ground are drawn from palette textures")
 	palette_box.button_pressed = false
+	await process_frame
 	check(not PaletteSheet.user_on and _saved("palette_textures") and not _drawn_palette(game) and game.player.sprite.material==null,"turning it off saves it on this device and the player's next frame is RGBA again")
+	check(game.terrain.material==null and not game.terrain.plain.tiles.is_empty(),"and the ground draws RGBA tiles at once")
 	palette_box.button_pressed = true
-	check(PaletteSheet.user_on and _drawn_palette(game),"turning it on draws the palette sheet again")
+	await process_frame
+	check(PaletteSheet.user_on and _drawn_palette(game) and game.terrain.material!=null,"turning it on draws palette textures again")
 	palette_box.button_pressed = false
 	check(_saved("zoom") and _saved("music_on"),"the zoom and the music switch are saved on this device")
 	# 画面 on a desktop: fixed aspect, 100% interface, the bar on hover.

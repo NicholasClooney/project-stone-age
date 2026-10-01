@@ -11,7 +11,7 @@ check's output and exits 1 unless it reports 0 failures.
   python3 tools/palette_web_check.py --modules <scratch> --chrome <chrome binary> \
       [sheet.png ...]
 
-Without sheets it takes the two smallest and one mid-sized sheet of each
+Without sheets it takes the two smallest, a median and a larger sheet of each
 folder in palette_sheet.gd's KINDS. See docs/technical/palette-textures.md.
 """
 import argparse
@@ -99,7 +99,7 @@ def samples():
     chosen = []
     for folder in kinds_folders():
         sheets = sorted((LEGACY / folder).glob("*.png"), key=lambda p: (p.stat().st_size, p.name))
-        picks = sheets[:2] + ([sheets[len(sheets) // 2]] if len(sheets) > 2 else [])
+        picks = sheets[:2] + [sheets[len(sheets) * q // 4] for q in (2, 3) if len(sheets) > 3]
         chosen += picks
     return chosen
 

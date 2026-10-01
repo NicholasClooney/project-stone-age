@@ -3,7 +3,7 @@ extends Node
 ## sheets as plain RGBA textures and through the palette shader into
 ## offscreen viewports and compares the pixels read back byte for byte:
 ## plain, modulated, flipped and scaled sprites, both ends of each sheet,
-## and a TextureRect. Then it measures texture memory both ways.
+## a TextureRect, and draw_texture() on a node (the map's ground layer). Then it measures texture memory both ways.
 ##
 ## Headless suites cannot render, so tools/palette_web_check.py runs this
 ## node in a small web export in headless Chromium (WebGL 2, the renderer
@@ -13,6 +13,11 @@ extends Node
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const SHEETS_FILE := "res://sheets/list.txt"
 var failures := 0
+
+class Drawn extends Node2D:
+	var texture: Texture2D
+	func _draw() -> void:
+		draw_texture(texture,Vector2.ZERO)
 
 func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
@@ -62,6 +67,13 @@ func render(texture: Texture2D, region: Rect2, palette: bool, look: Dictionary) 
 		viewport.add_child(camera)
 		holder = actor
 		item = sprite
+	elif look.get("draw",false):
+		# Custom drawing on a node with the material, like the map's ground.
+		var drawn := Drawn.new()
+		drawn.texture = frame
+		drawn.position = Vector2(1,1)
+		drawn.scale = Vector2(scale,scale)
+		item = drawn
 	elif look.get("rect",false):
 		var rect := TextureRect.new()
 		rect.texture = frame
@@ -103,7 +115,7 @@ func first_difference(a: Image, b: Image) -> String:
 	return "%s (%d pixels)" % [first,count]
 
 func run() -> void:
-	var looks := [{},{"modulate":Color(1,0.4,0.4,0.6)},{"flip":true},{"scale":2.0},{"scale":1.37},{"modulate":Color(0,0,0,0.5),"scale":0.75},{"offset":Vector2(0.4,0.6)},{"rect":true,"scale":1.5},{"zoom":1.0},{"zoom":0.5},{"zoom":0.73,"offset":Vector2(0.3,0.6)},{"zoom":1.6}]
+	var looks := [{},{"modulate":Color(1,0.4,0.4,0.6)},{"flip":true},{"scale":2.0},{"scale":1.37},{"modulate":Color(0,0,0,0.5),"scale":0.75},{"offset":Vector2(0.4,0.6)},{"rect":true,"scale":1.5},{"zoom":1.0},{"zoom":0.5},{"zoom":0.73,"offset":Vector2(0.3,0.6)},{"zoom":1.6},{"draw":true},{"draw":true,"scale":1.37}]
 	var paths := FileAccess.get_file_as_string(SHEETS_FILE).split("\n",false)
 	check(not paths.is_empty(),"sample sheets listed")
 	var largest := {}
@@ -128,7 +140,8 @@ func run() -> void:
 					same = false
 					print("  differs: %s %s %s %s" % [path,region,look,first_difference(a,b)])
 				if not a.is_invisible():drawn += 1
-		check(same and drawn > 0,"%s: the palette shader draws the same bytes as RGBA (%d views)" % [path.get_file(),2*looks.size()])
+		# A fully transparent image (some map images are) draws nothing either way.
+		check(same and (drawn > 0 or rgba.get_image().is_invisible()),"%s: the palette shader draws the same bytes as RGBA (%d views)" % [path.get_file(),2*looks.size()])
 	# Texture memory of the largest sample, both ways.
 	if not largest.is_empty():
 		for palette in [false,true]:

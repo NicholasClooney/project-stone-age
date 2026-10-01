@@ -278,6 +278,7 @@ var character_index := 0
 ## and the list of `characters`; each one's art is read when it is drawn.
 var character_catalog: Dictionary = {}
 const SpriteArt = preload("res://scripts/sprite_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const CharacterArt = preload("res://scripts/character_art.gd")
 const PerfRegistry = preload("res://scripts/perf_registry.gd")
 var character_selection: Control
@@ -447,7 +448,8 @@ func unproject(point: Vector2) -> Vector2:
 func texture(ident: String) -> Texture2D:
 	var cached: Texture2D = textures.get(ident)
 	if cached==null:
-		cached = load("res://assets/legacy/images/"+ident+".png")
+		# A palette texture once tiles use them (scripts/palette_sheet.gd).
+		cached = PaletteSheet.load_any("res://assets/legacy/images/"+ident+".png")
 		textures[ident] = cached
 		PerfRegistry.track_texture("map",ident,cached)
 	return cached
@@ -459,7 +461,7 @@ func character_frame(character: String, ident: int) -> Texture2D:
 	var art := CharacterArt.art(character)
 	if not SpriteArt.spot(art,ident).is_empty():
 		var frame: Texture2D = SpriteArt.texture(art,ident)
-		if frame != null or not ResourceLoader.exists("res://assets/legacy/images/%d.png" % ident):return frame
+		if frame != null or not PaletteSheet.exists("res://assets/legacy/images/%d.png" % ident):return frame
 	return texture(str(ident))
 
 func is_walkable(point: Vector2i) -> bool:
