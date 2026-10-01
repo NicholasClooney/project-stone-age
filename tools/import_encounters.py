@@ -111,6 +111,10 @@ def add_rare_encounters(data, path=RARE):
     clones: copy an enemy row at Lv1, capturable, at most one per troop.
     encounters: a new group {Lv1 enemy 1, companion 1} with area weight
     `weight`. The companion must already be in an ordinary group of that area.
+    With `alone_group_id` a second group holds the Lv1 enemy alone (as many
+    copies as its row's max_count allows, like the original's single Lv1
+    groups), also with area weight `weight`, so a hunt that only enters
+    troops of Lv1 enemies finds the pet too. Its `rare` has `alone: true`.
     """
     path = Path(path)
     spec = json.loads(path.read_text())
@@ -152,8 +156,17 @@ def add_rare_encounters(data, path=RARE):
             enemies=members, invalid_weights=False, source_line=-1,
             rare=dict(origin=item['origin'], template_id=item['template_id'], enemy_id=item['enemy_id'], reason=item['reason']))
         area['groups'].append(dict(id=item['group_id'], weight=item['weight']))
+        alone = item.get('alone_group_id')
+        if alone is not None:
+            if item.get('companion_id') is None or str(alone) in data['groups']:
+                raise ValueError(f"group {alone}: alone group of {item['group_id']} needs a companion group and a free id")
+            data['groups'][str(alone)] = dict(id=alone, name=f"rare_lv1_{item['template_id']}_alone", requires_item=-1, excludes_item=-1,
+                enemies=[dict(id=item['enemy_id'], weight=1)], invalid_weights=False, source_line=-1,
+                rare=dict(origin=item['origin'], template_id=item['template_id'], enemy_id=item['enemy_id'], alone=True,
+                    reason=f"只含 Lv1 {item['name']} 的补充组（非原版）：同原版加鲁卡、吉鲁岛、沙姆岛的单独 Lv1 组；同区另有它与高等级同伴的组 {item['group_id']}"))
+            area['groups'].append(dict(id=alone, weight=item['weight']))
     data['provenance']['rare_encounters'] = dict(file=path.name, sha256=hashlib.sha256(path.read_bytes()).hexdigest(),
-        encounters=len(spec['encounters']), clones=len(spec.get('clones', [])), scaled_areas=len(spec.get('areas', [])),
+        encounters=len(spec['encounters']), alone=sum(1 for item in spec['encounters'] if item.get('alone_group_id') is not None), clones=len(spec.get('clones', [])), scaled_areas=len(spec.get('areas', [])),
         rule='docs/reverse-engineering/rare-level-one-encounters.md; not original rows')
     return data
 
