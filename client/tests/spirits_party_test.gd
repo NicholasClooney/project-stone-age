@@ -81,7 +81,7 @@ func solo_run() -> void:
 	var player: Dictionary = session._profile.player
 	player.max_hp = 1000
 	player.hp = 50
-	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"battle","map_id":FIELD,"cell":[CELL.x,CELL.y],"settings":{"compact":false,"limit":5,"hp":20,"speed":8.0,"preset":"attack","level":120}})
+	var reply: Dictionary = backend.handle({"type":"auto_start","kind":"battle","map_id":FIELD,"cell":[CELL.x,CELL.y],"settings":{"select_troops":false,"compact":false,"limit":5,"hp":20,"speed":8.0,"preset":"attack","level":120}})
 	check(reply.ok and backend.automation.running,"自动练级 starts")
 	backend.automation.step()
 	check(backend.battle_open and int(session._profile.player.hp)>200 and int(session.player_mp())<100,"between troops, at its 20 %% line, the run casts 治愈 outside battle first, then meets the troop (体力 %d, 气力 %d)" % [int(session._profile.player.hp),session.player_mp()])

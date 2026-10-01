@@ -126,7 +126,7 @@ func solo() -> void:
 	backend.automation.client_attached = false
 	backend.session._profile.player.max_hp = 1000
 	backend.session._profile.player.hp = 1000
-	check(backend.handle({"type":"auto_start","kind":"battle","map_id":FIELD,"cell":[CELL.x,CELL.y],"settings":{"compact":false,"limit":5,"hp":10,"speed":8.0,"preset":"attack","level":120}}).ok,"solo 自动练级 starts wearing 提欧Lv1服2")
+	check(backend.handle({"type":"auto_start","kind":"battle","map_id":FIELD,"cell":[CELL.x,CELL.y],"settings":{"select_troops":false,"compact":false,"limit":5,"hp":10,"speed":8.0,"preset":"attack","level":120}}).ok,"solo 自动练级 starts wearing 提欧Lv1服2")
 	backend.automation.step()
 	check(backend.battle_open,"it meets a troop")
 	var battle = backend.battle
@@ -146,7 +146,7 @@ func solo() -> void:
 	backend.handle({"type":"set_free_spirits","on":false})
 	backend.session._profile.player.mp = 19
 	backend.session._profile.player.hp = 1000
-	backend.handle({"type":"auto_start","kind":"battle","map_id":FIELD,"cell":[CELL.x,CELL.y],"settings":{"compact":false,"limit":5,"hp":10,"speed":8.0,"preset":"attack","level":120}})
+	backend.handle({"type":"auto_start","kind":"battle","map_id":FIELD,"cell":[CELL.x,CELL.y],"settings":{"select_troops":false,"compact":false,"limit":5,"hp":10,"speed":8.0,"preset":"attack","level":120}})
 	backend.automation.step()
 	battle = backend.battle
 	battle._state.player_max_hp = 1000

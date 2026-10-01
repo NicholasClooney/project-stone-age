@@ -621,7 +621,7 @@ func _cmd_wild_encounter(command: Dictionary) -> Dictionary:
 	var result := wild_encounter(int(command.map_id),_cell(command))
 	return result
 
-func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
+func wild_encounter(map_id: int, cell: Vector2i, training_groups: Variant = null) -> Dictionary:
 	if battle.snapshot().active:return _stale("battle active")
 	var troop: Dictionary = encounter_catalog.roll(map_id,cell,encounter_rng,session.snapshot().get("original_items",[]))
 	if troop.is_empty():
@@ -632,6 +632,9 @@ func wild_encounter(map_id: int, cell: Vector2i) -> Dictionary:
 		var reply := _reject("art")
 		reply.skipped = "art"
 		return reply
+	if training_groups is Array and not int(troop.get("group_id",-1)) in training_groups:
+		encounter_catalog.pressure=int(encounter_catalog.area_at(map_id,cell).get("probability_min",0))
+		return {"ok":false,"skipped":"training","troop":troop}
 	var config: Dictionary = session.start_wild_battle_config(troop)
 	if config.is_empty():return _reject("battle validation failed")
 	var state := open_battle(config)
@@ -662,6 +665,8 @@ var party_battle_hook: Callable
 ## LAN phase 4c: set by the profile hub; () -> "" or why a party leader's
 ## 自动练级 stops before meeting the next troop (a member at its 停机线).
 var party_guard: Callable
+## Read-only roster/experience mode of the party the next encounter will open.
+var training_reward_context: Callable
 
 ## This profile joins a party battle (its pending record is already set):
 ## `view` is its window on it (server/party_battles.gd SlotView).

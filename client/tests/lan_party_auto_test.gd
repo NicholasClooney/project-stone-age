@@ -52,6 +52,7 @@ func run() -> void:
 	dir = "user://lan-party-auto-test-%d" % OS.get_process_id()
 	remove_tree(dir)
 	DirAccess.make_dir_recursive_absolute(dir)
+	await selection_context()
 	await refusals()
 	await leader_run()
 	await healing()
@@ -173,6 +174,28 @@ func refusals() -> void:
 ## The leader's run meets troops; everyone enters each battle; Bob (自动战斗)
 ## never holds a turn up; Cid (by hand) gets the 45 s timer; the run goes on
 ## to the next troop and the members are in it too.
+func selection_context() -> void:
+	var made:=party_hub()
+	var server=made[0]
+	var backend=server.backends.alice
+	backend.session.grant_starter_pets();backend.session.select_pet(0);backend.session.gm_raise_level(0,20)
+	var actual: Dictionary=backend.training_reward_context.call()
+	check(actual.get("party",false) and actual.players==3 and actual.active_pets==1 and actual.share_exp,"training estimate reads the real three-player party and participating pet")
+	var chooser=preload("res://server/training_troops.gd").new()
+	chooser.prepare(backend.encounter_catalog,100,Vector2i(637,493),backend.session.snapshot(),{"xp":10},false,false,actual)
+	var deadline:=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
+	while not chooser.ready and Time.get_ticks_msec()<deadline:chooser.advance(1000);await process_frame
+	var row: Dictionary={}
+	for value in chooser.rows:
+		if int(value.group_id)==88:row=value
+	check(not row.is_empty() and is_equal_approx(float(row.expected_xp),1.5),"real shared party uses target Lv20 gap rule: each Lv1 enemy awards 1 at 10x, mean count1.5")
+	server.handle(1,{"type":"party_share_exp","on":false})
+	check(start_run(server).ok,"unshared-party training begins validation")
+	var run=automation(server,"alice")
+	run.step()
+	check(not run.running and not backend.battle_open and run.stop_reason.contains("按击杀归属"),"unshared party pauses selection clearly rather than inventing pre-battle kill credit")
+	await close(server)
+
 func leader_run() -> void:
 	var made := party_hub()
 	var server = made[0]

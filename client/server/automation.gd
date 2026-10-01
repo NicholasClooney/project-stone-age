@@ -81,6 +81,9 @@ var previous_clone_enabled := false
 var compact_active := false
 var battles := 0
 var skipped := 0
+var training_skipped := 0
+var training_selection = preload("res://server/training_troops.gd").new()
+var _training_yield := false
 var unavailable_streak := 0
 var earned_xp := 0
 var earned_pet_xp := 0
@@ -255,6 +258,7 @@ func _init(owner) -> void:
 # ---- commands --------------------------------------------------------------
 
 func start(command: Dictionary) -> Dictionary:
+	if command.get("settings") is Dictionary and command.settings.has("select_troops") and not command.settings.select_troops is bool:return _reply(false,"select_troops must be bool")
 	_set_position(command)
 	match str(command.get("kind","")):
 		"battle":return _start_battle_runner(command)
@@ -327,7 +331,7 @@ func usable_templates(level_one: bool) -> Array:
 func profile_settings_changed() -> void:
 	if not (running or hunt_running or flow_active()):return
 	var fresh := profile_settings()
-	for key in ["capture_hp","capture_pet","capture_pet_id","capture_pet_max_level","capture_fallback_attempts","capture_fallback_rate","capture_fallback_hp"]:settings[key] = fresh[key]
+	for key in ["select_troops","capture_hp","capture_pet","capture_pet_id","capture_pet_max_level","capture_fallback_attempts","capture_fallback_rate","capture_fallback_hp"]:settings[key] = fresh[key]
 	if (hunt_running or flow_active()) and _profile_targets_key()!=_hunt_profile_targets_key:
 		_hunt_profile_targets_key=_profile_targets_key()
 		_apply_hunt_targets()
@@ -470,10 +474,11 @@ func tick(delta: float) -> void:
 
 func tick_battle(delta: float) -> void:
 	if not running:return
+	_training_yield=false
 	# Compact battles have nothing to watch: run steps back to back within a frame budget.
 	if bool(settings.compact) and (compact_active or not backend.battle_open):
 		var until := Time.get_ticks_usec()+frame_budget(COMPACT_BUDGET_USEC)
-		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until and not party_waiting():step()
+		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until and not party_waiting() and not _training_yield:step()
 		return
 	cooldown -= delta
 	if cooldown > 0:return
@@ -621,9 +626,24 @@ func step() -> void:
 	compact_active = bool(settings.compact)
 	_emit_status()
 	backend.session.protect_pets = bool(settings.get("protect",true))
-	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
+	var training_groups: Variant=null
+	if bool(settings.get("select_troops",true)) and str(settings.get("preset","attack"))!="capture" and not single_battle:
+		var reward_settings: Dictionary=settings.duplicate()
+		reward_settings.target_level=training_pet_level if not training_pet_id.is_empty() else (120 if int(settings.get("level",0))<=0 else int(settings.level))
+		var party_rewards: Dictionary=backend.training_reward_context.call() if backend.training_reward_context.is_valid() else {}
+		training_selection.prepare(backend.encounter_catalog,origin_map,origin_cell,backend.session.snapshot(),reward_settings,backend.session.clone_squad_enabled,backend.session.clone_best_others,party_rewards)
+		training_selection.advance(1000)
+		if not training_selection.ready:
+			_training_yield=true;compact_active=false;turn_text="正在计算当地敌群预计经验……";_emit_status();return
+		if training_selection.allowed.is_empty():stop(str(training_selection.participant.get("unavailable","当地没有可进入且能获得经验的练级敌群，请换个位置或关闭挑敌群。")));return
+		training_groups=training_selection.allowed
+	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell,training_groups) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
 	if not opened.ok:
 		compact_active = false
+		if str(opened.get("skipped",""))=="training":
+			training_skipped+=1;_training_yield=true
+			turn_text="练级挑敌群：第%d组预计经验未进当地前30%%，已跳过，无奖励。" % int(opened.troop.group_id)
+			_emit_status();return
 		if str(opened.get("skipped",""))=="art":
 			skipped += 1
 			unavailable_streak += 1
@@ -676,7 +696,7 @@ func start_training() -> void:
 	origin_map = position_map
 	origin_cell = position_cell
 	initial_level = int(backend.session.snapshot().player.level)
-	battles = 0;skipped = 0;unavailable_streak = 0;earned_xp = 0;earned_pet_xp = 0;turns = 0;cooldown = 0;stop_reason = "";starting_ride = -1;turn_text = ""
+	battles = 0;skipped = 0;training_skipped = 0;unavailable_streak = 0;earned_xp = 0;earned_pet_xp = 0;turns = 0;cooldown = 0;stop_reason = "";starting_ride = -1;turn_text = ""
 	if str(settings.preset)=="train_pet":
 		if single_battle and backend.battle.snapshot().get("allies",[]).is_empty():
 			stop_reason = "带宠升级请在遇敌前开启，以生成完整镜像队。"
@@ -1753,7 +1773,7 @@ func resume_state() -> Dictionary:
 			flow[field] = value.duplicate(true) if value is Dictionary or value is Array else value
 		state.flow = flow
 	elif kind=="training":
-		state.training = {"pet_id":training_pet_id,"level":training_pet_level,"battles":battles,"skipped":skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,"initial_level":initial_level}
+		state.training = {"pet_id":training_pet_id,"level":training_pet_level,"battles":battles,"skipped":skipped,"training_skipped":training_skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,"initial_level":initial_level}
 	return state
 
 ## Changes whenever the run moves on in a way the resume file must follow at
@@ -1829,7 +1849,7 @@ func _resume_training(state: Dictionary) -> void:
 		settings = kept
 	if not running:
 		log_line("[自动练级] 服务器重启后无法恢复：%s" % stop_reason);return
-	battles = int(saved.get("battles",0));skipped = int(saved.get("skipped",0))
+	battles = int(saved.get("battles",0));skipped = int(saved.get("skipped",0));training_skipped = int(saved.get("training_skipped",0))
 	earned_xp = int(saved.get("earned_xp",0));earned_pet_xp = int(saved.get("earned_pet_xp",0));initial_level = int(saved.get("initial_level",initial_level))
 	turn_text = RESUMED
 	log_line("[自动练级] %s（已打 %d 场）" % [RESUMED,battles])
@@ -2425,7 +2445,7 @@ func _showcase_resume() -> void:
 func status() -> Dictionary:
 	return {
 		"running":running,"compact":compact_active,"single_battle":single_battle,"capture_target":capture_target,
-		"stop_reason":stop_reason,"battles":battles,"skipped":skipped,"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,
+		"stop_reason":stop_reason,"battles":battles,"skipped":skipped,"training_skipped":training_skipped,"training_selection":training_selection.summary(),"earned_xp":earned_xp,"earned_pet_xp":earned_pet_xp,
 		"turns":turns,"initial_level":initial_level,"settings":settings.duplicate(true),"training_pet_id":training_pet_id,
 		"clone_override":clone_override_active,"previous_clone":previous_clone_enabled,"turn_text":turn_text,
 		"finish_after_capture":finish_after_capture,"origin_map":origin_map,"origin_cell":[origin_cell.x,origin_cell.y],

@@ -75,6 +75,11 @@ func run() -> void:
 	check(await until(func():return hunt_settings(backend).get("templates",[])==[113]) and await until(func():return hunt_b.target_ids==[113]),"remote actual checklist click selects one species without a local backend")
 	hunt_a.target_button.get_popup().id_pressed.emit(-2)
 	check(await until(func():return hunt_settings(backend).get("templates",[]).size()>=1),"remote all-select reaches authoritative profile")
+	check(a.training_helper.select_troops.button_pressed and b.training_helper.select_troops.button_pressed,"remote training selection defaults on")
+	a.training_helper.select_troops.button_pressed=false
+	check(await until(func():return not preload("res://scripts/automation_settings.gd").effective(backend.session.automation_settings()).training.select_troops) and await until(func():return not b.training_helper.select_troops.button_pressed),"actual remote checkbox saves false through server and synchronizes other device")
+	a.training_helper.select_troops.button_pressed=true
+	check(await until(func():return preload("res://scripts/automation_settings.gd").effective(backend.session.automation_settings()).training.select_troops) and await until(func():return b.training_helper.select_troops.button_pressed),"remote checkbox restores default selection and snapshots")
 	# A choice is saved at once; typed numbers once the player pauses.
 	hunt_a.level_one.button_pressed = false
 	check(await until(func():return hunt_settings(backend).get("level_one",true)==false),"device A's choice reaches the profile")

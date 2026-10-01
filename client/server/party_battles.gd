@@ -50,6 +50,25 @@ func party_busy(leader_id: String) -> bool:
 ## Backend.party_battle_hook: `leader_id`'s backend opens a battle with
 ## `config` (its pending record). Returns the leader's SlotView, or null
 ## when this is no party battle (not a leader, or nobody free to join).
+## Same admission conditions as open(), without closing battles or making
+## pending records. The next training estimate uses the real party mode.
+func training_context(leader_id: String) -> Dictionary:
+	if not hub.party.is_leader(leader_id) or fighting.has(leader_id):return {}
+	var ids: Array=[leader_id]
+	for id in hub.party.members(leader_id).slice(1):
+		var backend=hub.backends.get(id)
+		if backend==null or not backend.session._pending.is_empty() or fighting.has(id):continue
+		var settled_party: bool=backend.battle_open and backend.party_battle() and not bool(backend.battle.entry.session._state.active)
+		if backend.battle_open and not settled_party:continue
+		ids.append(id)
+	if ids.size()<2:return {}
+	var pets:=0
+	for id in ids:
+		var profile: Dictionary=hub.backends[id].session.snapshot()
+		var active:=int(profile.get("active_pet",-1))
+		if active>=0 and active<profile.pets.size() and active!=int(profile.get("ride_pet",-1)) and int(profile.pets[active].get("hp",0))>0:pets+=1
+	return {"party":true,"share_exp":hub.party.shares_exp(leader_id),"players":ids.size(),"active_pets":pets}
+
 func open(config: Dictionary, rng_seed: int, leader_id: String):
 	if not hub.party.is_leader(leader_id) or fighting.has(leader_id):return null
 	var leader = hub.backends.get(leader_id)

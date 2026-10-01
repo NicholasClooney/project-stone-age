@@ -342,3 +342,19 @@ original-equipment migration and preserves validated v6 UIDs/durability.
 旧设置及旧 `auto_start.filter.template` 继续兼容：非负值转换为单种目标，`-1` 或缺省保留旧的“当前位置全选”语义，不会迁移为空数组。旧角色首次明确勾选、全选或全不选后保存 `templates`；不增加 SaveVersion。旧调用显式发送 `template` 时覆盖集合；同时发送集合时以集合为准。切换地点保留集合，只取集合与当地实际可抓且素材齐全品种的交集，不自动补选新地点品种；交集为空时拒绝开始。
 
 运行中取消品种会清理其排队个体并记录“未捕获·目标取消”，取消摸底待选个体；排队捕获前再次检查目标集合。已进入捕获战斗的个体完成本次战斗。恢复状态保存同一集合，空集合不可恢复捕获。原生 helper 的 `filter` 行仍兼容旧协议，其 `usable` 列表现在携带服务端计算的目标交集、`template=-1`，因此无需更改协议版本或随机抽取逻辑；库存门控、掉落随机消耗和混合敌群规则不变。
+
+### 练级挑敌群（非原版助手）
+
+角色设置 `training.select_troops` 为严格布尔，默认 `true`；自动练级窗口可直接切换，经 `set_automation_settings` 保存和跨设备 snapshot 同步。运行中切换从下一次进战判断生效。只有自动练级普通攻击／带宠升级及后台搜宠的真实训练阶段使用；找宠、捕获、手动、任务和 NPC 战斗均不调用筛选。已打开的首场战斗照常完成：沿用原有单场自动接手语义，完成后结束，不强制退出或改敌人。后台旧快速模式直接升级、没有训练遇敌，保持原行为。
+
+`server/training_troops.gd` 只读当前地点的权威 `EncounterCatalog.area_at`（包括优先级遮盖）；按角色 `original_items` 验证 requires/excludes 条件，忽略零概率、无效或没有可渲染队形的组。原本就在当地表中的稀有 Lv.1 组照常评估，不引入高等级池。
+
+评分是**在胜利且目标按现有规则参与结算时，每次可进入该组的预计经验**：敌人采用 `EncounterCatalog.experience`（原表固定经验，或 experience_table、基础模板档级及抗性/rare 修正），在原表等级闭区间均匀平均；敌群人数按实际 `1..min(area.max_enemies,Σmax_count,10)` 均匀分布。槽位按原权重抽取，重复条目累计权重和数量上限；用离散状态概率精确展开原来的100次抽取、上限拒绝和最多5只大型宠物规则。仅对可渲染且非空的实际队形取条件期望，缺素材队形仍按原进场路径跳过。
+
+单人／镜像队出战宠每个击倒敌人获得 `reward_xp × xp_multiplier`，这是当前 `GameSession.apply_battle_result` 的真实结算规则；不凭空加阵营人数除数或单人等级差惩罚。统计实际角色／宠物人数，并保留真实目标等级；镜像不分走真实宠物经验，其他携带／仓库宠不算经验接收者。无出战宠且能确定每个击杀都有角色归属时，以坐骑经验评分；否则以角色经验评分。坐骑潜在经验单独调用 `Riding.experience`（倍率在等级差与60%取整之前），标记为“敌人由角色取得击杀归属时”，不拿不确定的坐骑击杀份额冒充目标宠物评分。LAN共享经验队伍使用真实参与名册和 `PartyBattleSession.gap_exp`；未共享经验时经验依赖未来击杀归属，当前明确暂停并提示打开共享或关闭挑群，不猜分配比例。胜负概率、宠物中途逃走／切换未计入此期望；练级保护本身不变。
+
+设当地可进入的不同 `group_id` 数为 N，保留预计经验从高到低的前 `ceil(0.3*N)`，阈值同分全部保留（浮点数仅使用1e-12相对／1e-9绝对误差识别数值同分）。遇敌表组权重影响找多久，不改变此离散组数排名。无可进入且能得经验的组时暂停并说明原因。
+
+估算在 `TrainingTroops.advance(1000)` 的短帧预算中续算并缓存队形分布，不抽随机数、不改变压力或生成战斗记录。原始 roll 完整生成敌人、成长和掉落后，只有组 id 未达阈值才跳过 `open_battle`；跳过不发经验/石币/物品，仍消费完整原随机流并把 encounter pressure 重置为当地 minimum。compact tick 每次最多跳过一组后让出，下一 tick 继续；素材和战斗保护仍走原路径。
+
+可复用接口：`prepare(catalog,map_id,cell,profile,settings,clones,best_others,party_context)`、`advance(budget_usec)`、`summary()`（group_id、expected_xp、expected_enemies、enemy_counts、entry_probability、allowed、threshold、真实参与者）、`local_best_expected()`（当地组中最高条件期望），以及 `remaining_xp(actor,target_level)`（按当前 `level*30` 升级公式精确剩余经验，Lv.120封顶）。这项不创建额外遇敌池；经验估算和剩余经验接口可供后续功能复用。
