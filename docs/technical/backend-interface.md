@@ -222,3 +222,12 @@ a worn copy; legacy quantities stay counted stacks. This is an explicit
 prototype deviation from the original unstacked inventory. Migration never
 truncates a legacy bag. New receipts exceeding 15 slots fail atomically;
 ACCEPT capacity accounts for removed items before adding rewards.
+# 原版木材战利品
+
+`wild_encounter` 由服务器库存筛选原许可敌群，客户端不提供库存或奖励。
+只启用已审查 enemy563：生成时原表抽取一次，结果保存在服务端 pending。
+击杀接收者 claim 为服务端内部参数，不接受 RPC 指定。结算 `drop_summary`
+包含 `item_id`、`received`、`name`，远端读取战斗 snapshot，经验为0也有摘要。
+普通包格满时销毁物，不拒绝整场结算。许可证与事件旗标不随采木变化。
+最小重启恢复覆盖单人单木；组队当前逐动作击杀者得物，合击随机名单和组队
+拓扑重启恢复未实现。详见 `docs/reverse-engineering/original-wood-drops.md`。

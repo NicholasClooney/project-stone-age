@@ -1,6 +1,6 @@
 """Import pinned gmsv encounter tables without inventing regional placements.
 
-Keeps conditional records as metadata; ordinary resolver excludes quest/item gates.
+Keeps conditional records as metadata; server resolves inventory gates.
 Generated resource data stays in ignored original-asset directory.
 
 Also adds the later pets the reference server has no template for: the 8.5
@@ -53,6 +53,16 @@ def choices(row, ids, weights):
 
 def malformed_weights(row, ids, weights):
     return any(value(row, ids+i)>=0 and value(row, weights+i)<0 for i in range(10))
+
+
+def drop_slots(row):
+    """ENEMY_ITEM1..10 (14..23), ITEMPROB1..10 (24..33), _FIX_ITEMPROB."""
+    return [dict(slot=i, item_id=value(row,14+i), probability=value(row,24+i,0), denominator=1000)
+            for i in range(10) if value(row,14+i)>0]
+
+def wait_only(tactics):
+    # Conservative subset: never interpret an unrecognised tactic as idle.
+    return bool(re.fullmatch(r'at:0;[^|]*\|gu:0\|es:0\|wa:[1-9]\d*;[0;]*', tactics))
 
 
 def album_names(path):
@@ -166,7 +176,7 @@ def build(root):
     for line,r in rows(root/'enemy.txt'):
         if len(r)<14:continue
         ident=value(r,3)
-        data['enemies'].setdefault(str(ident),dict(id=ident,name=r[0], tactics=r[1], condition=r[2],template_id=value(r,4),level_min=min(value(r,5),value(r,6)),level_max=max(value(r,5),value(r,6)),max_count=value(r,7),min_count=value(r,8),experience=value(r,10),pet_flag=value(r,13),source_line=line))
+        data['enemies'].setdefault(str(ident),dict(id=ident,name=r[0], tactics=r[1], condition=r[2],template_id=value(r,4),level_min=min(value(r,5),value(r,6)),level_max=max(value(r,5),value(r,6)),max_count=value(r,7),min_count=value(r,8),experience=value(r,10),pet_flag=value(r,13),drops=drop_slots(r),wait_only=wait_only(r[1]),source_line=line))
     for line,r in rows(root/'enemybase.txt'):
         if len(r)<39:continue
         ident=value(r,6)
@@ -175,7 +185,7 @@ def build(root):
     data['experience_table']=[int(x) for x in re.findall(r'\d+',exp_source.split('{',1)[1].split('}',1)[0])]
     data['provenance'] = dict(schema=1, tables={p:hashlib.sha256((root/p).read_bytes()).hexdigest() for p in ['encount.txt','group.txt','enemy.txt','enemybase.txt']},
         rules='encount.c ENCOUNT_getEncountAreaArray; enemy.c ENEMY_getEnemyIndexTable/ENEMY_createEnemy; char_walk.c CEP rand()%120',
-        limitations=['Quest/event and item-gated groups excluded by ordinary resolver.', 'Rare ENEMY_RandomEnemyArray overrides and special tactics deferred.', 'Original atoi parses wild growth 4.50 as 4; pet training uses separate growth rules.', 'Item drops and special tactics deferred; original enemy XP formula included.'])
+        limitations=['Quest/event conditions remain deferred; item gates use authoritative inventory.', 'Rare ENEMY_RandomEnemyArray overrides and special tactics deferred.', 'Original atoi parses wild growth 4.50 as 4; pet training uses separate growth rules.', 'Drop tables retain ITEM1..10/ITEMPROB1..10 and _FIX_ITEMPROB RAND(0,999); runtime activates only audited wood enemy 563. Only wait-only tactics implemented; original enemy XP formula included.'])
     return data
 
 if __name__=='__main__':

@@ -195,7 +195,7 @@ func _push(entry: Dictionary) -> void:
 			slice = session.slice_for(slot,str(entry.own[slot]))
 			entry.settled[slot] = true
 			fighting.erase(id)
-		backend.party_turn(state,slice)
+		backend.party_turn(state,slice,session.drop_claims_for(slot) if not slice.is_empty() else [])
 		# The party fell: the server has everyone in the village now, so a
 		# player with no device is there too and nobody is walked back.
 		if not slice.is_empty() and str(slice.outcome)=="defeat" and not bool(slice.get("party_stay",false)):

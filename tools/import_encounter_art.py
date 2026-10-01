@@ -40,8 +40,11 @@ def required_sprites(catalog, maps):
             continue
         for choice in area['groups']:
             group=catalog['groups'].get(str(choice['id']),{})
-            if not group or group['requires_item']>=0 or group['excludes_item']>=0:continue
+            if not group:continue
+            conditioned = group['requires_item']>=0 or group['excludes_item']>=0
             for choice in group['enemies']:
+                # Only the audited early wood enemy is supported behind item gates.
+                if conditioned and int(choice['id']) != 563:continue
                 enemy=catalog['enemies'].get(str(choice['id']),{})
                 template=catalog['templates'].get(str(enemy.get('template_id')), {})
                 if template:required.add(template['sprite'])
@@ -153,5 +156,53 @@ def run(source, root, extra_source=None, pets=True):
     (root/'encounters/art-coverage.json').write_text(json.dumps(report,ensure_ascii=False,indent=2)+'\n')
     print(json.dumps(report['counts'],ensure_ascii=False),json.dumps(report['unavailable'],ensure_ascii=False))
 
+def run_selected(source, root, sprites, extra_source=None):
+    """Refresh only named sprites, packing their original frames immediately.
+
+    Existing unrelated manifests/sheets and coverage are preserved. Named
+    sprites are runtime/core sprites, with their sheets in sprite-<id> packs.
+    Missing/incomplete source art fails instead of retaining stale success.
+    """
+    from sprite_sheets import save_sheets
+    from split_manifests import split_battle
+    root = Path(root)
+    archives = [Archive(source)] + ([Archive(extra_source)] if extra_source else [])
+    path = root / 'battle/manifest.json'
+    battle = json.loads(path.read_text())
+    report_path = root / 'encounters/art-coverage.json'
+    report = json.loads(report_path.read_text())
+    folder = root / 'battle/sheets'
+    folder.mkdir(exist_ok=True)
+    for sprite in sorted(set(sprites)):
+        actions, bitmaps, client = load_sprite(archives, sprite, extra_source)
+        geometry = {str(n): {k: a.entries[b][k] for k in ('x', 'y', 'w', 'h')}
+                    for n, (a, b) in bitmaps.items()}
+        for key, value in geometry.items():
+            if key in battle['images'] and battle['images'][key] != value:
+                raise ValueError(f'bitmap {key} differs from the one already imported')
+        sheet = save_sheets({n: a.image(b) for n, (a, b) in bitmaps.items()}, folder, str(sprite))
+        sheet['files'] = ['sheets/' + name for name in sheet['files']]
+        battle.setdefault('sheets', {})[str(sprite)] = sheet
+        battle['characters'][str(sprite)] = actions
+        battle['images'].update(geometry)
+        battle.get('extra_sprites', {}).pop(str(sprite), None)
+        report['available'] = sorted(set(report['available']) | {sprite})
+        report['unavailable'].pop(str(sprite), None)
+        report['sources'][str(sprite)] = ['2.5', '8.0'][client]
+        battle.setdefault('provenance', {}).setdefault('selected_encounter_art', {})[str(sprite)] = dict(
+            client=Path(archives[client].source).name, revision=['2.5', '8.0'][client],
+            rule='original actions 0-4 and 10 in all eight directions; own lossless sheet')
+        report['extra'] = [s for s in report['extra'] if s != sprite]
+        for archive in archives:archive.cache.clear()
+    report['counts'] = dict(available=len(report['available']), unavailable=len(report['unavailable']),
+                            extra=len(report['extra']), by_source={name: list(report['sources'].values()).count(name)
+                                                                  for name in ('2.5', '8.0')})
+    path.write_text(json.dumps(battle, ensure_ascii=False, separators=(',', ':')))
+    report_path.write_text(json.dumps(report, ensure_ascii=False, indent=2) + '\n')
+    split_battle(root)
+    print('Imported selected original battle sprites:', sorted(set(sprites)))
+
 if __name__=='__main__':
-    p=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter);p.add_argument('source');p.add_argument('--output',default='client/assets/legacy');p.add_argument('--extra-source',help='a later client with sprites the source lacks, for example .tools/legacy/extracted/SA8.0-20260803');p.add_argument('--no-pets',action='store_true',help='only the world spawns and the special pets, not every pet template');a=p.parse_args();run(a.source,a.output,a.extra_source,not a.no_pets)
+    p=argparse.ArgumentParser(description=__doc__,formatter_class=argparse.RawDescriptionHelpFormatter);p.add_argument('source');p.add_argument('--output',default='client/assets/legacy');p.add_argument('--extra-source',help='a later client with sprites the source lacks, for example .tools/legacy/extracted/SA8.0-20260803');p.add_argument('--no-pets',action='store_true',help='only the world spawns and the special pets, not every pet template');p.add_argument('--sprites', type=int, nargs='+', help='refresh and pack only these sprites; preserve unrelated art');a=p.parse_args()
+    if a.sprites:run_selected(a.source,a.output,a.sprites,a.extra_source)
+    else:run(a.source,a.output,a.extra_source,not a.no_pets)

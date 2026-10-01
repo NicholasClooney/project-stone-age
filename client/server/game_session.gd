@@ -9,6 +9,9 @@ const ClassicLuck = preload("res://server/classic_luck.gd")
 const Loyalty = preload("res://server/loyalty.gd")
 const Progression = preload("res://server/progression.gd")
 const Elements = preload("res://server/elements.gd")
+const EncounterCatalog = preload("res://server/encounter_catalog.gd")
+static var _drop_sources: Dictionary = {}
+static var _drop_sources_loaded := false
 const TroopArt = preload("res://server/troop_art.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
@@ -223,6 +226,7 @@ func start_wild_battle_config(troop: Dictionary) -> Dictionary:
 		if not enemy.get("can_capture") is bool:return {}
 		if not _integer(enemy.get("reward_xp"),0,1000000000) or not _integer(enemy.get("reward_gold"),0,1000000000):return {}
 		if not enemy.get("name") is String or enemy.name.is_empty():return {}
+		if not _generated_drops_valid(enemy):return {}
 		if not enemy.has("growth_weights") or not enemy.has("base_stats"):return {}
 	var config := start_battle_config()
 	if config.is_empty():return {}
@@ -275,7 +279,7 @@ func start_party_config(party_battle_id: String, enemies: Array = [], battle_gol
 	_pending = config.duplicate(true)
 	return config
 
-func apply_battle_result(result: Dictionary) -> bool:
+func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> bool:
 	if _pending.is_empty() or result.get("active",true) or result.get("battle_id","") != _pending.battle_id:
 		return false
 	var outcome: String = result.get("outcome","")
@@ -361,6 +365,24 @@ func apply_battle_result(result: Dictionary) -> bool:
 	if not _integer(ride_index,-1,roster.size()-1):return false
 	if int(ride_index) not in [-1,start_ride]:return false
 	if int(ride_index)>=0 and (int(result.get("active_pet",-1)) == int(ride_index) or int(battle_pets[int(ride_index)].hp)<=0):return false
+	# The host supplies party claims separately from the result. Item ids always
+	# come from the trusted start record, never result.enemies/generated_drops.
+	var claims: Array = party_drop_claims.duplicate(true) if party else _pending.get("loot_claims",[]).duplicate(true)
+	if not party and not _pending.has("loot_claims"):
+		for i in range(enemies.size()):
+			if int(enemies[i].hp)==0 and not bool(enemies[i].get("captured",false)):
+				for j in range(_pending.enemies[i].get("generated_drops",[]).size()):claims.append({"enemy":i,"item":j})
+	var seen_claims := {}
+	var items := []
+	for claim in claims:
+		if not claim is Dictionary or not _integer(claim.get("enemy"),0,enemies.size()-1):return false
+		var index := int(claim.enemy)
+		var generated: Array = _pending.enemies[index].get("generated_drops",[])
+		if not _integer(claim.get("item"),0,generated.size()-1):return false
+		var key := "%d:%d"%[index,int(claim.item)]
+		if seen_claims.has(key) or int(enemies[index].hp)!=0 or bool(enemies[index].get("captured",false)):return false
+		seen_claims[key] = true
+		items.append(int(generated[int(claim.item)]))
 	_profile.ride_pet = int(slots[int(ride_index)]) if int(ride_index)>=0 else -1
 	_profile.player.hp = hp
 	_profile.player.mp = mp
@@ -399,6 +421,14 @@ func apply_battle_result(result: Dictionary) -> bool:
 		earned_xp = 0
 		earned_gold = 0
 		pet_rewards.fill(0)
+	result.drop_summary = []
+	# Minimum wood path: normal surviving victory. Multi-enemy escape profits
+	# remain outside this implementation (original BATTLE_Stop is different).
+	if outcome=="win" and hp>0:
+		for item in items:
+			var received := bag_slots(_profile)<15
+			if received:_profile.original_items.append(item)
+			result.drop_summary.append({"item_id":item,"received":received})
 	result.experience_multiplier = multiplier
 	result.xp = earned_xp
 	result.gold = earned_gold
@@ -408,7 +438,7 @@ func apply_battle_result(result: Dictionary) -> bool:
 		if _pending.get("source_encounter",false):
 			# Capture keeps the actual wild animal, including caught level and rolls.
 			captured = original.duplicate(true)
-			for field in ["reward_xp","reward_gold","captured","defeated_by_pet_index","defeated_with_ride_index"]:captured.erase(field)
+			for field in ["reward_xp","reward_gold","captured","defeated_by_pet_index","defeated_with_ride_index","generated_drops","source_wait_only"]:captured.erase(field)
 			captured.hp = captured.max_hp
 			captured.xp = 0
 			captured.skill_unlocked = false
@@ -1617,4 +1647,31 @@ func claim_default_companions() -> bool:
 	if bool(_profile.get("default_companions_claimed",false)):return false
 	if not grant_starter_pets():return false
 	_profile.default_companions_claimed = true
+	return true
+
+static func _generated_drops_valid(enemy: Dictionary) -> bool:
+	var drops = enemy.get("generated_drops",[])
+	if not drops is Array or drops.size()>10:return false
+	for item in drops:
+		if not _original_integer(item,1,2147483647):return false
+	if enemy.has("source_wait_only") and not enemy.source_wait_only is bool:return false
+	if drops.is_empty() and not bool(enemy.get("source_wait_only",false)):return true
+	if not _drop_sources_loaded:
+		_drop_sources_loaded = true
+		var path := "res://assets/legacy/encounters/catalog.json"
+		if FileAccess.file_exists(path):
+			var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
+			if parsed is Dictionary:_drop_sources = parsed.get("enemies",{})
+	var id := int(enemy.get("source_enemy_id",-1))
+	var source: Dictionary = _drop_sources.get(str(id),{})
+	if source.is_empty() or str(enemy.get("species",""))!="original_%d"%int(source.template_id):return false
+	if bool(enemy.get("source_wait_only",false)) and not bool(source.get("wait_only",false)):return false
+	if not drops.is_empty() and id not in EncounterCatalog.DROP_ENEMY_IDS:return false
+	var allowed := []
+	for drop in source.get("drops",[]):
+		if int(drop.get("probability",0))>0:allowed.append(int(drop.item_id))
+	for item in drops:
+		var index := allowed.find(int(item))
+		if index<0:return false
+		allowed.remove_at(index)
 	return true

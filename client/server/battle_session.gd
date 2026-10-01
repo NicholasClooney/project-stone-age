@@ -204,7 +204,8 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 			"pet":
 				_pet_action(pet_command)
 			"enemy":
-				_enemy_action(action == "defend",pet_command == "defend")
+				if bool(_state.enemies[_acting_enemy].get("source_wait_only",false)):_last_outcome = "wait"
+				else:_enemy_action(action == "defend",pet_command == "defend")
 			_:
 				_extra_action(actor,action)
 		if _state.active_pet >= 0:
@@ -419,6 +420,9 @@ func _attack_enemy(stats: Dictionary, actor_name: String) -> void:
 		_finish("win","战斗胜利！")
 
 func _enemy_action(guarding: bool, pet_guarding: bool) -> void:
+	if bool(_state.enemies[_acting_enemy].get("source_wait_only",false)):
+		_last_outcome = "wait"
+		return
 	var pet_alive: bool = not _state.pet.is_empty() and _state.pet_hp > 0
 	var target_pet: bool = pet_alive and _rng.randi_range(0,1) == 1
 	_state.enemy_target = "pet" if target_pet else "player"
@@ -505,6 +509,17 @@ func _finish(outcome: String, message: String) -> void:
 
 func _record_frame(actor: String) -> void:
 	_state.turn_frames.append({"actor":actor,"player_hp":_state.player_hp,"enemy_hp":_state.enemy_hp,"pet_hp":_state.pet_hp,"enemy_target":_state.enemy_target,"enemy_index":_acting_enemy,"target_index":_target,"pet_index":_state.active_pet,"outcome":_last_outcome,"damage":_last_damage,"enemies":_state.enemies.duplicate(true),"pets":_state.pets.duplicate(true),"capture_success":_state.capture_success,"ride_pet":int(_state.get("ride_pet",-1)),"mounted_sprite":int(_state.get("mounted_sprite",-1)),"ride_damage":_last_ride_damage,"skill_id":_chosen_skill if actor == "pet" and _state.last_pet_command == "skill" and _pet_disobey.is_empty() and not _last_outcome.begins_with("counter") else 0,"disobey":_pet_disobey if actor == "pet" else ""})
+	if not bool(_state.get("party",false)):
+		var cache: Array = _state.get("loot_claims",[])
+		for index in range(_state.enemies.size()):
+			var enemy: Dictionary = _state.enemies[index]
+			if int(enemy.hp)>0 or bool(enemy.get("captured",false)) or bool(enemy.get("loot_credited",false)):continue
+			enemy.loot_credited = true
+			for j in range(enemy.get("generated_drops",[]).size()):
+				var claim := {"enemy":index,"item":j}
+				if cache.size()<3:cache.append(claim)
+				elif _rng.randi_range(0,1)==1:cache[_rng.randi_range(0,2)] = claim
+		_state.loot_claims = cache
 	# A 精灵 cast: who cast what on whom, and each heal (the original's BJ/BD).
 	if not _last_spirit.is_empty():_state.turn_frames.back().spirit = _last_spirit.duplicate(true)
 	_state.turn_frames.back().player_mp = int(_state.get("player_mp",0))
@@ -758,3 +773,6 @@ func _cast_spirit(caster: Dictionary, slot: String, target: Dictionary) -> void:
 			parts.append("%s耐久力回复%d" % [_ref_name(ref),own]+("（骑宠 %d）" % mount_part if mount_part>0 else ""))
 		_state.events.append("%s使用%s：%s。" % [who,str(spirit.name),"，".join(parts) if not parts.is_empty() else "没有目标"])
 	_last_spirit = {"slot":slot,"item":str(spirit.get("item","")),"magic":int(spirit.magic),"name":str(spirit.name),"kind":str(spirit.kind),"caster":caster.duplicate(),"target":target.duplicate(),"user_effect":Spirits.EFFECT_USER,"effect":Spirits.target_effect(str(spirit.kind),power),"heals":heals}
+
+func drop_claims_for(_slot: int = 0) -> Array:
+	return _state.get("loot_claims",[]).duplicate(true)
