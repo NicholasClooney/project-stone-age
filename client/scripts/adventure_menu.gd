@@ -24,6 +24,7 @@ var _built_view: Array = []
 var _records_drawn: Array = []
 var records_draw_count := 0
 var _records_sync_pending := false
+var _storage_sync_pending := false
 ## 同种比较 order (PetComparison.SORT_KEYS, first key first) and whether
 ## favourites lead each group; this device's choice (viewer.cfg), loaded on first use.
 var pet_compare_order: Array = []
@@ -217,7 +218,13 @@ func rebuild() -> void:
 ## Reuse the warehouse controls on state pushes, just as records do.
 func _refresh_storage_panel(view:Array)->void:
 	var select:=panel.find_child("StorageSpecies",true,false) as OptionButton
-	if select!=null and select.get_popup().visible:return
+	if select!=null and select.get_popup().visible:
+		if not _storage_sync_pending:
+			_storage_sync_pending=true
+			get_tree().create_timer(0.1).timeout.connect(func():
+				_storage_sync_pending=false
+				rebuild())
+		return
 	var live:=panel
 	panel=Control.new()
 	pet_storage_panel(world.session.snapshot())

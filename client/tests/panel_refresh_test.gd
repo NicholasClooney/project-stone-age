@@ -1,5 +1,7 @@
 extends SceneTree
-## Panels rebuilt for new backend data keep the player's scroll position.
+## Panels refreshed for new backend data keep the player's scroll position.
+const Warehouse=preload("res://tests/support/warehouse.gd")
+const Wait=preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -42,10 +44,28 @@ func run() -> void:
 
 	game.rebuild_keeping_scroll(menu)
 	var rebuilt: ScrollContainer = game._scroll_areas(menu)[0]
-	check(rebuilt!=scroll,"the panel was rebuilt with new controls")
+	check(rebuilt==scroll,"the warehouse refresh reuses its scroll controls")
 	await process_frame
 	await process_frame
-	check(rebuilt.scroll_vertical==scrolled,"the rebuilt warehouse keeps the scroll position")
+	check(rebuilt.scroll_vertical==scrolled,"the refreshed warehouse keeps the scroll position")
+
+	# Use real session operations after fixture construction. An open species
+	# popup defers a push but closing it must apply it without another push.
+	var picker: OptionButton=menu.panel.find_child("StorageSpecies",true,false)
+	picker.show_popup()
+	check(picker.get_popup().visible,"warehouse species popup is open")
+	check(game.session.retrieve_pet_by_id("scroll-0"),"retrieve removes a real stored UID")
+	game.sync_state();game.rebuild_keeping_scroll(menu)
+	check(menu.panel.find_child("StorageRow_scroll-0",true,false)!=null,"an open popup defers the warehouse content refresh")
+	picker.get_popup().hide()
+	check(await Wait.until(self,func():return menu.panel.find_child("StorageRow_scroll-0",true,false)==null and Warehouse.matches(menu,game.session.snapshot())),"closing the popup applies deleted UID, count, stats and capacity without a further push")
+	check(game._scroll_areas(menu)[0]==scroll and scroll.scroll_vertical==scrolled,"deferred reconciliation retains the scroll node and position")
+	var carried: Array=game.session.snapshot().pets
+	var index: int=carried.size()-1
+	check(game.session.gm_raise_level(index,12),"real session changes retrieved pet stats")
+	check(game.session.store_pet(index),"store returns the changed UID")
+	game.sync_state();game.rebuild_keeping_scroll(menu)
+	check(await Wait.until(self,func():return Warehouse.matches(menu,game.session.snapshot()) and menu.panel.find_child("StorageRow_scroll-0",true,false)!=null),"newly stored UID shows updated level, all stat cells, tooltip, count and actions")
 
 	rebuilt.scroll_vertical = 0
 	await process_frame

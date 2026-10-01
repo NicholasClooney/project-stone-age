@@ -3,6 +3,7 @@ extends SceneTree
 ## WebSocket: the hunt keeps searching on the backend while the player stores
 ## and releases pets in the warehouse, the open menu follows updates pushed by
 ## the backend, and a reloaded page comes back to the bar.
+const Warehouse = preload("res://tests/support/warehouse.gd")
 const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const MAP := 100
@@ -81,15 +82,25 @@ func run() -> void:
 	check(await until(func():return stored(backend,pet_id)),"storing a pet reaches the backend")
 	check(await until(func():return menu.visible and not menu.panel.find_children("StorageRow_"+pet_id,"",true,false).is_empty()),"the open warehouse shows the stored pet once the backend confirms it")
 
-	var drawn: int = menu.panel.get_instance_id()
-	var gold := int(backend.session._profile.player.gold)
-	backend.session._profile.player.gold = gold+7
-	backend.publish()
-	check(await until(func():return int(game.session.snapshot().player.gold)==gold+7 and menu.panel.get_instance_id()!=drawn),"a backend update redraws the open menu")
+	var drawn: Control = menu.panel
+	var scroll: Control = menu.panel.find_child("StorageScroll",true,false)
+	var row: Control = menu.panel.find_child("StorageRow_"+pet_id,true,false)
+	# A second real device changes carried capacity and storage UIDs while the
+	# first keeps the warehouse open beside its running hunt.
+	var device = await connect_client(port)
+	await Wait.settle(self,game)
+	var next_id: String = str(device.session.snapshot().pets[0].pet_id)
+	device.session.store_pet(0)
+	check(await until(func():return stored(backend,next_id) and Warehouse.matches(menu,game.session.snapshot()) and menu.panel.find_child("StorageRow_"+next_id,true,false)!=null),"another device's store push updates warehouse counts, UID rows, stats and tooltips")
+	check(menu.panel==drawn and menu.panel.find_child("StorageScroll",true,false)==scroll and menu.panel.find_child("StorageRow_"+pet_id,true,false)==row,"backend updates preserve the panel, scroll and existing UID row")
+	await close_client(device)
 
 	game.release_pets([pet_id])
 	check(await until(func():return not stored(backend,pet_id)),"releasing the stored pet reaches the backend")
-	check(await until(func():return menu.panel.find_children("StorageRow_"+pet_id,"",true,false).is_empty()),"the open warehouse drops the released pet")
+	check(await until(func():return menu.panel.find_children("StorageRow_"+pet_id,"",true,false).is_empty() and Warehouse.matches(menu,game.session.snapshot())),"the open warehouse drops the released UID and updates remaining content")
+	var remaining: Control = menu.panel.find_child("StorageRow_"+next_id,true,false)
+	remaining.find_children("RetrievePet_*","Button",true,false)[0].pressed.emit()
+	check(await until(func():return not stored(backend,next_id) and backend.session.snapshot().pets.any(func(p):return str(p.pet_id)==next_id) and Warehouse.matches(menu,game.session.snapshot())),"the reconciled remaining row withdraws its exact UID through the backend")
 
 	var rolls: int = backend.automation.hunt_rolls
 	check(await until(func():return backend.automation.hunt_rolls>rolls) and backend.automation.hunt_running,"the hunt keeps searching through the warehouse work")
