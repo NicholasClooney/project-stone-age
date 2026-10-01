@@ -67,6 +67,8 @@ var pending_hunt: Dictionary = {}
 var _pending_deadline := 0
 ## [TextureRect, sprite, placeholder] for pictures still to show.
 var _thumbs: Array = []
+var _pictures: Array = []
+var _thumb_revision := -1
 var _thumb_retry_msec := 0
 
 func configure(owner: Node) -> void:
@@ -258,6 +260,7 @@ func _input(event: InputEvent) -> void:
 
 func _clear_body() -> void:
 	_thumbs.clear()
+	_pictures.clear()
 	portrait = null
 	scroll = null
 	if not is_instance_valid(body):return
@@ -461,9 +464,11 @@ func _thumb(sprite: int, bounds: Vector2) -> Control:
 	placeholder.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 	placeholder.vertical_alignment = VERTICAL_ALIGNMENT_CENTER
 	holder.add_child(placeholder)
+	_pictures.append([picture,sprite,placeholder])
+	Thumbs.apply(picture,null)
 	var texture := Thumbs.cached(sprite)
 	if texture != null:
-		picture.texture = texture
+		Thumbs.apply(picture,texture)
 		placeholder.hide()
 	elif Thumbs.possible(sprite):
 		_thumbs.append([picture,sprite,placeholder])
@@ -488,7 +493,7 @@ func _update_thumbs() -> void:
 		if texture == null and Thumbs.possible(sprite):
 			var source := Thumbs.atlas_path(sprite)
 			if source.is_empty():source = Thumbs.sheet_path(sprite)
-			if not PaletteSheet.exists(source):
+			if not (Thumbs.available(source) if source.begins_with(Thumbs.THUMBS) else PaletteSheet.exists(source)):
 				# A pre-cut atlas comes with the thumbnail packs (all of them
 				# are being fetched); only a sprite without one needs its sheet.
 				if retry and Thumbs.atlas_path(sprite).is_empty():waiting.append(sprite)
@@ -496,7 +501,7 @@ func _update_thumbs() -> void:
 			if Time.get_ticks_usec()-started > THUMB_BUDGET_USEC:break
 			texture = Thumbs.texture(sprite)
 		if texture != null:
-			picture.texture = texture
+			Thumbs.apply(picture,texture)
 			item[2].hide()
 		elif not Thumbs.possible(sprite):
 			item[2].text = "无图"
@@ -525,10 +530,25 @@ func _update_thumbs_progress() -> void:
 
 var _thumb_pack_retry_msec := 0
 
+func _refresh_thumb_mode() -> void:
+	if _thumb_revision == Thumbs.revision:return
+	_thumb_revision = Thumbs.revision
+	_thumbs.clear()
+	# Drop every old visible texture/material, including hidden detail variants.
+	for item in _pictures:
+		if not is_instance_valid(item[0]):continue
+		Thumbs.apply(item[0],null)
+		item[2].show()
+		_thumbs.append(item)
+	_thumb_pack_retry_msec = 0
+	if scroll == null:_fill_variant_thumbs()
+
 func _process(_delta: float) -> void:
+	_refresh_thumb_mode()
 	if visible:
 		_update_thumbs_progress()
-		_update_thumbs()
+		if scroll == null:_fill_variant_thumbs()
+		else:_update_thumbs()
 	if not pending_hunt.is_empty():_check_arrival()
 
 # ---- 列表 ------------------------------------------------------------------
@@ -843,7 +863,7 @@ func _fill_variant_thumbs() -> void:
 		if not is_instance_valid(item[0]):continue
 		var texture := Thumbs.texture(int(item[1]))
 		if texture != null:
-			item[0].texture = texture
+			Thumbs.apply(item[0],texture)
 			item[2].hide()
 			_thumbs.erase(item)
 		elif not Thumbs.possible(int(item[1])):item[2].text = "无图"

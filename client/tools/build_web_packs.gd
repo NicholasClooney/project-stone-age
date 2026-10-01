@@ -13,7 +13,7 @@ extends SceneTree
 ## <out dir> that the new index does not name are removed.
 
 ## Bump when the packing itself changes, so every pack is rewritten once.
-const FORMAT := 1
+const FORMAT := 2
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 
 func _initialize() -> void:

@@ -84,6 +84,7 @@ static func kind_of(path: String) -> String:
 ## Whether the project uses palette sheets for this kind of art (so a web
 ## pack holds the sheet as its PNG).
 static func wanted(path: String) -> bool:
+	if path.begins_with(LEGACY+"thumbs/palette-") and path.ends_with(".png"):return true
 	var kind := kind_of(path)
 	return not kind.is_empty() and kinds().has(kind)
 

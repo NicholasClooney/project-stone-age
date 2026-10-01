@@ -41,6 +41,18 @@ class PlanWebPacksTest(unittest.TestCase):
         for ident in json.loads((LEGACY / "characters/index.json").read_text())["characters"]:
             self.assertIn(f"{plan_web_packs.RES}characters/art/{ident}.json", core, ident)
 
+    def test_thumbnail_variants_have_independent_complete_packs(self):
+        import json
+        index = json.loads((LEGACY/'thumbs/index.json').read_text())
+        self.assertIn(plan_web_packs.RES+'thumbs/index.json',self.plan['packs']['core'])
+        for key in ('files','palette_files'):
+            for name in index.get(key,[]):
+                path = plan_web_packs.RES+'thumbs/'+name
+                pack = self.plan['files'][path]
+                self.assertTrue(pack.startswith('thumbs-'))
+                self.assertEqual(self.plan['packs'][pack],[path])
+                self.assertEqual(pack.startswith('thumbs-palette-'),key=='palette_files')
+
     def test_lookups_name_real_packs(self):
         packs = set(self.plan["packs"])
         for ident, names in self.plan["maps"].items():
