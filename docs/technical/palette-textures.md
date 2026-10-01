@@ -36,6 +36,15 @@ Map tiles and props are single PNGs in `images/` (along with the walking frames 
 - `legacy_ground.gd` gives itself the shared tile material and draws the palette tiles; any tile that is not one (not converted, or the player's switch is off) goes to a child node without the material (`plain`). `legacy_props.gd` gives each prop sprite its material.
 - The player's switch also empties `game.textures` and redraws the ground at once.
 
+## Pet thumbnails stay RGBA
+
+宠物大全's thumbnails (`thumbs/atlas-*.png`, `tools/build_pet_thumbs.py`, 4.5 M pixels, 18 MB as RGBA when every atlas is loaded) are not palette textures, because they cannot be drawn byte-identically from one:
+
+- The 67 sprites larger than 128 px are downscaled with Lanczos, which makes new colours and partial alpha (up to 154,000 colours in one atlas). The other 622 keep their original pixels and would fit the palette all battle sheets share (223 colours).
+- The grid draws them scaled into 104x86 cells with linear filtering: the window sits under the UI `CanvasLayer`, so it takes the project's default filter, not the field's nearest. The shader picks one texel (it must, since blending indices is meaningless), so even the 622 exact ones would look sharper than today, and emulating bilinear filtering in the shader would not match the GPU's own filtering byte for byte.
+
+Options if the memory matters more than that look: unscaled thumbnails in palette atlases drawn nearest, the scaled ones in an RGBA atlas (about 18 to 7 MB with everything loaded; a visible change to the grid), or downscale with nearest at import so all of them fit (a larger visible change).
+
 ## Player switch
 
 设置 → 画面 → **调色板贴图（省显存）** (`SettingsPaletteTextures`, on by default) is saved per device in `viewer.cfg` (`palette_textures`) and read by `game_device.gd` when the device settings are restored. Off sets `PaletteSheet.user_on = false`: `PaletteSheet.load_any` then gives the imported RGBA texture, or, on the web, where a pack of an enabled kind holds only the PNG, an RGBA texture decoded from that PNG (`load_rgba`), so a sheet is always drawn. The switch applies live: it empties `SheetFrames` and the frames of every cached sprite entry, and each sprite on screen takes the new kind of texture at its next frame (`apply` removes the material for an RGBA frame). On the web `window.stoneAgeDev("palette_on")` / `("palette_off")` flip it from the console.
