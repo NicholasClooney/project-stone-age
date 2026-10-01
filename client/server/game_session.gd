@@ -267,7 +267,7 @@ func preview_wild_battle_config(troop: Dictionary) -> Dictionary:
 
 func start_wild_battle_config(troop: Dictionary, clear_target: int = -1, capture_only: bool = false) -> Dictionary:
 	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}
-	if capture_only and not storage_capture_room(1):return {}
+	if capture_only and _profile.pets.size()>=PET_CAPACITY and not storage_capture_room(1):return {}
 	var enemies: Array = troop.enemies.duplicate(true)
 	if enemies.is_empty() or enemies.size()>10:return {}
 	for enemy in enemies:
@@ -304,6 +304,7 @@ func start_wild_battle_config(troop: Dictionary, clear_target: int = -1, capture
 	config.source_encounter = true
 	if capture_only:
 		config.capture_only = true
+		config.capture_destination = "storage" if _profile.pets.size()>=PET_CAPACITY else "carried"
 		config.can_capture = true
 		config.capture_slots = 1
 	# Pinned gmsv setup.cf BATTLEGOLD=10; battle.c BATTLE_GetExp pays
@@ -371,12 +372,17 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	if mp < 0 or mp > mp_start:return false
 	var captures: Array = result.get("captured_species_list",[])
 	var enemies: Array = result.get("enemies",[])
-	var direct_storage := bool(_pending.get("capture_only",false)) and not bool(_pending.get("party",false))
+	var capture_only := bool(_pending.get("capture_only",false)) and not bool(_pending.get("party",false))
+	# Missing destination belongs to a legacy frozen direct-storage battle.
+	var direct_storage := capture_only and str(_pending.get("capture_destination","storage"))=="storage"
 	if enemies.size() != _pending.enemies.size():return false
 	if direct_storage:
 		if captures.size()>int(_pending.get("capture_slots",0)) or not storage_capture_room(captures.size()):return false
 	else:
-		if _profile.pets.size()+captures.size()>PET_CAPACITY:return false
+		if _profile.pets.size()+captures.size()>PET_CAPACITY:
+			if capture_only:last_error = "随身已满，只抓不练已停：请腾出位置后继续"
+			return false
+		if capture_only and captures.size()>int(_pending.get("capture_slots",0)):return false
 	# The result's pet indices are slots of the battle's start roster. Pets that
 	# are not in the battle can be stored, withdrawn or released meanwhile, so
 	# each slot is matched to the party by pet id (-1: no longer carried).
@@ -402,7 +408,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		if foe.get("captured",false):
 			if _pending.boss or not _pending.can_capture or not original.get("can_capture",true) or foe.hp != 0:return false
 			verified_captures.append(original.species)
-			if direct_storage and int(original.get("level",0))!=1:return false
+			if capture_only and int(original.get("level",0))!=1:return false
 			captured_actors.append(original.duplicate(true))
 		elif foe.hp == 0:
 			var enemy_xp := 0 if party else int(original.reward_xp)*multiplier
@@ -533,9 +539,11 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		_assign_pet_id(captured)
 		Loyalty.stamp_modai(captured)
 		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured))
-		if direct_storage:
+		if capture_only:
 			captured.capture_only = true
 			captured.capture_only_untrained = true
+			captured.capture_destination = "storage" if direct_storage else "carried"
+			captured.capture_destination_reason = "full_auto_store" if direct_storage and _pending.has("capture_destination") else ("legacy_storage" if direct_storage else "carried_room")
 		_record_capture(captured,"")
 		if direct_storage:_profile.pet_storage.append(captured)
 		else:
@@ -989,7 +997,7 @@ func battle_refusal(pet_id: String, what: String) -> String:
 
 ## Party slots the open battle may still fill with captures (0 without one).
 func _capture_room() -> int:
-	if bool(_pending.get("capture_only",false)):return 0
+	if bool(_pending.get("capture_only",false)) and str(_pending.get("capture_destination","storage"))=="storage":return 0
 	if _pending.is_empty() or bool(_pending.get("boss",false)) or not bool(_pending.get("can_capture",true)):return 0
 	return mini(int(_pending.get("capture_slots",0)),_pending.get("enemies",[]).size())
 
