@@ -70,6 +70,25 @@ func running() -> bool:
 ## `stat_filter_for` returns resolved filters (pet_stat_filter.gd resolve).
 ## `survey` maps template id -> 保留规则 for species being surveyed (摸底):
 ## their pets are candidates the helper collects, not hits.
+## Helpers that ended or were killed but are not reaped yet. A child process
+## that exits stays a zombie until its parent waits for it; Godot reaps one in
+## OS.is_process_running. Without this, every hit or restart left a zombie and
+## a long hunt exhausted the user's process limit (the whole Mac then could not
+## start a shell).
+var _unreaped: Array[int] = []
+
+func _forget_pid() -> void:
+	if pid > 0:_unreaped.append(pid)
+	pid = -1
+	reap()
+
+## Waits (without blocking) for every finished helper.
+func reap() -> void:
+	var still: Array[int] = []
+	for child in _unreaped:
+		if OS.is_process_running(child):still.append(child)
+	_unreaped = still
+
 func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}, held_items: Array = []) -> bool:
 	stop()
 	var folder := "user://fast-hunt"
@@ -94,6 +113,7 @@ func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 ## without a final report. During a survey `candidates` lists the pool so far:
 ## {index, slot, template_id, prediction: {attack, defence, speed, max_hp}}.
 func poll(force := false) -> Dictionary:
+	if not _unreaped.is_empty():reap()
 	if not running():return {}
 	var now := Time.get_ticks_msec()
 	if not force and now-_polled_msec < POLL_MSEC:return {}
@@ -103,11 +123,12 @@ func poll(force := false) -> Dictionary:
 		if not OS.is_process_running(pid):
 			report = _read()
 			if report.is_empty() or str(report.kind)=="progress":
+				# is_process_running said no: it has been reaped already.
 				pid = -1
 				_remove_files()
 				return {"kind":"exited"}
 	if not report.is_empty() and str(report.kind)!="progress":
-		pid = -1
+		_forget_pid()
 		_remove_files()
 	return report
 
@@ -116,6 +137,8 @@ func peek() -> Dictionary:
 	return _read() if running() else {}
 
 func stop() -> void:
+	# OS.kill waits for the child it kills, and is_process_running reaps one it
+	# finds finished: either way nothing is left to reap here.
 	if pid > 0 and OS.is_process_running(pid):OS.kill(pid)
 	pid = -1
 	_remove_files()
