@@ -4,6 +4,11 @@ const Session = preload("res://server/game_session.gd")
 var catalog
 var pending := {}
 var serial := 0
+# gmsv/include/version.h:241 enables _FIX_MAX_GOLD; char/char_base.c:
+# CHAR_getMaxHaveGold = 1,000,000 + transmigration * 1,800,000.
+# This game has no transmigration feature, so original NPC exchanges use its
+# untransmigrated limit, independent of the prototype combat currency limit.
+const ORIGINAL_MAX_GOLD := 1000000
 
 static func flag(profile: Dictionary, kind: String, event: int) -> bool:
 	return event>=0 and event<192 and (int(profile.original_events[kind][event >> 5]) & (1 << (event%32)))!=0
@@ -66,8 +71,12 @@ func talk(backend, id: String) -> Dictionary:
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
-		if action not in ["GetItem","DelItem","EndSetFlg","CleanFlg"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
+		if action not in ["GetItem","DelItem","GetStone","EndSetFlg","CleanFlg"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
 	var phase: String=str(branch.type)
+	if phase=="MESSAGE":
+		var result := transact(backend,profile,branch,"MESSAGE")
+		if not result.ok:return result
+		return window(npc,branch,"end",str(branch.texts.get("NomalWindowMsg","")),false)
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
 	var keys := {"REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
@@ -90,18 +99,42 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 		return {"ok":true,"closed":true}
 	if phase=="ACCEPT" and choice=="yes":return window(npc,branch,"reward",str(branch.texts.get("ThanksMsg","")),false)
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
+	var result := transact(backend,profile,branch,phase)
+	if not result.ok:return result
+	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
+	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",str(branch.texts.get(key,"")),false)
+
+func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -> Dictionary:
 	var candidate := profile.duplicate(true)
 	var event := int(branch.event)
 	if phase=="cancel":
-		remove_items(candidate,str(branch.actions.get("GetItem","")))
+		# Cancellation removes all copies, including quantified GetItem entries.
+		for id in item_list(str(branch.actions.get("GetItem",""))):
+			while id in candidate.original_items:candidate.original_items.erase(id)
 		set_flag(candidate,"now",event,false)
 		candidate.player.charm=maxi(0,int(candidate.player.get("charm",0))-1)
 	elif phase=="CLEAN":
 		clear_flags(candidate,str(branch.actions.get("CleanFlg","")))
 	else:
+		var received := item_list(str(branch.actions.get("GetItem","")))
+		# REQUEST has an additional pre-deletion capacity check in the original
+		# NPC callback. Keep the established event2 net-capacity compatibility.
+		if phase=="REQUEST" and event!=2 and Session.bag_slots(profile)+received.size()>15:
+			return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
+		if branch.actions.has("GetStone"):
+			var stone := int(branch.actions.GetStone)
+			if int(profile.player.gold)+stone>=ORIGINAL_MAX_GOLD:
+				return {"ok":false,"reason":str(branch.texts.get("StoneFullMsg","石币已满。"))}
+			candidate.player.gold+=stone
+		# AcceptDel checks net capacity, credits stone, deletes source items,
+		# gives items, then applies flags. Quantified deletions
+		# consume the script's count (fixing the reference C's empty *n branch).
+		var capacity := candidate.duplicate(true)
+		remove_items(capacity,str(branch.actions.get("DelItem","")))
+		if Session.bag_slots(capacity)+received.size()>15:
+			return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
 		remove_items(candidate,str(branch.actions.get("DelItem","")))
-		for item in item_list(str(branch.actions.get("GetItem",""))):candidate.original_items.append(item)
-		if Session.bag_slots(candidate)>15:return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
+		for item in received:candidate.original_items.append(item)
 		set_flag(candidate,"now",event,true)
 		var ended: String=str(branch.actions.get("EndSetFlg",""))
 		if not ended.is_empty():
@@ -113,8 +146,7 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 		backend.session._profile=profile
 		return {"ok":false,"reason":"save_failed"}
 	backend.publish()
-	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
-	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",str(branch.texts.get(key,"")),false)
+	return {"ok":true}
 
 static func item_list(raw: String) -> Array:
 	var result := []
