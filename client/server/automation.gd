@@ -18,6 +18,7 @@ const ServerSettings = preload("res://server/server_settings.gd")
 const FastHuntShare = preload("res://server/fast_hunt_share.gd")
 const Rarity = preload("res://scripts/showcase_rarity.gd")
 const ReleaseLog = preload("res://server/release_log.gd")
+const BattleForecast = preload("res://server/battle_forecast.gd")
 ## A presenting client may slow automation to its animation, never stall it.
 const PRESENT_TIMEOUT_MSEC := 5000
 const HUNT_FRAME_BUDGET_USEC := 12000
@@ -99,6 +100,9 @@ var hunt_cell := Vector2i.ZERO
 var hunt_rolls := 0
 var hunt_inspected := 0
 var hunt_best := -9
+## Pets that met the hunt's conditions in a troop with stronger enemies and
+## were passed over (只进无其他敌人的遇敌).
+var hunt_mixed_skips := 0
 var hunt_elapsed := 0.0
 var hunt_credit := 0.0
 var hunt_started_usec := 0
@@ -634,13 +638,7 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 ## `line`: the 停机线 in percent; -1 is this run's (settings.hp), and then
 ## the mount the run started on counts too.
 func health_reason(state: Dictionary, line: int = -1) -> String:
-	var floor_percent := int(settings.hp) if line<0 else line
-	if float(state.player_hp)/maxf(1,float(state.player_max_hp))*100<=floor_percent:return "玩家体力达到停机线"
-	for index in [int(state.get("active_pet",-1)),int(state.get("ride_pet",-1)),starting_ride if line<0 else -1]:
-		if index>=0 and index<state.get("pets",[]).size():
-			var pet: Dictionary = state.pets[index]
-			if float(pet.hp)/maxf(1,float(pet.max_hp))*100<=floor_percent:return "%s 体力达到停机线" % str(pet.get("name","宠物"))
-	return ""
+	return Policy.health_stop(state,int(settings.hp) if line<0 else line,starting_ride if line<0 else -1)
 
 ## In a party battle, what heals this run's player at its 停机线: "item" (a
 ## 回复药) for the player, "heal_pet" (the 恢复护符, never used up) for the
@@ -735,7 +733,7 @@ func start_hunt(filter: Dictionary) -> bool:
 	if usable.is_empty() or (int(filter.get("template",-1))>=0 and not int(filter.template) in usable):
 		hunt_status = "当前没有素材齐全的目标宠物。";return false
 	_prepare_catalog(filter)
-	hunt_rolls = 0;hunt_inspected = 0;hunt_best = -9;hunt_elapsed = 0;hunt_credit = 0;hunt_last_hit = {}
+	hunt_rolls = 0;hunt_inspected = 0;hunt_best = -9;hunt_mixed_skips = 0;hunt_elapsed = 0;hunt_credit = 0;hunt_last_hit = {}
 	# Two draws from the walking encounter stream seed this run's rolls.
 	hunt_run_seed = (backend.encounter_rng.randi() << 32) | backend.encounter_rng.randi()
 	hunt_fast_wanted = bool(filter.get("fast",false))
@@ -846,6 +844,9 @@ func _open_hit(troop: Dictionary, i: int, quality: Dictionary, roll: Dictionary 
 	var config: Dictionary = backend.session.start_wild_battle_config(troop)
 	if config.is_empty():
 		stop_hunt(found+"\n战斗校验未通过，已停止。");return
+	var refusal := mixed_refusal(troop,i,config)
+	if not refusal.is_empty():
+		stop_hunt(found+"\n"+refusal);return
 	stop_hunt(found)
 	# The workflow resolves its capture fight without animation, like compact training.
 	var workflow_capture := flow_phase=="hunt"
@@ -870,6 +871,8 @@ func roll_at(index: int) -> Dictionary:
 ## predictions); the native helper implements the same rules.
 func first_match(troop: Dictionary) -> int:
 	var filter := hunt_filter
+	# 只进无其他敌人的遇敌: decided per troop, counted per pet it costs.
+	var mixed := HuntRules.wants_clean(filter) and not HuntRules.clean_troop(troop)
 	for i in range(troop.enemies.size()):
 		var actor: Dictionary = troop.enemies[i]
 		if not actor.get("can_capture",false):continue
@@ -881,14 +884,39 @@ func first_match(troop: Dictionary) -> int:
 		if quality.valid:hunt_best = maxi(hunt_best,int(quality.total_offset))
 		if HuntRules.matches(actor,int(filter.template),bool(filter.level_one),int(filter.total),filter.offsets,backend.encounter_catalog.data):
 			if _predicting() and surveying(int(actor.template_id)):
-				# 摸底: a candidate, not a hit (the helper does the same).
+				# 摸底: a candidate, not a hit (the helper does the same). With
+				# no threshold yet, a mixed troop's pet is never one.
+				if mixed:
+					hunt_mixed_skips += 1;continue
 				var projected: Dictionary = Progression.project_pet(actor,120)
 				_note_best(projected)
 				survey_add(hunt_run_seed,hunt_rolls-1,i,int(actor.template_id),_prediction(projected))
 				continue
+			if mixed and not mixed_allowed(int(actor.template_id)):
+				hunt_mixed_skips += 1;continue
 			if _predicting() and not accepts_prediction(actor):continue
 			return i
 	return -1
+
+## Before a troop with enemies above Lv.1 is entered under mixed_if_stats:
+## "" when the capture battle forecast (server/battle_forecast.gd, from this
+## battle's own seed) says the run can plausibly win, else the reason to
+## pause, and the battle config built for it is dropped.
+func mixed_refusal(troop: Dictionary, slot: int, config: Dictionary) -> String:
+	if not HuntRules.wants_clean(hunt_filter) or HuntRules.clean_troop(troop):return ""
+	var run := profile_settings()
+	var result := BattleForecast.forecast(config,run,slot,42+backend.encounter_serial+1)
+	if bool(result.ok):return ""
+	backend.session.cancel_pending_battle(str(config.get("battle_id","")))
+	var actor: Dictionary = troop.enemies[slot]
+	return "%s Lv.1 达到属性条件，但同组还有 %s。按现在的人物和出战宠模拟这场捕捉 %d 次只赢 %d 次（%s），为免战败扣魅力和宠物忠诚，已暂停，没有进入战斗。可以换更强的出战宠、练级后再开始，或在「抓宠设置」关掉「属性达标仍进混合遇敌」。" % [
+		str(actor.get("name","")),BattleForecast.stronger_enemies(troop),int(result.trials),int(result.wins),str(result.reason)]
+
+## A Lv.1 pet in a troop with stronger enemies is still taken (after a battle
+## forecast before entering: mixed_refusal) only in a find-pet cycle with
+## mixed_if_stats on and enabled 属性条件 for its species, which it must meet.
+func mixed_allowed(template_id: int) -> bool:
+	return _predicting() and bool(hunt_filter.get("mixed_if_stats",false)) and StatFilter.enabled(filter_for(template_id))
 
 func _fast_mismatch(index: int) -> String:
 	return "本机极速模式的结果与游戏复核不一致（第 %d 组），已停止，没有进入战斗。请关闭本机极速模式后再试，并报告这个问题。" % (index+1)
@@ -909,7 +937,7 @@ func _fast_process() -> bool:
 		_survey_merge(fast_hunt.peek().get("candidates",[]))
 		fast_hunt.stop()
 	if not fast_hunt.running():
-		_fast_base = {"inspected":hunt_inspected,"best":hunt_best,"rejects":flow_predicted_rejects,"start":hunt_rolls}
+		_fast_base = {"inspected":hunt_inspected,"best":hunt_best,"rejects":flow_predicted_rejects,"mixed":hunt_mixed_skips,"start":hunt_rolls}
 		var area: Dictionary = hunt_catalog.area_at(hunt_map,hunt_cell)
 		_fast_thresholds = threshold_key() if _predicting() else ""
 		_fast_held_items = backend.session._profile.get("original_items",[]).duplicate()
@@ -933,6 +961,7 @@ func _fast_process() -> bool:
 	hunt_rolls = int(report.index)
 	hunt_inspected = int(_fast_base.inspected)+int(report.inspected)
 	hunt_best = maxi(int(_fast_base.best),int(report.best))
+	hunt_mixed_skips = int(_fast_base.mixed)+int(report.get("mixed",0))
 	flow_predicted_rejects = int(_fast_base.rejects)+int(report.predicted_rejects)
 	if int(report.best_sum)>=0 and (flow_best_predicted.is_empty() or int(report.best_sum)>int(flow_best_predicted.sum) or (int(report.best_sum)==int(flow_best_predicted.sum) and int(report.best_attack)>int(flow_best_predicted.attack))):
 		flow_best_predicted = {"sum":int(report.best_sum),"attack":int(report.best_attack)}
@@ -1599,7 +1628,7 @@ func resume_state() -> Dictionary:
 	if kind.is_empty() or map<0:return {}
 	var state := {"version":RESUME_VERSION,"kind":kind,"time":int(Time.get_unix_time_from_system()),"map_id":map,"cell":[at.x,at.y],"settings":settings.duplicate(true)}
 	if hunt_running:
-		state.hunt = {"filter":hunt_filter.duplicate(true),"run_seed":hunt_run_seed,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"elapsed":hunt_elapsed}
+		state.hunt = {"filter":hunt_filter.duplicate(true),"run_seed":hunt_run_seed,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"mixed":hunt_mixed_skips,"elapsed":hunt_elapsed}
 	if kind=="flow":
 		var flow := {"elapsed":elapsed_seconds(),"survey":not survey.is_empty()}
 		for field in RESUME_FLOW_FIELDS:
@@ -1661,6 +1690,7 @@ func _restore_hunt(saved: Dictionary) -> bool:
 	hunt_rolls = int(saved.rolls)
 	hunt_inspected = int(saved.inspected)
 	hunt_best = int(saved.best)
+	hunt_mixed_skips = int(saved.get("mixed",0))
 	hunt_started_usec = Time.get_ticks_usec()-int(float(saved.get("elapsed",0.0))*1000000.0)
 	_emit_status()
 	return true
@@ -2046,6 +2076,10 @@ func _showcase_capture() -> void:
 		stop_cycle("宠物栏已满，请自行存放伙伴后再开始。");return
 	var config: Dictionary = backend.session.start_wild_battle_config(troop)
 	if config.is_empty():stop_cycle("战斗校验未通过，已停止。");return
+	var refusal := mixed_refusal(troop,int(entry.slot),config)
+	if not refusal.is_empty():
+		_showcase_line("dropped","第%d组 %s 没有进入战斗：%s" % [int(entry.index)+1,str(actor.get("name","")),refusal])
+		stop_cycle(refusal);return
 	flow_known_ids.clear()
 	# Warehouse pets too: one withdrawn during the capture battle is not new.
 	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
@@ -2158,7 +2192,7 @@ func status() -> Dictionary:
 		"finish_after_capture":finish_after_capture,"origin_map":origin_map,"origin_cell":[origin_cell.x,origin_cell.y],
 		# Where the character is now (map -1 until a client has reported it).
 		"position":{"map_id":position_map,"cell":[position_cell.x,position_cell.y]},
-		"hunt":{"running":hunt_running,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"elapsed":hunt_elapsed,
+		"hunt":{"running":hunt_running,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"mixed":hunt_mixed_skips,"elapsed":hunt_elapsed,
 			"filter":hunt_filter.duplicate(true),"status":hunt_status,"credit":hunt_credit,"last_hit":hunt_last_hit.duplicate(true),"map_id":hunt_map,"cell":[hunt_cell.x,hunt_cell.y],
 			"fast":fast_hunt.running(),"fast_wanted":hunt_fast_wanted,"fast_note":hunt_fast_note,"fast_unavailable":fast_unavailable,
 			"threads":fast_threads,"threads_used":fast_threads_now() if fast_share!=null and fast_share.joined() else threads_used(fast_threads),"cores":ServerSettings.cores(),

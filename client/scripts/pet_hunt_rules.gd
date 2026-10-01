@@ -28,6 +28,19 @@ static func matches(actor: Dictionary, template_id: int, level_one: bool, min_to
 	var measured := quality(actor, catalog)
 	return measured.valid and _passes(measured.offsets, int(measured.total_offset), min_total, min_offsets)
 
+## 只进无其他敌人的遇敌: every enemy of the troop is Lv.1. Besides the Lv.1
+## hunt targets only other Lv.1 pets may be there: they cannot threaten the
+## party, and a find-pet capture defeats them once the target is caught.
+## tools/fast_hunt/fast_hunt.c implements the same rule.
+static func clean_troop(troop: Dictionary) -> bool:
+	for enemy in troop.get("enemies", []):
+		if int(enemy.get("level", 0)) != 1: return false
+	return true
+
+## Whether a Lv.1 hunt with this filter skips troops that are not clean.
+static func wants_clean(filter: Dictionary) -> bool:
+	return bool(filter.get("clean_only", false)) and bool(filter.get("level_one", true))
+
 static func _passes(offsets: Array, total: int, min_total: int, minimum: Array) -> bool:
 	if total < min_total or (not minimum.is_empty() and minimum.size() != 4): return false
 	for i in range(minimum.size()):

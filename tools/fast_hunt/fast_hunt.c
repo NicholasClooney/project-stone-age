@@ -15,19 +15,21 @@
  * tools/fast_hunt tests compare this program with GDScript roll by roll.
  *
  * Usage: fast_hunt INPUT STATUS
- *   INPUT   written by fast_hunt.gd _input (fasthunt 2). Groups are filtered
+ *   INPUT   written by fast_hunt.gd _input (fasthunt 3). Groups are filtered
  *           against the owning server profile's original_items before writing;
  *           enemy rows include enabled drop RNG draw counts.
  *   STATUS  rewritten atomically about ten times a second, one line:
- *     KIND INDEX SLOT INSPECTED BEST PRED_REJECTS BEST_SUM BEST_ATTACK
- *   KIND is progress (INDEX = next roll to commit), then finally one of
+ *     KIND INDEX SLOT INSPECTED BEST PRED_REJECTS BEST_SUM BEST_ATTACK MIXED
+ *   MIXED counts pets passed over in troops with an enemy above Lv.1
+ *   (只进无其他敌人的遇敌). KIND is progress (INDEX = next roll to commit), then finally one of
  *     hit    roll INDEX is taken, at enemy SLOT
  *     stop   roll INDEX gives an empty troop (the backend's replay stops the hunt)
  *     limit  the roll limit INDEX was reached
  *   The counters always cover rolls [START, INDEX).
  *   During a survey (摸底) further lines follow, one per candidate kept so far:
  *     cand INDEX SLOT TEMPLATE SUM ATTACK DEFENCE SPEED MAX_HP
- *   With --roll N it prints roll N (troop and projections) and exits: used by tests.
+ *   With --roll N it prints roll N (troop, projections, the slot taken and
+ *   the pets passed over as mixed) and exits: used by tests.
  *
  * Survey (the optional last input section): for the listed species the scan
  * has no Lv120 threshold. Every pet of theirs that passes the grade filter is
@@ -157,6 +159,10 @@ typedef struct { int enabled, any; int on[4]; double value[4]; int strict[4]; } 
 static uint64_t run_seed; static int64_t start_index, limit_index; static int threads, max_enemies;
 static int ngroups, nenemies, ntemplates; static Group *groups; static Enemy *enemies; static Template *templates;
 static int f_template, f_level_one, f_total, f_offsets[4], f_has_offsets, nusable, *usable, flow;
+/* clean: skip troops with an enemy above Lv.1 (pet_hunt_rules.gd clean_troop);
+ * mixed_if_stats: in a cycle still take a pet whose species has enabled stat
+ * conditions, if it meets them (automation.gd mixed_allowed). */
+static int f_clean, f_mixed_if_stats;
 static int nstat; static int *stat_template; static StatFilter *stat_filters;
 
 /* Survey: per species the keep rule; keys index {sum, attack, defence, speed, max_hp}. */
@@ -184,7 +190,7 @@ static void read_stat(FILE *f, StatFilter *s) {
 static void load(const char *path) {
     FILE *f = open_file(path, "r");
     if (!f) { perror(path); exit(2); }
-    need(f, "fasthunt"); if (num(f) != 2) { fprintf(stderr, "input: version\n"); exit(2); }
+    need(f, "fasthunt"); if (num(f) != 3) { fprintf(stderr, "input: version\n"); exit(2); }
     need(f, "run_seed"); run_seed = (uint64_t)num(f);
     need(f, "start"); start_index = num(f);
     need(f, "limit"); limit_index = num(f);
@@ -220,6 +226,7 @@ static void load(const char *path) {
     nusable = (int)num(f); usable = calloc(nusable + 1, sizeof *usable);
     for (int i = 0; i < nusable; i++) usable[i] = (int)num(f);
     need(f, "flow"); flow = (int)num(f);
+    need(f, "clean"); f_clean = (int)num(f); f_mixed_if_stats = (int)num(f);
     need(f, "stat_filters"); nstat = (int)num(f);
     stat_template = calloc(nstat + 1, sizeof *stat_template); stat_filters = calloc(nstat + 1, sizeof *stat_filters);
     for (int i = 0; i < nstat; i++) { stat_template[i] = (int)num(f); read_stat(f, &stat_filters[i]); }
@@ -247,7 +254,7 @@ static void load(const char *path) {
 /* ---- one roll ------------------------------------------------------------- */
 typedef struct { int enemy, level, weights[4], can_capture; int64_t base[4]; uint32_t growth_seed; } Actor;
 typedef struct { int count; Actor a[10]; } Troop;
-typedef struct { uint64_t inspected, pred_rejects; int best, best_sum, best_attack; } Tally;
+typedef struct { uint64_t inspected, pred_rejects; int best, best_sum, best_attack; uint64_t mixed; } Tally;
 
 /* encounter_catalog._weighted: -1 when the total weight is not positive. */
 static int weighted_group(Rng *r) {
@@ -439,6 +446,8 @@ static int scan(uint64_t index, Tally *tally) {
     Rng r; rng_seed(&r, roll_seed(run_seed, index));
     Troop troop;
     if (roll(&r, &troop) < 0) return -2;
+    int mixed = 0;
+    if (f_clean && f_level_one) for (int i = 0; i < troop.count; i++) if (troop.a[i].level != 1) mixed = 1;
     for (int i = 0; i < troop.count; i++) {
         const Actor *a = &troop.a[i];
         if (!a->can_capture) continue;
@@ -456,12 +465,17 @@ static int scan(uint64_t index, Tally *tally) {
         if (f_has_offsets) for (int k = 0; k < 4; k++) if (offsets[k] < f_offsets[k]) ok = 0;
         if (!ok) continue;
         if (flow && survey_for(t->id)) {
-            /* 摸底: a candidate, not a hit; the scan goes on. */
+            /* 摸底: a candidate, not a hit; the scan goes on. Never from a mixed troop. */
+            if (mixed) { tally->mixed++; continue; }
             int st[4]; project(a, t, st);
             int sum = st[0] + st[1] + st[2];
             if (sum > tally->best_sum || (sum == tally->best_sum && st[0] > tally->best_attack)) { tally->best_sum = sum; tally->best_attack = st[0]; }
             pool_add((int64_t)index, i, t->id, st);
             continue;
+        }
+        if (mixed) {
+            const StatFilter *s = stat_for(t->id);
+            if (!(flow && f_mixed_if_stats && s && s->enabled)) { tally->mixed++; continue; }
         }
         if (flow) {
             const StatFilter *s = stat_for(t->id);
@@ -513,7 +527,7 @@ static void *worker(void *unused) {
 }
 
 static void merge(Tally *into, const Tally *t) {
-    into->inspected += t->inspected; into->pred_rejects += t->pred_rejects;
+    into->inspected += t->inspected; into->pred_rejects += t->pred_rejects; into->mixed += t->mixed;
     if (t->best > into->best) into->best = t->best;
     if (t->best_sum > into->best_sum || (t->best_sum == into->best_sum && t->best_attack > into->best_attack)) { into->best_sum = t->best_sum; into->best_attack = t->best_attack; }
 }
@@ -524,7 +538,7 @@ static void write_status(const char *kind, int64_t index, int slot, const Tally 
     snprintf(tmp, sizeof tmp, "%s.tmp", status_path);
     FILE *f = open_file(tmp, "wb");
     if (!f) return;
-    fprintf(f, "%s %lld %d %llu %d %llu %d %d\n", kind, (long long)index, slot, (unsigned long long)t->inspected, t->best, (unsigned long long)t->pred_rejects, t->best_sum, t->best_attack);
+    fprintf(f, "%s %lld %d %llu %d %llu %d %d %llu\n", kind, (long long)index, slot, (unsigned long long)t->inspected, t->best, (unsigned long long)t->pred_rejects, t->best_sum, t->best_attack, (unsigned long long)t->mixed);
     if (nsurvey > 0) {
         pthread_mutex_lock(&pool_lock);
         pool_prune();
@@ -555,7 +569,8 @@ static int print_roll(int64_t index) {
                (long long)a->base[0], (long long)a->base[1], (long long)a->base[2], (long long)a->base[3], st[0], st[1], st[2], st[3]);
     }
     Tally t = {0, 0, -9, -1, -1};
-    printf("scan %d\n", scan((uint64_t)index, &t));
+    int slot = scan((uint64_t)index, &t);
+    printf("scan %d mixed %llu\n", slot, (unsigned long long)t.mixed);
     return 0;
 }
 

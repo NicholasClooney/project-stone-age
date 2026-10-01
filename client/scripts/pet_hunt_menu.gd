@@ -71,6 +71,12 @@ var showcase_speed: OptionButton
 ## 重启后自动恢复 (hunt.resume): a run the server was doing when it shut down
 ## goes on after the restart (server/automation.gd try_resume).
 var resume_after_restart: CheckBox
+## 只进无其他敌人的遇敌 (hunt.clean_only): a Lv.1 hunt skips troops with an
+## enemy above Lv.1. 属性达标仍进混合遇敌 (hunt.mixed_if_stats): a find-pet
+## cycle still takes such a pet when it meets its enabled 属性条件, after a
+## battle forecast (server/battle_forecast.gd) says the fight can be won.
+var clean_only: CheckBox
+var mixed_if_stats: CheckBox
 ## 线程数 of the server's helper (0 = auto): the computer's setting, not the
 ## character's, so it is sent as its own command and stays editable mid-hunt.
 var thread_count: SpinBox
@@ -291,7 +297,7 @@ func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,
 		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value),
-		"resume":resume_after_restart.button_pressed}
+		"resume":resume_after_restart.button_pressed,"clean_only":clean_only.button_pressed,"mixed_if_stats":mixed_if_stats.button_pressed}
 	# 任何 shown only because the saved species is not found here keeps the saved one.
 	if species.item_count>0 and not _template_fallback:wanted.template=species.get_selected_id()
 	# Likewise 属性条件's species: a fallback shown here keeps the saved choice.
@@ -324,6 +330,9 @@ func load_settings() -> void:
 	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
 	if _changed(old,hunt,"showcase"):showcase.set_pressed_no_signal(bool(hunt.showcase))
 	if _changed(old,hunt,"resume"):resume_after_restart.set_pressed_no_signal(bool(hunt.resume))
+	if _changed(old,hunt,"clean_only"):clean_only.set_pressed_no_signal(bool(hunt.clean_only))
+	if _changed(old,hunt,"mixed_if_stats"):mixed_if_stats.set_pressed_no_signal(bool(hunt.mixed_if_stats))
+	_show_mixed_option()
 	if not queue_size.get_line_edit().has_focus():queue_size.set_value_no_signal(int(hunt.queue))
 	showcase_xp.select(maxi(0,[1,2,10,100].find(int(world.automation_settings().training.xp))))
 	showcase_speed.select(maxi(0,[1.0,2.0,4.0,8.0].find(world.playback_speed())))
@@ -417,6 +426,7 @@ func set_controls(locked: bool) -> void:
 		var held:=locked and not (is_instance_valid(stat_page) and stat_page.is_ancestor_of(control))
 		if control is SpinBox:control.editable=not held
 		elif control is BaseButton:control.disabled=held
+	_show_mixed_option()
 	start_button.disabled=locked
 	stop_button.disabled=not locked
 	minimize_button.disabled=not locked
@@ -504,7 +514,11 @@ func stop_hunt(reason: String) -> void:
 	else:on_event({"kind":"hunt_stopped","reason":reason})
 func summary() -> String:
 	var actual:=rolls / maxf(elapsed,0.001)
-	return workflow_summary()+"已遇敌 %s 组 · 检查目标 %s 只 · 最好总档 %s · 本轮 %s\n%s · 实际 %s · 流程总用时 %s" % [cn_count(rolls),cn_count(inspected),"暂无" if best< -8 else "%+d" % best,duration_text(elapsed),speed_text(),rolls_text(actual),duration_text(world.pet_workflow.elapsed_seconds())]
+	return workflow_summary()+"已遇敌 %s 组 · 检查目标 %s 只%s · 最好总档 %s · 本轮 %s\n%s · 实际 %s · 流程总用时 %s" % [cn_count(rolls),cn_count(inspected),mixed_text(int(_hunt().get("mixed",0))),"暂无" if best< -8 else "%+d" % best,duration_text(elapsed),speed_text(),rolls_text(actual),duration_text(world.pet_workflow.elapsed_seconds())]
+## 「 · 混合敌群跳过 3 只」:达标 pets passed over because stronger enemies
+## were in their troop (只进无其他敌人的遇敌), or "".
+static func mixed_text(count: int) -> String:
+	return " · 混合敌群跳过 %s 只" % cn_count(count) if count>0 else ""
 ## How this run scans: the helper, the ordinary scan and why, or its target rate.
 func speed_text() -> String:
 	var hunt: Dictionary=_hunt()
@@ -622,6 +636,21 @@ func showcase_controls()->void:
 	resume_after_restart.tooltip_text="服务器重启时记下正在运行的找宠流程、筛选或自动练级（设置、排队的宠物、已遇敌组数和本轮计数），重启后角色还在原地就自动接着运行，停止记录和信息框写「服务器重启后已恢复」。重启时正在打的捕获或练级战斗按逃跑结束，重启后按原种子重新抓或接着练。摸底要重新开始。"
 	capture_page.add_child(resume_after_restart);controls.append(resume_after_restart)
 	resume_after_restart.toggled.connect(func(_value):_settings_changed(true))
+	clean_only=CheckBox.new();clean_only.name="CleanOnly";clean_only.text="只进无其他敌人的遇敌";clean_only.button_pressed=true;clean_only.position=Vector2(760,399)
+	clean_only.tooltip_text="找 Lv.1 时，敌群里只要有高于 Lv.1 的敌人就跳过不进（同组别的 Lv.1 宠物不算，打不过人也伤不了队伍）。抓宠时不打其他敌人，混进高等级敌人容易战败，扣魅力和宠物忠诚。敌群在进战斗前就已算好，跳过只是多找一会儿。"
+	capture_page.add_child(clean_only);controls.append(clean_only)
+	clean_only.toggled.connect(func(_value):
+		_show_mixed_option()
+		_settings_changed(true))
+	mixed_if_stats=CheckBox.new();mixed_if_stats.name="MixedIfStats";mixed_if_stats.text="属性达标仍进混合遇敌";mixed_if_stats.position=Vector2(760,429)
+	mixed_if_stats.tooltip_text="找宠流程里，这只 Lv.1 预测的120级属性达到已启用的属性条件时，即使同组有高等级敌人也去抓。进战斗前先按现在的人物和出战宠模拟这场捕捉，打不赢就暂停并说明，不进入战斗。"
+	capture_page.add_child(mixed_if_stats);controls.append(mixed_if_stats)
+	mixed_if_stats.toggled.connect(func(_value):_settings_changed(true))
+
+## 属性达标仍进混合遇敌 only matters while 只进无其他敌人的遇敌 is on.
+func _show_mixed_option()->void:
+	if not is_instance_valid(mixed_if_stats):return
+	mixed_if_stats.disabled=clean_only.disabled or not clean_only.button_pressed
 
 func show_capture_settings(enabled:bool)->void:
 	if is_instance_valid(stat_page):stat_page.hide()

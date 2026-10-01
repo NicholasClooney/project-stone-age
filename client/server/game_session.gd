@@ -224,6 +224,11 @@ func best_other_pets(count: int) -> Array:
 		result.append(copy)
 	return result
 
+## Forgets a battle config that was built but never opened (the hunt's
+## battle forecast refused a mixed troop: server/battle_forecast.gd).
+func cancel_pending_battle(battle_id: String) -> void:
+	if str(_pending.get("battle_id",""))==battle_id:_pending.clear()
+
 func start_wild_battle_config(troop: Dictionary) -> Dictionary:
 	if not _pending.is_empty() or not troop.get("enemies") is Array:return {}
 	var enemies: Array = troop.enemies.duplicate(true)

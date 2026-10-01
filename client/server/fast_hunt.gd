@@ -11,6 +11,7 @@ extends RefCounted
 ## Windows with MinGW-w64); elsewhere, or if it fails, the GDScript scan runs
 ## instead.
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
+const HuntRules = preload("res://scripts/pet_hunt_rules.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const METRICS := ["sum","attack","defence","speed"]
 const POLL_MSEC := 100
@@ -136,7 +137,7 @@ static func parse_status(text: String) -> Dictionary:
 		candidates.append({"index":int(c[1]),"slot":int(c[2]),"template_id":int(c[3]),
 			"prediction":{"attack":int(c[5]),"defence":int(c[6]),"speed":int(c[7]),"max_hp":int(c[8])}})
 	return {"kind":parts[0],"index":int(parts[1]),"slot":int(parts[2]),"inspected":int(parts[3]),"best":int(parts[4]),
-		"predicted_rejects":int(parts[5]),"best_sum":int(parts[6]),"best_attack":int(parts[7]),"candidates":candidates}
+		"predicted_rejects":int(parts[5]),"best_sum":int(parts[6]),"best_attack":int(parts[7]),"mixed":int(parts[8]) if parts.size()>8 else 0,"candidates":candidates}
 
 func _remove_files() -> void:
 	for path in [input_path,status_path,status_path+".tmp"]:
@@ -145,7 +146,7 @@ func _remove_files() -> void:
 ## The helper's input: see tools/fast_hunt/fast_hunt.c. Only the candidate
 ## groups roll() chooses among, in the same order and with the same weights.
 func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}, held_items: Array = []) -> String:
-	var lines: PackedStringArray = ["fasthunt 2","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % effective_threads(thread_count),"max_enemies %d" % int(area.get("max_enemies",1))]
+	var lines: PackedStringArray = ["fasthunt 3","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % effective_threads(thread_count),"max_enemies %d" % int(area.get("max_enemies",1))]
 	var groups: Array = []
 	var enemy_ids := {}
 	for choice in area.get("groups",[]):
@@ -191,6 +192,9 @@ func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 		1 if has_offsets else 0,int(offsets[0]) if has_offsets else 0,int(offsets[1]) if has_offsets else 0,int(offsets[2]) if has_offsets else 0,int(offsets[3]) if has_offsets else 0,
 		usable.size()," ".join(usable_text)])
 	lines.append("flow %d" % (1 if flow else 0))
+	# 只进无其他敌人的遇敌, and whether a cycle still takes a pet meeting its
+	# enabled 属性条件 there (automation.gd first_match, mixed_allowed).
+	lines.append("clean %d %d" % [1 if HuntRules.wants_clean(filter) else 0,1 if bool(filter.get("mixed_if_stats",false)) else 0])
 	lines.append("stat_filters %d" % usable.size())
 	for id in usable:
 		var chosen: Dictionary = stat_filter_for.call(int(id))

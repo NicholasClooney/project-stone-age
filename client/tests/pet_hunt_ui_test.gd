@@ -41,6 +41,15 @@ func run() -> void:
 	menu.fast.button_pressed=false
 	check(not bool(game.automation_settings().hunt.fast),"turning it off is saved with the character")
 	menu.fast.button_pressed=true
+	# 只进无其他敌人的遇敌 and its exception, on 抓宠设置.
+	check(menu.clean_only.button_pressed and not menu.mixed_if_stats.button_pressed and not menu.mixed_if_stats.disabled and menu.capture_page.is_ancestor_of(menu.clean_only),"抓宠设置 shows 只进无其他敌人的遇敌 on and 属性达标仍进混合遇敌 off")
+	menu.mixed_if_stats.button_pressed=true
+	menu.clean_only.button_pressed=false
+	check(not bool(game.automation_settings().hunt.clean_only) and bool(game.automation_settings().hunt.mixed_if_stats) and menu.mixed_if_stats.disabled,"both are saved with the character; the exception is greyed while the rule is off")
+	menu.clean_only.button_pressed=true;menu.mixed_if_stats.button_pressed=false
+	check(bool(game.automation_settings().hunt.clean_only) and not menu.mixed_if_stats.disabled,"turning the rule back on is saved too")
+	var clean_rect: Rect2=menu.clean_only.get_global_rect()
+	check(menu.panel.get_global_rect().encloses(clean_rect) and menu.panel.get_global_rect().encloses(menu.mixed_if_stats.get_global_rect()),"both fit inside the window")
 	FastHunt.helper_override="/nonexistent/fast_hunt"
 	game.backend.automation.fast_unavailable=FastHunt.unavailable_reason()
 	game.backend.automation._emit_status()

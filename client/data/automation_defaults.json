@@ -34,6 +34,8 @@
     "showcase": true,
     "queue": 10,
     "resume": true,
+    "clean_only": true,
+    "mixed_if_stats": false,
     "stat_species": -1
   },
   "stat_filter": {

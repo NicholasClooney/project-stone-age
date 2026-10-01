@@ -33,6 +33,7 @@ The helper reimplements, for one roll:
   These were confirmed by comparing sequences printed by Godot for many seeds and ranges; Lemire's method does not match.
 - **`encounter_catalog.gd`:** `roll()` (weighted group, count, the up-to-100 attempts with `max_count`, multiplicity and the five-slot swap for large monsters) and `actor()` (level, four grade draws, ten birth points, `randi()` growth seed, base stats with integer wild growth).
 - **`scan_once`'s filters and `HuntRules.matches`:** capturable, usable template, target template, Lv1, grade total and per-grade minimums.
+- **只进无其他敌人的遇敌 (`HuntRules.clean_troop`, `automation.mixed_allowed`):** with `clean` on in a Lv.1 hunt, a troop with any enemy above Lv.1 is mixed. A grade-matching pet there is passed over and counted (MIXED), before its Lv120 projection, unless the run is a find-pet cycle with `mixed_if_stats` and the species has enabled stat conditions; then it is predicted and taken only if it meets them. A surveyed species' pet in a mixed troop is never a candidate.
 - **During a find-pet cycle, `accepts_prediction`:** `Progression.project_pet` to Lv120 (per-level seed `growth_seed + level * 104729`, ten points, roll `450 + rank * 20 .. + 50`, integer division) and `StatFilter.evaluate`. It also tracks the best prediction and the number of rejected predictions.
 
 `fast_hunt_test` compares C and GDScript roll by roll: about 18,000 rolls and 45,000 enemies. It checks troops, levels, grades, growth seeds, base stats, Lv120 stats and the slot the hunt takes, across four named spots and 60 random areas. `build/fast_hunt INPUT --roll FROM COUNT` prints rolls for that comparison.
@@ -45,14 +46,14 @@ The helper reimplements, for one roll:
 - the area's candidate groups, in the order and with the weights `roll()` uses;
 - their enemies and templates;
 - the hunt filter;
-- whether predictions apply, and each usable template's stat filter (already resolved, see below);
+- whether predictions apply (`flow`), and `clean CLEAN MIXED_IF_STATS` (since `fasthunt 3`), and each usable template's stat filter (already resolved, see below);
 - optionally, the species being surveyed and their keep rules.
 
 It then starts `build/fast_hunt INPUT STATUS` with `OS.create_process`.
 
 The helper splits rolls into chunks of 65,536 and hands them to worker threads. The main thread commits chunk results in order, so the reported first hit is the lowest roll index that hits, the same one the sequential scan finds. About ten times a second it atomically rewrites STATUS with one line:
 
-    KIND INDEX SLOT INSPECTED BEST PRED_REJECTS BEST_SUM BEST_ATTACK
+    KIND INDEX SLOT INSPECTED BEST PRED_REJECTS BEST_SUM BEST_ATTACK MIXED
 
 `KIND` is one of:
 - `progress`: the next roll to commit.
@@ -60,9 +61,13 @@ The helper splits rolls into chunks of 65,536 and hands them to worker threads. 
 - `stop`: roll `INDEX` gives an empty troop.
 - `limit`: the roll limit was reached.
 
-The counters always cover rolls before `INDEX`, so the backend's status shows the same numbers the GDScript scan would.
+MIXED is the number of pets passed over in mixed troops (`hunt.mixed` in the status). The counters always cover rolls before `INDEX`, so the backend's status shows the same numbers the GDScript scan would.
 
 The backend polls STATUS every 100 ms from the hunt tick and never blocks a frame. On `hit` or `stop` it sets its counters and calls `_scan_index(INDEX, expected)`, which rolls that index again in GDScript. Only if the replay gives the same outcome does the hunt continue on the ordinary path (battle, capture, training, workflow). Any difference stops the hunt with 本机极速模式的结果与游戏复核不一致 and opens no battle; `fast_hunt_flow_test` checks this with a fake helper that lies.
+
+## Mixed troops and the battle forecast
+
+A mixed troop taken under `mixed_if_stats` is not entered blindly. `automation.mixed_refusal` runs `server/battle_forecast.gd` on the battle config the capture would open: the real `BattleSession` (or `SquadBattleSession` with a 五人镜像队) fights it out with the turn choices `step()` makes for a capture that finishes the battle (用精灵补血, the 停机线 via `Policy.health_stop`, `Policy.decide`, attacking the rest after the catch). Five seeds, the first being the battle's own (`42 + encounter_serial + 1`); at most one may be lost. Otherwise the pending battle config is dropped (`GameSession.cancel_pending_battle`) and the cycle pauses with the reason, from `_open_hit` and from `_showcase_capture`.
 
 ## Thread count (线程数)
 

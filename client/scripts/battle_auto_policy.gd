@@ -22,6 +22,16 @@ static func decide(state: Dictionary, settings: Dictionary, target: int) -> Dict
  if best!=int(state.get("active_pet",-1)):return {"action":"switch","pet":"defend","target":target,"switch":best}
  return {"action":"defend","pet":"attack","target":target}
 
+## Why a run stops at the 停机线 (`line` percent), or "": the player, the
+## battle pet, the mount, and the mount the run started on (`starting_ride`).
+static func health_stop(state:Dictionary,line:int,starting_ride:int=-1)->String:
+ if float(state.player_hp)/maxf(1,float(state.player_max_hp))*100<=line:return "玩家体力达到停机线"
+ for index in [int(state.get("active_pet",-1)),int(state.get("ride_pet",-1)),starting_ride]:
+  if index>=0 and index<state.get("pets",[]).size():
+   var pet:Dictionary=state.pets[index]
+   if float(pet.hp)/maxf(1,float(pet.max_hp))*100<=line:return "%s 体力达到停机线"%str(pet.get("name","宠物"))
+ return ""
+
 static func capture_pet_choice(state:Dictionary,settings:Dictionary,target_level:int)->Dictionary:
  var selected:=int(settings.get("capture_pet",-1))
  var pets: Array=state.get("pets",[])

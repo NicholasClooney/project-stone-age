@@ -43,6 +43,7 @@ func compare(automation, from_helper: String, first: int, count: int) -> Diction
 	var enemies := 0
 	var projected := 0
 	var matches := 0
+	var mixed := 0
 	for index in range(first,first+count):
 		var head := lines[at].split(" ",false)
 		at += 1
@@ -70,13 +71,16 @@ func compare(automation, from_helper: String, first: int, count: int) -> Diction
 				if int(actor.level) < 120:projected += 1
 		var scan := lines[at].split(" ",false)
 		at += 1
+		var skipped_before: int = automation.hunt_mixed_skips
 		var slot: int = -2 if troop.is_empty() else automation.first_match(troop)
+		var skipped: int = automation.hunt_mixed_skips-skipped_before
+		mixed += skipped
 		if slot >= 0:matches += 1
-		if int(scan[1])!=slot:
+		if int(scan[1])!=slot or (slot!=-2 and int(scan[3])!=skipped):
 			mismatch = true
-			if different < 3:print("  roll %d: GDScript takes slot %d, helper %s" % [index,slot,scan[1]])
+			if different < 3:print("  roll %d: GDScript takes slot %d passing over %d, helper %s" % [index,slot,skipped," ".join(scan)])
 		if mismatch:different += 1
-	return {"different":different,"enemies":enemies,"projected":projected,"matches":matches}
+	return {"different":different,"enemies":enemies,"projected":projected,"matches":matches,"mixed":mixed}
 
 func run_area(backend, catalog: Dictionary, label: String, map_id: int, cell: Vector2i, filter: Dictionary, flow: bool, count: int) -> Dictionary:
 	var automation = backend.automation
@@ -147,6 +151,25 @@ func run() -> void:
 	var blue_rex := {"template":302,"level_one":true,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":[302]}
 	result = run_area(backend,catalog,"added Lv1 blue rex",500,Vector2i(400,400),blue_rex,false,3000)
 	check(result.get("different",-1)==0 and int(result.get("matches",0))>0,"map 500 added Lv.1 左迪洛斯: 3000 rolls identical, the hunt takes %d" % int(result.get("matches",0)))
+
+	# 只进无其他敌人的遇敌: the same 左迪洛斯 rolls, but a troop with its
+	# Lv90-95 companion is passed over (and counted) in both.
+	var clean_blue_rex := blue_rex.duplicate(true)
+	clean_blue_rex.clean_only = true
+	result = run_area(backend,catalog,"added Lv1 blue rex",500,Vector2i(400,400),clean_blue_rex,false,3000)
+	check(result.get("different",-1)==0 and int(result.get("matches",0))>0 and int(result.get("mixed",0))>0,"只进无其他敌人的遇敌, 左迪洛斯: 3000 rolls identical, the hunt takes %d clean troops and passes over %d pets in mixed ones" % [int(result.get("matches",0)),int(result.get("mixed",0))])
+	# In a find-pet cycle with mixed_if_stats a pet meeting its 属性条件 is
+	# still taken from a mixed troop; one without enabled conditions is not.
+	var lax_rex := {"mode":"any","stop_after":1,"conditions":{"sum":{"enabled":true,"value":0,"strict":false,"keep":0}}}
+	backend.automation.flow_stat_filters[302] = lax_rex
+	clean_blue_rex.mixed_if_stats = true
+	result = run_area(backend,catalog,"added Lv1 blue rex",500,Vector2i(400,400),clean_blue_rex,true,3000)
+	var taken_mixed := int(result.get("matches",0))
+	check(result.get("different",-1)==0 and int(result.get("mixed",0))==0 and taken_mixed>0,"属性达标仍进混合遇敌: 3000 rolls identical, %d taken, none passed over" % taken_mixed)
+	backend.automation.flow_stat_filters[302] = {"mode":"any","stop_after":1,"conditions":{}}
+	result = run_area(backend,catalog,"added Lv1 blue rex",500,Vector2i(400,400),clean_blue_rex,true,3000)
+	check(result.get("different",-1)==0 and int(result.get("mixed",0))>0 and int(result.get("matches",0))<taken_mixed,"属性达标仍进混合遇敌 without enabled 属性条件: identical, mixed troops passed over (%d)" % int(result.get("mixed",0)))
+	backend.automation.flow_stat_filters.clear()
 
 	# A 补充 Lv.1 in a scaled area (吉鲁岛 311, ×33): 邦浦洛斯 next to its Lv43-45 row.
 	var grey_dragon := {"template":93,"level_one":true,"total":-8,"offsets":[],"limit":0,"rate":0,"usable":[93]}

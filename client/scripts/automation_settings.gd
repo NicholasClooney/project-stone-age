@@ -14,7 +14,12 @@ extends RefCounted
 ##                 that: the device shows a status line, not the battle view)}
 ##                 (LAN phase 4c, docs/development/lan-profiles.md)
 ##   hunt         {template, level_one, auto_capture, train_after_capture, total, offsets, rate, limit, fast, showcase, queue,
-##                 resume (重启后自动恢复), stat_species (属性条件 shows it; -1 follows the target)}
+##                 resume (重启后自动恢复), stat_species (属性条件 shows it; -1 follows the target),
+##                 clean_only (只进无其他敌人的遇敌: a Lv.1 hunt skips troops with
+##                 any enemy above Lv.1, pet_hunt_rules.gd clean_troop),
+##                 mixed_if_stats (still take such a troop in a find-pet cycle
+##                 when the pet meets its enabled 属性条件, after a battle
+##                 forecast: server/battle_forecast.gd)}
 ##   stat_filters {"<template id>": {mode, threshold_mode, stop_after, keep_rule, conditions: {sum|attack|defence|speed: {enabled, minus, value, keep}}}}
 ##     threshold_mode "relative" (default): a condition asks for 最高 − minus,
 ##     the best Lv120 value of that metric among the player's own pets of the
@@ -45,7 +50,7 @@ const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120]},
-	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"stat_species":["int",-1,1000000]},
+	"hunt":{"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000]},
 }
 static var _defaults: Dictionary = {}
 
@@ -95,7 +100,8 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 static func hunt_filter(overrides: Dictionary) -> Dictionary:
 	var hunt: Dictionary = effective(overrides).hunt
 	return {"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
-		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"queue":int(hunt.queue)}
+		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"queue":int(hunt.queue),
+		"clean_only":bool(hunt.clean_only),"mixed_if_stats":bool(hunt.mixed_if_stats)}
 
 static func device_default(key: String, fallback: Variant) -> Variant:
 	return defaults().get("device",{}).get(key,fallback)
