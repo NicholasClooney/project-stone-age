@@ -182,6 +182,51 @@ class RidingImportTest(unittest.TestCase):
             self.assertEqual(species_names(root/'missing', pairs), {})
 
 
+class GoldRexTest(unittest.TestCase):
+    def test_supplement_does_not_replace_c_certificate_namespace(self):
+        from import_riding import supplemental_mounts, GOLD_REX_BODIES
+        pairs = supplemental_mounts()
+        self.assertEqual(len(pairs),48)
+        self.assertEqual(pairs['100030:100907']['sprite'],103262)
+        self.assertEqual(len(set(p['sprite'] for p in pairs.values())),12)
+        self.assertFalse(any('certificate' in p for p in pairs.values()))
+        self.assertFalse(any(p['rider']>=100700 for p in pairs.values()))
+        self.assertEqual(set(GOLD_REX_BODIES),set(range(103262,103274)))
+        kept, unavailable = select(pairs,{str(100000+20*b+5*c) for b in range(12) for c in range(4)}-{'100100'})
+        self.assertEqual(len(kept),47)
+        self.assertEqual(unavailable[0]['rider'],100100)
+
+    def test_source_lua_column_matches_all_twelve_bodies(self):
+        import re
+        from import_riding import GOLD_REX_BODIES
+        source = Path(__file__).resolve().parent.parent/'references/anson1788-stoneage/服务器端lua文件/ablua/familyridefunction.lua'
+        if not source.exists():self.skipTest('reference source required')
+        text = source.read_text(errors='replace')
+        table = text.split('NewRideNoList =',1)[1] if 'NewRideNoList =' in text else text.split('NewRideNoList=',1)[1]
+        rows = re.findall(r'\{\s*(10\d{4}[^{}]+)\}',table)
+        columns = [list(map(int,re.findall(r'\d+',row)))[13] for row in rows[:12]]
+        self.assertEqual(tuple(columns),GOLD_REX_BODIES)
+
+
+    def test_gold_rex_falls_back_to_complete_original_80_actions(self):
+        from import_riding import find_composite, GOLD_REX_BODIES
+        from import_legacy import Archive, sprite_animations
+        root = Path(__file__).resolve().parent.parent
+        primary = root/'.tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5'
+        extra = root/'.tools/legacy/extracted/SA8.0-20260803'
+        if not primary.exists() or not extra.exists():self.skipTest('original archives required')
+        archives = [Archive(primary),Archive(extra)]
+        try:
+            for sprite in GOLD_REX_BODIES:
+                owner, actions = find_composite(archives,sprite)
+                self.assertIs(owner,archives[1])
+                self.assertEqual(actions,sprite_animations(archives[1],sprite,tuple(range(13))))
+                self.assertEqual(len(actions),104)
+                self.assertEqual(sum(len(a['frames']) for a in actions.values()),568)
+                self.assertEqual(len({f['image'] for a in actions.values() for f in a['frames']}),352)
+        finally:
+            for archive in archives:archive.real.close()
+
+
 if __name__ == '__main__':
     unittest.main()
-
