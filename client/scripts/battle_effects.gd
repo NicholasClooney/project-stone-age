@@ -3,6 +3,10 @@ extends Control
 ## Legacy tick motion is expressed at 60Hz here; source logic is not FPS-independent.
 const TICK_RATE := 60.0
 var clock := 0.0
+var map_point: Callable
+var canvas_factor := 1.0
+func mapped(point: Vector2) -> Vector2:
+ return map_point.call(point) if map_point.is_valid() else point
 var externally_driven := false
 var active: Array[Dictionary] = []
 var frames: Dictionary = {}
@@ -89,10 +93,15 @@ func _update_effects() -> void:
    var id: int = entry.ids[mini(2,int(ticks*3/8))]
    entry.node.texture = frames[id]
    var info: Dictionary = metadata[str(id)]
-   entry.node.position = entry.origin+Vector2(info.x,info.y)
+   entry.node.position = mapped(entry.origin)+Vector2(info.x,info.y)
   elif entry.kind=="critical":
    var id := 25501 if ticks<int(entry.duration)/2 else 25500
    entry.node.texture = frames[id]
    var info: Dictionary = metadata[str(id)]
-   entry.node.position = entry.origin+entry.velocity*ticks+Vector2(info.x,info.y)
-  elif entry.kind=="number":entry.node.position = entry.origin+Vector2(0,number_offset(ticks))
+   entry.node.position = mapped(entry.origin)+entry.velocity*ticks+Vector2(info.x,info.y)
+  elif entry.kind=="number":
+   entry.node.add_theme_font_size_override("font_size",maxi(1,roundi(14.0/canvas_factor)))
+   entry.node.scale = Vector2.ONE*canvas_factor
+   entry.node.size = Vector2(80,20)/canvas_factor
+   entry.node.position = mapped(entry.origin)+Vector2(0,number_offset(ticks))
+  elif entry.kind=="word":entry.node.position = mapped(entry.origin)

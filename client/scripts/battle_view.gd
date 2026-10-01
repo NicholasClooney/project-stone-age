@@ -18,6 +18,11 @@ const ART_ROOT := "res://assets/legacy/battle/"
 const STAGE_SIZE := Vector2(800,600)
 var world: Node
 var stage: Control
+var arena: Control
+var responsive = preload("res://scripts/battle_layout.gd").new()
+var layout_signature := ""
+var menu_origin := Vector2.ZERO
+var previous_window_aspect := -1
 ## battle/index.json (scripts/battle_art.gd): player and enemy ids, club
 ## variants, UI pictures and audio. Each actor holds its sprite's own entry.
 var manifest: Dictionary = {}
@@ -168,11 +173,17 @@ func _ready() -> void:
 	stage.size = STAGE_SIZE
 	stage.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(stage)
+	arena = Control.new()
+	arena.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	add_child(arena)
 	if BattleArt.present():
 		manifest = BattleArt.index()
 		frame_sounds = BattleArt.frame_sounds().duplicate()
 		battlefield = picture("background.png",Vector2.ZERO)
+		battlefield.reparent(self,false)
 		battlefield.z_index = -1000
+		battlefield.expand_mode = TextureRect.EXPAND_IGNORE_SIZE
+		battlefield.stretch_mode = TextureRect.STRETCH_KEEP_ASPECT_COVERED
 		add_actor(str(manifest.get("player_id","100000")),Vector2(677,504),3)
 		add_actor(str(manifest.get("enemy_id","")),Vector2(101,150),7)
 	status = label("",16,Vector2(20,12),Vector2(420,26))
@@ -190,6 +201,7 @@ func _ready() -> void:
 	party_status.hide()
 	command_panel = Control.new()
 	command_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
+	command_panel.z_index = 30
 	stage.add_child(command_panel)
 	# StockDispBuffer uses a common anchor plus each bitmap's stored offset.
 	# battlemenu.cpp:3757-3765, anim_tbl.h:25000-series classic menu.
@@ -209,8 +221,11 @@ func _ready() -> void:
 		command_panel.add_child(button)
 		commands.append(button)
 	choice_panel = Control.new()
+	# Filter the original one-pixel stipple when shrinking the HUD; nearest
+	# sampling creates large checkerboard moire in narrow native windows.
+	choice_panel.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR
 	choice_panel.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	choice_panel.z_index = 10
+	choice_panel.z_index = 30
 	stage.add_child(choice_panel)
 	for i in range(20):
 		var target := Button.new()
@@ -223,7 +238,7 @@ func _ready() -> void:
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND
 		target.focus_mode = Control.FOCUS_NONE
 		target.pressed.connect(select_target.bind(i))
-		stage.add_child(target)
+		arena.add_child(target)
 		target_buttons.append(target)
 		var highlight := Panel.new()
 		highlight.mouse_filter = Control.MOUSE_FILTER_IGNORE
@@ -234,7 +249,7 @@ func _ready() -> void:
 		outline.set_border_width_all(1)
 		highlight.add_theme_stylebox_override("panel",outline)
 		highlight.hide()
-		stage.add_child(highlight)
+		arena.add_child(highlight)
 		target_highlights.append(highlight)
 		actor_labels.append(label("",14,target.position+Vector2(-30,125),Vector2(200,45)))
 		var meter := Control.new()
@@ -278,9 +293,10 @@ func _ready() -> void:
 		ally_mount_bars.append(meter)
 		ally_mount_fills.append(fill)
 	battle_effects = BattleEffects.new()
-	stage.add_child(battle_effects)
+	arena.add_child(battle_effects)
 	battle_effects.setup(manifest)
 	battle_effects.externally_driven = true
+	battle_effects.map_point = responsive.point
 	result_panel = Control.new()
 	result_panel.position = Vector2(240,180)
 	result_panel.size = Vector2(320,288)
@@ -324,6 +340,23 @@ func _ready() -> void:
 	built = true
 	layout()
 	hide()
+	visibility_changed.connect(_battle_window_layout)
+
+func _battle_window_layout() -> void:
+	var window := get_viewport() as Window
+	if window==null: return
+	if visible:
+		previous_window_aspect = window.content_scale_aspect
+		window.content_scale_aspect = Window.CONTENT_SCALE_ASPECT_EXPAND
+	elif previous_window_aspect>=0:
+		window.content_scale_aspect = previous_window_aspect
+		previous_window_aspect = -1
+	layout()
+
+func _exit_tree() -> void:
+	var window := get_viewport() as Window
+	if window!=null and previous_window_aspect>=0:
+		window.content_scale_aspect = previous_window_aspect
 
 func label(value: String, font_size: int, point: Vector2, dimensions: Vector2) -> Label:
 	var result := Label.new()
@@ -362,7 +395,7 @@ func add_actor(ident: String, point: Vector2, facing: int) -> void:
 		return
 	var sprite := Sprite2D.new()
 	sprite.centered = false
-	stage.add_child(sprite)
+	(arena if is_instance_valid(arena) else stage).add_child(sprite)
 	actors.append({"character_id":ident,"sprite":sprite,"point":point,"home":point,"motions":[],"animation":animations[key],"animations":animations,"art":art,"facing":facing,"temporary":"","until":0.0,"cues":[],"started":0.0,"last_frame":""})
 
 func layout() -> void:
@@ -371,6 +404,82 @@ func layout() -> void:
 	var factor := minf(size.x/STAGE_SIZE.x,size.y/STAGE_SIZE.y)
 	stage.scale = Vector2.ONE*factor
 	stage.position = (size-STAGE_SIZE*factor)/2
+	menu_origin = Vector2((size.x-stage.position.x)/factor-STAGE_SIZE.x,-stage.position.y/factor)
+	command_panel.position.y = menu_origin.y
+	choice_panel.position.y = menu_origin.y
+	if is_instance_valid(battlefield):
+		battlefield.position = Vector2.ZERO
+		battlefield.size = size
+	layout_arena()
+
+
+func layout_arena() -> void:
+	var entries: Array = []
+	for i in range(actors.size()):
+		var actor: Dictionary = actors[i]
+		if not bool(actor.get("enabled",true)): continue
+		var box := Rect2(Vector2(-25,-90),Vector2(50,90))
+		var art: Dictionary = actor.art
+		for animation in [art.animations.get("3_%d"%int(actor.facing),actor.animation)]:
+			for frame in range(SpriteArt.frame_count(animation)):
+				var dimensions := Vector2(SpriteArt.image_size(art,SpriteArt.image(animation,frame)))
+				box = box.merge(Rect2(SpriteArt.offset(art,animation,frame),dimensions))
+		entries.append({"home":actor.home,"box":Rect2(Vector2(actor.home)+box.position,box.size),"side":0 if enemy_index(i)>=0 else 1})
+	# Window canvas_items scaling keeps the map/HUD in logical units. Solve
+	# the battlefield in displayed pixels so a narrow physical window cannot
+	# masquerade as a wide 1280-unit canvas.
+	var canvas_factor := maxf(get_viewport().get_final_transform().get_scale().x,0.001)
+	var physical_size := size*canvas_factor
+	battle_effects.canvas_factor = canvas_factor
+	# Rasterize text at the window's font resolution, then compensate the
+	# arena transform. This avoids low-resolution glyphs on a scaled canvas.
+	for actor_label in actor_labels:
+		actor_label.add_theme_font_size_override("font_size",maxi(1,roundi(14.0/canvas_factor)))
+		actor_label.scale = Vector2.ONE*canvas_factor
+		actor_label.size = Vector2(200,45)/canvas_factor
+	var hud_factor := stage.scale.x*canvas_factor
+	# Reserve the actual settled PLAYER menu rectangle at the top right.
+	# All camps fit below this band, so depth order never hides a combatant.
+	var menu := player_menu_rect()
+	var top := minf(physical_size.y*0.5,(menu.end.y+8.0*stage.scale.x)*canvas_factor)
+	var bottom := physical_size.y-minf(physical_size.y*0.15,92.0*hud_factor)
+	var available := Rect2(Vector2(8.0*hud_factor,top),Vector2(maxf(1,physical_size.x-16.0*hud_factor),maxf(1,bottom-top)))
+	if choice_panel.get_child_count()>0 and choice_panel.visible:
+		var choices := menu_rect(choice_panel)
+		var below := available
+		below.position.y = maxf(top,(choices.end.y+8.0*stage.scale.x)*canvas_factor)
+		below.size.y = maxf(1,bottom-below.position.y)
+		var beside := available
+		beside.size.x = maxf(1,(choices.position.x-8.0*stage.scale.x)*canvas_factor-beside.position.x)
+		var probe = preload("res://scripts/battle_layout.gd").new()
+		probe.solve(entries,beside)
+		var beside_factor: float = probe.factor
+		probe.solve(entries,below)
+		available = beside if beside_factor>probe.factor else below
+		for child in choice_panel.get_children():
+			if child is Button:
+				child.add_theme_font_size_override("font_size",maxi(16,roundi(14.0/maxf(hud_factor,0.001))))
+	responsive.solve(entries,available)
+	arena.scale = Vector2.ONE*responsive.factor/canvas_factor
+	arena.position = responsive.origin/canvas_factor
+	for node in actor_labels+hp_bars:
+		if node.get_parent()!=arena: node.reparent(arena,false)
+
+func player_menu_rect() -> Rect2:
+	return menu_rect(command_panel)
+
+func menu_rect(panel: Control) -> Rect2:
+	var bounds := Rect2()
+	var first := true
+	for child in panel.get_children():
+		if not child is Control: continue
+		var dimensions: Vector2 = child.size
+		if child is TextureRect and child.texture!=null: dimensions = child.texture.get_size()
+		if child is TextureButton and child.texture_normal!=null: dimensions = child.texture_normal.get_size()
+		var box := Rect2(child.position,dimensions)
+		bounds = box if first else bounds.merge(box)
+		first = false
+	return Rect2(stage.position+(menu_origin+bounds.position)*stage.scale.x,bounds.size*stage.scale.x)
 
 var hunt_target_index := -1
 
@@ -523,7 +632,7 @@ func open_battle(next_state: Dictionary) -> void:
 			if index<actors.size():actors[index].hide_at = 0.0
 	menu_slide_at = TRANSITION_SECONDS+ENTRY_SECONDS
 	feedback_until = TRANSITION_SECONDS+ENTRY_SECONDS+MENU_SLIDE_SECONDS
-	command_panel.position.x = 300
+	command_panel.position.x = menu_origin.x+300
 	show()
 
 # produce.cpp ProduceHagare(mode2): 8x8 viewport tiles, one released each
@@ -910,12 +1019,17 @@ func ui_picture(ident: int, anchor: Vector2, parent: Control) -> void:
 	if not ResourceLoader.exists(path): return
 	var image := TextureRect.new()
 	image.texture = load(path)
+	if ident==26130 and image.texture!=null:
+		var bitmap := image.texture.get_image()
+		bitmap.generate_mipmaps()
+		image.texture = ImageTexture.create_from_image(bitmap)
+		image.texture_filter = CanvasItem.TEXTURE_FILTER_LINEAR_WITH_MIPMAPS
 	image.position = anchor+ui_offset(ident)
 	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(image)
 
 func clear_choices() -> void:
-	choice_panel.position.x = 0
+	choice_panel.position.x = menu_origin.x
 	for child in choice_panel.get_children():
 		choice_panel.remove_child(child)
 		child.queue_free()
@@ -923,11 +1037,20 @@ func clear_choices() -> void:
 func choice(text: String, position_at: Vector2, callback: Callable) -> Button:
 	var button := Button.new()
 	button.text = text
-	button.flat = true
+	button.flat = false
+	var backing := StyleBoxFlat.new()
+	backing.bg_color = Color(0.05,0.04,0.03,0.85)
+	backing.border_color = Color(0.65,0.55,0.36,0.7)
+	backing.set_border_width_all(1)
+	for appearance in ["normal","hover","pressed","hover_pressed","disabled"]:
+		button.add_theme_stylebox_override(appearance,backing)
 	button.position = position_at
 	button.size = Vector2(220,30)
 	button.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
 	button.add_theme_color_override("font_color",Color.WHITE)
+	button.add_theme_color_override("font_pressed_color",Color.WHITE)
+	button.add_theme_color_override("font_hover_color",Color.WHITE)
+	button.add_theme_color_override("font_hover_pressed_color",Color.WHITE)
 	button.add_theme_color_override("font_outline_color",Color.BLACK)
 	button.add_theme_constant_override("outline_size",3)
 	button.add_theme_font_size_override("font_size",16)
@@ -1096,7 +1219,7 @@ func complete_player_command(action: String) -> void:
 		show_pet_choices()
 		pet_slide_at = elapsed
 		feedback_until = elapsed+MENU_SLIDE_SECONDS
-		choice_panel.position.x = 300
+		choice_panel.position.x = menu_origin.x+300
 	else:
 		submit_command()
 
@@ -1105,7 +1228,7 @@ func show_pet_choices() -> void:
 	ui_picture(25140,PET_MENU_ANCHOR,choice_panel)
 	ui_picture(25141,PET_MENU_ANCHOR,choice_panel)
 	var pet_title := label(str(state.get("pet_name",state.get("pet",{}).get("name","宠物"))),16,PET_MENU_ANCHOR+Vector2(-96,-14),Vector2(192,28))
-	pet_title.reparent(choice_panel)
+	pet_title.reparent(choice_panel,false)
 	ui_picture(26130,Vector2(650,300),choice_panel)
 	var actions := [["攻击","attack"],["技能","skill"],["防御","defend"],["待机","standby"]]
 	for i in range(actions.size()):
@@ -1211,15 +1334,23 @@ func _process(delta: float) -> void:
 
 func _advance_playback(delta: float) -> void:
 	elapsed += delta
+	var signature := str(size)+str(get_viewport().get_final_transform().get_scale())+str(choice_panel.get_child_count())+command_phase+selected_action
+	for actor in actors: signature += str(actor.character_id)+str(actor.get("enabled",true))
+	if signature!=layout_signature:
+		layout_signature = signature
+		layout_arena()
 	while not mirror_cues.is_empty() and elapsed>=float(mirror_cues[0].at):
 		var cue: Dictionary = mirror_cues.pop_front()
 		var effect = preload("res://scripts/mirror_effect.gd").new()
-		stage.add_child(effect)
-		effect.setup(int(cue.id),actors[int(cue.index)].point)
+		arena.add_child(effect)
+		effect.setup(int(cue.id),responsive.point(actors[int(cue.index)].point))
+		effect.set_meta("native_point",actors[int(cue.index)].point)
 		mirror_effects.append(effect)
 	for i in range(mirror_effects.size()-1,-1,-1):
 		if not is_instance_valid(mirror_effects[i]): mirror_effects.remove_at(i)
-		else: mirror_effects[i].advance(delta)
+		else:
+			mirror_effects[i].position = responsive.point(mirror_effects[i].get_meta("native_point"))
+			mirror_effects[i].advance(delta)
 	battle_effects.advance(delta)
 	for tile in transition_tiles:
 		var frames := maxf(0.0,(elapsed-float(tile.release))*60.0)
@@ -1274,10 +1405,10 @@ func _advance_playback(delta: float) -> void:
 	if bool(state.get("active",false)) and command_phase=="player":
 		command_panel.visible = elapsed>=menu_slide_at
 		var slide := clampf((elapsed-menu_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
-		command_panel.position.x = 300.0*pow(1.0-slide,2)
+		command_panel.position.x = menu_origin.x+300.0*pow(1.0-slide,2)
 	if command_phase=="pet" and choice_panel.get_child_count()>0:
 		var progress := clampf((elapsed-pet_slide_at)/MENU_SLIDE_SECONDS,0.0,1.0)
-		choice_panel.position.x = 300.0*pow(1.0-progress,2)
+		choice_panel.position.x = menu_origin.x+300.0*pow(1.0-progress,2)
 	for button in commands:
 		button.disabled = not bool(state.get("active",false)) or elapsed < feedback_until or (str(button.get_meta("action","")) == "help" or (str(button.get_meta("action","")) == "magic" and not magic_available()))
 		if str(button.get_meta("action",""))=="capture":
@@ -1311,11 +1442,14 @@ func _advance_playback(delta: float) -> void:
 			var maximum := maxi(1,int(actor.get("maximum",1)) if actor_index==2 else health_of(state,actor_index,true))
 			# Original battlemenu.cpp HpMeterDisp: every actor uses y-80,
 			# including small pets. The PET label is baked into frame26020.
-			hp_bars[actor_index].position = actor.point+Vector2(0,-80)
+			hp_bars[actor_index].position = responsive.point(actor.point)+Vector2(0,-80)
 			hp_bars[actor_index].visible = shown and displayed_hp[actor_index]>0
 			hp_fills[actor_index].size.x = int(clampf(float(displayed_hp[actor_index])/maximum,0,1)*40.0)
 		if actor_index<actor_labels.size():
-			actor_labels[actor_index].position = actor.point+Vector2(-100,-10)
+			actor_labels[actor_index].position = responsive.point(actor.point)+Vector2(-100,-10)
+			var left := -arena.position.x/arena.scale.x
+			var right := (size.x-arena.position.x)/arena.scale.x-actor_labels[actor_index].size.x*actor_labels[actor_index].scale.x
+			actor_labels[actor_index].position.x = clampf(actor_labels[actor_index].position.x,left,maxf(left,right))
 		var animation: Dictionary = actor.animation
 		if elapsed < float(actor.until) and not str(actor.temporary).is_empty():
 			animation = actor.animations[actor.temporary]
@@ -1346,7 +1480,7 @@ func _advance_playback(delta: float) -> void:
 		if sprite.texture==null: continue
 		PaletteSheet.apply(sprite,sprite.texture)
 		sprite.z_index = clampi(int(actor.point.y),0,599)-600
-		sprite.position = actor.point+SpriteArt.offset(art,animation,index)
+		sprite.position = responsive.point(actor.point)+SpriteArt.offset(art,animation,index)
 		var target: Button = target_buttons[actor_index]
 		target.visible = shown
 		target.position = sprite.position
@@ -1357,12 +1491,12 @@ func _advance_playback(delta: float) -> void:
 		var highlight: Panel = target_highlights[actor_index]
 		highlight.position = target.position-Vector2(2,2)
 		highlight.size = target.size+Vector2(4,4)
-		highlight.visible = eligible and target.get_rect().has_point(stage.get_local_mouse_position())
+		highlight.visible = eligible and target.get_rect().has_point(arena.get_local_mouse_position())
 		var phase := int(elapsed*60.0)%60
 		var outline: StyleBoxFlat = highlight.get_theme_stylebox("panel")
 		outline.border_color = Color.GREEN if phase<45 else (Color(0,0.5,0) if phase>=50 and phase<55 else Color.WHITE)
 
-	update_hover_info(stage.get_local_mouse_position())
+	update_hover_info(arena.get_local_mouse_position())
 
 func hover_actor_text(index: int) -> String:
 	var actor_name := actor_labels[index].text
