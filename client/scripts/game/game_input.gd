@@ -77,8 +77,8 @@ func on_input(event: InputEvent) -> void:
 			game.held.erase(action)
 
 func on_unhandled_input(event: InputEvent) -> void:
-	if event.is_action_pressed("ui_cancel") and is_instance_valid(game.quest_helper_travel) and game.quest_helper_travel.active:
-		game.quest_helper_travel.cancel("已停止任务导航。")
+	if event.is_action_pressed("ui_cancel") and is_instance_valid(game.quest_helper_travel) and (game.quest_helper_travel.active or game.state.derived.get("quest_auto",{}).get("running",false)):
+		game.quest_helper_travel.cancel("已停止任务导航或自动任务。")
 		game.get_viewport().set_input_as_handled()
 		return
 	for modal in [game.quest_helper_menu,game.leveling_destinations,game.helper_menu]:

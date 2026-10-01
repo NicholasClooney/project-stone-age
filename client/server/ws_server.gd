@@ -42,6 +42,9 @@ func start() -> Error:
 	return error
 
 func stop() -> void:
+	if backend!=null:backend.quest_auto.stop(backend,"服务器已停止。")
+	if hub!=null:
+		for profile_backend in hub.backends.values():profile_backend.quest_auto.stop(profile_backend,"服务器已停止。")
 	for peer in _pending:peer.close()
 	for peer in _clients:peer.close()
 	_server.stop()
@@ -84,7 +87,9 @@ func _process(_delta: float) -> void:
 		elif state==WebSocketPeer.STATE_CLOSED:
 			_clients.erase(peer)
 			if hub!=null:hub.disconnect_connection(peer.get_instance_id())
-			else:backend.automation.client_attached = not _clients.is_empty()
+			else:
+				if backend.quest_auto.connection==peer.get_instance_id():backend.quest_auto.stop(backend,"发起设备已断线。")
+				backend.automation.client_attached = not _clients.is_empty()
 
 ## Connected clients, for tests and diagnostics.
 func clients() -> Array[WebSocketPeer]:
@@ -105,6 +110,8 @@ func _receive(peer: WebSocketPeer, text: String) -> void:
 	if command.is_empty():
 		_send(peer,{"type":"rejected","seq":0,"ok":false,"reason":"malformed command","v":1})
 		return
+	# Connection ownership is transport identity, never a client-provided tag.
+	command["_quest_connection"]=peer.get_instance_id()
 	# Events raised by the command reach every client before this reply.
 	var reply: Dictionary = hub.handle(peer.get_instance_id(),command) if hub!=null else backend.handle(command)
 	reply.reply = true

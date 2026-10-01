@@ -53,6 +53,7 @@ func branch_for(npc: Dictionary, profile: Dictionary) -> Dictionary:
 	return {}
 
 func allowed(backend, npc: Dictionary) -> bool:
+	if backend.quest_auto.running and not backend.quest_auto.internal:return false
 	if backend.battle_open or not backend.session._pending.is_empty() or backend.automation.running or backend.automation.hunt_running or backend.automation.flow_active():return false
 	var cell: Array = npc.cell
 	return backend.automation.position_map==int(npc.map_id) and maxi(absi(backend.automation.position_cell.x-int(cell[0])),absi(backend.automation.position_cell.y-int(cell[1])))<=2
