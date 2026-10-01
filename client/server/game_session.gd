@@ -1313,6 +1313,7 @@ func _valid_profile(value: Variant) -> bool:
 	if value.has("ride_pet") and (not _integer(value.ride_pet,-1,value.pets.size()-1) or (value.ride_pet >= 0 and value.ride_pet == value.get("active_pet"))):return false
 	if not _integer(value.get("active_pet"),-1,value.pets.size()-1) or not _integer(value.get("next_battle"),1,1000000000) or not value.get("equipped") is bool:
 		return false
+	if value.player is Dictionary and value.player.has("transmigration") and not _integer(value.player.transmigration,0,2147483647):return false
 	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,1000000000):
 		return false
 	for field in ["charm","luck","last_luck_time"]:

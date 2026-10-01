@@ -2,6 +2,7 @@ extends RefCounted
 ## Source-script interpreter. Pending dialogues are server-owned and single use.
 const Session = preload("res://server/game_session.gd")
 const Progression = preload("res://server/progression.gd")
+const Charm = preload("res://server/original_charm.gd")
 const Loyalty = preload("res://server/loyalty.gd")
 var catalog
 var pending := {}
@@ -91,6 +92,7 @@ func talk(backend, id: String) -> Dictionary:
 	pending={}
 	var npc := npc_by_id(id)
 	if npc.is_empty() or not allowed(backend,npc):return {"ok":false,"reason":"任务人物不在附近，或当前正忙。"}
+	if str(npc.get("handler",""))=="Charm":return Charm.talk(self,backend,npc)
 	var profile: Dictionary=backend.session.snapshot()
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
@@ -120,6 +122,7 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	var phase: String=current.phase
 	if not allowed(backend,npc):return {"ok":false,"reason":"位置或活动状态已经改变。"}
 	if phase=="end":return {"ok":choice=="ok","closed":true}
+	if str(npc.get("handler",""))=="Charm":return Charm.choose(self,backend,current,choice)
 	var profile: Dictionary=backend.session.snapshot()
 	if (phase=="REQUEST" and flag(profile,"now",int(branch.event))) or (phase=="cancel" and not flag(profile,"now",int(branch.event))):return {"ok":false,"reason":"任务状态已经改变。"}
 	if branch_for(npc,profile)!=branch:return {"ok":false,"reason":"任务状态已经改变。"}

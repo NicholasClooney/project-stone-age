@@ -290,3 +290,13 @@ state. `field_step` checks this preference before rolling walking randomness, so
 clients cannot override it with `encounter: true`. Explicit `wild_encounter`,
 automatic training/hunting and NPC battles remain available. This is a project
 convenience, not an original game rule.
+
+### 原版美容师对话
+
+`quest_talk {npc_id: "original/charm/1005"}`（或 `original/charm/2005`）
+打开医院美容师。`quest_choose {token, choice: "charm"}` 请求收费确认，
+`leave` 退出；确认窗 `yes` 提交、`no` 退出，结果窗 `ok` 关闭。
+服务器验证同地图、距离≤2格、非战斗及非自动活动，每个 token 只用一次。
+客户端显示服务器台词及选项，远程客户端无 backend。费用和基础魅力重新读取
+服务器存档，保存失败整体回滚，玩家参数和原版 C int 费用须有效。
+可选 `player.transmigration` 默认0，只保留原版收费兼容，不提供转生玩法。

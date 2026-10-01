@@ -51,7 +51,7 @@ The base falls as the pet outlevels its owner; `variable_ai` makes up for it as 
 | The battle pet leaves in disobedience | -1 | `battle/battle_event.c:4729` | yes |
 | Knocked flying | -4 (-2) | `battle/battle.c:4269` | no ultimate KO |
 | Disconnect in battle | -3 | `net.c:1962` | not applicable |
-| 美容院 NPC (`Charm`: +5 for `level × 10 × (charm / 3)` stone) | | `npc/npc_charm.c:220-280` | no instance of the NPC in the pinned `data/npc` (only `npcgen.template`); not placed |
+| 美容师（+5，最多100） | | `npc/npc_charm.c:221-294` | 已恢复：萨姆吉尔医院1005 (25,15)、玛丽娜丝医院2005 (19,15)，原图16065 |
 | Quest NPCs, charm items, equipment `charm` modifiers | | `npc/npc_exchangeman.c:1281,1687`, `item/item_event.c:668`, `item/item.c:1404` | not yet (the mirror charm's +1 is still not wired, see `docs/development/mirror-accessory.md`) |
 
 Charm feeds the capture score (`× charm / 50`, `battle/battle_event.c:3140`, `server/capture_rules.gd`) and every carried pet's loyalty. The pet shop's buying price also uses charm + loyalty (`npc/npc_petshop.c:601-620`); this game has no pet shop.
@@ -94,4 +94,32 @@ Riding needs loyalty 100 (`char/family.c:2300`), which `scripts/riding.gd` alrea
 
 ## Left out
 
-Ultimate knock-outs, 转生, the 美容院 NPC (not placed in the pinned data), loyalty and charm items, equipment charm, pet shops, pet mail. The original also gives win loyalty to every participating pet; here only the battle pet (the one that gets the kill's experience) takes part.
+Ultimate knock-outs, 转生, loyalty and charm items, equipment charm, pet shops, pet mail. The original also gives win loyalty to every participating pet; here only the battle pet (the one that gets the kill's experience) takes part.
+
+## 原版美容师
+
+此前「参考数据中未放置」的结论有误：`gmsv/data/npc/genout/shop_m.create`
+定义了两位美容师。`tools/original_charm_sources.json` 固定创建表、
+`npc_charm.c`、人物类型表和图像常量表 SHA256，任一来源变化即拒绝导入。
+
+`npc_charm.c:272-294` 使用基础 `CHAR_LV`、`CHAR_CHARM`、
+`CHAR_TRANSMIGRATION` 收费：`level * 10 * (charm / 3) * (trans + 1)`。
+这是 C 整数除法，基础魅力 ≤1 时先按3计算，魅力为2时免费，≥100时拒绝。
+`npc_charm.c:229-247` 从 `CHAR_GOLD` 扣款、基础 `CHAR_CHARM` 加5并封顶100，
+再重算人物及携带宠物参数。`char/char.c:2829` 将基础魅力复制到
+`CHAR_WORKFIXCHARM`；装备修正属于工作值，不影响美容报价，也不会永久写入基础值。
+
+游戏沿用服务器持有的 `quest_talk` / `quest_choose` 一次性对话 token，
+先显示「给我魅力」与「什麽也不做」，再显示原版收费确认、钱不足、满魅力或
+对应人物类型的完成台词。确认时重新检查位置和基础参数；石币、基础魅力及忠诚
+参数保存失败整体回滚，不新增任务、事件位或日志。
+
+当前没有转生玩法。缺失的 `player.transmigration` 默认0；可选字段只接受
+非负整数且保存也验证它，超出原版 C int 费用范围的组合拒绝。
+无窗口测试验证资源存在及真实点击路由，不能验证渲染像素。
+
+创建定义的准确行段是 `shop_m.create:152-162` 与 `1138-1148`。
+该文件 SHA256 为 `1b168508524ca1ad012a65169aad7d19a9f6e4fc28201237972c17b4524564c9`；
+`npc_charm.c` SHA256 为 `87f0c3c30ffb0a1040e991b17749469e9eb01436decf14d201f5162a681c9f69`。
+常量 RATE10、CHARMHEAL5、WARU3 位于 `npc_charm.c:22-24`；
+原始选择与确认回调位于 `npc_charm.c:192-216`。

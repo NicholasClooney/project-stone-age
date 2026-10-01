@@ -1,0 +1,8 @@
+{
+  "sources": {
+    "gmsv/data/npc/genout/shop_m.create": "1b168508524ca1ad012a65169aad7d19a9f6e4fc28201237972c17b4524564c9",
+    "gmsv/npc/npc_charm.c": "87f0c3c30ffb0a1040e991b17749469e9eb01436decf14d201f5162a681c9f69",
+    "gmsv/char/char_data.c": "ec7d3f51982ba9bba9dc3c922c89263c6d3a9733b3188355d3a1280bf9afe990",
+    "gmsv/include/anim_tbl.h": "68d65c5ce8e6135116f337391c65f816b0a131dd45d38e986f42f8e4135e7a1d"
+  }
+}
