@@ -129,6 +129,10 @@ func set_palette_textures(on: bool) -> void:
 	_save_device("palette_textures",on)
 	if PaletteSheet.user_on == on:return
 	PaletteSheet.user_on = on
+	preload("res://scripts/pet_thumbnails.gd").clear()
+	if is_instance_valid(game.pet_encyclopedia):game.pet_encyclopedia._refresh_thumb_mode()
+	if game.asset_packs != null and game.asset_packs.enabled:
+		game.asset_packs.prefetch(preload("res://scripts/pet_thumbnails.gd").atlas_packs(game.asset_packs))
 	SheetFrames.flush()
 	for loader in [preload("res://scripts/battle_art.gd"),preload("res://scripts/riding.gd"),preload("res://scripts/character_art.gd")]:
 		if loader._cache != null:loader._cache.forget_frames()

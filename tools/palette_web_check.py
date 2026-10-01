@@ -15,6 +15,7 @@ Without sheets it takes the two smallest, a median and a larger sheet of each
 folder in palette_sheet.gd's KINDS. See docs/technical/palette-textures.md.
 """
 import argparse
+import json
 import functools
 import http.server
 import os
@@ -55,6 +56,38 @@ const { chromium } = createRequire(modules + "/package.json")("playwright-core")
     args: angle === "metal" ? ["--use-angle=metal", "--enable-gpu", "--ignore-gpu-blocklist"]
       : ["--use-angle=swiftshader", "--enable-unsafe-swiftshader", "--ignore-gpu-blocklist"] });
   const page = await browser.newPage();
+  await page.addInitScript(() => {
+    // Observe real WebGL allocation/release calls, rather than report a
+    // width×height estimate as physical GPU residency. Unknown formats fail.
+    const glp = WebGL2RenderingContext.prototype;
+    const sizes = new Map(), bound = new Map();
+    const nativeBind = glp.bindTexture;
+    glp.bindTexture = function(target, texture) { bound.set(target, texture); return nativeBind.apply(this, arguments); };
+    const bpp = new Map([[0x8229,1],[0x822B,2],[0x8051,3],[0x8058,4],[0x1903,1],[0x1907,3],[0x1908,4],[0x881A,8],[0x8814,16],[0x822D,2],[0x822E,4],[0x8D7C,4],[0x81A5,2],[0x8059,4],[0x88F0,4]]);
+    const unknown = [];
+    const note = (target, level, format, width, height) => {
+      const texture = bound.get(target); if (!texture) return;
+      if (!bpp.has(format)) { unknown.push(format); return; }
+      if (!sizes.has(texture)) sizes.set(texture,new Map());
+      sizes.get(texture).set(level,width*height*bpp.get(format));
+    };
+    const image = glp.texImage2D;
+    glp.texImage2D = function(...a) {
+      const result = image.apply(this,a);
+      if (a.length >= 9) note(a[0],a[1],a[2],a[3],a[4]);
+      else note(a[0],a[1],a[2],a[5].width,a[5].height);
+      return result;
+    };
+    const storage = glp.texStorage2D;
+    glp.texStorage2D = function(target, levels, format, width, height) {
+      const result = storage.apply(this,arguments);
+      for(let level=0;level<levels;level++) note(target,level,format,Math.max(1,width>>level),Math.max(1,height>>level));
+      return result;
+    };
+    const remove = glp.deleteTexture;
+    glp.deleteTexture = function(texture) { sizes.delete(texture); return remove.apply(this,arguments); };
+    window.__paletteAllocations = () => ({bytes:[...sizes.values()].reduce((sum,levels)=>sum+[...levels.values()].reduce((a,b)=>a+b,0),0),textures:sizes.size,unknown});
+  });
   let done;
   const finished = new Promise((resolve) => (done = resolve));
   page.on("console", (message) => {
@@ -118,7 +151,7 @@ def web_preset():
     return "\n".join(lines) + "\n"
 
 
-def build(project, sheets):
+def build(project, sheets, thumbs=False):
     (project / "scripts").mkdir(parents=True)
     (project / "tests/perf").mkdir(parents=True)
     (project / "sheets").mkdir()
@@ -134,6 +167,8 @@ def build(project, sheets):
         shutil.copy(sheet, project / name[len("res://"):])
         names.append(name)
     (project / "sheets/list.txt").write_text("\n".join(names) + "\n")
+    if thumbs:
+        build_thumbnails(project)
     (project / "out").mkdir()
     subprocess.run([godot(), "--headless", "--path", str(project), "--import"], check=False,
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
@@ -143,19 +178,55 @@ def build(project, sheets):
         sys.exit("export failed:\n" + result.stdout[-2000:] + result.stderr[-2000:])
 
 
+def build_thumbnails(project):
+    """Independent nearest references from original frames; never Lanczos.
+
+    Both variants are included here for measurement. Production packs remain
+    separate, selected by PetThumbnails.atlas_paths().
+    """
+    from PIL import Image
+    import build_pet_thumbs as thumbs
+    index = json.loads((LEGACY/'thumbs/index.json').read_text())
+    output = project/'thumbs'
+    output.mkdir()
+    shutil.copy(CLIENT/'tests/perf/pet_thumbnail_render_check.gd',project/'tests/perf/')
+    (project/'check.tscn').write_text(SCENE.replace('palette_render_check.gd','pet_thumbnail_render_check.gd'))
+    references = []
+    for name in index['palette_files']:
+        with Image.open(LEGACY/'thumbs'/name) as atlas:
+            references.append(Image.new('RGBA',atlas.size))
+    cache = {}
+    entries = thumbs.entries(LEGACY/'battle')
+    for sprite, (number,x,y,w,h) in index['sprites'].items():
+        animations,sheets = entries[sprite]
+        crop = thumbs.picture(LEGACY/'battle',sheets,thumbs.standing_frame(animations),cache,Image.Resampling.NEAREST)
+        references[number].paste(crop,(x,y))
+    for i,(nearest,rgba) in enumerate(zip(index['palette_files'],index['files'])):
+        shutil.copy(LEGACY/'thumbs'/nearest,output/f'palette-{i}.sheet')
+        shutil.copy(LEGACY/'thumbs'/rgba,output/f'rgba-{i}.png')
+        # An independent original-Lanczos import with the same default importer
+        # flags as production. Linear sampling must match that baseline.
+        shutil.copy(LEGACY/'thumbs'/rgba,output/f'baseline-{i}.png')
+        references[i].save(output/f'nearest-{i}.sheet',format='PNG')
+    (output/'index.json').write_text(json.dumps(index))
+    preset = (project/'export_presets.cfg').read_text().replace('include_filter="sheets/*"','include_filter="sheets/*,thumbs/*"')
+    (project/'export_presets.cfg').write_text(preset)
+
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--modules", required=True, help="folder playwright-core was installed into")
     parser.add_argument("--chrome", required=True, help="Chromium executable")
+    parser.add_argument("--thumbs", action="store_true", help="all thumbnail atlases, independent nearest references, linear RGBA baseline and instrumented allocations")
     parser.add_argument("--keep", action="store_true", help="keep the temporary project")
     parser.add_argument("--gpu", action="store_true",
                         help="the Mac's GPU through ANGLE on Metal (as Safari draws WebGL) instead of SwiftShader")
     parser.add_argument("sheets", nargs="*", type=Path)
     args = parser.parse_args()
-    sheets = [p.resolve() for p in args.sheets] or samples()
+    sheets = [] if args.thumbs else ([p.resolve() for p in args.sheets] or samples())
     project = Path(tempfile.mkdtemp(prefix="palette-check-"))
     try:
-        build(project, sheets)
+        build(project, sheets, args.thumbs)
         handler = functools.partial(QuietHandler, directory=str(project / "out"))
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), handler)
         threading.Thread(target=server.serve_forever, daemon=True).start()

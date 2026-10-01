@@ -33,6 +33,9 @@ static var _standing: Dictionary = {}
 static var _spots: Dictionary = {}
 static var _atlas_index: Dictionary = {}
 static var _atlas_loaded := false
+static var _atlases: Dictionary = {}
+static var revision := 0
+static var _mode := PaletteSheet.user_on
 
 ## {limit, files, sprites: {sprite: [file, x, y, w, h]}} or {} without them.
 static func atlas_index() -> Dictionary:
@@ -44,10 +47,28 @@ static func atlas_index() -> Dictionary:
 			if parsed is Dictionary:_atlas_index = parsed
 	return _atlas_index
 
-## The atlas file a sprite's thumbnail is in, or "" (then the sheet is cut).
+## Old imports without palette_files keep their original atlas files.
+static func palette_on() -> bool:
+	return PaletteSheet.user_on and not atlas_index().get("palette_files",[]).is_empty()
+
+static func _sync_mode() -> void:
+	if _mode != PaletteSheet.user_on:clear()
+
+static func _files() -> Array:
+	return atlas_index().get("palette_files" if palette_on() else "files",[])
+
+static func available(path: String) -> bool:
+	return FileAccess.file_exists(path) or ResourceLoader.exists(path)
+
+static func apply(picture: TextureRect, value: Texture2D) -> void:
+	picture.texture = value
+	picture.texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST if PaletteSheet.user_on else CanvasItem.TEXTURE_FILTER_LINEAR
+	PaletteSheet.apply(picture,value)
+
+## The selected atlas file a sprite is in, or "" (then the sheet is cut).
 static func atlas_path(sprite: int) -> String:
 	var spot: Array = atlas_index().get("sprites",{}).get(str(sprite),[])
-	return THUMBS+str(atlas_index().files[int(spot[0])]) if not spot.is_empty() else ""
+	return THUMBS+str(_files()[int(spot[0])]) if not spot.is_empty() else ""
 
 ## The web packs holding the atlases (empty on desktop, where nothing is packed).
 static func atlas_packs(asset_packs) -> Array:
@@ -60,7 +81,7 @@ static func atlas_packs(asset_packs) -> Array:
 
 ## Every atlas file, for a background download of all thumbnails at once.
 static func atlas_paths() -> Array:
-	return atlas_index().get("files",[]).map(func(name):return THUMBS+str(name))
+	return _files().map(func(name):return THUMBS+str(name))
 
 ## Whether the manifest has standing art for the sprite at all.
 static func has_art(sprite: int) -> bool:
@@ -71,6 +92,7 @@ static func has_art(sprite: int) -> bool:
 	return _standing[sprite]
 
 static func cached(sprite: int) -> Texture2D:
+	_sync_mode()
 	var made = _made.get(sprite)
 	return made if made is Texture2D else null
 
@@ -100,14 +122,21 @@ static func sheet_path(sprite: int) -> String:
 ## Makes (or returns) the picture. Null when the sheet is not available yet;
 ## call again later (a web pack may still arrive).
 static func texture(sprite: int) -> Texture2D:
+	_sync_mode()
 	if _made.has(sprite):return cached(sprite)
 	var atlas := atlas_path(sprite)
 	if not atlas.is_empty():
 		# Null until the atlas (a web pack) is here; try again later.
-		if not ResourceLoader.exists(atlas):return null
+		if not available(atlas):return null
 		var spot: Array = atlas_index().sprites[str(sprite)]
 		var piece := AtlasTexture.new()
-		piece.atlas = load(atlas)
+		if not _atlases.has(atlas):
+			_atlases[atlas] = PaletteSheet.load_texture(atlas) if palette_on() else PaletteSheet.load_any(atlas)
+			if _atlases[atlas] == null:
+				_atlases.erase(atlas)
+				return null
+			PerfRegistry.track_texture("thumbnails",atlas,_atlases[atlas])
+		piece.atlas = _atlases[atlas]
 		piece.region = Rect2(int(spot[1]),int(spot[2]),int(spot[3]),int(spot[4]))
 		_made[sprite] = piece
 		return piece
@@ -131,8 +160,17 @@ static func texture(sprite: int) -> Texture2D:
 	var longest := maxi(picture.get_width(),picture.get_height())
 	if longest > LIMIT:
 		var scale := float(LIMIT)/longest
-		picture.resize(maxi(1,int(picture.get_width()*scale)),maxi(1,int(picture.get_height()*scale)),Image.INTERPOLATE_LANCZOS)
-	var result := ImageTexture.create_from_image(picture)
+		picture.resize(maxi(1,int(picture.get_width()*scale)),maxi(1,int(picture.get_height()*scale)),Image.INTERPOLATE_NEAREST if PaletteSheet.user_on else Image.INTERPOLATE_LANCZOS)
+	var result: Texture2D
+	# Old imports without pre-cut atlases still follow the switch. Keep the
+	# sheet's original shared palette, resize only the indices with nearest.
+	if PaletteSheet.user_on and FileAccess.file_exists(path):
+		var decoded := PaletteSheet.decode(FileAccess.get_file_as_bytes(path))
+		if not decoded.is_empty():
+			var indices: Image = decoded.indices.get_region(Rect2i(int(spot[1]),int(spot[2]),int(spot[3]),int(spot[4])))
+			indices.resize(picture.get_width(),picture.get_height(),Image.INTERPOLATE_NEAREST)
+			result = PaletteSheet.texture_of({"indices":indices,"palette":decoded.palette})
+	if result == null:result = ImageTexture.create_from_image(picture)
 	_made[sprite] = result
 	PerfRegistry.track_texture("thumbnails",sprite,result)
 	return result
@@ -143,3 +181,6 @@ static func set_texture(sprite: int, value: Texture2D) -> void:
 
 static func clear() -> void:
 	_made.clear()
+	_atlases.clear()
+	_mode = PaletteSheet.user_on
+	revision += 1

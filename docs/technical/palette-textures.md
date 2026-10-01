@@ -36,14 +36,85 @@ Map tiles and props are single PNGs in `images/` (along with the walking frames 
 - `legacy_ground.gd` gives itself the shared tile material and draws the palette tiles; any tile that is not one (not converted, or the player's switch is off) goes to a child node without the material (`plain`). `legacy_props.gd` gives each prop sprite its material.
 - The player's switch also empties `game.textures` and redraws the ground at once.
 
-## Pet thumbnails stay RGBA
+## Pet thumbnails: separate palette and original RGBA variants
 
-宠物大全's thumbnails (`thumbs/atlas-*.png`, `tools/build_pet_thumbs.py`, 4.5 M pixels, 18 MB as RGBA when every atlas is loaded) are not palette textures, because they cannot be drawn byte-identically from one:
+宠物大全 now shares the device's **调色板贴图（省显存）** switch. This is
+an intentional visual tradeoff, rather than a claim that nearest looks like
+Lanczos/linear. The original 689 standing-frame thumbnails remain in
+`thumbs/atlas-*.png`: their pixels, layout and existing PNG bytes are unchanged.
+An unchanged atlas is kept rather than re-encoded, since Pillow/zlib versions
+can produce different PNG bytes from identical pixels.
 
-- The 67 sprites larger than 128 px are downscaled with Lanczos, which makes new colours and partial alpha (up to 154,000 colours in one atlas). The other 622 keep their original pixels and would fit the palette all battle sheets share (223 colours).
-- The grid draws them scaled into 104x86 cells with linear filtering: the window sits under the UI `CanvasLayer`, so it takes the project's default filter, not the field's nearest. The shader picks one texel (it must, since blending indices is meaningless), so even the 622 exact ones would look sharper than today, and emulating bilinear filtering in the shader would not match the GPU's own filtering byte for byte.
+`tools/build_pet_thumbs.py` also writes five `thumbs/palette-*.png` atlases.
+It reads the union of the battle sheets' original opaque PLTE colours (223
+colours in the current import), uses one shared 256-entry palette with index
+zero transparent, and uses exact index lookup without colour quantization.
+Frames larger than 128 px are resized nearest; dimensions, frame selection,
+source crop and the atlas rectangles are the same as the original variant.
+Alpha is always 0 or 255; hidden RGB of transparent texels is immaterial.
+The original variant keeps Lanczos, including its new colours and partial alpha.
+`thumbs/index.json` retains `files` and `sprites` and adds `palette_files`, whose
+file indices align with `files`.
 
-Options if the memory matters more than that look: unscaled thumbnails in palette atlases drawn nearest, the scaled ones in an RGBA atlas (about 18 to 7 MB with everything loaded; a visible change to the grid), or downscale with nearest at import so all of them fit (a larger visible change).
+`PetThumbnails` chooses the variant, caches one texture per atlas, and applies
+the shared shader to every grid/list/detail `TextureRect`. Each picture node
+explicitly samples **nearest when palette**, **linear when RGBA**, even under
+the UI CanvasLayer. The public setting clears both frame and atlas caches and
+releases every old picture/material reference immediately, including hidden
+variants. Detail pictures retry after a web pack arrives. Older imports without
+pre-cut atlases still cut a standing frame locally, selecting nearest indexed
+source art on and original Lanczos RGBA off.
+
+Both variants belong to independent `thumbs-*` packs (`thumbs-0` versus
+`thumbs-palette-0`, etc.); the index stays in core. Startup and setting changes
+prefetch only the currently selected variant. Palette packs contain raw PNGs
+without an imported RGBA remap; original packs keep the original import.
+Already mounted packs remain mounted for the web session (Godot cannot unmount
+them), but switching releases the old variant's GPU atlas references.
+This path reads no backend and works on remote clients as well.
+
+### Thumbnail GPU verification and measurements
+
+```sh
+.tools/asset-venv/bin/python tools/build_pet_thumbs.py
+./scripts/run.sh --headless --editor --import --quit
+.tools/asset-venv/bin/python tools/palette_web_check.py --thumbs --gpu \
+  --modules <scratch-with-playwright-core> --chrome <full-Chrome-for-Testing>
+```
+
+The checker exports a dedicated real web project, serves it on a random port,
+and runs headless Chromium without opening windows. On 2026-10-01 Chrome for
+Testing / Godot 4.6 / WebGL 2 reported **ANGLE Metal Renderer: Apple M4 Max**,
+not SwiftShader. All five entire atlas viewports were GPU byte-exact to RGBA
+nearest references independently rebuilt from the original standing frames.
+All 689 actual 104×86 `TextureRect` cells under a CanvasLayer were also
+byte-exact to those nearest references. Off was byte-exact for all 689 cells
+to an independently imported original Lanczos atlas drawn linear. These are
+separate baselines; nearest was never compared to Lanczos as if identical.
+
+The checker intercepts real WebGL `texImage2D` / `texStorage2D` and
+`deleteTexture` calls, counts known formats and rejects unrecognized formats.
+After loading **all five atlases** together:
+
+| Mode | Observed WebGL live allocation bytes | Godot `RENDER_TEXTURE_MEM_USED` delta bytes |
+| --- | ---: | ---: |
+| Off, original RGBA atlases | 19,509,248 | 26,005,548 |
+| On, R8 atlases + newly allocated shared palette | 4,878,336 | 6,503,431 |
+
+Observed WebGL allocation reduction: **14,630,912 bytes (about 75%)**. On uses
+4,877,312 bytes for the five R8 atlases and one 1,024-byte shared palette. The
+OFF → ON → OFF measurement freed every atlas allocation before loading the
+next variant. Only the shared 1,024-byte material palette can remain cached.
+Godot's monitor reports a larger allocation total in this web renderer; it is
+recorded separately and is not substituted for the WebGL calls.
+
+These are instrumented API texture allocations, **not physical GPU residency**
+or whole-game/browser process memory. The dedicated export loads all thumbnail
+atlases but excludes the live map, battle, font and network session. Headless
+Godot tests validate cache ownership, raw PNG packs, local fallback and the
+real encyclopedia UI switch; they cannot validate rendered pixels. Real web
+pixel/allocator checks validate the thumbnail drawing components, not an
+interactive screenshot of the user's live game.
 
 ## Player switch
 
@@ -65,6 +136,8 @@ Every node that shows a `SpriteArt.texture` frame calls `PaletteSheet.apply` aft
 - `client/tests/settings_menu_test.gd`: the switch is on by default, off draws the player's next frame from an RGBA sheet without the material and the ground from RGBA tiles at once, the choice is saved and restored, and on draws palette textures again.
 - `client/tests/mvp_journey_test.gd`: battle actors, the following pet, the walking player, the ground and props use their palette material.
 - `tools/test_palette_images.py`: images share one palette and keep every visible pixel; re-runs leave them alone; partial alpha stays RGBA; more than 255 colours keeps everything RGBA.
+- `client/tests/pet_thumbnail_palette_test.gd`: all frame bounds and shared palettes, all on/off paths and shader flags, explicit node filters, real encyclopedia/device toggle, released old atlas references, raw mounted PNG packs, local fallback and UI without a backend.
+- `tools/test_build_pet_thumbs.py`: all 689 independent nearest frame references, exact shared original colours and binary alpha, old PNG byte preservation, unchanged Lanczos/layout; `tools/test_plan_web_packs.py`: both variants have complete independent thumbnail pack ownership.
 - `client/tests/palette_sheet_test.gd` (headless suite): indices plus palette reproduce Godot's own RGBA decode of sample sheets of every kind byte for byte, and the imported texture's visible pixels (`fix_alpha_border` recolours hidden ones); the texture and material layout; `apply`; the setting being off by default. It also prints the expected texture memory of every sheet.
 - `tools/palette_web_check.py`: the shader on a real GPU without opening a window. It builds a small web export holding `palette_sheet.gd`, `client/tests/perf/palette_render_check.gd` and sample sheets, and runs it in headless Chromium (WebGL 2, the renderer phones and Vision Pro use). Each sheet is drawn as RGBA and through the shader in 24 views (plain, modulated, flipped, scaled by 2, 1.37 and 0.75, at a fractional position, as a scaled `TextureRect`, and as the field draws an actor: a sprite inheriting nearest filtering from its actor under a `Camera2D` zoomed to 1, 0.5, 0.73 and 1.6 in a viewport with the project's linear default; at both ends of the sheet) and the pixels read back must be equal byte for byte. `--gpu` runs it on the Mac's GPU through ANGLE on Metal, the way Safari (Mac, iPhone, Vision Pro) draws WebGL, instead of SwiftShader; it prints the WebGL renderer it got.
 
