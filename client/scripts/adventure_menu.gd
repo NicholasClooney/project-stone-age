@@ -21,6 +21,9 @@ var pet_compare_page := 0
 var pet_storage_page := 0
 ## The view and page the panel was last built for; scroll is kept within one.
 var _built_view: Array = []
+var _records_drawn: Array = []
+var records_draw_count := 0
+var _records_sync_pending := false
 ## 同种比较 order (PetComparison.SORT_KEYS, first key first) and whether
 ## favourites lead each group; this device's choice (viewer.cfg), loaded on first use.
 var pet_compare_order: Array = []
@@ -197,10 +200,105 @@ func choice(caption: String, point: Vector2, action: String, value: Variant = nu
 func rebuild() -> void:
 	if world==null or not visible:return
 	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_records_open,records_tab,records_page,records_template,records_run,storage_order,storage_favorites_first,records_sorts.get(records_tab,[]),records_uncaught]
+	if kind=="pets" and pet_records_open and is_instance_valid(panel) and panel.find_child("PetRecordsPanel",false,false)!=null:
+		_refresh_records_panel(view)
+		return
 	var before: Array[Vector2i] = world.capture_scroll(self) if view==_built_view else ([] as Array[Vector2i])
 	_rebuild_panel()
-	_built_view = view
+	_built_view = view.duplicate(true)
+	_records_drawn = [records_data.duplicate(true),records_loading] if pet_records_open else []
 	world.restore_scroll(self,before)
+
+## State pushes do not replace an open records window. Build a detached
+## description only when its data/view changes, then reconcile reusable controls.
+func _refresh_records_panel(view:Array)->void:
+	var drawn:=[records_data,records_loading]
+	if view==_built_view and drawn==_records_drawn:return
+	# Keep an open species/run popup usable until the player finishes choosing.
+	for control_name in ["RecordsSpecies","RecordsRun"]:
+		var select:=panel.find_child(control_name,true,false) as OptionButton
+		if select!=null and select.get_popup().visible:
+			if not _records_sync_pending:
+				_records_sync_pending=true
+				get_tree().create_timer(0.1).timeout.connect(func():
+					_records_sync_pending=false
+					rebuild())
+			return
+	var live:=panel
+	panel=Control.new()
+	pet_records_panel()
+	var draft:=panel
+	panel=live
+	_sync_records_controls(live.get_child(0),draft.get_child(0))
+	draft.free()
+	_built_view=view.duplicate(true)
+	_records_drawn=drawn.duplicate(true)
+	records_draw_count+=1
+
+func _sync_records_controls(live:Control,draft:Control)->void:
+	live.tooltip_text=draft.tooltip_text
+	live.custom_minimum_size=draft.custom_minimum_size
+	live.size_flags_horizontal=draft.size_flags_horizontal
+	live.size_flags_vertical=draft.size_flags_vertical
+	live.mouse_filter=draft.mouse_filter
+	if not live.get_parent() is Container:
+		live.position=draft.position
+		live.size=draft.size
+	if live is Label:
+		live.horizontal_alignment=draft.horizontal_alignment
+		live.autowrap_mode=draft.autowrap_mode
+		live.clip_text=draft.clip_text
+	if live is Label or live is Button:live.text=draft.text
+	if live is BaseButton:
+		live.disabled=draft.disabled
+		if live.toggle_mode:live.set_pressed_no_signal(draft.button_pressed)
+		# Refresh callbacks (page count/species choices) without losing hover/focus.
+		for signal_name in ["pressed","toggled","item_selected"]:
+			if not live.has_signal(signal_name):continue
+			for connection in live.get_signal_connection_list(signal_name):live.disconnect(signal_name,connection.callable)
+			for connection in draft.get_signal_connection_list(signal_name):live.connect(signal_name,connection.callable)
+	if live is OptionButton:
+		var same:bool=live.item_count==draft.item_count
+		if same:
+			for i in range(live.item_count):
+				if live.get_item_text(i)!=draft.get_item_text(i):same=false;break
+		if not same:
+			live.clear()
+			for i in range(draft.item_count):live.add_item(draft.get_item_text(i))
+		live.select(draft.selected)
+	# Exact local overrides: absent values must inherit again, not retain the
+	# previous tab/row's colors or styles. Never flatten inherited theme values.
+	var overrides:Dictionary={}
+	for property in draft.get_property_list():
+		var property_name:=str(property.name)
+		if property_name.begins_with("theme_override_"):
+			var value=draft.get(property_name)
+			if value!=null:overrides[property_name]=value
+	const OVERRIDE_TYPES:={"colors":"color","constants":"constant","fonts":"font","font_sizes":"font_size","icons":"icon","styles":"stylebox"}
+	for property in live.get_property_list():
+		var property_name:=str(property.name)
+		if not property_name.begins_with("theme_override_") or overrides.has(property_name):continue
+		if live.get(property_name)==null:continue
+		var category:=property_name.get_slice("/",0).trim_prefix("theme_override_")
+		if OVERRIDE_TYPES.has(category):live.call("remove_theme_"+str(OVERRIDE_TYPES[category])+"_override",property_name.get_slice("/",1))
+	for property_name in overrides:live.set(property_name,overrides[property_name])
+	# Preserve the actual ScrollContainer and its scrollbar throughout updates.
+	var scroll_y:int=live.scroll_vertical if live is ScrollContainer else 0
+	var children:=draft.get_children()
+	for i in range(children.size()):
+		var next:Control=children[i]
+		if i<live.get_child_count() and live.get_child(i).get_class()==next.get_class():
+			var existing:Control=live.get_child(i)
+			existing.name=next.name
+			_sync_records_controls(existing,next)
+		else:
+			if i<live.get_child_count():
+				var obsolete:=live.get_child(i);live.remove_child(obsolete);obsolete.queue_free()
+			draft.remove_child(next);live.add_child(next);live.move_child(next,i)
+	while live.get_child_count()>children.size():
+		var obsolete:=live.get_child(live.get_child_count()-1);live.remove_child(obsolete);obsolete.queue_free()
+	if live is ScrollContainer:
+		live.scroll_vertical=scroll_y
 
 func _notification(what: int) -> void:
 	# Reopening the menu starts at the top.
@@ -923,7 +1021,11 @@ func style_pet_modal(root_control:Control)->void:
 		elif node is OptionButton:
 			node.add_theme_font_override("font",PetTable.font(500));node.add_theme_font_size_override("font_size",13)
 			node.get_popup().add_theme_font_override("font",PetTable.font(500))
-		elif node is Button:PetTable.style_button(node,node.has_meta("compact"))
+		elif node is Button:
+			PetTable.style_button(node,node.has_meta("compact"))
+			if str(node.name).begins_with("RecordsTab") and node.button_pressed:
+				node.add_theme_color_override("font_color",PetTable.GOLD)
+				node.add_theme_color_override("font_pressed_color",PetTable.GOLD)
 		elif not node.has_theme_font_override("font"):node.add_theme_font_override("font",readable_font)
 
 ## A pet-table overlay: bordered panel with a title, a muted subtitle and the
@@ -1350,6 +1452,7 @@ func fetch_records(quiet:=false)->void:
 	var asked:=[records_tab,records_page,records_template,records_run,sort.duplicate(),records_uncaught]
 	var arrived:=func(data:Dictionary):
 		if asked!=[records_tab,records_page,records_template,records_run,records_sorts.get(records_tab,["",false]),records_uncaught]:return
+		if quiet and not records_loading and records_data==data:return
 		records_data=data
 		records_loading=false
 		if visible and pet_records_open:rebuild()
@@ -1461,7 +1564,7 @@ func pet_records_panel()->void:
 	var hint:="新的在前。数字下的小字是120级推算；红字是后来被放生的。" if caught else ("新的在前" if str(sorted[0]).is_empty() else "按%s%s"%[SORT_NAMES[sorted[0]],"从低到高" if sorted[1] else "从高到低"])+"（未满级按120级推算）。点列名排序，点「时间」回到新的在前。金色：比所有比下它的都高的一项。"
 	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,84);overlay.add_child(note)
 	var header:=PetTable.header(LOG_LEAD,["状态"]) if caught else sort_header("时间",[]);header.position=Vector2(18,108);overlay.add_child(header)
-	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var scroll:=ScrollContainer.new();scroll.name="RecordsScroll";scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
 	var entries:Array=data.get("entries",[])
 	if entries.is_empty() and not records_loading:list.add_child(PetTable.text("还没有记录。" if records_run!="latest" else "本轮还没有抓到宠物；选「全部」看以前的。","body"))
@@ -1551,7 +1654,7 @@ func queue_records(overlay:Control,data:Dictionary)->void:
 	var hint:="每个品种各自排队，各自最多%d只；名次按这个品种保留规则的排序，排满后放弃这个品种最后一只（记入放生「未捕获」）。轮流抓：每次抓下一个品种排第一的。数字是预测的120级属性；点列名在每个品种里排序，点「名次」回到排队顺序。"%int(data.get("limit",0))
 	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,46);note.custom_minimum_size=Vector2(870,0);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;overlay.add_child(note)
 	var header:=sort_header("名次",["状态"]);header.position=Vector2(18,108);overlay.add_child(header)
-	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var scroll:=ScrollContainer.new();scroll.name="RecordsScroll";scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
 	var rows:=sorted_queue(data.get("entries",[]),data.get("groups",[]),str(sort[0]),bool(sort[1]))
 	if rows.is_empty() and not records_loading:
@@ -1625,7 +1728,7 @@ func stop_records(overlay:Control,data:Dictionary)->void:
 	var next:Button=world.button("▶",func():records_page=mini(pages-1,records_page+1);fetch_records());next.position=Vector2(852,46);next.disabled=records_page>=pages-1;overlay.add_child(next)
 	var hint:="新的在前。停止：要你处理；暂停：换了地图、战败或服务器重启；已恢复：服务器重启后自动接着运行；已跳过、已重试：流程自己继续了；完成：收集够了或停下比较。"
 	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,46);note.custom_minimum_size=Vector2(670,0);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;overlay.add_child(note)
-	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,96);scroll.size=Vector2(876,540);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var scroll:=ScrollContainer.new();scroll.name="RecordsScroll";scroll.position=Vector2(12,96);scroll.size=Vector2(876,540);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
 	var entries:Array=data.get("entries",[])
 	if entries.is_empty() and not records_loading:list.add_child(PetTable.text("还没有记录。自动抓极品每次停下、暂停或跳过一只都会记在这里。","body"))
