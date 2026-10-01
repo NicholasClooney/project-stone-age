@@ -293,8 +293,8 @@ func choose_target(template_id: int) -> bool:
 	target_ids=[template_id]
 	_update_target_checks()
 	_template_fallback=false
-	_settings_changed(true)
 	_follow_target(template_id)
+	_settings_changed(true)
 	return true
 
 ## 属性条件 shows the target species when the player picks one.
