@@ -500,7 +500,9 @@ func _cmd_pet_log(command: Dictionary) -> Dictionary:
 	if latest.is_empty():
 		for item in capture_log.page(0,1).get("runs",[]).slice(0,1):latest = str(item.run)
 	if run=="latest":run = latest if not latest.is_empty() else "none"
-	var page: Dictionary = log.page(int(command.get("page",0)),int(command.get("page_size",20)),int(command.get("template_id",-1)),run)
+	# 放生 only: sorted by a stat, and 未捕获 (hits let go from the queue) only.
+	var sort := "" if caught else str(command.get("sort",""))
+	var page: Dictionary = log.page(int(command.get("page",0)),int(command.get("page_size",20)),int(command.get("template_id",-1)),run,sort,bool(command.get("ascending",false)),not caught and bool(command.get("uncaught",false)))
 	var other: Array = release_log.entries() if caught else capture_log.entries()
 	var by_id := {}
 	for item in other:by_id[str(item.get("pet_id",""))] = item
@@ -512,6 +514,10 @@ func _cmd_pet_log(command: Dictionary) -> Dictionary:
 	page.latest_run = latest
 	page.kind = "caught" if caught else "released"
 	return {"ok":true,"log":page}
+
+## 宠物记录's 排队 tab: the 后台搜宠 queue (automation.gd queue_view).
+func _cmd_hunt_queue(_command: Dictionary) -> Dictionary:
+	return {"ok":true,"queue":automation.queue_view()}
 
 ## Drops the listed hunt-stored pets beyond the per-metric keep counts; replies with how many.
 func _cmd_prune_hunt_pets(command: Dictionary) -> Dictionary:

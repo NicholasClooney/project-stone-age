@@ -42,9 +42,9 @@ const PetComparison=preload("res://scripts/pet_comparison.gd")
 const KeepRule=preload("res://scripts/keep_rule.gd")
 const PetTable=preload("res://scripts/pet_table.gd")
 const ReleaseLog=preload("res://server/release_log.gd")
-## 宠物记录 view: open, tab (caught / released), filters (template id, -1
-## all; run "latest" or "" for all), page, the last page the backend sent and
-## whether one is on its way.
+## 宠物记录 view: open, tab (caught / released / stops / queue), filters
+## (template id, -1 all; run "latest" or "" for all), page, the last page the
+## backend sent and whether one is on its way.
 var pet_records_open := false
 var records_tab := "caught"
 var records_template := -1
@@ -52,6 +52,12 @@ var records_run := "latest"
 var records_page := 0
 var records_data: Dictionary = {}
 var records_loading := false
+## Stat sort per sortable tab ({released, queue} -> [key, ascending]; key ""
+## is the tab's own order: newest first, or the queue's rank) and 只看未捕获
+## in 放生; with the tab, this device's (viewer.cfg records_*).
+var records_sorts := {"released":["",false],"queue":["",false]}
+var records_uncaught := false
+var _records_prefs_loaded := false
 ## 宠物仓库 order (PetComparison.storage_rows: "", caught_new, caught_old) and
 ## 收藏优先, this device's (viewer.cfg), loaded with the comparison prefs.
 var storage_order := ""
@@ -190,7 +196,7 @@ func choice(caption: String, point: Vector2, action: String, value: Variant = nu
 ## player left them, as long as the same view and page stay on screen.
 func rebuild() -> void:
 	if world==null or not visible:return
-	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_records_open,records_tab,records_page,records_template,records_run,storage_order,storage_favorites_first]
+	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_records_open,records_tab,records_page,records_template,records_run,storage_order,storage_favorites_first,records_sorts.get(records_tab,[]),records_uncaught]
 	var before: Array[Vector2i] = world.capture_scroll(self) if view==_built_view else ([] as Array[Vector2i])
 	_rebuild_panel()
 	_built_view = view
@@ -810,7 +816,7 @@ func pet_collection_tools(profile: Dictionary, filtered: Array) -> void:
 		else:feedback="空间不足或当前不能领取。"
 		rebuild(),"StarterPets")
 	label(feedback,origin+Vector2(16,436),230,12)
-	pet_tool_button("宠物记录",origin+Vector2(16,362),func():open_pet_records("caught",-1),"PetRecords")
+	pet_tool_button("宠物记录",origin+Vector2(16,362),func():open_pet_records("",-1),"PetRecords")
 	var hunt:=pet_tool_button("自动抓极品",origin+Vector2(16,398),func():world.close_adventure_menu();world.pet_hunt_menu.open_menu(),"PetHunt");hunt.custom_minimum_size.x=108
 	if world.battle_view.visible:hunt.disabled=true;hunt.tooltip_text="战斗结束后才能打开。"
 	# 宠物大全, where the player left it.
@@ -912,6 +918,7 @@ func style_pet_modal(root_control:Control)->void:
 		readable_font=FontVariation.new();readable_font.base_font=load("res://assets/fonts/NotoSansSC.ttf");readable_font.variation_opentype={2003265652:600.0}
 	# PetTable roles set their own fonts; only unstyled controls get the default.
 	for node in root_control.find_children("*","Control",true,false):
+		if node.has_meta("sort_header"):continue
 		if node is CheckBox:PetTable.style_checkbox(node)
 		elif node is OptionButton:
 			node.add_theme_font_override("font",PetTable.font(500));node.add_theme_font_size_override("font_size",13)
@@ -954,7 +961,7 @@ func pet_comparison_panel(profile:Dictionary,selected:Dictionary)->void:
 		clear_release_selection();pet_release_species=PetComparison.species_key(selected)
 	overlay_button(overlay,"自动抓极品",722,func():continue_comparison_hunt(selected),"CompareContinueHunt")
 	var species_key:=PetComparison.species_key(selected)
-	overlay_button(overlay,"宠物记录",626,func():open_pet_records("caught",int(species_key.trim_prefix("original_")) if species_key.trim_prefix("original_").is_valid_int() else -1),"CompareRecords")
+	overlay_button(overlay,"宠物记录",626,func():open_pet_records("",int(species_key.trim_prefix("original_")) if species_key.trim_prefix("original_").is_valid_int() else -1),"CompareRecords")
 	load_compare_prefs()
 	compare_sort_controls(overlay)
 	var workflow_note:bool=is_instance_valid(world.pet_workflow) and world.pet_workflow.phase=="compare" and world.pet_workflow.pet_id==str(selected.get("pet_id",""))
@@ -1220,7 +1227,7 @@ func pet_storage_panel(profile:Dictionary)->void:
 	var storage:Array=profile.get("pet_storage",[])
 	var overlay:=pet_overlay("PetStoragePanel","宠物仓库","%d只 · 携带%d/%d" % [storage.size(),profile.pets.size(),world.session.PET_CAPACITY],Vector2(820,mini(650,190+maxi(1,mini(20,storage.size()))*44)))
 	overlay_button(overlay,"关闭",752,func():pet_storage_open=false;pet_view="list";rebuild())
-	overlay_button(overlay,"宠物记录",656,func():open_pet_records("caught",-1),"StorageRecords")
+	overlay_button(overlay,"宠物记录",656,func():open_pet_records("",-1),"StorageRecords")
 	var store_index:=-1
 	for i in range(profile.pets.size()):
 		if str(profile.pets[i].get("pet_id",""))==pet_storage_target_id:store_index=i
@@ -1284,34 +1291,74 @@ func pet_storage_panel(profile:Dictionary)->void:
 
 # ---- 宠物记录: 抓到 (抓宠记录) and 放生 (放生记录), server/release_log.gd ------
 
-## Opens 宠物记录 on a tab (caught, released or stops), filtered to one species
-## (template id, -1 for all). The pet tools, 宠物仓库 and 同种比较 open it; the
-## planned 游戏助手 menu can call this too. 抓到 starts on 本轮 (the current or
-## most recent find-pet run).
-func open_pet_records(tab:String="caught",template_id:int=-1)->void:
+## Opens 宠物记录 on a tab (caught, released, stops or queue; "" for the
+## one last chosen on this device), filtered to one species (template id, -1
+## for all). The pet tools, 宠物仓库, 同种比较, 游戏助手 and 自动抓极品 open
+## it. 抓到 starts on 本轮 (the current or most recent find-pet run).
+const RECORDS_TABS:=["caught","released","stops","queue"]
+func open_pet_records(tab:String="",template_id:int=-1)->void:
 	if not visible or kind!="pets":open_menu("pets")
-	records_tab=tab if tab in ["caught","released","stops"] else "caught"
+	load_records_prefs()
+	if tab.is_empty():tab=str(world.viewer_pref("records_tab","caught"))
+	records_tab=tab if tab in RECORDS_TABS else "caught"
 	records_template=template_id
 	records_page=0
 	records_run="latest" if records_tab=="caught" else ""
 	pet_records_open=true
 	fetch_records()
 
+## A tab the player picked is remembered on this device.
+func choose_records_tab(tab:String)->void:
+	world.set_viewer_pref("records_tab",tab)
+	open_pet_records(tab,records_template)
+
+func load_records_prefs()->void:
+	if _records_prefs_loaded:return
+	_records_prefs_loaded=true
+	for tab in records_sorts:
+		var saved=world.viewer_pref("records_sort_"+tab,[])
+		if saved is Array and saved.size()==2 and str(saved[0]) in ReleaseLog.SORT_KEYS:records_sorts[tab]=[str(saved[0]),bool(saved[1])]
+	records_uncaught=bool(world.viewer_pref("records_uncaught",false))
+
+## A stat header was clicked: highest first, again lowest first; key "" goes
+## back to the tab's own order. Remembered on this device.
+func sort_records(key:String)->void:
+	var current:Array=records_sorts.get(records_tab,["",false])
+	var ascending:=key==str(current[0]) and not bool(current[1]) and not key.is_empty()
+	records_sorts[records_tab]=[key,ascending]
+	world.set_viewer_pref("records_sort_"+records_tab,records_sorts[records_tab])
+	records_page=0
+	if records_tab=="queue":rebuild()
+	else:fetch_records()
+
+func set_records_uncaught(on:bool)->void:
+	records_uncaught=on
+	world.set_viewer_pref("records_uncaught",on)
+	records_page=0
+	fetch_records()
+
 ## 放生记录 directly (kept for callers of the earlier release-only view).
 func open_release_log(template_id:int=-1)->void:
 	open_pet_records("released",template_id)
 
-## quiet: a live refresh (pet_log_changed) keeps the page shown until the
-## new one arrives instead of showing it loading.
+## quiet: a live refresh (pet_log_changed, hunt_status_changed) keeps the page
+## shown until the new one arrives instead of showing it loading.
 func fetch_records(quiet:=false)->void:
 	records_loading=not quiet
 	_records_fetched_msec=Time.get_ticks_msec()
-	var asked:=[records_tab,records_page,records_template,records_run]
-	world.session.pet_log(records_tab,records_page,20,records_template,records_run,func(data:Dictionary):
-		if asked!=[records_tab,records_page,records_template,records_run]:return
+	var sort:Array=records_sorts.get(records_tab,["",false])
+	var asked:=[records_tab,records_page,records_template,records_run,sort.duplicate(),records_uncaught]
+	var arrived:=func(data:Dictionary):
+		if asked!=[records_tab,records_page,records_template,records_run,records_sorts.get(records_tab,["",false]),records_uncaught]:return
 		records_data=data
 		records_loading=false
-		if visible and pet_records_open:rebuild())
+		if visible and pet_records_open:rebuild()
+	if records_tab=="queue":
+		_queue_key=_queue_signature(world.state.automation)
+		world.session.hunt_queue(arrived)
+	else:
+		var options:={"sort":str(sort[0]),"ascending":bool(sort[1]),"uncaught":records_uncaught} if records_tab=="released" else {}
+		world.session.pet_log(records_tab,records_page,20,records_template,records_run,arrived,options)
 	if records_loading:rebuild()
 
 const RECORDS_REFRESH_MSEC:=500
@@ -1322,6 +1369,24 @@ var _records_refresh_pending:=false
 ## an open 宠物记录 fetches its page again, at most every
 ## RECORDS_REFRESH_MSEC; rebuild() keeps the scroll place on the same page.
 func pet_log_changed()->void:
+	if records_tab!="queue":_refresh_records()
+
+## The automation status changed (auto_status): an open 排队 tab fetches the
+## queue again when the hit being caught or trained, the battles fought (its
+## level) or the queued hits changed.
+var _queue_key:=""
+func hunt_status_changed(status:Dictionary)->void:
+	if records_tab!="queue" or not visible or not pet_records_open:return
+	var key:=_queue_signature(status)
+	if key==_queue_key:return
+	_queue_key=key
+	_refresh_records()
+
+static func _queue_signature(status:Dictionary)->String:
+	var flow:Dictionary=status.get("flow",{})
+	return JSON.stringify([flow.get("phase",""),flow.get("showcase",false),flow.get("current_roll",0),flow.get("queue_limit",0),flow.get("queue",[]).map(func(item):return item.get("roll",0)),status.get("battles",0)])
+
+func _refresh_records()->void:
 	if not visible or not pet_records_open or _records_refresh_pending:return
 	# Never inside the event itself: the fetch is a backend request.
 	var wait:=maxi(0,RECORDS_REFRESH_MSEC-(Time.get_ticks_msec()-_records_fetched_msec))
@@ -1345,15 +1410,20 @@ static func log_place(item:Dictionary)->String:
 func pet_records_panel()->void:
 	var data:=records_data
 	var caught:=records_tab=="caught"
-	var overlay:=pet_overlay("PetRecordsPanel","宠物记录","%s共%d条 · 各保留最近%d条"%[{"caught":"抓到","released":"放生","stops":"停止"}.get(records_tab,""),int(data.get("total",0)),ReleaseLog.CAP],Vector2(900,650))
+	var subtitle:="后台搜宠 · 排队%d只 · 上限%d"%[int(data.get("size",0)),int(data.get("limit",0))] if records_tab=="queue" else "%s共%d条 · 各保留最近%d条"%[{"caught":"抓到","released":"放生","stops":"停止"}.get(records_tab,""),int(data.get("total",0)),ReleaseLog.CAP]
+	var overlay:=pet_overlay("PetRecordsPanel","宠物记录",subtitle,Vector2(900,650))
 	overlay_button(overlay,"关闭",832,func():pet_records_open=false;rebuild())
-	for tab in [["caught","抓到","RecordsTabCaught",566],["released","放生","RecordsTabReleased",626],["stops","停止","RecordsTabStops",686]]:
+	for tab in [["caught","抓到","RecordsTabCaught",566],["released","放生","RecordsTabReleased",626],["stops","停止","RecordsTabStops",686],["queue","排队","RecordsTabQueue",746]]:
 		var button:Button=world.button(tab[1],func():
-			if records_tab!=tab[0]:open_pet_records(tab[0],records_template))
+			if records_tab!=tab[0]:choose_records_tab(tab[0]))
 		button.name=tab[2];button.position=Vector2(tab[3],10);button.toggle_mode=true;button.button_pressed=records_tab==tab[0];overlay.add_child(button)
 		if records_tab==tab[0]:button.add_theme_color_override("font_color",PetTable.GOLD);button.add_theme_color_override("font_pressed_color",PetTable.GOLD)
 	if records_tab=="stops":
 		stop_records(overlay,data)
+		style_pet_modal(overlay)
+		return
+	if records_tab=="queue":
+		queue_records(overlay,data)
 		style_pet_modal(overlay)
 		return
 	var filter:=OptionButton.new();filter.name="RecordsSpecies";filter.position=Vector2(14,46);filter.focus_mode=Control.FOCUS_NONE;filter.custom_minimum_size.x=180
@@ -1376,13 +1446,21 @@ func pet_records_panel()->void:
 		run.select(0 if records_run=="latest" else 1)
 		run.item_selected.connect(func(index:int):records_run="latest" if index==0 else "";records_page=0;fetch_records())
 		overlay.add_child(run)
+	else:
+		# Hits the 后台搜宠 queue let go before their capture.
+		var uncaught:=CheckBox.new();uncaught.name="RecordsUncaught";uncaught.text="只看未捕获";uncaught.position=Vector2(204,46);uncaught.focus_mode=Control.FOCUS_NONE
+		uncaught.tooltip_text="只看后台搜宠排队时放弃、没有抓的（排队已满、门槛已提高），每条写明原因和排在它前面的几只。"
+		uncaught.button_pressed=records_uncaught
+		uncaught.toggled.connect(set_records_uncaught)
+		overlay.add_child(uncaught)
 	var pages:=int(data.get("pages",1))
 	var previous:Button=world.button("◀",func():records_page=maxi(0,records_page-1);fetch_records());previous.position=Vector2(700,46);previous.disabled=records_page<=0;overlay.add_child(previous)
 	var page:=PetTable.text("%d / %d 页"%[records_page+1,pages],"meta");page.position=Vector2(742,52);page.size.x=100;page.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;overlay.add_child(page)
 	var next:Button=world.button("▶",func():records_page=mini(pages-1,records_page+1);fetch_records());next.position=Vector2(852,46);next.disabled=records_page>=pages-1;overlay.add_child(next)
-	var hint:="新的在前。数字下的小字是120级推算；红字是后来被放生的。" if caught else "新的在前。金色：它比所有比下它的宠物都高的一项。"
+	var sorted:Array=records_sorts.released
+	var hint:="新的在前。数字下的小字是120级推算；红字是后来被放生的。" if caught else ("新的在前" if str(sorted[0]).is_empty() else "按%s%s"%[SORT_NAMES[sorted[0]],"从低到高" if sorted[1] else "从高到低"])+"（未满级按120级推算）。点列名排序，点「时间」回到新的在前。金色：比所有比下它的都高的一项。"
 	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,84);overlay.add_child(note)
-	var header:=PetTable.header(LOG_LEAD,["状态"] if caught else []);header.position=Vector2(18,108);overlay.add_child(header)
+	var header:=PetTable.header(LOG_LEAD,["状态"]) if caught else sort_header("时间",[]);header.position=Vector2(18,108);overlay.add_child(header)
 	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
 	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
 	var entries:Array=data.get("entries",[])
@@ -1428,6 +1506,100 @@ func pet_records_panel()->void:
 		if not origin.is_empty():
 			var from:=PetTable.text("抓到：%s · %s · %s"%[log_time(int(origin.get("time",0))),log_place(origin),origin.get("source","")],"meta");from.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;from.custom_minimum_size.x=840;stack.add_child(from)
 	style_pet_modal(overlay)
+
+## A 宠物记录 column header whose stat columns sort the tab (sort_records):
+## the active one gold with ▼ (highest first) or ▲. The lead caption (时间,
+## 名次) goes back to the tab's own order. Lines up with PetTable.stat_cells
+## after LOG_LEAD.
+const SORT_NAMES:={"sum":"三围合","attack":"攻击","defence":"防御","speed":"敏捷","max_hp":"血"}
+func sort_header(lead_caption:String,after:Array)->HBoxContainer:
+	var sort:Array=records_sorts.get(records_tab,["",false])
+	var row:=HBoxContainer.new();row.add_theme_constant_override("separation",6)
+	row.add_child(sort_button(lead_caption,"",66,HORIZONTAL_ALIGNMENT_LEFT,str(sort[0]).is_empty(),false))
+	var spacer:=Control.new();spacer.custom_minimum_size=Vector2(LOG_NAME,0);row.add_child(spacer)
+	for column in PetTable.COLUMNS:
+		if column[0]=="level":
+			var level:=PetTable.text(column[1],"head");level.custom_minimum_size=Vector2(column[2],0);level.horizontal_alignment=HORIZONTAL_ALIGNMENT_RIGHT;row.add_child(level)
+			continue
+		row.add_child(sort_button(column[1],column[0],column[2],HORIZONTAL_ALIGNMENT_RIGHT,str(sort[0])==column[0],bool(sort[1])))
+	var grade:=PetTable.text("先天","head");grade.custom_minimum_size=Vector2(PetTable.GRADE_WIDTH,0);grade.horizontal_alignment=HORIZONTAL_ALIGNMENT_CENTER;row.add_child(grade)
+	for caption in after:row.add_child(PetTable.text(caption,"head"))
+	return row
+
+func sort_button(caption:String,key:String,width:float,align:int,active:bool,ascending:bool)->Button:
+	var button:=Button.new();button.name="RecordsSort_"+(key if not key.is_empty() else "own")
+	button.text=caption+(("▲" if ascending else "▼") if active and not key.is_empty() else "")
+	button.flat=true;button.focus_mode=Control.FOCUS_NONE;button.alignment=align;button.custom_minimum_size=Vector2(width,0)
+	button.clip_text=false;button.set_meta("sort_header",true)
+	button.tooltip_text="按%s排序（再点一次反过来）"%SORT_NAMES[key] if not key.is_empty() else "回到原来的顺序"
+	for state in ["normal","hover","pressed","focus","disabled"]:button.add_theme_stylebox_override(state,StyleBoxEmpty.new())
+	button.add_theme_font_override("font",PetTable.font(600))
+	button.add_theme_font_size_override("font_size",12)
+	var color:=PetTable.GOLD if active else PetTable.MUTED
+	for state in ["font_color","font_hover_color","font_pressed_color","font_focus_color"]:button.add_theme_color_override(state,color)
+	button.add_theme_color_override("font_hover_color",PetTable.BRIGHT)
+	button.pressed.connect(sort_records.bind(key))
+	return button
+
+## 排队: the 后台搜宠 queue (automation.gd queue_view, backend hunt_queue):
+## the hit being caught or trained on top (当前, outside the ranking), then
+## every queued hit with its rank, roll, Lv, 成长档 and predicted Lv.120
+## stats; sorted by a stat column on request.
+const QUEUE_PHASES:={"capture":"捕获中","train":"练级中","restart":"刚练完"}
+func queue_records(overlay:Control,data:Dictionary)->void:
+	var sort:Array=records_sorts.queue
+	var hint:="名次是后台搜宠排队的顺序（按这个品种保留规则的排序），超过上限时放弃最后一只，记入放生「未捕获」。数字是预测的120级属性。点列名排序，再点反过来，点「名次」回到排队顺序。"
+	var note:=PetTable.text("载入中…" if records_loading else hint,"meta");note.position=Vector2(14,46);note.custom_minimum_size=Vector2(870,0);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;overlay.add_child(note)
+	var header:=sort_header("名次",["状态"]);header.position=Vector2(18,108);overlay.add_child(header)
+	var scroll:=ScrollContainer.new();scroll.position=Vector2(12,130);scroll.size=Vector2(876,506);scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;overlay.add_child(scroll)
+	var list:=VBoxContainer.new();list.size_flags_horizontal=Control.SIZE_EXPAND_FILL;list.add_theme_constant_override("separation",2);scroll.add_child(list)
+	var entries:=sorted_queue(data.get("entries",[]),str(sort[0]),bool(sort[1]))
+	if entries.is_empty() and not records_loading:
+		var empty:="没有在进行的后台搜宠。在自动抓极品里开始找宠流程（开着后台搜宠）后，这里显示正在抓或练的这只和排队的宠物。"
+		if bool(data.get("active",false)):empty="排队是空的：后台正在继续找。"
+		elif str(data.get("phase","idle")) in ["hunt","reveal","capture","train","restart"] and not bool(data.get("showcase",false)):empty="这一轮没开后台搜宠：找到就直接抓，不排队。"
+		var label:=PetTable.text(empty,"body");label.name="QueueEmpty";label.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;label.custom_minimum_size.x=840;list.add_child(label)
+	var best:=PetTable.best_values(entries)
+	for i in range(entries.size()):
+		var item:Dictionary=entries[i]
+		var current:=bool(item.get("current",false))
+		var holder:=PetTable.row_panel(i,current);holder.name="QueueRow_%d"%i;holder.mouse_filter=Control.MOUSE_FILTER_PASS
+		holder.tooltip_text=queue_description(item)
+		list.add_child(holder)
+		var line:=HBoxContainer.new();line.add_theme_constant_override("separation",6);holder.add_child(line)
+		var rank_box:=CenterContainer.new();rank_box.custom_minimum_size.x=66;line.add_child(rank_box)
+		rank_box.add_child(PetTable.badge("当前",PetTable.GOLD) if current else PetTable.text("第%d名"%int(item.get("rank",0)),"body"))
+		var who:=VBoxContainer.new();who.custom_minimum_size.x=LOG_NAME;who.add_theme_constant_override("separation",-2);line.add_child(who)
+		var title:=PetTable.text(str(item.get("name","")),"name");title.clip_text=true;title.custom_minimum_size.x=LOG_NAME;who.add_child(title)
+		var meta:=PetTable.text("第%d组"%int(item.get("roll",0))+(" · "+str(item.pet_id) if not str(item.get("pet_id","")).is_empty() else ""),"meta");meta.clip_text=true;meta.custom_minimum_size.x=LOG_NAME;who.add_child(meta)
+		PetTable.stat_cells(line,item,best)
+		var offsets:Array=item.get("offsets",[])
+		line.add_child(PetTable.grade({} if offsets.size()!=4 else {"offsets":offsets,"total":int(item.get("total_offset",0)),"full":bool(item.get("full",false))}))
+		if current:
+			var phase:=PetTable.badge(str(QUEUE_PHASES.get(str(item.get("phase","")),"处理中")),PetTable.GOOD);phase.size_flags_vertical=Control.SIZE_SHRINK_CENTER;line.add_child(phase)
+		if bool(item.get("survey",false)):
+			var survey:=PetTable.badge("摸底",PetTable.GOLD);survey.size_flags_vertical=Control.SIZE_SHRINK_CENTER;survey.tooltip_text="摸底选中：没有门槛时从候选里按保留规则挑出的，一定会抓。";line.add_child(survey)
+
+## The 排队 rows in display order: the current hit first, then the queue in
+## its rank, or by a stat (ties keep the rank).
+static func sorted_queue(entries:Array,key:String,ascending:bool)->Array:
+	var current:=entries.filter(func(item):return bool(item.get("current",false)))
+	var queued:=entries.filter(func(item):return not bool(item.get("current",false)))
+	if key in ReleaseLog.SORT_KEYS:
+		queued.sort_custom(func(a,b):
+			var va:=PetTable.value_of(a,key)
+			var vb:=PetTable.value_of(b,key)
+			if va!=vb:return va<vb if ascending else va>vb
+			return int(a.get("rank",0))<int(b.get("rank",0)))
+	return current+queued
+
+static func queue_description(item:Dictionary)->String:
+	var offsets:Array=item.get("offsets",[])
+	var place:="当前 · %s"%QUEUE_PHASES.get(str(item.get("phase","")),"处理中") if bool(item.get("current",false)) else "排队第%d名"%int(item.get("rank",0))
+	return "%s 第%d组 · Lv.%d · %s%s
+预测120级 血%d 攻%d 防%d 敏%d · 三围合%d
+成长档 %s"%[item.get("name",""),int(item.get("roll",0)),int(item.get("level",1)),place," · 摸底选中" if bool(item.get("survey",false)) else "",
+		int(item.get("max_hp",0)),int(item.get("attack",0)),int(item.get("defence",0)),int(item.get("speed",0)),int(item.get("sum",0)),"未知" if offsets.size()!=4 else "%s 总%+d"%[str(offsets),int(item.get("total_offset",0))]]
 
 ## 停止记录: why 自动抓极品 or the find-pet cycle stopped, paused, skipped a
 ## hit or finished (automation.gd _record_stop), newest first.

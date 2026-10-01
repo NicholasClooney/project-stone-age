@@ -106,7 +106,12 @@ func entries() -> Array:
 ## One page, newest first, optionally one species (template id; -1 for all)
 ## and one find-pet run (run id; "" for all), with the species in the log and
 ## their counts, and the runs newest first (up to 20) with their counts.
-func page(number: int, size: int, template_id: int = -1, run: String = "") -> Dictionary:
+## sort: one of SORT_KEYS orders by that stat (the Lv120 one when the entry
+## has it, as the release was judged), highest first unless ascending; ties
+## stay newest first. uncaught: only hits let go before their capture
+## (未捕获 · 排队已满 / 门槛已提高).
+const SORT_KEYS := ["sum", "attack", "defence", "speed", "max_hp"]
+func page(number: int, size: int, template_id: int = -1, run: String = "", sort: String = "", ascending: bool = false, uncaught: bool = false) -> Dictionary:
 	var all := entries()
 	all.reverse()
 	var runs := []
@@ -126,7 +131,21 @@ func page(number: int, size: int, template_id: int = -1, run: String = "") -> Di
 		species[key].count += 1
 	var chosen := all if template_id < 0 else all.filter(func(item):return int(item.get("template_id", -1)) == template_id)
 	if not run.is_empty():chosen = chosen.filter(func(item):return str(item.get("run", "")) == run)
+	if uncaught:chosen = chosen.filter(func(item):return bool(item.get("uncaught", false)))
+	if sort in SORT_KEYS:
+		var keyed := []
+		for i in range(chosen.size()):keyed.append([sort_value(chosen[i], sort), i, chosen[i]])
+		keyed.sort_custom(func(a, b):
+			if a[0] != b[0]:return a[0] < b[0] if ascending else a[0] > b[0]
+			return a[1] < b[1])
+		chosen = keyed.map(func(item):return item[2])
 	size = clampi(size, 1, MAX_PAGE)
 	var pages := maxi(1, ceili(chosen.size() / float(size)))
 	number = clampi(number, 0, pages - 1)
 	return {"entries":chosen.slice(number * size, (number + 1) * size), "total":chosen.size(), "page":number, "pages":pages, "species":species.values(), "runs":runs.slice(0, 20)}
+
+## The value an entry sorts by: its Lv120 stats when logged under Lv120.
+static func sort_value(item: Dictionary, key: String) -> int:
+	var stats: Dictionary = item.get("lv120", item)
+	if key == "sum":return int(stats.get("attack", 0)) + int(stats.get("defence", 0)) + int(stats.get("speed", 0))
+	return int(stats.get(key, 0))

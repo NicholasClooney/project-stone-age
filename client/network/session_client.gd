@@ -118,9 +118,18 @@ func release_log(page: int, page_size: int, template_id: int, done: Callable) ->
 	pet_log("released",page,page_size,template_id,"",done)
 ## One page of a pet log: kind caught (抓宠记录) or released (放生记录); run
 ## "" for all, "latest" for the current or last find-pet run (caught only).
-func pet_log(kind: String, page: int, page_size: int, template_id: int, run: String, done: Callable) -> void:
-	link.request({"type":"pet_log","kind":kind,"page":page,"page_size":page_size,"template_id":template_id,"run":run},func(reply: Dictionary):
+## options (放生 only): sort (sum/attack/defence/speed/max_hp), ascending,
+## uncaught (only hits let go from the 后台搜宠 queue).
+func pet_log(kind: String, page: int, page_size: int, template_id: int, run: String, done: Callable, options: Dictionary = {}) -> void:
+	var command := {"type":"pet_log","kind":kind,"page":page,"page_size":page_size,"template_id":template_id,"run":run}
+	command.merge(options)
+	link.request(command,func(reply: Dictionary):
 		done.call(reply.get("log",{}) if reply.get("ok",false) else {}))
+## The 后台搜宠 queue for 宠物记录's 排队 tab: done receives automation.gd
+## queue_view() ({active, showcase, phase, limit, size, entries}), or {}.
+func hunt_queue(done: Callable) -> void:
+	link.request({"type":"hunt_queue"},func(reply: Dictionary):
+		done.call(reply.get("queue",{}) if reply.get("ok",false) else {}))
 func store_pet(index: int, auto_hunt: bool = false) -> bool:return request({"type":"store_pet","index":index,"auto_hunt":auto_hunt})
 func retrieve_pet(index: int) -> bool:return request({"type":"retrieve_pet","index":index})
 func retrieve_pet_by_id(pet_id: String) -> bool:return request({"type":"retrieve_pet_by_id","pet_id":pet_id})

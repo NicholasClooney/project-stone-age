@@ -251,6 +251,7 @@ func _on_backend_message(event: Dictionary) -> void:
 		"auto_status":
 			for node in [game.training_helper,game.pet_hunt_menu,game.pet_workflow]:
 				if is_instance_valid(node):node.on_status(event.status)
+			if is_instance_valid(game.adventure_menu):game.adventure_menu.hunt_status_changed(event.status)
 		"auto_event":_on_auto_event(event.detail)
 		"rejected":
 			var reason := str(event.get("reason",""))

@@ -2000,6 +2000,34 @@ func _queue_summary() -> Array:
 		result.append({"roll":int(entry.index)+1,"name":str(entry.actor.get("name","")),"sum":int(p.attack)+int(p.defence)+int(p.speed),"attack":int(p.attack),"defence":int(p.defence),"speed":int(p.speed),"max_hp":int(p.max_hp)})
 	return result
 
+## 宠物记录's 排队 tab (backend hunt_queue): the hit being caught or trained
+## (current, phase capture/train/restart) and every queued hit best first,
+## each with its rank (1-based, 0 for current), Lv, 成长档 and predicted Lv.120
+## stats. active: a find-pet cycle is running with 后台搜宠.
+func queue_view() -> Dictionary:
+	var entries: Array = []
+	if not showcase_current.is_empty() and flow_phase in ["capture","train","restart"]:
+		var row := _queue_row(showcase_current,0)
+		row.current = true
+		row.phase = flow_phase
+		# Training: the caught pet's level now.
+		var pet := _flow_pet() if not flow_pet_id.is_empty() else {}
+		if not pet.is_empty():
+			row.level = int(pet.get("level",row.level))
+			row.pet_id = flow_pet_id
+		entries.append(row)
+	for i in range(showcase_queue.size()):entries.append(_queue_row(showcase_queue[i],i+1))
+	return {"active":flow_active() and flow_showcase,"showcase":flow_showcase,"phase":flow_phase,"limit":queue_limit(),"size":showcase_queue.size(),"entries":entries}
+
+static func _queue_row(entry: Dictionary, rank: int) -> Dictionary:
+	var actor: Dictionary = entry.get("actor",{})
+	var p: Dictionary = entry.get("prediction",{})
+	var quality: Dictionary = entry.get("quality",{})
+	var offsets: Array = quality.get("offsets",[]) if bool(quality.get("valid",false)) else []
+	return {"rank":rank,"roll":int(entry.get("index",-1))+1,"name":str(actor.get("name","")),"template_id":int(actor.get("template_id",-1)),"level":int(actor.get("level",1)),
+		"offsets":offsets.duplicate(),"total_offset":int(quality.get("total_offset",0)),"full":offsets.size()==4 and int(quality.get("total_offset",0))==8,"survey":bool(entry.get("survey",false)),"current":false,
+		"attack":int(p.get("attack",0)),"defence":int(p.get("defence",0)),"speed":int(p.get("speed",0)),"max_hp":int(p.get("max_hp",0)),"sum":int(p.get("attack",0))+int(p.get("defence",0))+int(p.get("speed",0))}
+
 ## One line of the scrolling info block every watching device shows at the top
 ## left: found, captured, Lv.120, 留下 / 放生, skips and queue drops.
 func _showcase_line(kind: String, text: String) -> void:
@@ -2201,7 +2229,7 @@ func status() -> Dictionary:
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(flow_target_filter.get("keep_rule",{}).get("auto",false)),"predicted_rejects":flow_predicted_rejects,
-			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),
+			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
 			"survey":survey_status(),"thresholds":thresholds_text(),
 			"log":showcase_log.duplicate(true),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}

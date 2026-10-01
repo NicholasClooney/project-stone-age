@@ -57,7 +57,7 @@ func entries() -> Array:
 		["HelperPetHunt","自动抓极品","按先天档位和120级属性找宠，可自动捕获、练级、存仓和按保留规则整理。","",func(): world.pet_hunt_menu.open_menu()],
 		["HelperPets","宠物 · 同种比较","宠物窗口：同种比较、仓库、收藏和放生。","",func(): world.show_adventure_menu("pets")],
 		["HelperEncyclopedia","宠物大全","每种宠物的原版图、成长资料、满档120级预测排名和野外出现地点；可瞬移去抓。","encyclopedia",func(): world.pet_encyclopedia.open_menu()],
-		["HelperPetRecords","宠物记录","抓到和放生的记录：这一轮找宠抓到了什么，放掉了哪些、为什么、被谁比下去。","",func(): world.adventure_menu.open_pet_records("caught",-1)],
+		["HelperPetRecords","宠物记录","抓到、放生和排队的记录：这一轮找宠抓到了什么，放掉了哪些、为什么、被谁比下去，后台搜宠排队里有哪些。","",func(): world.adventure_menu.open_pet_records("",-1)],
 		["HelperRadio","电台","原版配乐：全部曲目、收藏、歌单、随机和单曲循环。","radio",func(): world.toggle_radio()],
 		["HelperMapOverview","地图导航","按地图查看和传送。地图窗口（M）下方也可以打开。","",func(): world.dev_map_overview.open_map()],
 		["HelperTravel","刷怪传送","按练级点传送到原版刷怪位置。地图窗口下方也可以打开。","",func(): world.leveling_destinations.open_menu()],
