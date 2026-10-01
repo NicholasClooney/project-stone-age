@@ -482,6 +482,16 @@ func step() -> void:
 		if party_waiting():return
 		# Reset before healing too, matching the forecast turn for turn.
 		backend.set_capture_assist(str(settings.preset)=="capture")
+		# The 恢复护符 heals the battle pet for free (no 气力): before any 精灵,
+		# and before the 停机线 could stop the run.
+		if not backend.party_battle() and bool(state.get("healing_available",false)) and int(state.get("pet_hp",0))>0 and int(state.get("pet_hp",0))*100<=int(state.get("pet_max_hp",1))*maxi(50,int(settings.hp)):
+			backend.battle.set_pet_command("defend")
+			var charmed: Dictionary = backend.battle_command({"action":"heal_pet","target":-1})
+			turns += 1
+			if charmed.get("settled",false):record_result(charmed)
+			turn_text = "第 %d 回合 · 恢复护符治疗宠物" % turns
+			_emit_status()
+			return
 		# 用精灵补血: a healing 精灵 while the 气力 lasts, before a 回复药 or a
 		# stop (the player, its pet or mount at the line; in a party battle a
 		# teammate too, or a fallen one with 复活精灵).
@@ -678,8 +688,13 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 
 ## `line`: the 停机线 in percent; -1 is this run's (settings.hp), and then
 ## the mount the run started on counts too.
+## 练级保护: a carried pet may fall (it still earns its experience and is
+## brought back between battles), so only the player and the mount stop a run.
 func health_reason(state: Dictionary, line: int = -1) -> String:
-	return Policy.health_stop(state,int(settings.hp) if line<0 else line,starting_ride if line<0 else -1)
+	var watched := state
+	if bool(settings.get("protect",true)) and not backend.party_battle():
+		watched = state.duplicate();watched.active_pet = -1
+	return Policy.health_stop(watched,int(settings.hp) if line<0 else line,starting_ride if line<0 else -1)
 
 ## In a party battle, what heals this run's player at its 停机线: "item" (a
 ## 回复药) for the player, "heal_pet" (the 恢复护符, never used up) for the
