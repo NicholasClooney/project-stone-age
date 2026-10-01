@@ -101,7 +101,12 @@ func run() -> void:
 	game.battle_action("developer_escape")
 	for i in range(100):game.battle_view._process(0.2)
 	game.return_from_battle();game.session.gm_heal()
-	check(not helper.health_reason({"player_hp":100,"player_max_hp":100,"active_pet":0,"ride_pet":-1,"pets":[{"hp":1,"max_hp":100,"name":"pet"}]}).is_empty(),"active pet health triggers protection")
+	var low_pet:={"player_hp":100,"player_max_hp":100,"active_pet":0,"ride_pet":-1,"pets":[{"hp":1,"max_hp":100,"name":"pet"}]}
+	var automation=game.backend.automation
+	automation.settings.protect = false
+	check(not helper.health_reason(low_pet).is_empty(),"without 练级保护 active pet health triggers protection")
+	automation.settings.protect = true
+	check(helper.health_reason(low_pet).is_empty(),"with 练级保护 a low pet does not stop the run (it may fall and is brought back)")
 	check(not helper.health_reason({"player_hp":100,"player_max_hp":100,"active_pet":-1,"ride_pet":0,"pets":[{"hp":1,"max_hp":100,"name":"mount"}]}).is_empty(),"ridden pet health triggers protection")
 	helper.starting_ride=0
 	check(not helper.health_reason({"player_hp":100,"player_max_hp":100,"active_pet":-1,"ride_pet":-1,"pets":[{"hp":0,"max_hp":100,"name":"mount"}]}).is_empty(),"dead dismounted pet still triggers protection")
