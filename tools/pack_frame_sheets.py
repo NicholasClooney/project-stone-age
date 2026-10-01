@@ -27,7 +27,8 @@ Last, the manifests are split into the small per-sprite files the game reads
 
 Re-running is safe: a frame whose PNG is gone is cut back out of the sheet
 that holds it (the sheets are lossless), so running one importer again and
-then this tool repacks everything.
+then this tool repacks everything. With --sprites, only the named sheets
+are packed; unrelated sheets and their import sidecars remain untouched.
 """
 import argparse
 import json
@@ -99,11 +100,18 @@ def frame_source(folder, images, manifest, extras=()):
     return load
 
 
-def pack(manifest_path, images, keep=frozenset()):
+def pack(manifest_path, images, keep=frozenset(), sprites=None):
     manifest_path, images = Path(manifest_path), Path(images)
     folder = manifest_path.parent
     manifest = json.loads(manifest_path.read_text())
     extras = extra_manifests(folder, manifest)
+    selected = {str(sprite) for sprite in sprites} if sprites is not None else None
+    if selected is not None:
+        known = set(manifest.get('characters', {}))
+        for _, data in extras:
+            known.update(data.get('characters', {}))
+        if selected - known:
+            raise ValueError('Unknown sprites: ' + ', '.join(sorted(selected - known)))
     load = frame_source(folder, images, manifest, extras)
     staging = folder / 'sheets.new'
     shutil.rmtree(staging, ignore_errors=True)
@@ -112,7 +120,7 @@ def pack(manifest_path, images, keep=frozenset()):
     def pack_all(data):
         result = {}
         for sprite, bitmaps in groups(data).items():
-            if not bitmaps:
+            if not bitmaps or (selected is not None and sprite not in selected):
                 continue
             entry = save_sheets({b: load(b) for b in bitmaps}, staging, sprite)
             entry['files'] = ['sheets/' + name for name in entry['files']]
@@ -121,12 +129,23 @@ def pack(manifest_path, images, keep=frozenset()):
     sheets = pack_all(manifest)
     extra_sheets = [pack_all(data) for _path, data in extras]
     # Swap in the new sheets only once every frame was read from the old ones.
-    shutil.rmtree(folder / 'sheets', ignore_errors=True)
-    staging.rename(folder / 'sheets')
-    manifest['sheets'] = sheets
+    if selected is None:
+        shutil.rmtree(folder / 'sheets', ignore_errors=True)
+        staging.rename(folder / 'sheets')
+    else:
+        # A local refresh must not re-encode any unrelated sheet or discard
+        # its Godot import sidecar. Move only the selected sprites' new PNGs.
+        destination = folder / 'sheets'
+        destination.mkdir(exist_ok=True)
+        for path in staging.iterdir():
+            path.replace(destination / path.name)
+        staging.rmdir()
+    manifest['sheets'] = sheets if selected is None else {**manifest.get('sheets', {}), **sheets}
     manifest_path.write_text(json.dumps(manifest, ensure_ascii=False, separators=(',', ':')))
     for (path, data), packed in zip(extras, extra_sheets):
-        data['sheets'] = packed
+        if selected is not None and not packed:
+            continue
+        data['sheets'] = packed if selected is None else {**data.get('sheets', {}), **packed}
         path.write_text(json.dumps(data, ensure_ascii=False, separators=(',', ':')))
     everything = [sheets] + extra_sheets
     frames = sum(len(s['frames']) for group in everything for s in group.values())
@@ -150,12 +169,13 @@ if __name__ == '__main__':
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     # Checked by hand: Python 3.9's argparse matches an empty or default list against choices and fails.
     parser.add_argument('targets', nargs='*', help='any of %s (default: all)' % ', '.join(TARGETS))
+    parser.add_argument('--sprites', type=int, nargs='+', help='pack only these sprites, preserving unrelated sheets and imports')
     args = parser.parse_args()
     unknown = [t for t in args.targets if t not in TARGETS]
     if unknown:
         parser.error('unknown target: ' + ', '.join(unknown))
     for target in args.targets or list(TARGETS):
         manifest, images, others = TARGETS[target]
-        pack(LEGACY / manifest, LEGACY / images, referenced(LEGACY, others))
+        pack(LEGACY / manifest, LEGACY / images, referenced(LEGACY, others), args.sprites)
     # The game reads per-sprite files made from the manifests (split_manifests.py).
     split(args.targets or list(TARGETS), LEGACY)

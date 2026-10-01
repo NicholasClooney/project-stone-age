@@ -45,6 +45,18 @@ class SheetTest(unittest.TestCase):
         visible = lambda image: [p if p[3] else (0, 0, 0, 0) for p in image.convert('RGBA').getdata()]
         self.assertEqual(visible(small), visible(sheet))
 
+    def test_nearby_original_palette_colors_are_not_quantized(self):
+        from PIL import Image
+        from sprite_sheets import to_palette
+        # Real nianshou pixels that Pillow's palette lookup used to merge.
+        colors = [(243, 218, 155, 255), (240, 216, 149, 255),
+                  (237, 210, 132, 255), (237, 207, 133, 255), (0, 0, 0, 0)]
+        sheet = Image.new('RGBA', (len(colors), 1))
+        sheet.putdata(colors)
+        converted = to_palette(sheet).convert('RGBA')
+        self.assertEqual(list(converted.getdata())[:4], colors[:4])
+        self.assertEqual(converted.getpixel((4, 0))[3], 0)
+
     def test_partial_alpha_stays_rgba(self):
         from PIL import Image
         from sprite_sheets import to_palette

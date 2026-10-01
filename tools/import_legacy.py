@@ -90,23 +90,39 @@ class Archive:
         return self._sprites
 
     def animations(self,ident):
-        idx,raw=self.sprite_bytes()
-        found=None
-        for at in range(0,len(idx),12):
-            number,offset,count=struct.unpack_from('<IIH',idx,at)
-            if number==ident: found=(offset,count);break
-        if found is None: raise ValueError(f'Sprite {ident} absent')
-        at,count=found;result={}
-        for _ in range(count):
-            direction,action,duration,frames=struct.unpack_from('<HHII',raw,at);at+=12
-            if frames>1000: raise ValueError('Unreasonable frame count')
-            sequence=[]
-            for _ in range(frames):
-                bmp,x,y,sound=struct.unpack_from('<IhhH',raw,at);at+=10
-                sequence.append(dict(image=bmp,x=x,y=y,sound=sound))
-            if action in (3,4,5,6,7):
-                result[f'{action}_{direction}']=dict(duration_ms=duration,frames=sequence)
-        return result
+        return sprite_animations(self, ident, (3, 4, 5, 6, 7))
+
+
+def sprite_animations(archive, ident, action_ids):
+    """Decode the final SPRADRN record, as the original client overwrites
+    SpriteData[sprNo] on every index entry (loadsprbin.cpp:33-55).
+
+    Some original packs append corrections with the same sprite number.
+    Battle, followers and portraits must share this override order.
+    """
+    index, raw = archive.sprite_bytes()
+    found = None
+    for at in range(0, len(index), 12):
+        number, offset, count = struct.unpack_from('<IIH', index, at)
+        if number == ident:
+            found = offset, count
+    if found is None:
+        raise ValueError(f'Missing sprite {ident}')
+    at, count = found
+    result = {}
+    for _ in range(count):
+        direction, action, duration, count_frames = struct.unpack_from('<HHII', raw, at)
+        at += 12
+        if count_frames > 1000 or at + count_frames * 10 > len(raw):
+            raise ValueError('Invalid sprite frame count')
+        frames = []
+        for _ in range(count_frames):
+            bitmap, x, y, sound = struct.unpack_from('<IhhH', raw, at)
+            at += 10
+            frames.append(dict(image=bitmap, x=x, y=y, sound=sound))
+        if action in action_ids:
+            result[f'{action}_{direction}'] = dict(duration_ms=duration, frames=frames)
+    return result
 
 
 def decode_rle(data,expected):
