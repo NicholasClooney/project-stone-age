@@ -206,6 +206,7 @@ var _pets_key := ""
 ## The resolved thresholds the native helper was launched with; a change (a
 ## better pet arrived, or the player edited 属性条件) restarts it with the new ones.
 var _fast_thresholds := ""
+var _fast_held_items: Array = []
 ## Set by request_stop_cycle: the cycle stops once this pet is trained.
 var flow_stop_pending := ""
 ## 摸底: a species with enabled 最高 − x conditions (relative mode) and no pet
@@ -862,7 +863,7 @@ func _open_hit(troop: Dictionary, i: int, quality: Dictionary, roll: Dictionary 
 ## Roll `index` of this run, from its own seed (FastHunt.roll_seed).
 func roll_at(index: int) -> Dictionary:
 	hunt_rng.seed = FastHunt.roll_seed(hunt_run_seed,index)
-	return hunt_catalog.roll(hunt_map,hunt_cell,hunt_rng)
+	return hunt_catalog.roll(hunt_map,hunt_cell,hunt_rng,backend.session._profile.get("original_items",[]))
 
 ## The first enemy slot of a rolled troop the hunt takes, or -1. Counts what it
 ## inspects (hunt_inspected, hunt_best, and during a find-pet cycle the
@@ -903,20 +904,21 @@ func _fast_process() -> bool:
 	if not hunt_catalog is EncounterCatalog:return false
 	_share_rebalance()
 	# A better pet arrived (or a survey began or ended): the helper starts
-	# again from the rolls already committed, with the new thresholds.
-	if fast_hunt.running() and _predicting() and threshold_key()!=_fast_thresholds:
+	# again from the rolls already committed, with the new thresholds or item gates.
+	if fast_hunt.running() and ((_predicting() and threshold_key()!=_fast_thresholds) or _fast_held_items!=backend.session._profile.get("original_items",[])):
 		_survey_merge(fast_hunt.peek().get("candidates",[]))
 		fast_hunt.stop()
 	if not fast_hunt.running():
 		_fast_base = {"inspected":hunt_inspected,"best":hunt_best,"rejects":flow_predicted_rejects,"start":hunt_rolls}
 		var area: Dictionary = hunt_catalog.area_at(hunt_map,hunt_cell)
 		_fast_thresholds = threshold_key() if _predicting() else ""
+		_fast_held_items = backend.session._profile.get("original_items",[]).duplicate()
 		var rules := {}
 		if _predicting():
 			for id in survey.get("templates",[]):rules[int(id)] = raw_filter_for(int(id)).get("keep_rule",{})
 		_fast_launched_threads = fast_threads_now()
 		if fast_share!=null:_fast_launched_at = float(fast_share.clock.call())
-		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,_fast_launched_threads,rules):
+		if not fast_hunt.launch(hunt_catalog.data,area,hunt_filter,_predicting(),filter_for,hunt_run_seed,hunt_rolls,_fast_launched_threads,rules,backend.session._profile.get("original_items",[])):
 			hunt_fast_note = "本机辅助程序无法启动，已改用普通筛选。"
 			_share_leave()
 			return false
@@ -1269,7 +1271,7 @@ func _replay_candidate(c: Dictionary) -> Dictionary:
 	if hunt_catalog==null:return {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FastHunt.roll_seed(int(c.run_seed),int(c.index))
-	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,rng)
+	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,rng,backend.session._profile.get("original_items",[]))
 	var enemies: Array = troop.get("enemies",[])
 	if int(c.slot)<0 or int(c.slot)>=enemies.size():return {}
 	var actor: Dictionary = enemies[int(c.slot)]
@@ -1771,7 +1773,7 @@ func _resume_capture() -> String:
 		return "重启时正在抓的 %s 无法重新开战，已跳过" % name
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FastHunt.roll_seed(int(roll.run_seed),int(roll.index))
-	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,rng)
+	var troop: Dictionary = hunt_catalog.roll(hunt_map,hunt_cell,rng,backend.session._profile.get("original_items",[]))
 	var slot := int(roll.slot)
 	var enemies: Array = troop.get("enemies",[])
 	if slot<0 or slot>=enemies.size() or not same_capture(enemies[slot],flow_matched_actor):
@@ -2037,7 +2039,7 @@ func _showcase_capture() -> void:
 	_showcase_line("found","%s%s%s · 预测120级 %s%s · 排队%d" % ["摸底选中" if flow_target_survey else "找到","满档" if full else "",str(actor.get("name","")),_stat_text(p),"（"+str(rarity[0]).get_slice("：",1)+"）" if full and rarity.size()>0 and str(rarity[0]).contains("1/") else "",showcase_queue.size()])
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FastHunt.roll_seed(int(entry.run_seed),int(entry.index))
-	var troop: Dictionary = hunt_catalog.roll(flow_map,flow_cell,rng) if hunt_catalog!=null else {}
+	var troop: Dictionary = hunt_catalog.roll(flow_map,flow_cell,rng,backend.session._profile.get("original_items",[])) if hunt_catalog!=null else {}
 	if troop.is_empty() or JSON.stringify(troop)!=JSON.stringify(entry.troop):
 		_skip_hit("复核不一致","排队的第 %d 组复核不一致，没有进入战斗。" % (int(entry.index)+1));return
 	if backend.session.snapshot().pets.size()>=GameSession.PET_CAPACITY:

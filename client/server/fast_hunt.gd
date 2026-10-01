@@ -10,6 +10,7 @@ extends RefCounted
 ## that result. The helper exists where a C compiler built it (macOS, Linux,
 ## Windows with MinGW-w64); elsewhere, or if it fails, the GDScript scan runs
 ## instead.
+const EncounterCatalog = preload("res://server/encounter_catalog.gd")
 const StatFilter = preload("res://scripts/pet_stat_filter.gd")
 const METRICS := ["sum","attack","defence","speed"]
 const POLL_MSEC := 100
@@ -68,7 +69,7 @@ func running() -> bool:
 ## `stat_filter_for` returns resolved filters (pet_stat_filter.gd resolve).
 ## `survey` maps template id -> 保留规则 for species being surveyed (摸底):
 ## their pets are candidates the helper collects, not hits.
-func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}) -> bool:
+func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}, held_items: Array = []) -> bool:
 	stop()
 	var folder := "user://fast-hunt"
 	DirAccess.make_dir_recursive_absolute(folder)
@@ -77,7 +78,7 @@ func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 	status_path = ProjectSettings.globalize_path(folder.path_join(tag+".status"))
 	var file := FileAccess.open(input_path,FileAccess.WRITE)
 	if file == null:return false
-	file.store_string(_input(catalog,area,filter,flow,stat_filter_for,run_seed,start,thread_count,survey))
+	file.store_string(_input(catalog,area,filter,flow,stat_filter_for,run_seed,start,thread_count,survey,held_items))
 	file.close()
 	pid = OS.create_process(helper_path(),[input_path,status_path])
 	_polled_msec = 0
@@ -143,13 +144,16 @@ func _remove_files() -> void:
 
 ## The helper's input: see tools/fast_hunt/fast_hunt.c. Only the candidate
 ## groups roll() chooses among, in the same order and with the same weights.
-func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}) -> String:
-	var lines: PackedStringArray = ["fasthunt 1","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % effective_threads(thread_count),"max_enemies %d" % int(area.get("max_enemies",1))]
+func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: bool, stat_filter_for: Callable, run_seed: int, start: int, thread_count: int = 0, survey: Dictionary = {}, held_items: Array = []) -> String:
+	var lines: PackedStringArray = ["fasthunt 2","run_seed %d" % run_seed,"start %d" % start,"limit %d" % int(filter.get("limit",0)),"threads %d" % effective_threads(thread_count),"max_enemies %d" % int(area.get("max_enemies",1))]
 	var groups: Array = []
 	var enemy_ids := {}
 	for choice in area.get("groups",[]):
 		var group: Dictionary = catalog.groups.get(str(int(choice.id)),{})
-		if group.is_empty() or int(group.requires_item)>=0 or int(group.excludes_item)>=0:continue
+		if group.is_empty():continue
+		var requires := int(group.get("requires_item",-1))
+		var excludes := int(group.get("excludes_item",-1))
+		if (requires>=0 and requires not in held_items) or (excludes>=0 and excludes in held_items):continue
 		var entries: PackedStringArray = []
 		for entry in group.get("enemies",[]):
 			entries.append("%d %d" % [int(entry.id),int(entry.weight)])
@@ -162,7 +166,11 @@ func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 	for id in enemy_ids:
 		var enemy: Dictionary = catalog.enemies.get(str(id),{})
 		if enemy.is_empty():continue
-		enemies.append("%d %d %d %d %d %d" % [id,int(enemy.template_id),int(enemy.level_min),int(enemy.level_max),int(enemy.max_count),int(enemy.pet_flag)])
+		var drop_draws := 0
+		if id in EncounterCatalog.DROP_ENEMY_IDS:
+			for drop in enemy.get("drops",[]):
+				if int(drop.probability)!=0:drop_draws += 1
+		enemies.append("%d %d %d %d %d %d %d" % [id,int(enemy.template_id),int(enemy.level_min),int(enemy.level_max),int(enemy.max_count),int(enemy.pet_flag),drop_draws])
 		template_ids[int(enemy.template_id)] = true
 	lines.append("enemies %d" % enemies.size())
 	lines.append_array(enemies)

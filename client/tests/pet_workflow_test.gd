@@ -2,7 +2,7 @@ extends SceneTree
 var failures:=0
 class FixedTroop extends RefCounted:
 	var troop: Dictionary
-	func roll(_map, _cell, _rng) -> Dictionary:return troop.duplicate(true)
+	func roll(_map, _cell, _rng, _held_items: Array = []) -> Dictionary:return troop.duplicate(true)
 func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures+=1
