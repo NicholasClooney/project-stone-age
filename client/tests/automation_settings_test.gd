@@ -35,7 +35,7 @@ func run() -> void:
 	var blue := StatFilter.defaults(92)
 	check(blue.mode=="any" and not blue.has("stop_after") and blue.conditions.sum.enabled and int(blue.conditions.sum.keep)==15 and int(blue.conditions.attack.keep)==10 and blue.conditions.attack.enabled and int(blue.conditions.attack.minus)==1,"blue dragon keeps its per-species defaults")
 	var other := StatFilter.defaults(194)
-	check(int(defaults.hunt.stop_after)==1 and not other.has("stop_after") and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (relative, fixed values kept for 绝对); 找到N只后停止 is hunt.stop_after, 1 by default")
+	check(int(defaults.hunt.stop_after)==0 and not other.has("stop_after") and not StatFilter.enabled(other) and int(other.conditions.sum.minus)==1 and int(other.conditions.sum.value)==624 and str(other.threshold_mode)=="relative","other species use the general stat filter (relative, fixed values kept for 绝对); 找到N只后停止 is hunt.stop_after, 0 by default")
 
 	var backend = Backend.new()
 	backend.set_process(false)
@@ -118,11 +118,11 @@ func run() -> void:
 	check(session.load_game(SAVE) and session.automation_settings()=={"training":{"hp":55}},"invalid stored settings are dropped and valid ones kept (%s)" % JSON.stringify(session.automation_settings()))
 	# ---- migration: 找到N只后停止 was per species, now hunt.stop_after ----
 	var edited := Settings.sanitize({"hunt":{"stat_species":194,"template":92},"stat_filters":{"92":{"stop_after":5},"194":{"stop_after":0,"mode":"all"}}})
-	check(edited=={"hunt":{"stat_species":194,"template":92,"stop_after":0},"stat_filters":{"194":{"mode":"all"}}},"an old save takes the stop count of the species last edited on 属性条件 and drops the per-species ones (%s)" % JSON.stringify(edited))
+	check(edited=={"hunt":{"stat_species":194,"template":92},"stat_filters":{"194":{"mode":"all"}}} and int(Settings.effective(edited).hunt.stop_after)==0,"an old save takes the stop count of the species last edited on 属性条件 and drops the per-species ones (%s)" % JSON.stringify(edited))
 	var following := Settings.sanitize({"hunt":{"template":92},"stat_filters":{"92":{"stop_after":5}}})
 	check(int(Settings.effective(following).hunt.stop_after)==5,"属性条件 following the target: the target species' count")
 	var unset := Settings.sanitize({"hunt":{"stat_species":194},"stat_filters":{"92":{"stop_after":5}}})
-	check(int(Settings.effective(unset).hunt.stop_after)==1,"the species last edited had none of its own: 1, the classic stop")
+	check(int(Settings.effective(unset).hunt.stop_after)==0,"the species last edited had none of its own: the default 0")
 	var kept := Settings.sanitize({"hunt":{"stop_after":7,"stat_species":92},"stat_filters":{"92":{"stop_after":5}}})
 	check(int(kept.hunt.stop_after)==7,"a save that already has hunt.stop_after keeps it")
 	check(Settings.sanitize({"hunt":{"stat_species":92}})=={"hunt":{"stat_species":92}},"a new save without per-species counts is left alone")

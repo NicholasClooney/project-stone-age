@@ -101,7 +101,8 @@ func run() -> void:
 
 	# ---- 1: the classic stop at the first, plain or qualified ----
 	set_settings(backend,{"hunt":{"stop_after":null}})
-	check(int(Settings.effective(backend.session.automation_settings()).hunt.stop_after)==1,"1 is the default")
+	check(int(Settings.effective(backend.session.automation_settings()).hunt.stop_after)==0,"0 (keep going) is the default")
+	set_settings(backend,{"hunt":{"stop_after":1}})
 	begin(backend)
 	var classic := train(backend,PLAIN,280)
 	check(automation.flow_phase=="compare" and carried(backend,classic) and automation.flow_reason.begins_with("新伙伴已达到120级"),"1: the first plain pet stays carried and the run stops to compare")

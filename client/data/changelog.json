@@ -1,9 +1,18 @@
 {
-  "version": "v0.149.0",
-  "count": 208,
+  "version": "v0.149.1",
+  "count": 209,
   "feature_count": 133,
-  "fix_count": 75,
+  "fix_count": 76,
   "entries": [
+    {
+      "version": "v0.149.1",
+      "date": "2026-10-01",
+      "kind": "fix",
+      "title": "找宠默认一直找",
+      "details": [
+        "「找到N只后停止」新角色默认 0：一直找到手动停止；需要找到一只就停下来比较时设为 1。"
+      ]
+    },
     {
       "version": "v0.149.0",
       "date": "2026-10-01",

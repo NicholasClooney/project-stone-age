@@ -194,7 +194,7 @@ func hunting(game) -> void:
 
 func find_pet(game) -> void:
 	# 展示模式 off: this suite covers the full-speed find-pet cycle.
-	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false}}})
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"showcase":false,"stop_after":1}}})
 	game.load_area_id(100,Vector2i(637,493))
 	game.session.gm_raise_level(-1,120);game.session.gm_set_base_stat(-1,"toughness",500);game.session.gm_heal()
 	var flow=game.pet_workflow;flow.set_process(false)

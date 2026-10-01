@@ -179,7 +179,7 @@ static func sanitize(stored: Variant) -> Dictionary:
 ## 找到N只后停止 was per species (stat_filters.<id>.stop_after); now it is
 ## hunt.stop_after for the whole run. An old save takes the value of the
 ## species the player last edited (hunt.stat_species, or the hunt target when
-## it follows the target) if that one had its own, else 1.
+## it follows the target) if that one had its own, else the default (0).
 static func _migrate_stop_after(stored: Dictionary, result: Dictionary) -> void:
 	var filters := _dict(stored.get("stat_filters",{}))
 	var old := false
@@ -190,7 +190,7 @@ static func _migrate_stop_after(stored: Dictionary, result: Dictionary) -> void:
 	if species<0:species = int(hunt.get("template",-1))
 	var checked := _leaf(SPEC.hunt.stop_after,_dict(filters.get(str(species),{})).get("stop_after"))
 	var section := _dict(result.get("hunt",{}))
-	section.stop_after = checked[0] if not checked.is_empty() else 1
+	section.stop_after = checked[0] if not checked.is_empty() else int(defaults().get("hunt",{}).get("stop_after",0))
 	result.hunt = section
 
 ## 达标只保留前 N 只 (keep_qualified, rank) became keep_rule: a rank the player

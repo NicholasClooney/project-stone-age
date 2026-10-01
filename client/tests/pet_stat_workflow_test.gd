@@ -150,7 +150,7 @@ func run()->void:
 	hunt.show_stat_settings();hunt.stat_species.select(hunt.stat_species.get_item_index(92));hunt.load_stat_settings()
 	check(hunt.stat_keeps.sum.value==15 and hunt.stat_keeps.attack.value==10 and hunt.stat_page.find_child("StatStopAfter",true,false)==null,"attribute tab shows blue dragon defaults (keep 15 by sum and 10 by attack) and no per-species stop count")
 	hunt.show();hunt.show_capture_settings(true);await process_frame
-	check(hunt.stop_after.get_parent()==hunt.capture_page and hunt.stop_after.is_visible_in_tree() and int(hunt.stop_after.value)==1,"找到N只后停止 is on 抓宠设置, 1 by default")
+	check(hunt.stop_after.get_parent()==hunt.capture_page and hunt.stop_after.is_visible_in_tree() and int(hunt.stop_after.value)==0,"找到N只后停止 is on 抓宠设置, 0 (keep going) by default")
 	var note:Control=hunt.capture_page.get_node("HuntStopAfterNote")
 	var stop_rect:Rect2=hunt.stop_after.get_global_rect().merge(note.get_global_rect())
 	check(hunt.panel.get_global_rect().encloses(stop_rect) and note.get_global_rect().end.x<=hunt.showcase.get_global_rect().position.x and hunt.stop_after.size.y>=38,"the stop count row fits the panel's left column at touch height")

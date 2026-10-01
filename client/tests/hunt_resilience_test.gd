@@ -41,6 +41,7 @@ func run() -> void:
 	var game = load("res://scenes/main.tscn").instantiate();game.profile_persistence = false;root.add_child(game)
 	await process_frame
 	game.backend.stop_log_path = LOG
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"stop_after":1}}}) # cycles here stop to compare
 	game.session.grant_starter_pets()
 	game.load_area_id(100,Vector2i(637,493))
 	game.session.gm_raise_level(-1,120);game.session.gm_heal()
