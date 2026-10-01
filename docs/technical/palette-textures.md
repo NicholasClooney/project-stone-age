@@ -31,6 +31,8 @@ For a listed kind:
 | Kind | On since | Drawn by |
 | --- | --- | --- |
 | `battle` | battle sprites commit | `battle_view.gd` actors (mounted actors draw riding sheets, which follow `riding`), `pet_follower.gd`, `animated_portrait.gd`, `adventure_menu.gd` portraits |
+| `riding` | riding and field characters commit | `legacy_actor.gd` mounted (field), `battle_view.gd` mounted actors |
+| `characters` | riding and field characters commit | `legacy_actor.gd` walking frames from `game.character_frame` (the player, other players, the character chooser's previews when they use sheets) |
 
 Every node that shows a `SpriteArt.texture` frame calls `PaletteSheet.apply` after setting it. Code that only needs to know a sheet is here uses `PaletteSheet.exists(path)` (`BattleArt.renderable`, 宠物大全), and code that reads a sheet's pixels on the CPU uses `PaletteSheet.picture(path)` (thumbnails without a pre-cut atlas): on the web an enabled kind's pack holds only the PNG, so `ResourceLoader.exists` and `load()` would not find it.
 
@@ -57,4 +59,6 @@ Texture memory of all sheets as RGBA and as palette sheets (`palette_sheet_test.
 
 WebGL 2 in headless Chromium, `RENDER_TEXTURE_MEM_USED` for one 4091x1213 riding sheet: 25.2 MB as RGBA, 6.3 MB as a palette sheet.
 
-The web build in headless Chromium (`window.stoneAge.texture_mb`, which `tools/web_memory_probe.mjs` now prints), Samgir wilderness (map 100) then a battle: texture memory grew 9.9 MB opening the battle with RGBA battle sheets and 2.9 MB with palette sheets. Shipping battle sheets as their PNGs also shrinks their packs: 368 MB of PNGs instead of 454 MB of imported RGBA copies across all 643 sheets.
+The web build in headless Chromium (`window.stoneAge.texture_mb`, which `tools/web_memory_probe.mjs` now prints), Samgir wilderness (map 100) then a battle: texture memory grew 9.9 MB opening the battle with RGBA battle sheets and 2.9 MB with palette sheets. `window.stoneAge.texture_kinds` (MB of live textures by kind, from `perf_registry.gd`) on fresh saves, all three kinds off and then on: the player's character sheet in Samgir 1.3 to 0.3 MB; battle sheets after one battle 8.9 to 3.6 MB (a different encounter each run, so only roughly comparable). The map's tiles (17 to 20 MB here) are not palette textures yet.
+
+Shipping battle sheets as their PNGs also shrinks their packs: 368 MB of PNGs instead of 454 MB of imported RGBA copies across all 643 sheets.

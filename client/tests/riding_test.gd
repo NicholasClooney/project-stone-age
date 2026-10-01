@@ -1,6 +1,7 @@
 extends SceneTree
 const Riding = preload("res://scripts/riding.gd")
 const Actor = preload("res://scripts/legacy_actor.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 class PreviewWorld extends Node2D:
 	var data: Dictionary = {"characters":{},"images":{}}
 	var textures: Dictionary = {}
@@ -65,6 +66,7 @@ func render_native() -> void:
 		actor.set_action(4)
 		actor._process(0.2)
 		check(actor.sprite.texture != null,"native gold tiger walking bitmap loads direction"+str(facing))
+		check(PaletteSheet.is_palette(actor.sprite.texture) and actor.sprite.material==PaletteSheet.material_of(actor.sprite.texture),"the rider draws from its palette sheet, facing "+str(facing))
 		check(actor.sprite.position.y < 0,"native mounted foot anchor preserved")
 	if DisplayServer.get_name() != "headless":
 		await process_frame

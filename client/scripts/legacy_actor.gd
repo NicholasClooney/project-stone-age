@@ -12,6 +12,7 @@ var last_render_character := ""
 var art: Dictionary = {}
 const SpriteArt = preload("res://scripts/sprite_art.gd")
 const CharacterArt = preload("res://scripts/character_art.gd")
+const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const Riding = preload("res://scripts/riding.gd")
 
 func _ready() -> void:
@@ -57,6 +58,7 @@ func _process(delta: float) -> void:
 				world.textures[str(ident)] = load("res://assets/legacy/images/"+str(ident)+".png")
 				preload("res://scripts/perf_registry.gd").track_texture("map",ident,world.textures[str(ident)])
 			sprite.texture = world.textures[str(ident)]
+		PaletteSheet.apply(sprite,sprite.texture)
 	sprite.position = SpriteArt.offset(art,animation,index)
 
 ## The art drawn for this appearance: a riding composite, a player

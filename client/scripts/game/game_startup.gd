@@ -9,6 +9,7 @@ const TroopArt = preload("res://server/troop_art.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 const MusicTracks = preload("res://scripts/music_tracks.gd")
 const GameAudio = preload("res://scripts/game/game_audio.gd")
+const PerfRegistry = preload("res://scripts/perf_registry.gd")
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -79,8 +80,15 @@ func _publish_web_status() -> void:
 		"message":str(game.message.text) if is_instance_valid(game.message) else "",
 		"radio":str(game.radio.current) if is_instance_valid(game.radio) and game.radio.on else "","music":str(game.music.stream.resource_path) if is_instance_valid(game.music) and game.music.stream!=null else "",
 		"music_at":snappedf(game.music.get_playback_position(),0.01) if is_instance_valid(game.music) and game.music.playing else -1.0,
-		"texture_mb":snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)/1048576.0,0.1)}
+		"texture_mb":snappedf(Performance.get_monitor(Performance.RENDER_TEXTURE_MEM_USED)/1048576.0,0.1),"texture_kinds":_texture_kinds()}
 	JavaScriptBridge.eval("window.stoneAge = %s" % JSON.stringify(status))
+
+## MB of live textures by kind (scripts/perf_registry.gd), as the panel shows them.
+func _texture_kinds() -> Dictionary:
+	var kinds := {}
+	var textures: Dictionary = PerfRegistry.summary().textures
+	for kind in textures:kinds[kind] = snappedf(int(textures[kind].bytes)/1048576.0,0.1)
+	return kinds
 
 ## Web only: window.stoneAgeDev(name) runs the same actions as the on-screen DEV
 ## buttons, so a browser session can be driven from the console.

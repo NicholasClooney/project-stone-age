@@ -78,6 +78,8 @@ func run() -> void:
 	root.add_child(game)
 	game.random_encounters = false
 	await frames()
+	game.player._process(0.1)
+	check(PaletteSheet.is_palette(game.player.sprite.texture) and game.player.sprite.material==PaletteSheet.material_of(game.player.sprite.texture),"the player walks with frames from the character's palette sheet")
 	await visit_villager()
 	game.perform_adventure_action("accept_quest")
 	check(game.session.snapshot().quest.accepted,"accept quest through village menu")

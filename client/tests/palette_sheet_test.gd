@@ -9,7 +9,7 @@ extends SceneTree
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const SheetFrames = preload("res://scripts/sheet_frames.gd")
 ## The kinds the project draws from palette sheets so far.
-const ON := ["battle"]
+const ON := ["battle","riding","characters"]
 const ROOT := "res://assets/legacy/"
 const FOLDERS := ["battle/sheets","riding/sheets","characters/sheets"]
 var failures := 0
