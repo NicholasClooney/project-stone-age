@@ -16,7 +16,7 @@ def source_texts(reference, spec):
         raw = (Path(reference)/path).read_bytes()
         if hashlib.sha256(raw).hexdigest() != digest:
             raise ValueError('Unreviewed golden Bui source: '+path)
-        if '/map/' not in path:
+        if '/map/' not in path or Path(path).suffix in {'.c','.h','.txt'}:
             texts[path] = raw.decode('gb18030', errors='replace')
     return texts
 
@@ -114,6 +114,12 @@ def build_sidecar(reference, spec=None):
     if seen != set(spec['sidecar_scripts']):
         raise ValueError('Missing reviewed quiz/janken binding')
     portals, conflicts = [], []
+    map_points = {}
+    for line_number, line in enumerate(texts['gmsv/data/map/mapwarp.txt'].splitlines(),1):
+        match = re.fullmatch(r'NONE:NULL:(\d+),(\d+),(\d+):(\d+),(\d+),(\d+):NULL',line.strip())
+        if match:
+            values = list(map(int,match.groups()))
+            map_points.setdefault(tuple(values[:3]),[]).append((values[3:],line_number))
     by_cell = {}
     create='gmsv/data/npc/genout/quiz.create'
     for f in bindings(texts[create],create):
@@ -125,7 +131,7 @@ def build_sidecar(reference, spec=None):
                     source=f'quiz.create:{f["source_line"]}',source_create_index=f['source_create_index'])
         key=(f['map_id'],*f['cell'])
         if key in by_cell:
-            conflicts.append(dict(selected=by_cell[key],ignored=portal,rule='original-first-created'))
+            conflicts.append(dict(selected=by_cell[key],ignored=portal,rule='original-first-mapwarppoint'))
         else:
             by_cell[key]=portal;portals.append(portal)
     import import_encounters as encounters
@@ -138,10 +144,14 @@ def build_sidecar(reference, spec=None):
             drops.append(dict(enemy_id=enemy_id,item_id=slot['item_id'],source='gmsv/data/enemy.txt',
                               source_line=enemy['source_line'],probability=slot['probability'],
                               group_ids=[group_id],audit='Original random dojo disciple; existing AI, tactics retained in audit.'))
-    choices=[dict(from_map=p['from_map'],cell=p['cell'],to_map=p['to_map'],to_cell=p['target'],
-                  source='gmsv/data/npc/genout/quiz.create',source_line=int(p['source'].split(':')[1]),
-                  reason='original-first-created: npccreate append; npcgen ascending; MAP tail; EVENT first match')
-             for p in portals]
+    choices=[]
+    for p in portals:
+        active = map_points.get((p['from_map'],*p['cell']),[])
+        if not active or active[0][0] != [p['to_map'],*p['target']]:
+            raise ValueError('Reviewed create portal disagrees with enabled _MAP_WARPPOINT: '+str(p))
+        choices.append(dict(from_map=p['from_map'],cell=p['cell'],to_map=p['to_map'],to_cell=p['target'],
+                            source='gmsv/data/map/mapwarp.txt',source_line=active[0][1],
+                            reason='Pinned _MAP_WARPPOINT: mapwarp line order; MAP tail; EV EVENT_main first match'))
     return dict(version=1,module_id='golden-bui',npcs=npcs,services=services,
                 items={},reward_pets={},jobs=[],drops=drops,
                 world=dict(map_sources=spec['map_sources'],restored_scripts=list(spec['sidecar_scripts']),portal_choices=choices),

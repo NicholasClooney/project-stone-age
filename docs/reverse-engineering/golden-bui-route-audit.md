@@ -10,16 +10,22 @@
 
 中级820–829的退出NPC原传831大厅，随后从831到2020；831也有受理A/B及退出向导，故地图831必须导入。中级顶部原门直接进810，不是830；830和812不开放。
 
-## 810重复出口：实际创建顺序
+## 810重复出口：启用的MapWarpPoint与首匹配规则
 
-`npc/npccreate.c:182`顺序fgets，`:276–280`把每个闭合块append到NPC_create；`main.c:76`启动调用NPC_generateLoop(1)，`npc/npcgen.c:350,359–379`从createcount=0递增生成。`object.c:59`调用MAP_addNewObj，`map/readmap.c:1344–1357`转MAP_appendTailObj，`:1149–1182`追加格子对象链尾。`char/event.c:45–60`从链首取第一个匹配event后break。两条冲突在同一quiz.create，目录枚举顺序不改变它们的相对创建次序。
+仅核对create排序不足以证明实际触发路径。已补读并锁定以下实际启用链：`include/version.h:219`定义`_MAP_WARPPOINT`，`npc/npc_warp.c:55–57`因此拒建普通pipe形式Warp NPC；`data/npc/genout/npcgen.template:211–215`绑定Warp，而`npc/npctemplate.c:20–27,64–67,465–467`显示其PostOver槽为空。不能从char_walk.c遍历全部POSTOVER反推普通warp会连续传送。
 
-| 格子 | 使用原首条 | 忽略后条 | 首条/后条块起始行 |
-|---|---|---|---|
-| 2020 [11, 9] | 811 [30, 29] | 811 [29, 29] | quiz.create:55 / quiz.create:73 |
-| 810 [28, 27] | 809 [18, 13] | 829 [18, 13] | quiz.create:692 / quiz.create:1293 |
-| 810 [29, 27] | 809 [19, 13] | 829 [19, 13] | quiz.create:710 / quiz.create:1311 |
-| 4020 [11, 9] | 851 [30, 29] | 851 [29, 29] | quiz.create:1549 / quiz.create:1567 |
+当前启用的是`map/map_warppoint.c:39,188–242`逐行读取mapwarp.txt，`:81–109`创建OBJTYPE_WARPPOINT。`object.c:59`经MAP_addNewObj调用`map/readmap.c:1355`的MAP_appendTailObj，将点按顺序尾插。`char/char_walk.c:358–370`无这种对象的POSTOVER分派；实际`callfromcli.c:836–848`处理EV并调用EVENT_main，`char/event.c:63–70`对第一个匹配OBJTYPE_WARPPOINT执行后break。因此使用下表原mapwarp首行。
+
+`npccreate.c:182,276–280`与`npcgen.c:350,359–379`的create顺序只作为交叉检查，不能代替上述活动路径。builder现验证每个quiz.create候选与启用mapwarp首行目标完全相同，否则停止导入；portal_choices来源和行号改记mapwarp.txt。这个结论限定于固定revision的宏、模板和表，不宣称验证未知历史部署binary。
+
+| 格子 | 使用原首条 | 忽略后条 | mapwarp.txt首条/后条 | quiz.create交叉检查 |
+|---|---|---|---|---|
+| 2020 [11, 9] | 811 [30, 29] | 811 [29, 29] | 1169 / 1171 | 55 / 73 |
+| 810 [28, 27] | 809 [18, 13] | 829 [18, 13] | 1217 / 1261 | 692 / 1293 |
+| 810 [29, 27] | 809 [19, 13] | 829 [19, 13] | 1219 / 1263 | 710 / 1311 |
+| 4020 [11, 9] | 851 [30, 29] | 851 [29, 29] | 1268 / 1270 | 1549 / 1567 |
+
+所有上述C/header/template/mapwarp资料的SHA256均在`tools/golden_bui_quest_sources.json.sources`，每次build重新核对。关键新增固定值：version.h=`081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94`，npctemplate.c=`f3025f38dc06011e4f8d5f16932aed495174546cc0f96b4fb2bb66601e9240be`，npcgen.template=`0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3`，map_warppoint.c=`79ddaf6792db324351cd17cd774dcdfb25afed0eaf954a07571a13d081189856`，mapwarp.txt=`b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c`。第8个Python fixture覆盖启用宏、拒建分支、四组首行目的地及mapwarp SHA失配拒导入。
 
 ## 问答与猜拳规则
 
@@ -108,7 +114,7 @@
 ./scripts/run.sh --headless --editor --import --quit
 ```
 
-完整build已在main131d676费用底座上通过；Python来源测试增至7项，包含原购票LV公式与两个领奖实例。手机控件目标高度44px；离屏测试不能验证实体软键盘。
+完整build已在main131d676费用底座上通过；Python来源测试增至8项，包含原购票LV公式与两个领奖实例。手机控件目标高度44px；离屏测试不能验证实体软键盘。
 
 定向 `import_encounter_art.run_selected` 自身已经 `save_sheets` 并 `split_battle`；额外局部pack命令已实际验证支持上述格式，并自动再次split。三个sheet均P模式、透明索引0，无需再对battle/sheets全目录做palette_images；上方palette_images默认针对新地图共享images，须在world导入后运行。37图world与quest静态NPC生成先于最后plan/editor步骤。
 
