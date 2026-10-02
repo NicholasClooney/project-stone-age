@@ -45,6 +45,20 @@ class QuestModuleTests(unittest.TestCase):
             with self.subTest(changes=changes),self.assertRaises(ValueError):
                 common.load_quest_module(REFERENCE,invalid)
 
+    def test_keyword_handlers_use_actual_create_and_exact_source(self):
+        fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-keyword-gates.json').read_text())
+        spec=fixture['manifest'];result=common.load_quest_module(REFERENCE,spec)
+        self.assertEqual(result['npcs'],fixture['npcs'])
+        self.assertEqual(len(result['npcs']),4)
+        self.assertEqual([n['branches'][0]['keyword'] for n in result['npcs']],
+                         ['在卡坦有梦德','红色月亮的光芒','蓝色山脉即力量','白色之风即速度'])
+        from quest_source_handlers import keyword_warp
+        source=(REFERENCE/'gmsv/data/npc/genout/wpm_100_443_127').read_text(encoding='gb18030')
+        for extra in ['DelStone:20','NPCPOINT:1,2,3','FREE:LV>10']:
+            with self.assertRaises(ValueError):keyword_warp(source+'\n'+extra,'fixture',[9])
+        invalid=copy.deepcopy(spec);invalid['handlers']['unknown']=dict(kind='warpman',events=[9])
+        with self.assertRaisesRegex(ValueError,'Missing actual create'):common.load_quest_module(REFERENCE,invalid)
+
     def test_excluded_unsupported_language_never_reaches_parser(self):
         source = (REFERENCE/'gmsv/data/npc/quiz/equiz_02').read_text(encoding='gb18030')
         unsupported = source.replace('PET=77-12', 'PET=77-12EV')

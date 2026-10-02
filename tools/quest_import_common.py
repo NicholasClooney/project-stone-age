@@ -92,17 +92,25 @@ def load_quest_module(reference, manifest):
     result['module_id'] = spec['id']
     result['jobs'] = copy.deepcopy(spec.get('jobs', []))
     declared = spec['scripts']
+    handlers = spec.get('handlers', {})
+    if set(declared) & set(handlers):
+        raise ValueError('Handler duplicates changeevent declaration')
+    if any(review.get('kind') != 'warpman' for review in handlers.values()):
+        raise ValueError('Quest handler not yet supported')
+    selected_scripts = {**declared, **handlers}
     if any(extra.get('script') not in declared for extra in spec.get('supplements', [])):
         raise ValueError('Supplement script is not selected')
     seen = set()
     for create in spec['creates']:
         for ordinal, block in enumerate(re.findall(r'\{([^}]+)\}', texts[create])):
             fields = dict(line.strip().split('=', 1) for line in block.splitlines() if '=' in line and not line.lstrip().startswith('#'))
-            match = re.fullmatch(r'changeevent\|file:(\S+)', fields.get('enemy', ''))
-            if not match or match[1] not in declared:
+            match = re.fullmatch(r'(changeevent|npcgen_warpman)\|file:(\S+)', fields.get('enemy', ''))
+            if not match or match[2] not in selected_scripts:
                 continue
-            script = match[1]
-            review = declared[script]
+            script = match[2]
+            review = selected_scripts[script]
+            if (script in handlers) != (match[1] == 'npcgen_warpman'):
+                raise ValueError('Reviewed handler differs from actual create binding')
             corners = list(map(int, fields['borncorner'].split(',')))
             if len(corners) != 4 or corners[:2] != corners[2:] or fields['createnum'] != '1':
                 raise ValueError('Moving/multiple NPC requires a reviewed handler')
@@ -111,8 +119,12 @@ def load_quest_module(reference, manifest):
             ident = instance_id(script, map_id, cell)
             if 'instances' in review and ident not in review['instances']:
                 continue
-            default, branches = parse_script(texts[PREFIX + script], review['branches'])
-            apply_branch_supplements(spec, script, branches)
+            if script in handlers:
+                from quest_source_handlers import keyword_warp
+                default, branches = keyword_warp(texts[PREFIX + script], script, review['events'])
+            else:
+                default, branches = parse_script(texts[PREFIX + script], review['branches'])
+                apply_branch_supplements(spec, script, branches)
             events = review['events']
             if not events or any(type(e) is not int or not 0 < e < 192 for e in events):
                 raise ValueError('Invalid module events')
@@ -132,9 +144,9 @@ def load_quest_module(reference, manifest):
                 raise ValueError('Duplicate quest instance: ' + ident)
             seen.add(ident)
             result['npcs'].append(npc)
-    if {n['source_script'] for n in result['npcs']} != set(declared):
+    if {n['source_script'] for n in result['npcs']} != set(selected_scripts):
         raise ValueError('Missing actual create binding for reviewed script')
-    for script, review in declared.items():
+    for script, review in selected_scripts.items():
         if 'instances' in review and set(review['instances']) != {n['id'] for n in result['npcs'] if n['source_script'] == script}:
             raise ValueError('Missing reviewed NPC instance')
     for key, note in spec.get('item_notes', {}).items():

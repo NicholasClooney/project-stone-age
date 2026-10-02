@@ -93,3 +93,20 @@ original file. Unknown flags, branches, scripts and supplement fields fail
 closed. See `client/tests/fixtures/original-quest-supplements.json` for the exact
 manifest shape and source-bound expected output. This fixture does not register
 the cave task or imply that its NPCEnemy handlers are already implemented.
+
+## Original keyword WarpMan subset
+
+`handlers:{"genout/wpm_100_443_127":{"kind":"warpman","events":[9]}}`
+selects an actual `npcgen_warpman|file:...` create binding, preserving the same
+instance-id scheme. The importer currently accepts exactly the four-field
+source subset `WARP`, `FREE:LV>0`, `warp_msg`, `nomal_msg`; other conditions or
+actions fail closed. The four Munde/Jan source gates are covered by
+`original-keyword-gates.json`. `npcenemy` is not implemented by this slice.
+
+The server emits a presentation-only `kind:original_keyword,input:text`
+dialogue and consumes its existing single-use token with `choice:submit,text`.
+It compares the original string exactly (no trim/case-fold), rechecks location
+and the selected branch, and commits the source Warp via the normal save
+transaction. Wrong input returns the original nomal_msg. The text field is a
+project UI for the original spoken keyword; the accepted words and destinations
+are unchanged. Remote commands cannot supply their own Warp or actions.
