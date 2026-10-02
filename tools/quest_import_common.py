@@ -112,6 +112,8 @@ def merge_quest_module(result, module):
     merged = copy.deepcopy(result)
     ids = {n['id'] for n in merged['npcs']}
     for npc in module['npcs']:
+        if 'kind' in npc and (module['module_id'] != 'golden-bui' or npc.get('service_id') not in module.get('services', {})):
+            raise ValueError('Unreviewed service identity')
         if npc['id'] in ids:
             raise ValueError('Duplicate quest instance: ' + npc['id'])
         ids.add(npc['id'])
@@ -133,6 +135,10 @@ def merge_quest_module(result, module):
             raise ValueError('Conflicting quest journal')
         if old is None:
             merged['jobs'].append(copy.deepcopy(job))
+    if 'services' in module:
+        if module['module_id'] != 'golden-bui':
+            raise ValueError('Unreviewed private service module')
+        merged.setdefault('server_catalogs', {})['golden-bui'] = {'services': copy.deepcopy(module['services'])}
     modules = merged['provenance'].setdefault('modules', {})
     if module['module_id'] in modules:
         raise ValueError('Duplicate quest module')
@@ -140,22 +146,36 @@ def merge_quest_module(result, module):
     return merged
 
 
-def extend_registered_modules(reference, result, registry=REGISTRY):
+def registered_quest_modules(reference, registry=REGISTRY):
     configuration = json.loads(Path(registry).read_text())
     if configuration.get('version') != 1 or not isinstance(configuration.get('modules'), list):
         raise ValueError('Invalid quest module registry')
     entries = configuration['modules']
     root = Path(__file__).resolve().parents[1]
     for entry in entries:
-        relative = Path(entry['manifest'])
-        if relative.is_absolute() or '..' in relative.parts or relative.parts[:1] != ('tools',):
-            raise ValueError('Invalid quest manifest path')
-        module = load_quest_module(reference, root / relative)
+        if 'builder' in entry:
+            if entry['id'] != 'golden-bui' or entry['builder'] != 'golden-bui':
+                raise ValueError('Unreviewed quest builder')
+            from import_golden_bui import build
+            module = build(Path(reference))
+            for npc in module['npcs']:
+                if 'kind' in npc and npc['kind'] not in ('golden_bui_quiz', 'golden_bui_janken', 'golden_bui_gate'):
+                    raise ValueError('Unreviewed service kind')
+        else:
+            relative = Path(entry['manifest'])
+            if relative.is_absolute() or '..' in relative.parts or relative.parts[:1] != ('tools',):
+                raise ValueError('Invalid quest manifest path')
+            module = load_quest_module(reference, root / relative)
         if module['module_id'] != entry['id']:
             raise ValueError('Quest module identity mismatch')
         declared = {e for npc in module['npcs'] for e in npc['events']}
         enabled = entry['enabled_events']
         if not isinstance(enabled, list) or any(type(e) is not int for e in enabled) or not set(enabled) <= declared:
             raise ValueError('Module activates undeclared events')
+        yield module
+
+
+def extend_registered_modules(reference, result, registry=REGISTRY):
+    for module in registered_quest_modules(reference, registry):
         result = merge_quest_module(result, module)
     return result

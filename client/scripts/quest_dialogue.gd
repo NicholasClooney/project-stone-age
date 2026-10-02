@@ -22,6 +22,8 @@ var overlay: Control
 var panel: Control
 var body: Label
 var buttons: Array[Button] = []
+var service_scroll: ScrollContainer
+var service_controls: VBoxContainer
 var token := ""
 var active := false
 var busy := false
@@ -45,6 +47,7 @@ func open(npc_id: String) -> void:
 func _send(command: Dictionary) -> void:
 	busy=true
 	for button in buttons:button.disabled=true
+	if is_instance_valid(service_controls):service_controls.set_busy(true)
 	var expected:=generation
 	var guard:=ReplyGuard.new()
 	guard.controller=weakref(self);guard.link=world.link;guard.generation=expected
@@ -66,6 +69,10 @@ func _receive(reply: Dictionary, expected: int) -> void:
 	body.text=str(dialogue.get("name",""))+"\n\n"+str(dialogue.get("text","")).strip_edges()
 	for button in buttons:button.queue_free()
 	buttons.clear()
+	_clear_service()
+	if str(dialogue.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]:
+		_show_service(dialogue)
+		return
 	var choices: Array=dialogue.get("choices",[])
 	for i in range(choices.size()):
 		var entry: Dictionary=choices[i]
@@ -77,9 +84,38 @@ func _receive(reply: Dictionary, expected: int) -> void:
 		panel.add_child(button);buttons.append(button)
 	if not buttons.is_empty():buttons[0].grab_focus()
 
-func choose(choice: String) -> void:
+func _clear_service() -> void:
+	if is_instance_valid(service_scroll):
+		service_scroll.hide()
+		service_scroll.queue_free()
+	service_scroll=null;service_controls=null
+	if is_instance_valid(body):body.get_parent().show()
+
+func _show_service(dialogue: Dictionary) -> void:
+	body.get_parent().hide()
+	service_scroll=ScrollContainer.new()
+	service_scroll.name="QuestServiceScroll"
+	service_scroll.position=Vector2(18,15);service_scroll.size=Vector2(348,183)
+	service_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(service_scroll)
+	var content:=VBoxContainer.new()
+	content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	content.add_theme_constant_override("separation",8)
+	service_scroll.add_child(content)
+	var prompt:=Label.new()
+	prompt.text=body.text;prompt.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	prompt.custom_minimum_size.x=310
+	prompt.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	content.add_child(prompt)
+	service_controls=preload("res://scripts/golden_bui_controls.gd").new()
+	service_controls.configure(dialogue)
+	service_controls.submitted.connect(choose)
+	content.add_child(service_controls)
+	buttons.assign(service_controls.buttons)
+
+func choose(choice: String, text: String = "") -> void:
 	if not active or busy:return
-	_send({"type":"quest_choose","token":token,"choice":choice})
+	_send({"type":"quest_choose","token":token,"choice":choice,"text":text})
 
 func close() -> void:
 	if not active:return
@@ -89,6 +125,7 @@ func close() -> void:
 	for button in buttons:
 		if is_instance_valid(button):button.queue_free()
 	buttons.clear()
+	_clear_service()
 	if is_instance_valid(overlay):overlay.hide()
 	# Restore only this window's pause; other overlays retain their own pause.
 	var other_travel: bool=is_instance_valid(world.world_travel) and is_instance_valid(world.world_travel.overlay) and world.world_travel.overlay.visible
