@@ -282,7 +282,7 @@ func remote() -> void:
 	await process_frame
 	var menu=world.adventure_menu
 	await click(menu.panel.get_node("OriginalItemSlot_0"))
-	check(menu.panel.get_node("OriginalEquipmentDetails").text.contains("12345 / 300000") and menu.panel.get_node("OriginalEquipmentDetails").text.contains("等级 25"),"real item click shows per-copy durability, requirements and mods")
+	check(menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("12345 / 300000") and menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("等级 25"),"real item click shows per-copy durability, requirements and mods")
 	await click(menu.panel.get_node("EquipOriginalItem"))
 	check(await Wait.until(self,func():return int(world.session.snapshot().original_equipment.arm)==uid) and await Wait.settle(self,world),"real remote equip button executes server-owned instance command")
 	var count:=0

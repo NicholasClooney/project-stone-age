@@ -66,7 +66,7 @@ func run() -> void:
  world.show_adventure_menu("inventory")
  var slot=world.adventure_menu.panel.get_node("OriginalItemSlot_0")
  if not await click(slot):return
- if not check(world.adventure_menu.panel.get_node("OriginalItemDescription").text.contains("尚未实现"),"Unavailable equipment effects explicitly visible"):return
+ if not check(world.adventure_menu.panel.find_child("OriginalItemDescription",true,false).text.contains("尚未实现"),"Unavailable equipment effects explicitly visible"):return
  await proof("golden-reward-equipment-limit")
  world.close_adventure_menu()
  # Phone landscape: the actual viewport size changes, then clicks travel and
@@ -105,8 +105,8 @@ func run() -> void:
  if not await choose("ok"):return
  world.show_adventure_menu("inventory")
  if not await click(world.adventure_menu.panel.get_node("OriginalItemSlot_0")):return
- var description:Label=world.adventure_menu.panel.get_node("OriginalItemDescription")
- if not check(description.text.contains("尚未实现") and Rect2(Vector2.ZERO,Vector2(390,844)).encloses(description.get_global_rect()),"Portrait reward limitation visibly bounded"):return
+ var description:Label=world.adventure_menu.panel.find_child("OriginalItemDescription",true,false)
+ if not check(description.text.contains("尚未实现") and Rect2(Vector2.ZERO,Vector2(390,844)).encloses(world.adventure_menu.panel.get_node("OriginalItemDetailsScroll").get_global_rect()),"Portrait reward limitation visibly bounded"):return
  await proof("portrait-390x844-reward-limit")
  world.close_adventure_menu()
  world.link.close();world.music.stop();world.effect.stop();world.queue_free();server.stop();server.queue_free();backend.queue_free()

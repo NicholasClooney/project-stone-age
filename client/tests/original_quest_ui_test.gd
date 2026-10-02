@@ -64,7 +64,7 @@ func run() -> void:
 	check(icon.texture!=null and icon.texture.resource_path.ends_with(str(source.items["2415"].icon_path)),"Original flower uses its imported icon")
 	menu.panel.get_node("OriginalItemSlot_0").pressed.emit()
 	check(menu.panel.get_node("OriginalItemName").text==str(source.items["2415"].name),"Selecting flower displays original name")
-	check(menu.panel.get_node("OriginalItemDescription").text==str(source.items["2415"].description),"Selecting flower displays original description")
+	check(menu.panel.find_child("OriginalItemDescription",true,false).text==str(source.items["2415"].description),"Selecting flower displays original description")
 	check(menu.panel.get_node("OriginalItemSlot_0").gui_input.get_connections().is_empty(),"Quest item has no equipment/double-click handler")
 	var slots:=0
 	for node in menu.panel.get_children():

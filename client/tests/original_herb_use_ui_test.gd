@@ -50,7 +50,7 @@ func run() -> void:
  menu.open_menu("inventory")
  await click(menu.panel.get_node("OriginalItemSlot_0"))
  check(await Wait.until(self,func():return menu.panel.has_node("OriginalItemUse")),"actual slot click reveals original herb use action")
- var description:Label=menu.panel.get_node("OriginalItemDescription")
+ var description:Label=menu.panel.find_child("OriginalItemDescription",true,false)
  check(description.text.contains("90～110") and description.text.contains("满血仍消耗") and description.text.contains("战斗道具未接入"),"description states actual field effect and limitations")
  check(await Wait.until(self,func():return description.position.y+description.size.y<=404),"description fits above use controls")
  check(not menu.panel.get_node("OriginalItemUse").disabled and world.session.snapshot().player.hp==world.session.snapshot().player.max_hp,"full owner HP keeps original consumption action enabled")

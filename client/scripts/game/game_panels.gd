@@ -68,9 +68,10 @@ func restore_scroll(root: Node, before: Array[Vector2i]) -> void:
 	if before.is_empty() or before.all(func(position: Vector2i):return position==Vector2i.ZERO):return
 	var after := _scroll_areas(root)
 	for i in range(mini(before.size(),after.size())):
-		var scroll: ScrollContainer = after[i]
+		var scroll_ref: WeakRef = weakref(after[i])
 		var position: Vector2i = before[i]
 		var restore := func():
+			var scroll := scroll_ref.get_ref() as ScrollContainer
 			if is_instance_valid(scroll):
 				scroll.scroll_horizontal = position.x
 				scroll.scroll_vertical = position.y

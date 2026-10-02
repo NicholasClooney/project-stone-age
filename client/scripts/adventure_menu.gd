@@ -203,6 +203,7 @@ func choice(caption: String, point: Vector2, action: String, value: Variant = nu
 func rebuild() -> void:
 	if world==null or not visible:return
 	var view := [kind,pet_view,pet_category,pet_page,pet_compare_open,pet_compare_page,pet_storage_open,pet_storage_page,pet_records_open,records_tab,records_page,records_template,records_run,storage_order,storage_favorites_first,storage_ascending,storage_species,records_sorts.get(records_tab,[]),records_uncaught]
+	if kind=="inventory":view.append(selected_item_slot)
 	if kind=="pets" and pet_records_open and is_instance_valid(panel) and panel.find_child("PetRecordsPanel",false,false)!=null:
 		_refresh_records_panel(view)
 		return
@@ -671,39 +672,35 @@ func inventory_panel(profile: Dictionary) -> void:
 	if selected_original_item>=0 and selected_original_item<originals.size():
 		var data: Dictionary=quest_catalog.items.get(str(int(originals[selected_original_item])),{})
 		label(str(data.get("name","")),Vector2(15,328),240,15).name="OriginalItemName"
-		var description: Label
-		if int(data.get("id",0))==2401 and data.has("use"):
-			description=label("",Vector2(15,354),239,10)
-			description.add_theme_constant_override("line_spacing",-2)
-			description.text="野外回复90～110（原标示100）\n自己或随身宠物；满血仍消耗\n零HP宠物可回复；战斗道具未接入"
-			description.reset_size()
-			description.tooltip_text=str(data.get("description",""))
-			original_recovery_buttons(profile)
-		else:description=label(str(data.get("description","")),Vector2(15,354),239,14)
-		description.name="OriginalItemDescription"
-		if int(data.get("id",0)) in [2518,2519,2520,2525,2526,2532,2547,2551]:
-			description.add_theme_font_size_override("font_size",10)
-			description.tooltip_text=description.text
-			description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-			description.size.x=239
+		var detail_scroll := ScrollContainer.new()
+		detail_scroll.name="OriginalItemDetailsScroll"
+		detail_scroll.position=Vector2(15,350)
+		detail_scroll.size=Vector2(239,53)
+		detail_scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
+		detail_scroll.mouse_filter=Control.MOUSE_FILTER_STOP
+		panel.add_child(detail_scroll)
+		var content := VBoxContainer.new()
+		content.name="OriginalItemDetailsContent"
+		content.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+		content.add_theme_constant_override("separation",4)
+		detail_scroll.add_child(content)
 		var ident:=int(originals[selected_original_item])
 		if OriginalEquipment.ITEMS.has(ident) and selected_original_item<instances.size():
-			description.position.y=348
-			description.add_theme_font_size_override("font_size",10)
-			description.max_lines_visible=2
-			description.tooltip_text=description.text
 			var entry: Dictionary=instances[selected_original_item]
 			var worn:=OriginalEquipment.worn(profile,int(entry.uid))
 			var spec: Dictionary=OriginalEquipment.ITEMS[ident]
-			var details:=label("等级 %d · 攻 %+d 防 %+d 敏 %+d 魅 %+d\n%s" % [int(spec.level),int(spec.attack),int(spec.defence),int(spec.speed),int(spec.charm),"无战斗磨损" if int(spec.durability)==0 else "耐久 %d / %d · %s" % [int(entry.durability),int(spec.durability),OriginalEquipment.STAGES[OriginalEquipment.stage(entry)]]],Vector2(15,374),246,11)
-			details.name="OriginalEquipmentDetails"
+			var details:=original_detail_label(content,"OriginalEquipmentDetails","等级 %d · 攻 %+d 防 %+d 敏 %+d 魅 %+d\n%s" % [int(spec.level),int(spec.attack),int(spec.defence),int(spec.speed),int(spec.charm),"无战斗磨损" if int(spec.durability)==0 else "耐久 %d / %d · %s" % [int(entry.durability),int(spec.durability),OriginalEquipment.STAGES[OriginalEquipment.stage(entry)]]])
+			details.tooltip_text=details.text
 			if ident in [2418,2427]:
-				var resistance:=label("六状态耐性 +%d 尚未生效" % (3 if ident==2418 else 2),Vector2(90,410),174,10)
-				resistance.name="OriginalResistanceUnavailable"
-				resistance.tooltip_text="毒、麻痹、睡眠、石化、酒醉、混乱耐性各 +%d：状态战斗尚未实现，未生效" % (3 if ident==2418 else 2)
+				original_detail_label(content,"OriginalResistanceUnavailable","六状态耐性 +%d 尚未生效" % (3 if ident==2418 else 2))
 			var equip:=choice("卸下" if worn else "装备",Vector2(14,404),"equip_original:%d" % int(entry.uid),not worn)
 			equip.name="EquipOriginalItem"
-			if ident in [2418,2427]:equip.size.x=70
+		var description_text := str(data.get("description",""))
+		if ident==2401 and data.has("use"):
+			description_text="野外回复90～110（原标示100）\n自己或随身宠物；满血仍消耗\n零HP宠物可回复；战斗道具未接入"
+			original_recovery_buttons(profile)
+		var description := original_detail_label(content,"OriginalItemDescription",description_text)
+		description.tooltip_text=str(data.get("description",""))
 		return
 	selected_original_item=-1
 	var potion := selected_item=="potion"
@@ -711,6 +708,17 @@ func inventory_panel(profile: Dictionary) -> void:
 	label(item_description(selected_item),Vector2(15,354),239,12 if selected_item in Spirits.SPIRIT_ITEMS else 14)
 	var main := choice("使用" if potion else ("恢复宠物" if selected_item=="healing_charm" else "卸下" if item_equipped(profile,selected_item) else "装备"),Vector2(14,404),"use_potion" if potion else equip_action(selected_item),null if potion else not item_equipped(profile,selected_item),int(profile.inventory.get(selected_item,0))>0 and (not potion or int(profile.player.hp)<int(profile.player.max_hp)))
 	spirit_field_buttons(profile,main)
+
+## The original item frame has a fixed detail well. Stack text inside that well
+## and scroll it; long source descriptions must never cover action buttons.
+func original_detail_label(content: VBoxContainer, node_name: String, text: String) -> Label:
+	var result := label(text,Vector2.ZERO,215,11)
+	result.name=node_name
+	result.reparent(content)
+	result.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	result.custom_minimum_size=Vector2(215,0)
+	result.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	return result
 
 func original_recovery_buttons(profile: Dictionary) -> void:
 	if not original_use_pet_id.is_empty() and not profile.pets.any(func(pet):return str(pet.pet_id)==original_use_pet_id):original_use_pet_id=""
