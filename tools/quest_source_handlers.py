@@ -56,6 +56,8 @@ def npc_enemy(source, script, events):
         fields[key] = value
     allowed = {'entype','dieact','enemyno','startmsg','end msg','deniedmsg',
                'warpfl','warpx','warpy','item','steal','time'} | {f'askbattlemsg{i}' for i in range(1,7)}
+    if script in ('400/sb_muge1.arg','400/sb_muge2.arg') and fields.get('start msg') == '':
+        allowed.add('start msg')  # Original unused empty spelling, not a new message action.
     if set(fields) - allowed or fields.get('entype') != '2' or fields.get('dieact') not in ('0','1'):
         raise ValueError('Unreviewed NPCEnemy behavior')
     raw = fields.get('enemyno', '')

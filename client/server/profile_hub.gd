@@ -406,7 +406,7 @@ func _party_follow(leader: String, before: Array) -> void:
 	for member in party.members(leader).slice(1):
 		if backends.has(member):positions[member] = [backends[member].automation.position_map,backends[member].automation.position_cell]
 	for move in party.follow(leader,int(before[0]),before[1],automation.position_map,automation.position_cell,positions):
-		if backends.has(move[0]):backends[move[0]].handle({"type":"report_position","map_id":move[1],"cell":[move[2].x,move[2].y],"map_changed":move[3],"client":"party"})
+		if backends.has(move[0]):backends[move[0]].report_party_position({"type":"report_position","map_id":move[1],"cell":[move[2].x,move[2].y],"map_changed":move[3],"client":"party"})
 
 func _party_command(connection: int, type: String, command: Dictionary) -> Dictionary:
 	var id := profile_of(connection)
