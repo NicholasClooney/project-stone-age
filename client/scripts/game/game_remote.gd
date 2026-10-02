@@ -256,6 +256,9 @@ func _on_backend_message(event: Dictionary) -> void:
 		"rejected":
 			var reason := str(event.get("reason",""))
 			if not reason.is_empty():game.message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
+		"quest_result":
+			game.last_adventure_message=str(event.get("text",""))
+			game.message.text=game.last_adventure_message
 		"position":
 			if event.has("quest_position_seq"):game.set_meta("quest_position_receipt",{"seq":event.quest_position_seq,"map_id":int(event.map_id),"cell":event.cell.duplicate()})
 			if str(event.get("client",""))!=game._client_id:
