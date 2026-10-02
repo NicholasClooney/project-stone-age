@@ -27,7 +27,8 @@
     {"id": 90203, "template_id": 806, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1639},
     {"id": 90208, "template_id": 754, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1588},
     {"id": 90209, "template_id": 755, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1660},
-    {"id": 90210, "template_id": 756, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1589}
+    {"id": 90210, "template_id": 756, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1589},
+    {"id": 90211, "from": 1642, "template_id": 809, "reason": "原Lv1瑞里西尔1642的pet_flag为0，复制为可抓补充行；原模板809与原敌行保持不变。"}
   ],
   "encounters": [
     {"group_id": 91001, "alone_group_id": 92001, "template_id": 303, "name": "巴朵兰恩", "enemy_id": 352, "companion_id": 1473, "map_id": 500, "area_id": 639, "weight": 1, "origin": "original_area", "reason": "原版在此区有 Lv90–95 红暴（1473）；用原表未使用的 Lv1 红暴（352）"},
@@ -75,6 +76,9 @@
     {"group_id": 91107, "template_id": 779, "name": "玛斯贝卡", "enemy_id": 1612, "companion_id": null, "map_id": 200, "area_id": 152, "weight": 1, "origin": "added", "reason": "虎系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
     {"group_id": 91108, "template_id": 754, "name": "邦诺斯娜", "enemy_id": 90208, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
     {"group_id": 91109, "template_id": 755, "name": "杨格斯", "enemy_id": 90209, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
-    {"group_id": 91110, "template_id": 756, "name": "迪基格斯", "enemy_id": 90210, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"}
+    {"group_id": 91110, "template_id": 756, "name": "迪基格斯", "enemy_id": 90210, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91111, "template_id": 809, "name": "瑞里西尔", "enemy_id": 90211, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "原版骑图宠物Lv1补充（补充·非原版）：火鸡系的火鸡、奇宝区域，单独出现；复用原Lv1敌行，原模板成长、属性、捕获参数不变。"},
+    {"group_id": 91112, "template_id": 1110, "name": "史卡鲁", "enemy_id": 2138, "companion_id": null, "map_id": 500, "area_id": 639, "weight": 1, "origin": "added", "reason": "原版骑图宠物Lv1补充（补充·非原版）：本作稀有骑宠收集区；非原版分布，单独出现；复用原Lv1敌行，原模板成长、属性、捕获参数不变。"},
+    {"group_id": 91113, "template_id": 1095, "name": "罗多克雷", "enemy_id": 2119, "companion_id": null, "map_id": 500, "area_id": 638, "weight": 1, "origin": "added", "reason": "原版骑图宠物Lv1补充（补充·非原版）：本作稀有骑宠收集区；非原版分布，单独出现；复用原Lv1敌行，原模板成长、属性、捕获参数不变。"}
   ]
 }

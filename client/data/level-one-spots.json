@@ -356,6 +356,22 @@
     },
     {
       "map_id": 100,
+      "area_id": 38,
+      "cell": [
+        623,
+        178
+      ],
+      "map_name": "萨伊那斯",
+      "name": "瑞里西尔",
+      "enemy_id": 90211,
+      "template_id": 809,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
       "area_id": 47,
       "cell": [
         490,
@@ -1184,6 +1200,22 @@
     },
     {
       "map_id": 500,
+      "area_id": 638,
+      "cell": [
+        255,
+        326
+      ],
+      "map_name": "五十年前波拉岛",
+      "name": "罗多克雷",
+      "enemy_id": 2119,
+      "template_id": 1095,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
+      "map_id": 500,
       "area_id": 639,
       "cell": [
         400,
@@ -1225,6 +1257,22 @@
       "name": "斑尼迪克",
       "enemy_id": 90001,
       "template_id": 812,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
+      "map_id": 500,
+      "area_id": 639,
+      "cell": [
+        400,
+        400
+      ],
+      "map_name": "五十年前波拉岛",
+      "name": "史卡鲁",
+      "enemy_id": 2138,
+      "template_id": 1110,
       "level_min": 1,
       "level_max": 1,
       "dev_only": true,

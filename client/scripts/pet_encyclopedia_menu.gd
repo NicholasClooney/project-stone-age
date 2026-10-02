@@ -8,6 +8,7 @@ extends Control
 ## classic list by category, data/classic-pets.json) and 全部/已拥有/未拥有.
 ## Data: scripts/pet_encyclopedia.gd.
 ## See docs/development/pet-encyclopedia.md.
+const Riding = preload("res://scripts/riding.gd")
 const Encyclopedia = preload("res://scripts/pet_encyclopedia.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
@@ -74,6 +75,7 @@ var _owned_dirty := true
 var _owned_signature := ""
 var _withdraw_pending := ""
 var _detail_mobile := false
+var _rider_signature := ""
 
 func configure(owner: Node) -> void:
 	world = owner
@@ -294,9 +296,9 @@ func relayout() -> void:
 
 func rebuild() -> void:
 	if not is_instance_valid(body) or book == null:return
-	_place_panel()
 	_remember_scroll()
 	_clear_body()
+	_place_panel()
 	for pair in [[grid_button,"grid"],[list_button,"list"]]:
 		pair[0].add_theme_stylebox_override("normal",world.box(Color("775b3c"),PetTable.GOLD) if view == pair[1] else world.box(Color("574431"),Color("9d8354")))
 		pair[0].add_theme_color_override("font_color",PetTable.GOLD if view == pair[1] else PetTable.TEXT)
@@ -306,6 +308,7 @@ func rebuild() -> void:
 		"list":_build_list()
 		"detail":_build_detail()
 		_:_build_grid()
+	_place_panel.call_deferred()
 	_scroll_view = view
 	if is_instance_valid(scroll) and int(scroll_of.get(_scroll_key(view),0)) > 0:_scroll_back.call_deferred(scroll,int(scroll_of[_scroll_key(view)]))
 
@@ -341,6 +344,7 @@ func _build_grid() -> void:
 	var shown := {}
 	for id in _visible_ids():shown[id] = true
 	var summary := PetTable.text("%s %d 种 · 按原版宠物相簿分系；点一种看资料、预测和出现地点。" % [_count_caption(),shown.size()],"meta")
+	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(summary)
 	var content := _scroll_area()
 	for family in book.families:
@@ -366,7 +370,8 @@ func _count_caption() -> String:
 ## the pets our data lacks as greyed cells.
 func _build_classic_grid() -> void:
 	var records := _visible_classic()
-	var summary := PetTable.text("经典宠物 · %s %d 种 · 当年玩家最熟悉的宠物；格子下方是俗称，悬停看为什么经典和原版怎么得到。" % [_count_caption(),records.size()],"meta")
+	var summary := PetTable.text("经典宠物 · %s %d 项 · 骑宠按原版骑图归类，同图变体在卡内；PK和稀有分类保留。" % [_count_caption(),records.size()],"meta")
+	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.add_child(summary)
 	var content := _scroll_area()
 	for category in book.classic_categories:
@@ -375,7 +380,7 @@ func _build_classic_grid() -> void:
 		var heading := HBoxContainer.new()
 		heading.add_theme_constant_override("separation",8)
 		heading.add_child(PetTable.text(str(category.name),"section"))
-		heading.add_child(PetTable.text("%d种" % members.size(),"meta"))
+		heading.add_child(PetTable.text(("%d种外观" if str(category.id) == "mount" else "%d种") % members.size(),"meta"))
 		content.add_child(heading)
 		var flow := HFlowContainer.new()
 		flow.name = "Classic_%s" % category.id
@@ -383,8 +388,59 @@ func _build_classic_grid() -> void:
 		flow.add_theme_constant_override("v_separation",6)
 		content.add_child(flow)
 		for record in members:
-			flow.add_child(_grid_cell(book.species[int(record.entry_id)]) if int(record.entry_id) >= 0 else _missing_cell(record))
+			flow.add_child(_mount_card(record) if record.has("variant_ids") else (_grid_cell(book.species[int(record.entry_id)]) if int(record.entry_id) >= 0 else _missing_cell(record)))
 	if records.is_empty():content.add_child(PetTable.text("没有符合的宠物。","body"))
+
+## One native mount appearance; distinct growth templates stay accessible.
+func _mount_card(record: Dictionary) -> PanelContainer:
+	var card := PetTable.card()
+	card.name = "MountCard%d" % int(record.sprite)
+	card.custom_minimum_size = Vector2(168,0)
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation",4)
+	card.add_child(stack)
+	var entry: Dictionary = book.species[int(record.entry_id)]
+	var main := _grid_cell(entry)
+	main.tooltip_text = _classic_tooltip(record,entry)
+	stack.add_child(main)
+	stack.add_child(_mount_options(record))
+	return card
+
+func _mount_options(record: Dictionary, current_id: int = -1) -> VBoxContainer:
+	var stack := VBoxContainer.new()
+	stack.add_theme_constant_override("separation",4)
+	var status := PetTable.text("","meta",PetTable.GOOD)
+	status.name = "MountStatus%d" % int(record.sprite)
+	status.set_meta("mount_sprite",int(record.sprite))
+	status.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	stack.add_child(status)
+	_update_mount_status(status,str(world.session.snapshot().get("character_id","100000")))
+	var selected := int(record.entry_id) if current_id < 0 else current_id
+	for id in record.variant_ids:
+		if int(id) == selected:continue
+		var variant: Dictionary = book.species[id]
+		var button: Button = world.button("%s #%d ↗" % [variant.name,int(id)],func():show_species(int(id)))
+		button.name = "MountVariant%d" % int(id)
+		button.tooltip_text = "同一骑乘外观，成长资料独立；点击查看。\n"+_tooltip(variant)
+		button.add_theme_font_size_override("font_size",12)
+		PetTable.style_button(button)
+		stack.add_child(button)
+	return stack
+
+func _update_mount_status(label: Label, character: String) -> void:
+	var sprite := int(label.get_meta("mount_sprite"))
+	var composite := Riding.composite(character,sprite)
+	var direct := composite >= 0 and Riding.has_composite(str(composite))
+	var characters := Riding.compatible_characters(sprite)
+	label.text = "当前造型可骑" if direct else ("换造型可骑" if not characters.is_empty() else "暂无可选骑乘造型")
+	label.add_theme_color_override("font_color",PetTable.GOOD if direct else PetTable.GOLD)
+	label.tooltip_text = "造型匹配提示；实际骑乘还需满足待机、忠诚度、等级等条件。\n可选兼容造型：%d种。可在宠物窗口点「骑乘」选择。" % characters.size()
+
+func _refresh_mount_status() -> void:
+	var character := str(world.session.snapshot().get("character_id","100000"))
+	if character == _rider_signature:return
+	_rider_signature = character
+	for label in body.find_children("MountStatus*","Label",true,false):_update_mount_status(label,character)
 
 ## A classic pet this project's data does not have: its names, no picture.
 func _missing_cell(record: Dictionary) -> Button:
@@ -561,7 +617,9 @@ func _refresh_thumb_mode() -> void:
 func _process(_delta: float) -> void:
 	_refresh_thumb_mode()
 	if visible:
-		if _owned_dirty:_refresh_owned()
+		if _owned_dirty:
+			_refresh_mount_status()
+			_refresh_owned()
 		_update_thumbs_progress()
 		if scroll == null:_fill_variant_thumbs()
 		else:_update_thumbs()
@@ -660,7 +718,7 @@ func sort_by(key: String) -> void:
 func _list_row(entry: Dictionary, index: int, columns: Array = COLUMNS, profile: Dictionary = {}, record: Dictionary = {}) -> PanelContainer:
 	var holder := PetTable.row_panel(index)
 	holder.name = "Row%d" % int(entry.id)
-	holder.tooltip_text = _tooltip(entry)
+	holder.tooltip_text = _tooltip(entry) if record.is_empty() else _classic_tooltip(record,entry)
 	var row := HBoxContainer.new()
 	row.add_theme_constant_override("separation",6)
 	holder.add_child(row)
@@ -706,7 +764,12 @@ func _list_row(entry: Dictionary, index: int, columns: Array = COLUMNS, profile:
 				if int(entry.wild_lowest) > 1:where.add_theme_color_override("font_color",Color("e6c284"))
 				row.add_child(where)
 			"alias":row.add_child(_clipped(str(record.get("alias",entry.alias)),width,PetTable.GOLD))
-			"reason":row.add_child(_clipped(str(record.get("reason","")),width,PetTable.TEXT))
+			"reason":
+				if record.has("variant_ids"):
+					var options := _mount_options(record)
+					options.custom_minimum_size.x = width
+					row.add_child(options)
+				else:row.add_child(_clipped(str(record.get("reason","")),width,PetTable.TEXT))
 			"mine":row.add_child(_mine_cell(entry,profile,width))
 			"go":row.add_child(_go_button(entry,Encyclopedia.best_location(entry),"Go%d" % int(entry.id),width))
 	return holder
@@ -843,6 +906,10 @@ func _detail_art(entry: Dictionary) -> VBoxContainer:
 		button.disabled = portrait == null
 		turn.add_child(button)
 	turn.add_child(PetTable.text("也可点图转向","meta"))
+	var mount: Dictionary = book.mount_record(int(entry.sprite))
+	if not mount.is_empty():
+		column.add_child(PetTable.text("经典骑宠 · 同图变体","section"))
+		column.add_child(_mount_options(mount,int(entry.id)))
 	var family: Dictionary = {}
 	for group in book.families:
 		if int(group.id) == int(entry.family):family = group

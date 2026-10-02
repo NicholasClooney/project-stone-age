@@ -81,6 +81,36 @@ class EncounterImportTests(unittest.TestCase):
             with self.assertRaises(ValueError):add_album_pets({'templates':{},'provenance':{}},pets,album)
             with self.assertRaises(ValueError):add_album_pets({'templates':{'9':{'name':'巴雅'}},'provenance':{}},pets,Path(folder)/'missing.h')
 
+    @unittest.skipUnless(ROOT.exists(), 'local reference required')
+    def test_classic_riding_lv1_rows_preserve_source_templates(self):
+        original = build(ROOT)
+        data = build(ROOT)
+        add_rare_encounters(data)
+        additions = [(809, 1642, 90211, 91111, 100, 38, 131),
+                     (1110, 2138, 2138, 91112, 500, 639, 119),
+                     (1095, 2119, 2119, 91113, 500, 638, 96)]
+        self.assertEqual(data['templates'], original['templates'])
+        self.assertEqual(data['enemies']['1642'], original['enemies']['1642'])
+        self.assertEqual(data['enemies']['1642']['pet_flag'], 0)
+        self.assertEqual(data['enemies']['90211']['clone_of'], 1642)
+        for tid, source, enemy, group, map_id, area_id, total in additions:
+            row = original['enemies'][str(source)]
+            self.assertEqual((row['template_id'], row['level_min'], row['level_max']), (tid, 1, 1))
+            self.assertEqual(original['templates'][str(tid)]['pet_flag'], 1)
+            self.assertEqual(data['enemies'][str(enemy)]['pet_flag'], 1)
+            for key in ['tactics', 'condition', 'experience', 'drops']:
+                self.assertEqual(data['enemies'][str(enemy)][key], row[key])
+            added = data['groups'][str(group)]
+            self.assertEqual(added['enemies'], [dict(id=enemy, weight=1)])
+            self.assertEqual(added['rare']['origin'], 'added')
+            area = next(a for a in data['areas'] if (a['map_id'], a['id']) == (map_id, area_id))
+            self.assertIn(dict(id=group, weight=1), area['groups'])
+            ordinary = sum(g['weight'] for g in area['groups'] if str(g['id']) in data['groups']
+                           and data['groups'][str(g['id'])]['requires_item'] < 0
+                           and data['groups'][str(g['id'])]['excludes_item'] < 0)
+            self.assertEqual(ordinary, total)
+            self.assertTrue(0.005 < 1 / ordinary < 0.015)
+
     def rare_fixture(self):
         area = dict(id=5, map_id=9, groups=[dict(id=1, weight=3), dict(id=2, weight=1)])
         other = dict(id=5, map_id=8, groups=[])

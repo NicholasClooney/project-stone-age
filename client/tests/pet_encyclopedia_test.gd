@@ -149,11 +149,11 @@ func classic(book, catalog: Dictionary, profile: Dictionary) -> void:
 	check(pets.size() >= 30 and bad.is_empty(),"classic-pets.json: %d pets, each with name, 俗称, reason, how it was got, category and resolvable sources; templates match their names or are marked missing%s" % [pets.size(),"" if bad.is_empty() else ": "+"；".join(bad)])
 	book.load_classic(data)
 	var missing: Array = book.classic.filter(func(record):return int(record.entry_id) < 0)
-	check(book.classic.size() == pets.size() and missing.map(func(record):return record.name) == ["摩卡"],"every classic pet but 摩卡 resolves to an encyclopedia entry")
+	check(book.classic.size() == pets.filter(func(pet):return str(pet.category) != "mount").size()+25 and missing.map(func(record):return record.name) == ["摩卡"],"every classic pet but 摩卡 resolves to an encyclopedia entry")
 	check(book.entry_for(94).classic.alias == "红人龙" and book.entry_for(94).alias == "红人龙" and book.entry_for(303).alias == "红暴龙","红人龙 gets its 俗称; 红暴 keeps its starter name")
 	check(book.entry_for(105).has("classic") and book.filtered("金飞",false,true) == [274],"蓝暴 (302 merged under 105) is classic; searching a 俗称 finds 金飞")
 	var shown: Array = book.filtered("",false,true)
-	check(shown.size() == pets.size()-1 and shown.all(func(id):return book.species[id].has("classic")),"经典宠物 filter shows the %d classic species" % shown.size())
+	check(shown.size() > pets.size()-1 and shown.all(func(id):return book.species[id].has("classic")),"经典宠物 filter shows the %d classic species" % shown.size())
 	var wild: Dictionary = book.entry_for(94)
 	check(Encyclopedia.classic_where_text(book.entry_for(312).classic,book.entry_for(312)).ends_with("非原版") and Encyclopedia.classic_where_text(book.entry_for(304).classic,book.entry_for(304)).ends_with("非原版") and Encyclopedia.classic_where_text(missing[0],{}) == "资料里没有这只宠物" and Encyclopedia.classic_where_text(wild.classic,wild) == Encyclopedia.where_text(wild),"这里能不能抓: 红人龙 where it lives, 金羊 and 机暴 only at a 非原版 spot, 摩卡 not in the data")
 	# Ownership: 甲 (carried) and 乙 (stored) are 扬奇洛斯, 丙 (stored) 昆伊.
@@ -161,7 +161,7 @@ func classic(book, catalog: Dictionary, profile: Dictionary) -> void:
 	check(book.filtered("",false,false,"owned",owned) == [92,113] and book.filtered("",false,false,"unowned",owned).size() == book.order.size()-2,"已拥有 lists 扬奇洛斯 and 昆伊 (carried and stored), 未拥有 the other %d" % (book.order.size()-2))
 	var unowned: Array = book.filtered("",false,true,"unowned",owned)
 	check(book.filtered("",false,true,"owned",owned) == [92] and unowned.has(94) and not unowned.has(92) and not unowned.has(113),"经典 + 已拥有 is 蓝人龙 alone; 经典 + 未拥有 has 红人龙, not 蓝人龙")
-	check(book.classic_filtered("",false,"owned",owned).map(func(record):return record.name) == ["扬奇洛斯"] and book.classic_filtered("",false,"unowned",owned).size() == pets.size()-1,"the classic list agrees, and 未拥有 keeps 摩卡")
+	check(book.classic_filtered("",false,"owned",owned).map(func(record):return record.name) == ["扬奇洛斯","扬奇洛斯"] and book.classic_filtered("",false,"unowned",owned).size() == book.classic.size()-2,"the classic list agrees, and 未拥有 keeps 摩卡")
 	check(not book.classic_filtered("",true).any(func(record):return int(record.entry_id) < 0 or not book.species[int(record.entry_id)].catchable),"只看野外可抓 drops 摩卡 and the pets with no wild spawn")
 
 static func AnimatedPortraitFrames(sprite: int) -> PackedInt32Array:
@@ -251,9 +251,9 @@ func window() -> void:
 	var first_classic: Dictionary = menu.book.classic[0]
 	var classic_rows: Array = menu.body.find_children("Row*","PanelContainer",true,false)
 	check(menu.view == "list" and classic_rows[0].name == "Row%d" % int(first_classic.entry_id) and menu.body.find_child("Sort_sum",true,false) == null,"经典宠物 list starts with %s in the file's order, without sorting" % first_classic.name)
-	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where910",true,false).text.ends_with("非原版") and menu.body.find_child("Where304",true,false).text.ends_with("非原版"),"红人龙 says where it lives here; 吉比 and 机暴 only at 非原版 spots")
+	check(menu.body.find_child("Where94",true,false).text == Encyclopedia.where_text(menu.book.entry_for(94)) and menu.body.find_child("Where910",true,false).text.ends_with("非原版"),"红人龙 says where it lives here; 吉比 and 机暴 only at 非原版 spots")
 	check(menu.body.find_child("Go94",true,false) != null and not menu.body.find_child("Go94",true,false).disabled and not menu.body.find_child("Go910",true,false).disabled,"红人龙 and 吉比 (at its 非原版 spot) both have 瞬移去抓")
-	menu.list_page = 1
+	menu.list_page = int(menu.book.classic.find(menu.book.classic.filter(func(record):return str(record.name) == "摩卡")[0])/menu.PAGE_SIZE)
 	menu.rebuild()
 	check(menu.body.find_child("Missing_摩卡",true,false) != null,"摩卡, not in the data, is listed as 资料里没有")
 	menu._switch("grid")

@@ -215,18 +215,62 @@ static func _aliases(pets: Dictionary) -> Dictionary:
 ## Attaches the classic list (classic-pets.json): each found entry gets
 ## `classic` (its record) and, when it has no player name yet, the record's
 ## 俗称 as alias; records whose template is missing keep entry_id -1.
-func load_classic(data: Dictionary) -> void:
+func load_classic(data: Dictionary, riding_data: Variant = null) -> void:
 	classic.clear()
+	for entry in species.values():entry.erase("classic")
 	classic_categories = data.get("categories",[]).duplicate(true)
+	var historical := {}
 	for raw in data.get("pets",[]):
 		var record: Dictionary = raw.duplicate(true)
 		var template = record.get("template_id",null)
 		var entry: Dictionary = entry_for(int(template)) if template != null else {}
 		record.entry_id = int(entry.id) if not entry.is_empty() else -1
-		if not entry.is_empty() and not entry.has("classic"):
+		if not entry.is_empty():
+			historical[int(entry.id)] = record
 			entry.classic = record
 			if str(entry.alias).is_empty():entry.alias = str(record.get("alias",""))
+		if str(record.get("category","")) != "mount":classic.append(record)
+	# Membership comes from indexed native pairs, never a second pet whitelist.
+	var riding: Dictionary = preload("res://scripts/riding.gd").index() if riding_data == null else riding_data
+	var sprites := {}
+	for pair in riding.get("pairs",{}).values():
+		if riding.get("composites",{}).has(str(int(pair.get("sprite",-1)))):sprites[int(pair.pet)] = true
+	var sprite_ids: Array = sprites.keys()
+	sprite_ids.sort()
+	for sprite in sprite_ids:
+		var variants: Array = order.filter(func(id):return int(species[id].sprite) == int(sprite) and not str(species[id].name).begins_with("新手"))
+		if variants.is_empty():continue
+		var native_name := str(riding.get("names",{}).get(str(sprite),""))
+		variants.sort_custom(func(a,b):
+			var am := str(species[a].name) == native_name
+			var bm := str(species[b].name) == native_name
+			if am != bm:return am
+			if historical.has(a) != historical.has(b):return historical.has(a)
+			return int(a) < int(b))
+		var entry: Dictionary = species[variants[0]]
+		var record: Dictionary = historical.get(int(entry.id),{}).duplicate(true)
+		record.merge({"name":entry.name,"alias":entry.alias,"family":entry.family_name,"template_id":entry.id,"entry_id":entry.id,
+			"category":"mount","sprite":sprite,"variant_ids":variants,"reason":"已导入原版骑乘图；同图成长变体分别保留。"},true)
+		if not record.has("obtained"):record.obtained = "原版获得方式未核实；本作出现地点见详情。"
+		for id in variants:
+			if species[id].has("classic"):continue
+			var variant: Dictionary = record.duplicate()
+			variant.merge({"name":species[id].name,"entry_id":id,"template_id":id,"alias":species[id].alias,
+				"obtained":"原版获得方式未核实；本作出现地点见详情。"},true)
+			variant.erase("original_wild")
+			variant.erase("note")
+			species[id].classic = variant
 		classic.append(record)
+	# Keep category order, including the original PK/rare records of mounts.
+	var ordered: Array = []
+	for category in classic_categories:
+		ordered.append_array(classic.filter(func(record):return str(record.category) == str(category.id)))
+	classic = ordered
+
+func mount_record(sprite: int) -> Dictionary:
+	for record in classic:
+		if record.has("variant_ids") and int(record.sprite) == sprite:return record
+	return {}
 
 ## Every ordinary wild row per template: the same areas and groups the hunt
 ## uses (pet_hunt_rules.gd candidates), capturable or not.
@@ -331,10 +375,25 @@ func classic_filtered(text: String = "", catchable_only: bool = false, ownership
 			if catchable_only or ownership == "owned":continue
 			if not wanted.is_empty() and not [record.name,record.get("alias",""),record.get("family","")].any(func(value):return str(value).contains(wanted)):continue
 		else:
-			var entry: Dictionary = species[id]
-			if catchable_only and not entry.catchable:continue
-			if not _owned_matches(owned.has(id),ownership):continue
-			if not wanted.is_empty() and not _matches(entry,wanted) and not str(record.name).contains(wanted):continue
+			var ids: Array = record.get("variant_ids",[id])
+			var matching: Array = ids.filter(func(key):
+				var entry: Dictionary = species[key]
+				return (not catchable_only or entry.catchable) and _owned_matches(owned.has(key),ownership) and (wanted.is_empty() or _matches(entry,wanted)))
+			if matching.is_empty():continue
+			if record.has("variant_ids"):
+				var selected: Dictionary = record.duplicate()
+				selected.variant_ids = matching
+				selected.entry_id = matching[0]
+				selected.name = species[matching[0]].name
+				selected.alias = species[matching[0]].alias
+				if int(selected.entry_id) != int(record.entry_id):
+					var detail: Dictionary = species[matching[0]].get("classic",{})
+					selected.obtained = detail.get("obtained","原版获得方式未核实。")
+					selected.erase("original_wild")
+					if detail.has("original_wild"):selected.original_wild = detail.original_wild
+					selected.erase("note")
+				result.append(selected)
+				continue
 		result.append(record)
 	return result
 
@@ -433,6 +492,7 @@ static func where_text(entry: Dictionary) -> String:
 static func classic_where_text(record: Dictionary, entry: Dictionary) -> String:
 	if entry.is_empty():return "资料里没有这只宠物"
 	if entry.catchable:return where_text(entry)
+	if not record.has("original_wild"):return where_text(entry)+" · 原版获得方式未核实"
 	if not bool(record.get("original_wild",true)):return "原版不能野外捕捉 · "+str(record.get("obtained",""))
 	return where_text(entry)+" · 原版可野外捕捉"
 
