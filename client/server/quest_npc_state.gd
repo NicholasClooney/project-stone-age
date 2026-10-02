@@ -21,6 +21,7 @@ func snapshot()->Dictionary:
   var entry:Dictionary=records[id]
   var public:Dictionary={}
   if entry.has("dead_until"):public.hidden=true
+  if entry.has("time_mode"):public.time_mode=entry.time_mode
   if entry.has("map_id"):public.map_id=int(entry.map_id);public.cell=entry.cell.duplicate()
   if not public.is_empty():result[id]=public
  return result
@@ -59,4 +60,16 @@ func spawn_areas(npcs:Array,enabled_events:Array)->bool:
   if str(rule.walkable).substr(offset,1)!="1":continue
   records[id]={"map_id":int(npc.map_id),"cell":[int(rect[0])+offset%width,int(rect[1])+int(offset/width)]}
   version+=1;changed=true
+ return changed
+
+func refresh_time_visuals(npcs:Array,enabled_events:Array)->bool:
+ var mode:="main" if preload("res://server/original_world_clock.gd").after_at(preload("res://server/original_world_clock.gd").hour()) else "changed"
+ var changed:=false
+ for npc in npcs:
+  if npc.get("handler","")!="TimeMan" or not npc.get("events",[]).any(func(e):return int(e) in enabled_events):continue
+  var id:=str(npc.id)
+  if records.get(id,{}).get("time_mode","")==mode:continue
+  var entry:Dictionary=records.get(id,{}).duplicate(true)
+  entry.time_mode=mode;records[id]=entry;changed=true
+ if changed:version+=1
  return changed
