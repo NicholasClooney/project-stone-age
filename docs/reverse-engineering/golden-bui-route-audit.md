@@ -1,6 +1,6 @@
 # 金布伊任务44自然路线审计
 
-原始revision：`0c58fb6683a49a178a8ad845a8c296c2cb83bd81`。`tools/golden_bui_quest_sources.json`锁定源SHA256。该审计不代表已通过运行时验收。
+原始revision：`0c58fb6683a49a178a8ad845a8c296c2cb83bd81`。`tools/golden_bui_quest_sources.json`锁定源SHA256。源审计与运行时验收分别记录；实际通过范围见文末集成验收。
 
 ## 边界与原入口
 
@@ -84,10 +84,44 @@
 
 ## 地图与资料隔离
 
-已用原2.5客户端Archive与现import_world.convert检查37张图：缺图像0，70个问答/猜拳/受理/退出NPC均有可走相邻格。30关逐一用原碰撞层保守四邻连通核验：入口可接近挑战NPC，过关坐标不阻塞且能到下一层楼梯，入口不能直接走到过关坐标。后续仍需真实后端走图以及390×844实际点击渲染。headless不构成像素验收。
+已用原2.5客户端Archive与现import_world.convert检查37张图：缺图像0，70个问答/猜拳/受理/退出NPC均有可走相邻格。30关逐一用原碰撞层保守四邻连通核验：入口可接近挑战NPC，过关坐标不阻塞且能到下一层楼梯，入口不能直接走到过关坐标。真实后端走图与390×844点击渲染见文末集成验收；headless不构成像素验收。
 
 公开NPC只存service_id与来源定位；完整规则与答案写`client/assets/legacy/server/golden-bui.json`，运行时由服务器读取。该文件为纯web本机后端进入core包，因此可下载，不宣称本机题库保密。LAN不信客户端答案/状态，dialogue仅公开当前题文和选项，私有state仅在服务器pending。
 
 ## 当前验证
 
 原来源Python测试6项通过；纯plan Godot测试覆盖21个问答关全对/全错、3路线9个猜拳关平/胜/败与票扣除、受理等级边界及确认时门票复核。尚未接公共Backend、真实存盘失败/双设备，尚未运行渲染截图。
+
+## 素材验证与重新导入
+
+原敌人模板672–677分别用100400、100431、100405、100436、100100、100090。三个造型100405/100436/100100此前不在battle index，已用现有定向导入器从原2.5资料补齐，非替代美术。18种真实enemy actor均通过TroopArt可渲染检查与GameSession开战配置，三组708–710随机整队均可显示。
+
+合入后主工作树需在重启前运行原有导入命令（原资源不提交）：
+
+```sh
+.tools/asset-venv/bin/python tools/import_early_quests.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+.tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --fallback-source .tools/legacy/extracted/SA8.0-20260803
+.tools/asset-venv/bin/python tools/import_encounter_art.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --output client/assets/legacy --sprites 100405 100436 100100
+.tools/asset-venv/bin/python tools/pack_frame_sheets.py battle --sprites 100405 100436 100100
+.tools/asset-venv/bin/python tools/palette_images.py
+.tools/asset-venv/bin/python tools/plan_web_packs.py
+./scripts/run.sh --headless --editor --import --quit
+```
+
+完整build已在main131d676费用底座上通过；Python来源测试增至7项，包含原购票LV公式与两个领奖实例。手机控件目标高度44px；离屏测试不能验证实体软键盘。
+
+定向 `import_encounter_art.run_selected` 自身已经 `save_sheets` 并 `split_battle`；额外局部pack命令已实际验证支持上述格式，并自动再次split。三个sheet均P模式、透明索引0，无需再对battle/sheets全目录做palette_images；上方palette_images默认针对新地图共享images，须在world导入后运行。37图world与quest静态NPC生成先于最后plan/editor步骤。
+
+逐帧与原2.5解码核对：每个sprite256帧，共768帧，动作数据完全一致；每帧alpha与所有可见RGB像素一致。调色板会规范化完全透明像素隐藏RGB，不以这些不可见字节相等作为保真指标。定向pack后，三个PNG分别只归sprite-100405/100436/100100包，三个runtime sprites JSON归core；server/golden-bui.json归core，符合纯web本机模式可下载的已声明边界。headless editor import通过，未开窗口。
+
+## 完整入口的集成验收
+
+正式 `client/data/quest-modules.json` 通过builder白名单启用44；临时validation registry只用于公共注册落地前的测试，不是部署步骤。导入器必须将模块地图加入实际quest_maps的kind/dev_only分类；否则挑战层会误标interior，显式wild_encounter虽成功，生产走动却不会发field_step。此次集成已发现并由公共底座修复该缺陷。
+
+- `golden_bui_route_test` 从2000/4000原门口出发，按原碰撞逐格report_position和原portal走图，完成三个等级入口、正确石币收费、30个挑战层、实际field_step随机遇敌、原enemy战斗结算掉2752/2751、两实例2753及enemy14/template12/END44。柜台NPC隔着原不可走柜台，使用公共原对话两格范围，不移动NPC或改碰撞。
+- 同套完整路线对三档真实预生成掉落、2753领取及最终宠物兑换制造真实文件系统保存失败，检查完整profile回滚；随机战保留结算待重试，成功后重复close/旧兑换token不再发券或宠物。
+- `golden_bui_transactions_test` 使用真实Backend和两条localhost WebSocket，覆盖入场/答题/无票胜利保存失败、取消、旧token、跨设备覆盖、断线重连、恶意客户端答案/actions注入及公开snapshot/dialogue无服务私态。
+- `golden_bui_walking_test` 使用真实远程GameScene，在800/820/840上经生产walk_to、GameAreas.handle_arrival及field_step自然触发原三档随机敌群；额外断言地图field且非dev_only。它补足纯Backend走图不能证明客户端遇敌入口正常的边界。
+- `golden_bui_ui_test` 在真实静音离屏OpenGL渲染器的390×844窗口运行，无本地backend，通过鼠标事件点击原NPC和服务选项，通过键盘事件输入实际原题答案；逐张检查题文、选项、输入框、无票原版行为说明和猜拳三选项，包括滚动后末尾内容。触控高度至少44px，父Scroll在屏内；没有声称验证实体手机软键盘。
+
+上述六个GDScript定向suite已加入scripts/test.sh；普通headless运行只能验证流程/布局断言，设置STONE_AGE_PROOF_DIR时必须使用真实渲染器才生成像素证据。素材、原资料和截图不提交。全量测试由父协调在最终整合后统一运行。
