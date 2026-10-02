@@ -9,7 +9,7 @@ func run():
  game.profile_persistence=false;root.add_child(game);await process_frame
  var catalog=game.world_catalog
  check(catalog.residents.any(func(n):return int(n.map_id)==1000 and n.role=="resident") and catalog.residents.any(func(n):return int(n.map_id)==10202 and n.role=="gate"),"existing Samgir residents and tunnel guards retained")
- var counts:Dictionary={5100:2,5101:5,5103:6,5105:2,5106:5}
+ var counts:Dictionary={5100:2,5101:5,5103:6,5105:2,5106:6}
  for id in counts:
   check(game.dev_visit(id),"Dana map loads %d"%id)
   await process_frame

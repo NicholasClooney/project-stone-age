@@ -27,6 +27,7 @@ func snapshot(backend) -> Dictionary:
    elif event==2:shell_steps(backend,profile,quest)
    elif event in [15,16]:doctor_steps(backend,profile,quest)
    elif event==18:wood_steps(backend,profile,quest)
+   elif event in [28,29,30,31,54]:preload("res://server/brothers_helper.gd").steps(self,backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
   for step in quest.steps:step.quest_id=int(job.id)
@@ -302,7 +303,7 @@ func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  var neighbours: Array[Vector2i] = []
  var region:Array=npc.get("area_rect",[])
  if str(npc.id).is_empty() and safe(data,target,occupied,links):neighbours.append(target)
- for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+ for offset in preload("res://scripts/npc_interaction.gd").offsets():
   var cell: Vector2i = target+offset
   if safe(data,cell,occupied,links) and (region.is_empty() or cell.x>=int(region[0]) and cell.y>=int(region[1]) and cell.x<=int(region[2]) and cell.y<=int(region[3])):neighbours.append(cell)
  if neighbours.is_empty():return {}

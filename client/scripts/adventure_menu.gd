@@ -681,6 +681,11 @@ func inventory_panel(profile: Dictionary) -> void:
 			original_recovery_buttons(profile)
 		else:description=label(str(data.get("description","")),Vector2(15,354),239,14)
 		description.name="OriginalItemDescription"
+		if int(data.get("id",0)) in [2518,2519,2520,2525,2526,2532,2547,2551]:
+			description.add_theme_font_size_override("font_size",10)
+			description.tooltip_text=description.text
+			description.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+			description.size.x=239
 		var ident:=int(originals[selected_original_item])
 		if OriginalEquipment.ITEMS.has(ident) and selected_original_item<instances.size():
 			description.position.y=348

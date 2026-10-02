@@ -23,7 +23,7 @@ func fresh():
 	return b
 func run() -> void:
 	var public_backend=Backend.new()
-	check(public_backend.quest_catalog.enabled_events==[1,2,4,15,16,18,19] and public_backend.quest_catalog.active_npcs().size()==public_backend.quest_catalog.npcs.size()+2,"public catalog retains all reviewed herb, shell, adult, doctor and wood NPCs plus two independent beauticians")
+	check(public_backend.quest_catalog.enabled_events==[1,2,4,15,16,18,19,28,29,30,31,54] and public_backend.quest_catalog.active_npcs().size()==public_backend.quest_catalog.npcs.size()+2,"public catalog retains all reviewed herb, shell, adult, doctor and wood NPCs plus two independent beauticians")
 	public_backend.free()
 	migration()
 	for bit in range(4):direction(bit)

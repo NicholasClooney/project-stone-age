@@ -31,7 +31,7 @@ var origin_cell := Vector2i.ZERO
 var prior_pause := false
 
 func setup(owner: Node, root: Control, content: Label) -> void:
-	world=owner;overlay=root;body=content;panel=body.get_parent()
+	world=owner;overlay=root;body=content;panel=body.get_parent().get_parent()
 	if world.link.has_signal("disconnected"):world.link.disconnected.connect(close)
 
 func open(npc_id: String) -> void:
@@ -62,7 +62,8 @@ func _receive(reply: Dictionary, expected: int) -> void:
 	var dialogue: Dictionary=reply.get("dialogue",{})
 	if dialogue.is_empty():close();return
 	token=str(dialogue.get("token",""))
-	body.text=str(dialogue.get("name",""))+"\n\n"+str(dialogue.get("text",""))
+	body.get_parent().scroll_vertical=0
+	body.text=str(dialogue.get("name",""))+"\n\n"+str(dialogue.get("text","")).strip_edges()
 	for button in buttons:button.queue_free()
 	buttons.clear()
 	var choices: Array=dialogue.get("choices",[])

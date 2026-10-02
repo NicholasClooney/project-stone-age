@@ -16,6 +16,8 @@ from world_review import load_reviews, read_reviewed_portals, merge_portals
 from world_fallback import FallbackArchive
 from world_components import finalize_reviewed_maps
 
+from import_brothers_quests import MAPS as BROTHERS_MAPS, SPEC as BROTHERS_SPEC
+QUEST_MAPS = set(BROTHERS_MAPS)
 REGION_REVIEWS = load_reviews()
 REVIEWED_REGION_MAPS = {i for r in REGION_REVIEWS.values() for i in r["maps"] if str(i) not in r.get("deferred",{})}
 REVIEWED_INTERIORS = {i for r in REGION_REVIEWS.values() for i in r.get("interiors",[])}
@@ -138,7 +140,8 @@ def ordinary_portals(portals, ordinary):
     return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary
             and (300 not in (p['from_map'], p['to_map'])
                  or (p['from_map'] in (5000, 5100) or p['to_map'] in (5000, 5100))
-                 or p['from_map'] in REVIEWED_REGION_MAPS or p['to_map'] in REVIEWED_REGION_MAPS)]
+                 or p['from_map'] in REVIEWED_REGION_MAPS or p['to_map'] in REVIEWED_REGION_MAPS
+                 or p['from_map'] in QUEST_MAPS or p['to_map'] in QUEST_MAPS)]
 
 
 def require_seimu_permits(portals):
@@ -182,6 +185,8 @@ SCENIC_DOOR_CHOICES = {
     (200,285,926):(20601,9,59), (200,432,536):(20701,0,23),
     (21215,26,11):(21315,52,59), (21315,53,59):(21215,26,11),
     (21016,13,21):(21011,5,4),
+    (300,343,191):(31701,29,49),
+    (300,239,98):(31901,0,43), (31901,71,6):(31902,0,4),
 }
 
 
@@ -315,6 +320,10 @@ def run(source, reference, output, fallback_source=None):
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
     all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
     all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS))
+    # Restored NPC gates now transact through original_quests; scenery portals
+    # must not bypass their item/flag checks.
+    restored_scripts=json.loads(BROTHERS_SPEC.read_text())["scripts"]
+    all_portals=[p for p in all_portals if p.get("gate_source") not in restored_scripts]
     maps={}; variants={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
         if path.is_file() and path.read_bytes()[:6]==b'LS2MAP':
@@ -322,7 +331,7 @@ def run(source, reference, output, fallback_source=None):
             variants.setdefault(ident,[]).append(path)
             if ident in maps and maps[ident].read_bytes()!=path.read_bytes():conflicting.add(ident)
             maps[ident]=path
-    for review in REGION_REVIEWS.values():
+    for review in list(REGION_REVIEWS.values()) + [json.loads(BROTHERS_SPEC.read_text())]:
         for key, record in review.get('map_sources',{}).items():
             ident=int(key);chosen=reference/record['path'];raw=chosen.read_bytes()
             if hashlib.sha256(raw).hexdigest()!=record['sha256']:
@@ -330,7 +339,7 @@ def run(source, reference, output, fallback_source=None):
             if any(p.read_bytes()[:8]+p.read_bytes()[40:]!=raw[:8]+raw[40:] for p in variants.get(ident,[])):
                 raise ValueError(f'Reviewed alias has different map geometry: {ident}')
             maps[ident]=chosen;conflicting.discard(ident)
-    ordinary=select_connected_maps(maps,all_portals)
+    ordinary=select_connected_maps(maps,all_portals) | QUEST_MAPS
     selected=ordinary | DEV_TRAINING_MAPS
     if selected & conflicting:raise ValueError(f'Conflicting selected map IDs: {sorted(selected & conflicting)}')
     absent=selected-maps.keys()
@@ -373,13 +382,13 @@ def run(source, reference, output, fallback_source=None):
         arrival_region=reachable_cells(data,entrance)
         occupied=[npc['cell'] for npc in residents if npc['map_id']==ident]
         spawn=safe_spawn(data,preferred.get(ident,entrance),exits+occupied,arrival_region)
-        kind='village' if ident in TOWNS else 'interior' if ident in REVIEWED_INTERIORS else 'dungeon' if ident in (JYARUGA_SCENIC_MAPS | REVIEWED_REGION_MAPS) else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
+        kind='village' if ident in TOWNS else 'interior' if ident in REVIEWED_INTERIORS else 'dungeon' if ident in (JYARUGA_SCENIC_MAPS | REVIEWED_REGION_MAPS | QUEST_MAPS) else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.map',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
         owner=settlement_owner(ident,maps)
         if owner:metadata[str(ident)]['village_id']=owner
-        if ident in DEV_TRAINING_MAPS:metadata[str(ident)]['dev_only']=True
+        if ident in DEV_TRAINING_MAPS and ident not in QUEST_MAPS:metadata[str(ident)]['dev_only']=True
         for p in portals:
             points=[]
             if p['from_map']==ident:points.append(('cell',p['cell']))
@@ -402,7 +411,7 @@ def run(source, reference, output, fallback_source=None):
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    removed=finalize_reviewed_maps(output,metadata,portals,residents,reports,REVIEWED_REGION_MAPS,reachable_cells,safe_spawn)
+    removed=finalize_reviewed_maps(output,metadata,portals,residents,reports,REVIEWED_REGION_MAPS-QUEST_MAPS,reachable_cells,safe_spawn)
     unsupported.extend(dict(p,reason='Original map has no reachable reviewed entry/return component') for p in portals if p['from_map'] not in removed and p['to_map'] in removed)
     portals=[p for p in portals if p['from_map'] not in removed and p['to_map'] not in removed]
     if removed:print(f'Unreachable reviewed maps remain deferred: {sorted(removed)}',flush=True)

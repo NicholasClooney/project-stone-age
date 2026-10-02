@@ -58,7 +58,7 @@ func approach(index: int) -> void:
 	var cell := Vector2i(entries[index].cell[0],entries[index].cell[1])
 	var start: Vector2i = world.target_cell if world.moving else world.cell
 	var best: Array[Vector2i] = []
-	var offsets := [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]
+	var offsets: Array = preload("res://scripts/npc_interaction.gd").offsets() if entries[index].get("role","")=="quest" else [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]
 	if entries[index].get("role", "")=="trainer":offsets.append_array([Vector2i(-2,0),Vector2i(2,0),Vector2i(0,-2),Vector2i(0,2)])
 	for offset in offsets:
 		var destination: Vector2i = cell+offset
@@ -77,7 +77,7 @@ func _process(_delta: float) -> void:
 	var point := Vector2i(entries[pending].cell[0],entries[pending].cell[1])
 	var distance: Vector2i = (world.cell-point).abs()
 	var reach := 2 if entries[pending].get("role", "")=="trainer" else 1
-	if distance.x+distance.y<=reach:
+	if (maxi(distance.x,distance.y)<=2 if entries[pending].get("role","")=="quest" else distance.x+distance.y<=reach):
 		selected = pending
 		pending = -1
 		_open()
@@ -151,18 +151,35 @@ func _build_dialogue(root: Control) -> void:
 	panel.size = Vector2(384,240)
 	panel.scale = Vector2.ONE*world.classic_hud.SCALE
 	panel.position = Vector2((1280-384*world.classic_hud.SCALE)/2,350)
+	var layout:=func():
+		var viewport:Vector2=world.get_viewport_rect().size
+		var factor:float=minf(world.classic_hud.SCALE,(viewport.x-16.0)/384.0)
+		panel.scale=Vector2.ONE*factor
+		panel.position=Vector2((viewport.x-panel.size.x*factor)/2,minf(350,viewport.y-panel.size.y*factor-16))
+	world.get_viewport().size_changed.connect(layout)
+	layout.call()
 	overlay.add_child(panel)
+	var backdrop:=ColorRect.new()
+	backdrop.color=Color(0.06,0.065,0.055,0.97)
+	backdrop.size=panel.size
+	backdrop.mouse_filter=Control.MOUSE_FILTER_IGNORE
+	panel.add_child(backdrop)
 	for y in range(5):
 		for x in range(6):
 			var row := 0 if y==0 else (2 if y==4 else 1)
 			var col := 0 if x==0 else (2 if x==5 else 1)
 			world.classic_hud.picture(panel,26001+row*3+col,Vector2(x*64,y*48))
 	body = world.text("",15)
-	body.position = Vector2(18,15)
-	body.size = Vector2(348,150)
+	body.add_theme_color_override("font_color",Color("f3eddd"))
+	body.custom_minimum_size.x=328
+	body.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	body.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	body.mouse_filter = Control.MOUSE_FILTER_IGNORE
-	panel.add_child(body)
+	var scroll:=ScrollContainer.new()
+	scroll.name="OriginalDialogueScroll"
+	scroll.position=Vector2(18,15);scroll.size=Vector2(348,140)
+	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
+	panel.add_child(scroll);scroll.add_child(body)
 	choice = Button.new()
 	choice.position = Vector2(80,166)
 	choice.size = Vector2(224,28)

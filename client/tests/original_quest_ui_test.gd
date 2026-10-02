@@ -19,7 +19,8 @@ func check(value: bool, message: String) -> void:
 
 func run() -> void:
 	var source=Catalog.new()
-	check(sorted_ids(source.npcs)==sorted_values(QUEST_IDS) and sorted_ids(source.service_npcs)==sorted_values(SERVICE_IDS),"Exact audited quest and service IDs exist")
+	source.enabled_events=[1,2,4,15,16,18,19]
+	check(sorted_ids(source.npcs.filter(func(n):return str(n.id) in QUEST_IDS))==sorted_values(QUEST_IDS) and sorted_ids(source.service_npcs)==sorted_values(SERVICE_IDS),"Exact audited quest and service IDs exist")
 	check(sorted_ids(source.active_npcs())==sorted_values(QUEST_IDS+SERVICE_IDS),"Public catalog activates all 13 reviewed quests and two independent services")
 	check(source.active_npcs().filter(func(npc):return str(npc.id).begins_with("sainasu/event/event02_")).size()==(2 if 2 in source.enabled_events else 0),"Public shell NPC activation follows tracked enabled events")
 	source.enabled_events=[]
@@ -48,13 +49,13 @@ func run() -> void:
 	var dialogue=travel.quest_dialogue
 	check(dialogue.active and world.paused_input,"Existing approach opens server-owned dialogue and pauses walking")
 	var request: Dictionary=npc.branches.filter(func(branch):return str(branch.type)=="REQUEST")[0]
-	check(travel.body.text.ends_with(str(request.texts.RequestMsg)),"Visible text is original server REQUEST text")
+	check(travel.body.text.ends_with(str(request.texts.RequestMsg).strip_edges()),"Visible text is original server REQUEST text")
 	dialogue.choose("no")
 	check(not dialogue.active and world.session.snapshot().original_items.is_empty(),"NO cancels without granting items")
 	travel.selected=index;travel._open()
 	dialogue.choose("yes")
 	check(world.session.snapshot().original_items==[2415],"Real backend gives one original flower instance")
-	check(travel.body.text.ends_with(str(request.texts.ThanksMsg)),"Server thanks phase is displayed")
+	check(travel.body.text.ends_with(str(request.texts.ThanksMsg).strip_edges()),"Server thanks phase is displayed")
 	dialogue.choose("ok")
 	world.adventure_menu.open_menu("inventory")
 	var menu=world.adventure_menu

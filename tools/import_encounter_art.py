@@ -43,8 +43,8 @@ def required_sprites(catalog, maps):
             if not group:continue
             conditioned = group['requires_item']>=0 or group['excludes_item']>=0
             for choice in group['enemies']:
-                # Only the audited early wood enemy is supported behind item gates.
-                if conditioned and int(choice['id']) != 563:continue
+                # Only the audited wood and golden-antelope messenger is supported behind item gates.
+                if conditioned and int(choice['id']) not in (563,1060):continue
                 enemy=catalog['enemies'].get(str(choice['id']),{})
                 template=catalog['templates'].get(str(enemy.get('template_id')), {})
                 if template:required.add(template['sprite'])

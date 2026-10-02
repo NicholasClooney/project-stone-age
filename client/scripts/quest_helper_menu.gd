@@ -39,6 +39,9 @@ func _process(_delta: float) -> void:
 		var label=find_child("QuestAutoMessage_%d" % quest_id,true,false)
 		if label is Label:label.text=str(auto.get("message",""))
 func rebuild() -> void:
+	var narrow:bool=world.get_viewport_rect().size.x<720
+	var content_width:float=minf(690,world.get_viewport_rect().size.x-50)
+	custom_minimum_size.x=content_width+30
 	last_model=refresh_key()
 	for child in get_children():remove_child(child);child.queue_free()
 	body=VBoxContainer.new()
@@ -54,7 +57,7 @@ func rebuild() -> void:
 	header.add_child(close)
 	body.add_child(world.text("本项目助手：贝壳、药草与成人仪式可自动确认原交易；按停止、关闭或 Esc 可停止。",12))
 	var scroll:=ScrollContainer.new()
-	scroll.custom_minimum_size=Vector2(690,430)
+	scroll.custom_minimum_size=Vector2(content_width,minf(430,world.get_viewport_rect().size.y-120))
 	scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED
 	body.add_child(scroll)
 	var list:=VBoxContainer.new()
@@ -69,7 +72,7 @@ func rebuild() -> void:
 		if not str(quest.get("completion_detail","")).is_empty():
 			var detail:Label=world.text(str(quest.completion_detail),12)
 			detail.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
-			detail.custom_minimum_size.x=640
+			detail.custom_minimum_size.x=content_width-30
 			list.add_child(detail)
 		if bool(quest.get("can_restart",false)):list.add_child(world.text("可重做：请与原 NPC 对话确认。",12))
 		if AutoPolicy.supports(int(quest.id),int(quest.event)):
@@ -86,7 +89,7 @@ func rebuild() -> void:
 			status.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
 			list.add_child(status)
 		for step in quest.get("steps",[]):
-			var row:=HBoxContainer.new()
+			var row:BoxContainer=VBoxContainer.new() if narrow else HBoxContainer.new()
 			list.add_child(row)
 			var caption: Label=world.text(("▶ " if step.get("current",false) else ("✓ " if step.get("done",false) else "· "))+str(step.label),14)
 			caption.size_flags_horizontal=Control.SIZE_EXPAND_FILL

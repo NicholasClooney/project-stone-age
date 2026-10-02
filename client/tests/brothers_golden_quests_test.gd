@@ -1,0 +1,165 @@
+extends SceneTree
+const Backend=preload("res://server/backend.gd")
+const Rules=preload("res://server/original_quests.gd")
+const Session=preload("res://server/game_session.gd")
+const Hub=preload("res://server/profile_hub.gd")
+const KUY="king/event69_1"
+var failures:=0
+func _initialize() -> void:call_deferred("run")
+func check(ok:bool,note:String) -> void:
+ print(("PASS: " if ok else "FAIL: ")+note)
+ if not ok:failures+=1
+func fresh():
+ var b=Backend.new()
+ for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
+ b.session.gm_raise_level(-1,80)
+ b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
+ preload("res://server/progression.gd").refresh(b.session._profile.player)
+ b.session._profile.player.hp=b.session._profile.player.max_hp
+ return b
+func talk(b,id:String) -> Dictionary:
+ b.original_quests.pending={}
+ var visit:Dictionary=b.handle({"type":"quest_visit","npc_id":id,"mode":"near"})
+ check(visit.ok,"safe original NPC "+id)
+ return b.handle({"type":"quest_talk","npc_id":id})
+func choose(b,r:Dictionary,choice:String) -> Dictionary:
+ return b.handle({"type":"quest_choose","token":r.get("dialogue",{}).get("token",""),"choice":choice})
+func trade(b,id:String) -> Dictionary:
+ var r:=talk(b,id)
+ var phase:String=str(b.original_quests.pending.get("phase",""))
+ if phase=="end":choose(b,r,"ok");return {"ok":true}
+ r=choose(b,r,"yes")
+ if r.has("dialogue"):r=choose(b,r,"ok")
+ return r
+func adult(b) -> void:
+ check(trade(b,"jaruga/event/event04_1").ok,"adult source request")
+ check(trade(b,"jaruga/event/event04_2").ok,"adult source jade")
+ check(trade(b,"jaruga/event/event04_1").ok and Rules.flag(b.session.snapshot(),"ended",4),"adult actual prerequisite")
+func brothers(b,choice:int=5) -> void:
+ check(trade(b,"giiru/event/ev28_0").ok,"brothers REQUEST28")
+ # Select the actual source branch that issues each correct paper.
+ for item in [2507,2509,2511,2513,2515]:
+  var options:Array=b.quest_helper.candidates(b,28,"GetItem",item)
+  check(not options.is_empty(),"source correct answer exists %d"%item)
+  check(trade(b,str(options[0].npc.id)).ok and item in b.session.snapshot().original_items,"real answer paper %d"%item)
+ check(trade(b,"giiru/event/ev28_end").ok and Rules.flag(b.session.snapshot(),"ended",28) and 2517 in b.session.snapshot().original_items,"five papers to crystal END28")
+ check(trade(b,"giiru/event/ev28_end").ok and Rules.flag(b.session.snapshot(),"now",31),"source REQUEST31")
+ check(trade(b,"genout/wpm_31705_25_8").ok and b.automation.position_map==31706,"source floor gate")
+ var guard:="300/sb_5b%d.arg"%choice
+ var before:Dictionary=b.session.snapshot()
+ check(trade(b,guard).ok and b.battle_open and b.session._pending.has("quest_guard"),"real original fixed guard battle")
+ check(b.session._pending.enemies[0].source_enemy_id==[1001,1012,1013,1014,1015][choice-1],"exact original guard enemy")
+ var location:Dictionary=before.location
+ b.save_path="user://missing-brothers/save.json"
+ fight(b)
+ check(not b.battle_state.get("settled",false) and b.session.snapshot().original_items==before.original_items and b.session.snapshot().completed_battles==before.completed_battles and b.session.snapshot().location==location,"guard failed save rolls back rewards and warp")
+ check(not b.handle({"type":"battle_close"}).ok,"failed settlement remains retryable")
+ b.save_path=""
+ check(b.handle({"type":"battle_close"}).ok and b.automation.position_map==31706 and b.automation.position_cell.y in [16,17],"guard retry commits exact original warp")
+ var reward_id:="giiru/event/ev28_ed%d"%choice
+ var before_reward:Dictionary=b.session.snapshot()
+ b.save_path="user://missing-brothers/save.json"
+ check(not trade(b,reward_id).ok and b.session.snapshot()==before_reward,"pet reward failed save preserves UID, crystal and flags")
+ b.save_path=""
+ var pet_copy:Dictionary=b.session.snapshot()
+ for i in range(Session.PET_CAPACITY-b.session._profile.pets.size()):b.session.gm_grant_pet(91)
+ check(not trade(b,reward_id).ok and 2517 in b.session.snapshot().original_items,"pet capacity preflight preserves crystal")
+ b.session._profile=pet_copy
+ var reward_reply:=choose(b,talk(b,reward_id),"yes")
+ var reward_token:String=str(reward_reply.get("dialogue",{}).get("token",""))
+ check(choose(b,reward_reply,"ok").ok and Rules.flag(b.session.snapshot(),"ended",31),"five-choice original reward END31")
+ check(not b.handle({"type":"quest_choose","token":reward_token,"choice":"ok"}).ok,"single-use final reward token")
+ var pet:Dictionary=b.session.snapshot().pets[-1]
+ check(pet.source_enemy_id==[54,57,55,56,481][choice-1] and pet.level==1,"exact source GetPet variant and level")
+ var snapshot:Dictionary=b.session.snapshot()
+ trade(b,"giiru/event/ev28_ed%d"%choice)
+ check(b.session.snapshot()==snapshot,"completed reward cannot repeat")
+func fight(b) -> void:
+ for i in range(100):
+  if not b.battle.snapshot().active:return
+  b.handle({"type":"battle_command","action":"attack","target":0})
+ check(not b.battle.snapshot().active,"actual battle completes")
+func golden(b,lost:=false) -> void:
+ check(trade(b,"giiru/event/event30_1").ok and Rules.flag(b.session.snapshot(),"now",30) and 2549 in b.session.snapshot().original_items,"quarry request and actual key")
+ check(trade(b,"genout/wpm_31903_39_4").ok and b.automation.position_map==31904,"key gate original warp")
+ check(trade(b,"giiru/event/event30_2").ok and Rules.flag(b.session.snapshot(),"now",54),"spirit request54")
+ trade(b,"giiru/event/event30_3");trade(b,"giiru/event/event30_4")
+ check(trade(b,KUY).ok and Rules.flag(b.session.snapshot(),"ended",30) and 2547 in b.session.snapshot().original_items,"live-bound Kuy source gives first mirror END30")
+ if lost:
+  check(b.handle({"type":"quest_discard","item_id":2547}).ok,"discard first mirror")
+  check(trade(b,KUY).ok and 2532 in b.session.snapshot().original_items,"source replacement mirror2532")
+ var rng:=RandomNumberGenerator.new();rng.seed=40
+ var area:Dictionary=b.encounter_catalog.area_at(31907,Vector2i(24,43))
+ check(b.encounter_catalog.roll_group(area,522,rng,[]).is_empty(),"source mirror item gate enforced")
+ var troop:Dictionary={}
+ for i in range(100):
+  troop=b.encounter_catalog.roll_group(area,521 if lost else 522,rng,b.session.snapshot().original_items)
+  if troop.get("enemies",[]).any(func(e):return int(e.source_enemy_id)==1060):break
+ check(troop.get("enemies",[]).any(func(e):return int(e.source_enemy_id)==1060 and e.generated_drops==[2548]),"real source group produces messenger and guaranteed eye")
+ var config:Dictionary=b.session.start_wild_battle_config(troop)
+ check(not config.is_empty(),"source encounter accepted")
+ b.open_battle(config);fight(b)
+ check(b.handle({"type":"battle_close"}).ok and 2548 in b.session.snapshot().original_items,"kill messenger actual authoritative loot")
+ check(trade(b,"giiru/event/event30_2").ok and Rules.flag(b.session.snapshot(),"now",29),"eye source REQUEST29")
+ check(trade(b,"giiru/event/event30_7").ok and b.automation.position_map==31910,"spirit messenger true chamber warp")
+ var before:Dictionary=b.session.snapshot()
+ var r:=choose(b,talk(b,"genout/wpm_31910_8_9"),"yes")
+ b.save_path="user://missing-brothers/save.json"
+ check(not choose(b,r,"ok").ok and b.session.snapshot()==before and b.automation.position_map==31910,"eye consumption and warp save rollback")
+ b.save_path=""
+ check(trade(b,"genout/wpm_31910_8_9").ok and not 2548 in b.session.snapshot().original_items and b.automation.position_map==31911,"correct original messenger consumes eye and moves")
+ check(trade(b,"giiru/event/event30_6").ok and Rules.flag(b.session.snapshot(),"ended",29) and 2551 in b.session.snapshot().original_items,"spirit source armor END29")
+ var count:int=b.session.snapshot().pets.size()
+ check(trade(b,KUY).ok and Rules.flag(b.session.snapshot(),"ended",54),"return actual mirror END54")
+ check(b.session.snapshot().pets.size()==count+(0 if lost else 1),"replacement never grants antelope")
+ if not lost:check(b.session.snapshot().pets[-1].source_enemy_id==355,"exact antelope enemy355")
+ var after:Dictionary=b.session.snapshot();trade(b,KUY)
+ check(b.session.snapshot().pets==after.pets and b.session.snapshot().next_pet_id==after.next_pet_id,"no repeat antelope; source may reissue2532 because NOW54 remains set")
+func run() -> void:
+ var b=Backend.new()
+ b.session.gm_raise_level(-1,30)
+ var low:=talk(b,"giiru/event/ev28_0")
+ check(str(b.original_quests.pending.phase)=="end" and not Rules.flag(b.session.snapshot(),"now",28),"original LV>30 boundary")
+ b.original_quests.pending={};b.session.gm_raise_level(-1,80)
+ trade(b,"giiru/event/ev28_0");trade(b,"giiru/event/ev28_1")
+ check(2508 in b.session.snapshot().original_items,"wrong answer gives original wrong paper")
+ trade(b,"giiru/event/ev28_end")
+ check(not 2508 in b.session.snapshot().original_items and not Rules.flag(b.session.snapshot(),"ended",28),"failed five-answer check removes papers without END28")
+ b.free();b=fresh()
+ Session.OriginalEquipment.add(b.session._profile,2548)
+ check(trade(b,"genout/wpm_31910_10_11").ok and not 2548 in b.session.snapshot().original_items and b.automation.position_map==31904 and b.automation.position_cell==Vector2i(53,30),"wrong original messenger consumes eye and returns exact source coordinate")
+ b.free();b=fresh()
+ for npc in b.quest_catalog.active_npcs():
+  if not npc.events.any(func(e):return int(e) in [28,29,30,31,54]):continue
+  check(FileAccess.file_exists("res://assets/legacy/"+str(npc.path)),"original NPC graphic "+str(npc.id))
+  check(not b.quest_helper.destination(b,npc,"near").is_empty(),"NPC reachable neighbour "+str(npc.id))
+ check(b.original_quests.npc_by_id("giiru/event/event30_5").is_empty() and not b.original_quests.npc_by_id(KUY).is_empty(),"actual create binding only")
+ adult(b);brothers(b);golden(b)
+ b.free()
+ b=fresh();adult(b);golden(b,true);brothers(b,1);b.free()
+ for pick in [2,3,4]:
+  b=fresh();brothers(b,pick);b.free()
+ b=fresh();Rules.set_flag(b.session._profile,"ended",28,true)
+ check(trade(b,"giiru/event/ev28_end").ok and 2517 in b.session.snapshot().original_items,"missing crystal recoverable via source REQUEST31")
+ check(b.session.save_game("user://brothers-reload.json"),"temporary crystal save")
+ var loaded=Session.new()
+ check(loaded.load_game("user://brothers-reload.json") and not 2517 in loaded.snapshot().original_items,"source logout crystal removed on authoritative reload")
+ b.free()
+ lan()
+ print("BROTHERS GOLDEN QUESTS: %d failures"%failures)
+ quit(1 if failures else 0)
+func lan() -> void:
+ var dir:="user://brothers-hub-%d"%OS.get_process_id()
+ DirAccess.make_dir_recursive_absolute(dir)
+ var hub=Hub.new(dir.path_join("accounts.json"));hub.tick=false;hub.backups=false;hub.share_dir=""
+ check(hub.start(),"LAN profile hub starts")
+ check(hub.handle(1,{"type":"create_profile","name":"Alice","pin":"1111"}).ok and hub.handle(2,{"type":"login","name":"Alice","pin":"1111"}).ok,"two devices share authority")
+ var b=hub.backend_of(1);b.session.gm_raise_level(-1,40)
+ b.handle({"type":"quest_visit","npc_id":"giiru/event/ev28_0","mode":"near"})
+ var one:Dictionary=hub.handle(1,{"type":"quest_talk","npc_id":"giiru/event/ev28_0"})
+ var two:Dictionary=hub.handle(2,{"type":"quest_talk","npc_id":"giiru/event/ev28_0"})
+ check(not hub.handle(1,{"type":"quest_choose","token":one.dialogue.token,"choice":"yes"}).ok,"second device invalidates first token")
+ check(hub.handle(2,{"type":"quest_choose","token":two.dialogue.token,"choice":"yes"}).ok and Rules.flag(hub.backend_of(1).session.snapshot(),"now",28),"shared source transition consistent")
+ hub.shut_down();hub.free()
+ for f in DirAccess.get_files_at(dir):DirAccess.remove_absolute(dir.path_join(f))
+ DirAccess.remove_absolute(dir)
