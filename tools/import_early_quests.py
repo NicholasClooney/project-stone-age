@@ -21,7 +21,14 @@ def source_text(reference, relative, spec):
     return raw.decode('gb18030')
 
 
-def parse_script(text):
+def parse_script(text, branch_indices=None):
+    if branch_indices is not None:
+        from quest_import_common import select_branches
+        selected, provenance = select_branches(text, branch_indices)
+        default, branches = parse_script(selected)
+        for branch, origin in zip(branches, provenance):
+            branch.update(origin)
+        return default, branches
     branches, current, default = [], None, ''
     for line in text.splitlines():
         line = line.strip()
@@ -165,6 +172,8 @@ def run(source, reference, output):
     result = catalog(reference, spec)
     from import_brothers_quests import extend
     result = extend(reference, result, parse_script)
+    from quest_import_common import extend_registered_modules
+    result = extend_registered_modules(reference, result)
     result["service_npcs"], result["provenance"]["charm_sources"] = charm_catalog(reference)
     for relative, expected in spec['client_sources'].items():
         if hashlib.sha256((Path(source)/relative).read_bytes()).hexdigest() != expected:

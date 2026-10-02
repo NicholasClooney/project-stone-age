@@ -13,6 +13,12 @@ func _init() -> void:
   for event in config.get("enabled_events", []):
    if (event is int or event is float) and float(event) == floor(float(event)) and int(event) > 0 and int(event) < 192:
     enabled_events.append(int(event))
+ var modules = JSON.parse_string(FileAccess.get_file_as_string("res://data/quest-modules.json"))
+ if modules is Dictionary and int(modules.get("version",0))==1:
+  for module in modules.get("modules",[]):
+   for event in module.get("enabled_events",[]):
+    if (event is int or event is float) and float(event)==floor(float(event)) and int(event)>0 and int(event)<192 and not int(event) in enabled_events:
+     enabled_events.append(int(event))
  if not FileAccess.file_exists(ROOT + "quests/catalog.json"): return
  var data = JSON.parse_string(FileAccess.get_file_as_string(ROOT + "quests/catalog.json"))
  if not data is Dictionary or int(data.get("version", 0)) != 1: return
