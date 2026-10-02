@@ -64,6 +64,15 @@ class QuestModuleTests(unittest.TestCase):
         for fixture in fixtures:
             spec=fixture['manifest'];result=common.load_quest_module(REFERENCE,spec)
             self.assertEqual(result['npcs'],fixture['npcs'])
+            if spec['id'] == 'munde-guard-fixture':
+                self.assertEqual({(d['enemy_id'],d['item_id'],d['probability']) for d in result['drops']},{(526,2482,10),(527,2483,10)})
+                self.assertEqual(len(result['drops']),2)
+                result['enabled_events']=[9]
+                merged=common.merge_quest_module(quests.catalog(REFERENCE),result)
+                self.assertTrue(merged['reviewed_drops'][spec['id']]['active'])
+                self.assertEqual(merged['reviewed_drops'][spec['id']]['entries'],result['drops'])
+                invalid=copy.deepcopy(spec);invalid['items']=[]
+                with self.assertRaisesRegex(ValueError,'guard reward item'):common.load_quest_module(REFERENCE,invalid)
             for npc in result['npcs']:
                 branch=npc['branches'][0]
                 self.assertEqual(branch['guard']['enemy_ids'],list(map(int,branch['actions']['Battle'].split(','))))

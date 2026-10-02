@@ -136,6 +136,17 @@ def load_quest_module(reference, manifest):
                 default, branches = parser(texts[PREFIX + script], script, review['events'])
                 if kind == 'npcenemy':
                     branches[0]['combat_audit'] = fixed_enemy_audit(reference, texts, branches[0]['guard']['enemy_ids'], spec.get('combat_audit'))
+                    guard=branches[0]['guard']
+                    if not set(guard.get('required_items', [])) <= set(spec['items']):
+                        raise ValueError('Unreviewed NPCEnemy required item')
+                    from import_encounters import drop_slots
+                    for enemy_id, record in branches[0]['combat_audit']['enemies'].items():
+                        for drop in drop_slots(record['raw_columns']):
+                            if drop['item_id'] not in spec['items']:
+                                raise ValueError('Unreviewed guard reward item')
+                            entry=dict(enemy_id=int(enemy_id),item_id=drop['item_id'],probability=drop['probability'],source=record['source'],source_line=record['source_line'],audit='Pinned NPCEnemy original drop; existing AI only')
+                            if entry not in result.setdefault('drops',[]):result['drops'].append(entry)
+
             else:
                 default, branches = parse_script(texts[PREFIX + script], review['branches'])
                 apply_branch_supplements(spec, script, branches)

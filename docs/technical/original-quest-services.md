@@ -131,3 +131,10 @@ and personal party_settlement retry handling are unchanged.
 Fixed 1x1 `borncenter` follows A's existing fixed-spawn interpretation; original
 NPC wandering is not simulated and is marked in source_spawn_mode. Larger
 spawn rectangles remain unsupported in this slice.
+
+Static NPCEnemy drop entries are derived from each guard's audited enemy rows.
+There is no duplicated hand-written `drops` probability list in the manifest:
+include every nonzero source item id in `items`, or import fails closed. The
+fragment emits deduplicated `drops` entries with enemy_id/item_id/probability,
+source/source_line/audit, consumed by the existing module reviewed_drops merge.
+Original probabilities and actor-birth RNG timing remain unchanged.
