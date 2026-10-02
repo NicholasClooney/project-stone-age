@@ -30,6 +30,14 @@ Messages:
 - An instruction the user gives directly to any agent wins; that agent tells the others what changed.
 - Original-source bugs: keep ones that only make play easier, with a "原版行为" note in UI/changelog; ask the user case by case about ones that affect progression or the economy (repeatable rewards, item/gold farming, skipping key gates or rebirth requirements). See the rule in [rebirth bonus quest audit](docs/reverse-engineering/rebirth-quest-bonus-audit.md) (「原版源码漏洞的通用处理规则」).
 
+### Coordinator watchdog
+
+While a multi-agent batch runs (currently: bonus quests, then the rebirth main line), the coordinator checks Codex's pane and every sub agent pane (`agents-projects-stone-age` tmux session) every 30 minutes with a scheduled job, plus `python3 tools/worktree_pool.py status`:
+
+- Idle with pending work (commits not forwarded for merging, waiting on an interface that has already landed, a free pool slot while planned tasks have not started): nudge Codex via `tmux-ask` with exactly what to do next.
+- Tell the main agent only when something waits on a permission prompt, needs a user decision, or the same nudge already failed once.
+- The scheduled job lives only in the coordinator's Claude session: re-create it after a restart. Stop it when the rebirth work is done or the user says so.
+
 ## Working in the main checkout (the coordinator session, not subagents)
 
 The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a fix or feature there is ready:
