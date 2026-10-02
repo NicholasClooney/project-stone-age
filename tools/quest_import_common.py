@@ -44,6 +44,42 @@ def instance_id(script, map_id, cell):
     return f'{script}@{int(map_id)}:{int(cell[0])}:{int(cell[1])}'
 
 
+def apply_branch_supplements(spec, script, branches):
+    """Project-authorized additions retain the exact source actions/texts."""
+    for extra in spec.get('supplements', []):
+        if extra.get('script') != script:
+            continue
+        if type(extra.get('branch')) is not int or not extra.get('annotation') or not extra.get('approval'):
+            raise ValueError('Missing supplement authorization evidence')
+        matches = [b for b in branches if b.get('source_branch_index') == extra.get('branch')]
+        if len(matches) != 1:
+            raise ValueError('Supplement branch is not selected')
+        branch = matches[0]
+        if 'project_supplement' in branch:
+            raise ValueError('Duplicate branch supplement')
+        allowed = {'script', 'branch', 'annotation', 'approval'}
+        if 'end_flags_add' in extra:
+            allowed.add('end_flags_add')
+            if (script != 'sainasu/event/event13_1' or extra['branch'] != 0
+                    or extra['end_flags_add'] != [14] or branch['actions'].get('EndSetFlg') != '13'):
+                raise ValueError('Unapproved completion flag supplement')
+        if 'confirmation_text' in extra:
+            allowed.add('confirmation_text')
+            if (script != 'sainasu/event/event13_2' or extra['branch'] != 0
+                    or branch['type'] != 'CLEAN' or branch['actions'].get('CleanFlg') != '13'
+                    or not isinstance(extra['confirmation_text'], str) or not extra['confirmation_text'].strip()):
+                raise ValueError('Unapproved CLEAN confirmation supplement')
+        if set(extra) - allowed or not ({'end_flags_add', 'confirmation_text'} & set(extra)):
+            raise ValueError('Unsupported branch supplement')
+        branch['source_actions'] = copy.deepcopy(branch['actions'])
+        branch['source_texts'] = copy.deepcopy(branch['texts'])
+        branch['project_supplement'] = copy.deepcopy(extra)
+        if 'end_flags_add' in extra:
+            branch['actions']['EndSetFlg'] = '13,14'
+        if 'confirmation_text' in extra:
+            branch['confirmation_text'] = extra['confirmation_text']
+
+
 def load_quest_module(reference, manifest):
     from import_early_quests import catalog, parse_script, source_text
     spec = json.loads(Path(manifest).read_text()) if isinstance(manifest, (str, Path)) else copy.deepcopy(manifest)
@@ -56,6 +92,8 @@ def load_quest_module(reference, manifest):
     result['module_id'] = spec['id']
     result['jobs'] = copy.deepcopy(spec.get('jobs', []))
     declared = spec['scripts']
+    if any(extra.get('script') not in declared for extra in spec.get('supplements', [])):
+        raise ValueError('Supplement script is not selected')
     seen = set()
     for create in spec['creates']:
         for ordinal, block in enumerate(re.findall(r'\{([^}]+)\}', texts[create])):
@@ -74,6 +112,7 @@ def load_quest_module(reference, manifest):
             if 'instances' in review and ident not in review['instances']:
                 continue
             default, branches = parse_script(texts[PREFIX + script], review['branches'])
+            apply_branch_supplements(spec, script, branches)
             events = review['events']
             if not events or any(type(e) is not int or not 0 < e < 192 for e in events):
                 raise ValueError('Invalid module events')

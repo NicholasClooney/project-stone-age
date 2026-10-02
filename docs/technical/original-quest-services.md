@@ -72,3 +72,24 @@ source slots, so forged item IDs or extra copies remain invalid. The existing
 also cover these reviewed quest-drop enemies, including failed-save close
 retry. No global group/group1 source is changed. Restart/reimport is required
 after changing module activation.
+
+## Authorized source supplements
+
+Static manifests may include a `supplements` array. Each entry identifies an
+original `script` and zero-based `branch`, and requires `annotation` and an
+`approval` document path. The importer currently permits exactly two reviewed
+Saton additions; this is not a general arbitrary-action override:
+
+- `sainasu/event/event13_1`, branch 0: `end_flags_add:[14]`, only when the source
+  action is `EndSetFlg:13`. The resulting transaction sets both 13 and 14.
+- `sainasu/event/event13_2`, branch 0: `confirmation_text`, only when source
+  `TYPE:CLEAN` and `CleanFlg:13` are unchanged. The existing yes/no token flow
+  presents this project-added confirmation; cancel changes nothing and yes
+  clears 13 only. User-authorized repeat rewards remain possible; 14 survives.
+
+Branches retain `source_actions`, `source_texts`, and `project_supplement` beside
+the effective actions/prompt. Source SHA checks continue to cover the untouched
+original file. Unknown flags, branches, scripts and supplement fields fail
+closed. See `client/tests/fixtures/original-quest-supplements.json` for the exact
+manifest shape and source-bound expected output. This fixture does not register
+the cave task or imply that its NPCEnemy handlers are already implemented.

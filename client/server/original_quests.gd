@@ -175,7 +175,7 @@ func talk(backend, id: String) -> Dictionary:
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
 	var keys := {"BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
-	var prompt := message(branch.texts,keys[phase])
+	var prompt := str(branch.get("confirmation_text",message(branch.texts,keys[phase])))
 	if branch.actions.has("DelStone"):
 		var fee := stone_cost(profile,str(branch.actions.DelStone))
 		if fee<0:return {"ok":false,"reason":"尚未支持的原费用。"}
