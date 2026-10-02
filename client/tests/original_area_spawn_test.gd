@@ -3,7 +3,15 @@ const State=preload("res://server/quest_npc_state.gd")
 var npc:Dictionary={}
 var now:=1000.0
 func install(b,seed_value:int)->void:
- b.quest_catalog.npcs.append(npc.duplicate(true));b.quest_catalog.enabled_events.append(35)
+ # A registered event35 may already have spawned during ProfileHub login.
+ # Replace only this fixture identity and its runtime state, never other NPCs.
+ b.quest_catalog.npcs=b.quest_catalog.npcs.filter(func(entry):return str(entry.id)!=str(npc.id))
+ b.quest_catalog.npcs.append(npc.duplicate(true))
+ if not 35 in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(35)
+ var state=b.original_quests.npc_state
+ var was_present:bool=state.records.erase(str(npc.id))
+ state.spawn_attempts.erase(str(npc.id));b.quest_catalog.npc_overrides.erase(str(npc.id))
+ if was_present:state.version+=1
  b.original_quests.npc_state.clock=func():return now
  b.original_quests.npc_state.spawn_rng.seed=seed_value
 func seed_for(walkable:bool)->int:
@@ -15,7 +23,14 @@ func seed_for(walkable:bool)->int:
  return -1
 func run()->void:
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-area-spawn.json"));npc=fixture.module.npcs[0]
- var b=Backend.new();install(b,seed_for(false))
+ var b=Backend.new();install(b,seed_for(true));b.original_quests.refresh_npc_state()
+ check(b.original_quests.npc_state.records.has(npc.id),"fixture starts with production-style already born NPC")
+ b.original_quests.npc_state.records["unrelated-fixture"]={"map_id":100,"cell":[1,1]}
+ b.original_quests.npc_state.spawn_attempts["unrelated-fixture"]=now
+ b.quest_catalog.npc_overrides["unrelated-fixture"]={"map_id":100,"cell":[1,1]}
+ install(b,seed_for(false))
+ check(b.quest_catalog.npcs.filter(func(entry):return str(entry.id)==str(npc.id)).size()==1,"fixture replaces registered identity without duplicate NPC")
+ check(b.original_quests.npc_state.records.has("unrelated-fixture") and b.original_quests.npc_state.spawn_attempts.has("unrelated-fixture") and b.quest_catalog.npc_overrides.has("unrelated-fixture"),"fixture reset preserves unrelated NPC runtime and projection")
  check(not b.quest_catalog.active_npcs().any(func(n):return n.id==npc.id),"area NPC absent until server chooses valid source point")
  var before:Dictionary=b.session.snapshot()
  check(b.original_quests.npc_by_id(npc.id).is_empty(),"one original blocked draw leaves NPC absent")
@@ -62,6 +77,9 @@ func lan_birth()->void:
   links[i].login({"type":"login","name":"Alice" if i<2 else "Bob","pin":"1234"},func(_reply):pass)
   check(await Wait.until(self,func():poll();return links[i].online),"area login")
  var a=hub.backends.alice;var other=hub.backends.bob
+ # Reproduce successful login-time creation even before event35 is registered.
+ for backend in [a,other]:
+  install(backend,seed_for(true));backend._publish()
  install(a,seed_for(true));install(other,seed_for(false))
  a._process(0.0);other._process(0.0)
  for link in links:await request(link,{"type":"ping"})
