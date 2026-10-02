@@ -1,0 +1,84 @@
+{
+  "version": 1,
+  "id": "four-jewels",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/extra/event/hougyoku.create": "9030d0f15d4fc54a895d318ec22412764353d4480b46c1efdec226c4adf456bf",
+    "gmsv/data/npc/extra/event/hougyoku": "6b86fbde4c4e99377d3eab23db2525b1be38885562f8482a700de270c9c00437",
+    "gmsv/data/group.txt": "b1947ee3cad62d9f67d7aa0a4af0258c6d7fd35365883fc0fca0b9ec7ffee926",
+    "gmsv/data/group1.txt": "0bb651d20c4d8a89db7467a98722c337f51c235cfa853ab27a4be61dcc861b29",
+    "gmsv/data/encount.txt": "534466129cf7e17787d1990a885171d542463d279b4fc426494bb25930c1f4b5",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/include/enemy.h": "ad31a78f8171d6a72bbf96c70f498fbed05ece7ede154da8af3a3987fc0ab883",
+    "gmsv/battle/battle_ai.c": "22b6831745071f90ce7edfee67346ebac0226ee43a4700e3b3e8dd3cc870e4fb"
+  },
+  "creates": [
+    "gmsv/data/npc/extra/event/hougyoku.create"
+  ],
+  "scripts": {
+    "extra/event/hougyoku": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        45
+      ]
+    }
+  },
+  "items": [
+    2760,
+    2761,
+    2762,
+    2763,
+    2764,
+    2765
+  ],
+  "reward_enemies": [],
+  "jobs": [
+    {
+      "id": 31,
+      "event": 45,
+      "title": "四宝玉之迷",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "drops": [
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1305,
+      "item_id": 2760,
+      "probability": 100,
+      "audit": "docs/reverse-engineering/four-jewels-quest.md"
+    },
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1306,
+      "item_id": 2761,
+      "probability": 500,
+      "audit": "docs/reverse-engineering/four-jewels-quest.md"
+    },
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1307,
+      "item_id": 2763,
+      "probability": 500,
+      "audit": "docs/reverse-engineering/four-jewels-quest.md"
+    },
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1308,
+      "item_id": 2762,
+      "probability": 100,
+      "audit": "docs/reverse-engineering/four-jewels-quest.md"
+    }
+  ]
+}

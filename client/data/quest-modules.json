@@ -32,6 +32,13 @@
         37,
         38
       ]
+    },
+    {
+      "id": "four-jewels",
+      "manifest": "tools/four_jewels_quest_sources.json",
+      "enabled_events": [
+        45
+      ]
     }
   ]
 }
