@@ -14,6 +14,16 @@ class GoldenBuiImportTests(unittest.TestCase):
         cls.spec=json.loads(gold.SPEC.read_text())
         cls.data=gold.build_sidecar(REFERENCE)
 
+    def test_complete_builder_static_fees_rewards_and_instances(self):
+        data=gold.build(REFERENCE)
+        self.assertEqual(len(data["npcs"]),78)
+        self.assertEqual(data["reward_pets"]["14"]["template_id"],12)
+        for room in [810,850]:
+            self.assertIn(f"quiz/equiz_02@{room}:28:16",[n["id"] for n in data["npcs"]])
+        fees={b["actions"]["DelStone"] for n in data["npcs"] for b in n.get("branches",[]) if "DelStone" in b["actions"]}
+        self.assertEqual(fees,{"LV*20","LV*40"})
+        self.assertEqual({n["map_id"] for n in data["npcs"] if n.get("source_script")=="quiz/equiz_02"},{810,850})
+
     def test_three_full_original_routes(self):
         for base in (800,820,840):
             route=[n for n in self.data['npcs'] if base<=n['map_id']<base+10]

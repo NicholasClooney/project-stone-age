@@ -13,7 +13,7 @@ func configure(dialogue: Dictionary) -> void:
 		answer.name = "GoldenBuiAnswer"
 		answer.placeholder_text = "写下你的答案"
 		answer.max_length = 120
-		answer.custom_minimum_size.y = 42
+		answer.custom_minimum_size.y = 44
 		answer.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		answer.text_submitted.connect(func(_text: String):_submit("submit"))
 		add_child(answer)
@@ -22,7 +22,7 @@ func configure(dialogue: Dictionary) -> void:
 		button.name = "QuestChoice_"+str(entry.id)
 		button.text = str(entry.text)
 		button.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-		button.custom_minimum_size.y = 42
+		button.custom_minimum_size.y = 44
 		button.size_flags_horizontal = Control.SIZE_EXPAND_FILL
 		button.pressed.connect(_submit.bind(str(entry.id)))
 		add_child(button)

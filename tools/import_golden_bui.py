@@ -158,6 +158,7 @@ def build(reference):
     static_spec=dict(spec,sources={p:h for p,h in spec['sources'].items() if p in static_sources})
     result=load_quest_module(reference,static_spec)
     result['npcs'].extend(sidecar.pop('npcs'))
+    result['provenance']['golden_bui_sources']=sidecar['provenance']['sources']
     for key in ('services','world','drops','portal_conflicts'):
         result[key]=sidecar[key]
     return result
