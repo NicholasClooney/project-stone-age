@@ -1,0 +1,277 @@
+{
+  "version": 1,
+  "id": "jan-cave",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/jaruga/event/event20.create": "9a09b6d45ce7ce027d855f51090a53c09a6e6fec4436786dbfd8cd42a15e0b41",
+    "gmsv/data/npc/jaruga/event/event20_1": "ffc45d76c829aee8dd880058dea568b8f60e6c59d0a66fb3eea9ff5e33c94335",
+    "gmsv/data/npc/jaruga/event/event20_2": "80959186b8ea0d5e515be97397a76630809c7465ea95971f51d1969bd43342f0",
+    "gmsv/data/npc/jaruga/event/event20_3": "d9e06101d6ff74f11462f97cab5062ee76009843f2ec9db6da6e3555cefabd3c",
+    "gmsv/data/npc/jaruga/event/event20_4": "a219d40b5ad19357f31c01998787bb31af7fe41a7f70f11d2402c37a90f21225",
+    "gmsv/data/npc/jaruga/event/event20_5": "b3b6e7ec39fe833936e6f84d0cec43b18570e3aa91ccbbf4bf6b8f72b9aaddf5",
+    "gmsv/data/npc/jaruga/event/event20_6": "dd92b6e5f2d512e44cd5656a6b01f2f125b65336c074aad9527a51f70e542070",
+    "gmsv/data/npc/200/sb_jan1.arg": "a68a071221d280a1a30d8eb2a9bd45cab274f97afa8cc200f05293edfb5a80ad",
+    "gmsv/data/npc/200/sb_jan2.arg": "4f1b2d4d3725f5b9914ef42e01b5eea5cc0e1fb0d3d0e8dc0653dd057406c2dd",
+    "gmsv/data/npc/200/sb_jan3.arg": "bb257a1285dd41d1532625b26db4842732a1d230f73c5fcf04fc843f999f1105",
+    "gmsv/data/npc/genout/wpm_20604_11_53": "f8b7c37293c00d1b823f7bfb5841337c307554dae82f95d841ce32905767ce36",
+    "gmsv/data/npc/genout/wpm_20605_51_4": "1041e0f8ed17b33db3492eb4368868b9b15c7c9997c3173233dbc801dc63e355",
+    "gmsv/data/npc/genout/wpm_20606_9_23": "c9dbab118a5c7480bbe01ed5f8029e3e4120aea3ec7d2407a2017a10c156be23",
+    "gmsv/data/npc/200/sb_jan.create": "d111f4d0e843e52a5397711dfd2515d8db8f277f6810231adfe84c1b98870729",
+    "gmsv/data/npc/200/sb_jan.template": "66ce2e93d22998c7002ebc1d8e926ab8c9f4b446dce1c0116bf91438aea5589f",
+    "gmsv/data/npc/genout/20600npc.create": "a577ba64d7f0e322047ed4c6bc50ad9901023bf63290609ecc60015e5510ebe1",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
+    "gmsv/npc/npctemplate.c": "f3025f38dc06011e4f8d5f16932aed495174546cc0f96b4fb2bb66601e9240be",
+    "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3",
+    "gmsv/map/map_warppoint.c": "79ddaf6792db324351cd17cd774dcdfb25afed0eaf954a07571a13d081189856",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+    "gmsv/char/event.c": "3903d241a6105c63bcf55b284eaf6399dfbe7689ad7e68624dd54db7c002e4f5",
+    "gmsv/char/char_walk.c": "c605f93a1945aef0328d86da25f335f24188db86bb25687b6731ed8b5cc82bc0",
+    "gmsv/callfromcli.c": "8c95a0482f40736b324e81d9b0aab781f477c27c6a1c7dcf87da4ba4f2e5ddc0",
+    "gmsv/object.c": "c63d28b685e6610053a69f8a435404a8a23dfb958ad367379f5995c99dc931ce",
+    "gmsv/map/readmap.c": "287ffda7b2307797759aea937d7ba1aee49d3d1abbfb3c8c12e815528c35dc2e",
+    "gmsv/npc/npc_warp.c": "9799d5d3d742e18d0ab5da7799f3365e7acbec8ae754a2a9f8921c18fd561c02"
+  },
+  "creates": [
+    "gmsv/data/npc/jaruga/event/event20.create",
+    "gmsv/data/npc/200/sb_jan.create",
+    "gmsv/data/npc/genout/20600npc.create"
+  ],
+  "scripts": {
+    "jaruga/event/event20_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "jaruga/event/event20_2": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "jaruga/event/event20_3": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "jaruga/event/event20_4": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "jaruga/event/event20_5": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "jaruga/event/event20_6": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "events": [
+        20,
+        21,
+        22
+      ]
+    }
+  },
+  "items": [
+    2486,
+    2487,
+    2488,
+    2489,
+    2490,
+    2491,
+    2492,
+    2493,
+    2494
+  ],
+  "reward_enemies": [],
+  "jobs": [
+    {
+      "id": 27,
+      "event": 20,
+      "title": "强恩洞窟  找到强恩",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 28,
+      "event": 21,
+      "title": "强恩洞窟  找到吉德的女儿",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 29,
+      "event": 22,
+      "title": "强恩洞窟  领取山贼装备",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "handlers": {
+    "200/sb_jan1.arg": {
+      "kind": "npcenemy",
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "200/sb_jan2.arg": {
+      "kind": "npcenemy",
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "200/sb_jan3.arg": {
+      "kind": "npcenemy",
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "genout/wpm_20604_11_53": {
+      "kind": "warpman",
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "genout/wpm_20605_51_4": {
+      "kind": "warpman",
+      "events": [
+        20,
+        21,
+        22
+      ]
+    },
+    "genout/wpm_20606_9_23": {
+      "kind": "warpman",
+      "events": [
+        20,
+        21,
+        22
+      ]
+    }
+  },
+  "combat_audit": {
+    "path": "docs/reverse-engineering/bonus-cave-chains-sources.json",
+    "sha256": "ff542942f43782fbcd1038db63588d9557b2f0f704ef819523d442b472f8b92b"
+  },
+  "world": {
+    "map_sources": {
+      "20608": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-08",
+        "sha256": "3674dd560c13dc25afad82acaaaaac75e561d4264a941465d05136174a358d1c"
+      },
+      "20601": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-01",
+        "sha256": "61b52325afce7664e0470b2123412517e395d5fe3f4ddd891f11532bb3e65ba2"
+      },
+      "20602": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-02",
+        "sha256": "43b867c22d5cd4d07f1cc1219558c74f4e4ba1ee9faf7adfde144eca980fe106"
+      },
+      "20603": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-03",
+        "sha256": "565051defadc47284a2c393added7295705d08a3bf18b7e140a7f5bf396f6c18"
+      },
+      "20604": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-04",
+        "sha256": "650c6770291bf1f9a5555a6394f3dc4d4308d66ed9a02f03f9f78a31ea52726f"
+      },
+      "20605": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-05",
+        "sha256": "b6d66119757f359cc68baaa201244810071bb37fcb92e0f466814006faf1fb67"
+      },
+      "20606": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-06",
+        "sha256": "ad303d5cfbcdcd2ff41cd2bf23f6eacfa5947305e25b33febcf0a557c922ea7b"
+      },
+      "20607": {
+        "path": "gmsv/data/map/jyaruga/dungeon/dan_2-06-07",
+        "sha256": "3676c9716c05c673f62037e954a9f96be396504c1b0f2dc203dee0de6d7bebfb"
+      }
+    },
+    "restored_scripts": [
+      "200/sb_jan1.arg",
+      "200/sb_jan2.arg",
+      "200/sb_jan3.arg",
+      "genout/wpm_20604_11_53",
+      "genout/wpm_20605_51_4",
+      "genout/wpm_20606_9_23"
+    ],
+    "portal_choices": [
+      {
+        "from_map": 20607,
+        "cell": [
+          75,
+          13
+        ],
+        "to_map": 20608,
+        "to_cell": [
+          0,
+          7
+        ],
+        "source": "genout/dungeon01.create:1415; gmsv/data/map/mapwarp.txt:2308,2310",
+        "reason": "固定源码_MAP_WARPPOINT启用；mapwarp按行序尾插，EVENT_main首匹配break，2308先生效；不是POSTOVER连调"
+      }
+    ]
+  }
+}

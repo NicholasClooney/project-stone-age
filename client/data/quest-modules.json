@@ -70,6 +70,15 @@
       "enabled_events": [
         17
       ]
+    },
+    {
+      "id": "jan-cave",
+      "manifest": "tools/jan_cave_quest_sources.json",
+      "enabled_events": [
+        20,
+        21,
+        22
+      ]
     }
   ]
 }

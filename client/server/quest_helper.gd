@@ -20,6 +20,7 @@ func navigation_key(backend) -> Array:
  if 17 in backend.quest_catalog.enabled_events:
   var dragon_stage:Array=Dragon.stage_key(backend)
   if not dragon_stage.is_empty():key=key+[dragon_stage]
+ if 20 in backend.quest_catalog.enabled_events:key.append_array(preload("res://server/jan_cave_helper.gd").stage_key(self,backend))
  return key
 
 func snapshot(backend) -> Dictionary:
@@ -45,6 +46,7 @@ func snapshot(backend) -> Dictionary:
    elif event==18:wood_steps(backend,profile,quest)
    elif event in [6,7,8]:preload("res://server/goya_deliveries_helper.gd").steps(self,backend,profile,quest)
    elif event in [3,5]:preload("res://server/yam_axe_helper.gd").steps(self,backend,profile,quest)
+   elif event in [20,21,22]:preload("res://server/jan_cave_helper.gd").steps(self,backend,profile,quest)
    elif event==9:preload("res://server/munde_cave_helper.gd").steps(self,backend,profile,quest)
    elif event==17:Dragon.steps(self,backend,profile,quest)
    elif event==27:preload("res://server/miner_contest_helper.gd").steps(self,backend,profile,quest)
@@ -302,6 +304,7 @@ func resolve_step(backend,quest_id:int,step_id:String) -> Dictionary:
   for step in quest.steps:
    if str(step.id)==step_id:
     if int(quest.event)==44 and not GoldenBui.can_visit(step):return {}
+    if int(quest.event) in [20,21,22] and not preload("res://server/jan_cave_helper.gd").can_visit(step):return {}
     if int(quest.event)==9 and not preload("res://server/munde_cave_helper.gd").can_visit(step):return {}
     return step
  return {}
@@ -331,6 +334,7 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  if npc.get("events",[]).any(func(event):return int(event)==17):return Dragon.destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
+ if preload("res://server/jan_cave_helper.gd").owns(npc) and int(npc.map_id) in range(20601,20609):return preload("res://server/jan_cave_helper.gd").destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
  if preload("res://server/munde_cave_helper.gd").owns(npc) and int(npc.map_id)==11107:return preload("res://server/munde_cave_helper.gd").destination(self,backend,npc,mode)
  var world = places
