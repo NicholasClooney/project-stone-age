@@ -4,6 +4,9 @@ extends RefCounted
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	# Dragon cave itemset.txt:2043,2088; existing ARM/amulet ordinary modifiers.
+	2460:{"name":"龙之枪","type":3,"slot":"arm","level":40,"attack":36,"defence":-14,"speed":-14,"charm":2,"durability":2500000},
+	2505:{"name":"龙的魅力之笛","type":9,"slot":"amulet","level":40,"attack":0,"defence":0,"speed":0,"charm":3,"durability":200000},
 	# itemset.txt:1348,2072,2074-2077; fixed ordinary modifiers only.
 	1357:{"name":"黄色大首饰","type":10,"slot":"amulet","level":0,"attack":0,"defence":0,"speed":0,"charm":5,"durability":2500000},
 	2489:{"name":"卡娜的木笛","type":9,"slot":"amulet","level":0,"attack":0,"defence":0,"speed":0,"charm":2,"durability":2500000},
