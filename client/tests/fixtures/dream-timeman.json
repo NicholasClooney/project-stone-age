@@ -1,0 +1,228 @@
+{
+  "manifest": {
+    "version": 1,
+    "id": "dream-timeman-fixture",
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/npc/quiz/quiz.create": "f1d2b193f55b45b75813c390b95963cf819a938eb4b9827911ebcc07023ed459",
+      "gmsv/data/npc/quiz/equiz_01": "70af9ae74d61b2153bd889a72f47f895ce6b15f09ad0617f5fede055c715c22b",
+      "gmsv/data/npc/quiz/equiz_02": "f4678b82565b864c3e027d519bcc3f84ae4b1f3079e4e497ef190d961f63ed76",
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+      "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+      "gmsv/data/npc/genout/mugendungeon.create": "2cf197c7aa53b20b0be5a74491ed1d47b748afa12d7d07024042ab91c8d6d893",
+      "gmsv/data/npc/genout/mugendungeon2.create": "45a8edf4f53e9a6c70c0f83a8f633c01b2844247b9cedd83d5a4d9d5faeef6cd",
+      "gmsv/data/npc/genout/tman_400_95_120": "7231a57d18815afe2f5aee27237aa1d24ae697d518eda9892e67e2aef5013e28",
+      "gmsv/data/npc/genout/tman_400_98_120": "7231a57d18815afe2f5aee27237aa1d24ae697d518eda9892e67e2aef5013e28",
+      "gmsv/data/npc/genout/tman_400_85_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
+      "gmsv/data/npc/genout/tman_400_88_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
+      "gmsv/npc/npc_timeman.c": "30d88b9846b8fee9691c1fc61222a4fd14a6224f7b16ba46ef0d8105a7373187",
+      "gmsv/handletime.c": "6819b5387b924ca3901d47eee0e8bf434201674fd4780fc3d00525f153f08437",
+      "gmsv/include/handletime.h": "4288f1175e4239608539f29d739edb6c85671abd854bbe7b30cc6b61a6342807",
+      "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3"
+    },
+    "creates": [
+      "gmsv/data/npc/genout/mugendungeon.create",
+      "gmsv/data/npc/genout/mugendungeon2.create"
+    ],
+    "scripts": {},
+    "items": [],
+    "reward_enemies": [],
+    "jobs": [],
+    "handlers": {
+      "genout/tman_400_95_120": {
+        "kind": "timeman",
+        "events": [
+          34
+        ]
+      },
+      "genout/tman_400_98_120": {
+        "kind": "timeman",
+        "events": [
+          34
+        ]
+      },
+      "genout/tman_400_85_102": {
+        "kind": "timeman",
+        "events": [
+          34
+        ]
+      },
+      "genout/tman_400_88_102": {
+        "kind": "timeman",
+        "events": [
+          34
+        ]
+      }
+    }
+  },
+  "module": {
+    "version": 1,
+    "items": {},
+    "npcs": [
+      {
+        "id": "genout/tman_400_95_120@400:95:120",
+        "source_script": "genout/tman_400_95_120",
+        "source_create": "gmsv/data/npc/genout/mugendungeon.create",
+        "source_create_index": 55,
+        "events": [
+          34
+        ],
+        "name": "洞窟的守门人",
+        "map_id": 400,
+        "cell": [
+          95,
+          120
+        ],
+        "graphic": 16203,
+        "facing": 6,
+        "role": "quest",
+        "text": "有太阳的时候，可以从这里进入梦幻洞窟",
+        "branches": [],
+        "handler": "TimeMan",
+        "time_visuals": {
+          "main": {
+            "graphic": 16203,
+            "text": "有太阳的时候，可以从这里进入梦幻洞窟"
+          },
+          "changed": {
+            "graphic": 16200,
+            "text": "晚上没办法从这里进入，请到另一边的入口。"
+          },
+          "rule": "AFTER",
+          "source": "gmsv/data/npc/genout/tman_400_95_120",
+          "source_rule": "gmsv/npc/npc_timeman.c:50,130-146,173-195; 126 < hour < 300"
+        }
+      },
+      {
+        "id": "genout/tman_400_98_120@400:98:120",
+        "source_script": "genout/tman_400_98_120",
+        "source_create": "gmsv/data/npc/genout/mugendungeon.create",
+        "source_create_index": 56,
+        "events": [
+          34
+        ],
+        "name": "洞窟的守门人",
+        "map_id": 400,
+        "cell": [
+          98,
+          120
+        ],
+        "graphic": 16202,
+        "facing": 6,
+        "role": "quest",
+        "text": "有太阳的时候，可以从这里进入梦幻洞窟",
+        "branches": [],
+        "handler": "TimeMan",
+        "time_visuals": {
+          "main": {
+            "graphic": 16202,
+            "text": "有太阳的时候，可以从这里进入梦幻洞窟"
+          },
+          "changed": {
+            "graphic": 16200,
+            "text": "晚上没办法从这里进入，请到另一边的入口。"
+          },
+          "rule": "AFTER",
+          "source": "gmsv/data/npc/genout/tman_400_98_120",
+          "source_rule": "gmsv/npc/npc_timeman.c:50,130-146,173-195; 126 < hour < 300"
+        }
+      },
+      {
+        "id": "genout/tman_400_85_102@400:85:102",
+        "source_script": "genout/tman_400_85_102",
+        "source_create": "gmsv/data/npc/genout/mugendungeon2.create",
+        "source_create_index": 51,
+        "events": [
+          34
+        ],
+        "name": "洞窟守门人",
+        "map_id": 400,
+        "cell": [
+          85,
+          102
+        ],
+        "graphic": 16202,
+        "facing": 6,
+        "role": "quest",
+        "text": "有太阳的时候，不可以从这里进入梦幻洞窟",
+        "branches": [],
+        "handler": "TimeMan",
+        "time_visuals": {
+          "main": {
+            "graphic": 16202,
+            "text": "有太阳的时候，不可以从这里进入梦幻洞窟"
+          },
+          "changed": {
+            "graphic": 16204,
+            "text": "太阳下山后，就可以从这里进入梦幻洞窟了。"
+          },
+          "rule": "AFTER",
+          "source": "gmsv/data/npc/genout/tman_400_85_102",
+          "source_rule": "gmsv/npc/npc_timeman.c:50,130-146,173-195; 126 < hour < 300"
+        }
+      },
+      {
+        "id": "genout/tman_400_88_102@400:88:102",
+        "source_script": "genout/tman_400_88_102",
+        "source_create": "gmsv/data/npc/genout/mugendungeon2.create",
+        "source_create_index": 52,
+        "events": [
+          34
+        ],
+        "name": "洞窟守门人",
+        "map_id": 400,
+        "cell": [
+          88,
+          102
+        ],
+        "graphic": 16201,
+        "facing": 6,
+        "role": "quest",
+        "text": "有太阳的时候，不可以从这里进入梦幻洞窟",
+        "branches": [],
+        "handler": "TimeMan",
+        "time_visuals": {
+          "main": {
+            "graphic": 16201,
+            "text": "有太阳的时候，不可以从这里进入梦幻洞窟"
+          },
+          "changed": {
+            "graphic": 16204,
+            "text": "太阳下山后，就可以从这里进入梦幻洞窟了。"
+          },
+          "rule": "AFTER",
+          "source": "gmsv/data/npc/genout/tman_400_88_102",
+          "source_rule": "gmsv/npc/npc_timeman.c:50,130-146,173-195; 126 < hour < 300"
+        }
+      }
+    ],
+    "jobs": [],
+    "reward_pets": {},
+    "provenance": {
+      "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+      "sources": {
+        "gmsv/data/npc/quiz/quiz.create": "f1d2b193f55b45b75813c390b95963cf819a938eb4b9827911ebcc07023ed459",
+        "gmsv/data/npc/quiz/equiz_01": "70af9ae74d61b2153bd889a72f47f895ce6b15f09ad0617f5fede055c715c22b",
+        "gmsv/data/npc/quiz/equiz_02": "f4678b82565b864c3e027d519bcc3f84ae4b1f3079e4e497ef190d961f63ed76",
+        "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+        "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+        "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+        "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+        "gmsv/data/npc/genout/mugendungeon.create": "2cf197c7aa53b20b0be5a74491ed1d47b748afa12d7d07024042ab91c8d6d893",
+        "gmsv/data/npc/genout/mugendungeon2.create": "45a8edf4f53e9a6c70c0f83a8f633c01b2844247b9cedd83d5a4d9d5faeef6cd",
+        "gmsv/data/npc/genout/tman_400_95_120": "7231a57d18815afe2f5aee27237aa1d24ae697d518eda9892e67e2aef5013e28",
+        "gmsv/data/npc/genout/tman_400_98_120": "7231a57d18815afe2f5aee27237aa1d24ae697d518eda9892e67e2aef5013e28",
+        "gmsv/data/npc/genout/tman_400_85_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
+        "gmsv/data/npc/genout/tman_400_88_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
+        "gmsv/npc/npc_timeman.c": "30d88b9846b8fee9691c1fc61222a4fd14a6224f7b16ba46ef0d8105a7373187",
+        "gmsv/handletime.c": "6819b5387b924ca3901d47eee0e8bf434201674fd4780fc3d00525f153f08437",
+        "gmsv/include/handletime.h": "4288f1175e4239608539f29d739edb6c85671abd854bbe7b30cc6b61a6342807",
+        "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3"
+      },
+      "client": "StoneAge 2.5; logical static graphics, no fallback"
+    },
+    "module_id": "dream-timeman-fixture"
+  }
+}

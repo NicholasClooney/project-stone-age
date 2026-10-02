@@ -160,6 +160,9 @@ def plan() -> dict:
     if quest_catalog.exists():
         for npc in json.loads(quest_catalog.read_text())["npcs"]:
             npc_maps[npc["path"]].add(str(int(npc["map_id"])))
+            for mode in ["main","changed"]:
+                visual=npc.get("time_visuals",{}).get(mode,{})
+                if visual.get("path"):npc_maps[visual["path"]].add(str(int(npc["map_id"])))
     for path, users in npc_maps.items():
         if len(users) == 1 and next(iter(users)) in lookups["maps"]:
             assign(f"map-{next(iter(users))}", LEGACY / path)
