@@ -3,10 +3,14 @@ extends RefCounted
 const Rules = preload("res://server/original_quests.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 const MapFile = preload("res://scripts/map_file.gd")
+const GoldenBui = preload("res://server/golden_bui_helper.gd")
 var places = WorldCatalog.new()
 var maps := {}
 var cached_key := ""
 var cached_snapshot := {}
+
+func navigation_key(backend) -> Array:
+ return GoldenBui.stage_key(backend) if 44 in backend.quest_catalog.enabled_events else []
 
 func snapshot(backend) -> Dictionary:
  # Read only the trusted server profile. Ordinary battle/hunt publications do
@@ -14,6 +18,7 @@ func snapshot(backend) -> Dictionary:
  var profile: Dictionary = backend.session._profile
  var catalog = backend.quest_catalog
  var key := JSON.stringify([catalog.get_instance_id(),catalog.enabled_events,profile.original_events,profile.original_items,profile.get("original_equipment",{}),profile.original_savepoint_bits,profile.player.level,profile.player.gold,profile.pets.map(func(pet):return [pet.get("pet_id",""),pet.get("species",""),pet.get("level",0),Rules.Session.original_pet_event(pet)]),Rules.Session.bag_slots(profile)])
+ key+=JSON.stringify(navigation_key(backend))
  if key == cached_key:return cached_snapshot.duplicate(true)
  var quests: Array = []
  for job in catalog.jobs:
@@ -29,6 +34,7 @@ func snapshot(backend) -> Dictionary:
    elif event==18:wood_steps(backend,profile,quest)
    elif event in [6,7,8]:preload("res://server/goya_deliveries_helper.gd").steps(self,backend,profile,quest)
    elif event in [3,5]:preload("res://server/yam_axe_helper.gd").steps(self,backend,profile,quest)
+   elif event==44:GoldenBui.steps(self,backend,profile,quest)
    elif event in [28,29,30,31,54]:preload("res://server/brothers_helper.gd").steps(self,backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
@@ -260,7 +266,9 @@ func resolve_step(backend,quest_id:int,step_id:String) -> Dictionary:
  for quest in snapshot(backend).quests:
   if int(quest.id)!=quest_id:continue
   for step in quest.steps:
-   if str(step.id)==step_id:return step
+   if str(step.id)==step_id:
+    if int(quest.event)==44 and not GoldenBui.can_visit(step):return {}
+    return step
  return {}
 
 func item_names(catalog, raw: String) -> String:
@@ -286,6 +294,7 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
  return "%s：%s" % [npc.name,"，".join(parts)]
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
+ if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
  var world = places
  world.set_quest_catalog(backend.quest_catalog)
  var map_id := int(npc.map_id)
