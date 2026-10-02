@@ -71,6 +71,22 @@ class GoldenBuiImportTests(unittest.TestCase):
             rows.append(lines[584:587])
         self.assertEqual(*rows)
 
+    def test_enabled_map_point_path_matches_reviewed_first_portals(self):
+        texts=gold.source_texts(REFERENCE,self.spec)
+        self.assertIn('#define _MAP_WARPPOINT',texts['gmsv/include/version.h'])
+        self.assertIn('#ifdef _MAP_WARPPOINT\n\t\treturn FALSE;',texts['gmsv/npc/npc_warp.c'])
+        self.assertIn('MAPPOINT_MapWarpHandle',texts['gmsv/char/event.c'])
+        expected={(2020,11,9):(811,[30,29],1169),(810,28,27):(809,[18,13],1217),
+                  (810,29,27):(809,[19,13],1219),(4020,11,9):(851,[30,29],1268)}
+        for p in self.data['world']['portal_choices']:
+            self.assertEqual(p['source'],'gmsv/data/map/mapwarp.txt')
+            key=(p['from_map'],*p['cell'])
+            if key in expected:self.assertEqual((p['to_map'],p['to_cell'],p['source_line']),expected.pop(key))
+        self.assertFalse(expected)
+        altered=copy.deepcopy(self.spec)
+        altered['sources']['gmsv/data/map/mapwarp.txt']='0'*64
+        with self.assertRaisesRegex(ValueError,'Unreviewed'):gold.build_sidecar(REFERENCE,altered)
+
     def test_sha_and_explicit_binding_fail_closed(self):
         altered=copy.deepcopy(self.spec)
         altered['sources']['gmsv/data/question.txt']='0'*64
