@@ -25,6 +25,18 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_dream_guards_allow_only_reviewed_empty_start_msg_spelling(self):
+        from quest_source_handlers import npc_enemy
+        for number,x in [(1,34),(2,33)]:
+            script=f'400/sb_muge{number}.arg'
+            source=(REFERENCE/'gmsv/data/npc'/script).read_text(encoding='gb18030')
+            branch=npc_enemy(source,script,[34])[1][0]
+            self.assertEqual(branch['guard']['enemy_ids'],[1095]*3+[1087,1086]+[1096]*5)
+            self.assertEqual(branch['actions']['Warp'],f'41,{x},39')
+            self.assertEqual(branch['source_fields']['start msg'],'')
+            with self.assertRaises(ValueError):npc_enemy(source.replace('start msg:','start msg:unexpected'),script,[34])
+            with self.assertRaises(ValueError):npc_enemy(source,'other/script',[34])
+
     def test_area_spawn_is_source_random_rectangle_and_collision(self):
         fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-area-spawn.json').read_text())
         spec=fixture['manifest'];module=common.load_quest_module(REFERENCE,spec)

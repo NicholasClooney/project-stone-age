@@ -194,7 +194,7 @@ func handle_arrival() -> bool:
 	var links: Dictionary = game.world_catalog.links(int(game.data.map_id))
 	if links.has(game.cell):
 		var link: Dictionary = links[game.cell]
-		if preload("res://scripts/passage_rules.gd").requires_permit(int(game.data.map_id),int(link.to_map)) or bool(link.get("requires_travel_pass",false)) or int(link.get("requires_level",0))>0:
+		if preload("res://scripts/passage_rules.gd").requires_permit(int(game.data.map_id),int(link.to_map)) or bool(link.get("requires_travel_pass",false)) or int(link.get("requires_level",0))>0 or link.has("requires_time"):
 			if (preload("res://scripts/passage_rules.gd").requires_permit(int(game.data.map_id),int(link.to_map)) or bool(link.get("requires_travel_pass",false))) and not game.session.has_travel_pass():
 				game.message.text = "穿过海底关卡需要通行证。"
 				return false

@@ -1,0 +1,77 @@
+[
+  {
+    "from_map": 400,
+    "cell": [
+      97,
+      119
+    ],
+    "to_map": 41,
+    "target": [
+      11,
+      8
+    ],
+    "requires_time": "A",
+    "time_source": "gmsv/data/map/mapwarp.txt",
+    "time_source_line": 2746
+  },
+  {
+    "from_map": 400,
+    "cell": [
+      98,
+      119
+    ],
+    "to_map": 41,
+    "target": [
+      11,
+      8
+    ],
+    "requires_time": "M",
+    "time_source": "gmsv/data/map/mapwarp.txt",
+    "time_source_line": 2748
+  },
+  {
+    "from_map": 400,
+    "cell": [
+      97,
+      120
+    ],
+    "to_map": 41,
+    "target": [
+      11,
+      8
+    ],
+    "requires_time": "M",
+    "time_source": "gmsv/data/map/mapwarp.txt",
+    "time_source_line": 2749
+  },
+  {
+    "from_map": 400,
+    "cell": [
+      96,
+      119
+    ],
+    "to_map": 41,
+    "target": [
+      11,
+      8
+    ],
+    "requires_time": "M",
+    "time_source": "gmsv/data/map/mapwarp.txt",
+    "time_source_line": 2751
+  },
+  {
+    "from_map": 400,
+    "cell": [
+      87,
+      101
+    ],
+    "to_map": 42,
+    "target": [
+      11,
+      8
+    ],
+    "requires_time": "N",
+    "time_source": "gmsv/data/map/mapwarp.txt",
+    "time_source_line": 2801
+  }
+]

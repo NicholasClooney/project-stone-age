@@ -104,13 +104,14 @@ def read_portals(root):
             block = match[1]
             floor = re.search(r'floorid=(\d+)', block)
             corner = re.search(r'borncorner=(\d+),(\d+),(\d+),(\d+)', block)
-            target = re.search(r'enemy=npcgen_warp\|(\d+)\|(\d+)\|(\d+)', block)
+            target = re.search(r'enemy=npcgen_warp\|(\d+)\|(\d+)\|(\d+)(?:\|([A-Z]+))?\s*$', block, re.M)
             if not (floor and corner and target):
                 continue
             x1,y1,x2,y2 = map(int, corner.groups())
             for y in range(y1,y2+1):
                 for x in range(x1,x2+1):
                     p = dict(from_map=int(floor[1]), cell=[x,y], to_map=int(target[1]), target=[int(target[2]),int(target[3])], source=f'{path.name}:{path.read_text(errors="replace")[:match.start()].count(chr(10))+1}')
+                    if target[4]:p['source_time_suffix']=target[4]
                     key = (p['from_map'], x,y,p['to_map'],*p['target'])
                     result[key] = p
     return list(result.values())
@@ -325,6 +326,8 @@ def run(source, reference, output, fallback_source=None):
     all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
     all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS))
     all_portals=apply_module_portal_choices(all_portals, modules)
+    from quest_time_gates import apply_time_gates
+    all_portals=apply_time_gates(all_portals,modules)
     # Restored NPC gates now transact through original_quests; scenery portals
     # must not bypass their item/flag checks.
     restored_scripts=set(json.loads(BROTHERS_SPEC.read_text())["scripts"])

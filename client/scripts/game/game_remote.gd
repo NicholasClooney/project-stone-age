@@ -61,6 +61,7 @@ func _step_follow() -> bool:
 	return true
 
 func _on_map_reported(reply: Dictionary) -> void:
+	if not reply.get("ok",false) and is_instance_valid(game.message):game.message.text=str(reply.get("reason","移动未获服务器确认。"))
 	var workflow_pause := str(reply.get("paused",""))
 	if workflow_pause.is_empty():return
 	game.last_adventure_message="找宠流程暂停："+workflow_pause

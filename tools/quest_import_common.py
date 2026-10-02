@@ -273,6 +273,9 @@ def load_quest_module(reference, manifest):
         result['items'][key]['description'] += '\n' + note
     if spec.get('world'):
         result['world'] = copy.deepcopy(spec['world'])
+        from quest_time_gates import reviewed_time_gates
+        time_gates=reviewed_time_gates(spec,texts)
+        if time_gates is not None:result['world']['time_gates']=time_gates
     for item in result['items'].values():
         item['logout_vanish'] = len(item['raw_columns']) > 78 and item['raw_columns'][78] == '1'
     return result
