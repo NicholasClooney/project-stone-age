@@ -40,3 +40,5 @@ STONE_AGE_FOREGROUND_TEST=1 STONE_AGE_PROOF_DIR=/private/tmp/miner-contest-shots
 ```
 
 原seed27固定group508的完整真实Session战保留负成长、保存失败重试与幂等检查；另以原seed27连续原权重抽组，通过Backend.wild_encounter的数据、TroopArt与Session三层门直到遇到矿石并实际结算。手机390×844测试矿石回程使用明确fixture，仅验证界面；其余比赛/领奖/消费票门为真点击。九张PNG已逐张view_image，不把headless算像素验收。不运行full。
+
+补充像素验收：`miner_ore_ui_test.gd` 在生产GameScene远程客户端中真点击接取/领证，服务器使用原seed27自然抽组开战，390×844静音离屏截图 `/private/tmp/miner-contest-shots/miner-10-natural-ore-selected.png` 已逐张view_image。白灰原石100469在敌队中正常显示，点击攻击及该原石目标后真实服务器hp归零。日志 `/private/tmp/miner-ore-ui.log`：`MINER ORE UI: 0 failures`，无SCRIPT ERROR。此次只补该一张，不重拍前九张。
