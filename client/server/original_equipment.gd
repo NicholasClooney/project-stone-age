@@ -11,6 +11,10 @@ const ITEMS := {
 	2492:{"name":"山贼的投掷斧头","type":18,"slot":"arm","level":40,"attack":20,"defence":-5,"speed":0,"charm":5,"durability":200000},
 	2493:{"name":"山贼的爪","type":0,"slot":"arm","level":40,"attack":17,"defence":-5,"speed":0,"charm":5,"durability":300000},
 	2494:{"name":"山贼的小棍棒","type":2,"slot":"arm","level":40,"attack":7,"defence":0,"speed":0,"charm":5,"durability":200000},
+	# itemset.txt:2210–2212; original magic remains metadata only.
+	2688:{"name":"马祖的斧头","type":1,"slot":"arm","level":50,"attack":50,"defence":-20,"speed":-20,"charm":0,"durability":2500000},
+	2689:{"name":"马祖的矛","type":3,"slot":"arm","level":50,"attack":45,"defence":0,"speed":-10,"charm":4,"durability":2500000},
+	2690:{"name":"马祖的棍棒","type":2,"slot":"arm","level":50,"attack":35,"defence":0,"speed":0,"charm":0,"durability":2500000},
 	# itemset.txt:1207 numeric fields override its stale +2/+2/-2/+1 prose.
 	1206:{"name":"红玉的手环","type":8,"slot":"bracelet","level":0,"attack":3,"defence":3,"speed":-3,"charm":2,"durability":2500000},
 	# itemset.txt:1999/2031; the delivery axe is usable from Lv20.

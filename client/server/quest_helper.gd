@@ -4,13 +4,18 @@ const Rules = preload("res://server/original_quests.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 const MapFile = preload("res://scripts/map_file.gd")
 const GoldenBui = preload("res://server/golden_bui_helper.gd")
+const Marju = preload("res://server/marju_helper.gd")
 var places = WorldCatalog.new()
 var maps := {}
 var cached_key := ""
 var cached_snapshot := {}
 
 func navigation_key(backend) -> Array:
- return GoldenBui.stage_key(backend) if 44 in backend.quest_catalog.enabled_events else []
+ var key:Array=GoldenBui.stage_key(backend) if 44 in backend.quest_catalog.enabled_events else []
+ if 37 in backend.quest_catalog.enabled_events or 38 in backend.quest_catalog.enabled_events:
+  var marju_stage:Array=Marju.stage_key(backend)
+  if not marju_stage.is_empty():key=key+[marju_stage]
+ return key
 
 func snapshot(backend) -> Dictionary:
  # Read only the trusted server profile. Ordinary battle/hunt publications do
@@ -36,6 +41,7 @@ func snapshot(backend) -> Dictionary:
    elif event in [6,7,8]:preload("res://server/goya_deliveries_helper.gd").steps(self,backend,profile,quest)
    elif event in [3,5]:preload("res://server/yam_axe_helper.gd").steps(self,backend,profile,quest)
    elif event==44:GoldenBui.steps(self,backend,profile,quest)
+   elif event in [37,38]:Marju.steps(self,backend,profile,quest)
    elif event in [28,29,30,31,54]:preload("res://server/brothers_helper.gd").steps(self,backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
@@ -312,6 +318,7 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
  return "%s：%s" % [npc.name,"，".join(parts)]
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
+ if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
  var world = places
  world.set_quest_catalog(backend.quest_catalog)

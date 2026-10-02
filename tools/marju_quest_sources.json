@@ -1,0 +1,110 @@
+{
+  "version": 1,
+  "id": "marju",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/extra/event/marju.create": "d0ed5d2f757678ef24730e5229b9ea3032acbaac3cc50fd80559874ecee93a44",
+    "gmsv/data/npc/extra/event/marju": "85efd61851ace7c41c4acc4eea8f56c0ff6351a6b44e7e9238811cd479eeb0fc",
+    "gmsv/data/npc/extra/event/marju01": "769433ad0de8d54bb27861c423ce46ee82005f76916b6d28b63ed80f3c5e593e",
+    "gmsv/data/npc/genout/meiro.create": "a4fc992c05d8dd8285fdea9f7e6a3e37b2edafe364130159a00035b7855af9e2",
+    "gmsv/data/npc/genout/wpm_120_19_15": "9e0fd5764cf5ae4bd8d0008ed7d0a49cce80dd243258d48a20f9c982a9d5797e",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
+  },
+  "creates": [
+    "gmsv/data/npc/extra/event/marju.create",
+    "gmsv/data/npc/genout/meiro.create"
+  ],
+  "scripts": {
+    "extra/event/marju": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        37,
+        38
+      ]
+    },
+    "extra/event/marju01": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        37,
+        38
+      ]
+    }
+  },
+  "items": [
+    2687,
+    2688,
+    2689,
+    2690,
+    2697
+  ],
+  "reward_enemies": [],
+  "jobs": [
+    {
+      "id": 5,
+      "event": 37,
+      "title": "马祖任务",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 9,
+      "event": 38,
+      "title": "水田迷宫",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "world": {
+    "map_sources": {
+      "118": {
+        "path": "gmsv/data/map/extra/118",
+        "sha256": "02a9c0dd3c16efe3b32ee0d30b02db003eb701c54c6816f51a5c555b15189088"
+      },
+      "119": {
+        "path": "gmsv/data/map/extra/119",
+        "sha256": "18a1064dfe47878f47ae84a7d19b2343cdd1ff04a8a020584fbd1707725f7fc3"
+      },
+      "120": {
+        "path": "gmsv/data/map/extra/120",
+        "sha256": "255be9f81670ff4334c43e291a2c18035531cbc77bdeb3ebaa244ed5ecc15f74"
+      },
+      "121": {
+        "path": "gmsv/data/map/extra/121",
+        "sha256": "d406a320875bf2275fe47bd132f8229050d558fe6b6709ba6caf0fa972234c5a"
+      },
+      "122": {
+        "path": "gmsv/data/map/extra/122",
+        "sha256": "508dd047c0143b3561df8e2258bf8f58bc7d98e0244d091227746ab0efda9e55"
+      }
+    },
+    "restored_scripts": [
+      "genout/wpm_120_19_15"
+    ]
+  },
+  "item_notes": {
+    "2697": "本批仅恢复送信与返程领奖；迷宫宝袋支线尚未开放。"
+  },
+  "handlers": {
+    "genout/wpm_120_19_15": {
+      "kind": "warpman",
+      "events": [
+        37,
+        38
+      ]
+    }
+  }
+}
