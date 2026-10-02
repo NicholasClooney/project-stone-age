@@ -14,6 +14,7 @@ func check(ok: bool, note: String) -> void:
 	if not ok:failures+=1
 func fresh(strong: bool=true):
 	var b=Backend.new();root.add_child(b);b.set_process(false);b.automation.client_attached=false
+	b.encounter_rng.seed=9;b.training_pool_rng.seed=9
 	b.handle({"type":"grant_starter_pets"});b.session.select_pet(0)
 	if strong:
 		b.handle({"type":"gm_raise_level","index":-1,"target":120})
@@ -21,12 +22,20 @@ func fresh(strong: bool=true):
 		b.handle({"type":"gm_heal"})
 	b.automation.position_map=MAP;b.automation.position_cell=CELL
 	return b
-func enter(b) -> bool:
+## Reaching an outcome and successfully opening a battle are separate facts.
+func training_outcome(b) -> bool:
 	return await Wait.until(self,func():
-		if b.battle_open:return true
-		if not b.automation.running:return false
+		if b.battle_open or not b.automation.running:return true
 		b.automation.step()
 		return b.battle_open or not b.automation.running)
+func enter(b) -> bool:
+	return await training_outcome(b) and b.battle_open
+func pending_forecast(b) -> bool:
+	var reached: bool=await Wait.until(self,func():
+		if not b.automation.training_borrow_pending.is_empty() or not b.automation.running:return true
+		b.automation.step()
+		return not b.automation.training_borrow_pending.is_empty() or not b.automation.running)
+	return reached and not b.automation.training_borrow_pending.is_empty()
 func settled(b) -> bool:
 	return await Wait.until(self,func():
 		if not b.battle.snapshot().active:return true
@@ -37,8 +46,8 @@ func begin(b, borrow: bool=true, local: bool=true, target: int=120) -> bool:
 	return b.automation.start_pet_training(pet_id,target,{}, {"xp":10,"borrow_troops":borrow,"select_troops":local,"hp":1,"spirit":false,"limit":100})
 func dispose(b) -> void:
 	b.automation.stop("test end");b.queue_free();await process_frame
-func lan_borrow() -> void:
-	var folder:="user://borrow-lan-%d"%OS.get_process_id()
+func lan_borrow(seed_value: int, accepted: bool) -> void:
+	var folder:="user://borrow-lan-%d-%d"%[OS.get_process_id(),seed_value]
 	DirAccess.make_dir_recursive_absolute(folder)
 	var hub=preload("res://server/profile_hub.gd").new(folder.path_join("accounts.json"))
 	hub.tick=false;hub.backups=false;hub.share_dir="";root.add_child(hub);hub.start()
@@ -53,17 +62,23 @@ func lan_borrow() -> void:
 		backend.handle({"type":"gm_heal"})
 	hub.handle(2,{"type":"set_automation_settings","settings":{"party":{"auto":true,"compact":true}}})
 	var lead=hub.backends.alice
+	lead.training_pool_rng.seed=seed_value
 	lead.session.grant_starter_pets();lead.session.select_pet(0);lead.session.gm_raise_level(0,119);lead.session.gm_heal()
 	hub.handle(1,{"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y],"map_changed":true,"client":"p0"})
 	var context: Dictionary=lead.training_reward_context.call()
 	check(context.players==2 and context.active_pets==1 and context.member_ids==["alice","bob"],"borrow forecast and estimate use actual two-player one-pet roster")
 	check(hub.handle(1,{"type":"auto_start","kind":"battle","map_id":MAP,"cell":[CELL.x,CELL.y],"settings":{"level":0,"xp":10,"limit":1,"spirit":false,"hp":1,"select_troops":true,"borrow_troops":true}}).ok,"LAN shared training starts borrowing")
-	while lead.automation.training_borrow_pending.is_empty() and lead.automation.running:lead.automation.step();await process_frame
+	check(await pending_forecast(lead),"LAN reaches the pending borrowed forecast before member changes")
 	check(hub.backends.bob.session.set_character("100010"),"real member character changes while borrowed forecast is pending")
 	lead.automation.step()
 	check(not lead.battle_open and not lead.automation.running and lead.automation.stop_reason.contains("发生变化"),"LAN refuses stale member configuration before borrowed battle")
 	check(hub.handle(1,{"type":"auto_start","kind":"battle","map_id":MAP,"cell":[CELL.x,CELL.y],"settings":{"level":0,"xp":10,"limit":1,"spirit":false,"hp":1,"select_troops":true,"borrow_troops":true}}).ok,"LAN recomputes actual changed member before restart")
-	await enter(lead)
+	check(await training_outcome(lead),"LAN forecast reaches a bounded outcome seed%d"%seed_value)
+	if not accepted:
+		var forecast: Dictionary=lead.automation.training_borrow_forecast.summary()
+		check(not lead.battle_open and not lead.automation.running and forecast.ready and not forecast.ok and forecast.wins==3 and lead.automation.stop_reason.contains("预测"),"seed20 real LAN forecast wins only3/5 and correctly refuses the unsafe troop")
+		hub.shut_down();hub.queue_free();await process_frame
+		return
 	check(lead.battle_open and lead.party_battle() and lead.battle.snapshot().has("training_borrow"),"actual shared LAN opens forecast-approved borrowed original troop")
 	if lead.battle_open:
 		var expected:=0
@@ -144,7 +159,7 @@ func run() -> void:
 	await dispose(independent)
 	var neither=fresh();check(begin(neither,false,false) and await enter(neither) and neither.battle_open and neither.automation.training_skipped==0,"both settings off preserve original first local encounter")
 	await dispose(neither)
-	var weak=fresh(false);check(begin(weak) and await enter(weak) and not weak.battle_open and weak.automation.stop_reason.contains("预测"),"weak actual squad pauses before strong battle instead of fabricating victory")
+	var weak=fresh(false);check(begin(weak) and await training_outcome(weak) and not weak.battle_open and weak.automation.stop_reason.contains("预测"),"weak actual squad pauses before strong battle instead of fabricating victory")
 	await dispose(weak)
 
 	var saved=fresh();saved.save_path="user://training-borrow-save.json";saved.resume_path="user://training-borrow-resume.json"
@@ -179,13 +194,13 @@ func run() -> void:
 		await dispose(boundary)
 
 	var changed=fresh();check(begin(changed),"forecast identity guard fixture starts")
-	while changed.automation.training_borrow_pending.is_empty() and changed.automation.running:changed.automation.step();await process_frame
+	check(await pending_forecast(changed),"identity fixture reaches the pending forecast")
 	changed.session.clone_squad_enabled=not changed.session.clone_squad_enabled
 	changed.automation.step()
 	check(not changed.battle_open and not changed.automation.running and changed.automation.stop_reason.contains("发生变化"),"clone change during bounded forecast refuses stale config")
 	await dispose(changed)
 	var uid_changed=fresh();check(begin(uid_changed),"actual trained UID guard starts")
-	while uid_changed.automation.training_borrow_pending.is_empty() and uid_changed.automation.running:uid_changed.automation.step();await process_frame
+	check(await pending_forecast(uid_changed),"identity fixture reaches the pending forecast")
 	uid_changed.session.select_pet(1);uid_changed.automation.step()
 	check(not uid_changed.battle_open and not uid_changed.automation.running and uid_changed.automation.stop_reason.contains("发生变化"),"switching actual active pet UID refuses stale borrowed config")
 	await dispose(uid_changed)
@@ -196,11 +211,11 @@ func run() -> void:
 	await dispose(prefs);await dispose(loaded);await dispose(other)
 
 	var failed_save=fresh();failed_save.save_path="user://borrow-missing-%d/save.json"%OS.get_process_id()
-	check(begin(failed_save) and await enter(failed_save) and not failed_save.battle_open and failed_save.automation.stop_reason.contains("无法保存"),"real save failure pauses borrowed roll before forecasting/opening or rewards")
+	check(begin(failed_save) and await training_outcome(failed_save) and not failed_save.battle_open and failed_save.automation.stop_reason.contains("无法保存"),"real save failure pauses borrowed roll before forecasting/opening or rewards")
 	await dispose(failed_save)
 	var no_pool=fresh();var art=preload("res://server/troop_art.gd");var saved_art: Dictionary=art._validation.duplicate()
 	for sprite in ["100378","100341","100383"]:art._validation[sprite]=false
-	check(begin(no_pool) and await enter(no_pool) and not no_pool.battle_open and no_pool.automation.stop_reason.contains("没有可用"),"no eligible audited pool pauses clearly before drawing or opening")
+	check(begin(no_pool) and await training_outcome(no_pool) and not no_pool.battle_open and no_pool.automation.stop_reason.contains("没有可用"),"no eligible audited pool pauses clearly before drawing or opening")
 	art._validation=saved_art;await dispose(no_pool)
 	var spoof=fresh();var spoof_config: Dictionary=spoof.session.start_battle_config()
 	spoof_config.training_borrow={"map_id":500,"group_id":767,"texture":"res://wrong-client-background.png"}
@@ -224,7 +239,8 @@ func run() -> void:
 	check(saw_capture and capture_unchanged and saw_borrow and not flow.automation.flow_pet_id.is_empty(),"real capture leaves pool untouched; caught UID then trains through default-on validated borrowed group")
 	await dispose(flow)
 
-	await lan_borrow()
+	await lan_borrow(0,true)
+	await lan_borrow(20,false)
 	var counts:=[]
 	for seed_value in range(10):
 		var run=fresh();run.training_pool_rng.seed=seed_value
