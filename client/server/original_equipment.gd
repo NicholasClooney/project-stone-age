@@ -4,6 +4,8 @@ extends RefCounted
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	# itemset.txt:1207 numeric fields override its stale +2/+2/-2/+1 prose.
+	1206:{"name":"红玉的手环","type":8,"slot":"bracelet","level":0,"attack":3,"defence":3,"speed":-3,"charm":2,"durability":2500000},
 	# itemset.txt:1999/2031; the delivery axe is usable from Lv20.
 	2416:{"name":"亚姆亚姆的斧头","type":1,"slot":"arm","level":20,"attack":9,"defence":-3,"speed":-3,"charm":0,"durability":0},
 	2448:{"name":"亚姆亚姆的斧头","type":1,"slot":"arm","level":25,"attack":35,"defence":-10,"speed":-10,"charm":0,"durability":2500000},

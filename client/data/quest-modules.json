@@ -8,6 +8,15 @@
         3,
         5
       ]
+    },
+    {
+      "id": "goya-deliveries",
+      "manifest": "tools/goya_deliveries_quest_sources.json",
+      "enabled_events": [
+        6,
+        7,
+        8
+      ]
     }
   ]
 }

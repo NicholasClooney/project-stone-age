@@ -1,0 +1,204 @@
+{
+  "version": 1,
+  "id": "goya-deliveries",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+    "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
+    "gmsv/item/item_event.c": "33ed3526accf9b0051e08cbe150082056eebd9d36e39faa323d365c855d50d66",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/char/enemy.c": "fecfedd35d6323c1112fd164a4f4636618c943debb0917781abc2f58b806ed1a",
+    "gmsv/data/npc/jaruga/event/event06n.create": "22506e5a240ef2ce0ab741c363143efab59d3b321477f059a254800eafbdf615",
+    "gmsv/data/npc/jaruga/event/event07n.create": "25f6ea90a38884256263f000bf152a2a4e3929d3fffb6226ec5fb21708b2e738",
+    "gmsv/data/npc/jaruga/event/event06_1": "d650ee0700e3a9d43744a43353a622134626551fa82869887c32db4ade0fc9c6",
+    "gmsv/data/npc/jaruga/event/event06_2": "d0913ab13e410b3846785b0bfe6b8103defa3199dde03a90413793e416929bb3",
+    "gmsv/data/npc/jaruga/event/event07_1": "84c715c5a9f5d99b6ff5c897aa59845ebd340c842279ae41ad812a3325734531",
+    "gmsv/data/npc/jaruga/event/event07_2": "471b5bb7cda92e0e8def04bcc276a82bfefcc1710bae230deaa85f6a1be466e6",
+    "gmsv/data/npc/jaruga/event/event07_3": "b000da5322595a81a6ddb13b463f13a81d5f21b7251d60acc3be650057b2aba4",
+    "gmsv/data/npc/jaruga/event/event07_4": "7cbdcf7e24033fbb21fd843daee6a47c53865f6c82abf8dead5e7929a31bd600",
+    "gmsv/data/npc/jaruga/event/event07_5": "f8f2745db26ae99563582ed63c71a5936946ed37966316a9f91720488c941ee0",
+    "gmsv/data/npc/jaruga/event/event07_6": "88a77f72fa4df9fe6b708566812d64ba6b7b5b61d2c8d0416c46e11d9a8feecf",
+    "gmsv/data/npc/jaruga/event/event07_7": "5cdb522a8b69c79fa0c8a1b06293b87981d4c143f6804559ca9032da52a074b5",
+    "gmsv/data/npc/jaruga/event/event07_8": "e59508c0466e2461a58f310c2d7547ca2587365c35821812f53051a4073b6b29",
+    "gmsv/data/npc/jaruga/event/event07_9": "1e75e0332c90e3630fa21f0788858e60e0b394ebde3724890b5d6441d900b3f3",
+    "gmsv/data/npc/jaruga/event/event07_10": "789ecfe7ec1408d1c34176addc5e877fba9fee57095591f0b394d219e26e9e7b"
+  },
+  "creates": [
+    "gmsv/data/npc/jaruga/event/event06n.create",
+    "gmsv/data/npc/jaruga/event/event07n.create"
+  ],
+  "scripts": {
+    "jaruga/event/event06_1": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event06_2": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_2": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_3": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_4": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_5": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_6": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_7": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_8": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_9": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    },
+    "jaruga/event/event07_10": {
+      "branches": [
+        0
+      ],
+      "events": [
+        6,
+        7,
+        8
+      ]
+    }
+  },
+  "items": [
+    2414,
+    2424,
+    2425,
+    2426,
+    1206
+  ],
+  "reward_enemies": [
+    44,
+    47
+  ],
+  "jobs": [
+    {
+      "id": 23,
+      "event": 6,
+      "title": "哥亚山洞窟  交不可思议的贝壳",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 24,
+      "event": 7,
+      "title": "哥亚山洞窟  把花和信给乌力美",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 25,
+      "event": 8,
+      "title": "哥亚山洞窟  回信给1楼的猪",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "item_notes": {
+    "1206": "按原始数值字段生效：攻+3、防+3、敏-3、魅+2；上方原说明数值与原字段不一致。"
+  }
+}

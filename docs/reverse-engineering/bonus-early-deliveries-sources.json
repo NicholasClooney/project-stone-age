@@ -1,0 +1,901 @@
+{
+  "status": "reviewed evidence only; not an activation manifest",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "branch_index_base": 0,
+  "branch_digest_encoding": "decoded gb18030 block re-encoded UTF-8; source digest remains raw bytes",
+  "groups": {
+    "yam_axe": {
+      "events": [
+        3,
+        5
+      ],
+      "creates": [
+        "sainasu/event/event03.create"
+      ],
+      "scripts": {
+        "sainasu/event/event03_1": [
+          0,
+          1
+        ],
+        "sainasu/event/event03_2": [
+          0,
+          1,
+          2
+        ]
+      },
+      "items": [
+        2416,
+        2423,
+        2448
+      ],
+      "reward_enemies": [],
+      "selected_branch_evidence": {
+        "sainasu/event/event03_1": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "8bab6d2962c4a18ebffebb3d6908f66cd4954438f80af4d8c542f6c5279e5b49",
+            "fields": {
+              "EventNo": "3",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=3&ITEM=2416",
+              "AcceptMsg": "叔叔说要把这把斧头交给我吗？",
+              "ThanksMsg": "谢谢你特地大老远送来给我。\\n\\n可以的话，能不能听听我的请求呢？\\n如果可以的话，\\n待会要不要来我住的地方坐坐呢？",
+              "DelItem": "2416",
+              "EndSetFlg": "3"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 17,
+            "sha256": "da8f9d41ed10748909f82ab5ecd2f31b7dae61365d7b66fbefe291ead132d78f",
+            "fields": {
+              "EventNo": "5",
+              "TYPE": "REQUEST",
+              "EVENT": "ENDEV=3",
+              "RequestMsg": "关于之前收到的斧头，我已经写了感谢函了。\\n因为就凭我的力量，并不是那么容易就能办到的，\\n所以希望你能帮我把这封信转交给叔叔。\\n你能不能帮我这个忙呢？",
+              "ThanksMsg": "谢谢你。\\n\\n如果太麻烦的话，把它丢掉也没关系啦！",
+              "StopMsg": "还是不太可能帮我交给他是不是呢？",
+              "EndStopMsg": "也罢！不要太勉强了，那就先谢谢你啰！",
+              "NoStopMsg": "如果我有能越过那一片沙漠的能力\\n我就能自己去。\\n实在很抱歉。",
+              "ItemFullMsg": "好像装不下我的信了呢！",
+              "GetItem": "2423"
+            }
+          }
+        ],
+        "sainasu/event/event03_2": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "ea90f8c6287705fe363da5efe5d00ecf46af59784a57eee978ec3c1eefb552e6",
+            "fields": {
+              "EventNo": "5",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=5&ITEM=2423",
+              "AcceptMsg": "喂！\\n你是不是有帮我带来我孙子的来信啊？",
+              "ThanksMsg": "真是谢谢你了呢！\\n为了答谢您，我想把这把斧头送给您。\\n对了对了！这把跟给我孙子的那一把不同是改良过的\\n而且威力较强的唷！即使掉了，\\n也不消失。如何？\\n高不高兴呢？",
+              "ItemFullMsg": "好像已经装不下我的斧头了呢…。",
+              "GetItem": "2448",
+              "DelItem": "2423",
+              "EndSetFlg": "5"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 20,
+            "sha256": "81a7e2d19270402afc4f2df2eaefb16f947d147a2a1881ae3fee977f62e505c7",
+            "fields": {
+              "EventNo": "3",
+              "TYPE": "REQUEST",
+              "EVENT": "LV>0",
+              "RequestMsg": "你能不能听听我的请求呢？",
+              "ThanksMsg": "这把我所做的一松手就消失，不可思议的斧头，\\n希望你能帮我把它，\\n交给我那住在霍特尔的孙子马提。\\n\\n最近突然一下子老了很多，\\n无法横越沙漠…。\\n真是拜托你了呢！",
+              "StopMsg": "还是不行吗？",
+              "EndStopMsg": "嗯、还是找别人好呢…。",
+              "NoStopMsg": "这样吧！由衷地拜托你了。",
+              "ItemFullMsg": "好像已经装不下我的斧头了呢…。",
+              "GetItem": "2416"
+            }
+          },
+          {
+            "index": 2,
+            "source_line": 32,
+            "sha256": "cd6a23c61a914e8a148d1dc3821e91d30d9cfd357dd3adc4b261545ed2133ad9",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ENDEV=3,ENDEV=5",
+              "NomalMsg": "这一阵子真是谢谢你了。"
+            }
+          }
+        ]
+      }
+    },
+    "goya_deliveries": {
+      "events": [
+        6,
+        7,
+        8
+      ],
+      "creates": [
+        "jaruga/event/event06n.create",
+        "jaruga/event/event07n.create"
+      ],
+      "scripts": {
+        "jaruga/event/event06_1": [
+          0,
+          1,
+          2
+        ],
+        "jaruga/event/event06_2": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "jaruga/event/event07_1": [
+          0,
+          1,
+          2,
+          3
+        ],
+        "jaruga/event/event07_2": [
+          0,
+          1,
+          2
+        ],
+        "jaruga/event/event07_3": [
+          0,
+          1
+        ],
+        "jaruga/event/event07_4": [
+          0
+        ],
+        "jaruga/event/event07_5": [
+          0
+        ],
+        "jaruga/event/event07_6": [
+          0
+        ],
+        "jaruga/event/event07_7": [
+          0
+        ],
+        "jaruga/event/event07_8": [
+          0
+        ],
+        "jaruga/event/event07_9": [
+          0
+        ],
+        "jaruga/event/event07_10": [
+          0
+        ]
+      },
+      "items": [
+        2414,
+        2424,
+        2425,
+        2426,
+        1206
+      ],
+      "reward_enemies": [
+        44,
+        47
+      ],
+      "selected_branch_evidence": {
+        "jaruga/event/event06_1": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "9f075daa93ca4b99ad0b2e2c18577a0ba86118cb9eb412062f782dcbdb763d0a",
+            "fields": {
+              "EventNo": "6",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=6&ITEM=2414*2",
+              "AcceptMsg": "上回托你找的贝壳，有着落了吗？",
+              "ThanksMsg": "太感激你了！\\n还真的被你找到\\n真是出乎意料之外\\n就以我抓到的宠物\\n来做为谢礼吧！\\n你可要好好照顾它喔！",
+              "DelItem": "2414*1",
+              "GetPet": "44",
+              "PetFullMsg": "看情形，我的宠物\\n你大概是很难带走\\n你的道具袋已经满了    ",
+              "EndSetFlg": "6"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 19,
+            "sha256": "aa238587bb18b031d82a870f2e75b90f33274b6c38a4fd2430254c1b6ee3e081",
+            "fields": {
+              "EventNo": "6",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=6&ITEM=2414*1",
+              "AcceptMsg": "上回托你找的贝壳，有着落了吗？\\n可是！仅此一个而已\\n真的可以给我吗？",
+              "ThanksMsg": "太感激你了！\\n将仅有一个的贝壳给我，你真的是个大好人\\n就以我抓到的宠物\\n做为谢礼送给你吧！\\n你可要用心照顾它喔！",
+              "DelItem": "2414*1",
+              "GetPet": "47",
+              "PetFullMsg": "看情形，我的宠物\\n你大概是很难带走\\n你的道具袋已经满了    ",
+              "EndSetFlg": "6"
+            }
+          },
+          {
+            "index": 2,
+            "source_line": 32,
+            "sha256": "2f75d36eba67f0eb692faad2fb82952b78626235dd0a87c986294aa766ae491c",
+            "fields": {
+              "EventNo": "6",
+              "TYPE": "REQUEST",
+              "EVENT": "LV>0",
+              "RequestMsg": "想请教你一个问题\\n如果拥有一种神奇贝壳\\n就可以了解这个洞窟中所有的宠物\\n的语言和它们沟通无阻\\n\\n如果真能将这种贝壳到手\\n无论如何请你要分一个给我",
+              "ThanksMsg": "谢谢，那就麻烦你了\\n听说，\\n最近来到卡鲁它那的\\n玛丽娜丝商人手中好像有\\n我决定待在这里守着它\\n以免跑丢",
+              "StopMsg": "",
+              "EndStopMsg": "这样啊！真是可惜\\n好想和它聊聊天",
+              "NoStopMsg": "啊！希望能早点实现和它沟通的愿望  "
+            }
+          }
+        ],
+        "jaruga/event/event06_2": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "53e67f4ce94f3ea9ecaff44b0c047bfcb651d2586800916ab42ea433dd9ae43a",
+            "fields": {
+              "EventNo": "6",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=6&ITEM!=2414",
+              "AcceptMsg": "我从玛丽娜丝来到这加鲁卡\\n可是横渡那海洋，千里迢迢而来的\\n原本是打算在这开家店面\\n很不幸地遇上暴风雨\\n只剩下这个小小的贝壳\\n我看是做生意是没指望了\\n\\n什么！？你对这贝壳有兴趣？",
+              "ThanksMsg": "你的癖好还真是与众不同\\n你买这个要干嘛？\\n这对我来说这东西一点也用处也没有\\n就免费送给你吧！什么？你想要两个？\\n不用跟我客气，仅管拿去吧！",
+              "ItemFullMsg": "你的道具袋已经满了\\n我看等你减少道具后再来拿吧!",
+              "GetItem": "2414*2"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 19,
+            "sha256": "451f902e39025491023d1757c3a727b2cfe7aad4d0fee216bbf7d67570277c84",
+            "fields": {
+              "EventNo": "6",
+              "TYPE": "MESSAGE",
+              "EVENT": "NOWEV=6&ITEM=2414*2",
+              "NomalWindowMsg": "你不是已经有贝壳了吗？\\n那就已经不需要了\\n"
+            }
+          },
+          {
+            "index": 2,
+            "source_line": 28,
+            "sha256": "b6b140d920cc43b92190df66644a33729a72450c2626f1b1efe01d65ae4e5dff",
+            "fields": {
+              "EventNo": "6",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=6&ITEM=2414",
+              "AcceptMsg": "我从玛丽娜丝来到这加鲁卡\\n可是横渡那海洋，千里迢迢而来的\\n原本是打算在这开家店面\\n很不幸地遇上暴风雨\\n只剩下这个小小的贝壳\\n我看是做生意是没指望了\\n\\n什么！？你对这贝壳有兴趣？",
+              "ThanksMsg": "你的癖好还真是与众不同\\n你买这个要干嘛？\\n这对我来说这东西一点也用处也没有\\n就免费送给你吧！不用客气，仅管拿去吧！",
+              "ItemFullMsg": "你的道具袋已经满了\\n我看等你减少道具后再来拿吧!",
+              "GetItem": "2414"
+            }
+          },
+          {
+            "index": 3,
+            "source_line": 38,
+            "sha256": "867a83b951e815f66cbf249971ab9a95726a2064d361d06244d26a2d892c670a",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "ACCEPT",
+              "EVENT": "ENDEV=6&ITEM!=2414",
+              "AcceptMsg": "我从玛丽娜丝来到这加鲁卡\\n可是横渡那海洋，千里迢迢而来的\\n原本是打算在这开家店面\\n很不幸地遇上暴风雨\\n只剩下这个小小的贝壳\\n我看是做生意是没指望了\\n\\n什么！？你对这贝壳有兴趣？",
+              "ThanksMsg": "你的癖好还真是与众不同\\n你买这个要干嘛？\\n这对我来说这东西一点也用处也没有\\n就免费送给你吧！不用客气，仅管拿去吧！",
+              "ItemFullMsg": "你的道具袋已经满了\\n我看等你减少道具后再来拿吧!",
+              "GetItem": "2414*1"
+            }
+          }
+        ],
+        "jaruga/event/event07_1": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "eaf06fc191fac1ec5586635c4c18cb9bd4b908867db9c7051481d9a30c006c46",
+            "fields": {
+              "EventNo": "8",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=8&ITEM=2414&ITEM=2426",
+              "AcceptMsg": "上回真是谢谢你\\n已经照你所说的，还搭配着鲜花\\n你已经帮我传信给她了\\n\\n真的吗？乌力美有回封信\\n要转交给我！？",
+              "ThanksMsg": "哇～太高兴了，真是太感谢你了\\n为了表示我的谢意，给你我的宝物",
+              "ItemFullMsg": "你的道具袋已经满到装不下去！",
+              "GetItem": "1206",
+              "DelItem": "2426",
+              "EndSetFlg": "8"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 20,
+            "sha256": "d4a2d560e7af3284f9e7abdfc3e78a4a82199ac5cdd4a11438e415449e37d047",
+            "fields": {
+              "EventNo": "7",
+              "TYPE": "REQUEST",
+              "EVENT": "LV>0&ITEM=2414",
+              "RequestMsg": "乌力乌力乌力乌力乌力乌力力\\n啊！初次见面你好\\n我是最近才来到这洞窟的乌力斯凯\\n我想写封信给住在这洞窟的\\n乌力美小姐\\n希望你能代我送去，最好再附上鲜花\\n虽然这个要求很无理，但无论如何请你帮我这个忙",
+              "ThanksMsg": "谢谢！\\n乌力美小姐的特征\\n\\n还是请教长住于此的居民\\n应该会比较清楚才是\\n不妨问问看他们\\n可千万别把我的信搞丢",
+              "ItemFullMsg": "行李已经满到装不下去！",
+              "StopMsg": "没办法去到乌力美小姐住的地方！？",
+              "EndStopMsg": "啊～还是死心好了\\n反正我怎么样都无法上到山顶上面",
+              "NoStopMsg": "试试向大家问问乌力美小姐的特征\\n或许并不是那么的困难\\n\\n拜托你这么麻烦的事，真是抱歉。",
+              "GetItem": "2425"
+            }
+          },
+          {
+            "index": 2,
+            "source_line": 33,
+            "sha256": "98c83a918125244009ea5a3781a816a33e7d07db4198ea49cc948a1cdec2e055",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ENDEV=7&ENDEV=8&ITEM=2414",
+              "NomalMsg": "上回真是谢谢你，最近可好？"
+            }
+          },
+          {
+            "index": 3,
+            "source_line": 39,
+            "sha256": "8d604f9a370cab9715564387f7b4e35db8348402a00abd2821125630e78ec0ad",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "乌力美小姐～"
+            }
+          }
+        ],
+        "jaruga/event/event07_2": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "595bb1a9fe38ee3f422fa3f4460195f9437a1e2bb767610f4dca0d9bb6d7cf6d",
+            "fields": {
+              "EventNo": "7",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=7&ITEM=2414&ITEM=2424&ITEM=2425",
+              "AcceptMsg": "哇！月光花\\n特地买给我的吗？",
+              "ThanksMsg": "还附着一封信，好开心\\n这是住在1楼的乌力斯凯托你交给我的\\n\\n从这么远的地方送来，真是麻烦你\\n我读完信后马上回封信\\n不知可否请你稍后再过来一趟呢？",
+              "DelItem": "2425,2424",
+              "EndSetFlg": "7"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 19,
+            "sha256": "a1fed682db81d8e71f88880b9a2cd66bfba3e77273698f7cc07f9677873d1467",
+            "fields": {
+              "EventNo": "8",
+              "TYPE": "REQUEST",
+              "EVENT": "LV>0&ENDEV=7&ITEM=2414",
+              "RequestMsg": "啊，你来了吗？\\n这是我写给乌力斯凯的信。\\n可否请你再跑一趟，\\n帮我把信拿给乌力斯凯呢？\\n",
+              "ThanksMsg": "那就拜托你了\\n请小心\\n不要将信弄丢",
+              "StopMsg": "没办法送吗？",
+              "EndStopMsg": "这样啊\\n那我再去找别人",
+              "NoStopMsg": "给您添麻烦了\\n万事拜托",
+              "ItemFullMsg": "惨了你的道具袋已经满了\\n好像装不下了",
+              "GetItem": "2426"
+            }
+          },
+          {
+            "index": 2,
+            "source_line": 32,
+            "sha256": "a16092187394bdb8bc5118b014e617da3187ec1a9c58952e2aa84e43012a2185",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "我很喜欢月光花。它的花朵所呈现的色彩，就如那悬挂在夜空中的月光般迷人"
+            }
+          }
+        ],
+        "jaruga/event/event07_3": [
+          {
+            "index": 0,
+            "source_line": 7,
+            "sha256": "f13def5c35ba8deb5f87d4bce23067f2856be9bdf62f3c7573b53381f034b930",
+            "fields": {
+              "EventNo": "7",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=7&ITEM=2414&ITEM=2425&ITEM!=2424",
+              "AcceptMsg": "我所卖的花在这洞窟中\\n可是无人可比的。你也想要这种花吗？",
+              "ThanksMsg": "好吧。看在你的面子上，半买半赠送啦！\\n如果连同书信送\\n一定可以讨人欢心\\n下次有空再过来坐坐！",
+              "ItemFullMsg": "啊！你的道具袋已经满了",
+              "GetItem": "2424"
+            }
+          },
+          {
+            "index": 1,
+            "source_line": 16,
+            "sha256": "16b2431bb133993f1c1866253e31b26dcc60bc7bc06baee1b37ed00aba0f8a59",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ENDEV=7,ENDEV=8&ITEM=2414",
+              "NomalMsg": "上回的鲜花攻势可有产生功效？"
+            }
+          }
+        ],
+        "jaruga/event/event07_4": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "a648430f6a47e1ea9e7bbf84f70cc2ad366164daef6bfcc3814732fae3b43393",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "好久没有跟人类聊天了！"
+            }
+          }
+        ],
+        "jaruga/event/event07_5": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "9e3e205d161f447b4008e70eae33f5142363939cdd85fb707c927f568bad5be4",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "月光花，可是这洞窟中最有名气的花呢！"
+            }
+          }
+        ],
+        "jaruga/event/event07_6": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "f293a27cf42040f0e876254d8b2878728702e3d9e251ab6d513d0e1a9f9f106f",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "月光花的话，我记得在乌力花店可以买得到"
+            }
+          }
+        ],
+        "jaruga/event/event07_7": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "400ae535c2e2f8f483f00984863c29cb7ddef89d2797b09dc1064d54d2dbd55a",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "乌力美小姐？我是没有见过她"
+            }
+          }
+        ],
+        "jaruga/event/event07_8": [
+          {
+            "index": 0,
+            "source_line": 9,
+            "sha256": "3ce7d13f0b6b1c7075200751e85f1220f86537bf56044deb58fbd662f7ab8a41",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "乌力美小姐有说过她很喜欢月光花喔！"
+            }
+          }
+        ],
+        "jaruga/event/event07_9": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "3a2f635e67a5804a82cac2239ab5c18759b6b1e820acb8a13966a5a65f4c0088",
+            "fields": {
+              "EventNo": "-1",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "乌力美小姐？没有记错的话，我好像听说山顶上有这一号人物"
+            }
+          }
+        ],
+        "jaruga/event/event07_10": [
+          {
+            "index": 0,
+            "source_line": 8,
+            "sha256": "92976f2f8139709cd0955fa2fa909049e4b68571666e5360c7f6bf06d6feb4af",
+            "fields": {
+              "EventNo": "7",
+              "TYPE": "MESSAGE",
+              "EVENT": "ITEM=2414",
+              "NomalMsg": "从这里看出去的风景真是太棒了！和风徐徐好舒服喔！"
+            }
+          }
+        ]
+      }
+    },
+    "golden_bui": {
+      "events": [
+        44
+      ],
+      "creates": [
+        "quiz/quiz.create"
+      ],
+      "scripts": {
+        "quiz/equiz_01": [
+          3
+        ],
+        "quiz/equiz_02": [
+          4
+        ]
+      },
+      "items": [
+        2753
+      ],
+      "reward_enemies": [
+        14
+      ],
+      "selected_branch_evidence": {
+        "quiz/equiz_01": [
+          {
+            "index": 3,
+            "source_line": 29,
+            "sha256": "30601f2be78a49b6a53bb099ecd3b8dd556e9730f5f87be247427e18ffc3f995",
+            "fields": {
+              "EventNo": "44",
+              "TYPE": "REQUEST",
+              "EVENT": "LV>0",
+              "RequestMsg": "\\n\\n厉害！没想到能够来到12楼呀！\\n给来到这里的你猜谜大师的\\n入门证吧！可以收下吗？",
+              "ThanksMsg": "\\n\\n把这个入门证交给隔壁的伊那多\\n询问成为猜谜大师的课题吧！\\n你也以猜谜大师为目标！",
+              "StopMsg": "\\n\\n\\n不想成为猜谜大师？",
+              "EndStopMsg": "\\n\\n\\n那么，等你想来的时候再来吧！",
+              "NoStopMsg": "\\n\\n\\n这样的话，快点把入门证交给伊那多喔！",
+              "ItemFullMsg": "\\n\\n\\n道具已经满了无法收下的样子喔。",
+              "GetItem": "2753"
+            }
+          }
+        ],
+        "quiz/equiz_02": [
+          {
+            "index": 4,
+            "source_line": 38,
+            "sha256": "9c62d5d849bfae170dbdc8244344b66a7eaaa3c74a9d38fc408d9199e6e9d271",
+            "fields": {
+              "EventNo": "44",
+              "TYPE": "ACCEPT",
+              "EVENT": "NOWEV=44&ITEM=2753",
+              "AcceptMsg": "\\n\\n哎呀！那个是猜谜大师的入门证吧！\\n你也迈向猜谜大师之路了吗？",
+              "ThanksMsg": "\\n很好，很有干劲喔！\\n那么的话我就出成为猜谜大师的课题啰\\n等到现在交给你的稀有宠物\\n等级成为LV77之后是否可以带来给我呢？\\n如果无法达成这个条件的话我就没有办法带你到成为\\n猜谜大师的认定场\\n认定场喔。那么、加油啰！",
+              "PetFullMsg": "\\n\\n因为宠物太多而无法交给你喔。\\n能否把宠物的数量减少之后再来呢？",
+              "GetPet": "14",
+              "DelItem": "2753",
+              "EndSetFlg": "44"
+            }
+          }
+        ]
+      }
+    }
+  },
+  "bindings": [
+    {
+      "group": "yam_axe",
+      "source": "gmsv/data/npc/sainasu/event/event03.create",
+      "line": 7,
+      "source_script": "sainasu/event/event03_2",
+      "map_id": 1400,
+      "cell": [
+        69,
+        89
+      ],
+      "name": "亚姆亚姆",
+      "graphic": 16057
+    },
+    {
+      "group": "yam_axe",
+      "source": "gmsv/data/npc/sainasu/event/event03.create",
+      "line": 18,
+      "source_script": "sainasu/event/event03_1",
+      "map_id": 1300,
+      "cell": [
+        18,
+        42
+      ],
+      "name": "马提",
+      "graphic": 16048
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event06n.create",
+      "line": 8,
+      "source_script": "jaruga/event/event06_1",
+      "map_id": 20401,
+      "cell": [
+        12,
+        13
+      ],
+      "name": "年青人",
+      "graphic": 16203
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event06n.create",
+      "line": 21,
+      "source_script": "jaruga/event/event06_2",
+      "map_id": 4000,
+      "cell": [
+        71,
+        97
+      ],
+      "name": "玛丽娜丝的商人",
+      "graphic": 16018
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 8,
+      "source_script": "jaruga/event/event07_1",
+      "map_id": 20401,
+      "cell": [
+        14,
+        10
+      ],
+      "name": "乌力斯凯",
+      "graphic": 100252
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 20,
+      "source_script": "jaruga/event/event07_3",
+      "map_id": 20404,
+      "cell": [
+        44,
+        13
+      ],
+      "name": "乌力花店",
+      "graphic": 100252
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 33,
+      "source_script": "jaruga/event/event07_2",
+      "map_id": 20406,
+      "cell": [
+        36,
+        34
+      ],
+      "name": "乌力美",
+      "graphic": 100250
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 46,
+      "source_script": "jaruga/event/event07_4",
+      "map_id": 20401,
+      "cell": [
+        30,
+        26
+      ],
+      "name": "乌力姆",
+      "graphic": 100250
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 59,
+      "source_script": "jaruga/event/event07_5",
+      "map_id": 20402,
+      "cell": [
+        25,
+        18
+      ],
+      "name": "乌力库",
+      "graphic": 100250
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 72,
+      "source_script": "jaruga/event/event07_6",
+      "map_id": 20403,
+      "cell": [
+        19,
+        19
+      ],
+      "name": "乌力隆",
+      "graphic": 100252
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 85,
+      "source_script": "jaruga/event/event07_7",
+      "map_id": 20404,
+      "cell": [
+        24,
+        36
+      ],
+      "name": "乌力卡",
+      "graphic": 100250
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 98,
+      "source_script": "jaruga/event/event07_9",
+      "map_id": 20405,
+      "cell": [
+        40,
+        32
+      ],
+      "name": "乌力泰",
+      "graphic": 100252
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 112,
+      "source_script": "jaruga/event/event07_8",
+      "map_id": 20406,
+      "cell": [
+        20,
+        25
+      ],
+      "name": "乌力可",
+      "graphic": 100252
+    },
+    {
+      "group": "goya_deliveries",
+      "source": "gmsv/data/npc/jaruga/event/event07n.create",
+      "line": 125,
+      "source_script": "jaruga/event/event07_10",
+      "map_id": 20406,
+      "cell": [
+        17,
+        38
+      ],
+      "name": "乌力米",
+      "graphic": 100250
+    },
+    {
+      "group": "golden_bui",
+      "source": "gmsv/data/npc/quiz/quiz.create",
+      "line": 14,
+      "source_script": "quiz/equiz_01",
+      "map_id": 810,
+      "cell": [
+        29,
+        16
+      ],
+      "name": "魁司",
+      "graphic": 100000
+    },
+    {
+      "group": "golden_bui",
+      "source": "gmsv/data/npc/quiz/quiz.create",
+      "line": 26,
+      "source_script": "quiz/equiz_02",
+      "map_id": 810,
+      "cell": [
+        28,
+        16
+      ],
+      "name": "伊那多",
+      "graphic": 100015
+    },
+    {
+      "group": "golden_bui",
+      "source": "gmsv/data/npc/quiz/quiz.create",
+      "line": 53,
+      "source_script": "quiz/equiz_01",
+      "map_id": 850,
+      "cell": [
+        29,
+        16
+      ],
+      "name": "魁司",
+      "graphic": 100000
+    },
+    {
+      "group": "golden_bui",
+      "source": "gmsv/data/npc/quiz/quiz.create",
+      "line": 65,
+      "source_script": "quiz/equiz_02",
+      "map_id": 850,
+      "cell": [
+        28,
+        16
+      ],
+      "name": "伊那多",
+      "graphic": 100015
+    }
+  ],
+  "maps": [
+    {
+      "id": 810,
+      "source": "gmsv/data/map/quiz/quiz11",
+      "name": "猜谜三兄弟的家１２楼|0"
+    },
+    {
+      "id": 850,
+      "source": "gmsv/data/map/quiz/quiz11b",
+      "name": "猜谜三兄弟的家１２楼|0"
+    },
+    {
+      "id": 20401,
+      "source": "gmsv/data/map/jyaruga/dungeon/dan_2-04-01",
+      "name": "哥亚山洞窟１楼|0"
+    },
+    {
+      "id": 20402,
+      "source": "gmsv/data/map/jyaruga/dungeon/dan_2-04-02",
+      "name": "哥亚山洞窟２楼|0"
+    },
+    {
+      "id": 20403,
+      "source": "gmsv/data/map/jyaruga/dungeon/dan_2-04-03",
+      "name": "哥亚山洞窟３楼|0"
+    },
+    {
+      "id": 20404,
+      "source": "gmsv/data/map/jyaruga/dungeon/dan_2-04-04",
+      "name": "哥亚山洞窟４楼|0"
+    },
+    {
+      "id": 20405,
+      "source": "gmsv/data/map/jyaruga/dungeon/dan_2-04-05",
+      "name": "哥亚山洞窟５楼|0"
+    },
+    {
+      "id": 20406,
+      "source": "gmsv/data/map/jyaruga/dungeon/dan_2-04-06",
+      "name": "哥亚山的洞窟山顶"
+    }
+  ],
+  "sources": {
+    "gmsv/char/enemy.c": "fecfedd35d6323c1112fd164a4f4636618c943debb0917781abc2f58b806ed1a",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/map/jyaruga/dungeon/dan_2-04-01": "921fa930d067f8cb31adfdec18e33c5e7f575cb7b17a9b01f9d06522f112aacd",
+    "gmsv/data/map/jyaruga/dungeon/dan_2-04-02": "bb9c3de4e3f5b8c8c0155ad5283e5722b2b25fc2bef52c73f0980d5016216fa2",
+    "gmsv/data/map/jyaruga/dungeon/dan_2-04-03": "6e2e628fabf131607876ddacfae5eebab0ba6c827a0161c0d4de98925cd0c387",
+    "gmsv/data/map/jyaruga/dungeon/dan_2-04-04": "a5e7d86a4ec48ffff687dc45dc2fe250f1b07c84745492ab39c6b64c05589214",
+    "gmsv/data/map/jyaruga/dungeon/dan_2-04-05": "782970a89617dca7389a9befebbd01cbc3bd06a5d712a842296b61acfac9387d",
+    "gmsv/data/map/jyaruga/dungeon/dan_2-04-06": "aacacb7faf072a0146e82371239479c2f861128445404e1daa6286d3aed107e1",
+    "gmsv/data/map/quiz/quiz11": "1b8df4a9bb49a0cb5bfa0898be68ad13946e2ded9d75dba3e336084a7f7fd96a",
+    "gmsv/data/map/quiz/quiz11b": "1194fdf2d611500a2d844ff07ceb4df2b805ae9302856e7b077479bbe0de7a7a",
+    "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+    "gmsv/data/npc/genout/jan_802_29_19": "e157c84d66cc644bd424d2b38ce5cbf3f6d8ed08d906c015cebd7f215c350419",
+    "gmsv/data/npc/genout/janken.create": "f04af05473855c80127e91acc0ac13ab88c30248b5d3fb62654a2827a9b6edf4",
+    "gmsv/data/npc/genout/quiz.create": "2cea75c94aad409bc0f7f9df07281d7f47421972956aa00331a90224692570bb",
+    "gmsv/data/npc/genout/quizman.create": "fd03715c723a7e63d9200a425c97ca22595c84f823be861b8facf7993a83b3ba",
+    "gmsv/data/npc/genout/quz_800_29_19": "ccedfecc1971acb89f460530ecc49331884a6103f22e231d5ce90f60b6211340",
+    "gmsv/data/npc/genout/wpm_811_28_20": "f9c5905b6a7d4f1e3dfe3c06d96a36794731432108b204fd2c7f7512b44a0b23",
+    "gmsv/data/npc/genout/wpm_811_30_20": "ae018723c636fabb5e8c2fea5581a9ff6dcf2c9709f9c7b53180665259338fd7",
+    "gmsv/data/npc/jaruga/event/event06_1": "d650ee0700e3a9d43744a43353a622134626551fa82869887c32db4ade0fc9c6",
+    "gmsv/data/npc/jaruga/event/event06_2": "d0913ab13e410b3846785b0bfe6b8103defa3199dde03a90413793e416929bb3",
+    "gmsv/data/npc/jaruga/event/event06n.create": "22506e5a240ef2ce0ab741c363143efab59d3b321477f059a254800eafbdf615",
+    "gmsv/data/npc/jaruga/event/event07_1": "84c715c5a9f5d99b6ff5c897aa59845ebd340c842279ae41ad812a3325734531",
+    "gmsv/data/npc/jaruga/event/event07_10": "789ecfe7ec1408d1c34176addc5e877fba9fee57095591f0b394d219e26e9e7b",
+    "gmsv/data/npc/jaruga/event/event07_2": "471b5bb7cda92e0e8def04bcc276a82bfefcc1710bae230deaa85f6a1be466e6",
+    "gmsv/data/npc/jaruga/event/event07_3": "b000da5322595a81a6ddb13b463f13a81d5f21b7251d60acc3be650057b2aba4",
+    "gmsv/data/npc/jaruga/event/event07_4": "7cbdcf7e24033fbb21fd843daee6a47c53865f6c82abf8dead5e7929a31bd600",
+    "gmsv/data/npc/jaruga/event/event07_5": "f8f2745db26ae99563582ed63c71a5936946ed37966316a9f91720488c941ee0",
+    "gmsv/data/npc/jaruga/event/event07_6": "88a77f72fa4df9fe6b708566812d64ba6b7b5b61d2c8d0416c46e11d9a8feecf",
+    "gmsv/data/npc/jaruga/event/event07_7": "5cdb522a8b69c79fa0c8a1b06293b87981d4c143f6804559ca9032da52a074b5",
+    "gmsv/data/npc/jaruga/event/event07_8": "e59508c0466e2461a58f310c2d7547ca2587365c35821812f53051a4073b6b29",
+    "gmsv/data/npc/jaruga/event/event07_9": "1e75e0332c90e3630fa21f0788858e60e0b394ebde3724890b5d6441d900b3f3",
+    "gmsv/data/npc/jaruga/event/event07n.create": "25f6ea90a38884256263f000bf152a2a4e3929d3fffb6226ec5fb21708b2e738",
+    "gmsv/data/npc/quiz/equiz_01": "70af9ae74d61b2153bd889a72f47f895ce6b15f09ad0617f5fede055c715c22b",
+    "gmsv/data/npc/quiz/equiz_02": "f4678b82565b864c3e027d519bcc3f84ae4b1f3079e4e497ef190d961f63ed76",
+    "gmsv/data/npc/quiz/quiz.create": "f1d2b193f55b45b75813c390b95963cf819a938eb4b9827911ebcc07023ed459",
+    "gmsv/data/npc/quiz/uketuke": "5e593e9a0f9ae58a50c0b7555cbb4de29e83e8f48ff8755c1954a35beae910ed",
+    "gmsv/data/npc/quiz/uketuke2": "ca05a1ca788c5d3914d6de454cecfe27c48678c907ae41661cb649510f930e82",
+    "gmsv/data/npc/sainasu/event/event03.create": "e7d0f22f30fd4245e7d1893a52a6fb20b78b0ae1ab089344eec397a1d09b0e39",
+    "gmsv/data/npc/sainasu/event/event03_1": "2f54a3fe00d25f614506bd46dff4ebc986b3272b30191b4fd517056149e5d849",
+    "gmsv/data/npc/sainasu/event/event03_2": "05ab1ee59a31be595cf4847c9e7f92d0ab6ce2fc0d2d8d49d1ae627eb24d91b9",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npcutil.c": "47dd685fc91b2aa686c45a03e4fe49586649b345d6ab8c4bbf8da729e4c1064b",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+    "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
+    "gmsv/item/item_event.c": "33ed3526accf9b0051e08cbe150082056eebd9d36e39faa323d365c855d50d66",
+    "gmsv/char/char.c": "0f5074d47f0b12ee92b9d5f537b7bf099fc16dd969d33e5e38632b2dddbc3f9d"
+  }
+}
