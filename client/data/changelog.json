@@ -1,9 +1,18 @@
 {
-  "version": "v0.195.0",
-  "count": 293,
+  "version": "v0.195.1",
+  "count": 294,
   "feature_count": 179,
-  "fix_count": 114,
+  "fix_count": 115,
   "entries": [
+    {
+      "version": "v0.195.1",
+      "date": "2026-10-02",
+      "kind": "fix",
+      "title": "龙洞导航状态仅作用于七楼",
+      "details": [
+        "龙洞助手只在七楼记录带任务名的门内外状态，离开后不影响其他任务的导航缓存；保留原三玉门与领奖区域限制。"
+      ]
+    },
     {
       "version": "v0.195.0",
       "date": "2026-10-02",

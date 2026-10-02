@@ -18,7 +18,9 @@ static func inside(backend)->bool:
     if int(map.blocked[next.y*int(map.width)+next.x])!=0:continue
     reward_cells[next]=true;queue.append(next)
  return reward_cells.has(backend.automation.position_cell)
-static func stage_key(backend)->Array:return [inside(backend)]
+static func stage_key(backend)->Array:
+ if backend.automation.position_map!=20807:return []
+ return ["dragon17",inside(backend)]
 static func entry(backend,script:String,index:int=-1)->Dictionary:
  for npc in backend.quest_catalog.active_npcs():
   if str(npc.get("source_script",""))!=script:continue

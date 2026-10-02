@@ -33,14 +33,22 @@ func boundary(b)->void:
 func run()->void:
  var b=fresh()
  check(17 in b.quest_catalog.enabled_events,"registered17")
+ var original_events:Array=b.quest_catalog.enabled_events.duplicate()
+ b.quest_catalog.enabled_events=[17]
+ check(Dragon.stage_key(b).is_empty() and b.quest_helper.navigation_key(b).is_empty(),"outside dragon map stage key contributes nothing")
+ b.automation.position_changed(-999,Vector2i.ZERO)
+ check(Dragon.stage_key(b).is_empty() and not Dragon.inside(b),"unknown map fails closed without global stage key")
+ b.quest_catalog.enabled_events=original_events
  check(trade(b,FLUTE).ok and Rules.flag(b.session.snapshot(),"now",17) and 2505 in b.session.snapshot().original_items,"source guardian gives flute and NOW17")
  boundary(b)
+ check(Dragon.stage_key(b)==["dragon17",false],"entrance has named outside-wall stage")
  gems(b)
  boundary(b)
  var opened:=talk(b,GATE);var before:Dictionary=b.session.snapshot();b.save_path="user://dragon-missing-parent/save.json"
  check(not choose(b,opened,"yes").ok and b.session.snapshot()==before and not Dragon.inside(b),"failed gate save preserves entrance and all gems")
  b.save_path=""
  check(trade(b,GATE).ok and Dragon.inside(b),"original guard alone enters reward component")
+ check(Dragon.stage_key(b)==["dragon17",true],"reward component has named inside-wall stage")
  for id in [2457,2458,2459]:check(id in b.session.snapshot().original_items,"source gate keeps jade")
  for mode in ["near","arrival"]:
   for id in REWARDS:check(b.handle({"type":"quest_visit","npc_id":id,"mode":mode}).ok and Dragon.inside(b),"after source gate reward navigation stays inside component")
