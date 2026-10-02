@@ -111,6 +111,7 @@ static func pet_ids(profile: Dictionary, raw: String) -> Array:
 
 func refresh_npc_state() -> bool:
 	var changed:bool=npc_state.expire()
+	changed=npc_state.spawn_areas(catalog.npcs,catalog.enabled_events) or changed
 	catalog.npc_overrides=npc_state.snapshot()
 	return changed
 

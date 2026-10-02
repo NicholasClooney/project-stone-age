@@ -169,11 +169,18 @@ def load_quest_module(reference, manifest):
                 raise ValueError('Reviewed handler differs from actual create binding')
             corners = list(map(int, fields.get('borncorner', fields.get('borncenter','')).split(',')))
             fixed_spawn = len(corners) == 4 and (corners[:2] == corners[2:] if 'borncorner' in fields else kind == 'npcenemy' and corners[2:] == [1,1])
-            if not fixed_spawn or fields['createnum'] != '1':
-                raise ValueError('Moving/multiple NPC requires a reviewed handler')
+            spawn = None
+            if not fixed_spawn:
+                from quest_source_spawn import source_area
+                spawn = source_area(reference,spec,texts,script,create,fields,review)
+            elif review.get('spawn_policy'):
+                raise ValueError('Area policy requires actual source area')
+            if fields['createnum'] != '1':
+                raise ValueError('Multiple NPC requires a reviewed handler')
             map_id, cell = int(fields['floorid']), corners[:2]
             # Optional instance allowlist uses the same public stable id.
             ident = instance_id(script, map_id, cell)
+            if spawn:ident += ':area:%d:%d' % tuple(corners[2:])
             if 'instances' in review and ident not in review['instances']:
                 continue
             if script in handlers:
@@ -211,6 +218,7 @@ def load_quest_module(reference, manifest):
             npc = dict(id=ident, source_script=script, source_create=create, source_create_index=ordinal,
                        events=list(events), name=fields['name'], map_id=map_id, cell=cell,
                        graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches)
+            if spawn:npc['source_spawn'] = spawn
             if kind == 'npcenemy':
                 npc['source_spawn_mode'] = 'NPCEnemy borncenter 1x1; original movement not simulated'
             if ident in seen:

@@ -18,6 +18,8 @@ def source_text(reference, relative, spec):
     raw = (Path(reference) / relative).read_bytes()
     if hashlib.sha256(raw).hexdigest() != spec['sources'][relative]:
         raise ValueError(f'Unreviewed source change: {relative}')
+    # setup.cf has mixed legacy comment encodings; audited keys are ASCII.
+    if relative == 'gmsv/setup.cf':return raw.decode('latin1')
     return raw.decode('gb18030')
 
 
