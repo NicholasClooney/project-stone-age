@@ -1,7 +1,7 @@
 extends RefCounted
 ## Project policy B: one instance per character Backend; never serialized.
 ## Original NPC state was global. Here each character owns its own runtime state.
-var clock:Callable=func():return int(Time.get_unix_time_from_system())
+var clock:Callable=func():return Time.get_unix_time_from_system()
 var records:Dictionary={}
 var version:=0
 func expire()->bool:
@@ -36,3 +36,27 @@ func moved(id:String,destinations:Array)->void:
  entry.map_id=int(point[0]);entry.cell=[int(point[1]),int(point[2])]
  entry.counter=(next+1)%destinations.size()
  records[id]=entry;version+=1
+
+# Source birth attempts are not quest transactions and never enter the save.
+# An unsuccessful draw stays absent; the next server second retries one point.
+var spawn_rng:=RandomNumberGenerator.new()
+var spawn_attempts:Dictionary={}
+func _init()->void:spawn_rng.randomize()
+func spawn_areas(npcs:Array,enabled_events:Array)->bool:
+ var changed:=false
+ var now:=float(clock.call())
+ for npc in npcs:
+  if not npc.has("source_spawn") or not npc.get("events",[]).any(func(e):return int(e) in enabled_events):continue
+  var id:=str(npc.id)
+  if records.get(id,{}).has("map_id"):continue
+  if spawn_attempts.has(id) and now<float(spawn_attempts[id])+1.0:continue
+  spawn_attempts[id]=now
+  var rule:Dictionary=npc.source_spawn
+  var rect:Array=rule.rect
+  var width:=int(rect[2])-int(rect[0])+1
+  var area:=width*(int(rect[3])-int(rect[1])+1)
+  var offset:=spawn_rng.randi_range(0,area-1)
+  if str(rule.walkable).substr(offset,1)!="1":continue
+  records[id]={"map_id":int(npc.map_id),"cell":[int(rect[0])+offset%width,int(rect[1])+int(offset/width)]}
+  version+=1;changed=true
+ return changed
