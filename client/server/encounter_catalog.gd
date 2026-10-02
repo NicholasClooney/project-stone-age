@@ -4,6 +4,26 @@ const Rules = preload("res://server/progression.gd")
 ## Only the audited wood encounter is enabled; source tables retain all slots.
 ## Other enemies need their own profit/exit-path audit before activation.
 const DROP_ENEMY_IDS := [563,1060]
+static var _quest_drop_loaded := false
+static var _quest_drop_ids: Array = []
+static func reviewed_drop_enemy_ids() -> Array:
+	if not _quest_drop_loaded:
+		_quest_drop_loaded=true
+		var path:="res://assets/legacy/quests/catalog.json"
+		if FileAccess.file_exists(path):
+			var parsed=JSON.parse_string(FileAccess.get_file_as_string(path))
+			if parsed is Dictionary:
+				for module in parsed.get("reviewed_drops",{}).values():
+					if not bool(module.get("active",false)):continue
+					for entry in module.get("entries",[]):
+						var id:=int(entry.get("enemy_id",0))
+						if id>0 and not id in _quest_drop_ids:_quest_drop_ids.append(id)
+	return _quest_drop_ids
+static func drop_enemy_allowed(enemy_id: int) -> bool:
+	return enemy_id in DROP_ENEMY_IDS or enemy_id in reviewed_drop_enemy_ids()
+static func transactional_drop_enemy(enemy_id: int) -> bool:
+	return enemy_id==1060 or enemy_id in reviewed_drop_enemy_ids()
+
 var data: Dictionary = {}
 var pressure := 0
 var last_error := ""
@@ -128,7 +148,7 @@ func actor(enemy_id: int, rng: RandomNumberGenerator) -> Dictionary:
 	for i in range(10):initial[rng.randi_range(0,3)] += 1
 	var result := {"source_enemy_id":enemy_id,"template_id":int(template.id),"species":"original_%d"%int(template.id),"name":template.name,"sprite":int(template.sprite),"level":level,"base_stats":{},"growth_weights":weights,"growth_seed":rng.randi(),"growth_rank":5,"hp":1,"learned_skills":[],"source_experience":int(enemy.experience),"can_capture":int(enemy.pet_flag)!=0,"elements":template.elements.duplicate(),"size":int(template.size)}
 	result.source_wait_only = bool(enemy.get("wait_only",false))
-	result.generated_drops = roll_drops(enemy,rng) if enemy_id in DROP_ENEMY_IDS else []
+	result.generated_drops = roll_drops(enemy,rng) if drop_enemy_allowed(enemy_id) else []
 	if template.has("capture_resistance"):result.capture_parameter=int(template.capture_resistance)
 	var total := 0
 	for weight in template.weights:total += int(weight)
