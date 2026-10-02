@@ -25,6 +25,20 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_personal_npc_rules_are_exact_pinned_sources(self):
+        fixture_path=Path(__file__).resolve().parents[1]/'client/tests/fixtures/personal-quest-npcs.json'
+        fixtures=json.loads(fixture_path.read_text())
+        for fixture in fixtures:
+            result=common.load_quest_module(REFERENCE,fixture['manifest'])
+            self.assertEqual(result,fixture['module'])
+        from quest_source_handlers import npc_enemy
+        source=(REFERENCE/'gmsv/data/npc/300/sb_bac.arg').read_text(encoding='gb18030')
+        for old,new in [('time:300','time:301'),('steal:1','steal:0'),('dieact:0','dieact:3')]:
+            with self.subTest(new=new),self.assertRaises(ValueError):
+                npc_enemy(source.replace(old,new),'source',[27])
+        branch=fixtures[2]['module']['npcs'][0]['branches'][0]
+        self.assertEqual(branch['actions']['NpcWarp'],'4000.53.101,2000.44.39,5105.14.3,6000.58.44')
+
     def test_authorized_saton_supplements_preserve_original_source(self):
         fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-quest-supplements.json').read_text())
         spec=fixture['manifest']

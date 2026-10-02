@@ -53,8 +53,10 @@ def parse_script(text, branch_indices=None):
                     raise ValueError(f'Unsupported predicate: {clause}')
             texts = {k: v.replace('\\n', '\n') for k, v in current.items() if 'Msg' in k}
             actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
-            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'DelStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm'}:
+            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'DelStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm', 'NpcWarp'}:
                 raise ValueError('Unsupported quest action')
+            if 'NpcWarp' in actions and not re.fullmatch(r'\d+\.\d+\.\d+(?:,\d+\.\d+\.\d+)*',actions['NpcWarp']):
+                raise ValueError('Unsupported NpcWarp destination list')
             if 'DelStone' in actions and not valid_stone_cost(actions['DelStone']):
                 raise ValueError('Unsupported DelStone cost expression')
             for key in ('DelPet', 'GetPet', 'GetRandItem'):

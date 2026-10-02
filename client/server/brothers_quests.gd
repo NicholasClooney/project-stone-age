@@ -1,5 +1,5 @@
 extends RefCounted
-## Only the pinned NPCEnemy dieact=1 and warpman subset used by these chains.
+## Pinned NPCEnemy subsets: source troops, victory Warp or personal cooldown.
 static func begin(rules, backend, npc: Dictionary, branch: Dictionary) -> Dictionary:
  if backend.quest_visit_guard.is_valid():
   var reason: String=str(backend.quest_visit_guard.call())
@@ -7,7 +7,7 @@ static func begin(rules, backend, npc: Dictionary, branch: Dictionary) -> Dictio
  var ids:Array=[]
  if branch.has("guard"):
   var guard:Dictionary=branch.guard
-  if int(guard.get("dieact",-1))!=1:return {"ok":false,"reason":"尚未支持的守卫胜利动作。"}
+  if int(guard.get("dieact",-1)) not in [0,1]:return {"ok":false,"reason":"尚未支持的守卫胜利动作。"}
   ids=guard.get("enemy_ids",[]).duplicate()
   var expected:PackedStringArray=str(branch.actions.Battle).split(",")
   if ids.is_empty() or ids.size()>10 or ids.size()!=expected.size():return {"ok":false,"reason":"未审计的守卫。"}
@@ -17,6 +17,9 @@ static func begin(rules, backend, npc: Dictionary, branch: Dictionary) -> Dictio
   var id:=int(branch.actions.Battle)
   if id not in [1001,1012,1013,1014,1015]:return {"ok":false,"reason":"未审计的守卫。"}
   ids=[id]
+ var guard:Dictionary=branch.get("guard",{})
+ for required in guard.get("required_items",[]):
+  if not int(required) in backend.session._profile.original_items:return {"ok":false,"reason":str(branch.get("source_fields",{}).get("deniedmsg","缺少原守卫要求的道具。"))}
  var actors:Array=[]
  for id in ids:
   var actor:Dictionary=backend.encounter_catalog.actor(int(id),backend.encounter_rng)
@@ -24,10 +27,23 @@ static func begin(rules, backend, npc: Dictionary, branch: Dictionary) -> Dictio
   actors.append(actor)
  var config:Dictionary=backend.session.start_wild_battle_config({"enemies":actors})
  if config.is_empty():return {"ok":false,"reason":"原守卫战资源尚未导入。"}
- backend.session._pending.quest_guard={"npc_id":npc.id,"warp":str(branch.actions.Warp)}
+ backend.session._pending.quest_guard={"npc_id":npc.id,"warp":str(branch.actions.get("Warp","")),"guard":guard.duplicate(true)}
  rules.pending={}
  backend.open_battle(config)
  return {"ok":true,"closed":true}
+
+static func settle_profile(backend, pending:Dictionary)->void:
+ var guard:Dictionary=pending.get("guard",{})
+ if int(guard.get("steal",0))==1:
+  for item in guard.get("required_items",[]):backend.session.OriginalEquipment.remove(backend.session._profile,int(item))
+ var warp:=str(pending.get("warp",""))
+ if not warp.is_empty():warp_profile(backend.session._profile,warp)
+
+static func committed(backend, pending:Dictionary)->void:
+ var guard:Dictionary=pending.get("guard",{})
+ if int(guard.get("dieact",1))==0:
+  backend.original_quests.npc_state.defeated(str(pending.npc_id),int(guard.cooldown))
+  backend.original_quests.refresh_npc_state()
 
 static func warp_profile(profile: Dictionary, raw: String) -> void:
  var target:=raw.split(",")

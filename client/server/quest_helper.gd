@@ -19,6 +19,7 @@ func snapshot(backend) -> Dictionary:
  var catalog = backend.quest_catalog
  var key := JSON.stringify([catalog.get_instance_id(),catalog.enabled_events,profile.original_events,profile.original_items,profile.get("original_equipment",{}),profile.original_savepoint_bits,profile.player.level,profile.player.gold,profile.pets.map(func(pet):return [pet.get("pet_id",""),pet.get("species",""),pet.get("level",0),Rules.Session.original_pet_event(pet)]),Rules.Session.bag_slots(profile)])
  key+=JSON.stringify(navigation_key(backend))
+ key+=":"+str(backend.original_quests.npc_state.version)
  if key == cached_key:return cached_snapshot.duplicate(true)
  var quests: Array = []
  for job in catalog.jobs:

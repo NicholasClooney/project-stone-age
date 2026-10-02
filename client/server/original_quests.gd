@@ -7,6 +7,7 @@ const Brothers = preload("res://server/brothers_quests.gd")
 const Loyalty = preload("res://server/loyalty.gd")
 var catalog
 var services = preload("res://server/original_quest_services.gd").new()
+var npc_state = preload("res://server/quest_npc_state.gd").new()
 var pending := {}
 var serial := 0
 # gmsv/include/version.h:241 enables _FIX_MAX_GOLD; char/char_base.c:
@@ -108,7 +109,13 @@ static func _select_pets(profile: Dictionary, predicates: Array, offset: int, us
 static func pet_ids(profile: Dictionary, raw: String) -> Array:
 	return pet_indices(profile,raw).map(func(index):return str(profile.pets[index].pet_id))
 
+func refresh_npc_state() -> bool:
+	var changed:bool=npc_state.expire()
+	catalog.npc_overrides=npc_state.snapshot()
+	return changed
+
 func npc_by_id(id: String) -> Dictionary:
+	refresh_npc_state()
 	for npc in catalog.active_npcs():
 		if str(npc.id)==id:return npc
 	return {}
@@ -120,12 +127,16 @@ func branch_for(npc: Dictionary, profile: Dictionary) -> Dictionary:
 	return {}
 
 func allowed(backend, npc: Dictionary) -> bool:
+	var current := npc_by_id(str(npc.id))
+	if current.is_empty() or current.map_id!=npc.map_id or current.cell!=npc.cell:return false
 	if backend.quest_auto.running and not backend.quest_auto.internal:return false
 	if backend.battle_open or not backend.session._pending.is_empty() or backend.automation.running or backend.automation.hunt_running or backend.automation.flow_active():return false
 	var cell: Array = npc.cell
 	return backend.automation.position_map==int(npc.map_id) and maxi(absi(backend.automation.position_cell.x-int(cell[0])),absi(backend.automation.position_cell.y-int(cell[1])))<=2
 
 func window(npc: Dictionary, branch: Dictionary, phase: String, text: String, confirm: bool) -> Dictionary:
+	if int(branch.get("guard",{}).get("dieact",1))==0 or branch.get("actions",{}).has("NpcWarp"):
+		text+="\n【项目规则】原版为全服共享，本项目按角色各自计算；服务器重启复位。"
 	serial+=1
 	var token := "%d-%d" % [Time.get_ticks_usec(),serial]
 	pending={"token":token,"npc":npc,"branch":branch,"phase":phase}
@@ -166,10 +177,10 @@ func talk(backend, id: String) -> Dictionary:
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
-		if action not in ["GetItem","DelItem","GetStone","DelStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
+		if action not in ["GetItem","DelItem","GetStone","DelStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle","NpcWarp"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
 	var phase: String=str(branch.type)
 	if phase=="MESSAGE":
-		var result := transact(backend,profile,branch,"MESSAGE")
+		var result := transact(backend,profile,branch,"MESSAGE","",str(npc.id))
 		if not result.ok:return result
 		return window(npc,branch,"end",message(branch.texts,"NomalWindowMsg") if branch.texts.has("NomalWindowMsg") else message(branch.texts,"NomalMsg"),false)
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
@@ -221,15 +232,25 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 		if current.has("pet_ids"):pending.pet_ids=current.pet_ids
 		return reply
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
-	var result := transact(backend,profile,branch,phase)
+	var result := transact(backend,profile,branch,phase,"",str(npc.id))
 	if not result.ok:return result
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
-func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "") -> Dictionary:
+func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "") -> Dictionary:
 	if branch.actions.has("Warp") and backend.quest_visit_guard.is_valid():
 		var reason: String=str(backend.quest_visit_guard.call())
 		if not reason.is_empty():return {"ok":false,"reason":reason}
+	var npc_destinations:Array=[]
+	if branch.actions.has("NpcWarp") and phase not in ["cancel","CLEAN"]:
+		if npc_id.is_empty() or npc_by_id(npc_id).is_empty():return {"ok":false,"reason":"人物状态已经改变。"}
+		for raw in str(branch.actions.NpcWarp).split(","):
+			var parts:=raw.split(".")
+			if parts.size()!=3:return {"ok":false,"reason":"原人物位置资料不完整。"}
+			var point: Array=[int(parts[0]),int(parts[1]),int(parts[2])]
+			var info:Dictionary=backend.session.world_catalog.info(point[0])
+			if info.is_empty() or point[1]<0 or point[2]<0 or point[1]>=int(info.width) or point[2]>=int(info.height):return {"ok":false,"reason":"原人物目的地图尚未导入。"}
+			npc_destinations.append(point)
 	var candidate := profile.duplicate(true)
 	var event := int(branch.event)
 	if phase=="cancel":
@@ -310,6 +331,9 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 	if not backend.save():
 		backend.session._profile=profile
 		return {"ok":false,"reason":"save_failed"}
+	if not npc_destinations.is_empty():
+		npc_state.moved(npc_id,npc_destinations)
+		refresh_npc_state()
 	if not notice.is_empty():backend._emit({"type":"quest_result","text":notice})
 	if branch.actions.has("DelPet") and phase not in ["cancel","CLEAN"]:
 		var fresh: Dictionary=backend.automation.profile_settings()

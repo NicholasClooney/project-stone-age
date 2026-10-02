@@ -96,7 +96,7 @@ func navigation_maps() -> Array:
 
 ## Test/provider seam: use the real catalog with locally enabled source events.
 func set_quest_catalog(provider) -> void:
- for entry in quest_catalog.active_npcs():
+ for entry in quest_catalog.npcs+quest_catalog.service_npcs:
   residents = residents.filter(func(resident):return str(resident.get("id",""))!=str(entry.id))
  quest_catalog=provider
  residents.append_array(quest_catalog.active_npcs())
