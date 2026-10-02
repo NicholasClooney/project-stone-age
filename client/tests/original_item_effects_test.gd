@@ -3,12 +3,12 @@ const Effects=preload("res://scripts/original_item_effects.gd")
 func run()->void:
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-item-effects.json"))
  var items:Dictionary=fixture.items
- for id in [1206,2416,2418,2427,2448,2465,2481,2485,1357,2460,2487,2505,2489,2492,2493,2494]:
+ for id in [1206,2416,2418,2427,2448,2465,2481,2485,1357,2460,2487,2505,2605,2606,2489,2492,2493,2494]:
   var effects:Array=Effects.resolve(items[str(id)])
   check(effects.filter(func(e):return e.type=="stat").all(func(e):return bool(e.active)),"supported ordinary stats not labelled inactive %d"%id)
  for id in [1052,2482,2483,2490,2518,2519,2520,2525,2526,2532,2547,2551]:
   check(Effects.resolve(items[str(id)]).filter(func(e):return e.type=="stat").all(func(e):return not bool(e.active)),"unsupported original stats clearly inactive %d"%id)
- for id in [1357,2418,2427,2489,2491,2688,2689,2690,2765]:
+ for id in [1357,2418,2427,2489,2491,2688,2689,2690,2765,2605,2606]:
   var labels:Array[String]=Effects.lines(items[str(id)])
   check(not labels.is_empty() and labels.all(func(line):return line.begins_with("【未生效】")),"magic and resistance metadata only %d"%id)
   check(Effects.evidence(items[str(id)]).contains("gmsv/data/itemset.txt:"),"source row and raw field evidence retained")
