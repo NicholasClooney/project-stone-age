@@ -110,7 +110,7 @@ func helmet_remote():
  check(await Wait.until(self,func():return world.link.online and not world.data.is_empty()) and await Wait.settle(self,world) and world.backend==null,"real remote helmet viewer has no backend")
  world.adventure_menu.open_menu("inventory");await process_frame;var menu=world.adventure_menu
  await click(menu.panel.get_node("OriginalItemSlot_0"))
- check(menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("12345 / 2500000") and menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("等级 30") and menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("防 +15 敏 -3") and menu.panel.find_child("OriginalResistanceUnavailable",true,false).text.contains("+3 尚未生效"),"remote item details show exact modifiers, wear and unavailable status resistance")
+ check(menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("12345 / 2500000") and menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("等级 30") and menu.panel.find_child("OriginalEquipmentDetails",true,false).text.contains("防 +15 敏 -3") and menu.panel.find_child("OriginalEffectsMetadata",true,false).text.contains("【未生效】毒耐性 +3"),"remote item details show exact modifiers, wear and unavailable status resistance")
  await click(menu.panel.get_node("EquipOriginalItem"))
  check(await Wait.until(self,func():return int(world.session.snapshot().original_equipment.head)==uid) and await Wait.settle(self,world),"actual remote equip button uses server authority")
  check(menu.panel.get_node("OriginalItemIcon_0").texture!=null,"existing original2418 icon loads without new asset import")

@@ -78,6 +78,8 @@ def extend(reference, result, parse_script):
             description+='\n本项目：保留原物品；装备属性与精灵魔法效果尚未实现。'
         if ident in [2547,2532]:description+='\n'+('首次借出的镜子：归还可领取黄金羚羊，请勿丢弃。' if ident==2547 else '补发的镜子：归还只结束任务，不发黄金羚羊。')
         result['items'][str(ident)]=dict(id=ident,name=row[0],description=description,logical_icon=int(row[17]),stackable=False,source='gmsv/data/itemset.txt',source_line=line,raw_columns=row,logout_vanish=row[78]=='1')
+        from quest_item_effects import annotate_item
+        annotate_item(result['items'][str(ident)], reference)
     bases={int(r[6]):(i,r) for i,r in enumerate(csv.reader(texts['gmsv/data/enemybase.txt'].splitlines()),1) if len(r)>38 and r[6].isdigit()}
     for line,row in enumerate(csv.reader(texts['gmsv/data/enemy.txt'].splitlines()),1):
         if len(row)<7 or row[3] not in map(str,spec['reward_enemies']):continue
