@@ -4,6 +4,7 @@ const Rules = preload("res://server/original_quests.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 const MapFile = preload("res://scripts/map_file.gd")
 const GoldenBui = preload("res://server/golden_bui_helper.gd")
+const Dragon = preload("res://server/dragon_cave_helper.gd")
 const Marju = preload("res://server/marju_helper.gd")
 var places = WorldCatalog.new()
 var maps := {}
@@ -15,6 +16,7 @@ func navigation_key(backend) -> Array:
  if 37 in backend.quest_catalog.enabled_events or 38 in backend.quest_catalog.enabled_events:
   var marju_stage:Array=Marju.stage_key(backend)
   if not marju_stage.is_empty():key=key+[marju_stage]
+ if 17 in backend.quest_catalog.enabled_events:key=key+[Dragon.stage_key(backend)]
  return key
 
 func snapshot(backend) -> Dictionary:
@@ -40,6 +42,7 @@ func snapshot(backend) -> Dictionary:
    elif event==18:wood_steps(backend,profile,quest)
    elif event in [6,7,8]:preload("res://server/goya_deliveries_helper.gd").steps(self,backend,profile,quest)
    elif event in [3,5]:preload("res://server/yam_axe_helper.gd").steps(self,backend,profile,quest)
+   elif event==17:Dragon.steps(self,backend,profile,quest)
    elif event==27:preload("res://server/miner_contest_helper.gd").steps(self,backend,profile,quest)
    elif event==44:GoldenBui.steps(self,backend,profile,quest)
    elif event in [37,38]:Marju.steps(self,backend,profile,quest)
@@ -320,6 +323,7 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
  return "%s：%s" % [npc.name,"，".join(parts)]
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
+ if npc.get("events",[]).any(func(event):return int(event)==17):return Dragon.destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
  var world = places

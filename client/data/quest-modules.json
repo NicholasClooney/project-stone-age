@@ -46,6 +46,13 @@
       "enabled_events": [
         27
       ]
+    },
+    {
+      "id": "dragon-cave",
+      "manifest": "tools/dragon_cave_quest_sources.json",
+      "enabled_events": [
+        17
+      ]
     }
   ]
 }

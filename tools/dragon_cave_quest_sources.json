@@ -1,0 +1,158 @@
+{
+  "version": 1,
+  "id": "dragon-cave",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/data/group.txt": "b1947ee3cad62d9f67d7aa0a4af0258c6d7fd35365883fc0fca0b9ec7ffee926",
+    "gmsv/data/encount.txt": "534466129cf7e17787d1990a885171d542463d279b4fc426494bb25930c1f4b5",
+    "gmsv/data/npc/jaruga/event/event17.create": "ed09db86ad73c33ff7dbaac78e49c7bfc137141059e9831f97d5fda7de9e06d1",
+    "gmsv/data/npc/genout/20800npc.create": "fece518648c530e774b7264c41b250bdbcd42cedc6e55d9182c5b4ebc60abac3",
+    "gmsv/data/npc/jaruga/event/event17_1": "5555f3e355bb45d221d8932d7852bcd657a67c1a042600b47bc36055079cc6b5",
+    "gmsv/data/npc/jaruga/event/event17_2": "417ec68847dbb9fb18ddaf6a275917dea95d435d8eaa5bac4484c0b0dc31b74c",
+    "gmsv/data/npc/jaruga/event/event17_3": "cf5a5d45d7e21997dfda34806f444b91bb7cd3277534b9edb07ae8fc4c743dc8",
+    "gmsv/data/npc/jaruga/event/event17_4": "43a5b7a432d4133c1fb986abd161135238fc0bce2f08b519cbd9f9c6044ebaeb",
+    "gmsv/data/npc/genout/wpm_20807_11_37": "9a2d468e64f6ddfaee4bc261a1b2ff98e3ddcea3906f11cdf8b748c78e243c5f",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
+  },
+  "creates": [
+    "gmsv/data/npc/jaruga/event/event17.create",
+    "gmsv/data/npc/genout/20800npc.create"
+  ],
+  "scripts": {
+    "jaruga/event/event17_1": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        17
+      ]
+    },
+    "jaruga/event/event17_2": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        17
+      ]
+    },
+    "jaruga/event/event17_3": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        17
+      ]
+    },
+    "jaruga/event/event17_4": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        17
+      ]
+    }
+  },
+  "items": [
+    2457,
+    2458,
+    2459,
+    2460,
+    2461,
+    2462,
+    2505
+  ],
+  "reward_enemies": [],
+  "drops": [
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 562,
+      "item_id": 2457,
+      "probability": 800,
+      "audit": "Original group requires carried flute2505; original one-slot dragon jade drop, existing AI only"
+    },
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 560,
+      "item_id": 2458,
+      "probability": 800,
+      "audit": "Original group requires carried flute2505; original one-slot dragon jade drop, existing AI only"
+    },
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 559,
+      "item_id": 2459,
+      "probability": 800,
+      "audit": "Original group requires carried flute2505; original one-slot dragon jade drop, existing AI only"
+    }
+  ],
+  "item_notes": {
+    "2460": "原奖励；装备普通属性以现有槽位支持为准，治愈魔法尚未生效。",
+    "2461": "原奖励；当前未开放躯干装备槽与猛毒魔法，保存原始属性资料，暂未生效。",
+    "2462": "原奖励；当前未开放躯干装备槽与复活魔法，保存原始属性资料，暂未生效。"
+  },
+  "world": {
+    "restored_scripts": [
+      "genout/wpm_20807_11_37"
+    ],
+    "map_sources": {
+      "20802": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20802",
+        "sha256": "e98bff891f37c9c2095fe3170b7e9f42ef8fb3973b567e72d665d14feae68540"
+      },
+      "20805": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20805",
+        "sha256": "1a5825b58116a05e66b7f2dd69138207c44e4015d6fe7f3bd488639bb3b35eff"
+      },
+      "20804": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20804",
+        "sha256": "d4e5e51676eb3b7712eef3fe68550cf8bf80ac8ae41bd893aceb0826bc451570"
+      },
+      "20803": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20803",
+        "sha256": "28b69b563949eb44609af433dcd83bbfecf908992a930cdbc057e0901b856f93"
+      },
+      "20806": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20806",
+        "sha256": "e67ca77d39c22bb1aecac2bc2d91d836c0e51f89cf32006726b903f018a29a5c"
+      },
+      "20801": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20801",
+        "sha256": "30c7bbb8dddd493041e4f2c585a75b0a75e273250b46109788c05ff0e0d1eab5"
+      },
+      "20807": {
+        "path": "gmsv/data/map/jyaruga/dungeon/20807",
+        "sha256": "513397a36fd54d6d8caa61ee636b65292611e7a70a8f4ececd4b2af5a6c6d8f6"
+      }
+    },
+    "portal_choices": []
+  },
+  "handlers": {
+    "genout/wpm_20807_11_37": {
+      "kind": "warpman",
+      "events": [
+        17
+      ]
+    }
+  },
+  "jobs": [
+    {
+      "id": 26,
+      "event": 17,
+      "title": "龙洞任务／三龙之谜",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ]
+}
