@@ -1,4 +1,5 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const WorldClock=preload("res://server/original_world_clock.gd")
 const State=preload("res://server/quest_npc_state.gd")
 var npc:Dictionary={}
 var now:=1000.0
@@ -22,6 +23,8 @@ func seed_for(walkable:bool)->int:
   if (str(npc.source_spawn.walkable).substr(index,1)=="1")==walkable:return candidate
  return -1
 func run()->void:
+ var previous_clock:Callable=WorldClock.clock
+ WorldClock.clock=func():return WorldClock.ERA+1000
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-area-spawn.json"));npc=fixture.module.npcs[0]
  var b=Backend.new();install(b,seed_for(true));b.original_quests.refresh_npc_state()
  check(b.original_quests.npc_state.records.has(npc.id),"fixture starts with production-style already born NPC")
@@ -41,7 +44,7 @@ func run()->void:
  now+=0.001
  var active:Dictionary=b.original_quests.npc_by_id(npc.id)
  check(not active.is_empty() and active.cell!=npc.cell,"next server second draws original area instead of fixed corner")
- if active.is_empty():b.free();quit(1);return
+ if active.is_empty():WorldClock.clock=previous_clock;b.free();quit(1);return
  var cell:Array=active.cell
  var index:=(int(cell[1])-180)*296+int(cell[0])-230
  check(str(npc.source_spawn.walkable).substr(index,1)=="1","chosen point follows original two-layer mapset collision")
@@ -57,9 +60,12 @@ func run()->void:
  check(source_talk(b,active).ok,"real backend dialogue reachable only at actual born position")
  b.save_path="user://area-spawn.json";check(b.save(),"source spawn profile saves normally")
  var reloaded=Backend.new();install(reloaded,seed_for(false))
- check(reloaded.load_profile(b.save_path) and reloaded.original_quests.npc_state.records.is_empty(),"restart does not restore old birth from save; blocked fresh draw remains absent")
+ var loaded:bool=reloaded.load_profile(b.save_path)
+ check(loaded,"saved profile reloads")
+ check_failed_birth(reloaded,"restart")
  b.free();reloaded.free()
  await lan_birth()
+ WorldClock.clock=previous_clock
  print("ORIGINAL AREA SPAWN: %d failures"%failures);quit(1 if failures else 0)
 func lan_birth()->void:
  var hub=Hub.new("user://area-spawn-lan-%d/accounts.json"%OS.get_process_id());hub.tick=false;hub.backups=false;hub.share_dir=""
@@ -84,7 +90,8 @@ func lan_birth()->void:
  a._process(0.0);other._process(0.0)
  for link in links:await request(link,{"type":"ping"})
  check(snapshots[0].derived.quest_npcs.has(npc.id) and snapshots[0].derived.quest_npcs[npc.id]==snapshots[1].derived.quest_npcs[npc.id],"same-character devices receive identical actual birthplace")
- check(not snapshots[2].derived.quest_npcs.has(npc.id) and other.original_quests.npc_state.records.is_empty(),"other character independent unsuccessful draw")
+ check(not snapshots[2].derived.quest_npcs.has(npc.id),"other character has no public birthplace after unsuccessful draw")
+ check_failed_birth(other,"other character")
  other.original_quests.npc_state.spawn_rng.seed=seed_for(true);now+=1;other._process(0.0)
  await request(links[2],{"type":"ping"})
  check(snapshots[2].derived.quest_npcs.has(npc.id),"later successful birth publishes on server tick")
@@ -92,3 +99,15 @@ func lan_birth()->void:
  check(public.keys().size()==2 and public.has("map_id") and public.has("cell"),"projection exposes no RNG or retry state")
  for link in links:link.close()
  links=[];server.stop();server.queue_free();hub.queue_free()
+
+func check_failed_birth(b,context:String)->void:
+ var state=b.original_quests.npc_state
+ check(not state.records.has(npc.id) and b.original_quests.npc_by_id(npc.id).is_empty(),context+": failed birth neither inherits nor projects a position")
+ check(state.spawn_attempts.get(npc.id,-1.0)==now,context+": one birth attempt recorded at injected server time")
+ var expected:=RandomNumberGenerator.new();expected.seed=seed_for(false)
+ expected.randi_range(0,6215)
+ check(state.spawn_rng.state==expected.state,context+": exactly one blocked RNG draw, no hidden retry or TimeMan consumption")
+ for entry in b.quest_catalog.active_npcs():
+  if entry.get("handler","")!="TimeMan":continue
+  var mode:="main" if WorldClock.after_at(WorldClock.hour()) else "changed"
+  check(state.records.get(entry.id,{}).get("time_mode","")==mode,context+": unrelated active TimeMan projection is preserved")
