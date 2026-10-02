@@ -25,6 +25,26 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_authorized_saton_supplements_preserve_original_source(self):
+        fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-quest-supplements.json').read_text())
+        spec=fixture['manifest']
+        result=common.load_quest_module(REFERENCE,spec)
+        self.assertEqual(result['npcs'],fixture['npcs'])
+        for npc in result['npcs']:
+            branch=npc['branches'][0]
+            source=(REFERENCE/('gmsv/data/npc/'+npc['source_script'])).read_text(encoding='gb18030')
+            _, original=quests.parse_script(source,[0])
+            self.assertEqual(branch['source_actions'],original[0]['actions'])
+            self.assertEqual(branch['source_texts'],original[0]['texts'])
+        reward,clean=[n['branches'][0] for n in result['npcs']]
+        self.assertEqual(reward['actions']['EndSetFlg'],'13,14')
+        self.assertEqual(clean['actions']['CleanFlg'],'13')
+        self.assertIn('14保留',clean['confirmation_text'])
+        for changes in [dict(end_flags_add=[15]),dict(branch=1),dict(script='unknown'),dict(approval=''),dict(arbitrary_action='GetStone')]:
+            invalid=copy.deepcopy(spec);invalid['supplements'][0].update(changes)
+            with self.subTest(changes=changes),self.assertRaises(ValueError):
+                common.load_quest_module(REFERENCE,invalid)
+
     def test_excluded_unsupported_language_never_reaches_parser(self):
         source = (REFERENCE/'gmsv/data/npc/quiz/equiz_02').read_text(encoding='gb18030')
         unsupported = source.replace('PET=77-12', 'PET=77-12EV')
