@@ -1,0 +1,1457 @@
+{
+  "purpose": "Exchange-only isolation; adult completion is prerequisite fixture, guard route not covered",
+  "npcs": [
+    {
+      "id": "sainasu/event/event09@1200:97:75",
+      "source_script": "sainasu/event/event09",
+      "source_create": "gmsv/data/npc/sainasu/event/event09-12.create",
+      "source_create_index": 0,
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "name": "村姑",
+      "map_id": 1200,
+      "cell": [
+        97,
+        75
+      ],
+      "graphic": 16205,
+      "facing": 6,
+      "role": "quest",
+      "text": "你好啊！今天天气真是不错呢！,从柯尔克山一路看过来的风景，总是很漂亮呢！,我的朋友遭到盗贼袭击，不知道有没有人伸出援手啊…。",
+      "branches": [
+        {
+          "event": 9,
+          "type": "ACCEPT",
+          "condition": "ENDEV=12&ENDEV=10&ENDEV=11",
+          "texts": {
+            "AcceptMsg": "听说您帮了那两人的忙啊！\n真的是谢谢您啊！",
+            "ThanksMsg": "您是我们的骄傲。\n您为我们在卡坦、霍特尔、柯尔克的人民，\n带来了希望之光。\n从现在起，我们一定会好好加油，\n不会败给盗贼的。\n请您，务必要把这个收下。",
+            "ItemFullMsg": "哎呀！东西已经装满了呢！"
+          },
+          "actions": {
+            "GetItem": "1357",
+            "EndSetFlg": "9"
+          },
+          "source_branch_index": 0,
+          "source_line": 3,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event09"
+        },
+        {
+          "event": 9,
+          "type": "REQUEST",
+          "condition": "LV>29&ENDEV=4",
+          "texts": {
+            "RequestMsg": "如此说来，我那两个朋友在卡坦的沙漠，\n遇到了盗贼啊！总想，\n\n有没有那个人可以帮他们的忙呢？",
+            "ThanksMsg": "这样啊…那你能不能帮忙呢？真是谢谢你了呢。详情请问我那住在卡坦和霍特尔的朋友吧。",
+            "StopMsg": "你无法帮我的忙啊？",
+            "EndStopMsg": "这样啊…\n那我再找能帮我的人好了。\n真是不好意思。",
+            "NoStopMsg": "啊！那真是太谢谢你了。"
+          },
+          "actions": {},
+          "source_branch_index": 1,
+          "source_line": 14,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event09"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ENDEV=9",
+          "texts": {
+            "NomalMsg": "希望能有精灵保佑你。"
+          },
+          "actions": {},
+          "source_branch_index": 2,
+          "source_line": 27,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event09"
+        }
+      ]
+    },
+    {
+      "id": "sainasu/event/event10@1300:65:65",
+      "source_script": "sainasu/event/event10",
+      "source_create": "gmsv/data/npc/sainasu/event/event09-12.create",
+      "source_create_index": 1,
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "name": "村姑",
+      "map_id": 1300,
+      "cell": [
+        65,
+        65
+      ],
+      "graphic": 16206,
+      "facing": 6,
+      "role": "quest",
+      "text": "你好。今天天气真好啊！,霍特尔某个洞窟因为地震而崩塌了…",
+      "branches": [
+        {
+          "event": 10,
+          "type": "ACCEPT",
+          "condition": "ENDEV=11&NOWEV=10&ITEM=2419",
+          "texts": {
+            "AcceptMsg": "是的。就是这个。\n这就是我的守护石。",
+            "ThanksMsg": "谢谢你。有这个，村子就得救了。\n就以这个作为谢礼吧。\n我想，这个拿去换钱的话，\n可以换到２０００Ｓ。",
+            "ItemFullMsg": "哎呀！东西已经装满了呢！"
+          },
+          "actions": {
+            "GetItem": "2421",
+            "DelItem": "2419",
+            "EndSetFlg": "10,12"
+          },
+          "source_branch_index": 0,
+          "source_line": 4,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event10"
+        },
+        {
+          "event": 10,
+          "type": "ACCEPT",
+          "condition": "ENDEV=12&ITEM=2419",
+          "texts": {
+            "AcceptMsg": "是的。就是这个。\n这就是我的守护石。",
+            "ThanksMsg": "谢谢你。有这个，\n村子就得救了。就以这个作为谢礼吧！\n我想，这个拿去换钱的话，\n可以换到２０００Ｓ。",
+            "ItemFullMsg": "哎呀！东西已经装满了呢！"
+          },
+          "actions": {
+            "GetItem": "2421",
+            "DelItem": "2419",
+            "EndSetFlg": "10"
+          },
+          "source_branch_index": 1,
+          "source_line": 16,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event10"
+        },
+        {
+          "event": 10,
+          "type": "REQUEST",
+          "condition": "LV>29&ENDEV=4&NOWEV=9&NOWEV=11",
+          "texts": {
+            "RequestMsg": "这是从我柯尔克和卡坦的朋友\n那听来的。请你务必要帮忙。",
+            "ThanksMsg": "不知道你有没有听说，关于我们也被盗贼偷窃这个村庄\n重要的守护石的事？\n在这样下去，我实在没有脸\n见我们村长。请您务必要帮我拿回来。\\听说盗贼的地下城，是在霍尔特山西边的\n水井。听说暗号是‘在卡坦有梦德’\n的样子。",
+            "StopMsg": "果然还是无理的请求吗…",
+            "EndStopMsg": "这样啊…\n那我找再别人帮忙好了。\n真是抱歉。",
+            "NoStopMsg": "真是不好意思…那就拜托你了。"
+          },
+          "actions": {},
+          "source_branch_index": 2,
+          "source_line": 28,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event10"
+        },
+        {
+          "event": 10,
+          "type": "REQUEST",
+          "condition": "LV>29&ENDEV=4&NOWEV=9",
+          "texts": {
+            "RequestMsg": "这是从我那在柯尔克的朋友听来的。\n请你务必要帮忙。\n村庄的守护石，是被在卡坦沙漠的盗贼、\n梦德一族偷走了。",
+            "ThanksMsg": "盗贼在卡坦沙漠中心一带出没，\n偷走了这个村庄的守护石。\n而且不只这样，少了那个的话，\n好像还会发生不好的事。此外，\n我那在卡坦的友人也遭盗贼袭击，\n不知道你能不能帮我去看他呢？",
+            "StopMsg": "果然还是无理的请求吧…",
+            "EndStopMsg": "这样啊…\n那我再找可以帮我的人好了。\n真是抱歉。",
+            "NoStopMsg": "真是不好意思。那就拜托你了。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 41,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event10"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ENDEV=10",
+          "texts": {
+            "NomalMsg": "谢谢你帮我把守护石拿回来。一生都不会忘了您的恩惠。"
+          },
+          "actions": {},
+          "source_branch_index": 4,
+          "source_line": 54,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event10"
+        }
+      ]
+    },
+    {
+      "id": "sainasu/event/event11@1400:71:76",
+      "source_script": "sainasu/event/event11",
+      "source_create": "gmsv/data/npc/sainasu/event/event09-12.create",
+      "source_create_index": 2,
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "name": "卡坦的年轻人",
+      "map_id": 1400,
+      "cell": [
+        71,
+        76
+      ],
+      "graphic": 16203,
+      "facing": 4,
+      "role": "quest",
+      "text": "你好啊！最近太阳还真是大啊！就连卡坦也是。",
+      "branches": [
+        {
+          "event": 11,
+          "type": "ACCEPT",
+          "condition": "ENDEV=10&NOWEV=11&ITEM=2420",
+          "texts": {
+            "AcceptMsg": "这样啊…不知道你能不能帮我拿回来呢？\n真的非常谢谢你。",
+            "ThanksMsg": "这点礼物不诚敬意。请您收下。",
+            "ItemFullMsg": "哎呀！东西装不下了啊！"
+          },
+          "actions": {
+            "GetItem": "1052",
+            "DelItem": "2420",
+            "EndSetFlg": "11,12",
+            "Charm": "1"
+          },
+          "source_branch_index": 0,
+          "source_line": 4,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event11"
+        },
+        {
+          "event": 11,
+          "type": "ACCEPT",
+          "condition": "NOWEV=11&ITEM=2420",
+          "texts": {
+            "AcceptMsg": "这样啊…不知道你能不能帮我拿回来呢？\n真的非常谢谢你。",
+            "ThanksMsg": "这是不成敬意的礼物。请您收下。",
+            "ItemFullMsg": "哎呀！东西装不下了啊！"
+          },
+          "actions": {
+            "GetItem": "1052",
+            "DelItem": "2420",
+            "EndSetFlg": "11",
+            "Charm": "1"
+          },
+          "source_branch_index": 1,
+          "source_line": 16,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event11"
+        },
+        {
+          "event": 11,
+          "type": "REQUEST",
+          "condition": "LV>29&ENDEV=4&NOWEV=9&NOWEV=10",
+          "texts": {
+            "RequestMsg": "这是从我那在柯尔克和霍特尔的朋友那\n听来的。请您务必要帮忙。",
+            "ThanksMsg": "不知道您有没有听说，关于我们村庄重要的守护石也遭窃\n的事呢？如果\n没有了守护石的话，这一次村庄的祭典就无法\n举行了。请您务必要帮我们取回来。\n盗贼的地下城听说是在霍特尔山西边\n的水井。暗号好像是‘在卡坦有梦德’\n的样子。",
+            "StopMsg": "无论如何都无法帮我们的忙吗？",
+            "EndStopMsg": "我知道了。那我再找找可以帮我的人好了。\n真是抱歉打扰您了。",
+            "NoStopMsg": "真是不好意思…我知道这对您来说\n很为难，\n但现在就只有您能帮我的忙了。"
+          },
+          "actions": {},
+          "source_branch_index": 2,
+          "source_line": 29,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event11"
+        },
+        {
+          "event": 11,
+          "type": "REQUEST",
+          "condition": "LV>29&ENDEV=4&NOWEV=9",
+          "texts": {
+            "RequestMsg": "这是我从我那在柯尔克的朋友听来的。\n请您务必要帮忙。\n事实上，那名为梦德一族的盗贼\n偷了我们重要的\n守护石。",
+            "ThanksMsg": "前几天，村庄里重要的守护石\n被偷了。而且不只如此，\n好像还会发生一些不好的\n事情。此外，我那在霍特尔的友人，他的村庄\n据说守护石也遭窃。能否\n请您去看看他呢？",
+            "StopMsg": "真抱歉…这是不是无理的请求呢？",
+            "EndStopMsg": "这样啊.…\n我知道了…那我再找别人帮忙好了。",
+            "NoStopMsg": "就拜托你了。一切就只有靠你了。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 41,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event11"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ENDEV=11",
+          "texts": {
+            "NomalMsg": "谢谢你帮我们把守护石\n拿回来。您的恩惠我们一生都难忘。"
+          },
+          "actions": {},
+          "source_branch_index": 4,
+          "source_line": 54,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event11"
+        }
+      ]
+    },
+    {
+      "id": "sainasu/event/event12@11107:24:6",
+      "source_script": "sainasu/event/event12",
+      "source_create": "gmsv/data/npc/sainasu/event/event09-12.create",
+      "source_create_index": 3,
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ],
+      "name": "梦德（族长）",
+      "map_id": 11107,
+      "cell": [
+        24,
+        6
+      ],
+      "graphic": 16057,
+      "facing": 4,
+      "role": "quest",
+      "text": "你能来到这儿还真不简单。算你厉害！",
+      "branches": [
+        {
+          "event": 12,
+          "type": "ACCEPT",
+          "condition": "NOWEV=9&NOWEV=10&NOWEV=11&ITEM!=2419&ITEM!=2420",
+          "texts": {
+            "AcceptMsg": "是守护石的事情吧！",
+            "ThanksMsg": "嗯…把悟和唐打倒的是你\n手忙脚乱也于事无补啊！\n双方的守护石都让你拿去吧\n你这家伙还真强啊！",
+            "ItemFullMsg": "东西装满了唷！丢掉一些吧！"
+          },
+          "actions": {
+            "GetItem": "2419,2420"
+          },
+          "source_branch_index": 0,
+          "source_line": 4,
+          "enabled": true,
+          "events": [
+            9,
+            10,
+            11,
+            12
+          ],
+          "source": "sainasu/event/event12"
+        }
+      ]
+    }
+  ],
+  "items": {
+    "1052": {
+      "id": 1052,
+      "name": "芙雷雅Lv1铠6",
+      "description": "防 +20 敏 -6                滋润的精灵 Lv1",
+      "logical_icon": 21025,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 1053,
+      "raw_columns": [
+        "芙雷雅Lv1铠6",
+        "芙雷雅Lv1铠6",
+        "防 +20 敏 -6                滋润的精灵 Lv1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1052",
+        "21025",
+        "14685",
+        "7",
+        "0",
+        "0",
+        "30",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2500000",
+        "2500000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "20",
+        "20",
+        "-6",
+        "-6",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "10",
+        "100",
+        "8",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "305",
+        "石",
+        "305",
+        "",
+        "",
+        "回复",
+        "285",
+        "花",
+        "285"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "滋润的精灵 Lv1",
+          "active": false,
+          "raw": {
+            "magicid": "10",
+            "magicprob": "100",
+            "magicusemp": "8"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1053,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "滋润的精灵 Lv1",
+            "function": "MAGIC_OtherRecovery",
+            "argument": "65",
+            "line": 7,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "20",
+            "max": "20"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1053,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-6",
+            "max": "-6"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1053,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "1357": {
+      "id": 1357,
+      "name": "黄色大首饰",
+      "description": "魅 +5                       睡眠耐性 +30",
+      "logical_icon": 22024,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 1348,
+      "raw_columns": [
+        "黄色大首饰",
+        "黄色大首饰",
+        "魅 +5                       睡眠耐性 +30",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1357",
+        "22024",
+        "5200",
+        "10",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2500000",
+        "2500000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "5",
+        "5",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-7",
+        "-7",
+        "0",
+        "0",
+        "30",
+        "30",
+        "-7",
+        "-7",
+        "-7",
+        "-7",
+        "-7",
+        "-7",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "线",
+        "205",
+        "骨",
+        "205",
+        "",
+        "",
+        "昏睡",
+        "205",
+        "花",
+        "205"
+      ],
+      "effects": [
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-7",
+            "max": "-7"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1348,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "30",
+            "max": "30"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1348,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-7",
+            "max": "-7"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1348,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-7",
+            "max": "-7"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1348,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-7",
+            "max": "-7"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1348,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "5",
+            "max": "5"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1348,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "2419": {
+      "id": 2419,
+      "name": "霍特尔的保护石",
+      "description": "霍特尔村的保护石",
+      "logical_icon": 24057,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2002,
+      "raw_columns": [
+        "霍特尔的保护石",
+        "霍特尔的保护石",
+        "霍特尔村的保护石",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2419",
+        "24057",
+        "100",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [],
+      "stats_source": [],
+      "logout_vanish": false
+    },
+    "2420": {
+      "id": 2420,
+      "name": "卡坦的保护石",
+      "description": "卡坦村的保护石",
+      "logical_icon": 24058,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2003,
+      "raw_columns": [
+        "卡坦的保护石",
+        "卡坦的保护石",
+        "卡坦村的保护石",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2420",
+        "24058",
+        "100",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [],
+      "stats_source": [],
+      "logout_vanish": false
+    },
+    "2421": {
+      "id": 2421,
+      "name": "勾玉",
+      "description": "美丽的勾玉",
+      "logical_icon": 24071,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2004,
+      "raw_columns": [
+        "勾玉",
+        "勾玉",
+        "美丽的勾玉",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2421",
+        "24071",
+        "10000",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [],
+      "stats_source": [],
+      "logout_vanish": false
+    },
+    "2482": {
+      "id": 2482,
+      "name": "格的枪",
+      "description": "攻+35? 敏-6? 魅 +1?",
+      "logical_icon": 20433,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2065,
+      "raw_columns": [
+        "格的枪",
+        "格的枪",
+        "攻+35? 敏-6? 魅 +1?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2482",
+        "20433",
+        "10",
+        "3",
+        "0",
+        "0",
+        "35",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "33",
+        "37",
+        "0",
+        "0",
+        "-4",
+        "-8",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "1",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "2",
+        "4",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "405",
+        "木",
+        "405",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "33",
+            "max": "37"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2065,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-4",
+            "max": "-8"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2065,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "0",
+            "max": "1"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2065,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "2483": {
+      "id": 2483,
+      "name": "达的斧头",
+      "description": "攻+43? 防-16? 敏-14?",
+      "logical_icon": 20011,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2066,
+      "raw_columns": [
+        "达的斧头",
+        "达的斧头",
+        "攻+43? 防-16? 敏-14?",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2483",
+        "20011",
+        "10",
+        "1",
+        "0",
+        "0",
+        "35",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "41",
+        "45",
+        "-18",
+        "-14",
+        "-15",
+        "-13",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "405",
+        "木",
+        "405",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "41",
+            "max": "45"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2066,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-18",
+            "max": "-14"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2066,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-15",
+            "max": "-13"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2066,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    }
+  }
+}

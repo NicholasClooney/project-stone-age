@@ -1,0 +1,177 @@
+{
+  "version": 1,
+  "id": "munde-cave",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/sainasu/event/event09-12.create": "518a76ea59394c61d3ae90af0f4838ea52f0d946057f10279809d5a10f5e469c",
+    "gmsv/data/npc/sainasu/event/event09": "7d201e34ea3b230dc9deac43556e6cc50c43647fae01d1a35a6df4cc114618e7",
+    "gmsv/data/npc/sainasu/event/event10": "7bfb456f3d7f3604224036554b0abfebbc0a27a33cd3e3df572697d5ba39f13b",
+    "gmsv/data/npc/sainasu/event/event11": "e6b9230968cbd1669bcade7223c0fc7c4d7b6213320fc0311db0f1394a0540f3",
+    "gmsv/data/npc/sainasu/event/event12": "5f3919a27cb9238bce8490c2379aa48db4655b07074205b18a19b144d5bb5cd4",
+    "gmsv/data/npc/100/sb_go.arg": "79018dc8414c352eb90c5f388459b01d4985ba7eceb434d6e514639ad35127e0",
+    "gmsv/data/npc/100/sb_dan.arg": "3eb190cddec29b85de8f2d040c5b3ea4d385c51929fbc39d0ff755d187203da5",
+    "gmsv/data/npc/genout/wpm_100_443_127": "ab24fd28d53a0230943ff27ed0c852b4cde5d4b2d1ad22de4fccafadba700da5",
+    "gmsv/data/npc/100/sb_gd.create": "bad273f7adb024c82e4cd8364111f8eacc7e5d2ad3d2ca7f484af56f238bd9a5",
+    "gmsv/data/npc/100/sb_gd.template": "91186fd80e40a7d206e92dda87ff51846fa6fe2d632f985bddeac7a6070301a0",
+    "gmsv/data/npc/genout/11100npc.create": "5951e1221494a33ff62c718f03cd98b4f3f2d2fd81f7094c83409a9fc88e7f0a",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/data/npc/genout/11101d.create": "4a57c2ece8d7476ee10660d0713caab7d211dc64b7bb972c223335baef869a21"
+  },
+  "creates": [
+    "gmsv/data/npc/sainasu/event/event09-12.create",
+    "gmsv/data/npc/100/sb_gd.create",
+    "gmsv/data/npc/genout/11100npc.create"
+  ],
+  "scripts": {
+    "sainasu/event/event09": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "sainasu/event/event10": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "sainasu/event/event11": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "sainasu/event/event12": {
+      "branches": [
+        0
+      ],
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    }
+  },
+  "items": [
+    1052,
+    1357,
+    2419,
+    2420,
+    2421,
+    2482,
+    2483
+  ],
+  "reward_enemies": [],
+  "jobs": [
+    {
+      "id": 8,
+      "event": 9,
+      "title": "梦德洞窟",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "handlers": {
+    "100/sb_go.arg": {
+      "kind": "npcenemy",
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "100/sb_dan.arg": {
+      "kind": "npcenemy",
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    },
+    "genout/wpm_100_443_127": {
+      "kind": "warpman",
+      "events": [
+        9,
+        10,
+        11,
+        12
+      ]
+    }
+  },
+  "combat_audit": {
+    "path": "docs/reverse-engineering/bonus-cave-chains-sources.json",
+    "sha256": "ff542942f43782fbcd1038db63588d9557b2f0f704ef819523d442b472f8b92b"
+  },
+  "world": {
+    "map_sources": {
+      "11101": {
+        "path": "gmsv/data/map/sainasu/dungeon/11101",
+        "sha256": "9c3a2e4f69a3488c443117907c2c68e283c2ce1770b1cf89a4c8cae8185c5022"
+      },
+      "11102": {
+        "path": "gmsv/data/map/sainasu/dungeon/11102",
+        "sha256": "75928bcf9a12397faf99e3560a7ae07d54e44903b64fbe795e67848bcdb27a34"
+      },
+      "11103": {
+        "path": "gmsv/data/map/sainasu/dungeon/11103",
+        "sha256": "adba6e505018bbc9317fc251c3d23e790f7da15190bc00103da4c6e3d263d207"
+      },
+      "11104": {
+        "path": "gmsv/data/map/sainasu/dungeon/11104",
+        "sha256": "818ba5ac96962e6d79dfd058d2df8f830ccb7452f0bd14c9ae7d75a2a0f77507"
+      },
+      "11105": {
+        "path": "gmsv/data/map/sainasu/dungeon/11105",
+        "sha256": "91552ca7200638b95f6f8f45a182fb14091ceb41c2ca93800d1ced500d1194e9"
+      },
+      "11106": {
+        "path": "gmsv/data/map/sainasu/dungeon/11106",
+        "sha256": "f47325bd48b9bf4851733ba4f793e4cc1895f0234141293a4efaac2ee70790de"
+      },
+      "11107": {
+        "path": "gmsv/data/map/sainasu/dungeon/11107",
+        "sha256": "e9afe3ba789d7a261c2e61d701ac6662607f40de64b757f6da0fb8b580e19eeb"
+      }
+    },
+    "restored_scripts": [
+      "100/sb_go.arg",
+      "100/sb_dan.arg",
+      "genout/wpm_100_443_127"
+    ],
+    "portal_choices": []
+  }
+}

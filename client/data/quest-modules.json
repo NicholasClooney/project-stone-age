@@ -39,6 +39,16 @@
       "enabled_events": [
         45
       ]
+    },
+    {
+      "id": "munde-cave",
+      "manifest": "tools/munde_cave_quest_sources.json",
+      "enabled_events": [
+        9,
+        10,
+        11,
+        12
+      ]
     }
   ]
 }
