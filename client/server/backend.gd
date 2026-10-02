@@ -975,6 +975,7 @@ func _cmd_check_passage(command: Dictionary) -> Dictionary:
 ## Positions are reported by whichever client walks; every other client
 ## follows the broadcast (the reporter recognises its own client id).
 func _cmd_report_position(command: Dictionary) -> Dictionary:
+	var helper_stage: Array = quest_helper.navigation_key(self)
 	if quest_auto.accept_report(self,command):return {"ok":true}
 	if int(command.map_id)==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30。")
 	var origin: int = automation.position_map
@@ -984,6 +985,7 @@ func _cmd_report_position(command: Dictionary) -> Dictionary:
 	var moved: bool = int(command.map_id)!=automation.position_map or cell!=automation.position_cell
 	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)))
 	if moved:_emit({"type":"position","map_id":int(command.map_id),"cell":[cell.x,cell.y],"client":str(command.get("client",""))})
+	if helper_stage!=quest_helper.navigation_key(self):_publish()
 	return {"ok":true,"paused":paused}
 
 ## What other players on the map see of this character (LAN phase 2,
