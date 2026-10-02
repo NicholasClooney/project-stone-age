@@ -1,0 +1,139 @@
+{
+  "version": 1,
+  "id": "miner-contest",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/data/group.txt": "b1947ee3cad62d9f67d7aa0a4af0258c6d7fd35365883fc0fca0b9ec7ffee926",
+    "gmsv/data/encount.txt": "534466129cf7e17787d1990a885171d542463d279b4fc426494bb25930c1f4b5",
+    "gmsv/data/npc/giiru/event/giruev2.create": "13bb368631331ee6b2266f024a1ae47251ccd4e4fc0de972c96f1108abe176ac",
+    "gmsv/data/npc/300/sb_bac.create": "05059d1d743bdcaf3957cd9edda7317510759435b279b2fc3f83dca652c9393b",
+    "gmsv/data/npc/giiru/event/giruev2_1": "4900c660529650d9315c5d54c3b5f1d7a48b26fae7685ccb965ef1f37b48328a",
+    "gmsv/data/npc/giiru/event/giruev2_2": "68ccd5acc540f39ff83f111039385005500056eaf3ffc81251806cb45b37c6a9",
+    "gmsv/data/npc/300/sb_bac.arg": "ecdac71eec173f1979023f8f55ec930094a1047151b4e354c171753308fa5db4",
+    "gmsv/data/npc/300/sb_bac.template": "bf29360ebea02eca3515c03768e874ed0b79d797d19926cf2a2f251c9e6f3293",
+    "gmsv/data/npc/genout/dungeon02.create": "7e7ff68ef8c434e1023b7453901c0306d571fa06803161099f358d71d774c7c7",
+    "gmsv/data/npc/genout/giruev2.create": "078cc34d337a7d95b414d6c8cc24ee97d3bc1fd1f2f5f32618199e511fd94c4b",
+    "gmsv/data/npc/genout/wpm_31805_22_4": "4c1141db5a31a3579b2202889d81e0360f307f4d0d71016352c37d21c7e8e369",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
+  },
+  "creates": [
+    "gmsv/data/npc/giiru/event/giruev2.create",
+    "gmsv/data/npc/300/sb_bac.create",
+    "gmsv/data/npc/genout/giruev2.create"
+  ],
+  "scripts": {
+    "giiru/event/giruev2_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        27
+      ]
+    },
+    "giiru/event/giruev2_2": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "events": [
+        27
+      ]
+    }
+  },
+  "handlers": {
+    "300/sb_bac.arg": {
+      "kind": "npcenemy",
+      "events": [
+        27
+      ]
+    },
+    "genout/wpm_31805_22_4": {
+      "kind": "warpman",
+      "events": [
+        27
+      ]
+    }
+  },
+  "items": [
+    2527,
+    2533,
+    2534,
+    2535,
+    2536
+  ],
+  "reward_enemies": [],
+  "drops": [
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1043,
+      "item_id": 2534,
+      "probability": 1000,
+      "audit": "group508 requires item2536; original ore enemy and complete drop slot"
+    }
+  ],
+  "world": {
+    "map_sources": {
+      "31801": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-18-01",
+        "sha256": "1ebb76f544abee0b4936794fe382da24e05d405e8816b9af7ab4e81251b193c5"
+      },
+      "31802": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-18-02",
+        "sha256": "858e0abd239d2404754a8dc6e87b0be87c5273a6a89241356df863b22c384f58"
+      },
+      "31803": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-18-03",
+        "sha256": "54f9711ecb417958893926b24625fb7f43b8dd5b36e60cd0a7940ab4ee6b2c48"
+      },
+      "31804": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-18-04",
+        "sha256": "fbd443a083c4db006a05aabf7663750730bdd3f159f11183c6593913c2e600e9"
+      },
+      "31805": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-18-05",
+        "sha256": "a6cd237daa4551b028228fa9cb0321657427896c511c0dee4c2458d152170fa3"
+      },
+      "31806": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-18-06",
+        "sha256": "94aff8a8109077c3e118a5803842301f53911b419bb523a5097b4af321eff798"
+      }
+    },
+    "restored_scripts": [
+      "300/sb_bac.arg",
+      "genout/wpm_31805_22_4"
+    ],
+    "portal_choices": []
+  },
+  "jobs": [
+    {
+      "id": 14,
+      "event": 27,
+      "title": "矿工比赛／矿山入场许可证",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "combat_audit": "docs/reverse-engineering/miner-contest-source-audit.md",
+  "missing_condition_items": [
+    {
+      "id": 2391,
+      "script": "giiru/event/giruev2_1",
+      "branch": 0,
+      "reason": "当前锁定源物品表缺定义，仅保留原否定条件；不授予或删除该ID。"
+    }
+  ]
+}
