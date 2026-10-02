@@ -11,6 +11,15 @@ def keyword_warp(source, script, events):
         if not separator or key in fields:
             raise ValueError('Unsupported keyword source line')
         fields[key] = value
+    if set(fields) == {'WARP','FREE','MONEY','FreeMsg','PayMsg','PartyMsg','MoneyMsg'}:
+        if fields['FREE'] != 'LV>49' or fields['MONEY'] != '-1' or not re.fullmatch(r'\d+,\d+,\d+', fields['WARP']):
+            raise ValueError('Unreviewed free WarpMan gate')
+        return fields['PayMsg'].replace('\\n','\n'), [dict(
+            event=-1,type='FREEWARP',condition=fields['FREE'],
+            texts={'AcceptMsg':fields['FreeMsg'].replace('\\n','\n')},
+            actions={'Warp':fields['WARP']},enabled=True,events=events,source=script,
+            source_fields=fields,
+            source_rule='gmsv/npc/npc_warpman.c:228-231,254-268,300-309,393-400,560-566; original free level gate')]
     # Do not turn unrelated WarpMan fields/actions into an unconditional door.
     if set(fields) != {'WARP', 'FREE', 'warp_msg', 'nomal_msg'}:
         raise ValueError('Unreviewed keyword WarpMan fields')

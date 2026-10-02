@@ -173,6 +173,9 @@ func talk(backend, id: String) -> Dictionary:
 	if npc.has("kind"):
 		if str(npc.kind) not in services.KINDS:return {"ok":false,"reason":"尚未开放的原服务类型。"}
 		return services.open(self,backend,npc)
+	for gate in npc.get("branches",[]):
+		if str(gate.get("type",""))=="FREEWARP" and backend.quest_visit_guard.is_valid() and not str(backend.quest_visit_guard.call()).is_empty():
+			return window(npc,{},"end",str(gate.source_fields.PartyMsg).replace("\\n","\n"),false)
 	var profile: Dictionary=backend.session.snapshot()
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
@@ -184,7 +187,7 @@ func talk(backend, id: String) -> Dictionary:
 		if not result.ok:return result
 		return window(npc,branch,"end",message(branch.texts,"NomalWindowMsg") if branch.texts.has("NomalWindowMsg") else message(branch.texts,"NomalMsg"),false)
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
-	var keys := {"KEYWORD":"AcceptMsg","BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
+	var keys := {"FREEWARP":"AcceptMsg","KEYWORD":"AcceptMsg","BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
 	var prompt := str(branch.get("confirmation_text",message(branch.texts,keys[phase])))
 	if branch.actions.has("DelStone"):
@@ -219,6 +222,10 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
+	if phase=="FREEWARP":
+		if choice!="yes":return {"ok":false,"reason":"无效选择。"}
+		var committed := transact(backend,profile,branch,"FREEWARP")
+		return {"ok":true,"closed":true} if committed.ok else committed
 	if phase=="KEYWORD":
 		if choice!="submit" or text.length()>120:return {"ok":false,"reason":"无效口令输入。"}
 		if text!=str(branch.get("keyword","")):return {"ok":false,"reason":message(branch.texts,"AcceptMsg")}
@@ -240,7 +247,11 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "") -> Dictionary:
 	if branch.actions.has("Warp") and backend.quest_visit_guard.is_valid():
 		var reason: String=str(backend.quest_visit_guard.call())
-		if not reason.is_empty():return {"ok":false,"reason":reason}
+		if not reason.is_empty():return {"ok":false,"reason":str(branch.source_fields.PartyMsg).replace("\\n","\n") if phase=="FREEWARP" else reason}
+	if phase=="FREEWARP":
+		var parts:=str(branch.actions.Warp).split(",")
+		var info:Dictionary=backend.session.world_catalog.info(int(parts[0]))
+		if info.is_empty() or int(parts[1])<0 or int(parts[2])<0 or int(parts[1])>=int(info.width) or int(parts[2])>=int(info.height):return {"ok":false,"reason":"原门目的地图尚未导入。"}
 	var npc_destinations:Array=[]
 	if branch.actions.has("NpcWarp") and phase not in ["cancel","CLEAN"]:
 		if npc_id.is_empty() or npc_by_id(npc_id).is_empty():return {"ok":false,"reason":"人物状态已经改变。"}

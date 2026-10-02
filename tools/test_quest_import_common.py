@@ -25,6 +25,24 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_free_warp_gate_is_exact_bound_source(self):
+        fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-free-warp-gate.json').read_text())
+        self.assertEqual(common.load_quest_module(REFERENCE,fixture['manifest']),fixture['module'])
+        from import_world import read_map
+        for info in fixture['maps'].values():
+            raw=(REFERENCE/info['source']).read_bytes()
+            self.assertEqual(hashlib.sha256(raw).hexdigest(),info['source_sha256'])
+            mid,name,width,height,*_=read_map(REFERENCE/info['source'])
+            self.assertEqual([mid,name,width,height],[info['map_id'],info['name'],info['width'],info['height']])
+        from quest_source_handlers import keyword_warp
+        source=(REFERENCE/'gmsv/data/npc/genout/wpm_120_19_15').read_text(encoding='gb18030')
+        for old,new in [('MONEY:-1','MONEY:1'),('LV>49','LV>48'),('FREE:LV>49','FREE:ALLFREE')]:
+            with self.assertRaises(ValueError):keyword_warp(source.replace(old,new),'gate',[37,38])
+        branch=fixture['module']['npcs'][0]['branches'][0]
+        self.assertEqual(branch['condition'],'LV>49')
+        self.assertEqual(branch['actions'],{'Warp':'122,6,5'})
+        self.assertEqual(branch['source_fields']['MONEY'],'-1')
+
     def test_static_random_drops_are_verified_against_original_slots(self):
         spec=gold_bui_manifest()
         expected=[(1305,2760,100),(1306,2761,500),(1307,2763,500),(1308,2762,100)]
