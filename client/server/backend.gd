@@ -78,6 +78,8 @@ var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 var quest_visit_guard: Callable
 var quest_helper = preload("res://server/quest_helper.gd").new()
 const AdultCheckpoint=preload("res://server/adult_battle_checkpoint.gd")
+var stationary = preload("res://server/stationary_encounters.gd").new()
+var stationary_party_member: Callable
 var quest_auto = preload("res://server/quest_auto.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
 var session = GameSession.new()
@@ -164,6 +166,7 @@ func _process(delta: float) -> void:
 	_depth += 1
 	automation.tick(delta)
 	quest_auto.tick(self,delta)
+	stationary.tick(self,delta)
 	_depth -= 1
 	_record_releases()
 	_flush()
@@ -174,6 +177,7 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	stationary.stop(self,"载入存档停止了原地遇敌。")
 	quest_auto.stop(self,"载入存档停止了自动任务。")
 	original_quests.pending={}
 	if not session.load_game(path):return false
@@ -367,6 +371,7 @@ const TURN_COMMANDS := ["battle_command","battle_pet_command","battle_pet_skill"
 
 func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
+	stationary.command(self,type)
 	var quest_conflict:bool=quest_auto.running and type in ["quest_talk","quest_choose","quest_close","quest_visit","quest_discard"]
 	if quest_auto.running:
 		if type in ["warp","auto","auto_start","flow_start","hunt_start","start_hunt","open_battle","begin_battle","start_battle_config","start_wild_battle_config","start_wild_battle","field_step","wild_encounter"]:quest_auto.stop(self,"其他操作停止了自动任务。")
@@ -381,7 +386,9 @@ func _handle(command: Dictionary) -> Dictionary:
 	elif PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
 	elif has_method("_cmd_"+type):reply = call("_cmd_"+type,command)
 	else:reply = _reject("unknown command "+type)
-	if before_position!=[automation.position_map,automation.position_cell]:original_quests.pending={}
+	if before_position!=[automation.position_map,automation.position_cell]:
+		original_quests.pending={}
+		stationary.stop(self,"位置改变，已停止原地遇敌。")
 	reply.seq = command.get("seq",0)
 	reply.type = "ack" if reply.get("ok",false) else "rejected"
 	return reply
@@ -630,7 +637,17 @@ func _cmd_begin_battle(command: Dictionary) -> Dictionary:
 	if config.is_empty():return _reject("battle unavailable")
 	return {"ok":true,"state":open_battle(config)}
 
-## One step on a field cell. With encounter, a hit also opens the wild battle.
+## Temporary stationary encounters; movement randomness remains shared.
+func _cmd_stationary_encounters(command: Dictionary) -> Dictionary:
+	return stationary.start(self,command)
+
+func _cmd_stationary_keepalive(command: Dictionary) -> Dictionary:
+	return stationary.keepalive(self,command)
+
+func _cmd_stationary_pause(_command: Dictionary) -> Dictionary:
+	stationary.stop(self,"打开菜单或对话，已停止原地遇敌。")
+	return {"ok":true}
+
 func _cmd_no_random_encounters(command: Dictionary) -> Dictionary:
 	if not command.get("enabled") is bool:return _reject("开关必须为布尔值。")
 	var previous: bool = session._profile.get("no_random_encounters",false)
@@ -639,6 +656,7 @@ func _cmd_no_random_encounters(command: Dictionary) -> Dictionary:
 	if session._pending.is_empty() and not save():
 		session._profile.no_random_encounters = previous
 		return _reject("保存助手设置失败。")
+	if command.enabled:stationary.stop(self,"不遇敌已开启。")
 	publish()
 	return {"ok":true,"enabled":command.enabled}
 
@@ -856,6 +874,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			session._profile = before
 			session._pending = pending_before
 			session.capture_events = capture_events_before
+			stationary.settled(self,state,false)
 			state.settled = false
 			state.settlement_error = "任务战保存失败，已回滚奖励与传送；请检查保存位置后再次结束战斗。" if quest_transaction else "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
 			state.xp = 0;state.gold = 0;state.result_summary = []
@@ -889,6 +908,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 		elif state.outcome=="captured":
 			state.events.append((("随身已满，已存仓" if pending_before.has("capture_destination") else "只抓不练：Lv.1伙伴已留在旧仓库。") if str(pending_before.get("capture_destination","storage"))=="storage" else "只抓不练：Lv.1伙伴已加入随身。") if capture_only else "伙伴已加入宠物栏，可为它取名并选择出战。")
 		var saved_ok := save()
+		stationary.settled(self,state,saved_ok)
 		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.stop(self,"沿途战斗保存失败，停止自动任务。")
 		_publish()
 	if capture_only and not bool(state.get("active",true)) and not bool(state.get("settled",false)):
@@ -1045,7 +1065,7 @@ func _derived() -> Dictionary:
 	# battle_pets: pet_id -> reason for the open battle's participants, which
 	# release, store, deploy and ride refuse until it ends.
 	_published_battle_pets = session.battle_pets()
-	return {"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
+	return {"stationary":stationary.snapshot(self),"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
 	var options := {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier,"admin":admin}
