@@ -124,6 +124,31 @@ def reviewed_static_drops(spec, texts):
     return result
 
 
+def missing_condition_reviews(spec, texts):
+    """Explicit source inconsistencies; these ids never become usable items."""
+    import csv
+    declared=spec.get('missing_condition_items',[])
+    if not isinstance(declared,list):raise ValueError('Missing condition item reviews must be a list')
+    rows=csv.reader(texts['gmsv/data/itemset.txt'].splitlines())
+    defined={int(row[16]) for row in rows if len(row)>16 and row[16].isdigit()}
+    result={}
+    for entry in declared:
+        if (not isinstance(entry,dict) or set(entry)!={'id','script','branch','reason'}
+                or type(entry['id']) is not int or entry['id']<=0
+                or type(entry['branch']) is not int or entry['branch']<0
+                or not isinstance(entry['reason'],str) or not entry['reason'].strip()
+                or entry['script'] not in spec['scripts']):
+            raise ValueError('Invalid missing condition item source review')
+        key=(entry['script'],entry['branch'],entry['id'])
+        if key != ('giiru/event/giruev2_1',0,2391):
+            raise ValueError('Unapproved missing condition item exception')
+        if (entry['id'] in defined or entry['id'] in spec['items'] or key in result
+                or str(entry['id']) in spec.get('item_notes',{})):
+            raise ValueError('Missing condition item must be absent and condition-only')
+        result[key]=copy.deepcopy(entry)
+    return result
+
+
 def load_quest_module(reference, manifest):
     from import_early_quests import catalog, parse_script, source_text
     spec = json.loads(Path(manifest).read_text()) if isinstance(manifest, (str, Path)) else copy.deepcopy(manifest)
@@ -137,6 +162,8 @@ def load_quest_module(reference, manifest):
     result['jobs'] = copy.deepcopy(spec.get('jobs', []))
     drops = reviewed_static_drops(spec, texts)
     if drops:result['drops'] = drops
+    missing_reviews=missing_condition_reviews(spec,texts)
+    used_missing=set()
     declared = spec['scripts']
     handlers = spec.get('handlers', {})
     if set(declared) & set(handlers):
@@ -200,11 +227,19 @@ def load_quest_module(reference, manifest):
             if not events or any(type(e) is not int or not 0 < e < 192 for e in events):
                 raise ValueError('Invalid module events')
             for branch in branches:
-                item_ids = {int(i) for i in re.findall(r'ITEM(?:!=|=)(\d+)', branch['condition'])}
+                condition_ids = {int(i) for i in re.findall(r'ITEM(?:!=|=)(\d+)', branch['condition'])}
+                for item_id in condition_ids - set(spec['items']):
+                    key=(script,branch.get('source_branch_index'),item_id)
+                    if key not in missing_reviews:raise ValueError('Unreviewed branch condition item')
+                    if branch['condition'] != 'ENDEV=27&ITEM!=2391':raise ValueError('Unapproved missing item condition')
+                    review=missing_reviews[key]
+                    branch.setdefault('missing_condition_items',[]).append(dict(review,source=PREFIX+script,source_line=branch['source_line']))
+                    used_missing.add(key)
+                action_ids=set()
                 for key in ('GetItem', 'DelItem', 'GetRandItem'):
-                    item_ids.update(int(i.split('*')[0]) for i in branch['actions'].get(key, '').split(',') if i)
-                if not item_ids <= set(spec['items']):
-                    raise ValueError('Unreviewed branch item')
+                    action_ids.update(int(i.split('*')[0]) for i in branch['actions'].get(key, '').split(',') if i)
+                if not action_ids <= set(spec['items']):
+                    raise ValueError('Unreviewed branch action item')
                 if 'GetPet' in branch['actions'] and int(branch['actions']['GetPet']) not in spec.get('reward_enemies', []):
                     raise ValueError('Unreviewed reward enemy')
                 branch.update(enabled=True, events=list(events), source=script)
@@ -219,6 +254,8 @@ def load_quest_module(reference, manifest):
             result['npcs'].append(npc)
     if {n['source_script'] for n in result['npcs']} != set(selected_scripts):
         raise ValueError('Missing actual create binding for reviewed script')
+    if used_missing != set(missing_reviews):
+        raise ValueError('Missing condition item review does not match a selected source branch')
     for script, review in selected_scripts.items():
         if 'instances' in review and set(review['instances']) != {n['id'] for n in result['npcs'] if n['source_script'] == script}:
             raise ValueError('Missing reviewed NPC instance')

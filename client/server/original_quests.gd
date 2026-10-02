@@ -175,7 +175,7 @@ func talk(backend, id: String) -> Dictionary:
 		return services.open(self,backend,npc)
 	for gate in npc.get("branches",[]):
 		if str(gate.get("type",""))=="FREEWARP" and backend.quest_visit_guard.is_valid() and not str(backend.quest_visit_guard.call()).is_empty():
-			return window(npc,{},"end",str(gate.source_fields.PartyMsg).replace("\\n","\n"),false)
+			return window(npc,{},"end",str(gate.source_fields.get("PartyMsg","无法加入团队。请解散团队。")).replace("\\n","\n"),false)
 	var profile: Dictionary=backend.session.snapshot()
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
@@ -247,7 +247,7 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "") -> Dictionary:
 	if branch.actions.has("Warp") and backend.quest_visit_guard.is_valid():
 		var reason: String=str(backend.quest_visit_guard.call())
-		if not reason.is_empty():return {"ok":false,"reason":str(branch.source_fields.PartyMsg).replace("\\n","\n") if phase=="FREEWARP" else reason}
+		if not reason.is_empty():return {"ok":false,"reason":str(branch.source_fields.get("PartyMsg","无法加入团队。请解散团队。")).replace("\\n","\n") if phase=="FREEWARP" else reason}
 	if phase=="FREEWARP":
 		var parts:=str(branch.actions.Warp).split(",")
 		var info:Dictionary=backend.session.world_catalog.info(int(parts[0]))
@@ -306,7 +306,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 		# gives items, then applies flags. Quantified deletions
 		# consume the script's count (fixing the reference C's empty *n branch).
 		var capacity := candidate.duplicate(true)
-		remove_items(capacity,str(branch.actions.get("DelItem","")))
+		remove_items(capacity,str(branch.actions.get("DelItem","")),str(branch.get("item_deletion_scope",""))=="bag")
 		if Session.bag_slots(capacity)+reward_count>15:
 			return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
 		# Delete from the end so every slot index still identifies its bound UID.
@@ -327,7 +327,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 			candidate.next_pet_id+=1
 			candidate.pets.append(reward_pet)
 		if not random_items.is_empty():received.append(random_items[randi_range(0,random_items.size()-1)])
-		remove_items(candidate,str(branch.actions.get("DelItem","")))
+		remove_items(candidate,str(branch.actions.get("DelItem","")),str(branch.get("item_deletion_scope",""))=="bag")
 		for item in received:Session.OriginalEquipment.add(candidate,item)
 		set_flag(candidate,"now",event,true)
 		var ended: String=str(branch.actions.get("EndSetFlg",""))
@@ -362,8 +362,16 @@ static func item_list(raw: String) -> Array:
 		for i in range(int(parts[1]) if parts.size()>1 else 1):result.append(int(parts[0]))
 	return result
 
-static func remove_items(profile: Dictionary, raw: String) -> void:
+static func remove_items(profile: Dictionary, raw: String, bag_only := false) -> void:
 	if raw.is_empty():return
+	if bag_only:
+		for item_id in item_list(raw):
+			for index in range(profile.original_instances.size()):
+				var entry:Dictionary=profile.original_instances[index]
+				if int(entry.item_id)==item_id and not Session.OriginalEquipment.worn(profile,int(entry.uid)):
+					Session.OriginalEquipment.remove_at(profile,index)
+					break
+		return
 	for entry in raw.split(","):
 		var parts := entry.split("*")
 		var id := int(parts[0])

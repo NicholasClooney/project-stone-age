@@ -20,6 +20,15 @@ def keyword_warp(source, script, events):
             actions={'Warp':fields['WARP']},enabled=True,events=events,source=script,
             source_fields=fields,
             source_rule='gmsv/npc/npc_warpman.c:228-231,254-268,300-309,393-400,560-566; original free level gate')]
+    if set(fields) == {'WARP','FREE','MONEY','FreeMsg','PayMsg','MoneyMsg','DelItem'}:
+        if fields['FREE'] != 'ITEM=2527' or fields['MONEY'] != '-1' or fields['DelItem'] != '2527*1' or fields['WARP'] != '31806,34,6':
+            raise ValueError('Unreviewed ticket WarpMan gate')
+        return fields['PayMsg'].replace('\\n','\n'), [dict(
+            event=-1,type='FREEWARP',condition=fields['FREE'],
+            texts={'AcceptMsg':fields['FreeMsg'].replace('\\n','\n')},
+            actions={'Warp':fields['WARP'],'DelItem':fields['DelItem']},enabled=True,events=events,source=script,
+            source_fields=fields, item_deletion_scope='bag',
+            source_rule='gmsv/npc/npc_eventaction.c:856-906,1524-1538; npc_warpman.c:228-231,300-309,393-400')]
     # Do not turn unrelated WarpMan fields/actions into an unconditional door.
     if set(fields) != {'WARP', 'FREE', 'warp_msg', 'nomal_msg'}:
         raise ValueError('Unreviewed keyword WarpMan fields')
