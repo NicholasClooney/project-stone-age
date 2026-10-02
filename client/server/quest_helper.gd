@@ -39,7 +39,24 @@ func snapshot(backend) -> Dictionary:
    elif event in [28,29,30,31,54]:preload("res://server/brothers_helper.gd").steps(self,backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
-  for step in quest.steps:step.quest_id=int(job.id)
+  for step in quest.steps:
+   step.quest_id=int(job.id)
+   var rewards:Array=[]
+   var notices:Array[String]=[]
+   var actions:Dictionary=step.get("source",{}).get("actions",{})
+   for action in ["GetItem","GetRandItem"]:
+    for item_id in Rules.item_list(str(actions.get(action,""))):
+     var item:Dictionary=catalog.items.get(str(item_id),{})
+     var effects:Array=preload("res://scripts/original_item_effects.gd").resolve(item)
+     if effects.is_empty():continue
+     rewards.append({"item_id":item_id,"name":str(item.get("name","")),"effects":effects})
+     var labels:Array[String]=preload("res://scripts/original_item_effects.gd").lines(item)
+     if not labels.is_empty():notices.append(str(item.get("name",""))+"："+"；".join(labels))
+   if not rewards.is_empty():step.reward_effects=rewards
+   if not notices.is_empty():
+    step.effects_notice="\n".join(notices)
+    step.label+="\n"+str(step.effects_notice)
+
   quests.append(quest)
  cached_key = key
  cached_snapshot = {"quests":quests}
