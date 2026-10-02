@@ -39,6 +39,13 @@
       "enabled_events": [
         45
       ]
+    },
+    {
+      "id": "miner-contest",
+      "manifest": "tools/miner_contest_quest_sources.json",
+      "enabled_events": [
+        27
+      ]
     }
   ]
 }

@@ -40,6 +40,7 @@ func snapshot(backend) -> Dictionary:
    elif event==18:wood_steps(backend,profile,quest)
    elif event in [6,7,8]:preload("res://server/goya_deliveries_helper.gd").steps(self,backend,profile,quest)
    elif event in [3,5]:preload("res://server/yam_axe_helper.gd").steps(self,backend,profile,quest)
+   elif event==27:preload("res://server/miner_contest_helper.gd").steps(self,backend,profile,quest)
    elif event==44:GoldenBui.steps(self,backend,profile,quest)
    elif event in [37,38]:Marju.steps(self,backend,profile,quest)
    elif event==45:preload("res://server/four_jewels_helper.gd").steps(self,backend,profile,quest)
