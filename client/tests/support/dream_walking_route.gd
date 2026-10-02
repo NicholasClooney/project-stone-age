@@ -50,8 +50,14 @@ static func reach(tree:SceneTree,game,target:Vector2i)->bool:
   var path:Array[Vector2i]=game.travel_router._path_to(source)
   print("ROUTE from=",game.cell," source=",source," target=",arrival," path=",path.size())
   if path.is_empty():return false
-  game.walk_to(source)
-  path.pop_front();game.path=path
+  # The test selects adjacent click destinations from the existing router;
+  # only production walk_to writes movement state. The last step is a warp.
+  path.pop_front()
+  for point in path:
+   game.walk_to(point)
+   if point!=source and not await Wait.until(tree,func():return game.cell==point and not game.moving):
+    print("ADJACENT stalled requested=",point," current=",game.cell," message=",game.message.text," moving=",game.moving," busy=",game.area_transition_busy)
+    return false
   if not await Wait.until(tree,func():return game.cell==arrival and not game.moving and not game.area_transition_busy):
    print("ROUTE stalled cell=",game.cell," map=",game.data.map_id," moving=",game.moving," busy=",game.area_transition_busy," path=",game.path," message=",game.message.text)
    return false
