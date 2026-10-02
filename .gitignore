@@ -1,17 +1,17 @@
-.tools/
+/.tools
 client/.godot/
 .DS_Store
 build/
 artifacts/
 
 # Imported original client resources remain local.
-client/assets/legacy/
+client/assets/legacy
 
 __pycache__/
 *.pyc
 
 # Local upstream checkouts and offline Git archives.
-/references/
+/references
 
 # LAN profiles of this computer (scripts/profiles.sh; see scripts/profiles.example.json).
 /profiles.json
