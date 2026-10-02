@@ -25,6 +25,23 @@ Subagents working in their own worktrees don't relaunch; they test and commit, a
 - Tests never use the game's real user:// folder. `scripts/run.sh --script res://tests/…` points user:// at `…/Godot/app_userdata/Stone Age tests/<checkout>-<cksum>/` (the `TestUserDir` autoload reads `STONE_AGE_TEST_USER_DIR`), and `test-all.sh` gives every suite its own folder per run, deleted when it passes. Fixed fixture names like `user://x-test.json` are safe as long as tests reach files through user://, never an absolute path into the real app-data folder.
 - Several agents often run at once while the user's fast hunt uses the CPU. Don't run more than one full suite at a time per agent, and prefer fewer jobs over more.
 
+## Worktree pool
+
+Every agent (Claude, Codex and their subagents) borrows a worktree from one shared pool instead of creating its own. Slots are `.claude/worktrees/pool-a`, `pool-b`, … and are reused between tasks.
+
+```sh
+python3 tools/worktree_pool.py status                 # who has which slot, for how long
+python3 tools/worktree_pool.py acquire --owner <agent name> --branch <branch> --task "<what>"   # prints the slot path
+python3 tools/worktree_pool.py acquire ... --import    # only when the branch changes an importer
+python3 tools/worktree_pool.py release pool-b          # after the branch is merged into main
+```
+
+- The pool starts at 5 slots and grows by itself up to 10 when all are leased. More than 10 needs the user's approval; only then rerun with `--approved-by-user`.
+- Leases live in `.git/worktree-pool.json` (shared by every worktree, never tracked); a file lock stops two agents taking the same slot.
+- `acquire` checks the slot is clean, switches it to the branch (new from `main`, or the existing branch) and sets up the folders below. `release` refuses while the slot has uncommitted changes or the branch is not merged; `--abandon` drops uncommitted changes on purpose (the branch and its commits stay). Release as soon as the main session has merged your branch.
+- A slot left leased for more than 12 hours shows as `STALE?` in `status`: ask its owner before releasing it.
+- Do not create worktrees outside the pool, and do not delete slot folders by hand.
+
 ## Assets in worktrees
 
 Imported original assets are gitignored, so a worktree has to get them from the main checkout (`M` below). Copies add up: on 2026-10-02, 89 worktrees with full copies left the disk 99% full. Share what the worktree only reads, and copy only what it rewrites:
