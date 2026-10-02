@@ -72,6 +72,9 @@
 PYTHONPATH=tools .tools/asset-venv/bin/python -m unittest tools/test_marju_quest.py
 .tools/asset-venv/bin/python tools/import_early_quests.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
 .tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+.tools/asset-venv/bin/python tools/palette_images.py
+.tools/asset-venv/bin/python tools/plan_web_packs.py
+./scripts/run.sh --headless --editor --import
 STONE_AGE_TEST_JOBS=2 ./scripts/test-all.sh --only marju_equipment_test,marju_quest_test,marju_route_test
 STONE_AGE_FOREGROUND_TEST=1 STONE_AGE_PROOF_DIR=/private/tmp/bonus-third-marju-proof ./scripts/run.sh --rendering-method gl_compatibility --script res://tests/marju_ui_test.gd
 ```

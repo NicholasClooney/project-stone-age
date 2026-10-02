@@ -28,5 +28,5 @@ class FourJewelsSourceTests(unittest.TestCase):
   groups={int(r[1]):r for r in csv.reader((REF/'gmsv/data/group.txt').read_text(encoding='gb18030').splitlines()) if len(r)>1 and r[1].isdigit()}
   for ident,item in [(711,2760),(712,2761),(713,2763),(714,2762)]:self.assertEqual(groups[ident][2:4],['2764',str(item)])
   report=(ROOT/'docs/reverse-engineering/four-jewels-quest.md').read_text()
-  for ident in range(1305,1318):self.assertIn(enemies[ident][1],report)
+  for ident in range(1305,1318):self.assertIn(enemies[ident][1].replace('|',r'\|'),report)
 if __name__=='__main__':unittest.main()
