@@ -76,6 +76,8 @@ const ADMIN_COMMANDS := ["battle_escape_dev","start_battle_config","start_wild_b
 var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 ## Pure travel refusal hook supplied by a multi-profile host (party lock).
 var quest_visit_guard: Callable
+var _following_party:=false
+const TimePassage=preload("res://server/original_time_passage.gd")
 var quest_helper = preload("res://server/quest_helper.gd").new()
 const AdultCheckpoint=preload("res://server/adult_battle_checkpoint.gd")
 var stationary = preload("res://server/stationary_encounters.gd").new()
@@ -991,6 +993,8 @@ func _cmd_presented(command: Dictionary) -> Dictionary:
 
 ## Authorize the guarded sea portal using this backend's current map and permit.
 func _cmd_check_passage(command: Dictionary) -> Dictionary:
+	var timed_reason:=TimePassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("to_map",-1)))
+	if not timed_reason.is_empty():return _reject(timed_reason)
 	if int(command.get("to_map",-1))==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30；任务助手瞬移为项目便利。")
 	if int(command.get("from_map",-1))!=automation.position_map:return _reject("位置已经改变。")
 	if preload("res://scripts/passage_rules.gd").requires_permit(automation.position_map,int(command.get("to_map",-1))) and not session.has_travel_pass():
@@ -999,9 +1003,21 @@ func _cmd_check_passage(command: Dictionary) -> Dictionary:
 
 ## Positions are reported by whichever client walks; every other client
 ## follows the broadcast (the reporter recognises its own client id).
+## Internal host call, never selected by a client command or its "client" field.
+func report_party_position(command:Dictionary)->Dictionary:
+	_following_party=true
+	var result:=handle(command)
+	_following_party=false
+	return result
+
 func _cmd_report_position(command: Dictionary) -> Dictionary:
 	var helper_stage: Array = quest_helper.navigation_key(self)
 	if quest_auto.accept_report(self,command):return {"ok":true}
+	if not _following_party:
+		var timed_reason:=TimePassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("map_id",-1)),command.get("cell",[]))
+		if not timed_reason.is_empty():
+			_emit({"type":"position","map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y],"client":"server"})
+			return _reject(timed_reason)
 	if int(command.map_id)==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30。")
 	var origin: int = automation.position_map
 	if preload("res://scripts/passage_rules.gd").requires_permit(origin,int(command.map_id)) and not session.has_travel_pass():
