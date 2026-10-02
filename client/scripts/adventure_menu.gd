@@ -807,6 +807,14 @@ func pet_switch_view(view: String) -> void:
 	rebuild()
 
 func pet_panel(profile: Dictionary) -> void:
+	var responsive:=preload("res://scripts/pet_collection_mobile.gd")
+	var on_resize:Callable=responsive.resize.bind(self)
+	if not resized.is_connected(on_resize):resized.connect(on_resize)
+	_pet_native_panel(profile)
+	if size.x<960:
+		responsive.build(self)
+
+func _pet_native_panel(profile: Dictionary) -> void:
 	var pets: Array = profile.pets
 	var filtered := filtered_pet_indices(profile)
 	if pets.is_empty() or filtered.is_empty():pet_view="list"
