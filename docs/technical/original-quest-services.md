@@ -101,7 +101,7 @@ selects an actual `npcgen_warpman|file:...` create binding, preserving the same
 instance-id scheme. The importer currently accepts exactly the four-field
 source subset `WARP`, `FREE:LV>0`, `warp_msg`, `nomal_msg`; other conditions or
 actions fail closed. The four Munde/Jan source gates are covered by
-`original-keyword-gates.json`. `npcenemy` is not implemented by this slice.
+`original-keyword-gates.json`. The NPCEnemy subset is described below.
 
 The server emits a presentation-only `kind:original_keyword,input:text`
 dialogue and consumes its existing single-use token with `choice:submit,text`.
@@ -110,3 +110,24 @@ and the selected branch, and commits the source Warp via the normal save
 transaction. Wrong input returns the original nomal_msg. The text field is a
 project UI for the original spoken keyword; the accepted words and destinations
 are unchanged. Remote commands cannot supply their own Warp or actions.
+
+## Fixed NPCEnemy subset
+
+`handlers:{"100/sb_go.arg":{"kind":"npcenemy","events":[9,10,11,12]}}`
+uses the actual create's template name and requires exactly one matching
+SHA-pinned `.template` binding with `functionset=NPCEnemy`. The importer accepts
+`entype:2,dieact:1`, one to ten ordered `enemyno` ids, numbered askbattlemsg1..6,
+and the original victory warp. Item/steal/death-hide behavior remains rejected
+until the separate character-state implementation is delivered.
+
+The effective branch retains `actions.Battle` as the original comma-separated
+string, plus `guard:{enemy_ids:[...],dieact:1}`, `source_fields`, and
+`combat_audit`. The backend validates the list against the audit, creates every
+actor through EncounterCatalog, then submits the full troop to the existing
+Session validation/battle pipeline. It does not run source special skills.
+Victory Warp uses the existing atomic save/retry path; the legacy A guard ids
+and personal party_settlement retry handling are unchanged.
+
+Fixed 1x1 `borncenter` follows A's existing fixed-spawn interpretation; original
+NPC wandering is not simulated and is marked in source_spawn_mode. Larger
+spawn rectangles remain unsupported in this slice.
