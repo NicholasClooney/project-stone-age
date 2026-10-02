@@ -27,14 +27,16 @@ def gold_bui_manifest():
 class QuestModuleTests(unittest.TestCase):
     def test_excluded_unsupported_language_never_reaches_parser(self):
         source = (REFERENCE/'gmsv/data/npc/quiz/equiz_02').read_text(encoding='gb18030')
+        unsupported = source.replace('PET=77-12', 'PET=77-12EV')
         with self.assertRaisesRegex(ValueError, 'Unsupported predicate'):
-            quests.parse_script(source)
+            quests.parse_script(unsupported)
+        self.assertEqual(quests.parse_script(unsupported, [4]), quests.parse_script(source, [4]))
         _, branches = quests.parse_script(source, [4])
         self.assertEqual(len(branches), 1)
         self.assertEqual(branches[0]['source_line'], 38)
         self.assertEqual(branches[0]['source_branch_index'], 4)
         self.assertEqual(branches[0]['actions'], {'GetPet': '14', 'DelItem': '2753', 'EndSetFlg': '44'})
-        for indices in [[2], [9], [-1], [4, 4], [4, 3], [True], []]:
+        for indices in [[9], [-1], [4, 4], [4, 3], [True], []]:
             with self.subTest(indices=indices), self.assertRaises(ValueError):
                 quests.parse_script(source, indices)
 
@@ -82,6 +84,23 @@ class QuestModuleTests(unittest.TestCase):
         data['items']['2414']['description'] = 'module should not overwrite existing note'
         merged = common.merge_quest_module(base, data)
         self.assertEqual(merged['items']['2414'], base['items']['2414'])
+
+    def test_transaction_fixture_is_exact_selected_source(self):
+        fixture = json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/bonus-quest-transactions.json').read_text())
+        for relative, digest in fixture['provenance']['sources'].items():
+            self.assertEqual(hashlib.sha256((REFERENCE/relative).read_bytes()).hexdigest(), digest)
+        for npc in fixture['npcs']:
+            raw = (REFERENCE/('gmsv/data/npc/'+npc['source_script'])).read_text(encoding='gb18030')
+            indices = [b['source_branch_index'] for b in npc['branches']]
+            _, branches = quests.parse_script(raw, indices)
+            self.assertEqual([b['actions'] for b in branches], [b['actions'] for b in npc['branches']])
+            self.assertEqual([b['condition'] for b in branches], [b['condition'] for b in npc['branches']])
+        for invalid in ['PET=25-223*2', 'PET<25-223*1', 'EVDEL']:
+            with self.assertRaisesRegex(ValueError, 'Unsupported DelPet'):
+                quests.parse_script('EventNo:35\nTYPE:ACCEPT\nEVENT:LV>0\nDelPet:'+invalid+'\nEventEnd')
+        for invalid in ['-1000', 'LV*20', 'bad']:
+            with self.assertRaisesRegex(ValueError, 'Unsupported DelStone'):
+                quests.parse_script('EventNo:-1\nTYPE:REQUEST\nEVENT:LV>0\nDelStone:'+invalid+'\nEventEnd')
 
     def test_empty_registry_does_not_activate_fixture(self):
         base = quests.catalog(REFERENCE)

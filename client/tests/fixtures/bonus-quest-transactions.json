@@ -1,0 +1,400 @@
+{
+  "version": 1,
+  "items": {
+    "2527": {
+      "id": 2527,
+      "name": "最上层入场许可证",
+      "description": "阿斯玛鲁矿山最上层的入场券",
+      "logical_icon": 24222,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2110,
+      "raw_columns": [
+        "最上层入场许可证",
+        "最上层入场许可证",
+        "阿斯玛鲁矿山最上层的入场券",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2527",
+        "24222",
+        "0",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ]
+    },
+    "2607": {
+      "id": 2607,
+      "name": "火难的戒指",
+      "description": "魅力 +2                     会心一击率上升 +5",
+      "logical_icon": 22102,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2190,
+      "raw_columns": [
+        "火难的戒指",
+        "火难的戒指",
+        "魅力 +2                     会心一击率上升 +5",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2607",
+        "22102",
+        "0",
+        "11",
+        "0",
+        "0",
+        "30",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2500000",
+        "2500000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "2",
+        "2",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "5",
+        "5",
+        "-1",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ]
+    }
+  },
+  "npcs": [
+    {
+      "id": "seimu/event/event02_1",
+      "name": "原脚本事务测试",
+      "source_script": "seimu/event/event02_1",
+      "events": [
+        35
+      ],
+      "map_id": 100,
+      "cell": [
+        230,
+        180
+      ],
+      "text": "我想收集世界中的恐龙。",
+      "branches": [
+        {
+          "event": 35,
+          "type": "ACCEPT",
+          "condition": "LV>0&PET=25-221*1&PET=25-222*1&ITEM=2607&NOWEV=35",
+          "texts": {
+            "AcceptMsg": "\n我拜托你捕抓类似鱼状的恐龙你已经全部帮我抓来了！",
+            "ThanksMsg": "\n真的非常谢谢你！\n作梦都没想到能够收集齐全，依照最初的约定，这只金色的恐龙就给你吧。\n要好好的养育它喔。",
+            "PetFullMsg": "哎呀、宠物的数量太多了无法收下耶\n可以把宠物的数量减少之后再到我这里来吗？"
+          },
+          "actions": {
+            "DelPet": "PET=25-221*1,PET=25-222*1",
+            "DelItem": "2607",
+            "GetPet": "93",
+            "EndSetFlg": "35"
+          },
+          "source_branch_index": 0,
+          "source_line": 3,
+          "enabled": true,
+          "events": [
+            35
+          ],
+          "source": "seimu/event/event02_1"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0&NOWEV=35&ITEM=2607",
+          "texts": {
+            "NomalWindowMsg": "\n寻找恐龙的事进行的还顺利吗？\n还剩下克邦凯斯和加克拉这2只没有捕获\n就拜托你啰。"
+          },
+          "actions": {},
+          "source_branch_index": 1,
+          "source_line": 15,
+          "enabled": true,
+          "events": [
+            35
+          ],
+          "source": "seimu/event/event02_1"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&PET=25-223*1&PET=25-224*1&ITEM!=2607&NOWEV=35",
+          "texts": {
+            "AcceptMsg": "\n我拜托你寻找的加格和邦恩吉你已经抓来了呀，那剩下的只剩克邦凯斯和加克拉，那就拜托你啰。",
+            "ThanksMsg": "\n对了，收下这个吧。\n这是你抓到恐龙的证明喔。\n掉落不见的话就没有办法承认你帮过我喔。",
+            "ItemFullMsg": "哎呀，道具已经满了无法收下的样子喔。\n可以把所持品的数量减少之后再到我这里来吗？"
+          },
+          "actions": {
+            "DelPet": "PET=25-223*1,PET=25-224*1",
+            "GetItem": "2607"
+          },
+          "source_branch_index": 2,
+          "source_line": 22,
+          "enabled": true,
+          "events": [
+            35
+          ],
+          "source": "seimu/event/event02_1"
+        },
+        {
+          "event": 35,
+          "type": "REQUEST",
+          "condition": "LV>0&ENDEV!=35",
+          "texts": {
+            "RequestMsg": "你好！初次见面。\n我想收集LV25的恐龙而在世界中旅行。\n但是有些恐龙尚未在我的恐龙名单中，这些是···",
+            "RequestMsg2": "\n很像是鱼的恐龙，名字是～加格、邦恩吉、克邦凯斯、加克拉这4只。\n若是、可以代替我收集的话\n我就送你一只金色的恐龙。\n如何呢？应该还不错吧？",
+            "ThanksMsg": "\n答应我了吗。\n那么，可以先帮我收集加格和邦恩吉吗？\n但是我的宠物栏只剩下2个空位而已，所以请你一次只带两只来给我。\n当然等级要是25的喔，那么就拜托啰。\n任何时候我都会在这个沙漠的附近旅行。",
+            "StopMsg": "\n\n无法继续我的请求吗？",
+            "EndStopMsg": "\n这样呀、非常的遗憾。\n如果可以的话随时拜托你喔。",
+            "NoStopMsg": "\n这样说真是令我非常的高兴。\n首先先帮我收集加格和邦恩吉吧\n我的宠物栏只剩下2个空位而已。\n啊、别忘了等级要25的喔\n那么就拜托你啰。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 32,
+          "enabled": true,
+          "events": [
+            35
+          ],
+          "source": "seimu/event/event02_1"
+        }
+      ]
+    },
+    {
+      "id": "giiru/event/giruev2_1",
+      "name": "原脚本事务测试",
+      "source_script": "giiru/event/giruev2_1",
+      "events": [
+        27
+      ],
+      "map_id": 31805,
+      "cell": [
+        19,
+        21
+      ],
+      "text": "你如果更强壮一点的话…,谁能跃跃我们呀？",
+      "branches": [
+        {
+          "event": -1,
+          "type": "REQUEST",
+          "condition": "ENDEV=27&ITEM!=2391",
+          "texts": {
+            "RequestMsg": "真是跃了我们一个大忙！\n由于你的怿系我们将可以\n提供良质的石头给大家。\n你是不是想要往上去的入场许可证？\\一张１０００Ｓ怎样要买吗？",
+            "ThanksMsg": "那就请带着许可证吧！",
+            "StopMsg": "有什么事？",
+            "EndStopMsg": "这样呀！",
+            "NoStopMsg": "干什么？",
+            "ItemFullMsg": "你的袋子不是已经满了吗？\n空下后再来吧！",
+            "StoneLessMsg": "你的硿不潣粪！\n虽然是恩人，不过生意就是生意呀。\n请准想好硿后再来吧！"
+          },
+          "actions": {
+            "GetItem": "2527",
+            "DelStone": "1000"
+          },
+          "source_branch_index": 0,
+          "source_line": 9,
+          "enabled": true,
+          "events": [
+            27
+          ],
+          "source": "giiru/event/giruev2_1"
+        }
+      ]
+    }
+  ],
+  "jobs": [],
+  "reward_pets": {
+    "93": {
+      "enemy_id": 93,
+      "template_id": 171,
+      "species": "original_171",
+      "level": 1,
+      "name": "修宝",
+      "initial": 18,
+      "wild_growth": 4.5,
+      "weights": [
+        26,
+        28,
+        25,
+        16
+      ],
+      "modai": 270,
+      "variable_ai": 0,
+      "elements": [
+        80,
+        20,
+        0,
+        0
+      ],
+      "skill_slots": 5,
+      "sprite": 100319,
+      "size": 0,
+      "source": "gmsv/data/enemy.txt",
+      "source_line": 58,
+      "base_source": "gmsv/data/enemybase.txt",
+      "base_source_line": 171
+    }
+  },
+  "provenance": {
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+      "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+      "gmsv/data/npc/seimu/event/event02_1": "b904b56910629e79d6c3ec118fdcc50ec950b9ea4c63a03ddb12309ea70a70be",
+      "gmsv/data/npc/giiru/event/giruev2_1": "4900c660529650d9315c5d54c3b5f1d7a48b26fae7685ccb965ef1f37b48328a"
+    },
+    "client": "StoneAge 2.5; logical static graphics, no fallback"
+  }
+}

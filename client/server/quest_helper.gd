@@ -13,7 +13,7 @@ func snapshot(backend) -> Dictionary:
  # not need to copy a potentially large pet warehouse or rebuild task recipes.
  var profile: Dictionary = backend.session._profile
  var catalog = backend.quest_catalog
- var key := JSON.stringify([catalog.get_instance_id(),catalog.enabled_events,profile.original_events,profile.original_items,profile.get("original_equipment",{}),profile.original_savepoint_bits,profile.player.level,profile.pets.map(func(pet):return [pet.get("pet_id",""),pet.get("species",""),pet.get("level",0),Rules.Session.original_pet_event(pet)]),Rules.Session.bag_slots(profile)])
+ var key := JSON.stringify([catalog.get_instance_id(),catalog.enabled_events,profile.original_events,profile.original_items,profile.get("original_equipment",{}),profile.original_savepoint_bits,profile.player.level,profile.player.gold,profile.pets.map(func(pet):return [pet.get("pet_id",""),pet.get("species",""),pet.get("level",0),Rules.Session.original_pet_event(pet)]),Rules.Session.bag_slots(profile)])
  if key == cached_key:return cached_snapshot.duplicate(true)
  var quests: Array = []
  for job in catalog.jobs:
@@ -72,8 +72,10 @@ func add_step(backend,profile:Dictionary,quest:Dictionary,id:String,entry:Dictio
   if not worn_hint.is_empty():blocked=worn_hint
  if current and actionable and branch.actions.has("GetRandItem") and Rules.Session.bag_slots(profile)>=15:
   actionable=false;blocked="道具栏已满；需要一个空格领取随机谢礼"
- if current and actionable and branch.actions.has("GetPet") and profile.pets.size()-(1 if Rules.pet_index(profile,str(branch.actions.get("DelPet","")))>=0 else 0)+1>Rules.Session.PET_CAPACITY:
+ if current and actionable and branch.actions.has("GetPet") and profile.pets.size()-Rules.pet_indices(profile,str(branch.actions.get("DelPet",""))).size()+1>Rules.Session.PET_CAPACITY:
   actionable=false;blocked="宠物栏已满"
+ if current and actionable and branch.actions.has("DelStone") and int(profile.player.gold)<int(branch.actions.DelStone):
+  actionable=false;blocked="石币不足"
  if current and cancellation:blocked="已领取；请继续下一步骤"
  var caption:String=label if not label.is_empty() else label_for(backend.quest_catalog,npc,branch)
  if not blocked.is_empty():caption+="（"+blocked+"）"

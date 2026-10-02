@@ -25,9 +25,10 @@ static func set_flag(profile: Dictionary, kind: String, event: int, on: bool) ->
 static func matches(profile: Dictionary, condition: String) -> bool:
 	for alternative in condition.split(","):
 		var accepted := true
+		var pet_predicates: Array[String] = []
 		for predicate in alternative.split("&"):
 			if predicate.begins_with("PET"):
-				if pet_index(profile,predicate)<0:accepted=false;break
+				pet_predicates.append(predicate)
 				continue
 			var regex := RegEx.new()
 			regex.compile("^(NOWEV|ENDEV|ITEM|SP|LV)(!=|=|>)([0-9]+)(?:\\*([0-9]+))?$")
@@ -49,7 +50,7 @@ static func matches(profile: Dictionary, condition: String) -> bool:
 			if op=="!=":result=not result
 			if op==">" and kind!="LV":result=false
 			if not result:accepted=false;break
-		if accepted:return true
+		if accepted and (pet_predicates.is_empty() or not pet_indices(profile,",".join(pet_predicates)).is_empty()):return true
 	return false
 
 ## Unquantified ITEM checks use the bag (C NPC_EventItemCheck:1051).
@@ -72,14 +73,39 @@ static func worn_item_hint(profile: Dictionary, condition: String) -> String:
 	return ""
 
 static func pet_index(profile: Dictionary, predicate: String) -> int:
+	var indices := pet_indices(profile,predicate)
+	return -1 if indices.is_empty() else int(indices[0])
+
+## Resolve all source predicates against distinct carried UIDs. Return no partial
+## result if any pet is absent; source counts other than *1 remain unsupported.
+static func pet_indices(profile: Dictionary, raw: String) -> Array:
+	if raw.is_empty():return []
+	var predicates := []
 	var regex := RegEx.new()
-	regex.compile("^PET>([0-9]+)-([0-9]+)(?:\\*1)?$")
-	var found := regex.search(predicate)
-	if found==null:return -1
+	regex.compile("^PET([>=])([0-9]+)-([0-9]+)(?:\\*1)?$")
+	for entry in raw.split(","):
+		var found := regex.search(entry)
+		if found==null:return []
+		predicates.append({"op":found.get_string(1),"level":int(found.get_string(2)),"species":"original_%d"%int(found.get_string(3))})
+	if predicates.size()>profile.pets.size():return []
+	return _select_pets(profile,predicates,0,[])
+
+static func _select_pets(profile: Dictionary, predicates: Array, offset: int, used: Array) -> Array:
+	if offset==predicates.size():return used
+	var predicate: Dictionary=predicates[offset]
 	for index in range(profile.pets.size()):
+		if index in used:continue
 		var pet: Dictionary=profile.pets[index]
-		if str(pet.get("species",""))=="original_%d"%int(found.get_string(2)) and int(pet.level)>int(found.get_string(1)) and Session.original_pet_event(pet)==0:return index
-	return -1
+		if str(pet.get("species",""))!=predicate.species or Session.original_pet_event(pet)!=0:continue
+		if not (int(pet.level)>int(predicate.level) if predicate.op==">" else int(pet.level)==int(predicate.level)):continue
+		var selected := used.duplicate()
+		selected.append(index)
+		var resolved := _select_pets(profile,predicates,offset+1,selected)
+		if not resolved.is_empty():return resolved
+	return []
+
+static func pet_ids(profile: Dictionary, raw: String) -> Array:
+	return pet_indices(profile,raw).map(func(index):return str(profile.pets[index].pet_id))
 
 func npc_by_id(id: String) -> Dictionary:
 	for npc in catalog.active_npcs():
@@ -121,7 +147,7 @@ func talk(backend, id: String) -> Dictionary:
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
-		if action not in ["GetItem","DelItem","GetStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
+		if action not in ["GetItem","DelItem","GetStone","DelStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
 	var phase: String=str(branch.type)
 	if phase=="MESSAGE":
 		var result := transact(backend,profile,branch,"MESSAGE")
@@ -132,9 +158,11 @@ func talk(backend, id: String) -> Dictionary:
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
 	var reply := window(npc,branch,phase,message(branch.texts,keys[phase]),true)
 	if phase=="ACCEPT" and branch.actions.has("DelPet"):
-		var index := pet_index(profile,str(branch.actions.DelPet))
-		if index<0:return {"ok":false,"reason":"交付宠物已经改变。"}
-		pending.pet_id=str(profile.pets[index].pet_id)
+		var selected := pet_ids(profile,str(branch.actions.DelPet))
+		if selected.is_empty():
+			pending={}
+			return {"ok":false,"reason":"交付宠物已经改变。"}
+		pending.pet_ids=selected
 	return reply
 
 func choose(backend, token: String, choice: String) -> Dictionary:
@@ -153,13 +181,12 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
-	if current.has("pet_id"):
-		var index := pet_index(profile,str(branch.actions.DelPet))
-		if index<0 or str(profile.pets[index].pet_id)!=str(current.pet_id):return {"ok":false,"reason":"交付宠物已经改变，请重新确认。"}
+	if current.has("pet_ids"):
+		if pet_ids(profile,str(branch.actions.DelPet))!=current.pet_ids:return {"ok":false,"reason":"交付宠物已经改变，请重新确认。"}
 	if phase=="BATTLE" and choice=="yes":return Brothers.begin(self,backend,npc,branch)
 	if phase=="ACCEPT" and choice=="yes":
 		var reply := window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
-		if current.has("pet_id"):pending.pet_id=current.pet_id
+		if current.has("pet_ids"):pending.pet_ids=current.pet_ids
 		return reply
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
 	var result := transact(backend,profile,branch,phase)
@@ -185,13 +212,19 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 		var received := item_list(str(branch.actions.get("GetItem","")))
 		var random_items := item_list(str(branch.actions.get("GetRandItem","")))
 		var reward_count := received.size()+(1 if not random_items.is_empty() else 0)
-		var consumed := -1
+		var consumed := []
 		if branch.actions.has("DelPet"):
-			consumed=pet_index(candidate,str(branch.actions.DelPet))
-			if consumed<0:return {"ok":false,"reason":"交付宠物不符合原条件。"}
+			consumed=pet_indices(candidate,str(branch.actions.DelPet))
+			if consumed.is_empty():return {"ok":false,"reason":"交付宠物不符合原条件。"}
+		if branch.actions.has("DelStone"):
+			var fee_text := str(branch.actions.DelStone)
+			if not fee_text.is_valid_int() or int(fee_text)<0:return {"ok":false,"reason":"尚未支持的原费用。"}
+			var fee := int(fee_text)
+			if int(profile.player.gold)<fee:return {"ok":false,"reason":message(branch.texts,"StoneLessMsg") if branch.texts.has("StoneLessMsg") else "石币不足。"}
+			candidate.player.gold-=fee
 		var reward_pet: Dictionary={}
 		if branch.actions.has("GetPet"):
-			if candidate.pets.size()-(1 if consumed>=0 else 0)+1>Session.PET_CAPACITY:return {"ok":false,"reason":str(branch.texts.get("PetFullMsg","宠物栏已满。"))}
+			if candidate.pets.size()-consumed.size()+1>Session.PET_CAPACITY:return {"ok":false,"reason":str(branch.texts.get("PetFullMsg","宠物栏已满。"))}
 			var definition: Dictionary=catalog.reward_pets.get(str(branch.actions.GetPet),{})
 			if definition.is_empty() or not Session.TroopArt.can_render([{"sprite":int(definition.get("sprite",0))}]):return {"ok":false,"reason":"原奖励宠物来源或图像尚未导入。"}
 			reward_pet=Progression.species_actor(str(definition.species),int(definition.level),randi(),[],definition)
@@ -213,18 +246,19 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 		remove_items(capacity,str(branch.actions.get("DelItem","")))
 		if Session.bag_slots(capacity)+reward_count>15:
 			return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
-		if consumed>=0:
-			candidate.pets.remove_at(consumed)
+		# Delete from the end so every slot index still identifies its bound UID.
+		consumed.sort()
+		consumed.reverse()
+		for removed in consumed:
+			var old_id := str(candidate.pets[removed].pet_id)
+			candidate.pets.remove_at(removed)
 			for field in ["active_pet","ride_pet"]:
 				var index := int(candidate.get(field,-1))
-				candidate[field]=-1 if index==consumed else (index-1 if index>consumed else index)
-			# Selected capture helpers use UID plus a slot; reset the removed UID
-			# and rebase surviving slots together in the persisted settings.
+				candidate[field]=-1 if index==removed else (index-1 if index>removed else index)
 			var capture: Dictionary=candidate.get("automation_settings",{}).get("capture",{})
-			var old_id := str(profile.pets[consumed].pet_id)
-			if str(capture.get("pet_id",""))==old_id or int(capture.get("pet",-2))==consumed:
+			if str(capture.get("pet_id",""))==old_id or int(capture.get("pet",-2))==removed:
 				capture.pet_id="";capture.pet=-2
-			elif int(capture.get("pet",-2))>consumed:capture.pet=int(capture.pet)-1
+			elif int(capture.get("pet",-2))>removed:capture.pet=int(capture.pet)-1
 		if not reward_pet.is_empty():
 			reward_pet.pet_id="pet-%d"%int(candidate.next_pet_id)
 			candidate.next_pet_id+=1

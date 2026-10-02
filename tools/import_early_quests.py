@@ -43,16 +43,18 @@ def parse_script(text, branch_indices=None):
             if current['TYPE'] not in ('REQUEST', 'ACCEPT', 'MESSAGE', 'CLEAN'):
                 raise ValueError('Unsupported branch type')
             for clause in re.split('[,&]', current['EVENT']):
-                if not (re.fullmatch(r'(?:ENDEV|NOWEV|ITEM|SP|LV)(?:!=|=|>|<)\d+(?:\*\d+)?', clause) or re.fullmatch(r'PET>\d+-\d+', clause)):
+                if not (re.fullmatch(r'(?:ENDEV|NOWEV|ITEM|SP|LV)(?:!=|=|>|<)\d+(?:\*\d+)?', clause) or re.fullmatch(r'PET>\d+-\d+|PET=\d+-\d+(?:\*1)?', clause)):
                     raise ValueError(f'Unsupported predicate: {clause}')
             texts = {k: v.replace('\\n', '\n') for k, v in current.items() if 'Msg' in k}
             actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
-            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm'}:
+            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'DelStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm'}:
                 raise ValueError('Unsupported quest action')
+            if 'DelStone' in actions and not re.fullmatch(r'[0-9]+', actions['DelStone']):
+                raise ValueError('Unsupported DelStone cost expression')
             for key in ('DelPet', 'GetPet', 'GetRandItem'):
                 if key not in actions:
                     continue
-                pattern = r'PET>\d+-\d+\*1' if key == 'DelPet' else (r'\d+' if key == 'GetPet' else r'\d+(?:,\d+)+')
+                pattern = r'PET[>=]\d+-\d+\*1(?:,PET[>=]\d+-\d+\*1)*' if key == 'DelPet' else (r'\d+' if key == 'GetPet' else r'\d+(?:,\d+)+')
                 if not re.fullmatch(pattern, actions[key]):
                     raise ValueError(f'Unsupported {key}: {actions[key]}')
             branches.append(dict(event=int(current['EventNo']), type=current['TYPE'], condition=current['EVENT'], texts=texts, actions=actions))

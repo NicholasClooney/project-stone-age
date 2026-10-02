@@ -99,3 +99,35 @@ source tests; runtime regressions use the original doctor and brothers suites.
 Import only into an independent worktree legacy clone. A module/API commit does
 not certify a playable quest: content still needs audited maps, original NPC and
 item assets, helpers, authoritative transactions and end-to-end validation.
+
+## Exact pet delivery and fixed fees
+
+The strict parser now accepts `PET=level-template` with optional `*1` in
+conditions. `DelPet` accepts a comma-separated list of `PET>`/`PET=` predicates,
+with `*1` required on each deletion entry. Larger counts, EV pets, EVDEL and
+PET< remain outside this reviewed subset. Runtime selection binds distinct
+carried pet UIDs across the whole exchange, then rechecks all of them at both
+confirmation stages. No missing pet can be replaced silently by an eligible
+spare. All pet deletions, index repairs, item rewards, next UID and event flags
+are committed in one candidate-profile save.
+
+`DelStone` accepts a nonnegative integer source amount. Formula expressions are
+not yet accepted by the exchange parser. The current balance is checked again
+at commit; a failed save preserves the balance and reward together. The common
+helper checks net pet capacity for multiple deliveries and updates fee eligibility
+when gold changes.
+
+Evidence: `seimu/event/event02_1:5,9,24,28` requires the two exact level-25 shark
+pairs; `npc_exchangeman.c:940–960,1130–1144` implements exact level comparison.
+`giiru/event/giruev2_1:9–21` specifies a 1000-stone replacement ticket;
+`npc_exchangeman.c:2148–2158,2235–2248,2570–2579,2870–2882` checks and deducts
+fees. No task content is activated merely by supporting these primitives.
+
+The source-pinned `tests/fixtures/bonus-quest-transactions.json` is test-only.
+Its original conditions/actions are compared to the local source by the Python
+suite. The real Backend/Session suite covers missing/over-level/event pets,
+UID substitution, full-roster net capacity, both pair exchanges, save failure,
+source reward generation and reload. Reload comparison normalizes JSON numeric
+containers because existing load migration turns elemental float arrays into
+integer arrays; production save validation remains unchanged. Two real localhost
+WebSocket devices exercise token replacement and replay refusal on port 0.
