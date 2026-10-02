@@ -39,6 +39,12 @@ func active_npcs() -> Array:
   var active: Dictionary = npc.duplicate(true)
   if override.has("map_id"):
    active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
+  if active.get("handler","")=="TimeMan":
+   var visual:Dictionary=active.get("time_visuals",{}).get(str(override.get("time_mode","main")),{})
+   for field in ["graphic","text","path","offset","bitmap_id","source_pose"]:
+    if visual.has(field):active[field]=visual[field]
+   result.append(active)
+   continue
   if str(active.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"] and 44 in enabled_events:
    result.append(active)
    continue
