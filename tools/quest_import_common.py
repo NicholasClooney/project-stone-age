@@ -80,6 +80,50 @@ def apply_branch_supplements(spec, script, branches):
             branch['confirmation_text'] = extra['confirmation_text']
 
 
+def reviewed_static_drops(spec, texts):
+    """Activate only complete, explicitly reviewed drop slots from pinned enemies."""
+    import csv
+    from import_encounters import drop_slots
+    declared = spec.get('drops', [])
+    if not isinstance(declared, list):
+        raise ValueError('Reviewed drops must be a list')
+    if not declared:
+        return []
+    path = 'gmsv/data/enemy.txt'
+    if path not in texts:
+        raise ValueError('Reviewed drops require SHA-pinned enemy source')
+    enemies = {int(row[3]): (line, row) for line, row in
+               enumerate(csv.reader(texts[path].splitlines()), 1)
+               if len(row) > 33 and row[3].isdigit()}
+    seen = set()
+    result = []
+    for entry in declared:
+        if (not isinstance(entry, dict) or set(entry) - {'source','enemy_id','item_id','probability','audit','source_line'}
+                or entry.get('source') != path or not isinstance(entry.get('audit'), str) or not entry['audit'].strip()
+                or any(type(entry.get(key)) is not int for key in ('enemy_id','item_id','probability'))
+                or entry['enemy_id'] not in enemies or entry['item_id'] not in spec['items']):
+            raise ValueError('Invalid static reviewed drop declaration')
+        line, row = enemies[entry['enemy_id']]
+        identity = (entry['enemy_id'], entry['item_id'], entry['probability'])
+        if identity in seen or ('source_line' in entry and entry['source_line'] != line):
+            raise ValueError('Duplicate or incorrect reviewed drop source')
+        slots = [slot for slot in drop_slots(row)
+                 if (slot['item_id'], slot['probability']) == identity[1:]]
+        if not slots or not 0 <= entry['probability'] <= 1000:
+            raise ValueError('Reviewed drop differs from pinned original slot')
+        seen.add(identity)
+        result.append(dict(entry, source_line=line, source_slots=slots,
+                           source_raw_columns=row))
+    # Runtime activation is per enemy. Do not silently enable an undeclared
+    # second slot (including a second probability for the same item).
+    for enemy_id in {entry['enemy_id'] for entry in declared}:
+        expected = {(enemy_id, slot['item_id'], slot['probability'])
+                    for slot in drop_slots(enemies[enemy_id][1])}
+        if expected != {identity for identity in seen if identity[0] == enemy_id}:
+            raise ValueError('All original drop slots of an activated enemy require review')
+    return result
+
+
 def load_quest_module(reference, manifest):
     from import_early_quests import catalog, parse_script, source_text
     spec = json.loads(Path(manifest).read_text()) if isinstance(manifest, (str, Path)) else copy.deepcopy(manifest)
@@ -91,6 +135,8 @@ def load_quest_module(reference, manifest):
     result = catalog(reference, base_spec)
     result['module_id'] = spec['id']
     result['jobs'] = copy.deepcopy(spec.get('jobs', []))
+    drops = reviewed_static_drops(spec, texts)
+    if drops:result['drops'] = drops
     declared = spec['scripts']
     handlers = spec.get('handlers', {})
     if set(declared) & set(handlers):
