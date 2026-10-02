@@ -79,6 +79,14 @@
         21,
         22
       ]
+    },
+    {
+      "id": "saton-cave",
+      "manifest": "tools/saton_cave_quest_sources.json",
+      "enabled_events": [
+        13,
+        14
+      ]
     }
   ]
 }
