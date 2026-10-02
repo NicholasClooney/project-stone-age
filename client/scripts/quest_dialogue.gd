@@ -70,7 +70,7 @@ func _receive(reply: Dictionary, expected: int) -> void:
 	for button in buttons:button.queue_free()
 	buttons.clear()
 	_clear_service()
-	if str(dialogue.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]:
+	if str(dialogue.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_keyword"]:
 		_show_service(dialogue)
 		return
 	var choices: Array=dialogue.get("choices",[])

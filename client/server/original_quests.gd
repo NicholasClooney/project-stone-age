@@ -173,7 +173,7 @@ func talk(backend, id: String) -> Dictionary:
 		if not result.ok:return result
 		return window(npc,branch,"end",message(branch.texts,"NomalWindowMsg") if branch.texts.has("NomalWindowMsg") else message(branch.texts,"NomalMsg"),false)
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
-	var keys := {"BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
+	var keys := {"KEYWORD":"AcceptMsg","BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
 	var prompt := str(branch.get("confirmation_text",message(branch.texts,keys[phase])))
 	if branch.actions.has("DelStone"):
@@ -181,6 +181,8 @@ func talk(backend, id: String) -> Dictionary:
 		if fee<0:return {"ok":false,"reason":"尚未支持的原费用。"}
 		prompt=prompt.replace("%8d","%8d" % fee)
 	var reply := window(npc,branch,phase,prompt,true)
+	if phase=="KEYWORD":
+		reply.dialogue.merge({"kind":"original_keyword","input":"text","choices":[{"id":"submit","text":"说出口令"},{"id":"no","text":"取消"}]})
 	if phase=="ACCEPT" and branch.actions.has("DelPet"):
 		var selected := pet_ids(profile,str(branch.actions.DelPet))
 		if selected.is_empty():
@@ -206,6 +208,11 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
+	if phase=="KEYWORD":
+		if choice!="submit" or text.length()>120:return {"ok":false,"reason":"无效口令输入。"}
+		if text!=str(branch.get("keyword","")):return {"ok":false,"reason":message(branch.texts,"AcceptMsg")}
+		var committed := transact(backend,profile,branch,"KEYWORD")
+		return {"ok":true,"closed":true} if committed.ok else committed
 	if current.has("pet_ids"):
 		if pet_ids(profile,str(branch.actions.DelPet))!=current.pet_ids:return {"ok":false,"reason":"交付宠物已经改变，请重新确认。"}
 	if phase=="BATTLE" and choice=="yes":return Brothers.begin(self,backend,npc,branch)
