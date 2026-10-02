@@ -63,10 +63,21 @@ func run()->void:
  var moved:Dictionary=b.original_quests.npc_by_id(npc.id)
  check(int(moved.get("map_id",0))==4000 and moved.get("cell",[])==[53,101],"first source NpcWarp point selected")
  check(b.session.snapshot().location==before.location,"NpcWarp moves NPC rather than player")
- b.original_quests.npc_state.defeated(str(fixtures[0].module.npcs[0].id),300)
+ for fixture in fixtures.slice(0,2):
+  for guard in fixture.module.npcs:
+   b.original_quests.npc_state.defeated(str(guard.id),300)
+   check(b.original_quests.npc_by_id(guard.id).is_empty(),"restart precondition: each fixture guard is hidden")
  var again=Backend.new();install(again)
  check(again.load_profile(b.save_path),"real saved profile reads back")
- check(again.original_quests.npc_state.records.is_empty() and int(again.original_quests.npc_by_id(npc.id).map_id)==6000,"server restart resets runtime NPC position without changing save format")
+ # Other enabled quests may legitimately initialize fresh area-spawn records.
+ # Only this suite's hidden/moved NPCs must lose their previous runtime state.
+ for fixture in fixtures:
+  for source in fixture.module.npcs:
+   check(not again.original_quests.npc_state.records.has(source.id),"restart does not inherit fixture NPC hidden state, location or counter")
+   var restored:Dictionary=again.original_quests.npc_by_id(source.id)
+   check(not restored.is_empty() and int(restored.get("map_id",0))==int(source.map_id) and restored.get("cell",[])==source.cell,"restart restores each fixture NPC at its source location")
+ var reset:Dictionary=again.original_quests.npc_by_id(npc.id)
+ check(int(reset.get("map_id",0))==6000 and reset.get("cell",[])==npc.cell and reset.get("cell",[])!=moved.cell,"hougyoku returns to original 6000 cell rather than inheriting its moved position")
  var state=PersonalState.new();var points:Array=[[1,2,3],[4,5,6],[7,8,9],[10,11,12]]
  for i in range(5):
   state.moved("source",points)
