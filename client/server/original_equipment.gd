@@ -4,6 +4,9 @@ extends RefCounted
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	# itemset.txt:1999/2031; the delivery axe is usable from Lv20.
+	2416:{"name":"亚姆亚姆的斧头","type":1,"slot":"arm","level":20,"attack":9,"defence":-3,"speed":-3,"charm":0,"durability":0},
+	2448:{"name":"亚姆亚姆的斧头","type":1,"slot":"arm","level":25,"attack":35,"defence":-10,"speed":-10,"charm":0,"durability":2500000},
 	2418:{"name":"仪之兜","type":6,"slot":"head","level":30,"attack":0,"defence":15,"speed":-3,"charm":0,"durability":2500000,"resistances":[3,3,3,3,3,3]},
 	2427:{"name":"老爷爷的护身符","type":15,"slot":"amulet","level":10,"attack":0,"defence":0,"speed":0,"charm":-1,"durability":2500000,"resistances":[2,2,2,2,2,2]},
 	2465:{"name":"哈恩的斧头","type":1,"slot":"arm","level":25,"attack":35,"defence":-15,"speed":-15,"charm":0,"durability":0},

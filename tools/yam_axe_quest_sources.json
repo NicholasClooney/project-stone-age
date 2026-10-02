@@ -1,0 +1,68 @@
+{
+  "version": 1,
+  "id": "yam-axe",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+    "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
+    "gmsv/item/item_event.c": "33ed3526accf9b0051e08cbe150082056eebd9d36e39faa323d365c855d50d66",
+    "gmsv/data/npc/sainasu/event/event03.create": "e7d0f22f30fd4245e7d1893a52a6fb20b78b0ae1ab089344eec397a1d09b0e39",
+    "gmsv/data/npc/sainasu/event/event03_1": "2f54a3fe00d25f614506bd46dff4ebc986b3272b30191b4fd517056149e5d849",
+    "gmsv/data/npc/sainasu/event/event03_2": "05ab1ee59a31be595cf4847c9e7f92d0ab6ce2fc0d2d8d49d1ae627eb24d91b9"
+  },
+  "creates": [
+    "gmsv/data/npc/sainasu/event/event03.create"
+  ],
+  "scripts": {
+    "sainasu/event/event03_1": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        3,
+        5
+      ]
+    },
+    "sainasu/event/event03_2": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        3,
+        5
+      ]
+    }
+  },
+  "items": [
+    2416,
+    2423,
+    2448
+  ],
+  "reward_enemies": [],
+  "jobs": [
+    {
+      "id": 12,
+      "event": 3,
+      "title": "亚姆亚姆的斧头  送斧头",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 13,
+      "event": 5,
+      "title": "亚姆亚姆的斧头  还信",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "item_notes": {
+    "2416": "本项目：等级20可装备；交给马提前须卸下。丢弃直接删除，不能拾回。",
+    "2448": "本项目：等级25可装备。丢弃直接删除，尚无地面拾取功能。"
+  }
+}

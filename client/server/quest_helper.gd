@@ -27,6 +27,7 @@ func snapshot(backend) -> Dictionary:
    elif event==2:shell_steps(backend,profile,quest)
    elif event in [15,16]:doctor_steps(backend,profile,quest)
    elif event==18:wood_steps(backend,profile,quest)
+   elif event in [3,5]:preload("res://server/yam_axe_helper.gd").steps(self,backend,profile,quest)
    elif event in [28,29,30,31,54]:preload("res://server/brothers_helper.gd").steps(self,backend,profile,quest)
    restart_steps(backend,profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"

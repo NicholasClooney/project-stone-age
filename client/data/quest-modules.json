@@ -1,4 +1,13 @@
 {
   "version": 1,
-  "modules": []
+  "modules": [
+    {
+      "id": "yam-axe",
+      "manifest": "tools/yam_axe_quest_sources.json",
+      "enabled_events": [
+        3,
+        5
+      ]
+    }
+  ]
 }
