@@ -78,6 +78,7 @@ var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 var quest_visit_guard: Callable
 var _following_party:=false
 const TimePassage=preload("res://server/original_time_passage.gd")
+const DreamPassage=preload("res://server/original_dream_passage.gd")
 var quest_helper = preload("res://server/quest_helper.gd").new()
 const AdultCheckpoint=preload("res://server/adult_battle_checkpoint.gd")
 var stationary = preload("res://server/stationary_encounters.gd").new()
@@ -1012,6 +1013,13 @@ func report_party_position(command:Dictionary)->Dictionary:
 
 func _cmd_report_position(command: Dictionary) -> Dictionary:
 	var helper_stage: Array = quest_helper.navigation_key(self)
+	# Validate before accepting old helper receipts: none authorizes a new
+	# same-map jump across the dream cave's original maze or final guard.
+	if not _following_party:
+		var dream_reason:=DreamPassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("map_id",-1)),command.get("cell",[]))
+		if not dream_reason.is_empty():
+			_emit({"type":"position","map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y],"client":"server"})
+			return _reject(dream_reason)
 	if quest_auto.accept_report(self,command):return {"ok":true}
 	if not _following_party:
 		var timed_reason:=TimePassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("map_id",-1)),command.get("cell",[]))
