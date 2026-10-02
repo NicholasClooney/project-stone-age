@@ -12,13 +12,17 @@ static func reviewed_drop_enemy_ids() -> Array:
 		var path:="res://assets/legacy/quests/catalog.json"
 		if FileAccess.file_exists(path):
 			var parsed=JSON.parse_string(FileAccess.get_file_as_string(path))
-			if parsed is Dictionary:
-				for module in parsed.get("reviewed_drops",{}).values():
-					if not bool(module.get("active",false)):continue
-					for entry in module.get("entries",[]):
-						var id:=int(entry.get("enemy_id",0))
-						if id>0 and not id in _quest_drop_ids:_quest_drop_ids.append(id)
+			if parsed is Dictionary:configure_reviewed_drops(parsed)
 	return _quest_drop_ids
+## Trusted imported catalog only; never called with network or saved-profile data.
+static func configure_reviewed_drops(catalog: Dictionary) -> void:
+	_quest_drop_loaded=true
+	_quest_drop_ids=[]
+	for module in catalog.get("reviewed_drops",{}).values():
+		if not bool(module.get("active",false)):continue
+		for entry in module.get("entries",[]):
+			var id:=int(entry.get("enemy_id",0))
+			if id>0 and not id in _quest_drop_ids:_quest_drop_ids.append(id)
 static func drop_enemy_allowed(enemy_id: int) -> bool:
 	return enemy_id in DROP_ENEMY_IDS or enemy_id in reviewed_drop_enemy_ids()
 static func transactional_drop_enemy(enemy_id: int) -> bool:

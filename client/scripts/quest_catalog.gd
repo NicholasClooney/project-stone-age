@@ -7,6 +7,8 @@ var service_npcs: Array = []
 var jobs: Array = []
 var reward_pets: Dictionary = {}
 var enabled_events: Array = []
+## Trusted per-character runtime projection; never loaded from the save.
+var npc_overrides: Dictionary = {}
 func _init() -> void:
  var config = JSON.parse_string(FileAccess.get_file_as_string("res://data/early-quests.json"))
  if config is Dictionary:
@@ -31,7 +33,11 @@ func active_npcs() -> Array:
  var result: Array = []
  for npc in npcs:
   if not _enabled(npc.get("events", [])): continue
+  var override:Dictionary=npc_overrides.get(str(npc.id),{})
+  if bool(override.get("hidden",false)):continue
   var active: Dictionary = npc.duplicate(true)
+  if override.has("map_id"):
+   active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
   if str(active.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"] and 44 in enabled_events:
    result.append(active)
    continue

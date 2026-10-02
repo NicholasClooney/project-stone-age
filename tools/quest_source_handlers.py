@@ -35,24 +35,39 @@ def npc_enemy(source, script, events):
             raise ValueError('Unsupported NPCEnemy source line')
         fields[key] = value
     allowed = {'entype','dieact','enemyno','startmsg','end msg','deniedmsg',
-               'warpfl','warpx','warpy'} | {f'askbattlemsg{i}' for i in range(1,7)}
-    if set(fields) - allowed or fields.get('entype') != '2' or fields.get('dieact') != '1':
-        raise ValueError('Unreviewed NPCEnemy behavior (only explicit battle and victory Warp)')
+               'warpfl','warpx','warpy','item','steal','time'} | {f'askbattlemsg{i}' for i in range(1,7)}
+    if set(fields) - allowed or fields.get('entype') != '2' or fields.get('dieact') not in ('0','1'):
+        raise ValueError('Unreviewed NPCEnemy behavior')
     raw = fields.get('enemyno', '')
     if not re.fullmatch(r'\d+(?:,\d+){0,9}',raw):
         raise ValueError('Invalid fixed enemy list')
     enemies = list(map(int,raw.split(',')))
     if any(i <= 0 for i in enemies) or not fields.get('askbattlemsg1'):
         raise ValueError('Missing fixed guard enemies or confirmation')
-    destination = [fields.get(key,'') for key in ['warpfl','warpx','warpy']]
-    if any(not re.fullmatch(r'\d+',value) for value in destination):
-        raise ValueError('Invalid guard victory destination')
+    dieact=int(fields['dieact'])
+    guard={'enemy_ids':enemies,'dieact':dieact}
+    actions={'Battle':raw}
+    if dieact == 1:
+        if any(key in fields for key in ('item','steal','time')):
+            raise ValueError('Unreviewed victory Warp item behavior')
+        destination = [fields.get(key,'') for key in ['warpfl','warpx','warpy']]
+        if any(not re.fullmatch(r'\d+',value) for value in destination):
+            raise ValueError('Invalid guard victory destination')
+        actions['Warp']=','.join(destination)
+    else:
+        if fields.get('time') != '300' or fields.get('steal','0') not in ('0','1') or not re.fullmatch(r'\d+(?:,\d+)*',fields.get('item','')):
+            raise ValueError('Unreviewed personal guard cooldown or item rule')
+        if any(key in fields for key in ('warpfl','warpx','warpy')):
+            raise ValueError('Mixed guard death behavior')
+        guard.update(required_items=list(map(int,fields['item'].split(','))),steal=int(fields.get('steal','0')),cooldown=300)
+        # Missing steal does not consume items; explicit steal:0 is deferred.
+        if fields.get('steal') == '0':raise ValueError('Entry item theft is not yet supported')
     texts={f'AcceptMsg{i}':fields[f'askbattlemsg{i}'].replace('\\n','\n')
            for i in range(1,7) if f'askbattlemsg{i}' in fields}
     return '', [dict(event=-1,type='BATTLE',condition='LV>0',texts=texts,
-        actions={'Battle':raw,'Warp':','.join(destination)},enabled=True,events=events,
+        actions=actions,enabled=True,events=events,
         source=script,source_fields=fields,
-        guard={'enemy_ids':enemies,'dieact':1},
+        guard=guard,
         source_rule='gmsv/npc/npc_npcenemy.c:83-109,354-397,453-486; existing battle AI only')]
 
 

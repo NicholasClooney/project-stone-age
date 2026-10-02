@@ -3,6 +3,8 @@ extends Node
 var world: Node
 var entries: Array = []
 var sprites: Array[Sprite2D] = []
+var resident_nodes: Array[Node2D] = []
+var applied_npc_overrides: Dictionary = {}
 var pending := -1
 var selected := -1
 var overlay: Control
@@ -12,6 +14,14 @@ var quest_dialogue: Node
 
 func setup(owner: Node, ui_root: Control, residents: Array) -> void:
 	world = owner
+	applied_npc_overrides=world.state.derived.get("quest_npcs",{}).duplicate(true)
+	_render_residents(residents)
+	_build_dialogue(ui_root)
+	quest_dialogue=preload("res://scripts/quest_dialogue.gd").new()
+	add_child(quest_dialogue)
+	quest_dialogue.setup(world,overlay,body)
+
+func _render_residents(residents:Array)->void:
 	entries = residents
 	for entry in entries:
 		var cell := Vector2i(entry.cell[0],entry.cell[1])
@@ -19,6 +29,7 @@ func setup(owner: Node, ui_root: Control, residents: Array) -> void:
 		var actor := Node2D.new()
 		actor.position = world.project(Vector2(cell))
 		world.actors.add_child(actor)
+		resident_nodes.append(actor)
 		var sprite := Sprite2D.new()
 		var path := str(entry.get("path",""))
 		if not path.begins_with("res://"):path = "res://assets/legacy/"+path
@@ -34,10 +45,32 @@ func setup(owner: Node, ui_root: Control, residents: Array) -> void:
 		name_label.size.x = 180
 		name_label.horizontal_alignment = HORIZONTAL_ALIGNMENT_CENTER
 		actor.add_child(name_label)
-	_build_dialogue(ui_root)
-	quest_dialogue=preload("res://scripts/quest_dialogue.gd").new()
-	add_child(quest_dialogue)
-	quest_dialogue.setup(world,overlay,body)
+
+func sync_npc_state()->void:
+	var overrides:Dictionary=world.state.derived.get("quest_npcs",{})
+	if overrides==applied_npc_overrides:return
+	applied_npc_overrides=overrides.duplicate(true)
+	world.world_catalog.quest_catalog.npc_overrides=overrides.duplicate(true)
+	world.world_catalog.set_quest_catalog(world.world_catalog.quest_catalog)
+	var visible:Array=[]
+	for entry in world.world_catalog.residents:
+		if int(entry.map_id)==int(world.data.map_id) and Vector2i(entry.cell[0],entry.cell[1])!=world.npc_cell:visible.append(entry)
+	if visible==entries:return
+	var waiting_id:String=str(entries[pending].get("id","")) if pending>=0 else ""
+	var selected_id:String=str(entries[selected].get("id","")) if selected>=0 else ""
+	pending=-1;selected=-1
+	for i in range(visible.size()):
+		if not waiting_id.is_empty() and str(visible[i].get("id",""))==waiting_id:pending=i
+		if not selected_id.is_empty() and str(visible[i].get("id",""))==selected_id:selected=i
+	for entry in entries:
+		var cell:=Vector2i(entry.cell[0],entry.cell[1])
+		var index:=cell.y*int(world.data.width)+cell.x
+		var blocked:bool=index<0 or index>=world.data.blocked.size() or bool(world.data.blocked[index])
+		world.navigation.set_point_solid(cell,blocked)
+	for actor in resident_nodes:
+		actor.hide();actor.queue_free()
+	resident_nodes.clear();sprites.clear()
+	_render_residents(visible)
 
 func blocks(cell: Vector2i) -> bool:
 	for entry in entries:
@@ -73,6 +106,7 @@ func approach(index: int) -> void:
 	pending = index
 
 func _process(_delta: float) -> void:
+	sync_npc_state()
 	if pending < 0 or world.moving or not world.path.is_empty():return
 	var point := Vector2i(entries[pending].cell[0],entries[pending].cell[1])
 	var distance: Vector2i = (world.cell-point).abs()

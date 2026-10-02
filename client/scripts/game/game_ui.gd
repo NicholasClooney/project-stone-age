@@ -203,6 +203,8 @@ func build_ui() -> void:
 func refresh_map_ui() -> void:
 	game.world_travel = preload("res://scripts/world_travel.gd").new()
 	game.actors.add_child(game.world_travel)
+	game.world_catalog.quest_catalog.npc_overrides=game.state.derived.get("quest_npcs",{}).duplicate(true)
+	game.world_catalog.set_quest_catalog(game.world_catalog.quest_catalog)
 	var residents: Array = []
 	for entry in game.world_catalog.residents:
 		if int(entry.map_id)==int(game.data.map_id) and Vector2i(entry.cell[0],entry.cell[1])!=game.npc_cell:residents.append(entry)

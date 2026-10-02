@@ -82,6 +82,7 @@ var stationary = preload("res://server/stationary_encounters.gd").new()
 var stationary_party_member: Callable
 var quest_auto = preload("res://server/quest_auto.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
+var _npc_state_published_version := 0
 var session = GameSession.new()
 var battle = BattleSession.new()
 ## Augmented copy of the latest battle state (settlement summary included).
@@ -167,6 +168,8 @@ func _process(delta: float) -> void:
 	automation.tick(delta)
 	quest_auto.tick(self,delta)
 	stationary.tick(self,delta)
+	original_quests.refresh_npc_state()
+	if original_quests.npc_state.version!=_npc_state_published_version:_publish()
 	_depth -= 1
 	_record_releases()
 	_flush()
@@ -869,7 +872,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	var result: Dictionary = settle if not settle.is_empty() else state
 	if not bool(state.active) and session.apply_battle_result(result,drop_claims):
 		if pending_before.has("quest_guard") and str(state.outcome)=="win":
-			preload("res://server/brothers_quests.gd").warp_profile(session._profile,str(pending_before.quest_guard.warp))
+			preload("res://server/brothers_quests.gd").settle_profile(self,pending_before.quest_guard)
 		if atomic and not save():
 			session._profile = before
 			session._pending = pending_before
@@ -884,7 +887,9 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 		if not settle.is_empty():
 			for key in ["xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:state[key] = result.get(key,0)
 		state.settled = true
-		if pending_before.has("quest_guard") and str(state.outcome)=="win":state.quest_warp=str(pending_before.quest_guard.warp)
+		if pending_before.has("quest_guard") and str(state.outcome)=="win":
+			preload("res://server/brothers_quests.gd").committed(self,pending_before.quest_guard)
+			if not str(pending_before.quest_guard.get("warp","")).is_empty():state.quest_warp=str(pending_before.quest_guard.warp)
 		for drop in state.get("drop_summary",[]):
 			var item_name := str(quest_catalog.items.get(str(int(drop.item_id)),{}).get("name","原版物品 #%d"%int(drop.item_id)))
 			drop.name = item_name
@@ -1038,6 +1043,8 @@ func publish() -> void:
 	_publish()
 
 func _publish() -> void:
+	original_quests.refresh_npc_state()
+	_npc_state_published_version=original_quests.npc_state.version
 	rev += 1
 	var profile: Dictionary = session.snapshot()
 	var storage: Array = profile.get("pet_storage",[])
@@ -1067,7 +1074,7 @@ func _derived() -> Dictionary:
 	# battle_pets: pet_id -> reason for the open battle's participants, which
 	# release, store, deploy and ride refuse until it ends.
 	_published_battle_pets = session.battle_pets()
-	return {"stationary":stationary.snapshot(self),"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
+	return {"quest_npcs":original_quests.npc_state.snapshot(),"stationary":stationary.snapshot(self),"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
 	var options := {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier,"admin":admin}
