@@ -41,6 +41,8 @@
       2532,
       2547,
       2551,
+      2605,
+      2606,
       2688,
       2689,
       2690,
@@ -5468,6 +5470,383 @@
           "source": {
             "path": "gmsv/data/itemset.txt",
             "line": 2134,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ]
+    },
+    "2605": {
+      "id": 2605,
+      "name": "空想的帽子",
+      "description": "防御 +4 敏捷 +2             滋润的精灵 Lv2",
+      "logical_icon": 21531,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2188,
+      "raw_columns": [
+        "空想的帽子",
+        "空想的帽子",
+        "防御 +4 敏捷 +2             滋润的精灵 Lv2",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2605",
+        "21531",
+        "0",
+        "6",
+        "0",
+        "0",
+        "35",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2500000",
+        "2500000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "4",
+        "4",
+        "2",
+        "2",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "11",
+        "100",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "425",
+        "线",
+        "425",
+        "回复",
+        "425",
+        "花",
+        "425",
+        "",
+        "0"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "滋润的精灵 Lv2",
+          "active": false,
+          "raw": {
+            "magicid": "11",
+            "magicprob": "100",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2188,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "滋润的精灵 Lv2",
+            "function": "MAGIC_OtherRecovery",
+            "argument": "130",
+            "line": 8,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "4",
+            "max": "4"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2188,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "2",
+            "max": "2"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2188,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ]
+    },
+    "2606": {
+      "id": 2606,
+      "name": "空想的竖琴",
+      "description": "攻击 +2 敏捷 +1 魅力 +5     睡眠的精灵 Lv1",
+      "logical_icon": 24212,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2189,
+      "raw_columns": [
+        "空想的竖琴",
+        "空想的竖琴",
+        "攻击 +2 敏捷 +1 魅力 +5     睡眠的精灵 Lv1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2606",
+        "24212",
+        "0",
+        "9",
+        "0",
+        "0",
+        "35",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2500000",
+        "2500000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "2",
+        "2",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "5",
+        "5",
+        "0",
+        "0",
+        "0",
+        "0",
+        "180",
+        "100",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "10",
+        "10",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "木",
+        "165",
+        "线",
+        "165",
+        "昏睡",
+        "10",
+        "叶",
+        "165",
+        "",
+        "0"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "睡眠的精灵 Lv1",
+          "active": false,
+          "raw": {
+            "magicid": "180",
+            "magicprob": "100",
+            "magicusemp": "0"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2189,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "睡眠的精灵 Lv1",
+            "function": "MAGIC_StatusChange",
+            "argument": "眠 turn 3 成 20",
+            "line": 78,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2189,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "2",
+            "max": "2"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2189,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "1",
+            "max": "1"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2189,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "5",
+            "max": "5"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2189,
             "columns": [
               49,
               50

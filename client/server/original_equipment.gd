@@ -37,7 +37,7 @@ const ITEMS := {
 	2481:{"name":"杉的手环","type":8,"slot":"bracelet","level":30,"attack":8,"defence":5,"speed":-5,"charm":-5,"durability":2500000},
 }
 ## These formerly metadata-only items may exist with zero durability, unworn.
-const NEWLY_WEARABLE := [1357,2460,2487,2489,2491,2492,2493,2494,2505]
+const NEWLY_WEARABLE := [1357,2460,2487,2489,2491,2492,2493,2494,2505,2605,2606]
 const STAGES := ["完好","受损","毁坏","不堪使用"]
 const STATS := ["attack","defence","speed","charm"]
 

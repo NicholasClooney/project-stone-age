@@ -24,9 +24,14 @@ predicate now validates an integral numeric value then compares normalized ints;
 this preserves strict save validation before migration and works equally in the
 ITEM backpack predicate. Nonintegral/non-numeric slot values remain invalid.
 
-2605/2606 definitions remain with the dream route owner; their migration is not
-added ahead of their committed definitions. BODY/other missing slots remain
-metadata-only. The equipment schema, instance keys and normal wear are unchanged.
+Dream route commit a7ea469 supplies the original 2605/2606 definitions. Both are
+now also in the same narrow migration whitelist, with complete source effects
+fixtures from itemset.txt:2188–2189. 2605 uses existing HEAD, level35, durability
+2500000, defence4/speed2; 2606 uses existing amulet, level35, durability2500000,
+attack2/speed1/charm5. Ordinary fixed modifiers are active. Magic fields remain
+inactive: 2605 [11,100,12], 2606 [180,100,0]; 2606 sleep resistance [10,10] in
+columns67/68 also stays inactive. BODY/other missing slots remain metadata-only.
+The equipment schema, instance keys and normal wear are unchanged.
 
 Validation: source effects fixture is reproduced from the pinned table; the
 actual Session save/load tests verify fixed modifiers, source slot/type/level,

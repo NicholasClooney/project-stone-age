@@ -19,10 +19,13 @@ class ItemEffectsTests(unittest.TestCase):
                 self.assertFalse(effect['active'])
                 self.assertTrue(effect['raw'] and effect['source']['columns'] and effect['reason'])
                 self.assertEqual(effect['source']['line'],item['source_line'])
-        for ident,magic in [(2688,12),(2689,2),(2690,22),(2765,300)]:
+        for ident,magic in [(2688,12),(2689,2),(2690,22),(2765,300),(2605,11),(2606,180)]:
             effect=next(e for e in fixture['items'][str(ident)]['effects'] if e['type']=='magic')
             self.assertEqual(int(effect['raw']['magicid']),magic)
             self.assertEqual(effect['definition']['sha256'],MAGIC_SHA)
+        sleep=next(e for e in fixture['items']['2606']['effects'] if e['type']=='resistance')
+        self.assertEqual(sleep['raw'],dict(min='10',max='10'))
+        self.assertEqual(sleep['source']['columns'],[67,68])
         medicine=fixture['items']['2450']['effects'][0]
         self.assertEqual(medicine['raw'],dict(function='ITEM_useRessurect',argument='500'))
         self.assertEqual(fixture['items']['1357']['stats_source'][0]['raw'],dict(min='5',max='5'))
