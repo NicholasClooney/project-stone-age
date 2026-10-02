@@ -38,7 +38,7 @@ func _initialize() -> void:
 	check(Filter.needs_survey(blue,{}) and not Filter.needs_survey(blue,best) and Filter.needs_survey(other,{}) and not Filter.needs_survey(off,{}),"no pet of the species: survey first (only with enabled conditions)")
 	var resolved := Filter.resolve(blue,best)
 	check(int(resolved.conditions.sum.value)==626 and int(resolved.conditions.attack.value)==300 and not resolved.conditions.sum.strict and not resolved.conditions.sum.has("minus") and int(blue.conditions.sum.value)==624 and int(blue.conditions.sum.minus)==1,"resolve: 627−1=626 and 301−1=300 (the saved filter is not changed)")
-	check(not Filter.resolve(blue,{}).conditions.sum.has("value"),"relative without a maximum stays unresolved, ignoring the saved fixed value")
+	check(int(Filter.resolve(blue,{}).conditions.sum.value)==0 and Filter.evaluate(stats,Filter.resolve(blue,{})),"without a baseline the first qualified candidate passes immediately, ignoring the saved fixed value")
 	check(Filter.evaluate({"attack":288,"defence":186,"speed":152},resolved),"sum exactly 626 passes regardless of attack")
 	check(Filter.evaluate({"attack":300,"defence":150,"speed":140},resolved),"attack 300 passes below the sum threshold")
 	check(not Filter.evaluate({"attack":299,"defence":180,"speed":146},resolved),"sum 625 with attack 299 fails")
@@ -46,7 +46,7 @@ func _initialize() -> void:
 	check(not Filter.evaluate({"attack":299,"defence":187,"speed":150},resolved),"explicit AND remains respected")
 	var zero := blue.duplicate(true);zero.conditions.sum.minus=0
 	check(int(Filter.resolve(zero,best).conditions.sum.value)==627,"x = 0 asks to match the best")
-	check(Filter.describe_condition("sum",blue.conditions.sum,best)=="三围合 ≥ 最高 627 − 1 = 626" and Filter.describe_condition("attack",blue.conditions.attack,{})=="攻击 ≥ 最高 − 1（还没有同种，先摸底）","the UI sentence shows the resolved number")
+	check(Filter.describe_condition("sum",blue.conditions.sum,best)=="三围合 ≥ 最高 627 − 1 = 626" and Filter.describe_condition("attack",blue.conditions.attack,{})=="攻击 ≥ 最高 − 1（无基线，首个合格候选建立最高）","the UI sentence shows the resolved number")
 	check(Filter.describe_thresholds(blue,best)=="三围合 ≥ 最高 627 − 1 = 626，或 攻击 ≥ 最高 301 − 1 = 300","all enabled conditions joined by the mode")
 	absolute(blue,best)
 	print("PET STAT FILTER: %d failures" % failures)

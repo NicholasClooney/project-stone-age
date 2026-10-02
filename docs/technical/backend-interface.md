@@ -388,3 +388,9 @@ New captures retain their actual stats, growth seed and Lv.1/zero XP and persist
 `ServerSettings.pet_storage_capacity()` reads optional `[pet_storage] capacity` from the authority's `server-settings.cfg`; 0/missing means the existing unlimited warehouse. Warehouse capacity applies only to storage destinations; carried captures work even when storage is full. Preflight and settlement use the same destination capacity check. Failed settlement publishes `settled=false`, `settlement_error` and no reward summary; automation pauses with the finished battle still open. `battle_close` retries its same authority result after capacity or save recovery. Capture-only save failure rolls back profile/UID/rewards, pending config and capture events together. Resume persists the frozen mode and reconciles an already carried or stored capture by actual actor identity and new UID once, without training or duplicate settlement.
 
 Legacy pending capture-only config without `capture_destination` retains its original storage destination. Already stored captures keep source/protection flags and reconcile before scan preflight, with no move, duplicate UID or rewards. An unfinished capture whose pending battle was cleared on restart replays its original seed and freezes a new destination using current capacity; it never forces a pet into a full carried roster.
+
+### 抓宠独立运行选择与保留预演
+
+`set_automation_settings` 的 `hunt` 新增严格布尔字段 `background_search`、`show_battles`、`battle_training`、`preview_keep`（均默认true）。旧 `showcase` 存储/写入迁移为前三项，新字段优先；不提升SAVE_VERSION。候选队列为找宠流程的固定机制，状态内兼容字段 `flow.showcase` 表示使用队列，不再表示是否显示战斗；读取 `flow.background_search/show_battles/battle_training` 判断冻结的本轮运行方式，resume保存相应flow字段。原摸底计时不再运行，旧恢复状态清除计时后继续当前规则。
+
+保留预演读取当前角色 `hunt.preview_keep` 与 `hunt.keep_rule.auto`，仅二者同时开启、非只抓不练时复用KeepRule判断；不分配UID或改写宠物。队列入队、规则变更、出队前复核，淘汰计入原1Hz总数/品种计数，详细未捕获记录原因“预计不会被保留”。客户端不计算决定，远程仅用settings RPC开关，详情仍来自pet_log。预演关闭可照常捕获培养后整理。

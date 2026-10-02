@@ -110,7 +110,7 @@ func run()->void:
 		check(game.session.snapshot().pet_storage.size()==previous_storage+turn+1,"duplicate completion never stores another pet")
 		flow.advance()
 		check(flow.elapsed_seconds()==30.0+60.0*(turn+1),"total timer survives store and automatic restart")
-		check(flow.phase=="hunt" and hunt.running and hunt.status.text.contains("未达标") and hunt.status.text.contains("滚动淘汰") and hunt.status.text.contains(pet.pet_id),"next hunt starts and retained notification identifies stored individual")
+		check(flow.phase=="hunt" and hunt.running and hunt.summary().contains("未达标") and hunt.summary().contains("滚动淘汰") and hunt.summary().contains(pet.pet_id),"next hunt starts and retained notification identifies stored individual")
 		hunt.stop_hunt("test boundary");hunt.hide();game.paused_input=false
 	var storage:Array=game.session._profile.pet_storage
 	check(storage.back().get("auto_hunt",false),"workflow flags pets it stores")
@@ -166,15 +166,12 @@ func run()->void:
 	game.session._profile.pet_storage=game.session._profile.pet_storage.filter(func(pet):return not str(pet.pet_id) in endless_ids)
 	hunt.show_stat_settings();hunt.stat_species.select(hunt.stat_species.get_item_index(92));hunt.load_stat_settings()
 	check(hunt.stat_keeps.sum.value==15 and hunt.stat_keeps.attack.value==10 and hunt.stat_page.find_child("StatStopAfter",true,false)==null,"attribute tab shows blue dragon defaults (keep 15 by sum and 10 by attack) and no per-species stop count")
-	hunt.show();hunt.show_capture_settings(true);await process_frame
-	check(hunt.stop_after.get_parent()==hunt.capture_page and hunt.stop_after.is_visible_in_tree() and int(hunt.stop_after.value)==0,"找到N只后停止 is on 抓宠设置, 0 (keep going) by default")
-	var note:Control=hunt.capture_page.get_node("HuntStopAfterNote")
-	var stop_rect:Rect2=hunt.stop_after.get_global_rect().merge(note.get_global_rect())
-	check(hunt.panel.get_global_rect().encloses(stop_rect) and note.get_global_rect().end.x<=hunt.showcase.get_global_rect().position.x and hunt.stop_after.size.y>=38,"the stop count row fits the panel's left column at touch height")
-	var neighbours:=[hunt.status]
-	for child in hunt.capture_page.get_children():
-		if child is Control and child!=note and child!=hunt.stop_after:neighbours.append(child)
-	check(neighbours.all(func(other):return other==hunt.stop_after or not (other.get_global_rect().intersects(hunt.stop_after.get_global_rect()) or other.get_global_rect().intersects(note.get_global_rect()))),"and overlaps no other capture setting")
+	hunt.show();hunt.show_page("runtime");await process_frame
+	hunt.runtime_scroll.ensure_control_visible(hunt.stop_after);await process_frame
+	check(hunt.runtime_page.is_ancestor_of(hunt.stop_after) and hunt.stop_after.is_visible_in_tree() and int(hunt.stop_after.value)==0,"stop count is on runtime page and defaults to unlimited")
+	check(hunt.runtime_scroll.get_global_rect().encloses(hunt.stop_after.get_global_rect()) and hunt.stop_after.size.y>=44,"stop count is fully reachable at touch height")
+	check(not hunt.stop_after.get_global_rect().intersects(hunt.status.get_global_rect()),"stop count does not overlap status")
+	hunt.show_capture_settings(true);await process_frame
 	# 难抓 rows: each box sits beside its own caption, not one row up.
 	var captions:Dictionary={}
 	for child in hunt.capture_page.get_children():

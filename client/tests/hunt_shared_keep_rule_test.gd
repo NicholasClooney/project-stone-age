@@ -76,19 +76,16 @@ func run()->void:
 	game.profile_persistence=false;game.viewer_prefs_path="user://shared-keep-phone.cfg"
 	phone.add_child(game);await process_frame
 	var menu=game.pet_hunt_menu
-	menu.open_menu();menu.show_stat_settings();await process_frame
+	menu.open_menu();menu.show_page("keep");await process_frame
 	var frame:Rect2=menu.window_scroll.get_global_rect()
 	check(Rect2(Vector2.ZERO,Vector2(390,844)).encloses(frame),"mobile hunt viewport is bounded by the narrow screen")
-	check(menu.panel.size.x>=1100 and menu.window_scroll.size.x<=390,"narrow screen keeps full control widths reachable by horizontal scrolling")
+	check(menu.panel.size.x<=390 and menu.window_scroll.size.x<=390,"shared rules fit narrow viewport without horizontal scrolling")
 	check(not menu.rule_tiers.get_global_rect().intersects(menu.rule_per_tier.get_global_rect()) and not menu.rule_champions.get_global_rect().intersects(menu.rule_auto.get_global_rect()),"mobile keep rows have no overlapping controls")
-	menu.window_scroll.scroll_horizontal=10000;await process_frame
-	check(frame.intersects(menu.stat_rank[2].get_global_rect()),"mobile scroll reaches the third ranking selector")
-	menu.window_scroll.scroll_horizontal=0;menu.show_capture_settings(true);await process_frame
-	var stop_rect:Rect2=menu.stop_after.get_global_rect()
-	var overlap:=false
-	for child in menu.capture_page.get_children():
-		if child is Control and child!=menu.stop_after and child.is_visible_in_tree() and child.get_global_rect().intersects(stop_rect):overlap=true
-	check(not overlap,"mobile stop-after control does not overlap difficulty settings")
+	menu.keep_scroll.ensure_control_visible(menu.stat_rank[2]);await process_frame
+	check(frame.intersects(menu.stat_rank[2].get_global_rect()),"vertical scrolling reaches complete third ranking selector")
+	menu.window_scroll.scroll_horizontal=0;menu.show_page("runtime");await process_frame
+	menu.runtime_scroll.ensure_control_visible(menu.stop_after);await process_frame
+	check(not menu.stop_after.get_global_rect().intersects(menu.train_after_capture.get_global_rect()) and not menu.stop_after.get_global_rect().intersects(menu.capture_only.get_global_rect()),"mobile stop-after has a separate runtime row")
 	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"keep_rule":{"tiers":0,"champions":0}}}})
 	for template in [92,93]:
 		game.link.request({"type":"gm_grant_pet","template":template,"full_grade":true})

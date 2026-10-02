@@ -46,11 +46,23 @@ var stat_rank: Array[OptionButton] = []
 var rule_champions: SpinBox
 var rule_stats: Dictionary = {}
 var rule_auto: CheckBox
+var preview_keep: CheckBox
 var loading_stat_settings := false
 const CapturePolicy=preload("res://scripts/battle_auto_policy.gd")
 const Rules = preload("res://scripts/pet_hunt_rules.gd")
 var filter_nodes: Array[Control] = []
 var capture_page: Control
+var runtime_page: Control
+var keep_page: Control
+var runtime_scroll: ScrollContainer
+var keep_scroll: ScrollContainer
+var runtime_content: VBoxContainer
+var keep_content: VBoxContainer
+var show_battles: CheckBox
+var battle_training: CheckBox
+var _page_tabs: Array[Button] = []
+var _header_notes: Array[Control] = []
+var _footer_nodes: Array[Control] = []
 ## 找到N只后停止 (hunt.stop_after) on 抓宠设置: one count for the whole find-pet run.
 var stop_after: SpinBox
 var train_after_capture: CheckBox
@@ -155,7 +167,7 @@ func _ready() -> void:
 	panel.position=Vector2.ZERO
 	relayout()
 	label("轻松助手 · 自动抓极品",Vector2(24,18),24)
-	label("直接检查隐藏成长档。按当地原表遇敌；未达标跳过，不战斗、不捕获、不发奖励。",Vector2(24,58),16)
+	_header_notes.append(label("按当地原表筛选成长档；门槛按品种保存，队列与保留规则独立运行。",Vector2(24,58),16))
 	location_label=label("",Vector2(24,92),16)
 	label("目标宠物",Vector2(24,139),17)
 	species=OptionButton.new();species.name="LegacyHuntSpecies"
@@ -210,7 +222,7 @@ func _ready() -> void:
 	fast.tooltip_text="服务器所在电脑用全部 CPU 核心筛选，遇到的敌群和结果与普通筛选完全相同，只是快得多；「每秒遇敌」填了限速时按限速用普通筛选；无法使用时也自动改用普通筛选。"
 	panel.add_child(fast);controls.append(fast)
 	fast.toggled.connect(func(_value):_settings_changed(true))
-	label("线程数",Vector2(852,514),15)
+	var threads_caption:=label("线程数",Vector2(852,514),15);threads_caption.name="FastThreadsCaption"
 	thread_count=SpinBox.new();thread_count.name="FastHuntThreads";thread_count.position=Vector2(905,506);thread_count.size=Vector2(100,34)
 	thread_count.min_value=0;thread_count.max_value=64;thread_count.step=1;thread_count.value=0
 	thread_count.value_changed.connect(func(value):world.link.request({"type":"set_fast_hunt_threads","threads":int(value)}))
@@ -231,7 +243,7 @@ func _ready() -> void:
 	var capture_tab:Button=world.button("抓宠设置",func():show_capture_settings(true));capture_tab.name="HuntCaptureTab";capture_tab.position=Vector2(740,18);panel.add_child(capture_tab)
 	showcase_controls()
 	stop_after_controls()
-	train_after_capture=CheckBox.new();train_after_capture.text="抓到后直接升至120级";train_after_capture.tooltip_text="成长按宠物种子逐级固定，直接升级与战斗练级结果相同。达标（无属性条件时每只升满的）按「找到N只后停止」存仓或停下比较，未达标存仓并继续。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,450);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
+	train_after_capture=CheckBox.new();train_after_capture.text="捕获后培养至120级";train_after_capture.tooltip_text="捕获后培养到120级。可选真实自动练级战斗或按成长种子快速计算，两者成长一致；战斗培养实际取得经验和石币。只抓不练与此项互斥。";train_after_capture.name="TrainCapturedPetTo120";train_after_capture.position=Vector2(24,450);capture_page.add_child(train_after_capture);controls.append(train_after_capture)
 	train_after_capture.toggled.connect(func(enabled):
 		if enabled and is_instance_valid(capture_only) and capture_only.button_pressed:
 			capture_only.set_pressed_no_signal(false)
@@ -241,9 +253,9 @@ func _ready() -> void:
 		refresh_ready_status()
 		_settings_changed(true))
 	capture_only=CheckBox.new();capture_only.name="CaptureOnlyMode";capture_only.text="只抓不练（非原版）";capture_only.position=Vector2(24,496)
-	capture_only.tooltip_text="按原物种条件、每种排队上限轮流捕获，保持真实Lv.1，先留随身，满30只后新捕获本人自动存仓并继续抓；忽略找到N只后停止。开启后强制只找Lv.1及后台队列，覆盖直接升120。自动整理保护此来源，获得手动练级经验后解除；手动放生仍按原规则。运行中的模式已冻结，修改从下一轮开始生效。"
+	capture_only.tooltip_text="按原物种条件、每种排队上限轮流捕获，保持真实Lv.1，先留随身，满30只后新捕获本人自动存仓并继续抓；忽略找到N只后停止。开启后强制只找Lv.1，覆盖培养至120；队列始终维护。自动整理保护此来源，获得手动练级经验后解除；手动放生仍按原规则。运行中的模式已冻结，修改从下一轮开始生效。"
 	capture_page.add_child(capture_only);controls.append(capture_only)
-	for entry in [["按属性条件留存 · 无动画抓宠",460],["Lv.1先留随身，满了自动存仓继续抓",506]]:
+	for entry in [["按属性条件留存；培养方式在运行设置选择",460],["Lv.1先留随身，满了自动存仓继续抓",506]]:
 		var note:Label=world.text(entry[0],15);note.position=Vector2(340,entry[1]);note.size=Vector2(340,34);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;capture_page.add_child(note)
 	capture_only.toggled.connect(func(_enabled):
 		_capture_only_controls()
@@ -258,6 +270,7 @@ func _ready() -> void:
 		_follow_target(species.get_selected_id())
 		_settings_changed(true))
 	build_stat_page()
+	build_runtime_pages()
 	show_capture_settings(false)
 	load_settings()
 	hide()
@@ -341,11 +354,11 @@ func _follow_target(template_id: int) -> void:
 func settings_patch() -> Dictionary:
 	var patch := {}
 	var wanted:={"level_one":level_one.button_pressed,"auto_capture":auto_capture.button_pressed,"train_after_capture":train_after_capture.button_pressed,"capture_only":capture_only.button_pressed,
-		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"showcase":showcase.button_pressed,"queue":int(queue_size.value),
+		"total":int(total.value),"offsets":min_offsets(),"rate":int(rate.value),"limit":int(limit.value),"fast":fast.button_pressed,"background_search":showcase.button_pressed,"show_battles":show_battles.button_pressed,"battle_training":battle_training.button_pressed,"preview_keep":preview_keep.button_pressed,"queue":int(queue_size.value),
 		"resume":resume_after_restart.button_pressed,"clean_only":clean_only.button_pressed,"mixed_if_stats":mixed_if_stats.button_pressed,"stop_after":int(stop_after.value)}
 	# Mode overrides are effective only; retain the other mode's saved preferences.
 	if capture_only.button_pressed or bool(world.automation_settings().hunt.get("capture_only",false)):
-		for key in ["level_one","auto_capture","train_after_capture","showcase"]:wanted.erase(key)
+		for key in ["level_one","auto_capture","train_after_capture"]:wanted.erase(key)
 	# Keep explicit target choices, including choices from another location.
 	if _targets_explicit or world.automation_settings().hunt.has("templates"):wanted.templates=target_ids.duplicate()
 	# Likewise 属性条件's species: a fallback shown here keeps the saved choice.
@@ -381,7 +394,10 @@ func load_settings() -> void:
 	if _changed(old,hunt,"capture_only"):capture_only.set_pressed_no_signal(bool(hunt.get("capture_only",false)))
 	if _changed(old,hunt,"train_after_capture"):train_after_capture.set_pressed_no_signal(bool(hunt.train_after_capture))
 	if _changed(old,hunt,"fast"):fast.set_pressed_no_signal(bool(hunt.fast))
-	if _changed(old,hunt,"showcase"):showcase.set_pressed_no_signal(bool(hunt.showcase))
+	if _changed(old,hunt,"preview_keep"):preview_keep.set_pressed_no_signal(bool(hunt.preview_keep))
+	if _changed(old,hunt,"background_search"):showcase.set_pressed_no_signal(bool(hunt.background_search))
+	if _changed(old,hunt,"show_battles"):show_battles.set_pressed_no_signal(bool(hunt.show_battles))
+	if _changed(old,hunt,"battle_training"):battle_training.set_pressed_no_signal(bool(hunt.battle_training))
 	if _changed(old,hunt,"resume"):resume_after_restart.set_pressed_no_signal(bool(hunt.resume))
 	if _changed(old,hunt,"clean_only"):clean_only.set_pressed_no_signal(bool(hunt.clean_only))
 	if _changed(old,hunt,"mixed_if_stats"):mixed_if_stats.set_pressed_no_signal(bool(hunt.mixed_if_stats))
@@ -527,6 +543,35 @@ func relayout() -> void:
 	window_scroll.size=Vector2(minf(1100,maxf(1,available.x)),minf(700,maxf(1,available.y)))
 	window_scroll.position=(get_viewport_rect().size-window_scroll.size)/2
 	if is_instance_valid(status):status.size.x=minf(1040,maxf(1,available.x-48))
+	if not is_instance_valid(runtime_page):return
+	var responsive:=page in ["runtime","keep"]
+	var width:=window_scroll.size.x if responsive else 1100.0
+	var landscape:=responsive and width>=650 and window_scroll.size.y<550
+	var height:=window_scroll.size.y if landscape else 700.0
+	panel.custom_minimum_size=Vector2(width,height)
+	for note in _header_notes:note.hide()
+	location_label.visible=not responsive
+	location_label.position.y=52
+	for i in range(_page_tabs.size()):
+		var tab:=_page_tabs[i]
+		tab.position=Vector2(16+(i%3)*((width-32)/3),58+(i/3)*46) if responsive and width<650 else Vector2(16+i*155,78)
+		if landscape:tab.position.y=60
+		tab.size=Vector2((width-40)/3,44) if responsive and width<650 else Vector2(148,44)
+	for area in [runtime_page,keep_page]:
+		area.position=Vector2.ZERO;area.size=Vector2(width,height)
+	for scroll in [runtime_scroll,keep_scroll]:
+		scroll.get_child(0).custom_minimum_size.x=maxf(1,width-52)
+		scroll.position=Vector2(16,158);scroll.size=Vector2(maxf(1,width-32),350 if width<650 else 370)
+		if landscape:scroll.position.y=114;scroll.size.y=maxf(44,height-246)
+	status.position=Vector2(24,520 if responsive and width<650 else 548);status.size=Vector2(maxf(1,width-48),70 if responsive and width<650 else 80)
+	if landscape:status.position.y=height-124;status.size.y=56
+	for i in range(_footer_nodes.size()):
+		var node:=_footer_nodes[i]
+		node.position=Vector2(16+(i%3)*((width-32)/3),602+(i/3)*46) if responsive and width<650 else Vector2(24+i*200,640)
+		node.size=Vector2((width-40)/3,44) if responsive and width<650 else Vector2(180,38)
+		if landscape:node.position=Vector2(16+i*((width-32)/_footer_nodes.size()),height-66);node.size=Vector2((width-40)/_footer_nodes.size(),44)
+		if node is Button:node.clip_text=true;node.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+	start_button.text="开始" if responsive and width<650 else ("开始只抓不练" if capture_only.button_pressed else ("开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选"))
 
 func open_menu() -> void:
 	relayout()
@@ -558,7 +603,7 @@ func open_records() -> void:
 func set_controls(locked: bool) -> void:
 	for control in controls:
 		# 属性条件 and 找到N只后停止 stay editable: a running cycle follows them at once.
-		var held:=locked and control!=stop_after and not (is_instance_valid(stat_page) and stat_page.is_ancestor_of(control))
+		var held:=locked and control!=stop_after and control!=rule_auto and not (is_instance_valid(stat_page) and stat_page.is_ancestor_of(control)) and not (is_instance_valid(keep_page) and keep_page.is_ancestor_of(control) and control!=queue_size)
 		if control is SpinBox:control.editable=not held
 		elif control is BaseButton:control.disabled=held
 	_show_mixed_option()
@@ -749,7 +794,7 @@ func install_capture_controls(hp:SpinBox,pet:OptionButton,max_level:SpinBox)->vo
 
 ## 抓宠设置: 找到[N]只后停止（0＝不停）, beside the 难抓 rows, above the 抓到后直接升至120级 switch.
 func stop_after_controls()->void:
-	var tip:="整轮找宠共用，不分品种：本轮留下的宠物数到这个数就停止并打开比较。有属性条件时算达标的（摸底选中的也算）；没有启用条件时每只升到120级的都算。0＝不停，一直找到手动停止；1＝找到第一只就停下比较。未达标存仓的不算。仅在「抓到后直接升至120级」时生效。低血量、缺少削血宠或存仓失败仍会暂停。"
+	var tip:="整轮找宠共用，不分品种：本轮留下的宠物数到这个数就停止并打开比较。有属性条件时算达标的；没有启用条件时每只升到120级的都算。0＝不停，一直找到手动停止；1＝找到第一只就停下比较。未达标存仓的不算。仅在「捕获后培养至120级」时生效。低血量、缺少削血宠或存仓失败仍会暂停。"
 	var before:Label=world.text("找到",17);before.position=Vector2(410,399);before.mouse_filter=Control.MOUSE_FILTER_PASS;before.tooltip_text=tip;capture_page.add_child(before)
 	stop_after=SpinBox.new();stop_after.name="HuntStopAfter";stop_after.min_value=0;stop_after.max_value=100000;stop_after.step=1;stop_after.value=1
 	stop_after.position=Vector2(455,389);stop_after.size=Vector2(100,38);stop_after.tooltip_text=tip
@@ -777,18 +822,18 @@ func _capture_only_controls(locked: bool = false)->void:
 		level_one.set_pressed_no_signal(true)
 		auto_capture.set_pressed_no_signal(true)
 		train_after_capture.set_pressed_no_signal(false)
-		showcase.set_pressed_no_signal(true)
-	for control in [level_one,auto_capture,showcase]:control.disabled=locked or enabled
+	for control in [level_one,auto_capture]:control.disabled=locked or enabled
 	# 抓到后直接升至120级 and 只抓不练 stay clickable: choosing one turns the other off.
 	train_after_capture.disabled=locked
 	stop_after.editable=not enabled
-	showcase_xp.disabled=enabled
+	showcase_xp.disabled=enabled or (is_instance_valid(battle_training) and not battle_training.button_pressed)
+	if is_instance_valid(battle_training):battle_training.disabled=locked or enabled or not train_after_capture.button_pressed
 	start_button.text="开始只抓不练" if enabled else ("开始抓宠并练至120" if train_after_capture.button_pressed else "开始筛选")
 
 func showcase_controls()->void:
 	var name_text:=AutomationSettings.SHOWCASE_NAME
 	showcase=CheckBox.new();showcase.name="ShowcaseMode";showcase.text=name_text;showcase.button_pressed=true;showcase.position=Vector2(760,139)
-	showcase.tooltip_text="找宠流程一边在后台继续找，一边正常播放找到的宠物的捕获战斗和自动练级到120的每一场战斗；找到的先排队。关掉则像以前一样全速捕获、瞬间练满。"
+	showcase.tooltip_text="捕获或培养战斗期间继续搜索，普通筛选和本机极速均支持。关掉只暂停搜索，候选队列、培养方式和战斗显示不变。新选择从下一轮生效。"
 	capture_page.add_child(showcase);controls.append(showcase)
 	showcase.toggled.connect(func(_value):_settings_changed(true))
 	var queue_label:Label=world.text("排队上限",16);queue_label.position=Vector2(760,199);capture_page.add_child(queue_label)
@@ -809,10 +854,10 @@ func showcase_controls()->void:
 	showcase_speed.item_selected.connect(func(index):world.set_battle_speed([1.0,2.0,4.0,8.0][index]))
 	capture_page.add_child(showcase_speed)
 	resume_after_restart=CheckBox.new();resume_after_restart.name="ResumeAfterRestart";resume_after_restart.text="重启后自动恢复";resume_after_restart.button_pressed=true;resume_after_restart.position=Vector2(760,349)
-	resume_after_restart.tooltip_text="服务器重启时记下正在运行的找宠流程、筛选或自动练级（设置、排队的宠物、已遇敌组数和本轮计数），重启后角色还在原地就自动接着运行，停止记录和信息框写「服务器重启后已恢复」。重启时正在打的捕获或练级战斗按逃跑结束，重启后按原种子重新抓或接着练。摸底要重新开始。"
+	resume_after_restart.tooltip_text="服务器重启时记下正在运行的找宠流程、筛选或自动练级（设置、排队的宠物、已遇敌组数和本轮计数），重启后角色还在原地就自动接着运行，停止记录和信息框写「服务器重启后已恢复」。重启时正在打的捕获或练级战斗按逃跑结束，重启后按原种子重新抓或接着练。旧摸底状态恢复后按当前条件直接搜索。"
 	capture_page.add_child(resume_after_restart);controls.append(resume_after_restart)
 	resume_after_restart.toggled.connect(func(_value):_settings_changed(true))
-	clean_only=CheckBox.new();clean_only.name="CleanOnly";clean_only.text="只进无其他敌人的遇敌";clean_only.button_pressed=true;clean_only.position=Vector2(760,394)
+	clean_only=CheckBox.new();clean_only.name="CleanOnly";clean_only.text="跳过含高等级敌人的敌群";clean_only.button_pressed=true;clean_only.position=Vector2(760,394)
 	clean_only.tooltip_text="找 Lv.1 时，敌群里只要有高于 Lv.1 的敌人就跳过不进（同组别的 Lv.1 宠物不算，打不过人也伤不了队伍）。抓宠时不打其他敌人，混进高等级敌人容易战败，扣魅力和宠物忠诚。敌群在进战斗前就已算好，跳过只是多找一会儿。"
 	capture_page.add_child(clean_only);controls.append(clean_only)
 	clean_only.toggled.connect(func(_value):
@@ -830,9 +875,11 @@ func _show_mixed_option()->void:
 
 func show_capture_settings(enabled:bool)->void:
 	if is_instance_valid(stat_page):stat_page.hide()
+	if is_instance_valid(runtime_page):runtime_page.hide();keep_page.hide()
 	for node in filter_nodes:node.visible=not enabled
 	capture_page.visible=enabled
 	_remember_page("capture" if enabled else "filters")
+	relayout()
 
 ## The page shown is remembered on this device and shown again on opening.
 func _remember_page(which: String)->void:
@@ -843,6 +890,12 @@ func show_page(which: String)->void:
 	match which:
 		"capture":show_capture_settings(true)
 		"stats":show_stat_settings()
+		"runtime","keep":
+			show_capture_settings(false)
+			for node in filter_nodes:node.hide()
+			(runtime_page if which=="runtime" else keep_page).show()
+			_remember_page(which)
+			relayout()
 		_:show_capture_settings(false)
 
 func start_requested()->void:
@@ -851,7 +904,7 @@ func start_requested()->void:
 
 func ready_description()->String:
 	if capture_only.button_pressed:return "准备就绪：只抓不练（非原版），按原条件轮流抓Lv.1先留随身，满了自动存仓继续抓；忽略找到N只后停止，直到手动停止。"
-	if train_after_capture.button_pressed:return "准备就绪：自动找宠→捕捉→练到120；属性达标停止比较，未达标存仓继续（无条件仅一轮）。"
+	if train_after_capture.button_pressed:return "准备就绪：排队轮流捕获→%s→按规则保留；%s。" % ["实际战斗培养至120级" if battle_training.button_pressed else "按成长种子快速培养至120级","保留%d只后停止" % int(stop_after.value) if stop_after.value>0 else "持续寻找，直到手动停止"]
 	if auto_capture.button_pressed:return "准备就绪：开始后筛选达标宠物并自动捕捉。"
 	return "准备就绪：筛选达标后进入战斗，由你手动捕捉。"
 
@@ -973,7 +1026,7 @@ func build_keep_rule(top: float)->void:
 		stat_page.add_child(check);controls.append(check);rule_stats[stat]=check
 		check.toggled.connect(func(_on):save_stat_settings(true))
 	rule_auto=CheckBox.new();rule_auto.name="KeepRuleAuto";rule_auto.text="找宠时自动整理";rule_auto.position=Vector2(590,row+2)
-	rule_auto.tooltip_text="每存入一只就按保留规则整理整个同种（随身和仓库），放生规则外的宠物。收藏、出战、骑乘和削血宠不动。默认关：可先在同种比较里用「按保留规则选中」预览。"
+	rule_auto.tooltip_text="每存入一只就按保留规则整理整个同种（随身和仓库），放生规则外的宠物。收藏、出战、骑乘和削血宠不动。只抓不练的Lv.1来源受保护，不会被整理。默认关：可先在同种比较里用「按保留规则选中」预览。"
 	stat_page.add_child(rule_auto);controls.append(rule_auto);rule_auto.toggled.connect(func(_on):save_stat_settings(true))
 	for input in [rule_tiers,rule_per_tier,rule_champions]:input.value_changed.connect(func(_value):save_stat_settings())
 
@@ -1016,6 +1069,7 @@ func show_stat_settings()->void:
 	for node in filter_nodes:node.hide()
 	stat_page.show()
 	_remember_page("stats")
+	relayout()
 
 ## Shows the selected species' conditions from the profile. Switching species
 ## rewrites every control; a profile update skips the number being typed.
@@ -1064,7 +1118,7 @@ func refresh_stat_thresholds(now: bool = false) -> void:
 	if key==_thresholds_key and not now:return
 	_thresholds_key=key
 	stat_heading.text="120级属性筛选 · 门槛＝固定数值，不随宠物变化，不摸底" if fixed else "120级属性筛选 · 门槛＝同种现有最高 − x，随更好的宠物提高"
-	stat_heading.tooltip_text=("绝对：每项门槛是填写的固定数值（≥），抓到更好的宠物也不变，也不需要摸底；排队的宠物只按这些数值判断。已有极品后用它放宽门槛。" if fixed else "最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新。\n还没有这个品种时先摸底%d秒：不设门槛找，按保留规则挑出最好的几只抓来，之后按新的最高继续。" % AutomationSettings.SURVEY_SECONDS)+"\n每个品种默认勾三围合和攻击（任一满足，最高 − 1）；全部不勾就不按属性判断，每只升满120级的都算留下。\n改动立即用于正在进行的找宠（正在抓或练的这只除外）。"
+	stat_heading.tooltip_text=("绝对：每项门槛是填写的固定数值（≥），抓到更好的宠物也不变，也不需要摸底；排队的宠物只按这些数值判断。已有极品后用它放宽门槛。" if fixed else "最高＝随身和仓库里这个品种的宠物中，该项120级属性最高的数值（未满120级按成长种子精确推算）。抓到、存入或放生后门槛随之更新。\n还没有这个品种时，由首个满足成长等条件的候选建立基线；之后与现有、排队及正在捕获的同种候选一起提高门槛。")+"\n每个品种默认勾三围合和攻击（任一满足，最高 − 1）；全部不勾就不按属性判断，每只升满120级的都算留下。\n改动立即用于正在进行的找宠（正在抓或练的这只除外）。"
 	for i in range(StatFilter.METRICS.size()):
 		var metric:String=StatFilter.METRICS[i]
 		var condition:={"enabled":true,"minus":int(stat_numbers[metric].value),"value":int(stat_values[metric].value)}
@@ -1079,7 +1133,7 @@ func refresh_stat_thresholds(now: bool = false) -> void:
 		else:
 			stat_checks[metric].text="%s ≥ 最高%s −" % [name,str(best[metric]) if best.has(metric) else ""]
 			result.position.x=268+(i%2)*470
-			result.text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "摸底"
+			result.text="= %d" % (int(best[metric])-int(condition.minus)) if best.has(metric) else "首只建基线"
 			result.modulate.a=1.0
 		# Shorter fixed-mode text must shrink the checkbox hit rectangle too.
 		stat_checks[metric].size=stat_checks[metric].get_combined_minimum_size()
@@ -1222,3 +1276,74 @@ static func duration_text(seconds: float) -> String:
 	if s<60:return "%.1f秒" % seconds if seconds<10 else "%d秒" % s
 	if s<3600:return "%d分%02d秒" % [s/60,s%60]
 	return "%d小时%02d分" % [s/3600,(s/60)%60]
+
+## Operating choices are independent; the queue is always maintained.
+func build_runtime_pages()->void:
+	for entry in [["runtime","运行设置"],["keep","排队与保留"]]:
+		var area:=Control.new();area.name="HuntRuntimePage" if entry[0]=="runtime" else "HuntKeepPage";area.mouse_filter=Control.MOUSE_FILTER_IGNORE;panel.add_child(area)
+		var scroll:=ScrollContainer.new();scroll.name="RuntimeScroll" if entry[0]=="runtime" else "KeepScroll";scroll.horizontal_scroll_mode=ScrollContainer.SCROLL_MODE_DISABLED;area.add_child(scroll)
+		var content:=VBoxContainer.new();content.add_theme_constant_override("separation",12);scroll.add_child(content)
+		if entry[0]=="runtime":runtime_page=area;runtime_scroll=scroll;runtime_content=content
+		else:keep_page=area;keep_scroll=scroll;keep_content=content
+		var tab:Button=world.button(entry[1],func():show_page(entry[0]));tab.name="HuntRuntimeTab" if entry[0]=="runtime" else "HuntKeepTab";panel.add_child(tab)
+	for node in panel.get_children():
+		if node is Button and (str(node.name) in ["HuntFilterTab","HuntCaptureTab"] or node.text=="属性条件" or str(node.name) in ["HuntRuntimeTab","HuntKeepTab"]):_page_tabs.append(node)
+		if node is Button and node.position.y>=630:_footer_nodes.append(node)
+	_runtime_title(runtime_content,"搜索与战斗展示")
+	for control in [fast,showcase]:_runtime_control(runtime_content,control)
+	_runtime_row(runtime_content,"线程数（服务器设置）",thread_count)
+	_runtime_control(runtime_content,cores_label)
+	show_battles=CheckBox.new();show_battles.name="HuntShowBattles";show_battles.text="显示捕获与培养战斗";show_battles.tooltip_text="仅控制是否显示战斗。关掉后仍通过真实战斗核心结算捕获；战斗培养仍实际战斗。";controls.append(show_battles);show_battles.toggled.connect(func(_value):_settings_changed(true));_runtime_control(runtime_content,show_battles)
+	_runtime_row(runtime_content,"战斗播放速度（本设备）",showcase_speed)
+	_runtime_title(runtime_content,"捕获后处理（两种模式互斥）")
+	_runtime_control(runtime_content,train_after_capture)
+	_runtime_control(runtime_content,capture_only)
+	_runtime_note(runtime_content,"只抓不练：Lv.1先留随身，满了自动存仓继续抓；忽略停止数量，直到手动停止。")
+	battle_training=CheckBox.new();battle_training.name="HuntBattleTraining";battle_training.text="培养方式：真实练级战斗";battle_training.tooltip_text="开启：实际战斗逐步升至120，经验倍率有效。关闭：按同一种子快速计算至120，不发练级战斗经验或石币。显示战斗和后台搜索分别设置。";controls.append(battle_training);battle_training.toggled.connect(func(_value):_capture_only_controls();_settings_changed(true));_runtime_control(runtime_content,battle_training)
+	_runtime_note(runtime_content,"真实战斗培养开启：打练级战斗逐步升级；关闭：按同一成长种子快速培养至120级。")
+	_runtime_row(runtime_content,"经验倍率（与自动练级共用）",showcase_xp)
+	_runtime_row(runtime_content,"保留多少只后停止（0＝不停）",stop_after)
+	_runtime_title(runtime_content,"遇敌、整理与恢复")
+	for control in [auto_capture,clean_only,mixed_if_stats,rule_auto,resume_after_restart]:_runtime_control(runtime_content,control)
+	_runtime_note(runtime_content,"自动整理会放生规则之外的已培养宠物；候选队列淘汰不受此开关影响。模式与运行选择从下一轮生效。")
+	_runtime_title(keep_content,"所有品种共用规则，分别按同种排名")
+	preview_keep=CheckBox.new();preview_keep.name="PreviewKeep";preview_keep.text="捕获前预演保留结果";preview_keep.tooltip_text="开启且自动整理开启：跳过预计不会被保留的候选。关闭：照常捕获培养，再按自动整理规则决定去留。只抓不练不受预演影响。";preview_keep.toggled.connect(func(_value):_settings_changed(true));_runtime_control(keep_content,preview_keep)
+	_runtime_note(keep_content,"预演与自动整理同时开启才跳过预计留不下的宠物；关闭预演可照常抓宠培养，再决定去留。")
+	_runtime_row(keep_content,"每个品种的候选队列上限",queue_size)
+	_runtime_note(keep_content,"队列始终维护，动态淘汰并按品种轮流捕获；独立于后台搜索、战斗显示和自动整理。")
+	_runtime_row(keep_content,"看最高几档三围合",rule_tiers)
+	_runtime_row(keep_content,"每档保留几只",rule_per_tier)
+	for i in range(stat_rank.size()):_runtime_row(keep_content,["档内第一排序","同分时第二排序","同分时第三排序"][i],stat_rank[i])
+	_runtime_row(keep_content,"单项各留前几名",rule_champions)
+	for control in rule_stats.values():_runtime_control(keep_content,control)
+	# Remove obsolete captions; none of them own gameplay controls.
+	for child in capture_page.get_children():
+		if child is Label:child.hide()
+	for child in panel.get_children():
+		if child is Label and str(child.name)=="FastThreadsCaption":child.hide()
+	var stat_content:=stat_page.get_node("StatSettingsScroll/StatSettingsContent")
+	for child in stat_content.get_children():
+		if child is Label and child.position.y>=200:child.hide()
+	# All moved controls are no longer filter-page visibility members.
+	filter_nodes=filter_nodes.filter(func(node):return node.get_parent()==panel and node not in [fast,auto_capture])
+	runtime_page.hide();keep_page.hide()
+
+func _runtime_title(content:VBoxContainer,text:String)->void:
+	var title:Label=world.text(text,18);title.custom_minimum_size.y=32;title.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;content.add_child(title)
+
+func _runtime_note(content:VBoxContainer,text:String)->void:
+	var note:Label=world.text(text,15);note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;content.add_child(note)
+
+func _runtime_control(content:VBoxContainer,control:Control)->void:
+	if control.get_parent():control.reparent(content,false)
+	else:content.add_child(control)
+	control.position=Vector2.ZERO;control.custom_minimum_size=Vector2(0,44);control.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	if control is Button:control.clip_text=true;control.text_overrun_behavior=TextServer.OVERRUN_TRIM_ELLIPSIS
+
+func _runtime_row(content:VBoxContainer,text:String,control:Control)->void:
+	# A vertical caption keeps labels readable without horizontal scrolling.
+	var row:=VBoxContainer.new();row.add_theme_constant_override("separation",4);content.add_child(row)
+	var caption:Label=world.text(text,16);caption.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;row.add_child(caption)
+	if control.get_parent():control.reparent(row,false)
+	else:row.add_child(control)
+	control.position=Vector2.ZERO;control.custom_minimum_size=Vector2(0,44);control.size_flags_horizontal=Control.SIZE_EXPAND_FILL

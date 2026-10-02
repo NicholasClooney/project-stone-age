@@ -63,6 +63,15 @@ func build_ui() -> void:
 	readable_font.base_font = font
 	readable_font.variation_opentype = {2003265652:450.0} # OpenType wght axis tag.
 	ui_theme.default_font = readable_font
+	# Tooltips are separate popups: give them their own opaque background.
+	var tooltip_box := StyleBoxFlat.new()
+	tooltip_box.bg_color = Color("242a2b")
+	tooltip_box.border_color = Color("b49b66")
+	tooltip_box.set_border_width_all(1)
+	tooltip_box.content_margin_left = 12;tooltip_box.content_margin_right = 12
+	tooltip_box.content_margin_top = 8;tooltip_box.content_margin_bottom = 8
+	ui_theme.set_stylebox("panel","TooltipPanel",tooltip_box)
+	ui_theme.set_color("font_color","TooltipLabel",Color("fff4d5"))
 	root.theme = ui_theme
 	game.ui_layer.add_child(root)
 	game.coordinates = text("")

@@ -44,7 +44,7 @@ const PATH := "res://data/automation_defaults.json"
 ## What players call hunt.showcase: keep searching in the background while
 ## watching the capture and 自动练级. The one place the name is written; the
 ## switch, the info block and the server's lines use it.
-const SHOWCASE_NAME := "后台搜宠"
+const SHOWCASE_NAME := "战斗时继续搜索"
 ## 摸底: how long the find-pet cycle scans a species with no pet of its own
 ## (so no 最高 to count from) before choosing what to catch, in seconds.
 const SURVEY_SECONDS := 120
@@ -57,7 +57,7 @@ const SPEC := {
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"protect":["bool"],"select_troops":["bool"],"borrow_troops":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120],"fallback_attempts":["int",1,30],"fallback_rate":["int",0,98],"fallback_hp":["int",1,99]},
-	"hunt":{"keep_rule":KEEP_RULE_SPEC,"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"capture_only":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
+	"hunt":{"keep_rule":KEEP_RULE_SPEC,"templates":["templates"],"template":["int",-1,1000000],"level_one":["bool"],"auto_capture":["bool"],"train_after_capture":["bool"],"capture_only":["bool"],"total":["int",-8,8],"offsets":["offsets"],"rate":["int",0,100000],"limit":["int",0,1000000],"fast":["bool"],"showcase":["bool"],"background_search":["bool"],"show_battles":["bool"],"battle_training":["bool"],"preview_keep":["bool"],"queue":["int",1,50],"resume":["bool"],"clean_only":["bool"],"mixed_if_stats":["bool"],"stat_species":["int",-1,1000000],"stop_after":["int",0,100000]},
 }
 static var _defaults: Dictionary = {}
 
@@ -74,10 +74,15 @@ static func effective(overrides: Dictionary) -> Dictionary:
 	# A stored level without a flag is a player's own target (older clients).
 	var training := _dict(overrides.get("training",{}))
 	if training.has("level") and not training.has("level_explicit"):result.training.level_explicit = true
-	# Capture-only overrides training, uses the same background queue, and
+	# Legacy showcase combined three choices. Explicit new preferences win.
+	var hunt_over := _dict(overrides.get("hunt",{}))
+	if hunt_over.has("showcase"):
+		for key in ["background_search","show_battles","battle_training"]:
+			if not hunt_over.has(key):result.hunt[key] = bool(hunt_over.showcase)
+	# Capture-only overrides training, uses the same candidate queue, and
 	# accepts newborns only. Persisted preferences for the other mode remain.
 	if bool(result.hunt.get("capture_only",false)):
-		result.hunt.merge({"level_one":true,"auto_capture":true,"train_after_capture":false,"showcase":true},true)
+		result.hunt.merge({"level_one":true,"auto_capture":true,"train_after_capture":false},true)
 	return result
 
 static func default_stat_filter(template_id: int) -> Dictionary:
@@ -111,7 +116,7 @@ static func runner_settings(overrides: Dictionary, player_level: int) -> Diction
 static func hunt_filter(overrides: Dictionary) -> Dictionary:
 	var hunt: Dictionary = effective(overrides).hunt
 	var result := {"capture_only":bool(hunt.get("capture_only",false)),"template":int(hunt.template),"level_one":bool(hunt.level_one),"total":int(hunt.total),"offsets":hunt.offsets.duplicate(),
-		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"queue":int(hunt.queue),
+		"rate":int(hunt.rate),"limit":int(hunt.limit),"auto_capture":bool(hunt.auto_capture),"fast":bool(hunt.fast),"showcase":bool(hunt.showcase),"background_search":bool(hunt.background_search),"show_battles":bool(hunt.show_battles),"battle_training":bool(hunt.battle_training),"queue":int(hunt.queue),
 		"clean_only":bool(hunt.clean_only),"mixed_if_stats":bool(hunt.mixed_if_stats)}
 	if hunt.has("templates"):result.templates = hunt.templates.duplicate()
 	elif int(hunt.template)>=0:result.templates = [int(hunt.template)]
@@ -125,7 +130,7 @@ static func device_default(key: String, fallback: Variant) -> Variant:
 ## resets the section. Returns {ok, overrides} or {ok:false, reason}.
 static func apply_patch(overrides: Dictionary, patch: Variant) -> Dictionary:
 	if not patch is Dictionary:return _fail("settings must be an object")
-	var result: Dictionary = overrides.duplicate(true)
+	var result: Dictionary = sanitize(overrides)
 	for key in patch:
 		var section := str(key)
 		var value = patch[key]
@@ -146,6 +151,12 @@ static func apply_patch(overrides: Dictionary, patch: Variant) -> Dictionary:
 				filters[id] = reply.value
 			result.stat_filters = filters
 		elif SPEC.has(section):
+			if section=="hunt" and value is Dictionary and value.has("showcase"):
+				if value.showcase!=null and not value.showcase is bool:return _fail("invalid hunt.showcase")
+				value = value.duplicate(true)
+				for choice in ["background_search","show_battles","battle_training"]:
+					if not value.has(choice):value[choice] = value.showcase
+				value.erase("showcase")
 			if value==null:result.erase(section);continue
 			var reply := _merge(_dict(result.get(section,{})),value,SPEC[section],section)
 			if not reply.ok:return reply
@@ -177,6 +188,13 @@ static func sanitize(stored: Variant) -> Dictionary:
 	for section in SPEC:
 		var kept := _valid_part(stored.get(section),SPEC[section])
 		if not kept.is_empty():result[section] = kept
+	var legacy_hunt := _dict(stored.get("hunt",{}))
+	if legacy_hunt.has("showcase") and legacy_hunt.showcase is bool:
+		var migrated := _dict(result.get("hunt",{}))
+		for key in ["background_search","show_battles","battle_training"]:
+			if not migrated.has(key):migrated[key] = legacy_hunt.showcase
+		result.hunt = migrated
+	if result.has("hunt"):result.hunt.erase("showcase")
 	_migrate_stop_after(stored,result)
 	_migrate_keep_rule(stored,result)
 	var filters := {}

@@ -189,7 +189,11 @@ const SHOWCASE_LOG_MAX := 8
 ## A watching device plays a shown battle at its own speed; the runner waits
 ## for its turn to finish playing up to this long (a 1x group turn is long).
 const SHOWN_PRESENT_TIMEOUT_MSEC := 60000
+## Every find-pet run uses the queue independently of presentation.
 var flow_showcase := false
+var flow_background_search := true
+var flow_show_battles := true
+var flow_battle_training := true
 var flow_capture_only := false
 ## Found hits waiting for their turn: {index, slot, run_seed, actor, troop,
 ## prediction, quality}. Every species has its own queue: kept as one array
@@ -327,9 +331,12 @@ func hunt_request(command: Dictionary = {}) -> Dictionary:
 			given.templates = checked.overrides.hunt.templates
 		elif given.has("template"):filter.erase("templates")
 		filter.merge(given,true)
+		if given.has("showcase"):
+			for key in ["background_search","show_battles","battle_training"]:
+				if not given.has(key):filter[key] = bool(given.showcase)
 	filter.capture_only = bool(AutomationSettings.effective(backend.session.automation_settings()).hunt.get("capture_only",false))
 	if filter.capture_only:
-		filter.merge({"capture_only":true,"level_one":true,"auto_capture":true,"showcase":true},true)
+		filter.merge({"capture_only":true,"level_one":true,"auto_capture":true},true)
 	var actual := usable_templates(bool(filter.level_one))
 	filter.usable = actual.filter(func(id):return not filter.has("usable") or id in filter.usable)
 	return filter
@@ -398,9 +405,10 @@ func apply_stat_filters(overrides: Dictionary) -> void:
 		if JSON.stringify(now)==JSON.stringify(AutomationSettings.stat_filter(before,id)):continue
 		flow_stat_filters[id] = now
 		changed.append(id)
-	if changed.is_empty() and AutomationSettings.keep_rule(before)==AutomationSettings.keep_rule(overrides):return
+	if changed.is_empty() and AutomationSettings.keep_rule(before)==AutomationSettings.keep_rule(overrides) and AutomationSettings.effective(before).hunt.preview_keep==AutomationSettings.effective(overrides).hunt.preview_keep:return
 	_sort_queue()
 	refresh_maxima()
+	_prune_not_retained()
 	if not survey.is_empty():
 		var still: Array = survey.templates.filter(func(id):return StatFilter.needs_survey(raw_filter_for(int(id)),species_maxima(int(id))))
 		if still.is_empty():
@@ -851,7 +859,9 @@ func stop(reason: String) -> void:
 	# A battle the player takes over obeys the full loyalty rules again.
 	backend.battle.automated = false
 	var takeover := false
-	if compact_active and not backend.battle.snapshot().active:
+	# A failed atomic capture settlement must remain open for a real retry.
+	var unsettled_capture := bool(backend.session._pending.get("capture_only",false)) and not bool(backend.battle_state.get("settled",false))
+	if compact_active and not backend.battle.snapshot().active and not unsettled_capture:
 		battles += 1
 		_close_battle()
 	if compact_active:
@@ -948,13 +958,17 @@ func stop_hunt(reason: String) -> void:
 	_emit_event({"kind":"hunt_stopped","reason":reason})
 
 func _hunt_process(delta: float) -> void:
-	var background := flow_showcase and flow_active()
-	if (backend.battle_open and not background) or position_map!=hunt_map or position_cell!=hunt_cell:
+	var background := flow_background_search and flow_active()
+	# Pause work without losing the run cursor, its queue or its seed.
+	if flow_active() and not background and flow_phase!="hunt":
+		fast_hunt.stop();_share_leave();return
+	if backend.battle_open and flow_active() and not background:
+		fast_hunt.stop();_share_leave();return
+	if (backend.battle_open and not flow_active()) or position_map!=hunt_map or position_cell!=hunt_cell:
 		stop_hunt("场景状态变化，筛选已停止。");return
 	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
 	if _predicting():
 		refresh_maxima()
-		_survey_process()
 		if not hunt_running:return
 		if not flow_showcase and not survey_picks.is_empty():
 			_take_survey_pick();return
@@ -1354,8 +1368,8 @@ func threshold_key() -> String:
 		parts.append([id,surveying(id),chosen.get("mode",""),chosen.get("conditions",{}).values().map(func(c):return [c.get("enabled",false),c.get("value",null)])])
 	return JSON.stringify(parts)
 
-func surveying(template_id: int) -> bool:
-	return not survey.is_empty() and survey.templates.has(template_id)
+func surveying(_template_id: int) -> bool:
+	return false # Deprecated checkpoint fields no longer start a timed survey.
 
 ## Species of this hunt whose enabled 最高 − x conditions have nothing to
 ## count from (no pet of theirs, and no survey pick on the way).
@@ -1390,17 +1404,7 @@ func _template_name(template_id: int) -> String:
 
 ## Starts a survey when a species needs one; ends it when its time is up.
 func _survey_process() -> void:
-	if survey.is_empty():
-		var wanted := _survey_wanted()
-		if wanted.is_empty():return
-		survey = {"templates":wanted,"started":int(survey_clock.call()),"clock":int(survey_clock.call()),"credit":0.0,"candidates":{},"runs":[]}
-		var names: Array = wanted.map(_template_name)
-		var shared := "（%d 人共享本机，约%s）" % [fast_hunters(),_duration(survey_seconds*fast_hunters())] if fast_hunters()>1 else ""
-		_showcase_line("survey","摸底：还没有%s，先不设门槛找%s%s，再按保留规则挑最好的抓。" % ["、".join(names),_duration(survey_seconds),shared])
-		_emit_status()
-	else:
-		_survey_advance()
-		if survey_remaining()<=0.0:_finish_survey()
+	survey = {} # Compatibility seam only; no timed survey is started.
 
 static func _duration(seconds: float) -> String:
 	var s := int(seconds)
@@ -1539,7 +1543,10 @@ func start_cycle(continuing: bool) -> bool:
 	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
 	flow_phase = "hunt"
 	if not continuing:
-		flow_showcase = flow_capture_only or bool(flow_hunt_request.get("showcase",false))
+		flow_showcase = true
+		flow_background_search = bool(flow_hunt_request.get("background_search",flow_hunt_request.get("showcase",true)))
+		flow_show_battles = bool(flow_hunt_request.get("show_battles",flow_hunt_request.get("showcase",true)))
+		flow_battle_training = bool(flow_hunt_request.get("battle_training",flow_hunt_request.get("showcase",true)))
 		showcase_queue = [];showcase_current = {};showcase_log = [];showcase_last_template = -1
 		showcase_dropped_count = 0;showcase_dropped_species = {}
 	_emit_event({"kind":"flow_hunt"})
@@ -1651,6 +1658,10 @@ func _level_to_120() -> void:
 	backend.save()
 	backend.publish()
 	complete_trained_pet(_flow_pet())
+	if flow_phase=="compare":
+		if hunt_running:stop_hunt(flow_reason)
+		showcase_queue = []
+		_emit_status()
 
 func _store_hunt_pet(pet_id: String, prunable: bool, qualified: bool = false) -> bool:
 	var index := -1
@@ -1800,7 +1811,7 @@ const RESUME_KINDS := ["flow","hunt","training"]
 const RESUME_FLOW_FIELDS := ["flow_phase","flow_reason","flow_pet_id","flow_known_ids","flow_matched_actor","flow_matched_index","flow_matched_roll",
 	"flow_stat_filters","flow_settings_overrides","flow_target_filter","flow_hunt_request","flow_stored_count","flow_last_result","flow_last_stored_id",
 	"flow_last_stored_total","flow_kept_count","flow_collected_count","flow_pruned_count","flow_run_reject_ids","flow_released_count","flow_held_count",
-	"flow_predicted_rejects","flow_run_id","flow_showcase","flow_capture_only","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","showcase_dropped_count","showcase_dropped_species","flow_skip_kind",
+	"flow_predicted_rejects","flow_run_id","flow_showcase","flow_background_search","flow_show_battles","flow_battle_training","flow_capture_only","showcase_queue","showcase_last_template","showcase_current","showcase_log","_showcase_log_serial","showcase_dropped_count","showcase_dropped_species","flow_skip_kind",
 	"flow_skip_streak","flow_skipped_count","flow_skip_note","flow_best_predicted","survey_picks","survey_last","flow_target_survey"]
 const RESUMED := "服务器重启后已恢复"
 ## Read back at startup (load_resume) and applied by try_resume.
@@ -1925,12 +1936,21 @@ func _resume_flow(state: Dictionary) -> void:
 	var saved: Dictionary = state.get("flow",{})
 	for field in RESUME_FLOW_FIELDS:
 		if saved.has(field):set(field,saved[field])
+	var legacy_showcase := bool(saved.get("flow_showcase",false))
+	for key in ["flow_background_search","flow_show_battles","flow_battle_training"]:
+		if not saved.has(key):set(key,legacy_showcase)
+	if not legacy_showcase and str(saved.get("flow_phase",""))=="capture" and showcase_current.is_empty() and not flow_matched_roll.is_empty():
+		showcase_current = {"actor":flow_matched_actor.duplicate(true),"prediction":_prediction(Progression.project_pet(flow_matched_actor,120)),"run_seed":int(flow_matched_roll.run_seed),"index":int(flow_matched_roll.index),"slot":int(flow_matched_roll.slot),"quality":HuntRules.quality(flow_matched_actor,backend.encounter_catalog.data)}
+	flow_showcase = true
+	survey_picks = [];flow_target_survey = false
 	flow_settings_overrides = AutomationSettings.sanitize(flow_settings_overrides)
 	flow_target_filter.erase("keep_rule")
 	for id in flow_stat_filters:flow_stat_filters[id].erase("keep_rule")
 	showcase_last_template = int(showcase_last_template)
 	# A file from before per-species queues holds one shared queue: grouping
 	# splits it into each species' queue, in the same order within a species.
+	for entry in showcase_queue:entry.erase("survey")
+	showcase_current.erase("survey")
 	_sort_queue()
 	flow_map = int(state.map_id)
 	flow_cell = Vector2i(int(state.cell[0]),int(state.cell[1]))
@@ -1953,7 +1973,7 @@ func _resume_flow(state: Dictionary) -> void:
 		_prepare_catalog(flow_hunt_request)
 		if phase=="hunt" and not flow_showcase:phase = "restart"
 	_discard_unselected_targets()
-	if bool(saved.get("survey",false)):notes.append("摸底进度没有保存，重新摸底")
+	if bool(saved.get("survey",false)):notes.append("旧摸底已取消，从当前门槛继续筛选")
 	match phase:
 		"hunt":pass
 		"capture":
@@ -2164,6 +2184,7 @@ func _showcase_add(entry: Dictionary) -> void:
 	entry["queued_at"] = Time.get_unix_time_from_system()
 	showcase_queue.append(entry)
 	_sort_queue()
+	_prune_not_retained()
 	_prune_below_threshold()
 	for id in _queue_templates():
 		while _species_queue(id).size()>queue_limit():
@@ -2172,6 +2193,39 @@ func _showcase_add(entry: Dictionary) -> void:
 			_drop_queued(last)
 	if showcase_queue.has(entry):entry["queue_admission_rank"] = _species_queue(_template_of(entry)).find(entry)+1
 	_emit_status(true)
+
+## Evaluate the actual shared tidy rule before spending a capture/training run.
+## Synthetic IDs follow this species' capture order and come after owned IDs;
+## no IDs, pets, seeds or rewards are allocated by the preview.
+func _prune_not_retained() -> void:
+	var rule: Dictionary = shared_keep_rule()
+	if flow_capture_only or not bool(rule.get("auto",false)) or not bool(AutomationSettings.effective(backend.session.automation_settings()).hunt.preview_keep) or showcase_queue.is_empty():return
+	var profile: Dictionary = backend.session.snapshot()
+	var protected := KeepRule.always_kept(profile)
+	protected.merge(capture_helpers(),false)
+	var rejected: Array = []
+	for template in _queue_templates():
+		var pets: Array = KeepRule.species_pets(profile,int(template)).duplicate()
+		for pet in pets:
+			if GameSession.capture_only_protected(pet):protected[str(pet.pet_id)] = "只抓不练"
+		var serial := int(profile.get("next_pet_id",1))
+		if not showcase_current.is_empty() and _template_of(showcase_current)==int(template) and not pets.any(func(pet):return same_capture(pet,showcase_current.actor)):
+			var current: Dictionary = showcase_current.prediction.duplicate()
+			current["level"] = 120;current["pet_id"] = "pet-%d" % serial
+			pets.append(current);serial += 1
+		var pending := {}
+		for entry in _species_queue(int(template)):
+			var projected: Dictionary = entry.prediction.duplicate()
+			projected["level"] = 120;projected["pet_id"] = "pet-%d" % serial
+			pets.append(projected);pending[projected.pet_id] = entry;serial += 1
+		var verdict := KeepRule.evaluate(pets,rule,protected)
+		for id in verdict.release:
+			if not pending.has(id):continue
+			var entry: Dictionary = pending[id]
+			var detail: Dictionary = verdict.why.get(id,{})
+			_log_uncaught(entry,"预计不会被保留","预计不会被保留："+str(detail.get("reason","按共享保留规则淘汰")),[])
+			_count_queue_drop(entry);rejected.append(entry)
+	for entry in rejected:showcase_queue.erase(entry)
 
 static func _template_of(entry: Dictionary) -> int:
 	return int(entry.get("actor",{}).get("template_id",-1))
@@ -2371,6 +2425,8 @@ func _showcase_step() -> void:
 ## the same troop, and opens its capture battle, presented like any capture.
 func _showcase_capture() -> void:
 	refresh_maxima()
+	_prune_not_retained()
+	if showcase_queue.is_empty():return
 	showcase_current = _take_queued()
 	var entry := showcase_current
 	var actor: Dictionary = entry.actor
@@ -2417,16 +2473,16 @@ func _showcase_capture() -> void:
 	for pet in backend.session.snapshot().pets+backend.session.snapshot().get("pet_storage",[]):flow_known_ids[str(pet.pet_id)] = true
 	flow_matched_index = int(entry.slot)
 	flow_matched_actor = actor.duplicate(true)
-	compact_active = false
-	showcase_show_battle = true
+	compact_active = not flow_show_battles
+	showcase_show_battle = flow_show_battles
 	backend.open_battle(config)
 	flow_capture_battle_id = str(backend.battle.snapshot().get("battle_id",""))
 	flow_phase = "capture"
-	start_capture_battle(flow_matched_index,true)
+	start_capture_battle(flow_matched_index,true,{"compact":not flow_show_battles})
 	if not running:stop_cycle("无法开始自动捕捉，请手动处理当前战斗。");return
 	_showcase_line("capture","开始捕获：%s · 第%d组" % [str(actor.get("name","")),int(entry.index)+1])
 	# Devices clear the stage for the battle (the hunt window folds away).
-	_emit_event({"kind":"flow_reveal"})
+	if flow_show_battles:_emit_event({"kind":"flow_reveal"})
 
 ## After the capture battle: the same checks as the full-speed cycle, then
 ## 自动练级 to Lv.120.
@@ -2476,14 +2532,16 @@ func _complete_capture_only() -> void:
 ## 自动练级 for the caught pet uses the player's training.xp and 战斗速度,
 ## stopping between battles when Lv.120 is reached.
 func _showcase_train() -> void:
+	if not flow_battle_training:
+		_level_to_120();return
 	if _flow_pet().is_empty():stop_cycle("目标宠物不在随身队伍");return
 	# Set before the first battle opens: with a high 经验倍率 that battle may
 	# be the only one, and it must be shown, not resolved compactly.
 	# A Lv1 pet is easily hurt: no HP stop line (carried pets are healed
 	# between battles; a defeat is fought again, see _showcase_step).
 	backend.session.clone_best_others = true
-	showcase_show_battle = true
-	if not start_pet_training(flow_pet_id,120,{},{"xp":int(profile_settings().xp),"compact":false,"hp":-1,"limit":1000000}):
+	showcase_show_battle = flow_show_battles
+	if not start_pet_training(flow_pet_id,120,{},{"xp":int(profile_settings().xp),"compact":not flow_show_battles,"hp":-1,"limit":1000000}):
 		showcase_show_battle = false
 		backend.session.clone_best_others = false
 		stop_cycle("无法开始练级："+stop_reason);return
@@ -2555,7 +2613,7 @@ func status() -> Dictionary:
 		"flow":{"phase":flow_phase,"reason":flow_reason,"pet_id":flow_pet_id,"stored_count":flow_stored_count,"last_result":flow_last_result,
 			"last_stored_id":flow_last_stored_id,"last_stored_total":flow_last_stored_total,"map_id":flow_map,"cell":[flow_cell.x,flow_cell.y],
 			"kept_count":flow_kept_count,"collected_count":flow_collected_count,"pruned_count":flow_pruned_count,"released_count":flow_released_count,"held_count":flow_held_count,"keep_auto":bool(shared_keep_rule().get("auto",false)),"predicted_rejects":flow_predicted_rejects,
-			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"capture_only":flow_capture_only,"showcase":flow_showcase,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
+			"best_predicted":flow_best_predicted.duplicate(),"skipped_count":flow_skipped_count,"skip_note":flow_skip_note,"capture_only":flow_capture_only,"showcase":flow_showcase,"background_search":flow_background_search,"show_battles":flow_show_battles,"battle_training":flow_battle_training,"queue":_queue_summary(),"queue_size":showcase_queue.size(),"current_roll":int(showcase_current.get("index",-1))+1 if not showcase_current.is_empty() else 0,
 			"survey":survey_status(),"thresholds":thresholds_text(),
 			"log":showcase_log.duplicate(true),"queue_dropped":showcase_dropped_count,"queue_dropped_species":showcase_dropped_species.duplicate(),"queue_dropped_names":_queue_drop_names(),"stop_pending":flow_stop_pending,"queue_limit":queue_limit(),"show_battle":showcase_show_battle and backend.battle_open,"collect_target":collect_target_text(),"elapsed":elapsed_seconds(),"timer_running":timer_running},
 	}

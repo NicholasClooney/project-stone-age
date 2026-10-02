@@ -221,24 +221,11 @@ func survey_clock() -> void:
 	automation.fast_share.beat(8)
 	check(automation.fast_hunters()==2,"two hunts share the computer")
 	automation.survey = {"templates":[92],"started":0,"clock":0,"credit":0.0,"candidates":{},"runs":[]}
-	check(is_equal_approx(automation.survey_remaining(),120.0) and is_equal_approx(automation.survey_wall_remaining(),240.0),"a survey needs 120 full-CPU seconds: 4 minutes with two sharing")
-	msec[0] = 60000
-	check(is_equal_approx(automation.survey_remaining(),90.0) and is_equal_approx(float(automation.survey_status().remaining),180.0) and int(automation.survey_status().hunters)==2,"after a minute at half the CPU, 90 s of work (3 minutes) are left")
-	automation._survey_advance()
-	other.leave()
-	now += 1.0
-	automation.fast_share.beat(8)
-	msec[0] = 90000
-	check(is_equal_approx(automation.survey_remaining(),60.0) and is_equal_approx(automation.survey_wall_remaining(),60.0),"alone again, each second counts in full: 60 s left")
 	automation._survey_process()
-	check(not automation.survey.is_empty(),"the survey goes on")
-	msec[0] = 150000
+	check(automation.survey.is_empty() and not automation.surveying(92),"legacy survey state clears without delaying either profile")
+	other.leave();now+=1.0;automation.fast_share.beat(8)
+	check(automation.fast_hunters()==1,"remaining profile keeps the full CPU allocation")
 	automation._survey_process()
-	check(automation.survey.is_empty() and str(automation.survey_last.get("text","")).begins_with("摸底结束"),"and ends after 120 full-CPU seconds, 2.5 minutes of wall time here")
-	automation.fast_share.leave()
-	automation.fast_share = null
-	automation.survey = {"templates":[92],"started":0,"clock":0,"credit":0.0,"candidates":{},"runs":[]}
-	msec[0] = 0
-	check(automation.fast_hunters()==1 and is_equal_approx(automation.survey_wall_remaining(),120.0),"without the share (tests, a lone backend) it is the plain 2 minutes")
-	automation.survey = {}
+	check(automation.survey.is_empty(),"a missing species never starts a new timed survey")
+	automation.fast_share.leave();automation.fast_share=null
 	backend.queue_free()

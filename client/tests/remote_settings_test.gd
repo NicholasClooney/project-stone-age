@@ -139,7 +139,8 @@ func run() -> void:
 	await process_frame
 	var bounded:ScrollContainer=hunt_b.stat_page.get_node("StatSettingsScroll")
 	check(bounded.get_global_rect().end.y<=hunt_b.status.get_global_rect().position.y,"stat settings viewport ends above status")
-	check(not hunt_b.rule_tiers.get_global_rect().intersects(hunt_b.rule_per_tier.get_global_rect()) and not hunt_b.rule_champions.get_global_rect().intersects(hunt_b.rule_auto.get_global_rect()),"keep control rows have separate rectangles")
+	hunt_b.show_page("keep");await process_frame
+	check(not hunt_b.rule_tiers.get_global_rect().intersects(hunt_b.rule_per_tier.get_global_rect()) and hunt_b.runtime_page.is_ancestor_of(hunt_b.rule_auto),"keep rows are separate and automatic tidy has its own runtime page")
 	var outer:ScrollContainer=hunt_b.window_scroll
 	check(outer.get_rect().size.x<=b.get_viewport_rect().size.x and outer.get_rect().size.y<=b.get_viewport_rect().size.y,"hunt scroll viewport fits screen")
 

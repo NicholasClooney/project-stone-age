@@ -20,7 +20,7 @@ func run()->void:
 	check(hunt.panel.get_global_rect().end.x<=1280 and hunt.panel.get_global_rect().end.y<=800,"tabbed hunt panel fits viewport")
 	for control in [helper.capture_hp,helper.capture_pet,helper.capture_pet_max_level,hunt.train_after_capture]:
 		check(hunt.panel.get_global_rect().encloses(control.get_global_rect()),"capture control fits inside hunt panel")
-	check(hunt.status.text.contains("自动找宠") and not hunt.status.text.contains("手动捕捉"),"fresh checked mode has accurate automatic workflow ready hint")
+	check(hunt.status.text.contains("排队轮流捕获") and hunt.status.text.contains("实际战斗培养至120级") and not hunt.status.text.contains("手动捕捉"),"fresh checked mode has accurate automatic workflow ready hint")
 	game.encounter_rng.seed=778899;hunt.start_button.pressed.emit();hunt.set_process(true);await process_frame;await process_frame;hunt.set_process(false)
 	check(hunt.running and flow.phase=="hunt" and game.paused_input,"fresh checked default starts actual processing without toggling mode")
 	flow.stop_cycle()

@@ -1717,7 +1717,7 @@ func pet_records_panel()->void:
 		for value in offsets:total+=int(value)
 		line.add_child(PetTable.grade({} if offsets.size()!=4 else {"offsets":offsets,"total":total,"full":bool(item.get("full",false))}))
 		if caught:
-			var why:=Button.new();why.name="CaptureReason_%d"%i;why.text=capture_reason_summary(item);why.alignment=HORIZONTAL_ALIGNMENT_LEFT;why.clip_text=true;why.tooltip_text=capture_reason_details(item);stack.add_child(why)
+			var why:=Button.new();why.name="CaptureReason_%d"%i;why.text=capture_reason_summary(item);why.alignment=HORIZONTAL_ALIGNMENT_LEFT;why.clip_text=true;why.tooltip_text="点击查看捕获原因、同种排名和排队详情。";stack.add_child(why)
 			why.pressed.connect(func():show_capture_reason_details(item))
 			var released:Dictionary=item.get("released",{})
 			var state:=PetTable.badge("已放生",PetTable.BAD) if not released.is_empty() else PetTable.badge("在",PetTable.GOOD)
@@ -1890,7 +1890,7 @@ static func caught_description(item:Dictionary)->String:
 	if not judged.is_empty():text+="\n120级 血%d 攻%d 防%d 敏%d · 三围合%d"%[int(judged.max_hp),int(judged.attack),int(judged.defence),int(judged.speed),int(judged.attack)+int(judged.defence)+int(judged.speed)]
 	var released:Dictionary=item.get("released",{})
 	if not released.is_empty():text+="\n已放生：%s"%released.get("reason","")
-	text+="\n"+capture_reason_details(item)
+	text+="\n"+capture_reason_summary(item)
 	return text
 
 static func release_log_description(item:Dictionary)->String:

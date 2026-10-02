@@ -29,7 +29,7 @@ func new_backend():
 func hunt_until_stopped(backend, seconds: float = 60.0) -> Dictionary:
 	var deadline := Time.get_ticks_msec()+int(seconds*1000)
 	var saw_fast := false
-	while backend.automation.hunt_running and Time.get_ticks_msec() < deadline:
+	while backend.automation.hunt_running and not (backend.automation.flow_active() and backend.automation.flow_phase!="hunt") and Time.get_ticks_msec() < deadline:
 		backend._process(0.016)
 		saw_fast = saw_fast or backend.automation.fast_hunt.running()
 		await process_frame

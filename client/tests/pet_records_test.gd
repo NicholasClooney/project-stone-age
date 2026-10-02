@@ -46,7 +46,7 @@ func cycle_capture(game, seed_value: int) -> bool:
 	# compare). The newborn's species has no 属性条件, so no 摸底 comes first.
 	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.for_troop(fixture.troop).merged({"hunt":{"showcase":false,"stop_after":1}})})
 	if not flow.start_cycle():return false
-	hunt.hunt_catalog = fixture;hunt.scan_once()
+	hunt.hunt_catalog = fixture;hunt.scan_once();game.pet_workflow.advance()
 	for i in range(100):
 		game.battle_view._process(0.2);helper.advance();flow.advance()
 		if flow.phase!="capture":break
@@ -84,7 +84,9 @@ func real_paths() -> void:
 	game.pet_workflow.stop_cycle();game.pet_workflow.advance()
 	# The hunt's automatic capture battle, without the find-pet cycle.
 	var hunt = game.pet_hunt_menu
-	hunt.open_menu();hunt.auto_capture.button_pressed = true;hunt.train_after_capture.button_pressed = false
+	if not hunt.visible:hunt.open_menu()
+	check(hunt.visible,"raw capture settings can be opened after queued workflow")
+	hunt.auto_capture.button_pressed = true;hunt.train_after_capture.button_pressed = false
 	hunt.start_hunt()
 	hunt.hunt_catalog = newborn(game,999);hunt.scan_once()
 	var before: int = captures(game).size()

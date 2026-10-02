@@ -40,6 +40,9 @@ func run():
   check(int(field.value) in [5,20,50],"old/new character gets safe fallback defaults")
  await click(fields[0],Vector2(fields[0].size.x-8,fields[0].size.y*0.25))
  check(await Wait.until(self,func():return int(backend.session.automation_settings().get("capture",{}).get("fallback_attempts",0))==6),"a real spinner click writes the character setting over WebSocket")
+ menu.show_page("runtime");await process_frame
+ menu.runtime_scroll.ensure_control_visible(menu.mixed_if_stats);await process_frame
+ check(await Wait.until(self,func():return menu.runtime_scroll.get_global_rect().encloses(menu.mixed_if_stats.get_global_rect())),"mixed exception is fully reachable in runtime scroll")
  await click(menu.mixed_if_stats)
  check(await Wait.until(self,func():return bool(backend.session.automation_settings().get("hunt",{}).get("mixed_if_stats",false))),"real click enables mixed encounter capture remotely")
  menu.close_menu();menu.open_menu();menu.show_capture_settings(true)

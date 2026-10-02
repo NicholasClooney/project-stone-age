@@ -1,121 +1,53 @@
 extends SceneTree
-var failures := 0
-var visual := false
-var menu
+## Native screenshots exercise the same production scene as the headless geometry checks.
+const Wait=preload("res://tests/support/wait.gd")
+var failures:=0
+var visual:=false
 func _initialize()->void:call_deferred("run")
-func check(ok:bool, message:String)->void:
-	print(("PASS: " if ok else "FAIL: ")+message)
+func check(ok:bool,note:String)->void:
+	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures+=1
-func settle()->void:
-	await process_frame
-	await process_frame
 func shot(name:String)->void:
-	await settle()
-	if visual:
-		await RenderingServer.frame_post_draw
-		root.get_texture().get_image().save_png("/private/tmp/hunt-layout-shots/"+name+".png")
-func click(control:Control)->void:
-	var position:=control.get_global_rect().get_center()
-	var motion:=InputEventMouseMotion.new();motion.position=position;motion.global_position=position;root.push_input(motion,true);await process_frame
-	for pressed in [true,false]:
-		var event:=InputEventMouseButton.new()
-		event.position=position;event.global_position=position;event.button_index=MOUSE_BUTTON_LEFT;event.pressed=pressed
-		root.push_input(event,true)
-		await process_frame
-func choose_next(control:OptionButton)->void:
-	var previous:=control.selected
-	var press:=InputEventMouseButton.new();press.position=control.get_global_rect().get_center();press.global_position=press.position;press.button_index=MOUSE_BUTTON_LEFT;press.pressed=true;root.push_input(press,true);await process_frame
-	var popup:=control.get_popup()
-	check(popup.visible,"real click opens popup: "+control.name)
-	var next:=0 if previous!=0 else mini(1,control.item_count-1)
-	popup.set_focused_item(next)
-	for code in [KEY_ENTER]:
-		for pressed in [true,false]:
-			var event:=InputEventKey.new();event.keycode=code;event.pressed=pressed;root.push_input(event,true);await process_frame
-	check(control.selected==next,"real popup selection: "+control.name)
-	popup.hide()
-	press.pressed=false;root.push_input(press,true);await process_frame
-func geometry()->void:
-	var visible_controls:Array=[menu.thread_count]
-	for control in menu.controls:
-		if control.is_visible_in_tree() and control not in visible_controls:visible_controls.append(control)
-	for i in range(visible_controls.size()):
-		var control:Control=visible_controls[i]
-		check(not control.get_global_rect().intersects(menu.status.get_global_rect()),"separate status: "+control.name)
-		for j in range(i):
-			check(not control.get_global_rect().intersects(visible_controls[j].get_global_rect()),"separate controls: %s / %s"%[control.name,visible_controls[j].name])
-func reach_controls()->void:
-	for control in menu.controls:
-		if control.is_visible_in_tree():
-			menu.window_scroll.ensure_control_visible(control);await settle()
-			check(menu.window_scroll.get_global_rect().encloses(control.get_global_rect()),"phone can fully reach: "+control.name)
+	if not visual:return
+	await process_frame;await RenderingServer.frame_post_draw
+	root.get_texture().get_image().save_png("/private/tmp/hunt-runtime-shots/"+name+".png")
 func run()->void:
-	root.gui_embed_subwindows=true
+	root.gui_embed_subwindows=true;root.content_scale_size=Vector2i.ZERO
 	visual="--visual-review" in OS.get_cmdline_user_args() and DisplayServer.get_name()!="headless"
-	var game=load("res://scenes/main.tscn").instantiate()
-	game.profile_persistence=false
-	root.add_child(game)
-	await settle()
-	game.switch_area(true,Vector2i(45,45))
-	menu=game.pet_hunt_menu;menu.open_menu();menu.show_capture_settings(true)
-	await settle()
-	check(not menu.status.get_global_rect().intersects(menu.capture_only.get_global_rect()),"capture-only has a separate status region")
-	check(not menu.train_after_capture.get_global_rect().intersects(menu.capture_only.get_global_rect()),"capture modes have separate rows")
-	geometry()
-	await shot("pc-capture-normal")
-	await click(menu.capture_only)
-	check(menu.capture_only.button_pressed,"real click toggles capture-only")
-	await shot("pc-capture-only")
-	# The two modes stay clickable and turn each other off.
-	check(not menu.train_after_capture.disabled,"直接升至120级 stays clickable while 只抓不练 is on")
-	await click(menu.train_after_capture)
-	check(menu.train_after_capture.button_pressed and not menu.capture_only.button_pressed,"clicking 直接升至120级 turns 只抓不练 off")
-	await click(menu.capture_only)
-	check(menu.capture_only.button_pressed and not menu.train_after_capture.button_pressed,"clicking 只抓不练 turns 直接升至120级 off")
-	await click(menu.capture_only)
-	await click(menu.showcase)
-	await shot("pc-capture-background")
-	menu.show_stat_settings();await settle()
-	var scroll:ScrollContainer=menu.stat_page.get_node("StatSettingsScroll")
-	var content:Control=scroll.get_node("StatSettingsContent")
-	for child in content.get_children():
-		if child is Control and child.visible:
-			check(child.position.x>=0 and child.position.y>=0,"nonnegative stat content: "+child.name)
-			check(not child.get_global_rect().intersects(menu.status.get_global_rect()),"stat stays above status: "+child.name)
-	check(scroll.get_global_rect().encloses(menu.stat_species.get_global_rect()),"species fully visible at scroll top")
-	check(game.link.request({"type":"gm_grant_pet","template":menu.stat_species.get_selected_id(),"full_grade":true}).ok,"real progression fixture grants the selected species")
-	menu.refresh_stat_thresholds(true);await settle();geometry()
-	await choose_next(menu.stat_threshold_mode);await settle();geometry()
-	await shot("pc-stat-fixed-owned")
-	await choose_next(menu.stat_threshold_mode);await settle();geometry()
-	await choose_next(menu.stat_species)
-	await choose_next(menu.stat_mode)
-	geometry()
-	await choose_next(menu.stat_threshold_mode);await settle();geometry()
-	await shot("pc-stat-fixed")
-	await choose_next(menu.stat_threshold_mode);await settle();geometry()
-	await shot("pc-stat-top")
-	scroll.scroll_vertical=10000;await shot("pc-stat-bottom")
-	root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844);menu.relayout();await settle()
-	menu.window_scroll.scroll_horizontal=0;menu.window_scroll.scroll_vertical=0
-	menu.show_capture_settings(true);await shot("phone-capture-normal")
-	await click(menu.capture_only)
-	check(menu.capture_only.button_pressed,"phone click reaches bottom capture-only")
-	await shot("phone-capture-only")
-	await reach_controls()
-	menu.window_scroll.scroll_horizontal=10000;await shot("phone-capture-right")
-	menu.window_scroll.scroll_horizontal=0;menu.show_stat_settings();scroll.scroll_vertical=0
-	await shot("phone-stat-top")
-	scroll.scroll_vertical=10000;await shot("phone-stat-bottom")
-	var wheel:=InputEventMouseButton.new();wheel.position=Vector2(200,600);wheel.button_index=MOUSE_BUTTON_WHEEL_RIGHT;wheel.pressed=true;wheel.factor=20;root.push_input(wheel,true);wheel.pressed=false;root.push_input(wheel,true);await settle()
-	check(menu.window_scroll.scroll_horizontal>0,"actual phone wheel scroll moves the window")
-	menu.window_scroll.scroll_horizontal=10000;await shot("phone-stat-right")
-	check(menu.window_scroll.get_global_rect().encloses(menu.stat_rank[2].get_global_rect()),"phone horizontal scrolling reaches complete third ranking control")
-	await choose_next(menu.stat_rank[2])
-	await reach_controls()
-	menu.window_scroll.ensure_control_visible(menu.stat_mode);await shot("phone-stat-middle")
-	menu.show_capture_settings(false);await settle();await reach_controls()
-
-	game.queue_free();await process_frame
-	print("HUNT SETTINGS LAYOUT: %d failures"%failures)
-	quit(1 if failures else 0)
+	var game=load("res://scenes/main.tscn").instantiate();game.profile_persistence=false;game.viewer_prefs_path="user://hunt-settings-layout-new.cfg";root.add_child(game)
+	await process_frame;game.switch_area(true,Vector2i(45,45))
+	var menu=game.pet_hunt_menu;menu.open_menu()
+	for size in [Vector2i(1280,720),Vector2i(390,844),Vector2i(844,390)]:
+		root.size=size;menu.relayout();await process_frame
+		for page in ["runtime","keep"]:
+			menu.show_page(page);await process_frame
+			var scroll:ScrollContainer=menu.runtime_scroll if page=="runtime" else menu.keep_scroll
+			check(scroll.size.x<=menu.window_scroll.size.x and scroll.horizontal_scroll_mode==ScrollContainer.SCROLL_MODE_DISABLED,"new page fits width without horizontal scrolling")
+			scroll.scroll_vertical=0;await process_frame
+			await shot("layout-%dx%d-%s-top"%[size.x,size.y,page])
+			var selected:Array=[menu.fast,menu.showcase,menu.show_battles,menu.train_after_capture,menu.capture_only,menu.battle_training,menu.clean_only,menu.mixed_if_stats,menu.rule_auto,menu.resume_after_restart] if page=="runtime" else [menu.queue_size,menu.rule_tiers,menu.rule_per_tier,menu.rule_champions]+menu.stat_rank+menu.rule_stats.values()
+			for control in selected:
+				scroll.ensure_control_visible(control);await process_frame
+				check(await Wait.until(self,func():return scroll.get_global_rect().encloses(control.get_global_rect())),"complete control reachable: "+str(control.name))
+				check(not control.get_global_rect().intersects(menu.status.get_global_rect()),"separate status: "+str(control.name))
+				check(control.size.y>=44,"touch target at least44px")
+			if page=="runtime":
+				scroll.ensure_control_visible(menu.capture_only);await process_frame
+				await shot("layout-%dx%d-runtime-modes"%[size.x,size.y])
+				check(not menu.capture_only.get_global_rect().intersects(menu.train_after_capture.get_global_rect()),"capture-only and cultivation rows do not overlap")
+				scroll.ensure_control_visible(menu.rule_auto);await process_frame
+				await shot("layout-%dx%d-runtime-bottom"%[size.x,size.y])
+			else:
+				scroll.scroll_vertical=10000;await shot("layout-%dx%d-keep-bottom"%[size.x,size.y])
+		root.size=Vector2i(1280,720);menu.show_page("capture");await process_frame
+		var helper=game.training_helper
+		var fields:Array=[helper.capture_hp,helper.capture_pet,helper.capture_pet_max_level,helper.capture_fallback_attempts,helper.capture_fallback_rate,helper.capture_fallback_hp]
+		for i in range(fields.size()):
+			for j in range(i):check(not fields[i].get_global_rect().intersects(fields[j].get_global_rect()),"capture tactic fields do not overlap")
+		await shot("layout-1280x720-capture")
+		menu.show_stat_settings();await process_frame
+		check(menu.stat_page.get_node("StatSettingsScroll").get_global_rect().encloses(menu.stat_species.get_global_rect()),"species control fully visible at top of stat page")
+		check(not menu.stat_page.is_ancestor_of(menu.rule_auto) and not menu.stat_page.is_ancestor_of(menu.rule_tiers),"shared keep and automatic tidy no longer squeeze species thresholds")
+		await shot("layout-1280x720-stats")
+	game.music.stop();game.effect.stop();game.queue_free();await process_frame
+	print("HUNT SETTINGS LAYOUT: %d failures"%failures);quit(1 if failures else 0)

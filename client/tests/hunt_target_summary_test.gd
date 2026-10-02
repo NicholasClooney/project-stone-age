@@ -86,7 +86,7 @@ func run()->void:
 	await process_frame
 	check(menu.target_button.text.length()>80 and menu.target_button.tooltip_text.contains(menu.target_button.text),"long summary retains full tooltip")
 	check(menu.target_button.clip_text and menu.target_button.text_overrun_behavior==TextServer.OVERRUN_TRIM_ELLIPSIS and menu.target_button.size==before,"long name stays one fixed-width ellipsis caption")
-	check(menu.panel.get_global_rect().encloses(menu.target_button.get_global_rect()) and not menu.target_button.get_global_rect().intersects(menu.level_one.get_global_rect()) and not menu.target_button.get_global_rect().intersects(menu.auto_capture.get_global_rect()),"actual canvas geometry contains target and clears neighboring controls")
+	check(menu.panel.get_global_rect().encloses(menu.target_button.get_global_rect()) and not menu.target_button.get_global_rect().intersects(menu.level_one.get_global_rect()) and not menu.auto_capture.is_visible_in_tree(),"actual canvas geometry contains target and clears neighboring controls")
 	for index in range(30):popup.add_check_item("用于验证长名单滚动的中文目标品种名称".repeat(10),1000+index)
 	await click(menu.target_button.get_global_transform_with_canvas()*(menu.target_button.size/2))
 	check(await Wait.until(self,func():return popup.visible),"desktop opens long checklist through actual pointer")

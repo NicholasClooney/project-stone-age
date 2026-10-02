@@ -225,7 +225,7 @@ func find_pet(game) -> void:
 	hunt.minimize()
 	check(hunt.minimized and hunt.chip.visible and hunt.chip.title.text.contains("找宠流程"),"cycle minimizes with its own progress heading")
 	game.show_adventure_menu("pets")
-	hunt.hunt_catalog=fixture;hunt.scan_once()
+	hunt.hunt_catalog=fixture;hunt.scan_once();flow.advance()
 	check(flow.phase=="capture" and hunt.minimized and not helper.visible and game.adventure_menu.visible,"capture phase stays minimized behind the open menu")
 	for i in range(100):
 		game.battle_view._process(0.2);helper.advance();flow.advance()

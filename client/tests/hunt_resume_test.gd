@@ -215,18 +215,20 @@ func full_speed_cycle() -> void:
 	prepare(backend,{"showcase":false})
 	backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	var automation = backend.automation
-	check(automation.flow_active() and not automation.flow_showcase,"a full-speed find-pet cycle runs")
-	scan_until(automation,func():return automation.flow_phase=="capture")
-	check(automation.flow_phase=="capture" and backend.battle_open and not automation.flow_matched_roll.is_empty(),"a hit opens its capture battle and keeps its roll")
+	check(automation.flow_active() and automation.flow_showcase and not automation.flow_show_battles and not automation.flow_battle_training,"a full-speed find-pet cycle runs")
+	scan_until(automation,func():return not automation.showcase_queue.is_empty())
+	automation.flow_step()
+	check(automation.flow_phase=="capture" and backend.battle_open and not automation.showcase_current.is_empty(),"a hit opens its capture battle and keeps its roll")
 	var slot: int = automation.flow_matched_index
 	var growth: int = int(backend.battle.snapshot().enemies[slot].growth_seed)
 	var stored: int = automation.flow_stored_count
 	var fresh = restart(backend)
 	automation = fresh.automation
 	automation.try_resume();automation.backend._record_releases()
+	automation.flow_step()
 	check(automation.flow_phase=="capture" and fresh.battle_open and automation.running,"after the restart the same capture battle opens again")
 	check(automation.flow_matched_index==slot and int(fresh.battle.snapshot().enemies[slot].growth_seed)==growth,"rolled again from its seed: the same pet")
-	check(str(last_stop().get("reason","")).contains("按原种子重新开战"),"停止记录 says so")
+	check(str(last_stop().get("reason","")).contains("按原种子复核后重新开战"),"停止记录 says so")
 	check(drive(fresh,func():return automation.flow_stored_count>stored or automation.flow_phase in ["compare","restart","hunt"] and automation.flow_pet_id.is_empty() or not automation.flow_active()),"the cycle carries on with the pet")
 	fresh.queue_free()
 	await process_frame

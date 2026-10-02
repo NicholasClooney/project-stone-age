@@ -61,7 +61,7 @@ func run() -> void:
 	var helper = game.training_helper;helper.set_process(false)
 	flow.timer_clock = func():return clock
 	check(bool(game.automation_settings().hunt.showcase) and int(game.automation_settings().hunt.queue)==10,"%s is on by default with a queue of 10" % AutomationSettings.SHOWCASE_NAME)
-	check(hunt.showcase.text==AutomationSettings.SHOWCASE_NAME and hunt.capture_page.is_ancestor_of(hunt.showcase) and hunt.capture_page.is_ancestor_of(hunt.showcase_xp) and hunt.capture_page.is_ancestor_of(hunt.showcase_speed) and hunt.capture_page.is_ancestor_of(hunt.queue_size),"the switch, 排队上限, 经验倍率 and 战斗速度 are on 抓宠设置")
+	check(hunt.showcase.text==AutomationSettings.SHOWCASE_NAME and hunt.runtime_page.is_ancestor_of(hunt.showcase) and hunt.runtime_page.is_ancestor_of(hunt.showcase_xp) and hunt.runtime_page.is_ancestor_of(hunt.showcase_speed) and hunt.keep_page.is_ancestor_of(hunt.queue_size),"independent runtime controls and the persistent queue have their own pages")
 
 	# 经验倍率 and 战斗速度 are 自动练级's own settings, not copies.
 	hunt.open_menu()
@@ -90,7 +90,7 @@ func run() -> void:
 	var target := int(fixture.troop.enemies[0].template_id)
 	# Qualifiers of this species are stored and the cycle goes on (stop_after 0);
 	# auto tidy with a rule that keeps nothing releases each one after Lv120.
-	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"stop_after":0,"keep_rule":{"tiers":0,"champions":0,"auto":true}},"stat_filters":{str(target):{"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":1}}}}}})
+	game.link.request({"type":"set_automation_settings","settings":{"hunt":{"preview_keep":false,"stop_after":0,"keep_rule":{"tiers":0,"champions":0,"auto":true}},"stat_filters":{str(target):{"threshold_mode":"absolute","conditions":{"sum":{"enabled":true,"value":1}}}}}})
 	hunt.apply_preset(0)
 	# The radio plays before the run; the watched battles set it aside.
 	var radio = game.radio
@@ -285,13 +285,15 @@ func run() -> void:
 
 	# Off: a hit goes straight into the compact capture, as before.
 	hunt.showcase.button_pressed = false
+	hunt.show_battles.button_pressed = false
+	hunt.battle_training.button_pressed = false
 	game.flush_automation_settings()
 	hunt.close_menu()
 	game.session.gm_heal()
 	check(flow.start_cycle(),"a full-speed cycle starts")
-	check(not bool(game.state.automation.flow.showcase),"with %s off" % AutomationSettings.SHOWCASE_NAME)
-	hunt.hunt_catalog = fixture;hunt.scan_once()
-	check(flow.phase=="capture" and bool(game.state.automation.compact) and not automation.hunt_running,"a hit goes straight to the compact capture and the search stops")
+	check(bool(game.state.automation.flow.showcase) and not bool(game.state.automation.flow.background_search),"queue remains active with background searching off")
+	hunt.hunt_catalog = fixture;hunt.scan_once();flow.advance()
+	check(flow.phase=="capture" and bool(game.state.automation.compact) and automation.hunt_running,"a queued hit enters compact capture; its scan cursor is retained")
 	flow.stop_cycle();flow.advance()
 
 	# Battle music only while a pet is caught or trained on screen, or the next

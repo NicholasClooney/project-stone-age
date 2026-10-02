@@ -30,20 +30,22 @@ func run():
 	game.random_encounters=false
 	check(await Wait.until(self,func():return not game.paused_input and not game.area_transition_busy),"remote UI ready")
 	var menu=game.pet_hunt_menu;menu.open_menu()
-	await click(menu.panel.get_node("HuntCaptureTab"))
-	check(menu.capture_page.visible and menu.capture_only.visible,"real capture tab exposes capture-only switch")
-	check(menu.panel.get_global_rect().encloses(menu.capture_only.get_global_rect()) and not menu.capture_only.get_global_rect().intersects(menu.train_after_capture.get_global_rect()),"portrait switch fits with no training control overlap")
+	await click(menu.panel.get_node("HuntRuntimeTab"))
+	check(menu.runtime_page.visible and menu.capture_only.visible,"real capture tab exposes capture-only switch")
+	check(menu.runtime_page.is_ancestor_of(menu.capture_only) and not menu.capture_only.get_global_rect().intersects(menu.train_after_capture.get_global_rect()),"portrait switch fits with no training control overlap")
 	check(menu.capture_only.tooltip_text.contains("非原版") or menu.capture_only.text.contains("非原版"),"non-original convenience is explicitly labelled")
+	menu.runtime_scroll.ensure_control_visible(menu.capture_only);await process_frame
 	await click(menu.capture_only)
 	check(await Wait.until(self,func():return bool(backend.session.automation_settings().get("hunt",{}).get("capture_only",false))) and await Wait.settle(self,game),"actual remote checkbox click writes strict character preference")
-	check(menu.level_one.button_pressed and menu.level_one.disabled and menu.showcase.button_pressed and menu.showcase.disabled and not menu.train_after_capture.button_pressed and not menu.train_after_capture.disabled,"remote UI keeps Lv1/showcase fixed; 直接升至120级 is off but clickable")
+	check(menu.level_one.button_pressed and menu.level_one.disabled and menu.showcase.button_pressed and not menu.showcase.disabled and not menu.train_after_capture.button_pressed and not menu.train_after_capture.disabled,"remote UI keeps Lv1/showcase fixed; 直接升至120级 is off but clickable")
 	check(not menu.stop_after.editable and menu.start_button.text=="开始只抓不练" and menu.ready_description().contains("忽略"),"remote UI explains carried capture limits")
 	for bad in ["true",1]:
 		var reply:Dictionary={}
 		game.link.request({"type":"set_automation_settings","settings":{"hunt":{"capture_only":bad}}},func(result):reply.merge(result,true))
 		check(await Wait.until(self,func():return reply.has("ok")) and not reply.ok,"WebSocket rejects non-boolean capture_only")
-	menu.close_menu();menu.open_menu();menu.show_capture_settings(true)
+	menu.close_menu();menu.open_menu();menu.show_page("runtime")
 	check(menu.capture_only.button_pressed and not menu.train_after_capture.button_pressed,"saved mode survives panel reopen")
+	menu.runtime_scroll.ensure_control_visible(menu.capture_only);await process_frame
 	await click(menu.capture_only)
 	check(await Wait.until(self,func():return not Settings.effective(backend.session.automation_settings()).hunt.capture_only) and await Wait.settle(self,game),"real second click disables capture-only")
 	check(menu.train_after_capture.button_pressed and not menu.train_after_capture.disabled and not menu.level_one.disabled,"prior training preference returns without ambiguous mode")

@@ -60,7 +60,7 @@ func set_music(stream: AudioStream) -> void:
 ## it only searches, the radio or the map music plays.
 func showcase_music_active() -> bool:
 	var flow: Dictionary = game.state.automation.get("flow",{})
-	if not bool(flow.get("showcase",false)):return false
+	if not bool(flow.get("show_battles",flow.get("showcase",false))):return false
 	var phase := str(flow.get("phase","idle"))
 	return phase in ["capture","train"] or (phase in ["hunt","restart"] and int(flow.get("queue_size",0))>0)
 

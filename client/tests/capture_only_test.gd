@@ -47,7 +47,7 @@ func run() -> void:
 		check(not settings(backend,{"hunt":{"capture_only":wrong}}).ok,"capture_only rejects non-boolean %s" % str(wrong))
 	check(settings(backend,{"hunt":{"capture_only":true,"level_one":false,"train_after_capture":true,"showcase":false,"auto_capture":false,"total":-8,"offsets":[-2,-2,-2,-2],"fast":false,"queue":3,"stop_after":1}}).ok,"character capture-only preference saves")
 	var effective: Dictionary = Settings.effective(backend.session.automation_settings()).hunt
-	check(effective.level_one and effective.auto_capture and effective.showcase and not effective.train_after_capture,"server normalizes conflicting preferences to Lv1 capture-only queue")
+	check(effective.level_one and effective.auto_capture and not effective.background_search and not effective.train_after_capture,"server normalizes conflicting preferences to Lv1 capture-only queue")
 	while backend.session.snapshot().pets.size()<backend.session.PET_CAPACITY-1:
 		check(backend.handle({"type":"gm_grant_pet","template":templates[0],"full_grade":false}).ok,"fill carried roster with authority-issued pets")
 	check(backend.handle({"type":"gm_grant_pet","template":templates[0],"full_grade":false}).ok and backend.handle({"type":"gm_grant_pet","template":templates[0],"full_grade":false}).ok and backend.session.store_pet(29),"real authority creates warehouse pets while keeping 29 carried")

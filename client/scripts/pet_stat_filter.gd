@@ -82,9 +82,9 @@ static func resolve(settings: Dictionary, best: Dictionary) -> Dictionary:
 			continue
 		condition.erase("value")
 		condition.erase("strict")
-		if best.has(metric):
-			condition["value"] = int(best[metric]) - minus
-			condition["strict"] = false
+		# Without a baseline admit the first candidate; absolute gates are unchanged.
+		condition["value"] = int(best[metric]) - minus if best.has(metric) else 0
+		condition["strict"] = false
 	return result
 
 ## True when an enabled relative condition has no maximum to count from (the
@@ -110,7 +110,7 @@ static func absolute_values(settings: Dictionary, best: Dictionary, own: Array =
 	return result
 
 ## One condition as the player reads it. Relative: 「三围合 ≥ 最高 627 − 1 =
-## 626」, or 「三围合 ≥ 最高 − 1（还没有同种，先摸底）」 without a maximum.
+## 626」, or 「三围合 ≥ 最高 − 1（无基线，首个合格候选建立最高）」 without a maximum.
 ## Absolute (`fixed`): 「三围合 ≥ 624（现有最高 627）」, or 「三围合 ≥ 624」.
 static func describe_condition(metric: String, condition: Dictionary, best: Dictionary, fixed: bool = false) -> String:
 	var name: String = METRIC_NAMES.get(metric, metric)
@@ -121,7 +121,7 @@ static func describe_condition(metric: String, condition: Dictionary, best: Dict
 	# A negative x asks for more than the best: 最高 + n.
 	var minus := int(condition.get("minus", 0))
 	var offset := ("− %d" % minus) if minus >= 0 else ("+ %d" % -minus)
-	if not best.has(metric):return "%s ≥ 最高 %s（还没有同种，先摸底）" % [name, offset]
+	if not best.has(metric):return "%s ≥ 最高 %s（无基线，首个合格候选建立最高）" % [name, offset]
 	return "%s ≥ 最高 %d %s = %d" % [name, int(best[metric]), offset, int(best[metric]) - minus]
 
 ## Every enabled condition, joined by 或 / 且 as the mode says; "" when none.

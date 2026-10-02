@@ -38,7 +38,7 @@ func run() -> void:
 	# default 属性条件 turned off, so no 摸底 comes first.
 	game.link.request({"type":"set_automation_settings","settings":ConditionsOff.for_troop(fixture.troop)})
 	check(flow.start_cycle(),"new cycle uses current hunt criteria")
-	hunt.hunt_catalog=fixture;hunt.scan_once()
+	hunt.hunt_catalog=fixture;hunt.scan_once();flow.advance()
 	check(flow.phase=="capture" and helper.capture_target==0,"hunt hands exact matched target to capture phase")
 	for i in range(100):
 		game.battle_view._process(0.2);helper.advance();flow.advance()
@@ -64,7 +64,7 @@ func run() -> void:
 	changed.growth_seed=int(changed.growth_seed)+1
 	check(not flow.same_capture(changed,fixture.troop.enemies[0]),"capture identity guard rejects different growth seed")
 	check(flow.start_cycle(),"cycle can restart after explicit local adjustment")
-	hunt.hunt_catalog=fixture;hunt.scan_once()
+	hunt.hunt_catalog=fixture;hunt.scan_once();flow.advance()
 	var battle_id: String=game.battle_session.snapshot().battle_id
 	helper.stop_training("已手动停止");flow.advance()
 	check(flow.phase=="paused" and game.battle_session.snapshot().active and game.battle_session.snapshot().battle_id==battle_id,"capture stop preserves same live battle for takeover and never starts training")

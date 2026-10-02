@@ -51,7 +51,7 @@ func on_status(automation: Dictionary) -> void:
 		for child in lines.get_children():
 			lines.remove_child(child)
 			child.queue_free()
-		var title: Label = world.text(AutomationSettings.SHOWCASE_NAME, 12)
+		var title: Label = world.text("抓宠进度", 12)
 		title.add_theme_color_override("font_color", Color("b6aa8a"))
 		title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 		lines.add_child(title)
