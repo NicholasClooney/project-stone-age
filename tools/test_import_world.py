@@ -11,6 +11,47 @@ from import_world import read_map, read_portals, convert, safe_spawn, reachable_
 
 
 class WorldImportTests(unittest.TestCase):
+    def test_module_maps_export_encounter_kind_without_changing_safe_interiors(self):
+        # Exercise run() and the serialized manifest, not just its registry set.
+        import contextlib
+        import hashlib
+        import io
+        from unittest.mock import patch
+        import import_world as importer
+        import quest_import_common
+        with tempfile.TemporaryDirectory() as directory, contextlib.ExitStack() as stack:
+            root=Path(directory); maps=root/'gmsv/data/map'; maps.mkdir(parents=True)
+            output=root/'output'; output.mkdir()
+            (output/'samgir.json').write_text(json.dumps(dict(images={},characters={})))
+            module_ids={800,802,809,820,840}
+            selected=module_ids | importer.TOWNS | {100,200,20508,900}
+            sources={}
+            for ident in selected:
+                raw=bytearray(44+3*3*4); raw[:6]=b'LS2MAP'
+                struct.pack_into('>H',raw,6,ident)
+                struct.pack_into('>HH',raw,40,3,3)
+                raw[44:62]=struct.pack('>H',100)*9
+                path=maps/str(ident); path.write_bytes(raw)
+                if ident in module_ids:
+                    sources[str(ident)]=dict(path=str(path.relative_to(root)),sha256=hashlib.sha256(raw).hexdigest())
+            stack.enter_context(patch.object(quest_import_common,'module_world_reviews',return_value=[dict(map_sources=sources)]))
+            for name,value in dict(QUEST_MAPS=set(),REGION_REVIEWS={},REVIEWED_REGION_MAPS=set(),DEV_TRAINING_MAPS={800,900}).items():
+                stack.enter_context(patch.object(importer,name,value))
+            spec=root/'brothers.json'; spec.write_text('{"scripts":[]}')
+            stack.enter_context(patch.object(importer,'BROTHERS_SPEC',spec))
+            for name,value in dict(read_portals=[],read_scenic_gates=[],read_reviewed_portals=[],import_residents=[],select_connected_maps=selected,finalize_reviewed_maps=set()).items():
+                stack.enter_context(patch.object(importer,name,return_value=value))
+            stack.enter_context(patch.object(importer,'Archive',FakeArchive))
+            with contextlib.redirect_stdout(io.StringIO()):importer.run('unused',root,output)
+            metadata=json.loads((output/'world/manifest.json').read_text())['maps']
+            for ident in module_ids:
+                self.assertEqual(metadata[str(ident)]['kind'],'dungeon')
+                self.assertNotIn('dev_only',metadata[str(ident)])
+            self.assertEqual(metadata['20508']['kind'],'interior')
+            self.assertEqual(metadata['1000']['kind'],'village')
+            self.assertEqual(metadata['900']['kind'],'training')
+            self.assertTrue(metadata['900']['dev_only'])
+
     def test_expansion_follows_only_reviewed_unconditional_connected_maps(self):
         paths={1300:Path('map/sainasu/hotoru/hotoru'),1301:Path('map/sainasu/hotoru/1301'),
                1400:Path('map/sainasu/katan/katan'),10001:Path('map/sainasu/dungeon/10001'),
