@@ -274,7 +274,7 @@ func start_wild_battle_config(troop: Dictionary, clear_target: int = -1, capture
 		if not enemy is Dictionary:return {}
 		enemy.xp = 0
 		var definition: Dictionary = Progression.species_definition(str(enemy.get("species","")))
-		if definition.is_empty() or not _actor_valid(enemy):return {}
+		if definition.is_empty() or not _wild_actor_valid(enemy):return {}
 		if int(enemy.get("sprite",-1))!=int(definition.get("sprite",-2)):return {}
 		if not enemy.get("can_capture") is bool:return {}
 		if not _integer(enemy.get("reward_xp"),0,1000000000) or not _integer(enemy.get("reward_gold"),0,1000000000):return {}
@@ -1539,6 +1539,11 @@ func _valid_profile(value: Variant) -> bool:
 		if pet.has("modai") and not _integer(pet.modai,0,1000000000):return false
 		if pet.has("loyalty") and not _integer(pet.loyalty,0,100):return false
 	return true
+
+func _wild_actor_valid(actor: Dictionary) -> bool:
+	if _actor_valid(actor):return true
+	var shape:Dictionary=preload("res://server/original_ore_actor.gd").validation_shape(actor)
+	return not shape.is_empty() and _actor_valid(shape)
 
 func _actor_valid(actor: Dictionary) -> bool:
 	if actor.has("gm_modified") and not actor.gm_modified is bool:return false
