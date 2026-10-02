@@ -63,3 +63,11 @@ The grid and list pictures are pre-cut at import time by `tools/build_pet_thumbs
 打开的详情按 UID 保留个体行和按钮，快照更新只改资料与位置，保留悬停对象与滚动偏移；只有所选品种变化才创建该品种的新内容。列表的统计刷新保留当前页和行，所有权过滤的品种集合变化时才重新筛选。详情使用统一的有界滚动区，窄屏纵向排列资料与地点，缩略图仍走原 atlas、调色板和素材下载流程。
 
 `encyclopedia_owned_pets_test` 使用真实本机 GameScene、backend/session 与端口 0 WebSocket，两台无本地 backend 的远端设备；通过实际鼠标输入验证取出、UID 与属性保留、位置同步、满栏及战斗捕捉空位拒绝，并检查 390×844 布局几何。无窗口测试不验证渲染像素。
+
+## 动态骑宠卡
+
+`PetEncyclopedia.load_classic(data, riding_data)`按有效原版pairs生成骑宠分类，保留其他静态分类。`variant_ids`为同sprite的独立成长entry集合，`entry_id`为主条目；必须经`by_template`解析原表ID，不能把sprite相同等同于成长相同。当前25外观／28成长条目，排除4只新手虎。静态来源记录仍供其他分类和详情使用；新生成的成员只补原版骑图依据。
+
+`classic_filtered`对卡内每个变体应用搜索、可抓、拥有筛选，选择匹配的主入口。网格、经典列表和详情均提供同图变体按钮与当前造型骑乘提示。UI只读`world.session.snapshot()`，状态变化时刷新造型标签，避免每帧复制整个存档。面板重建先清空旧内容再计算宽度，并在布局后收缩，支持390×844。
+
+`classic_riding_catalog_test`使用端口0真实WebSocket与无本地backend的GameScene，验证25名单、28变体、原分类保留、动态新增pairs、拥有变体筛选、换造型提示刷新、鼠标点击变体入口及三个补充地点的远端瞬移和搜宠目标。默认无窗口；经明确授权，可用 `STONE_AGE_FOREGROUND_TEST=1 ./scripts/run.sh --position -2000,-2000 --script res://tests/classic_riding_catalog_test.gd -- --visual-review` 在静音屏幕外窗口抓取真实渲染PNG（`/private/tmp/tmux-agents/ride-classic-audit/shots/`）。390×844为真实viewport，不是事后缩图；PNG不提交。

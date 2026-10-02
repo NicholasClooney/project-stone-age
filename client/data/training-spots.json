@@ -700,13 +700,14 @@
       ],
       "level_min": 1,
       "level_max": 15,
-      "mean_level": 11.08,
+      "mean_level": 11.0,
       "monsters": [
         "吉比",
         "奇宝",
         "布伊",
         "布比",
         "火鸡",
+        "瑞里西尔",
         "葛雷吉鲁",
         "葛雷基欧",
         "葛雷洛比",
@@ -3688,11 +3689,12 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 83.67,
+      "mean_level": 82.81,
       "monsters": [
         "布拉奇多斯",
         "布洛多斯",
         "斯天多斯",
+        "罗多克雷",
         "邦恩多斯"
       ],
       "dev_only": true
@@ -3707,9 +3709,10 @@
       ],
       "level_min": 1,
       "level_max": 95,
-      "mean_level": 89.01,
+      "mean_level": 88.27,
       "monsters": [
         "可利多洛斯",
+        "史卡鲁",
         "奥卡洛斯",
         "左迪洛斯",
         "巴朵兰恩",

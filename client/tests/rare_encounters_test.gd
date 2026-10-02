@@ -206,7 +206,7 @@ func run() -> void:
 	# Exercise real capture + settlement, including the unchanged -1 parameter.
 	var family_failed: Array = []
 	for item in spec.encounters:
-		if int(item.group_id) < 91100 or int(item.group_id) > 91110:continue
+		if int(item.group_id) < 91100 or int(item.group_id) > 91113:continue
 		var actor_rng := RandomNumberGenerator.new()
 		actor_rng.seed = 9000+int(item.template_id)
 		var newborn: Dictionary = catalog.actor(int(item.enemy_id),actor_rng)
@@ -226,7 +226,7 @@ func run() -> void:
 			success = str(pet.species) == "original_%d" % int(item.template_id) and int(pet.level) == 1 and pet.base_stats == newborn.base_stats
 			if success:break
 		if not success:family_failed.append(item.name)
-	check(family_failed.is_empty(),"eleven added family pets capture and settle with original newborn stats, including -1 capture parameters: %s" % str(family_failed))
+	check(family_failed.is_empty(),"fourteen added family and riding pets capture and settle with original newborn stats, including -1 capture parameters: %s" % str(family_failed))
 	await process_frame
 	print("RARE ENCOUNTERS: %d failures" % failures)
 	quit(1 if failures else 0)
