@@ -1,0 +1,115 @@
+{
+  "manifest": {
+    "version": 1,
+    "id": "marju-gate-fixture",
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/npc/genout/meiro.create": "a4fc992c05d8dd8285fdea9f7e6a3e37b2edafe364130159a00035b7855af9e2",
+      "gmsv/data/npc/genout/wpm_120_19_15": "9e0fd5764cf5ae4bd8d0008ed7d0a49cce80dd243258d48a20f9c982a9d5797e",
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+    },
+    "creates": [
+      "gmsv/data/npc/genout/meiro.create"
+    ],
+    "scripts": {},
+    "handlers": {
+      "genout/wpm_120_19_15": {
+        "kind": "warpman",
+        "events": [
+          37,
+          38
+        ]
+      }
+    },
+    "items": [],
+    "reward_enemies": [],
+    "jobs": []
+  },
+  "module": {
+    "version": 1,
+    "items": {},
+    "npcs": [
+      {
+        "id": "genout/wpm_120_19_15@120:19:15",
+        "source_script": "genout/wpm_120_19_15",
+        "source_create": "gmsv/data/npc/genout/meiro.create",
+        "source_create_index": 16,
+        "events": [
+          37,
+          38
+        ],
+        "name": "房子主人",
+        "map_id": 120,
+        "cell": [
+          19,
+          15
+        ],
+        "graphic": 16017,
+        "facing": 6,
+        "role": "quest",
+        "text": "\n这里的地下洞窟是一个迷宫啊。\n以你的等级来说还太危险了\n你还是不要去比较好。",
+        "branches": [
+          {
+            "event": -1,
+            "type": "FREEWARP",
+            "condition": "LV>49",
+            "texts": {
+              "AcceptMsg": "\n你就算进入地下的迷宫洞窟\n也没有问题吧。\n等级低的人\n到那里会很危险啊。\n你要进入迷宫吗？"
+            },
+            "actions": {
+              "Warp": "122,6,5"
+            },
+            "enabled": true,
+            "events": [
+              37,
+              38
+            ],
+            "source": "genout/wpm_120_19_15",
+            "source_fields": {
+              "WARP": "122,6,5",
+              "FREE": "LV>49",
+              "MONEY": "-1",
+              "FreeMsg": "\\n你就算进入地下的迷宫洞窟\\n也没有问题吧。\\n等级低的人\\n到那里会很危险啊。\\n你要进入迷宫吗？",
+              "PayMsg": "\\n这里的地下洞窟是一个迷宫啊。\\n以你的等级来说还太危险了\\n你还是不要去比较好。",
+              "PartyMsg": "团队没办法进入那里\\n",
+              "MoneyMsg": "你的强度还不足以去那里\\n你变强一点再来比较好。"
+            },
+            "source_rule": "gmsv/npc/npc_warpman.c:228-231,254-268,300-309,393-400,560-566; original free level gate"
+          }
+        ]
+      }
+    ],
+    "jobs": [],
+    "reward_pets": {},
+    "provenance": {
+      "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+      "sources": {
+        "gmsv/data/npc/genout/meiro.create": "a4fc992c05d8dd8285fdea9f7e6a3e37b2edafe364130159a00035b7855af9e2",
+        "gmsv/data/npc/genout/wpm_120_19_15": "9e0fd5764cf5ae4bd8d0008ed7d0a49cce80dd243258d48a20f9c982a9d5797e",
+        "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+        "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+      },
+      "client": "StoneAge 2.5; logical static graphics, no fallback"
+    },
+    "module_id": "marju-gate-fixture"
+  },
+  "maps": {
+    "120": {
+      "map_id": 120,
+      "name": "靠近水田的家",
+      "width": 30,
+      "height": 30,
+      "source": "gmsv/data/map/extra/120",
+      "source_sha256": "255be9f81670ff4334c43e291a2c18035531cbc77bdeb3ebaa244ed5ecc15f74"
+    },
+    "122": {
+      "map_id": 122,
+      "name": "迷宫",
+      "width": 300,
+      "height": 200,
+      "source": "gmsv/data/map/extra/122",
+      "source_sha256": "508dd047c0143b3561df8e2258bf8f58bc7d98e0244d091227746ab0efda9e55"
+    }
+  }
+}
