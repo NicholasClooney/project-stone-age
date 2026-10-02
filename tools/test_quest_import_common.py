@@ -25,6 +25,38 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_miner_gate_and_condition_only_missing_item(self):
+        fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-miner-gate.json').read_text())
+        spec=fixture['manifest']
+        self.assertEqual(common.load_quest_module(REFERENCE,spec),fixture['module'])
+        gate=fixture['module']['npcs'][0]['branches'][0]
+        self.assertEqual(gate['actions'],{'Warp':'31806,34,6','DelItem':'2527*1'})
+        self.assertEqual(gate['item_deletion_scope'],'bag')
+        self.assertNotIn('2391',fixture['module']['items'])
+        for mutate in [lambda s:s.pop('missing_condition_items'),
+                       lambda s:s['items'].append(2391),
+                       lambda s:s['missing_condition_items'][0].update(branch=1),
+                       lambda s:s['missing_condition_items'][0].update(reason=''),
+                       lambda s:s.update(item_notes={'2391':'not an item'}),
+                       lambda s:s['scripts']['giiru/event/giruev2_1'].update(branches=[4])]:
+            invalid=copy.deepcopy(spec);mutate(invalid)
+            with self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
+        # Even a source-shaped pinned fixture may never use the exception for actions.
+        from unittest.mock import patch
+        original=quests.parse_script
+        for key in ['GetItem','DelItem','GetRandItem']:
+            def with_action(text,selected=None,key=key):
+                default,branches=original(text,selected)
+                branches[0]['actions'][key]='2391'
+                return default,branches
+            with patch.object(quests,'parse_script',side_effect=with_action):
+                with self.assertRaisesRegex(ValueError,'Unreviewed branch action item'):
+                    common.load_quest_module(REFERENCE,spec)
+        from quest_source_handlers import keyword_warp
+        source=(REFERENCE/'gmsv/data/npc/genout/wpm_31805_22_4').read_text(encoding='gb18030')
+        for old,new in [('2527*1','2527*2'),('ITEM=2527','ITEM!=2527'),('MONEY:-1','MONEY:0')]:
+            with self.assertRaises(ValueError):keyword_warp(source.replace(old,new),'gate',[27])
+
     def test_free_warp_gate_is_exact_bound_source(self):
         fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-free-warp-gate.json').read_text())
         self.assertEqual(common.load_quest_module(REFERENCE,fixture['manifest']),fixture['module'])

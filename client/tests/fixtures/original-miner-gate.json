@@ -1,0 +1,307 @@
+{
+  "manifest": {
+    "version": 1,
+    "id": "miner-gate-fixture",
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/npc/genout/giruev2.create": "078cc34d337a7d95b414d6c8cc24ee97d3bc1fd1f2f5f32618199e511fd94c4b",
+      "gmsv/data/npc/giiru/event/giruev2.create": "13bb368631331ee6b2266f024a1ae47251ccd4e4fc0de972c96f1108abe176ac",
+      "gmsv/data/npc/giiru/event/giruev2_1": "4900c660529650d9315c5d54c3b5f1d7a48b26fae7685ccb965ef1f37b48328a",
+      "gmsv/data/npc/genout/wpm_31805_22_4": "4c1141db5a31a3579b2202889d81e0360f307f4d0d71016352c37d21c7e8e369",
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+      "gmsv/npc/npc_eventaction.c": "c5dc5b17847ee0670a86cf9e9b713a9dbeffa7ef55b192e5ce51119479c73042"
+    },
+    "creates": [
+      "gmsv/data/npc/genout/giruev2.create",
+      "gmsv/data/npc/giiru/event/giruev2.create"
+    ],
+    "scripts": {
+      "giiru/event/giruev2_1": {
+        "branches": [
+          0
+        ],
+        "events": [
+          27
+        ]
+      }
+    },
+    "handlers": {
+      "genout/wpm_31805_22_4": {
+        "kind": "warpman",
+        "events": [
+          27
+        ]
+      }
+    },
+    "items": [
+      2527
+    ],
+    "reward_enemies": [],
+    "jobs": [],
+    "missing_condition_items": [
+      {
+        "id": 2391,
+        "script": "giiru/event/giruev2_1",
+        "branch": 0,
+        "reason": "Pinned itemset has no 2391; retain only original ENDEV=27&ITEM!=2391 condition."
+      }
+    ]
+  },
+  "module": {
+    "version": 1,
+    "items": {
+      "2527": {
+        "id": 2527,
+        "name": "最上层入场许可证",
+        "description": "阿斯玛鲁矿山最上层的入场券",
+        "logical_icon": 24222,
+        "stackable": false,
+        "source": "gmsv/data/itemset.txt",
+        "source_line": 2110,
+        "raw_columns": [
+          "最上层入场许可证",
+          "最上层入场许可证",
+          "阿斯玛鲁矿山最上层的入场券",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "2527",
+          "24222",
+          "0",
+          "16",
+          "2",
+          "0",
+          "0",
+          "-1",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "",
+          "0",
+          "0",
+          "",
+          "",
+          "",
+          "",
+          "",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "0",
+          "-1",
+          "0",
+          "1",
+          "1",
+          "0",
+          "0",
+          "0",
+          "",
+          "0",
+          "",
+          "0",
+          "",
+          "0",
+          "",
+          "0",
+          "",
+          "0"
+        ],
+        "effects": [],
+        "stats_source": [],
+        "logout_vanish": false
+      }
+    },
+    "npcs": [
+      {
+        "id": "genout/wpm_31805_22_4@31805:22:4",
+        "source_script": "genout/wpm_31805_22_4",
+        "source_create": "gmsv/data/npc/genout/giruev2.create",
+        "source_create_index": 20,
+        "events": [
+          27
+        ],
+        "name": "入场管理人",
+        "map_id": 31805,
+        "cell": [
+          22,
+          4
+        ],
+        "graphic": 16202,
+        "facing": 4,
+        "role": "quest",
+        "text": "这里没有许可证不能进去唷！",
+        "branches": [
+          {
+            "event": -1,
+            "type": "FREEWARP",
+            "condition": "ITEM=2527",
+            "texts": {
+              "AcceptMsg": "这是入场许可证。\n要进入最上层吗？"
+            },
+            "actions": {
+              "Warp": "31806,34,6",
+              "DelItem": "2527*1"
+            },
+            "enabled": true,
+            "events": [
+              27
+            ],
+            "source": "genout/wpm_31805_22_4",
+            "source_fields": {
+              "WARP": "31806,34,6",
+              "FREE": "ITEM=2527",
+              "DelItem": "2527*1",
+              "MONEY": "-1",
+              "FreeMsg": "这是入场许可证。\\n要进入最上层吗？",
+              "PayMsg": "这里没有许可证不能进去唷！",
+              "MoneyMsg": "请拿到许可证后，再来一次。"
+            },
+            "item_deletion_scope": "bag",
+            "source_rule": "gmsv/npc/npc_eventaction.c:856-906,1524-1538; npc_warpman.c:228-231,300-309,393-400"
+          }
+        ]
+      },
+      {
+        "id": "giiru/event/giruev2_1@31805:19:21",
+        "source_script": "giiru/event/giruev2_1",
+        "source_create": "gmsv/data/npc/giiru/event/giruev2.create",
+        "source_create_index": 0,
+        "events": [
+          27
+        ],
+        "name": "帖尼姆",
+        "map_id": 31805,
+        "cell": [
+          19,
+          21
+        ],
+        "graphic": 16062,
+        "facing": 4,
+        "role": "quest",
+        "text": "你如果更强壮一点的话…,谁能跃跃我们呀？",
+        "branches": [
+          {
+            "event": -1,
+            "type": "REQUEST",
+            "condition": "ENDEV=27&ITEM!=2391",
+            "texts": {
+              "RequestMsg": "真是跃了我们一个大忙！\n由于你的怿系我们将可以\n提供良质的石头给大家。\n你是不是想要往上去的入场许可证？\\一张１０００Ｓ怎样要买吗？",
+              "ThanksMsg": "那就请带着许可证吧！",
+              "StopMsg": "有什么事？",
+              "EndStopMsg": "这样呀！",
+              "NoStopMsg": "干什么？",
+              "ItemFullMsg": "你的袋子不是已经满了吗？\n空下后再来吧！",
+              "StoneLessMsg": "你的硿不潣粪！\n虽然是恩人，不过生意就是生意呀。\n请准想好硿后再来吧！"
+            },
+            "actions": {
+              "GetItem": "2527",
+              "DelStone": "1000"
+            },
+            "source_branch_index": 0,
+            "source_line": 9,
+            "missing_condition_items": [
+              {
+                "id": 2391,
+                "script": "giiru/event/giruev2_1",
+                "branch": 0,
+                "reason": "Pinned itemset has no 2391; retain only original ENDEV=27&ITEM!=2391 condition.",
+                "source": "gmsv/data/npc/giiru/event/giruev2_1",
+                "source_line": 9
+              }
+            ],
+            "enabled": true,
+            "events": [
+              27
+            ],
+            "source": "giiru/event/giruev2_1"
+          }
+        ]
+      }
+    ],
+    "jobs": [],
+    "reward_pets": {},
+    "provenance": {
+      "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+      "sources": {
+        "gmsv/data/npc/genout/giruev2.create": "078cc34d337a7d95b414d6c8cc24ee97d3bc1fd1f2f5f32618199e511fd94c4b",
+        "gmsv/data/npc/giiru/event/giruev2.create": "13bb368631331ee6b2266f024a1ae47251ccd4e4fc0de972c96f1108abe176ac",
+        "gmsv/data/npc/giiru/event/giruev2_1": "4900c660529650d9315c5d54c3b5f1d7a48b26fae7685ccb965ef1f37b48328a",
+        "gmsv/data/npc/genout/wpm_31805_22_4": "4c1141db5a31a3579b2202889d81e0360f307f4d0d71016352c37d21c7e8e369",
+        "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+        "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+        "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+        "gmsv/npc/npc_eventaction.c": "c5dc5b17847ee0670a86cf9e9b713a9dbeffa7ef55b192e5ce51119479c73042"
+      },
+      "client": "StoneAge 2.5; logical static graphics, no fallback"
+    },
+    "module_id": "miner-gate-fixture"
+  },
+  "maps": {
+    "31805": {
+      "map_id": 31805,
+      "name": "阿斯玛鲁矿山５楼",
+      "width": 50,
+      "height": 50,
+      "source": "gmsv/data/map/giiru/dungeon/dun_3-18-05",
+      "source_sha256": "a6cd237daa4551b028228fa9cb0321657427896c511c0dee4c2458d152170fa3"
+    },
+    "31806": {
+      "map_id": 31806,
+      "name": "阿斯玛鲁矿山６楼",
+      "width": 50,
+      "height": 50,
+      "source": "gmsv/data/map/giiru/dungeon/dun_3-18-06",
+      "source_sha256": "94aff8a8109077c3e118a5803842301f53911b419bb523a5097b4af321eff798"
+    }
+  }
+}
