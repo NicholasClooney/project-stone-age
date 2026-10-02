@@ -103,7 +103,7 @@ PYTHONPATH=tools .tools/asset-venv/bin/python -m unittest tools/test_four_jewels
 .tools/asset-venv/bin/python tools/import_early_quests.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
 .tools/asset-venv/bin/python tools/palette_images.py
 .tools/asset-venv/bin/python tools/plan_web_packs.py
-./scripts/run.sh --headless --editor --import
+./scripts/run.sh --headless --editor --import --quit
 STONE_AGE_TEST_JOBS=2 ./scripts/test-all.sh --only four_jewels_equipment_test,four_jewels_quest_test
 STONE_AGE_FOREGROUND_TEST=1 STONE_AGE_PROOF_DIR=/private/tmp/bonus-third-jewels-proof ./scripts/run.sh --rendering-method gl_compatibility --script res://tests/four_jewels_ui_test.gd
 ```
