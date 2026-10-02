@@ -4,6 +4,8 @@ extends RefCounted
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	# itemset.txt:2070, item.h:25/item.c:1242-1245: EARRING uses DECORATION1.
+	2487:{"name":"母亲的发饰","type":13,"slot":"amulet","level":0,"attack":0,"defence":0,"speed":0,"charm":2,"durability":200000},
 	# Dragon cave itemset.txt:2043,2088; existing ARM/amulet ordinary modifiers.
 	2460:{"name":"龙之枪","type":3,"slot":"arm","level":40,"attack":36,"defence":-14,"speed":-14,"charm":2,"durability":2500000},
 	2505:{"name":"龙的魅力之笛","type":9,"slot":"amulet","level":40,"attack":0,"defence":0,"speed":0,"charm":3,"durability":200000},
@@ -32,7 +34,7 @@ const ITEMS := {
 	2481:{"name":"杉的手环","type":8,"slot":"bracelet","level":30,"attack":8,"defence":5,"speed":-5,"charm":-5,"durability":2500000},
 }
 ## These formerly metadata-only items may exist with zero durability, unworn.
-const NEWLY_WEARABLE := [1357,2489,2491,2492,2493,2494]
+const NEWLY_WEARABLE := [1357,2460,2487,2489,2491,2492,2493,2494,2505]
 const STAGES := ["完好","受损","毁坏","不堪使用"]
 const STATS := ["attack","defence","speed","charm"]
 
@@ -107,7 +109,7 @@ static func remove(profile: Dictionary, id: int) -> void:
 	remove_at(profile,profile.original_items.find(id))
 
 static func worn(profile: Dictionary, uid: int) -> bool:
-	return uid>0 and uid in profile.get("original_equipment",{}).values()
+	return uid>0 and profile.get("original_equipment",{}).values().any(func(value):return integer(value,1,2147483647) and int(value)==uid)
 
 static func mods(profile: Dictionary) -> Dictionary:
 	var result: Dictionary={"attack":0,"defence":0,"speed":0,"charm":0}

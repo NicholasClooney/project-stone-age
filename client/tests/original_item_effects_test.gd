@@ -3,7 +3,7 @@ const Effects=preload("res://scripts/original_item_effects.gd")
 func run()->void:
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-item-effects.json"))
  var items:Dictionary=fixture.items
- for id in [1206,2416,2418,2427,2448,2465,2481,2485,1357,2489,2492,2493,2494]:
+ for id in [1206,2416,2418,2427,2448,2465,2481,2485,1357,2460,2487,2505,2489,2492,2493,2494]:
   var effects:Array=Effects.resolve(items[str(id)])
   check(effects.filter(func(e):return e.type=="stat").all(func(e):return bool(e.active)),"supported ordinary stats not labelled inactive %d"%id)
  for id in [1052,2482,2483,2490,2518,2519,2520,2525,2526,2532,2547,2551]:
@@ -31,6 +31,13 @@ func run()->void:
   loaded=Session.new()
   check(loaded.load_game("user://effect-old-equipment.json") and int(loaded.snapshot().original_instances[0].durability)==int(spec.durability),"old unworn metadata item migrates without save/schema expansion")
   check(loaded.snapshot().original_instances[0].keys().size()==3,"instance still only UID item and durability")
+  var worn_zero:Dictionary=s.snapshot();worn_zero.original_instances[0].durability=0
+  write("user://effect-old-equipment.json",worn_zero)
+  check(not Session.new().load_game("user://effect-old-equipment.json"),"migration never accepts worn zero-durability equipment")
+  old.original_instances[0].durability=1
+  write("user://effect-old-equipment.json",old)
+  loaded=Session.new()
+  check(loaded.load_game("user://effect-old-equipment.json") and int(loaded.snapshot().original_instances[0].durability)==1,"migration never repairs a positive damaged durability")
  var b=Backend.new();root.add_child(b)
  var helpers:Dictionary=b.quest_helper.snapshot(b)
  var advertised:=false
