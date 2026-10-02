@@ -23,6 +23,10 @@ func run()->void:
  backend.session._profile.default_companions_claimed=true
  backend.session._profile.no_random_encounters=true
  backend.session.gm_raise_level(-1,30)
+ # This controls fixture begins on the current challenge floor. Cross-floor
+ # helper travel is intentionally rejected by the route authority.
+ backend.session._profile.location={"map_id":801,"x":18,"y":20}
+ backend.automation.position_changed(801,Vector2i(18,20))
  backend.original_quests.services.rng.seed=44
  Session.OriginalEquipment.add(backend.session._profile,2752)
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1");root.add_child(server)
