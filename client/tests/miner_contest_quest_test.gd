@@ -21,6 +21,7 @@ func mine(b)->void:
 
  # Seed27 includes the original ore's negative growth component; retain it
  # to exercise the source-bounded noncapturable NPC compatibility.
+ check(preload("res://server/troop_art.gd").can_render(troop.enemies),"source seed27 troop has complete imported battle art")
  var config:Dictionary=b.session.start_wild_battle_config(troop)
  check(not config.is_empty(),"real Session accepts source mining troop")
  if config.is_empty():return
@@ -46,6 +47,7 @@ func run()->void:
  check(trade(b,RIVAL).ok and 2536 in b.session.snapshot().original_items,"real rival gives mining permit")
  check(not choose(b,talk(b,GUARD),"yes").ok and not b.battle_open,"mining permit is not competition qualification")
  mine(b)
+ natural_mining()
  save_failure(b,RIVAL,"failed qualification retains ore and mining permit")
  check(trade(b,RIVAL).ok and 2535 in b.session.snapshot().original_items and not 2534 in b.session.snapshot().original_items and not 2536 in b.session.snapshot().original_items,"original qualification consumes both source objects")
  check(choose(b,talk(b,GUARD),"yes").ok and b.battle_open,"real fixed contest starts")
@@ -102,3 +104,19 @@ func miner_lan()->void:
  check(not (await request(links[0],{"type":"quest_choose","token":c.dialogue.token,"choice":"ok"})).ok and b.session.snapshot().original_items.count(2535)==1 and not 2534 in b.session.snapshot().original_items,"LAN replay cannot clone qualification")
  for link in links:link.close()
  links=[];server.stop();server.queue_free();b.queue_free();await process_frame
+
+func natural_mining()->void:
+ var b=fresh()
+ check(trade(b,LEADER).ok and trade(b,RIVAL).ok,"natural route earns original mining permit")
+ # Exercise the actual random-group + art gate, not only roll_group/Session.
+ b.encounter_rng.seed=27
+ var found:=false
+ for attempt in range(100):
+  var result:Dictionary=b.wild_encounter(31801,Vector2i(24,24))
+  check(result.ok,"natural original encounter passes data/art/Session gates")
+  if not result.ok:b.free();return
+  found=result.troop.enemies.any(func(e):return int(e.source_enemy_id)==1043)
+  fight(b);b.handle({"type":"battle_close"})
+  if found:break
+ check(found and b.session.snapshot().original_items.count(2534)>=1,"seed27 natural weighted encounters reach original ore and settle")
+ b.free()
