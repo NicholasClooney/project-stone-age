@@ -14,8 +14,18 @@ func _initialize():
  var forge_ok: bool = not catalog.info(20508).is_empty() and not catalog.links(20508).is_empty()
  print(("PASS: " if forge_ok else "FAIL:")+"original Hahn forge is now explicitly reviewed and connected")
  if not forge_ok: failures+=1
- for id in [20608,20711,20712,20001,21103]:
+ # Jan explicitly restores this map; mapwarp.txt:2308 wins over 2310.
+ var jan:Dictionary=catalog.links(20607).get(Vector2i(75,13),{})
+ var jan_ok:bool=catalog.info(20608).get("path","")=="world/20608.map" and catalog.field(20608) and int(jan.get("to_map",0))==20608 and point(jan.get("target",[-1,-1]))==Vector2i(0,7)
+ for point in [Vector2i(0,7),Vector2i(0,8)]:
+  var back:Dictionary=catalog.links(20608).get(point,{})
+  jan_ok=jan_ok and int(back.get("to_map",0))==20607 and point(back.get("target",[-1,-1]))==Vector2i(75,13)
+ print(("PASS: " if jan_ok else "FAIL: ")+"Jan room uses original first-match entrance and both source returns")
+ if not jan_ok:failures+=1
+ for id in [20711,20712,20001,21103]:
   if not catalog.info(id).is_empty():
    print("FAIL: unconnected/service map %d must remain excluded" % id)
    failures+=1
  quit(1 if failures else 0)
+
+func point(values:Array)->Vector2i:return Vector2i(int(values[0]),int(values[1]))
