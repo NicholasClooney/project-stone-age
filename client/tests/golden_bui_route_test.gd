@@ -29,6 +29,7 @@ func fresh(level: int):
 	for key in b.session._profile.inventory: b.session._profile.inventory[key] = 0
 	for stat in ["vitality","strength","toughness","dexterity"]:b.session.gm_set_base_stat(-1,stat,10000)
 	b.session._profile.player.hp = b.session._profile.player.max_hp
+	b.save_path="user://golden-bui-route-%d.json"%level
 	return b
 func choose(b, reply: Dictionary, choice: String, text := "") -> Dictionary:
 	return b.handle({"type":"quest_choose","token":reply.get("dialogue",{}).get("token",""),"choice":choice,"text":text})
@@ -119,12 +120,13 @@ func earn(b, item: int) -> bool:
 		var route_id:=int(b.encounter_catalog.area_at(b.automation.position_map,b.automation.position_cell).get("group_id",b.automation.position_map))
 		var rollback:bool=not drop_rollback_checked.has(route_id) and b.session._pending.enemies.any(func(enemy):return not enemy.get("generated_drops",[]).is_empty())
 		var before:Dictionary=b.session.snapshot()
+		var valid_save:String=b.save_path
 		if rollback:b.save_path="user://golden-bui-route-blocked/child.json"
 		fight(b)
 		if rollback:
 			check(b.session.snapshot()==before and not bool(b.battle_state.get("settled",false)),"Real generated coupon save failure restores exact profile")
 			check(not b.handle({"type":"battle_close"}).ok and b.session.snapshot()==before,"Failed random battle settlement cannot close or leak coupons")
-			b.save_path=""
+			b.save_path=valid_save
 			drop_rollback_checked[route_id]=true
 		if not check(b.handle({"type":"battle_close"}).ok,"Actual battle settles and closes"):return false
 		var settled:Dictionary=b.session.snapshot()
@@ -189,19 +191,23 @@ func route(base: int, level: int) -> void:
 		var room: int = b.automation.position_map
 		var initial:=talk(b,"quiz/equiz_01@%d:29:16"%room)
 		var before:Dictionary=b.session.snapshot()
+		var valid_save:String=b.save_path
 		b.save_path="user://golden-bui-route-blocked/child.json"
 		check(not choose(b,initial,"yes").ok and b.session.snapshot()==before,"Final2753 save failure cannot set NOW44 or issue reward coupon")
-		b.save_path=""
+		b.save_path=valid_save
 		check(trade(b,"quiz/equiz_01@%d:29:16"%room).ok and 2753 in b.session.snapshot().original_items,"Actual REQUEST44 issues reward coupon")
 		var reward:=choose(b,talk(b,"quiz/equiz_02@%d:28:16"%room),"yes")
 		before=b.session.snapshot();b.save_path="user://golden-bui-route-blocked/child.json"
 		check(not choose(b,reward,"ok").ok and b.session.snapshot()==before,"Pet exchange save failure keeps2753 and leaves END44 unset")
-		b.save_path=""
+		b.save_path=valid_save
 		reward=choose(b,talk(b,"quiz/equiz_02@%d:28:16"%room),"yes")
 		check(choose(b,reward,"ok").ok and Rules.flag(b.session.snapshot(),"ended",44),"Actual END44 exchange")
 		before=b.session.snapshot()
 		check(not choose(b,reward,"ok").ok and b.session.snapshot()==before,"Old reward token cannot duplicate original pet")
 		check(b.session.snapshot().pets.size()==1 and b.session.snapshot().pets[0].source_enemy_id==14 and b.session.snapshot().pets[0].template_id==12,"Exact golden Bui source reward")
+		var saved:Dictionary=JSON.parse_string(FileAccess.get_file_as_string(b.save_path))
+		check(saved.pets.size()==1 and int(saved.pets[0].source_enemy_id)==14 and not 2753 in saved.original_items and Rules.flag(saved,"ended",44),"Successful retry persists exact final pet/coupon/END44 to real isolated save")
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(b.save_path))
 	b.free()
 func run() -> void:
 	var blocked:=FileAccess.open("user://golden-bui-route-blocked",FileAccess.WRITE)
