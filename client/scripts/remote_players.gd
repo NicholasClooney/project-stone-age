@@ -54,7 +54,7 @@ func on_event(event: Dictionary) -> void:
 
 ## The local character's bubble when this profile speaks (from any device).
 func _say_own(line: String) -> void:
-	if world==null or not is_instance_valid(world.player):return
+	if not is_instance_valid(world) or world.is_queued_for_deletion() or not is_instance_valid(world.player):return
 	if not is_instance_valid(_own_bubble) or _own_bubble.get_parent()!=world.player:
 		_own_bubble = speech_bubble()
 		world.player.add_child(_own_bubble)
@@ -81,7 +81,7 @@ func _process(delta: float) -> void:
 	if _own_left>0:
 		_own_left -= delta
 		if _own_left<=0 and is_instance_valid(_own_bubble):_own_bubble.hide()
-	var here: bool = world!=null and not world.data.is_empty() and model.map_id==int(world.data.get("map_id",-2)) and is_instance_valid(world.actors)
+	var here: bool = is_instance_valid(world) and not world.is_queued_for_deletion() and not world.data.is_empty() and model.map_id==int(world.data.get("map_id",-2)) and is_instance_valid(world.actors) and not world.actors.is_queued_for_deletion()
 	for id in model.players:
 		if not here:
 			_drop(id)
@@ -93,9 +93,9 @@ func _process(delta: float) -> void:
 
 func _draw_player(player: Dictionary) -> void:
 	var id := str(player.id)
-	var holder: Node2D = nodes.get(id)
-	if holder==null or not is_instance_valid(holder) or holder.get_parent()!=world.actors:
-		if holder!=null and is_instance_valid(holder):holder.queue_free()
+	var holder := _holder(id)
+	if holder==null:
+		if is_instance_valid(nodes.get(id)):nodes[id].queue_free()
 		holder = _build(player)
 		nodes[id] = holder
 		world.actors.add_child(holder)
@@ -218,13 +218,24 @@ func say_into(bubble: PanelContainer, line: String) -> void:
 
 # ---- the card --------------------------------------------------------------
 
+## Map replacement frees actors independently of the presence model. Keep the
+## dictionary value untyped until validity is checked: assigning a freed Object
+## to Node2D already raises an error, before the following guard can run.
+func _holder(id: String) -> Node2D:
+	var candidate = nodes.get(id)
+	if not is_instance_valid(candidate) or candidate.is_queued_for_deletion():return null
+	if not is_instance_valid(world) or world.is_queued_for_deletion():return null
+	if not is_instance_valid(world.actors) or world.actors.is_queued_for_deletion():return null
+	if candidate.get_parent()!=world.actors:return null
+	return candidate
+
 ## The player under a point on the map (map pixels), "" for none.
 func player_at(point: Vector2) -> String:
 	var best := ""
 	var best_y := -INF
 	for id in nodes:
-		var holder: Node2D = nodes[id]
-		if not is_instance_valid(holder):continue
+		var holder := _holder(id)
+		if holder==null:continue
 		if HIT.has_point(point-holder.position) and holder.position.y>best_y:
 			best = id
 			best_y = holder.position.y
@@ -235,15 +246,16 @@ func _hover(delta: float) -> void:
 		_pinned_left -= delta
 		if _pinned_left<=0:_pinned = ""
 	var hovered := ""
-	if not nodes.is_empty() and world.is_inside_tree() and world.get_viewport().gui_get_hovered_control()==null:
+	if not nodes.is_empty() and is_instance_valid(world) and not world.is_queued_for_deletion() and world.is_inside_tree() and world.get_viewport().gui_get_hovered_control()==null:
 		hovered = player_at(world.get_global_mouse_position())
 	_hovered = hovered
 	var shown := _hovered if not _hovered.is_empty() else _pinned
 	if shown!=_card_for:_update_card()
-	elif card!=null and card.visible:_place_card()
+	elif is_instance_valid(card) and card.visible:_place_card()
 
 ## A click on a player pins its card for a moment; the click still walks.
 func _input(event: InputEvent) -> void:
+	if not is_instance_valid(world) or world.is_queued_for_deletion():return
 	if event is InputEventMouseButton and event.pressed and event.button_index==MOUSE_BUTTON_LEFT and not nodes.is_empty():
 		var id := player_at(world.get_global_transform_with_canvas().affine_inverse()*event.position)
 		if not id.is_empty():
@@ -256,9 +268,10 @@ func _update_card() -> void:
 	var player: Dictionary = model.players.get(id,{})
 	_card_for = id if not player.is_empty() else ""
 	if player.is_empty():
-		if card!=null:card.hide()
+		if is_instance_valid(card):card.hide()
 		return
-	if card==null:_build_card()
+	if not is_instance_valid(world) or world.is_queued_for_deletion() or not is_instance_valid(world.ui_root):return
+	if not is_instance_valid(card):_build_card()
 	var lines: PackedStringArray = [str(player.name),"等级 %d" % int(player.lv)]
 	if int(player.ride)>=0:lines.append("骑乘：%s" % (str(player.rn) if not str(player.rn).is_empty() else Riding.pet_name(int(player.ride))))
 	if is_leader(player):lines.append("队长")
@@ -300,8 +313,8 @@ func _card_style() -> StyleBoxFlat:
 
 func _place_card() -> void:
 	var id := _hovered if not _hovered.is_empty() else _pinned
-	var holder: Node2D = nodes.get(id)
-	if holder==null or not is_instance_valid(holder):return
+	var holder := _holder(id)
+	if holder==null or not is_instance_valid(card):return
 	var screen: Vector2 = holder.get_global_transform_with_canvas().origin
 	var bounds: Vector2 = world.get_viewport().get_visible_rect().size
 	card.position = (screen+Vector2(24,-card.size.y-24)).clamp(Vector2.ZERO,(bounds-card.size).max(Vector2.ZERO))
