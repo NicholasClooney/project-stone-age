@@ -17,6 +17,13 @@
         7,
         8
       ]
+    },
+    {
+      "id": "golden-bui",
+      "builder": "golden-bui",
+      "enabled_events": [
+        44
+      ]
     }
   ]
 }
