@@ -19,7 +19,10 @@
         "gmsv/data/npc/100/sb_gd.create"
       ],
       "scripts": {},
-      "items": [],
+      "items": [
+        2482,
+        2483
+      ],
       "reward_enemies": [],
       "jobs": [],
       "handlers": {

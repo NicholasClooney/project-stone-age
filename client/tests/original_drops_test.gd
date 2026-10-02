@@ -48,6 +48,13 @@ func finish(b, action: String = "attack") -> Dictionary:
 func run() -> void:
 	DirAccess.make_dir_recursive_absolute(folder)
 	var catalog = Catalog.new()
+	for enemy_id in [526,527]:
+		var enemy:Dictionary=catalog.data.enemies[str(enemy_id)]
+		var item:=2482 if enemy_id==526 else 2483
+		check(catalog.roll_drops(enemy,rng_for(9))==[item],"source cave probability10 includes roll9")
+		check(catalog.roll_drops(enemy,rng_for(10)).is_empty(),"source cave probability10 excludes roll10")
+	for enemy_id in [513,514,515]:
+		check(catalog.roll_drops(catalog.data.enemies[str(enemy_id)],rng_for(999))==[2428+enemy_id-513],"source Saton probability1000 includes roll999")
 	var source: Dictionary = catalog.data.enemies["563"]
 	check(source.drops.size()==1 and int(source.drops[0].slot)==0 and int(source.drops[0].item_id)==2468 and int(source.drops[0].probability)==700 and int(source.drops[0].denominator)==1000,"original drop columns are imported without scaling")
 	check(catalog.roll_drops(source,rng_for(699))==[2468],"_FIX_ITEMPROB 699 grants wood")
