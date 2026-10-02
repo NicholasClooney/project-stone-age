@@ -12,14 +12,16 @@ def keyword_warp(source, script, events):
             raise ValueError('Unsupported keyword source line')
         fields[key] = value
     if set(fields) == {'WARP','FREE','MONEY','FreeMsg','PayMsg','PartyMsg','MoneyMsg'}:
-        if fields['FREE'] != 'LV>49' or fields['MONEY'] != '-1' or not re.fullmatch(r'\d+,\d+,\d+', fields['WARP']):
+        level_gate = fields['FREE'] == 'LV>49' and re.fullmatch(r'\d+,\d+,\d+', fields['WARP'])
+        dragon_gate = fields['FREE'] == 'ITEM=2457&ITEM=2458&ITEM=2459' and fields['WARP'] == '20807,13,35'
+        if not (level_gate or dragon_gate) or fields['MONEY'] != '-1':
             raise ValueError('Unreviewed free WarpMan gate')
         return fields['PayMsg'].replace('\\n','\n'), [dict(
             event=-1,type='FREEWARP',condition=fields['FREE'],
             texts={'AcceptMsg':fields['FreeMsg'].replace('\\n','\n')},
             actions={'Warp':fields['WARP']},enabled=True,events=events,source=script,
             source_fields=fields,
-            source_rule='gmsv/npc/npc_warpman.c:228-231,254-268,300-309,393-400,560-566; original free level gate')]
+            source_rule=('gmsv/npc/npc_eventaction.c:1243-1280,1423-1424,1524-1538; original three-jewel bag check without consumption' if dragon_gate else 'gmsv/npc/npc_warpman.c:228-231,254-268,300-309,393-400,560-566; original free level gate'))]
     if set(fields) == {'WARP','FREE','MONEY','FreeMsg','PayMsg','MoneyMsg','DelItem'}:
         if fields['FREE'] != 'ITEM=2527' or fields['MONEY'] != '-1' or fields['DelItem'] != '2527*1' or fields['WARP'] != '31806,34,6':
             raise ValueError('Unreviewed ticket WarpMan gate')

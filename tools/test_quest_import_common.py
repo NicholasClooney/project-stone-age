@@ -48,6 +48,17 @@ class QuestModuleTests(unittest.TestCase):
             invalid=copy.deepcopy(spec);mutate(invalid)
             with self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
 
+    def test_dragon_gate_requires_all_original_jewels_without_consumption(self):
+        fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-dragon-gate.json').read_text())
+        self.assertEqual(common.load_quest_module(REFERENCE,fixture['manifest']),fixture['module'])
+        branch=fixture['module']['npcs'][0]['branches'][0]
+        self.assertEqual(branch['condition'],'ITEM=2457&ITEM=2458&ITEM=2459')
+        self.assertEqual(branch['actions'],{'Warp':'20807,13,35'})
+        from quest_source_handlers import keyword_warp
+        source=(REFERENCE/'gmsv/data/npc/genout/wpm_20807_11_37').read_text(encoding='gb18030')
+        for old,new in [('ITEM=2459','ITEM!=2459'),('&ITEM=2459',''),('20807,13,35','20807,13,36'),('MONEY:-1','MONEY:0')]:
+            with self.assertRaises(ValueError):keyword_warp(source.replace(old,new),'gate',[17])
+
     def test_miner_gate_and_condition_only_missing_item(self):
         fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-miner-gate.json').read_text())
         spec=fixture['manifest']
