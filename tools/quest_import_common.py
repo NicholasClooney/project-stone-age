@@ -95,7 +95,7 @@ def load_quest_module(reference, manifest):
     handlers = spec.get('handlers', {})
     if set(declared) & set(handlers):
         raise ValueError('Handler duplicates changeevent declaration')
-    if any(review.get('kind') != 'warpman' for review in handlers.values()):
+    if any(review.get('kind') not in ('warpman','npcenemy') for review in handlers.values()):
         raise ValueError('Quest handler not yet supported')
     selected_scripts = {**declared, **handlers}
     if any(extra.get('script') not in declared for extra in spec.get('supplements', [])):
@@ -104,15 +104,26 @@ def load_quest_module(reference, manifest):
     for create in spec['creates']:
         for ordinal, block in enumerate(re.findall(r'\{([^}]+)\}', texts[create])):
             fields = dict(line.strip().split('=', 1) for line in block.splitlines() if '=' in line and not line.lstrip().startswith('#'))
-            match = re.fullmatch(r'(changeevent|npcgen_warpman)\|file:(\S+)', fields.get('enemy', ''))
+            match = re.fullmatch(r'([^|]+)\|file:(\S+)', fields.get('enemy', ''))
             if not match or match[2] not in selected_scripts:
                 continue
             script = match[2]
             review = selected_scripts[script]
-            if (script in handlers) != (match[1] == 'npcgen_warpman'):
+            kind = review.get('kind', 'changeevent')
+            if kind == 'npcenemy':
+                template_bindings = []
+                for path, text in texts.items():
+                    if not path.endswith('.template'):continue
+                    for template_block in re.findall(r'\{([^}]+)\}', text):
+                        template = dict(line.strip().split('=',1) for line in template_block.splitlines() if '=' in line and not line.lstrip().startswith('#'))
+                        if template.get('templatename') == match[1]:template_bindings.append(template.get('functionset'))
+                if template_bindings != ['NPCEnemy']:
+                    raise ValueError('Missing or ambiguous pinned NPCEnemy template binding')
+            elif match[1] != ('npcgen_warpman' if kind == 'warpman' else 'changeevent'):
                 raise ValueError('Reviewed handler differs from actual create binding')
-            corners = list(map(int, fields['borncorner'].split(',')))
-            if len(corners) != 4 or corners[:2] != corners[2:] or fields['createnum'] != '1':
+            corners = list(map(int, fields.get('borncorner', fields.get('borncenter','')).split(',')))
+            fixed_spawn = len(corners) == 4 and (corners[:2] == corners[2:] if 'borncorner' in fields else kind == 'npcenemy' and corners[2:] == [1,1])
+            if not fixed_spawn or fields['createnum'] != '1':
                 raise ValueError('Moving/multiple NPC requires a reviewed handler')
             map_id, cell = int(fields['floorid']), corners[:2]
             # Optional instance allowlist uses the same public stable id.
@@ -120,8 +131,11 @@ def load_quest_module(reference, manifest):
             if 'instances' in review and ident not in review['instances']:
                 continue
             if script in handlers:
-                from quest_source_handlers import keyword_warp
-                default, branches = keyword_warp(texts[PREFIX + script], script, review['events'])
+                from quest_source_handlers import keyword_warp, npc_enemy, fixed_enemy_audit
+                parser = npc_enemy if kind == 'npcenemy' else keyword_warp
+                default, branches = parser(texts[PREFIX + script], script, review['events'])
+                if kind == 'npcenemy':
+                    branches[0]['combat_audit'] = fixed_enemy_audit(reference, texts, branches[0]['guard']['enemy_ids'], spec.get('combat_audit'))
             else:
                 default, branches = parse_script(texts[PREFIX + script], review['branches'])
                 apply_branch_supplements(spec, script, branches)
@@ -140,6 +154,8 @@ def load_quest_module(reference, manifest):
             npc = dict(id=ident, source_script=script, source_create=create, source_create_index=ordinal,
                        events=list(events), name=fields['name'], map_id=map_id, cell=cell,
                        graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches)
+            if kind == 'npcenemy':
+                npc['source_spawn_mode'] = 'NPCEnemy borncenter 1x1; original movement not simulated'
             if ident in seen:
                 raise ValueError('Duplicate quest instance: ' + ident)
             seen.add(ident)

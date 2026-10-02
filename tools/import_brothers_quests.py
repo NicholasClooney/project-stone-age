@@ -60,6 +60,10 @@ def extend(reference, result, parse_script):
                 if f['entype']!='2' or f['dieact']!='1':raise ValueError('Unreviewed guard behavior')
                 branches = [dict(event=-1,type='BATTLE',condition='LV>0',texts={'AcceptMsg':f['askbattlemsg1']},actions={'Battle':f['enemyno'],'Warp':','.join(f[k] for k in ['warpfl','warpx','warpy'])},enabled=True,events=events,source=ident)]
             else:raise ValueError(kind)
+            if kind == 'battle':
+                from quest_source_handlers import fixed_enemy_audit
+                branches[0]['combat_audit'] = fixed_enemy_audit(root, texts, [int(f['enemyno'])])
+                branches[0]['source_fields'] = f
             corner = fields.get('borncorner', fields.get('borncenter')).split(',')
             npc = dict(id=ident,name=fields.get('name') or '看板',map_id=int(fields['floorid']),cell=list(map(int,corner[:2])),graphic=int(fields['graphicname']),facing=int(re.match(r'\d+',fields['dir'])[0]),role='quest',events=events,text=default,branches=branches)
             if kind=='battle':npc['source_spawn_mode']='NPCEnemy borncenter 1x1; original movement not simulated'

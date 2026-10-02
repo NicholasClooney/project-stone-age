@@ -59,6 +59,27 @@ class QuestModuleTests(unittest.TestCase):
         invalid=copy.deepcopy(spec);invalid['handlers']['unknown']=dict(kind='warpman',events=[9])
         with self.assertRaisesRegex(ValueError,'Missing actual create'):common.load_quest_module(REFERENCE,invalid)
 
+    def test_fixed_guards_keep_bound_templates_enemy_order_and_audit(self):
+        fixtures=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-fixed-guards.json').read_text())
+        for fixture in fixtures:
+            spec=fixture['manifest'];result=common.load_quest_module(REFERENCE,spec)
+            self.assertEqual(result['npcs'],fixture['npcs'])
+            for npc in result['npcs']:
+                branch=npc['branches'][0]
+                self.assertEqual(branch['guard']['enemy_ids'],list(map(int,branch['actions']['Battle'].split(','))))
+                for enemy in branch['combat_audit']['enemies'].values():
+                    self.assertEqual(enemy['tactics'],enemy['raw_columns'][1])
+                for base in branch['combat_audit']['bases'].values():
+                    self.assertEqual(len(base['skills']),7)
+                    self.assertEqual([s['raw'] for s in base['skills']],base['raw_columns'][25:32])
+            invalid=copy.deepcopy(spec)
+            invalid['sources']={k:v for k,v in invalid['sources'].items() if not k.endswith('.template')}
+            with self.assertRaisesRegex(ValueError,'template binding'):common.load_quest_module(REFERENCE,invalid)
+        from quest_source_handlers import npc_enemy
+        raw=(REFERENCE/'gmsv/data/npc/100/sb_go.arg').read_text(encoding='gb18030')
+        for altered in [raw.replace('dieact:1','dieact:0'),raw+'\nsteal:1',raw.replace('enemyno:527,526,528,529','enemyno:527,bad')]:
+            with self.assertRaises(ValueError):npc_enemy(altered,'fixture',[9])
+
     def test_excluded_unsupported_language_never_reaches_parser(self):
         source = (REFERENCE/'gmsv/data/npc/quiz/equiz_02').read_text(encoding='gb18030')
         unsupported = source.replace('PET=77-12', 'PET=77-12EV')
