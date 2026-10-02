@@ -1,0 +1,442 @@
+{
+  "version": 1,
+  "id": "golden-bui",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/char/event.c": "3903d241a6105c63bcf55b284eaf6399dfbe7689ad7e68624dd54db7c002e4f5",
+    "gmsv/data/encount.txt": "534466129cf7e17787d1990a885171d542463d279b4fc426494bb25930c1f4b5",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/group.txt": "b1947ee3cad62d9f67d7aa0a4af0258c6d7fd35365883fc0fca0b9ec7ffee926",
+    "gmsv/data/group1.txt": "0bb651d20c4d8a89db7467a98722c337f51c235cfa853ab27a4be61dcc861b29",
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/map/quiz/2020": "d79f979ab04c6827c064750511066f25492009634932f52c2fd080683959a746",
+    "gmsv/data/map/quiz/quiz00": "cb6be00dcd50054bd3c4b151a276ba754d6e500cf0af542fcd57c887eff8934c",
+    "gmsv/data/map/quiz/quiz00a": "157f4087e883b7cf89b64332cd6ae02708ef3cc8d310d7cd37bc48def95e82d8",
+    "gmsv/data/map/quiz/quiz00b": "9a0a1d75437018fbf0f6cd11a46b8da8ce0de0ba685010de35b90218e97f0682",
+    "gmsv/data/map/quiz/quiz01": "962122b1e3ae55a19ffba9afafef7e0cf980532c5461cb0a6bdec2a16a2a9289",
+    "gmsv/data/map/quiz/quiz01a": "e11dbf2edb2e0876964f6809e4e06a00f2afd0ab044b835247f7c53ca284e8f1",
+    "gmsv/data/map/quiz/quiz01b": "9f6247705a8124ba3187cfe6fa62e46d7b443ba02e7b74f8d09a470012129ec5",
+    "gmsv/data/map/quiz/quiz02": "336d729b16a03a01097b22d60b4c7c11ffa7155bcfd9d3fde0758d2966d57a9b",
+    "gmsv/data/map/quiz/quiz02a": "2e550f87b54c53a6689b78bf7cf6689affb8ecafa21645916080e66f1b1649a1",
+    "gmsv/data/map/quiz/quiz02b": "ea1cc39ea13d976dba367a59dd23ef04514aabbd1c37160500daa452be490534",
+    "gmsv/data/map/quiz/quiz03": "6344dcc960c11135a5780105faa59a6f46dba80508335163ababfa248c1420f0",
+    "gmsv/data/map/quiz/quiz03a": "8bdf275baf6d0499399d4170b5965e1b4c770a9203ada65692a882511836acc9",
+    "gmsv/data/map/quiz/quiz03b": "7bfa94403a1212032e717c3f995fb221c76f9d3360b182ad6abde3de340afb2c",
+    "gmsv/data/map/quiz/quiz04": "940ce241ce0e5ffa70ff7684cc7c4a23666aaa36ebcb19667a7cfda8e58c3857",
+    "gmsv/data/map/quiz/quiz04a": "95bf5d84f76f1a602fe9d466a9bc610d92311cf5125e0afb86dc4b5ca37f1b70",
+    "gmsv/data/map/quiz/quiz04b": "4d48c2153b048f653025fb9e179e08c2008eb4e321380e6be9eb065ec06c7837",
+    "gmsv/data/map/quiz/quiz05": "2a6582899d4ecf10fb72a547c989e4d64cd4001d271fdf4727cc41888d374dd3",
+    "gmsv/data/map/quiz/quiz05a": "08f79bc0301016f297a4a3bf6f6dc64e2a527794e644b29698f5acdfda89c35a",
+    "gmsv/data/map/quiz/quiz05b": "afc329643f18c731fac4966a76f32331bcedc97dde6c374e049891a3cd7c9fea",
+    "gmsv/data/map/quiz/quiz06": "6464718a84c10e5e6eb94986fb047b4f4cc5f6e7e50377f279092736f7b79802",
+    "gmsv/data/map/quiz/quiz06a": "dbff7732d6ed44770eb94550379dfdb3eeec816e006837d20f020f34d64d5a8c",
+    "gmsv/data/map/quiz/quiz06b": "9400c7356d41a69fcdcb5246357efe8c99dd8557a979488eda6576d59c6f5a59",
+    "gmsv/data/map/quiz/quiz07": "0041cbf9595b059408626128df26e8b341d3f1b0b67c2fa5d23d334241dec237",
+    "gmsv/data/map/quiz/quiz07a": "f644366a5f373155753cca868e49d756c4ad122b82c693c13c80f93f5f578498",
+    "gmsv/data/map/quiz/quiz07b": "a1f7315cdbc7dd532a33e48d88db187865a2698625d26d72d06d3450b06d40ad",
+    "gmsv/data/map/quiz/quiz08": "50853b9dbfa83ec1d6e3f7dc7bb07bcea0e44476afffa98a4d346cbbbddac806",
+    "gmsv/data/map/quiz/quiz08a": "b30283282a0fcd71e9d623e1ed0120b9d27f8e25fa928f81854f79184cbb6c51",
+    "gmsv/data/map/quiz/quiz08b": "57985bbff15db0006f36ba4f95d602b0acfe44d75b4574ab1c278da26eac6d82",
+    "gmsv/data/map/quiz/quiz09": "f4e4a26d434b5ca95cb40c944a8b9bea1d46f5ed11b4e563425870490eadc780",
+    "gmsv/data/map/quiz/quiz09a": "b39ecf52dbd14e7ec1fb1ba36388e7677a8c6feb3cb6cfcf8b9fb4bd70d6afb0",
+    "gmsv/data/map/quiz/quiz09b": "892e635e81132dac9e5afa33b50fd3bebbebd09f2fc8ce8521a2f2f0371392e5",
+    "gmsv/data/map/quiz/quiz10": "de19eaf9214a84ca7655714324b192d1f5f4e1f60ddca46680c672a57623366c",
+    "gmsv/data/map/quiz/quiz10a": "ff0789de8354a17b7bb0753a9883d93c4ee9bb3c2f10ea28367880d2bcd39a12",
+    "gmsv/data/map/quiz/quiz10b": "5e0d30c84a2b9321e66f10e54e32379556fa5a06a1e875c044781e9179801ab0",
+    "gmsv/data/map/quiz/quiz11": "1b8df4a9bb49a0cb5bfa0898be68ad13946e2ded9d75dba3e336084a7f7fd96a",
+    "gmsv/data/map/quiz/quiz11a": "4197cb5aba3ff71b030b612f132565de18d88137acde4256d0329924f398282c",
+    "gmsv/data/map/quiz/quiz11b": "1194fdf2d611500a2d844ff07ceb4df2b805ae9302856e7b077479bbe0de7a7a",
+    "gmsv/data/map/quiz/quiz12": "d045036cd8eec3f35875c908a32d04de5d27fd3b525e279e9f9ef022e712a880",
+    "gmsv/data/npc/genout/jan_802_29_19": "e157c84d66cc644bd424d2b38ce5cbf3f6d8ed08d906c015cebd7f215c350419",
+    "gmsv/data/npc/genout/jan_804_29_19": "757ef9f3309769624a6889227b666ec0bb2e393991e7a3dac90ae623ffbbdd8f",
+    "gmsv/data/npc/genout/jan_807_18_19": "9b7ed78f355f2721c2cbf894bef25375ff968eb9f71e1f0c7c7ebb807b0b4bc9",
+    "gmsv/data/npc/genout/jan_822_29_19": "c1736c2287cbb83ca9b66d20ca487335d1934827aafce61a0922d08d49e53cc9",
+    "gmsv/data/npc/genout/jan_824_29_19": "a515db924b4e14e7ec780df86490525f9ca7d2480d17ff8c6d94a02bb9f3e90c",
+    "gmsv/data/npc/genout/jan_827_18_19": "04fb8471ea37f358e3e9e72a49a31200252fae9b4c849e1d2e2e4bbdca6dbf52",
+    "gmsv/data/npc/genout/jan_842_29_19": "98cd8a1326f1baf4f3a3ffca92318cb10dca52184442cf9c1f99e459d5cd4a13",
+    "gmsv/data/npc/genout/jan_844_29_19": "8201576baee8ea875d13269db816d462b8971ca54605996e94dab5802cf483c5",
+    "gmsv/data/npc/genout/jan_847_18_19": "1cf72c224c4d7e6a84f94c7680746db7d9dc2040171c8ec3fe87cfc3a582dfff",
+    "gmsv/data/npc/genout/janken.create": "f04af05473855c80127e91acc0ac13ab88c30248b5d3fb62654a2827a9b6edf4",
+    "gmsv/data/npc/genout/msg_810_29_13": "1d7a33d6faaf12c175e63cb36d25b5ad4f04e24fd6d6ab6252e45712da08877b",
+    "gmsv/data/npc/genout/msg_850_29_13": "1d7a33d6faaf12c175e63cb36d25b5ad4f04e24fd6d6ab6252e45712da08877b",
+    "gmsv/data/npc/genout/quiz.create": "2cea75c94aad409bc0f7f9df07281d7f47421972956aa00331a90224692570bb",
+    "gmsv/data/npc/genout/quizman.create": "fd03715c723a7e63d9200a425c97ca22595c84f823be861b8facf7993a83b3ba",
+    "gmsv/data/npc/genout/quz_800_29_19": "ccedfecc1971acb89f460530ecc49331884a6103f22e231d5ce90f60b6211340",
+    "gmsv/data/npc/genout/quz_801_18_19": "2b31b5ad18657bd23b5eed610e06e7b9d2c33f8e9a27c2cde3b0de73d492ad4b",
+    "gmsv/data/npc/genout/quz_803_18_19": "b86ca84c382a63a308a3e78603df4fd14e60ffdb608774e64e5736c2d6bdded3",
+    "gmsv/data/npc/genout/quz_805_18_19": "e5d02312a3ac691338247ee8adf0ab462e88f5c08400c6389d8225145d2d095c",
+    "gmsv/data/npc/genout/quz_806_29_19": "fd17f5bbdf93badce16b7ef03dc77906e83f9e092752125366e0ac0d11c3ea70",
+    "gmsv/data/npc/genout/quz_808_29_19": "2af2e17cc4c9d9f76e2bfb745eb7dc7926c43c63861d5a38af2b3b090729a90c",
+    "gmsv/data/npc/genout/quz_809_18_19": "cd3db560b516720b52cdfb0241c00bba9941b71532bb94183168b82572a07627",
+    "gmsv/data/npc/genout/quz_820_29_19": "ddb4b6ce8f827ff9c9972cffea33caededa60b4b13b0d4450fac66e1936de9fa",
+    "gmsv/data/npc/genout/quz_821_18_19": "1ade8665186f818d8c25a17f288f3699173117fa1003c8fca0db26f4368c12bf",
+    "gmsv/data/npc/genout/quz_823_18_19": "755718c7b3e636bb21ad2951e700c56c8c7c66e2a01122dc0f3ed061fe5a0185",
+    "gmsv/data/npc/genout/quz_825_18_19": "875d0feb7a20cbca55c335a0a28d8419f82febc7ecf4d4917d7d5cb1ce57182e",
+    "gmsv/data/npc/genout/quz_826_29_19": "1ca23787d46cabeb490593edd7ec2c6a9bdafe1c077bda34e89e7d7455f0962d",
+    "gmsv/data/npc/genout/quz_828_29_19": "227b54ce9134ca70ee25ffdc56f59f6bfd15052ec6018970c27cb677671a303c",
+    "gmsv/data/npc/genout/quz_829_18_19": "476c9b348709e18d5e04971530c66a5bfc53b204053cc631d6b42149123d83e9",
+    "gmsv/data/npc/genout/quz_840_29_19": "993132a85dfba1eaf16b00ef00c3f545b45d4bf4318e5118bf3fd3c7895fbea4",
+    "gmsv/data/npc/genout/quz_841_18_19": "c9393ee19f7dad7cc585e5738805a365715943354ed920078d5851cd7f939f0d",
+    "gmsv/data/npc/genout/quz_843_18_19": "f4fa6bded3d4cabc0dab7d7705ea0eec20162e7566631d7ca01843b5d53dffdf",
+    "gmsv/data/npc/genout/quz_845_18_19": "bada17318c23f98bc871cd356df91b8dea1f90e98bbd88999fa4c8558635beb9",
+    "gmsv/data/npc/genout/quz_846_29_19": "e8c15842084dffd4e924ad71987d7b4cfdbc1f739906635d9a20a3b75f2bd19b",
+    "gmsv/data/npc/genout/quz_848_29_19": "3ab4bd38eedce92426e824e4afe253dca263c476644d80cedea5cf8dbbe7c689",
+    "gmsv/data/npc/genout/quz_849_18_19": "b686babbfaca93d828ef07895efd178ae0758498444799d108afc312d1e42271",
+    "gmsv/data/npc/genout/signb_811_26_24": "e7b13e45036fd05b1df7433662d76c1a668254302a2ef7b1589b5dbe10a26329",
+    "gmsv/data/npc/genout/signb_851_26_24": "995135c25387691251935cda5fc40b0e5c27d3f870ed8527c756feeb17d1d768",
+    "gmsv/data/npc/genout/wpm_800_34_23": "3c20ce22b2842d4339dc96a0bf2acba7275f03d8f5d89cbbb75107f40d1315a1",
+    "gmsv/data/npc/genout/wpm_801_34_23": "3c20ce22b2842d4339dc96a0bf2acba7275f03d8f5d89cbbb75107f40d1315a1",
+    "gmsv/data/npc/genout/wpm_802_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_803_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_804_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_805_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_806_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_807_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_808_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_809_34_23": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_810_28_13": "da8125818fc60127b60730d0e342befb79f9f1e135fc82ec05eb65e7639064f7",
+    "gmsv/data/npc/genout/wpm_810_33_17": "a94e01b9b2ce1cbdfe6e4d91b521fdd91cb46e5232509daecb0022c10bd8c374",
+    "gmsv/data/npc/genout/wpm_811_28_20": "f9c5905b6a7d4f1e3dfe3c06d96a36794731432108b204fd2c7f7512b44a0b23",
+    "gmsv/data/npc/genout/wpm_811_30_20": "ae018723c636fabb5e8c2fea5581a9ff6dcf2c9709f9c7b53180665259338fd7",
+    "gmsv/data/npc/genout/wpm_811_32_15": "5c8a4b3060995f73f9c694b82d6f06e1b3004306783ae8110a4bd42800eca367",
+    "gmsv/data/npc/genout/wpm_820_34_23": "231ff711808f2fcbb9309d12815804a72709303550f29854bc44a80b3d9b6d7a",
+    "gmsv/data/npc/genout/wpm_821_34_23": "231ff711808f2fcbb9309d12815804a72709303550f29854bc44a80b3d9b6d7a",
+    "gmsv/data/npc/genout/wpm_822_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_823_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_824_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_825_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_826_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_827_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_828_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_829_34_23": "031ae50eca4a56457282a6134ed9bdf41f40fa0f8fd3cc531a66677fc27b3267",
+    "gmsv/data/npc/genout/wpm_840_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_841_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_842_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_843_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_844_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_845_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_846_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_847_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_848_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_849_34_23": "5fd340b3e5e36142c05c2efa7d9bc21d31c40cb611b720d3bf6c9a98e9f10c00",
+    "gmsv/data/npc/genout/wpm_850_28_13": "da8125818fc60127b60730d0e342befb79f9f1e135fc82ec05eb65e7639064f7",
+    "gmsv/data/npc/genout/wpm_850_33_17": "e131eef70b638d1f8ef4d91b7c7a05cd6f426ecde23cb171d1c419fb544bc798",
+    "gmsv/data/npc/genout/wpm_851_29_20": "1046d94fa80b45c285f5dac1a8419fe0df9946c486925bbf2e98fa6e4a9a24fa",
+    "gmsv/data/npc/genout/wpm_851_32_15": "b83fc7d5f351c3a10b6287f68b67fcd025d842ee9d759a183a65e8e16c7e3465",
+    "gmsv/data/npc/quiz/equiz_01": "70af9ae74d61b2153bd889a72f47f895ce6b15f09ad0617f5fede055c715c22b",
+    "gmsv/data/npc/quiz/equiz_02": "f4678b82565b864c3e027d519bcc3f84ae4b1f3079e4e497ef190d961f63ed76",
+    "gmsv/data/npc/quiz/quiz.create": "f1d2b193f55b45b75813c390b95963cf819a938eb4b9827911ebcc07023ed459",
+    "gmsv/data/npc/quiz/uketuke": "5e593e9a0f9ae58a50c0b7555cbb4de29e83e8f48ff8755c1954a35beae910ed",
+    "gmsv/data/npc/quiz/uketuke2": "ca05a1ca788c5d3914d6de454cecfe27c48678c907ae41661cb649510f930e82",
+    "gmsv/data/question.txt": "b9ebc526f4cdcbc2f52c1a914089ba699a769bb483ed0d92f2caaf11ebbf57d8",
+    "gmsv/main.c": "05d5c1941a6114f456c14761c3f5891139c500f5cda045b7c4a7ef58887b914c",
+    "gmsv/map/readmap.c": "287ffda7b2307797759aea937d7ba1aee49d3d1abbfb3c8c12e815528c35dc2e",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npc_janken.c": "2aef92b8f1962cee85e3ac9762724cf279ed7add0cea75c7c1041374cf231487",
+    "gmsv/npc/npc_quiz.c": "bd453d39d6ad48a9ba3e630d7397af5b61e67e60fb71fa0d95768add4f3ffe0f",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/npc/npccreate.c": "0ebcf33d7ba2004958b76787965439f54eca8ae2e08037aa9dd54b0708844fad",
+    "gmsv/npc/npcgen.c": "909f0cdffdd2ec5ed7d2b0b64bf915932a132bf12384012354684f5fd28b39d3",
+    "gmsv/object.c": "c63d28b685e6610053a69f8a435404a8a23dfb958ad367379f5995c99dc931ce",
+    "gmsv/setup.cf": "f7a53ca90c42751c9b6ea730574400217cd9a07f3eb1e3f307cd697ee4d890a5",
+    "gmsv/data/map/jyaruga/karutana/4020": "7d6c3caccc598a2348e98606501ba290a5da9af32a877ed9509f7da0d3bd326f",
+    "gmsv/data/npc/genout/wpm_831_30_20": "ead62b5dc1376db2a0d3f19e2de3481ad71858f1b57138775cf3f012ff9e80c9",
+    "gmsv/data/npc/genout/wpm_831_28_20": "cddd68029659330566b724ffa2489d951d84541839a18251d323457ea37be31b",
+    "gmsv/data/npc/genout/wpm_831_32_15": "5c8a4b3060995f73f9c694b82d6f06e1b3004306783ae8110a4bd42800eca367"
+  },
+  "creates": [
+    "gmsv/data/npc/quiz/quiz.create"
+  ],
+  "scripts": {
+    "quiz/equiz_01": {
+      "branches": [
+        3
+      ],
+      "events": [
+        44
+      ]
+    },
+    "quiz/equiz_02": {
+      "branches": [
+        4
+      ],
+      "events": [
+        44
+      ]
+    },
+    "quiz/uketuke": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        44
+      ]
+    },
+    "quiz/uketuke2": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        44
+      ]
+    }
+  },
+  "sidecar_creates": [
+    "gmsv/data/npc/genout/quizman.create",
+    "gmsv/data/npc/genout/janken.create",
+    "gmsv/data/npc/genout/quiz.create"
+  ],
+  "sidecar_scripts": {
+    "genout/quz_800_29_19": "quiz",
+    "genout/quz_801_18_19": "quiz",
+    "genout/quz_803_18_19": "quiz",
+    "genout/quz_805_18_19": "quiz",
+    "genout/quz_806_29_19": "quiz",
+    "genout/quz_808_29_19": "quiz",
+    "genout/quz_809_18_19": "quiz",
+    "genout/quz_820_29_19": "quiz",
+    "genout/quz_821_18_19": "quiz",
+    "genout/quz_823_18_19": "quiz",
+    "genout/quz_825_18_19": "quiz",
+    "genout/quz_826_29_19": "quiz",
+    "genout/quz_828_29_19": "quiz",
+    "genout/quz_829_18_19": "quiz",
+    "genout/quz_840_29_19": "quiz",
+    "genout/quz_841_18_19": "quiz",
+    "genout/quz_843_18_19": "quiz",
+    "genout/quz_845_18_19": "quiz",
+    "genout/quz_846_29_19": "quiz",
+    "genout/quz_848_29_19": "quiz",
+    "genout/quz_849_18_19": "quiz",
+    "genout/jan_802_29_19": "janken",
+    "genout/jan_804_29_19": "janken",
+    "genout/jan_807_18_19": "janken",
+    "genout/jan_822_29_19": "janken",
+    "genout/jan_824_29_19": "janken",
+    "genout/jan_827_18_19": "janken",
+    "genout/jan_842_29_19": "janken",
+    "genout/jan_844_29_19": "janken",
+    "genout/jan_847_18_19": "janken",
+    "genout/wpm_811_30_20": "warpman",
+    "genout/wpm_811_28_20": "warpman",
+    "genout/wpm_811_32_15": "warpman",
+    "genout/wpm_810_33_17": "warpman",
+    "genout/wpm_800_34_23": "warpman",
+    "genout/wpm_801_34_23": "warpman",
+    "genout/wpm_802_34_23": "warpman",
+    "genout/wpm_803_34_23": "warpman",
+    "genout/wpm_804_34_23": "warpman",
+    "genout/wpm_805_34_23": "warpman",
+    "genout/wpm_806_34_23": "warpman",
+    "genout/wpm_807_34_23": "warpman",
+    "genout/wpm_808_34_23": "warpman",
+    "genout/wpm_809_34_23": "warpman",
+    "genout/wpm_851_29_20": "warpman",
+    "genout/wpm_851_32_15": "warpman",
+    "genout/wpm_850_33_17": "warpman",
+    "genout/wpm_840_34_23": "warpman",
+    "genout/wpm_841_34_23": "warpman",
+    "genout/wpm_842_34_23": "warpman",
+    "genout/wpm_843_34_23": "warpman",
+    "genout/wpm_844_34_23": "warpman",
+    "genout/wpm_845_34_23": "warpman",
+    "genout/wpm_846_34_23": "warpman",
+    "genout/wpm_847_34_23": "warpman",
+    "genout/wpm_848_34_23": "warpman",
+    "genout/wpm_849_34_23": "warpman",
+    "genout/wpm_831_30_20": "warpman",
+    "genout/wpm_831_28_20": "warpman",
+    "genout/wpm_831_32_15": "warpman",
+    "genout/wpm_820_34_23": "warpman",
+    "genout/wpm_821_34_23": "warpman",
+    "genout/wpm_822_34_23": "warpman",
+    "genout/wpm_823_34_23": "warpman",
+    "genout/wpm_824_34_23": "warpman",
+    "genout/wpm_825_34_23": "warpman",
+    "genout/wpm_826_34_23": "warpman",
+    "genout/wpm_827_34_23": "warpman",
+    "genout/wpm_828_34_23": "warpman",
+    "genout/wpm_829_34_23": "warpman"
+  },
+  "items": [
+    2751,
+    2752,
+    2753,
+    2754,
+    2755,
+    2756,
+    2757
+  ],
+  "reward_enemies": [
+    14
+  ],
+  "jobs": [
+    {
+      "id": 2,
+      "event": 44,
+      "title": "猜谜3兄弟",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "map_sources": {
+    "802": {
+      "path": "gmsv/data/map/quiz/quiz03",
+      "sha256": "6344dcc960c11135a5780105faa59a6f46dba80508335163ababfa248c1420f0"
+    },
+    "803": {
+      "path": "gmsv/data/map/quiz/quiz04",
+      "sha256": "940ce241ce0e5ffa70ff7684cc7c4a23666aaa36ebcb19667a7cfda8e58c3857"
+    },
+    "844": {
+      "path": "gmsv/data/map/quiz/quiz05b",
+      "sha256": "afc329643f18c731fac4966a76f32331bcedc97dde6c374e049891a3cd7c9fea"
+    },
+    "804": {
+      "path": "gmsv/data/map/quiz/quiz05",
+      "sha256": "2a6582899d4ecf10fb72a547c989e4d64cd4001d271fdf4727cc41888d374dd3"
+    },
+    "822": {
+      "path": "gmsv/data/map/quiz/quiz03a",
+      "sha256": "8bdf275baf6d0499399d4170b5965e1b4c770a9203ada65692a882511836acc9"
+    },
+    "801": {
+      "path": "gmsv/data/map/quiz/quiz02",
+      "sha256": "336d729b16a03a01097b22d60b4c7c11ffa7155bcfd9d3fde0758d2966d57a9b"
+    },
+    "845": {
+      "path": "gmsv/data/map/quiz/quiz06b",
+      "sha256": "9400c7356d41a69fcdcb5246357efe8c99dd8557a979488eda6576d59c6f5a59"
+    },
+    "828": {
+      "path": "gmsv/data/map/quiz/quiz09a",
+      "sha256": "b39ecf52dbd14e7ec1fb1ba36388e7677a8c6feb3cb6cfcf8b9fb4bd70d6afb0"
+    },
+    "847": {
+      "path": "gmsv/data/map/quiz/quiz08b",
+      "sha256": "57985bbff15db0006f36ba4f95d602b0acfe44d75b4574ab1c278da26eac6d82"
+    },
+    "826": {
+      "path": "gmsv/data/map/quiz/quiz07a",
+      "sha256": "f644366a5f373155753cca868e49d756c4ad122b82c693c13c80f93f5f578498"
+    },
+    "810": {
+      "path": "gmsv/data/map/quiz/quiz11",
+      "sha256": "1b8df4a9bb49a0cb5bfa0898be68ad13946e2ded9d75dba3e336084a7f7fd96a"
+    },
+    "841": {
+      "path": "gmsv/data/map/quiz/quiz02b",
+      "sha256": "ea1cc39ea13d976dba367a59dd23ef04514aabbd1c37160500daa452be490534"
+    },
+    "823": {
+      "path": "gmsv/data/map/quiz/quiz04a",
+      "sha256": "95bf5d84f76f1a602fe9d466a9bc610d92311cf5125e0afb86dc4b5ca37f1b70"
+    },
+    "840": {
+      "path": "gmsv/data/map/quiz/quiz01b",
+      "sha256": "9f6247705a8124ba3187cfe6fa62e46d7b443ba02e7b74f8d09a470012129ec5"
+    },
+    "809": {
+      "path": "gmsv/data/map/quiz/quiz10",
+      "sha256": "de19eaf9214a84ca7655714324b192d1f5f4e1f60ddca46680c672a57623366c"
+    },
+    "849": {
+      "path": "gmsv/data/map/quiz/quiz10b",
+      "sha256": "5e0d30c84a2b9321e66f10e54e32379556fa5a06a1e875c044781e9179801ab0"
+    },
+    "2020": {
+      "path": "gmsv/data/map/quiz/2020",
+      "sha256": "d79f979ab04c6827c064750511066f25492009634932f52c2fd080683959a746"
+    },
+    "850": {
+      "path": "gmsv/data/map/quiz/quiz11b",
+      "sha256": "1194fdf2d611500a2d844ff07ceb4df2b805ae9302856e7b077479bbe0de7a7a"
+    },
+    "824": {
+      "path": "gmsv/data/map/quiz/quiz05a",
+      "sha256": "08f79bc0301016f297a4a3bf6f6dc64e2a527794e644b29698f5acdfda89c35a"
+    },
+    "808": {
+      "path": "gmsv/data/map/quiz/quiz09",
+      "sha256": "f4e4a26d434b5ca95cb40c944a8b9bea1d46f5ed11b4e563425870490eadc780"
+    },
+    "851": {
+      "path": "gmsv/data/map/quiz/quiz00b",
+      "sha256": "9a0a1d75437018fbf0f6cd11a46b8da8ce0de0ba685010de35b90218e97f0682"
+    },
+    "806": {
+      "path": "gmsv/data/map/quiz/quiz07",
+      "sha256": "0041cbf9595b059408626128df26e8b341d3f1b0b67c2fa5d23d334241dec237"
+    },
+    "811": {
+      "path": "gmsv/data/map/quiz/quiz00",
+      "sha256": "cb6be00dcd50054bd3c4b151a276ba754d6e500cf0af542fcd57c887eff8934c"
+    },
+    "848": {
+      "path": "gmsv/data/map/quiz/quiz09b",
+      "sha256": "892e635e81132dac9e5afa33b50fd3bebbebd09f2fc8ce8521a2f2f0371392e5"
+    },
+    "825": {
+      "path": "gmsv/data/map/quiz/quiz06a",
+      "sha256": "dbff7732d6ed44770eb94550379dfdb3eeec816e006837d20f020f34d64d5a8c"
+    },
+    "800": {
+      "path": "gmsv/data/map/quiz/quiz01",
+      "sha256": "962122b1e3ae55a19ffba9afafef7e0cf980532c5461cb0a6bdec2a16a2a9289"
+    },
+    "805": {
+      "path": "gmsv/data/map/quiz/quiz06",
+      "sha256": "6464718a84c10e5e6eb94986fb047b4f4cc5f6e7e50377f279092736f7b79802"
+    },
+    "842": {
+      "path": "gmsv/data/map/quiz/quiz03b",
+      "sha256": "7bfa94403a1212032e717c3f995fb221c76f9d3360b182ad6abde3de340afb2c"
+    },
+    "807": {
+      "path": "gmsv/data/map/quiz/quiz08",
+      "sha256": "50853b9dbfa83ec1d6e3f7dc7bb07bcea0e44476afffa98a4d346cbbbddac806"
+    },
+    "821": {
+      "path": "gmsv/data/map/quiz/quiz02a",
+      "sha256": "2e550f87b54c53a6689b78bf7cf6689affb8ecafa21645916080e66f1b1649a1"
+    },
+    "846": {
+      "path": "gmsv/data/map/quiz/quiz07b",
+      "sha256": "a1f7315cdbc7dd532a33e48d88db187865a2698625d26d72d06d3450b06d40ad"
+    },
+    "827": {
+      "path": "gmsv/data/map/quiz/quiz08a",
+      "sha256": "b30283282a0fcd71e9d623e1ed0120b9d27f8e25fa928f81854f79184cbb6c51"
+    },
+    "820": {
+      "path": "gmsv/data/map/quiz/quiz01a",
+      "sha256": "e11dbf2edb2e0876964f6809e4e06a00f2afd0ab044b835247f7c53ca284e8f1"
+    },
+    "843": {
+      "path": "gmsv/data/map/quiz/quiz04b",
+      "sha256": "4d48c2153b048f653025fb9e179e08c2008eb4e321380e6be9eb065ec06c7837"
+    },
+    "829": {
+      "path": "gmsv/data/map/quiz/quiz10a",
+      "sha256": "ff0789de8354a17b7bb0753a9883d93c4ee9bb3c2f10ea28367880d2bcd39a12"
+    },
+    "4020": {
+      "path": "gmsv/data/map/jyaruga/karutana/4020",
+      "sha256": "7d6c3caccc598a2348e98606501ba290a5da9af32a877ed9509f7da0d3bd326f"
+    },
+    "831": {
+      "path": "gmsv/data/map/quiz/quiz00a",
+      "sha256": "157f4087e883b7cf89b64332cd6ae02708ef3cc8d310d7cd37bc48def95e82d8"
+    }
+  },
+  "item_notes": {
+    "2753": "本项目仅开放金布伊兑换；77级后续、任务47和百题尚未开放。"
+  }
+}

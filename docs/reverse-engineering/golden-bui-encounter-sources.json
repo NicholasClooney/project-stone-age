@@ -1,0 +1,1376 @@
+{
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "areas": [
+    {
+      "id": 524,
+      "map_id": 800,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 493
+    },
+    {
+      "id": 525,
+      "map_id": 801,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 494
+    },
+    {
+      "id": 526,
+      "map_id": 802,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 495
+    },
+    {
+      "id": 527,
+      "map_id": 803,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 496
+    },
+    {
+      "id": 528,
+      "map_id": 804,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 497
+    },
+    {
+      "id": 529,
+      "map_id": 805,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 498
+    },
+    {
+      "id": 530,
+      "map_id": 806,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 499
+    },
+    {
+      "id": 531,
+      "map_id": 807,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 500
+    },
+    {
+      "id": 532,
+      "map_id": 808,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 501
+    },
+    {
+      "id": 533,
+      "map_id": 809,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 3,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 708,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 502
+    },
+    {
+      "id": 534,
+      "map_id": 820,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 503
+    },
+    {
+      "id": 535,
+      "map_id": 821,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 504
+    },
+    {
+      "id": 536,
+      "map_id": 822,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 505
+    },
+    {
+      "id": 537,
+      "map_id": 823,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 506
+    },
+    {
+      "id": 538,
+      "map_id": 824,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 507
+    },
+    {
+      "id": 539,
+      "map_id": 825,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 508
+    },
+    {
+      "id": 540,
+      "map_id": 826,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 509
+    },
+    {
+      "id": 541,
+      "map_id": 827,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 510
+    },
+    {
+      "id": 542,
+      "map_id": 828,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 511
+    },
+    {
+      "id": 543,
+      "map_id": 829,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 4,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 709,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 512
+    },
+    {
+      "id": 544,
+      "map_id": 840,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 513
+    },
+    {
+      "id": 545,
+      "map_id": 841,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 514
+    },
+    {
+      "id": 546,
+      "map_id": 842,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 515
+    },
+    {
+      "id": 547,
+      "map_id": 843,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 516
+    },
+    {
+      "id": 548,
+      "map_id": 844,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 517
+    },
+    {
+      "id": 549,
+      "map_id": 845,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 518
+    },
+    {
+      "id": 550,
+      "map_id": 846,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 519
+    },
+    {
+      "id": 551,
+      "map_id": 847,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 520
+    },
+    {
+      "id": 552,
+      "map_id": 848,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 521
+    },
+    {
+      "id": 553,
+      "map_id": 849,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 1,
+      "probability_max": 2,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [
+        {
+          "id": 710,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 522
+    },
+    {
+      "id": 554,
+      "map_id": 811,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 0,
+      "probability_max": 0,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 523
+    },
+    {
+      "id": 555,
+      "map_id": 831,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 0,
+      "probability_max": 0,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 524
+    },
+    {
+      "id": 556,
+      "map_id": 851,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 0,
+      "probability_max": 0,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 525
+    },
+    {
+      "id": 557,
+      "map_id": 810,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 0,
+      "probability_max": 0,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 526
+    },
+    {
+      "id": 559,
+      "map_id": 850,
+      "rect": [
+        0,
+        0,
+        49,
+        49
+      ],
+      "probability_min": 0,
+      "probability_max": 0,
+      "max_enemies": 5,
+      "priority": 1,
+      "groups": [],
+      "invalid_weights": false,
+      "event_now": -1,
+      "event_end": -1,
+      "event_group": -1,
+      "source_line": 528
+    }
+  ],
+  "groups": {
+    "708": {
+      "id": 708,
+      "name": "初级问题",
+      "requires_item": -1,
+      "excludes_item": -1,
+      "enemies": [
+        {
+          "id": 1287,
+          "weight": 1
+        },
+        {
+          "id": 1288,
+          "weight": 1
+        },
+        {
+          "id": 1289,
+          "weight": 1
+        },
+        {
+          "id": 1290,
+          "weight": 1
+        },
+        {
+          "id": 1291,
+          "weight": 1
+        },
+        {
+          "id": 1292,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "source_line": 585
+    },
+    "709": {
+      "id": 709,
+      "name": "中级问题",
+      "requires_item": -1,
+      "excludes_item": -1,
+      "enemies": [
+        {
+          "id": 1293,
+          "weight": 1
+        },
+        {
+          "id": 1294,
+          "weight": 1
+        },
+        {
+          "id": 1295,
+          "weight": 1
+        },
+        {
+          "id": 1296,
+          "weight": 1
+        },
+        {
+          "id": 1297,
+          "weight": 1
+        },
+        {
+          "id": 1298,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "source_line": 586
+    },
+    "710": {
+      "id": 710,
+      "name": "高级问题",
+      "requires_item": -1,
+      "excludes_item": -1,
+      "enemies": [
+        {
+          "id": 1299,
+          "weight": 1
+        },
+        {
+          "id": 1300,
+          "weight": 1
+        },
+        {
+          "id": 1301,
+          "weight": 1
+        },
+        {
+          "id": 1302,
+          "weight": 1
+        },
+        {
+          "id": 1303,
+          "weight": 1
+        },
+        {
+          "id": 1304,
+          "weight": 1
+        }
+      ],
+      "invalid_weights": false,
+      "source_line": 587
+    }
+  },
+  "enemies": {
+    "1287": {
+      "id": 1287,
+      "name": "初级魁司1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 672,
+      "level_min": 30,
+      "level_max": 40,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 919
+    },
+    "1288": {
+      "id": 1288,
+      "name": "初级魁司2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 673,
+      "level_min": 30,
+      "level_max": 40,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 920
+    },
+    "1289": {
+      "id": 1289,
+      "name": "初级伊那多1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 674,
+      "level_min": 30,
+      "level_max": 40,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 921
+    },
+    "1290": {
+      "id": 1290,
+      "name": "初级伊那多2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 675,
+      "level_min": 30,
+      "level_max": 40,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 922
+    },
+    "1291": {
+      "id": 1291,
+      "name": "初级兹奇1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 676,
+      "level_min": 30,
+      "level_max": 40,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 923
+    },
+    "1292": {
+      "id": 1292,
+      "name": "初级兹奇2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 677,
+      "level_min": 30,
+      "level_max": 40,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 924
+    },
+    "1293": {
+      "id": 1293,
+      "name": "中级魁司1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 672,
+      "level_min": 40,
+      "level_max": 50,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 925
+    },
+    "1294": {
+      "id": 1294,
+      "name": "中级魁司2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 673,
+      "level_min": 40,
+      "level_max": 50,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 926
+    },
+    "1295": {
+      "id": 1295,
+      "name": "中级伊那多1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 674,
+      "level_min": 40,
+      "level_max": 50,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 927
+    },
+    "1296": {
+      "id": 1296,
+      "name": "中级伊那多2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 675,
+      "level_min": 40,
+      "level_max": 50,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 928
+    },
+    "1297": {
+      "id": 1297,
+      "name": "中级兹奇1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 676,
+      "level_min": 40,
+      "level_max": 50,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 929
+    },
+    "1298": {
+      "id": 1298,
+      "name": "中级兹奇2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 677,
+      "level_min": 40,
+      "level_max": 50,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 930
+    },
+    "1299": {
+      "id": 1299,
+      "name": "高级魁司1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 672,
+      "level_min": 50,
+      "level_max": 60,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 931
+    },
+    "1300": {
+      "id": 1300,
+      "name": "高级魁司2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 673,
+      "level_min": 50,
+      "level_max": 60,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 932
+    },
+    "1301": {
+      "id": 1301,
+      "name": "高级伊那多1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 674,
+      "level_min": 50,
+      "level_max": 60,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 933
+    },
+    "1302": {
+      "id": 1302,
+      "name": "高级伊那多2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 675,
+      "level_min": 50,
+      "level_max": 60,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 934
+    },
+    "1303": {
+      "id": 1303,
+      "name": "高级兹奇1",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 676,
+      "level_min": 50,
+      "level_max": 60,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2752,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 935
+    },
+    "1304": {
+      "id": 1304,
+      "name": "高级兹奇2",
+      "tactics": "at:3;1;1|gu:1|es:0|wa:0;0;0;0;0;0;0;",
+      "condition": "",
+      "template_id": 677,
+      "level_min": 50,
+      "level_max": 60,
+      "max_count": 2,
+      "min_count": 1,
+      "experience": 0,
+      "pet_flag": 0,
+      "drops": [
+        {
+          "slot": 0,
+          "item_id": 2751,
+          "probability": 600,
+          "denominator": 1000
+        }
+      ],
+      "wait_only": false,
+      "source_line": 936
+    }
+  },
+  "policy": "Use existing AI; preserve original per-enemy tactics as inactive metadata."
+}
