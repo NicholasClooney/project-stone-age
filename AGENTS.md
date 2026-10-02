@@ -6,6 +6,14 @@
 - Gameplay authority lives in `client/server/backend.gd` and `client/server/automation.gd`. UI code reads `world.state` / `world.session.snapshot()` and changes anything only through `world.session`, `world.battle_session` or `world.link.request`; never mutate `world.backend` from UI. A remote client has no backend at all. See [backend interface](docs/technical/backend-interface.md).
 - `scripts/test-all.sh` reports every suite; `scripts/test.sh` stops at the first failure. `scripts/test.sh` ignores its arguments and runs every suite one by one; run a single suite with `./scripts/run.sh --headless --script res://tests/<name>.gd`.
 
+## Effort estimates: project story points
+
+- Use this project's **story points (SP)** for effort estimates, including research reports and delegated tasks. The user's original playable MVP / completed Samgir slice is **1 SP**; completed villager conversation is **0.5 SP**. Do not substitute a generic team's point scale or treat the later, larger M004 MVP as the 1 SP anchor.
+- Read [estimate assumptions](docs/development/replication-estimates.md), the [estimate ledger](docs/development/feature-estimates.json), and the [feature catalogue](docs/product/feature-catalogue.md) before estimating. Compare the proposed scope to those completed anchors and to the **current** implementation; old backlog estimates are historical baselines, not current remaining work.
+- SP measures relative scope, effort and uncertainty, **not elapsed time**. Do not invent “agent-days” or convert SP mechanically to hours/days (the early 30-minute MVP aspiration is not a conversion rate). If the user separately requests a schedule, state its assumptions and evidence separately from SP.
+- Give an SP range with scope, dependencies, reusable existing systems, validation work and major unknowns. Separate shared foundations from per-task incremental work and charge foundations only once. If evidence is insufficient, mark the estimate provisional or investigate first rather than imply precision.
+- Pass this calibration to subagents asked to estimate. When revising the existing catalogue, update its ledger and scope together; do not silently rescale historical estimates.
+
 ## Working in the main checkout (the session the user talks to, not subagents)
 
 The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a fix or feature there is ready:
