@@ -175,6 +175,23 @@ def catalog(reference, spec=None):
     return dict(version=1, items=items, npcs=npcs, jobs=jobs, reward_pets=reward_pets, provenance=dict(reference_revision=spec['reference_revision'], sources=spec['sources'], client='StoneAge 2.5; logical static graphics, no fallback'))
 
 
+def write_quest_catalogs(root, result):
+    import copy
+    root = Path(root)
+    result = copy.deepcopy(result)
+    # Runtime code reads this sidecar privately. It is intentionally included
+    # in the web core pack for the local backend; its URL is not a secret.
+    for module_id, private in result.pop('server_catalogs', {}).items():
+        if module_id != 'golden-bui':
+            raise ValueError('Unreviewed server catalog output')
+        private_target = root/'server/golden-bui.json'
+        private_target.parent.mkdir(parents=True, exist_ok=True)
+        private_target.write_text(json.dumps(private, ensure_ascii=False, indent=2)+'\n')
+    target = root/'quests/catalog.json'
+    target.parent.mkdir(parents=True, exist_ok=True)
+    target.write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
+
+
 def run(source, reference, output):
     spec = json.loads(SPEC.read_text())
     result = catalog(reference, spec)
@@ -213,8 +230,7 @@ def run(source, reference, output):
         item.update(bitmap_id=bitmap, icon_path=f"quests/items/{item['id']}.png")
         target = root/item['icon_path']; target.parent.mkdir(parents=True, exist_ok=True)
         archive.image(bitmap).save(target)
-    target = root/'quests/catalog.json'
-    target.write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
+    write_quest_catalogs(root, result)
     print(f"Imported {len(result['npcs'])} reviewed quest NPCs and {len(result['items'])} items")
 
 

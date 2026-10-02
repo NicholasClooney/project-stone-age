@@ -114,6 +114,50 @@ class QuestModuleTests(unittest.TestCase):
         self.assertTrue(quests.valid_stone_cost('LV*40'))
         self.assertTrue(quests.valid_stone_cost('2147483647'))
 
+    def test_service_builder_and_public_private_output(self):
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            registry = root/'modules.json'
+            registry.write_text(json.dumps({'version': 1, 'modules': [
+                {'id': 'golden-bui', 'builder': 'golden-bui', 'enabled_events': [44]}]}))
+            result = common.extend_registered_modules(REFERENCE, quests.catalog(REFERENCE), registry)
+            quests.write_quest_catalogs(root, result)
+            public = json.loads((root/'quests/catalog.json').read_text())
+            private = json.loads((root/'server/golden-bui.json').read_text())
+            self.assertNotIn('server_catalogs', public)
+            self.assertNotIn('services', public)
+            self.assertNotIn('questions', json.dumps(public))
+            self.assertEqual(len(private['services']), 70)
+            for npc in public['npcs']:
+                if 'kind' in npc:
+                    self.assertIn(npc['service_id'], private['services'])
+            fixture_root = Path(__file__).resolve().parents[1]/'client/tests/fixtures'
+            for npc in json.loads((fixture_root/'golden-bui-public-npcs.json').read_text()):
+                self.assertIn(npc, public['npcs'])
+            fixture = json.loads((fixture_root/'golden-bui-private-services.json').read_text())
+            for key, rule in fixture['services'].items():
+                expected = copy.deepcopy(private['services'][key])
+                if 'questions' in expected: expected['questions'] = expected['questions'][:2]
+                self.assertEqual(rule, expected)
+            registry.write_text(json.dumps({'version': 1, 'modules': [
+                {'id': 'golden-bui', 'builder': 'arbitrary-module', 'enabled_events': [44]}]}))
+            with self.assertRaisesRegex(ValueError, 'Unreviewed quest builder'):
+                list(common.registered_quest_modules(REFERENCE, registry))
+
+    def test_private_service_catalog_remains_in_web_core(self):
+        from unittest.mock import patch
+        import plan_web_packs
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            for name, data in [('world/manifest.json', {'maps': {}}),
+                               ('characters/catalog.json', {}), ('battle/manifest.json', {}),
+                               ('server/golden-bui.json', {'services': {}})]:
+                path = root/name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(data))
+            with patch.object(plan_web_packs, 'LEGACY', root):
+                self.assertIn(plan_web_packs.RES+'server/golden-bui.json', plan_web_packs.plan()['packs']['core'])
+
     def test_empty_registry_does_not_activate_fixture(self):
         base = quests.catalog(REFERENCE)
         with tempfile.TemporaryDirectory() as folder:

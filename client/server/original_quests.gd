@@ -6,6 +6,7 @@ const Charm = preload("res://server/original_charm.gd")
 const Brothers = preload("res://server/brothers_quests.gd")
 const Loyalty = preload("res://server/loyalty.gd")
 var catalog
+var services = preload("res://server/original_quest_services.gd").new()
 var pending := {}
 var serial := 0
 # gmsv/include/version.h:241 enables _FIX_MAX_GOLD; char/char_base.c:
@@ -158,6 +159,9 @@ func talk(backend, id: String) -> Dictionary:
 	var npc := npc_by_id(id)
 	if npc.is_empty() or not allowed(backend,npc):return {"ok":false,"reason":"任务人物不在附近，或当前正忙。"}
 	if str(npc.get("handler",""))=="Charm":return Charm.talk(self,backend,npc)
+	if npc.has("kind"):
+		if str(npc.kind) not in services.KINDS:return {"ok":false,"reason":"尚未开放的原服务类型。"}
+		return services.open(self,backend,npc)
 	var profile: Dictionary=backend.session.snapshot()
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
@@ -185,14 +189,15 @@ func talk(backend, id: String) -> Dictionary:
 		pending.pet_ids=selected
 	return reply
 
-func choose(backend, token: String, choice: String) -> Dictionary:
+func choose(backend, token: String, choice: String, text: String = "") -> Dictionary:
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
 	var current: Dictionary=pending.duplicate(true)
 	pending={}
 	var npc: Dictionary=current.npc
+	if not allowed(backend,npc):return {"ok":false,"reason":"位置或活动状态已经改变。"}
+	if current.has("service_state"):return services.reply(self,backend,current,choice,text)
 	var branch: Dictionary=current.branch
 	var phase: String=current.phase
-	if not allowed(backend,npc):return {"ok":false,"reason":"位置或活动状态已经改变。"}
 	if phase=="end":return {"ok":choice=="ok","closed":true}
 	if str(npc.get("handler",""))=="Charm":return Charm.choose(self,backend,current,choice)
 	var profile: Dictionary=backend.session.snapshot()
@@ -214,7 +219,7 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
-func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -> Dictionary:
+func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "") -> Dictionary:
 	if branch.actions.has("Warp") and backend.quest_visit_guard.is_valid():
 		var reason: String=str(backend.quest_visit_guard.call())
 		if not reason.is_empty():return {"ok":false,"reason":reason}
@@ -298,6 +303,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 	if not backend.save():
 		backend.session._profile=profile
 		return {"ok":false,"reason":"save_failed"}
+	if not notice.is_empty():backend._emit({"type":"quest_result","text":notice})
 	if branch.actions.has("DelPet") and phase not in ["cancel","CLEAN"]:
 		var fresh: Dictionary=backend.automation.profile_settings()
 		for key in ["capture_pet","capture_pet_id"]:backend.automation.settings[key]=fresh[key]

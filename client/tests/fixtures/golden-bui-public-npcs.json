@@ -1,0 +1,71 @@
+[
+  {
+    "id": "genout/quz_801_18_19@801:18:19",
+    "source_script": "genout/quz_801_18_19",
+    "source_create": "gmsv/data/npc/genout/quizman.create",
+    "source_create_index": 1,
+    "source_line": 19,
+    "map_id": 801,
+    "cell": [
+      18,
+      19
+    ],
+    "name": "查克",
+    "graphic": 100065,
+    "facing": 4,
+    "role": "quest",
+    "events": [
+      44
+    ],
+    "kind": "golden_bui_quiz",
+    "text": "",
+    "branches": [],
+    "service_id": "genout/quz_801_18_19"
+  },
+  {
+    "id": "genout/jan_802_29_19@802:29:19",
+    "source_script": "genout/jan_802_29_19",
+    "source_create": "gmsv/data/npc/genout/janken.create",
+    "source_create_index": 0,
+    "source_line": 7,
+    "map_id": 802,
+    "cell": [
+      29,
+      19
+    ],
+    "name": "拉伊奇",
+    "graphic": 100120,
+    "facing": 4,
+    "role": "quest",
+    "events": [
+      44
+    ],
+    "kind": "golden_bui_janken",
+    "text": "",
+    "branches": [],
+    "service_id": "genout/jan_802_29_19"
+  },
+  {
+    "id": "genout/wpm_811_30_20@811:30:20",
+    "source_script": "genout/wpm_811_30_20",
+    "source_create": "gmsv/data/npc/genout/quiz.create",
+    "source_create_index": 12,
+    "source_line": 118,
+    "map_id": 811,
+    "cell": [
+      30,
+      20
+    ],
+    "name": "受理A",
+    "graphic": 16202,
+    "facing": 4,
+    "role": "quest",
+    "events": [
+      44
+    ],
+    "kind": "golden_bui_gate",
+    "text": "",
+    "branches": [],
+    "service_id": "genout/wpm_811_30_20"
+  }
+]
