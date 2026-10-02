@@ -158,6 +158,47 @@ class QuestModuleTests(unittest.TestCase):
             with patch.object(plan_web_packs, 'LEGACY', root):
                 self.assertIn(plan_web_packs.RES+'server/golden-bui.json', plan_web_packs.plan()['packs']['core'])
 
+    def test_portable_npc_image_identity(self):
+        ids = ['a/b', 'a-b', 'a:b', 'a_b', 'A/b', 'a%2Fb', '原人物@810:1:2',
+               'quiz/equiz_02@810:20:29', 'quiz/equiz_02@850:20:29']
+        paths = [quests.quest_npc_image_path(ident) for ident in ids]
+        self.assertEqual(len(set(path.casefold() for path in paths)), len(ids))
+        for ident, path in zip(ids, paths):
+            filename = Path(path).name
+            self.assertRegex(filename, r'^n-[0-9a-f]+\.png$')
+            self.assertEqual(bytes.fromhex(filename[2:-4]).decode('utf-8'), ident)
+            self.assertLessEqual(len(filename), 246)
+        for invalid in ['', 'x'*121]:
+            with self.assertRaises(ValueError): quests.quest_npc_image_path(invalid)
+
+    def test_portable_paths_remain_in_catalog_and_map_packs(self):
+        from unittest.mock import patch
+        import plan_web_packs
+        with tempfile.TemporaryDirectory() as folder:
+            root = Path(folder)
+            maps = {}
+            npcs = []
+            for map_id in (810, 850):
+                ident = f'quiz/equiz_02@{map_id}:20:29'
+                path = quests.quest_npc_image_path(ident)
+                target = root/path
+                target.parent.mkdir(parents=True, exist_ok=True)
+                target.write_bytes(b'fixture')
+                maps[str(map_id)] = {'path': f'world/{map_id}.json'}
+                npcs.append({'id': ident, 'map_id': map_id, 'path': path})
+            for name, data in [('world/manifest.json', {'maps': maps}),
+                               ('world/810.json', {'images': {}}), ('world/850.json', {'images': {}}),
+                               ('characters/catalog.json', {}), ('battle/manifest.json', {})]:
+                path = root/name
+                path.parent.mkdir(parents=True, exist_ok=True)
+                path.write_text(json.dumps(data))
+            quests.write_quest_catalogs(root, {'npcs': npcs})
+            self.assertEqual(json.loads((root/'quests/catalog.json').read_text())['npcs'], npcs)
+            with patch.object(plan_web_packs, 'LEGACY', root):
+                plan = plan_web_packs.plan()
+                for npc in npcs:
+                    self.assertIn(plan_web_packs.RES+npc['path'], plan['packs'][f'map-{npc["map_id"]}'])
+
     def test_empty_registry_does_not_activate_fixture(self):
         base = quests.catalog(REFERENCE)
         with tempfile.TemporaryDirectory() as folder:

@@ -175,6 +175,14 @@ def catalog(reference, spec=None):
     return dict(version=1, items=items, npcs=npcs, jobs=jobs, reward_pets=reward_pets, provenance=dict(reference_revision=spec['reference_revision'], sources=spec['sources'], client='StoneAge 2.5; logical static graphics, no fallback'))
 
 
+def quest_npc_image_path(ident):
+    """Injective UTF-8 hex name, also distinct on case-insensitive Windows."""
+    encoded = ident.encode('utf-8').hex()
+    if not encoded or len(encoded) > 240:
+        raise ValueError('Quest NPC id exceeds portable filename budget')
+    return 'quests/npcs/n-' + encoded + '.png'
+
+
 def write_quest_catalogs(root, result):
     import copy
     root = Path(root)
@@ -222,7 +230,7 @@ def run(source, reference, output):
     for npc in result['npcs'] + result['service_npcs']:
         bitmap = npc['bitmap_id']
         entry = archive.entries[bitmap]
-        npc.update(path=f"quests/npcs/{npc['id'].replace('/', '-')}.png", offset=[entry['x'], entry['y']], bitmap_id=bitmap)
+        npc.update(path=quest_npc_image_path(npc['id']), offset=[entry['x'], entry['y']], bitmap_id=bitmap)
         target = root/npc['path']; target.parent.mkdir(parents=True, exist_ok=True)
         archive.image(bitmap).save(target)
     for item in result['items'].values():

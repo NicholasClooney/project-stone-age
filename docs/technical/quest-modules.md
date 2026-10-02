@@ -131,3 +131,15 @@ source reward generation and reload. Reload comparison normalizes JSON numeric
 containers because existing load migration turns elemental float arrays into
 integer arrays; production save validation remains unchanged. Two real localhost
 WebSocket devices exercise token replacement and replay refusal on port 0.
+
+### Portable image paths
+
+`quest_npc_image_path(id)` encodes the full UTF-8 identity as lowercase hex in
+`quests/npcs/n-<hex>.png`. It is injective even on case-insensitive filesystems,
+including `/`, `:`, `%`, case differences and non-ASCII IDs. IDs remain unchanged
+in gameplay and save data. The importer rejects identities over 120 UTF-8 bytes
+rather than truncate them or create colliding filenames. Reimport all quest
+assets after this change: the public catalog points at the new image paths;
+previous files may remain unused, allowing an older catalog to continue loading
+until its corresponding import completes. Web map packs follow each catalog
+path, independent of the filename encoding.
