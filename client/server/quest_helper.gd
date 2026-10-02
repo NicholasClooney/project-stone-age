@@ -17,7 +17,9 @@ func navigation_key(backend) -> Array:
   var marju_stage:Array=Marju.stage_key(backend)
   if not marju_stage.is_empty():key=key+[marju_stage]
  if 9 in backend.quest_catalog.enabled_events:key.append_array(preload("res://server/munde_cave_helper.gd").stage_key(self,backend))
- if 17 in backend.quest_catalog.enabled_events:key=key+[Dragon.stage_key(backend)]
+ if 17 in backend.quest_catalog.enabled_events:
+  var dragon_stage:Array=Dragon.stage_key(backend)
+  if not dragon_stage.is_empty():key=key+[dragon_stage]
  return key
 
 func snapshot(backend) -> Dictionary:

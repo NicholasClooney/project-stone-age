@@ -50,3 +50,5 @@
 ## 合并后导入
 
 按 `miner-contest-handoff.md` 同一quest/world（保留8.0 fallback）→palette→split→packs→editor链导入。龙洞三类主敌及陪敌原图已存在，测试对每次真实队伍均执行TroopArt完整校验；无需新增战斗图。两普通装备定义2460/2505由本链添加，旧0耐久迁移白名单仍由foundation所有，不在本链扩展迁移。
+
+兼容补验：Dragon阶段键仅在20807返回命名阶段`["dragon17", inside]`，其他地图/未知地图返回空；snapshot key仅拼接非空阶段，保持与44/Marju/Munde独立相加。`golden_bui_helper_remote_test`旧disabled44空键断言未放宽，原套件0 failures；龙洞suite补地图外、未知地图、七楼墙内外键验证后仍0 failures。
