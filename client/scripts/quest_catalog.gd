@@ -35,6 +35,7 @@ func active_npcs() -> Array:
   if not _enabled(npc.get("events", [])): continue
   var override:Dictionary=npc_overrides.get(str(npc.id),{})
   if bool(override.get("hidden",false)):continue
+  if npc.has("source_spawn") and not override.has("map_id"):continue
   var active: Dictionary = npc.duplicate(true)
   if override.has("map_id"):
    active.map_id=int(override.map_id);active.cell=override.cell.duplicate()

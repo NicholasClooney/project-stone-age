@@ -25,6 +25,29 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_area_spawn_is_source_random_rectangle_and_collision(self):
+        fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-area-spawn.json').read_text())
+        spec=fixture['manifest'];module=common.load_quest_module(REFERENCE,spec)
+        self.assertEqual(module,fixture['module'])
+        npc=module['npcs'][0];rule=npc['source_spawn']
+        self.assertEqual(rule['rect'],[230,180,525,200])
+        self.assertEqual(len(rule['walkable']),6216)
+        self.assertEqual(rule['walkable'].count('1'),6125)
+        self.assertTrue(npc['id'].endswith(':area:525:200'))
+        from import_world import read_map
+        _,_,width,_,tiles,objects,_=read_map(REFERENCE/spec['world']['map_sources']['100']['path'])
+        table={int(c[0]):int(c[3]) for l in (REFERENCE/'gmsv/data/map/mapset.txt').read_text(encoding='gb18030').splitlines() if (c:=l.split()) and c[0].isdigit() and len(c)>3}
+        for offset,flag in enumerate(rule['walkable']):
+            x,y=230+offset%296,180+offset//296
+            obj=table.get(objects[y*width+x],0);tile=table.get(tiles[y*width+x],0)
+            self.assertEqual(flag=='1',obj==2 or (obj==1 and tile==1))
+        for mutate in [lambda s:s['scripts']['seimu/event/event02_1'].pop('spawn_policy'),
+                       lambda s:s['sources'].pop('gmsv/data/map/mapset.txt'),
+                       lambda s:s['sources'].pop('gmsv/data/npc/jaruga/event/event.template'),
+                       lambda s:s['world']['map_sources']['100'].update(sha256='0'*64)]:
+            invalid=copy.deepcopy(spec);mutate(invalid)
+            with self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
+
     def test_miner_gate_and_condition_only_missing_item(self):
         fixture=json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-miner-gate.json').read_text())
         spec=fixture['manifest']
