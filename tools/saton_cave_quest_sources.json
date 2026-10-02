@@ -1,0 +1,140 @@
+{
+  "version": 1,
+  "id": "saton-cave",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/sainasu/event/event13n.create": "c3c3d1962cb8f618860d47593117b959e6633673cd990ce33b56d68e85794aa8",
+    "gmsv/data/npc/sainasu/event/event13_1": "9a5eb18fa325f7dad0e9b25114e196c6c2b971cbff2c4662ec0c799a99eb09ac",
+    "gmsv/data/npc/sainasu/event/event13_2": "4aaf9abb7dd5c7549d1f5e78faafdf28f8a63f9f2e8167e63206adca8e21e614",
+    "gmsv/data/npc/100/sb_nusu1.arg": "c902fc462652073459c66423be15da9e581912fe55765d685ec19ed6e549d6e4",
+    "gmsv/data/npc/100/sb_nusu2.arg": "487764d75155e60058822f21977f2aa4dc0f432da306eaf981252a28d0215d2e",
+    "gmsv/data/npc/100/sb_nusu3.arg": "05c15614825df5025d2967b0e28f7ebd7f320079665741476b7a81b842986682",
+    "gmsv/data/npc/100/sb_nusu.create": "5738115e854f0eb69e4573f648b04e6d1eb0b631ea529dc2024fdc4f3cd9b667",
+    "gmsv/data/npc/100/sb_nusu.template": "fa2b4360735b0827aeb8c800d05ba86f89099bcf66cae116b7cfb2d7cd584624",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
+  },
+  "creates": [
+    "gmsv/data/npc/sainasu/event/event13n.create",
+    "gmsv/data/npc/100/sb_nusu.create"
+  ],
+  "scripts": {
+    "sainasu/event/event13_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        13,
+        14
+      ]
+    },
+    "sainasu/event/event13_2": {
+      "branches": [
+        0
+      ],
+      "events": [
+        13,
+        14
+      ]
+    }
+  },
+  "items": [
+    2428,
+    2429,
+    2430,
+    2431,
+    2450
+  ],
+  "reward_enemies": [],
+  "jobs": [
+    {
+      "id": 10,
+      "event": 13,
+      "title": "强盗洞窟",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "handlers": {
+    "100/sb_nusu1.arg": {
+      "kind": "npcenemy",
+      "events": [
+        13,
+        14
+      ]
+    },
+    "100/sb_nusu2.arg": {
+      "kind": "npcenemy",
+      "events": [
+        13,
+        14
+      ]
+    },
+    "100/sb_nusu3.arg": {
+      "kind": "npcenemy",
+      "events": [
+        13,
+        14
+      ]
+    }
+  },
+  "supplements": [
+    {
+      "script": "sainasu/event/event13_1",
+      "branch": 0,
+      "end_flags_add": [
+        14
+      ],
+      "annotation": "补充·依据编号登记；用户授权萨顿完成时同时补记14",
+      "approval": "docs/reverse-engineering/rebirth-quest-bonus-audit.md"
+    },
+    {
+      "script": "sainasu/event/event13_2",
+      "branch": 0,
+      "confirmation_text": "清除萨顿任务完成标记，可重新接取并领奖；加点项14保留，是否继续？",
+      "annotation": "项目补充：执行前确认；保留用户批准的原版重复领奖行为",
+      "approval": "docs/reverse-engineering/rebirth-quest-bonus-audit.md"
+    }
+  ],
+  "combat_audit": {
+    "path": "docs/reverse-engineering/bonus-cave-chains-sources.json",
+    "sha256": "ff542942f43782fbcd1038db63588d9557b2f0f704ef819523d442b472f8b92b"
+  },
+  "world": {
+    "map_sources": {
+      "10701": {
+        "path": "gmsv/data/map/sainasu/dungeon/10701",
+        "sha256": "8d63a9d3d45e0a4b72ec95ed5ab7fe992287724d60fe81d72629c1748c89331a"
+      },
+      "10705": {
+        "path": "gmsv/data/map/sainasu/dungeon/10705",
+        "sha256": "4e87bbc423aec7b6b17470dde680995116268976e2bb9327259155fb8ae4202c"
+      },
+      "10702": {
+        "path": "gmsv/data/map/sainasu/dungeon/10702",
+        "sha256": "85104d99f173a18cd9bfb0168a1e08ec1ed5975c9152f37e00dc454645d96f09"
+      },
+      "10703": {
+        "path": "gmsv/data/map/sainasu/dungeon/10703",
+        "sha256": "4bf35c35c4462b7661d2d0c268e847de46429f7dfb55ee5ef406191bd5e117d9"
+      },
+      "10704": {
+        "path": "gmsv/data/map/sainasu/dungeon/10704",
+        "sha256": "47385c69f42f89aa033b12be412c2698147ae2aa6b0de28d36dd4b6ee0a7353c"
+      }
+    },
+    "restored_scripts": [
+      "100/sb_nusu1.arg",
+      "100/sb_nusu2.arg",
+      "100/sb_nusu3.arg"
+    ]
+  }
+}
