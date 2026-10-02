@@ -1,7 +1,7 @@
 {
   "schema": 1,
   "title": "石器时代经典宠物",
-  "method": "当年（2000 到 2005 年，华义 1.0 到 8.0）玩家最熟悉的宠物。只收至少一个网上来源点名为经典、热门、PK 常用、十大骑宠或珍稀宠物的；原版获得方式按来源写，来源不一致的写在 note。名字用本作数据（参考服模板）的简体写法，template_id 是本作原表模板；本作没有的宠物 template_id 为 null。详见 docs/product/classic-pets.md。",
+  "method": "当年（2000 到 2005 年，华义 1.0 到 8.0）玩家最熟悉的宠物。只收至少一个网上来源点名为经典、热门、PK 常用、十大骑宠或珍稀宠物的；原版获得方式按来源写，来源不一致的写在 note。名字用本作数据（参考服模板）的简体写法，template_id 是本作原表模板；本作没有的宠物 template_id 为 null。详见 docs/product/classic-pets.md。 同系补全条目另按用户指定收录，来源 restoration_family_completion；补充捕获点明确非原版，不冒称原版野外。",
   "categories": [
     {
       "id": "pk",
@@ -138,6 +138,11 @@
       "title": "特殊宠物（本项目，参考服 NPC 资料核对）",
       "site": "本仓库",
       "url": "docs/reverse-engineering/special-pets.md"
+    },
+    "restoration_family_completion": {
+      "title": "用户指定同系补全（本作经典系列收录政策）",
+      "note": "依据本作pet_families与原enemybase/enemy表；不声称每个追加品种都有独立历史热门证据。",
+      "url": "docs/reverse-engineering/family-lv1-completion.md"
     }
   },
   "pets": [
@@ -681,7 +686,7 @@
       "template_id": 776,
       "family": "虎系",
       "category": "rare",
-      "reason": "老虎家族最神秘的一只，变装后可骑",
+      "reason": "老虎家族的蓝色品种；本作未确认可用原生骑乘图",
       "obtained": "后期：商城积分兑换、福袋",
       "original_wild": false,
       "sources": [
@@ -689,7 +694,8 @@
         "netease_jinhu",
         "welovesa"
       ],
-      "welovesa": "16/125"
+      "welovesa": "16/125",
+      "note": "历史资料有变装骑乘说法，但本地2.5/8.0与参考表未确证100871合成图；当前不能据此骑乘。"
     },
     {
       "name": "萨格鲁",
@@ -912,6 +918,202 @@
         "gameres_memory"
       ],
       "note": "只在重制手游的宣传里找到出处，原版宠物表和 8.5 客户端相簿都没有摩卡，所以本作没有它。"
+    },
+    {
+      "name": "可可恩",
+      "alias": "可可恩",
+      "template_id": 803,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "克洛恩",
+      "alias": "克洛恩",
+      "template_id": 804,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "布兰恩",
+      "alias": "布兰恩",
+      "template_id": 805,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "迪布恩",
+      "alias": "迪布恩",
+      "template_id": 806,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "扑满乌力",
+      "alias": "扑满乌力",
+      "template_id": 725,
+      "family": "乌力系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "乌力莱德",
+      "alias": "乌力莱德",
+      "template_id": 726,
+      "family": "乌力系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "乌力固力",
+      "alias": "乌力固力",
+      "template_id": 727,
+      "family": "乌力系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "玛斯贝卡",
+      "alias": "玛斯贝卡",
+      "template_id": 779,
+      "family": "虎系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "邦诺斯娜",
+      "alias": "邦诺斯娜",
+      "template_id": 754,
+      "family": "人龙系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "杨格斯",
+      "alias": "杨格斯",
+      "template_id": 755,
+      "family": "人龙系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "迪基格斯",
+      "alias": "迪基格斯",
+      "template_id": 756,
+      "family": "人龙系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "帖拉格恩",
+      "alias": "帖拉格恩",
+      "template_id": 271,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": true,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "洛卡伦恩",
+      "alias": "洛卡伦恩",
+      "template_id": 272,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": false,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
+    },
+    {
+      "name": "加宝格恩",
+      "alias": "加宝格恩",
+      "template_id": 273,
+      "family": "帖拉格恩系",
+      "category": "rare",
+      "reason": "按用户指定补全同系经典系列，保留原版品种属性。",
+      "obtained": "本作提供Lv1捕获点；新增点为补充·非原版，原版获得方式未在此推定。",
+      "original_wild": true,
+      "sources": [
+        "restoration_family_completion"
+      ],
+      "note": "同系收录不等同可骑；仅真实人物×宠物合成图支持骑乘。"
     }
   ]
 }

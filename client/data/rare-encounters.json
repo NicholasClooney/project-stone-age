@@ -13,13 +13,21 @@
     {"map_id": 100, "area_id": 56, "scale": 8, "reason": "乌力 Lv15–20 区普通组权重和 12；×8 后 96"},
     {"map_id": 300, "area_id": 311, "scale": 33, "reason": "吉鲁岛南部人龙 Lv43–45 区权重和 3；×33 后 99。原版把 Lv1 灰/黄人龙组放在套在本区里的小区 332/333（权重 1/101），但它们与本区同优先级 20，本作按原表顺序取本区，所以那两组走不到"},
     {"map_id": 500, "area_id": 659, "scale": 10, "reason": "五十年前波拉岛 Lv90–95 加格区普通组权重和 10（另有要道具的组 15）；×10 后 100"},
-    {"map_id": 10004, "area_id": 76, "scale": 2, "reason": "阿布的洞窟地下4楼权重和 45；×2 后 90"}
+    {"map_id": 10004, "area_id": 76, "scale": 2, "reason": "阿布的洞窟地下4楼权重和 45；×2 后 90"},
+    {"map_id": 32010, "area_id": 620, "scale": 17, "reason": "地下10楼原组权重和6，乘17至102；新增单独Lv1组约1%，保持原组相对比例。"}
   ],
   "clones": [
     {"id": 90001, "from": 1645, "template_id": 812, "reason": "原表 Lv1 斑尼迪克（1645）不可捕捉（pet_flag 0），复制为可捕捉"},
     {"id": 90014, "from": 1946, "template_id": 968, "reason": "原表 Lv1 艾迪希洛（1946）不可捕捉，复制为可捕捉"},
     {"id": 90015, "from": 539, "template_id": 524, "reason": "原表只有任务遇敌 Lv15 卡特利奴（539），复制为 Lv1"},
-    {"id": 90101, "from": 1947, "template_id": 969, "reason": "原表 Lv1 蒙奇（1947）不可捕捉（pet_flag 0），复制为可捕捉（id 90015 已是原表的行）"}
+    {"id": 90101, "from": 1947, "template_id": 969, "reason": "原表 Lv1 蒙奇（1947）不可捕捉（pet_flag 0），复制为可捕捉（id 90015 已是原表的行）"},
+    {"id": 90200, "template_id": 803, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1636},
+    {"id": 90201, "template_id": 804, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1637},
+    {"id": 90202, "template_id": 805, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1638},
+    {"id": 90203, "template_id": 806, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1639},
+    {"id": 90208, "template_id": 754, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1588},
+    {"id": 90209, "template_id": 755, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1660},
+    {"id": 90210, "template_id": 756, "reason": "原Lv1敌行不可捕获；经用户确认复制为补充·非原版可抓行，保留原模板及捕获参数。", "from": 1589}
   ],
   "encounters": [
     {"group_id": 91001, "alone_group_id": 92001, "template_id": 303, "name": "巴朵兰恩", "enemy_id": 352, "companion_id": 1473, "map_id": 500, "area_id": 639, "weight": 1, "origin": "original_area", "reason": "原版在此区有 Lv90–95 红暴（1473）；用原表未使用的 Lv1 红暴（352）"},
@@ -56,6 +64,17 @@
     {"group_id": 91047, "template_id": 965, "name": "鲁比", "enemy_id": 1926, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "大GP：原版来自卡包，无野外；和吉比成对，同上，用原版 Lv1 行 1926"},
     {"group_id": 91048, "template_id": 969, "name": "蒙奇", "enemy_id": 90101, "companion_id": null, "map_id": 100, "area_id": 38, "weight": 1, "origin": "added", "reason": "蒙奇：原版来自卡包，无野外；和吉比、鲁比同区，用复制为可捕捉的 Lv1 行 90101（原 1947）"},
     {"group_id": 91049, "alone_group_id": 92049, "template_id": 312, "name": "摩娜西普", "enemy_id": 355, "companion_id": 1463, "map_id": 500, "area_id": 652, "weight": 1, "origin": "added", "reason": "金羊：原版任务宠，无野外；和同系的黑羊同放五十年前波拉岛龙穴，用原版 Lv1 行 355"},
-    {"group_id": 91050, "alone_group_id": 92050, "template_id": 170, "name": "乌力王", "enemy_id": 2492, "companion_id": 255, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "乌力王：原版野外没有；和黑猪同放萨伊那斯的乌力草原，用原版 Lv1 行 2492"}
+    {"group_id": 91050, "alone_group_id": 92050, "template_id": 170, "name": "乌力王", "enemy_id": 2492, "companion_id": 255, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "乌力王：原版野外没有；和黑猪同放萨伊那斯的乌力草原，用原版 Lv1 行 2492"},
+    {"group_id": 91100, "template_id": 803, "name": "可可恩", "enemy_id": 90200, "companion_id": null, "map_id": 32006, "area_id": 616, "weight": 1, "origin": "added", "reason": "帖拉格恩系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91101, "template_id": 804, "name": "克洛恩", "enemy_id": 90201, "companion_id": null, "map_id": 32007, "area_id": 617, "weight": 1, "origin": "added", "reason": "帖拉格恩系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91102, "template_id": 805, "name": "布兰恩", "enemy_id": 90202, "companion_id": null, "map_id": 32008, "area_id": 618, "weight": 1, "origin": "added", "reason": "帖拉格恩系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91103, "template_id": 806, "name": "迪布恩", "enemy_id": 90203, "companion_id": null, "map_id": 32010, "area_id": 620, "weight": 1, "origin": "added", "reason": "帖拉格恩系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91104, "template_id": 725, "name": "扑满乌力", "enemy_id": 1558, "companion_id": null, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "乌力系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91105, "template_id": 726, "name": "乌力莱德", "enemy_id": 1559, "companion_id": null, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "乌力系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91106, "template_id": 727, "name": "乌力固力", "enemy_id": 1560, "companion_id": null, "map_id": 100, "area_id": 56, "weight": 1, "origin": "added", "reason": "乌力系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91107, "template_id": 779, "name": "玛斯贝卡", "enemy_id": 1612, "companion_id": null, "map_id": 200, "area_id": 152, "weight": 1, "origin": "added", "reason": "虎系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91108, "template_id": 754, "name": "邦诺斯娜", "enemy_id": 90208, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91109, "template_id": 755, "name": "杨格斯", "enemy_id": 90209, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"},
+    {"group_id": 91110, "template_id": 756, "name": "迪基格斯", "enemy_id": 90210, "companion_id": null, "map_id": 300, "area_id": 311, "weight": 1, "origin": "added", "reason": "人龙系系列补全（补充·非原版）：与已有同系Lv1区域相邻，单独出现；原始成长、属性与捕获参数不变。"}
   ]
 }

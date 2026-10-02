@@ -1,0 +1,980 @@
+{
+  "sources": {
+    "references/chenmingbiao-stone-age/gmsv/char/char_base.c": "0fb9501a891989799a4e6d6b407f14bdf2dfbe903df8169ff64d57a67826b287",
+    "references/anson1788-stoneage/服务器端lua文件/ablua/familyridefunction.lua": "9fea190502bd2d4cd31559ed54efada0f52b638e1444b288991818af42c2479d",
+    "references/anson1788-stoneage/石器时代8.5客户端最新源代码/石器源码/systeminc/anim_tbl.h": "cbd3dc3ffb213657709b6a5cc8c4d34847ec1573ecb493f058c02b99cd6fb8cd"
+  },
+  "pairs": {
+    "271": {
+      "sprite": 100359,
+      "count": 0,
+      "player100030": []
+    },
+    "272": {
+      "sprite": 100360,
+      "count": 0,
+      "player100030": []
+    },
+    "273": {
+      "sprite": 100361,
+      "count": 0,
+      "player100030": []
+    },
+    "274": {
+      "sprite": 100362,
+      "count": 47,
+      "player100030": [
+        {
+          "sprite": 101315,
+          "rider": 100030,
+          "pet": 100362,
+          "certificate": 2
+        }
+      ]
+    },
+    "803": {
+      "sprite": 100898,
+      "count": 0,
+      "player100030": []
+    },
+    "804": {
+      "sprite": 100899,
+      "count": 0,
+      "player100030": []
+    },
+    "805": {
+      "sprite": 100900,
+      "count": 0,
+      "player100030": []
+    },
+    "806": {
+      "sprite": 100901,
+      "count": 0,
+      "player100030": []
+    },
+    "725": {
+      "sprite": 100820,
+      "count": 0,
+      "player100030": []
+    },
+    "726": {
+      "sprite": 100821,
+      "count": 0,
+      "player100030": []
+    },
+    "727": {
+      "sprite": 100822,
+      "count": 0,
+      "player100030": []
+    },
+    "191": {
+      "sprite": 100327,
+      "count": 12,
+      "player100030": [
+        {
+          "sprite": 101016,
+          "rider": 100030,
+          "pet": 100327,
+          "source_enemy_id": 307
+        }
+      ]
+    },
+    "192": {
+      "sprite": 100328,
+      "count": 12,
+      "player100030": []
+    },
+    "193": {
+      "sprite": 100329,
+      "count": 11,
+      "player100030": []
+    },
+    "194": {
+      "sprite": 100330,
+      "count": 12,
+      "player100030": []
+    },
+    "524": {
+      "sprite": 100329,
+      "count": 11,
+      "player100030": []
+    },
+    "776": {
+      "sprite": 100871,
+      "count": 0,
+      "player100030": []
+    },
+    "777": {
+      "sprite": 100872,
+      "count": 0,
+      "player100030": []
+    },
+    "778": {
+      "sprite": 100873,
+      "count": 0,
+      "player100030": []
+    },
+    "779": {
+      "sprite": 100874,
+      "count": 0,
+      "player100030": []
+    },
+    "754": {
+      "sprite": 100849,
+      "count": 0,
+      "player100030": []
+    },
+    "755": {
+      "sprite": 100850,
+      "count": 0,
+      "player100030": []
+    },
+    "756": {
+      "sprite": 100851,
+      "count": 0,
+      "player100030": []
+    }
+  },
+  "client80_candidates": [
+    {
+      "sprite": 101004,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101005,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101006,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101007,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101014,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101015,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101016,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101017,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101024,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101025,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101026,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101027,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101034,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101035,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101036,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101037,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101044,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101045,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101046,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101047,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101055,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101056,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101057,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101064,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101065,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101066,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101067,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101074,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101075,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101076,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101077,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101084,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101085,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101086,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101087,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101094,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101095,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101096,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101097,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101104,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101105,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101106,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101107,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101114,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101115,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101116,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101117,
+      "clips": 72,
+      "images": 296,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101307,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101315,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101323,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101331,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101339,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101347,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101355,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101363,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101371,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101379,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101387,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 101395,
+      "clips": 72,
+      "images": 280,
+      "status": "decoded"
+    },
+    {
+      "sprite": 103274,
+      "clips": 48,
+      "images": 400,
+      "status": "decoded"
+    },
+    {
+      "sprite": 103275,
+      "clips": 48,
+      "images": 400,
+      "status": "decoded"
+    },
+    {
+      "sprite": 103276,
+      "clips": 48,
+      "images": 400,
+      "status": "decoded"
+    },
+    {
+      "sprite": 103277,
+      "clips": 48,
+      "images": 400,
+      "status": "decoded"
+    },
+    {
+      "sprite": 103278,
+      "status": "Missing sprite 103278"
+    },
+    {
+      "sprite": 103279,
+      "status": "Missing sprite 103279"
+    },
+    {
+      "sprite": 103280,
+      "status": "Missing sprite 103280"
+    },
+    {
+      "sprite": 103281,
+      "status": "Missing sprite 103281"
+    },
+    {
+      "sprite": 103282,
+      "status": "Missing sprite 103282"
+    },
+    {
+      "sprite": 103283,
+      "status": "Missing sprite 103283"
+    },
+    {
+      "sprite": 103284,
+      "status": "Missing sprite 103284"
+    },
+    {
+      "sprite": 103285,
+      "status": "Missing sprite 103285"
+    },
+    {
+      "sprite": 104025,
+      "status": "Missing sprite 104025"
+    },
+    {
+      "sprite": 104026,
+      "status": "Missing sprite 104026"
+    },
+    {
+      "sprite": 104027,
+      "status": "Missing sprite 104027"
+    },
+    {
+      "sprite": 104028,
+      "status": "Missing sprite 104028"
+    },
+    {
+      "sprite": 104029,
+      "status": "Missing sprite 104029"
+    },
+    {
+      "sprite": 104030,
+      "status": "Missing sprite 104030"
+    },
+    {
+      "sprite": 104031,
+      "status": "Missing sprite 104031"
+    },
+    {
+      "sprite": 104032,
+      "status": "Missing sprite 104032"
+    },
+    {
+      "sprite": 104033,
+      "status": "Missing sprite 104033"
+    },
+    {
+      "sprite": 104034,
+      "status": "Missing sprite 104034"
+    },
+    {
+      "sprite": 104035,
+      "status": "Missing sprite 104035"
+    },
+    {
+      "sprite": 104036,
+      "status": "Missing sprite 104036"
+    }
+  ],
+  "client25_candidates": [
+    {
+      "sprite": 101004,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101005,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101006,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101007,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101014,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101015,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101016,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101017,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101024,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101025,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101026,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101027,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101034,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101035,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101036,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101037,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101044,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101045,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101046,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101047,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101055,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101056,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101057,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101064,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101065,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101066,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101067,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101074,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101075,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101076,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101077,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101084,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101085,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101086,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101087,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101094,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101095,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101096,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101097,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101104,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101105,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101106,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101107,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101114,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101115,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101116,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101117,
+      "clips": 72,
+      "images": 296
+    },
+    {
+      "sprite": 101307,
+      "error": "Missing sprite 101307"
+    },
+    {
+      "sprite": 101315,
+      "error": "Missing sprite 101315"
+    },
+    {
+      "sprite": 101323,
+      "error": "Missing sprite 101323"
+    },
+    {
+      "sprite": 101331,
+      "error": "Missing sprite 101331"
+    },
+    {
+      "sprite": 101339,
+      "error": "Missing sprite 101339"
+    },
+    {
+      "sprite": 101347,
+      "error": "Missing sprite 101347"
+    },
+    {
+      "sprite": 101355,
+      "error": "Missing sprite 101355"
+    },
+    {
+      "sprite": 101363,
+      "error": "Missing sprite 101363"
+    },
+    {
+      "sprite": 101371,
+      "error": "Missing sprite 101371"
+    },
+    {
+      "sprite": 101379,
+      "error": "Missing sprite 101379"
+    },
+    {
+      "sprite": 101387,
+      "error": "Missing sprite 101387"
+    },
+    {
+      "sprite": 101395,
+      "error": "Missing sprite 101395"
+    },
+    {
+      "sprite": 103274,
+      "error": "Missing sprite 103274"
+    },
+    {
+      "sprite": 103275,
+      "error": "Missing sprite 103275"
+    },
+    {
+      "sprite": 103276,
+      "error": "Missing sprite 103276"
+    },
+    {
+      "sprite": 103277,
+      "error": "Missing sprite 103277"
+    },
+    {
+      "sprite": 103278,
+      "error": "Missing sprite 103278"
+    },
+    {
+      "sprite": 103279,
+      "error": "Missing sprite 103279"
+    },
+    {
+      "sprite": 103280,
+      "error": "Missing sprite 103280"
+    },
+    {
+      "sprite": 103281,
+      "error": "Missing sprite 103281"
+    },
+    {
+      "sprite": 103282,
+      "error": "Missing sprite 103282"
+    },
+    {
+      "sprite": 103283,
+      "error": "Missing sprite 103283"
+    },
+    {
+      "sprite": 103284,
+      "error": "Missing sprite 103284"
+    },
+    {
+      "sprite": 103285,
+      "error": "Missing sprite 103285"
+    },
+    {
+      "sprite": 104025,
+      "error": "Missing sprite 104025"
+    },
+    {
+      "sprite": 104026,
+      "error": "Missing sprite 104026"
+    },
+    {
+      "sprite": 104027,
+      "error": "Missing sprite 104027"
+    },
+    {
+      "sprite": 104028,
+      "error": "Missing sprite 104028"
+    },
+    {
+      "sprite": 104029,
+      "error": "Missing sprite 104029"
+    },
+    {
+      "sprite": 104030,
+      "error": "Missing sprite 104030"
+    },
+    {
+      "sprite": 104031,
+      "error": "Missing sprite 104031"
+    },
+    {
+      "sprite": 104032,
+      "error": "Missing sprite 104032"
+    },
+    {
+      "sprite": 104033,
+      "error": "Missing sprite 104033"
+    },
+    {
+      "sprite": 104034,
+      "error": "Missing sprite 104034"
+    },
+    {
+      "sprite": 104035,
+      "error": "Missing sprite 104035"
+    },
+    {
+      "sprite": 104036,
+      "error": "Missing sprite 104036"
+    }
+  ],
+  "visual_review": "All four contact sheets inspected: existing tiger and gold flying-dragon composites have riders; 103274-103277 are armored beasts without riders. No new riding import."
+}

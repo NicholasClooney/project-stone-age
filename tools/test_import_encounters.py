@@ -171,4 +171,33 @@ class EncounterImportTests(unittest.TestCase):
         self.assertEqual(len({p['sprite'] for p in pets}),len(pets))
         self.assertTrue(all(100000<p['sprite']<110000 and 28000<p['face']<29000 for p in pets))
 
+    @unittest.skipUnless(ROOT.exists(), 'local reference required')
+    def test_family_completion_preserves_sources_and_capture_parameters(self):
+        original = build(ROOT)
+        data = add_rare_encounters(build(ROOT), RARE)
+        placements = {803:(1636,32006,616),804:(1637,32007,617),
+                      805:(1638,32008,618),806:(1639,32010,620),
+                      725:(1558,100,56),726:(1559,100,56),727:(1560,100,56),
+                      779:(1612,200,152),754:(1588,300,311),
+                      755:(1660,300,311),756:(1589,300,311)}
+        spec = json.loads(RARE.read_text())
+        classic = json.loads(Path('client/data/classic-pets.json').read_text())['pets']
+        for tid, (source, mid, aid) in placements.items():
+            rows = [e for e in spec['encounters'] if e['template_id'] == tid]
+            self.assertEqual(len(rows), 1)
+            row = rows[0]
+            self.assertEqual((row['map_id'], row['area_id']), (mid, aid))
+            self.assertIsNone(row['companion_id'])
+            self.assertNotIn('alone_group_id', row)
+            self.assertEqual(data['enemies'][str(source)], original['enemies'][str(source)])
+            self.assertEqual(data['templates'][str(tid)], original['templates'][str(tid)])
+            enemy = data['enemies'][str(row['enemy_id'])]
+            self.assertEqual((enemy['level_min'], enemy['level_max'], enemy['pet_flag']), (1,1,1))
+            self.assertEqual(enemy['max_count'], original['enemies'][str(source)]['max_count'])
+            self.assertEqual(len([p for p in classic if p['template_id'] == tid]), 1)
+        for tid in [271,272,273,274]:
+            self.assertEqual(len([p for p in classic if p['template_id'] == tid]), 1)
+        for tid in [753,757,758,966,161,162,163,164]:
+            self.assertFalse(any(e['template_id'] == tid for e in spec['encounters']))
+
 if __name__=='__main__':unittest.main()

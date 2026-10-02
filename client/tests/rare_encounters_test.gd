@@ -202,6 +202,31 @@ func run() -> void:
 			captured = session.snapshot().pets[0]
 			break
 	check(not captured.is_empty() and str(captured.species) == "original_302" and int(captured.level) == 1 and captured.base_stats == found.base_stats,"the Lv.1 左迪洛斯 is captured (battle seed %d) with its wild stats" % tries)
+	# Family completion includes original pet_flag=0 rows cloned explicitly.
+	# Exercise real capture + settlement, including the unchanged -1 parameter.
+	var family_failed: Array = []
+	for item in spec.encounters:
+		if int(item.group_id) < 91100 or int(item.group_id) > 91110:continue
+		var actor_rng := RandomNumberGenerator.new()
+		actor_rng.seed = 9000+int(item.template_id)
+		var newborn: Dictionary = catalog.actor(int(item.enemy_id),actor_rng)
+		newborn.hp = 1
+		var success := false
+		for seed_value in range(1,30):
+			var real_session = Session.new()
+			real_session.gm_raise_level(-1,120)
+			real_session.gm_heal()
+			var real_battle = Battle.new()
+			real_battle.rng_seed = seed_value
+			real_battle.start_battle(real_session.start_wild_battle_config({"area_id":int(item.area_id),"group_id":int(item.group_id),"enemies":[newborn.duplicate(true)]}))
+			var result: Dictionary = real_battle.submit_action("capture",0)
+			if str(result.get("outcome","")) != "captured":continue
+			if not real_session.apply_battle_result(result):continue
+			var pet: Dictionary = real_session.snapshot().pets[0]
+			success = str(pet.species) == "original_%d" % int(item.template_id) and int(pet.level) == 1 and pet.base_stats == newborn.base_stats
+			if success:break
+		if not success:family_failed.append(item.name)
+	check(family_failed.is_empty(),"eleven added family pets capture and settle with original newborn stats, including -1 capture parameters: %s" % str(family_failed))
 	await process_frame
 	print("RARE ENCOUNTERS: %d failures" % failures)
 	quit(1 if failures else 0)

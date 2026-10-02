@@ -810,3 +810,8 @@
 去向：自动抓极品的「运行设置」「排队与保留」页。候选队列常驻，与战斗期间搜索、显示战斗、实际战斗培养分别控制；取消两分钟摸底，相对基线由首个合格候选建立。培养文字明确实际战斗或快速种子培养，不再把后台培养称为立即120。
 
 自动整理开启时可选捕获前保留预演，预计留不下的候选提前记未捕获；想看抓宠战斗可关闭预演。只抓不练保持独立保护。捕获原因长说明留在点击详情中，悬停简短且底色不透明。实现/验证见 `docs/development/pet-hunt-helper.md`。
+||||||| parent of db54a52 (feat(pets): complete classic families with rare level-one encounters)
+# 同系宠物 Lv.1 与经典名单补全 · 已实现
+
+- 去向：`rare-encounters.json`、`classic-pets.json`；飞龙8种全收录，乌力三种、玛斯贝卡及人龙三种增加单独Lv.1补充点，经典名单共补14项。
+- 新点为非原版便利，保留原成长与捕获参数。骑乘只核查原图，不把跨版本编号或传闻当作可用素材；详见 `docs/reverse-engineering/family-lv1-completion.md`。

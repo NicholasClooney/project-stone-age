@@ -1,5 +1,11 @@
 # Rare Lv.1 encounters in high-level areas
 
+## 2026-10-02 同系补全
+
+新增11个单独Lv.1补充组：四只后期飞龙分散于地下6/7/8/10楼，扑满乌力/乌力莱德/乌力固力在萨伊那斯乌力区，玛斯贝卡在加鲁卡老虎区，邦诺斯娜/杨格斯/迪基格斯在吉鲁人龙区。七条原本不可捕获的敌行采用明确标注的可抓克隆，原行和模板不改。经典名单补14条，原已收录的不重复。
+
+逐只ID、原行、区域、分配理由和骑乘原图核查见 [同系补全](family-lv1-completion.md)。这些新增捕获点均为「补充·非原版」，不是恢复原版野外分布。
+
 The original gives several strong pets a rare **Lv.1** encounter inside a high-level area, next to the same pet at its normal level. This project reuses that pattern so players can hunt Lv.1 versions of classic pets that have no Lv.1 wild spot (自动抓宠, 找宠, 后台搜宠, 本机极速模式, 属性条件, Lv.120 prediction). Every addition is marked in the data and in 宠物大全. None of them is an original row.
 
 ## Evidence in the original tables

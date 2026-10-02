@@ -915,11 +915,14 @@
       ],
       "level_min": 1,
       "level_max": 20,
-      "mean_level": 17.0,
+      "mean_level": 16.54,
       "monsters": [
         "乌力",
+        "乌力固力",
         "乌力斯坦",
         "乌力王",
+        "乌力莱德",
+        "扑满乌力",
         "黑乌力"
       ],
       "dev_only": false
@@ -2124,12 +2127,13 @@
       ],
       "level_min": 1,
       "level_max": 20,
-      "mean_level": 17.58,
+      "mean_level": 17.38,
       "monsters": [
         "佩露夏",
         "卡克尔",
         "巴克",
         "普鲁夏",
+        "玛斯贝卡",
         "贝鲁伊卡",
         "贝鲁卡",
         "金格萨贝鲁"
@@ -3194,10 +3198,13 @@
       ],
       "level_min": 1,
       "level_max": 45,
-      "mean_level": 42.75,
+      "mean_level": 41.57,
       "monsters": [
         "布鲁顿",
-        "邦浦洛斯"
+        "杨格斯",
+        "迪基格斯",
+        "邦浦洛斯",
+        "邦诺斯娜"
       ],
       "dev_only": true
     },
@@ -8038,9 +8045,10 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 82.22,
+      "mean_level": 81.42,
       "monsters": [
         "加宝格恩",
+        "可可恩",
         "大地守护兽",
         "布鲁顿",
         "帖拉格恩",
@@ -8061,8 +8069,9 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 87.73,
+      "mean_level": 86.9,
       "monsters": [
+        "克洛恩",
         "加宝格恩",
         "布鲁顿",
         "洛卡伦恩",
@@ -8080,10 +8089,11 @@
       ],
       "level_min": 1,
       "level_max": 90,
-      "mean_level": 82.22,
+      "mean_level": 81.42,
       "monsters": [
         "加宝格恩",
         "大地守护兽",
+        "布兰恩",
         "布鲁顿",
         "朵拉比斯",
         "水的守护兽",
@@ -8119,12 +8129,13 @@
         51,
         47
       ],
-      "level_min": 88,
+      "level_min": 1,
       "level_max": 90,
-      "mean_level": 89.0,
+      "mean_level": 88.15,
       "monsters": [
         "加宝格恩",
         "布鲁顿",
+        "迪布恩",
         "阿伊萨"
       ],
       "dev_only": true

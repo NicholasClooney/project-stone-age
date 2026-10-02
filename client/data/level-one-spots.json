@@ -448,6 +448,54 @@
     },
     {
       "map_id": 100,
+      "area_id": 56,
+      "cell": [
+        633,
+        376
+      ],
+      "map_name": "萨伊那斯",
+      "name": "扑满乌力",
+      "enemy_id": 1558,
+      "template_id": 725,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
+      "area_id": 56,
+      "cell": [
+        633,
+        376
+      ],
+      "map_name": "萨伊那斯",
+      "name": "乌力莱德",
+      "enemy_id": 1559,
+      "template_id": 726,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
+      "area_id": 56,
+      "cell": [
+        633,
+        376
+      ],
+      "map_name": "萨伊那斯",
+      "name": "乌力固力",
+      "enemy_id": 1560,
+      "template_id": 727,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 100,
       "area_id": 58,
       "cell": [
         313,
@@ -813,6 +861,22 @@
     },
     {
       "map_id": 200,
+      "area_id": 152,
+      "cell": [
+        294,
+        743
+      ],
+      "map_name": "加鲁卡",
+      "name": "玛斯贝卡",
+      "enemy_id": 1612,
+      "template_id": 779,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": false,
+      "origin": "added"
+    },
+    {
+      "map_id": 200,
       "area_id": 164,
       "cell": [
         94,
@@ -917,6 +981,54 @@
       "level_max": 1,
       "dev_only": true,
       "origin": "original_area"
+    },
+    {
+      "map_id": 300,
+      "area_id": 311,
+      "cell": [
+        402,
+        307
+      ],
+      "map_name": "吉鲁岛",
+      "name": "邦诺斯娜",
+      "enemy_id": 90208,
+      "template_id": 754,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
+      "map_id": 300,
+      "area_id": 311,
+      "cell": [
+        402,
+        307
+      ],
+      "map_name": "吉鲁岛",
+      "name": "杨格斯",
+      "enemy_id": 90209,
+      "template_id": 755,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
+      "map_id": 300,
+      "area_id": 311,
+      "cell": [
+        402,
+        307
+      ],
+      "map_name": "吉鲁岛",
+      "name": "迪基格斯",
+      "enemy_id": 90210,
+      "template_id": 756,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
     },
     {
       "map_id": 300,
@@ -1758,6 +1870,22 @@
       "origin": "added"
     },
     {
+      "map_id": 32006,
+      "area_id": 616,
+      "cell": [
+        29,
+        29
+      ],
+      "map_name": "漆黑的洞窟 地下6楼",
+      "name": "可可恩",
+      "enemy_id": 90200,
+      "template_id": 803,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
       "map_id": 32007,
       "area_id": 617,
       "cell": [
@@ -1774,6 +1902,22 @@
       "origin": "added"
     },
     {
+      "map_id": 32007,
+      "area_id": 617,
+      "cell": [
+        32,
+        26
+      ],
+      "map_name": "漆黑的洞窟 地下7楼",
+      "name": "克洛恩",
+      "enemy_id": 90201,
+      "template_id": 804,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
       "map_id": 32008,
       "area_id": 618,
       "cell": [
@@ -1784,6 +1928,22 @@
       "name": "朵拉比斯",
       "enemy_id": 341,
       "template_id": 274,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
+    },
+    {
+      "map_id": 32008,
+      "area_id": 618,
+      "cell": [
+        25,
+        26
+      ],
+      "map_name": "漆黑的洞窟 地下8楼",
+      "name": "布兰恩",
+      "enemy_id": 90202,
+      "template_id": 805,
       "level_min": 1,
       "level_max": 1,
       "dev_only": true,
@@ -1819,6 +1979,22 @@
       "level_max": 1,
       "dev_only": true,
       "origin": "original_area"
+    },
+    {
+      "map_id": 32010,
+      "area_id": 620,
+      "cell": [
+        51,
+        47
+      ],
+      "map_name": "漆黑的洞窟 地下10楼",
+      "name": "迪布恩",
+      "enemy_id": 90203,
+      "template_id": 806,
+      "level_min": 1,
+      "level_max": 1,
+      "dev_only": true,
+      "origin": "added"
     },
     {
       "map_id": 32011,
