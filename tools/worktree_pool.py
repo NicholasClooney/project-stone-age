@@ -209,6 +209,14 @@ def resolve_slot(text: str, state: dict) -> str:
     return name
 
 
+def landed(branch: str) -> bool:
+    """True when main contains the branch, merged or cherry-picked (git cherry finds no '+' commit)."""
+    if subprocess.run(['git', 'merge-base', '--is-ancestor', branch, 'main'], cwd=MAIN).returncode == 0:
+        return True
+    pending = git('cherry', 'main', branch, cwd=MAIN)
+    return not any(line.startswith('+') for line in pending.splitlines())
+
+
 def cmd_release(args) -> None:
     with locked():
         state = load()
@@ -219,7 +227,7 @@ def cmd_release(args) -> None:
             leftover = dirty(name)
             if leftover and not args.abandon:
                 raise SystemExit('%s has uncommitted changes; commit them, or rerun with --abandon to drop them:\n%s' % (name, '\n'.join(leftover[:20])))
-            merged = subprocess.run(['git', 'merge-base', '--is-ancestor', lease['branch'], 'main'], cwd=MAIN).returncode == 0
+            merged = landed(lease['branch'])
             if not merged and not args.abandon:
                 raise SystemExit('%s is not merged into main; merge it first, or rerun with --abandon (the branch and its commits stay).' % lease['branch'])
             if leftover:
