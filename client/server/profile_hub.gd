@@ -104,6 +104,7 @@ func open_profile(id: String) -> String:
 	backend.load_resume()
 	backend.event.connect(_on_backend_event.bind(id))
 	backend.party_battle_hook = party_battles.open.bind(id)
+	backend.stationary_party_member = party.in_party.bind(id)
 	backend.party_guard = _party_guard.bind(id)
 	backend.training_reward_context = party_battles.training_context.bind(id)
 	backend.training_borrow_preview = party_battles.training_preview.bind(id)

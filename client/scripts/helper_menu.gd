@@ -11,6 +11,7 @@ var content: VBoxContainer
 var grid: GridContainer
 var view := "list"
 var icons: Dictionary = {}
+var stationary_ui = preload("res://scripts/stationary_encounter_ui.gd").new()
 
 func configure(owner: Node) -> void:
 	world = owner
@@ -28,6 +29,7 @@ func configure(owner: Node) -> void:
 func open_menu() -> void:
 	# Opens over a battle too; entries the battle does not allow are greyed.
 	if world.dialogue.visible:return
+	stationary_ui.opened(world,self)
 	if visible:rebuild()
 	get_parent().move_child(self,get_parent().get_child_count()-1)
 	show()
@@ -99,7 +101,9 @@ func rebuild() -> void:
 	body.add_child(note)
 	var encounters := CheckButton.new()
 	encounters.name = "HelperNoRandomEncounters"
-	encounters.text = "不遇敌 · 地图随机遇敌"
+	encounters.text = "不遇敌"
+	encounters.custom_minimum_size.y = 44
+	encounters.focus_mode = Control.FOCUS_ALL
 	encounters.tooltip_text = "按角色保存；主动刷怪、搜宠和剧情战斗照常。"
 	encounters.button_pressed = bool(world.state.derived.get("no_random_encounters",false))
 	encounters.toggled.connect(func(enabled: bool):
@@ -107,11 +111,32 @@ func rebuild() -> void:
 		world.link.request({"type":"no_random_encounters","enabled":enabled},func(_reply: Dictionary):
 			if visible:rebuild();_center()))
 	body.add_child(encounters)
+	var stationary := CheckButton.new()
+	stationary.name = "HelperStationaryEncounters"
+	stationary.text = "原地遇敌"
+	stationary.custom_minimum_size.y = 44
+	stationary.focus_mode = Control.FOCUS_ALL
+	var current: Dictionary = world.state.derived.get("stationary",{})
+	var status: Dictionary = stationary_ui.status if not stationary_ui.status.is_empty() else current
+	stationary.button_pressed = bool(current.get("running",false))
+	stationary.disabled = stationary_ui.pending or (not stationary.button_pressed and (not bool(status.get("available",false)) or world.battle_view.visible))
+	stationary.tooltip_text = "项目便利：每0.5秒按原地图规则尝试遇敌；与不遇敌互斥。移动、菜单、逃跑或死亡停止；胜利后继续，不自动出招。组队及其他自动功能运行中不可用。"
+	stationary.toggled.connect(func(enabled: bool):stationary_ui.toggle(world,self,enabled))
+	body.add_child(stationary)
+	var encounter_note: Label = world.text("关闭地图随机遇敌 / 原地按原率遇敌",12)
+	encounter_note.name = "HelperEncounterNote"
+	encounter_note.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
+	encounter_note.custom_minimum_size.x = 0
+	encounter_note.size_flags_horizontal = Control.SIZE_EXPAND_FILL
+	if not stationary_ui.feedback.is_empty():encounter_note.text = stationary_ui.feedback
+	elif not bool(status.get("available",false)):encounter_note.text = str(status.get("reason","当前位置不可用。"))
+	else:encounter_note.text = "开启后关闭助手；重开菜单即停止。胜利后继续，不自动出招。"
+	body.add_child(encounter_note)
 	var scroll := ScrollContainer.new()
 	scroll.name = "HelperScroll"
 	scroll.horizontal_scroll_mode = ScrollContainer.SCROLL_MODE_DISABLED
 	scroll.follow_focus = true
-	scroll.custom_minimum_size.y = minf(480,maxf(80,screen.y-220))
+	scroll.custom_minimum_size.y = minf(480,maxf(80,screen.y-340))
 	body.add_child(scroll)
 	content = VBoxContainer.new()
 	content.size_flags_horizontal = Control.SIZE_EXPAND_FILL
@@ -144,7 +169,9 @@ func rebuild() -> void:
 	reset_size()
 
 func _process(_delta: float) -> void:
+	stationary_ui.tick(world,self,_delta)
 	if not visible:return
+	_center()
 	var toggle = find_child("HelperNoRandomEncounters",true,false)
 	if toggle is CheckButton and not toggle.disabled:
 		toggle.set_pressed_no_signal(bool(world.state.derived.get("no_random_encounters",false)))
