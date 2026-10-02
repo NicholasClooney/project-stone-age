@@ -141,6 +141,8 @@ def catalog(reference, spec=None):
             if not re.search(r'^#define\s+_MAGIC_REHPAI\b', texts['gmsv/include/version.h'], re.MULTILINE):
                 raise ValueError('Recovery rate configuration requires review')
             items[str(ident)]['use'] = dict(kind='hp_recovery', nominal=100, roll_min=90, roll_max=110, consume_at_full=True, zero_hp_target=True, targets=['self', 'carried_pet'], field_supported=True, battle_supported=False, source='gmsv/item/item_event.c', source_lines=[900,905,963,964,1052,1058], battle_source='gmsv/battle/battle_item.c', battle_source_line=224)
+    from quest_item_effects import annotate_item
+    for item in items.values():annotate_item(item, reference)
     if set(items) != set(map(str, spec['items'])):
         raise ValueError('Missing reviewed item')
     jobs = []

@@ -1,9 +1,16 @@
 extends RefCounted
-## Pinned itemset.txt; only reviewed wood/herb/adult equipment is wearable here.
+## Pinned itemset.txt; only explicitly reviewed ordinary equipment is wearable.
 ## HEAD is independent of legacy BODY. Legacy ownership fields stay intact.
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	# itemset.txt:1348,2072,2074-2077; fixed ordinary modifiers only.
+	1357:{"name":"黄色大首饰","type":10,"slot":"amulet","level":0,"attack":0,"defence":0,"speed":0,"charm":5,"durability":2500000},
+	2489:{"name":"卡娜的木笛","type":9,"slot":"amulet","level":0,"attack":0,"defence":0,"speed":0,"charm":2,"durability":2500000},
+	2491:{"name":"山贼的手环","type":8,"slot":"bracelet","level":40,"attack":0,"defence":0,"speed":0,"charm":0,"durability":300000},
+	2492:{"name":"山贼的投掷斧头","type":18,"slot":"arm","level":40,"attack":20,"defence":-5,"speed":0,"charm":5,"durability":200000},
+	2493:{"name":"山贼的爪","type":0,"slot":"arm","level":40,"attack":17,"defence":-5,"speed":0,"charm":5,"durability":300000},
+	2494:{"name":"山贼的小棍棒","type":2,"slot":"arm","level":40,"attack":7,"defence":0,"speed":0,"charm":5,"durability":200000},
 	# itemset.txt:1207 numeric fields override its stale +2/+2/-2/+1 prose.
 	1206:{"name":"红玉的手环","type":8,"slot":"bracelet","level":0,"attack":3,"defence":3,"speed":-3,"charm":2,"durability":2500000},
 	# itemset.txt:1999/2031; the delivery axe is usable from Lv20.
@@ -15,6 +22,8 @@ const ITEMS := {
 	2485:{"name":"哈恩改造的斧头","type":1,"slot":"arm","level":25,"attack":33,"defence":-10,"speed":-10,"charm":0,"durability":300000},
 	2481:{"name":"杉的手环","type":8,"slot":"bracelet","level":30,"attack":8,"defence":5,"speed":-5,"charm":-5,"durability":2500000},
 }
+## These formerly metadata-only items may exist with zero durability, unworn.
+const NEWLY_WEARABLE := [1357,2489,2491,2492,2493,2494]
 const STAGES := ["完好","受损","毁坏","不堪使用"]
 const STATS := ["attack","defence","speed","charm"]
 
@@ -23,6 +32,9 @@ static func instance(id: int, uid: int) -> Dictionary:
 
 static func migrate(profile: Dictionary) -> void:
 	if profile.has("original_instances"):
+		for entry in profile.original_instances:
+			if int(entry.item_id) in NEWLY_WEARABLE and int(entry.durability)==0 and not worn(profile,int(entry.uid)):
+				entry.durability=int(ITEMS[int(entry.item_id)].durability)
 		# Version 6 used no HEAD field: 2418 was an unworn story instance
 		# with zero durability. Initialize that newly supported item only once.
 		if not profile.original_equipment.has("head"):
@@ -129,7 +141,8 @@ static func valid(profile: Dictionary) -> bool:
 		if not integer(entry.get("durability"),0,int(ITEMS.get(int(entry.item_id),{}).get("durability",0))):return false
 		var legacy_helmet: bool=int(entry.item_id)==2418 and not has_head
 		if legacy_helmet and int(entry.durability)!=0:return false
-		if not legacy_helmet and ITEMS.has(int(entry.item_id)) and int(ITEMS[int(entry.item_id)].durability)>0 and int(entry.durability)==0:return false
+		if not legacy_helmet and ITEMS.has(int(entry.item_id)) and int(ITEMS[int(entry.item_id)].durability)>0 and int(entry.durability)==0:
+			if int(entry.item_id) not in NEWLY_WEARABLE or worn(profile,int(entry.uid)):return false
 		seen.append(entry.uid)
 	for slot in (["arm","bracelet","amulet","head"] if has_head else ["arm","bracelet","amulet"]):
 		var uid=profile.original_equipment.get(slot)

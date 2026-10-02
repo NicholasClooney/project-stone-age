@@ -163,6 +163,26 @@
             "",
             ""
           ],
+          "effects": [],
+          "stats_source": [
+            {
+              "type": "stat",
+              "stat": "defence",
+              "label": "防御",
+              "raw": {
+                "min": "3",
+                "max": "3"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2011,
+                "columns": [
+                  39,
+                  40
+                ]
+              }
+            }
+          ],
           "logout_vanish": false
         },
         "2429": {
@@ -268,6 +288,60 @@
             "0",
             "",
             "0"
+          ],
+          "effects": [],
+          "stats_source": [
+            {
+              "type": "stat",
+              "stat": "attack",
+              "label": "攻击",
+              "raw": {
+                "min": "10",
+                "max": "10"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2012,
+                "columns": [
+                  37,
+                  38
+                ]
+              }
+            },
+            {
+              "type": "stat",
+              "stat": "defence",
+              "label": "防御",
+              "raw": {
+                "min": "-5",
+                "max": "-5"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2012,
+                "columns": [
+                  39,
+                  40
+                ]
+              }
+            },
+            {
+              "type": "stat",
+              "stat": "speed",
+              "label": "敏捷",
+              "raw": {
+                "min": "-5",
+                "max": "-5"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2012,
+                "columns": [
+                  41,
+                  42
+                ]
+              }
+            }
           ],
           "logout_vanish": false
         },
@@ -375,6 +449,26 @@
             "",
             ""
           ],
+          "effects": [],
+          "stats_source": [
+            {
+              "type": "stat",
+              "stat": "defence",
+              "label": "防御",
+              "raw": {
+                "min": "3",
+                "max": "3"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2013,
+                "columns": [
+                  39,
+                  40
+                ]
+              }
+            }
+          ],
           "logout_vanish": false
         },
         "2431": {
@@ -481,6 +575,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2450": {
@@ -587,6 +683,27 @@
             "",
             "0"
           ],
+          "effects": [
+            {
+              "type": "use",
+              "label": "复活至500",
+              "active": false,
+              "raw": {
+                "argument": "500",
+                "function": "ITEM_useRessurect"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2033,
+                "columns": [
+                  3,
+                  10
+                ]
+              },
+              "reason": "原物品使用作用尚未实现"
+            }
+          ],
+          "stats_source": [],
           "logout_vanish": false
         }
       },
@@ -2360,6 +2477,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2535": {
@@ -2466,6 +2585,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         }
       },
@@ -2880,6 +3001,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2761": {
@@ -2986,6 +3109,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2762": {
@@ -3092,6 +3217,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2763": {
@@ -3198,6 +3325,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2764": {
@@ -3304,6 +3433,8 @@
             "",
             "0"
           ],
+          "effects": [],
+          "stats_source": [],
           "logout_vanish": false
         },
         "2765": {
@@ -3409,6 +3540,106 @@
             "0",
             "",
             "0"
+          ],
+          "effects": [
+            {
+              "type": "magic",
+              "label": "复活守护精灵 Lv1",
+              "active": false,
+              "raw": {
+                "magicid": "300",
+                "magicprob": "0",
+                "magicusemp": "35"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2276,
+                "columns": [
+                  55,
+                  56,
+                  57
+                ]
+              },
+              "reason": "原装备魔法运行时尚未实现",
+              "definition": {
+                "name": "复活守护精灵 Lv1",
+                "function": "MAGIC_ResAndDef",
+                "argument": "100 无 turn 2",
+                "line": 116,
+                "source": "gmsv/data/magic.txt",
+                "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+              }
+            }
+          ],
+          "stats_source": [
+            {
+              "type": "stat",
+              "stat": "attack",
+              "label": "攻击",
+              "raw": {
+                "min": "3",
+                "max": "3"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2276,
+                "columns": [
+                  37,
+                  38
+                ]
+              }
+            },
+            {
+              "type": "stat",
+              "stat": "defence",
+              "label": "防御",
+              "raw": {
+                "min": "3",
+                "max": "3"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2276,
+                "columns": [
+                  39,
+                  40
+                ]
+              }
+            },
+            {
+              "type": "stat",
+              "stat": "speed",
+              "label": "敏捷",
+              "raw": {
+                "min": "-3",
+                "max": "-3"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2276,
+                "columns": [
+                  41,
+                  42
+                ]
+              }
+            },
+            {
+              "type": "stat",
+              "stat": "charm",
+              "label": "魅力",
+              "raw": {
+                "min": "1",
+                "max": "1"
+              },
+              "source": {
+                "path": "gmsv/data/itemset.txt",
+                "line": 2276,
+                "columns": [
+                  49,
+                  50
+                ]
+              }
+            }
           ],
           "logout_vanish": false
         }

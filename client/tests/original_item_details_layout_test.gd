@@ -17,7 +17,10 @@ func shot(name:String)->void:
  if not visual:return
  await process_frame
  await RenderingServer.frame_post_draw
- root.get_texture().get_image().save_png("/private/tmp/bonus-item-details/"+name+".png")
+ var folder:=OS.get_environment("STONE_AGE_PROOF_DIR")
+ if folder.is_empty():folder="/private/tmp/bonus-item-details"
+ DirAccess.make_dir_recursive_absolute(folder)
+ root.get_texture().get_image().save_png(folder.path_join(name+".png"))
 func run()->void:
  root.unfocusable=true
  root.content_scale_size=Vector2i.ZERO
@@ -58,6 +61,9 @@ func run()->void:
  check(await Wait.until(self,func():return int(world.session.snapshot().original_equipment.head)==0) and await Wait.settle(self,world),"actual remote click unequips")
  await click(menu.panel.get_node("OriginalItemSlot_1"))
  await shot("390-original-reward")
+ var effect_label:Label=menu.panel.find_child("OriginalEffectsMetadata",true,false)
+ check(effect_label!=null and effect_label.text.contains("滋润的精灵 Lv2") and effect_label.text.contains("未生效"),"actual original A reward shows named inactive magic and stats")
+ check(effect_label.tooltip_text.contains("2101") and effect_label.tooltip_text.contains("magicid"),"real item UI retains original row and field evidence")
  check(not menu.panel.has_node("EquipOriginalItem"),"unsupported reward gains no equip action")
  world.music.stop();world.effect.stop();world.link.close();world.queue_free();server.stop();server.queue_free();b.queue_free()
  await process_frame

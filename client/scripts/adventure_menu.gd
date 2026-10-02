@@ -691,10 +691,12 @@ func inventory_panel(profile: Dictionary) -> void:
 			var spec: Dictionary=OriginalEquipment.ITEMS[ident]
 			var details:=original_detail_label(content,"OriginalEquipmentDetails","等级 %d · 攻 %+d 防 %+d 敏 %+d 魅 %+d\n%s" % [int(spec.level),int(spec.attack),int(spec.defence),int(spec.speed),int(spec.charm),"无战斗磨损" if int(spec.durability)==0 else "耐久 %d / %d · %s" % [int(entry.durability),int(spec.durability),OriginalEquipment.STAGES[OriginalEquipment.stage(entry)]]])
 			details.tooltip_text=details.text
-			if ident in [2418,2427]:
-				original_detail_label(content,"OriginalResistanceUnavailable","六状态耐性 +%d 尚未生效" % (3 if ident==2418 else 2))
 			var equip:=choice("卸下" if worn else "装备",Vector2(14,404),"equip_original:%d" % int(entry.uid),not worn)
 			equip.name="EquipOriginalItem"
+		var effect_lines: Array[String]=preload("res://scripts/original_item_effects.gd").lines(data)
+		if not effect_lines.is_empty():
+			var effects:=original_detail_label(content,"OriginalEffectsMetadata","\n".join(effect_lines))
+			effects.tooltip_text=preload("res://scripts/original_item_effects.gd").evidence(data)
 		var description_text := str(data.get("description",""))
 		if ident==2401 and data.has("use"):
 			description_text="野外回复90～110（原标示100）\n自己或随身宠物；满血仍消耗\n零HP宠物可回复；战斗道具未接入"
