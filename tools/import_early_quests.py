@@ -40,7 +40,7 @@ def parse_script(text):
                     raise ValueError(f'Unsupported predicate: {clause}')
             texts = {k: v.replace('\\n', '\n') for k, v in current.items() if 'Msg' in k}
             actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
-            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem'}:
+            if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm'}:
                 raise ValueError('Unsupported quest action')
             for key in ('DelPet', 'GetPet', 'GetRandItem'):
                 if key not in actions:
@@ -163,6 +163,8 @@ def catalog(reference, spec=None):
 def run(source, reference, output):
     spec = json.loads(SPEC.read_text())
     result = catalog(reference, spec)
+    from import_brothers_quests import extend
+    result = extend(reference, result, parse_script)
     result["service_npcs"], result["provenance"]["charm_sources"] = charm_catalog(reference)
     for relative, expected in spec['client_sources'].items():
         if hashlib.sha256((Path(source)/relative).read_bytes()).hexdigest() != expected:
@@ -172,11 +174,19 @@ def run(source, reference, output):
         "data/adrn_15.bin": hashlib.sha256((Path(source)/"data/adrn_15.bin").read_bytes()).hexdigest()}
     root = Path(output)
     # Validate all graphics before writing any catalog or art.
-    graphics = [n['graphic'] for n in result['npcs'] + result['service_npcs']] + [i['logical_icon'] for i in result['items'].values()]
+    from import_battle import animations
+    for npc in result['npcs'] + result['service_npcs']:
+        if npc['graphic'] in archive.map_ids:
+            npc['bitmap_id'] = archive.map_ids[npc['graphic']]
+        else:
+            frame = animations(archive, npc['graphic'])[f"0_{npc['facing']}"]['frames'][0]
+            npc['bitmap_id'] = frame['image']
+            npc['source_pose'] = dict(action=0, direction=npc['facing'], frame=0)
+    graphics = [i['logical_icon'] for i in result['items'].values()]
     if any(g not in archive.map_ids for g in graphics):
         raise ValueError('Reviewed static graphics missing from 2.5 client')
     for npc in result['npcs'] + result['service_npcs']:
-        bitmap = archive.map_ids[npc['graphic']]
+        bitmap = npc['bitmap_id']
         entry = archive.entries[bitmap]
         npc.update(path=f"quests/npcs/{npc['id'].replace('/', '-')}.png", offset=[entry['x'], entry['y']], bitmap_id=bitmap)
         target = root/npc['path']; target.parent.mkdir(parents=True, exist_ok=True)

@@ -396,3 +396,15 @@ Legacy pending capture-only config without `capture_destination` retains its ori
 `set_automation_settings` 的 `hunt` 新增严格布尔字段 `background_search`、`show_battles`、`battle_training`、`preview_keep`（均默认true）。旧 `showcase` 存储/写入迁移为前三项，新字段优先；不提升SAVE_VERSION。候选队列为找宠流程的固定机制，状态内兼容字段 `flow.showcase` 表示使用队列，不再表示是否显示战斗；读取 `flow.background_search/show_battles/battle_training` 判断冻结的本轮运行方式，resume保存相应flow字段。原摸底计时不再运行，旧恢复状态清除计时后继续当前规则。
 
 保留预演读取当前角色 `hunt.preview_keep` 与 `hunt.keep_rule.auto`，仅二者同时开启、非只抓不练时复用KeepRule判断；不分配UID或改写宠物。队列入队、规则变更、出队前复核，淘汰计入原1Hz总数/品种计数，详细未捕获记录原因“预计不会被保留”。客户端不计算决定，远程仅用settings RPC开关，详情仍来自pet_log。预演关闭可照常捕获培养后整理。
+
+### 五兄弟与黄金羚羊的原任务子集
+
+`quest_talk/quest_choose` 继续由 `original_quests.gd` 持有一次性token，新增白名单 `BATTLE`（仅NPCEnemy敌人1001/1012–1015）、`Warp` 与 `Charm`。实际源数据由 `brothers_quest_sources.json` 哈希锁定，库伊只开放 `king/event69_1` 的五个金羊分支，旧event30_5不绑定。NPC邻近为Chebyshev两格；客户端与助手共用纯几何offset，不访问backend。
+
+`brothers_quests.gd` 从权威原敌人资料生成固定战，`session._pending.quest_guard` 冻结原胜后坐标。胜利结算把原位置和正常战斗奖励一起保存；失败恢复profile、pending、UID/捕获事件，`battle_close`可重试同一结果。成功关闭后发普通 `position` 事件，所有设备看到同一落点；失败、逃跑不触发胜后传送。守卫和任务传送沿既有组队保护要求单人。服务器未实现该守卫战的中途断电checkpoint；设备断线可重连现有权威战斗。
+
+原组521/522要求2532/2547；只新增敌人1060的原掉落2548（概率1000/1000），沿原战利品归属/15格背包路径，背包满时原掉落销毁。包含1060的实际战斗也采用保存失败回滚与同战斗结算重试。不能由客户端提供任务奖励或胜后传送坐标。
+
+答案纸2507–2516、水晶2517按itemset的dropatlogout列78在权威存档重载时清除；普通镜/真实之眼/钥匙保留。服务端保持角色在线运行时，断开查看设备不触发临时物清理。物品实例仍经OriginalEquipment分配单调UID。首次镜2547发enemy355，补发镜2532仅结束54；原EventNo=-1不会清掉NOW54，因此完成后还可按原分支补发2532，但不会再发宠。奖励装备保留物品和原图，属性/魔法未实现的提示由导入资料显示。
+
+任务助手公开原对白、五层所有答案及五种守卫/奖励，不自动代选；瞬移是明确的项目便利。新增套件 `brothers_golden_quests_test`、`brothers_golden_ui_test`；后者使用真实WebSocket的无backend客户端和实际GUI点击，设置 `STONE_AGE_PROOF_DIR` 时必须使用真实renderer输出像素。

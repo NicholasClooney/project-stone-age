@@ -3,7 +3,7 @@ extends RefCounted
 const Rules = preload("res://server/progression.gd")
 ## Only the audited wood encounter is enabled; source tables retain all slots.
 ## Other enemies need their own profit/exit-path audit before activation.
-const DROP_ENEMY_IDS := [563]
+const DROP_ENEMY_IDS := [563,1060]
 var data: Dictionary = {}
 var pressure := 0
 var last_error := ""

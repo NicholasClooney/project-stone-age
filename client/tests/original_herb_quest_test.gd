@@ -28,7 +28,7 @@ func trade(b,id:String) -> Dictionary:
  return choose(b,r,"ok") if r.has("dialogue") else r
 func run() -> void:
  var b=Backend.new()
- check(b.quest_catalog.enabled_events==[1,2,4,15,16,18,19],"herb publicly enabled with existing quests")
+ check(b.quest_catalog.enabled_events==[1,2,4,15,16,18,19,28,29,30,31,54],"herb publicly enabled with existing quests")
  check(row(b).steps.size()==3 and current(b,"herb:request") and not row(b).repeatable,"three original stages, no invented CLEAN")
  for id in [GIRL,DOCTOR]:
   var npc:Dictionary=b.original_quests.npc_by_id(id)

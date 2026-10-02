@@ -833,18 +833,22 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	if settle.is_empty() and battle_open and not party_battle():session._pending.loot_claims = battle.drop_claims_for()
 	var before: Dictionary = session.snapshot()
 	var capture_only := bool(session._pending.get("capture_only",false)) and not party_battle()
-	var pending_before: Dictionary = session._pending.duplicate(true) if capture_only and not bool(state.active) else {}
-	var capture_events_before: Array = session.capture_events.duplicate(true) if capture_only and not bool(state.active) else []
+	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return int(enemy.get("source_enemy_id",0))==1060)
+	var atomic: bool=capture_only or quest_transaction
+	var pending_before: Dictionary = session._pending.duplicate(true) if atomic and not bool(state.active) else {}
+	var capture_events_before: Array = session.capture_events.duplicate(true) if atomic and not bool(state.active) else []
 	# A party battle settles this player's own slice (its own battle id and
 	# rewards); the state its devices see stays the shared battle.
 	var result: Dictionary = settle if not settle.is_empty() else state
 	if not bool(state.active) and session.apply_battle_result(result,drop_claims):
-		if capture_only and not save():
+		if pending_before.has("quest_guard") and str(state.outcome)=="win":
+			preload("res://server/brothers_quests.gd").warp_profile(session._profile,str(pending_before.quest_guard.warp))
+		if atomic and not save():
 			session._profile = before
 			session._pending = pending_before
 			session.capture_events = capture_events_before
 			state.settled = false
-			state.settlement_error = "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
+			state.settlement_error = "任务战保存失败，已回滚奖励与传送；请检查保存位置后再次结束战斗。" if quest_transaction else "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
 			state.xp = 0;state.gold = 0;state.result_summary = []
 			battle_state = state
 			_emit({"type":"battle_turn","state":state.duplicate(true)})
@@ -852,6 +856,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 		if not settle.is_empty():
 			for key in ["xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:state[key] = result.get(key,0)
 		state.settled = true
+		if pending_before.has("quest_guard") and str(state.outcome)=="win":state.quest_warp=str(pending_before.quest_guard.warp)
 		for drop in state.get("drop_summary",[]):
 			var item_name := str(quest_catalog.items.get(str(int(drop.item_id)),{}).get("name","原版物品 #%d"%int(drop.item_id)))
 			drop.name = item_name
@@ -892,7 +897,7 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	# 自动练级 met the next troop, LAN phase 4c) is not an error.
 	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
-	if bool(session._pending.get("capture_only",false)):
+	if bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return int(enemy.get("source_enemy_id",0))==1060):
 		var retried := _after_turn(battle.snapshot())
 		if not bool(retried.get("settled",false)):return _reject(str(retried.get("settlement_error","捕获未结算")))
 	return {"ok":true,"outcome":close_battle()}
@@ -904,6 +909,7 @@ func close_battle() -> String:
 	save()
 	_publish_battle_pets()
 	_emit({"type":"battle_closed","battle_id":str(battle_state.get("battle_id","")),"outcome":outcome})
+	if battle_state.has("quest_warp"):preload("res://server/brothers_quests.gd").publish_warp(self,str(battle_state.quest_warp))
 	return outcome
 
 func _refresh_battle_state() -> void:

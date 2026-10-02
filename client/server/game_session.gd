@@ -1440,6 +1440,10 @@ func load_game(path: String) -> bool:
 			_refresh_loyalty()
 			if int(_profile.version)<5:_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
 			OriginalEquipment.migrate(_profile)
+			# itemset dropatlogout (column78), char.c CHAR_dropItemAtLogout:
+			# only the audited answer papers and wisdom crystal (2507..2517).
+			for item in range(2507,2518):
+				while item in _profile.original_items:OriginalEquipment.remove(_profile,item)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true

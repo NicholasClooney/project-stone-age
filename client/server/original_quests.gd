@@ -3,6 +3,7 @@ extends RefCounted
 const Session = preload("res://server/game_session.gd")
 const Progression = preload("res://server/progression.gd")
 const Charm = preload("res://server/original_charm.gd")
+const Brothers = preload("res://server/brothers_quests.gd")
 const Loyalty = preload("res://server/loyalty.gd")
 var catalog
 var pending := {}
@@ -84,7 +85,7 @@ static func message(texts: Dictionary, key: String) -> String:
 	# Original scripts use both unnumbered and ordered numbered message fields.
 	var parts: Array[String] = []
 	if texts.has(key):parts.append(str(texts[key]))
-	for index in range(1,5):
+	for index in range(1,10):
 		if texts.has(key+str(index)):parts.append(str(texts[key+str(index)]))
 	return "\n".join(parts)
 
@@ -97,14 +98,14 @@ func talk(backend, id: String) -> Dictionary:
 	var branch := branch_for(npc,profile)
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
-		if action not in ["GetItem","DelItem","GetStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
+		if action not in ["GetItem","DelItem","GetStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
 	var phase: String=str(branch.type)
 	if phase=="MESSAGE":
 		var result := transact(backend,profile,branch,"MESSAGE")
 		if not result.ok:return result
 		return window(npc,branch,"end",message(branch.texts,"NomalWindowMsg") if branch.texts.has("NomalWindowMsg") else message(branch.texts,"NomalMsg"),false)
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
-	var keys := {"REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
+	var keys := {"BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
 	var reply := window(npc,branch,phase,message(branch.texts,keys[phase]),true)
 	if phase=="ACCEPT" and branch.actions.has("DelPet"):
@@ -132,6 +133,7 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	if current.has("pet_id"):
 		var index := pet_index(profile,str(branch.actions.DelPet))
 		if index<0 or str(profile.pets[index].pet_id)!=str(current.pet_id):return {"ok":false,"reason":"交付宠物已经改变，请重新确认。"}
+	if phase=="BATTLE" and choice=="yes":return Brothers.begin(self,backend,npc,branch)
 	if phase=="ACCEPT" and choice=="yes":
 		var reply := window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
 		if current.has("pet_id"):pending.pet_id=current.pet_id
@@ -143,6 +145,9 @@ func choose(backend, token: String, choice: String) -> Dictionary:
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
 func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -> Dictionary:
+	if branch.actions.has("Warp") and backend.quest_visit_guard.is_valid():
+		var reason: String=str(backend.quest_visit_guard.call())
+		if not reason.is_empty():return {"ok":false,"reason":reason}
 	var candidate := profile.duplicate(true)
 	var event := int(branch.event)
 	if phase=="cancel":
@@ -210,6 +215,9 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 			set_flag(candidate,"now",event,false)
 			for value in ended.split(","):set_flag(candidate,"ended",int(value),true)
 		clear_flags(candidate,str(branch.actions.get("CleanFlg","")))
+	if phase not in ["cancel","CLEAN"]:
+		if branch.actions.has("Charm"):candidate.player.charm=clampi(int(candidate.player.get("charm",0))+int(branch.actions.Charm),0,100)
+		if branch.actions.has("Warp"):Brothers.warp_profile(candidate,str(branch.actions.Warp))
 	backend.session._profile=candidate
 	if not backend.save():
 		backend.session._profile=profile
@@ -218,6 +226,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 		var fresh: Dictionary=backend.automation.profile_settings()
 		for key in ["capture_pet","capture_pet_id"]:backend.automation.settings[key]=fresh[key]
 		if not candidate.pets.any(func(pet):return str(pet.pet_id)==backend.automation.training_pet_id):backend.automation.training_pet_id=""
+	if branch.actions.has("Warp") and phase not in ["cancel","CLEAN"]:Brothers.publish_warp(backend,str(branch.actions.Warp))
 	backend.publish()
 	return {"ok":true}
 

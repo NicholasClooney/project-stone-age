@@ -34,7 +34,7 @@ func add(b,species:int,level:int,event:int=0) -> String:
  return str(pet.pet_id)
 func run() -> void:
  var b=Backend.new()
- check(b.quest_catalog.enabled_events==[1,2,4,15,16,18,19],"both doctor stages enabled")
+ check(b.quest_catalog.enabled_events==[1,2,4,15,16,18,19,28,29,30,31,54],"both doctor stages enabled")
  check(not row(b,15).repeatable and not row(b,16).repeatable,"no invented CLEAN")
  for id in [DOCTOR,ASSISTANT]:
   var npc:Dictionary=b.original_quests.npc_by_id(id)
