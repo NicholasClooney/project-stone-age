@@ -1,5 +1,6 @@
 extends SceneTree
 const Game = preload("res://server/game_session.gd")
+const Wait = preload("res://tests/support/wait.gd")
 const Travel = preload("res://scripts/world_travel.gd")
 var failures := 0
 func check(value: bool, message: String) -> void:
@@ -69,20 +70,13 @@ func run() -> void:
 		gate._open()
 		check(gate.choice.visible,"permit enables crossingconfirmation")
 		await click(gate.choice)
-		await process_frame
-		await process_frame
-		check(world.cell==Vector2i(21,33),"northguard confirmation crosses originaldestination")
+		check(await Wait.until(self,func():return world.cell==Vector2i(21,33) and not world.area_transition_busy),"northguard confirmation crosses originaldestination")
 		check(world.session.has_travel_pass(),"firstcrossing retainspermit")
 		gate = world.world_travel
 		gate.approach(1)
-		for i in range(5):
-			world._physics_process(0.3)
-			await process_frame
-		check(gate.overlay.visible,"walking up to return guard opens original dialogue")
+		check(await Wait.until(self,func():return not world.moving and world.path.is_empty() and gate.pending==-1 and gate.selected==1 and gate.overlay.visible and gate.choice.visible),"walking up to return guard opens original dialogue")
 		await click(gate.choice)
-		await process_frame
-		await process_frame
-		check(world.cell==Vector2i(21,27) and world.session.has_travel_pass(),"returncrossing uses samepermit")
+		check(await Wait.until(self,func():return world.cell==Vector2i(21,27) and not world.area_transition_busy) and world.session.has_travel_pass(),"returncrossing uses samepermit")
 	else:check(false,"both imported guards available")
 	world.music.stop()
 	world.effect.stop()

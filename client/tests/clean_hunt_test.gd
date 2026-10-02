@@ -9,6 +9,7 @@ const Backend = preload("res://server/backend.gd")
 const AutomationSettings = preload("res://scripts/automation_settings.gd")
 const HuntRules = preload("res://scripts/pet_hunt_rules.gd")
 const BattleForecast = preload("res://server/battle_forecast.gd")
+const Wait = preload("res://tests/support/wait.gd")
 const FastHunt = preload("res://server/fast_hunt.gd")
 ## 五十年前波拉岛, area 639: the added Lv.1 左迪洛斯 (302) next to Lv90-95 红暴.
 const MAP := 500
@@ -30,12 +31,15 @@ func new_backend(encounter_seed: int):
 	backend.encounter_rng.seed = encounter_seed
 	return backend
 
-func tick_until(backend, condition: Callable, seconds: float = 60.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while not condition.call() and Time.get_ticks_msec() < deadline:
-		backend._process(0.016)
-		await process_frame
-	return condition.call()
+## This suite compares the first accepted roll across weak/strong characters.
+## One real scan then one real flow step prevents the wall-clock frame budget
+## from queueing later hits before that first capture is selected.
+func tick_until(backend, condition: Callable) -> bool:
+	return await Wait.until(self,func():
+		if condition.call():return true
+		if backend.automation.hunt_running:backend.automation.scan_once()
+		if backend.automation.flow_active():backend.automation.flow_step()
+		return condition.call())
 
 ## Any 左迪洛斯 Lv.1, no grade limit, GDScript scan.
 func rex_filter(extra: Dictionary = {}) -> Dictionary:
@@ -156,6 +160,9 @@ func run() -> void:
 		await tick_until(mighty,func():return mighty.automation.flow_phase!="hunt")
 		var entered: Dictionary = mighty.automation.hunt_last_hit
 		check(not entered.is_empty() and not HuntRules.clean_troop(entered.troop) and mighty.automation.flow_phase in ["capture","train","restart"] ,"a character the forecast says wins enters the mixed troop (phase %s: %s)" % [mighty.automation.flow_phase,mighty.automation.flow_reason])
+		var actual: Dictionary = mighty.battle.snapshot()
+		check(mighty.battle_open and actual.get("active",false) and not HuntRules.clean_troop(actual) and int(actual.get("clear_capture_target",-1))==slot_of(entered.troop),"the real active battle contains the stronger enemies and pins the matched Lv.1 target")
+		check(mighty.session._pending.get("group_id",-1)==entered.troop.group_id and mighty.session._pending.enemies.map(func(e):return [e.template_id,e.level,e.growth_seed])==entered.troop.enemies.map(func(e):return [e.template_id,e.level,e.growth_seed]),"the authority's actual battle is the same forecast-approved original troop")
 		mighty.handle({"type":"auto_stop"})
 		mighty.queue_free()
 	await process_frame

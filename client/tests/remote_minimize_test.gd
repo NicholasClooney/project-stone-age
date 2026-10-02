@@ -8,6 +8,8 @@ const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const MAP := 100
 const CELL := Vector2i(637,493)
+const ENCOUNTER_SEED := 22
+const SEARCH_ROLLS := 4096
 const PREFS := "user://remote-minimize-test-viewer.cfg"
 const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
@@ -45,6 +47,7 @@ func run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(PREFS))
 	var backend = Backend.new()
 	root.add_child(backend)
+	backend.encounter_rng.seed = ENCOUNTER_SEED
 	backend.handle({"type":"grant_starter_pets"})
 	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(backend,port,"127.0.0.1")
@@ -62,10 +65,27 @@ func run() -> void:
 	hunt.open_menu()
 	hunt.auto_capture.button_pressed = false
 	hunt.train_after_capture.button_pressed = false
-	# Slow, so the hunt is still searching throughout.
+	# This original encounter stream has no qualifying 114 in its first 4096
+	# rolls. Rate alone cannot prevent a lucky early hit ending the hunt.
+	check(hunt.choose_target(114),"fixture selects an available original target species")
+	hunt.total.value = 8
+	for offset in hunt.offsets:offset.value = 2
+	hunt.fast.button_pressed = false
 	hunt.rate.value = 2
 	hunt.start_hunt()
 	check(await until(func():return hunt.running and not hunt.minimize_button.disabled),"the hunt window starts a backend hunt")
+	# Replay the actual received filter through a separate real scanner. This
+	# proves the no-hit prefix without advancing or stubbing the live backend.
+	var probe = Backend.new()
+	root.add_child(probe);probe.set_process(false)
+	probe.automation.client_attached = false
+	probe.encounter_rng.seed = ENCOUNTER_SEED
+	var filter: Dictionary = backend.automation.hunt_filter.duplicate(true)
+	check(filter.templates==[114] and filter.total==8 and filter.offsets==[2,2,2,2] and filter.rate==2 and not filter.fast,"the UI's deterministic search settings reach the actual server")
+	check(probe.handle({"type":"auto_start","kind":"hunt","map_id":MAP,"cell":[CELL.x,CELL.y],"filter":filter}).ok and probe.automation.hunt_run_seed==backend.automation.hunt_run_seed,"the prefix verifier uses the same real encounter stream")
+	while probe.automation.hunt_running and probe.automation.hunt_rolls<SEARCH_ROLLS:probe.automation.scan_once()
+	check(probe.automation.hunt_rolls==SEARCH_ROLLS and probe.automation.hunt_running and not probe.battle_open,"4096 original encounter rolls contain no matching pet, without a fake hunt core")
+	probe.automation.stop_hunt("prefix verified");probe.queue_free()
 	hunt.minimize()
 	check(hunt.minimized and not hunt.visible and hunt.chip.visible and game.paused_input,"the hunt window collapses to its bar and holds the character")
 
@@ -121,6 +141,7 @@ func run() -> void:
 	check(again.visible and not again.minimized and again.running and not again.stop_button.disabled,"展开 on the reloaded page shows the running hunt")
 	check(second.viewer_pref("hunt_minimized")==false,"restoring is remembered for the next reload")
 
+	check(backend.automation.hunt_rolls<SEARCH_ROLLS,"all live socket and warehouse checks remain inside the verified encounter prefix")
 	again.close_menu()
 	check(await until(func():return not backend.automation.hunt_running),"closing the full window still stops the hunt")
 	await close_client(second)
