@@ -1,4 +1,12 @@
 {
   "version": 1,
-  "modules": []
+  "modules": [
+    {
+      "id": "golden-bui",
+      "builder": "golden-bui",
+      "enabled_events": [
+        44
+      ]
+    }
+  ]
 }
