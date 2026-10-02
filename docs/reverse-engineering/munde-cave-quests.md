@@ -10,7 +10,7 @@
 4. 526/527分别按原10/1000概率掉2482格的枪、2483达的斧头。村庄保护石不是战斗掉落：族长同时发2419霍特尔石、2420卡坦石。
 5. 首次必须卡坦先交2420，得1052铠与魅力+1，仅END11；再向霍特尔交2419，得2421勾玉并END10/12；最后向柯尔克村姑领取1357黄色大首饰，才END9并完成本日志。
 
-助手提供九步说明、瞬移与从地图落点步行两种项目便利，不是原版功能；未开放自动执行。原战术权重、七技能槽、异常技能来源保留供审计，沿用现有战斗AI，不扩展技能系统。
+助手提供九步说明、瞬移与从地图落点步行两种项目便利，不是原版功能；未开放自动执行。导航只允许已抵达原区域：外部只能前往入口和村庄NPC，洞内不可跳未来楼层，守卫仅当前11107入口侧可导航，族长仅战胜Warp后的同一原可走组件可导航。未解锁步骤保留说明但不给导航按钮；旧步骤、直接NPC ID与两种模式均由服务器重查。阶段键只含楼层和组件，不因同区每格移动重发任务状态，不增加原任务旗标或存档字段。原战术权重、七技能槽、异常技能来源保留供审计，沿用现有战斗AI，不扩展技能系统。
 
 奖励按原数据发放。1052身体槽尚未实现，其防御/敏捷及魔法明确未生效；1357现有护身符槽魅力+5生效，原睡眠等抗性明确未生效；2421无虚构用途。2482/2483原随机区间仍为未生效元数据，不取中值、不扩UID属性模型。统一 `OriginalItemEffects` 在背包和助手展示这些区别。
 
@@ -23,6 +23,7 @@
 .tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --fallback-source .tools/legacy/extracted/SA8.0-20260803
 .tools/asset-venv/bin/python tools/import_encounter_art.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --sprites 100439
 .tools/asset-venv/bin/python tools/pack_frame_sheets.py battle --sprites 100439
+.tools/asset-venv/bin/python tools/palette_images.py
 .tools/asset-venv/bin/python tools/plan_web_packs.py
 ./scripts/run.sh --headless --editor --import --quit
 ```
@@ -36,3 +37,11 @@
 - `munde_cave_route_test`：实际注册catalog/Session/九步helper、原口令错字/保存失败、两守卫完整四敌、固定原RNG命中两种稀有物与未命中、真实击败结算/失败重试/胜Warp、整链完成读回、双socket旧token竞争。
 - `munde_cave_walking_test`：从真实口令目的地fixture起步，使用生产寻路与踩格触发，实际走完六道原楼梯，逐次核对落点并排除守卫免战旁路。此headless测试不提供像素证据。
 - `munde_cave_ui_test`：独立服务器与无backend远程客户端；390×844真实离屏渲染，实际点击助手/原交付/口令按钮/装备按钮，键盘中文输入，逐图查看。岛入口从地图落点行走数百格，专门等待180秒条件期限。另在GUI测试中对楼梯踩格做坐标fixture验证，其完整行走由前述walking suite承担。
+
+### 梦德导航独立补修
+
+`munde_cave_navigation_test`覆盖入口前与11101–11106的原NPC/旧step双模式拒绝，11107原portal落点(18,41)归入口侧且不误锁守卫导航，原胜利点(23,35)与族长邻格(24,7)同组件并与入口侧不同；原战斗保存成功后才开放族长。真实双socket验证另一设备看到阶段变化，同组件普通report_position只发位置、不发profile/helper。交换fixture直接放置位置只验证交易，不能替代这套防绕或walking自然路线验证。
+
+公共接点仅 `quest_helper.navigation_key`、event9的 `resolve_step`、梦德NPC的 `destination` 前置授权；组件解析与缓存全部在Munde模块，保留44与NPC-state缓存逻辑。组件排除原墙、全部NPC占位与portal；站在真实portal落点时，仅在其相邻格唯一归属一个组件时取得该组件，绝不借portal桥接两侧。
+
+每次world导入后必须执行 `palette_images.py`：本次核验100439 sheet为P模式，但world重新写出的4749张共享图仍需恢复统一调色板（另349张已具备，0张残留RGBA）。palette处理后再plan/editor，截图不能替代调色板suite。

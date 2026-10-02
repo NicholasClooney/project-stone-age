@@ -15,6 +15,7 @@ func navigation_key(backend) -> Array:
  if 37 in backend.quest_catalog.enabled_events or 38 in backend.quest_catalog.enabled_events:
   var marju_stage:Array=Marju.stage_key(backend)
   if not marju_stage.is_empty():key=key+[marju_stage]
+ if 9 in backend.quest_catalog.enabled_events:key.append_array(preload("res://server/munde_cave_helper.gd").stage_key(self,backend))
  return key
 
 func snapshot(backend) -> Dictionary:
@@ -294,6 +295,7 @@ func resolve_step(backend,quest_id:int,step_id:String) -> Dictionary:
   for step in quest.steps:
    if str(step.id)==step_id:
     if int(quest.event)==44 and not GoldenBui.can_visit(step):return {}
+    if int(quest.event)==9 and not preload("res://server/munde_cave_helper.gd").can_visit(step):return {}
     return step
  return {}
 
@@ -322,6 +324,7 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
+ if preload("res://server/munde_cave_helper.gd").owns(npc) and not preload("res://server/munde_cave_helper.gd").can_navigate(self,backend,npc):return {}
  var world = places
  world.set_quest_catalog(backend.quest_catalog)
  var map_id := int(npc.map_id)

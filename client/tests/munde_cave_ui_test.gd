@@ -31,6 +31,11 @@ func run()->void:
   if not await stage(step,8):return
   if step=="munde9:request":await proof("munde-01-request")
   if not await choose("yes") or not await choose("ok"):return
+ world.quest_helper_menu.open_menu()
+ world.quest_helper_menu.selected_steps[8]="munde12:stones";world.quest_helper_menu.select_quest(8)
+ if not check(world.quest_helper_menu.find_child("QuestVisit_8_munde12_stones_near",true,false)==null,"Future chief step has no navigation button"):return
+ await proof("munde-01b-chief-locked-before-entry")
+ world.quest_helper_menu.close_menu()
  if not await stage("munde9:gate",8):return
  var input:LineEdit=world.world_travel.overlay.find_child("GoldenBuiAnswer",true,false)
  if not await click(input):return

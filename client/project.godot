@@ -11,12 +11,18 @@ config_version=5
 [application]
 
 <<<<<<< HEAD
-config/version="v0.193.1"
+<<<<<<< HEAD
+config/version="v0.194.0"
 ||||||| parent of 813cde1 (feat(quests): restore the original Munde cave quest chain)
-config/version="v0.193.1"
+config/version="v0.194.0"
 =======
-config/version="v0.193.1"
+config/version="v0.194.0"
 >>>>>>> 813cde1 (feat(quests): restore the original Munde cave quest chain)
+||||||| parent of e093faa (fix(quests): restrict Munde navigation to reached source regions)
+config/version="v0.194.0"
+=======
+config/version="v0.194.0"
+>>>>>>> e093faa (fix(quests): restrict Munde navigation to reached source regions)
 
 config/name="Stone Age — 萨姆吉尔村"
 config/description="Original StoneAge resources rendered in Godot. Local Samgir exploration."

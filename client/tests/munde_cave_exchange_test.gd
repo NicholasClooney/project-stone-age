@@ -11,6 +11,12 @@ func setup():
  b.quest_catalog.enabled_events.append_array([9,10,11,12])
  b.session.gm_raise_level(-1,30)
  return b
+func talk(b,id:String)->Dictionary:
+ if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ # This exchange-only fixture places the player; route/navigation suites cover original access.
+ b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
+ return b.handle({"type":"quest_talk","npc_id":id})
 func run() -> void:
  var b=setup()
  check(b.original_quests.branch_for(b.original_quests.npc_by_id(KOLK),b.session.snapshot()).is_empty(),"LV30 without adult completion cannot request9")
