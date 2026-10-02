@@ -21,6 +21,12 @@ def source_text(reference, relative, spec):
     return raw.decode('gb18030')
 
 
+def valid_stone_cost(value):
+    # Audited NPC_EventGetCost subset; never evaluate arbitrary expressions.
+    return value in ('LV*20', 'LV*40') or (
+        re.fullmatch(r'[0-9]{1,10}', value) is not None and int(value) <= 2147483647)
+
+
 def parse_script(text, branch_indices=None):
     if branch_indices is not None:
         from quest_import_common import select_branches
@@ -49,7 +55,7 @@ def parse_script(text, branch_indices=None):
             actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
             if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'DelStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm'}:
                 raise ValueError('Unsupported quest action')
-            if 'DelStone' in actions and not re.fullmatch(r'[0-9]+', actions['DelStone']):
+            if 'DelStone' in actions and not valid_stone_cost(actions['DelStone']):
                 raise ValueError('Unsupported DelStone cost expression')
             for key in ('DelPet', 'GetPet', 'GetRandItem'):
                 if key not in actions:

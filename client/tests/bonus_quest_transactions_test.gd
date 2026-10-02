@@ -44,6 +44,7 @@ func add(b,species:int,level:int=25) -> String:
 func run() -> void:
  pets()
  fees()
+ level_fees()
  await lan()
  print("BONUS QUEST TRANSACTIONS: %d failures"%failures)
  quit(1 if failures else 0)
@@ -114,6 +115,42 @@ func fees() -> void:
  var token:String=r.dialogue.token
  check(choose(b,r,"yes").ok and b.session.snapshot().player.gold==0 and b.session.snapshot().original_items==[2527],"exact balance deducted once with original ticket")
  check(not b.handle({"type":"quest_choose","token":token,"choice":"yes"}).ok and b.session.snapshot().original_items==[2527],"fee request replay cannot issue another ticket")
+ b.free()
+func level_fees() -> void:
+ var b=setup()
+ var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-level-fees.json"))
+ b.quest_catalog.npcs.append_array(fixture.npcs);b.quest_catalog.items.merge(fixture.items)
+ b.quest_catalog.enabled_events.append(44)
+ var npc:="quiz/uketuke2@4020:18:13"
+ b.session._profile.player.gold=4000
+ var r:=talk(b,npc)
+ check(r.dialogue.text.contains("3200stone") and not r.dialogue.text.contains("%8d"),"source fee prompt expands authoritative Lv80*40")
+ r=choose(b,r,"yes")
+ b.session.gm_raise_level(-1,81)
+ b.session._profile.player.gold=3239
+ var before:Dictionary=b.session.snapshot()
+ check(not choose(b,r,"ok").ok and b.session.snapshot()==before,"reward confirmation recalculates changed level and balance")
+ b.session._profile.player.gold=3240
+ r=choose(b,talk(b,npc),"yes")
+ b.save_path="user://blocked-bonus-parent/child.json";before=b.session.snapshot()
+ check(not choose(b,r,"ok").ok and b.session.snapshot()==before,"scaled fee and ticket roll back on save failure")
+ b.save_path=""
+ r=choose(b,talk(b,npc),"yes")
+ var token:String=r.dialogue.token
+ check(choose(b,r,"ok").ok and b.session.snapshot().player.gold==0 and b.session.snapshot().original_items==[2757],"current Lv81*40 exact balance commits C ticket once")
+ check(not b.handle({"type":"quest_choose","token":token,"choice":"ok"}).ok and b.session.snapshot().original_items==[2757],"scaled transaction replay rejected")
+ # Fresh real level progression exercises the other create and original A/B branches.
+ for pair in [[30,600,2755],[50,2000,2756]]:
+  b.session._profile=Session.new().snapshot();b.session.gm_raise_level(-1,pair[0]);b.session._profile.player.gold=pair[1]
+  for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
+  check(trade(b,"quiz/uketuke@2020:18:13").ok and b.session.snapshot().player.gold==0 and b.session.snapshot().original_items==[pair[2]],"original level-selected ticket %d with exact fee"%pair[2])
+ var profile:Dictionary=b.session.snapshot()
+ for invalid in ["LV*30","LV*20+1","-1","+1","2147483648","99999999999999999999999"]:
+  check(Rules.stone_cost(profile,invalid)==-1,"unknown/overflow cost fails closed: "+invalid)
+ profile.player.level=53687091
+ check(Rules.stone_cost(profile,"LV*40")==2147483640,"signed int maximum safe multiplication")
+ profile.player.level=53687092
+ check(Rules.stone_cost(profile,"LV*40")==-1,"signed int multiplication overflow rejected")
  b.free()
 func poll() -> void:
  for link in links:link.poll(0.01)

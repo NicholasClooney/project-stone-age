@@ -130,6 +130,21 @@ func window(npc: Dictionary, branch: Dictionary, phase: String, text: String, co
 	pending={"token":token,"npc":npc,"branch":branch,"phase":phase}
 	return {"ok":true,"dialogue":{"token":token,"npc_id":npc.id,"name":npc.name,"text":text,"choices":[{"id":"yes","text":"是"},{"id":"no","text":"否"}] if confirm else [{"id":"ok","text":"确定"}]}}
 
+## NPC_EventGetCost (npc_exchangeman.c:3960-3974), reviewed cost subset.
+## Return -1 on unknown syntax or C signed-int overflow, before any mutation.
+static func stone_cost(profile: Dictionary, expression: String) -> int:
+	if expression in ["LV*20","LV*40"]:
+		var factor := 20 if expression=="LV*20" else 40
+		var level := int(profile.player.level)
+		if level<0 or level>2147483647/factor:return -1
+		return level*factor
+	if expression.is_empty() or expression.length()>10:return -1
+	for character in expression:
+		if character<"0" or character>"9":return -1
+	var fee := int(expression)
+	return fee if fee<=2147483647 else -1
+
+
 static func message(texts: Dictionary, key: String) -> String:
 	# Original scripts use both unnumbered and ordered numbered message fields.
 	var parts: Array[String] = []
@@ -156,7 +171,12 @@ func talk(backend, id: String) -> Dictionary:
 	if phase=="REQUEST" and flag(profile,"now",int(branch.event)):phase="cancel"
 	var keys := {"BATTLE":"AcceptMsg","REQUEST":"RequestMsg","ACCEPT":"AcceptMsg","CLEAN":"CleanMainMsg","cancel":"StopMsg"}
 	if not keys.has(phase):return {"ok":false,"reason":"尚未支持的任务分支。"}
-	var reply := window(npc,branch,phase,message(branch.texts,keys[phase]),true)
+	var prompt := message(branch.texts,keys[phase])
+	if branch.actions.has("DelStone"):
+		var fee := stone_cost(profile,str(branch.actions.DelStone))
+		if fee<0:return {"ok":false,"reason":"尚未支持的原费用。"}
+		prompt=prompt.replace("%8d","%8d" % fee)
+	var reply := window(npc,branch,phase,prompt,true)
 	if phase=="ACCEPT" and branch.actions.has("DelPet"):
 		var selected := pet_ids(profile,str(branch.actions.DelPet))
 		if selected.is_empty():
@@ -217,9 +237,8 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String) -
 			consumed=pet_indices(candidate,str(branch.actions.DelPet))
 			if consumed.is_empty():return {"ok":false,"reason":"交付宠物不符合原条件。"}
 		if branch.actions.has("DelStone"):
-			var fee_text := str(branch.actions.DelStone)
-			if not fee_text.is_valid_int() or int(fee_text)<0:return {"ok":false,"reason":"尚未支持的原费用。"}
-			var fee := int(fee_text)
+			var fee := stone_cost(profile,str(branch.actions.DelStone))
+			if fee<0:return {"ok":false,"reason":"尚未支持的原费用。"}
 			if int(profile.player.gold)<fee:return {"ok":false,"reason":message(branch.texts,"StoneLessMsg") if branch.texts.has("StoneLessMsg") else "石币不足。"}
 			candidate.player.gold-=fee
 		var reward_pet: Dictionary={}

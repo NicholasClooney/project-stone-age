@@ -98,9 +98,21 @@ class QuestModuleTests(unittest.TestCase):
         for invalid in ['PET=25-223*2', 'PET<25-223*1', 'EVDEL']:
             with self.assertRaisesRegex(ValueError, 'Unsupported DelPet'):
                 quests.parse_script('EventNo:35\nTYPE:ACCEPT\nEVENT:LV>0\nDelPet:'+invalid+'\nEventEnd')
-        for invalid in ['-1000', 'LV*20', 'bad']:
+        for invalid in ['-1000', 'LV*30', 'LV*20+1', 'lv*20', '2147483648', '999999999999999999999999', 'bad']:
             with self.assertRaisesRegex(ValueError, 'Unsupported DelStone'):
                 quests.parse_script('EventNo:-1\nTYPE:REQUEST\nEVENT:LV>0\nDelStone:'+invalid+'\nEventEnd')
+
+    def test_level_fees_source_fixture(self):
+        fixture = json.loads((Path(__file__).resolve().parents[1]/'client/tests/fixtures/original-level-fees.json').read_text())
+        for relative, digest in fixture['provenance']['sources'].items():
+            self.assertEqual(hashlib.sha256((REFERENCE/relative).read_bytes()).hexdigest(), digest)
+        for npc in fixture['npcs']:
+            raw = (REFERENCE/('gmsv/data/npc/'+npc['source_script'])).read_text(encoding='gb18030')
+            _, branches = quests.parse_script(raw, [b['source_branch_index'] for b in npc['branches']])
+            self.assertEqual([b['actions'] for b in branches], [b['actions'] for b in npc['branches']])
+        self.assertTrue(quests.valid_stone_cost('LV*20'))
+        self.assertTrue(quests.valid_stone_cost('LV*40'))
+        self.assertTrue(quests.valid_stone_cost('2147483647'))
 
     def test_empty_registry_does_not_activate_fixture(self):
         base = quests.catalog(REFERENCE)

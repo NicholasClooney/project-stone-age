@@ -1,0 +1,684 @@
+{
+  "version": 1,
+  "items": {
+    "2755": {
+      "id": 2755,
+      "name": "入场卷 A",
+      "description": "进入问题叁兄弟家            所需要的入场卷",
+      "logical_icon": 24314,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2266,
+      "raw_columns": [
+        "入场卷 A",
+        "入场卷 A",
+        "进入问题叁兄弟家            所需要的入场卷",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2755",
+        "24314",
+        "500",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "logout_vanish": false
+    },
+    "2756": {
+      "id": 2756,
+      "name": "入场卷 B",
+      "description": "进入问题叁兄弟家            所需要的入场卷",
+      "logical_icon": 24314,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2267,
+      "raw_columns": [
+        "入场卷 B",
+        "入场卷 B",
+        "进入问题叁兄弟家            所需要的入场卷",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2756",
+        "24314",
+        "500",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "logout_vanish": false
+    },
+    "2757": {
+      "id": 2757,
+      "name": "入场卷 C",
+      "description": "进入问题叁兄弟家            所需要的入场卷",
+      "logical_icon": 24314,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2268,
+      "raw_columns": [
+        "入场卷 C",
+        "入场卷 C",
+        "进入问题叁兄弟家            所需要的入场卷",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2757",
+        "24314",
+        "500",
+        "16",
+        "2",
+        "0",
+        "0",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "logout_vanish": false
+    }
+  },
+  "npcs": [
+    {
+      "id": "quiz/uketuke@2020:18:13",
+      "source_script": "quiz/uketuke",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 7,
+      "events": [
+        44
+      ],
+      "name": "入场卷贩售人",
+      "map_id": 2020,
+      "cell": [
+        18,
+        13
+      ],
+      "graphic": 16065,
+      "facing": 6,
+      "role": "quest",
+      "text": "你也以成为猜谜大师而在努力着呀！",
+      "branches": [
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>69",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到玛丽娜丝的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n这个道场接受LV70以下的人进来。\nLV70以上的人请往\n卡鲁它那的道场去。"
+          },
+          "actions": {},
+          "source_branch_index": 0,
+          "source_line": 8,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>49",
+          "texts": {
+            "AcceptMsg": "欢迎来到玛丽娜丝的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为你是LV50以上拿着“入场券B”进去吧。\n收下参加费%8dstone\n。这样子可以吗？",
+            "ThanksMsg": "\n\n非常的谢谢你。\n确实收到了。\n那么往前走请引导B的人\n帮你介绍吧。",
+            "StoneLessMsg": "\n\n非常的不好意思\n钱不够喔。",
+            "ItemFullMsg": "\n\n道具已经满了。\n可以把道具减少之后\n再入场来吗？"
+          },
+          "actions": {
+            "DelStone": "LV*40",
+            "GetItem": "2756"
+          },
+          "source_branch_index": 1,
+          "source_line": 14,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>29",
+          "texts": {
+            "AcceptMsg": "欢迎来到玛丽娜丝的道场。\n?在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为你是LV30以上拿着“入场券A”进去吧。\n收下参加费%8dstone\n。这样子可以吗？",
+            "ThanksMsg": "\n\n非常的谢谢你。\n确实收到了。\n那么往前走请引导A的人\n帮你介绍吧。",
+            "StoneLessMsg": "\n\n非常的不好意思\n钱不够喔。",
+            "ItemFullMsg": "\n\n道具已经满了。\n可以把道具减少之后\n再入场来吗？"
+          },
+          "actions": {
+            "DelStone": "LV*20",
+            "GetItem": "2755"
+          },
+          "source_branch_index": 2,
+          "source_line": 25,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到玛丽娜丝的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为LV30以下的客人非常的危险\n决定不让你入场。\n请变成LV30以上之后再来吧。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 36,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        }
+      ]
+    },
+    {
+      "id": "quiz/uketuke@2020:18:11",
+      "source_script": "quiz/uketuke",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 8,
+      "events": [
+        44
+      ],
+      "name": "入场卷贩售人",
+      "map_id": 2020,
+      "cell": [
+        18,
+        11
+      ],
+      "graphic": 16065,
+      "facing": 6,
+      "role": "quest",
+      "text": "你也以成为猜谜大师而在努力着呀！",
+      "branches": [
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>69",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到玛丽娜丝的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n这个道场接受LV70以下的人进来。\nLV70以上的人请往\n卡鲁它那的道场去。"
+          },
+          "actions": {},
+          "source_branch_index": 0,
+          "source_line": 8,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>49",
+          "texts": {
+            "AcceptMsg": "欢迎来到玛丽娜丝的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为你是LV50以上拿着“入场券B”进去吧。\n收下参加费%8dstone\n。这样子可以吗？",
+            "ThanksMsg": "\n\n非常的谢谢你。\n确实收到了。\n那么往前走请引导B的人\n帮你介绍吧。",
+            "StoneLessMsg": "\n\n非常的不好意思\n钱不够喔。",
+            "ItemFullMsg": "\n\n道具已经满了。\n可以把道具减少之后\n再入场来吗？"
+          },
+          "actions": {
+            "DelStone": "LV*40",
+            "GetItem": "2756"
+          },
+          "source_branch_index": 1,
+          "source_line": 14,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>29",
+          "texts": {
+            "AcceptMsg": "欢迎来到玛丽娜丝的道场。\n?在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为你是LV30以上拿着“入场券A”进去吧。\n收下参加费%8dstone\n。这样子可以吗？",
+            "ThanksMsg": "\n\n非常的谢谢你。\n确实收到了。\n那么往前走请引导A的人\n帮你介绍吧。",
+            "StoneLessMsg": "\n\n非常的不好意思\n钱不够喔。",
+            "ItemFullMsg": "\n\n道具已经满了。\n可以把道具减少之后\n再入场来吗？"
+          },
+          "actions": {
+            "DelStone": "LV*20",
+            "GetItem": "2755"
+          },
+          "source_branch_index": 2,
+          "source_line": 25,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到玛丽娜丝的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为LV30以下的客人非常的危险\n决定不让你入场。\n请变成LV30以上之后再来吧。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 36,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke"
+        }
+      ]
+    },
+    {
+      "id": "quiz/uketuke2@4020:18:13",
+      "source_script": "quiz/uketuke2",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 9,
+      "events": [
+        44
+      ],
+      "name": "入场卷贩售人",
+      "map_id": 4020,
+      "cell": [
+        18,
+        13
+      ],
+      "graphic": 16065,
+      "facing": 6,
+      "role": "quest",
+      "text": "你也以成为猜谜大师而在努力着呀！",
+      "branches": [
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>69",
+          "texts": {
+            "AcceptMsg": "欢迎来到卡鲁它那的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为你是LV70以上拿着“入场券C”进去吧。\n收下参加费%8dstone\n。这样子可以吗？",
+            "ThanksMsg": "\n\n非常的谢谢你。\n确实收到了。\n那么往前走请引导C的人\n帮你介绍吧。",
+            "StoneLessMsg": "\n\n非常的不好意思\n钱不够喔。",
+            "ItemFullMsg": "\n\n道具已经满了。\n可以把道具减少之后\n再入场来吗？"
+          },
+          "actions": {
+            "DelStone": "LV*40",
+            "GetItem": "2757"
+          },
+          "source_branch_index": 0,
+          "source_line": 8,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>29&LV<70",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到卡鲁它那的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n这个道场接受LV70以上的人进来。\n非此对象的话请往\n玛丽娜丝道场前进吧。"
+          },
+          "actions": {},
+          "source_branch_index": 1,
+          "source_line": 20,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到卡鲁它那的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为LV30以下的客人非常的危险\n决定不让你入场。\n请变成LV30以上之后再来吧。"
+          },
+          "actions": {},
+          "source_branch_index": 2,
+          "source_line": 27,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke2"
+        }
+      ]
+    },
+    {
+      "id": "quiz/uketuke2@4020:18:11",
+      "source_script": "quiz/uketuke2",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 10,
+      "events": [
+        44
+      ],
+      "name": "入场卷贩售人",
+      "map_id": 4020,
+      "cell": [
+        18,
+        11
+      ],
+      "graphic": 16065,
+      "facing": 6,
+      "role": "quest",
+      "text": "你也以成为猜谜大师而在努力着呀！",
+      "branches": [
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>69",
+          "texts": {
+            "AcceptMsg": "欢迎来到卡鲁它那的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为你是LV70以上拿着“入场券C”进去吧。\n收下参加费%8dstone\n。这样子可以吗？",
+            "ThanksMsg": "\n\n非常的谢谢你。\n确实收到了。\n那么往前走请引导C的人\n帮你介绍吧。",
+            "StoneLessMsg": "\n\n非常的不好意思\n钱不够喔。",
+            "ItemFullMsg": "\n\n道具已经满了。\n可以把道具减少之后\n再入场来吗？"
+          },
+          "actions": {
+            "DelStone": "LV*40",
+            "GetItem": "2757"
+          },
+          "source_branch_index": 0,
+          "source_line": 8,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>29&LV<70",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到卡鲁它那的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n这个道场接受LV70以上的人进来。\n非此对象的话请往\n玛丽娜丝道场前进吧。"
+          },
+          "actions": {},
+          "source_branch_index": 1,
+          "source_line": 20,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0",
+          "texts": {
+            "NomalWindowMsg": "\n欢迎来到卡鲁它那的道场。\n在这里贩卖着往前面的‘猜谜三兄弟的家’的入场券。\n因为LV30以下的客人非常的危险\n决定不让你入场。\n请变成LV30以上之后再来吧。"
+          },
+          "actions": {},
+          "source_branch_index": 2,
+          "source_line": 27,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/uketuke2"
+        }
+      ]
+    }
+  ],
+  "jobs": [],
+  "reward_pets": {},
+  "provenance": {
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "gmsv/data/npc/quiz/quiz.create": "f1d2b193f55b45b75813c390b95963cf819a938eb4b9827911ebcc07023ed459",
+      "gmsv/data/npc/quiz/uketuke": "5e593e9a0f9ae58a50c0b7555cbb4de29e83e8f48ff8755c1954a35beae910ed",
+      "gmsv/data/npc/quiz/uketuke2": "ca05a1ca788c5d3914d6de454cecfe27c48678c907ae41661cb649510f930e82",
+      "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435"
+    },
+    "client": "StoneAge 2.5; logical static graphics, no fallback"
+  },
+  "module_id": "level-fees-fixture"
+}
