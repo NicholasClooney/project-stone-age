@@ -24,6 +24,14 @@
       "enabled_events": [
         44
       ]
+    },
+    {
+      "id": "marju",
+      "manifest": "tools/marju_quest_sources.json",
+      "enabled_events": [
+        37,
+        38
+      ]
     }
   ]
 }
