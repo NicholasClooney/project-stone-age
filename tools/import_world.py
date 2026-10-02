@@ -135,13 +135,14 @@ def select_connected_maps(map_paths, portals):
         selected |= additions
 
 
-def ordinary_portals(portals, ordinary):
+def ordinary_portals(portals, ordinary, quest_maps=None):
     """Only selected ordinary/scenic maps get walking portals."""
+    quest_maps = QUEST_MAPS if quest_maps is None else quest_maps
     return [p for p in portals if p['from_map'] in ordinary and p['to_map'] in ordinary
             and (300 not in (p['from_map'], p['to_map'])
                  or (p['from_map'] in (5000, 5100) or p['to_map'] in (5000, 5100))
                  or p['from_map'] in REVIEWED_REGION_MAPS or p['to_map'] in REVIEWED_REGION_MAPS
-                 or p['from_map'] in QUEST_MAPS or p['to_map'] in QUEST_MAPS)]
+                 or p['from_map'] in quest_maps or p['to_map'] in quest_maps)]
 
 
 def require_seimu_permits(portals):
@@ -317,12 +318,17 @@ def import_residents(archive, reference, root):
 def run(source, reference, output, fallback_source=None):
     reference=Path(reference); output=Path(output); root=output/'world'
     root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
+    from quest_import_common import module_world_reviews, apply_module_portal_choices
+    modules = module_world_reviews(reference)
+    quest_maps = QUEST_MAPS | {int(ident) for module in modules for ident in module.get('map_sources', {})}
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
     all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
     all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS))
+    all_portals=apply_module_portal_choices(all_portals, modules)
     # Restored NPC gates now transact through original_quests; scenery portals
     # must not bypass their item/flag checks.
-    restored_scripts=json.loads(BROTHERS_SPEC.read_text())["scripts"]
+    restored_scripts=set(json.loads(BROTHERS_SPEC.read_text())["scripts"])
+    restored_scripts.update(script for module in modules for script in module.get("restored_scripts", []))
     all_portals=[p for p in all_portals if p.get("gate_source") not in restored_scripts]
     maps={}; variants={}; conflicting=set()
     for path in sorted((reference/'gmsv/data/map').rglob('*')):
@@ -331,7 +337,7 @@ def run(source, reference, output, fallback_source=None):
             variants.setdefault(ident,[]).append(path)
             if ident in maps and maps[ident].read_bytes()!=path.read_bytes():conflicting.add(ident)
             maps[ident]=path
-    for review in list(REGION_REVIEWS.values()) + [json.loads(BROTHERS_SPEC.read_text())]:
+    for review in list(REGION_REVIEWS.values()) + [json.loads(BROTHERS_SPEC.read_text())] + modules:
         for key, record in review.get('map_sources',{}).items():
             ident=int(key);chosen=reference/record['path'];raw=chosen.read_bytes()
             if hashlib.sha256(raw).hexdigest()!=record['sha256']:
@@ -339,14 +345,14 @@ def run(source, reference, output, fallback_source=None):
             if any(p.read_bytes()[:8]+p.read_bytes()[40:]!=raw[:8]+raw[40:] for p in variants.get(ident,[])):
                 raise ValueError(f'Reviewed alias has different map geometry: {ident}')
             maps[ident]=chosen;conflicting.discard(ident)
-    ordinary=select_connected_maps(maps,all_portals) | QUEST_MAPS
+    ordinary=select_connected_maps(maps,all_portals) | quest_maps
     selected=ordinary | DEV_TRAINING_MAPS
     if selected & conflicting:raise ValueError(f'Conflicting selected map IDs: {sorted(selected & conflicting)}')
     absent=selected-maps.keys()
     if absent:raise ValueError(f'Missing original maps: {absent}')
     # Preserve the existing exploration graph. Extra areas are DEV-only until
     # their entrances, quest gates and progression are restored explicitly.
-    portals=ordinary_portals(all_portals, ordinary)
+    portals=ordinary_portals(all_portals, ordinary, quest_maps)
     for portal in portals:
         if portal.get("gate_source")=="genout/wpm_10202_31_13":
             portal["requires_level"]=30

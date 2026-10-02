@@ -52,3 +52,23 @@ this narrow test pool never becomes runtime content. Python checks compare
 these fixture rows to the source builder and verify public/private files plus
 local-web core pack ownership. Existing Charm, A, original dialogue, and
 multi-pet/fee suites were also run as targeted regressions; no full run.
+
+## World and audited drops
+
+Registered fragments may supply `world:{map_sources,restored_scripts,portal_choices}`.
+The world importer validates pinned map hashes, selects these maps for ordinary
+play, removes scenery shortcuts for restored NPC handlers, and resolves only
+explicitly recorded existing portal destinations. Golden Bui retains all 37
+reviewed maps, including 831; conflicting 810 exits select the first-created
+original route, as recorded in the route audit. An invented destination fails
+import. Static manifests may also provide the same optional `world` object.
+
+A module's audited `drops` are exported under public `reviewed_drops` with an
+`active` flag derived from registry activation. The encounter catalog caches
+these source enemy IDs once at server startup. Enemy creation still rolls the
+original enemy.txt slots once; Session validates them against the original
+source slots, so forged item IDs or extra copies remain invalid. The existing
+1060/A settlement transaction and retained personal party_settlement path now
+also cover these reviewed quest-drop enemies, including failed-save close
+retry. No global group/group1 source is changed. Restart/reimport is required
+after changing module activation.

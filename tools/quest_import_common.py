@@ -102,6 +102,8 @@ def load_quest_module(reference, manifest):
         if key not in result['items'] or not isinstance(note, str):
             raise ValueError('Invalid item limitation note')
         result['items'][key]['description'] += '\n' + note
+    if spec.get('world'):
+        result['world'] = copy.deepcopy(spec['world'])
     for item in result['items'].values():
         item['logout_vanish'] = len(item['raw_columns']) > 78 and item['raw_columns'][78] == '1'
     return result
@@ -135,6 +137,15 @@ def merge_quest_module(result, module):
             raise ValueError('Conflicting quest journal')
         if old is None:
             merged['jobs'].append(copy.deepcopy(job))
+    if module.get('drops'):
+        entries = module['drops']
+        for entry in entries:
+            if (entry['source'] != 'gmsv/data/enemy.txt' or type(entry['enemy_id']) is not int
+                    or type(entry['item_id']) is not int or not 0 <= entry['probability'] <= 1000
+                    or str(entry['item_id']) not in module['items'] or not entry.get('audit')):
+                raise ValueError('Invalid reviewed quest drop')
+        merged.setdefault('reviewed_drops', {})[module['module_id']] = dict(
+            active=bool(module.get('enabled_events')), entries=copy.deepcopy(entries))
     if 'services' in module:
         if module['module_id'] != 'golden-bui':
             raise ValueError('Unreviewed private service module')
@@ -172,10 +183,42 @@ def registered_quest_modules(reference, registry=REGISTRY):
         enabled = entry['enabled_events']
         if not isinstance(enabled, list) or any(type(e) is not int for e in enabled) or not set(enabled) <= declared:
             raise ValueError('Module activates undeclared events')
+        module["enabled_events"] = list(enabled)
         yield module
 
 
 def extend_registered_modules(reference, result, registry=REGISTRY):
     for module in registered_quest_modules(reference, registry):
         result = merge_quest_module(result, module)
+    return result
+
+
+def module_world_reviews(reference, registry=REGISTRY):
+    return [copy.deepcopy(module['world']) for module in registered_quest_modules(reference, registry)
+            if module.get('world')]
+
+
+def apply_module_portal_choices(portals, reviews):
+    """Select only an existing source destination at explicitly audited cells."""
+    choices = {}
+    for review in reviews:
+        for choice in review.get('portal_choices', []):
+            key = (choice['from_map'], *choice['cell'])
+            value = (choice['to_map'], *choice['to_cell'])
+            if key in choices and choices[key] != value:
+                raise ValueError('Conflicting reviewed module portal choices')
+            if not choice.get('source') or not choice.get('reason'):
+                raise ValueError('Missing portal choice evidence')
+            choices[key] = value
+    seen = set()
+    result = []
+    for portal in portals:
+        key = (portal['from_map'], *portal['cell'])
+        if key in choices:
+            if (portal['to_map'], *portal['target']) != choices[key]:
+                continue
+            seen.add(key)
+        result.append(copy.deepcopy(portal))
+    if seen != set(choices):
+        raise ValueError('Reviewed portal destination not present in source')
     return result

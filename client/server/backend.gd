@@ -860,7 +860,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	if settle.is_empty() and battle_open and not party_battle():session._pending.loot_claims = battle.drop_claims_for()
 	var before: Dictionary = session.snapshot()
 	var capture_only := bool(session._pending.get("capture_only",false)) and not party_battle()
-	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return int(enemy.get("source_enemy_id",0))==1060)
+	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0))))
 	var atomic: bool=capture_only or quest_transaction
 	var pending_before: Dictionary = session._pending.duplicate(true) if atomic and not bool(state.active) else {}
 	var capture_events_before: Array = session.capture_events.duplicate(true) if atomic and not bool(state.active) else []
@@ -926,7 +926,7 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	# 自动练级 met the next troop, LAN phase 4c) is not an error.
 	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
-	if bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return int(enemy.get("source_enemy_id",0))==1060):
+	if bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
 		var retried := _after_turn(battle.snapshot())
 		if not bool(retried.get("settled",false)):return _reject(str(retried.get("settlement_error","捕获未结算")))
 	return {"ok":true,"outcome":close_battle()}
