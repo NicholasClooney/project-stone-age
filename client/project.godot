@@ -12,16 +12,16 @@ config_version=5
 
 <<<<<<< HEAD
 <<<<<<< HEAD
-config/version="v0.194.0"
+config/version="v0.194.2"
 ||||||| parent of 813cde1 (feat(quests): restore the original Munde cave quest chain)
-config/version="v0.194.0"
+config/version="v0.194.2"
 =======
-config/version="v0.194.0"
+config/version="v0.194.2"
 >>>>>>> 813cde1 (feat(quests): restore the original Munde cave quest chain)
 ||||||| parent of e093faa (fix(quests): restrict Munde navigation to reached source regions)
-config/version="v0.194.0"
+config/version="v0.194.2"
 =======
-config/version="v0.194.0"
+config/version="v0.194.2"
 >>>>>>> e093faa (fix(quests): restrict Munde navigation to reached source regions)
 
 config/name="Stone Age — 萨姆吉尔村"

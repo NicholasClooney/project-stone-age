@@ -18,7 +18,8 @@ static func steps(helper, backend, profile: Dictionary, quest: Dictionary) -> vo
  var stone10:bool=2419 in profile.original_items
  var stone11:bool=2420 in profile.original_items
  var in_cave:bool=backend.automation.position_map in range(11101,11108)
- var past_guard:bool=backend.automation.position_map==11107 and region_at(helper,backend,backend.automation.position_cell)==region_at(helper,backend,Vector2i(23,35))
+ var victory_region:int=region_at(helper,backend,Vector2i(23,35)) if backend.automation.position_map==11107 else -1
+ var past_guard:bool=victory_region>=0 and region_at(helper,backend,backend.automation.position_cell)==victory_region
  quest.completion_detail="成人仪式完成且等级30以上可接。取回两村守护石后，首次须先交卡坦石，再交霍特尔石，最后回柯尔克村姑领取黄色大首饰；只有最后回报才完成整项日志。洞窟暗号为“在卡坦有梦德”。助手瞬移是项目便利，仅限已到达的原区域；洞窟各层必须走原楼梯，族长侧需先战胜守卫。自动执行尚未开放。"
  helper.add_step(backend,profile,quest,"munde9:request",entry(backend,"sainasu/event/event09",1),not now9 and not ended,now9 or ended,"向柯尔克村姑接取委托")
  helper.add_step(backend,profile,quest,"munde11:request",entry(backend,"sainasu/event/event11",2 if now10 else 3),now9 and not now11 and not end11,now11 or end11,"向卡坦青年了解守护石")
@@ -100,3 +101,29 @@ static func can_navigate(helper,backend,npc:Dictionary)->bool:
  for offset in preload("res://scripts/npc_interaction.gd").offsets():
   if int(labels.get(target+offset,-2))==current:return true
  return false
+
+static func destination(helper,backend,npc:Dictionary,mode:String)->Dictionary:
+ if mode not in ["near","arrival"] or int(npc.get("map_id",-1))!=11107 or not can_navigate(helper,backend,npc):return {}
+ var current:int=region_at(helper,backend,backend.automation.position_cell)
+ if current<0:return {}
+ var labels:Dictionary=region_data(helper,backend).get("labels",{})
+ var target:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ var queue:Array[Vector2i]=[]
+ for offset in preload("res://scripts/npc_interaction.gd").offsets():
+  var point:Vector2i=target+offset
+  if int(labels.get(point,-1))==current:queue.append(point)
+ if queue.is_empty():return {}
+ if mode=="near":return {"map_id":11107,"cell":[queue[0].x,queue[0].y],"npc_id":str(npc.id)}
+ var spawn:Array=helper.places.info(11107).get("spawn",[])
+ if spawn.size()!=2:return {}
+ var origin:=Vector2i(int(spawn[0]),int(spawn[1]))
+ var seen:Dictionary={}
+ for point in queue:seen[point]=true
+ var cursor:=0
+ while cursor<queue.size():
+  var point:Vector2i=queue[cursor];cursor+=1
+  if maxi(absi(point.x-origin.x),absi(point.y-origin.y))<=32:return {"map_id":11107,"cell":[point.x,point.y],"npc_id":str(npc.id)}
+  for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+   var next:Vector2i=point+offset
+   if not seen.has(next) and int(labels.get(next,-1))==current:seen[next]=true;queue.append(next)
+ return {}

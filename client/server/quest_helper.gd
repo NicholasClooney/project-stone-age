@@ -324,7 +324,7 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
- if preload("res://server/munde_cave_helper.gd").owns(npc) and not preload("res://server/munde_cave_helper.gd").can_navigate(self,backend,npc):return {}
+ if preload("res://server/munde_cave_helper.gd").owns(npc) and int(npc.map_id)==11107:return preload("res://server/munde_cave_helper.gd").destination(self,backend,npc,mode)
  var world = places
  world.set_quest_catalog(backend.quest_catalog)
  var map_id := int(npc.map_id)
