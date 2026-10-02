@@ -16,21 +16,21 @@
 
 ## Agent roles and messages
 
-Three agents work together in tmux panes:
+Three agents work together in tmux panes: 主理人/master → integrator → Codex/developer.
 
 - **主理人 (master, Claude, `claude-projects-stone-age-2`)**: talks with the user, clarifies intent, turns it into self-contained tasks and relays user decisions. Does not investigate or implement.
-- **协调 / doer (Claude, `claude-projects-stone-age-1`)**: coordinates Codex and owns the main checkout: merges Codex commits, runs importers, backs up saves, relaunches the server, runs tests and records decisions in docs. Sends anything that needs a user decision to the master, not to the user.
+- **integrator (协调, Claude, `claude-projects-stone-age-1`)**: coordinates Codex and owns the main checkout: merges Codex commits, runs importers, backs up saves, relaunches the server, runs tests and records decisions in docs. Sends anything that needs a user decision to the master, not to the user.
 - **主力开发 (Codex, `codex-projects-stone-age-1` and its sub agents)**: main implementer. Sub agents split work by file ownership to avoid conflicts (for example, one owns `quest_helper_menu.gd`).
 
 Messages:
 
 - Everything goes through `tmux-ask`. Long reports go in a file; the message is a short summary plus the path.
-- The user reads doer→master messages directly, so the master does not restate them; it surfaces a decision as a one-line summary plus options.
+- The user reads integrator→master messages directly, so the master does not restate them; it surfaces a decision as a one-line summary plus options.
 - Mark FYIs "无需回复". A decision request states the default and what is blocked meanwhile.
 - An instruction the user gives directly to any agent wins; that agent tells the others what changed.
 - Original-source bugs: keep ones that only make play easier, with a "原版行为" note in UI/changelog; ask the user case by case about ones that affect progression or the economy (repeatable rewards, item/gold farming, skipping key gates or rebirth requirements). See the rule in [rebirth bonus quest audit](docs/reverse-engineering/rebirth-quest-bonus-audit.md) (「原版源码漏洞的通用处理规则」).
 
-## Working in the main checkout (the doer session, not subagents)
+## Working in the main checkout (the integrator session, not subagents)
 
 The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a fix or feature there is ready:
 
