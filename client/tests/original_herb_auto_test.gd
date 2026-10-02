@@ -117,6 +117,7 @@ func remote_auto() -> void:
  root.add_child(gate)
  world.asset_packs=gate
  var before:Dictionary=backend.session.snapshot()
+ if not await click(world.quest_helper_menu.find_child("QuestHelper_30",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_30",true,false)):return
  check(gate.waiting.is_valid() and not backend.quest_auto.running,"Automatic button waits for download before server start")
  world.quest_helper_menu.close_menu()
@@ -125,6 +126,7 @@ func remote_auto() -> void:
  check(not backend.quest_auto.running and backend.session.snapshot()==before,"Close cancels late automatic download")
  world.asset_packs=original_packs
  world.quest_helper_menu.open_menu()
+ if not await click(world.quest_helper_menu.find_child("QuestHelper_30",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_30",true,false)):return
  if not await ready(func():return backend.quest_auto.running and world.state.derived.get("quest_auto",{}).get("running",false),"Real button starts authoritative runner"):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStop",true,false)):return
@@ -134,6 +136,7 @@ func remote_auto() -> void:
  for i in range(20):backend.quest_auto.tick(backend,0.21)
  check(backend.session.snapshot()==before,"Stopped server cannot execute more transactions")
  world.quest_helper_menu.open_menu()
+ if not await click(world.quest_helper_menu.find_child("QuestHelper_30",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_30",true,false)):return
  if not await ready(func():return Rules.flag(backend.session._profile,"ended",1) and not backend.quest_auto.running,"Remote automatically confirms three original herb steps and completes"):return
  if not check(await Wait.settle(self,world),"Completion settles"):return
