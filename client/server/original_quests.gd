@@ -112,6 +112,7 @@ static func pet_ids(profile: Dictionary, raw: String) -> Array:
 func refresh_npc_state() -> bool:
 	var changed:bool=npc_state.expire()
 	changed=npc_state.spawn_areas(catalog.npcs,catalog.enabled_events) or changed
+	changed=npc_state.refresh_time_visuals(catalog.npcs,catalog.enabled_events) or changed
 	catalog.npc_overrides=npc_state.snapshot()
 	return changed
 
@@ -171,6 +172,7 @@ func talk(backend, id: String) -> Dictionary:
 	var npc := npc_by_id(id)
 	if npc.is_empty() or not allowed(backend,npc):return {"ok":false,"reason":"任务人物不在附近，或当前正忙。"}
 	if str(npc.get("handler",""))=="Charm":return Charm.talk(self,backend,npc)
+	if str(npc.get("handler",""))=="TimeMan":return window(npc,{},"end",str(npc.text),false)
 	if npc.has("kind"):
 		if str(npc.kind) not in services.KINDS:return {"ok":false,"reason":"尚未开放的原服务类型。"}
 		return services.open(self,backend,npc)

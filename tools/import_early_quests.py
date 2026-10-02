@@ -206,6 +206,34 @@ def write_quest_catalogs(root, result):
     target.write_text(json.dumps(result, ensure_ascii=False, indent=2)+'\n')
 
 
+def prepare_npc_art(archive,npcs):
+    from import_battle import animations
+    art_npcs = npcs.copy()
+    for npc in npcs:
+        if npc.get('handler') == 'TimeMan':
+            for mode in ['main','changed']:
+                visual=npc['time_visuals'][mode]
+                visual.update(id=npc['id']+':time-'+mode,facing=npc['facing'])
+                art_npcs.append(visual)
+    for npc in art_npcs:
+        if npc['graphic'] in archive.map_ids:
+            npc['bitmap_id'] = archive.map_ids[npc['graphic']]
+        else:
+            frame = animations(archive, npc['graphic'])[f"0_{npc['facing']}"]['frames'][0]
+            npc['bitmap_id'] = frame['image']
+            npc['source_pose'] = dict(action=0, direction=npc['facing'], frame=0)
+    return art_npcs
+
+
+def write_npc_art(archive,art_npcs,root):
+    for npc in art_npcs:
+        bitmap = npc['bitmap_id']
+        entry = archive.entries[bitmap]
+        npc.update(path=quest_npc_image_path(npc['id']), offset=[entry['x'], entry['y']], bitmap_id=bitmap)
+        target = root/npc['path']; target.parent.mkdir(parents=True, exist_ok=True)
+        archive.image(bitmap).save(target)
+
+
 def run(source, reference, output):
     spec = json.loads(SPEC.read_text())
     result = catalog(reference, spec)
@@ -222,23 +250,11 @@ def run(source, reference, output):
         "data/adrn_15.bin": hashlib.sha256((Path(source)/"data/adrn_15.bin").read_bytes()).hexdigest()}
     root = Path(output)
     # Validate all graphics before writing any catalog or art.
-    from import_battle import animations
-    for npc in result['npcs'] + result['service_npcs']:
-        if npc['graphic'] in archive.map_ids:
-            npc['bitmap_id'] = archive.map_ids[npc['graphic']]
-        else:
-            frame = animations(archive, npc['graphic'])[f"0_{npc['facing']}"]['frames'][0]
-            npc['bitmap_id'] = frame['image']
-            npc['source_pose'] = dict(action=0, direction=npc['facing'], frame=0)
+    art_npcs=prepare_npc_art(archive,result['npcs']+result['service_npcs'])
     graphics = [i['logical_icon'] for i in result['items'].values()]
     if any(g not in archive.map_ids for g in graphics):
         raise ValueError('Reviewed static graphics missing from 2.5 client')
-    for npc in result['npcs'] + result['service_npcs']:
-        bitmap = npc['bitmap_id']
-        entry = archive.entries[bitmap]
-        npc.update(path=quest_npc_image_path(npc['id']), offset=[entry['x'], entry['y']], bitmap_id=bitmap)
-        target = root/npc['path']; target.parent.mkdir(parents=True, exist_ok=True)
-        archive.image(bitmap).save(target)
+    write_npc_art(archive,art_npcs,root)
     for item in result['items'].values():
         bitmap = archive.map_ids[item['logical_icon']]
         item.update(bitmap_id=bitmap, icon_path=f"quests/items/{item['id']}.png")

@@ -168,7 +168,7 @@ def load_quest_module(reference, manifest):
     handlers = spec.get('handlers', {})
     if set(declared) & set(handlers):
         raise ValueError('Handler duplicates changeevent declaration')
-    if any(review.get('kind') not in ('warpman','npcenemy') for review in handlers.values()):
+    if any(review.get('kind') not in ('warpman','npcenemy','timeman') for review in handlers.values()):
         raise ValueError('Quest handler not yet supported')
     selected_scripts = {**declared, **handlers}
     if any(extra.get('script') not in declared for extra in spec.get('supplements', [])):
@@ -183,14 +183,14 @@ def load_quest_module(reference, manifest):
             script = match[2]
             review = selected_scripts[script]
             kind = review.get('kind', 'changeevent')
-            if kind == 'npcenemy':
+            if kind in ('npcenemy','timeman'):
                 template_bindings = []
                 for path, text in texts.items():
                     if not path.endswith('.template'):continue
                     for template_block in re.findall(r'\{([^}]+)\}', text):
                         template = dict(line.strip().split('=',1) for line in template_block.splitlines() if '=' in line and not line.lstrip().startswith('#'))
                         if template.get('templatename') == match[1]:template_bindings.append(template.get('functionset'))
-                if template_bindings != ['NPCEnemy']:
+                if template_bindings != ['NPCEnemy' if kind == 'npcenemy' else 'TimeMan']:
                     raise ValueError('Missing or ambiguous pinned NPCEnemy template binding')
             elif match[1] != ('npcgen_warpman' if kind == 'warpman' else 'changeevent'):
                 raise ValueError('Reviewed handler differs from actual create binding')
@@ -212,8 +212,13 @@ def load_quest_module(reference, manifest):
                 continue
             if script in handlers:
                 from quest_source_handlers import keyword_warp, npc_enemy, fixed_enemy_audit
-                parser = npc_enemy if kind == 'npcenemy' else keyword_warp
-                default, branches = parser(texts[PREFIX + script], script, review['events'])
+                if kind == 'timeman':
+                    from quest_timeman import visuals
+                    time_visuals=visuals(script,fields,texts)
+                    default,branches=time_visuals['main']['text'],[]
+                else:
+                    parser = npc_enemy if kind == 'npcenemy' else keyword_warp
+                    default, branches = parser(texts[PREFIX + script], script, review['events'])
                 if kind == 'npcenemy':
                     branches[0]['combat_audit'] = fixed_enemy_audit(reference, texts, branches[0]['guard']['enemy_ids'], spec.get('combat_audit'))
                     guard=branches[0]['guard']
@@ -253,6 +258,7 @@ def load_quest_module(reference, manifest):
             npc = dict(id=ident, source_script=script, source_create=create, source_create_index=ordinal,
                        events=list(events), name=fields['name'], map_id=map_id, cell=cell,
                        graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches)
+            if kind == 'timeman':npc.update(handler='TimeMan',time_visuals=time_visuals)
             if spawn:npc['source_spawn'] = spawn
             if kind == 'npcenemy':
                 npc['source_spawn_mode'] = 'NPCEnemy borncenter 1x1; original movement not simulated'
