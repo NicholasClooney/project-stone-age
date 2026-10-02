@@ -64,3 +64,17 @@ real remote game with no local Backend and checks original actor nodes, click
 positions and terrain collision after hide/restore/move; it is headless and does
 not claim rendered-pixel verification. Existing A party settlement regression is
 run separately. No full suite is run during this task batch.
+
+## Static random encounter drops without NPCEnemy
+
+A static module may declare `drops:[{source:"gmsv/data/enemy.txt",enemy_id:1305,
+item_id:2760,probability:100,audit:"path to task source audit"}]`. `sources` must
+SHA-pin that enemy table; `items` must contain every declared item. The importer
+checks each pair and its original thousandth probability against `drop_slots`,
+derives the source line, raw enemy row and exact source slots, and rejects
+unknown fields, duplicate declarations, unreviewed items or omitted slots on an
+activated enemy. Optional `source_line` must equal the actual row. It does not
+trust a manifest probability or copy arbitrary drops. The output feeds the
+existing `reviewed_drops` activation and battle RNG/claims transaction; it does
+not itself register the task. Original group item prerequisites/exclusions remain
+in the normal encounter tables and are not bypassed by this declaration.

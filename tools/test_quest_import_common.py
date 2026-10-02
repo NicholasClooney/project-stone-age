@@ -25,6 +25,36 @@ def gold_bui_manifest():
 
 
 class QuestModuleTests(unittest.TestCase):
+    def test_static_random_drops_are_verified_against_original_slots(self):
+        spec=gold_bui_manifest()
+        expected=[(1305,2760,100),(1306,2761,500),(1307,2763,500),(1308,2762,100)]
+        spec['items'] += [2760,2761,2762,2763]
+        spec['drops']=[dict(source='gmsv/data/enemy.txt',enemy_id=enemy,item_id=item,probability=chance,audit='four-jewels source audit') for enemy,item,chance in expected]
+        result=common.load_quest_module(REFERENCE,spec)
+        self.assertEqual([(d['enemy_id'],d['item_id'],d['probability']) for d in result['drops']],expected)
+        self.assertTrue(all(d['source_line'] and d['source_slots'] and d['source_raw_columns'] for d in result['drops']))
+        result['enabled_events']=[44]
+        merged=common.merge_quest_module(dict(npcs=[],items={},jobs=[],reward_pets={},enabled_events=[],provenance={}),result)
+        self.assertTrue(merged['reviewed_drops'][spec['id']]['active'])
+        for change in [dict(probability=101),dict(item_id=2761),dict(enemy_id=1309),dict(source_line=1),dict(audit=''),dict(probability=True),dict(extra='unsafe')]:
+            invalid=copy.deepcopy(spec);invalid['drops'][0].update(change)
+            with self.subTest(change=change),self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
+        invalid=copy.deepcopy(spec);invalid['items'].remove(2760)
+        with self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
+        invalid=copy.deepcopy(spec);invalid['sources'].pop('gmsv/data/enemy.txt')
+        with self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
+        invalid=copy.deepcopy(spec);invalid['drops'].append(copy.deepcopy(spec['drops'][0]))
+        with self.assertRaises(ValueError):common.load_quest_module(REFERENCE,invalid)
+        # Source-shaped multi-slot enemy: matching one slot must not activate the other.
+        import csv,io
+        text=(REFERENCE/'gmsv/data/enemy.txt').read_text(encoding='gb18030')
+        rows=list(csv.reader(text.splitlines()))
+        row=next(r for r in rows if len(r)>33 and r[3]=='1305')
+        row[15]='2761';row[25]='500'
+        stream=io.StringIO();csv.writer(stream).writerows(rows)
+        with self.assertRaisesRegex(ValueError,'All original drop slots'):
+            common.reviewed_static_drops(spec,{'gmsv/data/enemy.txt':stream.getvalue()})
+
     def test_personal_npc_rules_are_exact_pinned_sources(self):
         fixture_path=Path(__file__).resolve().parents[1]/'client/tests/fixtures/personal-quest-npcs.json'
         fixtures=json.loads(fixture_path.read_text())
