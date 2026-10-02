@@ -27,7 +27,21 @@ Subagents working in their own worktrees don't relaunch; they test and commit, a
 
 ## Assets in worktrees
 
-Imported original assets are gitignored, so a worktree gets them by copying from the main checkout with APFS copy-on-write (`cp -c -R client/assets/legacy .tools references client/.godot build/fast_hunt`), which is instant. The main session keeps the main checkout's assets current: after merging a change to an importer it re-runs the import there right away (or, if the live server must not be disturbed, in a separate assets worktree that agents copy from). An agent should re-run an importer only when its own branch changes that importer.
+Imported original assets are gitignored, so a worktree has to get them from the main checkout (`M` below). Copies add up: on 2026-10-02, 89 worktrees with full copies left the disk 99% full. Share what the worktree only reads, and copy only what it rewrites:
+
+| Folder | Size | In a worktree |
+|---|---|---|
+| `.tools/` (Godot, extracted originals, Python venv) | ~5 GB | **Symlink**, always: `ln -s "$M/.tools" .tools`. Read-only. |
+| `references/` | ~1 GB | **Symlink**, always: `ln -s "$M/references" references`. Read-only. |
+| `client/assets/legacy/` | ~1 GB | **Symlink** when the branch does not change an importer, which covers most work (server logic, automation, UI). **Clone** with `cp -c -R` only when the branch changes an importer and must regenerate assets. |
+| `client/.godot/` | ~2 GB | **Clone** with `cp -c -R` (Godot writes cache files while running; a clone costs nothing until a file changes). Re-clone it after `main` re-imports. |
+| `build/fast_hunt` | small | Built by `scripts/run.sh`; no need to copy. |
+
+Rules that go with it:
+
+- Never run an importer or `scripts/run.sh --headless --editor --import` in a worktree whose `client/assets/legacy` is a symlink: it would rewrite the main checkout, which the live server uses. Clone first if the branch needs to import.
+- A functional change only needs the game to run its tests, not its own copy of the art. Symlinked assets are the default; the main session keeps them current by re-running importers in the main checkout right after merging an importer change (or in a separate assets worktree if the live server must not be disturbed).
+- Remove a worktree as soon as its branch is merged: `git worktree remove <path>` keeps the branch and its commits, deletes the directory including ignored copies, removes a symlink itself without following it, and refuses when there are modified or untracked files unless `--force`. Then `git worktree prune`. Delete temporary folders (test logs, probe copies) under `/private/tmp` too.
 
 ## Required in-game changelog
 
