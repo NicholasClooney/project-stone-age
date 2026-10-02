@@ -134,6 +134,11 @@ func store_pet(index: int, auto_hunt: bool = false) -> bool:return request({"typ
 func retrieve_pet(index: int) -> bool:return request({"type":"retrieve_pet","index":index})
 func retrieve_pet_by_id(pet_id: String) -> bool:return request({"type":"retrieve_pet_by_id","pet_id":pet_id})
 func select_pet(index: int) -> bool:return request({"type":"select_pet","index":index})
+func mount_pet_as(pet_id: String, character_id: String, context: Dictionary) -> bool:
+	var command := context.duplicate(true)
+	command.merge({"type":"mount_pet_as","pet_id":pet_id,"character_id":character_id},true)
+	return request(command)
+
 func mount_pet(index: int) -> bool:return request({"type":"mount_pet","index":index})
 func rename_pet(index: int, pet_name: String) -> bool:return request({"type":"rename_pet","index":index,"name":pet_name})
 func set_pet_favorite(pet_id: String, favorite: bool) -> bool:return request({"type":"set_pet_favorite","pet_id":pet_id,"favorite":favorite})

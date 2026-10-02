@@ -1720,6 +1720,28 @@ func grant_starter_pets() -> bool:
 		_profile.pets.append(pet)
 	return true
 
+## One mutation; the backend owns persistence and rollback.
+func mount_pet_as(pet_id: String, character_id: String) -> bool:
+	last_error = ""
+	if not _valid_character(character_id):
+		last_error = "无效的角色造型。"
+		return false
+	var index := -1
+	for i in range(_profile.pets.size()):
+		if str(_profile.pets[i].get("pet_id","")) == pet_id and not pet_id.is_empty():index = i;break
+	if index < 0:
+		last_error = "这只伙伴已不在随身栏，请重新选择。"
+		return false
+	if not preload("res://scripts/riding.gd").compatible_characters(int(_profile.pets[index].get("sprite",0))).has(character_id):
+		last_error = "此造型没有这只伙伴的原版骑乘动画。"
+		return false
+	var before := _profile.duplicate(true)
+	_profile.character_id = character_id
+	if not mount_pet(index):
+		_profile = before
+		return false
+	return true
+
 func mount_pet(index: int) -> bool:
 	last_error = ""
 	if not _pending.is_empty():

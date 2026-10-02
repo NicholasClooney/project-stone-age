@@ -74,6 +74,31 @@ static func rideable_pets(character_id: String) -> Array:
 	result.sort()
 	return result
 
+## Only selectable appearances with an indexed original composite.
+static func compatible_characters(pet_sprite: int) -> Array[String]:
+	var result: Array[String] = []
+	for id in preload("res://scripts/character_art.gd").index().get("characters",{}):
+		var number := int(id)
+		if number < 100000 or number > 100235 or (number-100000)%5 != 0:continue
+		var sprite := composite(str(id),pet_sprite)
+		if sprite >= 0 and has_composite(str(sprite)):result.append(str(id))
+	result.sort()
+	return result
+
+## The pet window permits choosing a compatible appearance, never bypassing
+## the ordinary health, loyalty, level, deployment or certificate rules.
+static func selection_reason(profile: Dictionary, pet_index: int) -> String:
+	if pet_index < 0 or pet_index >= profile.get("pets",[]).size():return "没有这只伙伴。"
+	var candidates := compatible_characters(int(profile.pets[pet_index].get("sprite",0)))
+	if candidates.is_empty():return "任何造型都不能骑乘此宠物。\n没有已确认的原版骑乘图。"
+	var candidate := profile.duplicate()
+	var reason := ""
+	for id in candidates:
+		candidate.character_id = id
+		reason = can_mount(candidate,pet_index)
+		if reason.is_empty():return ""
+	return reason
+
 static func pet_name(pet_sprite: int) -> String:
 	return str(index().get("names",{}).get(str(pet_sprite),pet_sprite))
 

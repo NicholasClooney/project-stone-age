@@ -49,15 +49,26 @@ func refresh_companion() -> void:
 	game.pet_follower.select_pet(str(int(pet.sprite)),str(pet.name))
 
 func refresh_riding() -> void:
-	if not is_instance_valid(game.player): return
+	if not is_instance_valid(game) or not game.is_inside_tree() or not is_instance_valid(game.player):return
 	var profile: Dictionary = game.session.snapshot()
+	var character_id := str(profile.get("character_id","100000"))
 	var index := int(profile.get("ride_pet",-1))
 	var composite := -1
 	if index >= 0 and index < profile.pets.size():
-		composite = preload("res://scripts/riding.gd").composite(str(profile.get("character_id","100000")),int(profile.pets[index].sprite))
-	if composite >= 0 and not game.asset_packs.is_ready([game.asset_packs.riding_pack(composite)]):
-		game.asset_packs.ensure([game.asset_packs.riding_pack(composite)],func(ok: bool):if ok:refresh_riding())
+		composite = Riding.composite(character_id,int(profile.pets[index].sprite))
+	# A second device may never have opened the chooser. It needs the base
+	# character pack too, so dismounting can draw the new appearance.
+	var packs := [game.asset_packs.character_pack(character_id)]
+	if composite >= 0:packs.append(game.asset_packs.riding_pack(composite))
+	if not game.asset_packs.is_ready(packs):
+		var owner_ref: WeakRef = weakref(self)
+		game.asset_packs.ensure(packs,func(ok: bool):
+			var owner = owner_ref.get_ref()
+			# Re-read authority, including a newer appearance/dismount, instead
+			# of applying the appearance captured by this download.
+			if ok and is_instance_valid(owner):owner.refresh_riding())
 		return
+	game.player.character_id = character_id
 	game.player.mounted_character_id = str(composite) if composite >= 0 else ""
 
 ## DEV: dismount, or ride the pet selected in the pet window, else the first

@@ -956,14 +956,17 @@ func pet_tool_button(caption: String, at: Vector2, callback: Callable, control_n
 	panel.add_child(control)
 	return control
 
-## Ride or dismount the selected pet. Disabled, with the rule's reason below it,
-## when the current character cannot ride that pet (riding.gd can_mount).
+## Ride directly, or choose a compatible original appearance. Ordinary riding
+## restrictions still disable the button and explain why.
 func pet_mount_button(profile: Dictionary, at: Vector2) -> Button:
 	var pet: Dictionary = profile.pets[selected_pet]
 	var riding:=int(profile.get("ride_pet",-1))==selected_pet
-	var reason:="" if riding else Riding.can_mount(profile,selected_pet)
+	var reason:="" if riding else Riding.selection_reason(profile,selected_pet)
 	if world.session.in_battle():reason="战斗中不能骑乘或下骑。"
 	var control:=pet_tool_button(("下骑 · " if riding else "骑乘 · ")+str(pet.name),at,func():
+		if not riding and Riding.composite(str(profile.get("character_id","100000")),int(pet.get("sprite",0))) < 0:
+			world.character_selection.open_for_mount(pet)
+			return
 		if world.session.mount_pet(-1 if riding else selected_pet):
 			world.refresh_companion();world.checkpoint();feedback=""
 		else:feedback=world.session.last_error
@@ -971,8 +974,9 @@ func pet_mount_button(profile: Dictionary, at: Vector2) -> Button:
 	control.disabled=not reason.is_empty()
 	control.tooltip_text=reason
 	if not reason.is_empty():
-		var note:=label(reason,at+Vector2(0,174),230,12)
+		var note:=label(reason,at+Vector2(0,214),220,12)
 		note.name="PetMountReason"
+		note.size.x=220
 		note.add_theme_color_override("font_color",Color("ffd080"))
 	return control
 

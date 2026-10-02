@@ -436,6 +436,25 @@ func _cmd_checkpoint(command: Dictionary) -> Dictionary:
 	if not saved:return _reject("save_failed")
 	return {"ok":true}
 
+## Confirmed appearance + mount transaction. The chooser supplies the field
+## context it opened with; a second device cannot silently retarget it.
+func _cmd_mount_pet_as(command: Dictionary) -> Dictionary:
+	if battle_open or not session._pending.is_empty():return _reject("战斗中不能骑乘或下骑。")
+	if automation.running or automation.hunt_running or automation.flow_active() or quest_auto.running:return _reject("自动活动中不能更换骑乘造型，请先停止。")
+	for field in ["pet_id","character_id","expected_character"]:
+		if not command.get(field) is String:return _reject("无效的骑乘请求。")
+	var cell = command.get("cell")
+	if not cell is Array or cell.size()!=2:return _reject("无效的位置。")
+	if not session._integer(command.get("map_id"),0,2147483647) or not session._integer(cell[0],0,2147483647) or not session._integer(cell[1],0,2147483647):return _reject("无效的位置。")
+	if str(session._profile.character_id)!=command.expected_character or int(command.map_id)!=automation.position_map or Vector2i(int(cell[0]),int(cell[1]))!=automation.position_cell:return _reject("造型或位置已改变，请重新选择骑乘。")
+	var before: Dictionary = session.snapshot()
+	if not session.mount_pet_as(command.pet_id,command.character_id):return _reject(session.last_error)
+	if not save():
+		session._profile = before
+		return _reject("save_failed")
+	_publish()
+	return {"ok":true}
+
 func _required_arguments(method: String) -> int:
 	for info in session.get_script().get_script_method_list():
 		if info.name==method:return info.args.size()-info.default_args.size()
