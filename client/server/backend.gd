@@ -828,6 +828,15 @@ func _cmd_battle_escape_dev(_command: Dictionary) -> Dictionary:
 ## Settles a finished battle exactly once and appends the reward summary that
 ## clients display; the summary compares the profile before and after.
 func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array = []) -> Dictionary:
+	# Party dispatch consumes each terminal slice once. Keep the server-owned
+	# personal result and claims across save rollback; the shared view cannot
+	# substitute its battle id, XP or loot ownership on battle_close retry.
+	if not bool(state.active) and bool(session._pending.get("party",false)):
+		if not settle.is_empty() and not session._pending.has("party_settlement"):
+			session._pending.party_settlement={"result":settle.duplicate(true),"drop_claims":drop_claims.duplicate(true)}
+		if session._pending.has("party_settlement"):
+			settle=session._pending.party_settlement.result.duplicate(true)
+			drop_claims=session._pending.party_settlement.drop_claims.duplicate(true)
 	if not bool(state.active) and bool(battle_state.get("settled",false)) and str(battle_state.get("battle_id",""))==str(state.get("battle_id","")):
 		return battle_state.duplicate(true)
 	if settle.is_empty() and battle_open and not party_battle():session._pending.loot_claims = battle.drop_claims_for()

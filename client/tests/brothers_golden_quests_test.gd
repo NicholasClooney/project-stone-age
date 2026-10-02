@@ -146,6 +146,7 @@ func run() -> void:
  check(loaded.load_game("user://brothers-reload.json") and not 2517 in loaded.snapshot().original_items,"source logout crystal removed on authoritative reload")
  b.free()
  lan()
+ for failed_slot in [0,1,2]:await party_retry(failed_slot)
  print("BROTHERS GOLDEN QUESTS: %d failures"%failures)
  quit(1 if failures else 0)
 func lan() -> void:
@@ -163,3 +164,59 @@ func lan() -> void:
  hub.shut_down();hub.free()
  for f in DirAccess.get_files_at(dir):DirAccess.remove_absolute(dir.path_join(f))
  DirAccess.remove_absolute(dir)
+
+func party_retry(failed_slot:int) -> void:
+ var folder:="user://brothers-party-retry-%d-%d"%[OS.get_process_id(),failed_slot]
+ DirAccess.make_dir_recursive_absolute(folder)
+ var hub=Hub.new(folder.path_join("accounts.json"),func():return 10.0)
+ hub.tick=false;hub.backups=false;hub.share_dir=""
+ hub.presence_clock=func():return 10000
+ hub.battle_clock=func():return 500000
+ root.add_child(hub);hub.start()
+ for i in range(2):
+  hub.handle(i+1,{"type":"create_profile","name":"Eye%d"%i,"pin":"1111"})
+  hub.handle(i+1,{"type":"report_position","map_id":1000,"cell":[80+i,90],"client":"eye%d"%i})
+ check(hub.handle(2,{"type":"party_join","facing":1}).ok,"eye real two-member party")
+ var peers:Array=[hub.backends[hub.profile_of(1)],hub.backends[hub.profile_of(2)]]
+ for b in peers:
+  for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
+  b.session.gm_set_base_stat(-1,"vitality",10000)
+  b.session._profile.player.hp=b.session._profile.player.max_hp
+ peers[1].session.gm_set_base_stat(-1,"strength",10000)
+ var enemy:Dictionary=peers[0].encounter_catalog.actor(1060,peers[0].encounter_rng)
+ check(enemy.generated_drops==[2548],"party uses real1060 original eye roll")
+ var config:Dictionary=peers[0].session.start_wild_battle_config({"area_id":373,"group_id":522,"enemies":[enemy]})
+ peers[0].open_battle(config)
+ check(peers[0].party_battle() and peers[1].party_battle(),"eye uses real PartyBattleSession and both Backends")
+ var entry:Dictionary=hub.party_battles.fighting[hub.profile_of(1)]
+ var before:Array=[];var pending:Array=[];var paths:Array=[]
+ var blocker=FileAccess.open(folder.path_join("not-a-directory"),FileAccess.WRITE)
+ blocker.store_string("intentional save failure fixture");blocker.close()
+ for slot in range(2):
+  before.append(peers[slot].session.snapshot());pending.append(peers[slot].session._pending.duplicate(true));paths.append(peers[slot].save_path)
+  if slot==failed_slot or failed_slot==2:peers[slot].save_path=folder.path_join("not-a-directory/save.json")
+ for turn in range(100):
+  if not peers[0].battle.snapshot().active:break
+  for slot in range(2):
+   var state:Dictionary=peers[slot].battle.snapshot()
+   hub.handle(slot+1,{"type":"battle_command","battle_id":state.battle_id,"turn":state.turn,"slot":state.party_slot,"action":"defend" if slot==0 else "attack","target":0})
+ check(not peers[0].battle.snapshot().active and entry.settled.size()==2 and hub.party_battles.fighting.is_empty(),"party dispatch already consumed both terminal slices")
+ check(entry.session.drop_claims_for(0).is_empty() and entry.session.drop_claims_for(1).size()==1,"only member owns enemy1060 drop claim")
+ for slot in range(2):
+  var b=peers[slot]
+  var expected=Session.new();expected._profile=before[slot].duplicate(true);expected._pending=pending[slot].duplicate(true)
+  var personal:Dictionary=entry.session.slice_for(slot,str(entry.own[slot]))
+  check(expected.apply_battle_result(personal,entry.session.drop_claims_for(slot)),"independent personal slice expected settlement")
+  if slot==failed_slot or failed_slot==2:
+   check(not b.battle_state.get("settled",false) and b.session.snapshot()==before[slot],"party failed save rolls back whole personal profile")
+   check(not b.handle({"type":"battle_close"}).ok and b.session.snapshot()==before[slot],"party repeated failed close stays rolled back")
+  b.save_path=paths[slot]
+  check(b.handle({"type":"battle_close"}).ok,"party restore real save and retry original slice")
+  check(b.session.snapshot()==expected.snapshot(),"party retry exact personal HP XP currency UID and own loot")
+  var saved=Session.new()
+  check(saved.load_game(paths[slot]) and saved.snapshot()==expected.snapshot(),"party retry persisted exact personal result to real save")
+  check(b.session.snapshot().original_items.count(2548)==slot,"eye never duplicated or forwarded to leader")
+  var after:Dictionary=b.session.snapshot()
+  b.handle({"type":"battle_close"});hub.party_battles._push(entry)
+  check(b.session.snapshot()==after,"duplicate close and consumed party push grant nothing")
+ hub.shut_down();hub.queue_free();await process_frame

@@ -65,3 +65,11 @@ editor命令仅资源导入，不打开窗口；build-web是构建而非发布�
 真实OpenGL Metal渲染，静音离屏。截图目录`/private/tmp/tmux-agents/brothers-golden-sheep-quests/proofs/`：`portrait-390x844-original-options.png`、`portrait-390x844-original-reply.png`、`portrait-390x844-reward-limit.png`均为390×844，逐张view_image验收，鼠标GUI输入实际触发按钮并核对服务器交换结果；不是headless像素。其余桌面原对白、金羊宠物与道具、横屏助手截图共7张也已检查。竖屏仅修原对话框的宽度/位置，不承诺整个旧HUD或所有菜单均完成移动端重排。
 
 唯一全量在首次提交后执行，203/209通过（2 jobs，581秒）。六项失败不是忽略或判flaky：palette/settings/mvp_journey因world重导后遗漏既有`palette_images.py`，dana/travel_gate/travel_router因旧非任务邻格数组的GDScript类型推断不兼容。补齐资产转换与文档命令，邻格变量显式用Array，达那计数包含新恢复的原长老NPC；随后定向复验上述失败与受影响UI，不重复全量。修复后13/13定向通过（2 jobs，45秒），包含全部六个失败套件、两新suite、旧任务UI/助手、训练助手、npc_smoke与asset_packs。最终资源重新构建226 PCK零失败，真实渲染及390×844点击再次通过，十张最终截图逐张view_image。没有第二次全量。
+
+### 父审查：组队原结算重试
+
+真实两成员ProfileHub/Backend/PartyBattleSession与原enemy1060复现：`party_battles._push`先把slot记为settled并移除fighting，再推个人slice；保存失败后只拿共享snapshot重试无法匹配个人battle_id。新增服务器私有pending字段冻结个人slice及其drop claims，保存回滚保留、成功清除。测试覆盖队长失败、成员失败、双方失败，使用真实文件阻塞保存路径，恢复后比对个人HP/XP/石币/UID/物品/完成battle及实际磁盘重载；成员击杀的2548不会发给队长，重复close/push不重发。原solo/守卫事务继续沿既有路径。
+
+已rebase主分支30424f1（包含92df4df及新17173审计文档），仅ideas.md尾部文档冲突，双方完整保留；未改主文档结论。此轮只执行自身、party、settlement定向与changelog check，不第二次全量；此前203/209→修复后13/13记录保留。
+
+本轮定向8/8通过（2jobs，45秒）：brothers_golden_quests/ui、lan_party_battle/auto、original_drops、battle_settlement、capture_only及capture_only_remote。干净反证使用最终同一测试临时换回未修复backend，14项断言失败且无脚本错误（`/private/tmp/brothers-party-clean-repro.log`）；随即原字节恢复已通过的修复。新结果日志`/private/tmp/brothers-party-review-summary.log`。此次未更改图像或UI，不重复截图。
