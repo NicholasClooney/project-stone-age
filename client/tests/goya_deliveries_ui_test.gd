@@ -26,9 +26,18 @@ func run() -> void:
  if not await stage("goya6:deliver",23):return
  if not await choose("yes") or not await choose("ok"):return
  if not check(Rules.flag(world.session.snapshot(),"ended",6) and int(world.session.snapshot().pets[-1].source_enemy_id)==44,"Actual pet reward from two-shell route"):return
+ var earned_pet_id:String=str(world.session.snapshot().pets[-1].pet_id)
  world.show_adventure_menu("pets")
- if not await click(world.adventure_menu.panel.get_node("PetRow0")):return
- if not check(world.adventure_menu.pet_view=="detail" and world.session.snapshot().pets.size()==1,"Clicked portrait belongs to the earned quest pet"):return
+ var pets:Array=world.session.snapshot().pets
+ var earned_index:int=-1
+ for i in range(pets.size()):
+  if str(pets[i].pet_id)==earned_pet_id:earned_index=i
+ if not check(not earned_pet_id.is_empty() and earned_index>=0,"Reward has a stable carried pet UID"):return
+ # Mobile collection reparents native rows into its ScrollContainer. The shared
+ # click helper scrolls, waits for actual hover, and sends real mouse events.
+ var reward_row:Control=world.adventure_menu.panel.find_child("PetRow%d"%earned_index,true,false)
+ if not await click(reward_row):return
+ if not check(world.adventure_menu.pet_view=="detail" and str(world.session.snapshot().pets[world.adventure_menu.selected_pet].pet_id)==earned_pet_id,"Clicked portrait belongs to the earned quest pet UID"):return
  await proof("goya-03-original-pet-reward")
  world.close_adventure_menu()
  if not await stage("goya7:request",24):return

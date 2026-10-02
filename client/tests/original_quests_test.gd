@@ -23,7 +23,8 @@ func fresh():
 	return b
 func run() -> void:
 	var public_backend=Backend.new()
-	check(preload("res://tests/support/registered_quest_events.gd").matches(public_backend.quest_catalog.enabled_events) and public_backend.quest_catalog.active_npcs().size()==public_backend.quest_catalog.npcs.size()+2,"public catalog retains all reviewed herb, shell, adult, doctor and wood NPCs plus two independent beauticians")
+	check(preload("res://tests/support/registered_quest_events.gd").matches(public_backend.quest_catalog.enabled_events),"public catalog enables exactly baseline and registered events")
+	public_catalog(public_backend.quest_catalog)
 	public_backend.free()
 	migration()
 	for bit in range(4):direction(bit)
@@ -31,6 +32,72 @@ func run() -> void:
 	lan()
 	print("ORIGINAL QUESTS: %d failures" % failures)
 	quit(1 if failures else 0)
+# Frozen reviewed identities are independent of the runtime catalog and importer.
+# Registry additions must bring their own reviewed group; deleting a baseline NPC,
+# changing its binding/transaction, or substituting another instance must fail.
+# public-quest-npcs.json pins reviewed main 4854c86: 101 baseline instances
+# plus 141 module instances. Never regenerate expected data during the test.
+func public_catalog(catalog) -> void:
+	var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/public-quest-npcs.json"))
+	var registry:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://data/quest-modules.json"))
+	var groups:Dictionary=fixture.groups
+	var registered:Array=["baseline"]
+	for module in registry.modules:
+		var id:String=str(module.id)
+		check(not id in registered and groups.has(id),"independently reviewed registry group "+id)
+		if not groups.has(id):continue
+		registered.append(id)
+		for field in ["manifest","builder","enabled_events"]:
+			check(module.get(field)==groups[id].get(field),"registered source/events unchanged: "+id+"/"+field)
+	var reviewed:Array=groups.keys();reviewed.sort();registered.sort()
+	check(registered==reviewed,"registry exactly matches independent NPC groups")
+	var expected:Dictionary={}
+	for group in registered:
+		for npc in groups[group].npcs:
+			check(not expected.has(npc.id),"unique reviewed NPC instance "+str(npc.id))
+			expected[npc.id]=npc
+	var actual:Dictionary={}
+	for npc in catalog.npcs:
+		var id:String=str(npc.id)
+		check(not actual.has(id) and expected.has(id),"catalog instance belongs to exact reviewed union: "+id)
+		actual[id]=npc
+		if not expected.has(id):continue
+		for field in expected[id]:
+			if field!="branches":check(npc.get(field)==expected[id][field],"NPC identity "+id+"/"+field)
+		var behavior:Array=[]
+		for branch in npc.get("branches",[]):
+			var entry:Dictionary={}
+			for field in ["event","type","condition","actions","enabled","events","guard","keyword","item_deletion_scope","confirmation_text","disabled_conditions"]:
+				if branch.has(field):entry[field]=branch[field]
+			behavior.append(entry)
+		check(behavior==expected[id].branches,"original branch conditions/actions preserved: "+id)
+	var expected_ids:Array=expected.keys();expected_ids.sort()
+	var actual_ids:Array=actual.keys();actual_ids.sort()
+	check(actual_ids==expected_ids,"catalog is exact baseline plus independent registered NPC union")
+	var services:Array=[]
+	for npc in catalog.service_npcs:
+		check(npc.get("handler")=="Charm","independent beautician retains Charm handler")
+		services.append(str(npc.id))
+	services.sort()
+	check(services==["original/charm/1005","original/charm/2005"],"exactly both original independent beauticians")
+	# Area-spawn NPCs have no public position until the server chooses a valid
+	# birth cell. Test both projections explicitly instead of assuming all spawn.
+	var projection=preload("res://scripts/quest_catalog.gd").new()
+	var area_id:String="seimu/event/event02_1@100:230:180:area:525:200"
+	var active_expected:Array=expected_ids.duplicate()
+	active_expected.erase(area_id);active_expected.append_array(services);active_expected.sort()
+	check(npc_ids(projection.active_npcs())==active_expected,"unplaced area NPC excluded; every fixed instance/function stays public")
+	projection.npc_overrides[area_id]={"map_id":100,"cell":[230,180]}
+	active_expected.append(area_id);active_expected.sort()
+	check(npc_ids(projection.active_npcs())==active_expected,"placed area NPC joins the exact public union")
+	projection.npc_overrides[area_id]={"hidden":true}
+	active_expected.erase(area_id)
+	check(npc_ids(projection.active_npcs())==active_expected,"hidden area NPC does not remove any other original instance")
+func npc_ids(npcs:Array) -> Array:
+	var ids:Array=[]
+	for npc in npcs:ids.append(str(npc.id))
+	ids.sort()
+	return ids
 func migration() -> void:
 	var path: String="user://original-quests-migration.json"
 	for version in range(1,5):
