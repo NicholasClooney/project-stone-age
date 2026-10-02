@@ -53,6 +53,8 @@ func click(button: Control) -> bool:
 		root.push_input(event,true)
 	return true
 func visit_button(id: String, mode: String, job:int=11) -> Button:
+	world.quest_helper_menu.selected_steps[job]=id
+	world.quest_helper_menu.select_quest(job)
 	return world.quest_helper_menu.find_child(("QuestVisit_%s_%s_%s" % [job,id,mode]).validate_node_name(),true,false)
 func choose(id: String) -> bool:
 	var dialogue=world.world_travel.quest_dialogue
@@ -187,6 +189,8 @@ func local_flow() -> bool:
 	root.add_child(world)
 	if not await ready(func():return not world.data.is_empty() and is_instance_valid(world.quest_helper_menu),"Local real core starts"):return false
 	world.quest_helper_menu.open_menu()
+	world.quest_helper_menu.selected_steps[22]="wood:harvest"
+	world.quest_helper_menu.select_quest(22)
 	var harvest: Button
 	# Locate by source metadata: original jobdaily IDs need not be invented.
 	var harvest_buttons: Array=[]

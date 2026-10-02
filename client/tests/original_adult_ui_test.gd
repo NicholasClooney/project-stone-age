@@ -63,6 +63,7 @@ func run() -> void:
  if not await ready(func():return not world.state.derived.get("no_random_encounters",true),"Remote turns original walking encounters back on"):return
  world.helper_menu.close_menu()
  world.quest_helper_menu.open_menu()
+ if not await click(world.quest_helper_menu.find_child("QuestHelper_1",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_1",true,false)):return
  world.quest_helper_menu.hide()
  world.paused_input=false
@@ -74,6 +75,7 @@ func run() -> void:
  if not check(await Wait.settle(self,world),"Remote stop snapshot round trip settles before restart click"):return
  world.quest_helper_menu.close_menu()
  world.quest_helper_menu.open_menu()
+ if not await click(world.quest_helper_menu.find_child("QuestHelper_1",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_1",true,false)):return
  if not await ready(func():return backend.quest_auto.running,"Remote restarts original task"):return
  world.link.close()
