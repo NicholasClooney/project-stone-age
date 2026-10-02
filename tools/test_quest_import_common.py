@@ -199,6 +199,32 @@ class QuestModuleTests(unittest.TestCase):
                 for npc in npcs:
                     self.assertIn(plan_web_packs.RES+npc['path'], plan['packs'][f'map-{npc["map_id"]}'])
 
+    def test_module_world_choices_and_audited_drops(self):
+        import import_golden_bui
+        import import_world
+        module = import_golden_bui.build(REFERENCE)
+        portals = import_world.read_portals(REFERENCE/'gmsv/data/npc/genout')
+        selected = common.apply_module_portal_choices(portals, [module['world']])
+        for cell in ([28, 27], [29, 27]):
+            exits = [p for p in selected if p['from_map'] == 810 and p['cell'] == cell]
+            self.assertEqual([p['to_map'] for p in exits], [809])
+        self.assertEqual(len(module['world']['map_sources']), 37)
+        self.assertIn('831', module['world']['map_sources'])
+        forged = copy.deepcopy(module['world'])
+        forged['portal_choices'][0]['to_map'] = 999999
+        with self.assertRaisesRegex(ValueError, 'not present in source'):
+            common.apply_module_portal_choices(portals, [forged])
+        module['enabled_events'] = [44]
+        merged = common.merge_quest_module(quests.catalog(REFERENCE), module)
+        audit = merged['reviewed_drops']['golden-bui']
+        self.assertTrue(audit['active'])
+        self.assertEqual(len(audit['entries']), 18)
+        for entry in audit['entries']:
+            self.assertEqual(entry['probability'], 600)
+            self.assertEqual(entry['item_id'], 2752 if entry['enemy_id'] % 2 else 2751)
+        module['enabled_events'] = []
+        self.assertFalse(common.merge_quest_module(quests.catalog(REFERENCE), module)['reviewed_drops']['golden-bui']['active'])
+
     def test_empty_registry_does_not_activate_fixture(self):
         base = quests.catalog(REFERENCE)
         with tempfile.TemporaryDirectory() as folder:

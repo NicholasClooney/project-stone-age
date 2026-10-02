@@ -1913,7 +1913,7 @@ static func _generated_drops_valid(enemy: Dictionary) -> bool:
 	var source: Dictionary = _drop_sources.get(str(id),{})
 	if source.is_empty() or str(enemy.get("species",""))!="original_%d"%int(source.template_id):return false
 	if bool(enemy.get("source_wait_only",false)) and not bool(source.get("wait_only",false)):return false
-	if not drops.is_empty() and id not in EncounterCatalog.DROP_ENEMY_IDS:return false
+	if not drops.is_empty() and not EncounterCatalog.drop_enemy_allowed(id):return false
 	var allowed := []
 	for drop in source.get("drops",[]):
 		if int(drop.get("probability",0))>0:allowed.append(int(drop.item_id))
