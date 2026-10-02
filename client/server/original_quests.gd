@@ -39,7 +39,11 @@ static func matches(profile: Dictionary, condition: String) -> bool:
 			var result := false
 			match kind:
 				"NOWEV","ENDEV":result=flag(profile,"now" if kind=="NOWEV" else "ended",number)
-				"ITEM":result=profile.original_items.count(number)>=maxi(1,int(found.get_string(4)))
+				"ITEM":
+					# C NPC_EventBigSmallCheck handles != before the * quantity
+					# branch: ITEM!=id*n still means no such item in the bag.
+					var quantified := op=="=" and not found.get_string(4).is_empty()
+					result=item_count(profile,number,quantified)>=(maxi(1,int(found.get_string(4))) if quantified else 1)
 				"SP":result=number<4 and (int(profile.original_savepoint_bits)&(1<<number))!=0
 				"LV":result=int(profile.player.level)>number if op==">" else int(profile.player.level)==number
 			if op=="!=":result=not result
@@ -47,6 +51,25 @@ static func matches(profile: Dictionary, condition: String) -> bool:
 			if not result:accepted=false;break
 		if accepted:return true
 	return false
+
+## Unquantified ITEM checks use the bag (C NPC_EventItemCheck:1051).
+## ITEM=id*n uses all carried slots, including worn ones (EventReduce:3689).
+static func item_count(profile: Dictionary, item: int, include_equipped := false) -> int:
+	var count: int=profile.original_items.count(item)
+	if include_equipped:return count
+	for instance in profile.get("original_instances",[]):
+		if int(instance.item_id)==item and Session.OriginalEquipment.worn(profile,int(instance.uid)):count-=1
+	return maxi(0,count)
+
+static func worn_item_hint(profile: Dictionary, condition: String) -> String:
+	# Explain only a predicate that actually fails because its last copy is worn.
+	var regex := RegEx.new()
+	regex.compile("(?:^|[&,])ITEM=([0-9]+)(?=$|[&,])")
+	for found in regex.search_all(condition):
+		var item := int(found.get_string(1))
+		if item_count(profile,item)==0 and item_count(profile,item,true)>0:
+			return "原任务只检查背包中的道具；请先卸下需要交付的装备。"
+	return ""
 
 static func pet_index(profile: Dictionary, predicate: String) -> int:
 	var regex := RegEx.new()
