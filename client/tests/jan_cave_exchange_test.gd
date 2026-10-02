@@ -38,6 +38,14 @@ func run()->void:
  rollback_reward(b,JAN)
  check(trade(b,JAN).ok and Rules.flag(b.session.snapshot(),"ended",20) and 2487 in b.session.snapshot().original_items,"Jan records20 without consuming ornament")
  before=b.session.snapshot();check(trade(b,WIFE).ok and b.session.snapshot().original_items==before.original_items,"wife's original story has no invented item reward")
+ var uid:int=b.session.snapshot().original_instances[0].uid
+ check(b.handle({"type":"equip_item","item":"original:%d"%uid}).ok and int(b.session.equipment_mods().charm)==2,"original type13 ornament uses existing amulet slot and charm2")
+ var equipped:Dictionary=b.session.snapshot()
+ r=talk(b,SARAH)
+ check(not Rules.flag(b.session.snapshot(),"now",21) and int(b.original_quests.pending.branch.get("source_branch_index",-1))!=2,"worn-only ornament cannot satisfy original bag ITEM condition")
+ choose(b,r,"ok")
+ check(b.session.snapshot().original_items==equipped.original_items,"failed worn delivery does not consume original ornament")
+ check(b.handle({"type":"equip_item","item":"original:%d"%uid}).ok and int(b.session.snapshot().original_equipment.amulet)==0,"actual unequip restores original bag item eligibility")
  r=talk(b,SARAH);before=b.session.snapshot();b.save_path="user://missing-jan-parent/save.json"
  check(not choose(b,r,"yes").ok and b.session.snapshot()==before,"request21 failed save retains ornament")
  b.save_path=""
