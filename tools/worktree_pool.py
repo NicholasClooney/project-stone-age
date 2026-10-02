@@ -209,12 +209,25 @@ def resolve_slot(text: str, state: dict) -> str:
     return name
 
 
+# Files the main session regenerates or merges by union when it cherry-picks a branch.
+REWRITTEN_ON_MERGE = {'client/data/changelog.json', 'client/project.godot', 'scripts/test.sh'}
+
+
 def landed(branch: str) -> bool:
-    """True when main contains the branch, merged or cherry-picked (git cherry finds no '+' commit)."""
+    """True when main contains the branch: merged, cherry-picked (git cherry finds no '+'
+    commit), or cherry-picked with regenerated files (merging the branch into main would
+    change nothing outside REWRITTEN_ON_MERGE)."""
     if subprocess.run(['git', 'merge-base', '--is-ancestor', branch, 'main'], cwd=MAIN).returncode == 0:
         return True
     pending = git('cherry', 'main', branch, cwd=MAIN)
-    return not any(line.startswith('+') for line in pending.splitlines())
+    if not any(line.startswith('+') for line in pending.splitlines()):
+        return True
+    merged = subprocess.run(['git', 'merge-tree', '--write-tree', '--no-messages', 'main', branch], cwd=MAIN, capture_output=True, text=True)
+    tree = merged.stdout.split('\n', 1)[0].strip()
+    if not tree:
+        return False
+    differs = git('diff', '--name-only', 'main', tree, cwd=MAIN).splitlines()
+    return all(path in REWRITTEN_ON_MERGE for path in differs)
 
 
 def cmd_release(args) -> None:

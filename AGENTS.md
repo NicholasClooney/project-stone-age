@@ -62,7 +62,7 @@ python3 tools/worktree_pool.py release pool-b          # after the branch is mer
 
 - The pool starts at 5 slots and grows by itself up to 10 when all are leased. More than 10 needs the user's approval; only then rerun with `--approved-by-user`.
 - Leases live in `.git/worktree-pool.json` (shared by every worktree, never tracked); a file lock stops two agents taking the same slot.
-- `acquire` checks the slot is clean, switches it to the branch (new from `main`, or the existing branch) and sets up the folders below. `release` refuses while the slot has uncommitted changes or the branch has not landed on `main` (merged, fast-forwarded or cherry-picked; checked with `git cherry`); `--abandon` drops uncommitted changes on purpose (the branch and its commits stay). Release as soon as the main session has merged your branch.
+- `acquire` checks the slot is clean, switches it to the branch (new from `main`, or the existing branch) and sets up the folders below. `release` refuses while the slot has uncommitted changes or the branch has not landed on `main` (merged, fast-forwarded or cherry-picked, including cherry-picks whose changelog or `scripts/test.sh` suite list were regenerated; checked with `git cherry` and `git merge-tree`); `--abandon` drops uncommitted changes on purpose (the branch and its commits stay). Release as soon as the main session has merged your branch.
 - A slot left leased for more than 12 hours shows as `STALE?` in `status`: ask its owner before releasing it.
 - Do not create worktrees outside the pool, and do not delete slot folders by hand.
 
