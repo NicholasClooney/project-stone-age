@@ -1,0 +1,71 @@
+{
+  "version": 1,
+  "id": "katan",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/seimu/event/event02_n.create": "dd74b0a753b38baa5825a6fc0a41a6b92d4035132640b733a20652d15bb294bc",
+    "gmsv/data/npc/seimu/event/event02_1": "b904b56910629e79d6c3ec118fdcc50ec950b9ea4c63a03ddb12309ea70a70be",
+    "gmsv/data/npc/jaruga/event/event.template": "59977295ed4637e948a4752426c53c9ff475a44951a2adbc5015799946db7013",
+    "gmsv/npc/npcgen.c": "909f0cdffdd2ec5ed7d2b0b64bf915932a132bf12384012354684f5fd28b39d3",
+    "gmsv/npc/npccreate.c": "0ebcf33d7ba2004958b76787965439f54eca8ae2e08037aa9dd54b0708844fad",
+    "gmsv/npc/npctemplate.c": "f3025f38dc06011e4f8d5f16932aed495174546cc0f96b4fb2bb66601e9240be",
+    "gmsv/data/encount.txt": "534466129cf7e17787d1990a885171d542463d279b4fc426494bb25930c1f4b5",
+    "gmsv/data/group.txt": "b1947ee3cad62d9f67d7aa0a4af0258c6d7fd35365883fc0fca0b9ec7ffee926",
+    "gmsv/map/map_deal.c": "853791837d0062a11380c4540958149fdbda28fa53082e4856840f94088de1c1",
+    "gmsv/map/readmap.c": "287ffda7b2307797759aea937d7ba1aee49d3d1abbfb3c8c12e815528c35dc2e",
+    "gmsv/setup.cf": "f7a53ca90c42751c9b6ea730574400217cd9a07f3eb1e3f307cd697ee4d890a5",
+    "gmsv/data/map/mapset.txt": "efc0b793c901509e6387697c6b2c2a706bd7b9a2af09f1260b592566299cc7a6",
+    "gmsv/main.c": "05d5c1941a6114f456c14761c3f5891139c500f5cda045b7c4a7ef58887b914c",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242"
+  },
+  "creates": [
+    "gmsv/data/npc/seimu/event/event02_n.create"
+  ],
+  "scripts": {
+    "seimu/event/event02_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        35
+      ],
+      "spawn_policy": {
+        "mode": "source-area"
+      }
+    }
+  },
+  "items": [
+    2607
+  ],
+  "reward_enemies": [
+    93
+  ],
+  "jobs": [
+    {
+      "id": 4,
+      "event": 35,
+      "title": "卡坦  找4只鲨鱼",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "item_notes": {
+    "2607": "原脚本用此编号作为卡坦第一对鲨鱼的交付证明；原itemset名为火难的戒指。请保留至第二次交付。"
+  },
+  "world": {
+    "map_sources": {
+      "100": {
+        "path": "gmsv/data/map/sainasu/sainasu",
+        "sha256": "c60ca577506e38e6166dabcdf3dfbd4bcdc4860dcba2df08634eea8279deea0c"
+      }
+    }
+  }
+}

@@ -49,6 +49,13 @@
         11,
         12
       ]
+    },
+    {
+      "id": "katan",
+      "manifest": "tools/katan_quest_sources.json",
+      "enabled_events": [
+        35
+      ]
     }
   ]
 }
