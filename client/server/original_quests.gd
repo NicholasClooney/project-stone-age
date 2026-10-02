@@ -196,7 +196,7 @@ func talk(backend, id: String) -> Dictionary:
 		prompt=prompt.replace("%8d","%8d" % fee)
 	var reply := window(npc,branch,phase,prompt,true)
 	if phase=="KEYWORD":
-		reply.dialogue.merge({"kind":"original_keyword","input":"text","choices":[{"id":"submit","text":"说出口令"},{"id":"no","text":"取消"}]})
+		reply.dialogue.merge({"kind":"original_keyword","input":"text","choices":[{"id":"submit","text":"说出口令"},{"id":"no","text":"取消"}]},true)
 	if phase=="ACCEPT" and branch.actions.has("DelPet"):
 		var selected := pet_ids(profile,str(branch.actions.DelPet))
 		if selected.is_empty():

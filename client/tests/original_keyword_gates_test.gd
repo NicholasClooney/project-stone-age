@@ -15,6 +15,7 @@ func run()->void:
  for npc in gates:
   var phrase:String=npc.branches[0].keyword
   var r:=talk(b,npc.id)
+  check(r.dialogue.choices.map(func(choice):return str(choice.id))==["submit","no"],"public keyword controls replace yes/no with submit/no")
   check(r.dialogue.input=="text" and not JSON.stringify(r).contains(phrase),"keyword is not exposed in public prompt")
   var before:Dictionary=b.session.snapshot()
   check(not answer(b,r,phrase+" ").ok and b.session.snapshot()==before,"trailing space is not exact original strcmp")
