@@ -191,7 +191,7 @@ func _input(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 		var enemy: Dictionary = catalog.enemies.get(str(id),{})
 		if enemy.is_empty():continue
 		var drop_draws := 0
-		if id in EncounterCatalog.DROP_ENEMY_IDS:
+		if EncounterCatalog.drop_enemy_allowed(id):
 			for drop in enemy.get("drops",[]):
 				if int(drop.probability)!=0:drop_draws += 1
 		enemies.append("%d %d %d %d %d %d %d" % [id,int(enemy.template_id),int(enemy.level_min),int(enemy.level_max),int(enemy.max_count),int(enemy.pet_flag),drop_draws])
