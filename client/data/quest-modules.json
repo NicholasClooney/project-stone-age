@@ -79,6 +79,15 @@
         21,
         22
       ]
+    },
+    {
+      "id": "dream-cave",
+      "manifest": "tools/dream_cave_quest_sources.json",
+      "enabled_events": [
+        32,
+        33,
+        34
+      ]
     }
   ]
 }

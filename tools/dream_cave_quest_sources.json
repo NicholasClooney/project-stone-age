@@ -1,0 +1,182 @@
+{
+  "version": 1,
+  "id": "dream-cave",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+    "gmsv/data/npc/seimu/event/event01.create": "1f179d6c3b15375d9720b1536d2e19822d7c65b62d3a008d25e94352f9c8ede8",
+    "gmsv/data/npc/seimu/event/event01_1": "4b79ae2250381e9f9fcfeed398f4fff4ec8b4a0cb0ba020c939fe5910fb26315",
+    "gmsv/data/npc/seimu/event/event01_2": "48f2b6db1cfe09371086a51c195f14a49436ba16b0e03b252f3a465de4835577",
+    "gmsv/data/npc/400/sb_mugen.create": "84dd2069a016995fff0c357c2fa26ba5d1d60e4df2c74ca31884f88cc083153f",
+    "gmsv/data/npc/400/sb_mugen.template": "0407be750f2353e438ba40557f246b46315c5074b0fefb35c1f50c54bc464107",
+    "gmsv/data/npc/400/sb_muge1.arg": "7f4745cb325dcf2f72a404df4b7c5a704e244f9243e45d440eab0e584705d2a0",
+    "gmsv/data/npc/400/sb_muge2.arg": "48fc19ca789d2f19ec644b1f8e7683ba36b77f142aad3617f544ebc0f987d881",
+    "gmsv/data/npc/genout/mugendungeon.create": "2cf197c7aa53b20b0be5a74491ed1d47b748afa12d7d07024042ab91c8d6d893",
+    "gmsv/data/npc/genout/mugendungeon2.create": "45a8edf4f53e9a6c70c0f83a8f633c01b2844247b9cedd83d5a4d9d5faeef6cd",
+    "gmsv/handletime.c": "6819b5387b924ca3901d47eee0e8bf434201674fd4780fc3d00525f153f08437",
+    "gmsv/include/handletime.h": "4288f1175e4239608539f29d739edb6c85671abd854bbe7b30cc6b61a6342807",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
+    "gmsv/map/map_warppoint.c": "79ddaf6792db324351cd17cd774dcdfb25afed0eaf954a07571a13d081189856",
+    "gmsv/map/readmap.c": "287ffda7b2307797759aea937d7ba1aee49d3d1abbfb3c8c12e815528c35dc2e",
+    "gmsv/object.c": "c63d28b685e6610053a69f8a435404a8a23dfb958ad367379f5995c99dc931ce",
+    "gmsv/char/event.c": "3903d241a6105c63bcf55b284eaf6399dfbe7689ad7e68624dd54db7c002e4f5",
+    "gmsv/data/npc/genout/tman_400_95_120": "7231a57d18815afe2f5aee27237aa1d24ae697d518eda9892e67e2aef5013e28",
+    "gmsv/data/npc/genout/tman_400_98_120": "7231a57d18815afe2f5aee27237aa1d24ae697d518eda9892e67e2aef5013e28",
+    "gmsv/data/npc/genout/tman_400_85_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
+    "gmsv/data/npc/genout/tman_400_88_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
+    "gmsv/npc/npc_timeman.c": "30d88b9846b8fee9691c1fc61222a4fd14a6224f7b16ba46ef0d8105a7373187",
+    "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3"
+  },
+  "creates": [
+    "gmsv/data/npc/seimu/event/event01.create",
+    "gmsv/data/npc/400/sb_mugen.create",
+    "gmsv/data/npc/genout/mugendungeon.create",
+    "gmsv/data/npc/genout/mugendungeon2.create"
+  ],
+  "scripts": {
+    "seimu/event/event01_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        32,
+        33,
+        34
+      ]
+    },
+    "seimu/event/event01_2": {
+      "branches": [
+        1,
+        2,
+        3,
+        5
+      ],
+      "events": [
+        32,
+        33,
+        34
+      ]
+    }
+  },
+  "handlers": {
+    "400/sb_muge1.arg": {
+      "kind": "npcenemy",
+      "events": [
+        32,
+        33,
+        34
+      ]
+    },
+    "400/sb_muge2.arg": {
+      "kind": "npcenemy",
+      "events": [
+        32,
+        33,
+        34
+      ]
+    },
+    "genout/tman_400_95_120": {
+      "kind": "timeman",
+      "events": [
+        34
+      ]
+    },
+    "genout/tman_400_98_120": {
+      "kind": "timeman",
+      "events": [
+        34
+      ]
+    },
+    "genout/tman_400_85_102": {
+      "kind": "timeman",
+      "events": [
+        34
+      ]
+    },
+    "genout/tman_400_88_102": {
+      "kind": "timeman",
+      "events": [
+        34
+      ]
+    }
+  },
+  "items": [
+    2603,
+    2604,
+    2605,
+    2606,
+    19550
+  ],
+  "reward_enemies": [],
+  "drops": [],
+  "world": {
+    "map_sources": {
+      "41": {
+        "path": "gmsv/data/map/seimu/dungeon/dun_4_01_01",
+        "sha256": "e5497809443c5bcd271b22a632c12c7b284bd77b41c21f21d886d95a42b946bc"
+      },
+      "42": {
+        "path": "gmsv/data/map/seimu/dungeon/dun_4_01_02",
+        "sha256": "ffeff623fbd8b61071e10be15479f6ebaf3e41ddc761e2c3c56e151e995b4da4"
+      }
+    },
+    "restored_scripts": [
+      "400/sb_muge1.arg",
+      "400/sb_muge2.arg"
+    ],
+    "portal_choices": [
+      {
+        "from_map": 42,
+        "cell": [
+          45,
+          59
+        ],
+        "to_map": 42,
+        "to_cell": [
+          31,
+          44
+        ],
+        "source": "gmsv/data/map/mapwarp.txt:2803",
+        "reason": "Active MAP_WARPPOINT loader reads file order; MAP_addNewObj appends tail, CHAR event scans head and breaks on first matching object. Earlier 2803 wins over duplicate2835; local source only."
+      }
+    ],
+    "time_gates": "dream-cave"
+  },
+  "jobs": [
+    {
+      "id": 32,
+      "event": 32,
+      "title": "梦幻洞窟／第1轮",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 33,
+      "event": 33,
+      "title": "梦幻洞窟／第2轮",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 34,
+      "event": 34,
+      "title": "梦幻洞窟／第3轮",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "item_notes": {
+    "2603": "原先见之光；原离线掉落与丢地消失标记保留源资料，当前未实现地面物品生命周期。",
+    "2604": "原衣服奖励；躯干装备槽与治愈魔法尚未生效。",
+    "2605": "原帽子奖励；普通属性按现有头部槽支持为准，滋润魔法未生效。",
+    "2606": "原竖琴奖励；普通属性按现有护符槽支持为准，睡眠魔法及抗睡眠字段未生效。"
+  }
+}
