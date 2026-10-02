@@ -408,3 +408,5 @@ Legacy pending capture-only config without `capture_destination` retains its ori
 答案纸2507–2516、水晶2517按itemset的dropatlogout列78在权威存档重载时清除；普通镜/真实之眼/钥匙保留。服务端保持角色在线运行时，断开查看设备不触发临时物清理。物品实例仍经OriginalEquipment分配单调UID。首次镜2547发enemy355，补发镜2532仅结束54；原EventNo=-1不会清掉NOW54，因此完成后还可按原分支补发2532，但不会再发宠。奖励装备保留物品和原图，属性/魔法未实现的提示由导入资料显示。
 
 任务助手公开原对白、五层所有答案及五种守卫/奖励，不自动代选；瞬移是明确的项目便利。新增套件 `brothers_golden_quests_test`、`brothers_golden_ui_test`；后者使用真实WebSocket的无backend客户端和实际GUI点击，设置 `STONE_AGE_PROOF_DIR` 时必须使用真实renderer输出像素。
+
+组队包含1060的保存重试：`session._pending.party_settlement`只接收服务器`party_turn`传入的个人slice及自己的drop claims，深拷贝冻结。保存失败回滚时保留这组数据，`battle_close`从同一冻结结果重试，而不是把共享party snapshot当个人结算。成功后随pending清除；反复关闭或已经消费的party push不会再次发奖。队长/成员/双方真实保存失败均覆盖，恢复后持久化结果逐字段与原个人slice一致，真实之眼只给原击杀归属者。它仍是当前服务端进程内的重试，不宣称新增组队断电恢复。
