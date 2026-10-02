@@ -388,13 +388,13 @@ def run(source, reference, output, fallback_source=None):
         arrival_region=reachable_cells(data,entrance)
         occupied=[npc['cell'] for npc in residents if npc['map_id']==ident]
         spawn=safe_spawn(data,preferred.get(ident,entrance),exits+occupied,arrival_region)
-        kind='village' if ident in TOWNS else 'interior' if ident in REVIEWED_INTERIORS else 'dungeon' if ident in (JYARUGA_SCENIC_MAPS | REVIEWED_REGION_MAPS | QUEST_MAPS) else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
+        kind='village' if ident in TOWNS else 'interior' if ident in REVIEWED_INTERIORS else 'dungeon' if ident in (JYARUGA_SCENIC_MAPS | REVIEWED_REGION_MAPS | quest_maps) else 'training' if ident in DEV_TRAINING_MAPS else 'village' if ident in TOWNS else 'wilderness' if ident in (100,200) else 'interior'
         tones=Counter(m['tone'] for m in data['music_markers'])
         music='world/audio/'+MUSIC[tones.most_common(1)[0][0]] if tones else None
         metadata[str(ident)]=dict(path=f'world/{ident}.map',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
         owner=settlement_owner(ident,maps)
         if owner:metadata[str(ident)]['village_id']=owner
-        if ident in DEV_TRAINING_MAPS and ident not in QUEST_MAPS:metadata[str(ident)]['dev_only']=True
+        if ident in DEV_TRAINING_MAPS and ident not in quest_maps:metadata[str(ident)]['dev_only']=True
         for p in portals:
             points=[]
             if p['from_map']==ident:points.append(('cell',p['cell']))
@@ -417,7 +417,7 @@ def run(source, reference, output, fallback_source=None):
     blocked_keys={(p['portal']['from_map'],*p['portal']['cell']) for p in blocked_portals}
     for p in portals:
         if (p['from_map'],*p['cell']) in blocked_keys:p.update(disabled=True,reason='Original warp endpoint collides in available resource revision')
-    removed=finalize_reviewed_maps(output,metadata,portals,residents,reports,REVIEWED_REGION_MAPS-QUEST_MAPS,reachable_cells,safe_spawn)
+    removed=finalize_reviewed_maps(output,metadata,portals,residents,reports,REVIEWED_REGION_MAPS-quest_maps,reachable_cells,safe_spawn)
     unsupported.extend(dict(p,reason='Original map has no reachable reviewed entry/return component') for p in portals if p['from_map'] not in removed and p['to_map'] in removed)
     portals=[p for p in portals if p['from_map'] not in removed and p['to_map'] not in removed]
     if removed:print(f'Unreachable reviewed maps remain deferred: {sorted(removed)}',flush=True)
