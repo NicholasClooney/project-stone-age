@@ -8,7 +8,7 @@
 
 ## 精确依赖
 
-基础来源799d9cc、7cbcc3b（本槽5099a3c、502b23a）；backend/brothers/Hub/捕宠命令b2c9ad1；普通NPC最终事务3b5790a（本槽3d0b549）；arrival风/梦德增量21acb34（本槽dc77aec）；服务身份372481b（本槽f8ab156）。普通地图同步独立7e5a06f，生命周期与party独立2224d3c。只取原始hash或本槽等价之一，不能重复拷底座。成人37a768c/df1a652另片接入，不是本捕宠片宣称已完成范围。全任务policy尚在逐链交付。
+基础来源799d9cc、7cbcc3b（本槽5099a3c、502b23a）；backend/brothers/Hub/捕宠命令b2c9ad1；普通NPC最终事务3b5790a（本槽3d0b549）；arrival风/梦德增量21acb34（本槽dc77aec）；服务身份372481b（本槽f8ab156）。普通地图同步独立7e5a06f，生命周期与party独立2224d3c。只取原始hash或本槽等价之一，不能重复拷底座。成人37a768c/df1a652、party5161a11及成人产品e7eed56已在后续独立片接入；6a9343a的成人driver单文件兼容及最终2/2继承链证据见adult-original-entry-integration.md。全任务policy尚在逐链交付。
 
 ## 定向证据
 
