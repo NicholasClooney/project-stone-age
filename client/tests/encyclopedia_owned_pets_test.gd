@@ -5,6 +5,7 @@ const WsServer = preload("res://server/ws_server.gd")
 const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 var visual := false
+var retry_review := false
 const SHOTS := "/private/tmp/tmux-agents/encyclopedia-owned-list/"
 func _initialize():run.call_deferred()
 func check(ok: bool, note: String):
@@ -18,9 +19,19 @@ func caption(menu, uid: String) -> String:
  return "%s · %s · 攻 %s 防 %s 敏 %s · 三围合 %s · 血 %s" % [line.get_node("name").text,line.get_node("place").text,line.get_node("attack").text,line.get_node("defence").text,line.get_node("speed").text,line.get_node("stat_total").text,line.get_node("hp").text]
 func click(control: Control):
  if not check_ready(control):return
- var point: Vector2 = control.get_global_transform_with_canvas()*(control.size/2)
- var move := InputEventMouseMotion.new();move.position=point;move.global_position=point;root.push_input(move,true)
- check(await Wait.until(self,func():return root.gui_get_hovered_control()==control),"real pointer hover reaches target")
+ # Sorting changes column minima and nested horizontal scroll geometry.
+ # Recompute a real pointer target until the layout actually admits the hit.
+ var hovered: bool=await Wait.until(self,func():
+  var parent=control.get_parent()
+  while parent != null:
+   if parent is ScrollContainer:parent.ensure_control_visible(control)
+   parent=parent.get_parent()
+  var at: Vector2=control.get_global_transform_with_canvas()*(control.size/2)
+  var move := InputEventMouseMotion.new();move.position=at;move.global_position=at;root.push_input(move,true)
+  return root.gui_get_hovered_control()==control)
+ check(hovered,"real pointer hover reaches settled target")
+ if not hovered:return
+ var point: Vector2=control.get_global_transform_with_canvas()*(control.size/2)
  for pressed in [true,false]:
   var event := InputEventMouseButton.new();event.button_index=MOUSE_BUTTON_LEFT;event.pressed=pressed;event.position=point;event.global_position=point
   root.push_input(event,true)
@@ -98,14 +109,8 @@ func local_scene():
  var retrieved: Array=game.session.snapshot().pets.filter(func(p):return str(p.pet_id)==target_uid)
  check(retrieved.size()==1 and retrieved[0]==target_before,"withdraw preserves full individual without UID or stats changes")
  game.backend.handle({"type":"store_pet","index":game.session.snapshot().pets.size()-1})
- # Existing storage command publishes the changed snapshot even if save fails.
- # This UI must reflect that authority; it cannot claim an atomic rollback.
  var fail_uid := str(game.session.snapshot().pet_storage[0].pet_id)
- game.backend.save_path="user://absent-owned-list-parent/save.json"
- await click(await show_button(menu,fail_uid))
- check(await Wait.until(self,func():return menu._withdraw_pending.is_empty() and caption(menu,fail_uid).contains("随身")),"save failure follows existing non-atomic storage authority and clears pending")
- check(game.backend.session.last_error=="Cannot create save." and not FileAccess.file_exists(game.backend.save_path),"real storage save failure is exercised (backend still acknowledges move)")
- game.backend.save_path=""
+ await save_failure_retry(menu,game,game.backend,fail_uid,null,"1280")
  # All carried slots occupied: let server explain the refusal rather than disable button.
  while game.backend.session.snapshot().pets.size()<game.backend.session.PET_CAPACITY:
   game.backend.handle({"type":"gm_grant_pet","template":113})
@@ -189,7 +194,7 @@ func remote_scene():
  var hover := InputEventMouseMotion.new();hover.position=button.get_global_rect().get_center();hover.global_position=hover.position;root.push_input(hover,true)
  check(await Wait.until(self,func():return root.gui_get_hovered_control()==button),"remote action actual hover before screenshot")
  await shot("390-hover-action")
- await click(button)
+ await save_failure_retry(menu,game,backend,uid,other,"390")
  check(await Wait.settle(self,game) and await Wait.settle(self,other) and await Wait.until(self,func():return caption(menu,uid).contains("随身") and caption(peer,uid).contains("随身")),"actual remote click synchronizes individual location on both devices")
  var moved_place: Control=row(menu,uid).get_node("Line/place")
  check(await Wait.until(self,func():
@@ -210,10 +215,56 @@ func remote_scene():
  menu.close_menu();peer.close_menu()
  await close_game(game);await close_game(other)
  server.queue_free();backend.queue_free();await process_frame
+func save_failure_retry(menu,game,backend,uid: String,other,tag: String):
+ var path := "user://owned-save-retry-%s-%d.json" % [tag,OS.get_process_id()]
+ backend.save_path=path
+ check(backend.save(),"real fixture persisted before UI save refusal")
+ check(await Wait.settle(self,game),"requesting UI settled before persistence fixture")
+ if other != null:check(await Wait.settle(self,other),"peer UI settled before persistence fixture")
+ var before: Dictionary=backend.session.snapshot()
+ var disk := FileAccess.get_file_as_string(path)
+ var revision: int=backend.rev
+ var list=menu.body.find_child("OwnedList",true,false)
+ var sort_before := [list.order,list.ascending,list.best_sum_uid,list.best_attack_uid]
+ var button=await show_button(menu,uid)
+ var original_row=row(menu,uid)
+ var offset: int=menu.scroll.scroll_vertical
+ var horizontal: int=menu.body.find_child("OwnedHorizontalScroll",true,false).scroll_horizontal
+ check(DirAccess.make_dir_absolute(path+".tmp")==OK,"real .tmp directory blocks file creation for UI command")
+ await click(button)
+ check(await Wait.until(self,func():return menu._withdraw_pending.is_empty() and menu.feedback.contains("保存失败") and not button.disabled),"save rejection clears pending and re-enables original inline action")
+ check(menu.feedback_label.is_visible_in_tree() and menu.feedback_label.text=="保存失败，宠物未移动，请重试。","readable authority save reason is visibly presented")
+ check(await Wait.settle(self,game) and backend.session.snapshot()==before and backend.session._normalize_numbers(game.session.snapshot())==backend.session._normalize_numbers(before),"local/requesting remote snapshot and full UID roster remain unchanged")
+ if other != null:
+  check(await Wait.settle(self,other) and backend.session._normalize_numbers(other.session.snapshot())==backend.session._normalize_numbers(before) and caption(other.pet_encyclopedia,uid).contains("仓库"),"second real remote UI also keeps UID in warehouse")
+ check(caption(menu,uid).contains("仓库") and row(menu,uid)==original_row and menu.body.find_child("WithdrawOwned_"+uid,true,false)==button,"failed UID stays stored with original row/action identity")
+ check([list.order,list.ascending,list.best_sum_uid,list.best_attack_uid]==sort_before and menu.scroll.scroll_vertical==offset and menu.body.find_child("OwnedHorizontalScroll",true,false).scroll_horizontal==horizontal,"failure preserves sorting, best winners and both scroll positions")
+ check(backend.rev==revision and FileAccess.get_file_as_string(path)==disk,"failed real UI move neither publishes nor changes disk bytes")
+ await shot(tag+"-save-failure")
+ check(DirAccess.remove_absolute(path+".tmp")==OK,"restore actual persistence before retry")
+ await click(await show_button(menu,uid))
+ check(await Wait.until(self,func():return menu._withdraw_pending.is_empty() and menu.feedback=="已移到随身。" and caption(menu,uid).contains("随身")),"real inline retry succeeds after restoring writes")
+ check(await Wait.settle(self,game),"successful UI retry settles")
+ var after: Dictionary=backend.session.snapshot()
+ check(backend.rev==revision+1 and after.pets.filter(func(pet):return str(pet.pet_id)==uid).size()==1 and not after.pet_storage.any(func(pet):return str(pet.pet_id)==uid),"retry commits exactly one movement of requested UID")
+ var restored=preload("res://server/game_session.gd").new()
+ # JSON transport/save reads normalize integral numbers; original pet element
+ # arrays originate as floats. Compare with the same loader normalization.
+ check(restored.load_game(path) and restored.snapshot()==backend.session._normalize_numbers(after) and backend.session._normalize_numbers(game.session.snapshot())==backend.session._normalize_numbers(after),"retry snapshot agrees with real disk reload")
+ if other != null:
+  check(await Wait.settle(self,other) and backend.session._normalize_numbers(other.session.snapshot())==backend.session._normalize_numbers(after) and caption(other.pet_encyclopedia,uid).contains("随身"),"both remote devices observe the one committed retry")
+ check([list.order,list.ascending]==sort_before.slice(0,2) and row(menu,uid)==original_row,"successful retry retains display sorting and row (ties still follow new authority locations)")
+ var place: Control=original_row.get_node("Line/place")
+ check(await Wait.until(self,func():
+  menu.scroll.ensure_control_visible(place)
+  return menu.scroll.get_global_rect().encloses(place.get_global_rect())),"retried location is reachable")
+ await shot(tag+"-save-retry")
+ backend.save_path=""
+ for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(path+suffix)
 func shot(tag: String):
- if not visual:return
+ if not visual or (retry_review and not tag.contains("save-")):return
  await RenderingServer.frame_post_draw
- root.get_texture().get_image().save_png(SHOTS+tag+".png")
+ root.get_texture().get_image().save_png(SHOTS+("save-retry/" if retry_review else "")+tag+".png")
 func compact_checks(menu,game,tag: String):
  var list = menu.body.find_child("OwnedList",true,false)
  check(await Wait.until(self,func():return list.rows.get_child_count()==12 and list.rows.get_child(0).size.y>0),"12 real same-species individuals ready")
@@ -265,7 +316,8 @@ func compact_checks(menu,game,tag: String):
  await shot(tag+"-owned-hover")
 func run():
  root.unfocusable=true;root.position=Vector2i(-10000,-10000)
- visual="--visual-review" in OS.get_cmdline_user_args() and DisplayServer.get_name()!="headless"
+ retry_review="--save-retry-review" in OS.get_cmdline_user_args()
+ visual=(retry_review or "--visual-review" in OS.get_cmdline_user_args()) and DisplayServer.get_name()!="headless"
  await local_scene()
  await remote_scene()
  print("ENCYCLOPEDIA OWNED PETS: %d failures"%failures)
