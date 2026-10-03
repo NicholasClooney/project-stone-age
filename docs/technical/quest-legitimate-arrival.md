@@ -87,3 +87,11 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 集成依赖为b2c9ad1后端、3b5790a普通NPC事务、372481b服务身份。补片交付仍不表示旧成人助手/自动任务fixture已迁移；这些旧项目瞬移会被正确拒绝，需其owner调整路线后才能称功能回归全部完成。其它洞窟政策另片审核，不随此片宣称完成。
 
 成人套件后续去重：`quest_arrival_adult_test`已改为独立成人覆盖，不再继承/运行梦幻终战矩阵。直接验证level1拒门、level30真门、实际通道往返与15玉→2418/END4、项目到达拒绝，以及真实ProfileHub两个connection共享资格、第二设备伪造移动来源不能保住第一设备事务、实际load_profile/新Backend重启清凭证。连接仅用Hub的实际connection ID代替socket，故不声明WebSocket或像素层验证；梦幻最终保存失败/旧token仍由wind原事务suite承担。该独立成人suite 1/1通过。
+
+## 原组队队列步与portal末端
+
+`party.gd:172–189`的普通follow令成员走向前位的**旧格**，不是队长的新格；原portal才让全员同落点。模块现在分开验证：普通跟随检查服务端leader from/to是真实一格、成员自身已有scope且自己的一格碰撞合法、与队长原组件相通；只保留该成员资格，不授root或复制队长mark。portal分支要求精确源/目标、每个成员本侧能走到该源portal，且成员已有同scope或是受审公开根。
+
+真实400(96,119)/(97,119)是相邻原时辰portal；源portal可邻多个走路组件，不能用“唯一组件标签”断定不可达。`_portal_approach`只放宽最后的真实portal端点：本侧组件贴邻该源，或两个相邻真实portal端点；不会把任何中途portal当作普通地板穿越。原portal的NPC实体格也只作为该末端解析，BFS仍把普通NPC格作为障碍。
+
+`quest_arrival_party_follow_test`采用bonus授权的真实Hub复现，经过实际party_join、公开原门、连续队列步、洞内portal，再验证同房非相邻报告令双方失格，以及独立客户端伪造client/arrival_kind/evidence不能授party根。测试连接是Hub connection IDs，不是WebSocket/UI像素；仍不开放或声称固定NPC组队战可玩。

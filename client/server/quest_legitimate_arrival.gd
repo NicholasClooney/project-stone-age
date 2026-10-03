@@ -57,11 +57,18 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 		# A follower keeps its own route; the leader's marks are never copied.
 		var leader_map: int=int(evidence.get("leader_from_map",-1))
 		var leader_cell: Vector2i=_point(evidence.get("leader_from_cell",[]))
-		if int(evidence.get("leader_to_map",-1))!=to_map or _point(evidence.get("leader_to_cell",[]))!=to_cell or leader_map!=from_map:
+		var leader_target: Vector2i=_point(evidence.get("leader_to_cell",[]))
+		if int(evidence.get("leader_to_map",-1))!=to_map or leader_map!=from_map:
 			_invalidate();return
-		if valid_before and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell,_can_leave_portal):
+		# Ordinary party.follow moves each follower toward its predecessor's
+		# previous cell, not the leader's new cell. It can only retain that
+		# follower's existing route after checking both actual one-cell steps.
+		var walking: bool=leader_map==to_map and _walk_step(backend,leader_map,leader_cell,leader_target,true)
+		if walking and valid_before and _scope==target_scope and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell,_can_leave_portal) and (_same_room(backend,from_map,from_cell,leader_cell) or (_can_leave_portal and _same_room(backend,from_map,to_cell,leader_cell))):
 			_map=to_map;_cell=to_cell;_can_leave_portal=false;_expire_marks(backend,to_map,to_cell);return
-		if not _same_room(backend,from_map,from_cell,leader_cell):_invalidate();return
+		# A warp has one shared target, but still requires the exact source
+		# portal and the member's own previous room/root eligibility.
+		if leader_target!=to_cell or not _portal_approach(backend,from_map,from_cell,leader_cell):_invalidate();return
 		if _portal(backend,leader_map,leader_cell,to_map,to_cell) and ((valid_before and _scope==target_scope) or (Policy.scope(from_map).is_empty() and Policy.portal_root(from_map,to_map))):
 			_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;_expire_marks(backend,to_map,to_cell);return
 		_invalidate();return
@@ -220,6 +227,25 @@ func _same_room(backend, map_id: int, start: Vector2i, finish: Vector2i) -> bool
 	var first: int=_room_at(data,npcs,labels,links,start)
 	return first>=0 and first==_room_at(data,npcs,labels,links,finish)
 
+func _portal_approach(backend, map_id: int, member: Vector2i, portal: Vector2i) -> bool:
+	var links: Dictionary=backend.quest_helper.places.links(map_id)
+	if not links.has(portal):return false
+	var data: Dictionary=_map_data(backend,map_id)
+	if data.is_empty() or not _floor(data,{},portal):return false
+	if member==portal:return true
+	# Adjacent original source portals (the two time-cave doors) are each
+	# endpoints, not an intervening portal traversed to reach this one.
+	if links.has(member) and absi(member.x-portal.x)+absi(member.y-portal.y)==1 and _floor(data,{},member):return true
+	# A genuine portal can touch several disconnected components. A follower
+	# needs a path to its source from its own side, not a unique global label.
+	_same_room(backend,map_id,member,portal)
+	var labels: Dictionary=_rooms[map_id].labels
+	var room: int=_room_at(data,_npc_cells(backend,map_id),labels,links,member)
+	if room<0:return false
+	for delta in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+		if int(labels.get(portal+delta,-1))==room:return true
+	return false
+
 func _expire_marks(backend, map_id: int, cell: Vector2i) -> void:
 	for mark in _marks.keys():
 		var allowed: bool=false
@@ -232,7 +258,9 @@ static func _floor(data: Dictionary, npcs: Dictionary, cell: Vector2i) -> bool:
 
 static func _room_at(data: Dictionary, npcs: Dictionary, labels: Dictionary, links: Dictionary, cell: Vector2i) -> int:
 	if labels.has(cell):return int(labels[cell])
-	if not links.has(cell) or not _floor(data,npcs,cell):return -1
+	if not links.has(cell) or not _floor(data,{},cell):return -1
+	# An actual portal may share its source cell with its original gate NPC.
+	# Resolve only that endpoint; ordinary NPC cells remain excluded from BFS.
 	var neighbours: Dictionary={}
 	for delta in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
 		if labels.has(cell+delta):neighbours[labels[cell+delta]]=true
