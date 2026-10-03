@@ -4,15 +4,263 @@
   "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
   "sources": {
     "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
-    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/npc/sainasu/event/genou/genou.create": "cd6c11f26cde599be9ff0c251f70b1c1f8bd72e36eb6b16ba87f0121c669eb48",
+    "gmsv/data/npc/sainasu/event/genou_2": "094b5f439dddf2f12b34218a1e3f4ee3356d1ef7e45e44ca759e1ebcc71b7106",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/npc/100/sb_geno.create": "995866f6aa006e2d86bb219bb8a0b72b0f6f4e6bd9276e8c1cf0414cf7e0d99e",
+    "gmsv/data/npc/100/sb_geno.template": "1bf69cc171a036f63c84cb626bb5c964413b23f0164c1c895684b95aaa65c9f8",
+    "gmsv/data/npc/100/sb_kbu.arg": "961b87cebad2fd7cb7875f9433df0e301f9f64b06c46a558475fc1a0344e9eec",
+    "gmsv/data/npc/100/sb_kgi.arg": "738c5805a5e62f134035321032cc3baead067063434b6476354e5287d5a26959",
+    "gmsv/data/npc/genout/genou.create": "bcc79018829a4db6477c96329f61409261e04b7785d005a8c79e5bcbd9515d50",
+    "gmsv/data/npc/genout/wpm_100_278_325": "862f8913c8d49f3aaafe53714a4c2d0c2f4cf172d413f28846e60d7286906a93",
+    "gmsv/data/npc/genout/wpm_11206_5_42": "4a50da101d65029facf963ac489753ec011ec5001dc1db9b9b95e825d9075446",
+    "gmsv/data/npc/sainasu/event/event09-12.create": "518a76ea59394c61d3ae90af0f4838ea52f0d946057f10279809d5a10f5e469c",
+    "gmsv/data/npc/sainasu/event/event12": "5f3919a27cb9238bce8490c2379aa48db4655b07074205b18a19b144d5bb5cd4",
+    "gmsv/data/npc/sainasu/event/genou_1": "ca43949a993e0cdc47b7baf007e9f47205b264c74282ddf147392f2962d5a3a6",
+    "gmsv/data/npc/sainasu/event/genou_3": "ad81ffcb84e5d2bf18434191a9cdc5a80bd8174152067b861010171e30b061f0",
+    "gmsv/data/npc/sainasu/event/genou_4": "5fec4e6c5ed1f844a63e874d6fe7878425b4ef44ed36c46bb3e6dd52ea2468ab",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/npc/npc_eventaction.c": "c5dc5b17847ee0670a86cf9e9b713a9dbeffa7ef55b192e5ce51119479c73042",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/npc/npcutil.c": "47dd685fc91b2aa686c45a03e4fe49586649b345d6ab8c4bbf8da729e4c1064b",
+    "gmsv/util.c": "fb2fc8a071d7f67125458cce882f74354d308f9682ca9ad0c7183a351c40d18b"
   },
-  "creates": [],
-  "scripts": {},
-  "items": [],
+  "creates": [
+    "gmsv/data/npc/sainasu/event/genou/genou.create",
+    "gmsv/data/npc/sainasu/event/event09-12.create",
+    "gmsv/data/npc/100/sb_geno.create",
+    "gmsv/data/npc/genout/genou.create"
+  ],
+  "scripts": {
+    "sainasu/event/genou_2": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4,
+        5
+      ],
+      "events": [
+        41,
+        42
+      ],
+      "branch_reviews": {
+        "0": {
+          "project_pet_selection": true
+        },
+        "1": {
+          "project_pet_selection": true
+        },
+        "2": {
+          "project_pet_selection": true
+        }
+      }
+    },
+    "sainasu/event/genou_1": {
+      "branches": [
+        0,
+        1,
+        2,
+        3,
+        4
+      ],
+      "events": [
+        41,
+        42
+      ]
+    },
+    "sainasu/event/genou_3": {
+      "branches": [
+        0,
+        1,
+        2
+      ],
+      "events": [
+        41,
+        42
+      ]
+    },
+    "sainasu/event/genou_4": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        41,
+        42
+      ]
+    },
+    "sainasu/event/event12": {
+      "branches": [
+        1,
+        2,
+        3,
+        4
+      ],
+      "events": [
+        41,
+        42
+      ]
+    }
+  },
+  "items": [
+    67,
+    71,
+    73,
+    167,
+    171,
+    173,
+    271,
+    372,
+    375,
+    473,
+    571,
+    574,
+    676,
+    772,
+    774,
+    872,
+    972,
+    973,
+    1074,
+    1075,
+    1175,
+    2691,
+    2694,
+    2695,
+    2735,
+    2736,
+    2758
+  ],
   "reward_enemies": [],
-  "jobs": [],
-  "reserved_events": [
-    41,
-    42
-  ]
+  "jobs": [
+    {
+      "id": 38,
+      "event": 41,
+      "title": "玄黄洞窟-1",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 39,
+      "event": 42,
+      "title": "玄黄洞窟-2",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "handlers": {
+    "100/sb_kbu.arg": {
+      "kind": "npcenemy",
+      "events": [
+        41,
+        42
+      ]
+    },
+    "100/sb_kgi.arg": {
+      "kind": "npcenemy",
+      "events": [
+        41,
+        42
+      ]
+    },
+    "genout/wpm_100_278_325": {
+      "kind": "warpman",
+      "events": [
+        41,
+        42
+      ]
+    },
+    "genout/wpm_11206_5_42": {
+      "kind": "warpman",
+      "events": [
+        41,
+        42
+      ]
+    }
+  },
+  "combat_audit": {
+    "path": "docs/reverse-engineering/transmigration-combat-sources.json",
+    "sha256": "3641f8679d38801503f5a7e5c83f048d2b25c4cdf7e4e4528b2b75f91537a245"
+  },
+  "world": {
+    "map_sources": {
+      "11201": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_01",
+        "sha256": "8f2478d01ce1d8073b06b0767cc47018b6a4e779202c21c670a4ab5cf1e9b458"
+      },
+      "11202": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_02",
+        "sha256": "9cc4bcf351389eb291a025aa77f88f64f2fbd1f6dbd400814755a4c2f6deb4a8"
+      },
+      "11203": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_03",
+        "sha256": "ebb522c422601bf661a6d8c286638a2c6b6e45ca9f683d7dc2de8d053f19964d"
+      },
+      "11204": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_04",
+        "sha256": "e1950638e4d68c5373921d079c2f4c18af72878af9bd20ee5554ada7e272db16"
+      },
+      "11205": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_05",
+        "sha256": "a9df31ea7e409acc2db5d88338ed12e31c5fd97f5cb9849528baf20255aa441a"
+      },
+      "11206": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_06",
+        "sha256": "226d7dd39fdaaeb8b5beab3b41bbe9e7caa736a0e5b42bd5866a9aef04e399ea"
+      },
+      "11207": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_07",
+        "sha256": "7b9c4fbb4007184ddfd2991027c0011f5236860fc187fc8aff409acb7622859a"
+      },
+      "11208": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_08",
+        "sha256": "d9caf838fb6a65707901949a8e14c9833626ff4f4455c38b0dd50703369f1889"
+      },
+      "11209": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_09",
+        "sha256": "903bc6ad2151e2d093567064dfb26d77448384e4288f63718e0e8cc9f66ef5c1"
+      },
+      "11210": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_10",
+        "sha256": "480ea603da7be92b63cc0d396a03f258e4b6bd8845905317c11f430c230090d7"
+      },
+      "11211": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_11",
+        "sha256": "95f0ba35836953d015806da3f75d72a7abcdd915d0db2a35bbc820814db4a999"
+      },
+      "11212": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_12",
+        "sha256": "36f2603695962e08c6a8c7134b5a674d349818863544ce9eb7c05ce054a66ed2"
+      },
+      "11213": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_13",
+        "sha256": "2796bed219d157955980060fc79ad7a38e3f7672fc2634736f256c792f750ece"
+      },
+      "11214": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_14",
+        "sha256": "9f9ec451d8b8aa75facbbf3a4241568a619b31a4154222b096ad9cf52c6d2414"
+      },
+      "11215": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_15",
+        "sha256": "03a33a6824e7665f03f57027f61e2d68e49e615b1a0c4a7f5d21e7a63a32c1ea"
+      }
+    },
+    "portal_sources": {
+      "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+      "gmsv/data/npc/genout/genou.create": "bcc79018829a4db6477c96329f61409261e04b7785d005a8c79e5bcbd9515d50"
+    },
+    "restored_scripts": [
+      "100/sb_kbu.arg",
+      "100/sb_kgi.arg",
+      "genout/wpm_100_278_325",
+      "genout/wpm_11206_5_42"
+    ],
+    "portal_choices": []
+  }
 }

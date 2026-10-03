@@ -3,6 +3,12 @@ var selection_fixture:Dictionary={}
 func setup():
  var b=fresh()
  selection_fixture=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-wind-selection.json"))
+ # Isolate UID transaction permutations from route acquisition. The full
+ # production temple route is exercised by transmigration_wind_ui_test.
+ for index in range(selection_fixture.npcs.size()):
+  selection_fixture.npcs[index].map_id=1000
+  selection_fixture.npcs[index].cell=[69,56]
+  selection_fixture.npcs[index].id="wind-selection-transaction-fixture-%d"%index
  b.quest_catalog.npcs.append_array(selection_fixture.npcs.duplicate(true))
  b.quest_catalog.items.merge(selection_fixture.items)
  b.quest_catalog.enabled_events.append_array([41,42])
@@ -53,6 +59,7 @@ func transactions()->void:
   r=offer(b);check(not selected(b,r,invalid).ok and b.session.snapshot()==before,"invalid selection rejected "+str(invalid))
  r=offer(b);check(choose(b,r,"no").ok and b.session.snapshot()==before,"cancel does not consume")
  r=selected(b,offer(b),["pet-102"])
+ b.session._profile.pets[1].name="改名布鲁顿"
  b.session._profile.pets.reverse()
  check(choose(b,r,"ok").ok,"reordered roster commits selected UID")
  check(b.session.snapshot().pets.map(func(p):return p.pet_id)==["pet-103","pet-101"],"60 consumed and61 retained despite slot reorder")

@@ -1,6 +1,9 @@
 {
   "id": "transmigration-wind",
   "manifest": "tools/transmigration_wind_quest_sources.json",
-  "enabled_events": [],
+  "enabled_events": [
+    41,
+    42
+  ],
   "helper": "res://server/transmigration_wind_helper.gd"
 }

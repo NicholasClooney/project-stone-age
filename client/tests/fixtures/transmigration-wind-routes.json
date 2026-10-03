@@ -1,0 +1,520 @@
+{
+  "wind-up": [
+    {
+      "from_map": 11201,
+      "cell": [
+        54,
+        33
+      ],
+      "to_map": 11202,
+      "target": [
+        13,
+        16
+      ],
+      "source": "genou.create:34"
+    },
+    {
+      "from_map": 11202,
+      "cell": [
+        30,
+        4
+      ],
+      "to_map": 11203,
+      "target": [
+        9,
+        12
+      ],
+      "source": "genou.create:88"
+    },
+    {
+      "from_map": 11203,
+      "cell": [
+        31,
+        5
+      ],
+      "to_map": 11204,
+      "target": [
+        6,
+        34
+      ],
+      "source": "genou.create:106"
+    },
+    {
+      "from_map": 11204,
+      "cell": [
+        55,
+        13
+      ],
+      "to_map": 11205,
+      "target": [
+        5,
+        6
+      ],
+      "source": "genou.create:160"
+    },
+    {
+      "from_map": 11205,
+      "cell": [
+        30,
+        55
+      ],
+      "to_map": 11206,
+      "target": [
+        5,
+        31
+      ],
+      "source": "genou.create:196"
+    },
+    {
+      "from_map": 11206,
+      "cell": [
+        3,
+        38
+      ],
+      "to_map": 11206,
+      "target": [
+        3,
+        40
+      ],
+      "source": "genou.create:457"
+    },
+    {
+      "from_map": 11206,
+      "cell": [
+        57,
+        43
+      ],
+      "to_map": 11207,
+      "target": [
+        5,
+        39
+      ],
+      "source": "genou.create:214"
+    },
+    {
+      "from_map": 11207,
+      "cell": [
+        7,
+        13
+      ],
+      "to_map": 11208,
+      "target": [
+        27,
+        7
+      ],
+      "source": "genou.create:232"
+    },
+    {
+      "from_map": 11208,
+      "cell": [
+        14,
+        38
+      ],
+      "to_map": 11209,
+      "target": [
+        14,
+        38
+      ],
+      "source": "genou.create:286"
+    },
+    {
+      "from_map": 11209,
+      "cell": [
+        7,
+        10
+      ],
+      "to_map": 11210,
+      "target": [
+        7,
+        6
+      ],
+      "source": "genou.create:340"
+    },
+    {
+      "from_map": 11210,
+      "cell": [
+        32,
+        39
+      ],
+      "to_map": 11211,
+      "target": [
+        31,
+        21
+      ],
+      "source": "genou.create:358"
+    },
+    {
+      "from_map": 11211,
+      "cell": [
+        4,
+        14
+      ],
+      "to_map": 11212,
+      "target": [
+        14,
+        5
+      ],
+      "source": "genou.create:376"
+    },
+    {
+      "from_map": 11212,
+      "cell": [
+        26,
+        36
+      ],
+      "to_map": 11213,
+      "target": [
+        17,
+        33
+      ],
+      "source": "genou.create:394"
+    },
+    {
+      "from_map": 11213,
+      "cell": [
+        45,
+        26
+      ],
+      "to_map": 11214,
+      "target": [
+        45,
+        17
+      ],
+      "source": "genou.create:412"
+    },
+    {
+      "from_map": 11214,
+      "cell": [
+        41,
+        36
+      ],
+      "to_map": 11215,
+      "target": [
+        9,
+        16
+      ],
+      "npc_id": "100/sb_kgi.arg@11214:41:36",
+      "source": "100/sb_kgi.arg"
+    }
+  ],
+  "wind-down": [
+    {
+      "from_map": 11215,
+      "cell": [
+        9,
+        17
+      ],
+      "to_map": 11214,
+      "target": [
+        41,
+        41
+      ],
+      "source": "genou.create:430"
+    },
+    {
+      "from_map": 11214,
+      "cell": [
+        45,
+        17
+      ],
+      "to_map": 11213,
+      "target": [
+        45,
+        26
+      ],
+      "source": "genou.create:421"
+    },
+    {
+      "from_map": 11213,
+      "cell": [
+        17,
+        33
+      ],
+      "to_map": 11212,
+      "target": [
+        26,
+        36
+      ],
+      "source": "genou.create:403"
+    },
+    {
+      "from_map": 11212,
+      "cell": [
+        14,
+        5
+      ],
+      "to_map": 11211,
+      "target": [
+        4,
+        14
+      ],
+      "source": "genou.create:385"
+    },
+    {
+      "from_map": 11211,
+      "cell": [
+        31,
+        21
+      ],
+      "to_map": 11210,
+      "target": [
+        32,
+        39
+      ],
+      "source": "genou.create:367"
+    },
+    {
+      "from_map": 11210,
+      "cell": [
+        36,
+        5
+      ],
+      "to_map": 11209,
+      "target": [
+        54,
+        12
+      ],
+      "source": "genou.create:331"
+    },
+    {
+      "from_map": 11209,
+      "cell": [
+        46,
+        41
+      ],
+      "to_map": 11208,
+      "target": [
+        46,
+        41
+      ],
+      "source": "genou.create:313"
+    },
+    {
+      "from_map": 11208,
+      "cell": [
+        27,
+        7
+      ],
+      "to_map": 11207,
+      "target": [
+        7,
+        13
+      ],
+      "source": "genou.create:241"
+    },
+    {
+      "from_map": 11207,
+      "cell": [
+        5,
+        39
+      ],
+      "to_map": 11206,
+      "target": [
+        57,
+        43
+      ],
+      "source": "genou.create:223"
+    },
+    {
+      "from_map": 11206,
+      "cell": [
+        5,
+        42
+      ],
+      "to_map": 11206,
+      "target": [
+        5,
+        34
+      ],
+      "npc_id": "genout/wpm_11206_5_42@11206:5:42",
+      "source": "genout/wpm_11206_5_42"
+    },
+    {
+      "from_map": 11206,
+      "cell": [
+        5,
+        31
+      ],
+      "to_map": 11205,
+      "target": [
+        30,
+        55
+      ],
+      "source": "genou.create:205"
+    },
+    {
+      "from_map": 11205,
+      "cell": [
+        5,
+        6
+      ],
+      "to_map": 11204,
+      "target": [
+        55,
+        13
+      ],
+      "source": "genou.create:169"
+    },
+    {
+      "from_map": 11204,
+      "cell": [
+        6,
+        34
+      ],
+      "to_map": 11203,
+      "target": [
+        31,
+        5
+      ],
+      "source": "genou.create:115"
+    },
+    {
+      "from_map": 11203,
+      "cell": [
+        9,
+        12
+      ],
+      "to_map": 11202,
+      "target": [
+        30,
+        4
+      ],
+      "source": "genou.create:97"
+    },
+    {
+      "from_map": 11202,
+      "cell": [
+        13,
+        16
+      ],
+      "to_map": 11201,
+      "target": [
+        54,
+        33
+      ],
+      "source": "genou.create:43"
+    },
+    {
+      "from_map": 11201,
+      "cell": [
+        29,
+        79
+      ],
+      "to_map": 100,
+      "target": [
+        278,
+        325
+      ],
+      "source": "genou.create:7"
+    }
+  ],
+  "munde-up": [
+    {
+      "from_map": 11101,
+      "cell": [
+        64,
+        5
+      ],
+      "to_map": 11102,
+      "target": [
+        46,
+        7
+      ],
+      "source": "11101d.create:16"
+    },
+    {
+      "from_map": 11102,
+      "cell": [
+        9,
+        44
+      ],
+      "to_map": 11103,
+      "target": [
+        11,
+        37
+      ],
+      "source": "11101d.create:34"
+    },
+    {
+      "from_map": 11103,
+      "cell": [
+        7,
+        3
+      ],
+      "to_map": 11104,
+      "target": [
+        7,
+        3
+      ],
+      "source": "11101d.create:52"
+    },
+    {
+      "from_map": 11104,
+      "cell": [
+        45,
+        43
+      ],
+      "to_map": 11105,
+      "target": [
+        46,
+        44
+      ],
+      "source": "11101d.create:70"
+    },
+    {
+      "from_map": 11105,
+      "cell": [
+        24,
+        3
+      ],
+      "to_map": 11106,
+      "target": [
+        24,
+        3
+      ],
+      "source": "11101d.create:88"
+    },
+    {
+      "from_map": 11106,
+      "cell": [
+        18,
+        39
+      ],
+      "to_map": 11107,
+      "target": [
+        18,
+        41
+      ],
+      "source": "11101d.create:106"
+    },
+    {
+      "from_map": 11107,
+      "cell": [
+        22,
+        41
+      ],
+      "to_map": 11107,
+      "target": [
+        23,
+        35
+      ],
+      "npc_id": "100/sb_go.arg@11107:22:41",
+      "source": "100/sb_go.arg"
+    }
+  ],
+  "munde-down": [
+    {
+      "from_map": 11107,
+      "cell": [
+        32,
+        7
+      ],
+      "to_map": 100,
+      "target": [
+        466,
+        128
+      ],
+      "source": "11101d.create:124"
+    }
+  ]
+}
