@@ -32,7 +32,7 @@ func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
  var result:Dictionary=plan.get("result",{})
  var notice := result_text(result)
  if not actions.is_empty():
-  var transaction:Dictionary=router.transact(backend,backend.session.snapshot(),{"event":-1,"actions":actions,"texts":{}},"SERVICE",notice)
+  var transaction:Dictionary=router.transact(backend,backend.session.snapshot(),{"event":-1,"actions":actions,"texts":{}},"SERVICE",notice,str(npc.id))
   if not transaction.ok:return transaction
  elif not notice.is_empty():backend._emit({"type":"quest_result","text":notice})
  if bool(plan.get("close",false)):return {"ok":true,"closed":true}
