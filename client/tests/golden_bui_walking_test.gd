@@ -1,6 +1,5 @@
 extends "res://tests/brothers_golden_ui_test.gd"
 const DojoRoute=preload("res://tests/support/golden_bui_route.gd")
-const Route=preload("res://tests/support/original_route_driver.gd")
 ## Exercise the production GameAreas.handle_arrival -> field_step -> battle path.
 func run() -> void:
 	root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
