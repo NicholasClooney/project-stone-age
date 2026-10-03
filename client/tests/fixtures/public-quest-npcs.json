@@ -13604,6 +13604,862 @@
       ],
       "configuration": "client/data/quests/transmigration-water.json",
       "helper": "res://server/transmigration_water_helper.gd"
+    },
+    "transmigration-final": {
+      "id": "transmigration-final",
+      "manifest": "tools/transmigration_final_quest_sources.json",
+      "configuration": "client/data/quests/transmigration-final.json",
+      "helper": null,
+      "enabled_events": [],
+      "npcs": [
+        {
+          "id": "genout/wpm_300_103_228@300:103:228",
+          "source_script": "genout/wpm_300_103_228",
+          "source_create": "gmsv/data/npc/genout/sikkoku.create",
+          "source_create_index": 83,
+          "map_id": 300,
+          "cell": [
+            103,
+            228
+          ],
+          "name": "守门人",
+          "graphic": 16209,
+          "facing": 6,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "FREEWARP",
+              "condition": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+              "actions": {
+                "Warp": "300,105,228"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "item_deletion_scope": "bag"
+            }
+          ]
+        },
+        {
+          "id": "genout/wpm_300_108_225@300:108:225",
+          "source_script": "genout/wpm_300_108_225",
+          "source_create": "gmsv/data/npc/genout/sikkoku.create",
+          "source_create_index": 84,
+          "map_id": 300,
+          "cell": [
+            108,
+            225
+          ],
+          "name": "守门人２",
+          "graphic": 16201,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "FREEWARP",
+              "condition": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+              "actions": {
+                "Warp": "32001,29,3"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "item_deletion_scope": "bag"
+            }
+          ]
+        },
+        {
+          "id": "genout/wpm_32016_31_39@32016:31:39",
+          "source_script": "genout/wpm_32016_31_39",
+          "source_create": "gmsv/data/npc/genout/sikkoku.create",
+          "source_create_index": 86,
+          "map_id": 32016,
+          "cell": [
+            31,
+            39
+          ],
+          "name": "守门人",
+          "graphic": 16201,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "FREEWARP",
+              "condition": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+              "actions": {
+                "Warp": "32016,31,37"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "item_deletion_scope": "bag"
+            }
+          ]
+        },
+        {
+          "id": "genout/wpm_32021_31_51@32021:31:51",
+          "source_script": "genout/wpm_32021_31_51",
+          "source_create": "gmsv/data/npc/genout/sikkoku.create",
+          "source_create_index": 87,
+          "map_id": 32021,
+          "cell": [
+            31,
+            51
+          ],
+          "name": "守门人",
+          "graphic": 100436,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "FREEWARP",
+              "condition": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+              "actions": {
+                "Warp": "32021,32,47"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "item_deletion_scope": "bag"
+            }
+          ]
+        },
+        {
+          "id": "giiru/event/sikkoku01@32002:4:23",
+          "source_script": "giiru/event/sikkoku01",
+          "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+          "source_create_index": 0,
+          "map_id": 32002,
+          "cell": [
+            4,
+            23
+          ],
+          "name": "考古家",
+          "graphic": 100451,
+          "facing": 0,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM=2771",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 0
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM!=2771",
+              "actions": {
+                "GetItem": "2771"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 1
+            }
+          ]
+        },
+        {
+          "id": "giiru/event/sikkoku02@32006:46:46",
+          "source_script": "giiru/event/sikkoku02",
+          "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+          "source_create_index": 1,
+          "map_id": 32006,
+          "cell": [
+            46,
+            46
+          ],
+          "name": "考古家",
+          "graphic": 100195,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM=2772",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 0
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM!=2772",
+              "actions": {
+                "GetItem": "2772"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 1
+            }
+          ]
+        },
+        {
+          "id": "giiru/event/sikkoku03@32009:49:20",
+          "source_script": "giiru/event/sikkoku03",
+          "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+          "source_create_index": 2,
+          "map_id": 32009,
+          "cell": [
+            49,
+            20
+          ],
+          "name": "考古家",
+          "graphic": 100190,
+          "facing": 0,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM=2773",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 0
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM!=2773",
+              "actions": {
+                "GetItem": "2773"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 1
+            }
+          ]
+        },
+        {
+          "id": "giiru/event/sikkoku04@32014:14:48",
+          "source_script": "giiru/event/sikkoku04",
+          "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+          "source_create_index": 3,
+          "map_id": 32014,
+          "cell": [
+            14,
+            48
+          ],
+          "name": "考古家",
+          "graphic": 100446,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM=2774",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 0
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM!=2774",
+              "actions": {
+                "GetItem": "2774"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 1
+            }
+          ]
+        },
+        {
+          "id": "giiru/event/sikkoku05@32016:31:43",
+          "source_script": "giiru/event/sikkoku05",
+          "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+          "source_create_index": 4,
+          "map_id": 32016,
+          "cell": [
+            31,
+            43
+          ],
+          "name": "考古家",
+          "graphic": 100436,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ENDEV=52",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 1
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ENDEV=51&ITEM=2771&ITEM=2772&ITEM=2773&ITEM=2774",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 2
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ENDEV=50&ITEM=2771&ITEM=2772&ITEM=2773&ITEM=2774",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 3
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ENDEV=49&ITEM=2771&ITEM=2772&ITEM=2773&ITEM=2774",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 4
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ENDEV=48&ITEM=2771&ITEM=2772&ITEM=2773&ITEM=2774",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 5
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0&ITEM=2771&ITEM=2772&ITEM=2773&ITEM=2774",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 6
+            },
+            {
+              "event": -1,
+              "type": "MESSAGE",
+              "condition": "LV>0",
+              "actions": {},
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "source_branch_index": 7
+            }
+          ]
+        },
+        {
+          "id": "777/ten.arg@32021:31:28",
+          "source_script": "777/ten.arg",
+          "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+          "source_create_index": 5,
+          "map_id": 32021,
+          "cell": [
+            31,
+            28
+          ],
+          "name": "精灵王",
+          "graphic": 100444,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [],
+          "kind": "original_transmigration",
+          "handler": "Transmigration",
+          "service_id": "777/ten.arg"
+        },
+        {
+          "id": "300/sb_skr.arg@32010:54:30",
+          "source_script": "300/sb_skr.arg",
+          "source_create": "gmsv/data/npc/300/sb_sikkoku.create",
+          "source_create_index": 0,
+          "map_id": 32010,
+          "cell": [
+            54,
+            30
+          ],
+          "name": "漆黑的守护兽",
+          "graphic": 100389,
+          "facing": 6,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "BATTLE",
+              "condition": "LV>0",
+              "actions": {
+                "Battle": "1399,1401,1402,1400,1403",
+                "Warp": "32011,56,36"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "guard": {
+                "enemy_ids": [
+                  1399,
+                  1401,
+                  1402,
+                  1400,
+                  1403
+                ],
+                "dieact": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "300/sb_skt.arg@32020:20:9",
+          "source_script": "300/sb_skt.arg",
+          "source_create": "gmsv/data/npc/300/sb_sikkoku.create",
+          "source_create_index": 1,
+          "map_id": 32020,
+          "cell": [
+            20,
+            9
+          ],
+          "name": "帖拉所伊朵",
+          "graphic": 100374,
+          "facing": 4,
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "branches": [
+            {
+              "event": -1,
+              "type": "BATTLE",
+              "condition": "LV>0",
+              "actions": {
+                "Battle": "1404,1406,1407,1405,1408,1410,1409,1411,1412,1413",
+                "Warp": "32021,29,57"
+              },
+              "enabled": true,
+              "events": [
+                48,
+                49,
+                50,
+                51,
+                52
+              ],
+              "guard": {
+                "enemy_ids": [
+                  1404,
+                  1406,
+                  1407,
+                  1405,
+                  1408,
+                  1410,
+                  1409,
+                  1411,
+                  1412,
+                  1413
+                ],
+                "dieact": 1
+              }
+            }
+          ]
+        },
+        {
+          "id": "genout/wpm_117_6_5@117:6:5",
+          "name": "监狱的通关处",
+          "map_id": 117,
+          "cell": [
+            6,
+            5
+          ],
+          "graphic": 16204,
+          "facing": 4,
+          "source_script": "genout/wpm_117_6_5",
+          "source_create": "gmsv/data/npc/genout/manmoshall.create",
+          "source_create_index": 18,
+          "kind": "original_prison",
+          "handler": "Prison",
+          "service_id": "genout/wpm_117_6_5",
+          "branches": [],
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "source_fields": {
+            "WARP": "110,23,27",
+            "FREE": "",
+            "MONEY": "1",
+            "FreeMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你持有付钱，请通关。\\n请多加小心！",
+            "PayMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n这里是通往聊天室。\\n要你身上的９／１０的钱才可以通过这里。",
+            "PartyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n无法以团队进入。",
+            "MoneyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你钱不够哦。"
+          },
+          "prison": {
+            "role": "guard",
+            "warp": "110,23,27",
+            "condition": "",
+            "money": "1",
+            "del_item": ""
+          }
+        },
+        {
+          "id": "genout/wpm_110_37_20@110:37:20",
+          "name": "萨姆吉尔向导",
+          "map_id": 110,
+          "cell": [
+            37,
+            20
+          ],
+          "graphic": 16065,
+          "facing": 6,
+          "source_script": "genout/wpm_110_37_20",
+          "source_create": "gmsv/data/npc/genout/chatroom.create",
+          "source_create_index": 14,
+          "kind": "original_prison",
+          "handler": "Prison",
+          "service_id": "genout/wpm_110_37_20",
+          "branches": [],
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "source_fields": {
+            "WARP": "1012,13,13",
+            "FREE": "ITEM=2521*1",
+            "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+            "MONEY": "-1",
+            "FreeMsg": "期待您的再度光临。",
+            "PayMsg": "从这里往萨姆吉尔需要门票。",
+            "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+            "MoneyMsg": "能从这里退出的人仅限于能够来到\\n萨姆吉尔的人。\\n一张门票都没有的人请登出。"
+          },
+          "prison": {
+            "role": "guide",
+            "warp": "1012,13,13",
+            "condition": "ITEM=2521*1",
+            "money": "-1",
+            "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+          }
+        },
+        {
+          "id": "genout/wpm_110_37_24@110:37:24",
+          "name": "玛丽那丝向导",
+          "map_id": 110,
+          "cell": [
+            37,
+            24
+          ],
+          "graphic": 16067,
+          "facing": 6,
+          "source_script": "genout/wpm_110_37_24",
+          "source_create": "gmsv/data/npc/genout/chatroom.create",
+          "source_create_index": 15,
+          "kind": "original_prison",
+          "handler": "Prison",
+          "service_id": "genout/wpm_110_37_24",
+          "branches": [],
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "source_fields": {
+            "WARP": "2012,13,13",
+            "FREE": "ITEM=2522*1",
+            "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+            "MONEY": "-1",
+            "FreeMsg": "期待您的再度光临。",
+            "PayMsg": "从这里往玛丽那丝需要门票。",
+            "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+            "MoneyMsg": "能从这里退出的人仅限于能够来到\\n玛丽那丝的人。\\n一张门票都没有的人请登出。"
+          },
+          "prison": {
+            "role": "guide",
+            "warp": "2012,13,13",
+            "condition": "ITEM=2522*1",
+            "money": "-1",
+            "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+          }
+        },
+        {
+          "id": "genout/wpm_110_37_28@110:37:28",
+          "name": "加加向导",
+          "map_id": 110,
+          "cell": [
+            37,
+            28
+          ],
+          "graphic": 16030,
+          "facing": 6,
+          "source_script": "genout/wpm_110_37_28",
+          "source_create": "gmsv/data/npc/genout/chatroom.create",
+          "source_create_index": 16,
+          "kind": "original_prison",
+          "handler": "Prison",
+          "service_id": "genout/wpm_110_37_28",
+          "branches": [],
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "source_fields": {
+            "WARP": "3012,13,13",
+            "FREE": "ITEM=2523*1",
+            "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+            "MONEY": "-1",
+            "FreeMsg": "期待您的再度光临。",
+            "PayMsg": "从这里往加加需要门票。",
+            "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+            "MoneyMsg": "能从这里退出的人仅限于能够来到\\n加加的人。\\n一张门票都没有的人请登出。"
+          },
+          "prison": {
+            "role": "guide",
+            "warp": "3012,13,13",
+            "condition": "ITEM=2523*1",
+            "money": "-1",
+            "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+          }
+        },
+        {
+          "id": "genout/wpm_110_37_32@110:37:32",
+          "name": "卡鲁它那向导",
+          "map_id": 110,
+          "cell": [
+            37,
+            32
+          ],
+          "graphic": 16033,
+          "facing": 6,
+          "source_script": "genout/wpm_110_37_32",
+          "source_create": "gmsv/data/npc/genout/chatroom.create",
+          "source_create_index": 17,
+          "kind": "original_prison",
+          "handler": "Prison",
+          "service_id": "genout/wpm_110_37_32",
+          "branches": [],
+          "events": [
+            48,
+            49,
+            50,
+            51,
+            52
+          ],
+          "source_fields": {
+            "WARP": "4012,13,13",
+            "FREE": "ITEM=2524*1",
+            "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+            "MONEY": "-1",
+            "FreeMsg": "期待您的再度光临。",
+            "PayMsg": "从这里往卡鲁它那需要门票。",
+            "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+            "MoneyMsg": "能从这里退出的人仅限于能够来到\\n卡鲁它那的人。\\n一张门票都没有的人请登出。"
+          },
+          "prison": {
+            "role": "guide",
+            "warp": "4012,13,13",
+            "condition": "ITEM=2524*1",
+            "money": "-1",
+            "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+          }
+        }
+      ]
     }
   },
   "reviewed_chain_commits": {
@@ -13614,9 +14470,9 @@
   },
   "reviewed_counts": {
     "original_npcs": 242,
-    "new_npcs": 55,
-    "catalog_npcs": 297,
-    "catalog_items": 338
+    "new_npcs": 72,
+    "catalog_npcs": 314,
+    "catalog_items": 339
   },
   "item_ids": [
     33,
@@ -13786,6 +14642,7 @@
     1455,
     1460,
     1466,
+    2138,
     2401,
     2414,
     2415,
@@ -14359,6 +15216,39 @@
         12623,
         12648
       ]
+    },
+    "transmigration-final": {
+      "source_commits": [
+        "1c0bd94d76a8db85ab14158d2456764e6ca57bc7",
+        "26e7fcb19054227bbeee9a89d81071a2f06b891d",
+        "6b8bc2dce32883da3d1b36c6e733ee22367aebbf",
+        "f9baa6b55b867bb30c32553fcf9b800fb53d8844"
+      ],
+      "previous_catalog_npcs": 297,
+      "previous_catalog_items": 338,
+      "new_npc_ids": [
+        "genout/wpm_300_103_228@300:103:228",
+        "genout/wpm_300_108_225@300:108:225",
+        "genout/wpm_32016_31_39@32016:31:39",
+        "genout/wpm_32021_31_51@32021:31:51",
+        "giiru/event/sikkoku01@32002:4:23",
+        "giiru/event/sikkoku02@32006:46:46",
+        "giiru/event/sikkoku03@32009:49:20",
+        "giiru/event/sikkoku04@32014:14:48",
+        "giiru/event/sikkoku05@32016:31:43",
+        "777/ten.arg@32021:31:28",
+        "300/sb_skr.arg@32010:54:30",
+        "300/sb_skt.arg@32020:20:9",
+        "genout/wpm_117_6_5@117:6:5",
+        "genout/wpm_110_37_20@110:37:20",
+        "genout/wpm_110_37_24@110:37:24",
+        "genout/wpm_110_37_28@110:37:28",
+        "genout/wpm_110_37_32@110:37:32"
+      ],
+      "new_item_ids": [
+        2138
+      ],
+      "activation": "disabled until independent integration approval; 48..52 directory labels only"
     }
   }
 }

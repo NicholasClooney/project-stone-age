@@ -176,3 +176,34 @@ and collision in this resource revision, so their original declarations remain
 disabled. No walls are cleared to make the count appear playable. The actual
 return via(32,47) and full forward route pass. This is headless authority/route
 acceptance, not rendered GameScene/UI or king settlement acceptance.
+
+
+## Complete private asset pipeline and oracle
+
+Use the quest/art import above, then preserve the existing8.0 fallback and
+lossless map palette, and import Godot resources in a private `--import` clone:
+
+```sh
+.tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --output client/assets/legacy --fallback-source .tools/legacy/extracted/SA8.0-20260803
+.tools/asset-venv/bin/python tools/palette_images.py client/assets/legacy/images
+./scripts/run.sh --headless --editor --import
+```
+
+A PNG existing on disk does not establish ResourceLoader texture availability:
+Godot's import step is required after adding original sprites. Do not reuse a
+pre-import cache as proof of rendered GameScene readiness. Imported originals,
+Godot caches and verification screenshots are never committed.
+
+The public oracle now freezes314 NPCs/339 items: all297/338 previous entries
+are semantically identical, plus12 original cave actors,5 prison services and
+item2138. The sole event12 keeps its original branch0 and order0..4; disabled
+final tags add no active actors yet. The new expectations were assembled from
+raw create/script declarations and independent pinned identities, never from
+runtime catalog export. A canonical SHA test freezes the entire prior groups,
+items, active set, event set, area instances and Dream extension unchanged.
+
+Prison entrance declarations are NOT a proven natural walking escape route.
+With the reviewed NPC collision and source geometry, A found all18 unreachable
+from real reward routes. The current proof separates exact source endpoints,
+real reward-route authority, and project relocation into prison clearing prior
+scope; it does not move guardians or remove walls to force a natural loop.

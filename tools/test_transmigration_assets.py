@@ -20,7 +20,7 @@ class FoundationAssetTests(unittest.TestCase):
 
     def test_32021_palette_pixels_and_pack_dependencies(self):
         meta=self.world['maps']['32021']
-        self.assertTrue(meta['dev_only'])
+        self.assertFalse(meta.get('dev_only',False)) # Reviewed product world; NPC activation remains closed.
         data=load_map(LEGACY/meta['path'],header_only=True)
         packs=self.plan['maps']['32021']
         files={p for pack in packs for p in self.plan['packs'][pack]}
@@ -37,9 +37,9 @@ class FoundationAssetTests(unittest.TestCase):
                     self.assertEqual(image.convert('RGBA').convert('RGBa').tobytes(),self.source.image(int(key)).convert('RGBA').convert('RGBa').tobytes())
         self.assertEqual(len(palettes),1)
 
-    def test_29_original_item_icons_are_lossless_in_core(self):
-        items=[2698,2699,2700,2701,*range(2706,2719),2735,2736,2758,*range(2766,2775)]
-        self.assertEqual(len(items),29)
+    def test_30_original_item_icons_are_lossless_in_core(self):
+        items=[2138,2698,2699,2700,2701,*range(2706,2719),2735,2736,2758,*range(2766,2775)]
+        self.assertEqual(len(items),30)
         for ident in items:
             with self.subTest(item=ident):
                 item=self.catalog['items'][str(ident)]
@@ -50,6 +50,20 @@ class FoundationAssetTests(unittest.TestCase):
                     original=self.source.image(int(item['bitmap_id'])).convert('RGBA')
                     self.assertEqual(image.size,original.size)
                     self.assertEqual(image.convert('RGBA').tobytes(),original.tobytes())
+
+    def test_all17_final_npc_original_pixels_and_map_packs(self):
+        fixture=json.loads((ROOT/'client/tests/fixtures/public-quest-npcs.json').read_text())
+        actors=fixture['groups']['transmigration-final']['npcs']
+        self.assertEqual(len(actors),17)
+        for expected in actors:
+            npc=next(n for n in self.catalog['npcs'] if n['id']==expected['id'])
+            files={p for pack in self.plan['maps'][str(npc['map_id'])] for p in self.plan['packs'][pack]}
+            files.update(self.plan['packs']['core'])
+            self.assertIn(plan_web_packs.RES+npc['path'],files)
+            with Image.open(LEGACY/npc['path']) as image:
+                original=self.source.image(int(npc['bitmap_id'])).convert('RGBA')
+                self.assertEqual(image.size,original.size)
+                self.assertEqual(image.convert('RGBA').tobytes(),original.tobytes())
 
     def test_existing_80_fallback_and_exact_catalog_survive(self):
         fallback=self.world['provenance']['fallback_graphics']
