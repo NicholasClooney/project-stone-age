@@ -4,14 +4,39 @@
   "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
   "sources": {
     "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
-    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/npc/genout/wpm_300_247_222": "ed8c37230c2a6e13d4e4d14e7091959a6ff4fd6d1202ede01b6083ae6fc0bc5e",
+    "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
   },
-  "creates": [],
+  "creates": [
+    "gmsv/data/npc/genout/dungeon01.create"
+  ],
   "scripts": {},
   "items": [],
   "reward_enemies": [],
   "jobs": [],
   "reserved_events": [
     46
-  ]
+  ],
+  "handlers": {
+    "genout/wpm_300_247_222": {
+      "kind": "warpman",
+      "events": [
+        4,
+        46
+      ]
+    }
+  },
+  "world": {
+    "map_sources": {},
+    "portal_sources": {
+      "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+      "gmsv/data/npc/genout/warp_g2.create": "2cc5993e522cf48404c4486c8f8096ee63d0d983d0bc66fb0a76adb662702295",
+      "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c"
+    },
+    "restored_scripts": [
+      "genout/wpm_300_247_222"
+    ]
+  }
 }
