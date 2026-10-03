@@ -1,0 +1,5 @@
+{
+  "id": "transmigration-final",
+  "manifest": "tools/transmigration_final_quest_sources.json",
+  "enabled_events": []
+}
