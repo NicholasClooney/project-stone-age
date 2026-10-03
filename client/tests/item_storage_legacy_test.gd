@@ -15,6 +15,7 @@ func run() -> void:
   var source=Session.new()
   var old: Dictionary=source.snapshot()
   old.version=version
+  old.erase("rebirth") # Historical schema predates the v7 group.
   for key in Storage.FIELDS:old.erase(key)
   if version<6:
    for key in ["original_instances","original_equipment","next_original_uid"]:old.erase(key)

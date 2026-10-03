@@ -136,6 +136,7 @@ func saves() -> void:
 		add(old,2465);add(old,2485);add(old,2481)
 		var data: Dictionary=old.snapshot()
 		data.version=5
+		data.erase("rebirth");data.player.erase("transmigration") # Historical format predates v7.
 		check(not old._valid_profile(data),"v5 equipment with v6 warehouse fields is an invalid hybrid")
 		for key in Session.ItemStorage.FIELDS:data.erase(key)
 		for key in ["original_instances","original_equipment","next_original_uid"]:data.erase(key)
