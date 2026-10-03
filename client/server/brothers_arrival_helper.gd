@@ -50,7 +50,7 @@ static func project(helper,backend,quest:Dictionary)->void:
   var target:Dictionary=destination(helper,backend,npc,"near")
   var available:bool=bool(step.current) and bool(step.actionable) and not target.is_empty()
   # Root request remains the public entrance guide even after REQUEST28.
-  if Policy.scope(backend.automation.position_map)!="brothers" and Policy.source(npc)=="giiru/event/ev28_0":available=true
+  if Policy.scope(backend.automation.position_map)!="brothers" and Policy.source(npc)=="giiru/event/ev28_0":available=quest.status!="已完成" and not target.is_empty()
   step.current=available
   step.navigation_allowed=available
   if not available:
