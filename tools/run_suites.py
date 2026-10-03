@@ -46,9 +46,12 @@ STALL = 30
 
 
 def suite_timeout(name):
-    # Measured original route: 333 s walking, 367 s total; 480 s leaves margin.
-    # Only this exact suite is exceptional; TIMEOUT remains 300 for all others.
-    return 480 if name == "transmigration_wind_ui_test" else TIMEOUT
+    # Wind UI: original route 333 s, total 367 s; 480 s leaves margin.
+    # Water transactions: 310.610 s (init 22.488 + route/gates 139.569 + transactions/LAN 148.553).
+    # Water UI: 367.194 s (walking 325.562 + battle 8.238 + remaining 33.394).
+    # Exact names only; every other suite retains TIMEOUT (300 s).
+    return {"transmigration_wind_ui_test": 480, "transmigration_water_test": 420,
+            "transmigration_water_ui_test": 480}.get(name, TIMEOUT)
 
 
 def suites_from_test_sh():
