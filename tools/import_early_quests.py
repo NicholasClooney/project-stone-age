@@ -142,20 +142,30 @@ def catalog(reference, spec=None):
         npcs.append(dict(events=events, id=ident, name=fields['name'], map_id=int(fields['floorid']), cell=[x, y], graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches))
     if {n['id'] for n in npcs} != set(spec['scripts']):
         raise ValueError('Missing reviewed NPC')
+    from quest_single_items import reviewed_single_items, pile_metadata
+    single_items = reviewed_single_items(reference, spec)
+    used_single_items = set()
     items = {}
     for source_line, row in enumerate(csv.reader(texts['gmsv/data/itemset.txt'].splitlines()), 1):
         if len(row) < 26 or row[16] not in map(str, spec['items']):
             continue
-        if row[24].strip() or row[25].strip():
-            raise ValueError('Explicit pile fields require review')
         ident = int(row[16])
+        pile = None
+        if row[24].strip() or row[25].strip():
+            pile = pile_metadata(single_items.get(ident), row, source_line)
+            used_single_items.add(ident)
         items[str(ident)] = dict(id=ident, name=row[0], description=row[2], logical_icon=int(row[17]), stackable=False, source='gmsv/data/itemset.txt', source_line=source_line, raw_columns=row)
+        if pile:
+            items[str(ident)]['source_pile'] = pile
+            items[str(ident)]['description'] += '\n原表允许堆叠；本项目按原创建量逐件入包，每件占一格，堆叠尚未实现。'
         if ident in spec.get('recovery_items', []):
             if ident != 2401 or row[3] != '体100' or row[10] != 'ITEM_useRecovery' or row[19:22] != ['16', '0', '1']:
                 raise ValueError('Unreviewed recovery item')
             if not re.search(r'^#define\s+_MAGIC_REHPAI\b', texts['gmsv/include/version.h'], re.MULTILINE):
                 raise ValueError('Recovery rate configuration requires review')
             items[str(ident)]['use'] = dict(kind='hp_recovery', nominal=100, roll_min=90, roll_max=110, consume_at_full=True, zero_hp_target=True, targets=['self', 'carried_pet'], field_supported=True, battle_supported=False, source='gmsv/item/item_event.c', source_lines=[900,905,963,964,1052,1058], battle_source='gmsv/battle/battle_item.c', battle_source_line=224)
+    if used_single_items != set(single_items):
+        raise ValueError("Unused single item pile review")
     from quest_item_effects import annotate_item
     for item in items.values():annotate_item(item, reference)
     if set(items) != set(map(str, spec['items'])):
