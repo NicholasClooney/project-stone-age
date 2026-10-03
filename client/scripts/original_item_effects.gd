@@ -3,6 +3,11 @@ extends RefCounted
 const Equipment=preload("res://server/original_equipment.gd")
 static func resolve(item:Dictionary)->Array:
  var result:Array=item.get("effects",[]).duplicate(true)
+ for effect in result:
+  if str(effect.get("type",""))=="use" and int(item.get("id",0))==2450 and str(effect.get("raw",{}).get("function",""))=="ITEM_useRessurect" and str(effect.get("raw",{}).get("argument",""))=="500":
+   effect.active=true
+   effect.label="复活（原标示500，实际450～550）"
+   effect.reason="仅战斗；原标示500，实际450～550并封顶最大HP；活目标仍消耗（原版行为）"
  var definition:Dictionary=Equipment.ITEMS.get(int(item.get("id",0)),{})
  for source in item.get("stats_source",[]):
   var entry:Dictionary=source.duplicate(true)

@@ -1,9 +1,11 @@
 extends RefCounted
 ## Pinned itemset.txt; only explicitly reviewed ordinary equipment is wearable.
-## HEAD is independent of legacy BODY. Legacy ownership fields stay intact.
+## Original HEAD/BODY coexist with legacy ownership, with one wearer per slot.
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
 const ITEMS := {
+	# itemset.txt:1053: fixed ordinary modifiers; magic 10 remains metadata.
+	1052:{"name":"芙雷雅Lv1铠6","type":7,"slot":"body","level":30,"attack":0,"defence":20,"speed":-6,"charm":0,"durability":2500000},
 	# Dream cave source ordinary fields; magic and sleep resistance remain metadata.
 	2605:{"name":"空想的帽子","type":6,"slot":"head","level":35,"attack":0,"defence":4,"speed":2,"charm":0,"durability":2500000},
 	2606:{"name":"空想的竖琴","type":9,"slot":"amulet","level":35,"attack":2,"defence":0,"speed":1,"charm":5,"durability":2500000},
@@ -46,6 +48,10 @@ static func instance(id: int, uid: int) -> Dictionary:
 
 static func migrate(profile: Dictionary) -> void:
 	if profile.has("original_instances"):
+		if not profile.original_equipment.has("body"):
+			profile.original_equipment.body=0
+			for entry in profile.original_instances:
+				if int(entry.item_id)==1052 and int(entry.durability)==0:entry.durability=2500000
 		for entry in profile.original_instances:
 			if int(entry.item_id) in NEWLY_WEARABLE and int(entry.durability)==0 and not worn(profile,int(entry.uid)):
 				entry.durability=int(ITEMS[int(entry.item_id)].durability)
@@ -79,7 +85,7 @@ static func migrate(profile: Dictionary) -> void:
 			if int(profile.original_equipment[slot]) not in uids:profile.original_equipment[slot]=0
 		return
 	profile.original_instances=[]
-	profile.original_equipment={"arm":0,"bracelet":0,"amulet":0,"head":0}
+	profile.original_equipment={"arm":0,"bracelet":0,"amulet":0,"head":0,"body":0}
 	profile.next_original_uid=1
 	for id in profile.get("original_items",[]):
 		profile.original_instances.append(instance(int(id),int(profile.next_original_uid)))
@@ -145,7 +151,9 @@ static func valid(profile: Dictionary) -> bool:
 	if not profile.get("original_instances") is Array or profile.original_instances.size()!=profile.original_items.size():return false
 	if not profile.get("original_equipment") is Dictionary:return false
 	var has_head: bool=profile.original_equipment.has("head")
-	if profile.original_equipment.size()!=(4 if has_head else 3):return false
+	var has_body: bool=profile.original_equipment.has("body")
+	if has_body and not has_head:return false
+	if profile.original_equipment.size()!=3+int(has_head)+int(has_body):return false
 	if not integer(profile.get("next_original_uid"),1,2147483647):return false
 	var seen: Array=[]
 	for i in range(profile.original_instances.size()):
@@ -153,17 +161,23 @@ static func valid(profile: Dictionary) -> bool:
 		if not entry is Dictionary or entry.size()!=3 or not integer(entry.get("uid"),1,int(profile.next_original_uid)-1) or entry.uid in seen:return false
 		if not integer(entry.get("item_id"),1,2147483647) or int(entry.item_id)!=int(profile.original_items[i]):return false
 		if not integer(entry.get("durability"),0,int(ITEMS.get(int(entry.item_id),{}).get("durability",0))):return false
-		var legacy_helmet: bool=int(entry.item_id)==2418 and not has_head
+		var legacy_helmet: bool=(int(entry.item_id)==2418 and not has_head) or (int(entry.item_id)==1052 and not has_body)
 		if legacy_helmet and int(entry.durability)!=0:return false
 		if not legacy_helmet and ITEMS.has(int(entry.item_id)) and int(ITEMS[int(entry.item_id)].durability)>0 and int(entry.durability)==0:
 			if int(entry.item_id) not in NEWLY_WEARABLE or worn(profile,int(entry.uid)):return false
 		seen.append(entry.uid)
-	for slot in (["arm","bracelet","amulet","head"] if has_head else ["arm","bracelet","amulet"]):
+	var slots: Array=["arm","bracelet","amulet"]
+	if has_head:slots.append("head")
+	if has_body:slots.append("body")
+	for slot in slots:
 		var uid=profile.original_equipment.get(slot)
 		if not integer(uid,0,int(profile.next_original_uid)-1):return false
 		if int(uid)==0:continue
 		var matches: Array=profile.original_instances.filter(func(entry):return int(entry.uid)==int(uid))
 		if matches.size()!=1 or not ITEMS.has(int(matches[0].item_id)) or str(ITEMS[int(matches[0].item_id)].slot)!=slot:return false
+		if slot=="body":
+			if not profile.get("player") is Dictionary or not integer(profile.player.get("level"),int(ITEMS[int(matches[0].item_id)].level),1000000):return false
+	if has_body and int(profile.original_equipment.body)>0 and not str(profile.get("equipment",{}).get("body","")).is_empty():return false
 	if int(profile.original_equipment.arm)>0 and bool(profile.get("equipped",false)):return false
 	if int(profile.original_equipment.amulet)>0 and (bool(profile.get("equipped_mirror",false)) or not str(profile.get("equipment",{}).get("amulet","")).is_empty()):return false
 	return true

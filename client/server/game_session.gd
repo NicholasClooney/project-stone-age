@@ -3,6 +3,7 @@ var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
 const SAVE_VERSION := 6
+const OriginalRevival = preload("res://server/original_revival.gd")
 const OriginalEquipment = preload("res://server/original_equipment.gd")
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
@@ -110,7 +111,9 @@ static func original_state_valid(value: Dictionary) -> bool:
 			if not (word is int or word is float) or float(word)!=floor(float(word)) or word<0 or word>4294967295:return false
 	var original_limit:=15
 	if int(value.get("version",5))>=6:
-		original_limit=19 if value.get("original_equipment") is Dictionary and value.original_equipment.has("head") else 18
+		original_limit=18
+		if value.get("original_equipment") is Dictionary:
+			original_limit+=int(value.original_equipment.has("head"))+int(value.original_equipment.has("body"))
 	if not value.get("original_items") is Array or value.original_items.size()>original_limit:return false
 	for item in value.original_items:
 		if not (item is int or item is float) or float(item)!=floor(float(item)) or item<=0 or item>2147483647:return false
@@ -175,12 +178,14 @@ func start_battle_config(species: String = "wooli", boss: bool = false, enemy_co
 	config.player_level = player.level
 	# Reference effective charm/luck; login owns the native-day luck refresh.
 	config.player_charm = clampi(int(player.get("charm",60))+int(armour.charm),0,100)
+	config.original_revival_items = OriginalRevival.inventory(_profile)
+	config.original_revival_budget = config.original_revival_items.size()
 	config.original_equipment_items = OriginalEquipment.battle_items(_profile)
 	config.player_resistances = OriginalEquipment.resistances(_profile)
 	config.equipment_base = {}
 	var original_mods:=OriginalEquipment.mods(_profile)
 	for stat in OriginalEquipment.STATS:config.equipment_base[stat]=int(player.get(stat,60 if stat=="charm" else 0))+int(armour[stat])-int(original_mods[stat])
-	config.equipment_occupied = [int(_profile.original_equipment.head)>0,not str(_equipment().body).is_empty(),bool(_profile.equipped) or int(_profile.original_equipment.arm)>0,bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty() or int(_profile.original_equipment.amulet)>0,int(_profile.original_equipment.bracelet)>0]
+	config.equipment_occupied = [int(_profile.original_equipment.head)>0,(not str(_equipment().body).is_empty() or int(_profile.original_equipment.body)>0),bool(_profile.equipped) or int(_profile.original_equipment.arm)>0,bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty() or int(_profile.original_equipment.amulet)>0,int(_profile.original_equipment.bracelet)>0]
 	config.player_luck = int(player.get("luck",0))
 	config.player_vital = int(player.base_stats.vitality)/100.0
 	config.player_weapon = "axe" if int(_profile.original_equipment.arm)>0 else "club" if _profile.equipped else ""
@@ -360,6 +365,8 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	var id: String = _pending.battle_id
 	if id in _profile.completed_battles:
 		return false
+	var revival_result = result.get("original_revival_items",[] if _pending.get("original_revival_items",[]).is_empty() else null)
+	if not OriginalRevival.result_valid(_pending.get("original_revival_items",[]),revival_result):return false
 	var equipment_result = result.get("original_equipment_items",[] if _pending.get("original_equipment_items",[]).is_empty() else null)
 	if not OriginalEquipment.result_valid(_pending.get("original_equipment_items",[]),equipment_result):return false
 	var hp := int(result.get("player_hp",-1))
@@ -441,8 +448,13 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	if (outcome == "defeat" and hp != 0) or (outcome != "defeat" and hp == 0):return false
 	var battle_pets: Array = result.get("pets",[])
 	if battle_pets.size() != roster.size():return false
+	var revival_count:=0
+	var revival_budget:int=int(_pending.get("original_revival_budget",_pending.get("original_revival_items",[]).size()))
 	for i in range(battle_pets.size()):
 		if not _integer(battle_pets[i].get("hp"),0,roster[i].max_hp):return false
+		if not _integer(battle_pets[i].get("original_revival_count",0),0,revival_budget):return false
+		revival_count+=int(battle_pets[i].get("original_revival_count",0))
+	if revival_count>revival_budget:return false
 	if not _integer(result.get("active_pet",-1),-1,roster.size()-1):return false
 	if not _integer(result.get("pet_escapes",0),0,10):return false
 	var start_ride := int(_pending.get("ride_pet_index",_profile.get("ride_pet",-1)))
@@ -468,13 +480,16 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		if seen_claims.has(key) or int(enemies[index].hp)!=0 or bool(enemies[index].get("captured",false)):return false
 		seen_claims[key] = true
 		items.append(int(generated[int(claim.item)]))
+	OriginalRevival.settle(_profile,_pending.get("original_revival_items",[]),revival_result)
 	OriginalEquipment.settle(_profile,equipment_result)
 	_profile.ride_pet = int(slots[int(ride_index)]) if int(ride_index)>=0 else -1
 	_profile.player.hp = hp
 	_profile.player.mp = mp
 	_profile.inventory.potion = potions
 	for i in range(battle_pets.size()):
-		if int(slots[i])>=0:_profile.pets[int(slots[i])].hp = int(battle_pets[i].hp)
+		if int(slots[i])>=0:
+			_profile.pets[int(slots[i])].hp = int(battle_pets[i].hp)
+			Loyalty.add_variable(_profile.pets[int(slots[i])],int(battle_pets[i].get("original_revival_count",0))*OriginalRevival.PET_AI_GAIN)
 	_profile.active_pet = int(slots[int(result.active_pet)]) if int(result.get("active_pet",-1))>=0 else -1
 	# The owner a pet caught this battle judged its loyalty by (battle_event.c:3435).
 	var owner_level := int(_profile.player.level)
@@ -647,7 +662,8 @@ func use_item(item: Variant = "potion", pet_id: Variant = "") -> bool:
 	last_error=""
 	last_note=""
 	if not item is String or not pet_id is String:last_error="无效道具或目标。";return false
-	if not _pending.is_empty():last_error="野外道具不能在战斗中使用；原战斗道具回合尚未接入。";return false
+	if not _pending.is_empty():last_error="野外道具不能在战斗中使用；复活秘药请从战斗道具菜单选择。";return false
+	if item=="original_2450":last_error="萨顿家的秘药只能在战斗道具菜单使用。";return false
 	if item=="original_2401":return _use_original_herb(str(pet_id))
 	if item!="potion" or not str(pet_id).is_empty() or _profile.inventory.potion<=0 or _profile.player.hp>=_profile.player.max_hp:return false
 	_profile.inventory.potion-=1
@@ -723,6 +739,7 @@ func _toggle_original_item(raw_uid: String) -> bool:
 			return false
 		_profile.original_equipment[slot]=uid
 		if slot=="arm":_profile.equipped=false
+		if slot=="body":_equipment().body=""
 		return true
 	return false
 
@@ -760,6 +777,7 @@ func _toggle_spirit_item(item: String) -> bool:
 		last_error = Spirits.SAME_KIND
 		return false
 	worn[slot] = item
+	if slot=="body":_profile.original_equipment.body=0
 	return true
 
 ## All reviewed itemset attack/defence/speed/charm modifiers.

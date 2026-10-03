@@ -650,14 +650,15 @@ func inventory_panel(profile: Dictionary) -> void:
 		var icon_path: String="res://assets/legacy/"+str(data.get("icon_path",""))
 		if ResourceLoader.exists(icon_path):icon.texture=load(icon_path)
 		icon.name="OriginalItemIcon_%d" % index
-		var center:=Vector2(136,59) if ident==2418 else Vector2(61,129) if int(ident) in [2465,2485] else Vector2(32,68) if ident==2427 else Vector2(83,68)
+		var equipment_slot: String=str(OriginalEquipment.ITEMS.get(ident,{}).get("slot",""))
+		var center: Vector2={"head":Vector2(136,59),"body":Vector2(134,129),"arm":Vector2(61,129),"amulet":Vector2(32,68)}.get(equipment_slot,Vector2(83,68))
 		icon.position=(center if equipped else Vector2(32,200)+cell)-(icon.texture.get_size()/2 if icon.texture!=null else Vector2.ZERO)
 		icon.mouse_filter=Control.MOUSE_FILTER_IGNORE
 		panel.add_child(icon)
 		var slot:=choice("",center-Vector2(23,23) if equipped else Vector2(11,175)+cell,"",null)
 		for connection in slot.pressed.get_connections():slot.pressed.disconnect(connection.callable)
 		slot.name="OriginalItemSlot_%d" % index;slot.size=Vector2(48,48)
-		slot.tooltip_text=str(data.get("name",str(ident)))+(" · 双击卸下" if equipped else " · 双击装备" if OriginalEquipment.ITEMS.has(ident) else "")+(" · 野外可使用，满血仍消耗" if data.has("use") else "")
+		slot.tooltip_text=str(data.get("name",str(ident)))+(" · 双击卸下" if equipped else " · 双击装备" if OriginalEquipment.ITEMS.has(ident) else "")+(" · 野外可使用，满血仍消耗" if ident==2401 and data.has("use") else " · 仅战斗使用" if ident==2450 else "")
 		Highlight.attach(slot,Rect2(Vector2(-3,1),Vector2(50,47)),selected_original_item==index)
 		slot.pressed.connect(func():selected_original_item=index;selected_item_slot="original_%d" % index;rebuild())
 		if OriginalEquipment.ITEMS.has(ident):
@@ -698,8 +699,10 @@ func inventory_panel(profile: Dictionary) -> void:
 			var effects:=original_detail_label(content,"OriginalEffectsMetadata","\n".join(effect_lines))
 			effects.tooltip_text=preload("res://scripts/original_item_effects.gd").evidence(data)
 		var description_text := str(data.get("description",""))
+		if ident==2450:
+			description_text="仅战斗复活道具（战斗→道具）\n原标示500，实际450～550，封顶最大HP\n原版行为：活目标或出手前已复活仍消耗"
 		if ident==2401 and data.has("use"):
-			description_text="野外回复90～110（原标示100）\n自己或随身宠物；满血仍消耗\n零HP宠物可回复；战斗道具未接入"
+			description_text="野外回复90～110（原标示100）\n自己或随身宠物；满血仍消耗\n零HP宠物可回复；香草战斗使用未接入"
 			original_recovery_buttons(profile)
 		var description := original_detail_label(content,"OriginalItemDescription",description_text)
 		description.tooltip_text=str(data.get("description",""))
