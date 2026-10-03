@@ -77,6 +77,7 @@ var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 ## Pure travel refusal hook supplied by a multi-profile host (party lock).
 var quest_visit_guard: Callable
 var _following_party:=false
+var _project_position:=false
 var _party_move_evidence:Dictionary={}
 var quest_arrival = preload("res://server/quest_legitimate_arrival.gd").new()
 const TimePassage=preload("res://server/original_time_passage.gd")
@@ -1078,6 +1079,25 @@ func report_party_position(command:Dictionary, evidence:Dictionary = {})->Dictio
 	_party_move_evidence={}
 	return result
 
+## Explicit project movement can only revoke route proof. The source kind is
+## selected here, never accepted from a caller's report/party/grant fields.
+func _cmd_project_position(command:Dictionary)->Dictionary:
+	if battle_open or not session._pending.is_empty() or automation.running or automation.hunt_running or automation.flow_active() or quest_auto.running:return _reject("当前正忙，请先停止自动活动或战斗。")
+	var values=command.get("cell",[])
+	if not session._integer(command.get("map_id"),0,2147483647) or int(command.map_id)!=automation.position_map or not values is Array or values.size()!=2 or not session._integer(values[0],0,2147483647) or not session._integer(values[1],0,2147483647):return _reject("位置已改变，请重新选择地图落点。")
+	var map:Dictionary=preload("res://scripts/map_file.gd").load_map(quest_helper.places.file(int(command.map_id)))
+	var cell:=_cell(command)
+	if map.is_empty() or cell.x>=int(map.width) or cell.y>=int(map.height) or int(map.blocked[cell.y*int(map.width)+cell.x])!=0:return _reject("项目移动落点不可通行。")
+	for npc in quest_helper.places.residents:
+		if int(npc.map_id)==int(command.map_id) and cell==Vector2i(int(npc.cell[0]),int(npc.cell[1])):return _reject("项目移动不能占用人物格。")
+	var request:Dictionary=command.duplicate(true)
+	request.erase("quest_position_seq")
+	request.client="server"
+	_project_position=true
+	var reply:Dictionary=_cmd_report_position(request)
+	_project_position=false
+	return reply
+
 func _cmd_report_position(command: Dictionary) -> Dictionary:
 	var helper_stage: Array = quest_helper.navigation_key(self)
 	# Validate before accepting old helper receipts: none authorizes a new
@@ -1087,7 +1107,7 @@ func _cmd_report_position(command: Dictionary) -> Dictionary:
 		if not dream_reason.is_empty():
 			_emit({"type":"position","map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y],"client":"server"})
 			return _reject(dream_reason)
-	if quest_auto.accept_report(self,command):return {"ok":true}
+	if not _project_position and quest_auto.accept_report(self,command):return {"ok":true}
 	if not _following_party:
 		var timed_reason:=TimePassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("map_id",-1)),command.get("cell",[]))
 		if not timed_reason.is_empty():
@@ -1099,7 +1119,7 @@ func _cmd_report_position(command: Dictionary) -> Dictionary:
 		return _reject("穿过海底关卡需要通行证。")
 	var cell := _cell(command)
 	var moved: bool = int(command.map_id)!=automation.position_map or cell!=automation.position_cell
-	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)),"party" if _following_party and not _party_move_evidence.is_empty() else "project" if _following_party else "report",_party_move_evidence)
+	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)),"project" if _project_position else "party" if _following_party and not _party_move_evidence.is_empty() else "project" if _following_party else "report",_party_move_evidence)
 	if moved:_emit({"type":"position","map_id":int(command.map_id),"cell":[cell.x,cell.y],"client":str(command.get("client",""))})
 	if helper_stage!=quest_helper.navigation_key(self):_publish()
 	return {"ok":true,"paused":paused}
