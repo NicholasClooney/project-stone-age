@@ -85,3 +85,17 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 此前项目助手能直接进入10204，旧`original_adult_quest_test`甚至断言“explicit helper bypasses entrance”；这是已确认的绕门证据，不能把旧fixture当合法前置。新的`OriginalRouteDriver.complete_adult`只将角色放在公开村庄门口，真实report进入、两段逐格通道、三次真实NPC交换，获取END4。测试工具不会写旗标、物品、scope或grant；初始角色等级/能力由调用方普通fixture负责。`quest_arrival_adult_test`在此基础上复用真实梦幻终战和最终奖励savefail/旧token测试；直接瞬移仪式NPC旁的请求另有拒绝断言。普通生产GameScene像素或UI自动行走未由该工具验证。
 
 集成依赖为b2c9ad1后端、3b5790a普通NPC事务、372481b服务身份。补片交付仍不表示旧成人助手/自动任务fixture已迁移；这些旧项目瞬移会被正确拒绝，需其owner调整路线后才能称功能回归全部完成。其它洞窟政策另片审核，不随此片宣称完成。
+
+## 地链政策小片
+
+依赖earth纯源fixture c81b017，不开放descriptor。21001–21016为连续earth路线集合；两根`genout/wpm_200_359_671`及`wpm_200_358_671:1–3`保存成功后才进入，原LV>64/END4不变。三楼`wpm_21003_34_10:1–2`的羽毛／NOW39／END39三项OR完整保留。NPC项目到达不能自授路线，旧只持日记/项链也不能代替原路。
+
+| 实际案例／源物理行 | 处理与此前绕过证据 | 定向验证 |
+|---|---|---|
+| `jaruga/event/ruri01:10–22` b0收2698/2699、给2701、Charm+1、END39 | 项目直接到21015曾可领奖；现在须真正`200/sb_dbt.arg:4–7`保存胜战并Warp21015(9,17)产生earth_final | 实际成人→公开接取/领日记→原外门→三楼OR→原多层/两实际固定战→女神，最终savefail保物品旗标，重试END39通过 |
+| `ruri05/ruri06:8–16`各b0收2700、两85槽原随机池 | 同一终战后组件凭证，不能以持羽毛或NOW/END代替；未添加NOW39/END39新条件 | 真实NPC项目落点talk拒绝；合法终战组件下两b0的check_action通过；完整两池结算由earth owner并集 |
+| `ruri02:8–30`b0补项链/b1REQUEST39 | 普通3413村屋，没有先过洞窟的原要求；无scope，无缺口理由是本来公开 | 真实原接取拿2699通过 |
+| `ruri03:14–22`b1日记/NpcWarp | 公开200野外各原个人移动点，无洞窟前置；不锁为女神到达 | 真实公开事务给2698且个人移动通过 |
+| 1146普通条件遇敌的2700羽毛 | NPC领奖已保护；捕宠便利到21002后普通战斗得羽毛是否算任务推进是独立边界，尚未新增掉落资格限制 | 明确待主裁定，未冒称这个掉落来源已由NPC终端守卫完全封堵 |
+
+本槽真实碰撞路径从三楼原门后直找dbt邻格不可达，实际通过dtp胜Warp21009(45,48)后才走到dbt。抽象mapwarp图中21009→21010有边不证明忽略碰撞后仍能免战；政策没有新增全局dtp mark，所有可行原边仍允许，最终女神只核dbt实际胜后mark。完整真原路suite 1/1通过。Shared route driver附带兼容bonus已冻结`adult_walk_destination`只读几何接口（仅10204、has_method时调用），不将该目标作为权限或客户端传送入口。
