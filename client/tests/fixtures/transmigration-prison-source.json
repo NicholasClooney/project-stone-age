@@ -1,0 +1,2528 @@
+{
+  "version": 1,
+  "activation": "None. Source-only audit; 117/110, toll and all associated new exits remain disabled pending user decision.",
+  "sources": {
+    "gmsv/data/npc/genout/wpm_1012_14_13": "2621774b3b8266993460b04310eb7c581ed635b75a5666ce033eb8e15a829cd3",
+    "gmsv/data/npc/genout/wpm_130_57_48": "d9a0792d759661f433c1d8a4ebb56f45e99a1284a4740628c4b729d6c9ffcc78",
+    "gmsv/data/npc/genout/wpm_3012_14_13": "f9b1e2d588b0026f1f06a780a64bfa425b2d54ae9752fb7cfbbae2408014b0dd",
+    "gmsv/data/npc/genout/wpm_2012_14_13": "b2c93bcc2f55c51334a05125e18a409ec832ada3d094aedf9423e4edb91b3c33",
+    "gmsv/data/npc/genout/wpm_117_6_5": "1ed66e76fec332acb2daae97257f16d34c39c0c3c710df45fd7b3ea28e33a2df",
+    "gmsv/data/npc/genout/wpm_4012_14_13": "625e9b23c860204f3675b8afb627deffb882f828a5d33188bb179e28b7c692c0",
+    "gmsv/data/npc/king/event69_13.arg": "bed55ff43032ce934c2a49764f3d003919806cf155a8e50a8fb92569ac0614ed",
+    "gmsv/data/npc/king/event69_10": "8f0ce7b16a9c7da1c6fc3482a844ac457e64207c825571634e6a89d0d84f16a3",
+    "gmsv/data/npc/genout/deadroad.create": "64020507ce610ca777910683aca755a4ecb388664b9fdb930301d6150f40843d",
+    "gmsv/data/npc/genout/cyatroom.create": "7c8616d5f06806657785ef0e00d6f735572eaba82d575793a0e34045e51d2674",
+    "gmsv/data/npc/genout/wpm_110_38_37": "e49bc441edfb9f599276cb657510552e8ff6c97e0a064e660295a1c6354326d3",
+    "gmsv/data/npc/genout/duelroom.create": "54b0ce0d9bc71cd5835e58d63f433c2bfeabcfef83b640d3076333ab7dc2b7da",
+    "gmsv/data/npc/genout/ss_117_234_14": "f4b1df12a3c8bbb74bcb8b53a68a5bc24e1faa28ef9b0055ac49da89c218f925",
+    "gmsv/data/npc/genout/manmoshall.create": "e2da847b2278d5d35b7fffb5e3dbd64b5da1ef0eae9b80b36a373b008fb8fd0b",
+    "gmsv/data/npc/genout/wpm_110_37_20": "bbe21f404d619d7b689c67cf5cb3a80effb126909d4a5a5c4d5a04b2fbcf8a7b",
+    "gmsv/data/npc/genout/wpm_110_37_24": "b1a69f471f4e109b4544b97cc907a6aa3c206bccdee608c11a8c9a986845d053",
+    "gmsv/data/npc/genout/wpm_110_37_28": "2308622bdec8f51d997b566d0c88dbc67bf0a1282d2a9436c17b41a1af4a2968",
+    "gmsv/data/npc/genout/wpm_110_37_32": "db3641469abe35628cc5dc5569167872976f38cee38b7df43c94f79b896ccfdc",
+    "gmsv/data/npc/genout/chatroom.create": "2121f277b89d3680dbd76e829901309eb3bcd2a4f85f2d756907009545d2bf76",
+    "gmsv/data/npc/chatroom/ticket110": "b324c5479cdf49056ab7023b6afc1bca7c33faf27d417f724d26d433d413e97d",
+    "gmsv/data/npc/chatroom/chatroom.create": "ae0e68a994ef043abe5eb9310a8ddc45adf383e13540c8215571ad00e3007911",
+    "gmsv/data/npc/king/event69_alpha.create": "6d540334b4cb4d8411c69cf93c576f4482649b7f6a3b31139c3fdb42d27cfd45",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/npc/npc_eventaction.c": "c5dc5b17847ee0670a86cf9e9b713a9dbeffa7ef55b192e5ce51119479c73042",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94"
+  },
+  "map_sources": {
+    "110": {
+      "path": "gmsv/data/map/extra/110",
+      "sha256": "579c5500bcad3bc86cad940596602b3c7d4fe53c588b8f9b261ea7be325e629d"
+    },
+    "117": {
+      "path": "gmsv/data/map/extra/117",
+      "sha256": "672b928fda056c63da4772a7686ca73fe39509cf70d5e7d34cade1bf98f9dd59"
+    }
+  },
+  "ordinary_portals": [
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        8
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 7,
+      "source_create_index": 0
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 16,
+      "source_create_index": 1
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 25,
+      "source_create_index": 2
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 34,
+      "source_create_index": 3
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 43,
+      "source_create_index": 4
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 52,
+      "source_create_index": 5
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 61,
+      "source_create_index": 6
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 70,
+      "source_create_index": 7
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 79,
+      "source_create_index": 8
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 88,
+      "source_create_index": 9
+    },
+    {
+      "from_map": 5510,
+      "cell": [
+        59,
+        16
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 133,
+      "source_create_index": 14
+    },
+    {
+      "from_map": 5510,
+      "cell": [
+        59,
+        17
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 142,
+      "source_create_index": 15
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        33
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 151,
+      "source_create_index": 16
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        34
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 160,
+      "source_create_index": 17
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        35
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 169,
+      "source_create_index": 18
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 178,
+      "source_create_index": 19
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 187,
+      "source_create_index": 20
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        38
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 196,
+      "source_create_index": 21
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        39
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 205,
+      "source_create_index": 22
+    },
+    {
+      "from_map": 21014,
+      "cell": [
+        15,
+        4
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 259,
+      "source_create_index": 28
+    },
+    {
+      "from_map": 30691,
+      "cell": [
+        52,
+        71
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 268,
+      "source_create_index": 29
+    },
+    {
+      "from_map": 30692,
+      "cell": [
+        63,
+        66
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 277,
+      "source_create_index": 30
+    },
+    {
+      "from_map": 30693,
+      "cell": [
+        63,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 286,
+      "source_create_index": 31
+    },
+    {
+      "from_map": 30694,
+      "cell": [
+        59,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/npc/genout/deadroad.create",
+      "source_line": 295,
+      "source_create_index": 32
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        6,
+        1
+      ],
+      "to_map": 113,
+      "target": [
+        4,
+        10
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 7,
+      "source_create_index": 0
+    },
+    {
+      "from_map": 113,
+      "cell": [
+        4,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        6,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 16,
+      "source_create_index": 1
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        7,
+        1
+      ],
+      "to_map": 113,
+      "target": [
+        5,
+        10
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 25,
+      "source_create_index": 2
+    },
+    {
+      "from_map": 113,
+      "cell": [
+        5,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        7,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 34,
+      "source_create_index": 3
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        12,
+        1
+      ],
+      "to_map": 114,
+      "target": [
+        4,
+        10
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 43,
+      "source_create_index": 4
+    },
+    {
+      "from_map": 114,
+      "cell": [
+        4,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        12,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 52,
+      "source_create_index": 5
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        13,
+        1
+      ],
+      "to_map": 114,
+      "target": [
+        5,
+        10
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 61,
+      "source_create_index": 6
+    },
+    {
+      "from_map": 114,
+      "cell": [
+        5,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        13,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 70,
+      "source_create_index": 7
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        18,
+        1
+      ],
+      "to_map": 115,
+      "target": [
+        4,
+        10
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 79,
+      "source_create_index": 8
+    },
+    {
+      "from_map": 115,
+      "cell": [
+        4,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        18,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 88,
+      "source_create_index": 9
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        19,
+        1
+      ],
+      "to_map": 115,
+      "target": [
+        5,
+        10
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 97,
+      "source_create_index": 10
+    },
+    {
+      "from_map": 115,
+      "cell": [
+        5,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        19,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 106,
+      "source_create_index": 11
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        24,
+        1
+      ],
+      "to_map": 111,
+      "target": [
+        12,
+        21
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 115,
+      "source_create_index": 12
+    },
+    {
+      "from_map": 111,
+      "cell": [
+        12,
+        21
+      ],
+      "to_map": 110,
+      "target": [
+        24,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 124,
+      "source_create_index": 13
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        25,
+        1
+      ],
+      "to_map": 111,
+      "target": [
+        13,
+        21
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 133,
+      "source_create_index": 14
+    },
+    {
+      "from_map": 111,
+      "cell": [
+        13,
+        21
+      ],
+      "to_map": 110,
+      "target": [
+        25,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 142,
+      "source_create_index": 15
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        30,
+        1
+      ],
+      "to_map": 112,
+      "target": [
+        5,
+        19
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 151,
+      "source_create_index": 16
+    },
+    {
+      "from_map": 112,
+      "cell": [
+        5,
+        19
+      ],
+      "to_map": 110,
+      "target": [
+        30,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 160,
+      "source_create_index": 17
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        31,
+        1
+      ],
+      "to_map": 112,
+      "target": [
+        5,
+        19
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 169,
+      "source_create_index": 18
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        36,
+        1
+      ],
+      "to_map": 116,
+      "target": [
+        23,
+        40
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 178,
+      "source_create_index": 19
+    },
+    {
+      "from_map": 116,
+      "cell": [
+        23,
+        40
+      ],
+      "to_map": 110,
+      "target": [
+        36,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 187,
+      "source_create_index": 20
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        37,
+        1
+      ],
+      "to_map": 116,
+      "target": [
+        23,
+        40
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 196,
+      "source_create_index": 21
+    },
+    {
+      "from_map": 116,
+      "cell": [
+        22,
+        40
+      ],
+      "to_map": 110,
+      "target": [
+        36,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 205,
+      "source_create_index": 22
+    },
+    {
+      "from_map": 116,
+      "cell": [
+        24,
+        40
+      ],
+      "to_map": 110,
+      "target": [
+        36,
+        1
+      ],
+      "source": "gmsv/data/npc/genout/cyatroom.create",
+      "source_line": 214,
+      "source_create_index": 23
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        85
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 418
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        86
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 419
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        87
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 420
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        88
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 421
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        89
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 422
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        8
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 779
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 780
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 781
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 782
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 783
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 784
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 785
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 786
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 787
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 788
+    },
+    {
+      "from_map": 5510,
+      "cell": [
+        59,
+        16
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 793
+    },
+    {
+      "from_map": 5510,
+      "cell": [
+        59,
+        17
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 794
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        33
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 795
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        34
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 796
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        35
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 797
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 798
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 799
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        38
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 800
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        39
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 801
+    },
+    {
+      "from_map": 21014,
+      "cell": [
+        15,
+        4
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 807
+    },
+    {
+      "from_map": 30691,
+      "cell": [
+        52,
+        71
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 808
+    },
+    {
+      "from_map": 30692,
+      "cell": [
+        63,
+        66
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 809
+    },
+    {
+      "from_map": 30693,
+      "cell": [
+        63,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 810
+    },
+    {
+      "from_map": 30694,
+      "cell": [
+        59,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 811
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        6,
+        1
+      ],
+      "to_map": 113,
+      "target": [
+        4,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1620
+    },
+    {
+      "from_map": 113,
+      "cell": [
+        4,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        6,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1621
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        7,
+        1
+      ],
+      "to_map": 113,
+      "target": [
+        5,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1622
+    },
+    {
+      "from_map": 113,
+      "cell": [
+        5,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        7,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1623
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        12,
+        1
+      ],
+      "to_map": 114,
+      "target": [
+        4,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1624
+    },
+    {
+      "from_map": 114,
+      "cell": [
+        4,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        12,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1625
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        13,
+        1
+      ],
+      "to_map": 114,
+      "target": [
+        5,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1626
+    },
+    {
+      "from_map": 114,
+      "cell": [
+        5,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        13,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1627
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        18,
+        1
+      ],
+      "to_map": 115,
+      "target": [
+        4,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1628
+    },
+    {
+      "from_map": 115,
+      "cell": [
+        4,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        18,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1629
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        19,
+        1
+      ],
+      "to_map": 115,
+      "target": [
+        5,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1630
+    },
+    {
+      "from_map": 115,
+      "cell": [
+        5,
+        10
+      ],
+      "to_map": 110,
+      "target": [
+        19,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1631
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        24,
+        1
+      ],
+      "to_map": 111,
+      "target": [
+        12,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1632
+    },
+    {
+      "from_map": 111,
+      "cell": [
+        12,
+        21
+      ],
+      "to_map": 110,
+      "target": [
+        24,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1633
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        25,
+        1
+      ],
+      "to_map": 111,
+      "target": [
+        13,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1634
+    },
+    {
+      "from_map": 111,
+      "cell": [
+        13,
+        21
+      ],
+      "to_map": 110,
+      "target": [
+        25,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1635
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        30,
+        1
+      ],
+      "to_map": 112,
+      "target": [
+        5,
+        19
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1636
+    },
+    {
+      "from_map": 112,
+      "cell": [
+        5,
+        19
+      ],
+      "to_map": 110,
+      "target": [
+        30,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1637
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        31,
+        1
+      ],
+      "to_map": 112,
+      "target": [
+        5,
+        19
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1638
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        36,
+        1
+      ],
+      "to_map": 116,
+      "target": [
+        23,
+        40
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1639
+    },
+    {
+      "from_map": 116,
+      "cell": [
+        23,
+        40
+      ],
+      "to_map": 110,
+      "target": [
+        36,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1640
+    },
+    {
+      "from_map": 110,
+      "cell": [
+        37,
+        1
+      ],
+      "to_map": 116,
+      "target": [
+        23,
+        40
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1641
+    },
+    {
+      "from_map": 116,
+      "cell": [
+        22,
+        40
+      ],
+      "to_map": 110,
+      "target": [
+        36,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1642
+    },
+    {
+      "from_map": 116,
+      "cell": [
+        24,
+        40
+      ],
+      "to_map": 110,
+      "target": [
+        36,
+        1
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1643
+    }
+  ],
+  "source_actors": [
+    {
+      "source_create": "gmsv/data/npc/genout/duelroom.create",
+      "source_create_index": 4,
+      "source_line": 55,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "38,37,38,37",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16205",
+        "name": "斗技场向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_110_38_37"
+      },
+      "script": "genout/wpm_110_38_37",
+      "source_text": "WARP:130,57,49\nFREE:ITEM=2597,ITEM=2598,ITEM=2599,ITEM=2600,ITEM=2601\nMONEY:-1\nFreeMsg:欢迎来到斗技场\\n现在斗技场有%4d人的出席者。\\n请慢慢使用。\nPayMsg:没有门票。\\n请到那里购买门票。\\n\\n现在的入场者有%4d人。\nPartyMsg:以团队无法入场。\\n\\n请把团队解散之后再个别\\n入场。\nMoneyMsg:不好意思请多关照。\n\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/manmoshall.create",
+      "source_create_index": 16,
+      "source_line": 198,
+      "fields": {
+        "floorid": "117",
+        "borncorner": "234,12,234,12",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16024",
+        "name": "监狱医生",
+        "enemy": "npcgen_winhealer|1|40|60|1"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/manmoshall.create",
+      "source_create_index": 17,
+      "source_line": 210,
+      "fields": {
+        "floorid": "117",
+        "borncorner": "234,14,234,14",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16020",
+        "name": "护士长",
+        "enemy": "npcgen_shop|file:genout/ss_117_234_14"
+      },
+      "script": "genout/ss_117_234_14",
+      "source_text": "buy_rate:40.0\nsell_rate:0.1\nbuy_msg:你好,欢迎,买,ㄇㄞˇ,buy\nsell_msg:卖,sell,ㄇㄞˋ\nother_msg:最近怎样？\nhint_msg:嗯、药草并不容易齐全\nsellonly_msg:并不是专门买入的喔\nmain_msg:欢迎！\nbuy_main:要哪个呢？\\n呵呵呵！便宜算给你喔！\nsell_main:那么、请你买个东西吧。\nwhat_msg:要买几个？\nstone_msg:所持金已经满了。\nlevel_msg:等级还不足以使用那个。\nrealy_msg:这样就可以了吗？\nitemfull_msg:不好意思、道具已经满了。\nItemList:1500,1501,1510,1511,1512,1530,1531,1540,1541,1542,1543,1545\nLimitItemNo:1500-1550\nspecial_rate:1.5\nspecial_item:\n\n\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/manmoshall.create",
+      "source_create_index": 18,
+      "source_line": 222,
+      "fields": {
+        "floorid": "117",
+        "borncorner": "6,5,6,5",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16204",
+        "name": "监狱的通关处",
+        "enemy": "npcgen_warpman|file:genout/wpm_117_6_5"
+      },
+      "script": "genout/wpm_117_6_5",
+      "source_text": "WARP:110,23,27\nFREE:\nMONEY:1\nFreeMsg:＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你持有付钱，请通关。\\n请多加小心！\nPayMsg:＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n这里是通往聊天室。\\n要你身上的９／１０的钱才可以通过这里。\nPartyMsg:＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n无法以团队进入。\nMoneyMsg:＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你钱不够哦。\n\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 0,
+      "source_line": 7,
+      "fields": {
+        "floorid": "1012",
+        "borncorner": "14,13,14,13",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16202",
+        "name": "向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_1012_14_13"
+      },
+      "script": "genout/wpm_1012_14_13",
+      "source_text": "WARP:110,37,21\nFloor:111,112,113,114,115,116\nFREE:ITEM=2521*1\nDelItem:2522,2523,2524,2602,2597,2598,2599,2600,2601\nMONEY:-1\nFreeMsg:欢迎来到聊天室\\n现在聊天室里有%4d人的\\n出席者。\\n请您慢慢使用。\nPayMsg:没有门票。\\n请到那里购买门票。\\n\\n现在的入场者有%4d人。\nPartyMsg:无法以团队入场。\\n\\n请把团队解散之后再个别\\n入场。\nMoneyMsg:真的是不好意思。\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 1,
+      "source_line": 19,
+      "fields": {
+        "floorid": "2012",
+        "borncorner": "14,13,14,13",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16201",
+        "name": "向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_2012_14_13"
+      },
+      "script": "genout/wpm_2012_14_13",
+      "source_text": "WARP:110,37,25\nFloor:111,112,113,114,115,116\nFREE:ITEM=2522*1\nDelItem:2521,2523,2524,2602,2597,2598,2599,2600,2601\nMONEY:-1\nFreeMsg:欢迎来到聊天室\\n现在聊天室里有%4d人的\\n出席者。\\n请您慢慢使用。\nPayMsg:没有门票。\\n请到那里购买门票。\\n\\n现在的入场者有%4d人。\nPartyMsg:无法以团队入场。\\n\\n请把团队解散之后再个别\\n入场。\nMoneyMsg:真的是不好意思。\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 2,
+      "source_line": 31,
+      "fields": {
+        "floorid": "3012",
+        "borncorner": "14,13,14,13",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16202",
+        "name": "向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_3012_14_13"
+      },
+      "script": "genout/wpm_3012_14_13",
+      "source_text": "WARP:110,37,29\nFloor:111,112,113,114,115,116\nFREE:ITEM=2523\nDelItem:2521,2522,2524,2602,2597,2598,2599,2600,2601\nMONEY:-1\nFreeMsg:欢迎来到聊天室\\n现在聊天室里有%4d人的\\n出席者。\\n请您慢慢使用。\nPayMsg:没有门票。\\n请到那里购买门票。\\n\\n现在的入场者有%4d人。\nPartyMsg:无法以团队入场。\\n\\n请把团队解散之后再个别\\n入场。\nMoneyMsg:真的是不好意思。\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 3,
+      "source_line": 43,
+      "fields": {
+        "floorid": "4012",
+        "borncorner": "14,13,14,13",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16201",
+        "name": "向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_4012_14_13"
+      },
+      "script": "genout/wpm_4012_14_13",
+      "source_text": "WARP:110,37,33\nFloor:111,112,113,114,115,116\nFREE:ITEM=2524\nDelItem:2521,2522,2523,2602,2597,2598,2599,2600,2601\nMONEY:-1\nFreeMsg:欢迎来到聊天室\\n现在聊天室里有%4d人的\\n出席者。\\n请您慢慢使用。\nPayMsg:没有门票。\\n请到那里购买门票。\\n\\n现在的入场者有%4d人。\nPartyMsg:无法以团队入场。\\n\\n请把团队解散之后再个别\\n入场。\nMoneyMsg:真的是不好意思。\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 4,
+      "source_line": 55,
+      "fields": {
+        "floorid": "130",
+        "borncorner": "57,48,57,48",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16206",
+        "name": "聊天室向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_130_57_48"
+      },
+      "script": "genout/wpm_130_57_48",
+      "source_text": "WARP:110,37,37\nFloor:111,112,113,114,115,116\nFREE:ITEM=2521,ITEM=2522,ITEM=2523,ITEM=2524,ITEM=2602,ITEM=2597,ITEM=2598,ITEM=2599,ITEM=2600,ITEM=2601\nDelItem:2602,2609\nMONEY:-1\nFreeMsg:欢迎来到聊天室\\n现在聊天室里有%4d人的\\n出席者。\\n请您慢慢享用。\nPayMsg:从这里到聊天室\\n需要各斗技场的门票或是、聊天室\\n的门票。请到隔壁购买门票。\nPartyMsg:以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。\nMoneyMsg:没有门票的人请到隔壁拿。\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 5,
+      "source_line": 67,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "22,21,22,21",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "10063",
+        "name": "留言版",
+        "enemy": "npcgen_dengon"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 6,
+      "source_line": 79,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "8,2,8,2",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "10063",
+        "name": "房间1留言版",
+        "enemy": "npcgen_dengon"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 7,
+      "source_line": 91,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "14,2,14,2",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "10063",
+        "name": "房间2留言版",
+        "enemy": "npcgen_dengon"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 8,
+      "source_line": 103,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "20,2,20,2",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "10063",
+        "name": "房间3留言版",
+        "enemy": "npcgen_dengon"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 9,
+      "source_line": 115,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "26,2,26,2",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "10063",
+        "name": "大厅留言版",
+        "enemy": "npcgen_dengon"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 11,
+      "source_line": 139,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "32,2,32,2",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "10063",
+        "name": "结婚会场留言版",
+        "enemy": "npcgen_dengon"
+      }
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 14,
+      "source_line": 175,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "37,20,37,20",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16065",
+        "name": "萨姆吉尔向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_110_37_20"
+      },
+      "script": "genout/wpm_110_37_20",
+      "source_text": "WARP:1012,13,13\nFREE:ITEM=2521*1\nDelItem:2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609\nMONEY:-1\nFreeMsg:期待您的再度光临。\nPayMsg:从这里往萨姆吉尔需要门票。\nPartyMsg:以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。\nMoneyMsg:能从这里退出的人仅限于能够来到\\n萨姆吉尔的人。\\n一张门票都没有的人请登出。\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 15,
+      "source_line": 187,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "37,24,37,24",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16067",
+        "name": "玛丽那丝向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_110_37_24"
+      },
+      "script": "genout/wpm_110_37_24",
+      "source_text": "WARP:2012,13,13\nFREE:ITEM=2522*1\nDelItem:2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609\nMONEY:-1\nFreeMsg:期待您的再度光临。\nPayMsg:从这里往玛丽那丝需要门票。\nPartyMsg:以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。\nMoneyMsg:能从这里退出的人仅限于能够来到\\n玛丽那丝的人。\\n一张门票都没有的人请登出。\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 16,
+      "source_line": 199,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "37,28,37,28",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16030",
+        "name": "加加向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_110_37_28"
+      },
+      "script": "genout/wpm_110_37_28",
+      "source_text": "WARP:3012,13,13\nFREE:ITEM=2523*1\nDelItem:2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609\nMONEY:-1\nFreeMsg:期待您的再度光临。\nPayMsg:从这里往加加需要门票。\nPartyMsg:以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。\nMoneyMsg:能从这里退出的人仅限于能够来到\\n加加的人。\\n一张门票都没有的人请登出。\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 17,
+      "source_line": 211,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "37,32,37,32",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16033",
+        "name": "卡鲁它那向导",
+        "enemy": "npcgen_warpman|file:genout/wpm_110_37_32"
+      },
+      "script": "genout/wpm_110_37_32",
+      "source_text": "WARP:4012,13,13\nFREE:ITEM=2524*1\nDelItem:2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609\nMONEY:-1\nFreeMsg:期待您的再度光临。\nPayMsg:从这里往卡鲁它那需要门票。\nPartyMsg:以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。\nMoneyMsg:能从这里退出的人仅限于能够来到\\n卡鲁它那的人。\\n一张门票都没有的人请登出。\n\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/chatroom/chatroom.create",
+      "source_create_index": 13,
+      "source_line": 184,
+      "fields": {
+        "floorid": "110",
+        "borncorner": "35,40,35,40",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16013",
+        "name": "门票贩卖员",
+        "enemy": "changeevent|file:chatroom/ticket110"
+      },
+      "script": "chatroom/ticket110",
+      "source_text": "NomalMainMsg:欢迎光临。贩卖往斗技场的票。\n\nEventNo:-1\nTYPE:ACCEPT\nEVENT:LV<11,DR<11,DR=77,DR=777\nAcceptMsg:贩卖往斗技场的票。\\n您的话免费喔。\\n能够进入斗技场吗？\\n\\n还有，其他的票全部都要回收，请原谅。\nThanksMsg:那么、我就把票交给你啰。还有、这张票若是登出、或是放置于地面都会消失请注意。\nItemFullMsg:道具已满无法交付给你。\nGetItem:2601\nDelItem:2521,2522,2523,2524\nEventEnd\n\nEventNo:-1\nTYPE:MESSAGE\nEVENT:ITEM=2601\nNomalMsg:已经、有票了喔。\nEventEnd\n\n\nEventNo:-1\nTYPE:ACCEPT\nEVENT:LV>10\nAcceptMsg:贩卖往斗技场的票。\\n你的话需要%8ds。\\n这样可以吗？\\n\\n还有，其他的票全部都要回收，请原谅。\nThanksMsg:那么、请交给我吧。还有、这张票若是登出、或是放置于地面都会消失请注意。\nStoneLessMsg:不好意思钱不够喔。\nItemFullMsg:道具已满无法交付给你\nDelStone:LV*3\nGetItem:2601\nEventEnd\n\n"
+    },
+    {
+      "source_create": "gmsv/data/npc/king/event69_alpha.create",
+      "source_create_index": 7,
+      "source_line": 95,
+      "fields": {
+        "floorid": "30620",
+        "borncorner": "21,15,21,15",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "100451",
+        "name": "地精灵玛蕾菲雅",
+        "enemy": "npcgen_warpman|file:king/event69_10"
+      },
+      "script": "king/event69_10",
+      "source_text": "NEWWARPMAN\n\nNOFREE\nFREE:LV>0\nNomalMsg:你好，我们又见面了。\nPartyMsg:我的灵力有限，一次只能传送一个人，请等一下好吗？\nOVER\n\nTALKEVENT1\nWARP:30691,87,68\nFREE:ENDEV=4&ENDEV=69&ENDEV=70&NOWEV=71&NOWEV=72\nFreeMsg:谢谢你拯救了尼斯大陆，你还想去天空之岛吗？我还有力量送你去喔。OVER\n\nTALKEVENT2\nWARP:30691,87,68\nFREE:ENDEV=4&ENDEV=69&ENDEV=70&ENDEV=71&NOWEV=72\nFreeMsg:谢谢你拯救了尼斯大陆，你还想去天空之岛吗？我还有力量送你去喔。OVER\n\nTALKEVENT3\nWARP:30691,87,68\nFREE:ENDEV=4&ENDEV=69&ENDEV=70&ENDEV=71&ENDEV=72\nFreeMsg:谢谢你拯救了尼斯大陆，你还想去天空之岛吗？我还有力量送你去喔。OVER\n\nTALKEVENT4\nWARP:30619,14,20\nFREE:ENDEV=4&ENDEV=69&ENDEV=70&NOWEV=71\nFreeMsg:虽然有点突然，不过我有一件事情想拜托你…\\n十年前的那场地震需要你的帮助，你愿意走这一趟吗？OVER\n\nTALKEVENT5\nWARP:117,180,99\nFREE:LV>0\nFreeMsg:这里很危险不能久留，我送你去比较安全的地方吧。OVER"
+    },
+    {
+      "source_create": "gmsv/data/npc/king/event69_alpha.create",
+      "source_create_index": 10,
+      "source_line": 134,
+      "fields": {
+        "floorid": "30619",
+        "borncorner": "19,20,19,20",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "100444",
+        "name": "黑暗精灵王",
+        "enemy": "event69_13|file:king/event69_13.arg"
+      },
+      "script": "king/event69_13.arg",
+      "source_text": "NEWNPCENEMY\n\nentype:2\naskbattlemsg1:你又想来封印我吗？\naskbattlemsg2:可恶的光明精灵王，竟然关了我两千年！\naskbattlemsg3:不过因为这场地震，我出去的日子终于到来了！\naskbattlemsg4:就凭你一个人类也想来打扰我的计划吗？\naskbattlemsg5:不要以为你可以承受我累积了两千年的魔力！\naskbattlemsg6:受死吧！\nstartmsg:胆敢阻拦我？不自量力的人类！死吧！\ndieact:1\nwarpfl:30619\nwarpx:19\nwarpy:22\nitem:1292\nenemyno:1690,1688,1687,1689,1686,1678,1679,1677,1680\ndeniedmsg:你是什么东西？\nalreadymsg:别急，马上就轮到你了…\nonebattle:1\nOVER\n\nNEWEVENT1:\nFREE:ENDEV=4&ENDEV=69&ENDEV=70&NOWEV=71&EQUIT=1292\nWARP:30691,87,68\nendmsg:让你们尝尝我两千年的魔力与怨念吧！\nOVER\n\nNEWEVENT2:\nFREE:ENDEV=4&ENDEV=69&ENDEV=70&NOWEV=71&EQUIT!=1292\nWARP:30619,19,22\nendmsg:没有灵力铠，你是无法阻止我的～～～\nOVER\n\nNEWEVENT3:\nFREE:LV>0\nWARP:117,180,99\nendmsg:别想混水摸鱼！\nOVER"
+    }
+  ],
+  "import_impact": [
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        8
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 779,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 780,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 781,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 782,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 783,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 784,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 785,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 786,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 787,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 788,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 5510,
+      "cell": [
+        59,
+        16
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 793,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 5510,
+      "cell": [
+        59,
+        17
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 794,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        33
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 795,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        34
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 796,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        35
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 797,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 798,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 799,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        38
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 800,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        39
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 801,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 21014,
+      "cell": [
+        15,
+        4
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 807,
+      "origin_currently_imported": true,
+      "would_pass_map_membership_if_117_added": true
+    },
+    {
+      "from_map": 30691,
+      "cell": [
+        52,
+        71
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 808,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 30692,
+      "cell": [
+        63,
+        66
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 809,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 30693,
+      "cell": [
+        63,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 810,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 30694,
+      "cell": [
+        59,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 811,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        85
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 418,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        86
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 419,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        87
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 420,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        88
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 421,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    },
+    {
+      "from_map": 5576,
+      "cell": [
+        26,
+        89
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 422,
+      "origin_currently_imported": false,
+      "would_pass_map_membership_if_117_added": false
+    }
+  ],
+  "fee_cases": [
+    {
+      "gold": 0,
+      "quoted_fee": 0,
+      "destination": [
+        117,
+        225,
+        13
+      ],
+      "phase": "initial_talk"
+    },
+    {
+      "gold": 1,
+      "quoted_fee": 1,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 2,
+      "quoted_fee": 2,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 3,
+      "quoted_fee": 3,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 4,
+      "quoted_fee": 4,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 5,
+      "quoted_fee": 5,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 6,
+      "quoted_fee": 6,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 7,
+      "quoted_fee": 7,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 8,
+      "quoted_fee": 8,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 9,
+      "quoted_fee": 9,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 10,
+      "quoted_fee": 9,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 11,
+      "quoted_fee": 9,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 19,
+      "quoted_fee": 17,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 20,
+      "quoted_fee": 18,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 99,
+      "quoted_fee": 89,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 100,
+      "quoted_fee": 90,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    },
+    {
+      "gold": 1000000000,
+      "quoted_fee": 900000000,
+      "destination": [
+        110,
+        23,
+        27
+      ],
+      "phase": "confirmed_payment"
+    }
+  ]
+}
