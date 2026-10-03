@@ -77,6 +77,7 @@ func run() -> void:
 	# Replay the actual received filter through a separate real scanner. This
 	# proves the no-hit prefix without advancing or stubbing the live backend.
 	var probe = Backend.new()
+	probe.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	root.add_child(probe);probe.set_process(false)
 	probe.automation.client_attached = false
 	probe.encounter_rng.seed = ENCOUNTER_SEED

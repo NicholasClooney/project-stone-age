@@ -28,6 +28,7 @@ func choose_seed(backend, count: int) -> int:
 
 func strong_backend():
 	var backend = Backend.new()
+	backend.handle({"type":"report_position","map_id":MAP,"cell":CELL})
 	backend.set_process(false)
 	root.add_child(backend)
 	for command in [{"type":"gm_raise_level","index":-1,"target":10},{"type":"gm_set_base_stat","index":-1,"stat":"strength","value":100},{"type":"gm_set_base_stat","index":-1,"stat":"toughness","value":100},{"type":"gm_heal"}]:

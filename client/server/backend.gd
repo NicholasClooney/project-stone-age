@@ -382,6 +382,13 @@ const TURN_COMMANDS := ["battle_command","battle_pet_command","battle_pet_skill"
 
 func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
+	# Reject forged encounter/set commands before canceling activities/dialogues.
+	var position_error:=""
+	if type=="auto" and str(command.get("name",""))=="set":
+		position_error=str(automation.command("set",command).reason)
+	elif type in ["wild_encounter","field_step","auto_start","auto","auto_step","stationary_encounters","stationary_keepalive"]:
+		position_error=encounter_command_error(command,type in ["wild_encounter","field_step"])
+	if not position_error.is_empty():return {"ok":false,"reason":position_error,"seq":command.get("seq",0),"type":"rejected"}
 	stationary.command(self,type)
 	var quest_conflict:bool=quest_auto.running and type in ["quest_talk","quest_choose","quest_close","quest_visit","quest_discard"]
 	if quest_auto.running:
@@ -650,6 +657,8 @@ func _cmd_begin_battle(command: Dictionary) -> Dictionary:
 
 ## Temporary stationary encounters; movement randomness remains shared.
 func _cmd_stationary_encounters(command: Dictionary) -> Dictionary:
+	var reason:=encounter_command_error(command,false)
+	if not reason.is_empty():return _reject(reason)
 	return stationary.start(self,command)
 
 func _cmd_stationary_keepalive(command: Dictionary) -> Dictionary:
@@ -671,24 +680,47 @@ func _cmd_no_random_encounters(command: Dictionary) -> Dictionary:
 	publish()
 	return {"ok":true,"enabled":command.enabled}
 
+## Encounter coordinates are assertions, never a movement command. Validate before
+## pressure/RNG or pending battle state changes, including no-encounter mode.
+func encounter_position_error(map_id: int, cell: Vector2i) -> String:
+	if automation.position_map>=0 and map_id==automation.position_map and cell==automation.position_cell:return ""
+	var reason:="位置已改变或尚未确认，请同步服务器位置后再遇敌。"
+	automation.log_line("[遇敌位置拒绝] 请求 %d (%d,%d)，服务器 %d (%d,%d)。"%[map_id,cell.x,cell.y,automation.position_map,automation.position_cell.x,automation.position_cell.y])
+	return reason
+
+func encounter_command_error(command: Dictionary, required: bool = true) -> String:
+	if not required and not command.has("map_id") and not command.has("cell"):return ""
+	var point=command.get("cell",[])
+	if not session._integer(command.get("map_id",-1),0,2147483647) or not point is Array or point.size()!=2 or not session._integer(point[0],0,2147483647) or not session._integer(point[1],0,2147483647):
+		automation.log_line("[遇敌位置拒绝] 无效地图或坐标参数。")
+		return "无效的遇敌位置。"
+	return encounter_position_error(int(command.map_id),Vector2i(int(point[0]),int(point[1])))
+
 func _cmd_field_step(command: Dictionary) -> Dictionary:
+	var reason:=encounter_command_error(command)
+	if not reason.is_empty():return _reject(reason)
+	if battle_open or not session._pending.is_empty():return _stale("battle active or awaiting settlement")
 	# Only walking randomness is disabled. Explicit battles/hunting keep their authority.
 	if session._profile.get("no_random_encounters",false):return {"ok":true,"hit":false,"battle":false}
-	var hit: bool = encounter_catalog.step(int(command.map_id),_cell(command),encounter_rng)
+	var hit: bool = encounter_catalog.step(automation.position_map,automation.position_cell,encounter_rng)
 	if not hit or not bool(command.get("encounter",false)):return {"ok":true,"hit":hit,"battle":false}
-	var opened := wild_encounter(int(command.map_id),_cell(command))
+	var opened := wild_encounter(automation.position_map,automation.position_cell)
 	opened.hit = true
 	opened.battle = bool(opened.ok)
 	opened.ok = true
 	return opened
 
 func _cmd_wild_encounter(command: Dictionary) -> Dictionary:
-	var result := wild_encounter(int(command.map_id),_cell(command))
+	var reason:=encounter_command_error(command)
+	if not reason.is_empty():return _reject(reason)
+	var result := wild_encounter(automation.position_map,automation.position_cell)
 	return result
 
 func wild_encounter(map_id: int, cell: Vector2i, training_groups: Variant = null) -> Dictionary:
-	if battle.snapshot().active:return _stale("battle active")
-	var troop: Dictionary = encounter_catalog.roll(map_id,cell,encounter_rng,session.snapshot().get("original_items",[]))
+	var reason:=encounter_position_error(map_id,cell)
+	if not reason.is_empty():return _reject(reason)
+	if battle_open or not session._pending.is_empty() or battle.snapshot().active:return _stale("battle active or awaiting settlement")
+	var troop: Dictionary = encounter_catalog.roll(automation.position_map,automation.position_cell,encounter_rng,session.snapshot().get("original_items",[]))
 	if troop.is_empty():
 		var reply := _reject(encounter_catalog.last_error)
 		reply.skipped = "data"
@@ -1034,11 +1066,6 @@ func _cmd_reviewed_hunt_travel(command: Dictionary) -> Dictionary:
 	return {"ok":true,"target":{"map_id":int(plan.map_id),"area_id":int(plan.area_id),"template_id":int(plan.template_id),"cell":[plan.cell.x,plan.cell.y],"level_one":bool(plan.level_one)},"notice":reviewed_hunt_travel.POLICY}
 
 func _cmd_auto_start(command: Dictionary) -> Dictionary:
-	if command.has("map_id"):
-		var values=command.get("cell",[])
-		if not values is Array or values.size()!=2 or not session._integer(command.map_id,0,2147483647) or not session._integer(values[0],0,2147483647) or not session._integer(values[1],0,2147483647):return _reject("无效的找宠位置。")
-		if automation.position_map>=0 and (int(command.map_id)!=automation.position_map or _cell(command)!=automation.position_cell):return _reject("位置已改变，请先完成服务器确认的移动再开始自动活动。")
-		if automation.position_map<0 and int(command.map_id) in [41,42,31806]:return _reject("请先由服务器确认捕宠落点。")
 	return automation.start(command)
 
 func _cmd_auto_update(command: Dictionary) -> Dictionary:

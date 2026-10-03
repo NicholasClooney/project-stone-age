@@ -169,6 +169,7 @@ func run() -> void:
 	backend.automation.client_attached = false
 	backend.encounter_rng.seed = 515151
 	var cell: Vector2i = landing["500/639"]
+	backend.handle({"type":"report_position","map_id":500,"cell":[cell.x,cell.y]})
 	var started: Dictionary = backend.handle({"type":"auto_start","kind":"hunt","map_id":500,"cell":[cell.x,cell.y],"filter":{"template":302,"level_one":true,"total":-8,"offsets":[],"auto_capture":false,"limit":0,"fast":false}})
 	check(started.get("ok",false),"a 左迪洛斯 Lv.1 hunt starts at 五十年前波拉岛 %s" % started.get("reason",""))
 	var deadline := Time.get_ticks_msec()+120000
