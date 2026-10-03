@@ -92,12 +92,13 @@ static func sacrifice_templates(new_count: Variant) -> Array[int]:
 	if int(new_count)==5:return [693,694,695,696]
 	return [692+int(new_count)]
 
-## pets is the carried array. Species is the existing canonical template identity.
+## pets is the full carried array; Session validates its current capacity.
+## Species is the existing canonical template identity.
 ## Explicit UID choice is a project supplement; empty choice keeps C slot order.
 static func select_sacrifices(pets: Variant, new_count: Variant, selected_ids: Variant = []) -> Dictionary:
 	var required := sacrifice_templates(new_count)
 	if required.is_empty():return {"ok":false,"reason":"invalid_count"}
-	if not pets is Array or pets.size()>5 or not selected_ids is Array:return {"ok":false,"reason":"invalid_pets"}
+	if not pets is Array or not selected_ids is Array:return {"ok":false,"reason":"invalid_pets"}
 	var seen := {}
 	for pet in pets:
 		if not pet is Dictionary or not pet.get("pet_id") is String or pet.pet_id.is_empty() or seen.has(pet.pet_id):return {"ok":false,"reason":"invalid_pet_uid"}
