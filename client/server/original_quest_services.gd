@@ -2,7 +2,8 @@ extends RefCounted
 ## Explicit reviewed service dispatch. Never put this catalog in a snapshot.
 const GoldenBui=preload("res://server/golden_bui_service.gd")
 const JugShop=preload("res://server/original_jug_shop_service.gd")
-const KINDS := ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_jug_shop"]
+const Prison=preload("res://server/original_prison_service.gd")
+const KINDS := ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_jug_shop","original_prison"]
 var private_catalog: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 func _init()->void:rng.randomize()
@@ -12,9 +13,18 @@ func context(backend)->Dictionary:
   if parsed is Dictionary:private_catalog=parsed
  return {"catalog":private_catalog,"rng":rng,"in_party":backend.quest_visit_guard.is_valid() and not str(backend.quest_visit_guard.call()).is_empty()}
 func open(router,backend,npc:Dictionary)->Dictionary:
+ if str(npc.get("kind",""))==Prison.KIND:
+  if context(backend).in_party:return {"ok":false,"reason":"请先退出团队再办理监狱退场。"}
+  return apply(router,backend,npc,Prison.open(npc,backend.session.snapshot()))
  if str(npc.get("kind",""))==JugShop.KIND:return apply(router,backend,npc,JugShop.open(npc,backend.session.snapshot()))
  return apply(router,backend,npc,GoldenBui.open(npc,backend.session.snapshot(),context(backend)))
 func reply(router,backend,current:Dictionary,choice:String,text:String)->Dictionary:
+ if str(current.npc.get("kind",""))==Prison.KIND:
+  var retry_current:Dictionary=current.duplicate(true)
+  if context(backend).in_party:return {"ok":false,"reason":"请先退出团队再办理监狱退场。"}
+  var response:Dictionary=apply(router,backend,current.npc,Prison.reply(current.npc,backend.session.snapshot(),current.service_state,choice,text))
+  if not response.get("ok",false) and response.get("reason","")=="save_failed" and router.pending.is_empty():router.pending=retry_current
+  return response
  if str(current.npc.get("kind",""))==JugShop.KIND:return apply(router,backend,current.npc,JugShop.reply(current.npc,backend.session.snapshot(),current.service_state,choice,text))
  if text.length()>120:return {"ok":false,"reason":"输入内容过长。"}
  var authority:=context(backend)
@@ -23,7 +33,14 @@ func reply(router,backend,current:Dictionary,choice:String,text:String)->Diction
 func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
  if not bool(plan.get("ok",false)):return {"ok":false,"reason":str(plan.get("reason","无法交谈。"))}
  var actions:Dictionary=plan.get("actions",{})
- if str(npc.get("kind",""))==JugShop.KIND:
+ if str(npc.get("kind",""))==Prison.KIND:
+  if not Prison.valid_actions(npc,actions) or (not actions.is_empty() and not bool(plan.get("close",false))):return {"ok":false,"reason":"无效的监狱计划。"}
+  if not router.allowed(backend,npc) or context(backend).in_party:return {"ok":false,"reason":"位置或团队状态已改变。"}
+  if actions.has("Warp"):
+   var target:PackedStringArray=str(actions.Warp).split(",")
+   var info:Dictionary=backend.session.world_catalog.info(int(target[0]))
+   if info.is_empty() or int(target[1])<0 or int(target[2])<0 or int(target[1])>=int(info.width) or int(target[2])>=int(info.height):return {"ok":false,"reason":"监狱退场目的地尚未导入，请稍后重试。"}
+ elif str(npc.get("kind",""))==JugShop.KIND:
   if not JugShop.valid(npc) or (not actions.is_empty() and (actions!={"DelStone":"1150","GetItem":"2708"} or not bool(plan.get("close",false)))):return {"ok":false,"reason":"无效的原水壶购买计划。"}
  else:
   if str(npc.get("kind","")) not in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]:return {"ok":false,"reason":"尚未支持的原服务。"}
