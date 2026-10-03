@@ -2,7 +2,7 @@
 
 The source handoff pins original data and registers a **disabled** production
 module. `tools/transmigration_final_quest_sources.json` imports 12 source-bound
-NPCs and five items; the descriptor has `enabled_events=[]` until integration
+cave NPCs, five prison services and five items; the descriptor has `enabled_events=[]` until integration
 approval. `client/tests/fixtures/transmigration-final-identities.json` was read
 directly from original create blocks, independently of the runtime importer.
 The larger `transmigration-final-source.json` is an installable test catalog,
@@ -122,3 +122,27 @@ village/round selections against pinned source lines. The runtime test fixture
 and private imported catalog include these records. NPC/item counts remain
 309/339 and production events remain disabled. Settlement construction is
 owned by I and is unchanged by this content correction.
+
+
+## Prison catalog v1.1
+
+The B-policy content extension adds exactly five source-bound services (17
+module NPCs, 314 global NPCs/339 items). Each has kind `original_prison`,
+handler `Prison`, service_id equal to its original script, branches=[], and
+activation labels48–52. These are directory tags, never player flag gates.
+`prison` has exactly role/warp/condition/money/del_item; absent source DelItem
+normalizes to an empty string. No duplicate top-level prison_role is accepted.
+`source_fields` retains all original fields and text, including the obsolete
+90% fee wording for source audit only. Runtime must show the project B rule.
+
+`client/data/quests/prison-identities.json` pins all five original create
+identities and raw script SHA/fields. Parser and common catalog projection
+reject unreviewed identities, branch additions, modified payloads, relocation
+and closed event labels. All four active readers deep-copy the same projection.
+The separate prison runtime owns fees, ticket transactions, free birth-village
+return and retry. This content piece leaves the production descriptor disabled.
+
+Targeted evidence: two prison service source tests, eight final source tests,
+four historical prison audit tests, prison_catalog_test and the unchanged
+king catalog regression. Private quest/art import exports314/339 and all five
+original sprites. No settlement code or live assets are changed.

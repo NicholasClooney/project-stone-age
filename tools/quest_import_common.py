@@ -211,7 +211,7 @@ def load_quest_module(reference, manifest):
     handlers = spec.get('handlers', {})
     if set(declared) & set(handlers):
         raise ValueError('Handler duplicates changeevent declaration')
-    if any(review.get('kind') not in ('warpman','npcenemy','timeman','original_jug_shop','original_transmigration') for review in handlers.values()):
+    if any(review.get('kind') not in ('warpman','npcenemy','timeman','original_jug_shop','original_transmigration','original_prison') for review in handlers.values()):
         raise ValueError('Quest handler not yet supported')
     selected_scripts = {**declared, **handlers}
     if any(extra.get('script') not in declared for extra in spec.get('supplements', [])):
@@ -227,7 +227,10 @@ def load_quest_module(reference, manifest):
             review = selected_scripts[script]
             kind = review.get('kind', 'changeevent')
             shop_data = None
-            if kind == 'original_transmigration':
+            if kind == 'original_prison':
+                from quest_prison_service import parse as parse_prison
+                shop_data = parse_prison(spec,texts,script,create,ordinal,fields,review)
+            elif kind == 'original_transmigration':
                 from quest_transmigration_service import parse as parse_transmigration
                 shop_data = parse_transmigration(spec,texts,script,create,ordinal,fields,review)
             elif kind == 'original_jug_shop':
@@ -262,7 +265,7 @@ def load_quest_module(reference, manifest):
                 continue
             if script in handlers:
                 from quest_source_handlers import keyword_warp, npc_enemy, fixed_enemy_audit
-                if kind == 'original_transmigration':
+                if kind in ('original_transmigration','original_prison'):
                     default,branches='',[]
                 elif kind == 'original_jug_shop':
                     default,branches='巴那姆的水壶：每只1150石币。',[]
@@ -365,7 +368,8 @@ def merge_quest_module(result, module):
     for npc in module['npcs']:
         from quest_jug_shop import is_reviewed_npc as reviewed_jug_shop
         from quest_transmigration_service import is_reviewed_npc as reviewed_transmigration
-        if 'kind' in npc and not reviewed_jug_shop(npc,module['module_id']) and not reviewed_transmigration(npc,module['module_id']) and (module['module_id'] != 'golden-bui' or npc.get('service_id') not in module.get('services', {})):
+        from quest_prison_service import is_reviewed_npc as reviewed_prison
+        if 'kind' in npc and not reviewed_jug_shop(npc,module['module_id']) and not reviewed_transmigration(npc,module['module_id']) and not reviewed_prison(npc,module['module_id']) and (module['module_id'] != 'golden-bui' or npc.get('service_id') not in module.get('services', {})):
             raise ValueError('Unreviewed service identity')
         if npc['id'] in ids:
             # The wind harp and Munde rewards share one original Event12 NPC.

@@ -72,7 +72,7 @@ class PrisonSources(unittest.TestCase):
         self.assertEqual({e['from_map'] for e in impact if not e['origin_currently_imported']},{5510,5576,30691,30692,30693,30694})
         spec=json.loads((ROOT/'tools/transmigration_final_quest_sources.json').read_text())
         self.assertFalse({'110','117'} & set(spec['world']['map_sources']))
-        self.assertNotIn('genout/wpm_117_6_5',spec['handlers'])
+        self.assertEqual(spec['handlers']['genout/wpm_117_6_5'], {'kind':'original_prison','events':[48,49,50,51,52]})
         self.assertEqual(json.loads((ROOT/'client/data/quests/transmigration-final.json').read_text())['enabled_events'],[])
 
 if __name__=='__main__':unittest.main()
