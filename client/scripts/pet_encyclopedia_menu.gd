@@ -13,6 +13,7 @@ const Encyclopedia = preload("res://scripts/pet_encyclopedia.gd")
 const Thumbs = preload("res://scripts/pet_thumbnails.gd")
 const PaletteSheet = preload("res://scripts/palette_sheet.gd")
 const PetTable = preload("res://scripts/pet_table.gd")
+const OwnedList = preload("res://scripts/pet_owned_list.gd")
 const AnimatedPortrait = preload("res://scripts/animated_portrait.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const PANEL_SIZE := Vector2(1200,720)
@@ -865,6 +866,7 @@ func _build_detail() -> void:
 	columns.add_child(_detail_art(entry))
 	columns.add_child(_detail_stats(entry))
 	columns.add_child(_detail_places(entry))
+	if not _detail_mobile:content.add_child(_owned_card(entry))
 
 func _column(width: float) -> VBoxContainer:
 	var column := VBoxContainer.new()
@@ -989,7 +991,7 @@ func _detail_stats(entry: Dictionary) -> VBoxContainer:
 			text.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 			text.custom_minimum_size = Vector2(280 if _detail_mobile else 390,0)
 			facts.add_child(text)
-		column.add_child(_owned_card(entry))
+		if _detail_mobile:column.add_child(_owned_card(entry))
 		return column
 	var low := 450+20*int(entry.rank)
 	facts.add_child(_fact("初始系数",str(entry.initial)))
@@ -1017,7 +1019,7 @@ func _detail_stats(entry: Dictionary) -> VBoxContainer:
 	column.add_child(_potential_card("满档 Lv.120 预测 · Lv.1 捕获",entry.get("potential",{}),"PotentialLv1"))
 	if not entry.get("wild_potential",{}).is_empty():
 		column.add_child(_potential_card("满档 Lv.120 预测 · 野生最低 Lv.%d 捕获" % int(entry.wild_potential.level),entry.wild_potential,"PotentialWild"))
-	column.add_child(_owned_card(entry))
+	if _detail_mobile:column.add_child(_owned_card(entry))
 	return column
 
 func _fact(caption: String, value: String) -> HBoxContainer:
@@ -1116,17 +1118,14 @@ func _owned_card(entry: Dictionary) -> PanelContainer:
 	summary.name = "OwnedSummary"
 	summary.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 	stack.add_child(summary)
-	var rows := VBoxContainer.new()
-	rows.name = "OwnedIndividuals"
+	var rows := OwnedList.new()
+	rows.withdraw_requested.connect(withdraw_owned)
 	stack.add_child(rows)
 	_update_owned_card(card,entry,world.session.snapshot())
 	return card
 
 func _update_owned_card(card: Control, entry: Dictionary, profile: Dictionary) -> void:
 	var stack := card.get_node("OwnedStack")
-	var rows := stack.get_node("OwnedIndividuals")
-	var existing := {}
-	for row in rows.get_children():existing[str(row.get_meta("pet_id"))] = row
 	var individuals := []
 	for location in ["pets","pet_storage"]:
 		var pets: Array = profile.get(location,[])
@@ -1134,41 +1133,12 @@ func _update_owned_card(card: Control, entry: Dictionary, profile: Dictionary) -
 			var pet: Dictionary = pets[index]
 			var own: Dictionary = book.entry_for_pet(pet)
 			if not own.is_empty() and own.id == entry.id:individuals.append({"pet":pet,"location":location,"index":index})
-	var carried := 0
-	for item in individuals:
-		var pet: Dictionary = item.pet
-		var uid := str(pet.get("pet_id",""))
-		var row: VBoxContainer = existing.get(uid)
-		if row == null:
-			row = VBoxContainer.new()
-			row.name = "OwnedPet_"+uid
-			row.set_meta("pet_id",uid)
-			var label := PetTable.text("","meta",PetTable.TEXT)
-			label.name = "IndividualStats"
-			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
-			row.add_child(label)
-			var button: Button = world.button("移到随身",func():withdraw_owned(uid))
-			button.name = "WithdrawOwned_"+uid
-			row.add_child(button)
-			rows.add_child(row)
-		existing.erase(uid)
-		var position := "仓库"
-		if item.location == "pets":
-			carried += 1
-			position = "随身"
-			if int(item.index) == int(profile.get("active_pet",-1)):position += " · 出战"
-			if int(item.index) == int(profile.get("ride_pet",-1)):position += " · 骑乘"
-		row.get_node("IndividualStats").text = "%s · Lv.%d · %s\n攻 %d 防 %d 敏 %d · 三围合 %d\n血 %d / %d · %s" % [pet.get("name",entry.name),int(pet.get("level",1)),position,int(pet.get("attack",0)),int(pet.get("defence",0)),int(pet.get("speed",0)),int(pet.get("attack",0))+int(pet.get("defence",0))+int(pet.get("speed",0)),int(pet.get("hp",0)),int(pet.get("max_hp",0)),uid]
-		var button: Button = row.get_node("WithdrawOwned_"+uid)
-		button.visible = item.location == "pet_storage"
-		button.disabled = not _withdraw_pending.is_empty()
-	for row in existing.values():
-		rows.remove_child(row)
-		row.queue_free()
+	var carried := individuals.filter(func(item):return item.location == "pets").size()
+	stack.get_node("OwnedList").update_snapshot(individuals,profile,not _withdraw_pending.is_empty())
 	var text := "还没有。"
 	if not individuals.is_empty():
 		var best: Dictionary = book.owned_best(profile,entry)
-		text = "共 %d 只（随身 %d · 仓库 %d）\n最佳120级三围合 %d · %s\n最佳120级攻击 %d · %s" % [individuals.size(),carried,individuals.size()-carried,int(best.best_sum),best.best_sum_pet,int(best.best_attack),best.best_attack_pet]
+		text = "共 %d 只（随身 %d · 仓库 %d）\n最佳120级三围合 %d · %s\n最佳120级攻击 %d · %s\n金框/★：120级最佳；并列取随身优先、原顺序首只。" % [individuals.size(),carried,individuals.size()-carried,int(best.best_sum),best.best_sum_pet,int(best.best_attack),best.best_attack_pet]
 	stack.get_node("OwnedSummary").text = text
 
 ## UID is re-resolved at the authority, never an old displayed storage index.
