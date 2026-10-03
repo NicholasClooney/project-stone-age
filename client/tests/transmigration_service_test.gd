@@ -43,6 +43,14 @@ func run()->void:
   print("KING REJECTION: ",first)
   for link in links:link.close()
   server.stop();server.queue_free();b.queue_free();quit(1);return
+ var untouched:Dictionary=b.session.snapshot()
+ var forged:Dictionary=await request(links[0],{"type":"transmigration","action":"confirm","token":first.transmigration.token,"new_count":5,"seed":1,"base_stats":{"vitality":999}})
+ check(not forged.ok and b.session.snapshot()==untouched and b.transmigration.pending.token==first.transmigration.token,"mixed valid token and forged computed fields rejects whole request")
+ var bad_uid:Dictionary=await request(links[0],{"type":"transmigration","action":"preview","npc_id":KING,"pet_ids":["pet-2"]})
+ check(not bad_uid.ok and b.session.snapshot()==untouched and b.transmigration.pending.token==first.transmigration.token,"wrong-template UID cannot mutate profile or supersede valid preview")
+ check((await request(links[1],{"type":"gm_grant_points","amount":1})).ok,"real second-device profile command changes revision")
+ var changed:Dictionary=b.session.snapshot()
+ check(not (await request(links[0],{"type":"transmigration","action":"confirm","token":first.transmigration.token})).ok and b.session.snapshot()==changed,"profile change rejects old preview without any sacrifice")
  var second:Dictionary=await request(links[1],{"type":"transmigration","action":"preview","npc_id":KING,"pet_ids":["pet-1"]})
  check(second.has("transmigration") and second.transmigration.token!=first.transmigration.token,"new device preview supersedes old token")
  if not second.has("transmigration"):
