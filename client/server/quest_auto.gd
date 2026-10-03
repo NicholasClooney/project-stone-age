@@ -245,7 +245,7 @@ func advance(b) -> void:
   if path.is_empty():phase="travel";return
   var cell:Vector2i=path.pop_front()
   if absi(cell.x-b.automation.position_cell.x)+absi(cell.y-b.automation.position_cell.y)!=1:stop(b,"原通道路线已变化。");return
-  b.automation.position_changed(10204,cell)
+  b.automation.position_changed(10204,cell,false,"walk")
   emit_position(b,{"map_id":10204,"cell":[cell.x,cell.y]})
   var reply:Dictionary=b._cmd_field_step({"map_id":10204,"cell":[cell.x,cell.y],"encounter":true})
   if reply.get("battle",false):start_battle(b)
