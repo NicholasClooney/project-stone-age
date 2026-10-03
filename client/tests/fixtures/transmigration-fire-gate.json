@@ -1,0 +1,97 @@
+{
+  "manifest": {
+    "version": 1,
+    "id": "fire-gate-fixture",
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+      "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3",
+      "gmsv/data/npc/genout/wpm_20301_200_39": "f84e4676cb452083373bc330d4b8f1d5a66e749c028abacac7f098a033ea6ea2"
+    },
+    "creates": [
+      "gmsv/data/npc/genout/dungeon01.create"
+    ],
+    "scripts": {},
+    "handlers": {
+      "genout/wpm_20301_200_39": {
+        "kind": "warpman",
+        "events": [
+          40
+        ]
+      }
+    },
+    "items": [],
+    "jobs": [],
+    "reward_enemies": []
+  },
+  "module": {
+    "version": 1,
+    "items": {},
+    "npcs": [
+      {
+        "id": "genout/wpm_20301_200_39@20301:200:39",
+        "source_script": "genout/wpm_20301_200_39",
+        "source_create": "gmsv/data/npc/genout/dungeon01.create",
+        "source_create_index": 91,
+        "events": [
+          40
+        ],
+        "name": "拉特拉的守门人",
+        "map_id": 20301,
+        "cell": [
+          200,
+          39
+        ],
+        "graphic": 16306,
+        "facing": 0,
+        "role": "quest",
+        "text": "\n\n关于继续前进的资格\n请你仔细想想后再过来一趟",
+        "branches": [
+          {
+            "event": -1,
+            "type": "FREEWARP",
+            "condition": "LV>0&ENDEV=4&ENDEV=40,LV>0&ENDEV=4&NOWEV=40",
+            "texts": {
+              "AcceptMsg": "\n\n你想要继续前进吗？\n请你好好想一想\n这前面对你有什么意义再前进。"
+            },
+            "actions": {
+              "Warp": "20301,200,41"
+            },
+            "enabled": true,
+            "events": [
+              40
+            ],
+            "source": "genout/wpm_20301_200_39",
+            "source_fields": {
+              "WARP": "20301,200,41",
+              "FREE": "LV>0&ENDEV=4&ENDEV=40,LV>0&ENDEV=4&NOWEV=40",
+              "MONEY": "-1",
+              "FreeMsg": "\\n\\n你想要继续前进吗？\\n请你好好想一想\\n这前面对你有什么意义再前进。",
+              "PayMsg": "\\n\\n关于继续前进的资格\\n请你仔细想想后再过来一趟",
+              "PartyMsg": "\\n想继续前进的话\\n请一个人过来",
+              "MoneyMsg": "\\n\\n继续前进的资格是什么\\n请你想一想后在过来一趟。"
+            },
+            "item_deletion_scope": "bag",
+            "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"
+          }
+        ]
+      }
+    ],
+    "jobs": [],
+    "reward_pets": {},
+    "provenance": {
+      "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+      "sources": {
+        "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+        "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+        "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+        "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3",
+        "gmsv/data/npc/genout/wpm_20301_200_39": "f84e4676cb452083373bc330d4b8f1d5a66e749c028abacac7f098a033ea6ea2"
+      },
+      "client": "StoneAge 2.5; logical static graphics, no fallback"
+    },
+    "module_id": "fire-gate-fixture"
+  }
+}
