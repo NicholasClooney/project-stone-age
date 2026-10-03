@@ -27,7 +27,9 @@ func setup():
  return b
 func place(b,id:String) -> void:
  var npc:Dictionary=b.original_quests.npc_by_id(id)
- b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
+ if int(npc.map_id) in range(31801,31807):
+  check(preload("res://tests/support/legacy_cave_route.gd").approach(b,npc).get("ok",false),"fee fixture follows original miner entrance and five floors")
+ else:b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
 func talk(b,id:String) -> Dictionary:
  place(b,id)
  return b.handle({"type":"quest_talk","npc_id":id})
@@ -100,6 +102,7 @@ func pets() -> void:
 func fees() -> void:
  var b=setup();Rules.set_flag(b.session._profile,"ended",27,true)
  b.session._profile.player.gold=999
+ place(b,MINER)
  var before:Dictionary=b.session.snapshot()
  check(not trade(b,MINER).ok and b.session.snapshot()==before,"original fee1000 rejects999 without ticket")
  b.session._profile.player.gold=1000
