@@ -66,6 +66,7 @@ func snapshot(backend) -> Dictionary:
    elif event==45:preload("res://server/four_jewels_helper.gd").steps(self,backend,profile,quest)
    elif event in [28,29,30,31,54]:preload("res://server/brothers_helper.gd").steps(self,backend,profile,quest)
    restart_steps(backend,profile,quest)
+   preload("res://server/quest_helper_status.gd").apply(profile,quest)
    if ended and quest.repeatable and not quest.can_restart and str(quest.blocked_reason).is_empty():quest.blocked_reason="可重做；当前尚未满足原任务清理条件"
   for step in quest.steps:
    step.quest_id=int(job.id)
