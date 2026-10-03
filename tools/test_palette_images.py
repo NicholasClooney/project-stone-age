@@ -5,7 +5,7 @@ from pathlib import Path
 
 from PIL import Image
 
-from palette_images import convert
+from palette_images import convert, shared_palette, to_shared
 
 
 def rgba(colours, alpha=255):
@@ -16,6 +16,13 @@ def rgba(colours, alpha=255):
 
 
 class PaletteImagesTest(unittest.TestCase):
+    def test_neighbouring_original_colours_never_share_approximate_bucket(self):
+        colours = [(240,216,149),(243,218,155),(237,207,133),(237,210,132)]
+        image = Image.new('RGBA',(4,1))
+        image.putdata([(*colour,255) for colour in colours])
+        written = to_shared(image,shared_palette([set(colours)]))
+        self.assertEqual(written.convert('RGBA').tobytes(),image.tobytes())
+
     def test_images_share_one_palette_and_stay_pixel_identical(self):
         with tempfile.TemporaryDirectory() as folder:
             folder = Path(folder)

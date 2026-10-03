@@ -51,11 +51,13 @@ def shared_palette(sets):
 def to_shared(image, entries):
     """The image as a 'P' image with this palette (index 0 transparent)."""
     rgba = image.convert("RGBA")
-    rgb = Image.new("RGB", rgba.size, entries[0])
-    rgb.paste(rgba.convert("RGB"), mask=rgba.getchannel("A"))
-    palette = Image.new("P", (1, 1))
-    palette.putpalette([v for c in entries for v in c])
-    result = rgb.quantize(palette=palette, dither=Image.Dither.NONE)
+    # Pillow's palette quantizer caches approximate RGB buckets, so nearby
+    # source colours can collapse even when both exist in the palette.
+    # These colours are already known: map each opaque RGB to its exact index.
+    indices = {colour: index for index, colour in enumerate(entries) if index}
+    result = Image.new("P", rgba.size)
+    result.putpalette([v for colour in entries for v in colour])
+    result.putdata([indices[pixel[:3]] if pixel[3] else 0 for pixel in rgba.getdata()])
     result.info["transparency"] = 0
     return result
 
