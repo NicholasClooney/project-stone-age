@@ -135,9 +135,7 @@ func refresh_npc_state() -> bool:
 
 func npc_by_id(id: String) -> Dictionary:
 	refresh_npc_state()
-	for npc in catalog.active_npcs():
-		if str(npc.id)==id:return npc
-	return {}
+	return catalog.active_npc(id)
 
 func branch_for(npc: Dictionary, profile: Dictionary, spoken: String = "") -> Dictionary:
 	for branch in npc.get("branches",[]):

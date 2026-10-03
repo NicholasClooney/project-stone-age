@@ -30,32 +30,44 @@ func _init() -> void:
 func active_npcs() -> Array:
  var result: Array = []
  for npc in npcs:
-  if not _enabled(npc.get("events", [])): continue
-  var override:Dictionary=npc_overrides.get(str(npc.id),{})
-  if bool(override.get("hidden",false)):continue
-  if npc.has("source_spawn") and not override.has("map_id"):continue
-  var active: Dictionary = npc.duplicate(true)
-  if override.has("map_id"):
-   active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
-  if active.get("handler","")=="TimeMan":
-   var visual:Dictionary=active.get("time_visuals",{}).get(str(override.get("time_mode","main")),{})
-   for field in ["graphic","text","path","offset","bitmap_id","source_pose"]:
-    if visual.has(field):active[field]=visual[field]
-   result.append(active)
-   continue
-  if str(active.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"] and 44 in enabled_events:
-   result.append(active)
-   continue
-  if str(active.get("kind",""))=="original_jug_shop" and 40 in enabled_events:
-   result.append(active)
-   continue
-  active.branches = []
-  for branch in npc.get("branches", []):
-   if branch.get("enabled", false) and _enabled(branch.get("events", [])):
-    active.branches.append(branch.duplicate(true))
-  if not active.branches.is_empty(): result.append(active)
+  var active: Dictionary=_project_active_npc(npc)
+  if not active.is_empty():result.append(active)
  result.append_array(service_npcs.duplicate(true))
  return result
+
+## Same ordered projection as active_npcs(); no cross-character cache and no
+## mutable catalog record escapes. A lookup copies only its matching record.
+func active_npc(id: String) -> Dictionary:
+ for npc in npcs:
+  if str(npc.id)!=id:continue
+  var active: Dictionary=_project_active_npc(npc)
+  if not active.is_empty():return active
+ for npc in service_npcs:
+  if str(npc.id)==id:return npc.duplicate(true)
+ return {}
+
+func _project_active_npc(npc: Dictionary) -> Dictionary:
+ if not _enabled(npc.get("events", [])): return {}
+ var override:Dictionary=npc_overrides.get(str(npc.id),{})
+ if bool(override.get("hidden",false)):return {}
+ if npc.has("source_spawn") and not override.has("map_id"):return {}
+ var active: Dictionary = npc.duplicate(true)
+ if override.has("map_id"):
+  active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
+ if active.get("handler","")=="TimeMan":
+  var visual:Dictionary=active.get("time_visuals",{}).get(str(override.get("time_mode","main")),{})
+  for field in ["graphic","text","path","offset","bitmap_id","source_pose"]:
+   if visual.has(field):active[field]=visual[field]
+  return active
+ if str(active.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"] and 44 in enabled_events:
+  return active
+ if str(active.get("kind",""))=="original_jug_shop" and 40 in enabled_events:
+  return active
+ active.branches = []
+ for branch in npc.get("branches", []):
+  if branch.get("enabled", false) and _enabled(branch.get("events", [])):
+   active.branches.append(branch.duplicate(true))
+ return active if not active.branches.is_empty() else {}
 func _enabled(events: Array) -> bool:
  for event in events:
   if int(event) in enabled_events: return true
