@@ -914,7 +914,12 @@ func ui_picture(ident: int, anchor: Vector2, parent: Control) -> void:
 	image.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	parent.add_child(image)
 
+var revival_phone: VBoxContainer
+
 func clear_choices() -> void:
+	if is_instance_valid(revival_phone):
+		revival_phone.queue_free()
+		revival_phone=null
 	choice_panel.position.x = 0
 	for child in choice_panel.get_children():
 		choice_panel.remove_child(child)
@@ -973,6 +978,23 @@ func _request_action(action: String) -> void:
 		description.add_theme_color_override("font_outline_color",Color.BLACK)
 		description.add_theme_constant_override("outline_size",2)
 		choice_panel.add_child(description)
+		var revivals: Array=state.get("original_revival_items",[])
+		if not revivals.is_empty():
+			var uid: int=int(revivals[0].uid)
+			var revive:=choice("萨顿秘药 × %d" % revivals.size(),Vector2(590,190),func():
+				clear_choices()
+				selected_action="revival:%d" % uid
+				hint.text="选择复活目标；实际450～550，上限为最大HP。原版行为：活目标仍消耗。")
+			revive.name="OriginalRevivalItem"
+			revive.size=Vector2(180,40)
+			revive.tooltip_text="仅战斗；原标示500，实际450～550。人物或出战宠物；原版行为：活目标仍消耗。"
+			if size.x<600:
+				revive.hide()
+				_revival_phone_box("仅战斗 · 原标示500，实际450～550，上限为最大HP。原版行为：活目标仍消耗。")
+				_revival_phone_button("萨顿家的秘药 × %d" % revivals.size(),"OriginalRevivalItemPhone",func():
+					clear_choices()
+					selected_action="revival:%d" % uid
+					_revival_phone_targets())
 		hint.text = "选择道具；右键 / Esc 取消。"
 	elif action == "pet":
 		show_pet_roster(0)
@@ -1053,6 +1075,7 @@ func own_target_code(index: int, dead_ok: bool) -> int:
 ## The actor showing a spirit's ref (player, pet, ally i, ally_pet i).
 func ref_actor_index(ref: Dictionary) -> int:
 	match str(ref.get("kind","")):
+		"enemy":return enemy_actor(int(ref.get("index",0)))
 		"player":return 0
 		"pet":return 2
 		"ally":return ally_actor(int(ref.get("index",0)))
@@ -1063,6 +1086,12 @@ func select_target(index: int) -> void:
 
 	if world_modal_open() or command_phase=="waiting": return
 	if elapsed < feedback_until or not bool(state.get("active",false)): return
+	if command_phase=="player" and selected_action.begins_with("revival:"):
+		var code:=10+enemy_index(index) if enemy_index(index)>=0 else own_target_code(index,true)
+		if code>=0:
+			player_target=code
+			complete_player_command(selected_action)
+		return
 	if command_phase=="player" and selected_action.begins_with("spirit:"):
 		var code := own_target_code(index,bool(state.get("spirits",{}).get(selected_action.trim_prefix("spirit:"),{}).get("dead",false)))
 		if code>=0:
@@ -1351,7 +1380,7 @@ func _advance_playback(delta: float) -> void:
 		target.visible = shown
 		target.position = sprite.position
 		target.size = sprite.texture.get_size()
-		var eligible := shown and not is_animating() and not world_modal_open() and bool(state.get("active",false)) and ((enemy_index(actor_index)>=0 and displayed_hp[actor_index]>0 and selected_action in ["attack","capture","pet_attack","pet_skill"]) or (actor_index==0 and selected_action=="item_target"))
+		var eligible := shown and not is_animating() and not world_modal_open() and bool(state.get("active",false)) and ((enemy_index(actor_index)>=0 and displayed_hp[actor_index]>0 and selected_action in ["attack","capture","pet_attack","pet_skill"]) or (actor_index==0 and selected_action=="item_target") or (selected_action.begins_with("revival:") and (enemy_index(actor_index)>=0 or own_target_code(actor_index,true)>=0)))
 		target.disabled = not eligible
 		target.mouse_default_cursor_shape = Control.CURSOR_POINTING_HAND if eligible else Control.CURSOR_ARROW
 		var highlight: Panel = target_highlights[actor_index]
@@ -1660,3 +1689,45 @@ func update_ally_mount_health(health: Dictionary) -> void:
 		displayed_ally_mounts.append(mount.duplicate(true))
 		ally_mount_bars[i].visible = int(ally.get("mounted_sprite",-1))>=0 and int(mount.get("hp",0))>0
 		ally_mount_fills[i].size.x = 40.0*clampf(float(mount.get("hp",0))/maxf(1,float(mount.get("max_hp",1))),0,1)
+
+## Keep this newly supported item legible and tappable at phone widths;
+## existing native battle art remains at its normal aspect ratio.
+func _revival_phone_box(text: String) -> void:
+	revival_phone=VBoxContainer.new()
+	revival_phone.name="RevivalPhonePanel"
+	revival_phone.position=Vector2(12,minf(size.y-225,stage.position.y+600*stage.scale.y+10))
+	revival_phone.size=Vector2(size.x-24,205)
+	revival_phone.add_theme_font_override("font",load("res://assets/fonts/NotoSansSC.ttf"))
+	revival_phone.add_theme_font_size_override("font_size",14)
+	revival_phone.add_theme_constant_override("separation",8)
+	add_child(revival_phone)
+	var note:=Label.new()
+	note.text=text
+	note.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+	note.custom_minimum_size=Vector2(size.x-24,0)
+	revival_phone.add_child(note)
+
+func _revival_phone_button(text: String, id: String, callback: Callable, parent: Control = null) -> Button:
+	var button:=Button.new()
+	button.text=text;button.name=id
+	button.custom_minimum_size=Vector2(0,44)
+	button.pressed.connect(callback)
+	(revival_phone if parent==null else parent).add_child(button)
+	return button
+
+func _revival_phone_targets() -> void:
+	_revival_phone_box("选择复活目标 · 原版行为：活目标仍消耗")
+	var scroll:=ScrollContainer.new()
+	scroll.custom_minimum_size=Vector2(0,132)
+	revival_phone.add_child(scroll)
+	var targets:=VBoxContainer.new()
+	targets.size_flags_horizontal=Control.SIZE_EXPAND_FILL
+	scroll.add_child(targets)
+	for index in range(actors.size()):
+		if not bool(actors[index].get("enabled",true)):continue
+		if own_target_code(index,true)<0 and enemy_index(index)<0:continue
+		var title: String=str(actor_labels[index].text)
+		_revival_phone_button(title+(" · 倒下" if health_of(state,index)<=0 else " · 存活，仍消耗"),"RevivalPhoneTarget%d"%index,func():
+			select_target(index)
+			if is_instance_valid(revival_phone):revival_phone.queue_free();revival_phone=null,targets)
+	_revival_phone_button("取消","RevivalPhoneCancel",cancel_selection)

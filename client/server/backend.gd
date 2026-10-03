@@ -476,7 +476,7 @@ func _required_arguments(method: String) -> int:
 func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	if type=="use_item":
 		if command.has("pet_id") and not command.has("item"):return _reject("missing item")
-		if battle_open:return _reject("野外道具不能在战斗中使用；原战斗道具回合尚未接入。")
+		if battle_open:return _reject("野外道具不能在战斗中使用；复活秘药请从战斗道具菜单选择。")
 	var before: Dictionary=session.snapshot() if type in ["use_item","equip_item"] else {}
 	var spec: Array = PROFILE_COMMANDS[type]
 	var arguments := []
@@ -622,7 +622,7 @@ func _cmd_open_battle(command: Dictionary) -> Dictionary:
 	# Freeze source loot metadata from the config issued by this authority.
 	config = config.duplicate(true)
 	# Borrowed source presentation is issued only by this authority.
-	for key in ["capture_only","capture_destination","capture_slots","can_capture"]:
+	for key in ["capture_only","capture_destination","capture_slots","can_capture","original_revival_items","original_revival_budget","revival_transaction","pvp","norisk"]:
 		config.erase(key)
 		if session._pending.has(key):config[key] = session._pending[key]
 	config.erase("training_borrow")
@@ -808,6 +808,11 @@ func set_capture_assist(enabled: bool) -> void:
 
 func _cmd_battle_command(command: Dictionary) -> Dictionary:
 	if not battle_open:return _stale("no open battle")
+	if str(command.get("action","")).begins_with("revival:"):
+		if not session._integer(command.get("target"),0,19):return _reject("无效的复活目标。")
+		if not party_battle():
+			var reason: String=battle.revival_refusal({"kind":"player","index":-1},str(command.action),int(command.target))
+			if not reason.is_empty():return _reject(reason)
 	if party_battle():
 		# The turn resolves once every player has sent theirs (or on the
 		# timer); the host then presents it to every participant.
@@ -867,7 +872,8 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	var before: Dictionary = session.snapshot()
 	var capture_only := bool(session._pending.get("capture_only",false)) and not party_battle()
 	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0))))
-	var atomic: bool=capture_only or quest_transaction
+	var revival_transaction: bool=_revival_transaction()
+	var atomic: bool=capture_only or quest_transaction or revival_transaction
 	var pending_before: Dictionary = session._pending.duplicate(true) if atomic and not bool(state.active) else {}
 	var capture_events_before: Array = session.capture_events.duplicate(true) if atomic and not bool(state.active) else []
 	# A party battle settles this player's own slice (its own battle id and
@@ -882,7 +888,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			session.capture_events = capture_events_before
 			stationary.settled(self,state,false)
 			state.settled = false
-			state.settlement_error = "任务战保存失败，已回滚奖励与传送；请检查保存位置后再次结束战斗。" if quest_transaction else "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
+			state.settlement_error = "复活道具战保存失败，已回滚道具、体力与奖励；再次结束战斗可重试。" if revival_transaction else "任务战保存失败，已回滚奖励与传送；请检查保存位置后再次结束战斗。" if quest_transaction else "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
 			state.xp = 0;state.gold = 0;state.result_summary = []
 			battle_state = state
 			_emit({"type":"battle_turn","state":state.duplicate(true)})
@@ -934,7 +940,7 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	# 自动练级 met the next troop, LAN phase 4c) is not an error.
 	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
-	if bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
+	if _revival_transaction() or bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
 		var retried := _after_turn(battle.snapshot())
 		if not bool(retried.get("settled",false)):return _reject(str(retried.get("settlement_error","捕获未结算")))
 	return {"ok":true,"outcome":close_battle()}
@@ -1230,3 +1236,6 @@ func _cmd_quest_auto_start(command: Dictionary) -> Dictionary:
 func _cmd_quest_auto_stop(_command: Dictionary) -> Dictionary:
 	quest_auto.stop(self)
 	return {"ok":true}
+
+func _revival_transaction() -> bool:
+	return bool(session._pending.get("revival_transaction",false)) or not session._pending.get("original_revival_items",[]).is_empty()

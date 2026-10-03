@@ -36,7 +36,7 @@ func helmet_saves():
  var s=strong();var uid:=add(s,2418);var axe:=add(s,2485)
  equip(s,axe);s._profile.original_instances[1].durability=4321
  # Actual old v6: the unsupported reward was a bag item with durability 0.
- var old:Dictionary=s.snapshot();old.original_equipment.erase("head");old.original_instances[0].durability=0
+ var old:Dictionary=s.snapshot();old.original_equipment.erase("head");old.original_equipment.erase("body");old.original_instances[0].durability=0
  var path:="user://helmet-v6.json";remove_files(path);write(path,old)
  var loaded=Session.new()
  check(loaded.load_game(path),"genuine v6 without optional HEAD loads")

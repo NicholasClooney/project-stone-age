@@ -127,6 +127,11 @@ func submit_slot(slot: int, action: String, target: int = -1) -> String:
 	if slot_hp(slot)<=0:return "你已倒下，等待队友结束战斗。"
 	if action in ["capture","switch"]:return "组队战斗暂不能捕捉或换宠（下一阶段开放）。"
 	if action in ["mirror_self","mirror_pet"]:return "组队战斗暂不能使用镜子的精灵。"
+	if action.begins_with("revival:"):
+		var why:=revival_refusal(_caster(slot),action,target,slot)
+		if not why.is_empty():return why
+		_commands[slot]={"action":action,"target":target,"ref":revival_target(target,slot)}
+		return ""
 	if action.begins_with("spirit:"):
 		var why := spirit_refusal(_caster(slot),action.trim_prefix("spirit:"),target,slot)
 		if not why.is_empty():return why
@@ -319,6 +324,9 @@ func _extra_action(actor: Dictionary, _action: String) -> void:
 		return
 	var command: Dictionary = _commands.get(slot,_auto_command(slot))
 	_last_outcome = str(command.action)
+	if str(command.action).begins_with("revival:"):
+		_cast_revival(_caster(slot),str(command.action),command.ref)
+		return
 	if str(command.action).begins_with("spirit:"):
 		_cast_spirit(_caster(slot),str(command.action).trim_prefix("spirit:"),command.get("ref",_target_ref(int(command.target),slot)))
 		return
@@ -597,7 +605,9 @@ func _slot_pets(slot: int, source: Dictionary = {}) -> Array:
 	var ally_pets: Array = source.get("ally_pets",_state.ally_pets) if not source.is_empty() else _state.ally_pets
 	var member: Dictionary = allies[slot-1]
 	var active := int(member.get("active_pet",-1))
-	if active>=0 and active<roster.size() and not ally_pets[slot-1].is_empty():roster[active].hp = int(ally_pets[slot-1].get("hp",0))
+	if active>=0 and active<roster.size() and not ally_pets[slot-1].is_empty():
+		roster[active].hp = int(ally_pets[slot-1].get("hp",0))
+		roster[active].original_revival_count = int(ally_pets[slot-1].get("original_revival_count",0))
 	var ride := int(member.get("ride_pet",-1))
 	if ride>=0 and ride<roster.size() and not member.get("mount",{}).is_empty():roster[ride].hp = int(member.mount.get("hp",0))
 	return roster
@@ -620,6 +630,7 @@ func slice_for(slot: int, battle_id: String) -> Dictionary:
 	var ending := slot_outcome(slot)
 	var result := {"active":false,"battle_id":battle_id,"outcome":ending.outcome,"party_stay":ending.stay,"captured_species_list":[],"enemies":_slot_enemies(slot,_state.enemies),"pets":_slot_pets(slot),"party_xp":rewards_for(slot) if ending.outcome=="win" else {"player":0,"pets":_zeros(_slot_roster(slot).size())}}
 	if slot==0:
+		result.original_revival_items = _state.get("original_revival_items",[]).duplicate(true)
 		result.original_equipment_items = _state.get("original_equipment_items",[]).duplicate(true)
 		result.player_hp = int(_state.player_hp)
 		result.player_mp = int(_state.get("player_mp",0))
@@ -629,6 +640,7 @@ func slice_for(slot: int, battle_id: String) -> Dictionary:
 		result.pet_escapes = int(_state.get("pet_escapes",0))
 	else:
 		var member: Dictionary = _state.allies[slot-1]
+		result.original_revival_items = member.get("original_revival_items",[]).duplicate(true)
 		result.original_equipment_items = member.get("original_equipment_items",[]).duplicate(true)
 		result.player_hp = int(member.hp)
 		result.player_mp = int(member.get("mp",0))
@@ -731,6 +743,7 @@ func _remap_fields(target: Dictionary, source: Dictionary, slot: int) -> void:
 	target.ride_pet = int(me.get("ride_pet",-1)) if int(me.get("mount",{}).get("hp",0))>0 else -1
 	target.mounted_sprite = int(me.get("mounted_sprite",-1))
 	if source.has("potions") or source.has("player_level"):
+		target.original_revival_items = me.get("original_revival_items",[]).duplicate(true)
 		target.potions = int(me.get("potions",0))
 		target.player_mp = int(me.get("mp",0))
 		target.spirits = me.get("spirits",{}).duplicate(true)
@@ -800,4 +813,4 @@ func _leader_pet_as_ally(source: Dictionary) -> Dictionary:
 
 ## Host-only channel; no client result chooses recipients or item ids.
 func drop_claims_for(slot: int = 0) -> Array:
-	return _drop_claims.get(slot,[]).duplicate(true)
+	return _drop_claims.get(slot,[]).filter(func(claim):return int(_state.enemies[int(claim.enemy)].hp)==0 and not bool(_state.enemies[int(claim.enemy)].get("captured",false))).duplicate(true)

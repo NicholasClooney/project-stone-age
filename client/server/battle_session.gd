@@ -19,6 +19,7 @@ var _skill_used := false
 const CaptureRules = preload("res://server/capture_rules.gd")
 const CombatRules = preload("res://server/classic_combat_rules.gd")
 const Loyalty = preload("res://server/loyalty.gd")
+const OriginalRevival = preload("res://server/original_revival.gd")
 const OriginalEquipment = preload("res://server/original_equipment.gd")
 const Spirits = preload("res://server/spirits.gd")
 ## 镜子的精灵's 气力 (itemset.txt item 1460 magicusemp).
@@ -74,6 +75,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	if config.get("training_borrow") is Dictionary:_state.training_borrow=config.training_borrow.duplicate(true)
 	_state["player_resistances"]=config.get("player_resistances",[0,0,0,0,0,0]).duplicate()
 	_state["player_weapon"]=config.get("player_weapon","")
+	_state["original_revival_items"]=config.get("original_revival_items",[]).duplicate(true)
 	_state["original_equipment_items"]=config.get("original_equipment_items",[]).duplicate(true)
 	_state["equipment_base"]=config.get("equipment_base",{}).duplicate()
 	_state["equipment_occupied"]=config.get("equipment_occupied",[false,false,false,false,false]).duplicate()
@@ -109,6 +111,7 @@ func start_battle(config: Dictionary = {}) -> Dictionary:
 	var pinned := int(_state.clear_capture_target)
 	_state["clear_capture_uid"] = str(enemies[pinned].battle_uid) if pinned>=0 and pinned<enemies.size() else ""
 	_state["pets"] = config.get("pets", [pet] if not pet.is_empty() else []).duplicate(true)
+	for participant in _state.pets:participant.erase("original_revival_count")
 	_state["active_pet"] = int(config.get("active_pet",0 if not _state.pets.is_empty() else -1))
 	_state["ride_pet"] = int(config.get("ride_pet_index",-1))
 	_state["mounted_sprite"] = int(config.get("mounted_sprite",-1))
@@ -144,8 +147,12 @@ func set_pet_command(command: String) -> bool:
 	return true
 
 func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dictionary:
-	if not _state.active or (action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet","revive_pet"] and not action.begins_with("spirit:")):
+	if not _state.active or (action not in ["attack","defend","escape","capture","item","switch","mirror_self","mirror_pet","heal_pet","revive_pet"] and not action.begins_with("spirit:") and not action.begins_with("revival:")):
 		return snapshot()
+	if action.begins_with("revival:"):
+		if not revival_refusal({"kind":"player","index":-1},action,target).is_empty():return snapshot()
+		_spirit_target=target
+		target=-1
 	if action.begins_with("spirit:"):
 		if not spirit_refusal({"kind":"player","index":-1},action.trim_prefix("spirit:"),target).is_empty():return snapshot()
 		_spirit_target = target
@@ -238,6 +245,9 @@ func submit_action(action: String, target: int = -1, pet_index: int = -2) -> Dic
 	return snapshot()
 
 func _player_action(action: String) -> void:
+	if action.begins_with("revival:"):
+		_cast_revival({"kind":"player","index":-1},action,revival_target(_spirit_target))
+		return
 	match action:
 		"heal_pet":
 			if _state.pet_hp<=0:return # A slower healer cannot revive a fallen pet.
@@ -670,7 +680,7 @@ func _wear_equipment(damage: int, arm: bool, member: Dictionary = {}) -> void:
 		if not found:return
 	for entry in entries:
 		var data: Dictionary=OriginalEquipment.ITEMS[int(entry.item_id)]
-		if (0 if str(data.slot)=="head" else 2 if str(data.slot)=="arm" else 3 if str(data.slot)=="amulet" else 4)!=selected or int(data.durability)<1 or int(entry.durability)<=0:continue
+		if (0 if str(data.slot)=="head" else 1 if str(data.slot)=="body" else 2 if str(data.slot)=="arm" else 3 if str(data.slot)=="amulet" else 4)!=selected or int(data.durability)<1 or int(entry.durability)<=0:continue
 		var before:=OriginalEquipment.stage(entry)
 		entry.durability=maxi(0,int(entry.durability)-OriginalEquipment.wear_amount(damage,arm,_rng))
 		if int(entry.durability)==0:
@@ -899,4 +909,56 @@ func _cast_spirit(caster: Dictionary, slot: String, target: Dictionary) -> void:
 	_last_spirit = {"slot":slot,"item":str(spirit.get("item","")),"magic":int(spirit.magic),"name":str(spirit.name),"kind":str(spirit.kind),"caster":caster.duplicate(),"target":target.duplicate(),"user_effect":Spirits.EFFECT_USER,"effect":Spirits.target_effect(str(spirit.kind),power),"heals":heals}
 
 func drop_claims_for(_slot: int = 0) -> Array:
-	return _state.get("loot_claims",[]).duplicate(true)
+	return _state.get("loot_claims",[]).filter(func(claim):return int(_state.enemies[int(claim.enemy)].hp)==0 and not bool(_state.enemies[int(claim.enemy)].get("captured",false))).duplicate(true)
+
+## Item targets are independent of the narrower spirit target API.
+func revival_target(code: int, viewer: int = 0) -> Dictionary:
+	if code>=10 and code<10+_state.enemies.size():return {"kind":"enemy","index":code-10}
+	return _target_ref(code,viewer) if code>=0 and code<=9 else {}
+
+func _revival_present(target: Dictionary) -> bool:
+	if target.get("kind","")=="enemy":
+		var i:=int(target.index)
+		return i>=0 and i<_state.enemies.size() and not bool(_state.enemies[i].get("captured",false))
+	return _ref_present(target)
+
+func _revival_owner(caster: Dictionary) -> Dictionary:
+	return _state if caster.kind=="player" else _state.allies[int(caster.index)]
+
+func revival_refusal(caster: Dictionary, action: String, code: int, viewer: int = 0) -> String:
+	if _ref_hp(caster)<=0:return "施药者已经倒下。"
+	var uid:=OriginalRevival.uid(action)
+	var owned:Array=_revival_owner(caster).get("original_revival_items",[])
+	if not owned.any(func(entry):return int(entry.uid)==uid):return "复活道具已经用完或不属于你。"
+	if not _revival_present(revival_target(code,viewer)):return "目标不在战斗中。"
+	return ""
+
+func _cast_revival(caster: Dictionary, action: String, target: Dictionary) -> void:
+	var owned:Array=_revival_owner(caster).get("original_revival_items",[])
+	var uid:=OriginalRevival.uid(action)
+	var index:=-1
+	for i in range(owned.size()):
+		if int(owned[i].uid)==uid:index=i;break
+	if index<0:return
+	var spec:Dictionary=OriginalRevival.ITEMS[int(owned[index].item_id)]
+	owned.remove_at(index)
+	var present:bool=_revival_present(target)
+	var enemy:bool=target.get("kind","")=="enemy"
+	var actor:Dictionary=(_state.enemies[int(target.index)] if enemy else _ref_actor(target)) if present else {}
+	var before:int=(int(actor.hp) if enemy else _ref_hp(target)) if present else 1
+	_last_outcome="spirit"
+	var heals:Array=[]
+	if present and OriginalRevival.can_revive(before,target.kind in ["player","ally"] or (enemy and str(actor.get("kind",""))=="player"),bool(_config.get("pvp",false))):
+		var gained:=OriginalRevival.hp(int(spec.power),int(actor.max_hp) if enemy else _ref_max(target),_rng)
+		if enemy:
+			actor.hp=gained
+			_sync_enemy(int(_state.selected_target))
+		else:
+			_ref_set_hp(target,gained)
+			if target.kind in ["pet","ally_pet"] and not bool(_config.get("norisk",false)) and not bool(_config.get("pvp",false)):
+				actor.original_revival_count=int(actor.get("original_revival_count",0))+1
+				if target.kind=="pet" and int(_state.active_pet)>=0:_state.pets[int(_state.active_pet)].original_revival_count=actor.original_revival_count
+		heals.append({"kind":target.kind,"index":int(target.index),"amount":gained,"mount_amount":0,"revived":true})
+		_state.events.append("%s使用%s，目标恢复意识（体力 %d）。" % [_ref_name(caster),str(spec.name),gained])
+	else:_state.events.append("原版行为：目标未能复活，%s仍然消耗。" % str(spec.name))
+	_last_spirit={"name":str(spec.name),"kind":"ressurect","caster":caster.duplicate(),"target":target.duplicate(),"user_effect":OriginalRevival.USER_EFFECT,"effect":Spirits.target_effect("ressurect",int(spec.power)),"heals":heals}
