@@ -55,13 +55,22 @@ func run() -> void:
 func detached_defeat() -> bool:
 	var b=Backend.new()
 	for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
+	# Meet only the real entrance level: leave every new stat point unspent so
+	# the original weak character still loses a genuine channel encounter.
+	var weak_stats:Dictionary=b.session._profile.player.base_stats.duplicate(true)
+	if not check(b.session.gm_raise_level(-1,30) and b.session._profile.player.base_stats==weak_stats,"Level30 fixture retains weak unallocated combat stats"):return false
+	if not check(not b.quest_arrival.has_arrival(b,10204,Vector2i(2,6)),"Fixture starts without ritual arrival authority"):return false
 	b.encounter_rng.seed=7
+	var route:Array=[]
 	if not check(b.handle({"type":"quest_auto_start","quest_id":1,"client":"test","_quest_connection":123}).ok,"Weak adult fixture starts original task"):return false
 	for index in range(1500):
 		if b.quest_auto.phase=="battle":break
 		b.quest_auto.tick(b,0.21)
+		var position:Array=[b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y]
+		if route.is_empty() or route[-1]!=position:route.append(position)
 		if b.quest_auto.phase=="landing":b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test","_quest_connection":123})
 	if not check(b.quest_auto.phase=="battle","Original walk creates real battle before disconnect"):return false
+	if not check(route.slice(0,3)==[[10202,30,13],[10202,31,13],[10204,2,6]] and b.quest_arrival.has_arrival(b,10204,b.automation.position_cell),"Runner crosses level30 original gate and earns continuous walking authority"):return false
 	b.quest_auto.detach(b,123)
 	for index in range(200):
 		if not b.quest_auto.running:break
