@@ -23,7 +23,7 @@ func _ready() -> void:
 	name="ItemStorageMenu"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	z_index=50
-	var shade:=ColorRect.new();shade.color=Color(0.025,0.04,0.04,0.94)
+	var shade:=ColorRect.new();shade.color=Color(0.025,0.04,0.04,1.0)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(shade)
 	var margin:=MarginContainer.new();margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left","top","right","bottom"]:margin.add_theme_constant_override("margin_"+side,48 if side=="bottom" else 16)

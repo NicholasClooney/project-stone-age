@@ -1,9 +1,18 @@
 {
-  "version": "v0.216.15",
-  "count": 373,
+  "version": "v0.216.16",
+  "count": 374,
   "feature_count": 200,
-  "fix_count": 173,
+  "fix_count": 174,
   "entries": [
+    {
+      "version": "v0.216.16",
+      "date": "2026-10-03",
+      "kind": "fix",
+      "title": "物品仓库使用不透明背景",
+      "details": [
+        "物品仓库背景不再透出背包文字，提高仓库列表与操作按钮的可读性。"
+      ]
+    },
     {
       "version": "v0.216.15",
       "date": "2026-10-03",
