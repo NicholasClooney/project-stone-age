@@ -499,6 +499,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	_profile.active_pet = int(slots[int(result.active_pet)]) if int(result.get("active_pet",-1))>=0 else -1
 	# The owner a pet caught this battle judged its loyalty by (battle_event.c:3435).
 	var owner_level := int(_profile.player.level)
+	var owner_transmigration := int(_profile.player.get("transmigration",0))
 	var owner_charm := clampi(int(_profile.player.get("charm",Loyalty.CHARM_START))+int(equipment_mods().charm),0,100)
 	_battle_loyalty(result,enemies,battle_pets,outcome,roster,slots)
 	# Rewards per party slot from here on (the result summary reads them so).
@@ -559,7 +560,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		captured.original_end_event = 0
 		_assign_pet_id(captured)
 		Loyalty.stamp_modai(captured)
-		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured))
+		captured.variable_ai = Loyalty.capture_variable(owner_level,owner_charm,int(captured.level),Loyalty.modai_for(captured),owner_transmigration)
 		if capture_only:
 			captured.capture_only = true
 			captured.capture_only_untrained = true
@@ -624,7 +625,7 @@ func _refresh_loyalty() -> void:
 	var owner: Dictionary=_profile.player.duplicate()
 	owner.charm=clampi(int(owner.get("charm",60))+int(equipment_mods().charm),0,100)
 	for pet in _profile.pets+_profile.get("pet_storage",[]):
-		if pet.has("variable_ai"):Loyalty.refresh(pet,owner)
+		if pet.has("variable_ai"):Loyalty.refresh(pet,owner,int(owner.get("transmigration",0)))
 
 func _gain_xp(actor: Dictionary, amount: int) -> void:
 	if amount>0 and actor.get("capture_only_untrained",false):actor.capture_only_untrained = false
@@ -737,8 +738,8 @@ func _toggle_original_item(raw_uid: String) -> bool:
 		if int(_profile.original_equipment[slot])==uid:
 			_profile.original_equipment[slot]=0
 			return true
-		if int(_profile.player.level)<int(data.level):
-			last_error=Spirits.TOO_WEAK
+		if not OriginalEquipment.equip_error(_profile.player,id).is_empty():
+			last_error=OriginalEquipment.equip_error(_profile.player,id)
 			return false
 		if (slot=="bracelet" and int(_profile.original_equipment.bracelet)>0) or (slot=="amulet" and (int(_profile.original_equipment.amulet)>0 or bool(_profile.get("equipped_mirror",false)) or not str(_equipment().amulet).is_empty())):
 			last_error=Spirits.SAME_KIND
@@ -776,8 +777,8 @@ func _toggle_spirit_item(item: String) -> bool:
 	if str(worn[slot])==item:
 		worn[slot] = ""
 		return true
-	if int(data.level)>int(_profile.player.level):
-		last_error = Spirits.TOO_WEAK
+	if not OriginalEquipment.definition_error(_profile.player,data).is_empty():
+		last_error = OriginalEquipment.definition_error(_profile.player,data)
 		return false
 	if slot=="amulet" and (bool(_profile.get("equipped_mirror",false)) or int(_profile.get("original_equipment",{}).get("amulet",0))>0):
 		last_error = Spirits.SAME_KIND
@@ -1801,6 +1802,7 @@ func mount_pet(index: int) -> bool:
 	if index == -1:
 		_profile.ride_pet = -1
 		return true
+	_refresh_loyalty()
 	last_error = preload("res://scripts/riding.gd").can_mount(_profile,index)
 	if not last_error.is_empty():return false
 	_profile.ride_pet = index
