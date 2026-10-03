@@ -12,7 +12,8 @@ func run() -> void:
  var backend=preload("res://server/backend.gd").new()
  backend.automation.position_changed(122,Vector2i(6,5))
  var gate:Dictionary=backend.quest_helper.destination(backend,backend.original_quests.npc_by_id("genout/wpm_120_19_15@120:19:15"),"near")
- var kaite:Dictionary=backend.quest_helper.destination(backend,backend.original_quests.npc_by_id("extra/event/marju01@119:97:88"),"near")
+ # Geometry oracle uses the actual original recipient neighbour, not a project helper grant.
+ var kaite:Dictionary={"cell":[97,89]}
  var gate_cell:=Vector2i(int(gate.cell[0]),int(gate.cell[1]))
  var kaite_cell:=Vector2i(int(kaite.cell[0]),int(kaite.cell[1]))
  # Original gate warp, inter-floor warps, recipient's adjacent cell, exit.

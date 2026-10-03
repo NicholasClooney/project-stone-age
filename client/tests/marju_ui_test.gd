@@ -1,13 +1,32 @@
 extends "res://tests/yam_axe_ui_test.gd"
 ## Real socket, real portrait renderer, real pointer/scroll events throughout.
-func stage(step:String,job:int) -> bool:
+const Route=preload("res://tests/support/original_route_driver.gd")
+func walk_route(host,map_id:int,cell:Vector2i,maps:Array)->bool:
+ world.quest_helper_menu.close_menu()
+ var route:Array=Route.path(host,map_id,cell,maps)
+ if not check(not route.is_empty(),"Original Marju collision route"):return false
+ var index:=0
+ for point in route:
+  if not check(host.handle({"type":"report_position","map_id":point.map_id,"cell":point.cell}).get("ok",false),"Real maze step or original portal"):return false
+  index+=1
+  if index%16==0:await process_frame
+ host.publish()
+ if not await ready(func():return int(world.data.map_id)==map_id and not world.moving,"Original route rendered"):return false
+ return check(await Wait.settle(self,world),"Maze route settles")
+func stage(step:String,job:int)->bool:
  world.quest_helper_menu.open_menu()
- if not await ready(func():return visit_button(step,"arrival",job)!=null,"Original stage button exists"):return false
- if not await click(visit_button(step,"arrival",job)):return false
- # The original maze spans hundreds of walkable cells; bound actual travel,
- # not a fixed delay, while retaining real navigation and NPC pointer input.
- if not check(await Wait.until(self,func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,300.0),"Actual helper click traverses original maze and opens dialogue"):return false
- return check(await Wait.settle(self,world),"Stage map report settles")
+ if not await click(visit_button(step,"near",job)):return false
+ if not await ready(func():return not world.quest_helper_travel.active,"Original helper finishes"):return false
+ if not check(await Wait.settle(self,world),"Helper position settles"):return false
+ var target:Dictionary={}
+ for quest in world.state.derived.quest_helper.quests:
+  if int(quest.id)==job:
+   for entry in quest.steps:
+    if str(entry.id)==step:target=entry
+ if not check(not target.is_empty(),"Original stage retains source NPC identity"):return false
+ world.world_travel.quest_dialogue.open(str(target.npc_id))
+ if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Actual original dialogue opens"):return false
+ return check(await Wait.settle(self,world),"Original dialogue settles")
 func run() -> void:
  root.unfocusable=true
  root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
@@ -35,10 +54,14 @@ func run() -> void:
  if world.world_travel.quest_dialogue.active:
   if not await choose("ok"):return
  if not await ready(func():return backend.automation.position_map==122,"Clicked original gate enters maze122"):return
+ if not await walk_route(backend,119,Vector2i(97,89),[122,118,119]):return
  if not await stage("marju:deliver",5):return
  await proof("marju-03-original-recipient")
  if not await choose("yes") or not await choose("ok"):return
  if not check(Rules.flag(world.session.snapshot(),"ended",37) and not Rules.flag(world.session.snapshot(),"ended",38),"Clicked delivery only writes37"):return
+ if not await walk_route(backend,119,Vector2i(103,93),[119]):return
+ if not check(backend.handle({"type":"report_position","map_id":121,"cell":[17,15]}).get("ok",false),"Real original one-way exit before return"):return
+ if not check(await Wait.settle(self,world),"Exit settles"):return
  if not await stage("marju:return",9):return
  if not await choose("yes"):return
  await proof("marju-04-original-return-reward")
