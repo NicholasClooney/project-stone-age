@@ -1,5 +1,6 @@
 extends "res://tests/brothers_golden_quests_test.gd"
 ## Isolated branch oracle exercises the same helper and production transaction.
+## The synthetic public NPC supplies trusted transaction context, not route proof.
 ## Source capacity: npc_exchangeman.c:3812-3910 counts DelItem before GetRandItem.
 func run()->void:
  for spec in [
@@ -29,15 +30,20 @@ func exercise(spec:Dictionary)->void:
  var branch:Dictionary={"event":-1,"type":"ACCEPT","condition":"LV>0","actions":actions,"texts":{"ItemFullMsg":"source full"},"enabled":true,"events":[2]}
  if spec.has("scope"):branch.item_deletion_scope=spec.scope
  var fixture:Dictionary={"id":"capacity-fixture","name":"isolated capacity source","map_id":1000,"cell":[56,123],"branches":[branch],"events":[2]}
+ b.quest_catalog.npcs.append(fixture)
+ if not 2 in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(2)
  var quest:Dictionary={"steps":[],"blocked_reason":""}
  var before:Dictionary=b.session.snapshot()
  b.quest_helper.add_step(b,before,quest,"capacity",{"npc":fixture,"branch":branch},true,false,"capacity fixture")
  check(quest.steps.size()==1 and bool(quest.steps[0].actionable)==bool(spec.allowed),"helper capacity: "+str(spec.name))
  check(b.session.snapshot()==before,"helper never mutates UID candidate: "+str(spec.name))
- var result:Dictionary=b.original_quests.transact(b,before,branch,"reward")
+ var result:Dictionary=b.original_quests.transact(b,before,branch,"reward","",str(fixture.id))
+ print("CAPACITY transaction response: ",result)
  check(bool(result.ok)==bool(spec.allowed),"real transaction agrees: "+str(spec.name))
  if spec.allowed:
   check(Session.bag_slots(b.session.snapshot())==int(spec.size),"actual net bag slots: "+str(spec.name))
   if str(spec.delete)=="2700":check(Rules.item_count(b.session.snapshot(),2700)==0,"bare deletion removes every feather")
- else:check(b.session.snapshot()==before,"rejected random transaction keeps UID and worn state")
+ else:
+  check(str(result.get("reason",""))=="source full","rejection is the intended capacity check: "+str(spec.name))
+  check(b.session.snapshot()==before,"rejected random transaction keeps UID and worn state")
  b.free()

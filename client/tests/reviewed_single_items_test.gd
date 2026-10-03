@@ -8,9 +8,18 @@ func check(ok:bool,note:String) -> void:
  print(("PASS: " if ok else "FAIL: ")+note)
  if not ok:failures+=1
 func reward(b,id:int) -> Dictionary:
- # Exercise the real transaction/UID/save boundary; original source rows are
- # independently locked and imported by test_quest_single_items.py.
- return b.original_quests.transact(b,b.session._profile,{"event":-1,"actions":{"GetRandItem":str(id)},"texts":{}},"ACCEPT")
+ # This suite always used synthetic item actions, not an original route.
+ # Register a private public NPC so final authority resolves its identity;
+ # real source rows/routes remain covered by importer and chain suites.
+ var branch:Dictionary={"event":-1,"events":[2],"enabled":true,"type":"ACCEPT","condition":"LV>0","actions":{"GetRandItem":str(id)},"texts":{"ItemFullMsg":"single item full"}}
+ var fixture:Dictionary={"id":"reviewed-single-item-fixture","name":"isolated item transaction","map_id":1000,"cell":[56,123],"events":[2],"branches":[branch]}
+ b.quest_catalog.npcs=b.quest_catalog.npcs.filter(func(n):return str(n.id)!=str(fixture.id))
+ b.quest_catalog.npcs.append(fixture)
+ if not 2 in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(2)
+ check(not b.original_quests.npc_by_id(str(fixture.id)).is_empty(),"isolated public fixture resolves trusted transaction identity")
+ var result:Dictionary=b.original_quests.transact(b,b.session._profile,branch,"ACCEPT","",str(fixture.id))
+ print("SINGLE ITEM transaction response: ",result)
+ return result
 func run() -> void:
  var b=Backend.new()
  for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
@@ -22,10 +31,12 @@ func run() -> void:
  while Session.bag_slots(b.session._profile)<14:Equipment.add(b.session._profile,1238)
  check(reward(b,1238).ok and Session.bag_slots(b.session.snapshot())==15,"food reward occupies last available slot")
  before=b.session.snapshot()
- check(not reward(b,1238).ok and b.session.snapshot()==before,"full bag rejects without merging or advancing UID")
+ var rejected:Dictionary=reward(b,1238)
+ check(not rejected.ok and str(rejected.get("reason",""))=="single item full" and b.session.snapshot()==before,"full bag rejects without merging or advancing UID")
  Equipment.remove(b.session._profile,1238)
  before=b.session.snapshot();b.save_path="user://missing-single-item-review/save.json"
- check(not reward(b,11814).ok and b.session.snapshot()==before,"failed durable save rolls back material and UID")
+ rejected=reward(b,11814)
+ check(not rejected.ok and str(rejected.get("reason",""))=="save_failed" and b.session.snapshot()==before,"failed durable save rolls back material and UID")
  b.save_path="user://reviewed-single-items.json"
  check(reward(b,11814).ok,"same transaction can retry after save path recovery")
  state=b.session.snapshot()
