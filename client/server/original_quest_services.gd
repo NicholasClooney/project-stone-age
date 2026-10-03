@@ -1,7 +1,8 @@
 extends RefCounted
 ## Explicit reviewed service dispatch. Never put this catalog in a snapshot.
 const GoldenBui=preload("res://server/golden_bui_service.gd")
-const KINDS := ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]
+const JugShop=preload("res://server/original_jug_shop_service.gd")
+const KINDS := ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_jug_shop"]
 var private_catalog: Dictionary = {}
 var rng := RandomNumberGenerator.new()
 func _init()->void:rng.randomize()
@@ -11,8 +12,10 @@ func context(backend)->Dictionary:
   if parsed is Dictionary:private_catalog=parsed
  return {"catalog":private_catalog,"rng":rng,"in_party":backend.quest_visit_guard.is_valid() and not str(backend.quest_visit_guard.call()).is_empty()}
 func open(router,backend,npc:Dictionary)->Dictionary:
+ if str(npc.get("kind",""))==JugShop.KIND:return apply(router,backend,npc,JugShop.open(npc,backend.session.snapshot()))
  return apply(router,backend,npc,GoldenBui.open(npc,backend.session.snapshot(),context(backend)))
 func reply(router,backend,current:Dictionary,choice:String,text:String)->Dictionary:
+ if str(current.npc.get("kind",""))==JugShop.KIND:return apply(router,backend,current.npc,JugShop.reply(current.npc,backend.session.snapshot(),current.service_state,choice,text))
  if text.length()>120:return {"ok":false,"reason":"输入内容过长。"}
  var authority:=context(backend)
  if authority.in_party:return {"ok":false,"reason":"请先退出团队再挑战。"}
@@ -20,8 +23,12 @@ func reply(router,backend,current:Dictionary,choice:String,text:String)->Diction
 func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
  if not bool(plan.get("ok",false)):return {"ok":false,"reason":str(plan.get("reason","无法交谈。"))}
  var actions:Dictionary=plan.get("actions",{})
- for key in actions:
-  if key not in ["GetItem","DelItem","Warp"]:return {"ok":false,"reason":"尚未支持的原服务动作。"}
+ if str(npc.get("kind",""))==JugShop.KIND:
+  if not JugShop.valid(npc) or (not actions.is_empty() and (actions!={"DelStone":"1150","GetItem":"2708"} or not bool(plan.get("close",false)))):return {"ok":false,"reason":"无效的原水壶购买计划。"}
+ else:
+  if str(npc.get("kind","")) not in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]:return {"ok":false,"reason":"尚未支持的原服务。"}
+  for key in actions:
+   if key not in ["GetItem","DelItem","Warp"]:return {"ok":false,"reason":"尚未支持的原服务动作。"}
  var result:Dictionary=plan.get("result",{})
  var notice := result_text(result)
  if not actions.is_empty():

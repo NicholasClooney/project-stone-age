@@ -46,6 +46,9 @@ func active_npcs() -> Array:
   if str(active.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"] and 44 in enabled_events:
    result.append(active)
    continue
+  if str(active.get("kind",""))=="original_jug_shop" and 40 in enabled_events:
+   result.append(active)
+   continue
   active.branches = []
   for branch in npc.get("branches", []):
    if branch.get("enabled", false) and _enabled(branch.get("events", [])):
