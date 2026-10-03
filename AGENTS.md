@@ -30,6 +30,16 @@ Messages:
 - An instruction the user gives directly to any agent wins; that agent tells the others what changed.
 - Original-source bugs: keep ones that only make play easier, with a "原版行为" note in UI/changelog; ask the user case by case about ones that affect progression or the economy (repeatable rewards, item/gold farming, skipping key gates or rebirth requirements). See the rule in [rebirth bonus quest audit](docs/reverse-engineering/rebirth-quest-bonus-audit.md) (「原版源码漏洞的通用处理规则」).
 
+### Night rule (after 22:00 local time)
+
+While big work is in flight after 22:00, assume the user is asleep. All three roles:
+
+- Keep reporting milestones and decisions as usual; the user reads them in the morning.
+- Don't block on a user decision. Take the recommended or default option, keep working, and record it as provisional ("夜间自行决定，待用户确认") in the relevant audit doc or `docs/product/ideas.md`.
+- Prefer choices that are easy to reverse. For hard-to-undo decisions pick the conservative option (for example, keep a branch closed rather than open it) and continue other work.
+- Never take destructive or irreversible actions without the user: deleting saves or worktrees, force push, history rewrite, save-format changes without migration.
+- In the morning the main agent gives the user a short list of the night's provisional decisions to confirm or change.
+
 ### Coordinator watchdog
 
 While a multi-agent batch runs (currently: bonus quests, then the rebirth main line), the coordinator checks Codex's pane and every sub agent pane (`agents-projects-stone-age` tmux session) every 30 minutes with a scheduled job, plus `python3 tools/worktree_pool.py status`:
