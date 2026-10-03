@@ -153,6 +153,8 @@ func run() -> void:
 	check(str(lines.back().kind)=="found" and str(lines.back().text).contains("三围合%d" % (int(predicted.attack)+int(predicted.defence)+int(predicted.speed))) and str(lines.back().text).contains("排队2"),"the info block says what was found, its Lv120 prediction and the queue (%s)" % str(lines.back().text))
 	check(log_kinds(game).has("capture"),"starting the real capture is a separate key info event")
 	flow.on_status(game.state.automation)
+	check(not game.showcase_ticker.visible and hunt.chip.visible,"showcase starts with one collapsed progress entry")
+	game.showcase_ticker.expand()
 	check(game.showcase_ticker.visible and game.showcase_ticker.find_child("Line_found",true,false)!=null,"this device shows the info block")
 	check(is_equal_approx(game.battle_view.playback_speed,8.0),"the battle plays at this device's 战斗速度")
 	var bgm: String = str(preload("res://scripts/battle_art.gd").index().audio.bgm)

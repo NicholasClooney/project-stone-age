@@ -9,11 +9,13 @@ var world: Node
 var title: Label
 var detail: Label
 var restore_button: Button
+var _preferred_width := WIDTH
 
 ## `slot` stacks several bars upward from the bottom-right corner; `lines`
 ## and `width` size a bar with more to show.
 func setup(owner: Node, caption: String, slot: int, on_restore: Callable, lines: int = 1, width: float = WIDTH) -> void:
 	world = owner
+	_preferred_width=width
 	var height := HEIGHT+18.0*(lines-1)
 	mouse_filter = Control.MOUSE_FILTER_STOP
 	z_index = 60
@@ -21,6 +23,7 @@ func setup(owner: Node, caption: String, slot: int, on_restore: Callable, lines:
 	add_theme_stylebox_override("panel",world.box(Color("20292f",0.94),Color("b29b65")))
 	title = world.text(caption,14)
 	title.position = Vector2(10,4)
+	title.clip_text=true
 	title.mouse_filter = Control.MOUSE_FILTER_IGNORE
 	add_child(title)
 	detail = world.text("",12)
@@ -46,6 +49,10 @@ var _slot := 0
 ## (铺满屏幕, 界面大小) after the chip was made.
 func _place() -> void:
 	var screen: Vector2 = world.get_viewport_rect().size
+	size.x=minf(_preferred_width,screen.x-24)
+	title.size=Vector2(size.x-24,22)
+	detail.size.x=maxf(1,size.x-94)
+	restore_button.position.x=size.x-72
 	position = Vector2(screen.x-size.x-12,screen.y-44-(size.y+6)-(HEIGHT+6)*_slot)
 
 func _process(_delta: float) -> void:
