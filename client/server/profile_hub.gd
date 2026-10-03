@@ -163,7 +163,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 ## A connection closed.
 func disconnect_connection(connection: int) -> void:
 	var id := profile_of(connection)
-	if backends.has(id) and backends[id].quest_auto.connection==connection:backends[id].quest_auto.stop(backends[id],"发起设备已断线。")
+	if backends.has(id):backends[id].quest_auto.detach(backends[id],connection)
 	_connections.erase(connection)
 	presence.forget(connection)
 	_party_sent.erase(connection)
@@ -203,6 +203,7 @@ func _create(connection: int, command: Dictionary) -> Dictionary:
 func _logout(connection: int) -> Dictionary:
 	var id := profile_of(connection)
 	if id.is_empty():return {"ok":true}
+	if backends[id].quest_auto.connection==connection or backends[id].quest_auto.detached:backends[id].quest_auto.stop(backends[id],"已退出角色。")
 	accounts.revoke_token(id,str(_connections[connection].get("token","")))
 	disconnect_connection(connection)
 	return {"ok":true,"profiles":_listing(),"allow_create":accounts.allow_create()}

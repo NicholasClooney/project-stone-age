@@ -122,8 +122,10 @@ func remote_auto() -> void:
  check(gate.waiting.is_valid() and not backend.quest_auto.running,"Automatic button waits for download before server start")
  world.quest_helper_menu.close_menu()
  gate.finish(true)
- check(await Wait.settle(self,world),"Cancelled download settles")
- check(not backend.quest_auto.running and backend.session.snapshot()==before,"Close cancels late automatic download")
+ check(await Wait.settle(self,world),"Background download settles")
+ check(backend.quest_auto.running,"Close preserves late automatic download and starts on authority")
+ world.quest_helper_travel.cancel()
+ check(await Wait.settle(self,world),"Explicit stop after background herb download settles")
  world.asset_packs=original_packs
  world.quest_helper_menu.open_menu()
  if not await click(world.quest_helper_menu.find_child("QuestHelper_30",true,false)):return

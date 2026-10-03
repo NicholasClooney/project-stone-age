@@ -11,7 +11,7 @@ Grouping is deliberately conservative:
 
 No task IDs are enumerated by the list and no reward/stat icons are inferred. New server entries appear automatically. Automatic execution remains restricted by the existing shared `quest_auto_policy.gd`; this change does not enable additional automatic jobs.
 
-Only one task's steps are rendered in the detail pane. The current step is the initial action target; selecting another step exposes the same teleport and map-arrival/walk operations. The single pair of navigation buttons replaces a pair on every step. Original download, authoritative visit, confirmation and cancellation flows remain in the existing travel controller. UI state never mutates a backend. Stop stays above both pages during automatic execution or pending downloads. Close and Esc retain the existing pause/cancellation rules.
+Only one task's steps are rendered in the detail pane. The current step is the initial action target; selecting another step exposes the same teleport and map-arrival/walk operations. The single pair of navigation buttons replaces a pair on every step. Original download, authoritative visit, confirmation and cancellation flows remain in the existing travel controller. UI state never mutates a backend. Stop stays above both pages during automatic execution or pending downloads. Close and Esc cancel ordinary navigation but preserve automatic tasks; the explicit minimize button and background step/stop bar share that policy. See [background automatic quests](quest-auto-background.md).
 
 ## Verification
 
