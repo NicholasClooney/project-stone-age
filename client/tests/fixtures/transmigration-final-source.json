@@ -5787,6 +5787,225 @@
         }
       ],
       "source_spawn_mode": "NPCEnemy borncenter 1x1; original movement not simulated"
+    },
+    {
+      "id": "genout/wpm_117_6_5@117:6:5",
+      "source_script": "genout/wpm_117_6_5",
+      "source_create": "gmsv/data/npc/genout/manmoshall.create",
+      "source_create_index": 18,
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "name": "监狱的通关处",
+      "map_id": 117,
+      "cell": [
+        6,
+        5
+      ],
+      "graphic": 16204,
+      "facing": 4,
+      "role": "quest",
+      "text": "",
+      "branches": [],
+      "kind": "original_prison",
+      "handler": "Prison",
+      "service_id": "genout/wpm_117_6_5",
+      "prison": {
+        "role": "guard",
+        "warp": "110,23,27",
+        "condition": "",
+        "money": "1",
+        "del_item": ""
+      },
+      "source_fields": {
+        "WARP": "110,23,27",
+        "FREE": "",
+        "MONEY": "1",
+        "FreeMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你持有付钱，请通关。\\n请多加小心！",
+        "PayMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n这里是通往聊天室。\\n要你身上的９／１０的钱才可以通过这里。",
+        "PartyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n无法以团队进入。",
+        "MoneyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你钱不够哦。"
+      }
+    },
+    {
+      "id": "genout/wpm_110_37_20@110:37:20",
+      "source_script": "genout/wpm_110_37_20",
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 14,
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "name": "萨姆吉尔向导",
+      "map_id": 110,
+      "cell": [
+        37,
+        20
+      ],
+      "graphic": 16065,
+      "facing": 6,
+      "role": "quest",
+      "text": "",
+      "branches": [],
+      "kind": "original_prison",
+      "handler": "Prison",
+      "service_id": "genout/wpm_110_37_20",
+      "prison": {
+        "role": "guide",
+        "warp": "1012,13,13",
+        "condition": "ITEM=2521*1",
+        "money": "-1",
+        "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+      },
+      "source_fields": {
+        "WARP": "1012,13,13",
+        "FREE": "ITEM=2521*1",
+        "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+        "MONEY": "-1",
+        "FreeMsg": "期待您的再度光临。",
+        "PayMsg": "从这里往萨姆吉尔需要门票。",
+        "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+        "MoneyMsg": "能从这里退出的人仅限于能够来到\\n萨姆吉尔的人。\\n一张门票都没有的人请登出。"
+      }
+    },
+    {
+      "id": "genout/wpm_110_37_24@110:37:24",
+      "source_script": "genout/wpm_110_37_24",
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 15,
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "name": "玛丽那丝向导",
+      "map_id": 110,
+      "cell": [
+        37,
+        24
+      ],
+      "graphic": 16067,
+      "facing": 6,
+      "role": "quest",
+      "text": "",
+      "branches": [],
+      "kind": "original_prison",
+      "handler": "Prison",
+      "service_id": "genout/wpm_110_37_24",
+      "prison": {
+        "role": "guide",
+        "warp": "2012,13,13",
+        "condition": "ITEM=2522*1",
+        "money": "-1",
+        "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+      },
+      "source_fields": {
+        "WARP": "2012,13,13",
+        "FREE": "ITEM=2522*1",
+        "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+        "MONEY": "-1",
+        "FreeMsg": "期待您的再度光临。",
+        "PayMsg": "从这里往玛丽那丝需要门票。",
+        "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+        "MoneyMsg": "能从这里退出的人仅限于能够来到\\n玛丽那丝的人。\\n一张门票都没有的人请登出。"
+      }
+    },
+    {
+      "id": "genout/wpm_110_37_28@110:37:28",
+      "source_script": "genout/wpm_110_37_28",
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 16,
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "name": "加加向导",
+      "map_id": 110,
+      "cell": [
+        37,
+        28
+      ],
+      "graphic": 16030,
+      "facing": 6,
+      "role": "quest",
+      "text": "",
+      "branches": [],
+      "kind": "original_prison",
+      "handler": "Prison",
+      "service_id": "genout/wpm_110_37_28",
+      "prison": {
+        "role": "guide",
+        "warp": "3012,13,13",
+        "condition": "ITEM=2523*1",
+        "money": "-1",
+        "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+      },
+      "source_fields": {
+        "WARP": "3012,13,13",
+        "FREE": "ITEM=2523*1",
+        "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+        "MONEY": "-1",
+        "FreeMsg": "期待您的再度光临。",
+        "PayMsg": "从这里往加加需要门票。",
+        "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+        "MoneyMsg": "能从这里退出的人仅限于能够来到\\n加加的人。\\n一张门票都没有的人请登出。"
+      }
+    },
+    {
+      "id": "genout/wpm_110_37_32@110:37:32",
+      "source_script": "genout/wpm_110_37_32",
+      "source_create": "gmsv/data/npc/genout/chatroom.create",
+      "source_create_index": 17,
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
+      "name": "卡鲁它那向导",
+      "map_id": 110,
+      "cell": [
+        37,
+        32
+      ],
+      "graphic": 16033,
+      "facing": 6,
+      "role": "quest",
+      "text": "",
+      "branches": [],
+      "kind": "original_prison",
+      "handler": "Prison",
+      "service_id": "genout/wpm_110_37_32",
+      "prison": {
+        "role": "guide",
+        "warp": "4012,13,13",
+        "condition": "ITEM=2524*1",
+        "money": "-1",
+        "del_item": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609"
+      },
+      "source_fields": {
+        "WARP": "4012,13,13",
+        "FREE": "ITEM=2524*1",
+        "DelItem": "2521,2522,2523,2524,2602,2597,2598,2599,2600,2601,2609",
+        "MONEY": "-1",
+        "FreeMsg": "期待您的再度光临。",
+        "PayMsg": "从这里往卡鲁它那需要门票。",
+        "PartyMsg": "以团队无法退场。\\n\\n请把团队解散之后再个别\\n退场。",
+        "MoneyMsg": "能从这里退出的人仅限于能够来到\\n卡鲁它那的人。\\n一张门票都没有的人请登出。"
+      }
     }
   ],
   "jobs": [],
@@ -5978,7 +6197,14 @@
       "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
       "gmsv/include/item.h": "64a8616bac3607b8494b1b5efa0b4c3a3e8018af44228431f248762055a559b9",
       "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
-      "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539"
+      "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+      "gmsv/data/npc/genout/manmoshall.create": "e2da847b2278d5d35b7fffb5e3dbd64b5da1ef0eae9b80b36a373b008fb8fd0b",
+      "gmsv/data/npc/genout/wpm_117_6_5": "1ed66e76fec332acb2daae97257f16d34c39c0c3c710df45fd7b3ea28e33a2df",
+      "gmsv/data/npc/genout/chatroom.create": "2121f277b89d3680dbd76e829901309eb3bcd2a4f85f2d756907009545d2bf76",
+      "gmsv/data/npc/genout/wpm_110_37_20": "bbe21f404d619d7b689c67cf5cb3a80effb126909d4a5a5c4d5a04b2fbcf8a7b",
+      "gmsv/data/npc/genout/wpm_110_37_24": "b1a69f471f4e109b4544b97cc907a6aa3c206bccdee608c11a8c9a986845d053",
+      "gmsv/data/npc/genout/wpm_110_37_28": "2308622bdec8f51d997b566d0c88dbc67bf0a1282d2a9436c17b41a1af4a2968",
+      "gmsv/data/npc/genout/wpm_110_37_32": "db3641469abe35628cc5dc5569167872976f38cee38b7df43c94f79b896ccfdc"
     },
     "client": "StoneAge 2.5; logical static graphics, no fallback"
   },
