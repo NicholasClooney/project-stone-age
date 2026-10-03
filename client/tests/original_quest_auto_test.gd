@@ -135,8 +135,10 @@ func remote_auto() -> void:
  check(gate.waiting.is_valid() and not backend.quest_auto.running,"Automatic button waits for download before server start")
  world.quest_helper_menu.close_menu()
  gate.finish(true)
- check(await Wait.settle(self,world),"Cancelled download settles")
- check(not backend.quest_auto.running and backend.session.snapshot()==before,"Close cancels late automatic download")
+ check(await Wait.settle(self,world),"Background download settles")
+ check(backend.quest_auto.running,"Close preserves late automatic download and starts on authority")
+ world.quest_helper_travel.cancel()
+ check(await Wait.settle(self,world),"Explicit stop after background download settles")
  world.asset_packs=original_packs
  world.quest_helper_menu.open_menu()
  if not await click(world.quest_helper_menu.find_child("QuestHelper_11",true,false)):return
@@ -256,9 +258,10 @@ func devices() -> void:
  check(reply.ok,"Initiator starts again")
  var before:Dictionary=b.session.snapshot()
  first.close()
- if not await ready(func():return server.clients().size()==1 and not b.quest_auto.running,"Initiator disconnect stops owned runner"):return
+ if not await ready(func():return server.clients().size()==1 and b.quest_auto.detached,"Initiator disconnect preserves and waits on owned runner"):return
  for index in range(30):b.quest_auto.tick(b,0.21)
- check(b.session.snapshot()==before,"Server executes no more transactions after initiator closes")
+ check(b.session.snapshot()==before,"Detached server waits without advancing transactions")
+ await rpc(second,{"type":"quest_auto_stop"})
  reply=await rpc(second,{"type":"quest_auto_start","quest_id":11,"client":"other"})
  check(reply.ok,"Remaining device can start its own run")
  server.stop()
@@ -305,7 +308,8 @@ func profiles() -> void:
  reply=await rpc(alice,{"type":"quest_auto_start","quest_id":11,"client":"alice"})
  check(reply.ok,"Alice starts before disconnect")
  alice.close()
- if not await ready(func():return not ba.quest_auto.running and hub.connections_of("alice").size()==1,"Hub stops initiating socket while same-account observer remains"):return
+ if not await ready(func():return ba.quest_auto.detached and hub.connections_of("alice").size()==1,"Hub preserves initiating task while same-account observer remains"):return
+ await rpc(bob,{"type":"quest_auto_stop"})
  reply=await rpc(bob,{"type":"quest_auto_start","quest_id":11,"client":"alice-other"})
  check(reply.ok,"Remaining Alice device starts continuation")
  await drive_remote(bob,ba,"alice-other")

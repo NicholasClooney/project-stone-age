@@ -79,7 +79,7 @@ func run() -> void:
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_1",true,false)):return
  if not await ready(func():return backend.quest_auto.running,"Remote restarts original task"):return
  world.link.close()
- if not await ready(func():return not backend.quest_auto.running and not backend.automation.running,"Real initiating WebSocket disconnect stops task"):return
+ if not await ready(func():return backend.quest_auto.running and backend.quest_auto.detached,"Real initiating WebSocket disconnect preserves task for reconnect"):return
  world.process_mode=Node.PROCESS_MODE_DISABLED
  world.link.close();world.music.stop();world.effect.stop();world.queue_free()
  server.stop();server.queue_free();backend.queue_free()

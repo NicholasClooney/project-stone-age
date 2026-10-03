@@ -184,7 +184,12 @@ func _on_link_connected() -> void:
 	# Resync presentation to the backend's current battle and progress.
 	if game.state.battle_open and not game.battle_view.visible and not game.training_helper.compact_active and not game.party_compact():game.present_battle_start(game.state.battle)
 	elif not game.state.battle_open and game.battle_view.visible:game.present_battle_close(str(game.state.battle.get("outcome","")))
-	report_position()
+	if game.state.derived.get("quest_auto",{}).get("running",false):
+		# Reconnect follows authority before reporting, never the stale local cell.
+		var current:Dictionary=game.state.automation.get("position",{})
+		if not current.is_empty():game._follow=[int(current.map_id),Vector2i(int(current.cell[0]),int(current.cell[1]))]
+		game.quest_helper_travel.auto_reported=false
+	else:report_position()
 	# Windows show the backend's automation as it is now: after a server
 	# restart a resumed run (重启后自动恢复) is running again.
 	for node in [game.training_helper,game.pet_hunt_menu,game.pet_workflow]:

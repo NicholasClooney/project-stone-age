@@ -12,6 +12,11 @@ var own_route:=false
 var auto_requested:=false
 var auto_reported:=false
 func configure(owner: Node) -> void:world=owner
+func auto_pending() -> bool:
+	return active and phase in ["auto_download","auto_request"]
+func cancel_navigation() -> void:
+	# A panel owns presentation only; preserve pending and server-owned automation.
+	if active and not auto_pending():cancel()
 func cancel(reason: String="") -> void:
 	if auto_requested or world.state.derived.get("quest_auto",{}).get("running",false):
 		world.link.request({"type":"quest_auto_stop","client":world._client_id})
@@ -108,11 +113,11 @@ func _process(_delta: float) -> void:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false):
 		world.last_adventure_message=str(auto.get("message",""))
-		if not (world.link.is_local() or world.link.online) or (world.battle_view.visible and str(auto.get("phase",""))!="battle") or world.party_locked():cancel("自动任务已停止。")
-		var landing:bool=str(auto.get("phase",""))=="landing"
+		if (world.link.is_local() or world.link.online) and ((world.battle_view.visible and str(auto.get("phase",""))!="battle") or world.party_locked()):cancel("自动任务已停止。")
+		var landing:bool=str(auto.get("phase",""))=="landing" or auto.get("detached",false)
 		if not landing:auto_reported=false
-		var destination:Dictionary=auto.get("target",{})
-		if landing and not auto_reported and str(auto.get("client",""))==world._client_id and not destination.is_empty() and not world.area_transition_busy and not world.moving and not world.data.is_empty() and int(world.data.map_id)==int(destination.map_id) and world.cell==Vector2i(int(destination.cell[0]),int(destination.cell[1])):
+		var destination:Dictionary=world.state.automation.get("position",{}) if auto.get("detached",false) else auto.get("target",{})
+		if landing and not auto_reported and (str(auto.get("client",""))==world._client_id or auto.get("detached",false)) and not destination.is_empty() and not world.area_transition_busy and not world.moving and not world.data.is_empty() and int(world.data.map_id)==int(destination.map_id) and world.cell==Vector2i(int(destination.cell[0]),int(destination.cell[1])):
 			auto_reported=true
 			world.report_position()
 	else:

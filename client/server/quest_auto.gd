@@ -16,6 +16,8 @@ var waited:=0.0
 var internal:=false
 ## Only a restart-restored intent may continue without the initiating socket.
 var restored:=false
+## Transport loss pauses this live intent; it is not restart restoration.
+var detached:=false
 var shutdown_intent:Dictionary={}
 var path:Array[Vector2i]=[]
 var issued:Array=[]
@@ -30,7 +32,22 @@ func emit_position(b,point:Dictionary) -> void:
  issued.append({"seq":position_serial,"map_id":int(point.map_id),"cell":point.cell.duplicate()})
  while issued.size()>16:issued.pop_front()
  b._emit({"type":"position","map_id":point.map_id,"cell":point.cell,"quest_position_seq":position_serial,"client":"quest_auto"})
+func detach(b, peer:int) -> void:
+ if not running or connection!=peer:return
+ detached=true
+ connection=-1
+ client=""
+ b.publish()
 func accept_report(b,command:Dictionary) -> bool:
+ # Backend routing has already authenticated the profile; transport overwrites
+ # the connection tag. Only an actual report at the authoritative cell rebinds.
+ if running and detached and int(command.get("_quest_connection",-1))!=-1 and not str(command.get("client","")).is_empty():
+  if int(command.get("map_id",-1))==b.automation.position_map and b._cell(command)==b.automation.position_cell:
+   connection=int(command._quest_connection)
+   client=str(command.client)
+   detached=false
+   waited=0.0
+   b.publish()
  if running and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
   for receipt in issued:
    if int(command.get("quest_position_seq",-1))==int(receipt.seq) and int(command.get("map_id",-1))==int(receipt.map_id) and command.get("cell",[])==receipt.cell:
@@ -71,7 +88,7 @@ func start_battle(b) -> void:
  b.publish()
 
 func snapshot() -> Dictionary:
- return {"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client}
+ return {"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client,"detached":detached}
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
  var had_shutdown_intent:=not shutdown_intent.is_empty()
  if persist:shutdown_intent={}
@@ -109,6 +126,7 @@ func load_resume(b,state:Dictionary) -> void:
  client=""
  connection=-1
  restored=true
+ detached=false
  running=true
  phase="travel"
  elapsed=0.0
@@ -147,6 +165,7 @@ func start(b,command:Dictionary) -> Dictionary:
  if step.is_empty():return b._reject(str(quest.get("blocked_reason",""))+" 当前没有可自动执行的原任务步骤。")
  shutdown_intent={}
  restored=false
+ detached=false
  client=str(command.client)
  connection=int(command.get("_quest_connection",-1))
  running=true
@@ -183,6 +202,7 @@ func tick(b,delta:float) -> void:
  if Rules.flag(b.session._profile,"ended",event(b)) and not clean_authorized:
   stop(b,title(b)+"已完成。")
   return
+ if detached:return
  if phase=="landing":
   waited+=delta
   if waited>=30.0:stop(b,"等待地图位置确认超时。")
