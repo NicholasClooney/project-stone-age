@@ -27,8 +27,19 @@ Godot float64通过 `PackedFloat32Array` 显式round-trip至binary32：int转flo
 
 运行 `python3 tools/audit_transmigration_rules.py` 会从SHA锁定原文件**原样抽取** `NPC_TransCalculation`、`Rounding`、`NPC_TransmigrationStatus`，以最小字符字段/通知stub实际编译并运行。公式没有重写为Python参考实现。`--write`显式重建 `client/tests/fixtures/transmigration-rules.json`；默认将新编译输出与已提交fixture逐字比较。fixture不是由待测GDScript生成。
 
-固定 `-std=c99 -fno-fast-math -ffp-contract=off`，分别编译 `-O0` / `-O2`并要求相等；oracle拒绝非32位float/int、非IEEE binary32有效精度、`FLT_EVAL_METHOD!=0`。这锁定现代严格binary32执行语义，不声称验证所有历史x87 excess precision或原服务器构建。本机首片：Apple clang17，51组真实C vectors与Godot一致，包括五转累计、等级130封顶、非整数比例、2^24附近、负A、旧自由点覆盖。未启动原服务器。
+固定 `-std=c99 -fno-fast-math -ffp-contract=off`，分别编译 `-O0` / `-O2`并要求相等；oracle拒绝非32位float/int、非IEEE binary32有效精度、`FLT_EVAL_METHOD!=0`。这锁定现代严格binary32执行语义，不声称验证所有历史x87 excess precision或原服务器构建。本机：Apple clang17，851组真实C vectors与Godot一致，包括五转累计、等级130封顶、非整数比例、2^24附近、负A、旧自由点覆盖。未启动原服务器。
 
 Godot定向：`./scripts/run.sh --headless --script res://tests/transmigration_rules_test.gd`，测试不创建Session、不读存档。sandbox首次阻止Godot测试日志目录导致启动logger崩溃；允许隔离测试目录后重跑51组0失败，非规则断言失败。无full、无导入、无live。
 
-后续同owner扩展原20项计数、旗标清留、祭品原槽序和四村映射及边界矩阵；本片只提供可运行的数值核心，不开放精灵王、转生、六七转/PETTRANS或Boss技能。
+## 完整纯规则接口与边界
+
+- `quest_count(events)`：now/ended各六个uint32值，非法-1；仅计END。anson `Serv.zip` 中 `gmsv/npc/npc_transmigration.c:916–917` 的20项（包括14/44/45）替换chen快照20表，属于已裁定源配置组合。ZIP/成员SHA均在辅助oracle强制核验并写入fixture，QuestCheck函数仍原样编译。
+- `flags_after(events,new_count)`：原C1002–1084，启用 `_PET_TRANS` 旗标保留与 `_NEWEVENT` 六字配置，但不开放宠转生业务；END69/70/71/72/109/118/122/131/127/158/159、NOW69..72仅保旧值，再补END48..47+n。输出新对象。
+- `sacrifice_templates(new_count)` / `select_sacrifices(pets,new_count,selected_ids=[])`：原C1133–1185；只接随身≤5槽，默认每种模板首次命中，五转按693..696模板序返回；不加等级限制。既有`species="original_N"`为模板身份、`pet_id`为字符串UID。项目补充显式UID选择，拒缺失/重复/错模板；不接宠仓、不执行删除。服务仍须验证profile/所有权/净容量。
+- `reward_for(savepoint_bits,new_count)`：原C510–520只看低四位首置位，较高位忽略；无出生拒绝。777/ten.arg1–4的Present与Warp，enemy.txt1009–1013的模板映射；不处理成长随机数。Item/Pet仅metadata，函数不收费。
+
+辅助oracle编译原 `NPC_TransmigrationQuestCheck`、`NPC_TransmigrationFlg_CLS`、`NPC_StartpointCheck`、`NPC_TransmigrationDelPet`，仅字段/位存取、宠物索引与删除记录用stub。旗标setter不模拟家族贡献/通知，纯规则不负责这些副作用。事件394组覆盖全部384个NOW/END单独位及五轮全0/全1。献宠穷举15625组（五种模板/空槽的五槽排列×五轮）；fixture保留每种转数/成败/原槽输出组合代表，Godot逐代表校验。奖励32种出生位×5轮共160组，村索引由C执行，Present/Warp/enemy期望从SHA锁定源表直接读取。
+
+本次Godot首跑暴露JSON数组浮点值与整数数组比较类型不同，测试显式转换期望数组为整数后851属性组、394事件组、祭品代表及160奖励组全部0失败。数值与源规则实现未为绕过测试改写。输入只读断言及非法历史/零总量/小数/UID保护额外覆盖。
+
+全模块未连接生产，不开放精灵王、转生、六七转/PETTRANS或Boss技能。原技能仅metadata的现有限制仍在，不能据纯规则通过宣称原AI已恢复。API未增加保存字段；金币无需额外函数，始终由Session.MAX_GOLD统一。
