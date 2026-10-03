@@ -11,6 +11,9 @@ var map_id := -1
 var cell := Vector2i.ZERO
 var battle_id := ""
 var saved_win := false
+var encounters := 0
+# Ephemeral diagnostic context, never serialized with the profile.
+var diagnostic_command: Dictionary = {}
 
 func unavailable(b) -> String:
 	if b.stationary_party_member.is_valid() and b.stationary_party_member.call():return "组队中不能原地遇敌，请先离队。"
@@ -24,7 +27,7 @@ func unavailable(b) -> String:
 
 func snapshot(b) -> Dictionary:
 	var why := unavailable(b)
-	return {"running":running,"available":why.is_empty(),"reason":why if not why.is_empty() else reason,"interval":INTERVAL}
+	return {"running":running,"available":why.is_empty(),"reason":why if not why.is_empty() else reason,"interval":INTERVAL,"encounters":encounters,"stop_reason":reason if not running else ""}
 
 func start(b, command: Dictionary) -> Dictionary:
 	if not command.get("enabled") is bool:return b._reject("开关必须为布尔值。")
@@ -39,7 +42,7 @@ func start(b, command: Dictionary) -> Dictionary:
 		if not reply.ok:return reply
 	running = true
 	reason = "胜利后继续遇敌；出招仍由你控制。"
-	elapsed = 0.0;lease = LEASE
+	elapsed = 0.0;lease = LEASE;encounters = 0
 	connection = int(command.get("_quest_connection",0))
 	map_id = b.automation.position_map;cell = b.automation.position_cell
 	battle_id = "";saved_win = false
@@ -53,6 +56,7 @@ func keepalive(b, command: Dictionary) -> Dictionary:
 func stop(b, why: String) -> void:
 	if not running:return
 	running = false;reason = why;elapsed = 0.0
+	audit(b,"pause" if diagnostic_command.get("type","")=="stationary_pause" else "stop",why)
 	b.publish()
 
 func command(b, type: String) -> void:
@@ -69,6 +73,11 @@ func settled(b, state: Dictionary, saved: bool) -> void:
 
 func tick(b, delta: float) -> void:
 	if not running:return
+	diagnostic_command = {"type":"tick"}
+	_tick(b,delta)
+	diagnostic_command = {}
+
+func _tick(b, delta: float) -> void:
 	lease -= maxf(0,delta)
 	if lease<=0:
 		stop(b,"发起设备已断线或暂停，已停止原地遇敌。")
@@ -98,5 +107,24 @@ func tick(b, delta: float) -> void:
 	var reply: Dictionary = b._cmd_field_step({"map_id":map_id,"cell":[cell.x,cell.y],"encounter":true})
 	if bool(reply.get("battle",false)):
 		battle_id = str(b.battle_state.get("battle_id",""))
+		encounters += 1
+		b.publish()
 	elif bool(reply.get("hit",false)):
 		stop(b,"原版遇敌数据或素材不可用，已停止。")
+
+## One compact stdout record at a transition; whitelist fields, never tokens,
+## request payloads, filesystem paths or the character profile.
+func audit(b, event: String, why: String, source: Dictionary = {}) -> void:
+	var origin: Dictionary = diagnostic_command if source.is_empty() else source
+	var record := {"event":event,"time_utc":Time.get_datetime_string_from_system(true),"monotonic_ms":Time.get_ticks_msec(),
+		"character":b.account_name,"reason":why,"source":str(origin.get("type","server")),
+		"connection":origin.get("_quest_connection",null),"owner_connection":connection,
+		"battle_id":battle_id,"active":bool(b.battle.snapshot().get("active",false)),"running":running,
+		"pause":str(origin.get("type",""))=="stationary_pause","saved_win":saved_win,"encounters":encounters}
+	if origin.get("type","")=="auto":record.operation=str(origin.get("name",""))
+	if origin.get("type","")=="stationary_pause":
+		# Client observations aid diagnosis; they never authorize server state.
+		record.client_paused_input=bool(origin.get("paused_input",false))
+		record.client_battle_visible=bool(origin.get("battle_visible",false))
+		record.client_menu_visible=bool(origin.get("menu_visible",false))
+	print("[stationary] "+JSON.stringify(record))
