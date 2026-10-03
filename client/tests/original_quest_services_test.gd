@@ -1,9 +1,21 @@
 extends "res://tests/bonus_quest_transactions_test.gd"
+const DojoRoute=preload("res://tests/support/golden_bui_route.gd")
+func place(b,id:String)->void:
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if int(npc.map_id) in range(800,811):
+  check(DojoRoute.near(b,npc),"real ticket entrance and previous quiz precede service fixture")
+ else:super.place(b,id)
 func service_setup():
  var b=setup()
- b.original_quests.services.private_catalog=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/golden-bui-private-services.json"))
+ # Preserve all real preceding-floor services; override only pinned fixture
+ # definitions under test, never manufacture route receipts.
+ b.original_quests.services.context(b)
+ var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/golden-bui-private-services.json"))
+ b.original_quests.services.private_catalog.services.merge(fixture.services,true)
+ b.session._profile.player.level=30
  var npcs:Array=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/golden-bui-public-npcs.json"))
  b.quest_catalog.npcs.append_array(npcs);b.quest_catalog.enabled_events.append(44)
+ place(b,str(npcs[0].id))
  return b
 func public_only(value:Variant)->bool:
  if value is Dictionary:
@@ -42,6 +54,7 @@ func run()->void:
  b.quest_visit_guard=Callable()
  # Explicitly approved original no-ticket exception still goes through same token layer.
  while 2751 in b.session.snapshot().original_items:Session.OriginalEquipment.remove(b.session._profile,2751)
+ place(b,janken)
  before=b.session.snapshot()
  r=choose(b,talk(b,janken),"yes")
  check(r.ok and public_only(r) and b.session.snapshot()==before,"no-ticket janken retains original approved behavior")
@@ -72,6 +85,7 @@ func run()->void:
 func service_lan(npcs:Array)->void:
  var b=service_setup();root.add_child(b)
  var id:String=npcs[0].id
+ var route_items:Array=b.session.snapshot().original_instances.duplicate(true)
  Session.OriginalEquipment.add(b.session._profile,2752)
  place(b,id)
  var server=Server.new(b,0,"127.0.0.1");root.add_child(server)
@@ -86,6 +100,6 @@ func service_lan(npcs:Array)->void:
  var answer:Dictionary=await request(links[1],{"type":"quest_choose","token":second.dialogue.token,"choice":"yes"})
  check(answer.ok and public_only(answer),"actual LAN question contains no answers or private state")
  check(public_only(await request(links[0],{"type":"snapshot"})),"remote snapshot excludes questions and private answer state")
- check(not (await request(links[0],{"type":"quest_choose","token":second.dialogue.token,"choice":"yes"})).ok and b.session.snapshot().original_items.is_empty(),"LAN cannot consume entry twice")
+ check(not (await request(links[0],{"type":"quest_choose","token":second.dialogue.token,"choice":"yes"})).ok and b.session.snapshot().original_instances==route_items,"LAN cannot consume entry twice or alter rewards earned on the real preceding route")
  for link in links:link.close()
  links=[];server.stop();server.queue_free();b.queue_free();await process_frame
