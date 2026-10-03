@@ -21,6 +21,8 @@ func save_failure(b,id:String,note:String)->void:
  check(not choose(b,thanks,"ok" if accept else "yes").ok and b.session.snapshot()==before,note)
  b.save_path=""
 func mine(b)->void:
+ check(preload("res://tests/support/original_route_driver.gd").walk(b,31801,Vector2i(37,48),range(31801,31806)).ok,"ore rollback fixture walks the original five-floor return to its actual source")
+ check(b.quest_arrival.has_arrival(b,31801,Vector2i(37,48)),"ore rollback fixture holds real first-floor arrival")
  var rng:=RandomNumberGenerator.new();rng.seed=27
  var area:Dictionary=b.encounter_catalog.area_at(31801,Vector2i(37,48))
  check(not area.is_empty(),"original first-floor encounter area exists")
@@ -57,6 +59,7 @@ func run()->void:
  check(not choose(b,talk(b,GUARD),"yes").ok and not b.battle_open,"mining permit is not competition qualification")
  mine(b)
  natural_mining()
+ project_mining_denied()
  save_failure(b,RIVAL,"failed qualification retains ore and mining permit")
  check(trade(b,RIVAL).ok and 2535 in b.session.snapshot().original_items and not 2534 in b.session.snapshot().original_items and not 2536 in b.session.snapshot().original_items,"original qualification consumes both source objects")
  check(choose(b,talk(b,GUARD),"yes").ok and b.battle_open,"real fixed contest starts")
@@ -129,4 +132,23 @@ func natural_mining()->void:
   fight(b);b.handle({"type":"battle_close"})
   if found:break
  check(found and b.session.snapshot().original_items.count(2534)>=1,"seed27 natural weighted encounters reach original ore and settle")
+ b.free()
+
+func project_mining_denied()->void:
+ var b=fresh()
+ # Original permit is input data; project placement deliberately grants no route.
+ Rules.Session.OriginalEquipment.add(b.session._profile,2536)
+ b.automation.position_changed(31801,Vector2i(37,48),true)
+ check(not b.quest_arrival.has_arrival(b,31801,Vector2i(37,48)),"project mining position has no route authority")
+ b.encounter_rng.seed=27
+ var found:=false
+ for attempt in range(100):
+  var result:Dictionary=b.wild_encounter(31801,Vector2i(37,48))
+  check(result.ok,"project placement still allows ordinary original battle")
+  if not result.ok:b.free();return
+  found=result.troop.enemies.any(func(e):return int(e.source_enemy_id)==1043 and 2534 in e.generated_drops)
+  fight(b)
+  check(b.handle({"type":"battle_close"}).ok,"route-denied ore battle still settles and closes")
+  if found:break
+ check(found and b.session.snapshot().original_items.count(2534)==0 and 2536 in b.session.snapshot().original_items,"same original winning ore roll with project-only arrival grants no ore and preserves permit")
  b.free()
