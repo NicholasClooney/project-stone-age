@@ -244,6 +244,7 @@ func adult_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  quest.completion_detail="原入口要求等级30，助手只送入口外；洞内远处须沿原通道步行，已合法抵达且在可谈距离时助手保持原地。自动任务从原等级门进入并往返步行；接任务仍按原LV>0。仪玉由差使发放，非战斗掉落。"
 
 func wood_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
+ quest.completion_detail="木洞内须从公开原入口沿原路步行；助手只送入口或合法近处原地。村内原持物交付不增洞内条件。"
  var items:Array=profile.original_items
  var ended:=Rules.flag(profile,"ended",18)
  var stage:=0

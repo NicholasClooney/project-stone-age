@@ -11,7 +11,7 @@ static func steps(helper, backend, profile: Dictionary, quest: Dictionary) -> vo
  var ended:=Rules.flag(profile,"ended",event)
  var started:=Rules.flag(profile,"now",event)
  var shells:int=profile.original_items.count(2414)
- quest.completion_detail="商人免费提供贝壳；年青人收一颗，有两颗以上给特洛昆、只有一颗给呼拔拔。小猪送信要持有贝壳，鲜花免费，最后保留贝壳。红玉手环实际攻+3防+3敏-3魅+2，原说明数值有误。助手瞬移是项目便利；自动执行尚未开放。"
+ quest.completion_detail="商人免费提供贝壳；年青人收一颗，有两颗以上给特洛昆、只有一颗给呼拔拔。小猪送信要持有贝壳，鲜花免费，最后保留贝壳。红玉手环实际攻+3防+3敏-3魅+2，原说明数值有误。助手仅送原公开洞口或合法近处原地；须沿哥亚山原路线步行，自动执行尚未开放。"
  if event==6:
   helper.add_step(backend,profile,quest,"goya6:request",entry(backend,"jaruga/event/event06_1",2),not started and not ended,started or ended,"向哥亚山一楼年青人接取贝壳委托")
   var merchant:=0 if shells==0 else (2 if shells==1 else 1)

@@ -4,6 +4,16 @@ const MERCHANT="jaruga/event/event06_2@4000:71:97"
 const SKY="jaruga/event/event07_1@20401:14:10"
 const FLOWER="jaruga/event/event07_3@20404:44:13"
 const BEAUTY="jaruga/event/event07_2@20406:36:34"
+func fresh():
+ var b=Backend.new();b.quest_catalog.enabled_events=[6,7,8]
+ return b
+func talk(b,id:String) -> Dictionary:
+ if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if int(npc.map_id) in range(20401,20407):
+  check(preload("res://tests/support/legacy_cave_route.gd").approach(b,npc).ok,"actual original Goya route to "+id)
+ else:check(b.handle({"type":"quest_visit","npc_id":id,"mode":"near"}).ok,"public original merchant visit")
+ return b.handle({"type":"quest_talk","npc_id":id})
 func failure(b,id:String,note:String) -> void:
  var thanks:=choose(b,talk(b,id),"yes")
  var before:Dictionary=b.session.snapshot()
@@ -16,6 +26,7 @@ func shell_start(b) -> void:
 func run() -> void:
  var b=Backend.new()
  for e in [6,7,8]:check(e in b.quest_catalog.enabled_events and not row(b,e).steps.is_empty(),"registered event has helper stages %d"%e)
+ b.quest_catalog.enabled_events=[6,7,8]
  if b.original_quests.npc_by_id(BOY).is_empty():b.free();quit(1);return
  for id in [BOY,MERCHANT,SKY,FLOWER,BEAUTY]:
   var npc:Dictionary=b.original_quests.npc_by_id(id)
@@ -88,30 +99,30 @@ func run() -> void:
  print("GOYA DELIVERIES: %d failures"%failures)
  quit(1 if failures else 0)
 func alternatives() -> void:
- var independent=Backend.new()
+ var independent=fresh()
  Session.OriginalEquipment.add(independent.session._profile,2414)
  check(trade(independent,SKY).ok and Rules.flag(independent.session.snapshot(),"now",7) and not Rules.flag(independent.session.snapshot(),"ended",6),"an existing language shell starts pig chain without inventing END6 prerequisite")
  independent.free()
- var capacity=Backend.new()
+ var capacity=fresh()
  check(trade(capacity,BOY).ok,"capacity fixture earns NOW6")
  for i in range(14):Session.OriginalEquipment.add(capacity.session._profile,2424)
  var capacity_before:Dictionary=capacity.session.snapshot()
  check(not trade(capacity,MERCHANT).ok and capacity.session.snapshot().original_items==capacity_before.original_items and not 2414 in capacity.session.snapshot().original_items,"merchant cannot partially grant two shells into full bag")
  capacity.free()
  for count in [1,3]:
-  var b=Backend.new();shell_start(b)
+  var b=fresh();shell_start(b)
   if count==1:check(b.handle({"type":"quest_discard","item_id":2414}).ok,"prepare one-shell reward through actual discard")
   else:Session.OriginalEquipment.add(b.session._profile,2414)
   check(trade(b,BOY).ok,"original quantity branch %d"%count)
   check(int(b.session.snapshot().pets[-1].source_enemy_id)==(47 if count==1 else 44) and b.session.snapshot().original_items.count(2414)==count-1,"quantity>= branch and distinct pet match source")
   if count==1:check(trade(b,MERCHANT).ok and b.session.snapshot().original_items.count(2414)==1,"one-shell pet outcome can regain shell for pig chain")
   b.free()
- var b=Backend.new();shell_start(b)
+ var b=fresh();shell_start(b)
  b.handle({"type":"quest_discard","item_id":2414})
  check(trade(b,MERCHANT).ok and b.session.snapshot().original_items.count(2414)==2,"active merchant with one shell tops up exactly one")
  b.free()
 func lan() -> void:
- var b=Backend.new();root.add_child(b);shell_start(b)
+ var b=fresh();root.add_child(b);shell_start(b)
  var server=preload("res://server/ws_server.gd").new(b,0,"127.0.0.1");root.add_child(server)
  check(server.start()==OK,"Goya LAN server uses port0")
  var links:Array=[];var states:Array=[];var pollers:Array=[]
@@ -122,7 +133,7 @@ func lan() -> void:
   process_frame.connect(poller);links.append(link);states.append(state);pollers.append(poller);link.connect_now()
   check(await Wait.until(self,func():return link.online and not state.profile.is_empty()),"Goya second device connected")
   await rpc(link,{"type":"ping"})
- await rpc(links[0],{"type":"quest_visit","npc_id":BOY,"mode":"near"})
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,b.original_quests.npc_by_id(BOY)).ok,"LAN reward fixture walks actual Goya entrance")
  var opened:Dictionary=await rpc(links[0],{"type":"quest_talk","npc_id":BOY})
  var thanks:Dictionary=await rpc(links[0],{"type":"quest_choose","token":opened.dialogue.token,"choice":"yes"})
  await rpc(links[0],{"type":"ping"})
