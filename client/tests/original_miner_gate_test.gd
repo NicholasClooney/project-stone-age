@@ -1,4 +1,8 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const Route=preload("res://tests/support/original_route_driver.gd")
+func source_talk(b,npc:Dictionary)->Dictionary:
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,npc).get("ok",false),"actual original miner entrance and cave route before gate/service")
+ return b.handle({"type":"quest_talk","npc_id":npc.id})
 var gate:Dictionary={}
 var seller:Dictionary={}
 func install(b)->void:
@@ -53,9 +57,19 @@ func party_gate()->void:
  for i in range(2):
   check(hub.handle(i+1,{"type":"create_profile","name":"Miner%d"%i,"pin":"1234"}).ok,"miner party profile")
   var b=hub.backend_of(i+1);install(b);ticket(b)
-  hub.handle(i+1,{"type":"report_position","map_id":31805,"cell":[22+i,3],"client":"miner%d"%i})
+  var opened:Dictionary=source_talk(b,gate)
+  choose(b,opened,"no")
+ # Keep the leader on the actually reachable pre-gate side. The old
+ # (22,3) fixture is across the permit door and cannot be walked to.
+ var leader=hub.backend_of(1);var member=hub.backend_of(2)
+ var facing:=-1
+ for index in range(8):
+  var delta:Vector2i=preload("res://server/party.gd").DIRECTIONS[index]
+  var goal:Vector2i=leader.automation.position_cell+delta
+  if Route.walk(member,31805,goal,[31805]).get("ok",false):facing=index;break
+ check(facing>=0,"party member walks next to leader on original pre-gate side")
  var r:Dictionary=hub.handle(1,{"type":"quest_talk","npc_id":gate.id})
- check(r.ok and hub.handle(2,{"type":"party_join","facing":1}).ok,"party joins after permit offer")
+ check(r.ok and hub.handle(2,{"type":"party_join","facing":facing}).ok,"party joins after permit offer")
  var result:Dictionary=hub.handle(1,{"type":"quest_choose","token":r.dialogue.token,"choice":"yes"})
  check(not result.ok and result.reason.contains("解散团队") and hub.backend_of(1).session.snapshot().original_items.count(2527)==1,"source default PartyMsg rejects confirmation without consuming permit")
  r=hub.handle(1,{"type":"quest_talk","npc_id":gate.id})
