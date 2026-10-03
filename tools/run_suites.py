@@ -98,8 +98,14 @@ def main():
     queue = sorted(dict.fromkeys(chosen or suites_from_test_sh()), key=lambda name: -durations.get(name, 60.0))
     user_relative, user_root = user_dir_root()
 
-    subprocess.run(["sh", "./scripts/run.sh", "--headless", "--editor", "--import", "--quit"], cwd=ROOT,
-                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    # A pool worktree shares the main checkout's assets through a symlink and
+    # clones its import cache; importing there would rewrite the live server's
+    # files (AGENTS.md "Assets in worktrees"), so only real asset folders import.
+    if (ROOT / "client" / "assets" / "legacy").is_symlink():
+        print("skipping editor import: client/assets/legacy is shared with the main checkout")
+    else:
+        subprocess.run(["sh", "./scripts/run.sh", "--headless", "--editor", "--import", "--quit"], cwd=ROOT,
+                       stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     running = {}
     results = {}
     sizes = {}
