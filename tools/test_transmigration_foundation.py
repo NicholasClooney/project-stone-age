@@ -1,8 +1,9 @@
-"""First-stage data stays inactive; real source capabilities remain composable."""
+"""Foundation is inert; isolated disabled descriptors coexist with live chains."""
 import copy
 import json
 from pathlib import Path
 import unittest
+from unittest.mock import patch
 
 from quest_import_common import load_quest_module, registered_quest_modules, merge_quest_module, registry_entries
 from quest_source_handlers import npc_enemy, keyword_warp
@@ -33,12 +34,13 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(len(cooldowns),2)
         self.assertEqual(cooldowns[0]['branches'][0]['guard']['cooldown'],180)
 
-    def test_foundation_has_no_active_chain_or_settlement(self):
+    def test_foundation_has_no_settlement(self):
         modules=list(registered_quest_modules(REF))
         staged=[m for m in modules if m['module_id'].startswith('transmigration-')]
-        self.assertEqual(len(staged),5)
-        self.assertTrue(all(not m['enabled_events'] and not m['npcs'] for m in staged))
+        self.assertEqual({m['module_id'] for m in staged},{'transmigration-'+name for name in ['foundation','earth','fire','wind','water']})
         foundation=next(m for m in staged if m['module_id']=='transmigration-foundation')
+        self.assertEqual(foundation['enabled_events'],[])
+        self.assertEqual(foundation['npcs'],[])
         self.assertEqual(set(map(int,foundation['items'])),{2698,2699,2700,2701,*range(2706,2719),2735,2736,2758,*range(2766,2775)})
         self.assertIn('32021',foundation['staged_world']['map_sources'])
         self.assertNotIn('world',foundation)
@@ -46,6 +48,17 @@ class FoundationTests(unittest.TestCase):
             if entry['id'] in ['transmigration-earth','transmigration-fire','transmigration-wind','transmigration-water']:
                 self.assertTrue((ROOT/entry['manifest']).is_file())
                 self.assertEqual(entry['helper'],'res://server/'+entry['id'].replace('-','_')+'_helper.gd')
+
+    def test_disabled_chain_configuration_is_isolated(self):
+        entries=copy.deepcopy(registry_entries())
+        names={'transmigration-'+name for name in ['earth','fire','wind','water']}
+        for entry in entries:
+            if entry['id'] in names:entry['enabled_events']=[]
+        with patch('quest_import_common.registry_entries',return_value=entries):
+            modules=list(registered_quest_modules(REF))
+        self.assertEqual({m['module_id'] for m in modules if m['module_id'] in names},names)
+        for module in modules:
+            if module['module_id'] in names:self.assertEqual(module['enabled_events'],[])
 
     def test_npcenemy_rejects_unreviewed_behavior(self):
         source=(REF/'gmsv/data/npc/100/sb_kbu.arg').read_text(encoding='gb18030')

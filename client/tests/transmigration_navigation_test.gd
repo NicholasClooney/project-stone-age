@@ -1,6 +1,6 @@
 extends "res://tests/munde_cave_navigation_test.gd"
-# Enabled helpers are injected only into this isolated server. Production
-# descriptors remain disabled. Deliberately stale projection exercises the
+# Fixture helpers replace live chain helpers in this isolated server.
+# Deliberately stale projection exercises the
 # final authorization call independently of snapshot/step button state.
 class Chain:
  extends RefCounted
@@ -23,6 +23,9 @@ class Chain:
 
 func run()->void:
  var b=setup()
+ b.quest_catalog.jobs=b.quest_catalog.jobs.filter(func(job):return not int(job.event) in [39,40,41,42,46])
+ b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(event):return not int(event) in [39,40,41,42,46])
+ b.quest_helper.transmigration.helpers.clear();b.quest_helper.cached_key=""
  var chief:Dictionary=b.original_quests.npc_by_id(CHIEF)
  var baseline:Array=b.quest_helper.navigation_key(b)
  var chains:Array=[]

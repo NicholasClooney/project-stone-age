@@ -1,14 +1,24 @@
 extends "res://tests/original_fixed_guards_test.gd"
-## Real first-stage source fixtures; production spirit chains remain disabled.
+## Real source transaction fixtures isolated from currently enabled chains.
 var fixture:Dictionary={}
 var now:=1000
 func setup():
  var b=fresh()
  b.session.snapshot() # initialize authoritative original item UID fields
  if fixture.is_empty():fixture=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-foundation.json"))
- b.quest_catalog.npcs.append_array(fixture.module.npcs.duplicate(true))
+ b.quest_catalog.npcs=fixture.module.npcs.duplicate(true)
+ b.quest_catalog.enabled_events=[]
+ var ids:Dictionary={}
+ for n in b.quest_catalog.npcs:
+  check(not ids.has(n.id),"fixture NPC identity unique")
+  ids[n.id]=true
+  for event in n.events:
+   if not int(event) in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(int(event))
+ check(b.quest_catalog.npcs==fixture.module.npcs,"fixture exact NPC catalog has no production duplicates")
+ b.quest_catalog.npc_overrides={};b.original_quests.pending={}
+ b.quest_helper.transmigration.helpers.clear();b.quest_helper.cached_key=""
  b.quest_catalog.items.merge(fixture.module.items)
- b.quest_catalog.enabled_events.append_array([39,40])
+
  b.original_quests.npc_state.clock=func():return now
  return b
 func source(script:String,index:int=0)->Dictionary:
@@ -19,7 +29,10 @@ func submit(b,r:Dictionary,text:String)->Dictionary:
  return b.handle({"type":"quest_choose","token":r.get("dialogue",{}).get("token",""),"choice":"submit","text":text})
 func run()->void:
  var plain=Backend.new()
- check(not [39,40,41,42,46].any(func(e):return e in plain.quest_catalog.enabled_events),"foundation does not activate spirit flags")
+ check(not plain.quest_catalog.npcs.any(func(n):return str(n.get("source_script",""))=="777/ten.arg"),"production catalog has no spirit king instance")
+ check(not plain.quest_catalog.enabled_events.has(47),"third-stage settlement event remains disabled")
+ check(not plain.handle({"type":"transmigration"}).get("ok",false),"production has no transmigration command")
+ closed_fixture(plain)
  check(plain.quest_catalog.active_npcs().all(func(n):return not str(n.id).contains("777/ten.arg")),"32021 import does not spawn spirit king")
  check(plain.session.world_catalog.info(32021).get("dev_only",false),"32021 remains developer-only scenery")
  plain.free()
@@ -29,6 +42,18 @@ func run()->void:
  await keyword_lan()
  print("TRANSMIGRATION FOUNDATION: %d failures"%failures)
  quit(1 if failures else 0)
+func closed_fixture(b)->void:
+ var spirits:Array=b.quest_catalog.npcs.filter(func(n):return n.get("events",[]).any(func(e):return int(e) in [39,40,41,42,46]) and str(n.get("source_script",""))!="sainasu/event/event12")
+ b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(e):return not int(e) in [39,40,41,42,46])
+ b.quest_helper.transmigration.helpers.clear();b.quest_helper.cached_key="";b.original_quests.pending={}
+ check(not b.quest_catalog.active_npcs().any(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46])),"disabled fixture hides spirit-only NPCs")
+ for npc in spirits:
+  b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
+  check(not b.handle({"type":"quest_talk","npc_id":npc.id}).ok,"disabled fixture rejects raw spirit talk")
+  for mode in ["near","arrival"]:
+   check(not b.handle({"type":"quest_visit","npc_id":npc.id,"mode":mode}).ok,"disabled fixture rejects raw visit "+mode)
+   check(not b.handle({"type":"quest_visit","quest_id":36,"step_id":"earth39:deliver","mode":mode}).ok,"disabled fixture rejects previous step "+mode)
+ check(not b.original_quests.npc_by_id("sainasu/event/event12@11107:24:6").is_empty(),"closing spirits retains shared Munde NPC")
 func keyword_transactions()->void:
  var b=setup();var npc:=source("giiru/event/sink/sink03")
  b.session._profile.player.base_stats={"vitality":10,"strength":10,"toughness":10,"dexterity":10}
