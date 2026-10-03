@@ -1,4 +1,14 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const Travel=preload("res://tests/support/water_route_driver.gd")
+func source_talk(b,npc:Dictionary)->Dictionary:
+ if not b.quest_arrival.has_arrival(b,int(npc.map_id),b.automation.position_cell) or not Travel.walk_near(b,npc,range(20801,20808)):
+  var entered:=false
+  for portal in b.quest_helper.places.links(200).values():
+   if int(portal.to_map)==20801 and not portal.get("disabled",false):
+    b.automation.position_changed(200,Vector2i(int(portal.cell[0]),int(portal.cell[1])))
+    entered=b.handle({"type":"report_position","map_id":20801,"cell":portal.target}).get("ok",false);break
+  check(entered and Travel.walk_near(b,npc,range(20801,20808)),"real seven-floor dragon route precedes jewel gate")
+ return b.handle({"type":"quest_talk","npc_id":npc.id})
 var gate:Dictionary={}
 func install(b)->void:
  var f:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-dragon-gate.json"))
@@ -19,9 +29,9 @@ func run()->void:
  check(choose(b,r,"no").ok and b.session.snapshot()==before,"cancel preserves three jewels and location")
  r=source_talk(b,gate);Session.OriginalEquipment.remove(b.session._profile,2459)
  check(not choose(b,r,"yes").ok,"confirm rechecks latest third jewel")
- Session.OriginalEquipment.add(b.session._profile,2459);r=source_talk(b,gate);before=b.session.snapshot()
+ Session.OriginalEquipment.add(b.session._profile,2459);r=source_talk(b,gate);before=b.session.snapshot();var origin:Vector2i=b.automation.position_cell
  b.save_path="user://missing-dragon-gate/save.json"
- check(not choose(b,r,"yes").ok and b.session.snapshot()==before and b.automation.position_cell==Vector2i(11,37),"failed save rolls back original gate Warp")
+ check(not choose(b,r,"yes").ok and b.session.snapshot()==before and b.automation.position_cell==origin,"failed save rolls back original gate Warp")
  b.save_path="user://dragon-gate.json";r=source_talk(b,gate)
  check(choose(b,r,"yes").ok and b.automation.position_cell==Vector2i(13,35),"three jewels open exact source Warp")
  check(b.session.snapshot().original_instances==before.original_instances and b.session.snapshot().player.gold==before.player.gold,"source has no DelItem or charge; all original UIDs survive")
@@ -43,11 +53,11 @@ func lan_gate()->void:
   check(await Wait.until(self,func():poll();return links[i].online),"dragon device login")
  var a=hub.backends.alice;var other=hub.backends.bob
  for b in [a,other]:install(b);jewels(b)
- source_talk(a,gate);a.original_quests.pending={};other.automation.position_changed(20807,Vector2i(12,37))
+ source_talk(a,gate);a.original_quests.pending={};var origin:Vector2i=a.automation.position_cell;other.automation.position_changed(20807,origin+Vector2i.RIGHT)
  var r:Dictionary=await request(links[0],{"type":"quest_talk","npc_id":gate.id})
  check((await request(links[2],{"type":"party_join","facing":1})).ok,"party enters between gate offer and confirmation")
  var result:Dictionary=await request(links[1],{"type":"quest_choose","token":r.dialogue.token,"choice":"yes"})
- check(not result.ok and result.reason.contains("不能团体进入") and a.automation.position_cell==Vector2i(11,37),"second device cannot bypass authoritative party restriction")
+ check(not result.ok and result.reason.contains("不能团体进入") and a.automation.position_cell==origin,"second device cannot bypass authoritative party restriction")
  await request(links[2],{"type":"party_leave"})
  r=await request(links[0],{"type":"quest_talk","npc_id":gate.id})
  check((await request(links[1],{"type":"quest_choose","token":r.dialogue.token,"choice":"yes"})).ok and a.session.snapshot().original_items.size()==3,"solo second device commits without consuming jewels")
