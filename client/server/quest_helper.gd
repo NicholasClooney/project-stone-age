@@ -350,7 +350,20 @@ func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
  if preload("res://server/jan_cave_helper.gd").owns(npc) and int(npc.map_id) in range(20601,20609):return preload("res://server/jan_cave_helper.gd").destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
- if preload("res://server/munde_cave_helper.gd").owns(npc) and int(npc.map_id)==11107:return preload("res://server/munde_cave_helper.gd").destination(self,backend,npc,mode)
+ if preload("res://server/munde_cave_helper.gd").owns(npc) and int(npc.map_id)==11107:
+  var munde=preload("res://server/munde_cave_helper.gd")
+  var boundary:Dictionary=munde.destination(self,backend,npc,mode)
+  if boundary.is_empty():return {}
+  # event12 is one shared physical NPC. The already enabled Munde route
+  # remains a valid owner; inactive/locked wind must not revoke it. Both
+  # owners are always bounded by the original Munde guard component.
+  if 9 in backend.quest_catalog.enabled_events or not transmigration.owns(npc):return boundary
+  var target:Dictionary=transmigration.destination(self,backend,npc,mode)
+  if target.is_empty() or int(target.get("map_id",-1))!=11107:return {}
+  var cell:Array=target.get("cell",[])
+  if cell.size()!=2 or munde.region_at(self,backend,Vector2i(int(cell[0]),int(cell[1])))!=munde.region_at(self,backend,backend.automation.position_cell):return {}
+  return target
+ if transmigration.owns(npc):return transmigration.destination(self,backend,npc,mode)
  var world = places
  world.set_quest_catalog(backend.quest_catalog)
  var map_id := int(npc.map_id)

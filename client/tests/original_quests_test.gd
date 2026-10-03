@@ -42,11 +42,16 @@ func public_catalog(catalog) -> void:
 	var registry:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://data/quest-modules.json"))
 	var groups:Dictionary=fixture.groups
 	var registered:Array=["baseline"]
-	for module in registry.modules:
-		var id:String=str(module.id)
+	for raw in registry.modules:
+		var module:Dictionary=raw
+		var id:String=str(raw.id)
 		check(not id in registered and groups.has(id),"independently reviewed registry group "+id)
 		if not groups.has(id):continue
 		registered.append(id)
+		if groups[id].has("configuration"):
+			check(raw.size()==2 and raw.get("configuration")==groups[id].configuration,"independent descriptor binding "+id)
+			module=JSON.parse_string(FileAccess.get_file_as_string("res://"+str(groups[id].configuration).trim_prefix("client/")))
+			check(module.get("id")==id and module.get("helper")==groups[id].helper,"independent helper identity "+id)
 		for field in ["manifest","builder","enabled_events"]:
 			check(module.get(field)==groups[id].get(field),"registered source/events unchanged: "+id+"/"+field)
 	var reviewed:Array=groups.keys();reviewed.sort();registered.sort()
@@ -71,6 +76,9 @@ func public_catalog(catalog) -> void:
 				if branch.has(field):entry[field]=branch[field]
 			behavior.append(entry)
 		check(behavior==expected[id].branches,"original branch conditions/actions preserved: "+id)
+	check(actual.size()==242,"foundation adds no public NPC instances")
+	for item in [2698,2699,2700,2701,2706,2707,2708,2709,2710,2711,2712,2713,2714,2715,2716,2717,2718,2735,2736,2758,2766,2767,2768,2769,2770,2771,2772,2773,2774]:
+		check(catalog.items.has(str(item)),"reviewed shared item "+str(item))
 	var expected_ids:Array=expected.keys();expected_ids.sort()
 	var actual_ids:Array=actual.keys();actual_ids.sort()
 	check(actual_ids==expected_ids,"catalog is exact baseline plus independent registered NPC union")
