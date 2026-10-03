@@ -124,7 +124,6 @@ func audit(b, event: String, why: String, source: Dictionary = {}) -> void:
 	if origin.get("type","")=="auto":record.operation=str(origin.get("name",""))
 	if origin.get("type","")=="stationary_pause":
 		# Client observations aid diagnosis; they never authorize server state.
-		record.client_paused_input=bool(origin.get("paused_input",false))
-		record.client_battle_visible=bool(origin.get("battle_visible",false))
-		record.client_menu_visible=bool(origin.get("menu_visible",false))
+		for field in ["paused_input","battle_visible","menu_visible","battle_open"]:
+			if origin.has(field):record["client_"+field]=bool(origin[field])
 	print("[stationary] "+JSON.stringify(record))
