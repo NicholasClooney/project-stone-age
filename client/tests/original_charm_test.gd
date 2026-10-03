@@ -69,12 +69,21 @@ func run() -> void:
   b.session._profile.player[field]=old
  b.session._profile.player.transmigration=2147483647
  check(not talk(b).ok,"C int overflow rejected without charging")
- b.session._profile.player.erase("transmigration")
+ # v7 requires the explicit count; optional legacy cost inputs are separate
+ # dictionaries, not a partially deleted current profile used for disk IO.
+ var missing_count:Dictionary=b.session.snapshot();missing_count.player.erase("transmigration")
+ check(not b.session._valid_profile(missing_count),"v7 missing mandatory count is rejected instead of inventing history")
+ b.session._profile.player.transmigration=0
+ var legacy_cost:Dictionary=b.session.snapshot();legacy_cost.player.erase("transmigration")
+ check(Charm.cost(legacy_cost)==400,"legacy optional count remains zero for pure cost calculation")
  var p:Dictionary=b.session._profile
  Session.OriginalEquipment.add(p,2427)
  p.original_equipment.amulet=p.original_instances[-1].uid
+ var low_level:Dictionary=b.session.snapshot()
+ check(Charm.cost(low_level)==400 and not Session.OriginalEquipment.valid(low_level),"Lv2 cost remains400 but direct Lv10 amulet fixture is invalid")
+ check(b.session.gm_raise_level(-1,10) and Session.OriginalEquipment.valid(b.session.snapshot()),"use legal original Lv10 equipment before transaction and persistence")
  before=b.session.snapshot();r=trade(b)
- check(r.ok and b.session.snapshot().player.charm==65 and Charm.cost(before)==400 and b.session.equipment_mods().charm==-1,"equipment modifier never changes charge or permanent base")
+ check(r.ok and b.session.snapshot().player.charm==65 and Charm.cost(before)==2000 and b.session.snapshot().player.gold==before.player.gold-2000 and b.session.equipment_mods().charm==-1,"equipment modifier never changes charge or permanent base")
  b.session._profile.player.charm=60
  check(b.session.gm_grant_pet(74),"real pet participates in loyalty recomputation")
  r=choose(b,talk(b),"charm")
@@ -104,7 +113,10 @@ func run() -> void:
  check(not b.handle({"type":"quest_choose","token":stale,"choice":"charm"}).ok,"replaced token expires")
  b.save_path="user://original-charm-test.json"
  b.session._profile.player.charm=60
+ check(b.session._valid_profile(b.session.snapshot()),"complete v7 profile is valid before real charm transaction")
  check(trade(b).ok,"file-backed service commits")
+ var written:Variant=JSON.parse_string(FileAccess.get_file_as_string(b.save_path))
+ check(written is Dictionary and b.session._valid_profile(written),"actual written full profile validates before readback")
  var loaded=Backend.new()
  check(loaded.load_profile(b.save_path) and loaded.session.snapshot().player.charm==65 and loaded.session.snapshot().player.gold==b.session.snapshot().player.gold,"real save round-trip retains stone and base charm")
  var invalid:Dictionary=b.session.snapshot();invalid.player.transmigration=-1
