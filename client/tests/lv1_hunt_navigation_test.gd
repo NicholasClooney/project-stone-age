@@ -1,6 +1,6 @@
 extends SceneTree
 const Wait=preload("res://tests/support/wait.gd")
-const DreamRoute=preload("res://tests/support/dream_walking_route.gd")
+const ReviewedTravel=preload("res://server/reviewed_hunt_travel.gd")
 var failures:=0
 func _initialize():call_deferred("run")
 func check(ok:bool,note:String):
@@ -13,16 +13,23 @@ func run():
  game.random_encounters=false
  var rows:Array=JSON.parse_string(FileAccess.get_file_as_string("res://data/level-one-spots.json")).spots
  for row in rows:
-  if int(row.map_id)==41:
-   check(await DreamRoute.enter_and_reach(self,game,Vector2i(row.cell[0],row.cell[1])),"Burkel original time entrance and maze reach its pre-guard room")
   var map=game.dev_map_overview
   map.open_map();map.walk_mode=false
   var poi={"map_id":int(row.map_id),"area_id":int(row.area_id),"cell":Vector2i(row.cell[0],row.cell[1])}
-  var moved:bool=map.select_poi(poi)
-  check(await Wait.until(self,func():return int(game.data.map_id)==int(row.map_id) and game.cell==poi.cell and not game.area_transition_busy) and await Wait.settle(self,game),"%s destination position settles"%row.name)
+  var moved:=false
+  if not ReviewedTravel.reviewed_target(int(row.map_id),int(row.area_id),int(row.template_id)).is_empty():
+   map.close_map()
+   var menu=game.pet_encyclopedia
+   menu.encyclopedia()
+   for place in menu.book.entry_for(int(row.template_id)).locations:
+    if int(place.map_id)==int(row.map_id) and int(place.area_id)==int(row.area_id):
+     moved=menu.go_catch(place);break
+  else:moved=map.select_poi(poi)
+  check(await Wait.until(self,func():return int(game.data.map_id)==int(row.map_id) and game.cell==poi.cell and not game.area_transition_busy and not map._project_travel_pending and game.pet_encyclopedia.pending_hunt.is_empty()) and await Wait.settle(self,game),"%s destination position settles"%row.name)
   var menu=game.pet_hunt_menu
-  menu.open_menu()
+  if not menu.visible:menu.open_menu()
   menu.show_target(int(row.template_id),true)
+  check(menu.choose_target(int(row.template_id)),"%s real target selection"%row.name)
   var found:=false
   var renderable:=false
   for i in range(menu.species.item_count):
@@ -30,7 +37,7 @@ func run():
     found=true;renderable=not menu.species.is_item_disabled(i)
   check(moved and game.cell==poi.cell and int(game.data.map_id)==int(row.map_id) and found and renderable and not menu.start_button.disabled,"%s map %d (%s) found=%s render=%s enabled=%s actual=%s"%[row.name,row.map_id,poi.cell,found,renderable,not menu.start_button.disabled,game.cell])
   menu.auto_capture.button_pressed=false;menu.start_hunt()
-  check(menu.running,"%s verified target starts real hunt"%row.name)
+  check(menu.running,"%s verified target starts real hunt; reason=%s auth=%s/%s pending=%s"%[row.name,menu.status.text,game.backend.automation.position_map,game.backend.automation.position_cell,map._project_travel_pending])
   if int(row.map_id)==41:check(game.backend.automation.hunt_running and game.backend.automation.position_map==41 and game.backend.automation.position_cell==poi.cell,"Burkel hunt runs at authoritative original position")
   menu.close_menu()
  var map=game.dev_map_overview
