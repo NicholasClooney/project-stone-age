@@ -49,7 +49,7 @@ static func build(before:Dictionary,selected_ids:Array,reward_definition:Diction
   candidate.active_pet=-1 if active==removed else (active-1 if active>removed else active)
   var capture:Dictionary=candidate.get("automation_settings",{}).get("capture",{})
   var index:int=int(capture.get("pet",-1))
-  if str(capture.get("pet_id",""))==uid:capture.pet_id="";capture.pet=-1
+  if str(capture.get("pet_id",""))==uid or (str(capture.get("pet_id","")).is_empty() and index==removed):capture.pet_id="";capture.pet=-1
   elif index>removed:capture.pet=index-1
  candidate.ride_pet=-1
  for key in ["initial","weights","species","template_id","name","sprite","elements","size","modai","skill_slots"]:
