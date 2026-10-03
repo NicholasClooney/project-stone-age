@@ -54,6 +54,7 @@ func route_checks()->void:
  b.free()
 
 func run() -> void:
+ var started_at:=Time.get_ticks_msec()
  route_checks()
  for id in ["herb:request","herb:medicine","herb:return"]:
   for phase in ["landing","talk","yes","ok"]:
@@ -77,16 +78,16 @@ func run() -> void:
     var done:Dictionary=b.session.snapshot()
     check(not start(b).ok and b.session.snapshot()==done,"Completed herb has no invented repeat")
     b.free()
-    # Explicit stop invalidates pending tokens and preserves committed stages.
-    clear_save();b=fresh();start(b);reach(b,id,phase)
-    before=b.session.snapshot()
-    b.handle({"type":"quest_auto_stop"})
-    for index in range(15):advance(b)
-    check(b.session.snapshot()==before and b.original_quests.pending.is_empty(),"Stop preserves original stage "+id+"/"+phase)
-    check(start(b).ok,"Explicit restart derives current stage")
-    finish(b)
-    check(b.session._profile.original_items==[2427],"Restart finishes once")
-    b.free()
+   # Explicit stop invalidates pending tokens and preserves committed stages.
+   clear_save();var stopped=fresh();start(stopped);reach(stopped,id,phase)
+   var before_stop:Dictionary=stopped.session.snapshot()
+   stopped.handle({"type":"quest_auto_stop"})
+   for index in range(15):advance(stopped)
+   check(stopped.session.snapshot()==before_stop and stopped.original_quests.pending.is_empty(),"Stop preserves original stage "+id+"/"+phase)
+   check(start(stopped).ok,"Explicit restart derives current stage")
+   finish(stopped)
+   check(stopped.session._profile.original_items==[2427],"Restart finishes once")
+   stopped.free()
   clear_save()
   var b=fresh();start(b);reach(b,id,"yes" if id=="herb:request" else "ok")
   var before:Dictionary=b.session.snapshot()
@@ -95,6 +96,7 @@ func run() -> void:
   finish(b)
   check(b.session.snapshot()==before and b.quest_auto.message=="save_failed","Atomic failed save at "+id)
   b.free()
+ print("HERB MATRIX MS: ",Time.get_ticks_msec()-started_at)
  for action in ["eat","discard"]:
   clear_save()
   var b=fresh();start(b);reach(b,"herb:return","landing")
@@ -123,7 +125,10 @@ func run() -> void:
  for id in [6,7]:check(not b.handle({"type":"quest_auto_start","quest_id":id,"client":"test"}).ok,"Reviewed doctor job refuses auto")
  b.free()
  clear_save()
+ var remote_at:=Time.get_ticks_msec()
+ print("HERB FIXTURES MS: ",remote_at-started_at)
  await remote_auto()
+ print("HERB REMOTE MS: ",Time.get_ticks_msec()-remote_at)
  print("ORIGINAL HERB AUTO: %d failures" % failures)
  quit(1 if failures else 0)
 func remote_auto() -> void:
