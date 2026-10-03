@@ -433,6 +433,7 @@ func adult_destination(backend,npc:Dictionary)->Dictionary:
  return {"map_id":10204,"cell":[current.x,current.y],"npc_id":str(npc.id)}
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
+ if preload("res://server/transmigration_final_helper.gd").owns(npc):return preload("res://server/transmigration_final_helper.gd").destination(self,backend,npc,mode)
  if LegacyCave.owns(npc) and int(npc.map_id) not in range(10701,10706):return LegacyCave.destination(self,backend,npc,mode)
  if preload("res://server/golden_arrival_helper.gd").owns(npc):return preload("res://server/golden_arrival_helper.gd").destination(self,backend,npc,mode)
  if preload("res://server/brothers_arrival_helper.gd").owns(npc):return preload("res://server/brothers_arrival_helper.gd").destination(self,backend,npc,mode)
