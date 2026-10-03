@@ -32,9 +32,8 @@ func trade(b,id:String) -> Dictionary:
  if r.has("dialogue"):r=choose(b,r,"ok")
  return r
 func adult(b) -> void:
- check(trade(b,"jaruga/event/event04_1").ok,"adult source request")
- check(trade(b,"jaruga/event/event04_2").ok,"adult source jade")
- check(trade(b,"jaruga/event/event04_1").ok and Rules.flag(b.session.snapshot(),"ended",4),"adult actual prerequisite")
+ check(preload("res://tests/support/original_route_driver.gd").complete_adult(b).get("ok",false),"adult actual original level gate and channel prerequisite")
+
 func brothers(b,choice:int=5) -> void:
  check(trade(b,"giiru/event/ev28_0").ok,"brothers REQUEST28")
  # Select the actual source branch that issues each correct paper.

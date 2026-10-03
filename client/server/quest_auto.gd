@@ -58,6 +58,7 @@ func walk_path(b,goal:Vector2i) -> Array[Vector2i]:
    nav.set_point_solid(cell,not b.quest_helper.safe(data,cell,occupied,links))
  var result:Array[Vector2i]=[]
  var origin:Vector2i=b.automation.position_cell
+ if map_id==10204 and origin==Vector2i(2,6) and b.quest_arrival.has_arrival(b,map_id,origin) and int(data.blocked[origin.y*int(data.width)+origin.x])==0 and not occupied.has(origin):nav.set_point_solid(origin,false)
  if nav.is_point_solid(origin) or nav.is_point_solid(goal):return result
  for cell in nav.get_id_path(origin,goal):result.append(cell)
  if not result.is_empty():result.pop_front()
@@ -141,6 +142,7 @@ func start(b,command:Dictionary) -> Dictionary:
   var reason:=str(b.quest_visit_guard.call())
   if not reason.is_empty():return b._reject(reason)
  if str(command.get("client","")).is_empty():return b._reject("缺少发起设备。")
+ if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  quest_id=int(id)
  clean_authorized=bool(quest.get("can_restart",false))
  step=select(b)
@@ -193,13 +195,40 @@ func tick(b,delta:float) -> void:
  internal=true
  advance(b)
  internal=false
+func adult_enter(b)->void:
+ var portal:Dictionary=b.quest_helper.places.links(10202).get(Vector2i(31,13),{})
+ if portal.is_empty() or int(portal.get("to_map",-1))!=10204 or (portal.get("target",[]).size()!=2 or Vector2i(int(portal.target[0]),int(portal.target[1]))!=Vector2i(2,6)) or int(portal.get("requires_level",-1))!=30:
+  stop(b,"原成人仪式入口资料缺失，停止自动任务。");return
+ if int(b.session._profile.player.level)<int(portal.requires_level):stop(b,"原成人仪式入口需要等级30，不能绕门。");return
+ var cell:Vector2i=b.automation.position_cell
+ if b.automation.position_map!=10202 or cell not in [Vector2i(30,13),Vector2i(31,13)]:
+  target={"map_id":10202,"cell":[30,13]}
+  b.automation.position_changed(10202,Vector2i(30,13),b.automation.position_map!=10202)
+  phase="travel" if restored else "landing"
+  waited=0.0;emit_position(b,target);b.publish();return
+ if cell==Vector2i(30,13):
+  b.automation.position_changed(10202,Vector2i(31,13),false,"walk")
+  emit_position(b,{"map_id":10202,"cell":[31,13]});b.publish();return
+ var allowed:Dictionary=b._cmd_check_passage({"from_map":10202,"to_map":10204})
+ if not allowed.ok:stop(b,str(allowed.get("reason","原入口拒绝通行。")));return
+ b.automation.position_changed(10204,Vector2i(2,6),true,"walk")
+ if not b.quest_arrival.has_arrival(b,10204,Vector2i(2,6)):stop(b,"原入口未授予通道资格。");return
+ target={"map_id":10204,"cell":[2,6]}
+ phase="travel" if restored else "landing"
+ waited=0.0;emit_position(b,target);b.publish()
+
 func advance(b) -> void:
  if phase=="travel":
   step=select(b)
   if step.is_empty():stop(b,title(b)+"已完成。" if Rules.flag(b.session._profile,"ended",event(b)) else "原任务条件已变化。");return
   var npc:Dictionary=b.original_quests.npc_by_id(str(step.npc_id))
   if npc.is_empty() or b.original_quests.branch_for(npc,b.session._profile)!=step.source.branch_data:stop(b,"原任务分支已变化。");return
-  target=b.quest_helper.destination(b,npc,"near")
+  if event(b)==4:
+   if b.automation.position_map!=10204 or not b.quest_arrival.has_arrival(b,10204,b.automation.position_cell):
+    adult_enter(b)
+    return
+   target=b.quest_helper.adult_walk_destination(b,npc)
+  else:target=b.quest_helper.destination(b,npc,"near")
   if target.is_empty():stop(b,"找不到安全 NPC 落点。");return
   if event(b)==4 and b.automation.position_map==int(target.map_id):
    var goal:=Vector2i(target.cell[0],target.cell[1])
@@ -210,10 +239,6 @@ func advance(b) -> void:
     phase="walking"
    b.publish()
    return
-  if event(b)==4:
-   var arrival:Dictionary=b.quest_helper.destination(b,npc,"arrival")
-   if arrival.is_empty():stop(b,"找不到原地图入口落点。");return
-   target=arrival
   phase="travel" if restored and event(b)==4 else ("talk" if restored else "landing")
   waited=0.0
   message="准备原任务对话。" if restored else "等待发起设备加载任务地图。"
