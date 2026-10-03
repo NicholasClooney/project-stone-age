@@ -428,7 +428,9 @@ func select_target(target: Vector2i) -> bool:
 	show()
 	return false
 
+var _project_travel_pending:=false
 func teleport_near(target: Vector2i) -> bool:
+	if _project_travel_pending:return false
 	var destination:=nearest_safe(target)
 	if destination.x<0:
 		note.text="附近没有可站立的地面，请选择其他地点。"
@@ -439,18 +441,32 @@ func teleport_near(target: Vector2i) -> bool:
 		world.call_deferred("load_area_id",current_map,destination)
 		return true
 	world.clear_input()
-	world.moving=false
-	world.cell=destination
-	world.target_cell=destination
-	world.logical_position=Vector2(destination)
-	world.player.position=world.project(Vector2(destination))
-	world.player.set_action(3)
-	world.camera.reset_smoothing()
-	world.marker_cell=Vector2i(-1,-1)
+	_project_travel_pending=true
+	var requested_map:=current_map
+	var reply:Dictionary=world.link.request({"type":"project_position","map_id":requested_map,"cell":[destination.x,destination.y]},func(result:Dictionary):_finish_project_move(result,requested_map,destination))
+	return bool(reply.get("ok",false)) or bool(reply.get("pending",false))
+
+func _finish_project_move(reply:Dictionary,map_id:int,destination:Vector2i)->void:
+	if not bool(reply.get("ok",false)):
+		_project_travel_pending=false
+		note.text=str(reply.get("reason","服务器拒绝项目移动。"))
+		world.message.text=note.text
+		return
+	# The authority broadcasts first; wait until the scene has actually
+	# followed it before checkpointing or exposing the hunt controls.
+	var deadline:int=Time.get_ticks_msec()+30000
+	while is_instance_valid(world) and (int(world.data.get("map_id",-1))!=map_id or world.cell!=destination or world.moving or world.area_transition_busy):
+		if Time.get_ticks_msec()>deadline:
+			_project_travel_pending=false
+			note.text="权威位置已改变，请重新选择落点。"
+			return
+		await get_tree().process_frame
+	_project_travel_pending=false
+	if not is_instance_valid(world):return
 	world.checkpoint()
-	world.queue_redraw()
 	close_map()
-	return true
+	return
+
 func zoom_at(pointer: Vector2, multiplier: float) -> void:
 	var cell_point: Vector2=(pointer-map_rect.position)/map_rect.size
 	zoom_level=clampf(zoom_level*multiplier,1.0,12.0)
