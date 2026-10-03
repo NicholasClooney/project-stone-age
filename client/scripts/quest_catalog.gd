@@ -64,7 +64,12 @@ func _project_active_npc(npc: Dictionary) -> Dictionary:
  var override:Dictionary=npc_overrides.get(str(npc.id),{})
  if bool(override.get("hidden",false)):return {}
  if npc.has("source_spawn") and not override.has("map_id"):return {}
- var active: Dictionary = npc.duplicate(true)
+ # Special handlers retain the complete source branches. Ordinary records
+ # replace that field only on a fresh shallow dictionary before deep copying.
+ var whole_record:bool=npc.get("handler","")=="TimeMan" or (str(npc.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"] and 44 in enabled_events) or (str(npc.get("kind",""))=="original_jug_shop" and 40 in enabled_events)
+ var projected:Dictionary=npc if whole_record else npc.duplicate(false)
+ if not whole_record:projected.branches=[]
+ var active: Dictionary = projected.duplicate(true)
  if override.has("map_id"):
   active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
  if active.get("handler","")=="TimeMan":
