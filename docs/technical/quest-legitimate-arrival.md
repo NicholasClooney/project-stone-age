@@ -114,3 +114,9 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 免费湖入口源`mapwarp.txt:2739–2743`及`genout/dungeon03.create:67,76,94,103`含双向入口和31301↔31302；保留所有这些原边，不创造唯一收费入口。材料房mark在成功原门事务后排队、真实Warp发布才激活，重启/离组件/项目移动同通用生命周期。
 
 独立water suite 1/1通过（71秒），只用water owner生产命令driver，不自造凭证。隔离前置fixture明确为已有NOW46、1000金币和普通已持2767；成人END4、湖石2768、洞内两战、材料门与2769/END46均真实完成。此suite不声称复测从地/火/风完成后村庄REQUEST46的全串链，也不声称普通专用掉落来源已封闭。
+
+### Dragon cave: original seven floors and three-jewel room
+
+`20801–20807` now requires continuous arrival from an actual enabled `200→20801` original portal. Interior portals cannot start a new route. `npc/genout/wpm_20807_11_37:1–6` requires all three jewels and warps to `20807(13,35)`; only its successful saved action establishes `dragon_gate`. `jaruga/event/event17_1:4–12` (and the alternative `event17_2/3` branches) consumes the three jewels/flute and ends event17. These final branches require the committed gate mark as well as the original predicates. Holding the jewels or being in the room does not establish it. The mark uses the normal room-exit/epoch lifecycle.
+
+`quest_arrival_dragon_test` uses real Backend commands through seven floors, project-to-gate denial, actual source gate and final reward save failures/retries, and reset refusal. Its inventory is explicitly preexisting test material, not a claim that wild task drops are protected. Ordinary dragon drops remain unchanged pending the dedicated-drop decision. This policy must land with the corresponding legacy helper/test flow adaptations; the isolated arrival suite does not validate the full existing UI flow.

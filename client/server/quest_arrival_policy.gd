@@ -2,6 +2,7 @@ extends RefCounted
 ## Reviewed project safeguards. These are not additional original event flags.
 ## Other audited chains are added separately; staged rebirth bosses stay closed.
 static func scope(map_id: int) -> String:
+	if map_id>=20801 and map_id<=20807:return "dragon"
 	if map_id>=21001 and map_id<=21016:return "earth"
 	if map_id in [41,42]:return "dream"
 	if map_id==10204:return "adult"
@@ -12,6 +13,7 @@ static func scope(map_id: int) -> String:
 	return ""
 
 static func portal_root(from_map: int, to_map: int) -> bool:
+	if from_map==200 and to_map==20801:return true
 	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204) or (from_map==5000 and to_map==31301)
 
 static func script_root(source_id: String, to_map: int) -> bool:
@@ -22,6 +24,7 @@ static func script_root(source_id: String, to_map: int) -> bool:
 	return (source_id=="genout/wpm_100_443_127" and to_map==11101) or (source_id=="genout/wpm_100_278_325" and to_map==11201)
 
 static func action_marks(npc: Dictionary, _branch: Dictionary) -> Array:
+	if source(npc) in ["jaruga/event/event17_1","jaruga/event/event17_2","jaruga/event/event17_3"]:return ["dragon_gate"]
 	if source(npc)=="jaruga/event/hekisei03":return ["water_material"]
 	if source(npc) in ["jaruga/event/ruri01","jaruga/event/ruri05","jaruga/event/ruri06"]:return ["earth_final"]
 	if source(npc)=="seimu/event/event01_2":return ["dream_final"]
@@ -32,6 +35,7 @@ static func action_marks(npc: Dictionary, _branch: Dictionary) -> Array:
 	return []
 
 static func action_mark(source_id: String) -> String:
+	if source_id=="genout/wpm_20807_11_37":return "dragon_gate"
 	if source_id=="genout/wpm_21308_20_10":return "water_material"
 	return ""
 
@@ -43,6 +47,7 @@ static func battle_mark(source_id: String) -> String:
 	return ""
 
 static func mark_regions(mark: String) -> Array:
+	if mark=="dragon_gate":return [[20807,13,35]]
 	if mark=="water_material":return [[21308,20,7]]
 	if mark=="earth_final":return [[21015,9,17]]
 	if mark=="dream_final":return [[41,34,39],[42,34,39]]
