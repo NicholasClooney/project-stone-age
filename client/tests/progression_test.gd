@@ -45,19 +45,32 @@ func _initialize() -> void:
 	check(Rules.species_actor("wooli_wooli",1,101).base_stats != Rules.species_actor("wooli",1,101).base_stats,"species tables affect generation")
 	var old: Dictionary = game.snapshot()
 	old.version = 1
+	check(not game._valid_profile(old),"v1 stats profile with v6 warehouse fields is an invalid hybrid")
+	for key in Game.ItemStorage.FIELDS:old.erase(key)
 	old.player.erase("base_stats")
 	old.player.erase("legacy_stat_offset")
 	old.player.max_hp = 65;old.player.hp = 42;old.player.attack = 13;old.player.defence = 2;old.player.speed = 12
 	old.pets = [{"species":"wooli","name":"旧伙伴","sprite":100250,"hp":31,"max_hp":40,"attack":6,"defence":0,"speed":9,"level":2,"xp":10,"skill_unlocked":true}]
 	old.active_pet = 0
 	var path := "user://progression-migration-test.json"
+	for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
 	var file := FileAccess.open(path,FileAccess.WRITE)
 	file.store_string(JSON.stringify(old));file.close()
 	var migrated = Game.new()
-	check(migrated.load_game(path),"legacy save accepted")
+	var loaded_legacy: bool=migrated.load_game(path)
+	check(loaded_legacy,"legacy save accepted")
+	if not loaded_legacy:quit(1);return
 	var restored: Dictionary = migrated.snapshot()
 	for key in ["max_hp","hp","attack","defence","speed","level","xp","allocated_stats"]:
 		check(restored.player[key] == old.player[key],"migration preserves player "+key)
+	check(restored.pets.size()==old.pets.size(),"migration retains the original pet count")
+	if restored.pets.size()!=old.pets.size():quit(1);return
+	for key in old.pets[0]:
+		if key=="skill_unlocked":
+			# Existing load migration replaces the old unnamed boolean with the
+			# authoritative learned skill list; it must not invent a paid skill.
+			check(restored.pets[0].learned_skills.is_empty() and not restored.pets[0].skill_unlocked,"legacy unnamed skill flag normalizes to no learned skills")
+		else:check(restored.pets[0][key]==old.pets[0][key],"migration preserves complete old pet field "+key)
 	check(restored.pets[0].max_hp == 40 and restored.pets[0].attack == 6 and restored.pets[0].hp == 31,"migration preserves pet earned strength and damage")
 	check(migrated.save_game(path) and migrated.load_game(path) and migrated.snapshot() == restored,"versioned migration idempotent")
 	check(migrated.allocate_stat("toughness") and migrated.snapshot().player.max_hp == 66,"migrated allocation uses restored cross-stat formula")

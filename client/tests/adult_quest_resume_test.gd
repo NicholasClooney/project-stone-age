@@ -67,10 +67,15 @@ func run() -> void:
   var expected:Dictionary=migrated.session.snapshot()
   if legacy:
    checkpoint.profile.version=5
+   check(not migrated.session._valid_profile(checkpoint.profile),"v5 checkpoint with v6 warehouse fields is an invalid hybrid")
+   for key in Session.ItemStorage.FIELDS:checkpoint.profile.erase(key)
    for key in ["original_instances","original_equipment","next_original_uid"]:checkpoint.profile.erase(key)
    var disk:Dictionary=JSON.parse_string(FileAccess.get_file_as_string(SAVE))
    disk.version=5
+   check(not migrated.session._valid_profile(disk),"v5 disk profile with v6 warehouse fields is an invalid hybrid")
+   for key in Session.ItemStorage.FIELDS:disk.erase(key)
    for key in ["original_instances","original_equipment","next_original_uid"]:disk.erase(key)
+   DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE+".bak"))
    var out=FileAccess.open(SAVE,FileAccess.WRITE)
    out.store_string(JSON.stringify(disk));out.close()
   migrated._write_resume_file(migrated._resume_file(),{"quest_auto":migrated.quest_auto.resume_state(),"adult_battle":checkpoint,"map_id":10204,"cell":checkpoint.cell})
@@ -78,6 +83,8 @@ func run() -> void:
   migrated=fresh(true);migrated.load_resume()
   var after:Dictionary=migrated.session.snapshot()
   check(migrated.battle_open and migrated.quest_auto.running and after.version==6 and migrated.session._valid_profile(after),"real v5/v6 checkpoint resumes validated v6 battle "+str(legacy))
+  check(after==expected,"v5/v6 checkpoint preserves entire migrated profile, including pets/stats/MP/storage")
+  check(migrated.session._pending==checkpoint.pending and migrated.battle.snapshot()==checkpoint.state and migrated.battle._rng.state==int(checkpoint.rng_state),"v5/v6 checkpoint preserves full pending/live state and RNG")
   if not legacy:check(after.original_instances==expected.original_instances and after.original_equipment==expected.original_equipment,"v6 equipment UID and partial durability unchanged")
   migrated.handle({"type":"quest_auto_stop"});migrated.free()
  # Source-position receipt acknowledges only bounded server-issued positions.

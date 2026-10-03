@@ -29,12 +29,12 @@ func _initialize():
  var after_recall:Dictionary=recalled.snapshot()
  check(after_recall.active_pet==-1 and after_recall.pet_storage[0]==fighter,"storing active pet recalls it and preserves full individual")
  check(after_recall.ride_pet==1 and after_recall.pets[1].species=="red_rex","auto-recall preserves mounted pet identity after index shift")
- var recall_path:="/tmp/stone-age-storage-recall-test.json"
+ var recall_path:="user://stone-age-storage-recall-test.json"
  var recall_loaded=Session.new()
  check(recalled.save_game(recall_path) and recall_loaded.load_game(recall_path) and recall_loaded.snapshot()==after_recall,"auto-recalled active pet and warehouse survive save reload")
  for name in [recall_path,recall_path+".bak"]:
   if FileAccess.file_exists(name):DirAccess.remove_absolute(name)
- var path:="/tmp/stone-age-storage-test.json"
+ var path:="user://stone-age-storage-test.json"
  check(session.save_game(path),"storage saves successfully")
  var restored=Session.new()
  check(restored.load_game(path) and restored.snapshot()==session.snapshot(),"storage and stable IDs survive save/reload unchanged")
@@ -46,11 +46,20 @@ func _initialize():
  malformed=session.snapshot().duplicate(true);malformed.pet_storage[0].hp=-1
  check(not session._valid_profile(malformed),"stored actors receive full save validation")
  var old:Dictionary=before.duplicate(true);old.version=2;old.erase("pet_storage");old.erase("next_pet_id")
+ check(not session._valid_profile(old),"v2 pet profile with v6 warehouse fields is an invalid hybrid")
+ for key in Session.ItemStorage.FIELDS:old.erase(key)
  for pet in old.pets:pet.erase("pet_id")
- var legacy:="/tmp/stone-age-storage-legacy.json"
+ var legacy:="user://stone-age-storage-legacy.json"
+ for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(legacy+suffix)
  var file=FileAccess.open(legacy,FileAccess.WRITE);file.store_string(JSON.stringify(old));file.close()
  var migrated=Session.new();var again=Session.new()
- check(migrated.load_game(legacy) and again.load_game(legacy) and migrated.snapshot()==again.snapshot(),"legacy IDs migrate deterministically without changing pet stats")
+ var loaded_legacy:bool=migrated.load_game(legacy) and again.load_game(legacy)
+ check(loaded_legacy and migrated.snapshot()==again.snapshot(),"legacy IDs migrate deterministically without changing pet stats")
+ if not loaded_legacy:quit(1);return
+ var migrated_profile:Dictionary=migrated.snapshot()
+ for i in range(before.pets.size()):
+  check(migrated_profile.pets[i]==before.pets[i],"legacy migration preserves every pet field and deterministic UID %d"%i)
+ check(migrated.save_game(legacy) and again.load_game(legacy) and again.snapshot()==migrated_profile,"legacy pet migration writes and reads back the complete profile")
  check(migrated.snapshot().pets[0].base_stats==before.pets[0].base_stats and migrated.snapshot().pets[0].growth_seed==before.pets[0].growth_seed,"legacy migration preserves actual individual growth")
  while session._profile.pets.size()<Session.PET_CAPACITY:
   var copy:Dictionary=original.duplicate(true);session._assign_pet_id(copy);session._profile.pets.append(copy)
@@ -58,7 +67,7 @@ func _initialize():
  session.select_pet(0);session.start_battle_config()
  check(not session.store_pet(0) and not session.retrieve_pet(0),"a battle locks storing its fighting pet, and a full party still cannot withdraw")
  check(session.store_pet(1) and session.snapshot().pets.size()==Session.PET_CAPACITY-1,"a pet outside the battle can still be stored")
- for name in [path,path+".bak",legacy]:
+ for name in [path,path+".bak",legacy,legacy+".bak",legacy+".tmp"]:
   if FileAccess.file_exists(name):DirAccess.remove_absolute(name)
  print("PET STORAGE: %d failures"%failures)
  quit(1 if failures else 0)

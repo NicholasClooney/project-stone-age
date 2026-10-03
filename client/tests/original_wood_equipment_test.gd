@@ -136,14 +136,19 @@ func saves() -> void:
 		add(old,2465);add(old,2485);add(old,2481)
 		var data: Dictionary=old.snapshot()
 		data.version=5
+		check(not old._valid_profile(data),"v5 equipment with v6 warehouse fields is an invalid hybrid")
+		for key in Session.ItemStorage.FIELDS:data.erase(key)
 		for key in ["original_instances","original_equipment","next_original_uid"]:data.erase(key)
 		write(path,data)
 		var migrated=Session.new()
-		check(migrated.load_game(path),"actual version5 equipment profile migrates")
+		var loaded_legacy: bool=migrated.load_game(path)
+		check(loaded_legacy,"actual version5 equipment profile migrates")
+		if not loaded_legacy:return
 		var after: Dictionary=migrated.snapshot()
 		check(after.inventory==data.inventory and after.equipment==data.equipment and after.equipped==data.equipped and after.equipped_mirror==data.equipped_mirror and after.original_items==data.original_items,"v5 preserves club/mirror/body/amulet and all quantities without gifts")
 		check(after.original_instances.size()==3 and after.original_equipment=={"arm":0,"bracelet":0,"amulet":0,"head":0,"body":0} and int(after.original_instances[1].durability)==300000 and int(after.version)==Session.SAVE_VERSION,"v5 original copies initialized once and remain in bag")
-		check(migrated.save_game(path) and Session.new().load_game(path),"migrated v6 save valid for next login")
+		var reread=Session.new()
+		check(migrated.save_game(path) and reread.load_game(path) and reread.snapshot()==after,"migrated v6 save valid and identical for next login")
 		remove_files(path)
 func battle() -> void:
 	var s=strong()
