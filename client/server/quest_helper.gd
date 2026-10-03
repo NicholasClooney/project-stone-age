@@ -73,13 +73,30 @@ func snapshot(backend) -> Dictionary:
    var notices:Array[String]=[]
    var actions:Dictionary=step.get("source",{}).get("actions",{})
    for action in ["GetItem","GetRandItem"]:
-    for item_id in Rules.item_list(str(actions.get(action,""))):
+    var slots:Array=Rules.item_list(str(actions.get(action,"")))
+    var unique_items:Dictionary={}
+    var inactive_kinds:Dictionary={}
+    for item_id in slots:
+     unique_items[item_id]=true
      var item:Dictionary=catalog.items.get(str(item_id),{})
      var effects:Array=preload("res://scripts/original_item_effects.gd").resolve(item)
      if effects.is_empty():continue
+     # Preserve every original slot's full effects, including repeated ids.
      rewards.append({"item_id":item_id,"name":str(item.get("name","")),"effects":effects})
-     var labels:Array[String]=preload("res://scripts/original_item_effects.gd").lines(item)
-     if not labels.is_empty():notices.append(str(item.get("name",""))+"："+"；".join(labels))
+     if action=="GetRandItem":
+      for effect in effects:
+       if not bool(effect.get("active",false)):inactive_kinds[str(effect.get("type","unknown"))]=true
+     else:
+      var labels:Array[String]=preload("res://scripts/original_item_effects.gd").lines(item)
+      if not labels.is_empty():notices.append(str(item.get("name",""))+"："+"；".join(labels))
+    if action=="GetRandItem" and not slots.is_empty():
+     var names:Dictionary={"magic":"魔法","resistance":"抗性","use":"物品使用","attack_count":"连续攻击次数","attack_pattern":"特殊攻击方式","stat":"普通属性"}
+     var categories:Array=inactive_kinds.keys();categories.sort()
+     var labels:Array[String]=[]
+     for kind in categories:labels.append(str(names.get(kind,kind)))
+     var summary:String="原奖池%d槽、%d种物品；重复槽保持原权重，不按物品种类均分概率。"%[slots.size(),unique_items.size()]
+     summary+="未实现效果类别："+"、".join(labels)+"。" if not labels.is_empty() else "无未实现效果标记。"
+     notices.append(summary+"完整效果见物品说明。")
    if not rewards.is_empty():step.reward_effects=rewards
    if not notices.is_empty():
     step.effects_notice="\n".join(notices)
