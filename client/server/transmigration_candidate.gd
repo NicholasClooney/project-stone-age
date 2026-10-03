@@ -13,6 +13,7 @@ static func build(before:Dictionary,selected_ids:Array,reward_definition:Diction
  for event in [39,40,42,46]:
   if not Rules._flag(before.original_events.ended,event):return {"ok":false,"reason":"需要完成地、水、火、风四项试炼。"}
  if transaction_id.is_empty() or transaction_id.length()>128:return {"ok":false,"reason":"转生事务身份无效。"}
+ if pet_capacity<1 or before.pets.size()>pet_capacity:return {"ok":false,"reason":"随身宠物容量状态无效。"}
  var count:int=int(before.player.transmigration)+1
  var selected:=Rules.select_sacrifices(before.pets,count,selected_ids)
  if not selected.ok:return selected
@@ -58,7 +59,7 @@ static func build(before:Dictionary,selected_ids:Array,reward_definition:Diction
  for key in ["species","template_id","name","sprite","elements","size","modai","skill_slots"]:
   if not reward_definition.has(key):return {"ok":false,"reason":"原奖励宠物资料不完整。"}
   pet[key]=reward_definition[key].duplicate(true) if reward_definition[key] is Array or reward_definition[key] is Dictionary else reward_definition[key]
- pet.merge({"level":1,"xp":0,"skill_unlocked":false,"variable_ai":0,"original_end_event":0,"source_enemy_id":reward.enemy_id,"quest_reward_event":47+count,"pet_id":"pet-%d"%int(candidate.next_pet_id)})
+ pet.merge({"level":1,"xp":0,"skill_unlocked":false,"favorite":false,"variable_ai":0,"original_end_event":0,"source_enemy_id":reward.enemy_id,"quest_reward_event":47+count,"pet_id":"pet-%d"%int(candidate.next_pet_id)})
  candidate.next_pet_id+=1
  candidate.pets.append(pet)
  var equipment:=Equipment.revalidate_after_transmigration(candidate,15)

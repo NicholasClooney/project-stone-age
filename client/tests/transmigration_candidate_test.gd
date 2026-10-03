@@ -7,18 +7,18 @@ var failures:=0
 func check(ok:bool,label:String)->void:
  print(("PASS: " if ok else "FAIL: ")+label)
  if not ok:failures+=1
-func pet(template:int,uid:int)->Dictionary:
+static func pet(template:int,uid:int)->Dictionary:
  var species:="original_%d"%template
  var d:Dictionary=Session.Progression.species_definition(species)
  var p:Dictionary=Session.Progression.species_actor(species,1,100+uid)
  p.merge({"species":species,"sprite":d.sprite,"name":d.name,"pet_id":"pet-%d"%uid,"level":1,"xp":0,"skill_unlocked":false,"modai":d.modai,"variable_ai":-123,"elements":d.elements.duplicate(),"skill_slots":4})
  return p
-func definition(enemy:int,template:int)->Dictionary:
- # Isolated candidate input from the real encounter table; this test does not
- # install a service NPC, invent arrival, or exercise the final content importer.
- var d:Dictionary=Session.Progression.species_definition("original_%d"%template).duplicate(true)
- d.merge({"enemy_id":enemy,"template_id":template,"species":"original_%d"%template,"level":1,"skill_slots":4})
- return d
+static func definition(enemy:int,template:int)->Dictionary:
+ # Exact source-generated GetPet definition, not a reconstructed template.
+ var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-final-source.json"))
+ var d:Dictionary=fixture.reward_pets.get(str(enemy),{})
+ return d.duplicate(true) if int(d.get("template_id",-1))==template else {}
+
 func _initialize()->void:
  var s=Session.new()
  for village in range(4):
