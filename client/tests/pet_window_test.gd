@@ -1,4 +1,18 @@
 extends SceneTree
+const Wait=preload("res://tests/support/wait.gd")
+## Bracket the real portrait process pass without assuming a frame is <=60ms.
+class ClockStart extends Node:
+	var tick := -1
+	func _process(_delta:float)->void:tick=Time.get_ticks_msec()
+class ClockEnd extends Node:
+	var start:ClockStart
+	var portrait:Control
+	var sample:Dictionary={}
+	func _process(_delta:float)->void:
+		if start.tick<0:return
+		sample={"from":start.tick,"to":Time.get_ticks_msec(),"image":portrait.current_image,
+			"visible":portrait.is_visible_in_tree(),"processing":portrait.is_processing()}
+		set_process(false);start.set_process(false)
 var failures:=0
 func check(value:bool,note:String)->void:
 	if value:print("PASS: "+note)
@@ -9,12 +23,22 @@ func capture(path:String)->void:
 	await process_frame
 	await RenderingServer.frame_post_draw
 	root.get_texture().get_image().save_png(path)
-## The portrait shows the shared clock's frame (allowing one frame of lag).
-func shows_clock(portrait,animation:Dictionary)->bool:
-	var now:=Time.get_ticks_msec()
-	for lag in [0,20,40,60]:
-		if int(portrait.frame_at(animation,now-lag).image)==portrait.current_image:return true
+## The image must match the global clock inside the actual update interval.
+## Both endpoints are recorded before this test coroutine resumes on a later frame.
+func shows_clock(portrait,animation:Dictionary,sample:Dictionary)->bool:
+	for tick in range(int(sample.from),int(sample.to)+1):
+		if int(portrait.frame_at(animation,tick).image)==int(sample.image):return true
 	return false
+func process_sample(portrait)->Dictionary:
+	var start:=ClockStart.new();start.process_priority=portrait.process_priority-1
+	var end:=ClockEnd.new();end.start=start;end.portrait=portrait
+	end.process_priority=portrait.process_priority+1
+	root.add_child(start);root.add_child(end)
+	var sampled:bool=await Wait.until(self,func():return not end.sample.is_empty(),3.0)
+	var result:Dictionary=end.sample.duplicate()
+	start.queue_free();end.queue_free()
+	check(sampled,"portrait real process pass was observed")
+	return result
 func run()->void:
 	var world=load("res://scenes/main.tscn").instantiate()
 	world.profile_persistence=false
@@ -45,10 +69,11 @@ func run()->void:
 	var portrait=menu.panel.get_node("PetPortrait")
 	var standing:Dictionary=portrait.animation_for("100250",3,1)
 	check(portrait.facing==1 and portrait.action==3 and preload("res://scripts/sprite_art.gd").frame_count(standing)>1,"portrait loops the standing animation at original facing 1")
-	# process_frame fires before nodes process: let one full frame run.
-	await process_frame
-	await process_frame
-	check(shows_clock(portrait,standing),"portrait frame follows the shared clock")
+	var sample:Dictionary=await process_sample(portrait)
+	if sample.is_empty():quit(1);return
+	check(sample.visible and sample.processing,"portrait is visible and automatically processing")
+	print("PET CLOCK: process interval=",sample.from,"..",sample.to," image=",sample.image," observation_age_ms=",Time.get_ticks_msec()-int(sample.to))
+	check(shows_clock(portrait,standing,sample),"portrait frame follows the shared clock")
 	var first:int=portrait.current_image
 	var deadline:=Time.get_ticks_msec()+3000
 	while portrait.current_image==first and Time.get_ticks_msec()<deadline:await process_frame
@@ -58,10 +83,12 @@ func run()->void:
 	turn.pressed=true
 	portrait._gui_input(turn)
 	check(portrait.facing==2 and menu.pet_portrait_facing==2,"clicking the portrait turns it one facing")
+	var rebuild_from:=Time.get_ticks_msec()
 	menu.rebuild()
+	var rebuild_to:=Time.get_ticks_msec()
 	var rebuilt=menu.panel.get_node("PetPortrait")
 	var turned:Dictionary=rebuilt.animation_for("100250",3,2)
-	check(rebuilt.facing==2 and shows_clock(rebuilt,turned),"rebuilt portrait keeps its facing and clock position")
+	check(rebuilt.facing==2 and shows_clock(rebuilt,turned,{"from":rebuild_from,"to":rebuild_to,"image":rebuilt.current_image}),"rebuilt portrait keeps its facing and clock position")
 	var shown:int=rebuilt.current_image
 	deadline=Time.get_ticks_msec()+3000
 	while rebuilt.current_image==shown and Time.get_ticks_msec()<deadline:await process_frame
