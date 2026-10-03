@@ -1,5 +1,7 @@
 """Foundation is inert; isolated disabled descriptors coexist with live chains."""
 import copy
+import hashlib
+import re
 import json
 from pathlib import Path
 import unittest
@@ -13,6 +15,45 @@ REF=ROOT/'references/chenmingbiao-stone-age'
 
 
 class FoundationTests(unittest.TestCase):
+    def test_public_oracle_includes_pinned_dream_repeat_branches(self):
+        # Read original bytes, not importer output, to validate the frozen oracle.
+        public=json.loads((ROOT/'client/tests/fixtures/public-quest-npcs.json').read_text())
+        extension=public['reviewed_source_extensions']['dream-repeat']
+        self.assertEqual(extension['sources'],{
+            'gmsv/data/npc/seimu/event/event01_1':'4b79ae2250381e9f9fcfeed398f4fff4ec8b4a0cb0ba020c939fe5910fb26315',
+            'gmsv/data/npc/seimu/event/event01_2':'48f2b6db1cfe09371086a51c195f14a49436ba16b0e03b252f3a465de4835577'})
+        expected_slots=[450,451,449,549,552,543,653,646,12623,12648,
+                        11895,11926,11936,12052,11803,11814,11824,11833,11843,11853]
+        self.assertEqual(extension['source_branch_index'],4)
+        self.assertEqual(extension['reward_slots'],expected_slots)
+        self.assertEqual(len(extension['new_item_ids']),18)
+        self.assertEqual(public['reviewed_counts']['catalog_items'],338)
+        manifest=json.loads((ROOT/'tools/dream_cave_quest_sources.json').read_text())
+        for path,sha in extension['sources'].items():
+            raw=(REF/path).read_bytes()
+            self.assertEqual(hashlib.sha256(raw).hexdigest(),sha)
+            self.assertEqual(manifest['sources'][path],sha)
+            script=path.removeprefix('gmsv/data/npc/')
+            blocks=re.findall(r'EventNo:([^\r\n]+)\r?\n(.*?)EventEnd',raw.decode('gb18030'),re.S)
+            event,block=blocks[4]
+            fields=dict(re.findall(r'^([^:\r\n]+):([^\r\n]*)',block,re.M))
+            actions={key:fields[key] for key in ['DelItem','GetItem','GetRandItem'] if key in fields}
+            expected=dict(event=int(event),type=fields['TYPE'],condition=fields['EVENT'],
+                          actions=actions,enabled=True,events=[32,33,34],source_branch_index=4)
+            npcs=[n for n in public['groups']['dream-cave']['npcs'] if n['id'].split('@')[0]==script]
+            self.assertEqual(len(npcs),2 if script.endswith('_2') else 1)
+            for npc in npcs:
+                self.assertEqual([b['source_branch_index'] for b in npc['branches']],manifest['scripts'][script]['branches'])
+                self.assertEqual([b for b in npc['branches'] if b['source_branch_index']==4],[expected])
+            if script.endswith('_2'):
+                self.assertEqual(list(map(int,actions['GetRandItem'].split(','))),expected_slots)
+        declared=set()
+        for path in ['tools/early_quest_sources.json','tools/brothers_quest_sources.json',
+                     'tools/golden_bui_quest_sources.json']+[
+                group['manifest'] for name,group in public['groups'].items() if 'manifest' in group]:
+            declared.update(json.loads((ROOT/path).read_text())['items'])
+        self.assertEqual(public['item_ids'],sorted(declared))
+
     def test_source_break_and_unkeyed_heading_remain_explicit(self):
         from import_early_quests import parse_script
         text=(REF/'gmsv/data/npc/jaruga/event/ruri05').read_text(encoding='gb18030')
