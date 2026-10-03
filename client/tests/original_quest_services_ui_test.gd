@@ -1,4 +1,4 @@
-extends "res://tests/brothers_golden_ui_test.gd"
+extends "res://tests/golden_bui_ui_test.gd"
 ## Actual source map, NPC click, service controls, server answer, and warp.
 func service_choice(id:String,text:String="")->bool:
  var controller=world.world_travel.quest_dialogue
@@ -20,13 +20,17 @@ func run()->void:
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
  var backend=Backend.new();root.add_child(backend)
+ authority=backend;host=backend
  backend.session._profile.default_companions_claimed=true
  backend.session._profile.no_random_encounters=true
  backend.session.gm_raise_level(-1,30)
- # This controls fixture begins on the current challenge floor. Cross-floor
- # helper travel is intentionally rejected by the route authority.
- backend.session._profile.location={"map_id":801,"x":18,"y":20}
- backend.automation.position_changed(801,Vector2i(18,20))
+ # Establish the floor through the original ticket gate, first-floor service
+ # and staircase before the remote UI exercises the second-floor controls.
+ var route=preload("res://tests/support/golden_bui_route.gd")
+ var quiz:Dictionary=backend.original_quests.npc_by_id("genout/quz_801_18_19@801:18:19")
+ if not check(route.near(backend,quiz),"Original gate and first-floor service establish floor801 arrival"):return
+ var arrived:Vector2i=backend.automation.position_cell
+ backend.session.set_location(801,arrived.x,arrived.y)
  backend.original_quests.services.rng.seed=44
  Session.OriginalEquipment.add(backend.session._profile,2752)
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1");root.add_child(server)
@@ -36,7 +40,7 @@ func run()->void:
  world.profile_persistence=false;world.viewer_prefs_path="user://golden-service-ui.cfg";root.add_child(world)
  if not await ready(func():return world.link.online and not world.data.is_empty(),"remote service world loaded"):return
  if not check(await Wait.settle(self,world) and world.backend==null,"UI uses only remote authority"):return
- if not await visit("genout/quz_801_18_19@801:18:19"):return
+ if not await click_source("genout/quz_801_18_19@801:18:19"):return
  await proof("390-source-question-start")
  if not await service_choice("yes"):return
  if not check(not 2752 in world.session.snapshot().original_items,"actual yes consumed one source entry ticket"):return

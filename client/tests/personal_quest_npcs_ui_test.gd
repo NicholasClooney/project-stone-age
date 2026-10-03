@@ -1,4 +1,4 @@
-extends "res://tests/brothers_golden_ui_test.gd"
+extends "res://tests/golden_bui_ui_test.gd"
 ## Remote projection test on an already imported original NPC. Source dieact0
 ## and NpcWarp transactions are exercised independently in personal_quest_npcs_test.
 func has_resident(id:String)->bool:
@@ -6,6 +6,7 @@ func has_resident(id:String)->bool:
 func run()->void:
  root.unfocusable=true
  var backend=Backend.new();root.add_child(backend)
+ authority=backend;host=backend
  backend.session._profile.default_companions_claimed=true
  backend.session._profile.no_random_encounters=true
  backend.session.gm_raise_level(-1,80)
@@ -18,7 +19,14 @@ func run()->void:
  if not await ready(func():return world.link.online and not world.data.is_empty(),"remote NPC world loaded"):return
  if not check(await Wait.settle(self,world) and world.backend==null,"remote projection has no backend"):return
  var id:="giiru/event/ev28_0"
- if not await visit(id):return
+ if not check(await brothers_route(id),"Actual public entrance and original stairs reach personal NPC"):return
+ var reached:Vector2i=backend.automation.position_cell
+ var reached_map:int=backend.automation.position_map
+ backend.session.set_location(reached_map,reached.x,reached.y);backend.publish()
+ backend._emit({"type":"position","map_id":reached_map,"cell":[reached.x,reached.y],"client":"personal-npc-route-sync"})
+ if not await ready(func():return int(world.data.get("map_id",-1))==reached_map and world.cell==reached and not world.moving and not world.area_transition_busy,"Remote original route position settles"):return
+ if not check(await Wait.settle(self,world),"Route position round trip settles"):return
+ if not await click_source(id):return
  world.world_travel.quest_dialogue.close()
  await Wait.settle(self,world)
  var original:Dictionary=backend.original_quests.npc_by_id(id)
