@@ -70,7 +70,7 @@ func _receive(reply: Dictionary, expected: int) -> void:
 	for button in buttons:button.queue_free()
 	buttons.clear()
 	_clear_service()
-	if str(dialogue.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_keyword"]:
+	if str(dialogue.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_keyword","original_pet_selection"]:
 		_show_service(dialogue)
 		return
 	var choices: Array=dialogue.get("choices",[])
@@ -107,15 +107,20 @@ func _show_service(dialogue: Dictionary) -> void:
 	prompt.custom_minimum_size.x=310
 	prompt.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	content.add_child(prompt)
-	service_controls=preload("res://scripts/golden_bui_controls.gd").new()
+	service_controls=preload("res://scripts/quest_pet_selection_controls.gd").new() if str(dialogue.get("kind",""))=="original_pet_selection" else preload("res://scripts/golden_bui_controls.gd").new()
 	service_controls.configure(dialogue)
-	service_controls.submitted.connect(choose)
+	if str(dialogue.get("kind",""))=="original_pet_selection":service_controls.submitted.connect(choose_pets)
+	else:service_controls.submitted.connect(choose)
 	content.add_child(service_controls)
 	buttons.assign(service_controls.buttons)
 
 func choose(choice: String, text: String = "") -> void:
 	if not active or busy:return
 	_send({"type":"quest_choose","token":token,"choice":choice,"text":text})
+
+func choose_pets(choice:String, pet_ids:Array) -> void:
+	if not active or busy:return
+	_send({"type":"quest_choose","token":token,"choice":choice,"pet_ids":pet_ids})
 
 func close() -> void:
 	if not active:return

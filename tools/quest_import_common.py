@@ -80,6 +80,46 @@ def apply_branch_supplements(spec, script, branches):
             branch['confirmation_text'] = extra['confirmation_text']
 
 
+# Runtime-equivalent normalization is restricted to this audited source. The
+# malformed second OR is false in the original C, not an alternative reward.
+WIND_REWARD_SCRIPT = 'sainasu/event/genou_2'
+WIND_REWARD_SHA = '094b5f439dddf2f12b34218a1e3f4ee3356d1ef7e45e44ca759e1ebcc71b7106'
+WIND_REWARD_CONDITION = 'LV>0&ENDEV=42&ENDEV=4&PET>60-95,&ITEM=2758LV>0&PET>59-95&ITEM=2758'
+
+
+def pet_selection_source(spec, script, review, text):
+    reviews = review.get('branch_reviews', {})
+    if not isinstance(reviews, dict):
+        raise ValueError('Invalid branch reviews')
+    for index, fields in reviews.items():
+        if (script != WIND_REWARD_SCRIPT or index not in ('0', '1', '2')
+                or int(index) not in review['branches']
+                or fields != {'project_pet_selection': True}
+                or type(fields['project_pet_selection']) is not bool
+                or spec['sources'].get(PREFIX + script) != WIND_REWARD_SHA):
+            raise ValueError('Unapproved pet selection branch review')
+    if script == WIND_REWARD_SCRIPT and 0 in review['branches']:
+        if (spec['sources'].get(PREFIX + script) != WIND_REWARD_SHA
+                or text.count('EVENT:' + WIND_REWARD_CONDITION) != 1):
+            raise ValueError('Unreviewed wind reward condition')
+        text = text.replace('EVENT:' + WIND_REWARD_CONDITION,
+                            'EVENT:' + WIND_REWARD_CONDITION.split(',')[0])
+    return text
+
+
+def pet_selection_branches(script, review, branches):
+    for branch in branches:
+        index = branch['source_branch_index']
+        if script == WIND_REWARD_SCRIPT and index == 0:
+            branch['source_condition'] = WIND_REWARD_CONDITION
+            branch['condition_audit'] = 'Original C: leading-empty/glued second OR is false; first OR has no bracelet requirement.'
+        if review.get('branch_reviews', {}).get(str(index), {}).get('project_pet_selection'):
+            if branch['type'] != 'ACCEPT' or branch['actions'].get('DelPet') != ('PET>59-95*1', 'PET>42-95*1', 'PET>0-95*1')[index]:
+                raise ValueError('Pet selection differs from source consumption')
+            branch['project_pet_selection'] = True
+            branch['source_actions'] = copy.deepcopy(branch['actions'])
+
+
 def reviewed_static_drops(spec, texts):
     """Activate only complete, explicitly reviewed drop slots from pinned enemies."""
     import csv
@@ -248,7 +288,9 @@ def load_quest_module(reference, manifest):
                             or lines[number-1].strip() in ('Break','EventEnd')):
                         raise ValueError('Invalid unkeyed source heading review')
                     lines[number-1] = ''
-                default, branches = parse_script('\n'.join(lines), review['branches'])
+                selected_text = pet_selection_source(spec, script, review, '\n'.join(lines))
+                default, branches = parse_script(selected_text, review['branches'])
+                pet_selection_branches(script, review, branches)
                 apply_branch_supplements(spec, script, branches)
             events = review['events']
             if not events or any(type(e) is not int or not 0 < e < 192 for e in events):
