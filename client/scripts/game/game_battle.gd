@@ -68,7 +68,7 @@ func present_battle_start(battle_state: Dictionary) -> bool:
 	refresh_pet_window()
 	var manifest: Dictionary = preload("res://scripts/battle_art.gd").index()
 	if game.showcase_music_active():game.begin_showcase_music()
-	game.set_music(game.music_track("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
+	game._audio.begin_battle_music(game.music_track("res://assets/legacy/battle/"+str(manifest.audio.bgm)))
 	game.play_battle_sound(215)
 	return true
 
@@ -113,13 +113,12 @@ func return_from_battle() -> void:
 
 ## Presentation after the backend closed a battle.
 func present_battle_close(outcome: String) -> void:
+	if game.battle_view.visible:game._audio.close_battle_music()
 	game.battle_view.close_battle()
 	game.clear_input()
 	# A window opened during the battle keeps the field paused.
 	game.paused_input = game.automation_minimized() or game._panel_open()
 	game.field_steps = 0
-	# 后台搜宠 keeps its battle music between battles (game_audio.gd).
-	if outcome!="defeat" and not game.showcase_music:game.set_music(game.exploration_music())
 	game.play_ui_sound(203)
 	if outcome=="defeat":
 		game.switch_area(false,GameScene.SPAWN)

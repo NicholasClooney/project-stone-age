@@ -434,6 +434,7 @@ const EXIT_AUDIO_MSEC := 100
 
 ## Stops the music, the effect and every spare voice still finishing a sound.
 func stop_sounds() -> void:
+	if is_instance_valid(_audio):_audio._clear_transition()
 	if is_instance_valid(music): music.stop()
 	if is_instance_valid(effect): effect.stop()
 	for voice in effect_voices:

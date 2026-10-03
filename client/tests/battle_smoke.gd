@@ -56,7 +56,7 @@ func run() -> void:
 	while game.battle_view.is_animating():game.battle_view._process(0.1)
 	game.return_from_battle()
 	check(not game.battle_view.visible and not game.paused_input and game.cell==before,"victory returns to same wilderness position")
-	check(game.music.stream==game.exploration_music(),"exploration BGM restored")
+	check(await preload("res://tests/support/wait.gd").until(self,func():return game.music.stream==game.exploration_music()),"exploration BGM restored after battle audio")
 	check(game.field_steps==0,"return resets exploration step counter")
 	game.session.heal()
 	game.begin_battle()

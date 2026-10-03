@@ -194,14 +194,14 @@ func run() -> void:
 			last_battle = battle_id
 			shown += 1
 		if game.state.battle_open:last_state = game.state.battle.duplicate()
-		if radio_ok and flow.phase=="train" and not game.battle_view.visible and game.music.stream.resource_path.get_file().get_basename()!=bgm.get_file().get_basename():music_ok = false
+		if radio_ok and flow.phase=="train" and not game.battle_view.visible and not radio.suspended:music_ok = false
 		if flow.phase!="train":break
 		if not levelled and shown>=2:levelled = game.backend.session.level_pet_to(str(flow.pet_id),117)
 		step(game)
 	check(levelled,"the trainee was levelled close to 120 for this test")
 	check(shown>=3,"several training battles are shown (%d)" % shown)
 	check(cut_short==0,"no battle ends early: each is over before the next one starts (%d cut short)" % cut_short)
-	if radio_ok:check(music_ok,"between training battles the battle music keeps playing")
+	if radio_ok:check(music_ok,"between training battles the radio remains suspended while battle tails lead to map music")
 	var found_pet: Dictionary = game.backend.release_log.entries().filter(func(e):return str(e.get("source",""))!="排队已满").back() if not game.backend.release_log.entries().is_empty() else {}
 	lines = game.state.automation.flow.log
 	var level_lines: Array = lines.filter(func(line):return str(line.kind)=="level")
@@ -230,9 +230,11 @@ func run() -> void:
 	flow.advance()
 	flow.on_status(game.state.automation)
 	check(flow.phase=="paused" and automation.showcase_queue.is_empty() and str(game.state.automation.flow.reason).contains("排队的"),"moving pauses the cycle and drops the queue with a note")
-	if radio_ok:check(not radio.suspended and radio.on and radio.current==radio_track and game.music.stream==radio._stream and game.music.get_playback_position()>=resume_at-0.1,"the radio plays on with the same track where it was")
-	game.cell -= Vector2i.ONE
 	if game.state.battle_open:game.link.request({"type":"battle_close"})
+	if radio_ok:
+		check(await preload("res://tests/support/wait.gd").until(self,func():return not radio.suspended),"the final battle audio finishes before the radio resumes")
+		check(radio.on and radio.current==radio_track and game.music.stream==radio._stream and game.music.get_playback_position()>=resume_at-0.1,"the radio plays on with the same track where it was")
+	game.cell -= Vector2i.ONE
 
 	# The runner waits for a shown turn to finish playing; it does not give up
 	# after the 5 s it allows an unwatched turn.
