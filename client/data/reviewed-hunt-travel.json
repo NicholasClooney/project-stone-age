@@ -1,0 +1,466 @@
+{
+  "version": 1,
+  "policy": "项目便利，绕过原版门；只授权捕宠直达，不授予任务合法到达。",
+  "audit": "docs/reverse-engineering/gated-pet-navigation-audit.md",
+  "targets": [
+    {
+      "map_id": 41,
+      "area_id": 406,
+      "template_id": 65,
+      "cell": [
+        22,
+        8
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 406,
+      "template_id": 114,
+      "cell": [
+        22,
+        8
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 407,
+      "template_id": 65,
+      "cell": [
+        7,
+        23
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 407,
+      "template_id": 114,
+      "cell": [
+        7,
+        23
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 408,
+      "template_id": 65,
+      "cell": [
+        47,
+        54
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 408,
+      "template_id": 114,
+      "cell": [
+        47,
+        54
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 409,
+      "template_id": 65,
+      "cell": [
+        55,
+        46
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 409,
+      "template_id": 114,
+      "cell": [
+        55,
+        46
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 410,
+      "template_id": 63,
+      "cell": [
+        9,
+        40
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 410,
+      "template_id": 74,
+      "cell": [
+        9,
+        40
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 411,
+      "template_id": 63,
+      "cell": [
+        25,
+        55
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 411,
+      "template_id": 74,
+      "cell": [
+        25,
+        55
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 412,
+      "template_id": 63,
+      "cell": [
+        41,
+        10
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 412,
+      "template_id": 74,
+      "cell": [
+        41,
+        10
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 413,
+      "template_id": 63,
+      "cell": [
+        58,
+        27
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 413,
+      "template_id": 74,
+      "cell": [
+        58,
+        27
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 414,
+      "template_id": 72,
+      "cell": [
+        11,
+        56
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 414,
+      "template_id": 111,
+      "cell": [
+        11,
+        56
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 415,
+      "template_id": 72,
+      "cell": [
+        59,
+        11
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 415,
+      "template_id": 111,
+      "cell": [
+        59,
+        11
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 416,
+      "template_id": 72,
+      "cell": [
+        34,
+        35
+      ]
+    },
+    {
+      "map_id": 41,
+      "area_id": 416,
+      "template_id": 111,
+      "cell": [
+        34,
+        35
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 417,
+      "template_id": 65,
+      "cell": [
+        22,
+        8
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 417,
+      "template_id": 114,
+      "cell": [
+        22,
+        8
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 418,
+      "template_id": 65,
+      "cell": [
+        7,
+        23
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 418,
+      "template_id": 114,
+      "cell": [
+        7,
+        23
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 419,
+      "template_id": 65,
+      "cell": [
+        47,
+        54
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 419,
+      "template_id": 114,
+      "cell": [
+        47,
+        54
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 420,
+      "template_id": 65,
+      "cell": [
+        55,
+        46
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 420,
+      "template_id": 114,
+      "cell": [
+        55,
+        46
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 421,
+      "template_id": 63,
+      "cell": [
+        9,
+        41
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 421,
+      "template_id": 74,
+      "cell": [
+        9,
+        41
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 422,
+      "template_id": 63,
+      "cell": [
+        25,
+        55
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 422,
+      "template_id": 74,
+      "cell": [
+        25,
+        55
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 423,
+      "template_id": 63,
+      "cell": [
+        41,
+        10
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 423,
+      "template_id": 74,
+      "cell": [
+        41,
+        10
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 424,
+      "template_id": 63,
+      "cell": [
+        58,
+        27
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 424,
+      "template_id": 74,
+      "cell": [
+        58,
+        27
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 425,
+      "template_id": 72,
+      "cell": [
+        10,
+        57
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 425,
+      "template_id": 111,
+      "cell": [
+        10,
+        57
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 426,
+      "template_id": 72,
+      "cell": [
+        57,
+        13
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 426,
+      "template_id": 111,
+      "cell": [
+        57,
+        13
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 427,
+      "template_id": 72,
+      "cell": [
+        34,
+        35
+      ]
+    },
+    {
+      "map_id": 42,
+      "area_id": 427,
+      "template_id": 111,
+      "cell": [
+        34,
+        35
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 361,
+      "template_id": 233,
+      "cell": [
+        21,
+        24
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 361,
+      "template_id": 301,
+      "cell": [
+        21,
+        24
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 362,
+      "template_id": 233,
+      "cell": [
+        5,
+        7
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 362,
+      "template_id": 234,
+      "cell": [
+        5,
+        7
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 362,
+      "template_id": 301,
+      "cell": [
+        5,
+        7
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 363,
+      "template_id": 233,
+      "cell": [
+        37,
+        37
+      ]
+    },
+    {
+      "map_id": 31806,
+      "area_id": 363,
+      "template_id": 301,
+      "cell": [
+        37,
+        37
+      ]
+    }
+  ]
+}
