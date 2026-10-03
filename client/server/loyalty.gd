@@ -5,7 +5,8 @@ extends RefCounted
 ## A pet's loyalty (CHAR_WORKFIXAI) is recomputed from the owner, never stored
 ## as the truth (char.c:2918-2943 CHAR_complianceParameter):
 ##   base = min(100, int(owner_level × charm × 1.10 / (pet_level × modai) × 100))
-##   loyalty = clamp(int(base + variable_ai × 0.01), 0, 100)
+##   loyalty = clamp(int(base + variable_ai × 0.01) + rebirth_bonus, 0, 100)
+## rebirth_bonus = (140-owner_level)/2, C integer division, only for trans>0.
 ## modai is the species' 忠诚难度 (enemybase column 13, E_T_MODAI; 0 means 100);
 ## variable_ai is the pet's own earned part in hundredths (CHAR_VARIABLEAI,
 ## -10000..10000), moved by the events below.
@@ -31,17 +32,19 @@ const AI_PET_DEAD := -500
 const AI_GM_PET := 10000
 
 ## The loyalty an owner of this level and charm sees on this pet.
-static func value(owner_level: int, charm: int, pet_level: int, modai: int, variable_ai: int) -> int:
+static func value(owner_level: int, charm: int, pet_level: int, modai: int, variable_ai: int, owner_transmigration: int = 0) -> int:
 	if modai <= 0: modai = 100
 	var ai := int(float(owner_level*charm)*1.10/float(maxi(1,pet_level)*modai)*100.0)
 	if ai > 100: ai = 100
 	ai = int(float(ai)+float(variable_ai)*0.01)
+	if owner_transmigration > 0:ai += (140-owner_level)/2
 	return clampi(ai,0,100)
 
 ## battle_event.c:3436-3443: a caught pet starts at 0 and, when the owner's
-## formula gives more than 60, owes the excess so it starts at 60.
-static func capture_variable(owner_level: int, charm: int, pet_level: int, modai: int) -> int:
-	var ai := value(owner_level,charm,pet_level,modai,0)
+## formula gives more than 60, owes the excess; original WORKFIXAI is then
+## temporarily set to 60. A later refresh can differ after the pre-debt cap.
+static func capture_variable(owner_level: int, charm: int, pet_level: int, modai: int, owner_transmigration: int = 0) -> int:
+	var ai := value(owner_level,charm,pet_level,modai,0,owner_transmigration)
 	return (CAPTURE_MAX-ai)*100 if ai > CAPTURE_MAX else 0
 
 static func add_variable(pet: Dictionary, amount: int) -> void:
@@ -70,8 +73,8 @@ static func stamp_modai(pet: Dictionary) -> void:
 	if modai > 0: pet.modai = modai
 
 ## Recomputes pet.loyalty (the shown and used value) for this owner.
-static func refresh(pet: Dictionary, player: Dictionary) -> void:
-	pet.loyalty = value(int(player.get("level",1)),int(player.get("charm",CHARM_START)),int(pet.get("level",1)),modai_for(pet),int(pet.get("variable_ai",0)))
+static func refresh(pet: Dictionary, player: Dictionary, owner_transmigration: int = 0) -> void:
+	pet.loyalty = value(int(player.get("level",1)),int(player.get("charm",CHARM_START)),int(pet.get("level",1)),modai_for(pet),int(pet.get("variable_ai",0)),owner_transmigration)
 
 ## Pets from before these rules get the variable a pet caught at Lv1 by this
 ## owner and levelled to its current level would have; the developer starter
