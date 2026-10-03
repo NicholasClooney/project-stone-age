@@ -20,13 +20,20 @@ func blocked(world, menu) -> bool:
 	if is_instance_valid(world.world_travel) and is_instance_valid(world.world_travel.overlay) and world.world_travel.overlay.visible:return true
 	for panel in [world.quest_helper_menu,world.settings_menu,world.leveling_destinations,world.training_helper,world.pet_hunt_menu,world.changelog_menu,world.character_selection,world.dev_gm_menu,world.dev_map_overview,world.pet_training,world.adventure_menu,world.help,world.pet_encyclopedia]:
 		if is_instance_valid(panel) and panel.visible:return true
-	return world.paused_input and not menu.visible and not world.battle_view.visible
+	# Authority can open a battle before downloaded art makes its view visible.
+	# Keep the owner lease alive through that existing battle, not a new one.
+	# An idle minimized bar is not a modal window. Battle close restores its
+	# movement lock through automation_minimized(), even when no runner exists.
+	# The authority still refuses actual runners; every visible modal above
+	# remains blocking, independent of this presentation-only exception.
+	var idle_bar: bool = world.automation_minimized() and not world._automation_running() and not bool(world.state.derived.get("quest_auto",{}).get("running",false))
+	return world.paused_input and not menu.visible and not world.battle_view.visible and not world.state.battle_open and not idle_bar
 
 func pause(world) -> void:
 	canceled = true
 	if pause_sent or not connected(world):return
 	pause_sent = true
-	world.link.request({"type":"stationary_pause","paused_input":world.paused_input,"battle_visible":world.battle_view.visible,"menu_visible":world.helper_menu.visible})
+	world.link.request({"type":"stationary_pause","paused_input":world.paused_input,"battle_visible":world.battle_view.visible,"menu_visible":world.helper_menu.visible,"battle_open":world.state.battle_open})
 
 func refresh_status(world, menu) -> void:
 	if status_pending or not connected(world):return

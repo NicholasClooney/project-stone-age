@@ -51,10 +51,16 @@ func win(game,b,tag:String):
 		check(await Wait.until(self,func():return not b.battle.snapshot().active or int(b.battle.snapshot().turn)>int(state.turn)),"manual input resolved")
 
 	check(b.battle.snapshot().outcome=="win","actual resolver victory "+tag)
+	if tag=="old-coordinate" and "--level-up" in OS.get_cmdline_user_args():
+		check(b.battle_state.get("result_summary",[]).any(func(row):return bool(row.get("level_up",false))),"real settlement has level-up result")
 	check(await Wait.until(self,func():return game.battle_view.return_button.is_visible_in_tree() and not game.battle_view.is_animating()),"settled result UI "+tag)
 	var disk:Dictionary=JSON.parse_string(FileAccess.get_file_as_string(b.save_path))
 	print("SAVED ",tag," wood=",b.session.snapshot().original_items.count(2468)," file=",b.save_path)
 	check(disk.get("original_items",[]).filter(func(item):return int(item)==2468).size()==b.session.snapshot().original_items.count(2468) and b.session.last_error.is_empty(),"victory wood count saved to isolated real file "+tag)
+	if "--residual" in OS.get_cmdline_user_args():
+		# Controlled UI-only stale minimized state; no backend automation flags.
+		game.training_helper.minimized=true
+		check(not b.automation.running and not b.automation.hunt_running and not b.automation.flow_active(),"idle bar fixture has no competing authority")
 	await click(game.battle_view.return_button)
 	check(await Wait.until(self,func():return not b.battle_open and not game.battle_view.visible),"actual continue exploration click "+tag)
 func run():
@@ -67,6 +73,7 @@ func run():
 	quests.set_flag(b.session._profile,"ended",18,true);quests.set_flag(b.session._profile,"ended",19,true)
 	b.session._profile.original_items=[2478]
 	b.session._profile.player.level=15
+	if "--level-up" in OS.get_cmdline_user_args():b.session._profile.player.xp=449
 	check(b.session.gm_set_base_stat(-1,"strength",10000),"isolated legal GM combat-stat fixture")
 	b.save_path="user://stationary-manual-save.json"
 	b.handle({"type":"report_position","map_id":200,"cell":[644,345]})
@@ -91,7 +98,17 @@ func run():
 	var menu=game.helper_menu
 	menu.open_menu();await Wait.settle(self,game)
 	await click(menu.find_child("HelperStationaryEncounters",true,false))
+	# Only the presentation download completion is gated; the real backend
+	# clock still opens and owns the battle through the production path.
+	var original_packs=game.asset_packs
+	var gate=DelayedBattlePacks.new();gate.enabled=true;game.add_child(gate);game.asset_packs=gate
 	check(await Wait.until(self,func():return b.battle_open,45),"unmodified production clock encounters normally at old coordinate")
+	check(await Wait.until(self,func():return gate.completion.is_valid()),"production battle presentation awaits art")
+	await Wait.settle(self,game)
+	check(game.state.battle_open and game.paused_input and not game.battle_view.visible,"real authority opened battle before its view is ready")
+	check(b.stationary.running and not menu.stationary_ui.blocked(game,menu),"battle art loading preserves stationary lease")
+	game.asset_packs=original_packs
+	gate.completion.call(true);gate.queue_free()
 	check(b.stationary.running,"negative WS connection identity lease remains alive")
 	check(await Wait.until(self,func():return int(game.state.derived.get("stationary",{}).get("encounters",0))==1),"first encounter count published by server")
 	await win(game,b,"old-coordinate")
@@ -103,6 +120,13 @@ func run():
 		if not b.stationary.running:break
 		await win(game,b,"manual-%d"%i)
 	await chip_checks(game,b)
+	if "--residual" in OS.get_cmdline_user_args():
+		game.helper_menu.open_menu();await Wait.settle(self,game)
+		await click(game.helper_menu.find_child("HelperStationaryEncounters",true,false))
+		check(await Wait.until(self,func():return b.stationary.running),"idle minimized bar allows explicit restart")
+		game.settings_menu.open_menu();await Wait.settle(self,game)
+		check(await Wait.until(self,func():return not b.stationary.running),"real modal still stops with idle bar present")
+		game.settings_menu.close_menu()
 	game.music.stop();game.effect.stop();game.queue_free();server.stop();server.queue_free();b.queue_free()
 	await process_frame
 	print("STATIONARY MANUAL RESUME: %d failures"%failures)
@@ -162,3 +186,9 @@ class TraceBackend extends Backend:
 		var type:String=str(command.get("type",""));requests[type]=int(requests.get(type,0))+1
 		print("REQUEST ms=",Time.get_ticks_msec()," ",command," ok=",reply.get("ok")," running=",stationary.running," reason=",stationary.reason," battle_id=",stationary.battle_id," saved_win=",stationary.saved_win," active=",battle.snapshot().get("active",false))
 		return reply
+
+class DelayedBattlePacks extends "res://scripts/asset_packs.gd":
+	var completion: Callable
+	func is_ready(_packs: Array) -> bool:return false
+	func ensure(_packs: Array, done: Callable = Callable(), _label: String = "") -> void:
+		completion=done
