@@ -429,7 +429,7 @@ func adult_destination(backend,npc:Dictionary)->Dictionary:
  return {"map_id":10204,"cell":[current.x,current.y],"npc_id":str(npc.id)}
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
- if LegacyCave.owns(npc):return LegacyCave.destination(self,backend,npc,mode)
+ if LegacyCave.owns(npc) and int(npc.map_id) not in range(10701,10706):return LegacyCave.destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==4):return adult_destination(backend,npc)
  if npc.get("events",[]).any(func(event):return int(event) in [32,33,34]):return Dream.destination(self,backend,npc,mode)
  if preload("res://server/saton_cave_helper.gd").owns(npc) and int(npc.map_id) in range(10701,10706):return preload("res://server/saton_cave_helper.gd").destination(self,backend,npc,mode)

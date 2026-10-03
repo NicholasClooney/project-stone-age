@@ -2,8 +2,12 @@ extends "res://tests/original_fixed_guards_test.gd"
 const ELDER="sainasu/event/event13_1@1112:16:15"
 const YOUTH="sainasu/event/event13_2@1100:86:99"
 var now:=1000
+func source_talk(b,npc:Dictionary)->Dictionary:
+ if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,npc).ok,"Saton fixture follows actual original portals and continuous path")
+ return b.handle({"type":"quest_talk","npc_id":str(npc.id)})
 func setup():
- var b=fresh();guards=[]
+ var b=fresh();b.quest_catalog.enabled_events=[13,14];guards=[]
  b.original_quests.npc_state.clock=func():return now
  for npc in b.quest_catalog.active_npcs():
   if str(npc.get("source_script","")) in ["100/sb_nusu1.arg","100/sb_nusu2.arg","100/sb_nusu3.arg"]:guards.append(npc)
@@ -16,7 +20,7 @@ func run()->void:
  check(trade(b,ELDER).ok and 2431 in b.session.snapshot().original_items,"actual request grants footprint")
  for i in range(guards.size()):
   var npc:Dictionary=guards[i]
-  # Source dialogue fixture only; production walking and navigation have separate suites.
+  # Actual original route precedes every protected source dialogue.
   var r:=source_talk(b,npc)
   seed(100+i)
   check(choose(b,r,"yes").ok,"original guard starts with footprint")
