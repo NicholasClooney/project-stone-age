@@ -85,3 +85,5 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 此前项目助手能直接进入10204，旧`original_adult_quest_test`甚至断言“explicit helper bypasses entrance”；这是已确认的绕门证据，不能把旧fixture当合法前置。新的`OriginalRouteDriver.complete_adult`只将角色放在公开村庄门口，真实report进入、两段逐格通道、三次真实NPC交换，获取END4。测试工具不会写旗标、物品、scope或grant；初始角色等级/能力由调用方普通fixture负责。`quest_arrival_adult_test`在此基础上复用真实梦幻终战和最终奖励savefail/旧token测试；直接瞬移仪式NPC旁的请求另有拒绝断言。普通生产GameScene像素或UI自动行走未由该工具验证。
 
 集成依赖为b2c9ad1后端、3b5790a普通NPC事务、372481b服务身份。补片交付仍不表示旧成人助手/自动任务fixture已迁移；这些旧项目瞬移会被正确拒绝，需其owner调整路线后才能称功能回归全部完成。其它洞窟政策另片审核，不随此片宣称完成。
+
+成人套件后续去重：`quest_arrival_adult_test`已改为独立成人覆盖，不再继承/运行梦幻终战矩阵。直接验证level1拒门、level30真门、实际通道往返与15玉→2418/END4、项目到达拒绝，以及真实ProfileHub两个connection共享资格、第二设备伪造移动来源不能保住第一设备事务、实际load_profile/新Backend重启清凭证。连接仅用Hub的实际connection ID代替socket，故不声明WebSocket或像素层验证；梦幻最终保存失败/旧token仍由wind原事务suite承担。该独立成人suite 1/1通过。
