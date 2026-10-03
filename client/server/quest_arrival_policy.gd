@@ -5,6 +5,7 @@ static func scope(map_id: int) -> String:
 	if map_id in [41,42]:return "dream"
 	for entry in [[20101,20105,"herb"],[20401,20406,"goya"],[20501,20508,"wood"],[11001,11006,"doctor"],[10701,10705,"saton"],[31801,31806,"miner"]]:
 		if map_id>=int(entry[0]) and map_id<=int(entry[1]):return str(entry[2])
+	if map_id>=20601 and map_id<=20608:return "jan"
 	if map_id>=20801 and map_id<=20807:return "dragon"
 	if map_id==10204:return "adult"
 	if (map_id>=21201 and map_id<=21215) or (map_id>=21301 and map_id<=21315):return "water"
@@ -17,7 +18,7 @@ static func scope(map_id: int) -> String:
 	return ""
 
 static func portal_root(from_map: int, to_map: int) -> bool:
-	if [from_map,to_map] in [[200,20801],[200,20101],[200,20401],[200,20501],[100,11001],[100,10701],[300,31801]]:return true
+	if [from_map,to_map] in [[200,20601],[200,20801],[200,20101],[200,20401],[200,20501],[100,11001],[100,10701],[300,31801]]:return true
 	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204) or (from_map==200 and to_map==20301) or (from_map==5000 and to_map==31301)
 
 static func script_root(source_id: String, to_map: int) -> bool:
@@ -28,6 +29,7 @@ static func script_root(source_id: String, to_map: int) -> bool:
 	return (source_id=="genout/wpm_100_443_127" and to_map==11101) or (source_id=="genout/wpm_100_278_325" and to_map==11201) or (source_id=="genout/wpm_30502_45_41" and to_map==30001) or (source_id=="genout/wpm_30503_26_5" and to_map==30015)
 
 static func action_marks(npc: Dictionary, _branch: Dictionary) -> Array:
+	if source(npc) in ["jaruga/event/event20_4","jaruga/event/event20_6"]:return ["jan_final"]
 	if source(npc) in ["jaruga/event/event17_1","jaruga/event/event17_2","jaruga/event/event17_3"]:return ["dragon_gate"]
 	if source(npc)=="jaruga/event/hekisei03":return ["water_material"]
 	if source(npc) in ["jaruga/event/ruri01","jaruga/event/ruri05","jaruga/event/ruri06"]:return ["earth_final"]
@@ -45,6 +47,7 @@ static func action_mark(source_id: String) -> String:
 	return ""
 
 static func battle_mark(source_id: String) -> String:
+	if source_id in ["200/sb_jan1.arg","200/sb_jan2.arg","200/sb_jan3.arg"]:return "jan_final"
 	if source_id=="200/sb_dbt.arg":return "earth_final"
 	if source_id=="300/sb_hpa.arg":return "fire_final"
 	if source_id in ["400/sb_muge1.arg","400/sb_muge2.arg"]:return "dream_final"
@@ -53,6 +56,7 @@ static func battle_mark(source_id: String) -> String:
 	return ""
 
 static func mark_regions(mark: String) -> Array:
+	if mark=="jan_final":return [[20607,36,31],[20608,0,7]]
 	if mark=="dragon_gate":return [[20807,13,35]]
 	if mark=="water_material":return [[21308,20,7]]
 	if mark=="earth_final":return [[21015,9,17]]
