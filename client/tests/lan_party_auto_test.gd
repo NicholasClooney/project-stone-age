@@ -449,9 +449,9 @@ func client() -> void:
 	check(await Wait.until(self,func():return not server.party_auto("bob").is_empty() and not compact_box.disabled and compact_box.button_pressed),"自动战斗 reaches his profile on the server, with 快速战斗 on")
 	var effective := func():return bool(preload("res://scripts/automation_settings.gd").effective(server.backends.bob.session._profile.automation_settings).party.compact)
 	compact_box.button_pressed = false
-	check(await Wait.until(self,func():return not panel.party_setting("compact") and not effective.call()),"he can turn 快速战斗 off")
+	check(await Wait.until(self,func():return not panel.party_setting("compact") and not effective.call() and not compact_box.button_pressed),"he can turn 快速战斗 off")
 	compact_box.button_pressed = true
-	check(await Wait.until(self,func():return panel.party_setting("compact") and effective.call()),"and on again")
+	check(await Wait.until(self,func():return panel.party_setting("compact") and effective.call() and compact_box.button_pressed),"and on again")
 	server.handle(900001,{"type":"begin_battle","enemy_count":2})
 	var view = game.battle_view
 	check(await Wait.until(self,func():return game.state.battle_open and panel.auto_line.visible),"Alice meets enemies: Bob sees the status line")
