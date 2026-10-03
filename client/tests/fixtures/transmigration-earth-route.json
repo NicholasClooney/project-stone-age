@@ -1,0 +1,218 @@
+{
+  "chain": "earth",
+  "start": [
+    21001,
+    4,
+    3
+  ],
+  "goal": [
+    21015,
+    10,
+    8
+  ],
+  "reachable": true,
+  "route": [
+    {
+      "from_map": 21001,
+      "cell": [
+        8,
+        61
+      ],
+      "to_map": 21002,
+      "target": [
+        9,
+        56
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2404"
+    },
+    {
+      "from_map": 21002,
+      "cell": [
+        40,
+        25
+      ],
+      "to_map": 21003,
+      "target": [
+        34,
+        28
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2406"
+    },
+    {
+      "from_map": 21003,
+      "cell": [
+        34,
+        10
+      ],
+      "to_map": 21003,
+      "target": [
+        34,
+        7
+      ],
+      "source": "genout/wpm_21003_34_10",
+      "gate": true,
+      "condition": "LV>0&ITEM=2700,LV>0&NOWEV=39,LV>0&ENDEV=39",
+      "battle": ""
+    },
+    {
+      "from_map": 21003,
+      "cell": [
+        34,
+        6
+      ],
+      "to_map": 21004,
+      "target": [
+        28,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2408"
+    },
+    {
+      "from_map": 21004,
+      "cell": [
+        61,
+        64
+      ],
+      "to_map": 21005,
+      "target": [
+        17,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2410"
+    },
+    {
+      "from_map": 21005,
+      "cell": [
+        24,
+        4
+      ],
+      "to_map": 21006,
+      "target": [
+        42,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2412"
+    },
+    {
+      "from_map": 21006,
+      "cell": [
+        60,
+        59
+      ],
+      "to_map": 21007,
+      "target": [
+        9,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2414"
+    },
+    {
+      "from_map": 21007,
+      "cell": [
+        5,
+        36
+      ],
+      "to_map": 21008,
+      "target": [
+        6,
+        3
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2416"
+    },
+    {
+      "from_map": 21008,
+      "cell": [
+        34,
+        29
+      ],
+      "to_map": 21009,
+      "target": [
+        28,
+        3
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2418"
+    },
+    {
+      "from_map": 21009,
+      "cell": [
+        47,
+        47
+      ],
+      "to_map": 21010,
+      "target": [
+        48,
+        48
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2420"
+    },
+    {
+      "from_map": 21010,
+      "cell": [
+        6,
+        4
+      ],
+      "to_map": 21011,
+      "target": [
+        28,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2422"
+    },
+    {
+      "from_map": 21011,
+      "cell": [
+        5,
+        32
+      ],
+      "to_map": 21012,
+      "target": [
+        13,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2424"
+    },
+    {
+      "from_map": 21012,
+      "cell": [
+        28,
+        3
+      ],
+      "to_map": 21013,
+      "target": [
+        13,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2426"
+    },
+    {
+      "from_map": 21013,
+      "cell": [
+        17,
+        3
+      ],
+      "to_map": 21014,
+      "target": [
+        22,
+        23
+      ],
+      "source": "gmsv/data/map/mapwarp.txt:2428"
+    },
+    {
+      "from_map": 21014,
+      "cell": [
+        14,
+        14
+      ],
+      "to_map": 21015,
+      "target": [
+        9,
+        17
+      ],
+      "source": "200/sb_dbt.arg",
+      "gate": true,
+      "condition": "LV>0",
+      "battle": "1151,1153,1153,1152,1152,1155,1154,1154,1149,1149"
+    }
+  ],
+  "visited_arrivals": 93
+}

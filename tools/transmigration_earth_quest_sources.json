@@ -4,14 +4,551 @@
   "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
   "sources": {
     "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
-    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/npc/jaruga/event/ruri.create": "9d74de3b02599059f2b058a60bd3ab335eac15c9f9432d936b913de63412d6e1",
+    "gmsv/data/npc/200/sb_ruri.create": "85878a57275b8ccd7555c70d961d56e5569256b28374bfddcb133650d7fcfed1",
+    "gmsv/data/npc/genout/ruri.create": "294502d74314a202549462b34fd53707704727824d31ebf08af740a1f9d61a3d",
+    "gmsv/data/npc/genout/genou.create": "bcc79018829a4db6477c96329f61409261e04b7785d005a8c79e5bcbd9515d50",
+    "gmsv/data/npc/jaruga/event/ruri01": "b27ad8f8d220950ed8c6330b2f32abdfa4458f47b69b32905973368fb63b188f",
+    "gmsv/data/npc/jaruga/event/ruri02": "8d775d18c31115466d672f91c35335b9ddce0ede79dc78dd055cad2b99a3765e",
+    "gmsv/data/npc/jaruga/event/ruri03": "9b4e4a6cca3cc9ff4ddd0c8cb2ebca52fdef45eabee7f1c35704971b91ca9006",
+    "gmsv/data/npc/jaruga/event/ruri04": "c66ce042ad1c0361a1bcde9a7da5d13deef3be071e84604982e16aa24cf3bdc3",
+    "gmsv/data/npc/jaruga/event/ruri05": "4b3c619def7a265765fd2c0d840361a421677fba6af1fe9b8087fef76af1ea7b",
+    "gmsv/data/npc/jaruga/event/ruri06": "0ca6ecafdf87121e731561c67ac7afbdd880032076a18aa9e4d348b79c773029",
+    "gmsv/data/npc/200/sb_dtp.arg": "bb6608659c21ee19f1af0d03a3da965ec4c207e09aacc04cbe644521b8b55993",
+    "gmsv/data/npc/200/sb_dbt.arg": "c903a1967eb3744cc25734688a47fa7109a1c59c34c2ec581926b3099a4ab357",
+    "gmsv/data/npc/genout/wpm_21003_34_10": "e907b62125931b0ea9d89b4728159d6771ea9114c03f8447503527839c22b55f",
+    "gmsv/data/npc/genout/wpm_200_359_671": "82b81c476ff45723e18886b344f4d10c38d5e8b75608b7fb9d8371d2a08568b6",
+    "gmsv/data/npc/genout/wpm_200_358_671": "82b81c476ff45723e18886b344f4d10c38d5e8b75608b7fb9d8371d2a08568b6",
+    "gmsv/data/npc/200/sb_ruri.template": "8f96007334791552a04ce79522f4a8bc362ddc0b8bdfa810df2ab7106715485d",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
+    "gmsv/include/item.h": "64a8616bac3607b8494b1b5efa0b4c3a3e8018af44228431f248762055a559b9",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539"
   },
-  "creates": [],
-  "scripts": {},
-  "items": [],
+  "creates": [
+    "gmsv/data/npc/jaruga/event/ruri.create",
+    "gmsv/data/npc/200/sb_ruri.create",
+    "gmsv/data/npc/genout/ruri.create",
+    "gmsv/data/npc/genout/genou.create"
+  ],
+  "scripts": {
+    "jaruga/event/ruri01": {
+      "branches": [
+        0,
+        2,
+        3,
+        4,
+        5
+      ],
+      "events": [
+        39
+      ]
+    },
+    "jaruga/event/ruri02": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        39
+      ]
+    },
+    "jaruga/event/ruri03": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        39
+      ]
+    },
+    "jaruga/event/ruri04": {
+      "branches": [
+        0,
+        1,
+        2,
+        3
+      ],
+      "events": [
+        39
+      ]
+    },
+    "jaruga/event/ruri05": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        39
+      ]
+    },
+    "jaruga/event/ruri06": {
+      "branches": [
+        0,
+        1
+      ],
+      "events": [
+        39
+      ]
+    }
+  },
+  "items": [
+    33,
+    36,
+    45,
+    46,
+    60,
+    157,
+    160,
+    162,
+    165,
+    168,
+    170,
+    240,
+    244,
+    250,
+    255,
+    257,
+    261,
+    339,
+    340,
+    344,
+    345,
+    356,
+    359,
+    440,
+    442,
+    443,
+    453,
+    457,
+    458,
+    530,
+    532,
+    540,
+    542,
+    544,
+    558,
+    561,
+    645,
+    646,
+    652,
+    655,
+    664,
+    667,
+    743,
+    745,
+    747,
+    750,
+    751,
+    755,
+    758,
+    957,
+    964,
+    966,
+    970,
+    1034,
+    1036,
+    1044,
+    1045,
+    1047,
+    1056,
+    1141,
+    1144,
+    1154,
+    1156,
+    1159,
+    1357,
+    1358,
+    1359,
+    1367,
+    2691,
+    2692,
+    2693,
+    2694,
+    2695,
+    2696,
+    2698,
+    2699,
+    2700,
+    2701,
+    11804,
+    11805,
+    11806,
+    11813,
+    11814,
+    11815,
+    11834,
+    11835,
+    11836,
+    11844,
+    11845,
+    11846,
+    11855,
+    11856,
+    11864,
+    11865,
+    11875,
+    11883,
+    11884,
+    11902,
+    11904
+  ],
   "reward_enemies": [],
-  "jobs": [],
+  "jobs": [
+    {
+      "id": 36,
+      "event": 39,
+      "title": "琉璃洞窟",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
   "reserved_events": [
     39
+  ],
+  "handlers": {
+    "200/sb_dtp.arg": {
+      "kind": "npcenemy",
+      "events": [
+        39
+      ]
+    },
+    "200/sb_dbt.arg": {
+      "kind": "npcenemy",
+      "events": [
+        39
+      ]
+    },
+    "genout/wpm_21003_34_10": {
+      "kind": "warpman",
+      "events": [
+        39
+      ]
+    },
+    "genout/wpm_200_359_671": {
+      "kind": "warpman",
+      "events": [
+        39
+      ]
+    },
+    "genout/wpm_200_358_671": {
+      "kind": "warpman",
+      "events": [
+        39
+      ]
+    }
+  },
+  "drops": [
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1146,
+      "item_id": 2700,
+      "probability": 1000,
+      "audit": "Original enemy1146 sole drop slot; group605 excludes diary2698. Existing AI only; no capture reward."
+    }
+  ],
+  "combat_audit": {
+    "path": "docs/reverse-engineering/transmigration-combat-sources.json",
+    "sha256": "3641f8679d38801503f5a7e5c83f048d2b25c4cdf7e4e4528b2b75f91537a245"
+  },
+  "world": {
+    "map_sources": {
+      "21001": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_01",
+        "sha256": "b9093b5300314bca332f4dae93b058ff201476042c6a4005edcec12c522ca15b"
+      },
+      "21002": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_02",
+        "sha256": "7afb8915cf7caa74c9bc0d4112cf7e0599711c99bd3c68a0a0a27d7d28b37575"
+      },
+      "21003": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_03",
+        "sha256": "c09d462c2f2e37e7ff99ad62c61af764b50264774ca98b3c298ceb0c109f6c85"
+      },
+      "21004": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_04",
+        "sha256": "9af469116a59b65fe36b154ee1dc276542c84bf7211609242338a557012a20db"
+      },
+      "21005": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_05",
+        "sha256": "23f6f889c2a26986c810951d6d6ffede29502bc5b2a6f1bdc961d55d19e3501a"
+      },
+      "21006": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_06",
+        "sha256": "7fd6ba5639c13d525dc35678911d5f81ed66dedf6137c9b6ac08acb7ff231475"
+      },
+      "21007": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_07",
+        "sha256": "38b1654cfda4c98e2c1f8aec57a04419550d575228941f81b0dd50bdd1216b4f"
+      },
+      "21008": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_08",
+        "sha256": "81af97ba6c102f1996bb21e4a6979dec3724390101a6a71c8abca537ba060aef"
+      },
+      "21009": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_09",
+        "sha256": "bb9eea5cda81145f093a0e1a1223273527ec3fd6dc9cf1d232e90f6761e9fb95"
+      },
+      "21010": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_10",
+        "sha256": "b520313f1b7809f6902137dcd57c76a4bf03130b4f4779e04671975c02774135"
+      },
+      "21011": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_11",
+        "sha256": "44a47ef6ec598968baeddce291e9ecdb61108c3f296c6dfa644702379ca75ca9"
+      },
+      "21012": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_12",
+        "sha256": "45444e2c33abd31d0c3dbf9f42b6aa197cf388c60ff9772532e62f453d00115e"
+      },
+      "21013": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_13",
+        "sha256": "b97f9f2eb120a8df36e0a0f6823c2f5a4ee84572d1f3d588bb3af460f4a68def"
+      },
+      "21014": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_14",
+        "sha256": "d4fd935b32e057a55ac1ab01028635e6f8abbcee5db64483b35f4c62c65cb41a"
+      },
+      "21015": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_15",
+        "sha256": "df8e5cf16010646d8fe2280f7d36e2da1317021df43be4d0b65fe264a248fed2"
+      }
+    },
+    "portal_sources": {
+      "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+      "gmsv/data/npc/genout/genou.create": "bcc79018829a4db6477c96329f61409261e04b7785d005a8c79e5bcbd9515d50",
+      "gmsv/data/npc/genout/ruri.create": "294502d74314a202549462b34fd53707704727824d31ebf08af740a1f9d61a3d"
+    },
+    "portal_choices": [],
+    "restored_scripts": [
+      "200/sb_dtp.arg",
+      "200/sb_dbt.arg",
+      "genout/wpm_21003_34_10",
+      "genout/wpm_200_359_671",
+      "genout/wpm_200_358_671"
+    ]
+  },
+  "single_item_pile_reviews": [
+    {
+      "id": 11804,
+      "source_line": 6813,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11805,
+      "source_line": 6814,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11806,
+      "source_line": 6815,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11813,
+      "source_line": 6822,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11814,
+      "source_line": 6823,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11815,
+      "source_line": 6824,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11834,
+      "source_line": 6843,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11835,
+      "source_line": 6844,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11836,
+      "source_line": 6845,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11844,
+      "source_line": 6853,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11845,
+      "source_line": 6854,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11846,
+      "source_line": 6855,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11855,
+      "source_line": 6864,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11856,
+      "source_line": 6865,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11864,
+      "source_line": 6873,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11865,
+      "source_line": 6874,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11875,
+      "source_line": 6884,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11883,
+      "source_line": 6892,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11884,
+      "source_line": 6893,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11902,
+      "source_line": 6911,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11904,
+      "source_line": 6913,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    }
   ]
 }
