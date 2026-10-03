@@ -82,6 +82,22 @@ func _project_active_npc(npc: Dictionary) -> Dictionary:
  var projected:Dictionary=npc if whole_record else npc.duplicate(false)
  if not whole_record:projected.branches=[]
  var active: Dictionary = projected.duplicate(true)
+ if str(active.get("kind",""))=="original_transmigration":
+  # One reviewed original service with no changeevent branches. Event tags
+  # select this module; they are not prior player completion requirements.
+  var identity:Dictionary={"id":"777/ten.arg@32021:31:28","source_script":"777/ten.arg","source_create":"gmsv/data/npc/giiru/event/sikkoku/sikkoku.create","source_create_index":5,"map_id":32021,"cell":[31,28],"graphic":100444,"facing":4,"name":"精灵王","handler":"Transmigration","service_id":"777/ten.arg","events":[48,49,50,51,52],"branches":[]}
+  for field in identity:
+   var actual=npc.get(field)
+   var expected=identity[field]
+   if expected is Array:
+    if not actual is Array or actual.size()!=expected.size():return {}
+    for index in range(expected.size()):
+     if actual[index]!=expected[index]:return {}
+   elif actual!=expected:return {}
+  var service:Dictionary=npc.get("transmigration",{})
+  if int(service.get("schema",0))!=1 or str(service.get("rules",""))!="original-1to5-anson20-v1":return {}
+  if not override.is_empty():return {}
+  return active
  if override.has("map_id"):
   active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
  if active.get("handler","")=="TimeMan":

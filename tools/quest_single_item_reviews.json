@@ -338,6 +338,16 @@
       ],
       "creation_quantity": 1,
       "audit": "original-single-item-v1"
+    },
+    "2138": {
+      "id": 2138,
+      "source_line": 1857,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
     }
   }
 }
