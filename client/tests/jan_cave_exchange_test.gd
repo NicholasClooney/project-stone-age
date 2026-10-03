@@ -1,5 +1,7 @@
 extends "res://tests/yam_axe_quest_test.gd"
-## Source exchanges only; original guard/keyword/map acquisition has separate route coverage.
+## Source exchange fixtures retain original transactions; protected NPCs are
+## reached through the actual original entry, keywords, guard and portals.
+const JanRoute=preload("res://tests/support/jan_route_driver.gd")
 const FRIEND="jaruga/event/event20_1@3400:59:66"
 const JIDE="jaruga/event/event20_2@3406:27:14"
 const SON="jaruga/event/event20_3@3406:28:17"
@@ -8,15 +10,14 @@ const WIFE="jaruga/event/event20_5@20607:71:7"
 const SARAH="jaruga/event/event20_6@20608:9:3"
 func setup():
  var b=Backend.new()
- var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/jan-cave-exchanges.json"))
- b.quest_catalog.npcs.append_array(fixture.npcs);b.quest_catalog.items.merge(fixture.items)
- b.quest_catalog.enabled_events.append_array([20,21,22])
+ b.session.gm_raise_level(-1,80)
+ for stat in ["vitality","strength","toughness","dexterity"]:b.session.gm_set_base_stat(-1,stat,10000)
+ b.session._profile.player.hp=b.session._profile.player.max_hp
  return b
 func talk(b,id:String)->Dictionary:
  if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
  var npc:Dictionary=b.original_quests.npc_by_id(id)
- # Exchange fixture isolates original transactions; never claim this placement is a route.
- b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
+ if not JanRoute.approach(b,npc):check(false,"real Jan route reaches exchange "+id);return {"ok":false}
  return b.handle({"type":"quest_talk","npc_id":id})
 func rollback_reward(b,id:String)->void:
  var r:=choose(b,talk(b,id),"yes")
@@ -60,6 +61,7 @@ func run()->void:
   check(trade(b,JAN).ok,"fixed seed executes original five-choice reward")
   var item:int=b.session.snapshot().original_items[0]
   if not item in seen:seen.append(item)
+  if seen.size()==5:break # All audited alternatives covered; extra seeds repeat the same trades.
  seen.sort();check(seen==[2490,2491,2492,2493,2494],"all five source reward alternatives reachable")
  b.session._profile=before22.duplicate(true)
  while Session.bag_slots(b.session.snapshot())<15:Session.OriginalEquipment.add(b.session._profile,2486)
@@ -72,12 +74,16 @@ func run()->void:
  check(b.session.snapshot().original_items.size()==1 and b.session.snapshot().original_items[0] in [2490,2491,2492,2493,2494],"exactly one of the five original random rewards")
  check(not choose(b,r,"ok").ok,"random reward cannot replay")
  before=b.session.snapshot();talk(b,JAN)
- check(b.session.snapshot().original_items==before.original_items,"completed22 cannot issue a second random reward")
+ check(b.session.snapshot().original_items==before.original_items and b.session.snapshot().original_events==before.original_events,"completed22 cannot issue a second random reward or rewrite flags")
  rollback_reward(b,SARAH)
  check(trade(b,SARAH).ok and 2488 in b.session.snapshot().original_items,"original letter only after22")
+ before=b.session.snapshot();talk(b,SARAH)
+ check(b.session.snapshot().original_items==before.original_items and b.session.snapshot().original_events==before.original_events,"letter already held cannot issue a second copy or rewrite flags")
  rollback_reward(b,JIDE)
  check(trade(b,JIDE).ok and Rules.flag(b.session.snapshot(),"ended",21) and 2489 in b.session.snapshot().original_items and not 2488 in b.session.snapshot().original_items,"Jide consumes letter and gives flute with21")
- before=b.session.snapshot();talk(b,JAN);talk(b,SARAH);talk(b,JIDE)
+ # Jan/Sarah duplicate checks ran at their actual reached positions above;
+ # do not repeat the entire cave just to repeat those same assertions.
+ before=b.session.snapshot();talk(b,JIDE)
  check(b.session.snapshot().original_items==before.original_items and b.session.snapshot().original_events==before.original_events,"completed20/21/22 exchanges neither repeat nor enable161")
  check(not Rules.flag(b.session.snapshot(),"now",161) and not Rules.flag(b.session.snapshot(),"ended",47),"later chain161 and quiz47 excluded")
  check(b.session.save_game("user://jan-exchanges.json"),"exchange result persists")
