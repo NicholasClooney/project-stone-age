@@ -354,7 +354,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 			if definition.is_empty() or not Session.TroopArt.can_render([{"sprite":int(definition.get("sprite",0))}]):return {"ok":false,"reason":"原奖励宠物来源或图像尚未导入。"}
 			reward_pet=Progression.species_actor(str(definition.species),int(definition.level),randi(),[],definition)
 			reward_pet.merge({"species":definition.species,"template_id":definition.template_id,"name":definition.name,"sprite":definition.sprite,"level":definition.level,"xp":0,"skill_unlocked":false,"elements":definition.elements.duplicate(),"size":definition.size,"modai":definition.modai,"variable_ai":0,"original_end_event":0,"source_enemy_id":definition.enemy_id,"quest_reward_event":event,"skill_slots":definition.skill_slots})
-			Loyalty.refresh(reward_pet,candidate.player)
+			Loyalty.refresh(reward_pet,candidate.player,int(candidate.player.get("transmigration",0)))
 		# REQUEST has an additional pre-deletion capacity check in the original
 		# NPC callback. Keep the established event2 net-capacity compatibility.
 		if phase=="REQUEST" and event!=2 and Session.bag_slots(profile)+received.size()>15:
