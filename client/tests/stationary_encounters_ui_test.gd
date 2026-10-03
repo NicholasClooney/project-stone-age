@@ -84,6 +84,7 @@ func run():
 	await click(menu.find_child("HelperStationaryEncounters",true,false))
 	check(await Wait.until(self,func():return b.stationary.running and not menu.visible),"re-enable before blocked menu")
 	var reference=Backend.new()
+	reference.handle({"type":"report_position","map_id":100,"cell":[637,493]})
 	b.encounter_rng.seed=918;b.encounter_catalog.pressure=0
 	reference.encounter_rng.seed=918
 	b.stationary.lease=100

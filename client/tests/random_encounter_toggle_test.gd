@@ -8,6 +8,7 @@ func check(ok:bool,note:String) -> void:
  if not ok:failures+=1
 func run() -> void:
  var b=Backend.new()
+ b.handle({"type":"report_position","map_id":100,"cell":[637,493]})
  var other=Backend.new()
  check(not b.full_snapshot().derived.no_random_encounters,"new characters keep random encounters")
  check(not b.handle({"type":"no_random_encounters","enabled":"true"}).ok,"malformed setting rejected")

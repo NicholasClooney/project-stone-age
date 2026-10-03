@@ -19,6 +19,7 @@ func run() -> void:
 	check(Rules.targets({"usable":[113,114],"templates":[113,92]})==[113],"location change intersects choices, never broadens them")
 	for chosen in [[],[113],[113,114]]:
 		var backend=Backend.new();root.add_child(backend);backend.set_process(false)
+		backend.handle({"type":"report_position","map_id":100,"cell":[637,493]})
 		backend.handle({"type":"gm_raise_level","index":-1,"target":120})
 		backend.handle({"type":"gm_set_base_stat","index":-1,"stat":"toughness","value":500})
 		backend.handle({"type":"gm_heal"})
@@ -39,7 +40,9 @@ func run() -> void:
 				check(result.outcome=="captured" and backend.session.apply_battle_result(result) and backend.session.snapshot().pets.any(func(p):return int(p.template_id) in chosen),"selected real individual is genuinely captured and settled into character pets")
 		backend.handle({"type":"auto_stop"});backend.queue_free();await process_frame
 	var other=Backend.new();root.add_child(other);other.set_process(false)
+	other.handle({"type":"report_position","map_id":300,"cell":[509,93]})
 	check(not other.handle({"type":"auto_start","kind":"hunt","map_id":300,"cell":[509,93],"filter":{"templates":[113,114]}}).ok,"real map change does not substitute the local dragon for saved choices")
+	other.handle({"type":"report_position","map_id":100,"cell":[637,493]})
 	for malformed in [null,[113.5],["113"],{}]:
 		check(not other.handle({"type":"auto_start","kind":"hunt","map_id":100,"cell":[637,493],"filter":{"templates":malformed}}).ok,"backend refuses malformed run-only target set")
 	other.queue_free();await process_frame
@@ -56,6 +59,7 @@ func run() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path))
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(save_path+".bak"))
 	var queued=Backend.new();root.add_child(queued);queued.set_process(false)
+	queued.handle({"type":"report_position","map_id":100,"cell":[637,493]})
 	var started: Dictionary=queued.handle({"type":"auto_start","kind":"hunt","map_id":100,"cell":[637,493],"filter":{"templates":[113,114],"level_one":true,"total":-8,"offsets":[],"auto_capture":false,"fast":false,"clean_only":false}})
 	check(started.ok,"queue/resume fixture uses real hunt core")
 	var saved: Dictionary={"filter":queued.automation.hunt_filter.duplicate(true),"run_seed":queued.automation.hunt_run_seed,"rolls":0,"inspected":0,"best":-9}

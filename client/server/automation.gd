@@ -275,7 +275,8 @@ func start(command: Dictionary) -> Dictionary:
 	if command.get("filter") is Dictionary and command.filter.has("capture_only") and not command.filter.capture_only is bool:return _reply(false,"capture_only must be boolean")
 	for flag in ["select_troops","borrow_troops"]:
 		if command.get("settings") is Dictionary and command.settings.has(flag) and not command.settings[flag] is bool:return _reply(false,"%s must be bool"%flag)
-	_set_position(command)
+	var position_error: String=backend.encounter_command_error(command,false)
+	if not position_error.is_empty():return _reply(false,position_error)
 	match str(command.get("kind","")):
 		"battle":return _start_battle_runner(command)
 		"capture_battle":
@@ -457,17 +458,8 @@ func command(name: String, arguments: Dictionary) -> Dictionary:
 			if hunt_running:_hunt_process(float(arguments.get("delta",0.0)))
 			else:_share_idle()
 		"set":
-			var fields:Dictionary=arguments.get("fields",{})
-			if fields.has("position_map") or fields.has("position_cell"):
-				var next_map=fields.get("position_map",position_map)
-				var next_cell=fields.get("position_cell",position_cell)
-				if not backend.session._integer(next_map,0,2147483647):return _reply(false,"无效位置")
-				if next_cell is Array and next_cell.size()==2 and backend.session._integer(next_cell[0],0,2147483647) and backend.session._integer(next_cell[1],0,2147483647):next_cell=Vector2i(int(next_cell[0]),int(next_cell[1]))
-				if not next_cell is Vector2i:return _reply(false,"无效位置")
-				position_changed(int(next_map),next_cell)
-			for key in fields:
-				if key not in ["position_map","position_cell"]:set(key,fields[key])
-			_emit_status()
+			log_line("[自动活动拒绝] 客户端不能改写内部运行字段。")
+			return _reply(false,"内部自动活动状态不能通过客户端设置；请使用公开设置与启动命令。")
 	return {"ok":true}
 
 func presented(battle_id: String, turn: int) -> void:
@@ -626,6 +618,8 @@ func step() -> void:
 		turn_text = "第 %d 回合 · 体力 %d/%d · 气力 %d\n%s" % [turns,next.player_hp,next.player_max_hp,int(next.get("player_mp",0))," / ".join(next.events)]
 		_emit_status(true)
 		return
+	var position_error: String=backend.encounter_position_error(origin_map,origin_cell)
+	if not position_error.is_empty():stop(position_error);return
 	# 练级保护 brings every carried pet back to full between battles.
 	if (backend.session.restore_carried_pets() if bool(settings.get("protect",true)) else backend.session.heal_carried_pets()):
 		backend.save()
@@ -751,7 +745,8 @@ func _close_battle() -> void:
 # ---- battle runner lifecycle -----------------------------------------------
 
 func _start_battle_runner(command: Dictionary) -> Dictionary:
-	_set_position(command)
+	var position_error: String=backend.encounter_command_error(command,false)
+	if not position_error.is_empty():return _reply(false,position_error)
 	_load_settings(command)
 	if command.has("capture_target"):capture_target = int(command.capture_target)
 	start_training()
@@ -1011,6 +1006,7 @@ func scan_once() -> void:
 ## its hit, or -2 for an empty troop. The helper only searches; this replay
 ## decides, and a different outcome stops the hunt.
 func _scan_index(index: int, expected := -1) -> void:
+	if not _hunt_position_valid():return
 	hunt_rolls = index+1
 	var troop := roll_at(index)
 	if troop.is_empty():
@@ -1041,6 +1037,7 @@ func _scan_index(index: int, expected := -1) -> void:
 ## A hit (or a survey pick) becomes a battle: the hunt stops, the battle opens
 ## and a find-pet cycle catches the pet (or 自动捕捉 does, if on).
 func _open_hit(troop: Dictionary, i: int, quality: Dictionary, roll: Dictionary = {}) -> void:
+	if not _hunt_position_valid():return
 	var filter := hunt_filter
 	var actor: Dictionary = troop.enemies[i]
 	hunt_last_hit = {"actor":actor.duplicate(true),"index":i,"quality":quality,"troop":troop.duplicate(true)}
@@ -1132,10 +1129,17 @@ func mixed_allowed(template_id: int) -> bool:
 func _fast_mismatch(index: int) -> String:
 	return "本机极速模式的结果与游戏复核不一致（第 %d 组），已停止，没有进入战斗。请关闭本机极速模式后再试，并报告这个问题。" % (index+1)
 
+func _hunt_position_valid() -> bool:
+	var reason: String=backend.encounter_position_error(hunt_map,hunt_cell)
+	if reason.is_empty():return true
+	stop_hunt(reason)
+	return false
+
 ## 本机极速模式 for this frame: starts the helper when wanted and possible,
 ## and applies its reports. False when the GDScript scan should run instead:
 ## also while a 每秒遇敌 rate is set, since that asks for a throttled scan.
 func _fast_process() -> bool:
+	if not _hunt_position_valid():return true
 	if not hunt_fast_wanted or not hunt_fast_note.is_empty() or int(hunt_filter.get("rate",0))>0:
 		if fast_hunt.running():fast_hunt.stop()
 		_share_leave()
@@ -1506,6 +1510,7 @@ func _finish_survey() -> void:
 ## A candidate replayed from its own seed: the queue entry {index, slot,
 ## run_seed, actor, troop, quality, prediction}, or {} when it differs.
 func _replay_candidate(c: Dictionary) -> Dictionary:
+	if not _hunt_position_valid():return {}
 	if hunt_catalog==null:return {}
 	var rng := RandomNumberGenerator.new()
 	rng.seed = FastHunt.roll_seed(int(c.run_seed),int(c.index))
@@ -2435,6 +2440,8 @@ func _showcase_step() -> void:
 ## Takes the best queued hit, replays its roll from its own seed, checks it is
 ## the same troop, and opens its capture battle, presented like any capture.
 func _showcase_capture() -> void:
+	var position_error: String=backend.encounter_position_error(flow_map,flow_cell)
+	if not position_error.is_empty():stop_cycle(position_error);return
 	refresh_maxima()
 	_prune_not_retained()
 	if showcase_queue.is_empty():return
@@ -2668,11 +2675,6 @@ func _flush_progress_status() -> void:
 
 func _emit_event(detail: Dictionary) -> void:
 	backend.emit_event({"type":"auto_event","detail":detail})
-
-func _set_position(command: Dictionary) -> void:
-	if command.has("map_id"):
-		var cell: Array = command.get("cell",[0,0])
-		position_changed(int(command.map_id),Vector2i(int(cell[0]),int(cell[1])))
 
 func _reply(ok: bool, reason: String) -> Dictionary:
 	return {"ok":ok,"reason":"" if ok else reason}
