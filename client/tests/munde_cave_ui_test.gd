@@ -1,6 +1,10 @@
 extends "res://tests/yam_axe_ui_test.gd"
+var authority
 func stage(step:String,job:int)->bool:
  print("UI STAGE: "+step)
+ if step in ["munde9:battle","munde12:stones"]:
+  var id:String="100/sb_go.arg@11107:22:41" if step=="munde9:battle" else "sainasu/event/event12@11107:24:6"
+  if not await walk_near(authority.original_quests.npc_by_id(id)):return false
  world.quest_helper_menu.open_menu()
  if not await ready(func():return visit_button(step,"arrival",job)!=null,"Original stage button exists"):return false
  if not await click(visit_button(step,"arrival",job)):return false
@@ -14,7 +18,7 @@ func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
- var host=Backend.new();root.add_child(host)
+ var host=Backend.new();authority=host;root.add_child(host)
  host.session._profile.no_random_encounters=true
  host.session.gm_raise_level(-1,80)
  for stat in ["vitality","strength","toughness","dexterity"]:host.session.gm_set_base_stat(-1,stat,10000)
@@ -50,11 +54,7 @@ func run()->void:
   for p in world.world_catalog.links(level).values():
    if int(p.to_map)==level+1:door=p;break
   if not check(not door.is_empty(),"Original next-floor portal exists"):return
-  if not check(world.load_area_id(level,Vector2i(int(door.cell[0]),int(door.cell[1]))),"Load original stair cell fixture"):return
-  world.arrival_lock=Vector2i(-1,-1)
-  if not check(world.handle_arrival(),"Actual original staircase trigger"):return
-  if not await ready(func():return not world.area_transition_busy and int(world.data.map_id)==level+1,"Source staircase destination loaded"):return
-  if not check(await Wait.settle(self,world),"Staircase position settles"):return
+  if not await portal(level,Vector2i(int(door.cell[0]),int(door.cell[1])),level+1):return
  if not check(not world.world_catalog.links(11107).has(Vector2i(22,41)) and not world.world_catalog.links(11107).has(Vector2i(23,41)),"Both scenic guard bypasses removed"):return
  if not await stage("munde9:battle",8):return
  if not await choose("yes"):return
@@ -101,3 +101,20 @@ func run()->void:
  await process_frame
  print("MUNDE CAVE UI: %d failures"%failures)
  quit(1 if failures else 0)
+
+func walk_near(npc:Dictionary)->bool:
+ world.quest_helper_menu.close_menu()
+ if not check(int(world.data.map_id)==int(npc.map_id),"NPC approach starts on naturally reached floor"):return false
+ var target:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ for offset in preload("res://scripts/npc_interaction.gd").offsets():
+  var point:Vector2i=target+offset
+  if world.cell!=point and world.navigation.get_id_path(world.cell,point).is_empty():continue
+  world.walk_to(point)
+  if not check(await Wait.until(self,func():return world.cell==point and world.path.is_empty() and not world.moving,180.0),"Actual client walks to original NPC "+str(npc.id)):return false
+  return check(await Wait.settle(self,world),"Actual walking position settles before helper action")
+ return check(false,"Original geometry contains a reachable talk neighbour")
+func portal(map_id:int,cell:Vector2i,to_map:int)->bool:
+ if not check(int(world.data.map_id)==map_id,"Portal begins at naturally reached current floor"):return false
+ world.walk_to(cell)
+ if not check(await Wait.until(self,func():return not world.area_transition_busy and int(world.data.map_id)==to_map,180.0),"Actual walking triggers original portal"):return false
+ return check(await Wait.settle(self,world),"Original portal server position settles")

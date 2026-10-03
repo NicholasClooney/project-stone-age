@@ -1,25 +1,8 @@
-extends "res://tests/yam_axe_quest_test.gd"
-## Original exchanges only: gate/battle acquisition is a separate route test.
-const KOLK="sainasu/event/event09@1200:97:75"
-const HOTOR="sainasu/event/event10@1300:65:65"
-const KATAN="sainasu/event/event11@1400:71:76"
-const CHIEF="sainasu/event/event12@11107:24:6"
-func setup():
- var b=Backend.new()
- var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/munde-cave-exchanges.json"))
- b.quest_catalog.npcs.append_array(fixture.npcs);b.quest_catalog.items.merge(fixture.items)
- b.quest_catalog.enabled_events.append_array([9,10,11,12])
- b.session.gm_raise_level(-1,30)
- return b
-func talk(b,id:String)->Dictionary:
- if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
- var npc:Dictionary=b.original_quests.npc_by_id(id)
- # This exchange-only fixture places the player; route/navigation suites cover original access.
- b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
- return b.handle({"type":"quest_talk","npc_id":id})
+extends "res://tests/munde_cave_route_test.gd"
+## Original exchanges use the actual catalog and a genuinely earned Munde route.
 func run() -> void:
  var b=setup()
- check(b.original_quests.branch_for(b.original_quests.npc_by_id(KOLK),b.session.snapshot()).is_empty(),"LV30 without adult completion cannot request9")
+ check(b.original_quests.branch_for(b.original_quests.npc_by_id(KOLK),b.session.snapshot()).is_empty(),"high level without adult completion cannot request9")
  Rules.set_flag(b.session._profile,"ended",4,true) # Existing adult completion prerequisite.
  var r:=talk(b,KOLK)
  var before:Dictionary=b.session.snapshot()
@@ -29,10 +12,18 @@ func run() -> void:
  check(trade(b,KOLK).ok and Rules.flag(b.session.snapshot(),"now",9),"original Kolk request9")
  check(trade(b,KATAN).ok and trade(b,HOTOR).ok,"original two-village requests")
  check(Rules.flag(b.session.snapshot(),"now",10) and Rules.flag(b.session.snapshot(),"now",11),"both source subquests started")
+ var guard_talk:=source_talk(b,guards[0])
+ b.encounter_rng.seed=seed_for(b,0) # Keep exact exchange inventory assertions independent of rare combat loot.
+ var started:=choose(b,guard_talk,"yes")
+ check(started.get("ok",false) and b.battle_open,"exchange fixture walks original stairs and starts source guard: "+str(started.get("reason","")))
+ if not b.battle_open:b.free();quit(1);return
+ fight(b);check(b.handle({"type":"battle_close"}).ok,"real guard victory establishes reward access")
  r=choose(b,talk(b,CHIEF),"yes");before=b.session.snapshot();b.save_path="user://missing-munde-parent/save.json"
  check(not choose(b,r,"ok").ok and b.session.snapshot()==before,"two-stone grant rolls back together")
  b.save_path=""
  check(trade(b,CHIEF).ok and b.session.snapshot().original_items==[2419,2420],"chief source gives both stones, not a fake battle drop")
+ before=b.session.snapshot();talk(b,CHIEF)
+ check(b.session.snapshot().original_items==before.original_items,"already held stones cannot be claimed twice at the actual chief")
  before=b.session.snapshot()
  talk(b,HOTOR)
  check(b.session.snapshot().original_items==before.original_items and not Rules.flag(b.session.snapshot(),"ended",10),"first completion cannot deliver Hotor stone before Katan")
@@ -53,8 +44,16 @@ func run() -> void:
  r=choose(b,talk(b,KOLK),"yes")
  check(choose(b,r,"ok").ok and Rules.flag(b.session.snapshot(),"ended",9) and b.session.snapshot().original_items.count(1357)==1,"only final Kolk return completes9 with1357")
  check(not choose(b,r,"ok").ok,"final reward token is single use")
- before=b.session.snapshot();talk(b,KOLK);talk(b,KATAN);talk(b,HOTOR);talk(b,CHIEF)
+ before=b.session.snapshot();talk(b,KOLK);talk(b,KATAN);talk(b,HOTOR)
  check(b.session.snapshot().original_items==before.original_items and b.session.snapshot().original_events==before.original_events,"completed source exchanges neither reissue stones nor repeat rewards")
+ # Preserve the completed-chain chief revisit case with a second real route,
+ # rather than granting a receipt after returning from the three villages.
+ guard_talk=source_talk(b,guards[0]);b.encounter_rng.seed=seed_for(b,0)
+ check(choose(b,guard_talk,"yes").ok and b.battle_open,"completed chain re-enters original guard route")
+ if not b.battle_open:b.free();quit(1);return
+ fight(b);check(b.handle({"type":"battle_close"}).ok,"completed chain earns a new legitimate chief approach")
+ before=b.session.snapshot();talk(b,CHIEF)
+ check(b.session.snapshot().original_items==before.original_items and b.session.snapshot().original_events==before.original_events,"completed chief conversation cannot reissue stones or restart rewards")
  b.free()
  print("MUNDE CAVE EXCHANGES: %d failures"%failures)
  quit(1 if failures else 0)

@@ -1,4 +1,6 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const Walk=preload("res://tests/support/water_route_driver.gd")
+const Route=preload("res://tests/support/original_route_driver.gd")
 const KOLK="sainasu/event/event09@1200:97:75"
 const HOTOR="sainasu/event/event10@1300:65:65"
 const KATAN="sainasu/event/event11@1400:71:76"
@@ -10,6 +12,23 @@ func setup():
  for npc in b.quest_catalog.active_npcs():
   if str(npc.get("source_script","")) in ["100/sb_go.arg","100/sb_dan.arg"]:guards.append(npc)
  return b
+func enter_original(b)->bool:
+ # Public approach fixture only. Protected maps always use the real keyword,
+ # report_position staircase route and actual guard settlement.
+ if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+ b.automation.position_changed(100,Vector2i(443,128))
+ return bool(answer(b,b.handle({"type":"quest_talk","npc_id":GATE}),"在卡坦有梦德").get("ok",false))
+func source_talk(b,npc:Dictionary)->Dictionary:
+ if b.automation.position_map!=11101:
+  if not enter_original(b):return {"ok":false,"reason":"Original keyword failed"}
+ if not Walk.walk_near(b,npc,range(11101,11108)):return {"ok":false,"reason":"Original stairs failed"}
+ return b.handle({"type":"quest_talk","npc_id":npc.id})
+func talk(b,id:String)->Dictionary:
+ if id!=CHIEF:return super.talk(b,id)
+ if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if not Walk.walk_near(b,npc,[11107]):return {"ok":false,"reason":"Original chief corridor not reachable"}
+ return b.handle({"type":"quest_talk","npc_id":id})
 func answer(b,r:Dictionary,text:String)->Dictionary:
  return b.handle({"type":"quest_choose","token":r.get("dialogue",{}).get("token",""),"choice":"submit","text":text})
 func seed_for(b,wanted:int)->int:
@@ -24,8 +43,12 @@ func seed_for(b,wanted:int)->int:
 func run()->void:
  var b=setup()
  check(guards.size()==2,"two actually bound original guards are imported")
- var events:Array=b.quest_catalog.enabled_events.filter(func(e):return e in [9,10,11,12,41,42,47])
- events.sort();check(events==[9,10,11,12],"exact Munde events exclude41/42/47")
+ var modules:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://data/quest-modules.json"))
+ var manifest:Dictionary={}
+ for module in modules.modules:
+  if str(module.id)=="munde-cave":manifest=module
+ check(manifest.get("enabled_events",[]).map(func(event):return int(event))==[9,10,11,12],"Munde registration owns exactly9/10/11/12; wind has independent41/42 ownership")
+ check([9,10,11,12].all(func(event):return event in b.quest_catalog.enabled_events),"all four Munde events remain enabled")
  check(b.original_quests.branch_for(b.original_quests.npc_by_id(KOLK),b.session.snapshot()).is_empty(),"adult prerequisite still blocks high-level player")
  Rules.set_flag(b.session._profile,"ended",4,true) # Existing prerequisite fixture; original requests below.
  check(trade(b,KOLK).ok and trade(b,KATAN).ok and trade(b,HOTOR).ok,"three original requests")
@@ -43,7 +66,9 @@ func run()->void:
   var npc:Dictionary=guards[0 if wanted!=2483 else 1]
   r=source_talk(b,npc)
   b.encounter_rng.seed=seed_for(b,wanted)
-  check(choose(b,r,"yes").ok,"actual source guard battle begins")
+  var started:Dictionary=choose(b,r,"yes")
+  check(started.ok and b.battle_open,"actual source guard battle begins: "+str(started.get("reason","")))
+  if not b.battle_open:b.free();quit(1);return
   check(b.session._pending.enemies.map(func(e):return int(e.source_enemy_id))==[527,526,528,529],"original four enemies preserve source order")
   check(preload("res://server/troop_art.gd").can_render(b.session._pending.enemies),"All original four-enemy battle art is imported")
   var drops:Array=[]
