@@ -102,3 +102,11 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 | `genout/ss_30504_10_11`购壶1150 | 原300(388,337)→30504(22,19)公开入口（mapwarp.txt:2034，warp_g2.create:918–922），无需深红资格。服务最终传真实NPC身份，但公开map检查通过 | 本槽372481b真实服务hook已接，jug与golden服务定向通过 |
 
 深红两合法根为`genout/wpm_30502_45_41:1–3`→30001(29,14)及`wpm_30503_26_5:1–3`→30015(70,95)，均原LV>64/END4；后者不能误删。内部景观门不能变成新的root。源hpa坐标是63；fire早期报告61已由owner更正为笔误，没有修改原落点。`has_arrival`只读路线，helper实际领奖提示必须结合`check_action`；本片未宣称全链终端结算、两设备、掉落边界均已完成。
+
+## 原组队队列步与portal末端
+
+`party.gd:172–189`的普通follow令成员走向前位的**旧格**，不是队长的新格；原portal才让全员同落点。模块现在分开验证：普通跟随检查服务端leader from/to是真实一格、成员自身已有scope且自己的一格碰撞合法、与队长原组件相通；只保留该成员资格，不授root或复制队长mark。portal分支要求精确源/目标、每个成员本侧能走到该源portal，且成员已有同scope或是受审公开根。
+
+真实400(96,119)/(97,119)是相邻原时辰portal；源portal可邻多个走路组件，不能用“唯一组件标签”断定不可达。`_portal_approach`只放宽最后的真实portal端点：本侧组件贴邻该源，或两个相邻真实portal端点；不会把任何中途portal当作普通地板穿越。原portal的NPC实体格也只作为该末端解析，BFS仍把普通NPC格作为障碍。
+
+`quest_arrival_party_follow_test`采用bonus授权的真实Hub复现，经过实际party_join、公开原门、连续队列步、洞内portal，再验证同房非相邻报告令双方失格，以及独立客户端伪造client/arrival_kind/evidence不能授party根。测试连接是Hub connection IDs，不是WebSocket/UI像素；仍不开放或声称固定NPC组队战可玩。
