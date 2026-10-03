@@ -42,6 +42,8 @@ func run() -> void:
 		a.action_committed(b,gate,gate.branches[0],"KEYWORD")
 		observed(b,a,11101,Vector2i(33,29),"script")
 	check(a.has_arrival(b,11101,Vector2i(33,29)),"matching committed original keyword Warp starts Munde route")
+	if not a.has_arrival(b,11101,Vector2i(33,29)):
+		b.free();quit(1);return
 	var path: Array=RouteDriver.path(b,11107,Vector2i(22,42),range(11101,11108))
 	check(not path.is_empty(),"actual seven-map portal graph reaches guard front")
 	for step in path:
@@ -53,6 +55,8 @@ func run() -> void:
 	var guard: Dictionary=b.original_quests.npc_by_id("100/sb_go.arg@11107:22:41")
 	var opened: Dictionary=b.handle({"type":"quest_talk","npc_id":guard.id})
 	check(opened.ok and choose(b,opened,"yes").ok,"actual Munde final guard starts")
+	if not b.battle_open:
+		b.free();quit(1);return
 	var pending: Dictionary=b.session._pending.quest_guard.duplicate(true)
 	if not integrated:
 		pending.arrival=a.battle_context(b,guard,guard.branches[0])
