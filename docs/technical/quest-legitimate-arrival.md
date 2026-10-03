@@ -1,0 +1,59 @@
+# 冻结接入契约 v1（实现中）
+
+新模块 `res://server/quest_legitimate_arrival.gd`，Backend成员名统一 `quest_arrival = preload(...).new()`。模块和独立测试/审计归quest-legitimate-arrival；不要给客户端增加grant或任何能选择source kind的命令。
+
+```gdscript
+func reset() -> void
+func observe_move(backend, from_map: int, from_cell: Vector2i,
+    to_map: int, to_cell: Vector2i, kind: String = "report", evidence: Dictionary = {}) -> void
+func check_action(backend, npc: Dictionary, branch: Dictionary, phase: String) -> String
+func action_committed(backend, npc: Dictionary, branch: Dictionary, phase: String) -> void
+func battle_context(backend, npc: Dictionary, branch: Dictionary) -> Dictionary
+func check_battle(backend, pending_guard: Dictionary) -> String
+func battle_committed(backend, pending_guard: Dictionary) -> void
+func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
+```
+
+所有接点均同步调用，不修改profile或发送网络。`check_*`空字符串成功，非空为中文项目补充说明。`battle_context`只生成服务器证据，不能来自command；存入pending.quest_guard.arrival。其最小结构 `{epoch, scope, map_id, cell:[x,y], npc_id, warp}`；调用方不得自行拼。模块会核源身份和当前状态，不以此字典自身作为grant。
+
+## bonus：后端/移动/战斗owner
+
+- load_profile/reset重启路径 `quest_arrival.reset()`；不进session.snapshot/save/resume。恢复旧战斗pending无本次内存epoch不得授新资格。
+- 任何权威位置变化取得old位置，调用observe_move一次；可以在position_changed之后，传真实old/new，避免同一变化重复调用。`report`用于普通report_position，`walk`仅用于服务器逐格自动步行；都核真实碰撞、相邻步或原portal精确源/目标，不能凭kind自报授权。
+- `project`用于quest_visit/自动任务项目落点/抓宠/dev/automation._set_position等。相同位置不破坏合法路线；真正移位到保护区不授资格且失效当前路线。移到公开区域只清已有相关路线。组件相同本身不授资格。
+- `script`只用于Brothers.publish_warp的真实原门/胜战Warp发布：必须由此前action_committed/battle_committed在模块中生成匹配源、目标、epoch的单次待发布记录。孤立调用publish_warp或普通report冒同一坐标不能授予。close_battle取原成功结算pending，不从state任意npc字段生成。
+- 同角色WebSocket共用Backend实例，消息先后即epoch先后；旧token最终check_action仍重验。
+- Brothers.begin在实际NPC分支已核准后，先check_action(...,"BATTLE")，再将battle_context返回值放进pending.quest_guard.arrival。
+- _after_turn在任何胜战任务Warp/任务掉落应用前调用check_battle；失败返回不结算任务推进。保存成功后battle_committed；保存失败完全不调用。battle_committed只生成待发布记录，close_battle→publish_warp(script)才激活新区域。dieact0无Warp保留已合法scope，不合成胜后区域。
+- 组队普通步行/portal跟随kind=`party`，evidence最小`{leader_from_map, leader_from_cell:[x,y], leader_to_map, leader_to_cell:[x,y]}`，只能ProfileHub内部从成功且经验证的leader原移动构建；模块再次核实际portal、成员原scope与同区。不得从客户端command原样读evidence；项目队长移动仅传kind=project；无资格成员不能继承leader资格。原脚本禁止组队的门照旧拒绝。
+- check_battle在每个成员自己Backend调用；不能把队长arrival复制给全队。无任务guard的普通掉落暂不接额外禁止，待具体案例裁定。
+
+## wind：original_quests独占owner
+
+- 所有transact调用保留真实npc上下文，已有npc_id可复用：FREEWARP/KEYWORD在choose传入str(npc.id)；open_branch MESSAGE等也需传，禁止推测已经被清掉的pending。
+- talk/open_branch/choose可用check_action早提示；最终transact在候选变更前必须解析当前npc_by_id(npc_id)，调用check_action；有实际保护动作却缺NPC身份默认拒绝。必须包括REQUEST的NOW、MESSAGE自动奖励、ACCEPT reward、FREEWARP/KEYWORD，不只EndSetFlg。
+- 成功backend.save之后、任何Brothers.publish_warp之前调用action_committed；失败保存不调用，不提前变token/route state。
+- 服务synthetic branch必须保留真实NPC身份；source_branch_index缺失用可信原branch实际内容匹配，不能按客户端提供编号。
+- helper仅只读has_arrival，不可grant。公开村庄/野外分支不加朝圣要求。
+
+## fire：service owner
+
+- services.apply调用transact传str(npc.id)，保留服务source身份和实际actions；无需新服务内部到达容器。原购壶无门与路线障碍证据时不额外加NOW40或洞窟资格。
+
+## 政策与实现边界
+
+我独占新增 `quest_arrival_policy.gd`（静态审核scope、原入口/受保护NPC动作）与模块；各链给manifest/实际原门源，不改此文件。连续route从已审入口开始，允许瞬移到**公开入口前**后正式过门，不要求从出生村步行；禁止瞬移到**链内部**portal源格再过门洗白。无scope公开NPC返回通过，回村奖按原条件而非洞窟当前凭证。
+
+新掉落资格暂不自动扩展：1146羽毛2700在21002、龙玉三层等要单列“捕宠便利是否允许顺带原任务掉落”案例交父。不会以NPC审计名义静默禁止普通战利品。
+
+## 首片实现范围与战斗失败语义
+
+`quest_legitimate_arrival.gd` 已提供以上接口，另有 `blocked_guard_items(pending_guard: Dictionary) -> Array`。首片仅启用梦幻41/42政策；尚未接入共享Backend/交易入口，不能宣称全任务漏洞已封闭。政策扩展与共享接入由独立提交完成。
+
+`check_battle` 非空只否定本次任务到达授权，不能永久卡住战斗或吞掉普通战果。集成调用方仍用冻结的原slice/claim结算HP、药耗、经验与金币；跳过任务settle_profile/committed/Warp，仅在候选claim副本剔除本模块给出的专用任务物，保存失败保留原pending/原claim，成功正常关闭。先验证原claim合法，不能过滤后替伪造claim洗白。
+
+精确专用物来源：`gmsv/data/npc/100/sb_nusu1.arg`、`sb_nusu2.arg`、`sb_nusu3.arg`的原敌513/514/515，分别掉2428/2429/2430；`gmsv/data/npc/300/sb_bac.arg`原enemy1004掉2533。源审计为 `saton-cave-quests.md`、`miner-contest-source-audit.md` 及锁SHA manifest。本接口只接受当前模块曾签发且保留的真实原NPC战上下文；仅伪造同名npc_id、改另一个守卫、普通wild或新模块均返回空列表。普通野外任务掉落不在本片限制范围。
+
+内存proof额外含instance/serial，与私有签发记录逐字段相等才有效。项目移动增加epoch但保留未结战的真实来源记录，只用于精确去除未获授权任务物；reset/reload清掉记录，不恢复凭证。普通合法步行与保存失败不换epoch。成功battle_committed仅安排单次待发布Warp；script移动匹配真实旧坐标、目标和epoch后才授胜后mark，重复结算不能再次安排。
+
+`quest_legitimate_arrival_test` 已运行headless：真实时间入口、独立四向地图oracle连续走完整梦幻迷宫（含原portal到达锁）、真实十敌战/真实文件系统savefail/原结果重试、胜Warp后授予、项目传入撤销、旧proof/不同角色/重启拒绝与精确守卫物品白名单。测试显式调用待集成hook，未把它说成共享入口已接通或双设备已验收。只运行此定向suite，未触live/import/full。
