@@ -470,7 +470,7 @@ func geometric_destination(backend,npc:Dictionary,mode:String)->Dictionary:
  var occupied := {}
  for resident in world.residents:
   if int(resident.map_id)==map_id:occupied[Vector2i(int(resident.cell[0]),int(resident.cell[1]))]=true
- for entry in backend.quest_catalog.active_npcs():
+ for entry in backend.quest_catalog.active_npcs_on_map(map_id):
   if int(entry.map_id)==map_id:occupied[Vector2i(int(entry.cell[0]),int(entry.cell[1]))]=true
  if map_id==1000 and FileAccess.file_exists("res://assets/legacy/samgir-npc.json"):
   var special = JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/samgir-npc.json"))
