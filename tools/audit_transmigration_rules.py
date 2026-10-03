@@ -13,6 +13,7 @@ import random
 import re
 import subprocess
 import tempfile
+from transmigration_rules_aux_oracle import build as build_aux
 
 ROOT = Path(__file__).resolve().parents[1]
 SPEC = ROOT / 'tools/transmigration_rules_sources.json'
@@ -92,6 +93,13 @@ def cases():
                                'level':level,'new_count':n,'quests':q,'old_unspent':19})
     # Negative answers are legal intermediate results; clamp components, not ans.
     result.append({'base':[1,0,0,0],'equation':4*80,'level':80,'new_count':5,'quests':0,'old_unspent':0})
+    rng=random.Random(32021)
+    for i in range(800):
+        n=rng.randrange(1,6)
+        base=[rng.choice([0,1,49,50,51,1199,1200,1201,16777215,16777216,16777217,100000000]) for _ in range(4)]
+        if not sum(base):base[0]=1
+        result.append({'base':base,'equation':(rng.randrange(20*(n-1)+1)<<16)+rng.randrange(80*(n-1),130*(n-1)+1),
+                       'level':rng.choice([80,84,85,86,129,130,131,2147483647]),'new_count':n,'quests':rng.randrange(21),'old_unspent':rng.choice([0,19,999])})
     return result
 
 
@@ -119,7 +127,7 @@ def build(cc='cc'):
         numbers = [int(x) for x in line.split()]
         vector['expected']={'base':numbers[:4],'equation':numbers[4],'stat_points':numbers[5],'ans':numbers[6]}
     return {'sources':spec['sources'],'oracle':{'functions':['NPC_TransCalculation','Rounding','NPC_TransmigrationStatus'],
-            'profile':'human-1-5','flags':flags,'optimization_equivalence':['-O0','-O2']},'inheritance':vectors},compiler
+            'profile':'human-1-5','flags':flags,'optimization_equivalence':['-O0','-O2']},'inheritance':vectors,'auxiliary':build_aux(ROOT,source,function,cc)},compiler
 
 
 def main():
