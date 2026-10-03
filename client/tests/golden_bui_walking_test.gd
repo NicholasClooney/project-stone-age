@@ -1,11 +1,26 @@
 extends "res://tests/brothers_golden_ui_test.gd"
 const DojoRoute=preload("res://tests/support/golden_bui_route.gd")
+# Observe real WS dispatch without substituting movement, encounter or troop logic.
+class ObservedBackend extends "res://server/backend.gd":
+	var positions:Array[Dictionary]=[]
+	var steps:Array[Dictionary]=[]
+	func handle(command:Dictionary)->Dictionary:
+		var previous_rng:=encounter_rng.state
+		var previous_pressure:int=encounter_catalog.pressure
+		var reply:=super.handle(command)
+		if command.get("type","")=="report_position":
+			positions.append({"command":command.duplicate(true),"reply":reply.duplicate(true)})
+		elif command.get("type","")=="field_step":
+			var sample:Dictionary={"command":command.duplicate(true),"reply":reply.duplicate(true),"map":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y],"rng_before":str(previous_rng),"rng_after":str(encounter_rng.state),"pressure_before":previous_pressure,"pressure_after":encounter_catalog.pressure}
+			steps.append(sample)
+			print("GOLDEN WALK STEP ",JSON.stringify(sample))
+		return reply
 ## Exercise the production GameAreas.handle_arrival -> field_step -> battle path.
 func run() -> void:
 	root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
 	proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
 	if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
-	var host=Backend.new();root.add_child(host);host.quest_catalog.enabled_events=[44]
+	var host=ObservedBackend.new();root.add_child(host);host.quest_catalog.enabled_events=[44]
 	host.session._profile.default_companions_claimed=true
 	host.session.gm_raise_level(-1,70)
 	for stat in ["vitality","strength","toughness","dexterity"]:host.session.gm_set_base_stat(-1,stat,10000)
@@ -28,13 +43,28 @@ func run() -> void:
 		host.publish();host._emit({"type":"position","map_id":map_id,"cell":[29,20],"client":"golden-bui-walking-fixture"})
 		if not await ready(func():return int(world.data.map_id)==map_id and world.cell==Vector2i(29,20) and not world.moving,"Original floor loaded via server position"):return
 		if not check(await Wait.settle(self,world),"Walking map report settled"):return
+		# Source probability caps at 2/120: 160 random draws can all miss.
+		# Pin only the RNG input, once per floor, retaining GameAreas, WS,
+		# pressure growth, weighted group/enemy selection and actual battle UI.
+		host.encounter_rng.seed=0
+		print("GOLDEN WALK AREA ",JSON.stringify(host.encounter_catalog.area_at(map_id,world.cell)))
 		var before:=int(world.field_steps)
 		for step in range(160):
 			var target:=Vector2i(29,21) if step%2==0 else Vector2i(29,20)
 			if not check(world.is_walkable(target),"Original collision allows test walking cell"):return
+			var sent_before:=int(world.field_steps)
+			var received_before:int=host.steps.size()
+			var positions_before:int=host.positions.size()
 			world.walk_to(target)
 			if not await ready(func():return world.cell==target and not world.moving or host.battle_open,"Production navigation reaches source collision cell"):return
 			if not check(await Wait.settle(self,world),"Each production walk request settled"):return
+			if not check(world.link.online and int(world.field_steps)==sent_before+1 and host.steps.size()==received_before+1,"Each actual cell arrival sends and completes exactly one field step"):return
+			if not check(host.positions.size()==positions_before+1,"Each actual arrival reports one authoritative position"):return
+			var position:Dictionary=host.positions.back()
+			var sample:Dictionary=host.steps.back()
+			if not check(position.reply.get("ok",false) and position.command.cell==[target.x,target.y] and int(position.command.map_id)==map_id,"Walking position accepted at intended original cell"):return
+			if not check(sample.reply.get("ok",false) and sample.command.get("encounter",false) and sample.command.cell==[target.x,target.y] and int(sample.command.map_id)==map_id and sample.map==map_id and sample.cell==[target.x,target.y],"Real field step accepted with battle enabled at authoritative position"):return
+			if not check(sample.rng_before!=sample.rng_after,"Accepted field step advances the original encounter RNG"):return
 			if host.battle_open:break
 		if not check(host.battle_open and int(world.field_steps)>before,"GameAreas actual walking opens source random battle %d"%map_id):return
 		if not await ready(func():return world.battle_view.visible,"Actual remote battle scene rendered"):return
