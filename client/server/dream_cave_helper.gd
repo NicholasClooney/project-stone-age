@@ -58,7 +58,7 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary)->void:
  var light:=Rules.item_count(profile,2603)>0
  var map_id:int=backend.automation.position_map
  var cave:int=map_id if map_id in [41,42] else 41
- quest.completion_detail="三轮依次领取空想竖琴、帽子、衣服；只有第三次交先见之光才写END34。保留END4与前轮完成条件。晨门与日夕门通41、夜门通42，使用原1024小时制；须亲自走入当时开放的原门。沿原传送迷宫抵达两只守卫，任选其一挑战原十敌队伍；两图胜后原目标都在41。助手只导航当前实际连通房间，不跨时间门或终战；现AI未恢复特殊技能，魔法与衣服槽未生效。原后续随机谢礼暂未开放；先见之光原离线消失尚未实现。"
+ quest.completion_detail="三轮依次领取空想竖琴、帽子、衣服；只有第三次交先见之光才写END34。保留END4与前轮完成条件。晨门与日夕门通41、夜门通42，使用原1024小时制；须亲自走入当时开放的原门。沿原传送迷宫抵达两只守卫，任选其一挑战原十敌队伍；两图胜后原目标都在41。助手只导航当前实际连通房间，不跨时间门或终战；现AI未恢复特殊技能，魔法与衣服槽未生效。原版行为：≥35级可免费领取先见之光，交仙人后从原20项谢礼随机获得一项，可无限重复；前三轮仍优先完成。先见之光原离线消失尚未实现。"
  helper.add_step(backend,profile,quest,"dream%d:request"%event,entry(backend,"seimu/event/event01_1",34-event),previous and not light and not ended,light or ended,"向村中老人领取本轮先见之光")
  for i in [1,2]:
   helper.add_step(backend,profile,quest,"dream%d:battle:%d"%[event,i],entry(backend,"400/sb_muge%d.arg"%i,0,cave),previous and light and not ended,false,"沿原迷宫抵达守卫，原十敌固定战（二选一）")
@@ -67,6 +67,9 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary)->void:
  elif map_id not in [41,42] and not ended:quest.blocked_reason="亲自走入原时间门：400(97,119)日／夕，邻格晨，400(87,101)夜；助手不直接瞬移入洞。"
 
  if event==34:
+  var repeat_ready:=int(profile.player.level)>=35
+  helper.add_step(backend,profile,quest,"dream34:repeat-request",entry(backend,"seimu/event/event01_1",4),repeat_ready and not light,false,"原版行为：免费领取先见之光（可重复，前三轮优先）")
+  helper.add_step(backend,profile,quest,"dream34:repeat-reward",entry(backend,"seimu/event/event01_2",4,cave),repeat_ready and light,false,"原版行为：交先见之光，随机20项谢礼之一（可重复）")
   for npc in backend.quest_catalog.active_npcs():
    if str(npc.get("handler",""))!="TimeMan":continue
    var point:String=str(npc.source_script).trim_prefix("genout/tman_400_")

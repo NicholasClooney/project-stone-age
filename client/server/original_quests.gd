@@ -141,6 +141,8 @@ func window(npc: Dictionary, branch: Dictionary, phase: String, text: String, co
 	if int(branch.get("guard",{}).get("dieact",1))==0 or branch.get("actions",{}).has("NpcWarp"):
 		text+="\n【项目规则】原版为全服共享，本项目按角色各自计算；服务器重启复位。"
 	if branch.get("source_break",false):text+="\n原版行为：交付道具会损坏并消失。"
+	if str(branch.get("source","")) in ["seimu/event/event01_1","seimu/event/event01_2"] and int(branch.get("source_branch_index",-1))==4:
+		text="原版行为：可重复。≥35级免费领取先见之光，交付后随机获得原20项谢礼之一。\n"+text
 	serial+=1
 	var token := "%d-%d" % [Time.get_ticks_usec(),serial]
 	pending={"token":token,"npc":npc,"branch":branch,"phase":phase}
