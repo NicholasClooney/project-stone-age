@@ -1,5 +1,27 @@
 extends "res://tests/yam_axe_ui_test.gd"
 const Session=preload("res://server/game_session.gd")
+## Ten original enemies can overlap: a rear actor's center may belong to
+## another target for every idle animation frame. Click an exposed point on
+## the intended real button, without changing actors, z order or hit testing.
+func click_enemy(button: Button) -> bool:
+ if not check(is_instance_valid(button),"Original enemy target exists"):return false
+ var point:=[Vector2.ZERO]
+ if not await ready(func():
+  if not button.is_visible_in_tree() or button.disabled or button.size.x<=0 or button.size.y<=0:return false
+  for y in [0.5,0.05,0.25,0.75,0.95]:
+   for x in [0.5,0.05,0.25,0.75,0.95]:
+    point[0]=button.get_global_transform_with_canvas()*(button.size*Vector2(x,y))
+    var motion:=InputEventMouseMotion.new()
+    motion.position=point[0];motion.global_position=point[0]
+    root.push_input(motion,true)
+    if root.gui_get_hovered_control()==button:return true
+  return false,"Mouse hover reaches exposed point of "+str(button.name)):return false
+ for pressed in [true,false]:
+  var event:=InputEventMouseButton.new()
+  event.button_index=MOUSE_BUTTON_LEFT;event.pressed=pressed
+  event.position=point[0];event.global_position=point[0]
+  root.push_input(event,true)
+ return true
 func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
@@ -42,7 +64,7 @@ func run()->void:
   for i in range(enemies.size()):
    if int(enemies[i].hp)>0:index=i;break
   if not await click(world.battle_view.find_child("Attack",true,false)):return
-  if not await click(world.battle_view.find_child("EnemyTarget" if index==0 else "EnemyTarget%d"%(index+1),true,false)):return
+  if not await click_enemy(world.battle_view.find_child("EnemyTarget" if index==0 else "EnemyTarget%d"%(index+1),true,false)):return
   if not check(await Wait.settle(self,world),"actual target command reaches server"):return
  if not await ready(func():return not world.battle_view.is_animating() and world.battle_view.return_button.is_visible_in_tree(),"dream battle result ready"):return
  if not await click(world.battle_view.return_button):return

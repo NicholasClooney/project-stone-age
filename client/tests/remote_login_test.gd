@@ -9,6 +9,7 @@ extends SceneTree
 const ProfileHub = preload("res://server/profile_hub.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const WsLink = preload("res://network/ws_link.gd")
+const Wait = preload("res://tests/support/wait.gd")
 var failures := 0
 var links: Array = []
 
@@ -18,14 +19,19 @@ func check(ok: bool, note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 
-## Waits up to seconds for condition, polling the test's own links.
-func until(condition: Callable, seconds: float = 5.0) -> bool:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
-	while Time.get_ticks_msec() < deadline:
+## Profile creation runs synchronously on the server; its response may need
+## another I/O turn after that frame. Pump links until the real reply, using
+## the shared condition budget. Even Wait's last predicate drains the socket.
+func until(condition: Callable) -> bool:
+	return await Wait.until(self,func():
 		for link in links:link.poll(1.0/60.0)
-		if condition.call():return true
-		await physics_frame
-	return bool(condition.call())
+		return bool(condition.call()))
+
+## A reply is a barrier for this connection's preceding commands/events.
+func settle(link) -> bool:
+	var answered := [false]
+	link.request({"type":"ping"},func(_reply):answered[0] = true)
+	return await until(func():return answered[0])
 
 static func remove_tree(folder: String) -> void:
 	if not DirAccess.dir_exists_absolute(folder):return
@@ -55,11 +61,10 @@ func run() -> void:
 	hub.share_dir = dir.path_join("share")
 	root.add_child(hub)
 	check(hub.start(),"a multi-profile server starts on an empty accounts file")
-	var port := 20000+randi()%20000
-	var server = WsServer.new(hub,port,"127.0.0.1")
+	var server = WsServer.new(hub,0,"127.0.0.1")
 	root.add_child(server)
 	check(server.start()==OK,"it listens on localhost")
-	var url := "ws://127.0.0.1:%d" % port
+	var url := "ws://127.0.0.1:%d" % server.port
 
 	# Two devices, two new characters.
 	var alice := Device.new(url)
@@ -80,11 +85,11 @@ func run() -> void:
 	check(snapshot_a.size()==1 and bool(snapshot_a[0].options.admin) and str(snapshot_a[0].options.account)=="Alice","Alice's snapshot names her account")
 
 	# Each device hears only its own character.
-	for _i in range(10):await until(func():return false,0.02)
+	check(await settle(alice.link) and await settle(bob.link),"both startup streams settle before checking isolation")
 	alice.events.clear();bob.events.clear()
 	alice.link.request({"type":"gm_grant_points","amount":5})
 	check(await until(func():return alice.count("profile") > 0),"Alice's GM command updates her device")
-	for _i in range(20):await until(func():return false,0.02)
+	check(await settle(alice.link) and await settle(bob.link),"both streams settle before checking isolation")
 	check(bob.events.is_empty(),"Bob's device hears nothing of it")
 	var bob_reply := {}
 	bob.link.request({"type":"gm_grant_points","amount":5},func(answer):bob_reply.merge(answer))
@@ -93,7 +98,7 @@ func run() -> void:
 	alice.events.clear()
 	bob.link.request({"type":"heal"})
 	check(await until(func():return bob.count("profile") > 0),"Bob's own command updates his device")
-	for _i in range(20):await until(func():return false,0.02)
+	check(await settle(alice.link) and await settle(bob.link),"both streams settle before checking isolation")
 	check(alice.count("profile")==0,"and not Alice's")
 
 	# A dropped connection logs in again by itself with the token.
@@ -102,7 +107,7 @@ func run() -> void:
 		if hub.profile_of(peer.get_instance_id())=="alice":peer.close()
 	check(await until(func():return not alice.link.online),"Alice's connection drops")
 	alice.login_info = {}
-	check(await until(func():return alice.link.online,15.0) and alice.login_info.is_empty() and alice.link.login_token==token,"and comes back logged in, without the login screen")
+	check(await until(func():return alice.link.online) and alice.login_info.is_empty() and alice.link.login_token==token,"and comes back logged in, without the login screen")
 
 	# The game's login screen.
 	var game_script = load("res://scripts/game.gd")
@@ -111,7 +116,7 @@ func run() -> void:
 	game_script.server_url_override = ""
 	game.profile_persistence = false
 	root.add_child(game)
-	check(await until(func():return is_instance_valid(game.login_screen) and game.login_screen.visible,10.0),"the game opens on the 登录 screen")
+	check(await until(func():return is_instance_valid(game.login_screen) and game.login_screen.visible),"the game opens on the 登录 screen")
 	var screen = game.login_screen
 	check(screen.list.get_child_count()==2 and screen.find_child("Profile_Alice",true,false)!=null and screen.find_child("Profile_Bob",true,false).text.contains("在线"),"it lists both characters, Bob as online")
 	check(screen.create_toggle.visible and not screen.create_box.visible,"creating a character is one click away")
@@ -122,7 +127,7 @@ func run() -> void:
 	check(game.data.is_empty() and not game.link.online,"and the game waits")
 	screen.pin.text = "2222"
 	screen.login_button.pressed.emit()
-	check(await until(func():return not game.data.is_empty() and game.link.online,15.0),"the right PIN enters the world")
+	check(await until(func():return not game.data.is_empty() and game.link.online),"the right PIN enters the world")
 	check(not screen.visible and not game.link_blocked(),"the login screen is gone")
 	check(not game.is_admin() and game.account_name()=="Bob","the game knows it plays Bob, not an admin")
 	game.dev_gm_menu.open_menu()
@@ -139,7 +144,7 @@ func run() -> void:
 	game_script.server_url_override = ""
 	second.profile_persistence = false
 	root.add_child(second)
-	check(await until(func():return is_instance_valid(second.login_screen) and second.login_screen.visible,10.0),"a second game opens on the 登录 screen")
+	check(await until(func():return is_instance_valid(second.login_screen) and second.login_screen.visible),"a second game opens on the 登录 screen")
 	var create = second.login_screen
 	create.create_toggle.pressed.emit()
 	create.new_name.text = "小红"
@@ -149,8 +154,8 @@ func run() -> void:
 	check(create.error.text.contains("不一样") and second.data.is_empty(),"mistyped PINs are caught before sending")
 	create.new_pin_again.text = "3333"
 	create.create_button.pressed.emit()
-	check(await until(func():return not second.data.is_empty(),15.0),"the new character enters the world")
-	check(await until(func():return second.character_selection.visible,5.0) and second.character_selection.title_label.text.begins_with("新角色"),"and chooses its look first")
+	check(await until(func():return not second.data.is_empty()),"the new character enters the world")
+	check(await until(func():return second.character_selection.visible) and second.character_selection.title_label.text.begins_with("新角色"),"and chooses its look first")
 	check(hub.accounts.find("小红").size() > 0 and hub.backends.size()==3,"the server has three characters, each with its own backend")
 	second.character_selection.close_menu()
 	second.queue_free()
