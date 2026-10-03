@@ -154,3 +154,9 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 | 采矿END27及奖杯：`giiru/event/giruev2_1/2@31805`、`300/sb_bac.arg`、原31805门 | 大赛提交/奖杯战同原洞路线；6F捕宠可继续便利到达但不授miner route，倒走原门不能洗白。矿2534普通条件掉落未改、待用户裁定。 |
 
 `quest_arrival_legacy_caves_test`遍历这六类当前catalog全部实际副作用分支，调用带真实npc_id最终transact，核拒绝原因来自项目到达且profile逐字不变；随后经各精确公开入口、真实碰撞/portal逐格走至深处实际NPC并核资格，最后验证内部原门洗白失败。六类1/1通过（57秒）；此为路线与最终守卫集成，不冒称每个兑换所需物品/宠物都重新自然收集。各旧产品helper/auto仍需owner适配连续步行后并集；不能为旧瞬移fixture放宽最终守卫。
+
+### Dragon cave: original seven floors and three-jewel room
+
+`20801–20807` now requires continuous arrival from an actual enabled `200→20801` original portal. Interior portals cannot start a new route. `npc/genout/wpm_20807_11_37:1–6` requires all three jewels and warps to `20807(13,35)`; only its successful saved action establishes `dragon_gate`. `jaruga/event/event17_1:4–12` (and the alternative `event17_2/3` branches) consumes the three jewels/flute and ends event17. These final branches require the committed gate mark as well as the original predicates. Holding the jewels or being in the room does not establish it. The mark uses the normal room-exit/epoch lifecycle.
+
+`quest_arrival_dragon_test` uses real Backend commands through seven floors, project-to-gate denial, actual source gate and final reward save failures/retries, and reset refusal. Its inventory is explicitly preexisting test material, not a claim that wild task drops are protected. Ordinary dragon drops remain unchanged pending the dedicated-drop decision. This policy must land with the corresponding legacy helper/test flow adaptations; the isolated arrival suite does not validate the full existing UI flow.
