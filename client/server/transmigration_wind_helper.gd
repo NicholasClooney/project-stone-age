@@ -10,7 +10,7 @@ func owns(npc:Dictionary)->bool:
 func stage_key(helper,backend)->Array:
  var map_id:int=backend.automation.position_map
  var eligibility:Array=[]
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_on_map(map_id):
   if owns(npc) and int(npc.map_id)==map_id:eligibility.append([str(npc.id),legitimate(backend,npc)])
  return [map_id,backend.original_quests.npc_state.version,region_at(helper,backend,map_id,backend.automation.position_cell) if map_id in range(11201,11216) else -1,eligibility]
 func entry(backend,script:String,index:int=-1,npc_id:String="")->Dictionary:
