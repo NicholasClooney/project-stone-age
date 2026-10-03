@@ -20,7 +20,7 @@ static func steps(helper, backend, profile: Dictionary, quest: Dictionary) -> vo
  var in_cave:bool=backend.automation.position_map in range(11101,11108)
  var victory_region:int=region_at(helper,backend,Vector2i(23,35)) if backend.automation.position_map==11107 else -1
  var past_guard:bool=victory_region>=0 and region_at(helper,backend,backend.automation.position_cell)==victory_region
- quest.completion_detail="成人仪式完成且等级30以上可接。取回两村守护石后，首次须先交卡坦石，再交霍特尔石，最后回柯尔克村姑领取黄色大首饰；只有最后回报才完成整项日志。洞窟暗号为“在卡坦有梦德”。助手瞬移是项目便利，仅限已到达的原区域；洞窟各层必须走原楼梯，族长侧需先战胜守卫。自动执行尚未开放。"
+ quest.completion_detail="成人仪式完成且等级30以上可接。取回两村守护石后，首次须先交卡坦石，再交霍特尔石，最后回柯尔克村姑领取黄色大首饰；只有最后回报才完成整项日志。洞窟暗号为“在卡坦有梦德”。洞内助手仅在沿原路线合法抵达、步行走近人物且原动作允许时原地交谈；不能跳过同房间步行。洞窟各层必须走原楼梯，族长侧需先战胜守卫。自动执行尚未开放。"
  helper.add_step(backend,profile,quest,"munde9:request",entry(backend,"sainasu/event/event09",1),not now9 and not ended,now9 or ended,"向柯尔克村姑接取委托")
  helper.add_step(backend,profile,quest,"munde11:request",entry(backend,"sainasu/event/event11",2 if now10 else 3),now9 and not now11 and not end11,now11 or end11,"向卡坦青年了解守护石")
  helper.add_step(backend,profile,quest,"munde10:request",entry(backend,"sainasu/event/event10",2 if now11 else 3),now9 and not now10 and not end10,now10 or end10,"向霍特尔村姑了解守护石")
@@ -87,13 +87,22 @@ static func region_at(helper,backend,cell:Vector2i)->int:
 static func stage_key(helper,backend)->Array:
  var map_id:int=backend.automation.position_map
  if not map_id in range(11101,11108):return []
- return ["munde",map_id,region_at(helper,backend,backend.automation.position_cell) if map_id==11107 else -1]
+ var nearby:Array=[]
+ for npc in backend.quest_catalog.active_npcs():
+  if owns(npc) and int(npc.map_id)==map_id and can_navigate(helper,backend,npc):nearby.append(str(npc.id))
+ nearby.sort()
+ return ["munde",map_id,region_at(helper,backend,backend.automation.position_cell) if map_id==11107 else -1,backend.quest_arrival.has_arrival(backend,map_id,backend.automation.position_cell),nearby]
 static func can_visit(step:Dictionary)->bool:
  return bool(step.get("navigation_allowed",false))
 static func can_navigate(helper,backend,npc:Dictionary)->bool:
  if npc.is_empty():return false
  if int(npc.map_id)!=11107:return true
  if backend.automation.position_map!=11107:return false
+ if not backend.quest_arrival.has_arrival(backend,11107,backend.automation.position_cell):return false
+ var delta:Vector2i=backend.automation.position_cell-Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ if maxi(absi(delta.x),absi(delta.y))>2:return false
+ var branch:Dictionary=backend.original_quests.branch_for(npc,backend.session._profile)
+ if not backend.quest_arrival.check_action(backend,npc,branch,str(branch.get("type",""))).is_empty():return false
  var current:int=region_at(helper,backend,backend.automation.position_cell)
  if current<0:return false
  var labels:Dictionary=region_data(helper,backend).get("labels",{})
@@ -104,26 +113,7 @@ static func can_navigate(helper,backend,npc:Dictionary)->bool:
 
 static func destination(helper,backend,npc:Dictionary,mode:String)->Dictionary:
  if mode not in ["near","arrival"] or int(npc.get("map_id",-1))!=11107 or not can_navigate(helper,backend,npc):return {}
- var current:int=region_at(helper,backend,backend.automation.position_cell)
- if current<0:return {}
- var labels:Dictionary=region_data(helper,backend).get("labels",{})
- var target:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
- var queue:Array[Vector2i]=[]
- for offset in preload("res://scripts/npc_interaction.gd").offsets():
-  var point:Vector2i=target+offset
-  if int(labels.get(point,-1))==current:queue.append(point)
- if queue.is_empty():return {}
- if mode=="near":return {"map_id":11107,"cell":[queue[0].x,queue[0].y],"npc_id":str(npc.id)}
- var spawn:Array=helper.places.info(11107).get("spawn",[])
- if spawn.size()!=2:return {}
- var origin:=Vector2i(int(spawn[0]),int(spawn[1]))
- var seen:Dictionary={}
- for point in queue:seen[point]=true
- var cursor:=0
- while cursor<queue.size():
-  var point:Vector2i=queue[cursor];cursor+=1
-  if maxi(absi(point.x-origin.x),absi(point.y-origin.y))<=32:return {"map_id":11107,"cell":[point.x,point.y],"npc_id":str(npc.id)}
-  for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
-   var next:Vector2i=point+offset
-   if not seen.has(next) and int(labels.get(next,-1))==current:seen[next]=true;queue.append(next)
- return {}
+ # Recheck authority for both raw NPC and helper-step requests. No different
+ # neighbour, arrival flood, or same-room teleport can preserve a false route.
+ var cell:Vector2i=backend.automation.position_cell
+ return {"map_id":11107,"cell":[cell.x,cell.y],"npc_id":str(npc.id)}
