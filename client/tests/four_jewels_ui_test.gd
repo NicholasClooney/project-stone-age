@@ -77,6 +77,10 @@ func run() -> void:
  if not await stage("jewels:return",31):return
  if not check(int(world.data.map_id)==4000 and host.original_quests.npc_by_id(SCHOLAR).cell==[53,101],"Real helper click finds scholar at original first relocated point"):return
  await proof("jewels-06-personal-scholar-moved")
+ # This last visit deliberately leaves the relocated scholar's dialogue open.
+ # Finish its protocol while the socket is live, before freeing the world.
+ world.world_travel.quest_dialogue.close()
+ if not check(await Wait.settle(self,world),"Final scholar dialogue closes before socket teardown"):return
  world.link.close();world.music.stop();world.effect.stop();world.queue_free();server.stop();server.queue_free();host.queue_free();await process_frame
  print("FOUR JEWELS UI: %d failures"%failures)
  quit(1 if failures else 0)
