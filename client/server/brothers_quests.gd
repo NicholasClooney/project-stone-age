@@ -20,6 +20,9 @@ static func begin(rules, backend, npc: Dictionary, branch: Dictionary) -> Dictio
  var guard:Dictionary=branch.get("guard",{})
  for required in guard.get("required_items",[]):
   if not int(required) in backend.session._profile.original_items:return {"ok":false,"reason":str(branch.get("source_fields",{}).get("deniedmsg","缺少原守卫要求的道具。"))}
+ var arrival_reason:String=backend.quest_arrival.check_action(backend,npc,branch,"BATTLE")
+ if not arrival_reason.is_empty():return {"ok":false,"reason":arrival_reason}
+ var arrival:Dictionary=backend.quest_arrival.battle_context(backend,npc,branch)
  var actors:Array=[]
  for id in ids:
   var actor:Dictionary=backend.encounter_catalog.actor(int(id),backend.encounter_rng)
@@ -27,7 +30,7 @@ static func begin(rules, backend, npc: Dictionary, branch: Dictionary) -> Dictio
   actors.append(actor)
  var config:Dictionary=backend.session.start_wild_battle_config({"enemies":actors})
  if config.is_empty():return {"ok":false,"reason":"原守卫战资源尚未导入。"}
- backend.session._pending.quest_guard={"npc_id":npc.id,"warp":str(branch.actions.get("Warp","")),"guard":guard.duplicate(true)}
+ backend.session._pending.quest_guard={"npc_id":npc.id,"warp":str(branch.actions.get("Warp","")),"guard":guard.duplicate(true),"arrival":arrival}
  rules.pending={}
  backend.open_battle(config)
  return {"ok":true,"closed":true}
@@ -52,6 +55,6 @@ static func warp_profile(profile: Dictionary, raw: String) -> void:
 static func publish_warp(backend, raw: String) -> void:
  var target:=raw.split(",")
  var map_id:=int(target[0]);var cell:=Vector2i(int(target[1]),int(target[2]))
- backend.automation.position_changed(map_id,cell,map_id!=backend.automation.position_map)
+ backend.automation.position_changed(map_id,cell,map_id!=backend.automation.position_map,"script")
  backend._emit({"type":"position","map_id":map_id,"cell":[cell.x,cell.y],"client":""})
  backend.publish()
