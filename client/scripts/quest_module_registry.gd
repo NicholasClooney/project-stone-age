@@ -12,7 +12,7 @@ static func entries() -> Array:
   if id.is_empty() or seen.has(id):return []
   if raw.has("configuration"):
    var expected:="client/data/quests/"+id+".json"
-   if raw.size()!=2 or str(raw.configuration)!=expected or not id in ["transmigration-earth","transmigration-fire","transmigration-wind","transmigration-water"]:return []
+   if raw.size()!=2 or str(raw.configuration)!=expected or not id in ["transmigration-earth","transmigration-fire","transmigration-wind","transmigration-water","transmigration-final"]:return []
    var path:="res://data/quests/"+id+".json"
    if not FileAccess.file_exists(path):return []
    var configuration=JSON.parse_string(FileAccess.get_file_as_string(path))

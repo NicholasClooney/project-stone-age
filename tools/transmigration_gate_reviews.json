@@ -74,5 +74,20 @@
     "WARP": "30307,10,6",
     "FREE": "LV>64&ENDEV=4",
     "MONEY": "-1"
+  },
+  "genout/wpm_300_103_228": {
+    "WARP": "300,105,228",
+    "FREE": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+    "MONEY": "-1"
+  },
+  "genout/wpm_300_108_225": {
+    "WARP": "32001,29,3",
+    "FREE": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+    "MONEY": "-1"
+  },
+  "genout/wpm_32016_31_39": {
+    "WARP": "32016,31,37",
+    "FREE": "LV>79&ENDEV=39&ENDEV=40&ENDEV=42&ENDEV=46",
+    "MONEY": "-1"
   }
 }
