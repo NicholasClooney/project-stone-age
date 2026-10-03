@@ -126,3 +126,18 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 `genout/wpm_120_19_15:1–3` is the only reviewed original maze entry: LV>49, no fee, Warp122(6,5). Maps122/118/119 form one arrival scope. `map/mapwarp.txt:1651–1656` contains the original interior paired portals and the one-way119(103,93)→121(17,15) exit, with no reverse121 entrance. `extra/event/marju01` REQUEST38 consumes2687, gives2697 and sets END37; its MESSAGE replacement and independent ACCEPT cutting-stone branch are also protected. Being in the maze with mail/stone is no substitute for the gate and continuous route.
 
 `extra/event/marju` on public1300 accepts the mail request and awards END38 on return using its original predicates. It intentionally requires no current cave mark after the legitimate one-way exit. `quest_arrival_marju_test` verifies real public request, project delivery refusal, original gate/large maze/portals, delivery save failure/retry, actual one-way exit, public return reward, and project replacement refusal. The independent route oracle snapshots each map's portal dictionary once per synchronous path search, avoiding repeated catalogue work without changing movement or grant semantics. Marju and Dragon route suites pass together; legacy UI/fixture adaptation is still required for release.
+
+## 火链政策首片
+
+本片依赖fire已提交源fixture `6d98ce6`，不启用descriptor。原源为`references/chenmingbiao-stone-age/gmsv/data/npc/`，以下路径相对此根；政策只列地图集合，实际传播始终重验真实portal图，不要求按地图编号逐层。
+
+| 实际案例／源分支 | 此前项目绕行与处理 | 本片验证／剩余 |
+|---|---|---|
+| `giiru/event/sink/sink01:12–20` b1发2706且NpcWarp | 项目到20309可绕羽毛洞；20301–20309纳phoenix scope，必须200真实入口及连续原边；内部原门`genout/wpm_20301_200_39:1–3`仍由真实FREEWARP条件END4且NOW40/END40核验 | b1项目到达拒绝；真实完整羽毛路线由fire源driver继续并集复验。实际连通20301→20302→20306→20307→20309，不要求20303/4/5/8 |
+| `sink02:10–20` b0收2706、给2707、Charm+1、END40；`sink06:28–89` b3–9七奖池 | 30001–30016纳fire scope；到30016战前组件不能领奖；必须真实`300/sb_hpa.arg:4–7`保存胜战并Warp30016(26,63)后获得fire_final，离领奖组件清除 | 真实成人前置→30502门savefail/retry→原多层→hba7→30008 portal→30016战前拒绝→hpa真实十敌战→63到32原走路→各七奖池资格通过；同组件项目移位撤销 |
+| `sink044/044a/044b/044c`各换水b0–3，`sink055/055a`各换水b0–9 | NpcWarp会在30001/2/6/8/10/11/12移动；当前位置属于fire route，NPC个人移动本身不授角色资格，不能helper跳未来楼层兑现 | 各实际branch项目位置拒绝；穷举原NpcWarp目标仍在fire scope。完整换水保存失败/个人NPC移动由fire链suite负责并集 |
+| `sink07@5106`b2 REQUEST40 | 原公开村庄，无必须先走洞窟的原障碍；不加scope，无缺口理由是NPC本就公开，仍核原END4 | 真实成人完成后公开NPC真实REQUEST40通过 |
+| `sink03@300`b0退款1149/b1–3关键词灌水 | 公开野外，无必须先走洞窟障碍；不因其提供任务材料创造洞窟资格或NOW40门槛 | public scope为空；既有真实关键词/savefail suite保留 |
+| `genout/ss_30504_10_11`购壶1150 | 原300(388,337)→30504(22,19)公开入口（mapwarp.txt:2034，warp_g2.create:918–922），无需深红资格。服务最终传真实NPC身份，但公开map检查通过 | 本槽372481b真实服务hook已接，jug与golden服务定向通过 |
+
+深红两合法根为`genout/wpm_30502_45_41:1–3`→30001(29,14)及`wpm_30503_26_5:1–3`→30015(70,95)，均原LV>64/END4；后者不能误删。内部景观门不能变成新的root。源hpa坐标是63；fire早期报告61已由owner更正为笔误，没有修改原落点。`has_arrival`只读路线，helper实际领奖提示必须结合`check_action`；本片未宣称全链终端结算、两设备、掉落边界均已完成。

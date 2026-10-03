@@ -2,6 +2,8 @@ extends RefCounted
 ## Reviewed project safeguards. These are not additional original event flags.
 ## Other audited chains are added separately; staged rebirth bosses stay closed.
 static func scope(map_id: int) -> String:
+	if map_id>=20301 and map_id<=20309:return "phoenix"
+	if map_id>=30001 and map_id<=30016:return "fire"
 	if map_id in [118,119,122]:return "marju"
 	if map_id>=20801 and map_id<=20807:return "dragon"
 	if map_id>=21001 and map_id<=21016:return "earth"
@@ -14,10 +16,13 @@ static func scope(map_id: int) -> String:
 	return ""
 
 static func portal_root(from_map: int, to_map: int) -> bool:
+	if from_map==200 and to_map==20301:return true
 	if from_map==200 and to_map==20801:return true
 	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204) or (from_map==5000 and to_map==31301)
 
 static func script_root(source_id: String, to_map: int) -> bool:
+	if source_id=="genout/wpm_30502_45_41" and to_map==30001:return true
+	if source_id=="genout/wpm_30503_26_5" and to_map==30015:return true
 	if source_id=="genout/wpm_120_19_15" and to_map==122:return true
 	if source_id=="genout/wpm_200_73_696" and to_map==21201:return true
 	if source_id=="genout/wpm_200_316_711" and to_map==21301:return true
@@ -26,6 +31,7 @@ static func script_root(source_id: String, to_map: int) -> bool:
 	return (source_id=="genout/wpm_100_443_127" and to_map==11101) or (source_id=="genout/wpm_100_278_325" and to_map==11201)
 
 static func action_marks(npc: Dictionary, _branch: Dictionary) -> Array:
+	if source(npc) in ["giiru/event/sink/sink02","giiru/event/sink/sink06"]:return ["fire_final"]
 	if source(npc) in ["jaruga/event/event17_1","jaruga/event/event17_2","jaruga/event/event17_3"]:return ["dragon_gate"]
 	if source(npc)=="jaruga/event/hekisei03":return ["water_material"]
 	if source(npc) in ["jaruga/event/ruri01","jaruga/event/ruri05","jaruga/event/ruri06"]:return ["earth_final"]
@@ -42,6 +48,7 @@ static func action_mark(source_id: String) -> String:
 	return ""
 
 static func battle_mark(source_id: String) -> String:
+	if source_id=="300/sb_hpa.arg":return "fire_final"
 	if source_id=="200/sb_dbt.arg":return "earth_final"
 	if source_id in ["400/sb_muge1.arg","400/sb_muge2.arg"]:return "dream_final"
 	if source_id in ["100/sb_go.arg","100/sb_dan.arg"]:return "munde_final"
@@ -49,6 +56,7 @@ static func battle_mark(source_id: String) -> String:
 	return ""
 
 static func mark_regions(mark: String) -> Array:
+	if mark=="fire_final":return [[30016,26,63]]
 	if mark=="dragon_gate":return [[20807,13,35]]
 	if mark=="water_material":return [[21308,20,7]]
 	if mark=="earth_final":return [[21015,9,17]]
