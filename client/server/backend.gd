@@ -1082,6 +1082,7 @@ func report_party_position(command:Dictionary, evidence:Dictionary = {})->Dictio
 ## Explicit project movement can only revoke route proof. The source kind is
 ## selected here, never accepted from a caller's report/party/grant fields.
 func _cmd_project_position(command:Dictionary)->Dictionary:
+	if quest_visit_guard.is_valid() and not str(quest_visit_guard.call()).is_empty():return _reject("组队时请先离开队伍再使用地图瞬移。")
 	if battle_open or not session._pending.is_empty() or automation.running or automation.hunt_running or automation.flow_active() or quest_auto.running:return _reject("当前正忙，请先停止自动活动或战斗。")
 	var values=command.get("cell",[])
 	if not session._integer(command.get("map_id"),0,2147483647) or int(command.map_id)!=automation.position_map or not values is Array or values.size()!=2 or not session._integer(values[0],0,2147483647) or not session._integer(values[1],0,2147483647):return _reject("位置已改变，请重新选择地图落点。")
