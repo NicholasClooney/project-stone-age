@@ -1,9 +1,18 @@
 {
-  "version": "v0.202.2",
-  "count": 308,
+  "version": "v0.202.3",
+  "count": 309,
   "feature_count": 186,
-  "fix_count": 122,
+  "fix_count": 123,
   "entries": [
+    {
+      "version": "v0.202.3",
+      "date": "2026-10-03",
+      "kind": "fix",
+      "title": "装备保存失败时恢复原状态",
+      "details": [
+        "背包内装备或卸下道具时，若保存失败，恢复整份角色状态并显示失败；不会留下只在内存生效的穿戴结果。"
+      ]
+    },
     {
       "version": "v0.202.2",
       "date": "2026-10-03",

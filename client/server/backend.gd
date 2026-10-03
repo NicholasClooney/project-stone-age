@@ -477,7 +477,7 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	if type=="use_item":
 		if command.has("pet_id") and not command.has("item"):return _reject("missing item")
 		if battle_open:return _reject("野外道具不能在战斗中使用；原战斗道具回合尚未接入。")
-	var before: Dictionary=session.snapshot() if type=="use_item" else {}
+	var before: Dictionary=session.snapshot() if type in ["use_item","equip_item"] else {}
 	var spec: Array = PROFILE_COMMANDS[type]
 	var arguments := []
 	for field in spec[1]:
@@ -490,7 +490,7 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	var ok: bool = session.callv(spec[0],arguments)
 	if not ok:return _reject(session.last_error)
 	var saved := save()
-	if type=="use_item" and not saved:
+	if type in ["use_item","equip_item"] and not saved:
 		session._profile=before
 		session.last_note=""
 		return _reject("save_failed")
