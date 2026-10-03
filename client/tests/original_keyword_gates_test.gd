@@ -1,5 +1,10 @@
 extends "res://tests/bonus_quest_transactions_test.gd"
 var gates:Array=[]
+func place(b,id:String)->void:
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if int(npc.map_id) in range(20601,20609):
+  check(preload("res://tests/support/jan_route_driver.gd").approach(b,npc),"real Jan entrance and previous passwords precede keyword test")
+ else:super.place(b,id)
 func setup():
  var b=Backend.new()
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/original-keyword-gates.json"))
