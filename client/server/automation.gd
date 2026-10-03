@@ -457,16 +457,28 @@ func command(name: String, arguments: Dictionary) -> Dictionary:
 			if hunt_running:_hunt_process(float(arguments.get("delta",0.0)))
 			else:_share_idle()
 		"set":
-			for key in arguments.get("fields",{}):set(key,arguments.fields[key])
+			var fields:Dictionary=arguments.get("fields",{})
+			if fields.has("position_map") or fields.has("position_cell"):
+				var next_map=fields.get("position_map",position_map)
+				var next_cell=fields.get("position_cell",position_cell)
+				if not backend.session._integer(next_map,0,2147483647):return _reply(false,"无效位置")
+				if next_cell is Array and next_cell.size()==2 and backend.session._integer(next_cell[0],0,2147483647) and backend.session._integer(next_cell[1],0,2147483647):next_cell=Vector2i(int(next_cell[0]),int(next_cell[1]))
+				if not next_cell is Vector2i:return _reply(false,"无效位置")
+				position_changed(int(next_map),next_cell)
+			for key in fields:
+				if key not in ["position_map","position_cell"]:set(key,fields[key])
 			_emit_status()
 	return {"ok":true}
 
 func presented(battle_id: String, turn: int) -> void:
 	_presented_key = "%s:%d" % [battle_id,turn]
 
-func position_changed(map_id: int, cell: Vector2i, map_changed: bool = false) -> String:
+func position_changed(map_id: int, cell: Vector2i, map_changed: bool = false, arrival_kind: String = "project", evidence: Dictionary = {}) -> String:
+	var previous_map:=position_map
+	var previous_cell:=position_cell
 	position_map = map_id
 	position_cell = cell
+	backend.quest_arrival.observe_move(backend,previous_map,previous_cell,map_id,cell,arrival_kind,evidence)
 	if not map_changed:return ""
 	# A new map ends the current run; a defeat or travel pauses the workflow.
 	var pause := ""
@@ -1868,8 +1880,7 @@ func load_resume(state: Dictionary) -> void:
 	if not state.get("cell") is Array or state.cell.size()!=2:return
 	pending_resume = state.duplicate(true)
 	if position_map<0:
-		position_map = int(state.map_id)
-		position_cell = Vector2i(int(state.cell[0]),int(state.cell[1]))
+		position_changed(int(state.map_id),Vector2i(int(state.cell[0]),int(state.cell[1])))
 
 ## Goes on with the pending run once it is safe: the character stands where it
 ## ran and no battle is open. Standing elsewhere drops it (and says so).
@@ -2660,9 +2671,8 @@ func _emit_event(detail: Dictionary) -> void:
 
 func _set_position(command: Dictionary) -> void:
 	if command.has("map_id"):
-		position_map = int(command.map_id)
 		var cell: Array = command.get("cell",[0,0])
-		position_cell = Vector2i(int(cell[0]),int(cell[1]))
+		position_changed(int(command.map_id),Vector2i(int(cell[0]),int(cell[1])))
 
 func _reply(ok: bool, reason: String) -> Dictionary:
 	return {"ok":ok,"reason":"" if ok else reason}
