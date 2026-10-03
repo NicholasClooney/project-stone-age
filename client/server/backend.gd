@@ -9,6 +9,7 @@ const GameSession = preload("res://server/game_session.gd")
 const BattleSession = preload("res://server/battle_session.gd")
 const SquadBattleSession = preload("res://server/squad_battle_session.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
+const WildLoot = preload("res://server/quest_wild_loot.gd")
 const TroopArt = preload("res://server/troop_art.gd")
 const Automation = preload("res://server/automation.gd")
 const KeepRule = preload("res://scripts/keep_rule.gd")
@@ -768,6 +769,7 @@ func training_borrow_config(troop: Dictionary) -> Dictionary:
 	return config
 
 func open_battle(config: Dictionary) -> Dictionary:
+	WildLoot.freeze(self)
 	session.battle_pets_hook = _live_battle_pets
 	session.capture_entry_hook = _capture_entry
 	encounter_serial += 1
@@ -907,7 +909,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	if settle.is_empty() and battle_open and not party_battle():session._pending.loot_claims = battle.drop_claims_for()
 	var before: Dictionary = session.snapshot()
 	var capture_only := bool(session._pending.get("capture_only",false)) and not party_battle()
-	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0))))
+	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.has("wild_drop_receipt") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0))))
 	var revival_transaction: bool=_revival_transaction()
 	var atomic: bool=capture_only or quest_transaction or revival_transaction
 	var pending_before: Dictionary = session._pending.duplicate(true) if atomic and not bool(state.active) else {}
@@ -924,8 +926,20 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 				drop_claims=_allowed_guard_claims(pending_before,drop_claims,blocked,result)
 			else:
 				session._pending.loot_claims=_allowed_guard_claims(pending_before,pending_before.get("loot_claims",[]),blocked,result)
-	var applied:bool=not bool(state.active) and session.apply_battle_result(result,drop_claims)
-	if not applied and not arrival_denied.is_empty():session._pending=pending_before
+	var wild_denied:=""
+	var wild_error:=""
+	if not bool(state.active) and pending_before.has("wild_drop_receipt"):
+		wild_error=str(pending_before.wild_drop_receipt.get("error",""))
+		var party:=bool(pending_before.get("party",false))
+		var original_claims:Array=drop_claims if party else pending_before.get("loot_claims",[])
+		if _loot_claims_valid(pending_before,original_claims,result):
+			var filtered:Dictionary=WildLoot.filter_claims(self,pending_before.wild_drop_receipt,original_claims)
+			wild_denied=str(filtered.denied)
+			if party:drop_claims=filtered.claims
+			else:session._pending.loot_claims=filtered.claims
+	var applied:bool=not bool(state.active) and wild_error.is_empty() and session.apply_battle_result(result,drop_claims)
+	if not applied and (not arrival_denied.is_empty() or pending_before.has("wild_drop_receipt")):session._pending=pending_before
+	if not wild_error.is_empty():state.settlement_error=wild_error
 	if applied:
 		if pending_before.has("quest_guard") and str(state.outcome)=="win" and arrival_denied.is_empty():
 			preload("res://server/brothers_quests.gd").settle_profile(self,pending_before.quest_guard)
@@ -943,6 +957,9 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 		if not settle.is_empty():
 			for key in ["xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:state[key] = result.get(key,0)
 		state.settled = true
+		if not wild_denied.is_empty():
+			state.quest_drop_denied=wild_denied
+			state.events.append(wild_denied)
 		if not arrival_denied.is_empty():
 			state.quest_arrival_denied=arrival_denied
 			state.events.append(arrival_denied)
@@ -985,27 +1002,28 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	_emit({"type":"battle_turn","state":state.duplicate(true)})
 	return state.duplicate(true)
 
-## Filter only audited guard-specific loot on a candidate copy. Malformed
-## claims remain present so the original Session validator rejects them.
-func _allowed_guard_claims(pending:Dictionary, claims:Array, blocked:Array, battle_result:Dictionary)->Array:
-	if blocked.is_empty():return claims.duplicate(true)
+## Validate the entire original list before either task filter. Invalid claims
+## stay untouched for the normal Session rejection; suppression cannot repair them.
+func _loot_claims_valid(pending:Dictionary, claims:Array, battle_result:Dictionary)->bool:
 	var enemies:Array=pending.get("enemies",[])
 	var finished:Array=battle_result.get("enemies",[])
-	if finished.size()!=enemies.size():return claims.duplicate(true)
+	if finished.size()!=enemies.size():return false
 	var seen:Dictionary={}
-	# Validate the entire original claim list first. Never hide a duplicate or
-	# invalid claim by filtering the first occurrence of a withheld item.
 	for claim in claims:
-		if not claim is Dictionary or not session._integer(claim.get("enemy"),0,enemies.size()-1):return claims.duplicate(true)
+		if not claim is Dictionary or not session._integer(claim.get("enemy"),0,enemies.size()-1):return false
 		var index:=int(claim.enemy)
 		var generated:Array=enemies[index].get("generated_drops",[])
-		if not session._integer(claim.get("item"),0,generated.size()-1):return claims.duplicate(true)
+		if not session._integer(claim.get("item"),0,generated.size()-1):return false
 		var key:="%d:%d"%[index,int(claim.item)]
-		if seen.has(key) or not finished[index] is Dictionary or not session._integer(finished[index].get("hp"),0,0) or bool(finished[index].get("captured",false)):return claims.duplicate(true)
+		if seen.has(key) or not finished[index] is Dictionary or not session._integer(finished[index].get("hp"),0,0) or bool(finished[index].get("captured",false)):return false
 		seen[key]=true
+	return true
+
+func _allowed_guard_claims(pending:Dictionary, claims:Array, blocked:Array, battle_result:Dictionary)->Array:
+	if blocked.is_empty() or not _loot_claims_valid(pending,claims,battle_result):return claims.duplicate(true)
 	var result:Array=[]
 	for claim in claims:
-		if not int(enemies[int(claim.enemy)].generated_drops[int(claim.item)]) in blocked:result.append(claim.duplicate(true))
+		if not int(pending.enemies[int(claim.enemy)].generated_drops[int(claim.item)]) in blocked:result.append(claim.duplicate(true))
 	return result
 
 func _cmd_battle_close(command: Dictionary) -> Dictionary:
@@ -1014,7 +1032,7 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	# 自动练级 met the next troop, LAN phase 4c) is not an error.
 	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
-	if _revival_transaction() or bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
+	if _revival_transaction() or bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.has("wild_drop_receipt") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
 		var retried := _after_turn(battle.snapshot())
 		if not bool(retried.get("settled",false)):return _reject(str(retried.get("settlement_error","捕获未结算")))
 	return {"ok":true,"outcome":close_battle()}
