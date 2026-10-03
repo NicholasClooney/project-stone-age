@@ -1,0 +1,1850 @@
+{
+  "source": "gmsv/data/map/mapwarp.txt",
+  "sha256": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+  "portals": [
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        8
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 779
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 780
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 781
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 782
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 783
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 784
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source_line": 785
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source_line": 786
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source_line": 787
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source_line": 788
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        59
+      ],
+      "to_map": 32020,
+      "target": [
+        20,
+        10
+      ],
+      "source_line": 789
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        59
+      ],
+      "to_map": 32020,
+      "target": [
+        21,
+        10
+      ],
+      "source_line": 790
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        29,
+        3
+      ],
+      "to_map": 300,
+      "target": [
+        108,
+        225
+      ],
+      "source_line": 1807
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        38,
+        12
+      ],
+      "to_map": 32002,
+      "target": [
+        42,
+        13
+      ],
+      "source_line": 1808
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        42,
+        13
+      ],
+      "to_map": 32001,
+      "target": [
+        38,
+        12
+      ],
+      "source_line": 1809
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        9,
+        46
+      ],
+      "to_map": 32002,
+      "target": [
+        8,
+        46
+      ],
+      "source_line": 1810
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        8,
+        46
+      ],
+      "to_map": 32001,
+      "target": [
+        9,
+        46
+      ],
+      "source_line": 1811
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        7,
+        53
+      ],
+      "to_map": 32002,
+      "target": [
+        6,
+        54
+      ],
+      "source_line": 1812
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        6,
+        54
+      ],
+      "to_map": 32001,
+      "target": [
+        7,
+        53
+      ],
+      "source_line": 1813
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        53,
+        34
+      ],
+      "to_map": 32003,
+      "target": [
+        53,
+        33
+      ],
+      "source_line": 1814
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        53,
+        33
+      ],
+      "to_map": 32002,
+      "target": [
+        53,
+        34
+      ],
+      "source_line": 1815
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        34,
+        54
+      ],
+      "to_map": 32004,
+      "target": [
+        42,
+        29
+      ],
+      "source_line": 1816
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        42,
+        29
+      ],
+      "to_map": 32003,
+      "target": [
+        34,
+        54
+      ],
+      "source_line": 1817
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        35,
+        43
+      ],
+      "to_map": 32004,
+      "target": [
+        19,
+        28
+      ],
+      "source_line": 1818
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        19,
+        28
+      ],
+      "to_map": 32003,
+      "target": [
+        35,
+        43
+      ],
+      "source_line": 1819
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        41,
+        13
+      ],
+      "to_map": 32004,
+      "target": [
+        52,
+        25
+      ],
+      "source_line": 1820
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        52,
+        25
+      ],
+      "to_map": 32003,
+      "target": [
+        41,
+        13
+      ],
+      "source_line": 1821
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        11,
+        27
+      ],
+      "to_map": 32004,
+      "target": [
+        19,
+        7
+      ],
+      "source_line": 1822
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 32003,
+      "target": [
+        11,
+        27
+      ],
+      "source_line": 1823
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        37,
+        5
+      ],
+      "to_map": 32004,
+      "target": [
+        42,
+        13
+      ],
+      "source_line": 1824
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        42,
+        13
+      ],
+      "to_map": 32003,
+      "target": [
+        37,
+        5
+      ],
+      "source_line": 1825
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        47,
+        15
+      ],
+      "to_map": 32003,
+      "target": [
+        21,
+        44
+      ],
+      "source_line": 1826
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        21,
+        44
+      ],
+      "to_map": 32004,
+      "target": [
+        47,
+        15
+      ],
+      "source_line": 1827
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        44,
+        50
+      ],
+      "to_map": 32003,
+      "target": [
+        55,
+        19
+      ],
+      "source_line": 1828
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        55,
+        19
+      ],
+      "to_map": 32004,
+      "target": [
+        44,
+        50
+      ],
+      "source_line": 1829
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        55,
+        47
+      ],
+      "to_map": 32003,
+      "target": [
+        45,
+        43
+      ],
+      "source_line": 1830
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        45,
+        43
+      ],
+      "to_map": 32004,
+      "target": [
+        55,
+        47
+      ],
+      "source_line": 1831
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        27,
+        34
+      ],
+      "to_map": 32003,
+      "target": [
+        8,
+        4
+      ],
+      "source_line": 1832
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        8,
+        4
+      ],
+      "to_map": 32004,
+      "target": [
+        27,
+        34
+      ],
+      "source_line": 1833
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        18,
+        21
+      ],
+      "to_map": 32003,
+      "target": [
+        52,
+        4
+      ],
+      "source_line": 1834
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        52,
+        4
+      ],
+      "to_map": 32004,
+      "target": [
+        18,
+        21
+      ],
+      "source_line": 1835
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        8,
+        47
+      ],
+      "to_map": 32004,
+      "target": [
+        8,
+        48
+      ],
+      "source_line": 1836
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        8,
+        48
+      ],
+      "to_map": 32003,
+      "target": [
+        8,
+        47
+      ],
+      "source_line": 1837
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        21,
+        46
+      ],
+      "to_map": 32003,
+      "target": [
+        27,
+        34
+      ],
+      "source_line": 1838
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        27,
+        34
+      ],
+      "to_map": 32004,
+      "target": [
+        21,
+        46
+      ],
+      "source_line": 1839
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        15,
+        12
+      ],
+      "to_map": 32004,
+      "target": [
+        32,
+        26
+      ],
+      "source_line": 1840
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        32,
+        26
+      ],
+      "to_map": 32003,
+      "target": [
+        15,
+        12
+      ],
+      "source_line": 1841
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        28,
+        4
+      ],
+      "to_map": 32005,
+      "target": [
+        48,
+        3
+      ],
+      "source_line": 1842
+    },
+    {
+      "from_map": 32005,
+      "cell": [
+        48,
+        3
+      ],
+      "to_map": 32004,
+      "target": [
+        28,
+        4
+      ],
+      "source_line": 1843
+    },
+    {
+      "from_map": 32005,
+      "cell": [
+        37,
+        23
+      ],
+      "to_map": 32006,
+      "target": [
+        17,
+        20
+      ],
+      "source_line": 1844
+    },
+    {
+      "from_map": 32006,
+      "cell": [
+        17,
+        20
+      ],
+      "to_map": 32005,
+      "target": [
+        37,
+        23
+      ],
+      "source_line": 1845
+    },
+    {
+      "from_map": 32006,
+      "cell": [
+        13,
+        56
+      ],
+      "to_map": 32007,
+      "target": [
+        29,
+        4
+      ],
+      "source_line": 1846
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        29,
+        4
+      ],
+      "to_map": 32006,
+      "target": [
+        13,
+        56
+      ],
+      "source_line": 1847
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        55,
+        55
+      ],
+      "to_map": 32008,
+      "target": [
+        49,
+        8
+      ],
+      "source_line": 1848
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        49,
+        8
+      ],
+      "to_map": 32007,
+      "target": [
+        55,
+        55
+      ],
+      "source_line": 1849
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        6,
+        23
+      ],
+      "to_map": 32008,
+      "target": [
+        4,
+        38
+      ],
+      "source_line": 1850
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        4,
+        38
+      ],
+      "to_map": 32007,
+      "target": [
+        6,
+        23
+      ],
+      "source_line": 1851
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        55,
+        15
+      ],
+      "to_map": 32009,
+      "target": [
+        4,
+        38
+      ],
+      "source_line": 1852
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        4,
+        38
+      ],
+      "to_map": 32008,
+      "target": [
+        55,
+        15
+      ],
+      "source_line": 1853
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        10,
+        5
+      ],
+      "to_map": 32009,
+      "target": [
+        49,
+        8
+      ],
+      "source_line": 1854
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        49,
+        8
+      ],
+      "to_map": 32008,
+      "target": [
+        10,
+        5
+      ],
+      "source_line": 1855
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        10,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        10,
+        4
+      ],
+      "source_line": 1856
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        10,
+        4
+      ],
+      "to_map": 32009,
+      "target": [
+        10,
+        5
+      ],
+      "source_line": 1857
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        16,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        92,
+        4
+      ],
+      "source_line": 1858
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        92,
+        4
+      ],
+      "to_map": 32009,
+      "target": [
+        16,
+        5
+      ],
+      "source_line": 1859
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        22,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        6,
+        57
+      ],
+      "source_line": 1860
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        6,
+        57
+      ],
+      "to_map": 32009,
+      "target": [
+        22,
+        5
+      ],
+      "source_line": 1861
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        28,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        93,
+        93
+      ],
+      "source_line": 1862
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        93,
+        93
+      ],
+      "to_map": 32009,
+      "target": [
+        28,
+        5
+      ],
+      "source_line": 1863
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        56,
+        36
+      ],
+      "to_map": 32010,
+      "target": [
+        51,
+        30
+      ],
+      "source_line": 1864
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        9
+      ],
+      "source_line": 1865
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        16
+      ],
+      "source_line": 1866
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        21
+      ],
+      "source_line": 1867
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        28
+      ],
+      "source_line": 1868
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        33
+      ],
+      "source_line": 1869
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        40
+      ],
+      "source_line": 1870
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        45
+      ],
+      "source_line": 1871
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        52
+      ],
+      "source_line": 1872
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        9
+      ],
+      "source_line": 1873
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        16
+      ],
+      "source_line": 1874
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        21
+      ],
+      "source_line": 1875
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        28
+      ],
+      "source_line": 1876
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        33
+      ],
+      "source_line": 1877
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        40
+      ],
+      "source_line": 1878
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        45
+      ],
+      "source_line": 1879
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        52
+      ],
+      "source_line": 1880
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        9
+      ],
+      "source_line": 1881
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        16
+      ],
+      "source_line": 1882
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        21
+      ],
+      "source_line": 1883
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        28
+      ],
+      "source_line": 1884
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        33
+      ],
+      "source_line": 1885
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        40
+      ],
+      "source_line": 1886
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        45
+      ],
+      "source_line": 1887
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        52
+      ],
+      "source_line": 1888
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1890
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1891
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1892
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1893
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1894
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1895
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1896
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1897
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1898
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1899
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1900
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1901
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1902
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1903
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1904
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1905
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1906
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1907
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1908
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1909
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source_line": 1910
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        31,
+        38
+      ],
+      "to_map": 32016,
+      "target": [
+        31,
+        41
+      ],
+      "source_line": 1911
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        33,
+        9
+      ],
+      "to_map": 32013,
+      "target": [
+        6,
+        5
+      ],
+      "source_line": 1912
+    },
+    {
+      "from_map": 32013,
+      "cell": [
+        6,
+        5
+      ],
+      "to_map": 32012,
+      "target": [
+        33,
+        9
+      ],
+      "source_line": 1913
+    },
+    {
+      "from_map": 32013,
+      "cell": [
+        40,
+        23
+      ],
+      "to_map": 32014,
+      "target": [
+        8,
+        8
+      ],
+      "source_line": 1914
+    },
+    {
+      "from_map": 32014,
+      "cell": [
+        8,
+        8
+      ],
+      "to_map": 32013,
+      "target": [
+        40,
+        23
+      ],
+      "source_line": 1915
+    },
+    {
+      "from_map": 32014,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32015,
+      "target": [
+        31,
+        35
+      ],
+      "source_line": 1916
+    },
+    {
+      "from_map": 32015,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32014,
+      "target": [
+        31,
+        35
+      ],
+      "source_line": 1917
+    },
+    {
+      "from_map": 32015,
+      "cell": [
+        54,
+        42
+      ],
+      "to_map": 32016,
+      "target": [
+        54,
+        42
+      ],
+      "source_line": 1918
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        54,
+        42
+      ],
+      "to_map": 32015,
+      "target": [
+        54,
+        42
+      ],
+      "source_line": 1919
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32017,
+      "target": [
+        31,
+        35
+      ],
+      "source_line": 1920
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32016,
+      "target": [
+        31,
+        35
+      ],
+      "source_line": 1921
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        43,
+        13
+      ],
+      "to_map": 32018,
+      "target": [
+        43,
+        13
+      ],
+      "source_line": 1922
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        43,
+        13
+      ],
+      "to_map": 32017,
+      "target": [
+        43,
+        13
+      ],
+      "source_line": 1923
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        17,
+        13
+      ],
+      "to_map": 32018,
+      "target": [
+        17,
+        13
+      ],
+      "source_line": 1924
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        17,
+        13
+      ],
+      "to_map": 32017,
+      "target": [
+        17,
+        13
+      ],
+      "source_line": 1925
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        23,
+        54
+      ],
+      "to_map": 32019,
+      "target": [
+        23,
+        54
+      ],
+      "source_line": 1926
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        23,
+        54
+      ],
+      "to_map": 32018,
+      "target": [
+        23,
+        54
+      ],
+      "source_line": 1927
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        52,
+        22
+      ],
+      "to_map": 32020,
+      "target": [
+        95,
+        29
+      ],
+      "source_line": 1928
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        95,
+        29
+      ],
+      "to_map": 32019,
+      "target": [
+        52,
+        22
+      ],
+      "source_line": 1929
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 32019,
+      "target": [
+        53,
+        49
+      ],
+      "source_line": 1930
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 32018,
+      "target": [
+        53,
+        49
+      ],
+      "source_line": 1931
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 300,
+      "target": [
+        108,
+        225
+      ],
+      "source_line": 1932
+    },
+    {
+      "from_map": 300,
+      "cell": [
+        104,
+        228
+      ],
+      "to_map": 300,
+      "target": [
+        93,
+        228
+      ],
+      "source_line": 1889
+    }
+  ],
+  "entry_pocket": [
+    [
+      105,
+      227
+    ],
+    [
+      105,
+      228
+    ],
+    [
+      106,
+      227
+    ],
+    [
+      106,
+      228
+    ],
+    [
+      107,
+      227
+    ],
+    [
+      107,
+      228
+    ],
+    [
+      108,
+      226
+    ],
+    [
+      108,
+      227
+    ],
+    [
+      108,
+      228
+    ],
+    [
+      108,
+      229
+    ],
+    [
+      109,
+      226
+    ],
+    [
+      109,
+      228
+    ]
+  ]
+}

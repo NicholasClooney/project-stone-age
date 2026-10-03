@@ -2,6 +2,7 @@ extends RefCounted
 ## Reviewed project safeguards. These are not additional original event flags.
 ## Other audited chains are added separately; staged rebirth bosses stay closed.
 static func scope(map_id: int) -> String:
+	if map_id>=32001 and map_id<=32021:return "transmigration"
 	if map_id in [41,42]:return "dream"
 	for entry in [[20101,20105,"herb"],[20401,20406,"goya"],[20501,20508,"wood"],[11001,11006,"doctor"],[10701,10705,"saton"],[31801,31806,"miner"]]:
 		if map_id>=int(entry[0]) and map_id<=int(entry[1]):return str(entry[2])
@@ -27,6 +28,7 @@ static func portal_root(from_map: int, to_map: int) -> bool:
 	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204) or (from_map==200 and to_map==20301) or (from_map==5000 and to_map==31301)
 
 static func script_root(source_id: String, to_map: int) -> bool:
+	if source_id=="genout/wpm_300_108_225" and to_map==32001:return true
 	if source_id in ["genout/wpm_811_30_20","genout/wpm_831_30_20"] and to_map==800:return true
 	if source_id in ["genout/wpm_811_28_20","genout/wpm_831_28_20"] and to_map==820:return true
 	if source_id=="genout/wpm_851_29_20" and to_map==840:return true
@@ -40,6 +42,7 @@ static func script_root(source_id: String, to_map: int) -> bool:
 	return (source_id=="genout/wpm_100_443_127" and to_map==11101) or (source_id=="genout/wpm_100_278_325" and to_map==11201) or (source_id=="genout/wpm_30502_45_41" and to_map==30001) or (source_id=="genout/wpm_30503_26_5" and to_map==30015)
 
 static func action_marks(npc: Dictionary, _branch: Dictionary) -> Array:
+	if source(npc)=="777/ten.arg":return ["transmigration_king"]
 	if source(npc)=="giiru/event/event30_6":return ["golden_truth"]
 	if source(npc) in ["giiru/event/ev28_ed1","giiru/event/ev28_ed2","giiru/event/ev28_ed3","giiru/event/ev28_ed4","giiru/event/ev28_ed5"]:return ["brothers_final"]
 	if source(npc) in ["jaruga/event/event20_4","jaruga/event/event20_6"]:return ["jan_final"]
@@ -55,6 +58,7 @@ static func action_marks(npc: Dictionary, _branch: Dictionary) -> Array:
 	return []
 
 static func action_mark(source_id: String) -> String:
+	if source_id=="genout/wpm_32021_31_51":return "transmigration_king"
 	if source_id=="genout/wpm_31910_8_9":return "golden_truth"
 	if source_id=="genout/wpm_20807_11_37":return "dragon_gate"
 	if source_id=="genout/wpm_21308_20_10":return "water_material"
@@ -71,6 +75,7 @@ static func battle_mark(source_id: String) -> String:
 	return ""
 
 static func mark_regions(mark: String) -> Array:
+	if mark=="transmigration_king":return [[32021,32,47]]
 	if mark=="golden_truth":return [[31911,6,15]]
 	if mark=="brothers_final":return [[31706,45,16],[31706,5,17],[31706,35,17],[31706,25,16],[31706,15,16],[31706,14,5]]
 	if mark=="jan_final":return [[20607,36,31],[20608,0,7]]
@@ -94,19 +99,40 @@ static func blocked_guard_items(pending_guard: Dictionary) -> Array:
 static func source(npc: Dictionary) -> String:
 	return str(npc.get("source_script",str(npc.get("id","")).split("@")[0]))
 
-## Generic stage hooks. Exact third-stage source routes are added separately;
-## these defaults neither open a scope nor authorize a new encounter.
-static func stage_scope(_stage: String) -> String:
-	return ""
+## Private source stages are not player event flags or persistent history.
+static func stage_scope(stage: String) -> String:
+	return "transmigration" if stage in ["transmigration_first_boss","transmigration_final_boss"] else ""
 
-static func action_stages(_npc: Dictionary, _branch: Dictionary) -> Array:
+static func action_stages(npc: Dictionary, _branch: Dictionary) -> Array:
+	var map_id: int=int(npc.get("map_id",-1))
+	if map_id==32021:return ["transmigration_first_boss","transmigration_final_boss"]
+	if map_id>=32011 and map_id<=32020:return ["transmigration_first_boss"]
 	return []
 
 static func action_stage(_source_id: String) -> String:
 	return ""
 
-static func battle_stage(_source_id: String) -> String:
+static func battle_stage(source_id: String) -> String:
+	if source_id=="300/sb_skr.arg":return "transmigration_first_boss"
+	if source_id=="300/sb_skt.arg":return "transmigration_final_boss"
 	return ""
 
 static func context_service(npc: Dictionary) -> bool:
-	return str(npc.get("id",""))=="777/ten.arg@32021:31:28" and source(npc)=="777/ten.arg" and int(npc.get("map_id",-1))==32021 and npc.get("cell",[])==[31,28] and str(npc.get("kind",""))=="original_transmigration" and str(npc.get("handler",""))=="Transmigration" and str(npc.get("service_id",""))=="777/ten.arg" and npc.get("branches",[])==[]
+	var cell=npc.get("cell",[])
+	if not cell is Array or cell.size()!=2 or cell[0]!=31 or cell[1]!=28:return false
+	return str(npc.get("id",""))=="777/ten.arg@32021:31:28" and source(npc)=="777/ten.arg" and int(npc.get("map_id",-1))==32021 and str(npc.get("kind",""))=="original_transmigration" and str(npc.get("handler",""))=="Transmigration" and str(npc.get("service_id",""))=="777/ten.arg" and npc.get("branches",[])==[]
+
+## The twelve original floor cells between the two outdoor gates are not a
+## general wilderness scope. mapwarp.txt:1889 is their exit, not another entry.
+static func approach_root(source_id: String, to_map: int) -> String:
+	return "transmigration_entry" if source_id=="genout/wpm_300_103_228" and to_map==300 else ""
+
+static func action_approach(npc: Dictionary) -> String:
+	return "transmigration_entry" if source(npc)=="genout/wpm_300_108_225" else ""
+
+static func approach_cell(name: String, map_id: int, cell: Vector2i) -> bool:
+	return name=="transmigration_entry" and map_id==300 and [cell.x,cell.y] in [[105,227],[105,228],[106,227],[106,228],[107,227],[107,228],[108,226],[108,227],[108,228],[108,229],[109,226],[109,228]]
+
+static func approach_return(from_map: int, from_cell: Vector2i, to_map: int, to_cell: Vector2i) -> String:
+	if to_map==300 and to_cell==Vector2i(108,225) and ((from_map==32001 and from_cell==Vector2i(29,3)) or (from_map==32021 and from_cell==Vector2i(53,49))):return "transmigration_entry"
+	return ""

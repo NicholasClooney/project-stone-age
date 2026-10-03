@@ -12,6 +12,7 @@ var _cell: Vector2i=Vector2i(-1,-1)
 var _marks: Dictionary={}
 var _stages: Dictionary={}
 var _action: Dictionary={}
+var _approach: Dictionary={}
 var _warp: Dictionary={}
 var _battles: Dictionary={}
 var _wild: Dictionary={}
@@ -34,6 +35,7 @@ func _invalidate() -> void:
 	_marks.clear()
 	_stages.clear()
 	_action.clear()
+	_approach.clear()
 	_warp.clear()
 	_can_leave_portal=false
 
@@ -43,7 +45,11 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 	if kind=="script":
 		var receipt: Dictionary=_warp.duplicate(true)
 		_warp.clear()
-		if not receipt.is_empty() and int(receipt.epoch)==_epoch and int(receipt.from_map)==from_map and _point(receipt.from_cell)==from_cell and int(receipt.to_map)==to_map and _point(receipt.to_cell)==to_cell and not target_scope.is_empty():
+		if not receipt.is_empty() and int(receipt.epoch)==_epoch and int(receipt.from_map)==from_map and _point(receipt.from_cell)==from_cell and int(receipt.to_map)==to_map and _point(receipt.to_cell)==to_cell and (not target_scope.is_empty() or not str(receipt.get("approach","")).is_empty()):
+			if not str(receipt.get("approach","")).is_empty():
+				_begin_approach(str(receipt.approach),to_map,to_cell)
+				return
+			_approach.clear()
 			if _scope!=target_scope:_stages.clear()
 			_scope=target_scope
 			_map=to_map
@@ -61,6 +67,12 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 			return
 		_invalidate()
 		return
+	if target_scope.is_empty() and kind in ["report","walk"]:
+		if _continue_approach(backend,from_map,from_cell,to_map,to_cell):return
+		var returning: String=Policy.approach_return(from_map,from_cell,to_map,to_cell)
+		if not returning.is_empty() and _scope==Policy.scope(from_map) and not _scope.is_empty() and _map==from_map and _cell==from_cell and _portal(backend,from_map,from_cell,to_map,to_cell,true):
+			_begin_approach(returning,to_map,to_cell,true)
+			return
 	if target_scope.is_empty() or kind not in ["report","walk","party"]:
 		_invalidate()
 		return
@@ -113,6 +125,8 @@ func check_wild(backend, context: Dictionary, wanted_scope: String) -> String:
 func check_action(backend, npc: Dictionary, branch: Dictionary, phase: String) -> String:
 	if phase in ["cancel","CLEAN","end"]:return ""
 	if npc.is_empty():return DENIED
+	var approach: String=Policy.action_approach(npc)
+	if not approach.is_empty() and not _has_approach(backend,approach):return DENIED
 	var wanted: String=Policy.scope(int(npc.get("map_id",-1)))
 	if wanted.is_empty():return ""
 	if not _at_authority(backend) or _scope!=wanted or int(npc.map_id)!=_map:return DENIED
@@ -203,17 +217,37 @@ func _queue_warp(backend, npc: Dictionary, raw: String, mark: String="", stage: 
 		if not value.is_valid_int():return
 	var target: int=int(parts[0])
 	var target_scope: String=Policy.scope(target)
-	if target_scope.is_empty():return
+	var approach: String=Policy.approach_root(Policy.source(npc),target)
+	if target_scope.is_empty() and approach.is_empty():return
 	var origin: int=int(backend.automation.position_map)
-	if target_scope!=_scope or not _at_authority(backend):
+	if approach.is_empty() and (target_scope!=_scope or not _at_authority(backend)):
 		if not Policy.script_root(Policy.source(npc),target):return
 	var cell: Vector2i=backend.automation.position_cell
-	_warp={"epoch":_epoch,"from_map":origin,"from_cell":[cell.x,cell.y],"to_map":target,"to_cell":[int(parts[1]),int(parts[2])],"mark":mark,"stage":stage}
+	_warp={"epoch":_epoch,"from_map":origin,"from_cell":[cell.x,cell.y],"to_map":target,"to_cell":[int(parts[1]),int(parts[2])],"mark":mark,"stage":stage,"approach":approach}
+
+## Public entry pockets do not turn the whole outdoor map into a quest scope.
+## Only a reviewed saved script Warp or an already legitimate original return
+## portal can start this memory; coordinates alone never start an approach.
+func _begin_approach(name: String, map_id: int, cell: Vector2i, source_landing: bool=false) -> void:
+	_invalidate()
+	_approach={"name":name,"epoch":_epoch,"map_id":map_id,"cell":[cell.x,cell.y],"source_landing":source_landing}
+
+func _has_approach(backend, name: String) -> bool:
+	return not _approach.is_empty() and str(_approach.name)==name and int(_approach.epoch)==_epoch and int(_approach.map_id)==int(backend.automation.position_map) and _point(_approach.cell)==backend.automation.position_cell
+
+func _continue_approach(backend, from_map: int, from_cell: Vector2i, to_map: int, to_cell: Vector2i) -> bool:
+	if _approach.is_empty() or int(_approach.epoch)!=_epoch or int(_approach.map_id)!=from_map or _point(_approach.cell)!=from_cell or from_map!=to_map:return false
+	if not Policy.approach_cell(str(_approach.name),to_map,to_cell) or not _walk_step(backend,from_map,from_cell,to_cell,bool(_approach.source_landing)):return false
+	# A source portal must be taken, not walked through to launder continuity.
+	if backend.quest_helper.places.links(from_map).has(from_cell) and not bool(_approach.source_landing):return false
+	_approach.cell=[to_cell.x,to_cell.y]
+	_approach.source_landing=false
+	return true
 
 func _at_authority(backend) -> bool:
 	return not _scope.is_empty() and _scope==Policy.scope(int(backend.automation.position_map)) and _map==int(backend.automation.position_map) and _cell==backend.automation.position_cell
 
-func _portal(backend, from_map: int, from_cell: Vector2i, to_map: int, to_cell: Vector2i) -> bool:
+func _portal(backend, from_map: int, from_cell: Vector2i, to_map: int, to_cell: Vector2i, reviewed_landing: bool=false) -> bool:
 	var link: Dictionary=backend.quest_helper.places.links(from_map).get(from_cell,{})
 	if link.is_empty() or bool(link.get("disabled",false)) or int(link.get("to_map",-1))!=to_map or _point(link.get("target",[]))!=to_cell:return false
 	# Scenic script-gate substitutions cannot become route proof. Adult's
@@ -222,6 +256,9 @@ func _portal(backend, from_map: int, from_cell: Vector2i, to_map: int, to_cell: 
 	if int(backend.session._profile.get("player",{}).get("level",0))<int(link.get("requires_level",0)):return false
 	if bool(link.get("requires_travel_pass",false)) and not backend.session.has_travel_pass():return false
 	if link.has("requires_time") and not Clock.allows(str(link.requires_time),Clock.hour()):return false
+	if reviewed_landing:
+		var data: Dictionary=_map_data(backend,to_map)
+		return not data.is_empty() and _floor(data,{},to_cell)
 	return _walkable(backend,to_map,to_cell)
 
 func _map_data(backend, map_id: int) -> Dictionary:

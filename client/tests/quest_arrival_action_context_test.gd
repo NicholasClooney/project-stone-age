@@ -9,6 +9,10 @@ func run()->void:
  var king:Dictionary={"id":"777/ten.arg@32021:31:28","source_script":"777/ten.arg","map_id":32021,"cell":[31,28],"kind":"original_transmigration","handler":"Transmigration","service_id":"777/ten.arg","branches":[]}
  var policy=preload("res://server/quest_arrival_policy.gd")
  check(policy.context_service(king),"only reviewed king identity supports empty service branch")
+ var parsed_king:Dictionary=JSON.parse_string(JSON.stringify(king))
+ check(policy.context_service(parsed_king),"original JSON numeric coordinates keep exact service identity")
+ parsed_king.cell=[31.5,28]
+ check(not policy.context_service(parsed_king),"fractional coordinate never matches king identity")
  for field in ["id","source_script","map_id","cell","kind","handler","service_id","branches"]:
   var changed:Dictionary=king.duplicate(true)
   changed[field]=0 if field=="map_id" else ([0] if field in ["cell","branches"] else "forged")
