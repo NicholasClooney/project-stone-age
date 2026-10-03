@@ -8,11 +8,12 @@ func run()->void:
  Rules.set_flag(b.session._profile,"ended",4,true)
  Rules.set_flag(b.session._profile,"now",39,true)
  for id in [2698,2699,2700]:b.session.OriginalEquipment.add(b.session._profile,id)
- # Public report_position is accepted for world position; it cannot mint a
+ # Authoritative project relocation can change position but cannot mint a
  # quest route. Exercise both raw helper modes, old step and final authority.
  for script in ["200/sb_dtp.arg","200/sb_dbt.arg","jaruga/event/ruri01","jaruga/event/ruri05","jaruga/event/ruri06"]:
   var n:=source(b,script)
-  b.handle({"type":"report_position","map_id":int(n.map_id),"cell":[int(n.cell[0]),int(n.cell[1])+1]})
+  b.automation.position_changed(int(n.map_id),Vector2i(int(n.cell[0]),int(n.cell[1])+1))
+  check(b.automation.position_map==int(n.map_id) and not b.quest_arrival.has_arrival(b,int(n.map_id),b.automation.position_cell),"project relocation reaches actual map without route proof "+script)
   var before:Dictionary=b.session.snapshot().duplicate(true)
   for mode in ["near","arrival"]:
    check(not b.handle({"type":"quest_visit","npc_id":n.id,"mode":mode}).ok,"project placement cannot authorize raw helper "+script+mode)

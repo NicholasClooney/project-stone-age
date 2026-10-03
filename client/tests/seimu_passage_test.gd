@@ -21,7 +21,16 @@ func run():
  for id in [31301,31401,31501]:
   for p in Catalog.new().links(id).values():
    if int(p.to_map)==40:doors.append(p)
- check(doors.size()==6,"all original sea doors imported")
+ var expected:Array=[
+  [40,[1,8],31401,[92,27]], [40,[12,18],31501,[32,2]],
+  [31301,[10,103],40,[12,1]], [31401,[94,27],40,[1,9]], [31501,[34,2],40,[11,18]]]
+ var actual:Array=doors.map(func(p):return [int(p.from_map),[int(p.cell[0]),int(p.cell[1])],int(p.to_map),[int(p.target[0]),int(p.target[1])]])
+ var order:Callable=func(a,b):return str(a)<str(b)
+ actual.sort_custom(order);expected.sort_custom(order)
+ check(actual==expected,"exact five original ordinary sea doors; Giru outbound is paid NPC")
+ check(not Catalog.new().links(40).has(Vector2i(13,1)),"original paid NPC has no permit-only convenience portal")
+ var paid:Dictionary=backend.original_quests.npc_by_id("genout/wpm_40_13_1@40:13:1")
+ check(not paid.is_empty() and paid.branches[0].actions=={"Warp":"31301,10,104","DelStone":"300"},"original source fee and landing preserved")
  for door in doors:
   var origin=int(door.from_map)
   var target=int(door.to_map)
@@ -37,7 +46,7 @@ func run():
   for b in [100,200,300,400]:
    if a==b:continue
    check(game.travel_router.map_route(a,b,false).is_empty(),"no permit route between islands %d and %d" % [a,b])
-   check(not game.travel_router.map_route(a,b,true).is_empty(),"permit connects islands %d and %d" % [a,b])
+   check(game.travel_router.map_route(a,b,true).is_empty()==(b==300),"ordinary permit graph excludes only paid outbound Giru leg %d -> %d" % [a,b])
  backend.session._profile.player.gold=200
  check(backend.session.buy_travel_pass(),"server permit bought")
  game.backend.session._profile.player.gold=200
@@ -54,6 +63,16 @@ func run():
   check(game.handle_arrival(),"permitted gate begins transition")
   check(await Wait.until(self,func():return not game.area_transition_busy),"permitted transition finishes")
   check(int(game.data.map_id)==target and game.cell==Vector2i(door.target[0],door.target[1]),"original gate destination retained")
+ # A travel permit does not waive this restored original MONEY300 branch.
+ backend.session._profile.player.gold=299
+ backend.automation.position_changed(40,Vector2i(13,2))
+ var offer:Dictionary=backend.handle({"type":"quest_talk","npc_id":paid.id})
+ check(not backend.handle({"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"yes"}).ok and backend.automation.position_map==40,"permit cannot waive original300 fee")
+ backend.session._profile.player.gold=300
+ offer=backend.handle({"type":"quest_talk","npc_id":paid.id})
+ var pay:Dictionary={"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"yes"}
+ check(backend.handle(pay).ok and backend.session.snapshot().player.gold==0 and backend.automation.position_map==31301 and backend.automation.position_cell==Vector2i(10,104),"original paid sea NPC deducts300 and commits exact Warp")
+ check(not backend.handle(pay).ok,"paid sea token cannot replay")
  game.process_mode=Node.PROCESS_MODE_DISABLED
  game.music.stop();game.effect.stop();game.queue_free();backend.free()
  print("SEIMU PERMIT: %d failures" % failures)

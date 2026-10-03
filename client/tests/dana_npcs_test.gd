@@ -9,12 +9,21 @@ func run():
  game.profile_persistence=false;root.add_child(game);await process_frame
  var catalog=game.world_catalog
  check(catalog.residents.any(func(n):return int(n.map_id)==1000 and n.role=="resident") and catalog.residents.any(func(n):return int(n.map_id)==10202 and n.role=="gate"),"existing Samgir residents and tunnel guards retained")
- var counts:Dictionary={5100:2,5101:5,5103:6,5105:2,5106:6}
- for id in counts:
+ var frozen:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/dana-public-actors.json"))
+ for id in [5100,5101,5103,5105,5106]:
   check(game.dev_visit(id),"Dana map loads %d"%id)
   await process_frame
   var travel=game.world_travel
-  check(travel.entries.size()==counts[id],"source actor count matches map%d"%id)
+  var expected:Array=frozen.actors.filter(func(n):return int(n.map_id)==id)
+  var actual:Array=[]
+  for n in travel.entries:
+   var entry:Dictionary={}
+   for field in ["map_id","cell","name","graphic","facing","role"]:entry[field]=n.get(field)
+   if str(n.role)=="quest":entry.id=n.id
+   actual.append(entry)
+  var order:Callable=func(a,b):return str(a.cell)<str(b.cell)
+  actual.sort_custom(order);expected.sort_custom(order)
+  check(actual==expected,"exact original Dana actors plus reviewed fire NPC map%d"%id)
   check(travel.sprites.all(func(s):return s.texture!=null),"all original NPC graphics available map%d"%id)
   if id==5100:
    travel.approach(0)

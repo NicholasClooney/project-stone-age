@@ -3,6 +3,7 @@ extends SceneTree
 const Catalog=preload("res://scripts/quest_catalog.gd")
 const Wait=preload("res://tests/support/wait.gd")
 const QUEST_IDS=["sainasu/event/event02_1","sainasu/event/event02_2","jaruga/event/20501ev1","jaruga/event/20501ev2","jaruga/event/20501ev3","jaruga/event/20501ev4","jaruga/event/20501ev5","jaruga/event/event01_1","jaruga/event/event01_2","jaruga/event/event04_1","jaruga/event/event04_2","sainasu/event/event15_1","sainasu/event/event15_2"]
+const WATER_ADULT_GATES=["genout/wpm_300_247_222@300:247:222","genout/wpm_300_182_162@300:182:162"]
 const SERVICE_IDS=["original/charm/1005","original/charm/2005"]
 var failures:=0
 func sorted_ids(entries:Array) -> Array:
@@ -21,7 +22,7 @@ func run() -> void:
 	var source=Catalog.new()
 	source.enabled_events=[1,2,4,15,16,18,19]
 	check(sorted_ids(source.npcs.filter(func(n):return str(n.id) in QUEST_IDS))==sorted_values(QUEST_IDS) and sorted_ids(source.service_npcs)==sorted_values(SERVICE_IDS),"Exact audited quest and service IDs exist")
-	check(sorted_ids(source.active_npcs())==sorted_values(QUEST_IDS+SERVICE_IDS),"Public catalog activates all 13 reviewed quests and two independent services")
+	check(sorted_ids(source.active_npcs())==sorted_values(QUEST_IDS+WATER_ADULT_GATES+SERVICE_IDS),"Selected events activate exactly13 legacy quests, two original event4 water gates and two Charm services")
 	check(source.active_npcs().filter(func(npc):return str(npc.id).begins_with("sainasu/event/event02_")).size()==(2 if 2 in source.enabled_events else 0),"Public shell NPC activation follows tracked enabled events")
 	source.enabled_events=[]
 	check(sorted_ids(source.active_npcs())==sorted_values(SERVICE_IDS),"Services remain active without enabled quest events")
