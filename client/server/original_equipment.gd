@@ -3,6 +3,8 @@ extends RefCounted
 ## Original HEAD/BODY coexist with legacy ownership, with one wearer per slot.
 ## arm / bracelet are
 ## CHAR_ARM / CHAR_DECORATION2, with amulets (legacy or original) in CHAR_DECORATION1.
+const RebirthRules=preload("res://server/rebirth_equipment_rules.gd")
+const Spirits=preload("res://server/spirits.gd")
 const ITEMS := {
 	# Reviewed second-stage rewards and carried quest equipment: fixed ordinary
 	# fields only. Magic, resistances, multi-hit and throwing remain metadata.
@@ -291,9 +293,62 @@ static func battle_items(profile: Dictionary) -> Array:
 static func integer(value: Variant, low: int, high: int) -> bool:
 	return (value is int or value is float) and float(value)==floor(float(value)) and value>=low and value<=high
 
+## All currently supported source rows have zero extra requirements. Their
+## audited defaults remain explicit in the source fixture; new nonzero fields
+## use the same raw comparison rather than receiving a rebirth exemption.
+static func definition_error(player:Dictionary,definition:Dictionary)->String:
+	if not integer(player.get("level"),1,1000000) or not integer(player.get("transmigration",0),0,2147483647):return "人物装备条件无效。"
+	var base=player.get("base_stats",{})
+	if not base is Dictionary:return "人物装备条件无效。"
+	for stat in ["strength","dexterity"]:
+		if not integer(base.get(stat,0),0,2147483647):return "人物装备条件无效。"
+	var error:String=RebirthRules.requirement_error(int(player.level),int(player.get("transmigration",0)),int(base.get("strength",0)),int(base.get("dexterity",0)),definition)
+	return "" if error.is_empty() else Spirits.TOO_WEAK
+
+static func equip_error(player:Dictionary,item_id:int)->String:
+	if not ITEMS.has(item_id):return "该物品没有已审核的装备定义。"
+	return definition_error(player,ITEMS[item_id])
+
+## Candidate-only project legality guard, not an original rebirth side effect.
+## Existing instance ownership/durability is never migrated or repaired here.
+static func revalidate_after_transmigration(candidate:Dictionary,bag_capacity:int=15)->Dictionary:
+	if bag_capacity<0 or not candidate.get("player") is Dictionary or not candidate.get("inventory") is Dictionary or not _valid(candidate,false):return {"ok":false,"reason":"装备候选状态无效。"}
+	if not definition_error(candidate.player,{"level":0}).is_empty():return {"ok":false,"reason":"人物装备条件无效。"}
+	var result:Dictionary=candidate.duplicate(true)
+	var removed:Array=[]
+	for slot in result.original_equipment:
+		var uid:int=int(result.original_equipment[slot])
+		if uid==0:continue
+		for entry in result.original_instances:
+			if int(entry.uid)==uid and not equip_error(result.player,int(entry.item_id)).is_empty():
+				result.original_equipment[slot]=0;removed.append(uid);break
+	for slot in result.get("equipment",{}):
+		var item:String=str(result.equipment[slot])
+		if item.is_empty():continue
+		if not item in Spirits.SPIRIT_ITEMS or str(Spirits.ITEMS[item].slot)!=slot or int(result.inventory.get(item,0))<1:return {"ok":false,"reason":"旧装备候选状态无效。"}
+		if not definition_error(result.player,Spirits.ITEMS[item]).is_empty():result.equipment[slot]=""
+	# Counted legacy club/mirror flags retain their existing ownership semantics.
+	# They carry no instance UID and must never be converted into a new one.
+	for pair in [["equipped","club"],["equipped_mirror","mirror_charm"]]:
+		if bool(result.get(pair[0],false)) and int(result.inventory.get(pair[1],0))<1:return {"ok":false,"reason":"旧装备候选状态无效。"}
+	var total:int=result.original_items.size()
+	for uid in result.original_equipment.values():
+		if int(uid)>0:total-=1
+	var counted:Array=result.get("equipment",{}).values()
+	if bool(result.get("equipped",false)):counted.append("club")
+	if bool(result.get("equipped_mirror",false)):counted.append("mirror_charm")
+	for key in result.inventory:
+		if int(result.inventory[key])>(1 if key in counted else 0):total+=1
+	if total>bag_capacity:return {"ok":false,"reason":"转生后的装备需要卸下，但背包已满；请先整理道具。"}
+	if not _valid(result,true):return {"ok":false,"reason":"转生后的装备状态无效。"}
+	return {"ok":true,"profile":result,"unequipped_uids":removed}
+
 static func valid(profile: Dictionary) -> bool:
+	return _valid(profile,true)
+
+static func _valid(profile:Dictionary,check_requirements:bool)->bool:
 	if profile.has("equipment") and not profile.equipment is Dictionary:return false
-	if not profile.get("original_instances") is Array or profile.original_instances.size()!=profile.original_items.size():return false
+	if not profile.get("original_items") is Array or not profile.get("original_instances") is Array or profile.original_instances.size()!=profile.original_items.size():return false
 	if not profile.get("original_equipment") is Dictionary:return false
 	var has_head: bool=profile.original_equipment.has("head")
 	var has_body: bool=profile.original_equipment.has("body")
@@ -320,8 +375,8 @@ static func valid(profile: Dictionary) -> bool:
 		if int(uid)==0:continue
 		var matches: Array=profile.original_instances.filter(func(entry):return int(entry.uid)==int(uid))
 		if matches.size()!=1 or not ITEMS.has(int(matches[0].item_id)) or str(ITEMS[int(matches[0].item_id)].slot)!=slot:return false
-		if slot=="body":
-			if not profile.get("player") is Dictionary or not integer(profile.player.get("level"),int(ITEMS[int(matches[0].item_id)].level),1000000):return false
+		if check_requirements:
+			if not profile.get("player") is Dictionary or not equip_error(profile.player,int(matches[0].item_id)).is_empty():return false
 	if has_body and int(profile.original_equipment.body)>0 and not str(profile.get("equipment",{}).get("body","")).is_empty():return false
 	if int(profile.original_equipment.arm)>0 and bool(profile.get("equipped",false)):return false
 	if int(profile.original_equipment.amulet)>0 and (bool(profile.get("equipped_mirror",false)) or not str(profile.get("equipment",{}).get("amulet","")).is_empty()):return false
