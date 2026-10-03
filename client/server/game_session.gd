@@ -3,6 +3,7 @@ var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
 const SAVE_VERSION := 6
+const ItemStorage=preload("res://server/item_storage.gd")
 const OriginalRevival = preload("res://server/original_revival.gd")
 const OriginalEquipment = preload("res://server/original_equipment.gd")
 const PET_CAPACITY := 30
@@ -135,6 +136,7 @@ static func bag_slots(profile: Dictionary) -> int:
 	return total
 
 func snapshot() -> Dictionary:
+	ItemStorage.migrate(_profile)
 	OriginalEquipment.migrate(_profile)
 	_ensure_pet_ids()
 	_sync_stat_points()
@@ -1481,6 +1483,7 @@ func _valid_profile(value: Variant) -> bool:
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
 	if int(value.version)>=5 and not original_state_valid(value):return false
+	if not ItemStorage.valid(value):return false
 	if int(value.version)>=6 and (not OriginalEquipment.valid(value) or bag_slots(value)>15):return false
 	for key in ["player","inventory","quest","location"]:
 		if not value.get(key) is Dictionary:

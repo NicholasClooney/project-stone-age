@@ -4,6 +4,7 @@ var world: Node
 var kind := "status"
 var panel: Control
 var feedback := ""
+var item_storage_menu: Control
 var allocation_amount := 1
 var allocation_stats: Array = ["vitality","strength","toughness","dexterity"]
 var selected_pet := 0
@@ -121,10 +122,12 @@ func _ready() -> void:
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
 	hide()
 func _has_point(point: Vector2) -> bool:
+	if is_instance_valid(item_storage_menu) and item_storage_menu.is_visible_in_tree():return true
 	# Leave the original bottom menu reachable while blocking world/dev clicks.
 	return point.y < size.y-40
 
 func open_menu(next_kind: String) -> void:
+	if is_instance_valid(item_storage_menu):item_storage_menu.hide()
 	kind = next_kind
 	pet_view = "list"
 	# 宠物记录 opens on purpose only (open_pet_records sets it after this).
@@ -348,6 +351,9 @@ func _rebuild_panel() -> void:
 	layout_panel()
 	panel.mouse_filter = Control.MOUSE_FILTER_STOP
 	add_child(panel)
+	# GUI hit testing follows sibling order, not z_index. Profile pushes rebuild
+	# the bag underneath the open warehouse, never above its controls.
+	if is_instance_valid(item_storage_menu) and item_storage_menu.visible:item_storage_menu.move_to_front()
 	var profile: Dictionary = world.session.snapshot()
 	var p: Dictionary = profile.player
 	if kind=="quest":
@@ -587,6 +593,15 @@ func inventory_panel(profile: Dictionary) -> void:
 	image(26060,Vector2.ZERO)
 	image(26061,Vector2(0,159))
 	label(str(profile.player.gold),Vector2(182,84),75,14)
+	var storage_button:=Button.new()
+	storage_button.name="OpenItemStorage";storage_button.text="物品仓库"
+	storage_button.position=Vector2(169,116);storage_button.size=Vector2(96,36)
+	storage_button.pressed.connect(func():
+		if not is_instance_valid(item_storage_menu):
+			item_storage_menu=preload("res://scripts/item_storage_menu.gd").new()
+			item_storage_menu.world=world;add_child(item_storage_menu)
+		item_storage_menu.move_to_front();item_storage_menu.open_menu())
+	panel.add_child(storage_button)
 	# Classic five-slot frame: InitItem menu.cpp8940-8973. Weapon is
 	# CHAR_ARM=2 at(61,129), not the top-left accessory slot. The frame
 	# already contains head/body/hand silhouettes; no invented mannequin.
