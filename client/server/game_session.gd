@@ -541,7 +541,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 		if _pending.get("source_encounter",false):
 			# Capture keeps the actual wild animal, including caught level and rolls.
 			captured = original.duplicate(true)
-			for field in ["reward_xp","reward_gold","captured","defeated_by_pet_index","defeated_with_ride_index","generated_drops","source_wait_only"]:captured.erase(field)
+			for field in ["reward_xp","reward_gold","captured","defeated_by_pet_index","defeated_with_ride_index","generated_drops","generated_drop_slots","source_wait_only"]:captured.erase(field)
 			captured.hp = captured.max_hp
 			captured.xp = 0
 			captured.skill_unlocked = false

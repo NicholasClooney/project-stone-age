@@ -152,7 +152,8 @@ func actor(enemy_id: int, rng: RandomNumberGenerator) -> Dictionary:
 	for i in range(10):initial[rng.randi_range(0,3)] += 1
 	var result := {"source_enemy_id":enemy_id,"template_id":int(template.id),"species":"original_%d"%int(template.id),"name":template.name,"sprite":int(template.sprite),"level":level,"base_stats":{},"growth_weights":weights,"growth_seed":rng.randi(),"growth_rank":5,"hp":1,"learned_skills":[],"source_experience":int(enemy.experience),"can_capture":int(enemy.pet_flag)!=0,"elements":template.elements.duplicate(),"size":int(template.size)}
 	result.source_wait_only = bool(enemy.get("wait_only",false))
-	result.generated_drops = roll_drops(enemy,rng) if drop_enemy_allowed(enemy_id) else []
+	result.generated_drop_slots = []
+	result.generated_drops = roll_drops(enemy,rng,result.generated_drop_slots) if drop_enemy_allowed(enemy_id) else []
 	if template.has("capture_resistance"):result.capture_parameter=int(template.capture_resistance)
 	var total := 0
 	for weight in template.weights:total += int(weight)
@@ -177,8 +178,10 @@ func experience(enemy: Dictionary, template: Dictionary, level: int, rank: int) 
 	return maxi(1,int(float(table[level-1])+([2.5,2.0,1.5,1.0,0.5,0.0][clampi(rank,0,5)]+alpha)*level))
 
 ## _FIX_ITEMPROB in pinned gmsv: created once with the enemy, never at settlement.
-func roll_drops(enemy: Dictionary, rng: RandomNumberGenerator) -> Array:
+func roll_drops(enemy: Dictionary, rng: RandomNumberGenerator, original_slots: Array = []) -> Array:
 	var items := []
 	for drop in enemy.get("drops",[]):
-		if int(drop.probability)!=0 and rng.randi_range(0,999)<int(drop.probability):items.append(int(drop.item_id))
+		if int(drop.probability)!=0 and rng.randi_range(0,999)<int(drop.probability):
+			items.append(int(drop.item_id))
+			original_slots.append(int(drop.get("slot",-1)))
 	return items
