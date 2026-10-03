@@ -11,6 +11,7 @@ static func floor_base(map_id:int) -> int:
 
 static func stage_key(backend) -> Array:
 	var map_id:int=backend.automation.position_map
+	if not protected_map(map_id):return [map_id]
 	# All thirty pinned maps separate entry/challenge (y>=19) from the won
 	# stair component (y<=17) with the source y18 wall. Walking within either
 	# component does not invalidate every quest's cached projection.
