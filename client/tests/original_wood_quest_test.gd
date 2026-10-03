@@ -21,8 +21,10 @@ func fresh():
 	return b
 func near(b,id: String) -> void:
 	var n: Dictionary=b.original_quests.npc_by_id(id)
-	b.automation.position_map=int(n.map_id)
-	b.automation.position_cell=Vector2i(int(n.cell[0])+1,int(n.cell[1]))
+	if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+	if int(n.map_id) in range(20501,20509):
+		check(preload("res://tests/support/legacy_cave_route.gd").approach(b,n).ok,"actual original wood cave route")
+	else:check(b.handle({"type":"quest_visit","npc_id":id,"mode":"near"}).ok,"public wood village visit")
 func talk(b,id: String) -> Dictionary:
 	near(b,id)
 	return b.handle({"type":"quest_talk","npc_id":id})
@@ -165,14 +167,15 @@ func atomic_rejections() -> void:
 	b.free()
 func flag_order() -> void:
 	var b=fresh()
+	near(b,BARL) # Synthetic action-order unit case still supplies the real public NPC context.
 	var branch={"event":18,"actions":{"GetItem":"2467","EndSetFlg":"18,19","CleanFlg":"19"},"texts":{}}
-	check(b.original_quests.transact(b,b.session.snapshot(),branch,"MESSAGE").ok and Quests.flag(b.session.snapshot(),"ended",18) and not Quests.flag(b.session.snapshot(),"now",18) and not Quests.flag(b.session.snapshot(),"ended",19),"EndSetFlg then CleanFlg retains original ordered semantics")
+	check(b.original_quests.transact(b,b.session.snapshot(),branch,"MESSAGE","",BARL).ok and Quests.flag(b.session.snapshot(),"ended",18) and not Quests.flag(b.session.snapshot(),"now",18) and not Quests.flag(b.session.snapshot(),"ended",19),"EndSetFlg then CleanFlg retains original ordered semantics")
 	Quests.set_flag(b.session._profile,"now",18,true)
 	b.session._profile.original_items=[2465]
 	# The EventNo=-1 direct axe branch sets END18 without clearing NOW18.
 	Quests.set_flag(b.session._profile,"ended",18,false)
 	var direct: Dictionary=b.original_quests.npc_by_id(BARL).branches[3]
-	check(b.original_quests.transact(b,b.session.snapshot(),direct,"reward").ok and Quests.flag(b.session.snapshot(),"now",18) and Quests.flag(b.session.snapshot(),"ended",18),"EventNo=-1 does not clear another event NOW")
+	check(b.original_quests.transact(b,b.session.snapshot(),direct,"reward","",BARL).ok and Quests.flag(b.session.snapshot(),"now",18) and Quests.flag(b.session.snapshot(),"ended",18),"EventNo=-1 does not clear another event NOW")
 	check(b.quest_catalog.journal(b.session.snapshot()).size()==1 and b.quest_catalog.journal(b.session.snapshot())[0].state=="已完成","journal END precedes NOW and adds no event19 title")
 	b.free()
 func lan() -> void:
