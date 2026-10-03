@@ -46,3 +46,10 @@ The public original root remains south island map 100 (132,421) to 10701 (76,67)
 With original strict-wild commit `c55fd28548589f2a0e40d91cff98683f99c0e5ad` integrated, the three targeted suites passed: miner transactions 8 s, miner ore UI 29 s, original drops 152 s (3/3). The existing herb automatic matrix also passed, but an initial union run took 196.08 s, exceeding the unchanged 180-second shell budget. Its explicit-stop block had run twice identically inside the graceful/crash restart loop. The final fixture retains all 24 restart cases and all 12 distinct stop cases, moves that duplicate block outside the restart-mode loop, and passes in 171.56 s. Measured sections: matrix 93.472 s; total non-UI fixtures 100.779 s; remote UI 68.497 s. No route grant, case coverage or production threshold was relaxed. No runner exception was added for herb.
 
 All six-chain work is complete against this union. The Saton exchange suite additionally passed its public repeat/save-failure/LAN assertions. These are targeted headless results; no full suite or live game process was run, and no new pixel verification is claimed.
+
+
+## Task-only wild-drop union
+
+Validated against original `6af90df` policy/API and `a30fbde` wild-drop integration, on top of `c55fd28` location authority and `7c8cc27` miner scope. No additional scope snapshot is needed for this miner/wood validation. The existing mine save-failure fixture now walks the original five-floor return to31801(37,48) before opening the source troop; its source map and actual authority agree. Original seed27 ore1043/2534 still survives save rollback/retry exactly once. A separate project-only placement with the same source permit and winning roll may fight/close but receives no2534. No production grant or policy change is used.
+
+Targeted union: miner_contest_quest_test, miner_ore_ui_test and original_drops_test pass (3/3, maximum2 jobs). The strengthened miner-only suite also passes. Ordinary public wood and isolated source-drop assertions remain unchanged. This does not claim full validation of every scope in the shared drop policy.
