@@ -10,6 +10,8 @@ var _scope: String=""
 var _map: int=-1
 var _cell: Vector2i=Vector2i(-1,-1)
 var _marks: Dictionary={}
+var _stages: Dictionary={}
+var _action: Dictionary={}
 var _warp: Dictionary={}
 var _battles: Dictionary={}
 var _wild: Dictionary={}
@@ -30,6 +32,8 @@ func _invalidate() -> void:
 	_map=-1
 	_cell=Vector2i(-1,-1)
 	_marks.clear()
+	_stages.clear()
+	_action.clear()
 	_warp.clear()
 	_can_leave_portal=false
 
@@ -40,12 +44,19 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 		var receipt: Dictionary=_warp.duplicate(true)
 		_warp.clear()
 		if not receipt.is_empty() and int(receipt.epoch)==_epoch and int(receipt.from_map)==from_map and _point(receipt.from_cell)==from_cell and int(receipt.to_map)==to_map and _point(receipt.to_cell)==to_cell and not target_scope.is_empty():
+			if _scope!=target_scope:_stages.clear()
 			_scope=target_scope
 			_map=to_map
 			_cell=to_cell
 			_can_leave_portal=true
 			var mark: String=str(receipt.get("mark",""))
-			if not mark.is_empty():_marks[mark]=true
+			if not mark.is_empty():
+				_serial+=1
+				_marks[mark]=_serial
+			var stage: String=str(receipt.get("stage",""))
+			if not stage.is_empty() and Policy.stage_scope(stage)==target_scope:
+				_serial+=1
+				_stages[stage]=_serial
 			_expire_marks(backend,to_map,to_cell)
 			return
 		_invalidate()
@@ -105,9 +116,44 @@ func check_action(backend, npc: Dictionary, branch: Dictionary, phase: String) -
 	var wanted: String=Policy.scope(int(npc.get("map_id",-1)))
 	if wanted.is_empty():return ""
 	if not _at_authority(backend) or _scope!=wanted or int(npc.map_id)!=_map:return DENIED
+	for stage in Policy.action_stages(npc,branch):
+		if not has_stage(backend,str(stage)):return DENIED
 	for mark in Policy.action_marks(npc,branch):
 		if not _marks.has(mark):return DENIED
 	return ""
+
+## Stages describe source-verified progression within a continuous scope;
+## they are not final-room marks and cannot be restored from profile fields.
+func has_stage(backend, stage: String) -> bool:
+	return not stage.is_empty() and _at_authority(backend) and Policy.stage_scope(stage)==_scope and _stages.has(stage)
+
+## Arrival-only proof: the service owner separately binds profile/UID/seed and
+## validates source requirements. Neither the proof nor its backing record is saved.
+func action_context(backend, npc: Dictionary, branch: Dictionary, phase: String) -> Dictionary:
+	if Policy.scope(int(npc.get("map_id",-1))).is_empty() or int(npc.get("map_id",-1))!=_map:return {}
+	if phase in ["cancel","CLEAN","end"] or not _at_authority(backend) or not check_action(backend,npc,branch,phase).is_empty():return {}
+	var actual: Dictionary=backend.original_quests.npc_by_id(str(npc.get("id","")))
+	if actual.is_empty() or actual!=npc:return {}
+	if not branch in actual.get("branches",[]) and not (branch.is_empty() and phase=="SERVICE" and Policy.context_service(actual)):return {}
+	_serial+=1
+	var proof: Dictionary={"instance":get_instance_id(),"serial":_serial,"epoch":_epoch,"scope":_scope,"map_id":_map,"cell":[_cell.x,_cell.y],"npc_id":str(actual.id),"phase":phase,"marks":_marks.duplicate(true),"stages":_stages.duplicate(true)}
+	_action={"proof":proof.duplicate(true),"npc":actual.duplicate(true),"branch":branch.duplicate(true)}
+	return proof
+
+func check_action_context(backend, context: Dictionary) -> String:
+	if context.is_empty() or _action.is_empty() or context!=_action.proof:return DENIED
+	if int(context.get("instance",-1))!=get_instance_id() or int(context.get("epoch",-1))!=_epoch or not _at_authority(backend):return DENIED
+	if str(context.scope)!=_scope or int(context.map_id)!=_map or _point(context.cell)!=_cell or context.marks!=_marks or context.stages!=_stages:return DENIED
+	var actual: Dictionary=backend.original_quests.npc_by_id(str(context.npc_id))
+	if actual.is_empty() or actual!=_action.npc:return DENIED
+	return check_action(backend,actual,_action.branch,str(context.phase))
+
+## Called ONLY after the owning service's atomic save succeeds. Profile position
+## may already be the saved return village: consume by private identity, not by
+## the changed profile. Failure paths must leave this receipt untouched.
+func consume_action_context(context: Dictionary) -> void:
+	if context.is_empty() or _action.is_empty() or context!=_action.proof:return
+	reset()
 
 func action_committed(backend, npc: Dictionary, branch: Dictionary, phase: String) -> void:
 	if phase in ["cancel","CLEAN","end"] or not check_action(backend,npc,branch,phase).is_empty():return
@@ -115,7 +161,7 @@ func action_committed(backend, npc: Dictionary, branch: Dictionary, phase: Strin
 	if actual.is_empty() or actual!=npc:return
 	var service: bool=phase=="SERVICE" and str(actual.get("kind","")) in ["golden_bui_gate","golden_bui_quiz","golden_bui_janken","original_jug_shop"]
 	if not service and not branch in actual.get("branches",[]):return
-	_queue_warp(backend,npc,str(branch.get("actions",{}).get("Warp","")),Policy.action_mark(Policy.source(npc)))
+	_queue_warp(backend,npc,str(branch.get("actions",{}).get("Warp","")),Policy.action_mark(Policy.source(npc)),Policy.action_stage(Policy.source(npc)))
 
 func battle_context(backend, npc: Dictionary, branch: Dictionary) -> Dictionary:
 	if not check_action(backend,npc,branch,"BATTLE").is_empty():return {}
@@ -140,7 +186,7 @@ func battle_committed(backend, pending_guard: Dictionary) -> void:
 	if not check_battle(backend,pending_guard).is_empty():return
 	var proof: Dictionary=pending_guard.arrival
 	var record: Dictionary=_battles[int(proof.serial)]
-	_queue_warp(backend,record.npc,str(pending_guard.get("warp","")),Policy.battle_mark(Policy.source(record.npc)))
+	_queue_warp(backend,record.npc,str(pending_guard.get("warp","")),Policy.battle_mark(Policy.source(record.npc)),Policy.battle_stage(Policy.source(record.npc)))
 	_battles.erase(int(proof.serial))
 
 func blocked_guard_items(pending_guard: Dictionary) -> Array:
@@ -149,7 +195,7 @@ func blocked_guard_items(pending_guard: Dictionary) -> Array:
 	if record.is_empty() or proof!=record.proof or str(proof.npc_id)!=str(pending_guard.get("npc_id","")) or str(proof.warp)!=str(pending_guard.get("warp","")):return []
 	return Policy.blocked_guard_items(pending_guard)
 
-func _queue_warp(backend, npc: Dictionary, raw: String, mark: String="") -> void:
+func _queue_warp(backend, npc: Dictionary, raw: String, mark: String="", stage: String="") -> void:
 	if raw.is_empty():return
 	var parts: PackedStringArray=raw.split(",")
 	if parts.size()!=3:return
@@ -162,7 +208,7 @@ func _queue_warp(backend, npc: Dictionary, raw: String, mark: String="") -> void
 	if target_scope!=_scope or not _at_authority(backend):
 		if not Policy.script_root(Policy.source(npc),target):return
 	var cell: Vector2i=backend.automation.position_cell
-	_warp={"epoch":_epoch,"from_map":origin,"from_cell":[cell.x,cell.y],"to_map":target,"to_cell":[int(parts[1]),int(parts[2])],"mark":mark}
+	_warp={"epoch":_epoch,"from_map":origin,"from_cell":[cell.x,cell.y],"to_map":target,"to_cell":[int(parts[1]),int(parts[2])],"mark":mark,"stage":stage}
 
 func _at_authority(backend) -> bool:
 	return not _scope.is_empty() and _scope==Policy.scope(int(backend.automation.position_map)) and _map==int(backend.automation.position_map) and _cell==backend.automation.position_cell

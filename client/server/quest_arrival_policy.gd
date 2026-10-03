@@ -93,3 +93,20 @@ static func blocked_guard_items(pending_guard: Dictionary) -> Array:
 
 static func source(npc: Dictionary) -> String:
 	return str(npc.get("source_script",str(npc.get("id","")).split("@")[0]))
+
+## Generic stage hooks. Exact third-stage source routes are added separately;
+## these defaults neither open a scope nor authorize a new encounter.
+static func stage_scope(_stage: String) -> String:
+	return ""
+
+static func action_stages(_npc: Dictionary, _branch: Dictionary) -> Array:
+	return []
+
+static func action_stage(_source_id: String) -> String:
+	return ""
+
+static func battle_stage(_source_id: String) -> String:
+	return ""
+
+static func context_service(npc: Dictionary) -> bool:
+	return str(npc.get("id",""))=="777/ten.arg@32021:31:28" and source(npc)=="777/ten.arg" and int(npc.get("map_id",-1))==32021 and npc.get("cell",[])==[31,28] and str(npc.get("kind",""))=="original_transmigration" and str(npc.get("handler",""))=="Transmigration" and str(npc.get("service_id",""))=="777/ten.arg" and npc.get("branches",[])==[]
