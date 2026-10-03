@@ -57,8 +57,13 @@ STONE_AGE_FOREGROUND_TEST=1 STONE_AGE_PROOF_DIR=/private/tmp/tmux-agents/spirit-
 
 项目放到同一组件不能获得资格；raw NPC两mode、旧step与三楼门均拒绝。`transmigration_earth_arrival_test.gd`另核最终transact不依赖助手重验及合法近谈两mode无位移；`transmigration_earth_ui_test.gd`已移除终点位置fixture，逐原碰撞/portal报告走完整洞窟、真实两战，阶段按钮和对话/两袋/装备是真实390静音离屏指针点击。后二者本轮均0失败：`arrival-final.log`、`ui-final-labels.log`。最终17张图在 `shots-final/`，均已逐图检查；原入口、审判、两守卫、女神、两袋和装备按钮没有越出390边界，长文本可实际滚动。UI行走用测试驱动的真实服务端逐格报告，战斗用真实command/保存/close；阶段/对话/装备用实际指针点击，不声称每一个步行格和攻击都由手动点击。
 
-仍明确的共享边界：1146普通条件遇敌掉羽毛的来源资格，由主协调另行裁定；本片未自增掉落禁令，不能声称NPC终端凭证已经覆盖这项掉落。第三阶段、原特殊战术及已列inactive效果保持关闭/未实现。
+仍明确的共享边界：1146普通条件遇敌掉羽毛的来源资格，由主协调另行裁定。当前 `reviewed-hunt-travel.json` 的51个捕宠白名单目标仅在41、42、31806，未授权21002直达；当前地羽毛缺口涉及通用项目移动和不可信wild位置，后者正由共享owner修复。未来若扩大捕宠白名单到地洞窟，需要另核该来源资格，不能将未来扩展说成当前入口。本片未自增掉落禁令，不能声称NPC终端凭证已经覆盖这项掉落。第三阶段、原特殊战术及已列inactive效果保持关闭/未实现。
 
 政策后原完整往返与自然遇敌 `route-final.log` 0失败；原实现176.64秒，随后移除遇敌相邻每步重复读整图/BFS的测试冗余，仍由真实report_position/field_step与战斗完成验证。此优化不改生产代码、遇敌概率或掉落资格。
 
 优化后的自然路线 `route-final-efficient.log` 仍0失败，`/usr/bin/time -p`实测126.62秒（user125.27/sys0.78）；没有扩大suite预算或跳过真实路线。
+
+
+## 公共oracle候选状态
+
+水链先前13NPC/55物品核对只覆盖当时的候选，不是最终冻结集合。后续已授权恢复原材料入口 `genout/wpm_300_247_222`：锁源 `genout/dungeon01.create:2326` 绑定，原脚本为 `LV>64&ENDEV=4`、Warp `30301,23,37`；water owner负责精确gate与restored_scripts。待实际水提交后须增量重核真实create身份、原条件/动作、manifest和最终物品并集，不能继续冻结旧13NPC数量或仅把计数宽化。旧已核记录保留为历史证据。
