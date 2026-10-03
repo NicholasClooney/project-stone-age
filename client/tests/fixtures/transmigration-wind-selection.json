@@ -1,0 +1,6014 @@
+{
+  "version": 1,
+  "items": {
+    "67": {
+      "id": 67,
+      "name": "特洛西Lv4斧头",
+      "description": "攻 +41 防 -13 敏 -13        睡眠的精灵 Lv4",
+      "logical_icon": 20019,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 68,
+      "raw_columns": [
+        "特洛西Lv4斧头",
+        "特洛西Lv4斧头",
+        "攻 +41 防 -13 敏 -13        睡眠的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "67",
+        "20019",
+        "19420",
+        "1",
+        "0",
+        "0",
+        "35",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "41",
+        "41",
+        "-13",
+        "-13",
+        "-13",
+        "-13",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "183",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "425",
+        "木",
+        "425",
+        "",
+        "",
+        "昏睡",
+        "425",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "睡眠的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "183",
+            "magicprob": "0",
+            "magicusemp": "0"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "睡眠的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "眠 turn 4 成 30",
+            "line": 81,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "41",
+            "max": "41"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-13",
+            "max": "-13"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-13",
+            "max": "-13"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 68,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "71": {
+      "id": 71,
+      "name": "贝洛萨Lv4斧头",
+      "description": "攻 +47 防 -15 敏 -15        毒雾的精灵 Lv4",
+      "logical_icon": 20004,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 72,
+      "raw_columns": [
+        "贝洛萨Lv4斧头",
+        "贝洛萨Lv4斧头",
+        "攻 +47 防 -15 敏 -15        毒雾的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "71",
+        "20004",
+        "33200",
+        "1",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "47",
+        "47",
+        "-15",
+        "-15",
+        "-15",
+        "-15",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "138",
+        "0",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "10",
+        "10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "毒",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "毒雾的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "138",
+            "magicprob": "0",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "毒雾的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "毒 turn 4 成 30",
+            "line": 46,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "47",
+            "max": "47"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-15",
+            "max": "-15"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-15",
+            "max": "-15"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 72,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "73": {
+      "id": 73,
+      "name": "贝所金Lv4斧头",
+      "description": "攻 +47 防 -15 敏 -15        混迷的精灵 Lv4",
+      "logical_icon": 20004,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 74,
+      "raw_columns": [
+        "贝所金Lv4斧头",
+        "贝所金Lv4斧头",
+        "攻 +47 防 -15 敏 -15        混迷的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "73",
+        "20004",
+        "30800",
+        "1",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "47",
+        "47",
+        "-15",
+        "-15",
+        "-15",
+        "-15",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "168",
+        "0",
+        "10",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "混乱",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "混迷的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "168",
+            "magicprob": "0",
+            "magicusemp": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "混迷的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "乱 turn 4 成 30",
+            "line": 66,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "47",
+            "max": "47"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-15",
+            "max": "-15"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-15",
+            "max": "-15"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 74,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "167": {
+      "id": 167,
+      "name": "特洛西Lv4棍棒",
+      "description": "攻 +27                      睡眠的精灵 Lv4",
+      "logical_icon": 20105,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 168,
+      "raw_columns": [
+        "特洛西Lv4棍棒",
+        "特洛西Lv4棍棒",
+        "攻 +27                      睡眠的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "167",
+        "20105",
+        "15520",
+        "2",
+        "0",
+        "0",
+        "35",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "27",
+        "27",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "183",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "2",
+        "2",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "线",
+        "425",
+        "石",
+        "425",
+        "",
+        "",
+        "昏睡",
+        "425",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "睡眠的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "183",
+            "magicprob": "0",
+            "magicusemp": "0"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "睡眠的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "眠 turn 4 成 30",
+            "line": 81,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "27",
+            "max": "27"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 168,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "171": {
+      "id": 171,
+      "name": "贝洛萨Lv4棍棒",
+      "description": "攻 +31                      毒雾的精灵 Lv4",
+      "logical_icon": 20117,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 172,
+      "raw_columns": [
+        "贝洛萨Lv4棍棒",
+        "贝洛萨Lv4棍棒",
+        "攻 +31                      毒雾的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "171",
+        "20117",
+        "27200",
+        "2",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "31",
+        "31",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "138",
+        "0",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "10",
+        "10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "2",
+        "2",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "线",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "毒",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "毒雾的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "138",
+            "magicprob": "0",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "毒雾的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "毒 turn 4 成 30",
+            "line": 46,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "31",
+            "max": "31"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 172,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "173": {
+      "id": 173,
+      "name": "贝所金Lv4棍棒",
+      "description": "攻 +31                      混迷的精灵 Lv4",
+      "logical_icon": 20117,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 174,
+      "raw_columns": [
+        "贝所金Lv4棍棒",
+        "贝所金Lv4棍棒",
+        "攻 +31                      混迷的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "173",
+        "20117",
+        "24800",
+        "2",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "31",
+        "31",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "168",
+        "0",
+        "10",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "2",
+        "2",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "线",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "混乱",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "混迷的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "168",
+            "magicprob": "0",
+            "magicusemp": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "混迷的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "乱 turn 4 成 30",
+            "line": 66,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "31",
+            "max": "31"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 174,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "271": {
+      "id": 271,
+      "name": "贝洛萨Lv4枪",
+      "description": "攻 +38 敏 -8 魅 +4          毒雾的精灵 Lv4",
+      "logical_icon": 20448,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 272,
+      "raw_columns": [
+        "贝洛萨Lv4枪",
+        "贝洛萨Lv4枪",
+        "攻 +38 敏 -8 魅 +4          毒雾的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "271",
+        "20448",
+        "31200",
+        "3",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "38",
+        "38",
+        "0",
+        "0",
+        "-8",
+        "-8",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "4",
+        "4",
+        "0",
+        "0",
+        "0",
+        "0",
+        "138",
+        "0",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "10",
+        "10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "4",
+        "4",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "木",
+        "565",
+        "石",
+        "565",
+        "",
+        "",
+        "毒",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "毒雾的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "138",
+            "magicprob": "0",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "毒雾的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "毒 turn 4 成 30",
+            "line": 46,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "38",
+            "max": "38"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-8",
+            "max": "-8"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "4",
+            "max": "4"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 272,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "372": {
+      "id": 372,
+      "name": "威金娜斯Lv4爪",
+      "description": "攻 +23 (x3)                 石化的精灵 Lv4",
+      "logical_icon": 20223,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 373,
+      "raw_columns": [
+        "威金娜斯Lv4爪",
+        "威金娜斯Lv4爪",
+        "攻 +23 (x3)                 石化的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "372",
+        "20223",
+        "28000",
+        "0",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1200000",
+        "1200000",
+        "",
+        "",
+        "",
+        "3",
+        "3",
+        "23",
+        "23",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "158",
+        "0",
+        "11",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "牙",
+        "565",
+        "壳",
+        "565",
+        "",
+        "",
+        "石化",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "石化的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "158",
+            "magicprob": "0",
+            "magicusemp": "11"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "石化的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "石 turn 4 成 30",
+            "line": 56,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_count",
+          "label": "原连续攻击次数",
+          "active": false,
+          "raw": {
+            "min": "3",
+            "max": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              35,
+              36
+            ]
+          },
+          "reason": "原武器连续攻击尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "23",
+            "max": "23"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 373,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "375": {
+      "id": 375,
+      "name": "特洛金Lv4爪",
+      "description": "攻 +23 (x3)                 昏睡的精灵 Lv4",
+      "logical_icon": 20223,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 376,
+      "raw_columns": [
+        "特洛金Lv4爪",
+        "特洛金Lv4爪",
+        "攻 +23 (x3)                 昏睡的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "375",
+        "20223",
+        "29200",
+        "0",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1200000",
+        "1200000",
+        "",
+        "",
+        "",
+        "3",
+        "3",
+        "23",
+        "23",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "188",
+        "0",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "牙",
+        "565",
+        "壳",
+        "565",
+        "",
+        "",
+        "昏睡",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "昏睡的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "188",
+            "magicprob": "0",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "昏睡的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "眠 turn 4 成 30",
+            "line": 86,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_count",
+          "label": "原连续攻击次数",
+          "active": false,
+          "raw": {
+            "min": "3",
+            "max": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              35,
+              36
+            ]
+          },
+          "reason": "原武器连续攻击尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "23",
+            "max": "23"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 376,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "473": {
+      "id": 473,
+      "name": "贝所金Lv4弓箭",
+      "description": "攻 +16 防 -16 (3-5)         混迷的精灵 Lv4",
+      "logical_icon": 20335,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 474,
+      "raw_columns": [
+        "贝所金Lv4弓箭",
+        "贝所金Lv4弓箭",
+        "攻 +16 防 -16 (3-5)         混迷的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "473",
+        "20335",
+        "30800",
+        "4",
+        "0",
+        "0",
+        "45",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1200000",
+        "1200000",
+        "",
+        "",
+        "",
+        "3",
+        "5",
+        "16",
+        "16",
+        "-16",
+        "-16",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "168",
+        "0",
+        "10",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "线",
+        "565",
+        "骨",
+        "565",
+        "",
+        "",
+        "混乱",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "混迷的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "168",
+            "magicprob": "0",
+            "magicusemp": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "混迷的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "乱 turn 4 成 30",
+            "line": 66,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_count",
+          "label": "原连续攻击次数",
+          "active": false,
+          "raw": {
+            "min": "3",
+            "max": "5"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              35,
+              36
+            ]
+          },
+          "reason": "原武器连续攻击尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "16",
+            "max": "16"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-16",
+            "max": "-16"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 474,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "571": {
+      "id": 571,
+      "name": "贝洛萨Lv4回旋标",
+      "description": "攻 +20 魅 +3                毒雾的精灵 Lv4",
+      "logical_icon": 20542,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 572,
+      "raw_columns": [
+        "贝洛萨Lv4回旋标",
+        "贝洛萨Lv4回旋标",
+        "攻 +20 魅 +3                毒雾的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "571",
+        "20542",
+        "31200",
+        "17",
+        "0",
+        "0",
+        "45",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1200000",
+        "1200000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "20",
+        "20",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "3",
+        "3",
+        "0",
+        "0",
+        "0",
+        "0",
+        "138",
+        "0",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "10",
+        "10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "毒",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "毒雾的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "138",
+            "magicprob": "0",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "毒雾的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "毒 turn 4 成 30",
+            "line": 46,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_pattern",
+          "label": "原投掷武器攻击方式",
+          "active": false,
+          "raw": {
+            "item_type": "17"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              19
+            ]
+          },
+          "reason": "原特殊攻击目标规则尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "20",
+            "max": "20"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "3",
+            "max": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 572,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "574": {
+      "id": 574,
+      "name": "莱伊萨Lv4回旋标",
+      "description": "攻 +20 魅 +3                酩酊的精灵 Lv4",
+      "logical_icon": 20542,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 575,
+      "raw_columns": [
+        "莱伊萨Lv4回旋标",
+        "莱伊萨Lv4回旋标",
+        "攻 +20 魅 +3                酩酊的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "574",
+        "20542",
+        "28800",
+        "17",
+        "0",
+        "0",
+        "45",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1200000",
+        "1200000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "20",
+        "20",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "3",
+        "3",
+        "0",
+        "0",
+        "0",
+        "0",
+        "178",
+        "0",
+        "10",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "酒醉",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "酩酊的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "178",
+            "magicprob": "0",
+            "magicusemp": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "酩酊的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "醉 turn 4 成 30",
+            "line": 76,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_pattern",
+          "label": "原投掷武器攻击方式",
+          "active": false,
+          "raw": {
+            "item_type": "17"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              19
+            ]
+          },
+          "reason": "原特殊攻击目标规则尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "20",
+            "max": "20"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "3",
+            "max": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 575,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "676": {
+      "id": 676,
+      "name": "特洛金Lv4投掷斧头",
+      "description": "攻 +31                      昏睡的精灵 Lv4",
+      "logical_icon": 20533,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 677,
+      "raw_columns": [
+        "特洛金Lv4投掷斧头",
+        "特洛金Lv4投掷斧头",
+        "攻 +31                      昏睡的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "676",
+        "20533",
+        "27200",
+        "18",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "31",
+        "31",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "188",
+        "0",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "1",
+        "1",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "565",
+        "木",
+        "565",
+        "",
+        "",
+        "昏睡",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "昏睡的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "188",
+            "magicprob": "0",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "昏睡的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "眠 turn 4 成 30",
+            "line": 86,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_pattern",
+          "label": "原投掷武器攻击方式",
+          "active": false,
+          "raw": {
+            "item_type": "18"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              19
+            ]
+          },
+          "reason": "原特殊攻击目标规则尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "31",
+            "max": "31"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 677,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "772": {
+      "id": 772,
+      "name": "威金娜斯Lv4石",
+      "description": "攻 +23 防 -4                石化的精灵 Lv4",
+      "logical_icon": 20503,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 773,
+      "raw_columns": [
+        "威金娜斯Lv4石",
+        "威金娜斯Lv4石",
+        "攻 +23 防 -4                石化的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "772",
+        "20503",
+        "28000",
+        "19",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "23",
+        "23",
+        "-4",
+        "-4",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "158",
+        "0",
+        "11",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "565",
+        "皮",
+        "565",
+        "",
+        "",
+        "石化",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "石化的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "158",
+            "magicprob": "0",
+            "magicusemp": "11"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "石化的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "石 turn 4 成 30",
+            "line": 56,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_pattern",
+          "label": "原投掷武器攻击方式",
+          "active": false,
+          "raw": {
+            "item_type": "19"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              19
+            ]
+          },
+          "reason": "原特殊攻击目标规则尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "23",
+            "max": "23"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-4",
+            "max": "-4"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 773,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "774": {
+      "id": 774,
+      "name": "莱伊萨Lv4石",
+      "description": "攻 +23 防 -4                酩酊的精灵 Lv4",
+      "logical_icon": 20503,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 775,
+      "raw_columns": [
+        "莱伊萨Lv4石",
+        "莱伊萨Lv4石",
+        "攻 +23 防 -4                酩酊的精灵 Lv4",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "774",
+        "20503",
+        "26800",
+        "19",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "1",
+        "1",
+        "23",
+        "23",
+        "-4",
+        "-4",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "178",
+        "0",
+        "10",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-10",
+        "-10",
+        "-10",
+        "-10",
+        "10",
+        "10",
+        "-10",
+        "-10",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "石",
+        "565",
+        "皮",
+        "565",
+        "",
+        "",
+        "酒醉",
+        "565",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "酩酊的精灵 Lv4",
+          "active": false,
+          "raw": {
+            "magicid": "178",
+            "magicprob": "0",
+            "magicusemp": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "酩酊的精灵 Lv4",
+            "function": "MAGIC_StatusChange",
+            "argument": "醉 turn 4 成 30",
+            "line": 76,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        },
+        {
+          "type": "resistance",
+          "label": "毒耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              63,
+              64
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "睡眠耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              67,
+              68
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "石化耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              69,
+              70
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "酒醉耐性",
+          "active": false,
+          "raw": {
+            "min": "10",
+            "max": "10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              71,
+              72
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "resistance",
+          "label": "混乱耐性",
+          "active": false,
+          "raw": {
+            "min": "-10",
+            "max": "-10"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              73,
+              74
+            ]
+          },
+          "reason": "原六状态抗性运行时尚未实现"
+        },
+        {
+          "type": "attack_pattern",
+          "label": "原投掷武器攻击方式",
+          "active": false,
+          "raw": {
+            "item_type": "19"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              19
+            ]
+          },
+          "reason": "原特殊攻击目标规则尚未实现"
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "23",
+            "max": "23"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-4",
+            "max": "-4"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 775,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "872": {
+      "id": 872,
+      "name": "爱鲁菲Lv1兜8",
+      "description": "防 +14 敏 -4                净化精灵(石化) Lv1",
+      "logical_icon": 21515,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 873,
+      "raw_columns": [
+        "爱鲁菲Lv1兜8",
+        "爱鲁菲Lv1兜8",
+        "防 +14 敏 -4                净化精灵(石化) Lv1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "872",
+        "21515",
+        "21600",
+        "6",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "14",
+        "14",
+        "-4",
+        "-4",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "90",
+        "0",
+        "3",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "425",
+        "骨",
+        "425",
+        "",
+        "",
+        "回复",
+        "425",
+        "石化",
+        "425"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "净化精灵(石化)Lv1",
+          "active": false,
+          "raw": {
+            "magicid": "90",
+            "magicprob": "0",
+            "magicusemp": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 873,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "净化精灵(石化)Lv1",
+            "function": "MAGIC_StatusRecovery",
+            "argument": "石",
+            "line": 30,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "14",
+            "max": "14"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 873,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-4",
+            "max": "-4"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 873,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "972": {
+      "id": 972,
+      "name": "爱鲁菲Lv2帽子8",
+      "description": "防 +7                       净化精灵(石化) Lv2",
+      "logical_icon": 21506,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 973,
+      "raw_columns": [
+        "爱鲁菲Lv2帽子8",
+        "爱鲁菲Lv2帽子8",
+        "防 +7                       净化精灵(石化) Lv2",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "972",
+        "21506",
+        "17920",
+        "6",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "7",
+        "7",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "91",
+        "0",
+        "9",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "425",
+        "线",
+        "425",
+        "",
+        "",
+        "回复",
+        "425",
+        "石化",
+        "425"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "净化精灵(石化)Lv2",
+          "active": false,
+          "raw": {
+            "magicid": "91",
+            "magicprob": "0",
+            "magicusemp": "9"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 973,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "净化精灵(石化)Lv2",
+            "function": "MAGIC_StatusRecovery",
+            "argument": "石",
+            "line": 31,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "7",
+            "max": "7"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 973,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "973": {
+      "id": 973,
+      "name": "所鲁菲Lv2帽子8",
+      "description": "防 +7                       净化精灵(混乱) Lv2",
+      "logical_icon": 21506,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 974,
+      "raw_columns": [
+        "所鲁菲Lv2帽子8",
+        "所鲁菲Lv2帽子8",
+        "防 +7                       净化精灵(混乱) Lv2",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "973",
+        "21506",
+        "17536",
+        "6",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "7",
+        "7",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "101",
+        "0",
+        "9",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "425",
+        "线",
+        "425",
+        "",
+        "",
+        "回复",
+        "425",
+        "混乱",
+        "425"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "净化精灵(混乱)Lv2",
+          "active": false,
+          "raw": {
+            "magicid": "101",
+            "magicprob": "0",
+            "magicusemp": "9"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 974,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "净化精灵(混乱)Lv2",
+            "function": "MAGIC_StatusRecovery",
+            "argument": "乱",
+            "line": 33,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "7",
+            "max": "7"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 974,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "1074": {
+      "id": 1074,
+      "name": "哈鲁Lv2铠8",
+      "description": "防 +30 敏 -8                治愈的精灵 Lv2",
+      "logical_icon": 21060,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 1075,
+      "raw_columns": [
+        "哈鲁Lv2铠8",
+        "哈鲁Lv2铠8",
+        "防 +30 敏 -8                治愈的精灵 Lv2",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1074",
+        "21060",
+        "30800",
+        "7",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "30",
+        "30",
+        "-8",
+        "-8",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "1",
+        "100",
+        "8",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "565",
+        "壳",
+        "565",
+        "",
+        "",
+        "回复",
+        "579",
+        "",
+        ""
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "治愈的精灵 Lv2",
+          "active": false,
+          "raw": {
+            "magicid": "1",
+            "magicprob": "100",
+            "magicusemp": "8"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1075,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "治愈的精灵 Lv2",
+            "function": "MAGIC_Recovery",
+            "argument": "160",
+            "line": 2,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "30",
+            "max": "30"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1075,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-8",
+            "max": "-8"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1075,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "1075": {
+      "id": 1075,
+      "name": "芙雷雅Lv2铠8",
+      "description": "防 +29 敏 -8                滋润的精灵 Lv2",
+      "logical_icon": 21060,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 1076,
+      "raw_columns": [
+        "芙雷雅Lv2铠8",
+        "芙雷雅Lv2铠8",
+        "防 +29 敏 -8                滋润的精灵 Lv2",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1075",
+        "21060",
+        "34760",
+        "7",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "29",
+        "29",
+        "-8",
+        "-8",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "11",
+        "100",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "565",
+        "壳",
+        "565",
+        "",
+        "",
+        "回复",
+        "593",
+        "花",
+        "593"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "滋润的精灵 Lv2",
+          "active": false,
+          "raw": {
+            "magicid": "11",
+            "magicprob": "100",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1076,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "滋润的精灵 Lv2",
+            "function": "MAGIC_OtherRecovery",
+            "argument": "130",
+            "line": 8,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "29",
+            "max": "29"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1076,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "speed",
+          "label": "敏捷",
+          "raw": {
+            "min": "-8",
+            "max": "-8"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1076,
+            "columns": [
+              41,
+              42
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "1175": {
+      "id": 1175,
+      "name": "芙雷雅Lv2服8",
+      "description": "防 +18                      滋润的精灵 Lv2",
+      "logical_icon": 21030,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 1176,
+      "raw_columns": [
+        "芙雷雅Lv2服8",
+        "芙雷雅Lv2服8",
+        "防 +18                      滋润的精灵 Lv2",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1175",
+        "21030",
+        "28160",
+        "7",
+        "0",
+        "0",
+        "40",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "300000",
+        "300000",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "18",
+        "18",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "11",
+        "100",
+        "12",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "皮",
+        "565",
+        "线",
+        "565",
+        "",
+        "",
+        "回复",
+        "593",
+        "花",
+        "593"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "滋润的精灵 Lv2",
+          "active": false,
+          "raw": {
+            "magicid": "11",
+            "magicprob": "100",
+            "magicusemp": "12"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1176,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "滋润的精灵 Lv2",
+            "function": "MAGIC_OtherRecovery",
+            "argument": "130",
+            "line": 8,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "18",
+            "max": "18"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 1176,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "2691": {
+      "id": 2691,
+      "name": "芙蕾美雅Lv3的戒指",
+      "description": "魅力 +3                     滋润的精灵 Lv3",
+      "logical_icon": 22110,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2213,
+      "raw_columns": [
+        "芙蕾美雅Lv3的戒指",
+        "芙蕾美雅Lv3的戒指",
+        "魅力 +3                     滋润的精灵 Lv3",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2691",
+        "22110",
+        "2000",
+        "11",
+        "0",
+        "0",
+        "50",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "3",
+        "3",
+        "0",
+        "0",
+        "0",
+        "0",
+        "12",
+        "100",
+        "16",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "黏土",
+        "350",
+        "回复",
+        "350",
+        "花",
+        "350",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "滋润的精灵 Lv3",
+          "active": false,
+          "raw": {
+            "magicid": "12",
+            "magicprob": "100",
+            "magicusemp": "16"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2213,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "滋润的精灵 Lv3",
+            "function": "MAGIC_OtherRecovery",
+            "argument": "260",
+            "line": 9,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "3",
+            "max": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2213,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "2694": {
+      "id": 2694,
+      "name": "芙蕾美雅Lv3的手镯",
+      "description": "攻击 -1 防御 +1 魅力 +1     滋润的精灵 Lv3",
+      "logical_icon": 22083,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2216,
+      "raw_columns": [
+        "芙蕾美雅Lv3的手镯",
+        "芙蕾美雅Lv3的手镯",
+        "攻击 -1 防御 +1 魅力 +1     滋润的精灵 Lv3",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2694",
+        "22083",
+        "2000",
+        "8",
+        "0",
+        "0",
+        "50",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "-1",
+        "-1",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "0",
+        "12",
+        "100",
+        "16",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "黏土",
+        "350",
+        "回复",
+        "350",
+        "花",
+        "350",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "滋润的精灵 Lv3",
+          "active": false,
+          "raw": {
+            "magicid": "12",
+            "magicprob": "100",
+            "magicusemp": "16"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2216,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "滋润的精灵 Lv3",
+            "function": "MAGIC_OtherRecovery",
+            "argument": "260",
+            "line": 9,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "-1",
+            "max": "-1"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2216,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "1",
+            "max": "1"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2216,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "1",
+            "max": "1"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2216,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "2695": {
+      "id": 2695,
+      "name": "哈鲁Lv3的手镯",
+      "description": "攻 +2 防 -1 魅 +2           治愈的精灵 Lv3",
+      "logical_icon": 22080,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2217,
+      "raw_columns": [
+        "哈鲁Lv3的手镯",
+        "哈鲁Lv3的手镯",
+        "攻 +2 防 -1 魅 +2           治愈的精灵 Lv3",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2695",
+        "22080",
+        "2000",
+        "8",
+        "0",
+        "0",
+        "50",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "2",
+        "2",
+        "-1",
+        "-1",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "2",
+        "2",
+        "0",
+        "0",
+        "0",
+        "0",
+        "2",
+        "100",
+        "11",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "1",
+        "1",
+        "1",
+        "0",
+        "黏土",
+        "350",
+        "回复",
+        "350",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [
+        {
+          "type": "magic",
+          "label": "治愈的精灵 Lv3",
+          "active": false,
+          "raw": {
+            "magicid": "2",
+            "magicprob": "100",
+            "magicusemp": "11"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2217,
+            "columns": [
+              55,
+              56,
+              57
+            ]
+          },
+          "reason": "原装备魔法运行时尚未实现",
+          "definition": {
+            "name": "治愈的精灵 Lv3",
+            "function": "MAGIC_Recovery",
+            "argument": "320",
+            "line": 3,
+            "source": "gmsv/data/magic.txt",
+            "sha256": "e4e63894a532272fdfda51f2aa4dba0e46d1ab872a551a3dcf667a95711612bd"
+          }
+        }
+      ],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "attack",
+          "label": "攻击",
+          "raw": {
+            "min": "2",
+            "max": "2"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2217,
+            "columns": [
+              37,
+              38
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "defence",
+          "label": "防御",
+          "raw": {
+            "min": "-1",
+            "max": "-1"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2217,
+            "columns": [
+              39,
+              40
+            ]
+          }
+        },
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "2",
+            "max": "2"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2217,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": false
+    },
+    "2758": {
+      "id": 2758,
+      "name": "风的手镯 [风]",
+      "description": "魅力 +3 [风+5]",
+      "logical_icon": 22119,
+      "stackable": false,
+      "source": "gmsv/data/itemset.txt",
+      "source_line": 2269,
+      "raw_columns": [
+        "风的手镯 [风]",
+        "风的手镯 [风]",
+        "魅力 +3 [风+5]",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "2758",
+        "22119",
+        "500",
+        "8",
+        "0",
+        "0",
+        "65",
+        "-1",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "3",
+        "3",
+        "0",
+        "0",
+        "4",
+        "50",
+        "",
+        "0",
+        "0",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "0",
+        "-1",
+        "1",
+        "1",
+        "1",
+        "0",
+        "0",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0",
+        "",
+        "0"
+      ],
+      "effects": [],
+      "stats_source": [
+        {
+          "type": "stat",
+          "stat": "charm",
+          "label": "魅力",
+          "raw": {
+            "min": "3",
+            "max": "3"
+          },
+          "source": {
+            "path": "gmsv/data/itemset.txt",
+            "line": 2269,
+            "columns": [
+              49,
+              50
+            ]
+          }
+        }
+      ],
+      "logout_vanish": true
+    }
+  },
+  "npcs": [
+    {
+      "id": "sainasu/event/genou_2@11215:13:11",
+      "source_script": "sainasu/event/genou_2",
+      "source_create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 1,
+      "events": [
+        41,
+        42
+      ],
+      "name": "风的使者",
+      "map_id": 11215,
+      "cell": [
+        13,
+        11
+      ],
+      "graphic": 100446,
+      "facing": 6,
+      "role": "quest",
+      "text": "你真是不简单\n居然可以通过玄黄洞窟的考验啊。",
+      "branches": [
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&ENDEV=42&ENDEV=4&PET>60-95",
+          "texts": {
+            "AcceptMsg": "\n\n你要把御风恐龙布鲁顿\n还有守护这个世界的风的手环\n奉献给风之神殿吗？",
+            "ThanksMsg": "\n\n我确实收下了。\n这只布鲁顿成长的好棒啊。\n由于威尔大人的好意\n就此给你奖赏。",
+            "ItemFullMsg": "你身上的东西好像太多，没办法拿新东西了啊。\n等你把东西弄少一点，在过来这里一趟吧。"
+          },
+          "actions": {
+            "DelPet": "PET>59-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "73,173,375,574,774,973,1075,2695"
+          },
+          "source_branch_index": 0,
+          "source_line": 9,
+          "source_condition": "LV>0&ENDEV=42&ENDEV=4&PET>60-95,&ITEM=2758LV>0&PET>59-95&ITEM=2758",
+          "condition_audit": "Original C: leading-empty/glued second OR is false; first OR has no bracelet requirement.",
+          "project_pet_selection": true,
+          "source_actions": {
+            "DelPet": "PET>59-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "73,173,375,574,774,973,1075,2695"
+          },
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&ENDEV=42&ENDEV=4&PET>42-95&ITEM=2758,LV>0&PET>42-95&ITEM=2758",
+          "texts": {
+            "AcceptMsg": "\n\n你要把御风恐龙布鲁顿\n还有守护这个世界的风的手环\n奉献给风之神殿吗？",
+            "ThanksMsg": "\n\n我确实收下了。\n这只布鲁顿成长的挺不错啊。\n由于威尔大人的好意\n就此给你奖赏。",
+            "ItemFullMsg": "你身上的东西好像太多，没办法拿新东西了啊。\n等你把东西弄少一点，在过来这里一趟吧。"
+          },
+          "actions": {
+            "DelPet": "PET>42-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "67,167,271,473,676,872,1175,2691,167,271,676,872,1175"
+          },
+          "source_branch_index": 1,
+          "source_line": 20,
+          "project_pet_selection": true,
+          "source_actions": {
+            "DelPet": "PET>42-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "67,167,271,473,676,872,1175,2691,167,271,676,872,1175"
+          },
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&ENDEV=42&ENDEV=4&PET>0-95&ITEM=2758,LV>0&PET>0-95&ITEM=2758",
+          "texts": {
+            "AcceptMsg": "\n\n你要把御风恐龙布鲁顿\n还有守护这个世界的风的手环\n奉献给风之神殿吗？",
+            "ThanksMsg": "\n\n我确实收下了。\n这只布鲁顿成长的好棒啊啊。\n由于威尔大人的好意\n就此给你奖赏。",
+            "ItemFullMsg": "你身上的东西好像太多，没办法拿新东西了啊。\n等你把东西弄少一点，在过来这里一趟吧。"
+          },
+          "actions": {
+            "DelPet": "PET>0-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "71,171,372,571,772,972,1074,2694,71,171,372,571,772,972"
+          },
+          "source_branch_index": 2,
+          "source_line": 32,
+          "project_pet_selection": true,
+          "source_actions": {
+            "DelPet": "PET>0-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "71,171,372,571,772,972,1074,2694,71,171,372,571,772,972"
+          },
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0&ENDEV=4&ENDEV=42",
+          "texts": {
+            "NomalWindowMsg": "\n\n真的非常感谢你\n帮忙把风之竖琴找回来。\n只要弹奏这个竖琴，就可以把风送到世界各地。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 43,
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0&ENDEV=4",
+          "texts": {
+            "NomalWindowMsg": "\n\n\n请你完成风之女神威尔大人\n的请求啊。"
+          },
+          "actions": {},
+          "source_branch_index": 4,
+          "source_line": 49,
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0",
+          "texts": {
+            "NomalWindowMsg": "\n\n\n你为了找寻什么而来这里的？"
+          },
+          "actions": {},
+          "source_branch_index": 5,
+          "source_line": 55,
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        }
+      ]
+    },
+    {
+      "id": "sainasu/event/genou_2@11215:7:11",
+      "source_script": "sainasu/event/genou_2",
+      "source_create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 2,
+      "events": [
+        41,
+        42
+      ],
+      "name": "风的使者",
+      "map_id": 11215,
+      "cell": [
+        7,
+        11
+      ],
+      "graphic": 100446,
+      "facing": 2,
+      "role": "quest",
+      "text": "你真是不简单\n居然可以通过玄黄洞窟的考验啊。",
+      "branches": [
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&ENDEV=42&ENDEV=4&PET>60-95",
+          "texts": {
+            "AcceptMsg": "\n\n你要把御风恐龙布鲁顿\n还有守护这个世界的风的手环\n奉献给风之神殿吗？",
+            "ThanksMsg": "\n\n我确实收下了。\n这只布鲁顿成长的好棒啊。\n由于威尔大人的好意\n就此给你奖赏。",
+            "ItemFullMsg": "你身上的东西好像太多，没办法拿新东西了啊。\n等你把东西弄少一点，在过来这里一趟吧。"
+          },
+          "actions": {
+            "DelPet": "PET>59-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "73,173,375,574,774,973,1075,2695"
+          },
+          "source_branch_index": 0,
+          "source_line": 9,
+          "source_condition": "LV>0&ENDEV=42&ENDEV=4&PET>60-95,&ITEM=2758LV>0&PET>59-95&ITEM=2758",
+          "condition_audit": "Original C: leading-empty/glued second OR is false; first OR has no bracelet requirement.",
+          "project_pet_selection": true,
+          "source_actions": {
+            "DelPet": "PET>59-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "73,173,375,574,774,973,1075,2695"
+          },
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&ENDEV=42&ENDEV=4&PET>42-95&ITEM=2758,LV>0&PET>42-95&ITEM=2758",
+          "texts": {
+            "AcceptMsg": "\n\n你要把御风恐龙布鲁顿\n还有守护这个世界的风的手环\n奉献给风之神殿吗？",
+            "ThanksMsg": "\n\n我确实收下了。\n这只布鲁顿成长的挺不错啊。\n由于威尔大人的好意\n就此给你奖赏。",
+            "ItemFullMsg": "你身上的东西好像太多，没办法拿新东西了啊。\n等你把东西弄少一点，在过来这里一趟吧。"
+          },
+          "actions": {
+            "DelPet": "PET>42-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "67,167,271,473,676,872,1175,2691,167,271,676,872,1175"
+          },
+          "source_branch_index": 1,
+          "source_line": 20,
+          "project_pet_selection": true,
+          "source_actions": {
+            "DelPet": "PET>42-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "67,167,271,473,676,872,1175,2691,167,271,676,872,1175"
+          },
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "LV>0&ENDEV=42&ENDEV=4&PET>0-95&ITEM=2758,LV>0&PET>0-95&ITEM=2758",
+          "texts": {
+            "AcceptMsg": "\n\n你要把御风恐龙布鲁顿\n还有守护这个世界的风的手环\n奉献给风之神殿吗？",
+            "ThanksMsg": "\n\n我确实收下了。\n这只布鲁顿成长的好棒啊啊。\n由于威尔大人的好意\n就此给你奖赏。",
+            "ItemFullMsg": "你身上的东西好像太多，没办法拿新东西了啊。\n等你把东西弄少一点，在过来这里一趟吧。"
+          },
+          "actions": {
+            "DelPet": "PET>0-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "71,171,372,571,772,972,1074,2694,71,171,372,571,772,972"
+          },
+          "source_branch_index": 2,
+          "source_line": 32,
+          "project_pet_selection": true,
+          "source_actions": {
+            "DelPet": "PET>0-95*1",
+            "DelItem": "2758",
+            "GetRandItem": "71,171,372,571,772,972,1074,2694,71,171,372,571,772,972"
+          },
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0&ENDEV=4&ENDEV=42",
+          "texts": {
+            "NomalWindowMsg": "\n\n真的非常感谢你\n帮忙把风之竖琴找回来。\n只要弹奏这个竖琴，就可以把风送到世界各地。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 43,
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0&ENDEV=4",
+          "texts": {
+            "NomalWindowMsg": "\n\n\n请你完成风之女神威尔大人\n的请求啊。"
+          },
+          "actions": {},
+          "source_branch_index": 4,
+          "source_line": 49,
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "LV>0",
+          "texts": {
+            "NomalWindowMsg": "\n\n\n你为了找寻什么而来这里的？"
+          },
+          "actions": {},
+          "source_branch_index": 5,
+          "source_line": 55,
+          "enabled": true,
+          "events": [
+            41,
+            42
+          ],
+          "source": "sainasu/event/genou_2"
+        }
+      ]
+    }
+  ],
+  "jobs": [],
+  "reward_pets": {},
+  "provenance": {
+    "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+    "sources": {
+      "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+      "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "gmsv/data/npc/sainasu/event/genou/genou.create": "cd6c11f26cde599be9ff0c251f70b1c1f8bd72e36eb6b16ba87f0121c669eb48",
+      "gmsv/data/npc/sainasu/event/genou_2": "094b5f439dddf2f12b34218a1e3f4ee3356d1ef7e45e44ca759e1ebcc71b7106"
+    },
+    "client": "StoneAge 2.5; logical static graphics, no fallback"
+  },
+  "module_id": "transmigration-wind-selection"
+}
