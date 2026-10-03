@@ -1,4 +1,5 @@
 extends "res://tests/yam_axe_ui_test.gd"
+const Natural=preload("res://tests/support/dream_backend_route.gd")
 func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
@@ -7,6 +8,9 @@ func run()->void:
  backend.session._profile.default_companions_claimed=true
  backend.session._profile.no_random_encounters=true
  backend.session.gm_raise_level(-1,35)
+ backend.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
+ preload("res://server/progression.gd").refresh(backend.session._profile.player)
+ backend.session._profile.player.hp=backend.session._profile.player.max_hp
  # UI-only original repeat fixture; source and unlimited transactions have
  # separate Backend tests. No claim of natural maze traversal in this shot.
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1");root.add_child(server)
@@ -20,9 +24,9 @@ func run()->void:
  await proof("dream-repeat-01-free-light")
  if not await choose("yes") or not await choose("ok"):return
  if not check(2603 in world.session.snapshot().original_items,"real free-light click commits"):return
- backend.automation.position_changed(41,Vector2i(34,39))
- backend._emit({"type":"position","map_id":41,"cell":[34,39],"client":"server"});backend.publish()
- if not await ready(func():return int(world.data.map_id)==41 and world.cell==Vector2i(34,39),"repeat reward room fixture displayed"):return
+ if not check(Natural.win(backend).ok,"actual original maze final win and saved Warp earn repeat eligibility"):return
+ backend._emit({"type":"position","map_id":41,"cell":[34,27],"client":"server"});backend.publish()
+ if not await ready(func():return int(world.data.map_id)==41 and world.cell==Vector2i(34,27),"repeat reward room fixture displayed"):return
  if not await stage("dream34:repeat-reward",34):return
  if not await choose("yes"):return
  await proof("dream-repeat-02-random-thanks")

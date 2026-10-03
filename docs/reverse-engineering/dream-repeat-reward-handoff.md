@@ -7,9 +7,9 @@
 ## 验证边界
 
 - 来源 4 测试：SHA、完整 20 项与原 OR 条件、前三轮写位、十敌七槽。
-- `dream_repeat_reward_test`：真实 Backend 原对话 token、34/35 级边界、免费光、随机一件、连续重复、保存失败/重试、旧 token、旗标不变。重复循环直接设独立测试角色在 NPC 邻格，以免重复计算跨大陆导航；不是自然迷宫路线验收。
+- `dream_repeat_reward_test`：真实 Backend 原对话 token、34/35 级边界、免费光、随机一件、连续重复、保存失败/重试、旧 token、旗标不变。后续捕宠/资格整合片已把每次领奖准备改为真实原入口、逐格迷宫、终战与成功保存Warp；不直接放领奖区授资格。
 - `dream_repeat_ui_test`：390×844 静音离屏的生产远程 GameScene，鼠标真实点击领取/交付/道具详情；领奖房间为明确的测试 fixture。三张图片 `/private/tmp/dream-repeat-shots/` 均实际查看，日志 `/private/tmp/dream-repeat-ui.log`。事务日志 `/private/tmp/dream-repeat-reward.log`。
-- 捕宠新白名单及通用合法到达资格由后续独立功能提交；本片不宣称解决所有任务捷径。后续通用资格须适配本 UI/事务 fixture，改为经正常终战获得到达记录，不得在产品中给测试特权。
+- 捕宠新白名单及通用合法到达资格由后续独立功能提交；本片不宣称解决所有任务捷径。后续整合见reviewed-capture-arrival-handoff.md；UI/事务fixture现通过正常终战取得记录，不给测试特权。
 
 ## 准确导入
 

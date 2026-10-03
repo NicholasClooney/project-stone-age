@@ -10,27 +10,10 @@ func forbidden(b)->void:
    var r:Dictionary=b.handle({"type":"quest_visit","npc_id":"seimu/event/event01_2@%d:34:25"%map_id,"mode":mode})
    check(not r.ok,"raw future sage cannot bypass entrance/guard")
    check(not b.handle({"type":"quest_visit","quest_id":34,"step_id":"dream34:reward","mode":mode}).ok,"future reward step cannot bypass source gates")
+const Natural=preload("res://tests/support/dream_backend_route.gd")
+const Route=preload("res://tests/support/original_route_driver.gd")
 func maze(b,map_id:int)->void:
- var start:=Dream.region(map_id,b.automation.position_cell)
- var goal:=Dream.region(map_id,Vector2i(34,42))
- var queue:Array=[start];var paths:Dictionary={start:[]};var cursor:=0
- var links:Dictionary=b.quest_helper.places.links(map_id)
- while cursor<queue.size() and not paths.has(goal):
-  var current:int=queue[cursor];cursor+=1
-  for link in links.values():
-   if int(link.to_map)!=map_id:continue
-   var from:=Vector2i(int(link.cell[0]),int(link.cell[1]));var to:=Vector2i(int(link.target[0]),int(link.target[1]))
-   if Dream.region(map_id,from)!=current:continue
-   var next:=Dream.region(map_id,to)
-   if next<0 or paths.has(next):continue
-   paths[next]=paths[current]+[link];queue.append(next)
- check(paths.has(goal),"original maze links reach final guard room")
- if not paths.has(goal):return
- for link in paths[goal]:
-  var from:=Vector2i(int(link.cell[0]),int(link.cell[1]))
-  check(Dream.region(map_id,from)==Dream.region(map_id,b.automation.position_cell),"next original warp is in current walkable room")
-  check(b.handle({"type":"report_position","map_id":map_id,"cell":link.cell}).ok,"walked source portal reports")
-  check(b.handle({"type":"report_position","map_id":map_id,"cell":link.target,"map_changed":true}).ok,"original maze destination reports")
+ check(Route.walk(b,map_id,Vector2i(34,42),[map_id]).ok,"every original maze step reaches guard through production reports")
 func run()->void:
  var old:=Clock.clock;Clock.clock=func():return seconds
  var b=fresh();adult(b)
@@ -50,7 +33,8 @@ func run()->void:
    check(not b.handle({"type":"quest_visit","npc_id":"400/sb_muge1.arg@%d:34:41"%map_id,"mode":mode}).ok,"maze entry cannot navigate directly to final guard room")
   b.automation.position_changed(map_id,Vector2i.ZERO)
   check(not b.handle({"type":"quest_visit","npc_id":"400/sb_muge1.arg@%d:34:41"%map_id,"mode":"near"}).ok,"unknown blocked component fails closed")
-  b.automation.position_changed(map_id,Vector2i(11,8))
+  b.automation.position_changed(400,Vector2i(int(door[0]),int(door[1])))
+  check(b.handle({"type":"report_position","map_id":map_id,"cell":[11,8]}).ok,"reenter through actual public gate after invalid-location probe")
   maze(b,map_id);forbidden(b)
   var guard:="400/sb_muge%d.arg@%d:%d:41"%[2 if event==33 else 1,map_id,33 if event==33 else 34]
   check(choose(b,talk(b,guard),"yes").ok and b.battle_open,"actual bound dream guard starts")
@@ -61,6 +45,8 @@ func run()->void:
   check(b.session.snapshot()==before and Dream.region(map_id,b.automation.position_cell)==Dream.region(map_id,Vector2i(34,42)),"failed saved victory cannot cross guard wall")
   b.save_path=""
   check(b.handle({"type":"battle_close"}).ok and b.automation.position_map==41 and b.automation.position_cell==Vector2i(33 if event==33 else 34,39),"saved source victory always warps41 including42 fight")
+  if not b.original_quests.pending.is_empty():check(b.handle({"type":"quest_close","token":b.original_quests.pending.token}).ok,"close original guard dialogue before helper")
+  check(Natural.sage(b).ok,"walk original reward room before helper/NPC")
   for mode in ["near","arrival"]:
    check(b.handle({"type":"quest_visit","npc_id":SAGE,"mode":mode}).ok and Dream.region(41,b.automation.position_cell)==Dream.region(41,Vector2i(34,39)),"post-victory navigation stays in reward component")
   if event==34:replay_profile=b.session.snapshot()
@@ -84,7 +70,7 @@ func run()->void:
 
 func dream_lan(earned:Dictionary)->void:
  var b=fresh();b.session._profile=earned.duplicate(true);root.add_child(b)
- b.automation.position_changed(41,Vector2i(34,39))
+ check(Natural.win(b).ok,"LAN fixture earns fresh final arrival via real route and battle")
  var server=Server.new(b,0,"127.0.0.1");root.add_child(server);check(server.start()==OK,"dream LAN port0")
  for i in range(2):
   var link=Link.new("ws://127.0.0.1:%d"%server.port);links.append(link);link.connect_now()

@@ -46,7 +46,12 @@ static func destination(helper,backend,npc:Dictionary,mode:String)->Dictionary:
  # legitimate route. Only offer a stationary talk destination already near.
  var target:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
  if maxi(absi(current.x-target.x),absi(current.y-target.y))>2:return {}
- if region(map_id,current)!=region(map_id,target+Vector2i.DOWN) and region(map_id,current)!=region(map_id,target+Vector2i.UP):return {}
+ # The original sage at (34,25) has blocked adjacent terrain; its actual
+ # talking floor starts two cells south at (34,27). Do not infer a side
+ # from the blocked (34,26), and do not accept an arbitrary nearby room.
+ var anchors:Array=[target+Vector2i.DOWN,target+Vector2i.UP]
+ if str(npc.get("source_script",""))=="seimu/event/event01_2" and target==Vector2i(34,25):anchors=[Vector2i(34,27)]
+ if not anchors.any(func(point):return region(map_id,point)>=0 and region(map_id,current)==region(map_id,point)):return {}
  return {"map_id":map_id,"cell":[current.x,current.y],"npc_id":str(npc.id)}
 
 static func entry(backend,script:String,branch_index:int,map_id:int=-1)->Dictionary:
@@ -61,7 +66,7 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary)->void:
  var light:=Rules.item_count(profile,2603)>0
  var map_id:int=backend.automation.position_map
  var cave:int=map_id if map_id in [41,42] else 41
- quest.completion_detail="三轮依次领取空想竖琴、帽子、衣服；只有第三次交先见之光才写END34。保留END4与前轮完成条件。晨门与日夕门通41、夜门通42，使用原1024小时制；须亲自走入当时开放的原门。沿原传送迷宫抵达两只守卫，任选其一挑战原十敌队伍；两图胜后原目标都在41。助手仅在已沿原路合法抵达且当前可对话时保持原地；洞内请沿原路步行，不用项目瞬移绕过路线。捕宠直达为项目便利，不授予领奖资格；现AI未恢复特殊技能，魔法与衣服槽未生效。原版行为：≥35级可免费领取先见之光，交仙人后从原20项谢礼随机获得一项，可无限重复；前三轮仍优先完成。先见之光原离线消失尚未实现。"
+ quest.completion_detail="三轮依次领取空想竖琴、帽子、衣服；只有第三次交先见之光才写END34。保留END4与前轮完成条件。晨门与日夕门通41、夜门通42，使用原1024小时制；须亲自走入当时开放的原门。沿原传送迷宫抵达两只守卫，任选其一挑战原十敌队伍；两图胜后原目标都在41。助手仅在已沿原路合法抵达且当前可对话时保持原地；洞内请沿原路步行，不用项目瞬移绕过路线。捕宠直达为项目便利，不授予领奖资格；现AI未恢复特殊技能，空想帽2605使用头部槽、竖琴2606使用护符槽；空想衣2604尚无可穿戴定义，魔法与抗性未生效。原版行为：≥35级可免费领取先见之光，交仙人后从原20项谢礼随机获得一项，可无限重复；前三轮仍优先完成。先见之光原离线消失尚未实现。"
  helper.add_step(backend,profile,quest,"dream%d:request"%event,entry(backend,"seimu/event/event01_1",34-event),previous and not light and not ended,light or ended,"向村中老人领取本轮先见之光")
  for i in [1,2]:
   helper.add_step(backend,profile,quest,"dream%d:battle:%d"%[event,i],entry(backend,"400/sb_muge%d.arg"%i,0,cave),previous and light and not ended,false,"沿原迷宫抵达守卫，原十敌固定战（二选一）")
