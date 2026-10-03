@@ -5,7 +5,8 @@ func run()->void:
  check(trade(b,ELDER).ok,"source Saton request")
  for npc in guards:
   for mode in ["near","arrival"]:
-   check(not b.handle({"type":"quest_visit","npc_id":npc.id,"mode":mode}).ok,"village cannot skip original cave route")
+   var outside:Dictionary=b.handle({"type":"quest_visit","npc_id":npc.id,"mode":mode})
+   check(outside.ok and int(outside.target.map_id)==100 and str(outside.target.npc_id).is_empty(),"both helper modes stop at public entrance without guard delivery")
  for location in [[10701,76,67],[10702,22,3],[10703,64,3],[10704,4,26],[10704,46,11],[10705,53,74]]:
   var map_id:int=location[0];var pos:=Vector2i(location[1],location[2])
   var region:int=Saton.region_at(b.quest_helper,b,map_id,pos)
@@ -14,25 +15,29 @@ func run()->void:
    var npc:Dictionary=guards[i]
    for mode in ["near","arrival"]:
     b.automation.position_changed(map_id,pos)
+    var geometry:Dictionary=Saton.walk_destination(b.quest_helper,b,npc,mode)
+    check(geometry.is_empty() or (int(geometry.map_id)==map_id and Saton.region_at(b.quest_helper,b,map_id,Vector2i(int(geometry.cell[0]),int(geometry.cell[1])))==region),"pure original geometry never crosses a component")
     var dest:Dictionary=b.quest_helper.destination(b,npc,mode)
-    print("SATON DEST ",location," ",npc.id," ",mode," ",dest)
-    check(dest.is_empty() or (int(dest.map_id)==map_id and Saton.region_at(b.quest_helper,b,map_id,Vector2i(int(dest.cell[0]),int(dest.cell[1])))==region),"final destination cannot cross original component")
+    check(dest.is_empty() or int(dest.map_id)==100,"project placement in any cave component never authorizes internal helper travel")
     var r:Dictionary=b.handle({"type":"quest_visit","npc_id":npc.id,"mode":mode})
-    check(bool(r.ok)==not dest.is_empty(),"raw NPC uses same filtered landing")
-    if r.ok:check(Saton.region_at(b.quest_helper,b,map_id,b.automation.position_cell)==region,"actual backend position stays in original component")
+    check(bool(r.ok)==not dest.is_empty() and (not r.ok or b.automation.position_map==100),"raw NPC only returns to public root")
     b.automation.position_changed(map_id,pos)
     r=b.handle({"type":"quest_visit","quest_id":10,"step_id":"saton13:battle%d"%(i+1),"mode":mode})
-    check(bool(r.ok)==not dest.is_empty(),"old helper step obeys current authoritative map and component")
- b.automation.position_changed(10701,Vector2i(76,67))
+    check(bool(r.ok)==not dest.is_empty() and (not r.ok or b.automation.position_map==100),"old helper step cannot wash project position into legal route")
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,guards[0]).ok,"actual original portal and walking reach first guard")
+ for mode in ["near","arrival"]:
+  var before:Vector2i=b.automation.position_cell
+  var visit:Dictionary=b.handle({"type":"quest_visit","npc_id":guards[0].id,"mode":mode})
+  check(visit.ok and b.automation.position_cell==before and b.quest_arrival.has_arrival(b,10701,before),"legitimate nearby helper is stationary in original component")
  Saton.region_cache.clear();b.quest_helper.maps[10701]={}
- check(b.quest_helper.destination(b,guards[0],"near").is_empty(),"unreadable original map fails closed")
+ check(b.quest_helper.destination(b,guards[0],"near").is_empty(),"unreadable original map fails closed at legitimate destination")
  Saton.region_cache.clear();b.free()
  await remote_navigation()
  await remote_characters()
  print("SATON CAVE NAVIGATION: %d failures"%failures);quit(1 if failures else 0)
 func remote_navigation()->void:
  var b=setup();root.add_child(b);trade(b,ELDER)
- b.automation.position_changed(10701,Vector2i(76,67))
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,guards[0]).ok,"remote fixture takes actual original route to first guard")
  var server=Server.new(b,0,"127.0.0.1");root.add_child(server);check(server.start()==OK,"Saton ephemeral remote server")
  var states:Array=[]
  for i in range(2):

@@ -1,5 +1,17 @@
 extends "res://tests/yam_axe_ui_test.gd"
+var route_backend
 func stage(step:String,job:int)->bool:
+ if step.begins_with("saton13:battle"):
+  if not check(await Wait.settle(self,world),"Prior Saton activity settles before route fixture"):return false
+  var number:=int(step.trim_prefix("saton13:battle"))
+  var npc:Dictionary={}
+  for actor in route_backend.quest_catalog.active_npcs():
+   if str(actor.get("source_script",""))=="100/sb_nusu%d.arg"%number:npc=actor;break
+  if not check(not npc.is_empty() and preload("res://tests/support/legacy_cave_route.gd").approach(route_backend,npc).ok,"Actual original route reaches Saton guard"):return false
+  var cell:Vector2i=route_backend.automation.position_cell
+  route_backend._emit({"type":"position","map_id":int(npc.map_id),"cell":[cell.x,cell.y],"client":"route_fixture"})
+  if not await ready(func():return int(world.data.map_id)==int(npc.map_id) and world.cell==cell and not world.area_transition_busy,"Remote renders legitimate Saton endpoint"):return false
+  if not check(await Wait.settle(self,world),"Saton route endpoint settles"):return false
  print("UI STAGE: "+step)
  world.quest_helper_menu.open_menu()
  if not await ready(func():return visit_button(step,"arrival",job)!=null,"Original stage button exists"):return false
@@ -14,7 +26,8 @@ func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
- var host=Backend.new();root.add_child(host)
+ var host=Backend.new();root.add_child(host);route_backend=host
+ host.quest_catalog.enabled_events=[13,14]
  host.session._profile.no_random_encounters=true
  host.session.gm_raise_level(-1,80)
  for stat in ["vitality","strength","toughness","dexterity"]:host.session.gm_set_base_stat(-1,stat,10000)
@@ -105,7 +118,16 @@ func run()->void:
 func has_guard(id:String)->bool:
  return world.world_travel.entries.any(func(entry):return str(entry.get("id",""))==id)
 func portal(map_id:int,cell:Vector2i,to_map:int)->bool:
- if not check(world.load_area_id(map_id,cell),"Original portal cell fixture"):return false
+ if not check(await Wait.settle(self,world),"Prior scene activity settles before portal fixture"):return false
+ if map_id==100:
+  var guard:Dictionary={}
+  for npc in route_backend.quest_catalog.active_npcs():
+   if str(npc.get("source_script",""))=="100/sb_nusu1.arg":guard=npc;break
+  if not check(route_backend.handle({"type":"quest_visit","npc_id":str(guard.id),"mode":"near"}).ok,"Helper reaches public south-island entrance only"):return false
+ if not check(preload("res://tests/support/original_route_driver.gd").walk(route_backend,map_id,cell,[100]+range(10701,10706)).ok,"Fixture actually walks to original portal cell"):return false
+ route_backend._emit({"type":"position","map_id":map_id,"cell":[cell.x,cell.y],"client":"route_fixture"})
+ if not await ready(func():return int(world.data.map_id)==map_id and world.cell==cell and not world.area_transition_busy,"Remote renders reached original portal"):return false
+ if not check(await Wait.settle(self,world),"Source portal position settles"):return false
  world.arrival_lock=Vector2i(-1,-1)
  if not check(world.handle_arrival(),"Production original portal trigger"):return false
  if not await ready(func():return not world.area_transition_busy and int(world.data.map_id)==to_map,"Original portal destination loads"):return false

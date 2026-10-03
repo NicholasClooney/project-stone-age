@@ -4,7 +4,10 @@ func run()->void:
  game.profile_persistence=false;root.add_child(game)
  if not check(await Wait.until(self,func():return not game.data.is_empty()),"Saton isolated GameScene loads"):quit(1);return
  game.random_encounters=false
- if not check(game.load_area_id(10701,Vector2i(76,67)),"exact original south-island entrance landing"):quit(1);return
+ if not check(game.load_area_id(100,Vector2i(131,421)),"public south-island original entrance approach"):quit(1);return
+ if not check(await Wait.settle(self,game),"public entrance position settles"):quit(1);return
+ game.walk_to(Vector2i(132,421))
+ if not check(await Wait.until(self,func():return int(game.data.map_id)==10701 and not game.area_transition_busy),"actual public portal enters original cave"):quit(1);return
  for floor_id in range(10701,10706):
   if floor_id in [10701,10703,10705]:
    var goal:Vector2i={10701:Vector2i(22,51),10703:Vector2i(5,63),10705:Vector2i(43,41)}[floor_id]
@@ -20,5 +23,6 @@ func run()->void:
   if not check(await Wait.until(self,func():return int(game.data.map_id)==floor_id+1 and not game.area_transition_busy,180.0),"actual staircase enters next original floor"):break
   if not check(game.cell==Vector2i(int(door.target[0]),int(door.target[1])),"exact source staircase landing"):break
  check(int(game.data.map_id)==10705 and game.cell==Vector2i(43,41),"all four natural stairs connect three original guardian neighbours")
+ check(game.backend.quest_arrival.has_arrival(game.backend,10705,game.cell),"natural GameScene walk retains server-owned original-route evidence")
  game.music.stop();game.effect.stop();game.queue_free();await process_frame
  print("SATON CAVE WALKING: %d failures"%failures);quit(1 if failures else 0)
