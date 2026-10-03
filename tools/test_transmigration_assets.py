@@ -56,7 +56,13 @@ class FoundationAssetTests(unittest.TestCase):
         self.assertEqual(fallback['source'],'.tools/legacy/extracted/SA8.0-20260803')
         self.assertEqual(fallback['logical_ids'],[15401])
         self.assertEqual(fallback['bitmap_namespace'],1000000000)
-        self.assertEqual(len(self.catalog['npcs']),242)
-        self.assertEqual(len(self.catalog['items']),138)
+        fixture=json.loads((ROOT/'client/tests/fixtures/public-quest-npcs.json').read_text())
+        expected=[n['id'] for group in fixture['groups'].values() for n in group['npcs']]
+        actual=[n['id'] for n in self.catalog['npcs']]
+        self.assertEqual(len(expected),fixture['reviewed_counts']['catalog_npcs'])
+        self.assertEqual(len(expected),len(set(expected)))
+        self.assertEqual(sorted(actual),sorted(expected))
+        self.assertEqual(sorted(map(int,self.catalog['items'])),fixture['item_ids'])
+        self.assertEqual(len(fixture['item_ids']),fixture['reviewed_counts']['catalog_items'])
 
 if __name__=='__main__':unittest.main()
