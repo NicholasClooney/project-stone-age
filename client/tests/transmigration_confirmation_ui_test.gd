@@ -46,8 +46,8 @@ func preview(token: String="one") -> Dictionary:
 func build() -> void:
 	world=World.new();root.add_child(world);world.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	world.session.state=world.state
-	world.state.profile={"player":{"transmigration":0},"pets":[{"pet_id":"pet-a","template_id":693,"name":"祭品甲","level":80},{"pet_id":"pet-b","template_id":693,"name":"祭品乙","level":2},{"pet_id":"wrong","template_id":694,"name":"异模板","level":80}]}
-	world.state.pet_storage=[{"pet_id":"stored","template_id":693,"name":"仓库同种","level":90}]
+	world.state.profile={"player":{"transmigration":0},"pets":[{"pet_id":"pet-a","species":"original_693","name":"祭品甲","level":80},{"pet_id":"pet-b","species":"original_693","name":"祭品乙","level":2},{"pet_id":"wrong","species":"original_694","name":"异模板","level":80}]}
+	world.state.pet_storage=[{"pet_id":"stored","species":"original_693","name":"仓库同种","level":90}]
 	world.dialogue.hide();world.battle_view.hide()
 	world.add_child(world.dialogue);world.add_child(world.battle_view);world.add_child(world.message)
 	overlay=Control.new();world.add_child(overlay);overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
@@ -87,7 +87,7 @@ func run() -> void:
 		await click(view.confirm)
 		check(world.link.sent[-1]=={"type":"transmigration","action":"confirm","token":"one"},"confirm sends token only")
 		check(view.confirm.disabled,"in-flight confirmation cannot duplicate")
-		world.link.answer(world.link.sent.size()-1,{"ok":false,"reason":"保存失败"})
+		world.link.answer(world.link.sent.size()-1,{"ok":false,"reason":"save_failed"})
 		check(view.token=="one" and not view.confirm.disabled and view.status.text.contains("保存失败"),"save rejection retains same token retry with visible reason")
 		await proof(view,"save-rejected",viewport)
 		world.state.profile.player.gold=20;world.state.changed.emit("profile")
