@@ -250,7 +250,11 @@ func _expire_marks(backend, map_id: int, cell: Vector2i) -> void:
 	for mark in _marks.keys():
 		var allowed: bool=false
 		for region in Policy.mark_regions(str(mark)):
-			if int(region[0])==map_id and _same_room(backend,map_id,Vector2i(int(region[1]),int(region[2])),cell):allowed=true;break
+			if int(region[0])!=map_id:continue
+			var anchor: Vector2i=Vector2i(int(region[1]),int(region[2]))
+			# Reaching an original portal endpoint is not leaving its source
+			# room yet. The actual Warp separately checks the destination region.
+			if _same_room(backend,map_id,anchor,cell) or _portal_approach(backend,map_id,anchor,cell):allowed=true;break
 		if not allowed:_marks.erase(mark)
 
 static func _floor(data: Dictionary, npcs: Dictionary, cell: Vector2i) -> bool:
