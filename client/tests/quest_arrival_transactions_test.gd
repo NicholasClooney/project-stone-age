@@ -1,5 +1,7 @@
 extends "res://tests/quest_arrival_backend_test.gd"
 ## Final NPC transactions reuse the production route and battle hooks.
+func adult(b)->void:
+ check(preload("res://tests/support/original_route_driver.gd").complete_adult(b).get("ok",false),"original adult gate and corridors establish END4")
 func run()->void:
  var old:Callable=WorldClock.clock;WorldClock.clock=func():return WorldClock.ERA+100
  var b=fresh();adult(b);Equipment.add(b.session._profile,2603)
