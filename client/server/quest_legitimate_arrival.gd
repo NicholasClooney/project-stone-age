@@ -92,7 +92,7 @@ func action_committed(backend, npc: Dictionary, branch: Dictionary, phase: Strin
 	if actual.is_empty() or actual!=npc:return
 	var service: bool=phase=="SERVICE" and str(actual.get("kind","")) in ["golden_bui_gate","golden_bui_quiz","golden_bui_janken","original_jug_shop"]
 	if not service and not branch in actual.get("branches",[]):return
-	_queue_warp(backend,npc,str(branch.get("actions",{}).get("Warp","")))
+	_queue_warp(backend,npc,str(branch.get("actions",{}).get("Warp","")),Policy.action_mark(Policy.source(npc)))
 
 func battle_context(backend, npc: Dictionary, branch: Dictionary) -> Dictionary:
 	if not check_action(backend,npc,branch,"BATTLE").is_empty():return {}
