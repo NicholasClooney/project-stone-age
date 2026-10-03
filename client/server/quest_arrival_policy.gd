@@ -5,6 +5,7 @@ static func scope(map_id: int) -> String:
 	if map_id in [41,42]:return "dream"
 	for entry in [[20101,20105,"herb"],[20401,20406,"goya"],[20501,20508,"wood"],[11001,11006,"doctor"],[10701,10705,"saton"],[31801,31806,"miner"]]:
 		if map_id>=int(entry[0]) and map_id<=int(entry[1]):return str(entry[2])
+	if map_id in [118,119,122]:return "marju"
 	if map_id>=31901 and map_id<=31911:return "golden"
 	if map_id>=31701 and map_id<=31706:return "brothers"
 	if map_id>=20601 and map_id<=20608:return "jan"
@@ -25,6 +26,7 @@ static func portal_root(from_map: int, to_map: int) -> bool:
 	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204) or (from_map==200 and to_map==20301) or (from_map==5000 and to_map==31301)
 
 static func script_root(source_id: String, to_map: int) -> bool:
+	if source_id=="genout/wpm_120_19_15" and to_map==122:return true
 	if source_id=="genout/wpm_300_247_222" and to_map==30301:return true
 	if source_id=="genout/wpm_300_182_162" and to_map==30307:return true
 	if source_id=="genout/wpm_200_73_696" and to_map==21201:return true
