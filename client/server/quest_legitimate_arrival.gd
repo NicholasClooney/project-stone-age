@@ -15,6 +15,8 @@ var _battles: Dictionary={}
 var _maps: Dictionary={}
 var _can_leave_portal: bool=false
 var _rooms: Dictionary={}
+var _block_signature: Array=[]
+var _block_cache: Dictionary={}
 
 func reset() -> void:
 	_invalidate()
@@ -57,13 +59,13 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 		var leader_cell: Vector2i=_point(evidence.get("leader_from_cell",[]))
 		if int(evidence.get("leader_to_map",-1))!=to_map or _point(evidence.get("leader_to_cell",[]))!=to_cell or leader_map!=from_map:
 			_invalidate();return
-		if valid_before and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell):
+		if valid_before and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell,_can_leave_portal):
 			_map=to_map;_cell=to_cell;_can_leave_portal=false;_expire_marks(backend,to_map,to_cell);return
 		if not _same_room(backend,from_map,from_cell,leader_cell):_invalidate();return
 		if _portal(backend,leader_map,leader_cell,to_map,to_cell) and ((valid_before and _scope==target_scope) or (Policy.scope(from_map).is_empty() and Policy.portal_root(from_map,to_map))):
 			_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;_expire_marks(backend,to_map,to_cell);return
 		_invalidate();return
-	if valid_before and _scope==target_scope and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell):
+	if valid_before and _scope==target_scope and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell,_can_leave_portal):
 		_map=to_map;_cell=to_cell;_can_leave_portal=false;_expire_marks(backend,to_map,to_cell);return
 	if _portal(backend,from_map,from_cell,to_map,to_cell) and ((valid_before and _scope==target_scope) or (Policy.scope(from_map).is_empty() and Policy.portal_root(from_map,to_map))):
 		_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;_expire_marks(backend,to_map,to_cell);return
@@ -86,6 +88,10 @@ func check_action(backend, npc: Dictionary, branch: Dictionary, phase: String) -
 
 func action_committed(backend, npc: Dictionary, branch: Dictionary, phase: String) -> void:
 	if phase in ["cancel","CLEAN","end"] or not check_action(backend,npc,branch,phase).is_empty():return
+	var actual: Dictionary=backend.original_quests.npc_by_id(str(npc.get("id","")))
+	if actual.is_empty() or actual!=npc:return
+	var service: bool=phase=="SERVICE" and str(actual.get("kind","")) in ["golden_bui_gate","golden_bui_quiz","golden_bui_janken","original_jug_shop"]
+	if not service and not branch in actual.get("branches",[]):return
 	_queue_warp(backend,npc,str(branch.get("actions",{}).get("Warp","")))
 
 func battle_context(backend, npc: Dictionary, branch: Dictionary) -> Dictionary:
@@ -158,17 +164,30 @@ func _map_data(backend, map_id: int) -> Dictionary:
 		_maps[map_id]=data
 	return _maps[map_id]
 
+func _npc_cells(backend, map_id: int) -> Dictionary:
+	var catalog=backend.quest_catalog
+	var signature: Array=[hash(catalog.npc_overrides),hash(catalog.enabled_events),catalog.npcs.size(),catalog.service_npcs.size()]
+	if signature!=_block_signature:
+		_block_cache.clear()
+		for npc in catalog.active_npcs():
+			var id: int=int(npc.map_id)
+			if not _block_cache.has(id):_block_cache[id]={}
+			_block_cache[id][_point(npc.cell)]=true
+		_block_signature=signature
+	return _block_cache.get(map_id,{})
+
 func _walkable(backend, map_id: int, cell: Vector2i) -> bool:
 	var data: Dictionary=_map_data(backend,map_id)
 	if data.is_empty() or cell.x<0 or cell.y<0 or cell.x>=int(data.width) or cell.y>=int(data.height):return false
 	if int(data.blocked[cell.y*int(data.width)+cell.x])!=0:return false
-	for npc in backend.quest_catalog.active_npcs():
-		if int(npc.map_id)==map_id and _point(npc.cell)==cell:return false
-	return true
+	return not _npc_cells(backend,map_id).has(cell)
 
-func _walk_step(backend, map_id: int, start: Vector2i, finish: Vector2i) -> bool:
+func _walk_step(backend, map_id: int, start: Vector2i, finish: Vector2i, source_landing: bool=false) -> bool:
 	var delta: Vector2i=finish-start
-	if maxi(absi(delta.x),absi(delta.y))!=1 or not _walkable(backend,map_id,start) or not _walkable(backend,map_id,finish):return false
+	if maxi(absi(delta.x),absi(delta.y))!=1 or not _walkable(backend,map_id,finish):return false
+	if not _walkable(backend,map_id,start):
+		var data: Dictionary=_map_data(backend,map_id)
+		if not source_landing or data.is_empty() or not _floor(data,{},start):return false
 	if delta.x!=0 and delta.y!=0:
 		return _walkable(backend,map_id,start+Vector2i(delta.x,0)) and _walkable(backend,map_id,start+Vector2i(0,delta.y))
 	return true
@@ -176,9 +195,7 @@ func _walk_step(backend, map_id: int, start: Vector2i, finish: Vector2i) -> bool
 func _same_room(backend, map_id: int, start: Vector2i, finish: Vector2i) -> bool:
 	var data: Dictionary=_map_data(backend,map_id)
 	if data.is_empty():return false
-	var npcs: Dictionary={}
-	for npc in backend.quest_catalog.active_npcs():
-		if int(npc.map_id)==map_id:npcs[_point(npc.cell)]=true
+	var npcs: Dictionary=_npc_cells(backend,map_id)
 	var links: Dictionary=backend.quest_helper.places.links(map_id)
 	var signature: Array=[hash(data.blocked),hash(npcs),hash(links)]
 	if not _rooms.has(map_id) or _rooms[map_id].signature!=signature:
