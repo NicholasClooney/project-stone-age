@@ -36,12 +36,21 @@
     "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
     "gmsv/include/item.h": "64a8616bac3607b8494b1b5efa0b4c3a3e8018af44228431f248762055a559b9",
     "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
-    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539"
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+    "gmsv/data/npc/genout/manmoshall.create": "e2da847b2278d5d35b7fffb5e3dbd64b5da1ef0eae9b80b36a373b008fb8fd0b",
+    "gmsv/data/npc/genout/wpm_117_6_5": "1ed66e76fec332acb2daae97257f16d34c39c0c3c710df45fd7b3ea28e33a2df",
+    "gmsv/data/npc/genout/chatroom.create": "2121f277b89d3680dbd76e829901309eb3bcd2a4f85f2d756907009545d2bf76",
+    "gmsv/data/npc/genout/wpm_110_37_20": "bbe21f404d619d7b689c67cf5cb3a80effb126909d4a5a5c4d5a04b2fbcf8a7b",
+    "gmsv/data/npc/genout/wpm_110_37_24": "b1a69f471f4e109b4544b97cc907a6aa3c206bccdee608c11a8c9a986845d053",
+    "gmsv/data/npc/genout/wpm_110_37_28": "2308622bdec8f51d997b566d0c88dbc67bf0a1282d2a9436c17b41a1af4a2968",
+    "gmsv/data/npc/genout/wpm_110_37_32": "db3641469abe35628cc5dc5569167872976f38cee38b7df43c94f79b896ccfdc"
   },
   "creates": [
     "gmsv/data/npc/genout/sikkoku.create",
     "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
-    "gmsv/data/npc/300/sb_sikkoku.create"
+    "gmsv/data/npc/300/sb_sikkoku.create",
+    "gmsv/data/npc/genout/manmoshall.create",
+    "gmsv/data/npc/genout/chatroom.create"
   ],
   "scripts": {
     "giiru/event/sikkoku01": {
@@ -444,6 +453,56 @@
     },
     "777/ten.arg": {
       "kind": "original_transmigration",
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ]
+    },
+    "genout/wpm_117_6_5": {
+      "kind": "original_prison",
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ]
+    },
+    "genout/wpm_110_37_20": {
+      "kind": "original_prison",
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ]
+    },
+    "genout/wpm_110_37_24": {
+      "kind": "original_prison",
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ]
+    },
+    "genout/wpm_110_37_28": {
+      "kind": "original_prison",
+      "events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ]
+    },
+    "genout/wpm_110_37_32": {
+      "kind": "original_prison",
       "events": [
         48,
         49,
