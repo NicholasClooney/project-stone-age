@@ -124,7 +124,10 @@ func run() -> void:
 	check(a.blocked_guard_items({"npc_id":"100/sb_nusu1.arg"}).is_empty(),"client-named guard alone cannot suppress ordinary loot")
 	check(a.blocked_guard_items({}).is_empty(),"wild combat has no guard loot exclusion")
 	var thief: Dictionary=b.original_quests.npc_by_id("100/sb_nusu1.arg@10701:23:51")
-	b.automation.position_changed(10701,Vector2i(23,52))
+	b.automation.position_changed(100,Vector2i(132,421))
+	observed(b,a,10701,Vector2i(76,67))
+	for step in RouteDriver.path(b,10701,Vector2i(23,52),[10701]):
+		observed(b,a,int(step.map_id),Vector2i(int(step.cell[0]),int(step.cell[1])))
 	var thief_proof: Dictionary=a.battle_context(b,thief,thief.branches[0])
 	var thief_pending: Dictionary={"npc_id":thief.id,"warp":"","arrival":thief_proof}
 	observed(b,a,1000,Vector2i(20,20),"project")

@@ -56,3 +56,29 @@ static func walk(backend, goal_map: int, goal: Vector2i, allowed_maps: Array) ->
 		var reply: Dictionary=backend.handle({"type":"report_position","map_id":step.map_id,"cell":step.cell,"client":"original-route-test"})
 		if not reply.get("ok",false):return reply
 	return {"ok":true,"steps":steps.size()}
+
+## Gameplay-level setup for downstream suites. Only the initial public-village
+## position is a fixture; the level-gated entrance, both channel walks, source
+## dialogues, item exchange and END4 all execute production commands.
+static func complete_adult(backend) -> Dictionary:
+	backend.automation.position_changed(10202,Vector2i(31,13))
+	var entered: Dictionary=backend.handle({"type":"report_position","map_id":10204,"cell":[2,6]})
+	if not entered.get("ok",false):return entered
+	for id in ["jaruga/event/event04_1","jaruga/event/event04_2","jaruga/event/event04_1"]:
+		var result: Dictionary=exchange_from_route(backend,id,[10204])
+		if not result.get("ok",false):return result
+	return {"ok":preload("res://server/original_quests.gd").flag(backend.session.snapshot(),"ended",4)}
+
+static func exchange_from_route(backend, npc_id: String, allowed_maps: Array) -> Dictionary:
+	var npc: Dictionary=backend.original_quests.npc_by_id(npc_id)
+	if npc.is_empty():return {"ok":false,"reason":"Missing original NPC"}
+	var near: Dictionary=backend.quest_helper.destination(backend,npc,"near")
+	if near.is_empty():return {"ok":false,"reason":"Missing original dialogue position"}
+	var moved: Dictionary=walk(backend,int(near.map_id),Vector2i(int(near.cell[0]),int(near.cell[1])),allowed_maps)
+	if not moved.get("ok",false):return moved
+	var result: Dictionary=backend.handle({"type":"quest_talk","npc_id":npc_id})
+	for i in range(3):
+		if not result.get("ok",false) or not result.has("dialogue"):return result
+		var phase: String=str(backend.original_quests.pending.get("phase",""))
+		result=backend.handle({"type":"quest_choose","token":result.dialogue.token,"choice":"ok" if phase in ["reward","end"] else "yes"})
+	return result
