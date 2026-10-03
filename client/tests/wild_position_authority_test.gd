@@ -99,7 +99,14 @@ func mining_retry()->void:
  preload("res://server/progression.gd").refresh(b.session._profile.player)
  b.session._profile.player.hp=b.session._profile.player.max_hp
  preload("res://server/original_equipment.gd").add(b.session._profile,2536)
- check(b.handle({"type":"report_position","map_id":31801,"cell":[37,48]}).ok,"test permit fixture reaches actual mining encounter point")
+ var entrance:Dictionary={}
+ for link in b.quest_helper.places.links(300).values():
+  if int(link.to_map)==31801 and not link.has("gate_source"):entrance=link;break
+ check(not entrance.is_empty(),"real public miner entrance exists")
+ if entrance.is_empty():b.free();return
+ b.automation.position_changed(300,Vector2i(int(entrance.cell[0]),int(entrance.cell[1])))
+ check(b.handle({"type":"report_position","map_id":31801,"cell":entrance.target}).ok,"permit fixture crosses actual original mine entrance")
+ check(preload("res://tests/support/original_route_driver.gd").walk(b,31801,Vector2i(37,48),[31801]).ok,"continuous original route reaches mining point")
  var data:Dictionary=preload("res://scripts/map_file.gd").load_map(b.quest_helper.places.file(31801))
  check(not data.is_empty() and int(data.blocked[48*int(data.width)+37])==0,"ore test uses an actual walkable first-floor cell")
  check(b.encounter_catalog.area_at(31801,Vector2i(37,48))==b.encounter_catalog.area_at(31801,Vector2i(24,24)),"walkable ore fixture preserves original seed27 area")
