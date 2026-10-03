@@ -77,3 +77,9 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 风原回程落100(278,325)入口NPC格在scope外：只清凭证，不拒位置或后续走离；受保护原script落点即使正逢NPC实体，只有刚提交该真实落点的下一步可离开，普通报告不能凭占格声明穿人。
 
 共享测试support `tests/support/original_route_driver.gd`只按实际碰撞、NPC与portal计算四向路径，并用生产report_position逐格走图。脚本门与固定战必须由调用者实际完成；不会修改scope/epoch/receipt、不会把位置fixture伪装成合法入场。旧Backend下模块suite显式观察移动；已接入Backend下使用唯一b.quest_arrival、实际begin产生的proof及自动commit/Warp hook，避免双调用。两个定向suite均注册；首轮旧Backend 2/2通过，真实接入另行记录。
+
+### Jan: three source passwords and the final guard
+
+`20601–20608` starts only at an actual enabled `200→20601` portal. Source `genout/wpm_20604_11_53:1–3`, `wpm_20605_51_4:1–3` and `wpm_20606_9_23:1–3` specify three distinct keywords and successive Warps to floors5/6/7. Server transactions preserve route across these gates; project placement in front of an internal gate cannot establish the missing earlier route. The three alternative `200/sb_jan1/2/3.arg:5–10` guards share the original victory Warp `20607(36,31)`, establishing `jan_final`.
+
+`jaruga/event/event20_4:5–11,17–24` sets END20 and awards END22; `event20_6:5–10,25–34` gives the letter and starts NOW21 while consuming the hair ornament. They require the final mark. Its reviewed regions include both the post-battle floor7 component and floor8 reached at `(0,7)`, preserving the original father/daughter round trips. Public return delivery retains original item/event conditions and no cave mark requirement. `quest_arrival_jan_test` runs real production steps across all three passwords, real final combat, father/daughter REQUEST21/END20/END22/letter branches and final transaction save failure/retry. Preexisting hair ornament and NOW20 are explicit inventory fixtures, not evidence. Legacy helper/auto/fixture adaptation must accompany release.
