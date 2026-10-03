@@ -14,7 +14,19 @@ func run()->void:
   check(Effects.evidence(items[str(id)]).contains("gmsv/data/itemset.txt:"),"source row and raw field evidence retained")
  check(Effects.lines(items["2450"],false)[0].contains("原标示500，实际450～550") and Effects.lines(items["2450"],false)[0].contains("ITEM_useRessurect"),"implemented battle revive names exact source action and amount")
  check(Effects.lines(items["2421"]).is_empty(),"ordinary quest token has no invented inactive effect")
- for id in Equipment.NEWLY_WEARABLE:
+ # This frozen fixture owns the original eleven migrations. The separate
+ # four-spirit fixture/test owns all142 new definitions and its132 positive
+ # durability migrations. Their exact ordered union must equal runtime.
+ var legacy_ids:Array=[1357,2460,2487,2489,2491,2492,2493,2494,2505,2605,2606]
+ var spirits:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-equipment.json"))
+ var positive:Array=spirits.positive_durability_ids.map(func(id):return int(id))
+ var derived:Array=[]
+ for record in spirits.records:
+  if int(record.definition.durability)>0:derived.append(int(record.id))
+ check(spirits.records.size()==142 and positive.size()==132 and positive==derived,"new frozen fixture precisely owns142 definitions and132 positive migrations")
+ check(Equipment.NEWLY_WEARABLE==legacy_ids+positive,"exact union of both audited migration fixtures; no unknown ID skipped")
+ check(legacy_ids.all(func(id):return items.has(str(id))),"legacy fixture covers every original migration ID")
+ for id in legacy_ids:
   var s=strong(40);var uid:=add(s,id)
   check(equip(s,uid),"new fixed equipment uses existing slot %d"%id)
   var spec:Dictionary=Equipment.ITEMS[id]
