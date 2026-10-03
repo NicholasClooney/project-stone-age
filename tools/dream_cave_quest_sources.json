@@ -30,7 +30,11 @@
     "gmsv/data/npc/genout/tman_400_85_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
     "gmsv/data/npc/genout/tman_400_88_102": "4878461364b952e749c60258a1bf11b136e7709d4b9fd3f8e96c62f8811b8045",
     "gmsv/npc/npc_timeman.c": "30d88b9846b8fee9691c1fc61222a4fd14a6224f7b16ba46ef0d8105a7373187",
-    "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3"
+    "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3",
+    "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
+    "gmsv/include/item.h": "64a8616bac3607b8494b1b5efa0b4c3a3e8018af44228431f248762055a559b9",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539"
   },
   "creates": [
     "gmsv/data/npc/seimu/event/event01.create",
@@ -44,7 +48,8 @@
         0,
         1,
         2,
-        3
+        3,
+        4
       ],
       "events": [
         32,
@@ -57,6 +62,7 @@
         1,
         2,
         3,
+        4,
         5
       ],
       "events": [
@@ -109,10 +115,30 @@
     }
   },
   "items": [
+    449,
+    450,
+    451,
+    543,
+    549,
+    552,
+    646,
+    653,
     2603,
     2604,
     2605,
     2606,
+    11803,
+    11814,
+    11824,
+    11833,
+    11843,
+    11853,
+    11895,
+    11926,
+    11936,
+    12052,
+    12623,
+    12648,
     19550
   ],
   "reward_enemies": [],
@@ -178,5 +204,107 @@
     "2604": "原衣服奖励；躯干装备槽与治愈魔法尚未生效。",
     "2605": "原帽子奖励；普通属性按现有头部槽支持为准，滋润魔法未生效。",
     "2606": "原竖琴奖励；普通属性按现有护符槽支持为准，睡眠魔法及抗睡眠字段未生效。"
-  }
+  },
+  "single_item_pile_reviews": [
+    {
+      "id": 11895,
+      "source_line": 6904,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11926,
+      "source_line": 6935,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11936,
+      "source_line": 6945,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 12052,
+      "source_line": 7061,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11803,
+      "source_line": 6812,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11814,
+      "source_line": 6823,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11824,
+      "source_line": 6833,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11833,
+      "source_line": 6842,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11843,
+      "source_line": 6852,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    {
+      "id": 11853,
+      "source_line": 6862,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    }
+  ]
 }
