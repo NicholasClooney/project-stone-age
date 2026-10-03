@@ -77,6 +77,8 @@ var quest_catalog = preload("res://scripts/quest_catalog.gd").new()
 ## Pure travel refusal hook supplied by a multi-profile host (party lock).
 var quest_visit_guard: Callable
 var _following_party:=false
+var _party_move_evidence:Dictionary={}
+var quest_arrival = preload("res://server/quest_legitimate_arrival.gd").new()
 const TimePassage=preload("res://server/original_time_passage.gd")
 const DreamPassage=preload("res://server/original_dream_passage.gd")
 var quest_helper = preload("res://server/quest_helper.gd").new()
@@ -93,6 +95,7 @@ var battle_state: Dictionary = {}
 ## A battle stays open from start until a client or runner closes it.
 var battle_open := false
 var encounter_catalog = EncounterCatalog.new()
+var reviewed_hunt_travel = preload("res://server/reviewed_hunt_travel.gd").new()
 var encounter_rng := RandomNumberGenerator.new()
 var training_pool_rng := RandomNumberGenerator.new()
 var encounter_serial := 0
@@ -187,6 +190,7 @@ func load_profile(path: String) -> bool:
 	quest_auto.stop(self,"载入存档停止了自动任务。")
 	original_quests.pending={}
 	if not session.load_game(path):return false
+	quest_arrival.reset()
 	last_saved_payload = JSON.stringify(session.snapshot())
 	_publish()
 	return true
@@ -879,8 +883,19 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	# A party battle settles this player's own slice (its own battle id and
 	# rewards); the state its devices see stays the shared battle.
 	var result: Dictionary = settle if not settle.is_empty() else state
-	if not bool(state.active) and session.apply_battle_result(result,drop_claims):
-		if pending_before.has("quest_guard") and str(state.outcome)=="win":
+	var arrival_denied:=""
+	if not bool(state.active) and pending_before.has("quest_guard") and str(state.outcome)=="win":
+		arrival_denied=quest_arrival.check_battle(self,pending_before.quest_guard)
+		if not arrival_denied.is_empty():
+			var blocked:Array=quest_arrival.blocked_guard_items(pending_before.quest_guard)
+			if bool(pending_before.get("party",false)):
+				drop_claims=_allowed_guard_claims(pending_before,drop_claims,blocked,result)
+			else:
+				session._pending.loot_claims=_allowed_guard_claims(pending_before,pending_before.get("loot_claims",[]),blocked,result)
+	var applied:bool=not bool(state.active) and session.apply_battle_result(result,drop_claims)
+	if not applied and not arrival_denied.is_empty():session._pending=pending_before
+	if applied:
+		if pending_before.has("quest_guard") and str(state.outcome)=="win" and arrival_denied.is_empty():
 			preload("res://server/brothers_quests.gd").settle_profile(self,pending_before.quest_guard)
 		if atomic and not save():
 			session._profile = before
@@ -896,8 +911,12 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 		if not settle.is_empty():
 			for key in ["xp","gold","pet_reward_xp","experience_multiplier","drop_summary"]:state[key] = result.get(key,0)
 		state.settled = true
-		if pending_before.has("quest_guard") and str(state.outcome)=="win":
+		if not arrival_denied.is_empty():
+			state.quest_arrival_denied=arrival_denied
+			state.events.append(arrival_denied)
+		if pending_before.has("quest_guard") and str(state.outcome)=="win" and arrival_denied.is_empty():
 			preload("res://server/brothers_quests.gd").committed(self,pending_before.quest_guard)
+			quest_arrival.battle_committed(self,pending_before.quest_guard)
 			if not str(pending_before.quest_guard.get("warp","")).is_empty():state.quest_warp=str(pending_before.quest_guard.warp)
 		for drop in state.get("drop_summary",[]):
 			var item_name := str(quest_catalog.items.get(str(int(drop.item_id)),{}).get("name","原版物品 #%d"%int(drop.item_id)))
@@ -933,6 +952,29 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	battle_state = state
 	_emit({"type":"battle_turn","state":state.duplicate(true)})
 	return state.duplicate(true)
+
+## Filter only audited guard-specific loot on a candidate copy. Malformed
+## claims remain present so the original Session validator rejects them.
+func _allowed_guard_claims(pending:Dictionary, claims:Array, blocked:Array, battle_result:Dictionary)->Array:
+	if blocked.is_empty():return claims.duplicate(true)
+	var enemies:Array=pending.get("enemies",[])
+	var finished:Array=battle_result.get("enemies",[])
+	if finished.size()!=enemies.size():return claims.duplicate(true)
+	var seen:Dictionary={}
+	# Validate the entire original claim list first. Never hide a duplicate or
+	# invalid claim by filtering the first occurrence of a withheld item.
+	for claim in claims:
+		if not claim is Dictionary or not session._integer(claim.get("enemy"),0,enemies.size()-1):return claims.duplicate(true)
+		var index:=int(claim.enemy)
+		var generated:Array=enemies[index].get("generated_drops",[])
+		if not session._integer(claim.get("item"),0,generated.size()-1):return claims.duplicate(true)
+		var key:="%d:%d"%[index,int(claim.item)]
+		if seen.has(key) or not finished[index] is Dictionary or not session._integer(finished[index].get("hp"),0,0) or bool(finished[index].get("captured",false)):return claims.duplicate(true)
+		seen[key]=true
+	var result:Array=[]
+	for claim in claims:
+		if not int(enemies[int(claim.enemy)].generated_drops[int(claim.item)]) in blocked:result.append(claim.duplicate(true))
+	return result
 
 func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	if not battle_open:return _stale("no open battle")
@@ -978,7 +1020,24 @@ func _live_battle_state() -> Dictionary:
 
 # ---- automation ------------------------------------------------------------
 
+## Capture-only project travel: the server chooses the cell from reviewed data.
+func _cmd_reviewed_hunt_travel(command: Dictionary) -> Dictionary:
+	if battle_open or not session._pending.is_empty() or automation.running or automation.hunt_running or automation.flow_active() or quest_auto.running:return _reject("当前正忙，请先停止战斗或自动活动。")
+	if quest_visit_guard.is_valid() and not str(quest_visit_guard.call()).is_empty():return _reject("组队时请先离开队伍再使用捕宠瞬移。")
+	var plan: Dictionary=reviewed_hunt_travel.resolve(self,command)
+	if plan.is_empty():return _reject("此目标不在服务器审核的捕宠直达名单，或原资料已改变。")
+	original_quests.pending={}
+	automation.position_changed(int(plan.map_id),plan.cell,int(plan.map_id)!=automation.position_map)
+	_emit({"type":"position","map_id":int(plan.map_id),"cell":[plan.cell.x,plan.cell.y],"client":"server"})
+	_publish()
+	return {"ok":true,"target":{"map_id":int(plan.map_id),"area_id":int(plan.area_id),"template_id":int(plan.template_id),"cell":[plan.cell.x,plan.cell.y],"level_one":bool(plan.level_one)},"notice":reviewed_hunt_travel.POLICY}
+
 func _cmd_auto_start(command: Dictionary) -> Dictionary:
+	if command.has("map_id"):
+		var values=command.get("cell",[])
+		if not values is Array or values.size()!=2 or not session._integer(command.map_id,0,2147483647) or not session._integer(values[0],0,2147483647) or not session._integer(values[1],0,2147483647):return _reject("无效的找宠位置。")
+		if automation.position_map>=0 and (int(command.map_id)!=automation.position_map or _cell(command)!=automation.position_cell):return _reject("位置已改变，请先完成服务器确认的移动再开始自动活动。")
+		if automation.position_map<0 and int(command.map_id) in [41,42,31806]:return _reject("请先由服务器确认捕宠落点。")
 	return automation.start(command)
 
 func _cmd_auto_update(command: Dictionary) -> Dictionary:
@@ -1011,10 +1070,12 @@ func _cmd_check_passage(command: Dictionary) -> Dictionary:
 ## Positions are reported by whichever client walks; every other client
 ## follows the broadcast (the reporter recognises its own client id).
 ## Internal host call, never selected by a client command or its "client" field.
-func report_party_position(command:Dictionary)->Dictionary:
+func report_party_position(command:Dictionary, evidence:Dictionary = {})->Dictionary:
 	_following_party=true
+	_party_move_evidence=evidence.duplicate(true)
 	var result:=handle(command)
 	_following_party=false
+	_party_move_evidence={}
 	return result
 
 func _cmd_report_position(command: Dictionary) -> Dictionary:
@@ -1038,7 +1099,7 @@ func _cmd_report_position(command: Dictionary) -> Dictionary:
 		return _reject("穿过海底关卡需要通行证。")
 	var cell := _cell(command)
 	var moved: bool = int(command.map_id)!=automation.position_map or cell!=automation.position_cell
-	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)))
+	var paused: String = automation.position_changed(int(command.map_id),cell,bool(command.get("map_changed",false)),"party" if _following_party and not _party_move_evidence.is_empty() else "project" if _following_party else "report",_party_move_evidence)
 	if moved:_emit({"type":"position","map_id":int(command.map_id),"cell":[cell.x,cell.y],"client":str(command.get("client",""))})
 	if helper_stage!=quest_helper.navigation_key(self):_publish()
 	return {"ok":true,"paused":paused}
