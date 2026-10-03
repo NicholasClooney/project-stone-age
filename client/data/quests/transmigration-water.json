@@ -1,6 +1,8 @@
 {
   "id": "transmigration-water",
   "manifest": "tools/transmigration_water_quest_sources.json",
-  "enabled_events": [],
+  "enabled_events": [
+    46
+  ],
   "helper": "res://server/transmigration_water_helper.gd"
 }
