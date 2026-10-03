@@ -21,7 +21,8 @@ func has_current(row:Dictionary,npc:String,kind:String) -> bool:
   if step.current and step.npc_id==npc and step.source.type==kind:return true
  return false
 func exchange(b,npc:String) -> void:
- var visit:Dictionary=b.handle({"type":"quest_visit","npc_id":npc,"mode":"near"})
+ var actor:Dictionary=b.original_quests.npc_by_id(npc)
+ var visit:Dictionary=preload("res://tests/support/legacy_cave_route.gd").approach(b,actor) if int(actor.map_id) in range(20501,20509) else b.handle({"type":"quest_visit","npc_id":npc,"mode":"near"})
  check(visit.ok,"visit real source NPC")
  var reply:Dictionary=b.handle({"type":"quest_talk","npc_id":npc})
  check(reply.ok,"source talk")
