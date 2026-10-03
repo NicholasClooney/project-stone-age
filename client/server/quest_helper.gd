@@ -329,6 +329,41 @@ func harvest_step(backend) -> Dictionary:
   var point:=Vector2i((int(rect[0])+int(rect[2]))/2,(int(rect[1])+int(rect[3]))/2)
   var target:Dictionary=destination(backend,{"id":"","map_id":int(area.map_id),"cell":[point.x,point.y],"area_rect":rect},"near")
   if target.is_empty():continue
+  # Overlapping source rectangles are not interchangeable: equal-priority
+  # areas retain the first source row, exactly as ENCOUNT_getEncountAreaArray.
+  # Search the traversable component of the old landing, not a rectangle-only
+  # midpoint that can be shadowed by an earlier area without the wood group.
+  var map_id:=int(area.map_id)
+  var geometry_key:=[backend.encounter_catalog.get_instance_id(),backend.quest_catalog.get_instance_id(),backend.quest_catalog.enabled_events,backend.original_quests.npc_state.version,int(area.id)]
+  var cached:Dictionary=get_meta("wood_harvest_geometry",{})
+  if cached.get("key",[])==geometry_key:
+   target=cached.target.duplicate(true)
+  else:
+   var map_data:Dictionary=maps[map_id]
+   var occupied:Dictionary={}
+   for resident in places.residents:
+    if int(resident.map_id)==map_id:occupied[Vector2i(int(resident.cell[0]),int(resident.cell[1]))]=true
+   for resident in backend.quest_catalog.active_npcs():
+    if int(resident.map_id)==map_id:occupied[Vector2i(int(resident.cell[0]),int(resident.cell[1]))]=true
+   var links:Dictionary=places.links(map_id)
+   var origin:=Vector2i(int(target.cell[0]),int(target.cell[1]))
+   var queue:Array[Vector2i]=[origin]
+   var seen:Dictionary={origin:true}
+   var cursor:=0
+   target={}
+   while cursor<queue.size():
+    var candidate:Vector2i=queue[cursor]
+    cursor+=1
+    if int(backend.encounter_catalog.area_at(map_id,candidate).get("id",-1))==int(area.id):
+     target={"map_id":map_id,"cell":[candidate.x,candidate.y],"npc_id":""}
+     break
+    for offset in [Vector2i.RIGHT,Vector2i.LEFT,Vector2i.DOWN,Vector2i.UP]:
+     var next:Vector2i=candidate+offset
+     if seen.has(next) or next.x<int(rect[0]) or next.y<int(rect[1]) or next.x>int(rect[2]) or next.y>int(rect[3]):continue
+     seen[next]=true
+     if safe(map_data,next,occupied,links):queue.append(next)
+   set_meta("wood_harvest_geometry",{"key":geometry_key.duplicate(true),"target":target.duplicate(true)})
+  if target.is_empty():continue
   return {"id":"wood:harvest","npc_id":"","map_id":int(area.map_id),"cell":target.cell,"current":false,"done":false,"actionable":false,"source":{"type":"encounter","area_id":int(area.id),"area_rect":rect.duplicate(),"area_source_line":int(area.get("source_line",0)),"enemy_id":563,"drops":enemy.drops.duplicate(true)}}
  return {}
 
