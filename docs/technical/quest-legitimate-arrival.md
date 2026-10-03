@@ -95,3 +95,83 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 真实400(96,119)/(97,119)是相邻原时辰portal；源portal可邻多个走路组件，不能用“唯一组件标签”断定不可达。`_portal_approach`只放宽最后的真实portal端点：本侧组件贴邻该源，或两个相邻真实portal端点；不会把任何中途portal当作普通地板穿越。原portal的NPC实体格也只作为该末端解析，BFS仍把普通NPC格作为障碍。
 
 `quest_arrival_party_follow_test`采用bonus授权的真实Hub复现，经过实际party_join、公开原门、连续队列步、洞内portal，再验证同房非相邻报告令双方失格，以及独立客户端伪造client/arrival_kind/evidence不能授party根。测试连接是Hub connection IDs，不是WebSocket/UI像素；仍不开放或声称固定NPC组队战可玩。
+
+## 旧普通洞窟六类政策
+
+新增herb20101–20105、goya20401–20406、wood20501–20508、doctor11001–11006、saton10701–10705、miner31801–31806六个连续scope。只允许实际原portal：200→20101/20401/20501，100→11001/10701，300→31801作为公开根；任何内部门源格项目到达都不能产生根。所有具体边仍从实际图中验证，不创造编号唯一路径。
+
+| 任务与实际奖励分支 | 此前可绕与修复／公开无缺口范围 |
+|---|---|
+| 草药END1：`jaruga/event/event01_2@20105`洞内药、`event01_1@3110`回村交付 | 洞内药源原路保护；3110按原持药交付，不要求把洞内凭证带回村。没有新增原版不存在的回村路径义务。 |
+| 戈雅END8及送物子事件：`event06_1/event07_1..10@20401..20406` | 洞内各原收送、装备、旗标分支同scope保护；原普通入口没有贝壳门，不附加门票。公开米兰达/村庄END5部分保持原条件。 |
+| 伐木END19及子事件：`jaruga/event/20501ev1@20508`哈恩制斧；`20501ev2@20507`水壶 | 洞内制造/装水须原路；公开村里交斧END18及木材计件石币不凭猜测加洞窟当前凭证。野外木材2468另列掉落来源审核，不在本片禁用。 |
+| 博士END15/16：`sainasu/event/event15_1/2@11006` | 深处原宠交付/奖励都重验路线；不新增成人END4门槛。 |
+| 萨顿三贼→END13及已批准END14补充：`100/sb_nusu1/2/3.arg@10701/3/5` | 固定战须角色自有原路；既有private guard掉落2428/9/30失epoch窄过滤才获得完整scope前提。1112村庄凭原三宝交付，不要求当前仍在萨顿洞。 |
+| 采矿END27及奖杯：`giiru/event/giruev2_1/2@31805`、`300/sb_bac.arg`、原31805门 | 大赛提交/奖杯战同原洞路线；6F捕宠可继续便利到达但不授miner route，倒走原门不能洗白。矿2534普通条件掉落未改、待用户裁定。 |
+
+`quest_arrival_legacy_caves_test`遍历这六类当前catalog全部实际副作用分支，调用带真实npc_id最终transact，核拒绝原因来自项目到达且profile逐字不变；随后经各精确公开入口、真实碰撞/portal逐格走至深处实际NPC并核资格，最后验证内部原门洗白失败。六类1/1通过（57秒）；此为路线与最终守卫集成，不冒称每个兑换所需物品/宠物都重新自然收集。各旧产品helper/auto仍需owner适配连续步行后并集；不能为旧瞬移fixture放宽最终守卫。
+
+### Dragon cave: original seven floors and three-jewel room
+
+`20801–20807` now requires continuous arrival from an actual enabled `200→20801` original portal. Interior portals cannot start a new route. `npc/genout/wpm_20807_11_37:1–6` requires all three jewels and warps to `20807(13,35)`; only its successful saved action establishes `dragon_gate`. `jaruga/event/event17_1:4–12` (and the alternative `event17_2/3` branches) consumes the three jewels/flute and ends event17. These final branches require the committed gate mark as well as the original predicates. Holding the jewels or being in the room does not establish it. The mark uses the normal room-exit/epoch lifecycle.
+
+`quest_arrival_dragon_test` uses real Backend commands through seven floors, project-to-gate denial, actual source gate and final reward save failures/retries, and reset refusal. Its inventory is explicitly preexisting test material, not a claim that wild task drops are protected. Ordinary dragon drops remain unchanged pending the dedicated-drop decision. This policy must land with the corresponding legacy helper/test flow adaptations; the isolated arrival suite does not validate the full existing UI flow.
+
+### Jan: three source passwords and the final guard
+
+`20601–20608` starts only at an actual enabled `200→20601` portal. Source `genout/wpm_20604_11_53:1–3`, `wpm_20605_51_4:1–3` and `wpm_20606_9_23:1–3` specify three distinct keywords and successive Warps to floors5/6/7. Server transactions preserve route across these gates; project placement in front of an internal gate cannot establish the missing earlier route. The three alternative `200/sb_jan1/2/3.arg:5–10` guards share the original victory Warp `20607(36,31)`, establishing `jan_final`.
+
+`jaruga/event/event20_4:5–11,17–24` sets END20 and awards END22; `event20_6:5–10,25–34` gives the letter and starts NOW21 while consuming the hair ornament. They require the final mark. Its reviewed regions include both the post-battle floor7 component and floor8 reached at `(0,7)`, preserving the original father/daughter round trips. Public return delivery retains original item/event conditions and no cave mark requirement. `quest_arrival_jan_test` runs real production steps across all three passwords, real final combat, father/daughter REQUEST21/END20/END22/letter branches and final transaction save failure/retry. Preexisting hair ornament and NOW20 are explicit inventory fixtures, not evidence. Legacy helper/auto/fixture adaptation must accompany release.
+
+### Five brothers: source papers, crystal and chosen guard
+
+`31701–31706` uses the real `300→31701` entrance and all original internal portals. `giiru/event/ev28_0` is inside floor1, so its REQUEST28 requires arrival; it is not an unrestricted town request. The five paper exchanges and `ev28_end` keep original conditions. In particular, the crystal/END28 and REQUEST31 happen before the final battle and receive no invented final mark. `genout/wpm_31705_25_8:1–6` remains the source ENDEV28 plus NOW31/ENDEV31 floor gate.
+
+`300/sb_5b1..5.arg` saved victories establish `brothers_final` at their actual five distinct Warps on floor6. `giiru/event/ev28_ed1..5:9–20` pet/harp/crystal/END31 transactions require this mark. The common room-lifecycle check is restricted to the reviewed post-victory components and original reward hall; no leader's receipt or persistent save flag is copied. The dedicated suite follows real floor routes and original correct-paper NPC branches, makes the crystal, crosses the original gate, fights brother5, and retries the final reward after failed persistence. This is representative real combat coverage, not a claim that all five variants and the old UI flow were rerun here. Those legacy flows must be adapted before publishing this scope.
+
+Five-brother source topology also contains the same-map portal `31706(14/15,60)→(14,5)` (`mapwarp.txt:2065–2066`). The actual brother5 test must use it between saved victory and the reward hall. A portal source endpoint is still adjacent to the originating region; mark expiry now uses the existing reviewed portal-approach check there, then checks the destination region on the actual Warp. This does not make a portal destination outside the approved regions eligible. The core Dream suite separately verifies original exits still clear its final mark.
+
+### Stone Island green material: two original entrances, separate wild-drop decision
+
+The original connected cave is `30301–30307`. `genout/wpm_300_247_222:1–3` and `genout/wpm_300_182_162:1–3` both require LV>64 and END4, charge no gold (`MONEY:-1`), and Warp to `30301(23,37)` and `30307(10,6)` respectively. `map/mapwarp.txt:1975–1994` preserves both return entrances, the front route to30305, three30305/30306 passages, and the rear route through30307. Both actual saved gate transactions are roots of `water_stone`; the replaced convenience portals are not roots. The gate restoration is owned by water (`188f648`, `0bb3ccf`), with reviewed maps pinned there; this policy adds no parser or source-condition change.
+
+`quest_arrival_stone_island_test` completes the real adult ritual, enters each source gate with failed-save/retry coverage, and walks the original portal graph to30305. Inventory item2767 is still produced under the unchanged ordinary wild-drop rule, pending the explicit dedicated-drop decision. Arrival evidence is available but this slice does not restrict wild production or claim that the full material-acquisition path is closed. The previous all-cases/drop report has been updated to distinguish missing source gates from unprotected wild drops.
+
+### Golden cave: real key gate and the consuming truth door
+
+`31901–31911` starts at an actual enabled `300→31901` portal. The source key gate `genout/wpm_31903_39_4:1–3` and `giiru/event/event30_7` TALKEVENT1 guide Warp are original saved transactions within that route. Neither holding2548 nor reaching floor10 authorizes the final spirit. `genout/wpm_31910_8_9:1–4` requires and consumes2548 to Warp to31911(6,15); only this successful action establishes `golden_truth`. `giiru/event/event30_6` ACCEPT branch (NOW29, END4/30, NOW54) gives2551, END29 and charm, and is guarded by that mark. Incorrect original room doors retain their original actions but establish no final mark.
+
+Public Kuy mirror exchanges and return delivery remain governed by their original conditions, without a current-cave prerequisite. `quest_arrival_golden_test` performs the actual adult ritual, original entrance, three-floor key gate, middle floors, guide, consuming truth door with save failure/retry, final spirit exchange and reset refusal. Earlier public progression flags/key/eye are explicit preexisting fixtures, not claimed natural wild-drop acquisition. Ordinary2548 drops are unchanged pending the separate user decision. Release requires old golden helper/fixture adaptation alongside this policy.
+
+### Marju mail: actual maze, one-way exit and public return
+
+`genout/wpm_120_19_15:1–3` is the only reviewed original maze entry: LV>49, no fee, Warp122(6,5). Maps122/118/119 form one arrival scope. `map/mapwarp.txt:1651–1656` contains the original interior paired portals and the one-way119(103,93)→121(17,15) exit, with no reverse121 entrance. `extra/event/marju01` REQUEST38 consumes2687, gives2697 and sets END37; its MESSAGE replacement and independent ACCEPT cutting-stone branch are also protected. Being in the maze with mail/stone is no substitute for the gate and continuous route.
+
+`extra/event/marju` on public1300 accepts the mail request and awards END38 on return using its original predicates. It intentionally requires no current cave mark after the legitimate one-way exit. `quest_arrival_marju_test` verifies real public request, project delivery refusal, original gate/large maze/portals, delivery save failure/retry, actual one-way exit, public return reward, and project replacement refusal. The independent route oracle snapshots each map's portal dictionary once per synchronous path search, avoiding repeated catalogue work without changing movement or grant semantics. Marju and Dragon route suites pass together; legacy UI/fixture adaptation is still required for release.
+
+### Golden Bui dojo: all original ticket roots and service transactions
+
+Protected maps are800–810,820–829,840–850; public halls811/831/851 and public ticket shops keep original conditions. Exact source roots are `genout/wpm_811_30_20`/`wpm_831_30_20` to800, `wpm_811_28_20`/`wpm_831_28_20` to820, and `wpm_851_29_20` to840 (each original script's WARP/FREE/DelItem fields). An ordinary portal from a public hall is not an alternative root. Quiz/janken/gate service Warps propagate only the existing character's route through the actual saved service transaction and NPC identity. Internal `quiz/equiz_01` REQUEST44/2753 and `equiz_02:38–46` ACCEPT/2753→pet14/END44 therefore cannot be advanced by project placement.
+
+The independently registered `quest_arrival_dojo_test` runs all five real source entry services at their original level brackets, source ticket/save failures, first quiz save failure/retry and stale token rejection for all five roots. On the high-level route it continues via real portals to the two-question second floor and no-ticket janken, verifying the explicitly approved original no-ticket behavior and result Warp remain playable. It also checks all actual active internal NPC/service identities against project arrival. This does not claim a new full twelve-floor UI run or activation of END47/master812; old full-chain helper/fixture adaptation remains a release prerequisite. Quiz/janken wild tickets retain the unchanged ordinary-drop policy pending the separate decision.
+
+### Test driver after legacy helper tightening
+
+The committed six-cave helper stack (`a0f9c82`, `ce72d53`, `7db9811`, `a974e50`, `5784e2f`) was integrated in the isolated arrival worktree. `OriginalRouteDriver.exchange_from_route` now uses the optional owner's `LegacyCaveHelper.walk_destination` pure geometry for owned caves; it still uses `adult_walk_destination` for10204. No backend grant or test switch is added. The existing real path oracle and production `report_position` commands remain responsible for every interior step. Legacy builds without that adapter retain their existing test geometry interface.
+
+The six-cave suite now explicitly invokes this shared driver from the real herb entrance through all five maps to the original medicine exchange (NOW1 is stated preexisting public-request fixture). It and the real adult lifecycle suite pass together (2/2, log `stone-age-suites-bmlwxa35`). This confirms driver compatibility with the actual committed helper stack, not just a mock method signature. It does not claim the still-pending strict-wild patch was present. Current suite registration is one shell loop with320 unique existing test scripts; `bash -n`, runner enumeration, diff and changelog checks pass.
+
+
+### Approved A: exact wild task drops (2026-10-03)
+
+The user selected A in main `c298d39`; previous “pending A/B” descriptions above record the earlier slice, not the current decision. `quest_wild_drop_policy.gd.match_rule(map_id, area, group, enemy, item, slot)` returns a copied source row or `{}`. The six integer fields must come from the server's frozen original encounter/claim provenance, not client input. The returned `scope` is the seventh policy dimension. All 214 exact rows in `client/data/quest-wild-drop-policy.json` pin source revision, file SHA256, physical lines, original conditions/probability and zero-based enemy drop slot. This file does not activate staged earth/water descriptors or alter RNG.
+
+At authoritative encounter start, each participating character's own `quest_arrival.wild_context(backend)` records the private instance, serial, epoch, original map/cell and existing route scope. Keep this only in the server pending battle/slice, never a save or client-authorized field. There is one active wild receipt per character: a new encounter supersedes the previous receipt. `check_wild(backend, context, scope) -> String` returns empty only if the original private receipt is unchanged, the original start was qualified, and final epoch/scope/position remain valid. Invalid-at-start encounters cannot become valid later. Checks do not consume receipts; save retries use the same frozen receipt. Reset/restart clears it. Each party member must freeze/check its own receipt; a leader or another backend cannot lend one.
+
+The backend owner validates all original claims first, then filters only candidate copies of exact matched task slots whose check is nonempty. Preserve the original frozen claims for save-failure retries. An unmatched tuple is unrestricted by this policy; it is not a substitute for normal claim validation. Failed task qualification must still permit ordinary HP/medicine/XP/gold/capture/other-slot settlement and closing the battle. Fixed guards keep their separately authenticated guard policy. This policy/API slice alone does not implement backend/native/queue/party settlement integration.
+
+30305 is included as `water_stone`: original `genout/wpm_300_247_222:1–3` and `wpm_300_182_162:1–3` both require LV>64 and END4, Warp respectively to30301(23,37) and30307(10,6). `map/mapwarp.txt:1975–1994` connects all seven maps, including all three30305↔30306 links. The gate restores188f648/0bb3ccf and policy/real-route test883bf9b prove both entries; no single prescribed route is invented. The drop graph is encount.txt535 (map30305/area570) → group.txt595 (718) → enemy.txt956 (1324), item2767/slot0 at800/1000.
+
+1099 remains explicitly unverified and excluded: encount.txt239 → group.txt301 (414, requires2478) → enemy.txt387 (563, item2468/slot0) exists, but exhaustive source npc-file and mapwarp scans find no1099 entrance. No root is invented and possession of2478 is not arrival evidence. Correction to the early prose summary: public200/area88 also uses group414 (encount.txt62), not407; group407 has no referenced area in this source graph. Public200 wood and public four-jewel encounters retain original item conditions without a new route requirement. Ordinary water enemy slots1249/1238, Munde equipment2482/2483, all ordinary pets and combat rewards remain outside the whitelist.
+
+Validation: the source oracle rebuilds the pinned encounter graph and compares the complete selected tuple set, probabilities/conditions/physical lines, both stone gates and missing1099 source links. The Godot suite checks all tuple dimensions, immutable returned copies and actual Backend original miner entry/project entry/epoch leave-return/reset/foreign instance. Repeated receipt checks verify the retry API only; actual savefail/native/queue/party claims remain the backend owner's integration tests.

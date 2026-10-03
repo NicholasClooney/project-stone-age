@@ -12,6 +12,7 @@ var _cell: Vector2i=Vector2i(-1,-1)
 var _marks: Dictionary={}
 var _warp: Dictionary={}
 var _battles: Dictionary={}
+var _wild: Dictionary={}
 var _maps: Dictionary={}
 var _can_leave_portal: bool=false
 var _rooms: Dictionary={}
@@ -21,6 +22,7 @@ var _block_cache: Dictionary={}
 func reset() -> void:
 	_invalidate()
 	_battles.clear()
+	_wild.clear()
 
 func _invalidate() -> void:
 	_epoch+=1
@@ -82,6 +84,20 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool:
 	if Policy.scope(map_id).is_empty():return true
 	if not _at_authority(backend) or _map!=map_id:return false
 	return cell==_cell or _same_room(backend,map_id,_cell,cell)
+
+## Server-only encounter receipt. Unqualified starts remain unqualified even if
+## a later route is completed. Retry checks never consume or refresh a receipt.
+func wild_context(backend) -> Dictionary:
+	_serial+=1
+	_wild={"instance":get_instance_id(),"serial":_serial,"epoch":_epoch,"scope":_scope if _at_authority(backend) else "","map_id":int(backend.automation.position_map),"cell":[backend.automation.position_cell.x,backend.automation.position_cell.y]}
+	return _wild.duplicate(true)
+
+func check_wild(backend, context: Dictionary, wanted_scope: String) -> String:
+	if wanted_scope.is_empty() or context.is_empty() or context!=_wild:return DENIED
+	if int(context.get("instance",-1))!=get_instance_id() or int(context.get("epoch",-1))!=_epoch:return DENIED
+	if str(context.get("scope",""))!=wanted_scope or not _at_authority(backend) or _scope!=wanted_scope:return DENIED
+	if int(context.map_id)!=int(backend.automation.position_map) or _point(context.cell)!=backend.automation.position_cell:return DENIED
+	return ""
 
 func check_action(backend, npc: Dictionary, branch: Dictionary, phase: String) -> String:
 	if phase in ["cancel","CLEAN","end"]:return ""
