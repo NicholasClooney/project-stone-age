@@ -142,6 +142,9 @@ func migration() -> void:
 		session.set_character("100010")
 		var old: Dictionary=session.snapshot()
 		old.version=version
+		# These optional v6 fields did not exist in a v1-v4 save. Merely
+		# lowering the version on today's snapshot creates an invalid hybrid.
+		for key in Session.ItemStorage.FIELDS:old.erase(key)
 		for key in Session.ORIGINAL_DEFAULT:old.erase(key)
 		old.location={"map_id":2000,"x":55,"y":92}
 		old.inventory.potion=37
@@ -150,6 +153,7 @@ func migration() -> void:
 		file.store_string(JSON.stringify(old));file.close()
 		check(session.load_game(path),"load legacy v%d" % version)
 		var migrated: Dictionary=session.snapshot()
+		check(migrated.item_storage.is_empty() and migrated.legacy_item_storage.is_empty() and migrated.item_storage_revision==0,"v%d receives empty item storage" % version)
 		check(migrated.version==Session.SAVE_VERSION and migrated.original_items.is_empty() and migrated.origin.village_id==1000 and migrated.location==old.location and migrated.inventory.potion==37 and migrated.travel_pass,"v%d retains stacks/location/pass, origin not inferred from map" % version)
 		check(migrated.pets==old.pets and migrated.pet_storage==old.pet_storage and migrated.player==old.player and migrated.character_id==old.character_id and migrated.equipped==old.equipped and migrated.quest==old.quest,"v%d preserves pets/stats/charm/luck/flags/equipment/character" % version)
 		for key in ["active_pet","ride_pet","equipment","allocated_stats","gm_modified","gm_bonus_points","default_companions_claimed","music","automation_settings","completed_battles","next_battle"]:
