@@ -3,6 +3,15 @@ const LEADER="giiru/event/giruev2_1@31805:19:21"
 const RIVAL="giiru/event/giruev2_2@31805:33:23"
 const GUARD="300/sb_bac.arg@31805:26:23"
 const GATE="genout/wpm_31805_22_4@31805:22:4"
+func fresh():
+ var b=super.fresh();b.quest_catalog.enabled_events=[27]
+ return b
+func talk(b,id:String)->Dictionary:
+ if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if npc.is_empty():return {"ok":false}
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,npc).ok,"miner fixture follows actual original cave route")
+ return b.handle({"type":"quest_talk","npc_id":id})
 func save_failure(b,id:String,note:String)->void:
  var opened:=talk(b,id)
  var accept:bool=str(b.original_quests.pending.get("phase",""))=="ACCEPT"
@@ -13,7 +22,7 @@ func save_failure(b,id:String,note:String)->void:
  b.save_path=""
 func mine(b)->void:
  var rng:=RandomNumberGenerator.new();rng.seed=27
- var area:Dictionary=b.encounter_catalog.area_at(31801,Vector2i(24,24))
+ var area:Dictionary=b.encounter_catalog.area_at(31801,Vector2i(37,48))
  check(not area.is_empty(),"original first-floor encounter area exists")
  check(b.encounter_catalog.roll_group(area,508,rng,[]).is_empty(),"without source permit no ore group")
  var troop:Dictionary=b.encounter_catalog.roll_group(area,508,rng,b.session.snapshot().original_items)
@@ -38,7 +47,7 @@ func run()->void:
  check(27 in b.quest_catalog.enabled_events,"registered END27")
  if b.original_quests.npc_by_id(LEADER).is_empty():check(false,"real imported miner content missing");b.free();quit(1);return
  var now:=[1000];b.original_quests.npc_state.clock=func():return now[0]
- var low=Backend.new()
+ var low=Backend.new();low.quest_catalog.enabled_events=[27]
  check(not trade(low,LEADER).get("dialogue",{}).has("actions") and not Rules.flag(low.session.snapshot(),"now",27),"below30 cannot acquire NOW27")
  low.free()
  save_failure(b,LEADER,"failed request does not write NOW27")
@@ -93,7 +102,7 @@ func miner_lan()->void:
  for i in range(2):
   var link=Link.new("ws://127.0.0.1:%d"%server.port);links.append(link);link.connect_now()
  check(await Wait.until(self,func():poll();return links.all(func(l):return l.online)),"two real miner sockets")
- await request(links[0],{"type":"quest_visit","npc_id":RIVAL,"mode":"near"})
+ check(preload("res://tests/support/legacy_cave_route.gd").approach(b,b.original_quests.npc_by_id(RIVAL)).ok,"LAN qualification stays on actual original route")
  var a:Dictionary=await request(links[0],{"type":"quest_talk","npc_id":RIVAL})
  a=await request(links[0],{"type":"quest_choose","token":a.dialogue.token,"choice":"yes"})
  await request(links[0],{"type":"ping"})
@@ -108,11 +117,12 @@ func miner_lan()->void:
 func natural_mining()->void:
  var b=fresh()
  check(trade(b,LEADER).ok and trade(b,RIVAL).ok,"natural route earns original mining permit")
+ check(preload("res://tests/support/original_route_driver.gd").walk(b,31801,Vector2i(37,48),range(31801,31806)).ok,"natural mining actually walks back down to original first-floor point")
  # Exercise the actual random-group + art gate, not only roll_group/Session.
  b.encounter_rng.seed=27
  var found:=false
  for attempt in range(100):
-  var result:Dictionary=b.wild_encounter(31801,Vector2i(24,24))
+  var result:Dictionary=b.wild_encounter(31801,Vector2i(37,48))
   check(result.ok,"natural original encounter passes data/art/Session gates")
   if not result.ok:b.free();return
   found=result.troop.enemies.any(func(e):return int(e.source_enemy_id)==1043)
