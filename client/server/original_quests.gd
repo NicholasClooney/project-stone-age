@@ -10,11 +10,8 @@ var services = preload("res://server/original_quest_services.gd").new()
 var npc_state = preload("res://server/quest_npc_state.gd").new()
 var pending := {}
 var serial := 0
-# gmsv/include/version.h:241 enables _FIX_MAX_GOLD; char/char_base.c:
-# CHAR_getMaxHaveGold = 1,000,000 + transmigration * 1,800,000.
-# This game has no transmigration feature, so original NPC exchanges use its
-# untransmigrated limit, independent of the prototype combat currency limit.
-const ORIGINAL_MAX_GOLD := 1000000
+# Project change: exchanges share Session.MAX_GOLD with battle rewards and
+# save validation. Future rebirth does not introduce a separate gold limit.
 
 static func flag(profile: Dictionary, kind: String, event: int) -> bool:
 	return event>=0 and event<192 and (int(profile.original_events[kind][event >> 5]) & (1 << (event%32)))!=0
@@ -363,8 +360,8 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 			return {"ok":false,"reason":str(branch.texts.get("ItemFullMsg","道具栏已满。"))}
 		if branch.actions.has("GetStone"):
 			var stone := int(branch.actions.GetStone)
-			if int(profile.player.gold)+stone>=ORIGINAL_MAX_GOLD:
-				return {"ok":false,"reason":str(branch.texts.get("StoneFullMsg","石币已满。"))}
+			if int(profile.player.gold)+stone>Session.MAX_GOLD:
+				return {"ok":false,"reason":str(branch.texts.get("StoneFullMsg","石币已满。"))+"\n【项目改动】石币上限为10亿，本次收入会超过上限；物品与石币均未变动。"}
 			candidate.player.gold+=stone
 		# AcceptDel checks net capacity, credits stone, deletes source items,
 		# gives items, then applies flags. Quantified deletions
