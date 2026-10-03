@@ -35,7 +35,7 @@ func run() -> void:
 # Frozen reviewed identities are independent of the runtime catalog and importer.
 # Registry additions must bring their own reviewed group; deleting a baseline NPC,
 # changing its binding/transaction, or substituting another instance must fail.
-# Frozen union preserves all242 prior instances plus55 reviewed additions.
+# Frozen union preserves all297 stage-two instances plus17 reviewed final services.
 # The one shared event12 remains in Munde source order. Never generate expected data here.
 func public_catalog(catalog) -> void:
 	var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/public-quest-npcs.json"))
@@ -51,7 +51,7 @@ func public_catalog(catalog) -> void:
 		if groups[id].has("configuration"):
 			check(raw.size()==2 and raw.get("configuration")==groups[id].configuration,"independent descriptor binding "+id)
 			module=JSON.parse_string(FileAccess.get_file_as_string("res://"+str(groups[id].configuration).trim_prefix("client/")))
-			check(module.get("id")==id and module.get("helper")==groups[id].helper,"independent helper identity "+id)
+			check(module.get("id")==id and module.get("helper")==groups[id].get("helper"),"independent helper identity "+id)
 		for field in ["manifest","builder","enabled_events"]:
 			check(module.get(field)==groups[id].get(field),"registered source/events unchanged: "+id+"/"+field)
 	var reviewed:Array=groups.keys();reviewed.sort();registered.sort()

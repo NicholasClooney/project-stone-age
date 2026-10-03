@@ -27,7 +27,7 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(extension['source_branch_index'],4)
         self.assertEqual(extension['reward_slots'],expected_slots)
         self.assertEqual(len(extension['new_item_ids']),18)
-        self.assertEqual(public['reviewed_counts']['catalog_items'],338)
+        self.assertEqual(public['reviewed_counts']['catalog_items'],339)
         manifest=json.loads((ROOT/'tools/dream_cave_quest_sources.json').read_text())
         for path,sha in extension['sources'].items():
             raw=(REF/path).read_bytes()
@@ -79,7 +79,7 @@ class FoundationTests(unittest.TestCase):
         modules=list(registered_quest_modules(REF))
         reviewed=json.loads((ROOT/"client/tests/fixtures/public-quest-npcs.json").read_text())["groups"]
         staged=[m for m in modules if m['module_id'].startswith('transmigration-')]
-        self.assertEqual({m['module_id'] for m in staged},{'transmigration-'+name for name in ['foundation','earth','fire','wind','water']})
+        self.assertEqual({m['module_id'] for m in staged},{'transmigration-'+name for name in ['foundation','earth','fire','wind','water','final']})
         foundation=next(m for m in staged if m['module_id']=='transmigration-foundation')
         self.assertEqual(foundation['enabled_events'],[])
         self.assertEqual(foundation['npcs'],[])
