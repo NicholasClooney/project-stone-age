@@ -118,6 +118,53 @@ class FinalSources(unittest.TestCase):
             with self.assertRaises(ValueError):parse(self.spec,self.texts,SCRIPT,CREATE,5,fields,review)
         with self.assertRaises(ValueError):parse(self.spec,self.texts,SCRIPT,CREATE,6,actor['source_fields'],review)
 
+    def test_five_complete_original_reward_pets(self):
+        import csv
+        module = load_quest_module(REF, self.spec)
+        self.assertEqual(self.spec['reward_enemies'], [1377,1378,1379,1380,1381])
+        self.assertEqual(set(module['reward_pets']), {'1377','1378','1379','1380','1381'})
+        expected = [
+            (1377,6,1009,6,'乌力斯坦',25,[30,24,27,24],100,[50,0,0,50],1,100252,0),
+            (1378,232,1010,206,'奇娜',24,[33,28,31,11],300,[40,60,0,0],0,100344,1),
+            (1379,244,1011,212,'多鲁宝',24,[33,23,24,10],240,[0,50,50,0],0,100350,1),
+            (1380,272,1012,225,'洛卡伦恩',26,[22,33,24,24],300,[0,0,80,20],5,100360,1),
+            (1381,304,1013,236,'帖拉所伊朵',28,[23,35,25,21],300,[0,0,50,50],2,100374,1),
+        ]
+        enemy_rows=list(csv.reader(self.texts['gmsv/data/enemy.txt'].splitlines()))
+        base_rows=list(csv.reader(self.texts['gmsv/data/enemybase.txt'].splitlines()))
+        for ident,template,line,base_line,name,initial,weights,modai,elements,slots,sprite,size in expected:
+            enemy,base=enemy_rows[line-1],base_rows[base_line-1]
+            self.assertEqual(list(map(int,enemy[3:7])), [ident,template,1,1])
+            self.assertEqual([base[0],int(base[6]),int(base[7]),float(base[8])], [name,template,initial,4.5])
+            self.assertEqual(list(map(int,base[9:13])), weights)
+            self.assertEqual(list(map(int,base[15:19])), elements)
+            self.assertEqual([int(base[i]) for i in [13,34,36,38]], [modai,slots,sprite,size])
+            self.assertEqual(module['reward_pets'][str(ident)], dict(
+                enemy_id=ident,template_id=template,species='original_'+str(template),level=1,
+                name=name,initial=initial,wild_growth=4.5,weights=weights,modai=modai,
+                variable_ai=0,elements=elements,skill_slots=slots,sprite=sprite,size=size,
+                source='gmsv/data/enemy.txt',source_line=line,
+                base_source='gmsv/data/enemybase.txt',base_source_line=base_line))
+        tables={
+            'samugiru':[1377,1380,1379,1378,1381],
+            'marinasu':[1380,1379,1378,1377,1381],
+            'jaja':[1379,1378,1377,1380,1381],
+            'karutarna':[1378,1377,1380,1379,1381],
+        }
+        king=next(n for n in module['npcs'] if n.get('service_id')=='777/ten.arg')
+        self.assertEqual({v['key']:v['presents'] for v in king['transmigration']['villages']}, tables)
+        source=self.texts['gmsv/data/npc/777/ten.arg']
+        for key,presents in tables.items():
+            row=next(line for line in source.splitlines() if line.startswith(key+':'))
+            self.assertIn('Present='+'.'.join(map(str,presents))+',Warp=',row)
+        for path,digest in {
+            'gmsv/data/enemy.txt':'69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629',
+            'gmsv/data/enemybase.txt':'3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17',
+            'gmsv/data/npc/777/ten.arg':'5d09f42c64a61c3220a01a5a0e82340672fb67ead03b818c4f6457421832c852',
+        }.items():
+            self.assertEqual(self.spec['sources'][path],digest)
+            self.assertEqual(hashlib.sha256((REF/path).read_bytes()).hexdigest(),digest)
+
     def test_normal_boss_meat_source_and_inactive_recovery(self):
         import csv
         from quest_single_items import AUDIT
