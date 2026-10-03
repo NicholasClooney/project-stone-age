@@ -54,3 +54,10 @@
 已修测试注册事故：前三片曾复制整条for循环，定向运行器显式suite未发现shell语法错误。独立`49ef5c9`保留314套原注册并集并去重为单条for，`bash -n`及`run_suites`枚举/文件存在性验证通过；不能以此前refresh/check代替这项检查。
 
 实跑矩阵1343行，去重并补入wind已交efaeddb锁源后共421分支、237原脚本。逐行NPC实例／map:cell／原源物理行／原条件动作／当前scope与mark／测试层级见 `/private/tmp/tmux-agents/quest-legitimate-arrival/all-arrival-cases.md`，完整源SHA为同名JSON。风补入部分明确属于owner自然链验证，未伪称本槽矩阵跑过风全链。公开三套与矩阵4/4通过，日志 `stone-age-suites-md1nqtxq`。
+
+
+## 2026-10-03 掉落 A 已批准：政策片状态
+
+main `c298d39` 正式批准专用野战掉落 A，取代本文此前“待 A/B”状态。本片交付214条精确 source tuple 白名单与开战／最终 epoch 凭证接口；后端／automation／claims 由 bonus 单独接入，本片不冒称整套结算已实施。名单、源SHA及排除项见 `client/data/quest-wild-drop-policy.json`，契约及测试层级见 `docs/technical/quest-legitimate-arrival.md` 最后一节。
+
+30305 双原门＋七图连续路线证据齐全，纳入 water_stone；1099 只有遇敌记录而未找到原NPC/portal入口，继续排除待核。公开200木材实际group414（不是早期摘要的407）、四宝玉均不增路线门。固定guard独立，普通装备／宠物／经验不受此名单限制。最终 backend native/queue/party/savefail 并集测试与1099入口是剩余边界。
