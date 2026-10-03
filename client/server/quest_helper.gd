@@ -370,7 +370,7 @@ func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  if npc.get("events",[]).any(func(event):return int(event) in [32,33,34]):return Dream.destination(self,backend,npc,mode)
  if preload("res://server/saton_cave_helper.gd").owns(npc) and int(npc.map_id) in range(10701,10706):return preload("res://server/saton_cave_helper.gd").destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==17):return Dragon.destination(self,backend,npc,mode)
- if npc.get("events",[]).any(func(event):return int(event) in [37,38]) and not Marju.can_navigate(backend,npc):return {}
+ if npc.get("events",[]).any(func(event):return int(event) in [37,38]):return Marju.destination(self,backend,npc,mode)
  if preload("res://server/jan_cave_helper.gd").owns(npc) and int(npc.map_id) in range(20601,20609):return preload("res://server/jan_cave_helper.gd").destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==44):return GoldenBui.destination(self,backend,npc,mode)
  if preload("res://server/munde_cave_helper.gd").owns(npc) and int(npc.map_id)==11107:
