@@ -10,6 +10,12 @@ func install(b)->void:
  b.quest_catalog.enabled_events.append_array([13,14,27,45])
  b.original_quests.npc_state.clock=func():return now
 func grant(b,id:int)->void:b.session.OriginalEquipment.add(b.session._profile,id)
+func source_talk(b,npc:Dictionary)->Dictionary:
+ if int(npc.map_id) in range(10701,10706) or int(npc.map_id) in range(31801,31807):
+  var route:Dictionary=preload("res://tests/support/legacy_cave_route.gd").approach(b,npc)
+  if not route.get("ok",false):return route
+  return b.handle({"type":"quest_talk","npc_id":npc.id})
+ return super.source_talk(b,npc)
 func run()->void:
  fixtures=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/personal-quest-npcs.json"))
  var trusted:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/quests/catalog.json"))
@@ -22,10 +28,13 @@ func run()->void:
   for npc in fixture.module.npcs:
    var required:=int(npc.branches[0].guard.required_items[0])
    var r:=source_talk(b,npc)
-   check(not choose(b,r,"yes").ok and not b.battle_open,"source entry item required")
+   var missing:Dictionary=choose(b,r,"yes")
+   var source_denial:String=str(npc.branches[0].get("source_fields",{}).get("deniedmsg","缺少原守卫要求的道具。"))
+   check(r.ok and not missing.ok and not b.battle_open and str(missing.get("reason",""))==source_denial,"source entry item required after real route: "+str(missing))
    grant(b,required);grant(b,required)
    r=source_talk(b,npc)
-   check(choose(b,r,"yes").ok and b.battle_open,"source dieact0 battle starts")
+   var opened:Dictionary=choose(b,r,"yes")
+   check(opened.ok and b.battle_open,"source dieact0 battle starts: "+str(opened))
    if not b.battle_open:continue
    var before:Dictionary=b.session.snapshot()
    var ids:Array=b.session._pending.enemies.map(func(e):return int(e.source_enemy_id))
@@ -113,6 +122,10 @@ func personal_lan()->void:
  var npc:Dictionary=fixtures[0].module.npcs[0]
  grant(a,2431);source_talk(a,npc);a.original_quests.pending={}
  var r:Dictionary=await request(links[0],{"type":"quest_talk","npc_id":npc.id})
+ check(r.has("dialogue"),"LAN personal guard window: "+str(r))
+ if not r.has("dialogue"):
+  for link in links:link.close()
+  links=[];server.stop();server.queue_free();hub.shut_down();hub.queue_free();return
  var started:Dictionary=await request(links[1],{"type":"quest_choose","token":r.dialogue.token,"choice":"yes"})
  check(started.ok and a.battle_open,"same-character second device confirms source battle")
  var path:String=a.save_path;a.save_path="user://missing-personal-lan/save.json"

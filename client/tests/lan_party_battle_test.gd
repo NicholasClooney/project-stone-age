@@ -413,12 +413,19 @@ func wild_gold() -> void:
 	var server = made[0]
 	setup(server,"alice",3,5000,1,10)
 	setup(server,"bob",7,5000,1,10)
+	var rng_before:int=server.backends.alice.encounter_rng.state
+	var stale:Dictionary=server.handle(1,{"type":"wild_encounter","map_id":100,"cell":[600,500]})
+	check(not stale.ok and server.backends.alice.encounter_rng.state==rng_before and server.backends.alice.session._pending.is_empty(),"village authority rejects old remote field fixture before RNG: "+str(stale))
+	var moved:Dictionary=server.handle(1,{"type":"report_position","map_id":100,"cell":[600,500]})
+	check(moved.ok and server.backends.alice.automation.position_map==100 and server.backends.bob.automation.position_map==100,"actual leader field report follows both authorities: "+str(moved))
 	var opened := {}
 	for attempt in range(40):
 		server.backends.alice.encounter_rng.seed = 1000+attempt
 		opened = server.handle(1,{"type":"wild_encounter","map_id":100,"cell":[600,500]})
 		if opened.ok:break
-	check(opened.ok and server.backends.bob.battle_open,"a wild troop pulls the party in")
+	check(opened.ok and server.backends.bob.battle_open,"a wild troop pulls the party in: "+str(opened.get("reason","")))
+	if not opened.ok:
+		await close(server);return
 	check(int(server.backends.alice.session._pending.get("battle_gold",-1))==30 and int(server.backends.bob.session._pending.get("battle_gold",-1))==70,"each pending pays its own level x 10")
 	check(server.backends.bob.session._pending.enemies.map(func(e):return e.species)==server.backends.alice.session._pending.enemies.map(func(e):return e.species),"the same troop for both")
 	server.backends.alice.abandon_battle()
