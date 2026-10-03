@@ -174,3 +174,12 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 `300/sb_5b1..5.arg` saved victories establish `brothers_final` at their actual five distinct Warps on floor6. `giiru/event/ev28_ed1..5:9–20` pet/harp/crystal/END31 transactions require this mark. The common room-lifecycle check is restricted to the reviewed post-victory components and original reward hall; no leader's receipt or persistent save flag is copied. The dedicated suite follows real floor routes and original correct-paper NPC branches, makes the crystal, crosses the original gate, fights brother5, and retries the final reward after failed persistence. This is representative real combat coverage, not a claim that all five variants and the old UI flow were rerun here. Those legacy flows must be adapted before publishing this scope.
 
 Five-brother source topology also contains the same-map portal `31706(14/15,60)→(14,5)` (`mapwarp.txt:2065–2066`). The actual brother5 test must use it between saved victory and the reward hall. A portal source endpoint is still adjacent to the originating region; mark expiry now uses the existing reviewed portal-approach check there, then checks the destination region on the actual Warp. This does not make a portal destination outside the approved regions eligible. The core Dream suite separately verifies original exits still clear its final mark.
+
+## Golden antelope original truth door
+
+The original 300 → 31901 entrance establishes cave arrival. The original key
+gate and guide preserve it; only saved consumption of 2548 at
+`genout/wpm_31910_8_9` with Warp31911(6,15) grants golden_truth.
+The original event30_6 reward branches require that proof. Public Kuy mirror
+and village return branches retain their source conditions. Restart and leaving
+the original reward component clear proof; inventory/flags alone do not grant it.
