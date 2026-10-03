@@ -91,3 +91,21 @@ STONE_AGE_FOREGROUND_TEST=1 STONE_AGE_PROOF_DIR=/private/tmp/item-storage-shots 
 最小修复仅在该函数构造old fixture时移除 `Session.ItemStorage.FIELDS`，并断言迁移后空仓/revision=0；产品迁移、半缺schema拒绝和跨容器UID校验均未修改。独立 `item_storage_legacy_test` 同时调用整个原migration函数，另外覆盖v1–v6移除相应未来字段的真实可接受旧格式，以非默认药37、石币4321、位置2000(55,92)及通行证检查真正的读取结果。每个版本清理测试备份，使用全新Session读取并保存，再以另一新Session验证完整快照一致，避免沿用fixture会话或备份掩盖读取失败。混合版本、每种半缺仓库字段、重复UID磁盘档仍拒绝。
 
 基于 `92f0ec0de48848004de44166875b0a888bd264e8` 的专项复现日志 `/private/tmp/item-storage-legacy-before.log` 精确8fail；修后 `/private/tmp/item-storage-legacy-after.log` 为0fail。只运行迁移专项，不运行并行代理正在修改的目录oracle；未运行full、未改main/live/真实存档。
+
+
+## 其余旧版本fixture回归审计（b2836e8）
+
+full185的五套失败均来自当前snapshot降版本时留下仓库三字段；真实旧档本身没有该字段组。此次只修测试构造，不修改Session或ItemStorage产品迁移、strict schema、UID校验。每套先新增负向断言证明混合格式仍被拒绝，再去除 `Session.ItemStorage.FIELDS` 生成对应旧档。
+
+| 套件 | 旧版本与保留目标 | 定向结果 |
+| --- | --- | --- |
+| adult_quest_resume_test | v5磁盘与resume.profile；保留完整profile、pending、战斗state和RNG，v6 UID/耐久原断言保留 | 0 failures，257秒 |
+| original_wood_equipment_test | v5装备与原物品计数；完整迁移快照保存后以新Session读回 | 0 failures，32秒 |
+| pet_storage_test | v2宠物UID确定性、所有个体字段/成长；完整保存读回，路径改为隔离user:// | 0 failures，2秒 |
+| progression_test | v1玩家所有原stats断言、旧宠字段、成长和训练持久化 | 修正新增断言后单套0 failures |
+| spirits_rules_test | v3气力补100；全部原player字段、宠物及整档读回 | 0 failures，3秒 |
+| item_storage_legacy_test | 复用真实v1–v6、半缺/混合/重复UID拒绝和独立读回 | 0 failures，4秒 |
+
+新增逐字段宠物断言揭示既有 `085fe266` 迁移行为：旧 `skill_unlocked=true` 没有技能名称时，按权威 `learned_skills` 空列表规范为false，不凭无名标记赠送付费技能。测试明确验证该迁移结果，其余旧宠字段逐项保留；原有训练、费用和读回断言不变。第一次定向运行仅此新增断言失败，修正后直接单套复验通过；没有降低既有断言来掩盖产品错误。adult仅修改旧格式fixture及恢复断言，路线/等待逻辑不变。
+
+证据：`/private/tmp/item-storage-legacy-five/` 含六套初次定向日志；最终progression日志为 `/private/tmp/item-storage-progression-final.log`。测试包装器的 `--only` 仍隐式执行editor import，本次误用一次后停止使用该入口；核查共享legacy资源在运行开始后修改数为0，本槽生成的139个未跟踪UID文件已可恢复归档到 `/private/tmp/item-storage-legacy-five-generated-uids/`（含manifest），不纳入提交。未运行full、未改main/live/真实存档。

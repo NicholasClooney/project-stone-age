@@ -77,6 +77,8 @@ func mp_and_saves() -> void:
 	# A version 3 save (before 气力): loads with full 气力 and no spirit equipment.
 	var old: Dictionary = s.snapshot()
 	old.version = 3
+	check(not s._valid_profile(old),"v3 MP profile with v6 warehouse fields is an invalid hybrid")
+	for key in Session.ItemStorage.FIELDS:old.erase(key)
 	old.player.erase("mp")
 	old.erase("equipment")
 	for item in Spirits.SPIRIT_ITEMS:old.inventory.erase(item)
@@ -86,6 +88,11 @@ func mp_and_saves() -> void:
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path+".bak"))
 	var migrated := Session.new()
 	check(migrated.load_game(path) and int(migrated.snapshot().player.mp)==100 and int(migrated.snapshot().version)==Session.SAVE_VERSION and migrated.snapshot().equipment=={"body":"","amulet":""} and int(migrated.snapshot().inventory.teo_robe)==0,"a version 3 save migrates to the current version with 气力 full")
+	var migrated_profile: Dictionary=migrated.snapshot()
+	for key in old.player:check(migrated_profile.player[key]==old.player[key],"v3 MP migration preserves player field "+key)
+	check(migrated_profile.pets==old.pets and migrated_profile.pet_storage==old.pet_storage,"v3 MP migration preserves all pet fields")
+	var reread:=Session.new()
+	check(migrated.save_game(path) and reread.load_game(path) and reread.snapshot()==migrated_profile,"v3 MP migration persists and reads back the entire profile")
 	var broken: Dictionary = s.snapshot()
 	broken.player.mp = 101
 	file = FileAccess.open(path,FileAccess.WRITE)
