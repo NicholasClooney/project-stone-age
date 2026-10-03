@@ -119,6 +119,8 @@ func open(config: Dictionary, rng_seed: int, leader_id: String):
 		var backend = hub.backends[id]
 		var member: Dictionary = backend.session.start_party_config(battle_id,config.get("enemies",[]),config.has("battle_gold"))
 		if member.is_empty():continue
+		if leader.session._pending.has("wild_drop_source"):
+			preload("res://server/quest_wild_loot.gd").freeze(backend,leader.session._pending.wild_drop_source)
 		ids.append(id)
 		own.append(str(member.battle_id))
 		slots.append(_slot_info(id,backend,member))
