@@ -46,6 +46,19 @@ func active_npc(id: String) -> Dictionary:
   if str(npc.id)==id:return npc.duplicate(true)
  return {}
 
+## Filter on the effective personal map before projecting/copying records.
+## Preserve source order, duplicates, birth/hidden rules and service semantics.
+func active_npcs_on_map(map_id: int) -> Array:
+ var result: Array=[]
+ for npc in npcs:
+  var override:Dictionary=npc_overrides.get(str(npc.id),{})
+  if int(override.get("map_id",npc.map_id))!=map_id:continue
+  var active:Dictionary=_project_active_npc(npc)
+  if not active.is_empty():result.append(active)
+ for npc in service_npcs:
+  if int(npc.map_id)==map_id:result.append(npc.duplicate(true))
+ return result
+
 func _project_active_npc(npc: Dictionary) -> Dictionary:
  if not _enabled(npc.get("events", [])): return {}
  var override:Dictionary=npc_overrides.get(str(npc.id),{})
