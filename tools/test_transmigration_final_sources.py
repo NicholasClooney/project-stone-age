@@ -94,7 +94,7 @@ class FinalSources(unittest.TestCase):
         descriptor=json.loads((ROOT/entry['configuration']).read_text())
         self.assertEqual(descriptor['enabled_events'], [])
         module = load_quest_module(REF, self.spec)
-        self.assertEqual(len(module['npcs']), 12)
+        self.assertEqual(len(module['npcs']), 17)
         self.assertEqual(module, json.loads((ROOT/'client/tests/fixtures/transmigration-final-source.json').read_text()))
         self.assertEqual(set(module['items']), {'2138','2771','2772','2773','2774'})
         for ident,item in module['items'].items():

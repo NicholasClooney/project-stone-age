@@ -82,6 +82,9 @@ func _project_active_npc(npc: Dictionary) -> Dictionary:
  var projected:Dictionary=npc if whole_record else npc.duplicate(false)
  if not whole_record:projected.branches=[]
  var active: Dictionary = projected.duplicate(true)
+ if str(active.get("kind",""))=="original_prison":
+  if not override.is_empty() or not preload("res://scripts/prison_catalog_identity.gd").valid(npc):return {}
+  return active
  if str(active.get("kind",""))=="original_transmigration":
   # One reviewed original service with no changeevent branches. Event tags
   # select this module; they are not prior player completion requirements.
