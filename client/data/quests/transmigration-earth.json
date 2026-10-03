@@ -1,6 +1,8 @@
 {
   "id": "transmigration-earth",
   "manifest": "tools/transmigration_earth_quest_sources.json",
-  "enabled_events": [],
+  "enabled_events": [
+    39
+  ],
   "helper": "res://server/transmigration_earth_helper.gd"
 }
