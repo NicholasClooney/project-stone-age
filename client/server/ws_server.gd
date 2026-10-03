@@ -88,7 +88,7 @@ func _process(_delta: float) -> void:
 			_clients.erase(peer)
 			if hub!=null:hub.disconnect_connection(peer.get_instance_id())
 			else:
-				if backend.quest_auto.connection==peer.get_instance_id():backend.quest_auto.stop(backend,"发起设备已断线。")
+				backend.quest_auto.detach(backend,peer.get_instance_id())
 				backend.automation.client_attached = not _clients.is_empty()
 
 ## Connected clients, for tests and diagnostics.

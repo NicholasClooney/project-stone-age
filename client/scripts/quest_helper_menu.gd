@@ -22,14 +22,15 @@ func configure(owner: Node) -> void:
 	hide()
 func open_menu() -> void:
 	if world.battle_view.visible or world.dialogue.visible:return
-	world.quest_helper_travel.cancel()
+	world.quest_helper_travel.cancel_navigation()
 	rebuild()
 	show()
+	move_to_front()
 	world.clear_input()
 	world.paused_input=true
 func close_menu() -> void:
 	remember_scroll()
-	world.quest_helper_travel.cancel()
+	world.quest_helper_travel.cancel_navigation()
 	hide()
 	world.paused_input=world.battle_view.visible or world.automation_minimized()
 	world.clear_input()
@@ -48,6 +49,8 @@ func _process(_delta: float) -> void:
 	if refresh_key()!=last_model or viewport_size!=world.get_viewport_rect().size:rebuild()
 	var status=find_child("QuestAutoMessage",true,false)
 	if status is Label:status.text=str(world.state.derived.get("quest_auto",{}).get("message",""))
+	# Container minimum sizes settle after rebuilding; keep window chrome on screen.
+	relayout()
 func remember_scroll() -> void:
 	if is_instance_valid(list_scroll) and list_scroll.is_visible_in_tree():list_position=list_scroll.scroll_vertical
 	if is_instance_valid(detail_scroll) and detail_scroll.is_visible_in_tree():detail_positions[selected_id]=detail_scroll.scroll_vertical
@@ -112,6 +115,9 @@ func rebuild(save_scroll:bool=true) -> void:
 	body=column(self)
 	var header:=HBoxContainer.new();body.add_child(header)
 	label(header,"任务助手",20)
+	var minimize:=button(header,"最小化",close_menu,"QuestHelperMinimize")
+	minimize.size_flags_horizontal=Control.SIZE_SHRINK_END
+	minimize.autowrap_mode=TextServer.AUTOWRAP_OFF
 	var close:=button(header,"关闭 · Esc",close_menu,"QuestHelperClose")
 	close.size_flags_horizontal=Control.SIZE_SHRINK_END
 	close.custom_minimum_size.x=110
@@ -169,7 +175,7 @@ func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 	if AutoPolicy.supports(int(quest.id),int(quest.event)) and not world.state.derived.get("quest_auto",{}).get("running",false):
 		var action:=button(content,"自动重做" if quest.get("can_restart",false) else "自动执行",func():world.quest_helper_travel.start_auto(int(quest.id));rebuild(),"QuestAutoStart_%s"%quest.id)
 		action.disabled=(str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty()
-		label(content,"自动执行会确认原交易；停止、关闭或 Esc 可中止。",12)
+		label(content,"自动执行会确认原交易；关窗、Esc 或最小化后继续，点击停止可中止。",12)
 	var steps:Array=quest.get("steps",[])
 	var chosen:Dictionary={}
 	for step in steps:
