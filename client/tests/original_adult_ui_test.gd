@@ -2,9 +2,22 @@ extends "res://tests/quest_helper_ui_test.gd"
 func check(value:bool,message:String) -> bool:
  print(("PASS: " if value else "FAIL: ")+message)
  return super.check(value,message)
+func walk_channel(backend,id:String)->bool:
+ var npc:Dictionary=backend.original_quests.npc_by_id(id)
+ var target:Dictionary=backend.quest_helper.adult_walk_destination(backend,npc)
+ if not check(not target.is_empty(),"Original adult geometry target exists"):return false
+ var goal:=Vector2i(int(target.cell[0]),int(target.cell[1]))
+ var route:Array[Vector2i]=world.travel_router._path_to(goal)
+ if not check(not route.is_empty(),"Production router finds original channel path"):return false
+ route.pop_front()
+ for point in route:
+  world.walk_to(point)
+  if not await ready(func():return world.cell==point and not world.moving,"Production adjacent channel walking settles"):return false
+ return check(await Wait.settle(self,world) and backend.quest_arrival.has_arrival(backend,10204,backend.automation.position_cell),"Actual continuous channel walking preserves arrival")
 func run() -> void:
  var backend=preload("res://server/backend.gd").new()
  for key in backend.session._profile.inventory:backend.session._profile.inventory[key]=0
+ backend.session.gm_raise_level(-1,30)
  root.add_child(backend)
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1")
  root.add_child(server)
@@ -26,10 +39,15 @@ func run() -> void:
  if not await click(visit_button("adult:request","near",1)):return
  if not await ready(func():return not world.quest_helper_travel.active,"Helper near teleport completes"):return
  if not check(await Wait.settle(self,world),"Adult position settles"):return
- if not check(int(world.data.map_id)==10204 and world.cell.distance_to(Vector2i(14,6))==1,"Original judge neighbour reached despite low-level original entrance gate"):return
+ if not check(int(world.data.map_id)==10202,"Helper stays outside original adult gate"):return
+ world.walk_to(Vector2i(31,13))
+ if not await ready(func():return int(world.data.map_id)==10204 and not world.area_transition_busy and not world.moving,"Production walking enters actual level30 portal"):return
+ if not check(await Wait.settle(self,world),"Original gate position reaches authority"):return
+ if not await walk_channel(backend,"jaruga/event/event04_1"):return
  world.world_travel.quest_dialogue.open("jaruga/event/event04_1")
  if not await choose("yes"):return
  if not await choose("ok"):return
+ if not await walk_channel(backend,"jaruga/event/event04_2"):return
  world.quest_helper_menu.open_menu()
  if not await click(visit_button("adult:jade","arrival",1)):return
  if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Arrival route really walks channel to messenger"):return
@@ -37,6 +55,7 @@ func run() -> void:
  if not check(world.world_travel.body.text.contains("１５个仪玉") and world.session.snapshot().original_items.is_empty(),"Original messenger text before committed reward"):return
  if not await choose("ok"):return
  if not check(world.session.snapshot().original_items.count(2417)==15,"Remote exchange grants fifteen independent jade"):return
+ if not await walk_channel(backend,"jaruga/event/event04_1"):return
  world.quest_helper_menu.open_menu()
  if not await click(visit_button("adult:return","near",1)):return
  if not await ready(func():return not world.quest_helper_travel.active,"Return near visit completes"):return
