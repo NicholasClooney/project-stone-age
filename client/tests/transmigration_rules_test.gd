@@ -40,6 +40,38 @@ func _initialize() -> void:
 			check(result.village_index==int(vector.village),"C first birth bit")
 			check(result.enemy_id==int(vector.enemy_id) and result.template_id==int(vector.template_id),"source Present/enemy template")
 			check([result.location.map_id,result.location.x,result.location.y]==vector.location.map(func(v):return int(v)),"source Warp")
+	# Project capacity compatibility, distinct from the original C five-slot oracle.
+	var carried := []
+	for index in range(30):carried.append({"pet_id":"carried-%d"%index,"species":"original_1","level":1})
+	carried[5].species="original_693"
+	carried[29].species="original_693"
+	var carried_before: Array=carried.duplicate(true)
+	check(Rules.select_sacrifices(carried.slice(0,6),1).indices==[5],"sixth carried slot eligible")
+	check(Rules.select_sacrifices(carried,1).indices==[5],"30-slot default retains first match")
+	check(Rules.select_sacrifices(carried,1,["carried-29"]).indices==[29],"30-slot explicit UID selects final slot")
+	check(carried==carried_before,"30-slot selection leaves input unchanged")
+	carried[5].species="original_1"
+	check(Rules.select_sacrifices(carried,1).indices==[29],"default finds sole sacrifice in slot 30")
+	carried[5].species="original_694"
+	carried[12].species="original_695"
+	carried[20].species="original_696"
+	check(Rules.select_sacrifices(carried,5).indices==[29,5,12,20],"five-turn default scans all 30 slots in template order")
+	check(Rules.select_sacrifices(carried,5,["carried-20","carried-12","carried-5","carried-29"]).indices==[29,5,12,20],"five-turn explicit UID order is canonical")
+	check(not Rules.select_sacrifices(carried,5,["carried-29","carried-5","carried-12","carried-12"]).ok,"30-slot duplicate selection rejected")
+	check(not Rules.select_sacrifices(carried,1,["warehouse-only"]).ok,"stored-only UID cannot satisfy carried sacrifice")
+	check(not Rules.select_sacrifices(carried,1,[29]).ok,"numeric selected UID rejected")
+	check(not Rules.select_sacrifices(carried,1,["carried-0"]).ok,"30-slot wrong template rejected")
+	var invalid_carried: Array=carried.duplicate(true)
+	invalid_carried[29].pet_id=invalid_carried[0].pet_id
+	check(not Rules.select_sacrifices(invalid_carried,5).ok,"duplicate stored identity at slot 30 rejected")
+	invalid_carried=carried.duplicate(true)
+	invalid_carried[29].pet_id=""
+	check(not Rules.select_sacrifices(invalid_carried,1).ok,"empty final-slot UID rejected")
+	invalid_carried[29].pet_id=29
+	check(not Rules.select_sacrifices(invalid_carried,1).ok,"numeric final-slot UID rejected")
+	invalid_carried[29]=null
+	check(not Rules.select_sacrifices(invalid_carried,1).ok,"invalid final-slot pet rejected")
+	check(not Rules.select_sacrifices({"pets":carried},1).ok,"requires carried array, not profile or storage container")
 	var choices := [{"pet_id":"first","species":"original_693","level":1},{"pet_id":"second","species":"original_693","level":140}]
 	check(Rules.select_sacrifices(choices,1,["second"]).pet_ids==["second"],"explicit UID project supplement")
 	check(not Rules.select_sacrifices(choices,1,["missing"]).ok,"missing UID rejected")
