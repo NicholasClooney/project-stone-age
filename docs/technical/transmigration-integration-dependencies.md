@@ -16,3 +16,16 @@
 I外围接线仅GameSession捕获前原主人count、统一_refresh_loyalty、原UID/legacy装备命令与骑乘前刷新，OriginalQuests奖励宠刷新；不改变loyalty/equipment所属模块实现。新rebirth_session_rules_test使用真实Session/Battle捕获结算、仓库及真实保存读回验证known legacy positive（不虚构自然历史）。零转仍拒Lv1高级装，正转BODY1052保UID/磨损及legacy互斥；仓库宠与战斗配置补偿一致，原VARIABLEAI债务不重写。
 
 并集定向3/3：rebirth_session_rules_test、transmigration_rules_test、transmigration_migration_test，日志/private/tmp/stage-three-peripheral-integration.log，5秒/单并发。零转loyalty/spirits回归另见/private/tmp/stage-three-peripheral-regression.log。服务/真实NPC/LAN全矩阵仍是后续，不能以这几套代替完整转生闭环。
+
+## 精灵王事务增量依赖（原hash）
+
+| Owner | 原提交 | 本槽用途 |
+| --- | --- | --- |
+| R | cd0857c483e4b65f99286d07b6c794b4a85163cc | 全部随身容量兼容，不截前五只 |
+| C | 1c0bd94d76a8db85ab14158d2456764e6ca57bc7、26e7fcb19054227bbeee9a89d81071a2f06b891d | 精确12身份与runtime源fixture |
+| C | 6b8bc2dce32883da3d1b36c6e733ee22367aebbf | 五种锁源GetPet定义 |
+| A | 4443b042ed2cbbdc3c7161a1d39443311c85053c | 原门、两战stage、王room proof |
+| UI | 181bbfaa698a7fcabe8d8e2e57d0277bee24abdb | 确认面板，suite由I注册 |
+| I | b5f065267da422e991714ba6200dd5da147d0074 | 纯候选构造；服务片补全favorite字段及真实源奖励测试 |
+
+依赖应取原hash，不重复本槽cherry等价历史。服务定向日志`/private/tmp/stage-three-service-final.log`，真实原门/两战写盘/最后门/双socket/失败重试/返村读回0fail。候选源数据回归见`/private/tmp/stage-three-candidate-source-final.log`。仍不代表UI像素、生产world导入或117出口已完成；生产descriptor保持关闭。
