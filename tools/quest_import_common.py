@@ -171,7 +171,7 @@ def load_quest_module(reference, manifest):
     handlers = spec.get('handlers', {})
     if set(declared) & set(handlers):
         raise ValueError('Handler duplicates changeevent declaration')
-    if any(review.get('kind') not in ('warpman','npcenemy','timeman') for review in handlers.values()):
+    if any(review.get('kind') not in ('warpman','npcenemy','timeman','original_jug_shop') for review in handlers.values()):
         raise ValueError('Quest handler not yet supported')
     selected_scripts = {**declared, **handlers}
     if any(extra.get('script') not in declared for extra in spec.get('supplements', [])):
@@ -186,7 +186,11 @@ def load_quest_module(reference, manifest):
             script = match[2]
             review = selected_scripts[script]
             kind = review.get('kind', 'changeevent')
-            if kind in ('npcenemy','timeman'):
+            shop_data = None
+            if kind == 'original_jug_shop':
+                from quest_jug_shop import parse as parse_jug_shop
+                shop_data = parse_jug_shop(spec,texts,script,create,ordinal,fields,review)
+            elif kind in ('npcenemy','timeman'):
                 template_bindings = []
                 for path, text in texts.items():
                     if not path.endswith('.template'):continue
@@ -215,7 +219,9 @@ def load_quest_module(reference, manifest):
                 continue
             if script in handlers:
                 from quest_source_handlers import keyword_warp, npc_enemy, fixed_enemy_audit
-                if kind == 'timeman':
+                if kind == 'original_jug_shop':
+                    default,branches='巴那姆的水壶：每只1150石币。',[]
+                elif kind == 'timeman':
                     from quest_timeman import visuals
                     time_visuals=visuals(script,fields,texts)
                     default,branches=time_visuals['main']['text'],[]
@@ -273,6 +279,7 @@ def load_quest_module(reference, manifest):
             npc = dict(id=ident, source_script=script, source_create=create, source_create_index=ordinal,
                        events=list(events), name=fields['name'], map_id=map_id, cell=cell,
                        graphic=int(fields['graphicname']), facing=int(fields['dir']), role='quest', text=default, branches=branches)
+            if shop_data:npc.update(shop_data)
             if kind == 'timeman':npc.update(handler='TimeMan',time_visuals=time_visuals)
             if spawn:npc['source_spawn'] = spawn
             if kind == 'npcenemy':
@@ -309,7 +316,8 @@ def merge_quest_module(result, module):
     merged = copy.deepcopy(result)
     ids = {n['id'] for n in merged['npcs']}
     for npc in module['npcs']:
-        if 'kind' in npc and (module['module_id'] != 'golden-bui' or npc.get('service_id') not in module.get('services', {})):
+        from quest_jug_shop import is_reviewed_npc as reviewed_jug_shop
+        if 'kind' in npc and not reviewed_jug_shop(npc,module['module_id']) and (module['module_id'] != 'golden-bui' or npc.get('service_id') not in module.get('services', {})):
             raise ValueError('Unreviewed service identity')
         if npc['id'] in ids:
             # The wind harp and Munde rewards share one original Event12 NPC.
