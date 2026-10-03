@@ -496,7 +496,10 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	if type=="use_item":
 		if command.has("pet_id") and not command.has("item"):return _reject("missing item")
 		if battle_open:return _reject("野外道具不能在战斗中使用；复活秘药请从战斗道具菜单选择。")
-	var before: Dictionary=session.snapshot() if type in ["use_item","equip_item"] else {}
+	# Warehouse transfers must not become visible until their save commits.
+	var warehouse_transfer := type in ["store_pet","retrieve_pet","retrieve_pet_by_id"]
+	var rollback_on_save_failure := warehouse_transfer or type in ["use_item","equip_item"]
+	var before: Dictionary=session.snapshot() if rollback_on_save_failure else {}
 	var spec: Array = PROFILE_COMMANDS[type]
 	var arguments := []
 	for field in spec[1]:
@@ -509,10 +512,10 @@ func _profile_command(type: String, command: Dictionary) -> Dictionary:
 	var ok: bool = session.callv(spec[0],arguments)
 	if not ok:return _reject(session.last_error)
 	var saved := save()
-	if type in ["use_item","equip_item"] and not saved:
+	if rollback_on_save_failure and not saved:
 		session._profile=before
 		session.last_note=""
-		return _reject("save_failed")
+		return _reject("保存失败，宠物未移动，请重试。" if warehouse_transfer else "save_failed")
 	_publish()
 	# What a field 精灵 did (耐久力回复N), for the device that cast it.
 	return {"ok":true,"note":session.last_note} if not session.last_note.is_empty() else {"ok":true}
