@@ -85,6 +85,9 @@ rejection. No scope/epoch/stage/mark is assigned by the test driver.
 This is Backend authority integration, not rendered GameScene validation or
 completed natural rebirth settlement. Content owner's production world/helper
 and I's king settlement must be tested together later. The static portal oracle
-includes117 exits, but the runtime test installer skips them: prison117/110 and
-all related exits remain unactivated pending the user's fee decision. This
-slice does not restore prison exits or implement their fee.
+includes117 exits, but the basic cave fixture does not add them. After the user's
+option B decision, C restored the exact18 endpoints and fire implemented the
+fee/guide services. `quest-arrival-prison-lifecycle.md` documents the separate
+actual-world lifecycle suite and the lack of a demonstrated natural walking
+route into those endpoints under current occupied-NPC movement. Neither this
+policy nor those tests modify walls/guardians to invent such a route.

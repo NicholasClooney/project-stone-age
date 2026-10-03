@@ -1,0 +1,260 @@
+{
+  "source_sha": {
+    "gmsv/data/npc/genout/deadroad.create": "64020507ce610ca777910683aca755a4ecb388664b9fdb930301d6150f40843d",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c"
+  },
+  "portals": [
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        8
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 779
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 780
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 781
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 782
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 783
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 784
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 785
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 786
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 787
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 788
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        33
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 795
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        34
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 796
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        35
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 797
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        36
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 798
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        37
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 799
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        38
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 800
+    },
+    {
+      "from_map": 21214,
+      "cell": [
+        30,
+        39
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 801
+    },
+    {
+      "from_map": 21014,
+      "cell": [
+        15,
+        4
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 807
+    }
+  ]
+}
