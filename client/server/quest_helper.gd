@@ -239,7 +239,7 @@ func adult_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  add_step(backend,profile,quest,"adult:request",request,not started and not ended,started or ended,"向审判领取成人仪式")
  add_step(backend,profile,quest,"adult:jade",pick(backend,profile,candidates(backend,4,"GetItem",2417)),started and held==0 and not ended,held>=15 or ended,"向通道尽头差使领取十五个仪玉（需十五空格）")
  add_step(backend,profile,quest,"adult:return",pick(backend,profile,candidates(backend,4,"DelItem",2417)),started and held>0 and not ended,ended,"返回审判交付十五个仪玉，领取仪之兜")
- quest.completion_detail="助手传送绕过原入口等级30，是项目便利；接任务仍按原LV>0。仪玉由差使发放，非战斗掉落。"
+ quest.completion_detail="原入口要求等级30，助手只送入口外；洞内远处须沿原通道步行，已合法抵达且在可谈距离时助手保持原地。自动任务从原等级门进入并往返步行；接任务仍按原LV>0。仪玉由差使发放，非战斗掉落。"
 
 func wood_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var items:Array=profile.original_items
@@ -343,7 +343,31 @@ func label_for(catalog, npc: Dictionary, branch: Dictionary) -> String:
  if actions.has("GetStone"):parts.append("兑换%s石币" % actions.GetStone)
  return "%s：%s" % [npc.name,"，".join(parts)]
 
+func adult_walk_destination(backend,npc:Dictionary)->Dictionary:
+ # Geometry only, used by the server's real step runner, never by a
+ # client travel receipt. Clearing events only avoids this local dispatch.
+ if int(npc.get("map_id",-1))!=10204:return {}
+ var plain:=npc.duplicate(true);plain.events=[]
+ return destination(backend,plain,"near")
+
+func adult_destination(backend,npc:Dictionary)->Dictionary:
+ if int(npc.get("map_id",-1))!=10204:return {}
+ var current:Vector2i=backend.automation.position_cell
+ if backend.automation.position_map!=10204 or not backend.quest_arrival.has_arrival(backend,10204,current):
+  var outside:Dictionary=destination(backend,{"id":"","map_id":10202,"cell":[30,13],"events":[]},"near")
+  if outside.is_empty():return {}
+  outside.npc_id=str(npc.id)
+  return outside
+ var branch:Dictionary=backend.original_quests.branch_for(npc,backend.session.snapshot())
+ if not backend.quest_arrival.check_action(backend,npc,branch,str(branch.get("type",""))).is_empty():return {}
+ var target:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ if maxi(absi(current.x-target.x),absi(current.y-target.y))>2:return {}
+ var near:=adult_walk_destination(backend,npc)
+ if near.is_empty() or not backend.quest_arrival.has_arrival(backend,10204,Vector2i(int(near.cell[0]),int(near.cell[1]))):return {}
+ return {"map_id":10204,"cell":[current.x,current.y],"npc_id":str(npc.id)}
+
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
+ if npc.get("events",[]).any(func(event):return int(event)==4):return adult_destination(backend,npc)
  if npc.get("events",[]).any(func(event):return int(event) in [32,33,34]):return Dream.destination(self,backend,npc,mode)
  if preload("res://server/saton_cave_helper.gd").owns(npc) and int(npc.map_id) in range(10701,10706):return preload("res://server/saton_cave_helper.gd").destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==17):return Dragon.destination(self,backend,npc,mode)
