@@ -16,7 +16,7 @@ func run()->void:
  session.gm_raise_level(-1,40)
  check(session.equip_item("original:%d"%spear) and session.equip_item("original:%d"%flute),"spear ARM and flute amulet coexist")
  check(session.equipment_mods()=={"attack":36,"defence":-14,"speed":-14,"charm":5},"exact ordinary source stat sum")
- check(not session.equip_item("original:%d"%int(session.snapshot().original_instances[2].uid)) and not session.equip_item("original:%d"%int(session.snapshot().original_instances[3].uid)),"dragon armor/clothes remain metadata without BODY")
+ check(not session.equip_item("original:%d"%int(session.snapshot().original_instances[2].uid)) and not session.equip_item("original:%d"%int(session.snapshot().original_instances[3].uid)),"dragon armor/clothes remain original dragon body item definitions remain unimplemented")
  check(session.snapshot().original_instances[0].durability==2500000 and session.snapshot().original_instances[1].durability==200000,"source durability values")
  var path:="user://dragon-cave-equipment.json"
  check(session.save_game(path),"source equipment persists")
