@@ -14,6 +14,10 @@ func setup():
 func source_talk(b,npc:Dictionary)->Dictionary:
  b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
  return b.handle({"type":"quest_talk","npc_id":npc.id})
+func guard_talk(b,npc:Dictionary)->Dictionary:
+ var route:Dictionary=preload("res://tests/support/fixed_guard_route.gd").approach(b,npc)
+ if not route.get("ok",false):return route
+ return b.handle({"type":"quest_talk","npc_id":npc.id})
 func fight(b)->void:
  for i in range(100):
   var state:Dictionary=b.battle.snapshot()
@@ -26,8 +30,10 @@ func fight(b)->void:
 func run()->void:
  var b=setup()
  for npc in guards:
-  var r:=source_talk(b,npc)
-  check(r.ok,"actual bound fixed guard dialogue")
+  var direct:=source_talk(b,npc)
+  check(not direct.ok and str(direct.get("reason","")).contains("原入口"),"old project-placement fixture correctly has no arrival: "+str(direct))
+  var r:=guard_talk(b,npc)
+  check(r.ok,"actual bound fixed guard dialogue: "+str(r))
   if not r.ok:continue
   var expected:Array=npc.branches[0].guard.enemy_ids.map(func(id):return int(id))
   var start:=choose(b,r,"yes")
@@ -57,7 +63,7 @@ func request(link,command:Dictionary)->Dictionary:
 func lan_guard()->void:
  var b=setup();root.add_child(b)
  var npc:Dictionary=guards[0]
- source_talk(b,npc);b.original_quests.pending={}
+ var prepared:=guard_talk(b,npc);check(prepared.ok,"LAN guard original route: "+str(prepared));b.original_quests.pending={}
  var server=Server.new(b,0,"127.0.0.1");root.add_child(server)
  check(server.start()==OK,"fixed guard LAN ephemeral server")
  for i in range(2):
@@ -66,6 +72,10 @@ func lan_guard()->void:
  await request(links[0],{"type":"ping"});await request(links[1],{"type":"ping"})
  var a:Dictionary=await request(links[0],{"type":"quest_talk","npc_id":npc.id})
  var c:Dictionary=await request(links[1],{"type":"quest_talk","npc_id":npc.id})
+ check(a.has("dialogue") and c.has("dialogue"),"both real guard windows: "+str([a,c]))
+ if not a.has("dialogue") or not c.has("dialogue"):
+  for link in links:link.close()
+  links=[];server.stop();server.queue_free();b.queue_free();return
  check(not (await request(links[0],{"type":"quest_choose","token":a.dialogue.token,"choice":"yes"})).ok,"other device supersedes old guard token")
  var answer:Dictionary=await request(links[1],{"type":"quest_choose","token":c.dialogue.token,"choice":"yes","enemies":[1001]})
  check(answer.ok and b.session._pending.enemies.size()==4,"remote client cannot replace four original enemies")
