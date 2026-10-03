@@ -54,6 +54,10 @@ var minimize_button: Button
 ## Collapsed to a progress bar while the run continues (see automation_chip.gd).
 var minimized := false
 var chip: Panel
+var stop_notice: Panel
+var stop_notice_text: Label
+var _notice_remaining := 0.0
+const STOP_NOTICE_SECONDS := 8.0
 
 func _status() -> Dictionary:
 	return world.state.automation if is_instance_valid(world) else {}
@@ -341,9 +345,13 @@ func update_status() -> void:
 
 ## Backend status: show progress while running and mirror the active settings.
 func on_status(automation: Dictionary) -> void:
+	_clear_legacy_hint()
 	if not bool(automation.get("running",false)):
 		if minimized:_end_minimized();world.release_input()
+		status.text=""
 		return
+	if is_instance_valid(stop_notice):stop_notice.hide()
+	_notice_remaining=0
 	if minimized:_update_chip();return
 	# A find-pet cycle minimized from 自动抓极品 keeps its capture battles out of
 	# sight too, and 后台搜宠 shows its battles with the info block instead:
@@ -363,6 +371,7 @@ func on_event(detail: Dictionary) -> void:
 	var reason:=str(detail.get("reason",""))
 	if str(detail.kind)=="battle_refused":
 		world.message.text=reason
+		_show_stop_notice(reason)
 		if reason.begins_with("带宠升级"):close_menu()
 		else:panel.hide();progress.show();result.text=reason
 		return
@@ -382,11 +391,55 @@ func on_event(detail: Dictionary) -> void:
 		world.set_music(world.music_track("res://assets/legacy/battle/audio/sabgm_b0.wav"))
 	world.clear_input();hide()
 	world.release_input()
-	world.last_adventure_message="自动练级：%s · 已完成 %d 场。"%[reason,int(detail.get("battles",battles))]
-	world.message.text=world.last_adventure_message
+	_clear_legacy_hint()
+	result.text="自动练级：%s · 已完成 %d 场。"%[reason,int(detail.get("battles",battles))]
+	world.message.text=result.text
+	_show_stop_notice(result.text)
 	if world.battle_view.visible and world.battle_session.snapshot().active:
 		world.battle_view.report.text="自动抓宠／战斗已暂停："+reason+"；可手动接手。"
+func _clear_legacy_hint() -> void:
+	if world.last_adventure_message.begins_with("自动练级："):
+		world.last_adventure_message=""
+		world.update_adventure_hint()
+
+## Stop/error reasons remain in the helper result and normal message, while
+## the field shows a bounded, temporary notice instead of a permanent HUD line.
+func _show_stop_notice(reason: String) -> void:
+	if reason.is_empty():return
+	if not is_instance_valid(stop_notice):
+		stop_notice=Panel.new()
+		stop_notice.name="TrainingStopNotice"
+		stop_notice.z_index=71
+		stop_notice.mouse_filter=Control.MOUSE_FILTER_PASS
+		stop_notice.add_theme_stylebox_override("panel",world.box(Color("20292f",0.94),Color("b29b65")))
+		world.ui_root.add_child(stop_notice)
+		stop_notice_text=world.text("",14)
+		stop_notice_text.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART
+		stop_notice_text.max_lines_visible=3
+		stop_notice_text.mouse_filter=Control.MOUSE_FILTER_IGNORE
+		stop_notice.add_child(stop_notice_text)
+	stop_notice_text.text=reason
+	stop_notice.tooltip_text=reason
+	_notice_remaining=STOP_NOTICE_SECONDS
+	_place_stop_notice()
+	stop_notice.show()
+
+func _place_stop_notice() -> void:
+	var screen:Vector2=world.get_viewport_rect().size
+	stop_notice.size=Vector2(minf(560,screen.x-24),88)
+	stop_notice_text.position=Vector2(10,6)
+	stop_notice_text.size=stop_notice.size-Vector2(20,12)
+	var bottom:=screen.y-50
+	for sibling in world.ui_root.get_children():
+		if sibling is Control and str(sibling.name).ends_with("Chip") and sibling.visible:
+			bottom=minf(bottom,sibling.position.y-6)
+	stop_notice.position=Vector2((screen.x-stop_notice.size.x)/2,maxf(8,bottom-stop_notice.size.y))
+
 func _process(delta: float) -> void:
+	if _notice_remaining>0:
+		_notice_remaining=maxf(0,_notice_remaining-delta)
+		_place_stop_notice()
+		if _notice_remaining==0:stop_notice.hide()
 	if not running:return
 	# Over a network the backend stops the run from position reports itself;
 	# another device following the character must not stop a shared run.

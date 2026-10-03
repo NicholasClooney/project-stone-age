@@ -23,14 +23,15 @@ func run()->void:
   var tag:="%dx%d"%[dimensions.x,dimensions.y]
   ticker.on_status({"flow":{"showcase":false}})
   ticker.on_status(status)
+  if not await click(world.pet_hunt_menu._chip().restore_button):return
   if not await ready(func():return ticker.visible and ticker.size.x<=dimensions.x,"Responsive ticker visible"):return
   await process_frame
   var before:Dictionary=world.session.snapshot().duplicate(true)
   if not await click(ticker.fold_button):return
-  if not check(ticker.minimized and ticker.visible and not ticker.content.visible,"Running true click minimizes viewer"):return
+  if not check(ticker.minimized and not ticker.visible and world.pet_hunt_menu.chip.visible,"Running true click minimizes viewer"):return
   if not check(world.session.snapshot()==before and status.flow.phase=="hunt","Viewer does not mutate session or requested automation status"):return
   await shot(tag+"-compact")
-  if not await click(ticker.fold_button):return
+  if not await click(world.pet_hunt_menu.chip.restore_button):return
   if not check(not ticker.minimized and ticker.content.visible,"True click restores log"):return
   await shot(tag+"-expanded")
   preload("res://server/original_quests.gd").set_flag(world.backend.session._profile,"ended",18,true)
@@ -76,13 +77,14 @@ func run()->void:
   world.state.derived.quest_auto={"running":false}
   other.queue_free()
   status.flow.phase="idle";ticker.on_status(status)
+  if not await click(world.pet_hunt_menu.chip.restore_button):return
   if not await ready(func():return ticker.visible and ticker.close_button.visible,"Stopped run can close"):return
   await shot(tag+"-stopped")
   if not await click(ticker.close_button):return
   ticker.on_status(status);ticker._process(0)
   if not check(not ticker.visible and ticker.dismissed,"Repeated idle publications do not resurrect dismissed panel"):return
   status.flow.phase="hunt";ticker.on_status(status)
-  if not check(ticker.visible and not ticker.dismissed and not ticker.minimized,"Next run automatically restores progress"):return
+  if not check(not ticker.visible and not ticker.dismissed and ticker.minimized and world.pet_hunt_menu.chip.visible,"Next run automatically restores the single progress entry"):return
  world.queue_free()
  await process_frame
  print("SHOWCASE PANEL UI: PASS")

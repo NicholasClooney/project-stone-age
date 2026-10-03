@@ -1205,6 +1205,9 @@ func minimize() -> void:
 	minimized_flow=world.pet_workflow.active()
 	hide();world.clear_input()
 	_chip().pop_up();_update_chip()
+	if is_instance_valid(world.showcase_ticker) and world.showcase_ticker.has_progress():
+		world.showcase_ticker.minimized=true
+		world.showcase_ticker._refresh()
 	world.release_input()
 	world.set_viewer_pref("hunt_minimized",true)
 
@@ -1226,11 +1229,17 @@ func _end_minimized() -> void:
 	minimized=false
 	if is_instance_valid(chip):chip.hide()
 
+## The existing hunt bar is the only collapsed entry for showcase progress.
+func _restore_progress() -> void:
+	if is_instance_valid(world.showcase_ticker) and world.showcase_ticker.has_progress():
+		world.showcase_ticker.expand()
+	else:restore()
+
 func _chip() -> Panel:
 	if not is_instance_valid(chip):
 		chip=preload("res://scripts/automation_chip.gd").new()
 		chip.name="PetHuntChip"
-		chip.setup(world,"自动抓极品",0,restore,3,560.0)
+		chip.setup(world,"自动抓极品",0,_restore_progress,3,560.0)
 		get_parent().add_child(chip)
 	return chip
 
