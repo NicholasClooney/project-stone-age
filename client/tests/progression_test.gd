@@ -45,6 +45,7 @@ func _initialize() -> void:
 	check(Rules.species_actor("wooli_wooli",1,101).base_stats != Rules.species_actor("wooli",1,101).base_stats,"species tables affect generation")
 	var old: Dictionary = game.snapshot()
 	old.version = 1
+	old.erase("rebirth");old.player.erase("transmigration") # Historical format predates v7.
 	check(not game._valid_profile(old),"v1 stats profile with v6 warehouse fields is an invalid hybrid")
 	for key in Game.ItemStorage.FIELDS:old.erase(key)
 	old.player.erase("base_stats")

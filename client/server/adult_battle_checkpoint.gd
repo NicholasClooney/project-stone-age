@@ -22,8 +22,9 @@ static func restore(b,saved:Dictionary) -> bool:
   # Match v5 save migration: ignore unauthoritative instance/equipment fields.
   for key in ["original_instances","original_equipment","next_original_uid"]:restored_profile.erase(key)
   Session.OriginalEquipment.migrate(restored_profile)
-  restored_profile.version=Session.SAVE_VERSION
  Session.OriginalEquipment.migrate(restored_profile)
+ Session.TransmigrationState.migrate(restored_profile)
+ restored_profile.version=Session.SAVE_VERSION
  for pet in restored_profile.pets+restored_profile.get("pet_storage",[]):
   if not pet.has("original_end_event"):pet.original_end_event=Session.original_pet_event(pet)
  if not b.session._valid_profile(restored_profile):return false

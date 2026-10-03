@@ -2,7 +2,8 @@ extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
-const SAVE_VERSION := 6
+const SAVE_VERSION := 7
+const TransmigrationState=preload("res://server/transmigration_state.gd")
 const ItemStorage=preload("res://server/item_storage.gd")
 const OriginalRevival = preload("res://server/original_revival.gd")
 const OriginalEquipment = preload("res://server/original_equipment.gd")
@@ -83,6 +84,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	# A new character starts at charm 60 under the charm rules (loyalty.gd).
 	_profile.player.charm = Loyalty.CHARM_START
 	_profile.player.charm_rules = 1
+	TransmigrationState.migrate(_profile)
 	_refresh_login_luck()
 
 func _refresh_login_luck() -> void:
@@ -1388,6 +1390,20 @@ func save_game(path: String) -> bool:
 	if not _pending.is_empty():
 		last_error = "Finish the battle before saving."
 		return false
+	return _write_profile(path)
+
+## Candidate is already normalized/validated; do not run equipment migration here.
+func commit_transmigration_candidate(candidate:Dictionary,path:String)->bool:
+	if not _pending.is_empty() or path.is_empty() or not TransmigrationState.continuation_error(_profile).is_empty():return false
+	if not _valid_profile(candidate) or candidate.rebirth.history!="natural" or int(candidate.player.transmigration)!=int(_profile.player.transmigration)+1:return false
+	if str(candidate.rebirth.last_transaction)==str(_profile.rebirth.get("last_transaction","")):return false
+	var before:Dictionary=_profile
+	_profile=candidate.duplicate(true)
+	if _write_profile(path):return true
+	_profile=before
+	return false
+
+func _write_profile(path:String)->bool:
 	var file := FileAccess.open(path + ".tmp",FileAccess.WRITE)
 	if file == null:
 		last_error = "Cannot create save."
@@ -1466,6 +1482,7 @@ func load_game(path: String) -> bool:
 			# only the audited answer papers and wisdom crystal (2507..2517).
 			for item in range(2507,2518):
 				while item in _profile.original_items:OriginalEquipment.remove(_profile,item)
+			TransmigrationState.migrate(_profile)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
 			return true
@@ -1484,6 +1501,7 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
+	if not TransmigrationState.valid(value):return false
 	if int(value.version)>=5 and not original_state_valid(value):return false
 	if not ItemStorage.valid(value):return false
 	if int(value.version)>=6 and (not OriginalEquipment.valid(value) or bag_slots(value)>15):return false
@@ -1508,10 +1526,10 @@ func _valid_profile(value: Variant) -> bool:
 			return false
 		var assigned := 0
 		for stat in ["vitality","strength","toughness","dexterity"]:
-			if not _integer(value.player.allocated_stats.get(stat),0,(value.player.level-1)*3+int(value.get("gm_bonus_points",0))):
+			if not _integer(value.player.allocated_stats.get(stat),0,TransmigrationState.point_budget(value)):
 				return false
 			assigned += int(value.player.allocated_stats[stat])
-		if assigned > (int(value.player.level)-1)*3+int(value.get("gm_bonus_points",0)):
+		if assigned > TransmigrationState.point_budget(value):
 			return false
 	if not _integer(value.inventory.get("healing_charm",0),0,99):return false
 	if value.has("pet_care_granted") and not value.pet_care_granted is bool:return false
@@ -1690,7 +1708,7 @@ func _sync_stat_points() -> void:
 	var assigned := 0
 	for count in _profile.player.allocated_stats.values():
 		assigned += int(count)
-	_profile.player.stat_points = maxi(0,(int(_profile.player.level)-1)*3+int(_profile.get("gm_bonus_points",0))-assigned)
+	_profile.player.stat_points = maxi(0,TransmigrationState.point_budget(_profile)-assigned)
 
 func learn_pet_skill(index: int, skill_id: int) -> bool:
 	var catalog = preload("res://scripts/pet_skills.gd")
@@ -1858,6 +1876,7 @@ func gm_set_base_stat(index: int, stat: String, value: Variant, additive: bool =
 	planned.base_stats[stat]=fixed
 	Progression.refresh(planned)
 	actor.merge(planned,true)
+	if index==-1:TransmigrationState.record_developer_base(_profile)
 	_gm_mark(actor)
 	return true
 
