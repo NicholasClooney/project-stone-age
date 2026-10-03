@@ -146,6 +146,7 @@ func _ready() -> void:
 	hide()
 
 func open_map() -> void:
+	_cancel_project_wait()
 	if world.battle_view.visible or world.paused_input:return
 	world.clear_input()
 	world.paused_input=true
@@ -154,11 +155,13 @@ func open_map() -> void:
 	queue_redraw()
 
 func close_map() -> void:
+	_cancel_project_wait()
 	hide()
 	world.paused_input=false
 	world.clear_input()
 
 func browse_map(map_id: int) -> void:
+	_cancel_project_wait()
 	var needed: Array=world.asset_packs.map_packs(map_id)
 	if map_id!=int(world.data.map_id) and not world.asset_packs.is_ready(needed):
 		world.asset_packs.ensure(needed,func(ok: bool):if ok and visible:browse_map(map_id),"地图")
@@ -429,6 +432,11 @@ func select_target(target: Vector2i) -> bool:
 	return false
 
 var _project_travel_pending:=false
+var _project_travel_ticket:=0
+func _cancel_project_wait()->void:
+	_project_travel_ticket+=1
+	_project_travel_pending=false
+
 func teleport_near(target: Vector2i) -> bool:
 	if _project_travel_pending:return false
 	var destination:=nearest_safe(target)
@@ -442,30 +450,42 @@ func teleport_near(target: Vector2i) -> bool:
 		return true
 	world.clear_input()
 	_project_travel_pending=true
+	_project_travel_ticket+=1
+	var ticket:=_project_travel_ticket
 	var requested_map:=current_map
-	var reply:Dictionary=world.link.request({"type":"project_position","map_id":requested_map,"cell":[destination.x,destination.y]},func(result:Dictionary):_finish_project_move(result,requested_map,destination))
+	var reply:Dictionary=world.link.request({"type":"project_position","map_id":requested_map,"cell":[destination.x,destination.y]},func(result:Dictionary):_finish_project_move(result,requested_map,destination,ticket))
 	return bool(reply.get("ok",false)) or bool(reply.get("pending",false))
 
-func _finish_project_move(reply:Dictionary,map_id:int,destination:Vector2i)->void:
+func _project_wait_valid(ticket:int)->bool:
+	return ticket==_project_travel_ticket and not is_queued_for_deletion() and is_instance_valid(world) and not world.is_queued_for_deletion() and is_instance_valid(note) and not note.is_queued_for_deletion()
+
+func _finish_project_move(reply:Dictionary,map_id:int,destination:Vector2i,ticket:int)->void:
+	if not _project_wait_valid(ticket):return
 	if not bool(reply.get("ok",false)):
 		_project_travel_pending=false
 		note.text=str(reply.get("reason","服务器拒绝项目移动。"))
 		world.message.text=note.text
 		return
-	# The authority broadcasts first; wait until the scene has actually
-	# followed it before checkpointing or exposing the hunt controls.
+	var expected:Array=[map_id,destination]
 	var deadline:int=Time.get_ticks_msec()+30000
-	while is_instance_valid(world) and (int(world.data.get("map_id",-1))!=map_id or world.cell!=destination or world.moving or world.area_transition_busy):
-		if Time.get_ticks_msec()>deadline:
+	while _project_wait_valid(ticket):
+		# A newer authority event supersedes this request even while its
+		# earlier map/scene transition is still settling.
+		var incoming:Array=world._follow
+		if not incoming.is_empty() and incoming!=expected:
+			_project_travel_pending=false
+			note.text="另一台设备已移动角色，请重新选择落点。"
+			return
+		if int(world.data.get("map_id",-1))==map_id and world.cell==destination and not world.moving and not world.area_transition_busy:
+			_project_travel_pending=false
+			world.checkpoint()
+			close_map()
+			return
+		if (incoming.is_empty() and world._followed!=expected) or Time.get_ticks_msec()>deadline:
 			_project_travel_pending=false
 			note.text="权威位置已改变，请重新选择落点。"
 			return
 		await get_tree().process_frame
-	_project_travel_pending=false
-	if not is_instance_valid(world):return
-	world.checkpoint()
-	close_map()
-	return
 
 func zoom_at(pointer: Vector2, multiplier: float) -> void:
 	var cell_point: Vector2=(pointer-map_rect.position)/map_rect.size
