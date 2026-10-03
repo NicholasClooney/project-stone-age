@@ -9,7 +9,7 @@ func npc(b,script:String)->Dictionary:
  return {}
 func answer(b,opened:Dictionary)->Dictionary:
  var state:Dictionary=b.original_quests.pending.get("service_state",{})
- return b.handle({"type":"quest_choose","token":opened.get("dialogue",{}).get("token",""),"choice":str(state.get("answer_choice","submit")),"text":str(state.get("answer_text",""))})
+ return b.handle({"type":"quest_choose","token":opened.get("dialogue",{}).get("token",""),"choice":"submit" if int(state.get("answer_type",0))==4 else str(state.get("answer_choice","")),"text":str(state.get("answer_text",""))})
 func run()->void:
  for row in [["genout/wpm_811_30_20",30,2755,800],["genout/wpm_831_30_20",30,2755,800],["genout/wpm_811_28_20",50,2756,820],["genout/wpm_831_28_20",50,2756,820],["genout/wpm_851_29_20",70,2757,840]]:
   var b=fresh();b.session._profile.player.level=int(row[1])
@@ -40,9 +40,19 @@ func run()->void:
   if int(row[3])==840:
    var next_quiz:Dictionary=npc(b,"genout/quz_841_18_19")
    check(Travel.walk_near(b,next_quiz,[840,841]),"actual portal to second quiz floor")
+   # Seed1 uses original questions73(choice) then38(text). The service
+   # retains answer_choice from question1, so current answer_type must win.
+   # This reproduces the former random failure without any timing/sleep.
+   b.original_quests.services.rng.seed=1
    question=choose(b,b.handle({"type":"quest_talk","npc_id":next_quiz.id}),"yes")
-   for index in range(2):question=answer(b,question)
-   check(question.get("ok",false) and b.quest_arrival.has_arrival(b,841,b.automation.position_cell),"real two-answer source quiz advances")
+   var first_state:Dictionary=b.original_quests.pending.get("service_state",{}).duplicate(true)
+   check(question.get("ok",false) and int(first_state.get("answer_type",0))==2 and int(first_state.get("index",-1))==0,"real source sequence begins with a choice question")
+   question=answer(b,question)
+   var second_state:Dictionary=b.original_quests.pending.get("service_state",{}).duplicate(true)
+   check(question.get("ok",false) and int(second_state.get("answer_type",0))==4 and int(second_state.get("index",-1))==1 and int(second_state.get("correct",0))==1 and second_state.get("answer_choice","")==first_state.get("answer_choice",""),"real second question is text despite retained previous choice")
+   check(question.get("dialogue",{}).get("input","")=="text" and question.get("dialogue",{}).get("choices",[]).any(func(c):return str(c.id)=="submit"),"authoritative public text prompt requires submit")
+   question=answer(b,question)
+   check(question.get("ok",false) and question.get("closed",false) and b.automation.position_map==841 and b.automation.position_cell==Vector2i(18,15) and b.quest_arrival.has_arrival(b,841,b.automation.position_cell),"real two-answer source quiz advances: "+str(question))
    var fist:Dictionary=npc(b,"genout/jan_842_29_19")
    check(Travel.walk_near(b,fist,[841,842]),"actual source portal and walking reach janken")
    question=choose(b,b.handle({"type":"quest_talk","npc_id":fist.id}),"yes")
