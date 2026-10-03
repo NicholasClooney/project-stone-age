@@ -20,4 +20,4 @@
 - adult_quest_resume_test：保原真实battle turn/RNG/troop与未完成事务、重启续行、旧checkpoint拒重放、v5/v6设备耐久、延迟/伪造receipt、手动/组队/停机/savefail停止，0 failures。/private/tmp/strict-adult-resume.log。新原入口可能在首NPC接取前遇敌，测试角色按真实ProfileHub流程先保存初始Lv30状态，不能依赖首NPC交易偶然产生save。
 - /private/tmp/strict-adult-preload.log对实际生产pack plan核10202与10204均有有效pack归属，其余预载任务集合原样。该单行预载没有重复跑已绿UI。
 
-共享brothers_golden_quests_test仅adult(b)改成真实complete_adult，待arrival owner独立driver几何接口兼容片并集后跑受影响继承者一次；不把尚待该片的共享fixture回归称为已完成。所有其它任务policy仍按owner逐片审核；固定NPC组队战没有开放。无full、无真实save/live操作。原图与原物品导入无需变化，部署照常重建Web。
+共享brothers_golden_quests_test仅adult(b)改成真实complete_adult。driver兼容已从arrival owner实际提交6a9343a提取唯一support文件；只在10204且helper具有adult_walk_destination时取纯几何，其它链不变，没有带入该提交的地政策。owner实际接入e7eed56（其槽等价bbdd9f7）后，quest_arrival_adult_test及quest_arrival_transactions_test两套2/2通过，覆盖共享adult(b)继承链；日志stone-age-suites-uqheu2b1。本槽核对该文件差异仅一行，按测试预算未重复owner刚绿的相同并集。所有其它任务policy仍按owner逐片审核；固定NPC组队战没有开放。无full、无真实save/live操作。原图与原物品导入无需变化，部署照常重建Web。
