@@ -32,6 +32,11 @@ func run()->void:
   if entrance.is_empty():continue
   b.automation.position_changed(int(row[0]),Vector2i(int(entrance.cell[0]),int(entrance.cell[1])))
   check(b.handle({"type":"report_position","map_id":int(row[1]),"cell":entrance.target}).ok and b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell),"exact original entrance starts independent cave route")
+  if int(row[1])==20101:
+   # Preexisting public request is a fixture, never an arrival grant. The
+   # driver must cross all five real maps before the actual doctor exchange.
+   Rules.set_flag(b.session._profile,"now",1,true)
+   check(Route.exchange_from_route(b,str(n.id),maps).get("ok",false) and 2401 in b.session.snapshot().original_items,"tightened helper pure geometry supports real five-floor exchange")
   var reached: bool=false
   for delta in [Vector2i.UP,Vector2i.LEFT,Vector2i.RIGHT,Vector2i.DOWN]:
    var point: Vector2i=Vector2i(int(n.cell[0]),int(n.cell[1]))+delta
