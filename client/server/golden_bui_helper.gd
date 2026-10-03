@@ -3,6 +3,7 @@ extends RefCounted
 const Rules=preload("res://server/original_quests.gd")
 const MapFile=preload("res://scripts/map_file.gd")
 const BASES=[800,820,840]
+static var service_sources:Dictionary={}
 static func floor_base(map_id:int) -> int:
 	for base in BASES:
 		if map_id>=base and map_id<base+10:return base
@@ -13,7 +14,13 @@ static func stage_key(backend) -> Array:
 	# All thirty pinned maps separate entry/challenge (y>=19) from the won
 	# stair component (y<=17) with the source y18 wall. Walking within either
 	# component does not invalidate every quest's cached projection.
-	return [map_id,backend.automation.position_cell.y<18] if floor_base(map_id)>=0 else [map_id]
+	var cell:Vector2i=backend.automation.position_cell
+	var nearby:Array=[]
+	for actor in backend.quest_catalog.active_npcs():
+		if int(actor.map_id)!=map_id or not owns(actor) or str(actor.get("kind",""))=="golden_bui_gate":continue
+		var delta:=cell-Vector2i(int(actor.cell[0]),int(actor.cell[1]))
+		if maxi(absi(delta.x),absi(delta.y))<=2:nearby.append(str(actor.id))
+	return [map_id,cell.y<18,backend.quest_arrival.has_arrival(backend,map_id,cell),nearby] if protected_map(map_id) else [map_id]
 
 static func band(level:int) -> Dictionary:
 	if level>=70:return {"base":840,"ticket":2757,"counter":4020,"lobby":851,"fee":level*40,"name":"高级","range":"70级以上"}
@@ -46,7 +53,7 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary) -> void:
 	var coupon:bool=2753 in profile.original_items
 	var ticket:bool=int(route.ticket) in profile.original_items
 	if not ended and (on_floor or reward_ready or ticket):quest.status="进行中"
-	quest.completion_detail="原任务“猜谜3兄弟”。30–49／50–69／70级以上分别购买初／中／高级门票，收费等级×20／40／40。每条十层有七组问答（1、2、3、5、5、7、10题）和三次猜拳；题库Level不是角色等级。首层答对另得道具交换卷；通关后先领取猜谜专家的会员证，再兑换1级金布伊。原版行为：没有猜拳的参加券也能玩，有券扣一张，平局不再扣。助手只导航已允许的阶段，问答、猜拳和取券战需亲自进行；不开放47、77级后续或自动执行。"
+	quest.completion_detail="原任务“猜谜3兄弟”。30–49／50–69／70级以上分别购买初／中／高级门票，收费等级×20／40／40。每条十层有七组问答（1、2、3、5、5、7、10题）和三次猜拳；题库Level不是角色等级。首层答对另得道具交换卷；通关后先领取猜谜专家的会员证，再兑换1级金布伊。原版行为：没有猜拳的参加券也能玩，有券扣一张，平局不再扣。助手只送公开售票入口或票门；洞内须经过真实票门和原路，合法近谈时仅保持原地。问答、猜拳和取券战需亲自进行；不开放47、77级后续或自动执行。"
 	if ended:
 		row(quest,"complete","已领取金布伊，任务已完成；不会重复发宠物。",false,true)
 		return
@@ -104,16 +111,80 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary) -> void:
 static func can_visit(step:Dictionary) -> bool:
 	return bool(step.get("current",false)) and step.has("map_id") and step.get("cell",[]).size()==2
 
-static func destination(helper,backend,npc_data:Dictionary,_mode:String) -> Dictionary:
-	# Used for BOTH step-based and raw npc_id requests. Rebuild from trusted
-	# current state; a stale client cannot select a future floor or reward room.
+static func protected_map(map_id:int)->bool:
+	return floor_base(map_id)>=0 or map_id in [810,850]
+
+static func coupon_target(target:Dictionary)->bool:
+	var map_id:int=int(target.get("map_id",-1))
+	var base:=floor_base(map_id)
+	if base<0 or str(target.get("id",""))!="":return false
+	# Exact reviewed source challenge-column encounter point, never arbitrary
+	# empty IDs or client-supplied rectangles. Backend derives this from a step.
+	var x:=29 if (map_id-base)%2==0 else 18
+	return target.get("cell",[])==[x,21] and target.get("area_rect",[])==[x,21,x,21]
+
+static func owns(target:Dictionary)->bool:
+	if coupon_target(target):return true
+	if str(target.get("id","" )).is_empty() or not target.get("events",[]).any(func(event):return int(event)==44):return false
+	var script:=str(target.get("source_script",str(target.id).split("@")[0]))
+	var map_id:int=int(target.get("map_id",-1))
+	var cell:Array=target.get("cell",[])
+	if cell.size()!=2 or str(target.id)!="%s@%d:%d:%d"%[script,map_id,int(cell[0]),int(cell[1])]:return false
+	if script in ["quiz/uketuke","quiz/uketuke2"]:
+		return map_id==(2020 if script=="quiz/uketuke" else 4020) and int(cell[0])==18 and int(cell[1])==13
+	if script in ["quiz/equiz_01","quiz/equiz_02"]:
+		return map_id in [810,850] and int(cell[0])==(29 if script=="quiz/equiz_01" else 28) and int(cell[1])==16
+	if str(target.get("kind","")) not in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]:return false
+	if service_sources.is_empty():
+		var parsed=JSON.parse_string(FileAccess.get_file_as_string("res://assets/legacy/server/golden-bui.json"))
+		if parsed is Dictionary:service_sources=parsed.get("services",{})
+	if not service_sources.has(script):return false
+	var parts:=script.split("_")
+	return parts.size()==4 and int(parts[1])==map_id and int(parts[2])==int(cell[0]) and int(parts[3])==int(cell[1])
+
+static func walk_destination(helper,backend,target:Dictionary)->Dictionary:
+	# Pure collision geometry for real walking/tests, never a travel receipt.
+	if not owns(target):return {}
+	return helper.geometric_destination(backend,target,"near")
+
+static func public_entrance(helper,backend)->Dictionary:
+	var profile:Dictionary=backend.session._profile
+	var route:=band(int(profile.player.level))
+	if int(profile.player.level)<30:return {}
+	var map_id:int=int(route.counter)
+	var cell:Array=[16,13]
+	if int(route.ticket) in profile.original_items:
+		map_id=831 if backend.automation.position_map==831 and int(route.lobby)==811 else int(route.lobby)
+		cell=[29 if map_id==851 else (30 if int(route.base)==800 else 28),22]
+	if not helper.maps.has(map_id):helper.maps[map_id]=MapFile.load_map(helper.places.file(map_id))
+	if not helper.safe(helper.maps[map_id],Vector2i(int(cell[0]),int(cell[1])),{},helper.places.links(map_id)):return {}
+	return {"map_id":map_id,"cell":cell,"npc_id":""}
+
+static func destination(helper,backend,target:Dictionary,mode:String)->Dictionary:
+	if mode not in ["near","arrival"] or not owns(target):return {}
+	var map_id:int=int(target.map_id)
+	var current_map:int=backend.automation.position_map
+	var current:Vector2i=backend.automation.position_cell
+	var has_route:bool=protected_map(current_map) and backend.quest_arrival.has_arrival(backend,current_map,current)
+	if protected_map(map_id) and not has_route:return public_entrance(helper,backend)
+	# Rebuild only from the canonical published stage. Raw NPC and stale step
+	# requests use the same stage and final route check; no client fields count.
+	var selected:Dictionary={}
 	for quest in helper.snapshot(backend).quests:
 		if int(quest.event)!=44:continue
-		for step in quest.steps:
-			if str(step.get("npc_id",""))!=str(npc_data.id) or not can_visit(step):continue
-			var map_id:=int(step.map_id)
-			if not helper.maps.has(map_id):helper.maps[map_id]=MapFile.load_map(helper.places.file(map_id))
-			var point:=Vector2i(int(step.navigation_cell[0]),int(step.navigation_cell[1]))
-			if not helper.safe(helper.maps[map_id],point,{},helper.places.links(map_id)):return {}
-			return {"map_id":map_id,"cell":[point.x,point.y],"npc_id":str(npc_data.id)}
-	return {}
+		for candidate in quest.steps:
+			if not can_visit(candidate) or int(candidate.map_id)!=map_id:continue
+			if coupon_target(target):
+				if str(candidate.get("npc_id",""))=="" and str(candidate.source.get("type",""))=="encounter" and candidate.cell==target.cell:selected=candidate;break
+			elif str(candidate.get("npc_id",""))==str(target.id):selected=candidate;break
+	if selected.is_empty():return {}
+	if not protected_map(map_id):return public_entrance(helper,backend)
+	if current_map!=map_id:return {}
+	var delta:=current-Vector2i(int(target.cell[0]),int(target.cell[1]))
+	if maxi(absi(delta.x),absi(delta.y))>2:return {}
+	var geometry:Dictionary=walk_destination(helper,backend,target)
+	if geometry.is_empty() or not backend.quest_arrival.has_arrival(backend,map_id,Vector2i(int(geometry.cell[0]),int(geometry.cell[1]))):return {}
+	if not coupon_target(target):
+		var branch:Dictionary=backend.original_quests.branch_for(target,backend.session._profile)
+		if not backend.quest_arrival.check_action(backend,target,branch,"SERVICE" if str(target.get("kind","" )).begins_with("golden_bui_") else str(branch.get("type",""))).is_empty():return {}
+	return {"map_id":current_map,"cell":[current.x,current.y],"npc_id":"" if coupon_target(target) else str(target.id)}

@@ -14,7 +14,7 @@ func run() -> void:
 	root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
 	proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
 	if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
-	host=Backend.new();root.add_child(host)
+	host=Backend.new();root.add_child(host);host.quest_catalog.enabled_events=[44]
 	host.session._profile.default_companions_claimed=true
 	host.session._profile.no_random_encounters=true
 	host.session.gm_raise_level(-1,30);host.session._profile.player.gold=100000
@@ -32,7 +32,9 @@ func run() -> void:
 	if not check(world.quest_helper_menu.find_child("QuestAutoStart_2",true,false)==null,"No unauthorized auto44 control"):return
 	await proof("390x844-helper-entry-detail")
 	if not await click(visit_button("golden44:buy:2755","arrival",2)):return
-	if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Actual helper navigation reaches original desk and opens source dialogue"):return
+	if not await ready(func():return int(world.data.get("map_id",-1))==2020 and not world.area_transition_busy and not world.moving and not world.quest_helper_travel.active,"Helper stops at public ticket entrance"):return
+	if not check(await Wait.settle(self,world) and not world.world_travel.quest_dialogue.active,"Public entrance does not impersonate a completed NPC interaction"):return
+	if not await click_source("quiz/uketuke@2020:18:13"):return
 	if not check(int(world.data.map_id)==2020 and world.cell.x<=16,"Helper reaches front of original counter, not behind wall"):return
 	await proof("390x844-helper-original-ticket-counter")
 	if not await choose("yes") or not await choose("ok"):return
@@ -41,7 +43,9 @@ func run() -> void:
 	if not await select_step("golden44:enter:811:2755"):return
 	await proof("390x844-helper-ticket-reception")
 	if not await click(visit_button("golden44:enter:811:2755","arrival",2)):return
-	if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Source receptionist dialogue opens after actual navigation"):return
+	if not await ready(func():return int(world.data.get("map_id",-1))==811 and not world.area_transition_busy and not world.moving and not world.quest_helper_travel.active,"Helper stops before original ticket gate"):return
+	if not check(await Wait.settle(self,world) and not world.world_travel.quest_dialogue.active,"Public gate requires actual source click"):return
+	if not await click_source("genout/wpm_811_30_20@811:30:20"):return
 	if not await choose("yes"):return
 	if not await ready(func():return int(world.data.map_id)==800 and not world.area_transition_busy,"Original gate enters first floor"):return
 	if not check(await Wait.settle(self,world) and not 2755 in world.session.snapshot().original_items,"Original gate consumes original ticket"):return
@@ -53,12 +57,9 @@ func run() -> void:
 	if not await select_step("golden44:coupon:800"):return
 	await proof("390x844-helper-natural-coupon-step")
 	world.quest_helper_menu.close_menu()
-	# Late-stage source fixture only; complete natural traversal is covered by
-	# golden_bui_route_test. UI below still uses actual navigation and trades.
-	host.automation.position_changed(810,Vector2i(29,20),true);host.session.set_location(810,29,20)
-	host.publish();host._emit({"type":"position","map_id":810,"cell":[29,20],"client":"helper-render-fixture"})
-	if not await ready(func():return int(world.data.map_id)==810 and not world.moving,"Reached reward-room fixture via server"):return
-	if not check(await Wait.settle(self,world),"Reward-room report settled"):return
+	# Reuse actual source services and each original portal; never place a
+	# character directly in the protected reward room.
+	if not await route_and_sync("quiz/equiz_01@810:29:16"):return
 	if not await show_helper() or not await select_step("golden44:claim:810"):return
 	await proof("390x844-helper-reward-explanation")
 	if not await click(visit_button("golden44:claim:810","arrival",2)):return

@@ -1,5 +1,5 @@
 extends SceneTree
-## Real Backend + two WebSocket devices. Source fixtures only establish location/items.
+## Real Backend + two WebSocket devices. Item inputs plus actual original gate, services and portal fixtures.
 const Backend = preload("res://server/backend.gd")
 const Session = preload("res://server/game_session.gd")
 const Server = preload("res://server/ws_server.gd")
@@ -19,14 +19,14 @@ func check(value: bool, label: String) -> bool:
 func setup():
 	var b=Backend.new()
 	b.set_process(false)
-	if not 44 in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(44)
+	b.quest_catalog.enabled_events=[44]
 	for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
 	b.session.gm_raise_level(-1,30)
 	return b
 func place(b,id: String) -> void:
 	var npc: Dictionary=b.original_quests.npc_by_id(id)
 	if not check(not npc.is_empty(),"Source instance activated "+id):return
-	b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])+1))
+	check(preload("res://tests/support/golden_bui_route.gd").near(b,npc),"Actual original ticket gate and services reach fixture NPC")
 func choice(b,reply: Dictionary,id: String,text := "") -> Dictionary:
 	return b.handle({"type":"quest_choose","token":reply.get("dialogue",{}).get("token",""),"choice":id,"text":text})
 func answer(reply: Dictionary) -> Dictionary:

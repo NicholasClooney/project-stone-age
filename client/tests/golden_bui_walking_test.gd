@@ -1,10 +1,12 @@
 extends "res://tests/brothers_golden_ui_test.gd"
+const DojoRoute=preload("res://tests/support/golden_bui_route.gd")
+const Route=preload("res://tests/support/original_route_driver.gd")
 ## Exercise the production GameAreas.handle_arrival -> field_step -> battle path.
 func run() -> void:
 	root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
 	proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
 	if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
-	var host=Backend.new();root.add_child(host)
+	var host=Backend.new();root.add_child(host);host.quest_catalog.enabled_events=[44]
 	host.session._profile.default_companions_claimed=true
 	host.session.gm_raise_level(-1,70)
 	for stat in ["vitality","strength","toughness","dexterity"]:host.session.gm_set_base_stat(-1,stat,10000)
@@ -19,7 +21,10 @@ func run() -> void:
 	if not check(await Wait.settle(self,world) and world.backend==null,"Production walk uses remote authority"):return
 	for map_id in [800,820,840]:
 		if not check(world.world_catalog.field(map_id) and not bool(world.world_catalog.info(map_id).get("dev_only",false)),"Official challenge map participates in natural field steps"):return
-		host.automation.position_changed(map_id,Vector2i(29,20),true)
+		# The per-band level is source gate input, not route evidence.
+		host.session._profile.player.level=30 if map_id==800 else (50 if map_id==820 else 70)
+		if not check(DojoRoute.enter(host,map_id) and Route.walk(host,map_id,Vector2i(29,20),[map_id]).ok,"Actual ticket gate and collision path precede natural encounter"):return
+		if not check(host.quest_arrival.has_arrival(host,map_id,host.automation.position_cell),"Walking source has original route authority"):return
 		host.session.set_location(map_id,29,20)
 		host.publish();host._emit({"type":"position","map_id":map_id,"cell":[29,20],"client":"golden-bui-walking-fixture"})
 		if not await ready(func():return int(world.data.map_id)==map_id and world.cell==Vector2i(29,20) and not world.moving,"Original floor loaded via server position"):return

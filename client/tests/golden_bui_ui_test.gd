@@ -1,19 +1,28 @@
 extends "res://tests/brothers_golden_ui_test.gd"
 ## Actual remote scene, source questions, rendered viewport and mouse/key input.
+const DojoRoute=preload("res://tests/support/golden_bui_route.gd")
 const Service = preload("res://server/golden_bui_service.gd")
 const QUIZ := "genout/quz_800_29_19@800:29:19"
 const FIST := "genout/jan_802_29_19@802:29:19"
 var host
 var private_data: Dictionary
 
-func place_and_click(id: String) -> bool:
+func route_and_sync(id:String)->bool:
 	var npc: Dictionary=host.original_quests.npc_by_id(id)
-	host.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])+1),true)
-	host.session.set_location(int(npc.map_id),int(npc.cell[0]),int(npc.cell[1])+1)
+	if not check(await Wait.settle(self,world),"Settle before server original route"):return false
+	if not check(DojoRoute.near(host,npc),"True gate, services and original portals precede source click"):return false
+	var cell:Vector2i=host.automation.position_cell
+	host.session.set_location(int(npc.map_id),cell.x,cell.y)
 	host.publish()
-	host._emit({"type":"position","map_id":int(npc.map_id),"cell":[int(npc.cell[0]),int(npc.cell[1])+1],"client":"golden-bui-ui-fixture"})
-	if not await ready(func():return int(world.data.get("map_id",-1))==int(npc.map_id) and not world.moving,"Remote source floor arrives"):return false
+	host._emit({"type":"position","map_id":int(npc.map_id),"cell":[cell.x,cell.y],"client":"golden-bui-ui-fixture"})
+	if not await ready(func():return int(world.data.get("map_id",-1))==int(npc.map_id) and world.cell==cell and not world.moving and not world.area_transition_busy,"Remote source floor arrives"):return false
 	if not check(await Wait.settle(self,world),"Remote source position settled"):return false
+	return true
+
+func place_and_click(id:String)->bool:
+	return await route_and_sync(id) and await click_source(id)
+
+func click_source(id:String)->bool:
 	var matches: Array=world.world_travel.entries.filter(func(n):return str(n.id)==id)
 	if not check(matches.size()==1,"Source NPC rendered once"):return false
 	var sprite=world.world_travel.sprites[world.world_travel.entries.find(matches[0])]
@@ -53,7 +62,7 @@ func run() -> void:
 	if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
 	private_data=JSON.parse_string(FileAccess.get_file_as_string(Service.CATALOG_PATH))
 	host=Backend.new();root.add_child(host)
-	if not 44 in host.quest_catalog.enabled_events:host.quest_catalog.enabled_events.append(44)
+	host.quest_catalog.enabled_events=[44]
 	host.session._profile.default_companions_claimed=true
 	host.session._profile.no_random_encounters=true
 	host.session.gm_raise_level(-1,30)

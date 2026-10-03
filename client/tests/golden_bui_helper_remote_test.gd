@@ -1,4 +1,5 @@
 extends "res://tests/quest_helper_ui_test.gd"
+const DojoRoute=preload("res://tests/support/golden_bui_route.gd")
 const Backend=preload("res://server/backend.gd")
 const Server=preload("res://server/ws_server.gd")
 const Socket=preload("res://network/ws_link.gd")
@@ -24,9 +25,9 @@ func run() -> void:
 	host.session.gm_raise_level(-1,30)
 	host.session._profile.default_companions_claimed=true
 	host.session._profile.no_random_encounters=true
-	# A source-complete post-quiz fixture; walk the actual collision path and
-	# original stair portal. No direct report_position for the successful warp.
-	host.session.set_location(800,29,15);host.automation.position_changed(800,Vector2i(29,15),true)
+	host.quest_catalog.enabled_events=[44]
+	if not check(DojoRoute.enter(host,800) and DojoRoute.challenge(host),"Real ticket gate and first quiz establish original stair fixture"):return
+	host.session.set_location(800,host.automation.position_cell.x,host.automation.position_cell.y)
 	var server=Server.new(host,0,"127.0.0.1");root.add_child(server)
 	if not check(server.start()==OK,"Two-device helper server"):return
 	var script=load("res://scripts/game.gd");script.server_url_override="ws://127.0.0.1:%d"%server.port
@@ -75,11 +76,11 @@ func run() -> void:
 	await request(world.link,{"type":"ping"})
 	if not check(not rejected.ok and host.automation.position_map==801 and profile_count(first)==0 and profile_count(second)==0,"Rejected invalid-for-level position never publishes helper/profile"):return
 	host.quest_catalog.enabled_events.erase(44)
-	if not check(host.quest_helper.navigation_key(host)==[],"Disabled44 has explicitly empty stage key"):return
+	if not check(host.quest_helper.resolve_step(host,2,"golden44:coupon:801").is_empty(),"Disabled44 exposes no actionable source stage"):return
 	first.clear();second.clear()
 	# Isolate this command from the scene's existing follow-map checkpoint.
 	# Normal reporter client id suppresses follow; both sockets still observe events.
-	var moved:=await request(observer,{"type":"report_position","map_id":800,"cell":[14,26],"client":world._client_id})
+	var moved:=await request(observer,{"type":"report_position","map_id":801,"cell":[world.cell.x,world.cell.y],"client":world._client_id})
 	await request(world.link,{"type":"ping"})
 	if not check(moved.ok and profile_count(first)==0 and profile_count(second)==0,"Disabled44 causes no additional movement profile broadcast"):return
 	process_frame.disconnect(poll_observer);observer.close();observer=null
