@@ -3,7 +3,7 @@ static var targets:Dictionary={}
 const Rules=preload("res://server/original_quests.gd")
 const PARTS=[{"group":711,"enemy":1305,"item":2760,"name":"地"},{"group":712,"enemy":1306,"item":2761,"name":"水"},{"group":713,"enemy":1307,"item":2763,"name":"风"},{"group":714,"enemy":1308,"item":2762,"name":"火"}]
 static func entry(backend,index:int) -> Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source("extra/event/hougyoku"):
   if str(npc.get("source_script",""))!="extra/event/hougyoku":continue
   for branch in npc.branches:
    if int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}

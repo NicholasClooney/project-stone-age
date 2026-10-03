@@ -55,7 +55,7 @@ static func destination(helper,backend,npc:Dictionary,mode:String)->Dictionary:
  return {"map_id":map_id,"cell":[current.x,current.y],"npc_id":str(npc.id)}
 
 static func entry(backend,script:String,branch_index:int,map_id:int=-1)->Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source(script):
   if str(npc.get("source_script",""))!=script or map_id>=0 and int(npc.map_id)!=map_id:continue
   for branch in npc.branches:
    if int(branch.get("source_branch_index",0))==branch_index:return {"npc":npc,"branch":branch}

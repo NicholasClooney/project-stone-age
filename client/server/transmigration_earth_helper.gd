@@ -7,7 +7,7 @@ const SCRIPTS=["jaruga/event/ruri01","jaruga/event/ruri02","jaruga/event/ruri03"
 static func owns(npc:Dictionary)->bool:
  return str(npc.get("source_script","")) in SCRIPTS or (str(npc.get("id","_")).is_empty() and int(npc.get("map_id",-1))==21002)
 static func entry(backend,script:String,index:int=-1)->Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source(script):
   if str(npc.get("source_script",""))!=script:continue
   for branch in npc.branches:
    if index<0 or int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}

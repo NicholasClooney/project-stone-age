@@ -1,7 +1,7 @@
 extends RefCounted
 const Rules=preload("res://server/original_quests.gd")
 static func entry(backend, script: String, index: int) -> Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source(script):
   if str(npc.get("source_script",""))!=script:continue
   for branch in npc.branches:
    if index<0 or int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}

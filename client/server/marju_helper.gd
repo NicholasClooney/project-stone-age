@@ -34,7 +34,7 @@ static func destination(helper,backend,npc:Dictionary,mode:String)->Dictionary:
  var point:Vector2i=backend.automation.position_cell
  return {"map_id":int(npc.map_id),"cell":[point.x,point.y],"npc_id":str(npc.id)}
 static func entry(backend,script:String,index:int) -> Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source(script):
   if str(npc.get("source_script",""))!=script:continue
   for branch in npc.branches:
    if int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}
