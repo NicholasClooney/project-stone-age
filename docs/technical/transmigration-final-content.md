@@ -95,9 +95,9 @@ Private-clone quest/art import command:
 
 It produces309 catalog NPCs and339 items: old297/338 plus12 distinct new actors
 and only2138 as a new item (2771–2774 already existed in the foundation).
-Production activation remains closed. World import/route geometry, helper and
-independent final public oracle are subsequent work; settlement/arrival are
-owned by their designated modules.
+Production activation remains closed. World/helper acceptance is recorded below;
+independent final public oracle remains separate. Settlement/arrival are owned
+by their designated modules.
 
 ## Complete king reward pets
 
@@ -146,3 +146,33 @@ Targeted evidence: two prison service source tests, eight final source tests,
 four historical prison audit tests, prison_catalog_test and the unchanged
 king catalog regression. Private quest/art import exports314/339 and all five
 original sprites. No settlement code or live assets are changed.
+
+
+## Product-world route and read-only helper
+
+The final helper owns the21 cave maps and four exact original gates. Outside
+navigation only points to public300(102,228) with empty npc_id; neither mode can
+place a player in the pocket or inside the cave. All internal targets require
+canonical active identity, the actual source branch, current nearby geometry,
+legitimate arrival and final action eligibility. Both modes keep the existing
+position. King navigation reads eligibility only and cannot issue or consume a
+service receipt. No new journal job or invented END48–52 prerequisite is added.
+
+`transmigration_final_route_test` reuses A's real entrance/two-Boss/save-failure/
+retry/final-door dual-WebSocket/restart sequence against the **imported product
+world and imported catalog**, only isolating activation labels and prior-chain
+profile setup. It never installs A's portal/catalog fixture or grants a route.
+The original five/ten enemies, first-gate pocket, entry return/reentry, middle
+door, final door and king component all pass. Additional helper checks prove
+stationary raw visits in both modes and that an already issued receipt remains
+valid after helper queries. `transmigration_final_helper_test` checks all12
+original targets against project-near placement, stale source steps, raw modes,
+closed descriptor and unknown identity/mode; prison services are not owned.
+
+The independent portal fixture retains262 source declarations /137 distinct
+six-tuples, exactly matching all imported cave-related portals. Five source
+return cells in32021 (28,47), (29,47), (28,48), (29,48), (34,49) have source prop2
+and collision in this resource revision, so their original declarations remain
+disabled. No walls are cleared to make the count appear playable. The actual
+return via(32,47) and full forward route pass. This is headless authority/route
+acceptance, not rendered GameScene/UI or king settlement acceptance.
