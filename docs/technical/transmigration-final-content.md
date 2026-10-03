@@ -1,11 +1,14 @@
 # Transmigration final cave content
 
-The first source handoff pins original data without registering or enabling a
-production module. `tools/transmigration_final_quest_sources.json` currently has
-no active create/scripts; its reviewed bindings and staged maps are evidence.
-`client/tests/fixtures/transmigration-final-identities.json` was read directly
-from original create blocks, independently of the runtime catalog/importer.
-The source revision is `0c58fb6683a49a178a8ad845a8c296c2cb83bd81`.
+The source handoff pins original data and registers a **disabled** production
+module. `tools/transmigration_final_quest_sources.json` imports 12 source-bound
+NPCs and five items; the descriptor has `enabled_events=[]` until integration
+approval. `client/tests/fixtures/transmigration-final-identities.json` was read
+directly from original create blocks, independently of the runtime importer.
+The larger `transmigration-final-source.json` is an installable test catalog,
+checked against those separate identities and original source values; it is
+not the independent public-union oracle. The source revision is
+`0c58fb6683a49a178a8ad845a8c296c2cb83bd81`.
 
 ## Identity contract
 
@@ -28,13 +31,16 @@ actors, five changeevent archaeologists, two NPCEnemy actors and the king make
 | 300/sb_skr.arg | 32010 (54,30) | 300/sb_sikkoku.create 0 | Five enemies; victory Warp 32011 (56,36) |
 | 300/sb_skt.arg | 32020 (20,9) | 300/sb_sikkoku.create 1 | Ten enemies; victory Warp 32021 (29,57) |
 
-The king's full ID is `777/ten.arg@32021:31:28`. The integration v1 contract uses
-`service="transmigration"`, `script="777/ten.arg"`; these are service dispatch
-fields, not a new player-save shape. Activation events await integration-owner
-confirmation. END48–52 are original rebirth history flags and must not become
-additional cave-entry conditions. Existing shared parser/merge hooks need an
-explicitly reviewed service extension; this source-only commit does not alter
-them or invent a parallel schema.
+The king's full ID is `777/ten.arg@32021:31:28`. Frozen service fields are
+`kind="original_transmigration"`, `handler="Transmigration"`,
+`service_id="777/ten.arg"`, and `branches=[]`. Its `transmigration` payload has
+schema1, rules `original-1to5-anson20-v1`, source TENSEI1–5 texts and four original
+village reward/return records. These are catalog data, not player-save fields.
+Events48–52 are module activation labels, never prior player flags required to
+enter. The source handler is additionally bound through `777/allnpc.template`
+to functionset `transmigration`; neither `777.old` nor another ten.arg is used.
+All four public catalog readers use the same strict identity projection and
+return independent deep copies. Empty branches alone never enable a service.
 
 All four gates require LV>79 and END39/40/42/46, with MONEY:-1. The outer same-map
 gate does not itself establish cave arrival. Archaeologist MESSAGE actions can
@@ -49,12 +55,46 @@ enemy order is frozen; original special tactics remain metadata and must not
 be presented as restored AI. No settlement or arrival implementation is in
 this handoff.
 
-## Verification
+## Original ordinary meat drop
 
-Run `.tools/asset-venv/bin/python -m unittest discover -s tools -p
- test_transmigration_final_sources.py -v` (one shell line). Five tests cover
-exact create fields/ordinals, source and 21-map SHA, changed binding/map/source
-rejection, four gate conditions, five/ten-enemy order and victory destinations,
-original selected/excluded branch numbers, and source-only production closure.
-This proves source identities, not a completed natural route. Route geometry,
-real transactions and final public union remain subsequent content work.
+Enemy1405 is the fourth terminal-Boss enemy. Original enemy.txt:1037 slot0 is
+item2138 with probability100/1000 (10%). itemset.txt:1857 defines 布洛多斯的肉,
+type20, cost125, level0, `体125`/`ITEM_useRecovery`. The definition exists; this
+is normal original loot, not an END53 reward. Its six-source pile review adds
+exactly this one ID: default creation quantity1, original pile flag1, project
+stacking still unsupported. Each successful drop consumes one bag slot/UID.
+Flags78–82 are0/0/1/1/1, so ordinary storage is allowed.
+
+Meat healing is **not implemented**. Existing recovery code only supports2401;
+this item has no active use metadata and its item description states that it
+cannot currently heal. No Session recovery path or new economy policy was
+introduced. `char/enemy.c:1109–1118` and `battle/battle.c:4705–4729` establish the
+creation-time roll and original defeated-enemy transfer. Their SHA are pinned
+in the manifest. Original special Boss skills remain metadata.
+
+## Verification and import
+
+Use `.tools/asset-venv/bin/python -m unittest discover -s tools -p
+test_transmigration_final_sources.py -v` on one shell line: seven tests cover
+exact source identities, map and source SHA mutation rejection, service texts,
+normal drop fields/pile sources, and closed descriptor. The shared single-item
+source suite covers all34 explicit definitions after this one-ID addition.
+
+`transmigration_final_catalog_test` verifies all four readers, each activation
+label, deep-copy isolation and malformed/relocated king rejection.
+`transmigration_final_drops_test` runs the actual ten-enemy battle as an
+isolated source-loot transaction fixture, checking the100/1000 boundary,
+save-failure/retry, duplicate close, full bag and durable storage UID. It does
+not claim natural-route admission; that remains arrival-owner coverage.
+
+Private-clone quest/art import command:
+
+```sh
+.tools/asset-venv/bin/python tools/import_early_quests.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --output client/assets/legacy
+```
+
+It produces309 catalog NPCs and339 items: old297/338 plus12 distinct new actors
+and only2138 as a new item (2771–2774 already existed in the foundation).
+Production activation remains closed. World import/route geometry, helper and
+independent final public oracle are subsequent work; settlement/arrival are
+owned by their designated modules.

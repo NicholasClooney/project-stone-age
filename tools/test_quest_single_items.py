@@ -18,9 +18,9 @@ def manifest():
                 single_item_pile_reviews=copy.deepcopy(list(AUDIT['items'].values())))
 
 class SingleItemsTests(unittest.TestCase):
-    def test_all_33_source_rows_and_created_quantity(self):
+    def test_all_34_source_rows_and_created_quantity(self):
         items = catalog(REF, manifest())['items']
-        self.assertEqual(len(items), 33)
+        self.assertEqual(len(items), 34)
         for ident, item in items.items():
             self.assertEqual(item['raw_columns'][24:26], ['', '1'])
             self.assertEqual(item['source_line'], AUDIT['items'][ident]['source_line'])
