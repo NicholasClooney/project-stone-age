@@ -321,6 +321,9 @@ def run(source, reference, output, fallback_source=None):
     root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
     from quest_import_common import module_world_reviews, staged_module_world_reviews, apply_module_portal_choices
     modules = module_world_reviews(reference)
+    from prison_world import load_review, restrict_portals
+    prison_review = load_review(reference)
+    modules.append(prison_review)
     staged = staged_module_world_reviews(reference)
     staged_maps = {int(i) for review in staged for i in review.get("map_sources", {})}
     quest_maps = QUEST_MAPS | {int(ident) for module in modules for ident in module.get('map_sources', {})}
@@ -329,6 +332,7 @@ def run(source, reference, output, fallback_source=None):
     from transmigration_foundation import portals as module_portals
     all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS)+module_portals(reference,modules))
     staged_portals=module_portals(reference,staged)
+    all_portals=restrict_portals(all_portals, prison_review)
     all_portals=apply_module_portal_choices(all_portals, modules)
     from quest_time_gates import apply_time_gates
     all_portals=apply_time_gates(all_portals,modules)
