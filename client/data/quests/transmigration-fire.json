@@ -1,6 +1,8 @@
 {
   "id": "transmigration-fire",
   "manifest": "tools/transmigration_fire_quest_sources.json",
-  "enabled_events": [],
+  "enabled_events": [
+    40
+  ],
   "helper": "res://server/transmigration_fire_helper.gd"
 }
