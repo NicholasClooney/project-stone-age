@@ -98,7 +98,7 @@ func clients() -> Array[WebSocketPeer]:
 func _accept(stream: StreamPeer) -> void:
 	var peer := WebSocketPeer.new()
 	peer.inbound_buffer_size = MAX_MESSAGE_BYTES
-	peer.outbound_buffer_size = 8 << 20
+	peer.outbound_buffer_size = 32 << 20
 	if peer.accept_stream(stream)==OK:_pending.append(peer)
 
 func _promote(peer: WebSocketPeer) -> void:
@@ -126,7 +126,7 @@ func _on_outgoing(connection: int, message: Dictionary) -> void:
 	for peer in _clients:
 		if peer.get_instance_id()==connection and peer.get_ready_state()==WebSocketPeer.STATE_OPEN:_send(peer,message)
 
-## A client that stopped reading (a suspended page) fills its 8 MB outbound
+## A client that stopped reading (a suspended page) fills its 32 MB outbound
 ## queue; later messages would be dropped and its view would silently fall
 ## behind. Close it instead: the client reconnects and resyncs from a snapshot.
 func _send(peer: WebSocketPeer, message: Dictionary) -> void:
