@@ -140,7 +140,10 @@ func show_preview(value: Dictionary) -> void:
 		var slot:=selected_ids.size()-1
 		var group:=ButtonGroup.new()
 		for pet in baseline.get("pets",[]):
-			if int(pet.get("template_id",-1))!=int(sacrifice.get("template_id",-2)):continue
+			var template_id: int=int(pet.get("template_id",-1))
+			var species:=str(pet.get("species",""))
+			if species.begins_with("original_") and species.trim_prefix("original_").is_valid_int():template_id=int(species.trim_prefix("original_"))
+			if template_id!=int(sacrifice.get("template_id",-2)):continue
 			var uid:=str(pet.get("pet_id",""))
 			var choice:=Button.new();choice.custom_minimum_size.y=48
 			choice.text="%s · Lv%d\nUID %s" % [str(pet.get("name","")),int(pet.get("level",0)),uid]
@@ -198,7 +201,11 @@ func _send(command: Dictionary, action: String) -> void:
 func _receive(reply: Dictionary, action: String) -> void:
 	busy=false;cancel.text="取消 · 不消耗"
 	if not bool(reply.get("ok",false)):
-		status.text=str(reply.get("reason","操作失败。"))+"\n保存失败可用原确认重试；若预览已失效，请重新获取预览。"
+		var reason:=str(reply.get("reason","操作失败。"))
+		if reason=="save_failed":reason="保存失败，尚未扣除祭品或完成转生。"
+		elif reason=="offline":reason="连接已断开，请重新连接后核对角色状态。"
+		if reason.contains("已过期") or reason.contains("状态已改变"):stale=true
+		status.text=reason+"\n保存失败可用原确认重试；若预览已失效，请重新获取预览。"
 		_buttons();return
 	if action=="confirm":
 		world.message.text="转生成功，已由服务器保存并返回村庄。"

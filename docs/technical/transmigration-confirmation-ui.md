@@ -37,8 +37,31 @@ run; the test positions an unfocusable window offscreen. The existing
 `original_quest_services_ui_test.gd` also passes over real localhost WebSocket,
 covering the unchanged ordinary dialogue path.
 
-These are UI and protocol-lifetime checks, **not successful natural transmigration
-or real save-failure tests**. The foundation service remains closed. Real king
-arrival, settlement, two-device invalidation, persistence failure/retry and
-reopening after success require the final I/content/arrival commits and a later
-integration test. No production service activation is included here.
+The synthetic suite is a UI and protocol-lifetime check, **not successful natural
+transmigration or a real save-failure test**. The real-service counterpart below
+adds those checks using the actual service dependency. The production descriptor
+remains disabled; no production service activation is included here.
+
+## Actual service integration increment
+
+`transmigration_confirmation_remote_test.gd` now uses the actual
+`transmigration_service_test` route: original outer/cave gates, original portal
+oracle, real five/ten-enemy battles with failed-save retries and successful saved
+Warps, then the last original gate and continuous approach. Prior END flags and
+combat strength remain explicit fixtures, never arrival marks. A real WebSocket
+server on port0 serves two clients; the UI client uses actual WS Link,
+ClientState, SessionClient and production QuestDialogue/Confirmation, with no
+client backend. The surrounding view is a small isolated Control harness;
+**it does not instantiate GameScene, render cave/village art, or verify world NPC
+hitboxes**. The closed production descriptor is untouched.
+
+Desktop/390 real clicks cover preview, cancellation with identical complete
+prestate, exact alternate UID, preview superseded by the second socket and stale
+cancel, actual saved preference updates on that socket, disabled old UI, refreshed
+preview, actual filesystem save failure, retained token/frozen candidate, successful
+retry, exact one-pet consumption, one return location, rejected transaction replay,
+remote reconnect and complete disk readback into a new Backend. The real actor
+snapshot uses `species=original_N`; candidate display now reads that field rather
+than assuming the preview's separate `template_id` also exists on actor snapshots.
+`save_failed` is translated to a clear Chinese retry message. Both dedicated suites
+are registered; no full run, import or production activation is included.
