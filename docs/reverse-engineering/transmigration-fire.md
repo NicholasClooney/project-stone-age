@@ -137,9 +137,32 @@ python3 tools/plan_web_packs.py
 
 - `tools/test_transmigration_fire.py`：6项，真实源绑定、分支顺序、奖池以及已提交fixture与重新解析结果一致。
 - `tools/test_transmigration_fire_assets.py`：2项，42物品及19NPC原图逐像素一致，20图pack依赖完整，便利门移除、最终未开放图保持关闭。
-- `transmigration_fire_test.gd`：60种换水每次沿原路追随实际NpcWarp；七奖池逐项保存失败与重试；原始壶/NOW说明优先、裸DelItem全收；三组十敌、旧step/rawNPC及两设备灌水重放。
+- 初次集成矩阵已完成60种换水逐次沿原路追随实际NpcWarp，原日志保留。持续回归去重为六个`transmigration_fire_sink*_test.gd`：每只恐龙先真实到达一次，其十种水态各自还原该NPC的原初位置测试夹具并设置轮转序号，实际结算后逐项核对原NpcWarp目标。只还原NPC夹具，不改玩家位置、scope、epoch、mark或收据，不能用它授予路线。
+- `transmigration_fire_test.gd`保留七奖池逐项保存失败与重试、原始壶/NOW说明优先、公开原口令/退款、裸DelItem全收及两设备灌水重放；`transmigration_fire_guards_test.gd`独立覆盖三组十敌和旧step/rawNPC边界。六个水态suite共保留60种转换与原清空/重叠优先序断言。
 - `transmigration_fire_core_test.gd`：从实际不死鸟原入口走迷宫取羽毛，再走深红原门/原阶梯/胜战交伊拉；羽毛和最终交付保存失败、UID重载及END40只结算一次。核心比较快照在真实走路及战斗之后、交付之前采样，避免把沿途正常战果误判为事务回滚失败。
 - `transmigration_fire_replay_test.gd`：项目到达不死鸟不能取羽毛，两个助手模式不能授路线；真实原路换水保存失败保UID且不移动恐龙，新token重试；两WebSocket设备合法奖池结算仅一次，同组件项目移位撤销旧token及rawNPC助手资格。
 - `transmigration_fire_ui_test.gd`：最终公共policy/后端/事务/服务并集下390静音离屏真点击自然路线0失败，11图逐张检查。图中验证原对话/口令、两场十敌、伊拉交付、使者奖池、火羽属性与真实穿戴、已完成助手。大敌人重叠时测试点击其实际暴露按钮部分，不改命中规则。
 
 以上均定向，不跑full、不触碰live或真实存档；不以高属性测试角色声明原战斗难度已平衡。共享购壶的余额1149/1150、14→15/满包、UID、savefail、retry/replay、LAN及Golden隔离由独立已交suite覆盖。本链取公共普通装备原字段，魔法等未实现项继续显示公共未生效标签。
+
+## 单次实际进程计时
+
+Python `time.monotonic()`包围每个完整进程，最多2套并发、独立测试用户目录；UI为headless且不设截图目录。不是从文件时间推算，不是像素复验。11/11通过。
+
+| Suite | 实际秒数 |
+|---|---:|
+| `transmigration_fire_test` | 50.795 |
+| `transmigration_fire_core_test` | 54.650 |
+| `transmigration_fire_replay_test` | 36.294 |
+| `transmigration_fire_ui_test` | 208.623 |
+| `transmigration_fire_sink044_test` | 35.951 |
+| `transmigration_fire_sink044a_test` | 37.099 |
+| `transmigration_fire_sink044b_test` | 38.540 |
+| `transmigration_fire_sink044c_test` | 28.792 |
+| `transmigration_fire_sink055_test` | 26.592 |
+| `transmigration_fire_sink055a_test` | 19.759 |
+| `transmigration_fire_guards_test` | 60.283 |
+
+UI分段：公开/入口步行21.231秒、不死鸟步行75.267秒、深红步行67.059秒；hba7战斗10.567秒、hpa战斗11.705秒。战斗计时包含接近NPC的步行，因此分段不可简单相加。进程总计还含启动、地图加载、对话、网络settle和装备操作。原始逐段计时见UI日志。
+
+仅UI超过串行180秒默认；建议runner owner为该套设串行300秒，现并行300秒不因本次2并发测量主动扩大。未测更高并发，不据此保证其耗时。runner代码未改。
