@@ -67,3 +67,13 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 `has_arrival`只表达当前合法路线及同组件，不能替代奖励分支的`check_action`。helper显示/导航真实奖励步骤应调用只读check_action；真正项目移位会撤资格，同区也不构成免检授权。已在可对话范围内可以返回当前格（无位移）；远处提示沿原路步行。
 
 本轮不新增组队固定NPC战：生产Brothers.begin仍由Hub拒绝in_party。party验收限于原普通移动/portal的成员独立路线；NPC战savefail为单人真实战，不能把人工复制quest_guard的party fixture当可玩证明。
+
+## 风与梦德政策
+
+新增11101–11107的munde scope及11201–11215的wind scope；这是允许连续原边的区域集合，不是要求编号顺序或创造唯一路线。源入口分别为`genout/wpm_100_443_127:1–4`精确口令Warp11101(33,29)、`genout/wpm_100_278_325:1–2`LV>69且END4的Warp11201(29,79)。旧景观gate_source不能作为普通portal授予资格。
+
+`100/sb_go.arg`/`sb_dan.arg`原胜Warp11107(23,35)后才有munde_final；共享`sainasu/event/event12:4–10`旧石分支、19–25补琴、28–36发琴/END41统一核此凭证。原回村交石/领奖仍按村庄原分支，不要求当前洞内mark。`100/sb_kgi.arg:5–7`胜Warp11215(9,16)才有wind_final，保护`genou_1:8–17`END42与32–40的REQUEST41、`genou_2:9–40`三档献宠；中层kbu个人隐藏不是山顶凭证。`genou_4:9–15`补环需要当前六楼原route；野外`genou_3`无scope不加洞窟前置。献宠分支是否激活仍由原descriptor控制，本政策不激活事件。
+
+风原回程落100(278,325)入口NPC格在scope外：只清凭证，不拒位置或后续走离；受保护原script落点即使正逢NPC实体，只有刚提交该真实落点的下一步可离开，普通报告不能凭占格声明穿人。
+
+共享测试support `tests/support/original_route_driver.gd`只按实际碰撞、NPC与portal计算四向路径，并用生产report_position逐格走图。脚本门与固定战必须由调用者实际完成；不会修改scope/epoch/receipt、不会把位置fixture伪装成合法入场。旧Backend下模块suite显式观察移动；已接入Backend下使用唯一b.quest_arrival、实际begin产生的proof及自动commit/Warp hook，避免双调用。两个定向suite均注册；首轮旧Backend 2/2通过，真实接入另行记录。
