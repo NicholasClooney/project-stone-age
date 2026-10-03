@@ -15,9 +15,11 @@ import subprocess, sys
 # Wind UI: original route 333 s, total 367 s; 480 s leaves margin.
 # Water transactions: 310.610 s (init 22.488 + route/gates 139.569 + transactions/LAN 148.553).
 # Water UI: 367.194 s (walking 325.562 + battle 8.238 + remaining 33.394).
+# Jan UI: 248.932 s; route: 257.920 s (three independent original guard routes/save retries).
 # Exact names only; every other suite retains the 180 s default.
 timeout = {"transmigration_wind_ui_test": 480, "transmigration_water_test": 420,
-           "transmigration_water_ui_test": 480}.get(sys.argv[1], 180)
+           "transmigration_water_ui_test": 480, "jan_cave_ui_test": 360,
+           "jan_cave_route_test": 300}.get(sys.argv[1], 180)
 with open(sys.argv[2], "w") as output:
     try:
         result = subprocess.run(["sh", "./scripts/run.sh", "--headless", "--script", f"res://tests/{sys.argv[1]}.gd"], stdout=output, stderr=subprocess.STDOUT, timeout=timeout)
