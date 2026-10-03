@@ -88,9 +88,19 @@ func _initialize()->void:
  check(restored.gm_set_base_stat(-1,"strength",30) and restored._valid_profile(restored.snapshot()) and restored.snapshot().rebirth.developer_base_delta.strength!=0,"explicit developer change has separate delta ledger")
  check(restored.gm_grant_points(2) and restored.snapshot().player.stat_points==2 and restored._valid_profile(restored.snapshot()),"new-round GM points remain separate")
  var b=Backend.new();var unchanged:Dictionary=b.session.snapshot()
+ var king:="777/ten.arg@32021:31:28"
+ check(not b.original_quests.npc_by_id(king).is_empty(),"production descriptor exposes reviewed king after approved activation")
+ for command in [{"type":"transmigration","action":"preview","npc_id":king,"pet_ids":[]},{"type":"transmigration","action":"confirm","token":"fake"},{"type":"transmigration","action":"cancel","token":"fake"}]:
+  var rejected:Dictionary=b.handle(command)
+  var expected:="请沿原路线走到精灵王身边。" if command.action=="preview" else "转生确认已过期，请重新与精灵王交谈。"
+  check(not rejected.ok and rejected.get("reason")==expected and b.session.snapshot()==unchanged and b.transmigration.pending.is_empty(),"enabled service rejects unauthorized request without mutation: "+str(command.action))
+ # Explicit closed-descriptor fixture: remove only this module's directory
+ # tags from this isolated catalog. Do not revert production activation.
+ b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(event):return int(event) not in [48,49,50,51,52])
+ check(b.original_quests.npc_by_id(king).is_empty(),"closed fixture projects no king service")
  for action in ["preview","confirm","cancel"]:
   var result:Dictionary=b.handle({"type":"transmigration","action":action,"token":"fake","enabled":true,"count":5})
-  check(not result.ok and str(result.reason).contains("尚未开放") and b.session.snapshot()==unchanged,"production command remains closed: "+action)
+  check(not result.ok and str(result.reason).contains("尚未开放") and b.session.snapshot()==unchanged,"explicit closed fixture rejects client activation: "+action)
  b.free()
  for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(disk+suffix))
  print("TRANSMIGRATION MIGRATION: %d failures"%failures)
