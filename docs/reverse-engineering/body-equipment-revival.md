@@ -65,3 +65,18 @@ STONE_AGE_FOREGROUND_TEST=1 ./scripts/run.sh --position -2000,-2000 --script res
 Six screenshots in `/private/tmp/body-revival-shots` cover BODY before/equipped, field medicine details, battle item selection, target selection and revived pet. Each was opened for pixel review. Screenshots and imported assets are not committed. This is a 390px mobile verification, not a claim of a full desktop/PvP/all-device visual audit. Only relevant suites were run; the coordinator owns the full-suite run and live relaunch.
 
 Incremental estimate was provisionally 1.5–2.5 project SP, calibrated to original Samgir=1 and villager conversation=0.5. Reuses UID inventory, battle targeting, authority transport and settlement foundations; source/target audit, new BODY compatibility, per-owner item transactions and failure/mobile validation are this slice's incremental work. SP is scope/uncertainty, not elapsed time. Historical catalogue totals are unchanged.
+
+
+## Desktop follow-up and source effect availability
+
+The same real WebSocket UI suite accepts `--desktop` (1280×720). It clicks the native `choice_panel/OriginalRevivalItem`, verifies the corpse target is visible, enabled and inside the viewport, then sends actual mouse input to `target_buttons[2]`. The authority revives the owned pet and consumes one UID; a second socket replay is rejected and the saved profile reads back correctly. On 2026-10-03 this offscreen rendered run passed with zero failures:
+
+```sh
+STONE_AGE_FOREGROUND_TEST=1 ./scripts/run.sh --position -2000,-2000 --script res://tests/body_revival_ui_test.gd -- --visual-review --desktop
+```
+
+Log: `/private/tmp/body-revival-desktop.log`. Six `1280-*.png` images in `/private/tmp/body-revival-shots` were individually opened for review. This confirms the desktop medicine/dead-pet click path, not an exhaustive desktop layout audit. The native medicine menu retains the existing small canvas-scaled presentation.
+
+100612 is **available in the original pack**, but absent from the current imported index. Read-only decoding with the existing `Archive` and `import_battle.animations` found action `0_0`, duration 1500 ms, 14 frames, bitmaps 7232–7245, all decoded successfully. Source root: `.tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5`; animation files `data/spradrn_5.bin` and `data/spr_4.bin`, bitmap file `data/real_15.bin`. Evidence and decoded PNGs are isolated under `/private/tmp/body-revival-100612/audit.json` and its directory. Shared assets were not written.
+
+The minimal supplemental import is to add 100612 to `tools/import_mirror.py:EFFECTS` and its provenance, then run that existing importer against the above source in the coordinator's asset checkout (or an approved cloned asset worktree). It emits the 14 PNGs and the `characters["100612"]["0_0"]`/image metadata consumed directly by `mirror_effect.gd`; no new runtime interface or magic implementation is needed. Its normal run also rewrites the existing mirror item images/manifest entries and effect index, so it must not run through this worktree's shared asset symlink. A full export was also validated under `/private/tmp/body-revival-100612/export` by extending the imported module's `EFFECTS` tuple only in the temporary Python process: 167 total effect PNGs exported, including all 14 new frames and matching index entries; log `/private/tmp/body-revival-100612/export.log`. No tracked importer or shared asset changed. Importer modification/asset regeneration remains a separately coordinated step; this follow-up commits only the desktop test option and source evidence.
