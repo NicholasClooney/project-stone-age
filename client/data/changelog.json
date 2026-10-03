@@ -1,9 +1,18 @@
 {
-  "version": "v0.216.9",
-  "count": 366,
+  "version": "v0.216.10",
+  "count": 367,
   "feature_count": 200,
-  "fix_count": 166,
+  "fix_count": 167,
   "entries": [
+    {
+      "version": "v0.216.10",
+      "date": "2026-10-03",
+      "kind": "fix",
+      "title": "完成五兄弟后不再提示入洞",
+      "details": [
+        "五兄弟任务完成并离开洞窟后，助手不再把公开入口列为待推进步骤；未完成任务仍可沿原入口继续。"
+      ]
+    },
     {
       "version": "v0.216.9",
       "date": "2026-10-03",

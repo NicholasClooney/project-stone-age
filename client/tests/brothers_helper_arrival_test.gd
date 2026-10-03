@@ -33,6 +33,10 @@ func run()->void:
  b.quest_arrival.reset()
  check(b.quest_helper.destination(b,first,"near").is_empty(),"restart rejects inherited cave position without arrival")
  check(b.quest_helper.destination(b,reward,"near").is_empty(),"restart cannot revive old final reward route")
+ Rules.set_flag(b.session._profile,"ended",28,true);Rules.set_flag(b.session._profile,"ended",31,true)
+ b.automation.position_changed(1000,Vector2i(80,90))
+ for quest in b.quest_helper.snapshot(b).quests:
+  if int(quest.event) in [28,31]:check(not quest.steps.any(func(step):return bool(step.current)),"completed brothers entry is not presented as pending progress")
  b.free()
  await remote_tokens()
  print("BROTHERS HELPER ARRIVAL: %d failures"%failures)
