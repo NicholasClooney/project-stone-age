@@ -124,8 +124,14 @@ func add_step(backend,profile:Dictionary,quest:Dictionary,id:String,entry:Dictio
   else:blocked="尚未满足原任务条件"
   var worn_hint := Rules.worn_item_hint(profile,str(branch.condition))
   if not worn_hint.is_empty():blocked=worn_hint
- if current and actionable and branch.actions.has("GetRandItem") and Rules.Session.bag_slots(profile)>=15:
-  actionable=false;blocked="道具栏已满；需要一个空格领取随机谢礼"
+ if current and actionable and branch.actions.has("GetRandItem"):
+  # Use the authority's actual UID deletion semantics on a private candidate.
+  # Worn items do not occupy bag slots; deleting one cannot free a bag slot.
+  var capacity:Dictionary=profile.duplicate(true)
+  Rules.remove_items(capacity,str(branch.actions.get("DelItem","")),str(branch.get("item_deletion_scope",""))=="bag")
+  var rewards:int=Rules.item_list(str(branch.actions.get("GetItem",""))).size()+1
+  if Rules.Session.bag_slots(capacity)+rewards>15:
+   actionable=false;blocked="道具栏已满；交换后需要足够空格领取随机谢礼"
  if current and actionable and branch.actions.has("GetPet") and profile.pets.size()-Rules.pet_indices(profile,str(branch.actions.get("DelPet",""))).size()+1>Rules.Session.PET_CAPACITY:
   actionable=false;blocked="宠物栏已满"
  if current and actionable and branch.actions.has("DelStone"):
