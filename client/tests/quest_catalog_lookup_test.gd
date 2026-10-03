@@ -1,5 +1,8 @@
 extends SceneTree
 const Catalog=preload("res://scripts/quest_catalog.gd")
+const FINAL_TAGS=[48,49,50,51,52]
+const FINAL_SERVICE_IDS=["777/ten.arg@32021:31:28","genout/wpm_117_6_5@117:6:5","genout/wpm_110_37_20@110:37:20","genout/wpm_110_37_24@110:37:24","genout/wpm_110_37_28@110:37:28","genout/wpm_110_37_32@110:37:32"]
+var reviewed_final:Array=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-final-source.json")).npcs
 var failures:int=0
 func _initialize()->void:call_deferred("run")
 func check(ok:bool,label:String)->void:
@@ -30,7 +33,13 @@ func mutate_nested(value)->void:
   value.append(-909)
 func run()->void:
  var catalog=Catalog.new();var other=Catalog.new()
+ check_final_services(catalog)
  compare(catalog,"all actual enabled modules")
+ var enabled_final:Array=catalog.enabled_events.duplicate()
+ for event in FINAL_TAGS:catalog.enabled_events.erase(event)
+ compare(catalog,"explicit final-module disabled fixture")
+ for id in FINAL_SERVICE_IDS:check(catalog.active_npc(id).is_empty(),"explicit disabled service absent "+id)
+ catalog.enabled_events=enabled_final
  var initial:Array=reference(catalog);var ids:Array=initial.map(func(n):return str(n.id))
  var start:int=Time.get_ticks_usec()
  for id in ids:first(reference(catalog),id)
@@ -89,6 +98,11 @@ func reference(catalog) -> Array:
   if bool(override.get("hidden",false)):continue
   if npc.has("source_spawn") and not override.has("map_id"):continue
   var active: Dictionary = npc.duplicate(true)
+  # Source-fixture oracle for branchless services added in stage three.
+  # No production projection or identity helper supplies the expected result.
+  if str(npc.get("kind","")) in ["original_transmigration","original_prison"]:
+   if override.is_empty() and reviewed_service(npc):result.append(active)
+   continue
   if override.has("map_id"):
    active.map_id=int(override.map_id);active.cell=override.cell.duplicate()
   if active.get("handler","")=="TimeMan":
@@ -110,3 +124,25 @@ func reference(catalog) -> Array:
   if not active.branches.is_empty(): result.append(active)
  result.append_array(catalog.service_npcs.duplicate(true))
  return result
+
+func reviewed_service(npc:Dictionary)->bool:
+ var source:Dictionary=first(reviewed_final,str(npc.id))
+ if source.is_empty() or str(npc.id) not in FINAL_SERVICE_IDS:return false
+ for field in ["id","source_script","source_create","source_create_index","events","name","map_id","cell","graphic","facing","branches","kind","handler","service_id"]:
+  if npc.get(field)!=source.get(field):return false
+ if str(npc.kind)=="original_prison":
+  return not npc.has("prison_role") and npc.get("prison")==source.prison and npc.get("source_fields")==source.source_fields
+ var service=npc.get("transmigration",{})
+ return service is Dictionary and service.get("schema")==source.transmigration.schema and service.get("rules")==source.transmigration.rules
+
+func check_final_services(catalog)->void:
+ var present:Array=[]
+ for npc in catalog.active_npcs():
+  if str(npc.get("kind","")) in ["original_transmigration","original_prison"]:present.append(str(npc.id))
+ var wanted:Array=FINAL_SERVICE_IDS.duplicate();present.sort();wanted.sort()
+ check(present==wanted,"production activation contains exact reviewed king and five Prison identities")
+ for id in FINAL_SERVICE_IDS:
+  var source:Dictionary=first(reviewed_final,id);var actual:Dictionary=catalog.active_npc(id)
+  var same:bool=not source.is_empty() and not actual.is_empty()
+  for field in source: same=same and actual.get(field)==source[field]
+  check(same,"production service source fields exactly match independent fixture "+id)
