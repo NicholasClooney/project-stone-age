@@ -2,6 +2,7 @@ extends RefCounted
 ## Reviewed project safeguards. These are not additional original event flags.
 ## Other audited chains are added separately; staged rebirth bosses stay closed.
 static func scope(map_id: int) -> String:
+	if map_id in [118,119,122]:return "marju"
 	if map_id>=20801 and map_id<=20807:return "dragon"
 	if map_id>=21001 and map_id<=21016:return "earth"
 	if map_id in [41,42]:return "dream"
@@ -17,6 +18,7 @@ static func portal_root(from_map: int, to_map: int) -> bool:
 	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204) or (from_map==5000 and to_map==31301)
 
 static func script_root(source_id: String, to_map: int) -> bool:
+	if source_id=="genout/wpm_120_19_15" and to_map==122:return true
 	if source_id=="genout/wpm_200_73_696" and to_map==21201:return true
 	if source_id=="genout/wpm_200_316_711" and to_map==21301:return true
 	if source_id=="genout/wpm_40_13_1" and to_map==31301:return true
