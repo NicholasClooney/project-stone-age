@@ -1,0 +1,3798 @@
+{
+  "provenance": "Direct original create/mapwarp source rows; duplicate declarations retained, no runtime catalog used as expectation.",
+  "portals": [
+    {
+      "from_map": 32001,
+      "cell": [
+        29,
+        3
+      ],
+      "to_map": 300,
+      "target": [
+        108,
+        225
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 7,
+      "source_create_index": 0
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        38,
+        12
+      ],
+      "to_map": 32002,
+      "target": [
+        42,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 16,
+      "source_create_index": 1
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        42,
+        13
+      ],
+      "to_map": 32001,
+      "target": [
+        38,
+        12
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 25,
+      "source_create_index": 2
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        9,
+        46
+      ],
+      "to_map": 32002,
+      "target": [
+        8,
+        46
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 34,
+      "source_create_index": 3
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        8,
+        46
+      ],
+      "to_map": 32001,
+      "target": [
+        9,
+        46
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 43,
+      "source_create_index": 4
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        7,
+        53
+      ],
+      "to_map": 32002,
+      "target": [
+        6,
+        54
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 52,
+      "source_create_index": 5
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        6,
+        54
+      ],
+      "to_map": 32001,
+      "target": [
+        7,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 61,
+      "source_create_index": 6
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        53,
+        34
+      ],
+      "to_map": 32003,
+      "target": [
+        53,
+        33
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 70,
+      "source_create_index": 7
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        53,
+        33
+      ],
+      "to_map": 32002,
+      "target": [
+        53,
+        34
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 79,
+      "source_create_index": 8
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        34,
+        54
+      ],
+      "to_map": 32004,
+      "target": [
+        42,
+        29
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 88,
+      "source_create_index": 9
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        42,
+        29
+      ],
+      "to_map": 32003,
+      "target": [
+        34,
+        54
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 97,
+      "source_create_index": 10
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        35,
+        43
+      ],
+      "to_map": 32004,
+      "target": [
+        19,
+        28
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 106,
+      "source_create_index": 11
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        19,
+        28
+      ],
+      "to_map": 32003,
+      "target": [
+        35,
+        43
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 115,
+      "source_create_index": 12
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        41,
+        13
+      ],
+      "to_map": 32004,
+      "target": [
+        52,
+        25
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 124,
+      "source_create_index": 13
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        52,
+        25
+      ],
+      "to_map": 32003,
+      "target": [
+        41,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 133,
+      "source_create_index": 14
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        11,
+        27
+      ],
+      "to_map": 32004,
+      "target": [
+        19,
+        7
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 142,
+      "source_create_index": 15
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 32003,
+      "target": [
+        11,
+        27
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 151,
+      "source_create_index": 16
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        37,
+        5
+      ],
+      "to_map": 32004,
+      "target": [
+        42,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 160,
+      "source_create_index": 17
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        42,
+        13
+      ],
+      "to_map": 32003,
+      "target": [
+        37,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 169,
+      "source_create_index": 18
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        47,
+        15
+      ],
+      "to_map": 32003,
+      "target": [
+        21,
+        44
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 178,
+      "source_create_index": 19
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        21,
+        44
+      ],
+      "to_map": 32004,
+      "target": [
+        47,
+        15
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 187,
+      "source_create_index": 20
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        44,
+        50
+      ],
+      "to_map": 32003,
+      "target": [
+        55,
+        19
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 196,
+      "source_create_index": 21
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        55,
+        19
+      ],
+      "to_map": 32004,
+      "target": [
+        44,
+        50
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 205,
+      "source_create_index": 22
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        55,
+        47
+      ],
+      "to_map": 32003,
+      "target": [
+        45,
+        43
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 214,
+      "source_create_index": 23
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        45,
+        43
+      ],
+      "to_map": 32004,
+      "target": [
+        55,
+        47
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 223,
+      "source_create_index": 24
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        27,
+        34
+      ],
+      "to_map": 32003,
+      "target": [
+        8,
+        4
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 232,
+      "source_create_index": 25
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        8,
+        4
+      ],
+      "to_map": 32004,
+      "target": [
+        27,
+        34
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 241,
+      "source_create_index": 26
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        18,
+        21
+      ],
+      "to_map": 32003,
+      "target": [
+        52,
+        4
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 250,
+      "source_create_index": 27
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        52,
+        4
+      ],
+      "to_map": 32004,
+      "target": [
+        18,
+        21
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 259,
+      "source_create_index": 28
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        8,
+        47
+      ],
+      "to_map": 32004,
+      "target": [
+        8,
+        48
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 268,
+      "source_create_index": 29
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        8,
+        48
+      ],
+      "to_map": 32003,
+      "target": [
+        8,
+        47
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 277,
+      "source_create_index": 30
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        21,
+        46
+      ],
+      "to_map": 32003,
+      "target": [
+        27,
+        34
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 286,
+      "source_create_index": 31
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        27,
+        34
+      ],
+      "to_map": 32004,
+      "target": [
+        21,
+        46
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 295,
+      "source_create_index": 32
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        15,
+        12
+      ],
+      "to_map": 32004,
+      "target": [
+        32,
+        26
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 304,
+      "source_create_index": 33
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        32,
+        26
+      ],
+      "to_map": 32003,
+      "target": [
+        15,
+        12
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 313,
+      "source_create_index": 34
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        28,
+        4
+      ],
+      "to_map": 32005,
+      "target": [
+        48,
+        3
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 322,
+      "source_create_index": 35
+    },
+    {
+      "from_map": 32005,
+      "cell": [
+        48,
+        3
+      ],
+      "to_map": 32004,
+      "target": [
+        28,
+        4
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 331,
+      "source_create_index": 36
+    },
+    {
+      "from_map": 32005,
+      "cell": [
+        37,
+        23
+      ],
+      "to_map": 32006,
+      "target": [
+        17,
+        20
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 340,
+      "source_create_index": 37
+    },
+    {
+      "from_map": 32006,
+      "cell": [
+        17,
+        20
+      ],
+      "to_map": 32005,
+      "target": [
+        37,
+        23
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 349,
+      "source_create_index": 38
+    },
+    {
+      "from_map": 32006,
+      "cell": [
+        13,
+        56
+      ],
+      "to_map": 32007,
+      "target": [
+        29,
+        4
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 358,
+      "source_create_index": 39
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        29,
+        4
+      ],
+      "to_map": 32006,
+      "target": [
+        13,
+        56
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 367,
+      "source_create_index": 40
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        55,
+        55
+      ],
+      "to_map": 32008,
+      "target": [
+        49,
+        8
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 376,
+      "source_create_index": 41
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        49,
+        8
+      ],
+      "to_map": 32007,
+      "target": [
+        55,
+        55
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 385,
+      "source_create_index": 42
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        6,
+        23
+      ],
+      "to_map": 32008,
+      "target": [
+        4,
+        38
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 394,
+      "source_create_index": 43
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        4,
+        38
+      ],
+      "to_map": 32007,
+      "target": [
+        6,
+        23
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 403,
+      "source_create_index": 44
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        55,
+        15
+      ],
+      "to_map": 32009,
+      "target": [
+        4,
+        38
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 412,
+      "source_create_index": 45
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        4,
+        38
+      ],
+      "to_map": 32008,
+      "target": [
+        55,
+        15
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 421,
+      "source_create_index": 46
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        10,
+        5
+      ],
+      "to_map": 32009,
+      "target": [
+        49,
+        8
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 430,
+      "source_create_index": 47
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        49,
+        8
+      ],
+      "to_map": 32008,
+      "target": [
+        10,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 439,
+      "source_create_index": 48
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        10,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        10,
+        4
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 448,
+      "source_create_index": 49
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        10,
+        4
+      ],
+      "to_map": 32009,
+      "target": [
+        10,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 457,
+      "source_create_index": 50
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        16,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        92,
+        4
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 466,
+      "source_create_index": 51
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        92,
+        4
+      ],
+      "to_map": 32009,
+      "target": [
+        16,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 475,
+      "source_create_index": 52
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        22,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        6,
+        57
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 484,
+      "source_create_index": 53
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        6,
+        57
+      ],
+      "to_map": 32009,
+      "target": [
+        22,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 493,
+      "source_create_index": 54
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        28,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        93,
+        93
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 502,
+      "source_create_index": 55
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        93,
+        93
+      ],
+      "to_map": 32009,
+      "target": [
+        28,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 511,
+      "source_create_index": 56
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        56,
+        36
+      ],
+      "to_map": 32010,
+      "target": [
+        51,
+        30
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 520,
+      "source_create_index": 57
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        9
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 529,
+      "source_create_index": 58
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        16
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 538,
+      "source_create_index": 59
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        21
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 547,
+      "source_create_index": 60
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        28
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 556,
+      "source_create_index": 61
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        33
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 565,
+      "source_create_index": 62
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        40
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 574,
+      "source_create_index": 63
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        45
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 583,
+      "source_create_index": 64
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        52
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 592,
+      "source_create_index": 65
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        9
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 601,
+      "source_create_index": 66
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        16
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 610,
+      "source_create_index": 67
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        21
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 619,
+      "source_create_index": 68
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        28
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 628,
+      "source_create_index": 69
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        33
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 637,
+      "source_create_index": 70
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        40
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 646,
+      "source_create_index": 71
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        45
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 655,
+      "source_create_index": 72
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        52
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 664,
+      "source_create_index": 73
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        9
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 673,
+      "source_create_index": 74
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        16
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 682,
+      "source_create_index": 75
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        21
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 691,
+      "source_create_index": 76
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        28
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 700,
+      "source_create_index": 77
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        33
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 709,
+      "source_create_index": 78
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        40
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 718,
+      "source_create_index": 79
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        45
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 727,
+      "source_create_index": 80
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        52
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 736,
+      "source_create_index": 81
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 814,
+      "source_create_index": 88
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 823,
+      "source_create_index": 89
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 832,
+      "source_create_index": 90
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 841,
+      "source_create_index": 91
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 850,
+      "source_create_index": 92
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 859,
+      "source_create_index": 93
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 868,
+      "source_create_index": 94
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 877,
+      "source_create_index": 95
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 886,
+      "source_create_index": 96
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 895,
+      "source_create_index": 97
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 904,
+      "source_create_index": 98
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 913,
+      "source_create_index": 99
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 922,
+      "source_create_index": 100
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 931,
+      "source_create_index": 101
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 940,
+      "source_create_index": 102
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 949,
+      "source_create_index": 103
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 958,
+      "source_create_index": 104
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 967,
+      "source_create_index": 105
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 976,
+      "source_create_index": 106
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 985,
+      "source_create_index": 107
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 994,
+      "source_create_index": 108
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        31,
+        38
+      ],
+      "to_map": 32016,
+      "target": [
+        31,
+        41
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1003,
+      "source_create_index": 109
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        33,
+        9
+      ],
+      "to_map": 32013,
+      "target": [
+        6,
+        5
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1012,
+      "source_create_index": 110
+    },
+    {
+      "from_map": 32013,
+      "cell": [
+        6,
+        5
+      ],
+      "to_map": 32012,
+      "target": [
+        33,
+        9
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1021,
+      "source_create_index": 111
+    },
+    {
+      "from_map": 32013,
+      "cell": [
+        40,
+        23
+      ],
+      "to_map": 32014,
+      "target": [
+        8,
+        8
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1030,
+      "source_create_index": 112
+    },
+    {
+      "from_map": 32014,
+      "cell": [
+        8,
+        8
+      ],
+      "to_map": 32013,
+      "target": [
+        40,
+        23
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1039,
+      "source_create_index": 113
+    },
+    {
+      "from_map": 32014,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32015,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1048,
+      "source_create_index": 114
+    },
+    {
+      "from_map": 32015,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32014,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1057,
+      "source_create_index": 115
+    },
+    {
+      "from_map": 32015,
+      "cell": [
+        54,
+        42
+      ],
+      "to_map": 32016,
+      "target": [
+        54,
+        42
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1066,
+      "source_create_index": 116
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        54,
+        42
+      ],
+      "to_map": 32015,
+      "target": [
+        54,
+        42
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1075,
+      "source_create_index": 117
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32017,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1084,
+      "source_create_index": 118
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32016,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1093,
+      "source_create_index": 119
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        43,
+        13
+      ],
+      "to_map": 32018,
+      "target": [
+        43,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1102,
+      "source_create_index": 120
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        43,
+        13
+      ],
+      "to_map": 32017,
+      "target": [
+        43,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1111,
+      "source_create_index": 121
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        17,
+        13
+      ],
+      "to_map": 32018,
+      "target": [
+        17,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1120,
+      "source_create_index": 122
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        17,
+        13
+      ],
+      "to_map": 32017,
+      "target": [
+        17,
+        13
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1129,
+      "source_create_index": 123
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        23,
+        54
+      ],
+      "to_map": 32019,
+      "target": [
+        23,
+        54
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1138,
+      "source_create_index": 124
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        23,
+        54
+      ],
+      "to_map": 32018,
+      "target": [
+        23,
+        54
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1147,
+      "source_create_index": 125
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        52,
+        22
+      ],
+      "to_map": 32020,
+      "target": [
+        95,
+        29
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1156,
+      "source_create_index": 126
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        95,
+        29
+      ],
+      "to_map": 32019,
+      "target": [
+        52,
+        22
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1165,
+      "source_create_index": 127
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 32019,
+      "target": [
+        53,
+        49
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1174,
+      "source_create_index": 128
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 32018,
+      "target": [
+        53,
+        49
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1183,
+      "source_create_index": 129
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 300,
+      "target": [
+        108,
+        225
+      ],
+      "source": "gmsv/data/npc/genout/sikkoku.create",
+      "source_line": 1192,
+      "source_create_index": 130
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        8
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 779
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 780
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 781
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        7
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 782
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 783
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 784
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        6
+      ],
+      "to_map": 117,
+      "target": [
+        225,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 785
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        19,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 786
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        20,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 787
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        21,
+        5
+      ],
+      "to_map": 117,
+      "target": [
+        180,
+        99
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 788
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        59
+      ],
+      "to_map": 32020,
+      "target": [
+        20,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 789
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        59
+      ],
+      "to_map": 32020,
+      "target": [
+        21,
+        10
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 790
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        29,
+        3
+      ],
+      "to_map": 300,
+      "target": [
+        108,
+        225
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1807
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        38,
+        12
+      ],
+      "to_map": 32002,
+      "target": [
+        42,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1808
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        42,
+        13
+      ],
+      "to_map": 32001,
+      "target": [
+        38,
+        12
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1809
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        9,
+        46
+      ],
+      "to_map": 32002,
+      "target": [
+        8,
+        46
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1810
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        8,
+        46
+      ],
+      "to_map": 32001,
+      "target": [
+        9,
+        46
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1811
+    },
+    {
+      "from_map": 32001,
+      "cell": [
+        7,
+        53
+      ],
+      "to_map": 32002,
+      "target": [
+        6,
+        54
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1812
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        6,
+        54
+      ],
+      "to_map": 32001,
+      "target": [
+        7,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1813
+    },
+    {
+      "from_map": 32002,
+      "cell": [
+        53,
+        34
+      ],
+      "to_map": 32003,
+      "target": [
+        53,
+        33
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1814
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        53,
+        33
+      ],
+      "to_map": 32002,
+      "target": [
+        53,
+        34
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1815
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        34,
+        54
+      ],
+      "to_map": 32004,
+      "target": [
+        42,
+        29
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1816
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        42,
+        29
+      ],
+      "to_map": 32003,
+      "target": [
+        34,
+        54
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1817
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        35,
+        43
+      ],
+      "to_map": 32004,
+      "target": [
+        19,
+        28
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1818
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        19,
+        28
+      ],
+      "to_map": 32003,
+      "target": [
+        35,
+        43
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1819
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        41,
+        13
+      ],
+      "to_map": 32004,
+      "target": [
+        52,
+        25
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1820
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        52,
+        25
+      ],
+      "to_map": 32003,
+      "target": [
+        41,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1821
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        11,
+        27
+      ],
+      "to_map": 32004,
+      "target": [
+        19,
+        7
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1822
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        19,
+        7
+      ],
+      "to_map": 32003,
+      "target": [
+        11,
+        27
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1823
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        37,
+        5
+      ],
+      "to_map": 32004,
+      "target": [
+        42,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1824
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        42,
+        13
+      ],
+      "to_map": 32003,
+      "target": [
+        37,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1825
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        47,
+        15
+      ],
+      "to_map": 32003,
+      "target": [
+        21,
+        44
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1826
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        21,
+        44
+      ],
+      "to_map": 32004,
+      "target": [
+        47,
+        15
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1827
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        44,
+        50
+      ],
+      "to_map": 32003,
+      "target": [
+        55,
+        19
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1828
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        55,
+        19
+      ],
+      "to_map": 32004,
+      "target": [
+        44,
+        50
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1829
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        55,
+        47
+      ],
+      "to_map": 32003,
+      "target": [
+        45,
+        43
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1830
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        45,
+        43
+      ],
+      "to_map": 32004,
+      "target": [
+        55,
+        47
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1831
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        27,
+        34
+      ],
+      "to_map": 32003,
+      "target": [
+        8,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1832
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        8,
+        4
+      ],
+      "to_map": 32004,
+      "target": [
+        27,
+        34
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1833
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        18,
+        21
+      ],
+      "to_map": 32003,
+      "target": [
+        52,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1834
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        52,
+        4
+      ],
+      "to_map": 32004,
+      "target": [
+        18,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1835
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        8,
+        47
+      ],
+      "to_map": 32004,
+      "target": [
+        8,
+        48
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1836
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        8,
+        48
+      ],
+      "to_map": 32003,
+      "target": [
+        8,
+        47
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1837
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        21,
+        46
+      ],
+      "to_map": 32003,
+      "target": [
+        27,
+        34
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1838
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        27,
+        34
+      ],
+      "to_map": 32004,
+      "target": [
+        21,
+        46
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1839
+    },
+    {
+      "from_map": 32003,
+      "cell": [
+        15,
+        12
+      ],
+      "to_map": 32004,
+      "target": [
+        32,
+        26
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1840
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        32,
+        26
+      ],
+      "to_map": 32003,
+      "target": [
+        15,
+        12
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1841
+    },
+    {
+      "from_map": 32004,
+      "cell": [
+        28,
+        4
+      ],
+      "to_map": 32005,
+      "target": [
+        48,
+        3
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1842
+    },
+    {
+      "from_map": 32005,
+      "cell": [
+        48,
+        3
+      ],
+      "to_map": 32004,
+      "target": [
+        28,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1843
+    },
+    {
+      "from_map": 32005,
+      "cell": [
+        37,
+        23
+      ],
+      "to_map": 32006,
+      "target": [
+        17,
+        20
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1844
+    },
+    {
+      "from_map": 32006,
+      "cell": [
+        17,
+        20
+      ],
+      "to_map": 32005,
+      "target": [
+        37,
+        23
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1845
+    },
+    {
+      "from_map": 32006,
+      "cell": [
+        13,
+        56
+      ],
+      "to_map": 32007,
+      "target": [
+        29,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1846
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        29,
+        4
+      ],
+      "to_map": 32006,
+      "target": [
+        13,
+        56
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1847
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        55,
+        55
+      ],
+      "to_map": 32008,
+      "target": [
+        49,
+        8
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1848
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        49,
+        8
+      ],
+      "to_map": 32007,
+      "target": [
+        55,
+        55
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1849
+    },
+    {
+      "from_map": 32007,
+      "cell": [
+        6,
+        23
+      ],
+      "to_map": 32008,
+      "target": [
+        4,
+        38
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1850
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        4,
+        38
+      ],
+      "to_map": 32007,
+      "target": [
+        6,
+        23
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1851
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        55,
+        15
+      ],
+      "to_map": 32009,
+      "target": [
+        4,
+        38
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1852
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        4,
+        38
+      ],
+      "to_map": 32008,
+      "target": [
+        55,
+        15
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1853
+    },
+    {
+      "from_map": 32008,
+      "cell": [
+        10,
+        5
+      ],
+      "to_map": 32009,
+      "target": [
+        49,
+        8
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1854
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        49,
+        8
+      ],
+      "to_map": 32008,
+      "target": [
+        10,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1855
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        10,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        10,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1856
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        10,
+        4
+      ],
+      "to_map": 32009,
+      "target": [
+        10,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1857
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        16,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        92,
+        4
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1858
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        92,
+        4
+      ],
+      "to_map": 32009,
+      "target": [
+        16,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1859
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        22,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        6,
+        57
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1860
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        6,
+        57
+      ],
+      "to_map": 32009,
+      "target": [
+        22,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1861
+    },
+    {
+      "from_map": 32009,
+      "cell": [
+        28,
+        5
+      ],
+      "to_map": 32010,
+      "target": [
+        93,
+        93
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1862
+    },
+    {
+      "from_map": 32010,
+      "cell": [
+        93,
+        93
+      ],
+      "to_map": 32009,
+      "target": [
+        28,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1863
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        56,
+        36
+      ],
+      "to_map": 32010,
+      "target": [
+        51,
+        30
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1864
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        9
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1865
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        16
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1866
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1867
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        28
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1868
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        33
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1869
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        40
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1870
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        12,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        10,
+        45
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1871
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        10,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        12,
+        52
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1872
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        9
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1873
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        16
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1874
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1875
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        28
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1876
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        33
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1877
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        40
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1878
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        29,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        27,
+        45
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1879
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        27,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        29,
+        52
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1880
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        16
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        9
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1881
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        9
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        16
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1882
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        28
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        21
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1883
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        21
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        28
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1884
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        40
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        33
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1885
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        33
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        40
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1886
+    },
+    {
+      "from_map": 32011,
+      "cell": [
+        46,
+        52
+      ],
+      "to_map": 32012,
+      "target": [
+        44,
+        45
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1887
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        44,
+        45
+      ],
+      "to_map": 32011,
+      "target": [
+        46,
+        52
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1888
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1890
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1891
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1892
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1893
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1894
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1895
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        47
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1896
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1897
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1898
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1899
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1900
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1901
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1902
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        48
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1903
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        28,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1904
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        29,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1905
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        30,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1906
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        31,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1907
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        32,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1908
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        33,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1909
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        34,
+        49
+      ],
+      "to_map": 32021,
+      "target": [
+        31,
+        53
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1910
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        31,
+        38
+      ],
+      "to_map": 32016,
+      "target": [
+        31,
+        41
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1911
+    },
+    {
+      "from_map": 32012,
+      "cell": [
+        33,
+        9
+      ],
+      "to_map": 32013,
+      "target": [
+        6,
+        5
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1912
+    },
+    {
+      "from_map": 32013,
+      "cell": [
+        6,
+        5
+      ],
+      "to_map": 32012,
+      "target": [
+        33,
+        9
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1913
+    },
+    {
+      "from_map": 32013,
+      "cell": [
+        40,
+        23
+      ],
+      "to_map": 32014,
+      "target": [
+        8,
+        8
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1914
+    },
+    {
+      "from_map": 32014,
+      "cell": [
+        8,
+        8
+      ],
+      "to_map": 32013,
+      "target": [
+        40,
+        23
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1915
+    },
+    {
+      "from_map": 32014,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32015,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1916
+    },
+    {
+      "from_map": 32015,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32014,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1917
+    },
+    {
+      "from_map": 32015,
+      "cell": [
+        54,
+        42
+      ],
+      "to_map": 32016,
+      "target": [
+        54,
+        42
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1918
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        54,
+        42
+      ],
+      "to_map": 32015,
+      "target": [
+        54,
+        42
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1919
+    },
+    {
+      "from_map": 32016,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32017,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1920
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        31,
+        35
+      ],
+      "to_map": 32016,
+      "target": [
+        31,
+        35
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1921
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        43,
+        13
+      ],
+      "to_map": 32018,
+      "target": [
+        43,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1922
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        43,
+        13
+      ],
+      "to_map": 32017,
+      "target": [
+        43,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1923
+    },
+    {
+      "from_map": 32017,
+      "cell": [
+        17,
+        13
+      ],
+      "to_map": 32018,
+      "target": [
+        17,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1924
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        17,
+        13
+      ],
+      "to_map": 32017,
+      "target": [
+        17,
+        13
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1925
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        23,
+        54
+      ],
+      "to_map": 32019,
+      "target": [
+        23,
+        54
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1926
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        23,
+        54
+      ],
+      "to_map": 32018,
+      "target": [
+        23,
+        54
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1927
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        52,
+        22
+      ],
+      "to_map": 32020,
+      "target": [
+        95,
+        29
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1928
+    },
+    {
+      "from_map": 32020,
+      "cell": [
+        95,
+        29
+      ],
+      "to_map": 32019,
+      "target": [
+        52,
+        22
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1929
+    },
+    {
+      "from_map": 32018,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 32019,
+      "target": [
+        53,
+        49
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1930
+    },
+    {
+      "from_map": 32019,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 32018,
+      "target": [
+        53,
+        49
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1931
+    },
+    {
+      "from_map": 32021,
+      "cell": [
+        53,
+        49
+      ],
+      "to_map": 300,
+      "target": [
+        108,
+        225
+      ],
+      "source": "gmsv/data/map/mapwarp.txt",
+      "source_line": 1932
+    }
+  ]
+}
