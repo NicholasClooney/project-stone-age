@@ -9,9 +9,9 @@ This test-only union is reviewed from committed manifests, pinned original GB180
 | Water | `9a4d10477ff1f34cca70ebf95aa1ab7dabbca0ff` | `1825a7e`, `188f648`, `0bb3ccf` | 15 / 55; 13 reviewed drops |
 | Fire | `3932b4359f40d184171cd37b8a97c7c182804c40` | `6d98ce6b1d0c0e04303dc32d13e1dfe941f53bbd` | 19 / 42 |
 
-The exact catalogue contains **297 NPC instances and 320 item IDs**: all prior242 identities and prior branch fields remain, plus55 new instances. Wind contributes10 new instances because `sainasu/event/event12@11107:24:6` remains the single Munde NPC, with source branches0–4 in original order and the complete original branch0 unchanged. All old groups remain. Every enabled descriptor is checked against its own frozen group; extra or missing IDs fail equality.
+The exact catalogue contains **297 NPC instances and 338 item IDs**: all prior242 identities and prior branch fields remain, plus55 new instances. Wind contributes10 new instances because `sainasu/event/event12@11107:24:6` remains the single Munde NPC, with source branches0–4 in original order and the complete original branch0 unchanged. All old groups remain. Every enabled descriptor is checked against its own frozen group; extra or missing IDs fail equality.
 
-Item declarations across manifests total362;42 repeated declarations represent39 IDs shared between manifests. The320-ID set only deduplicates catalogue definitions. It does not deduplicate any reward pool or alter slot order/weights. Wind's approved branch0 condition normalization is checked alongside the complete `source_condition`; all three UID-selection branches retain exact `source_actions`, including weighted random rewards.
+Item declarations across manifests total382;44 repeated declarations represent41 IDs shared between manifests. The338-ID set only deduplicates catalogue definitions. It does not deduplicate any reward pool or alter slot order/weights. Wind's approved branch0 condition normalization is checked alongside the complete `source_condition`; all three UID-selection branches retain exact `source_actions`, including weighted random rewards.
 
 The active projection is **296 fixed catalogue NPCs plus two independent Charm services =298**. The remaining area instance, `seimu/event/event02_1@100:230:180:area:525:200`, stays absent until placed. Its explicit test override at map100(230,180) is walkable; placement produces299 active entries including services, and hiding it returns exactly298. A region NPC is not silently dropped from the297-instance catalogue.
 
@@ -34,7 +34,7 @@ The route suites already passed with their chain deliveries. This oracle increme
 
 ## Directed verification and asset import
 
-Run `tools/test_transmigration_foundation.py` (7 tests), `tools/test_transmigration_assets.py` (3 tests), and the Godot suites `original_quests_test`, `transmigration_foundation_test`, `transmigration_navigation_test`. Existing registrations remain unchanged. The latter still tests isolated helper dispatch and geometric boundaries; it does not claim to reproduce each production route.
+Run `tools/test_transmigration_foundation.py` (8 tests), `tools/test_transmigration_assets.py` (3 tests), and the Godot suites `original_quests_test`, `transmigration_foundation_test`, `transmigration_navigation_test`. Existing registrations remain unchanged. The latter still tests isolated helper dispatch and geometric boundaries; it does not claim to reproduce each production route.
 
 Only a worktree with an independent legacy-assets directory may run:
 
@@ -47,4 +47,10 @@ python3 tools/split_manifests.py
 python3 tools/plan_web_packs.py
 ```
 
-The isolated integration produced450 maps,1572 portals and4751 images, with297 quest NPCs/320 items matching the prior frozen oracle. Assets, original archives and rendered screenshots are not committed. This increment changes test data and assertions only; no new graphical verification is needed.
+The isolated integration produced450 maps,1572 portals and4751 images, with297 quest NPCs/320 items matching the original four-chain oracle; the later Dream repeat reward integration expands the item union to338. Assets, original archives and rendered screenshots are not committed. This increment changes test data and assertions only; no new graphical verification is needed.
+
+## Dream repeat reward integration correction
+
+The `integrate/stage-two` baseline `92f0ec0` also includes `cfdb568` (original repeatable Dream rewards), which the first four-chain fixture omitted. Both pinned scripts add original zero-based branch4: `event01_1` at public6000 requests2603 with the complete original OR; both `event01_2` instances at41/42 consume2603 and draw from the exact20 source slots. Existing branch priority and all preceding branches stay unchanged; the repeat branch has event=-1 and no completion flag action.
+
+The frozen `reviewed_source_extensions.dream-repeat` stores both exact SHA256 values, the feature commit, original20-slot sequence and18 newly unique item IDs. The other two reward IDs (646,11814) were already in the four-chain item union. This is338 item definitions and still297 NPC instances; there is no reward-pool deduplication. A directed Python assertion reads pinned GB18030 source bytes independently of the importer and checks all three branch4 instances, ordering and exact full manifest item union. Runtime public equality still rejects missing/extra IDs. Migration assertions and production code are outside this correction.
