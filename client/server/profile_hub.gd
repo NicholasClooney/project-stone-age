@@ -153,7 +153,7 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 					var trusted:=command.duplicate(true)
 					trusted["_quest_connection"]=connection
 					var result: Dictionary = backend.handle(trusted)
-					if leading:_party_follow(id,before)
+					if leading and bool(result.get("ok",false)):_party_follow(id,before)
 					return result
 	reply.seq = command.get("seq",0)
 	reply.type = "ack" if reply.get("ok",false) else "rejected"
@@ -406,8 +406,9 @@ func _party_follow(leader: String, before: Array) -> void:
 	var positions := {}
 	for member in party.members(leader).slice(1):
 		if backends.has(member):positions[member] = [backends[member].automation.position_map,backends[member].automation.position_cell]
+	var evidence:Dictionary={"leader_from_map":int(before[0]),"leader_from_cell":[before[1].x,before[1].y],"leader_to_map":automation.position_map,"leader_to_cell":[automation.position_cell.x,automation.position_cell.y]}
 	for move in party.follow(leader,int(before[0]),before[1],automation.position_map,automation.position_cell,positions):
-		if backends.has(move[0]):backends[move[0]].report_party_position({"type":"report_position","map_id":move[1],"cell":[move[2].x,move[2].y],"map_changed":move[3],"client":"party"})
+		if backends.has(move[0]):backends[move[0]].report_party_position({"type":"report_position","map_id":move[1],"cell":[move[2].x,move[2].y],"map_changed":move[3],"client":"party"},evidence)
 
 func _party_command(connection: int, type: String, command: Dictionary) -> Dictionary:
 	var id := profile_of(connection)
