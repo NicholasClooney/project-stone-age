@@ -1,4 +1,5 @@
 extends SceneTree
+const AutomationFixture=preload("res://tests/support/automation_fixture.gd")
 var failures:=0
 func check(ok: bool,note: String) -> void:
 	print(("PASS: " if ok else "FAIL: ")+note)
@@ -25,7 +26,7 @@ func run() -> void:
 	game.session._profile.player.hp=1
 	var config: Dictionary=game.session.start_battle_config()
 	game.open_battle_config(config)
-	var flow=game.pet_workflow;flow.set_process(false);flow.phase="capture"
+	var flow=game.pet_workflow;flow.set_process(false);AutomationFixture.set_fields(game,{"flow_phase":"capture"})
 	var helper=game.training_helper;helper.set_process(false);helper.start_capture_battle(0,true);helper.acquire_clone_override()
 	for i in range(30):
 		for frame in range(100):game.battle_view._process(0.2)

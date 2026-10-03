@@ -14,6 +14,7 @@ func check(ok: bool, label: String) -> void:
 	if not ok:failures+=1
 func fresh():
 	var b=Backend.new();root.add_child(b);b.set_process(false);b.automation.client_attached=false
+	b.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	b.handle({"type":"set_automation_settings","settings":{"training":{"borrow_troops":false}}})
 	b.handle({"type":"grant_starter_pets"});b.session.select_pet(0)
 	b.handle({"type":"gm_raise_level","index":-1,"target":20})
@@ -42,6 +43,7 @@ func run() -> void:
 	check(Settings.defaults().training.select_troops,"training selection is on by default")
 	check(not Settings.apply_patch({}, {"training":{"select_troops":1}}).ok and not Settings.apply_patch({}, {"training":{"select_troops":"true"}}).ok,"selection setting strictly requires bool")
 	var strict=Backend.new();root.add_child(strict);strict.set_process(false)
+	strict.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	check(not strict.handle({"type":"auto_start","kind":"battle","map_id":MAP,"cell":[CELL.x,CELL.y],"settings":{"select_troops":1}}).ok,"legacy flat start refuses non-bool selector too")
 	strict.queue_free();await process_frame
 	var b=fresh();var p: Dictionary=b.session.snapshot()

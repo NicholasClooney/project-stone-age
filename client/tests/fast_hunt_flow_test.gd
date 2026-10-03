@@ -19,6 +19,7 @@ func check(ok: bool, note: String) -> void:
 
 func new_backend():
 	var backend = Backend.new()
+	backend.handle({"type":"report_position","map_id":MAP,"cell":CELL})
 	backend.set_process(false)
 	root.add_child(backend)
 	backend.automation.client_attached = false
@@ -59,6 +60,7 @@ func run() -> void:
 	var multi_hits: Array=[]
 	for native in [false,true]:
 		var multi=new_backend()
+		multi.handle({"type":"report_position","map_id":100,"cell":[637,493]})
 		multi.session._profile.original_items=[2478]
 		check(multi.handle({"type":"auto_start","kind":"hunt","map_id":100,"cell":[637,493],"filter":{"templates":[113,114],"level_one":true,"total":-8,"offsets":[],"auto_capture":false,"fast":native,"clean_only":false}}).ok,"multi-species end-to-end hunt starts with inventory gates")
 		var multi_run: Dictionary=await hunt_until_stopped(multi)

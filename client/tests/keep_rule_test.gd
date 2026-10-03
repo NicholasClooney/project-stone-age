@@ -1,4 +1,5 @@
 extends SceneTree
+const AutomationFixture=preload("res://tests/support/automation_fixture.gd")
 ## 保留规则 (scripts/keep_rule.gd): the top tiers of 三围合 keep their best few by
 ## the player's order, each chosen single stat keeps its best few across the
 ## species, favourites / 出战 / 骑乘 / the capture helper always stay, and the
@@ -119,16 +120,16 @@ func run()->void:
 	var source:Dictionary=session.snapshot().pets[0].duplicate(true)
 	var found_stats:=[[292,180,152],[293,180,152],[290,183,152],[294,178,152],[288,186,152],[293,181,152],[280,170,150]]
 	var cycle:=func(target: Dictionary, base: int) -> Array:
-		flow.kept_count=0;flow.collected_count=0;flow.target_stat_filter=target
+		AutomationFixture.set_fields(game,{"flow_kept_count":0});AutomationFixture.set_fields(game,{"flow_collected_count":0});flow.target_stat_filter=target
 		game.backend.automation.flow_released_count=0;game.backend.automation.flow_held_count=0
 		var results:=[]
 		for turn in range(found_stats.size()):
 			var found:Dictionary=source.duplicate(true);found.pet_id="pet-%d"%(base+turn);found.species="original_92";found.template_id=92;found.level=120
 			found.attack=found_stats[turn][0];found.defence=found_stats[turn][1];found.speed=found_stats[turn][2];found.erase("gm_modified")
 			session._profile.pets.append(found);session._profile.active_pet=session._profile.pets.size()-1
-			flow.pet_id=found.pet_id;flow.phase="train";flow.complete_trained_pet(found)
+			AutomationFixture.set_fields(game,{"flow_pet_id":found.pet_id});AutomationFixture.set_fields(game,{"flow_phase":"train"});flow.complete_trained_pet(found)
 			results.append(flow.last_result)
-			flow.phase="idle"
+			AutomationFixture.set_fields(game,{"flow_phase":"idle"})
 		return results
 	# 三围合 ≥ 625−1 or 攻击 ≥ 294−1, as the cycle resolves 最高 − 1.
 	var target:=Filter.resolve(Settings.default_stat_filter(92),{"sum":625,"attack":294})

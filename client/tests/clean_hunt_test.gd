@@ -25,6 +25,7 @@ func check(ok: bool, note: String) -> void:
 
 func new_backend(encounter_seed: int):
 	var backend = Backend.new()
+	backend.handle({"type":"report_position","map_id":MAP,"cell":CELL})
 	backend.set_process(false)
 	root.add_child(backend)
 	backend.automation.client_attached = false
