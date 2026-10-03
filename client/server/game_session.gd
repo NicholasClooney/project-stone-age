@@ -1480,8 +1480,9 @@ func load_game(path: String) -> bool:
 			if int(_profile.version)<5:_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
 			OriginalEquipment.migrate(_profile)
 			# itemset dropatlogout (column78), char.c CHAR_dropItemAtLogout:
-			# only the audited answer papers and wisdom crystal (2507..2517).
-			for item in range(2507,2518):
+			# Audited papers/crystal and four final-cave history proofs only.
+			# 2771..2774: itemset lines2282..2285, zero-based column78=1.
+			for item in range(2507,2518)+[2771,2772,2773,2774]:
 				while item in _profile.original_items:OriginalEquipment.remove(_profile,item)
 			TransmigrationState.migrate(_profile)
 			_profile.version = SAVE_VERSION
