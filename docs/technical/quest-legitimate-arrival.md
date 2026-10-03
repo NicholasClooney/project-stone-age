@@ -110,3 +110,17 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 真实400(96,119)/(97,119)是相邻原时辰portal；源portal可邻多个走路组件，不能用“唯一组件标签”断定不可达。`_portal_approach`只放宽最后的真实portal端点：本侧组件贴邻该源，或两个相邻真实portal端点；不会把任何中途portal当作普通地板穿越。原portal的NPC实体格也只作为该末端解析，BFS仍把普通NPC格作为障碍。
 
 `quest_arrival_party_follow_test`采用bonus授权的真实Hub复现，经过实际party_join、公开原门、连续队列步、洞内portal，再验证同房非相邻报告令双方失格，以及独立客户端伪造client/arrival_kind/evidence不能授party根。测试连接是Hub connection IDs，不是WebSocket/UI像素；仍不开放或声称固定NPC组队战可玩。
+
+## 地链政策小片
+
+依赖earth纯源fixture c81b017，不开放descriptor。21001–21016为连续earth路线集合；两根`genout/wpm_200_359_671`及`wpm_200_358_671:1–3`保存成功后才进入，原LV>64/END4不变。三楼`wpm_21003_34_10:1–2`的羽毛／NOW39／END39三项OR完整保留。NPC项目到达不能自授路线，旧只持日记/项链也不能代替原路。
+
+| 实际案例／源物理行 | 处理与此前绕过证据 | 定向验证 |
+|---|---|---|
+| `jaruga/event/ruri01:10–22` b0收2698/2699、给2701、Charm+1、END39 | 项目直接到21015曾可领奖；现在须真正`200/sb_dbt.arg:4–7`保存胜战并Warp21015(9,17)产生earth_final | 实际成人→公开接取/领日记→原外门→三楼OR→原多层/两实际固定战→女神，最终savefail保物品旗标，重试END39通过 |
+| `ruri05/ruri06:8–16`各b0收2700、两85槽原随机池 | 同一终战后组件凭证，不能以持羽毛或NOW/END代替；未添加NOW39/END39新条件 | 真实NPC项目落点talk拒绝；合法终战组件下两b0的check_action通过；完整两池结算由earth owner并集 |
+| `ruri02:8–30`b0补项链/b1REQUEST39 | 普通3413村屋，没有先过洞窟的原要求；无scope，无缺口理由是本来公开 | 真实原接取拿2699通过 |
+| `ruri03:14–22`b1日记/NpcWarp | 公开200野外各原个人移动点，无洞窟前置；不锁为女神到达 | 真实公开事务给2698且个人移动通过 |
+| 1146普通条件遇敌的2700羽毛 | NPC领奖已保护；捕宠便利到21002后普通战斗得羽毛是否算任务推进是独立边界，尚未新增掉落资格限制 | 明确待主裁定，未冒称这个掉落来源已由NPC终端守卫完全封堵 |
+
+本槽真实碰撞路径从三楼原门后直找dbt邻格不可达，实际通过dtp胜Warp21009(45,48)后才走到dbt。抽象mapwarp图中21009→21010有边不证明忽略碰撞后仍能免战；政策没有新增全局dtp mark，所有可行原边仍允许，最终女神只核dbt实际胜后mark。完整真原路suite 1/1通过。Shared route driver附带兼容bonus已冻结`adult_walk_destination`只读几何接口（仅10204、has_method时调用），不将该目标作为权限或客户端传送入口。
