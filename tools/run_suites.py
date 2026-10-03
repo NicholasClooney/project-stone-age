@@ -45,6 +45,12 @@ TIMEOUT = 300
 STALL = 30
 
 
+def suite_timeout(name):
+    # Measured original route: 333 s walking, 367 s total; 480 s leaves margin.
+    # Only this exact suite is exceptional; TIMEOUT remains 300 for all others.
+    return 480 if name == "transmigration_wind_ui_test" else TIMEOUT
+
+
 def suites_from_test_sh():
     text = (ROOT / "scripts" / "test.sh").read_text()
     match = re.search(r"^for suite in (.*); do$", text, re.M)
@@ -119,8 +125,8 @@ def main():
                 elif SUMMARY.search(text.rstrip().rsplit("\n", 1)[-1]) and time.monotonic() - quiet_since[name] > STALL:
                     # The suite reported its result and quit() but Godot did not exit.
                     reason = f"did not exit {STALL} s after its summary"
-                elif elapsed > TIMEOUT:
-                    reason = f"timed out after {TIMEOUT} s"
+                elif elapsed > suite_timeout(name):
+                    reason = f"timed out after {suite_timeout(name)} s"
                 else:
                     continue
                 if shutil.which("sample"):
