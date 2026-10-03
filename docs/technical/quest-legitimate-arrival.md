@@ -100,3 +100,10 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 | 采矿END27及奖杯：`giiru/event/giruev2_1/2@31805`、`300/sb_bac.arg`、原31805门 | 大赛提交/奖杯战同原洞路线；6F捕宠可继续便利到达但不授miner route，倒走原门不能洗白。矿2534普通条件掉落未改、待用户裁定。 |
 
 `quest_arrival_legacy_caves_test`遍历这六类当前catalog全部实际副作用分支，调用带真实npc_id最终transact，核拒绝原因来自项目到达且profile逐字不变；随后经各精确公开入口、真实碰撞/portal逐格走至深处实际NPC并核资格，最后验证内部原门洗白失败。六类1/1通过（57秒）；此为路线与最终守卫集成，不冒称每个兑换所需物品/宠物都重新自然收集。各旧产品helper/auto仍需owner适配连续步行后并集；不能为旧瞬移fixture放宽最终守卫。
+
+
+### Golden Bui dojo: all original ticket roots and service transactions
+
+Protected maps are800–810,820–829,840–850; public halls811/831/851 and public ticket shops keep original conditions. Exact source roots are `genout/wpm_811_30_20`/`wpm_831_30_20` to800, `wpm_811_28_20`/`wpm_831_28_20` to820, and `wpm_851_29_20` to840 (each original script's WARP/FREE/DelItem fields). An ordinary portal from a public hall is not an alternative root. Quiz/janken/gate service Warps propagate only the existing character's route through the actual saved service transaction and NPC identity. Internal `quiz/equiz_01` REQUEST44/2753 and `equiz_02:38–46` ACCEPT/2753→pet14/END44 therefore cannot be advanced by project placement.
+
+The independently registered `quest_arrival_dojo_test` runs all five real source entry services at their original level brackets, source ticket/save failures, first quiz save failure/retry and stale token rejection for all five roots. On the high-level route it continues via real portals to the two-question second floor and no-ticket janken, verifying the explicitly approved original no-ticket behavior and result Warp remain playable. It also checks all actual active internal NPC/service identities against project arrival. This does not claim a new full twelve-floor UI run or activation of END47/master812; old full-chain helper/fixture adaptation remains a release prerequisite. Quiz/janken wild tickets retain the unchanged ordinary-drop policy pending the separate decision.
