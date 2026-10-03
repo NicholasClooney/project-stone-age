@@ -1,0 +1,10 @@
+{
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "npc/npc_transmigration.c": "d7e40557bc460cc5a094f7e9d143ec4e3094883890a7832393baf713d3995d24",
+    "npc/npcutil.c": "47dd685fc91b2aa686c45a03e4fe49586649b345d6ab8c4bbf8da729e4c1064b",
+    "char/char_base.c": "0fb9501a891989799a4e6d6b407f14bdf2dfbe903df8169ff64d57a67826b287",
+    "data/npc/777/ten.arg": "5d09f42c64a61c3220a01a5a0e82340672fb67ead03b818c4f6457421832c852",
+    "data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629"
+  }
+}

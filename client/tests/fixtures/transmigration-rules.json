@@ -1,0 +1,1252 @@
+{
+  "sources": {
+    "npc/npc_transmigration.c": "d7e40557bc460cc5a094f7e9d143ec4e3094883890a7832393baf713d3995d24",
+    "npc/npcutil.c": "47dd685fc91b2aa686c45a03e4fe49586649b345d6ab8c4bbf8da729e4c1064b",
+    "char/char_base.c": "0fb9501a891989799a4e6d6b407f14bdf2dfbe903df8169ff64d57a67826b287",
+    "data/npc/777/ten.arg": "5d09f42c64a61c3220a01a5a0e82340672fb67ead03b818c4f6457421832c852",
+    "data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629"
+  },
+  "oracle": {
+    "functions": [
+      "NPC_TransCalculation",
+      "Rounding",
+      "NPC_TransmigrationStatus"
+    ],
+    "profile": "human-1-5",
+    "flags": [
+      "-std=c99",
+      "-fno-fast-math",
+      "-ffp-contract=off"
+    ],
+    "optimization_equivalence": [
+      "-O0",
+      "-O2"
+    ]
+  },
+  "inheritance": [
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 80,
+      "new_count": 1,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          0,
+          50,
+          50,
+          50
+        ],
+        "equation": 80,
+        "stat_points": 10,
+        "ans": -1
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 80,
+      "new_count": 1,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          350,
+          50,
+          50,
+          50
+        ],
+        "equation": 1310800,
+        "stat_points": 10,
+        "ans": 3
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 85,
+      "new_count": 1,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          50,
+          50,
+          50,
+          50
+        ],
+        "equation": 85,
+        "stat_points": 10,
+        "ans": 0
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 85,
+      "new_count": 1,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          550,
+          50,
+          50,
+          50
+        ],
+        "equation": 1310805,
+        "stat_points": 10,
+        "ans": 5
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 120,
+      "new_count": 1,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          850,
+          50,
+          50,
+          50
+        ],
+        "equation": 120,
+        "stat_points": 10,
+        "ans": 8
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 120,
+      "new_count": 1,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1350,
+          50,
+          50,
+          50
+        ],
+        "equation": 1310840,
+        "stat_points": 10,
+        "ans": 13
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 130,
+      "new_count": 1,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1150,
+          50,
+          50,
+          50
+        ],
+        "equation": 130,
+        "stat_points": 10,
+        "ans": 11
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 0,
+      "level": 130,
+      "new_count": 1,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1650,
+          50,
+          50,
+          50
+        ],
+        "equation": 1310850,
+        "stat_points": 10,
+        "ans": 16
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 0,
+      "level": 131,
+      "new_count": 1,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          349,
+          351,
+          249,
+          451
+        ],
+        "equation": 130,
+        "stat_points": 10,
+        "ans": 12
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 0,
+      "level": 131,
+      "new_count": 1,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          473,
+          476,
+          331,
+          618
+        ],
+        "equation": 1310850,
+        "stat_points": 10,
+        "ans": 17
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 80,
+      "new_count": 2,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          448,
+          451,
+          315,
+          584
+        ],
+        "equation": 1310930,
+        "stat_points": 20,
+        "ans": 16
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 80,
+      "new_count": 2,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          573,
+          576,
+          398,
+          751
+        ],
+        "equation": 2621650,
+        "stat_points": 20,
+        "ans": 21
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 85,
+      "new_count": 2,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          473,
+          476,
+          331,
+          618
+        ],
+        "equation": 1310935,
+        "stat_points": 20,
+        "ans": 17
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 85,
+      "new_count": 2,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          598,
+          601,
+          414,
+          785
+        ],
+        "equation": 2621655,
+        "stat_points": 20,
+        "ans": 22
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 120,
+      "new_count": 2,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          697,
+          702,
+          481,
+          918
+        ],
+        "equation": 1310970,
+        "stat_points": 20,
+        "ans": 26
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 120,
+      "new_count": 2,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          822,
+          827,
+          564,
+          1085
+        ],
+        "equation": 2621690,
+        "stat_points": 20,
+        "ans": 31
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 130,
+      "new_count": 2,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          747,
+          752,
+          514,
+          985
+        ],
+        "equation": 1310980,
+        "stat_points": 20,
+        "ans": 28
+      }
+    },
+    {
+      "base": [
+        299,
+        301,
+        199,
+        401
+      ],
+      "equation": 1310850,
+      "level": 130,
+      "new_count": 2,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          872,
+          877,
+          597,
+          1152
+        ],
+        "equation": 2621700,
+        "stat_points": 20,
+        "ans": 33
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 1310850,
+      "level": 131,
+      "new_count": 2,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8336050,
+          50,
+          50,
+          50
+        ],
+        "equation": 1310980,
+        "stat_points": 20,
+        "ans": 83360
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 1310850,
+      "level": 131,
+      "new_count": 2,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8336550,
+          50,
+          50,
+          50
+        ],
+        "equation": 2621700,
+        "stat_points": 20,
+        "ans": 83365
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 80,
+      "new_count": 3,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8336450,
+          50,
+          50,
+          50
+        ],
+        "equation": 2621780,
+        "stat_points": 30,
+        "ans": 83364
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 80,
+      "new_count": 3,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8336950,
+          50,
+          50,
+          50
+        ],
+        "equation": 3932500,
+        "stat_points": 30,
+        "ans": 83369
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 85,
+      "new_count": 3,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8336550,
+          50,
+          50,
+          50
+        ],
+        "equation": 2621785,
+        "stat_points": 30,
+        "ans": 83365
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 85,
+      "new_count": 3,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8337050,
+          50,
+          50,
+          50
+        ],
+        "equation": 3932505,
+        "stat_points": 30,
+        "ans": 83370
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 120,
+      "new_count": 3,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8337450,
+          50,
+          50,
+          50
+        ],
+        "equation": 2621820,
+        "stat_points": 30,
+        "ans": 83374
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 120,
+      "new_count": 3,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8337950,
+          50,
+          50,
+          50
+        ],
+        "equation": 3932540,
+        "stat_points": 30,
+        "ans": 83379
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 130,
+      "new_count": 3,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8337750,
+          50,
+          50,
+          50
+        ],
+        "equation": 2621830,
+        "stat_points": 30,
+        "ans": 83377
+      }
+    },
+    {
+      "base": [
+        100000000,
+        1,
+        0,
+        0
+      ],
+      "equation": 2621700,
+      "level": 130,
+      "new_count": 3,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8338250,
+          50,
+          50,
+          50
+        ],
+        "equation": 3932550,
+        "stat_points": 30,
+        "ans": 83382
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 2621700,
+      "level": 131,
+      "new_count": 3,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400299,
+          1400300,
+          50,
+          50
+        ],
+        "equation": 2621830,
+        "stat_points": 30,
+        "ans": 28005
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 2621700,
+      "level": 131,
+      "new_count": 3,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400549,
+          1400550,
+          50,
+          50
+        ],
+        "equation": 3932550,
+        "stat_points": 30,
+        "ans": 28010
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 80,
+      "new_count": 4,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400499,
+          1400500,
+          50,
+          50
+        ],
+        "equation": 3932630,
+        "stat_points": 40,
+        "ans": 28009
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 80,
+      "new_count": 4,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400749,
+          1400750,
+          50,
+          50
+        ],
+        "equation": 5243350,
+        "stat_points": 40,
+        "ans": 28014
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 85,
+      "new_count": 4,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400549,
+          1400550,
+          50,
+          50
+        ],
+        "equation": 3932635,
+        "stat_points": 40,
+        "ans": 28010
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 85,
+      "new_count": 4,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400799,
+          1400800,
+          50,
+          50
+        ],
+        "equation": 5243355,
+        "stat_points": 40,
+        "ans": 28015
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 120,
+      "new_count": 4,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1400999,
+          1401000,
+          50,
+          50
+        ],
+        "equation": 3932670,
+        "stat_points": 40,
+        "ans": 28019
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 120,
+      "new_count": 4,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1401249,
+          1401250,
+          50,
+          50
+        ],
+        "equation": 5243390,
+        "stat_points": 40,
+        "ans": 28024
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 130,
+      "new_count": 4,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1401149,
+          1401150,
+          50,
+          50
+        ],
+        "equation": 3932680,
+        "stat_points": 40,
+        "ans": 28022
+      }
+    },
+    {
+      "base": [
+        16777217,
+        16777219,
+        1,
+        0
+      ],
+      "equation": 3932550,
+      "level": 130,
+      "new_count": 4,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          1401399,
+          1401400,
+          50,
+          50
+        ],
+        "equation": 5243400,
+        "stat_points": 40,
+        "ans": 28027
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 3932550,
+      "level": 131,
+      "new_count": 4,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          2795,
+          2185,
+          50,
+          1270
+        ],
+        "equation": 3932680,
+        "stat_points": 40,
+        "ans": 61
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 3932550,
+      "level": 131,
+      "new_count": 4,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3020,
+          2360,
+          50,
+          1370
+        ],
+        "equation": 5243400,
+        "stat_points": 40,
+        "ans": 66
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 80,
+      "new_count": 5,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          2975,
+          2325,
+          50,
+          1350
+        ],
+        "equation": 5243480,
+        "stat_points": 50,
+        "ans": 65
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 80,
+      "new_count": 5,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3200,
+          2500,
+          50,
+          1450
+        ],
+        "equation": 6554200,
+        "stat_points": 50,
+        "ans": 70
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 85,
+      "new_count": 5,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3020,
+          2360,
+          50,
+          1370
+        ],
+        "equation": 5243485,
+        "stat_points": 50,
+        "ans": 66
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 85,
+      "new_count": 5,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3244,
+          2535,
+          50,
+          1470
+        ],
+        "equation": 6554205,
+        "stat_points": 50,
+        "ans": 71
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 120,
+      "new_count": 5,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3425,
+          2675,
+          50,
+          1550
+        ],
+        "equation": 5243520,
+        "stat_points": 50,
+        "ans": 75
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 120,
+      "new_count": 5,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3650,
+          2850,
+          50,
+          1650
+        ],
+        "equation": 6554240,
+        "stat_points": 50,
+        "ans": 80
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 130,
+      "new_count": 5,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3514,
+          2745,
+          50,
+          1590
+        ],
+        "equation": 5243530,
+        "stat_points": 50,
+        "ans": 77
+      }
+    },
+    {
+      "base": [
+        900,
+        700,
+        0,
+        400
+      ],
+      "equation": 5243400,
+      "level": 130,
+      "new_count": 5,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          3739,
+          2920,
+          50,
+          1690
+        ],
+        "equation": 6554250,
+        "stat_points": 50,
+        "ans": 82
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 5243400,
+      "level": 131,
+      "new_count": 5,
+      "quests": 0,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          7650,
+          50,
+          50,
+          50
+        ],
+        "equation": 5243530,
+        "stat_points": 50,
+        "ans": 76
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 5243400,
+      "level": 131,
+      "new_count": 5,
+      "quests": 20,
+      "old_unspent": 19,
+      "expected": {
+        "base": [
+          8150,
+          50,
+          50,
+          50
+        ],
+        "equation": 6554250,
+        "stat_points": 50,
+        "ans": 81
+      }
+    },
+    {
+      "base": [
+        1,
+        0,
+        0,
+        0
+      ],
+      "equation": 320,
+      "level": 80,
+      "new_count": 5,
+      "quests": 0,
+      "old_unspent": 0,
+      "expected": {
+        "base": [
+          0,
+          50,
+          50,
+          50
+        ],
+        "equation": 400,
+        "stat_points": 50,
+        "ans": -6
+      }
+    }
+  ]
+}
