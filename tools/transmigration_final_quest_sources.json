@@ -1,0 +1,282 @@
+{
+  "version": 1,
+  "id": "transmigration-final",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+    "gmsv/data/npc/genout/sikkoku.create": "5efb3afa1f44c1793874c1835e9013ac815c41e4bd3a117c3f3ac0fde4abe29b",
+    "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create": "db20a0b44bebd3d6dedb1d67dec42a9dd78bd82b82ebc8107789db199a08ed13",
+    "gmsv/data/npc/300/sb_sikkoku.create": "b4634f420e88615bd4fb12d6346d2f6ec23e4828d9ba25949ed8a2c768b8e4ce",
+    "gmsv/data/npc/300/sb_sikkoku.template": "dd707e3ad718ba90eafba0b36eb4a55eeba03721908bcf2d75e90dff0b3758eb",
+    "gmsv/data/npc/300/sb_skr.arg": "0dbec971e15174a4dad37f9160ab227b7b777b1c8c2b2ce6ad262d5423042145",
+    "gmsv/data/npc/300/sb_skt.arg": "5844223293d7cef81fdb7e2bc7d85fa73ccb70f6ebafb52ed78b2210f7458670",
+    "gmsv/data/npc/777/ten.arg": "5d09f42c64a61c3220a01a5a0e82340672fb67ead03b818c4f6457421832c852",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/npc/npc_transmigration.c": "d7e40557bc460cc5a094f7e9d143ec4e3094883890a7832393baf713d3995d24",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/data/npc/genout/wpm_300_103_228": "40556108c2c068597d4038fa66191599088610ca89c2e2d897afc966a3dbd76e",
+    "gmsv/data/npc/genout/wpm_300_108_225": "be5d7c43dbe07e9e3f7498b3de7e1179502a0d7a418cac3b52143a539b39cf08",
+    "gmsv/data/npc/genout/wpm_32016_31_39": "a4669cc029a3783ca3008345353a2cf6356322eb6b8777fc2c5b060c36df0888",
+    "gmsv/data/npc/genout/wpm_32021_31_51": "b6498e3a37c47fd7e44ce07388a78de65dce29dd14e0ddf6589fe130ca91d098",
+    "gmsv/data/npc/giiru/event/sikkoku01": "daabd416d1454435829f9a0a6e55370f9041a7326de65ba01ccd433e24cfc2b1",
+    "gmsv/data/npc/giiru/event/sikkoku02": "5a0bfb9479bb24076d559b05e6d587f6a9806d8939a08f3136cdf1c63c7fdf10",
+    "gmsv/data/npc/giiru/event/sikkoku03": "075aa885c7fb79c2472388c30c775ba9af8ea29c0c035856ef3f1172edec2b78",
+    "gmsv/data/npc/giiru/event/sikkoku04": "b07c33c5ba0decfa179e13dece7974f4580083f081e1a7864652ac408f3a5008",
+    "gmsv/data/npc/giiru/event/sikkoku05": "e06cf95fc3f2d77d7922423733c45fd0c134a9ce15a0362c800f31631a83908d"
+  },
+  "creates": [],
+  "scripts": {},
+  "items": [
+    2771,
+    2772,
+    2773,
+    2774
+  ],
+  "jobs": [],
+  "reward_enemies": [],
+  "reviewed_bindings": [
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 83,
+      "source_line": 754,
+      "script": "genout/wpm_300_103_228",
+      "handler": "npcgen_warpman",
+      "map_id": 300,
+      "cell": [
+        103,
+        228
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 84,
+      "source_line": 766,
+      "script": "genout/wpm_300_108_225",
+      "handler": "npcgen_warpman",
+      "map_id": 300,
+      "cell": [
+        108,
+        225
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 86,
+      "source_line": 790,
+      "script": "genout/wpm_32016_31_39",
+      "handler": "npcgen_warpman",
+      "map_id": 32016,
+      "cell": [
+        31,
+        39
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 87,
+      "source_line": 802,
+      "script": "genout/wpm_32021_31_51",
+      "handler": "npcgen_warpman",
+      "map_id": 32021,
+      "cell": [
+        31,
+        51
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 0,
+      "source_line": 8,
+      "script": "giiru/event/sikkoku01",
+      "handler": "changeevent",
+      "map_id": 32002,
+      "cell": [
+        4,
+        23
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 1,
+      "source_line": 21,
+      "script": "giiru/event/sikkoku02",
+      "handler": "changeevent",
+      "map_id": 32006,
+      "cell": [
+        46,
+        46
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 2,
+      "source_line": 33,
+      "script": "giiru/event/sikkoku03",
+      "handler": "changeevent",
+      "map_id": 32009,
+      "cell": [
+        49,
+        20
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 3,
+      "source_line": 45,
+      "script": "giiru/event/sikkoku04",
+      "handler": "changeevent",
+      "map_id": 32014,
+      "cell": [
+        14,
+        48
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 4,
+      "source_line": 57,
+      "script": "giiru/event/sikkoku05",
+      "handler": "changeevent",
+      "map_id": 32016,
+      "cell": [
+        31,
+        43
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 5,
+      "source_line": 71,
+      "script": "777/ten.arg",
+      "handler": "npc_transmigration",
+      "map_id": 32021,
+      "cell": [
+        31,
+        28
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sikkoku.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "300/sb_skr.arg",
+      "handler": "sb_skr",
+      "map_id": 32010,
+      "cell": [
+        54,
+        30
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sikkoku.create",
+      "source_create_index": 1,
+      "source_line": 15,
+      "script": "300/sb_skt.arg",
+      "handler": "sb_skt",
+      "map_id": 32020,
+      "cell": [
+        20,
+        9
+      ]
+    }
+  ],
+  "staged_world": {
+    "map_sources": {
+      "32001": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-01",
+        "sha256": "dc0fd5736d48b561aece15e3c504cb6fedb3b4fe4c2dfb0afb8fb97691967eb2"
+      },
+      "32002": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-02",
+        "sha256": "7c25ca2a6587b24e70c46974db83ebb991f0be7ed225dbc54c7c1ad5fb122d03"
+      },
+      "32003": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-03",
+        "sha256": "cd1d4be67c85115727e596199e0cd9b55f3ba523ea1640c7db8e1ac55c7f244a"
+      },
+      "32004": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-04",
+        "sha256": "0b903d7bf5cb6f575b93e039848ce62dfdcaa89c193e435b2eed9fbb57204976"
+      },
+      "32005": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-05",
+        "sha256": "0babc83ca6d786637bfcc396d882250ce53ca7eab3d238c9bca0d89f1ed89992"
+      },
+      "32006": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-06",
+        "sha256": "056d1b8a27c442a6a31f27d2babf12c805ae3b146ac6cf5d16e0f4f6f60665f7"
+      },
+      "32007": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-07",
+        "sha256": "3f6bc5bd3633b7761f93da1b0623c17ec562b127955065bd35c2c1847f1ebdd6"
+      },
+      "32008": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-08",
+        "sha256": "5ba9bed441f7f6015e3f9f65551dfee0d27eb99ca88fe973c1ab636b5c81c0e8"
+      },
+      "32009": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-09",
+        "sha256": "5d4660a63825c93ece0de0a74c736b65f8129c03ed49d76f37f864e7bfe49157"
+      },
+      "32010": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-10",
+        "sha256": "2f36a6dcdef772ab46cfae16ce2b93b86df1439073dbe73c6986b8b40fab2e25"
+      },
+      "32011": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-11",
+        "sha256": "d0f7f698943fe8b45e0de62e11f0f19791cd6f938b92271d5595568e4ddf9737"
+      },
+      "32012": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-12",
+        "sha256": "50e942dff9c0d5e72ea6684f02d7fcc6bffa9fd4bdb6ca418890409da115f700"
+      },
+      "32013": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-13",
+        "sha256": "aa962ec48dab90ceae9b1248479434d64614de6239e2f0e96fe0fc40c8d0f1ff"
+      },
+      "32014": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-14",
+        "sha256": "52d45d0314bb52c148e47dd6b0b93b50439898f4238a132e239cbac028bbc25e"
+      },
+      "32015": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-15",
+        "sha256": "a1f5aceb54dab3e34653a5116088183af53d48363e57d88011dca7e7a64cac6f"
+      },
+      "32016": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-16",
+        "sha256": "5f419dbc11e03457bfeb3ab74563fb7b1f92e74735fbd21e394fc82417011d18"
+      },
+      "32017": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-17",
+        "sha256": "f4a8e64d747013f6f69dfef93acfe3e563fbded7e38dca2693e2b6a0c72f3c00"
+      },
+      "32018": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-18",
+        "sha256": "cd2c6804deb12eb4b2f9e0b3167e8a1900b5292cad0429e67e3a7185a003611f"
+      },
+      "32019": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-19",
+        "sha256": "4433cc1c48a34d881e7d9a758069c024a18849940ecdf0a2127d96064008af3f"
+      },
+      "32020": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-20",
+        "sha256": "b023ba2c783edeaf8c12d80f537cb690a302d67a2fa5c62075b3239e2852f82c"
+      },
+      "32021": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-21",
+        "sha256": "f270c4b1c45e152dffb580a1f596c645cc5c46251b57c7404e2e145de3a4935c"
+      }
+    },
+    "portal_sources": {
+      "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+      "gmsv/data/npc/genout/sikkoku.create": "5efb3afa1f44c1793874c1835e9013ac815c41e4bd3a117c3f3ac0fde4abe29b"
+    }
+  },
+  "activation_note": "Source-only handoff. No registry entry, NPCs or service enabled; shared service contract pending. END53, nurses, sixth/seventh rebirth and PETTRANS remain closed."
+}

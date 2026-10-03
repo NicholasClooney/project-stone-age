@@ -1,0 +1,419 @@
+{
+  "version": 1,
+  "provenance": "Static original create identities, read directly from SHA-pinned GB18030 source; not an exported runtime catalog.",
+  "npcs": [
+    {
+      "id": "genout/wpm_300_103_228@300:103:228",
+      "source_script": "genout/wpm_300_103_228",
+      "source_create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 83,
+      "source_line": 754,
+      "map_id": 300,
+      "cell": [
+        103,
+        228
+      ],
+      "graphic": 16209,
+      "facing": 6,
+      "name": "守门人",
+      "source_handler": "npcgen_warpman",
+      "source_fields": {
+        "floorid": "300",
+        "borncorner": "103,228,103,228",
+        "time": "0",
+        "createnum": "1",
+        "dir": "6",
+        "ignoreinvincible": "1",
+        "graphicname": "16209",
+        "name": "守门人",
+        "enemy": "npcgen_warpman|file:genout/wpm_300_103_228"
+      }
+    },
+    {
+      "id": "genout/wpm_300_108_225@300:108:225",
+      "source_script": "genout/wpm_300_108_225",
+      "source_create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 84,
+      "source_line": 766,
+      "map_id": 300,
+      "cell": [
+        108,
+        225
+      ],
+      "graphic": 16201,
+      "facing": 4,
+      "name": "守门人２",
+      "source_handler": "npcgen_warpman",
+      "source_fields": {
+        "floorid": "300",
+        "borncorner": "108,225,108,225",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16201",
+        "name": "守门人２",
+        "enemy": "npcgen_warpman|file:genout/wpm_300_108_225"
+      }
+    },
+    {
+      "id": "genout/wpm_32016_31_39@32016:31:39",
+      "source_script": "genout/wpm_32016_31_39",
+      "source_create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 86,
+      "source_line": 790,
+      "map_id": 32016,
+      "cell": [
+        31,
+        39
+      ],
+      "graphic": 16201,
+      "facing": 4,
+      "name": "守门人",
+      "source_handler": "npcgen_warpman",
+      "source_fields": {
+        "floorid": "32016",
+        "borncorner": "31,39,31,39",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "16201",
+        "name": "守门人",
+        "enemy": "npcgen_warpman|file:genout/wpm_32016_31_39"
+      }
+    },
+    {
+      "id": "genout/wpm_32021_31_51@32021:31:51",
+      "source_script": "genout/wpm_32021_31_51",
+      "source_create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 87,
+      "source_line": 802,
+      "map_id": 32021,
+      "cell": [
+        31,
+        51
+      ],
+      "graphic": 100436,
+      "facing": 4,
+      "name": "守门人",
+      "source_handler": "npcgen_warpman",
+      "source_fields": {
+        "floorid": "32021",
+        "borncorner": "31,51,31,51",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "100436",
+        "name": "守门人",
+        "enemy": "npcgen_warpman|file:genout/wpm_32021_31_51"
+      }
+    },
+    {
+      "id": "giiru/event/sikkoku01@32002:4:23",
+      "source_script": "giiru/event/sikkoku01",
+      "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 0,
+      "source_line": 8,
+      "map_id": 32002,
+      "cell": [
+        4,
+        23
+      ],
+      "graphic": 100451,
+      "facing": 0,
+      "name": "考古家",
+      "source_handler": "changeevent",
+      "source_fields": {
+        "floorid": "32002",
+        "borncorner": "4,23,4,23",
+        "time": "0",
+        "createnum": "1",
+        "dir": "0",
+        "ignoreinvincible": "1",
+        "graphicname": "100451",
+        "name": "考古家",
+        "enemy": "changeevent|file:giiru/event/sikkoku01"
+      }
+    },
+    {
+      "id": "giiru/event/sikkoku02@32006:46:46",
+      "source_script": "giiru/event/sikkoku02",
+      "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 1,
+      "source_line": 21,
+      "map_id": 32006,
+      "cell": [
+        46,
+        46
+      ],
+      "graphic": 100195,
+      "facing": 4,
+      "name": "考古家",
+      "source_handler": "changeevent",
+      "source_fields": {
+        "floorid": "32006",
+        "borncorner": "46,46,46,46",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "100195",
+        "name": "考古家",
+        "enemy": "changeevent|file:giiru/event/sikkoku02"
+      }
+    },
+    {
+      "id": "giiru/event/sikkoku03@32009:49:20",
+      "source_script": "giiru/event/sikkoku03",
+      "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 2,
+      "source_line": 33,
+      "map_id": 32009,
+      "cell": [
+        49,
+        20
+      ],
+      "graphic": 100190,
+      "facing": 0,
+      "name": "考古家",
+      "source_handler": "changeevent",
+      "source_fields": {
+        "floorid": "32009",
+        "borncorner": "49,20,49,20",
+        "time": "0",
+        "createnum": "1",
+        "dir": "0",
+        "ignoreinvincible": "1",
+        "graphicname": "100190",
+        "name": "考古家",
+        "enemy": "changeevent|file:giiru/event/sikkoku03"
+      }
+    },
+    {
+      "id": "giiru/event/sikkoku04@32014:14:48",
+      "source_script": "giiru/event/sikkoku04",
+      "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 3,
+      "source_line": 45,
+      "map_id": 32014,
+      "cell": [
+        14,
+        48
+      ],
+      "graphic": 100446,
+      "facing": 4,
+      "name": "考古家",
+      "source_handler": "changeevent",
+      "source_fields": {
+        "floorid": "32014",
+        "borncorner": "14,48,14,48",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "100446",
+        "name": "考古家",
+        "enemy": "changeevent|file:giiru/event/sikkoku04"
+      }
+    },
+    {
+      "id": "giiru/event/sikkoku05@32016:31:43",
+      "source_script": "giiru/event/sikkoku05",
+      "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 4,
+      "source_line": 57,
+      "map_id": 32016,
+      "cell": [
+        31,
+        43
+      ],
+      "graphic": 100436,
+      "facing": 4,
+      "name": "考古家",
+      "source_handler": "changeevent",
+      "source_fields": {
+        "floorid": "32016",
+        "borncorner": "31,43,31,43",
+        "time": "0",
+        "createnum": "1",
+        "dir": "4",
+        "ignoreinvincible": "1",
+        "graphicname": "100436",
+        "name": "考古家",
+        "enemy": "changeevent|file:giiru/event/sikkoku05"
+      }
+    },
+    {
+      "id": "777/ten.arg@32021:31:28",
+      "source_script": "777/ten.arg",
+      "source_create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 5,
+      "source_line": 71,
+      "map_id": 32021,
+      "cell": [
+        31,
+        28
+      ],
+      "graphic": 100444,
+      "facing": 4,
+      "name": "精灵王",
+      "source_handler": "npc_transmigration",
+      "source_fields": {
+        "name": "精灵王",
+        "floorid": "32021",
+        "dir": "4",
+        "createnum": "1",
+        "time": "0",
+        "graphicname": "100444",
+        "borncorner": "31,28,31,28",
+        "ignoreinvincible": "1",
+        "enemy": "npc_transmigration|file:777/ten.arg"
+      }
+    },
+    {
+      "id": "300/sb_skr.arg@32010:54:30",
+      "source_script": "300/sb_skr.arg",
+      "source_create": "gmsv/data/npc/300/sb_sikkoku.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "map_id": 32010,
+      "cell": [
+        54,
+        30
+      ],
+      "graphic": 100389,
+      "facing": 6,
+      "name": "漆黑的守护兽",
+      "source_handler": "sb_skr",
+      "source_fields": {
+        "floorid": "32010",
+        "borncenter": "54,30,1,1",
+        "movecenter": "20,20,100,100",
+        "createnum": "1",
+        "time": "60000",
+        "dir": "6",
+        "graphicname": "100389",
+        "name": "漆黑的守护兽",
+        "enemy": "sb_skr|file:300/sb_skr.arg"
+      }
+    },
+    {
+      "id": "300/sb_skt.arg@32020:20:9",
+      "source_script": "300/sb_skt.arg",
+      "source_create": "gmsv/data/npc/300/sb_sikkoku.create",
+      "source_create_index": 1,
+      "source_line": 15,
+      "map_id": 32020,
+      "cell": [
+        20,
+        9
+      ],
+      "graphic": 100374,
+      "facing": 4,
+      "name": "帖拉所伊朵",
+      "source_handler": "sb_skt",
+      "source_fields": {
+        "floorid": "32020",
+        "borncenter": "20,9,1,1",
+        "movecenter": "20,20,100,100",
+        "createnum": "1",
+        "time": "60000",
+        "dir": "4",
+        "graphicname": "100374",
+        "name": "帖拉所伊朵",
+        "enemy": "sb_skt|file:300/sb_skt.arg"
+      }
+    }
+  ],
+  "selected_source_branches": {
+    "giiru/event/sikkoku01": [
+      0,
+      1
+    ],
+    "giiru/event/sikkoku02": [
+      0,
+      1
+    ],
+    "giiru/event/sikkoku03": [
+      0,
+      1
+    ],
+    "giiru/event/sikkoku04": [
+      0,
+      1
+    ],
+    "giiru/event/sikkoku05": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ]
+  },
+  "disabled_source_branches": {
+    "giiru/event/sikkoku05": [
+      0
+    ]
+  },
+  "gate_warps": {
+    "genout/wpm_300_103_228": [
+      300,
+      105,
+      228
+    ],
+    "genout/wpm_300_108_225": [
+      32001,
+      29,
+      3
+    ],
+    "genout/wpm_32016_31_39": [
+      32016,
+      31,
+      37
+    ],
+    "genout/wpm_32021_31_51": [
+      32021,
+      32,
+      47
+    ]
+  },
+  "bosses": {
+    "300/sb_skr.arg": {
+      "enemies": [
+        1399,
+        1401,
+        1402,
+        1400,
+        1403
+      ],
+      "warp": [
+        32011,
+        56,
+        36
+      ]
+    },
+    "300/sb_skt.arg": {
+      "enemies": [
+        1404,
+        1406,
+        1407,
+        1405,
+        1408,
+        1410,
+        1409,
+        1411,
+        1412,
+        1413
+      ],
+      "warp": [
+        32021,
+        29,
+        57
+      ]
+    }
+  }
+}
