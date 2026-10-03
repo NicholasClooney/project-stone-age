@@ -34,18 +34,20 @@ is reconstructed from END flags, carried items, current room or profile data.
 
 ## Continuous stages
 
-The stage hooks are backward-compatible defaults with no active mappings in
-this first slice. A reviewed policy can associate a saved original action or
-battle Warp with a stage. `battle_committed` / `action_committed` only queue the
+The stage hooks retain empty defaults for unrelated sources. The exact final
+cave mappings added after the generic first slice are described in
+transmigration-arrival-policy.md; production activation remains separate. A
+reviewed policy associates a saved original action or battle Warp with a stage. `battle_committed` / `action_committed` only queue the
 existing private Warp receipt; a matching actual script move consumes it and
 awards the stage. Same-scope original walking and portals retain stages across
 rooms. Scope exit, project movement and reset remove them. Final-room marks have
 their separate component lifecycle. Stage requirements are checked by
 `check_action`, including existing guard begin and final settlement hooks.
 
-The third-stage exact source routes, two actual bosses, final door and king
-service integration remain a separate policy/content slice. The static source
-identity fixture alone is not an installable runtime fixture. END53 stays closed;
+The final cave policy now has an independent real-Backend route test using the
+content owner's runtime source fixture. Product world/helper and natural king
+settlement integration remain separate. The static source identity fixture
+alone is not an installable runtime fixture. END53 stays closed;
 events48–52 are catalog tags, not extra player entry requirements.
 
 ## Verification and limits
