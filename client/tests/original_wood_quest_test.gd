@@ -138,11 +138,11 @@ func atomic_rejections() -> void:
 	before=b.session.snapshot()
 	check(not accept(b,BARL).ok and b.session.snapshot()==before,"axe-for-two reward rejects full bag")
 	b.session._profile.original_items=[2478,2468]
-	b.session._profile.player.gold=Quests.ORIGINAL_MAX_GOLD-400
+	b.session._profile.player.gold=Session.MAX_GOLD-399
 	before=b.session.snapshot()
-	check(not accept(b,MERCHANT).ok and b.session.snapshot()==before,"exact maxGold rejects entire exchange including input deletion")
+	check(not accept(b,MERCHANT).ok and b.session.snapshot()==before,"above project maxGold rejects entire exchange including input deletion")
 	b.session._profile.player.gold-=1
-	check(accept(b,MERCHANT).ok and b.session.snapshot().player.gold==Quests.ORIGINAL_MAX_GOLD-1,"one below maxGold succeeds")
+	check(accept(b,MERCHANT).ok and b.session.snapshot().player.gold==Session.MAX_GOLD,"exact project maxGold succeeds")
 	b.session._profile.original_items=[2478,2468]
 	b.session._profile.player.gold=20
 	b.save_path="user://missing-wood-directory/save.json"

@@ -8,6 +8,8 @@ const OriginalRevival = preload("res://server/original_revival.gd")
 const OriginalEquipment = preload("res://server/original_equipment.gd")
 const PET_CAPACITY := 30
 const MAX_LEVEL := 120
+## Project change: one gold cap for all rewards, including future rebirth.
+const MAX_GOLD := 1000000000
 const ClassicLuck = preload("res://server/classic_luck.gd")
 const Loyalty = preload("res://server/loyalty.gd")
 const Progression = preload("res://server/progression.gd")
@@ -506,7 +508,7 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	pet_rewards = party_rewards
 	if outcome in ["win","captured"]:
 		earned_gold += int(_pending.get("battle_gold",0))
-		earned_gold = mini(earned_gold,1000000000-int(_profile.player.gold))
+		earned_gold = mini(earned_gold,MAX_GOLD-int(_profile.player.gold))
 		_profile.player.gold += earned_gold
 		var level_before := int(_profile.player.level)
 		_gain_xp(_profile.player,earned_xp)
@@ -1494,7 +1496,7 @@ func _valid_profile(value: Variant) -> bool:
 	if not _integer(value.get("active_pet"),-1,value.pets.size()-1) or not _integer(value.get("next_battle"),1,1000000000) or not value.get("equipped") is bool:
 		return false
 	if value.player is Dictionary and value.player.has("transmigration") and not _integer(value.player.transmigration,0,2147483647):return false
-	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,1000000000):
+	if not _actor_valid(value.player) or not _integer(value.player.get("gold"),0,MAX_GOLD):
 		return false
 	for field in ["charm","luck","last_luck_time"]:
 		if value.player.has(field) and not _integer(value.player[field],1 if field=="luck" else 0,4102444800 if field=="last_luck_time" else (100 if field=="charm" else 5)):return false
