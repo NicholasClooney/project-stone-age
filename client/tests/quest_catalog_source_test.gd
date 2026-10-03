@@ -49,7 +49,15 @@ func run()->void:
  for npc in catalog.npcs+catalog.service_npcs:
   var source:String=str(npc.get("source_script",""))
   if not source in scripts:scripts.append(source)
+ check_final_services(catalog)
  compare_sources(catalog,"all enabled")
+ var final_enabled:Array=catalog.enabled_events.duplicate()
+ for event in FINAL_TAGS:catalog.enabled_events.erase(event)
+ compare_sources(catalog,"explicit final-module disabled fixture")
+ for id in FINAL_SERVICE_IDS:
+  var source:String=str(first(reviewed_final,id).source_script)
+  check(catalog.active_npcs_by_source(source).is_empty(),"explicit disabled service source absent "+source)
+ catalog.enabled_events=final_enabled
  compare_entries(catalog,old,"all enabled")
  var enabled:Array=catalog.enabled_events.duplicate()
  for events in [[9],[41],[42],[9,41,42],[]]:
