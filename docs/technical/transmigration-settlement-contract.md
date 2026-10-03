@@ -40,7 +40,7 @@ I复用现check_action(backend,npc,branch,phase)->String（空允许），在tal
 
 命令type="transmigration"，action="preview"|"confirm"|"cancel"；preview接npc_id:String、pet_ids:Array[String]（空为原默认顺序）；confirm接token:String；cancel接token:String。SessionClient封装同字段；原NPCtalk服务dispatch走preview。首底座三个动作统一拒绝“第三阶段尚未开放”，不得加客户端可选enable或GM开关。
 
-成功preview {ok:true,transmigration:{token,npc_id,new_count,quest_count,equation,base_stats,stat_points,sacrifices:[{pet_id,template_id,name,level}],reward:{enemy_id,template_id},location,warning}}；不发送服务私有seed/proof。确认返回{ok:true,transaction_id,new_count,location}，由权威profile+warp更新客户端。错误走现rejected/明确reason；取消不变profile。
+成功preview {ok:true,transmigration:{token,npc_id,new_count,quest_count,equation,base_stats,stat_points,sacrifices:[{pet_id,template_id,name,level}],reward:{enemy_id,template_id},location,warning}}；不发送服务私有seed/proof。确认返回{ok:true,transaction_id,new_count,location,closed:true}，由权威profile+warp更新客户端。错误走现rejected/明确reason；取消不变profile。
 
 服务内pending绑定backend实例/同认证角色、npc、不可变profile前态与rev、原arrival proof、选定UID及本次奖励seed；任意profile变化使旧preview失效（失败save不改前态，允许同token重试），同角色第二设备新preview使旧token失效。持久snapshot是唯一真值，不用客户端revision授权。preview不重掷既有pending同选择奖励；取消/重开不可靠预览看到随机成长来刷奖（预览仅模板，随机成长不公开）。
 
@@ -64,3 +64,7 @@ client/data/quests/transmigration-final.json沿既有descriptor：id、manifest�
 王NPC branches=[]，完整常规source身份保留（create ordinal5），额外transmigration={schema:1,rules:"original-1to5-anson20-v1",rounds:[{count:1..5,texts:{startmsg,mainmsg,yesmsg1,yesmsg2,nomsg,nonemsg}}],villages:[{key,savepoint_bit,presents:[五个原enemy],location:{map_id,x,y},source_item,source_pet}],maxmsg:String}。villages按原低四bit顺序，source_item/source_pet仅metadata。禁止导入PETTRANS/6/7转为可执行服务。
 
 E已确认Loyalty.value/capture_variable/refresh末参owner_transmigration:int=0；I全部调用传player.transmigration。OriginalEquipment.equip_error(player,item_id)->String；revalidate_after_transmigration(candidate,bag_capacity=15)->{ok:true,profile,unequipped_uids}或{ok:false,reason}，纯深拷贝不migrate/修耐久。E只需已知转数，不依赖rebirth内部历史。
+
+## UI确认补充（v1兼容字段）
+
+真实quest_talk成功直接返回顶层reply.transmigration；不是dialogue.kind包装。UI可直接world.link.request合同命令并等待callback，无需SessionClient重复封装。cancel必须命中当前token才清pending并返回{ok:true,closed:true}；迟到旧token拒绝且保后来窗口。confirm成功返回closed:true并发布权威profile/position，使UI正常关闭。UI文件由独立owner持有。
