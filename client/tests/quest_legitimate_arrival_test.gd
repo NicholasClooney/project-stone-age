@@ -1,12 +1,17 @@
 extends "res://tests/original_fixed_guards_test.gd"
 const Arrival=preload("res://server/quest_legitimate_arrival.gd")
+var integrated: bool=false
 const WorldClock=preload("res://server/original_world_clock.gd")
+const RouteDriver=preload("res://tests/support/original_route_driver.gd")
 
 func observed(b, a, map_id: int, cell: Vector2i, kind: String="report", evidence: Dictionary={}) -> void:
 	var before_map: int=b.automation.position_map
 	var before_cell: Vector2i=b.automation.position_cell
-	b.automation.position_changed(map_id,cell)
-	a.observe_move(b,before_map,before_cell,map_id,cell,kind,evidence)
+	if integrated:
+		b.automation.call("position_changed",map_id,cell,false,kind,evidence)
+	else:
+		b.automation.position_changed(map_id,cell)
+		a.observe_move(b,before_map,before_cell,map_id,cell,kind,evidence)
 
 func enter(b,a) -> void:
 	b.automation.position_changed(400,Vector2i(97,119))
@@ -52,7 +57,8 @@ func run() -> void:
 	var original_clock: Callable=WorldClock.clock
 	WorldClock.clock=func():return WorldClock.ERA+100
 	var b=fresh()
-	var a=Arrival.new()
+	integrated=b.get("quest_arrival")!=null
+	var a=b.get("quest_arrival") if integrated else Arrival.new()
 	var sage: Dictionary=b.original_quests.npc_by_id("seimu/event/event01_2@41:34:25")
 	var guard: Dictionary=b.original_quests.npc_by_id("400/sb_muge1.arg@41:34:41")
 	var public_npc: Dictionary=b.original_quests.npc_by_id("sainasu/event/event02_1")
@@ -65,6 +71,8 @@ func run() -> void:
 	check(not a.has_arrival(b,41,b.automation.position_cell),"teleport onto internal portal cannot launder route")
 	enter(b,a)
 	var route: Array=maze_path(b)
+	var shared_path: Array=RouteDriver.path(b,41,Vector2i(34,42),[41])
+	check(shared_path.size()==route.size(),"shared production-report driver agrees with independent maze oracle")
 	for point in route:
 		observed(b,a,41,point)
 		check(a.has_arrival(b,41,point),"continuous original maze step %s"%point)
@@ -80,7 +88,11 @@ func run() -> void:
 	# explicitly invoked here until their separate integration commit lands.
 	var talk: Dictionary=b.handle({"type":"quest_talk","npc_id":guard.id})
 	check(talk.ok and choose(b,talk,"yes").ok,"real ten-enemy guard starts")
-	b.session._pending.quest_guard.arrival=proof
+	if integrated:
+		proof=b.session._pending.quest_guard.arrival.duplicate(true)
+		pending=b.session._pending.quest_guard.duplicate(true)
+	else:
+		b.session._pending.quest_guard.arrival=proof
 	b.save_path="user://missing-legitimate-arrival/fail.json"
 	fight(b)
 	check(not b.battle_state.get("settled",false) and a.check_battle(b,pending).is_empty(),"savefail retains same route proof for retry")
@@ -88,11 +100,11 @@ func run() -> void:
 	b.save_path=""
 	b._after_turn(b.battle.snapshot())
 	check(bool(b.battle_state.get("settled",false)),"same combat result retries")
-	a.battle_committed(b,pending)
+	if not integrated:a.battle_committed(b,pending)
 	check(not a.check_action(b,sage,sage.branches[0],"reward").is_empty(),"saved win before Warp is not arrival")
 	var old: Vector2i=b.automation.position_cell
 	b.close_battle()
-	a.observe_move(b,41,old,41,b.automation.position_cell,"script")
+	if not integrated:a.observe_move(b,41,old,41,b.automation.position_cell,"script")
 	check(a.check_action(b,sage,sage.branches[0],"reward").is_empty(),"only successful original victory Warp authorizes sage")
 	observed(b,a,41,Vector2i(34,38))
 	check(a.check_action(b,sage,sage.branches[0],"reward").is_empty(),"normal postbattle walking retains proof")
