@@ -208,6 +208,8 @@ func talk(backend, id: String) -> Dictionary:
 	return open_branch(backend,npc,profile,branch)
 
 func open_branch(backend, npc:Dictionary, profile:Dictionary, branch:Dictionary) -> Dictionary:
+	var arrival_reason:String=backend.quest_arrival.check_action(backend,npc,branch,str(branch.get("type","")))
+	if not arrival_reason.is_empty():return {"ok":false,"reason":arrival_reason}
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
 		if action not in ["GetItem","DelItem","GetStone","DelStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle","NpcWarp"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
@@ -264,17 +266,19 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 		return reply
 	if (phase=="REQUEST" and flag(profile,"now",int(branch.event))) or (phase=="cancel" and not flag(profile,"now",int(branch.event))):return {"ok":false,"reason":"任务状态已经改变。"}
 	if branch_for(npc,profile,str(current.get("spoken","")))!=branch:return {"ok":false,"reason":"任务状态已经改变。"}
+	var arrival_reason:String=backend.quest_arrival.check_action(backend,npc,branch,phase)
+	if not arrival_reason.is_empty():return {"ok":false,"reason":arrival_reason}
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
 	if phase=="FREEWARP":
 		if choice!="yes":return {"ok":false,"reason":"无效选择。"}
-		var committed := transact(backend,profile,branch,"FREEWARP")
+		var committed := transact(backend,profile,branch,"FREEWARP","",str(npc.id))
 		return {"ok":true,"closed":true} if committed.ok else committed
 	if phase=="KEYWORD":
 		if choice!="submit" or text.length()>120:return {"ok":false,"reason":"无效口令输入。"}
 		if text!=str(branch.get("keyword","")):return {"ok":false,"reason":message(branch.texts,"AcceptMsg")}
-		var committed := transact(backend,profile,branch,"KEYWORD")
+		var committed := transact(backend,profile,branch,"KEYWORD","",str(npc.id))
 		return {"ok":true,"closed":true} if committed.ok else committed
 	if bool(branch.get("project_pet_selection",false)):
 		if not selected_ids is Array:return {"ok":false,"reason":"无效宠物选择。"}
@@ -301,6 +305,10 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
 func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "", selected_ids: Array = []) -> Dictionary:
+	# Resolve from the explicit trusted context, never the already-cleared token.
+	var source_npc:Dictionary=npc_by_id(npc_id)
+	var arrival_reason:String=backend.quest_arrival.check_action(backend,source_npc,branch,phase)
+	if not arrival_reason.is_empty():return {"ok":false,"reason":arrival_reason}
 	if branch.actions.has("Warp") and backend.quest_visit_guard.is_valid():
 		var reason: String=str(backend.quest_visit_guard.call())
 		if not reason.is_empty():return {"ok":false,"reason":str(branch.source_fields.get("PartyMsg","无法加入团队。请解散团队。")).replace("\\n","\n") if phase=="FREEWARP" else reason}
@@ -398,6 +406,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 	if not backend.save():
 		backend.session._profile=profile
 		return {"ok":false,"reason":"save_failed"}
+	backend.quest_arrival.action_committed(backend,source_npc,branch,phase)
 	if not npc_destinations.is_empty():
 		npc_state.moved(npc_id,npc_destinations)
 		refresh_npc_state()
