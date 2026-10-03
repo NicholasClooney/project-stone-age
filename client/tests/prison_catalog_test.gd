@@ -17,8 +17,13 @@ func run()->void:
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-final-source.json"))
  var actors:Array=fixture.npcs.filter(func(n):return n.get("kind","")=="original_prison")
  check(actors.size()==5,"exact five prison services")
- var closed:Array=c.enabled_events.duplicate()
- for npc in actors:projection(c,npc,{},"production closed "+str(npc.id))
+ var closed:Array=c.enabled_events.filter(func(e):return int(e) not in [48,49,50,51,52])
+ check(c.enabled_events.filter(func(e):return int(e) in [48,49,50,51,52])==[48,49,50,51,52],"production enables exact final directory tags")
+ for npc in actors:
+  var actual:Dictionary=c.npcs.filter(func(n):return n.id==npc.id)[0]
+  projection(c,npc,actual,"production enabled "+str(npc.id))
+ c.enabled_events=closed
+ for npc in actors:projection(c,npc,{},"explicit disabled fixture "+str(npc.id))
  for npc in actors:
   c.npcs=c.npcs.filter(func(n):return n.id!=npc.id);c.npcs.append(npc.duplicate(true))
   for event in [48,49,50,51,52]:

@@ -20,13 +20,15 @@ func check_projection(c,expected:Dictionary,label:String)->void:
   check(c.active_npc(ID)==expected,label+" nested projection deep copy")
 func run()->void:
  var c=Catalog.new()
- check(c.active_npc(ID).is_empty(),"production descriptor keeps service closed")
+ check(c.enabled_events.filter(func(e):return int(e) in [48,49,50,51,52])==[48,49,50,51,52],"production enables exact final directory tags")
+ check_projection(c,c.npcs.filter(func(n):return str(n.id)==ID)[0],"production enabled original king")
  var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-final-source.json"))
  var king:Dictionary=fixture.npcs.filter(func(n):return str(n.id)==ID)[0]
  c.npcs=c.npcs.filter(func(n):return str(n.id)!=ID)
  c.npcs.append(king.duplicate(true))
- var original:Array=c.enabled_events.duplicate()
- check_projection(c,{},"source fixture with production events closed")
+ var original:Array=c.enabled_events.filter(func(e):return int(e) not in [48,49,50,51,52])
+ c.enabled_events=original
+ check_projection(c,{},"explicit source fixture with final events closed")
  for event in [48,49,50,51,52]:
   c.enabled_events=original+[event]
   check_projection(c,king,"explicit isolated label "+str(event))

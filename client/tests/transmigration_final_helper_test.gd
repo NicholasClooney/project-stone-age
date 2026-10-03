@@ -2,7 +2,8 @@ extends "res://tests/quest_arrival_backend_test.gd"
 const FinalHelper=preload("res://server/transmigration_final_helper.gd")
 func run()->void:
  var b=fresh()
- var closed:Array=b.quest_catalog.enabled_events.duplicate()
+ check(b.quest_catalog.enabled_events.filter(func(e):return int(e) in [48,49,50,51,52])==[48,49,50,51,52],"production enables exact final directory tags")
+ var closed:Array=b.quest_catalog.enabled_events.filter(func(e):return int(e) not in [48,49,50,51,52])
  for event in [48,49,50,51,52]:
   if event not in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(event)
  b.quest_helper.places.set_quest_catalog(b.quest_catalog)
