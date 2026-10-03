@@ -16,6 +16,9 @@ class FireTests(unittest.TestCase):
         cls.module=load_quest_module(REF,MANIFEST)
     def source(self,name):
         return next(n for n in self.module['npcs'] if n['source_script']==PREFIX+name)
+    def test_committed_fixture_matches_reviewed_source(self):
+        fixture=json.loads((ROOT/'client/tests/fixtures/transmigration-fire-source.json').read_text())
+        self.assertEqual(fixture,self.module)
     def test_exact_bindings_and_scope(self):
         npcs=self.module['npcs']
         self.assertEqual(len(npcs),19)
