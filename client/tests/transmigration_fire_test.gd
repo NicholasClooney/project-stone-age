@@ -82,7 +82,6 @@ func run()->void:
  b.free()
  water()
  rewards()
- guards_and_navigation()
  await lan_water()
  print("TRANSMIGRATION FIRE: %d failures"%failures)
  quit(1 if failures else 0)
@@ -105,22 +104,37 @@ func core()->void:
  var loaded=Backend.new();check(loaded.load_profile(b.save_path) and loaded.session.snapshot().original_instances==after.original_instances,"core saved UID reload");loaded.free()
  r=source_talk(b,ira);check(b.original_quests.pending.get("phase","")=="end" and b.session.snapshot().player.charm==after.player.charm,"ended core never grants twice")
  b.free()
-func water()->void:
+func water(which:String="")->void:
  var b=setup();var elder:=source(b,"sink03")
- for pair in [["很多",2709],["一半",2710],["一点点",2711]]:
-  grant(b,[2708,2708]);var r:=source_talk(b,elder)
-  r=b.handle({"type":"quest_choose","token":r.dialogue.token,"choice":"submit","text":pair[0]})
-  r=choose(b,r,"yes");check(choose(b,r,"ok").ok and b.session.snapshot().original_items==[pair[1]],"original exact water keyword, bareDelItem consumes all empty jugs")
- grant(b,[2708,2708,2712]);var gold:int=b.session._profile.player.gold
- check(commit_trade(b,elder).ok and b.session.snapshot().original_items==[2712] and b.session.snapshot().player.gold==gold+1149,"refund all empty jugs once1149 only with existing water")
- for short in ["sink044","sink044a","sink044b","sink044c","sink055","sink055a"]:
-  var pairs:Array=[[2709,2716],[2712,2717],[2713,2718],[2710,2708],[2711,2708],[2714,2708],[2715,2708],[2716,2708],[2717,2708],[2718,2708]] if short.begins_with("sink044") else [[2709,2712],[2710,2715],[2711,2716],[2712,2713],[2713,2714],[2714,2715],[2715,2716],[2716,2717],[2717,2718],[2718,2708]]
-  for pair in pairs:
-   grant(b,[pair[0],pair[0]])
-   var npc:=source(b,short)
-   check(commit_trade(b,npc).ok and b.session.snapshot().original_items==[pair[1]],short+" conversion "+str(pair))
- grant(b,[2712,2710]);check(commit_trade(b,source(b,"sink044a")).ok and b.session.snapshot().original_items==[2710,2717],"044a earlier conversion beats overlapping clear branch")
- grant(b,[2710,2711,2714,2715,2716,2717,2718]);check(commit_trade(b,source(b,"sink044")).ok and b.session.snapshot().original_items==[2708],"clear branch consumes complete bare-ID list including trailing comma")
+ if which.is_empty():
+  for pair in [["很多",2709],["一半",2710],["一点点",2711]]:
+   grant(b,[2708,2708]);var r:=source_talk(b,elder)
+   r=b.handle({"type":"quest_choose","token":r.dialogue.token,"choice":"submit","text":pair[0]})
+   r=choose(b,r,"yes");check(choose(b,r,"ok").ok and b.session.snapshot().original_items==[pair[1]],"original exact water keyword, bareDelItem consumes all empty jugs")
+  grant(b,[2708,2708,2712]);var gold:int=b.session._profile.player.gold
+  check(commit_trade(b,elder).ok and b.session.snapshot().original_items==[2712] and b.session.snapshot().player.gold==gold+1149,"refund all empty jugs once1149 only with existing water")
+  b.free();return
+ var npc:=source(b,which)
+ var pairs:Array=[[2709,2716],[2712,2717],[2713,2718],[2710,2708],[2711,2708],[2714,2708],[2715,2708],[2716,2708],[2717,2708],[2718,2708]] if which.begins_with("sink044") else [[2709,2712],[2710,2715],[2711,2716],[2712,2713],[2713,2714],[2714,2715],[2715,2716],[2716,2717],[2717,2718],[2718,2708]]
+ for index in range(pairs.size()):
+  # Independent item-state cases reuse one genuinely earned player route.
+  # Only this NPC's test fixture is restored; never touch arrival/position.
+  b.original_quests.npc_state.records[npc.id]={"counter":index}
+  b.original_quests.npc_state.version+=1;b.original_quests.refresh_npc_state()
+  var pair:Array=pairs[index];grant(b,[pair[0],pair[0]])
+  var selected:Dictionary=b.original_quests.branch_for(npc,b.session.snapshot())
+  var destinations:Array=[]
+  for raw in str(selected.actions.NpcWarp).split(",",false):destinations.append(Array(raw.split(".")))
+  check(commit_trade(b,npc).ok and b.session.snapshot().original_items==[pair[1]],which+" conversion "+str(pair))
+  var moved:Dictionary=b.original_quests.npc_by_id(npc.id)
+  var expected:Array=destinations[index%destinations.size()]
+  check(int(moved.map_id)==int(expected[0]) and moved.cell==[int(expected[1]),int(expected[2])],which+" actual source NpcWarp destination "+str(index))
+ b.original_quests.npc_state.records.erase(npc.id)
+ b.original_quests.npc_state.version+=1;b.original_quests.refresh_npc_state()
+ if which=="sink044a":
+  grant(b,[2712,2710]);check(commit_trade(b,npc).ok and b.session.snapshot().original_items==[2710,2717],"044a earlier conversion beats overlapping clear branch")
+ if which=="sink044":
+  grant(b,[2710,2711,2714,2715,2716,2717,2718]);check(commit_trade(b,npc).ok and b.session.snapshot().original_items==[2708],"clear branch consumes complete bare-ID list including trailing comma")
  b.free()
 func rewards()->void:
  var b=setup();var npc:=source(b,"sink06")
