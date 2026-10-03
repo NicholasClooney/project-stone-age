@@ -13,7 +13,11 @@
 
 四份配置现为`enabled_events: []`，manifest现无NPC/奖励分支、helper拒绝访问。正式实现仅改自己的配置/manifest/helper，不改`quest-modules.json`、`quest_helper.gd`或共享解释器。通过`quest_module_registry.gd`读可信本地配置；不从客户端或存档动态加载脚本。Python importer从同一descriptor读取manifest和事件，拒绝路径/身份变化与重复registry id。
 
-helper实例API：`stage_key(helper, backend) -> Array`、`steps(helper, backend, profile, quest) -> void`、`can_visit(helper, backend, step) -> bool`。步骤仍经既有`add_step`/`resolve_step`和服务端事务。关键词分支的`add_step`/`pick`使用`spoken_keyword`进行只读选择，打开NPC后仍由玩家输入口令，不以helper代发奖励。没有增加 backend / game_session / battle_session / party_battle_session 接点。
+helper实例API：`stage_key(helper, backend) -> Array`、`steps(helper, backend, profile, quest) -> void`、`can_visit(helper, backend, step) -> bool`、`owns(npc) -> bool`、`destination(helper, backend, npc, mode) -> Dictionary`。空stage键不追加到共享cache key。步骤仍经既有`add_step`/`resolve_step`和服务端事务。关键词分支的`add_step`/`pick`使用`spoken_keyword`进行只读选择，打开NPC后仍由玩家输入口令，不以helper代发奖励。没有增加 backend / game_session / battle_session / party_battle_session 接点。
+
+最终旅行授权也由同一独立helper负责：共享`quest_helper.destination`识别链所有权，重新从服务端当前步骤查找NPC并调用`can_visit`，通过后才调用该链`destination`。raw `npc_id`、两种mode与缓存旧步骤都走此检查，缺helper/缺当前步骤默认拒绝；链的`destination`负责near/arrival同组件与原门边界。`steps`生成本链步骤时不要递归调用共享`destination`；若需计算区域，复用本链无副作用geometry函数。`owns`也可识别本链条件遇敌的map/cell区域；无NPC目标必须匹配服务端步骤map/cell，不能由客户端自报位置解锁。
+
+共享`event12`采用联合访问权和固定几何上限：启用梦德9时，保留既有梦德访问权，不因未开放/受限的风链拒掉合法梦德访问；始终先用梦德原守卫区域筛选目的地。只有风链拥有访问权时，仍须风链当前步骤`can_visit`及自身`destination`通过，而且返回目标必须在同一梦德组件。用风链`quest_id/step_id`发起的请求仍先检查风链步骤，不能借共享NPC规避步骤禁用；raw NPC只表达访问共享人物，不指定领取哪条奖励，实际对话仍按原分支顺序结算。其他既有链的dispatch维持原顺序。
 
 ## 共用物品与来源
 
@@ -63,12 +67,21 @@ helper实例API：`stage_key(helper, backend) -> Array`、`steps(helper, backend
 由协调者在合入后遵循AGENTS的存档备份/干净停服及重启顺序执行；本worker不接触live。以下从仓库根目录执行，资源来自已安装原包，无新下载：
 
 ```sh
-.tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --reference references/chenmingbiao-stone-age
+.tools/asset-venv/bin/python tools/import_legacy.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --server-map references/chenmingbiao-stone-age/gmsv/data/map/sainasu/samugiru/samugiru
+.tools/asset-venv/bin/python tools/import_world.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --reference references/chenmingbiao-stone-age --fallback-source .tools/legacy/extracted/SA8.0-20260803
 .tools/asset-venv/bin/python tools/import_early_quests.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5 --reference references/chenmingbiao-stone-age
+.tools/asset-venv/bin/python tools/palette_images.py
+python3 tools/split_manifests.py
 ./scripts/run.sh --headless --editor --import --quit
+python3 tools/plan_web_packs.py
+.tools/asset-venv/bin/python tools/test_transmigration_assets.py
 ```
 
-import_world输出450图、1605普通portal，32021 `missing=0`；quests输出242NPC/138物品，NPC数量未因本阶段增长。本阶段不需重新导入encounters或Boss美术。未将导入资产/截图提交Git。
+import_world输出450图、1605普通portal，32021 `missing=0`；quests输出242NPC/138物品，NPC数量未因本阶段增长。主世界既有8.0补图logical15401保留在命名空间1000000000，不能省略`--fallback-source`；本工作树实导出4751图。未将导入资产/截图提交Git。
+
+实际资源链：首次修复还需重导继承自`samgir.json`的1066张基础图；world只重写本次场景使用的图，保留的349张基础图也可能带旧近似色。以上`import_legacy`使用与当前provenance一致的原服务端地图；工作树实测重导前后`samgir.json` SHA256同为`738b696dc6f37bb60079500b93815c47a6a3e58a5e41aba78da53a1b3d0f64e9`，村庄布局不变。world重写`images/*.png`为RGBA，必须随后做地图调色板转换再Godot import。补片修正既有Pillow量化近似颜色缓存，改为精确RGB→索引；原量化已改色的PNG不能靠再次palette恢复，必须先从原包重导。32021 header引用1207张图，验证共享P模式/透明索引0、原不透明颜色与alpha逐像素一致；其`map-32021`及134个总依赖pack完整覆盖所有图。29物品图仍为原RGBA（地图palette工具不处理`quests/items/`），逐像素对原包且全部归`core`。
+
+`split_manifests`处理battle/riding/characters/backgrounds，本次无新Boss/角色帧，不需重跑这些艺术importer；仍实际执行split以核对已有运行时manifest完整性。`plan_web_packs`已实际重建包含450地图的2641包清单，不能沿用旧map集合/tiles签名。它生成`build/web-packs/plan.json`，不会自行发布或替换已部署`.pck`；如协调者发布web版，仍走现有web构建/打包流程。无需重导encounters，条件掉落尚未激活。
 
 ## 定向验证
 
@@ -77,6 +90,9 @@ import_world输出450图、1605普通portal，32021 `missing=0`；quests输出24
 - Python `test_quest_import_common.py`：既有模块23项回归。
 - `transmigration_foundation_test.gd`：三种水量的真实Backend/Session保存失败、UID保留、重放、成功存档重载；原等级+END门与300收费门；10个真实守卫实例完整十敌、失败保存与原结算重试、180秒个人冷却；两设备真实WebSocket端口0，旧token失效、原奖励不可伪造。
 - `transmigration_drops_test.gd`：原group605持物排除、原概率阈值、真实战斗掉落保存失败回滚/同一roll重试/关闭重放不重复。
+- `transmigration_navigation_test.gd`：隔离启用四链helper，真实raw NPC/两mode/旧步骤拒绝，独立目的地dispatch、原守卫组件、梦德共享访问与默认拒绝。
+- `original_quests_test.gd`：独立固定NPC oracle仅显式追加5个空组及4份descriptor约束，保留242个原实例/全部原分支；确认29物品。
+- Python `test_transmigration_assets.py` 3项 / `test_palette_images.py` 4项 / `test_plan_web_packs.py` 13项：实际32021/29图/8.0fallback/pack归属及近色量化回归；并运行Godot `palette_sheet_test.gd`、`split_manifests_test.gd`验证生成纹理和运行时manifest。
 - `quest_helper_test.gd`：既有助手及真实远程只读投影回归。
 - `audit_transmigration_conditions.py`：最小原C解析器证据，局限见[风奖励报告](../reverse-engineering/transmigration-wind-reward-condition.md)。
 
