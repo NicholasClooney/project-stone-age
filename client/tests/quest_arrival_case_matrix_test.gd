@@ -1,9 +1,19 @@
 extends "res://tests/brothers_golden_quests_test.gd"
 const Policy=preload("res://server/quest_arrival_policy.gd")
+const KING="777/ten.arg@32021:31:28"
+const Service=preload("res://server/transmigration_service.gd")
 var cases:Array=[]
 func audit(b,label:String)->void:
  for n in b.quest_catalog.active_npcs():
   b.automation.position_changed(int(n.map_id),Vector2i(int(n.cell[0])+1,int(n.cell[1])))
+  if str(n.id)==KING:
+   check(Policy.context_service(n) and Policy.scope(int(n.map_id))=="transmigration" and Policy.action_marks(n,{})==["transmigration_king"],"exact active king binds reviewed scope and final-room mark")
+   var before:Dictionary=b.session.snapshot()
+   var result:Dictionary=b.handle({"type":"transmigration","action":"preview","npc_id":KING,"pet_ids":[]})
+   check(not result.get("ok",false) and str(result.get("reason","")).begins_with("项目补充") and b.session.snapshot()==before,"real king service rejects project arrival without profile mutation")
+   check(b.quest_arrival.action_context(b,n,{},"SERVICE").is_empty(),"project arrival cannot mint king service receipt")
+   cases.append({"catalog":label,"npc":n.id,"map":n.map_id,"scope":Policy.scope(int(n.map_id)),"phase":"SERVICE","marks":Policy.action_marks(n,{})})
+   continue
   var branches:Array=n.get("branches",[])
   if str(n.get("kind","")) in ["golden_bui_gate","golden_bui_quiz","golden_bui_janken","original_jug_shop"]:
    branches=[{"type":"SERVICE","event":-1,"condition":"original service private rule","actions":{}}]
@@ -13,7 +23,7 @@ func audit(b,label:String)->void:
    if str(branch.type)=="CLEAN":continue # Original cancellation only removes flags.
    var scope:String=Policy.scope(int(n.map_id))
    var before:Dictionary=b.session.snapshot()
-   if scope.is_empty():
+   if scope.is_empty() and Policy.action_approach(n).is_empty():
     check(b.quest_arrival.check_action(b,n,branch,"reward").is_empty(),"public original branch adds no arrival predicate "+str(n.id))
    else:
     var result:Dictionary=b.original_quests.transact(b,before,branch,"SERVICE" if str(branch.type)=="SERVICE" else "reward","",str(n.id))
@@ -21,9 +31,21 @@ func audit(b,label:String)->void:
    cases.append({"catalog":label,"npc":n.id,"map":n.map_id,"cell":n.cell,"scope":scope,"branch":branch.duplicate(true),"catalog_index":i,"source":Policy.source(n),"marks":Policy.action_marks(n,branch)})
 func run()->void:
  var b=fresh()
- check(not b.quest_catalog.active_npcs().any(func(n):return int(n.map_id) in [32011,32021] or str(n.get("kind",""))=="transmigration"),"planned dark cave/king has no active NPC transaction")
- for event in [47,48,49,50,51,52]:check(event not in b.quest_catalog.enabled_events,"later master/rebirth events remain inactive "+str(event))
+ for event in [48,49,50,51,52]:check(event in b.quest_catalog.enabled_events,"approved final-chain catalogue enabled "+str(event))
+ check(47 not in b.quest_catalog.enabled_events and 53 not in b.quest_catalog.enabled_events,"unapproved master and END53 reward remain inactive")
+ check(not b.original_quests.npc_by_id(KING).is_empty(),"production catalogue contains exact reviewed king service")
  audit(b,"baseline active catalogue")
+ b.free()
+ # Explicit isolated closure preserves the old rejection test without reverting
+ # the approved production descriptor or equating policy existence with activation.
+ b=fresh()
+ b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(event):return event not in [48,49,50,51,52])
+ check(b.original_quests.npc_by_id(KING).is_empty(),"explicit closed catalogue hides king")
+ var before:Dictionary=b.session.snapshot()
+ for action in ["preview","confirm","cancel"]:
+  var denied:Dictionary=b.handle({"type":"transmigration","action":action,"npc_id":KING})
+  check(not denied.get("ok",false) and denied.get("reason","")==Service.CLOSED and b.session.snapshot()==before,"explicit closed service rejects "+action+" without mutation")
+ audit(b,"explicit final-chain closed catalogue")
  b.free()
  for chain in ["earth","fire","water"]:
   b=fresh()
