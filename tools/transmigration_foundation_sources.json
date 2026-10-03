@@ -1,0 +1,1381 @@
+{
+  "version": 1,
+  "id": "transmigration-foundation",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/encount.txt": "534466129cf7e17787d1990a885171d542463d279b4fc426494bb25930c1f4b5",
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/group.txt": "b1947ee3cad62d9f67d7aa0a4af0258c6d7fd35365883fc0fca0b9ec7ffee926",
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+    "gmsv/data/map/mapset.txt": "efc0b793c901509e6387697c6b2c2a706bd7b9a2af09f1260b592566299cc7a6",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+    "gmsv/data/npc/100/sb_geno.create": "995866f6aa006e2d86bb219bb8a0b72b0f6f4e6bd9276e8c1cf0414cf7e0d99e",
+    "gmsv/data/npc/100/sb_geno.template": "1bf69cc171a036f63c84cb626bb5c964413b23f0164c1c895684b95aaa65c9f8",
+    "gmsv/data/npc/100/sb_kbu.arg": "961b87cebad2fd7cb7875f9433df0e301f9f64b06c46a558475fc1a0344e9eec",
+    "gmsv/data/npc/100/sb_kgi.arg": "738c5805a5e62f134035321032cc3baead067063434b6476354e5287d5a26959",
+    "gmsv/data/npc/200/sb_dbt.arg": "c903a1967eb3744cc25734688a47fa7109a1c59c34c2ec581926b3099a4ab357",
+    "gmsv/data/npc/200/sb_dtp.arg": "bb6608659c21ee19f1af0d03a3da965ec4c207e09aacc04cbe644521b8b55993",
+    "gmsv/data/npc/200/sb_heki.create": "7c1bba78a16aff2922121a6efdaeb27103383aecd871bafc8fff659e34c63ab2",
+    "gmsv/data/npc/200/sb_heki.template": "5db72e927f53370b4d5c083735749f59a22f0b2b0e2a05eb388c55cda6a89a12",
+    "gmsv/data/npc/200/sb_mzl.arg": "0e056b324c80c4ee34f5392708515f9384def84ed7e101e2fb37cadabf22db62",
+    "gmsv/data/npc/200/sb_mzn.arg": "3670d5148ed7d8efabe61e41a6f1ee903b4395e6c4b0b27be101a1695219180e",
+    "gmsv/data/npc/200/sb_ruri.create": "85878a57275b8ccd7555c70d961d56e5569256b28374bfddcb133650d7fcfed1",
+    "gmsv/data/npc/200/sb_ruri.template": "8f96007334791552a04ce79522f4a8bc362ddc0b8bdfa810df2ab7106715485d",
+    "gmsv/data/npc/300/sb_hba7.arg": "493dffaa62e85931790af0212a31a8f3ad7038ebd61a47f7292510e10629c190",
+    "gmsv/data/npc/300/sb_hba9.arg": "00183dc0afd81ff958f8e8bd6a7e098a4d5d38d2a373f3f724a5fc52886d491e",
+    "gmsv/data/npc/300/sb_hpa.arg": "b2354b9df75d56777d330e67c3d114d572f71fcf13cf560d630ee2c4d605420a",
+    "gmsv/data/npc/300/sb_sikkoku.create": "b4634f420e88615bd4fb12d6346d2f6ec23e4828d9ba25949ed8a2c768b8e4ce",
+    "gmsv/data/npc/300/sb_sikkoku.template": "dd707e3ad718ba90eafba0b36eb4a55eeba03721908bcf2d75e90dff0b3758eb",
+    "gmsv/data/npc/300/sb_sinku.create": "a6a42683b3799b5ce3c33152a05e3dd719bcea7ef2561e21e866ec5bee49be76",
+    "gmsv/data/npc/300/sb_sinku.template": "b59bbb9b21ea1d968e1a80663986b990acb201edd92f472c51f76f17ebe96850",
+    "gmsv/data/npc/300/sb_skr.arg": "0dbec971e15174a4dad37f9160ab227b7b777b1c8c2b2ce6ad262d5423042145",
+    "gmsv/data/npc/300/sb_skt.arg": "5844223293d7cef81fdb7e2bc7d85fa73ccb70f6ebafb52ed78b2210f7458670",
+    "gmsv/data/npc/777/ten.arg": "5d09f42c64a61c3220a01a5a0e82340672fb67ead03b818c4f6457421832c852",
+    "gmsv/data/npc/genout/genou.create": "bcc79018829a4db6477c96329f61409261e04b7785d005a8c79e5bcbd9515d50",
+    "gmsv/data/npc/genout/msg_21001_14_17": "54ae00337a25cf9bbb1b4395954983c5c3d09a49e3c8ec94f61c61b037929406",
+    "gmsv/data/npc/genout/msg_21001_25_59": "79086023ba555ea7eeb310b6b57e9cd77498d09ddee6d777430756faca617067",
+    "gmsv/data/npc/genout/msg_21003_11_15": "1ac3b4195201764c2909082a7c933ec9556f4e5197955f433ecdc2f91bb3c7bd",
+    "gmsv/data/npc/genout/msg_21003_59_62": "61945be76c05334e55d150bba581e4b9021f4ba289344d8f9872b1cb60671b51",
+    "gmsv/data/npc/genout/ruri.create": "294502d74314a202549462b34fd53707704727824d31ebf08af740a1f9d61a3d",
+    "gmsv/data/npc/genout/signb_21009_46_43": "88a6e7f80a37923b52209162704020592743a790080dd0346d5b45fdfe35f0ce",
+    "gmsv/data/npc/genout/sikkoku.create": "5efb3afa1f44c1793874c1835e9013ac815c41e4bd3a117c3f3ac0fde4abe29b",
+    "gmsv/data/npc/genout/wpm_100_278_325": "862f8913c8d49f3aaafe53714a4c2d0c2f4cf172d413f28846e60d7286906a93",
+    "gmsv/data/npc/genout/wpm_11206_5_42": "4a50da101d65029facf963ac489753ec011ec5001dc1db9b9b95e825d9075446",
+    "gmsv/data/npc/genout/wpm_200_358_671": "82b81c476ff45723e18886b344f4d10c38d5e8b75608b7fb9d8371d2a08568b6",
+    "gmsv/data/npc/genout/wpm_200_359_671": "82b81c476ff45723e18886b344f4d10c38d5e8b75608b7fb9d8371d2a08568b6",
+    "gmsv/data/npc/genout/wpm_21003_34_10": "e907b62125931b0ea9d89b4728159d6771ea9114c03f8447503527839c22b55f",
+    "gmsv/data/npc/genout/wpm_300_103_228": "40556108c2c068597d4038fa66191599088610ca89c2e2d897afc966a3dbd76e",
+    "gmsv/data/npc/genout/wpm_300_108_225": "be5d7c43dbe07e9e3f7498b3de7e1179502a0d7a418cac3b52143a539b39cf08",
+    "gmsv/data/npc/genout/wpm_300_118_171": "72e25e5a4b4ccfb5eab0b18272d3a6ae4391e0b80a93a110901b70fd62f5bdbf",
+    "gmsv/data/npc/genout/wpm_30502_45_41": "6e71cd622319b13060fcab3fd1f7c2df991b728fa694548c47a32f63c487fbab",
+    "gmsv/data/npc/genout/wpm_30503_26_5": "32e05ab2032eb95542dfd1e1b3f657110ef3841f347dc84a131f8f14836353fb",
+    "gmsv/data/npc/genout/wpm_32016_31_39": "a4669cc029a3783ca3008345353a2cf6356322eb6b8777fc2c5b060c36df0888",
+    "gmsv/data/npc/genout/wpm_32021_31_51": "b6498e3a37c47fd7e44ce07388a78de65dce29dd14e0ddf6589fe130ca91d098",
+    "gmsv/data/npc/giiru/banam.arg": "b32c3a65d44da557b649b44c3c70b2238a1a0e93fd458a4ddebd776953419573",
+    "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create": "db20a0b44bebd3d6dedb1d67dec42a9dd78bd82b82ebc8107789db199a08ed13",
+    "gmsv/data/npc/giiru/event/sikkoku01": "daabd416d1454435829f9a0a6e55370f9041a7326de65ba01ccd433e24cfc2b1",
+    "gmsv/data/npc/giiru/event/sikkoku02": "5a0bfb9479bb24076d559b05e6d587f6a9806d8939a08f3136cdf1c63c7fdf10",
+    "gmsv/data/npc/giiru/event/sikkoku03": "075aa885c7fb79c2472388c30c775ba9af8ea29c0c035856ef3f1172edec2b78",
+    "gmsv/data/npc/giiru/event/sikkoku04": "b07c33c5ba0decfa179e13dece7974f4580083f081e1a7864652ac408f3a5008",
+    "gmsv/data/npc/giiru/event/sikkoku05": "e06cf95fc3f2d77d7922423733c45fd0c134a9ce15a0362c800f31631a83908d",
+    "gmsv/data/npc/giiru/event/sink/sink.create": "6bb50775cd34e76814388bdff2bdd09f0f5815da9193f44f43ffd2b15def6124",
+    "gmsv/data/npc/giiru/event/sink/sink01": "b188b493f0729428e5c84a33093cf9c87e02218a06b6b30b474d7de05a8c0349",
+    "gmsv/data/npc/giiru/event/sink/sink02": "4c13749cbf6c85945a8017741b1ab4aafd38ee5649d744508e6ba5a53030fb08",
+    "gmsv/data/npc/giiru/event/sink/sink03": "23f0eb8f12e68e54ddc6f66c097dee40ccf936081b607dc976ff378c09890b80",
+    "gmsv/data/npc/giiru/event/sink/sink044": "42c9801ec40a08ff0a1ce6ba51a2ce09ead8397cd865db46e98d148ac3246ba6",
+    "gmsv/data/npc/giiru/event/sink/sink044a": "22fc13adeac093675a26a3f33494e44bbd4117c7ac78b9cbd05774a15c798db4",
+    "gmsv/data/npc/giiru/event/sink/sink044b": "53625a17e0a646558e82a186e86e525000a28bc3044272abb34dcb2e803d10e4",
+    "gmsv/data/npc/giiru/event/sink/sink044c": "f1aef93db3f2e84d138d196af88d2d306487f0365ededa06480e67fa55d84967",
+    "gmsv/data/npc/giiru/event/sink/sink055": "2bcdd87bd927337089986ee7913cf65ac11736f685f8395ae62c15a7cb2d1f6f",
+    "gmsv/data/npc/giiru/event/sink/sink055a": "3b43d3afe612d976c90af02e3b989d3dafe0ba7d5b02ebf74202319a564297f1",
+    "gmsv/data/npc/giiru/event/sink/sink06": "afaed92567bcb844c0edcc94b6c857cdd8a98589197b702cd65ad4b9eb51f3aa",
+    "gmsv/data/npc/giiru/event/sink/sink07": "3046efb4dafa637231f3801dd9dfd96c9677ac8bf9fd8a2e42a49dbf7f68e590",
+    "gmsv/data/npc/jaruga/event/hekisei": "91b5ec3e8af73817de7ca2d87f7388f6fcb5a57e5ee70e52b98515849e35b3fa",
+    "gmsv/data/npc/jaruga/event/hekisei.create": "c88c4af01ac28d5cffa3ea133ddf96c37b51f736ad94bdae5d083d44102c4ca9",
+    "gmsv/data/npc/jaruga/event/hekisei01": "347981ed36e192aac0ccb33a08f60371519ab86bf598b0d46ee1e21ea7cdae7f",
+    "gmsv/data/npc/jaruga/event/hekisei02": "6aa62a64429be321cc4cd866bccfd53af4067b94e81818a4538ee53f20076da3",
+    "gmsv/data/npc/jaruga/event/hekisei03": "8677bb0b1bd7332e8078494d12e354adac7763133e5f7a7518eb91c8d90c2fc4",
+    "gmsv/data/npc/jaruga/event/hekisei04": "9ed3bb2dcfa07cb69632943c21ac9b5c568bed75695f5b17aed3c3db014c22bc",
+    "gmsv/data/npc/jaruga/event/hekisei05": "6b5cdeda25ec6ccc915f880a45373c1fe1ca2d08628567d1c148ea7378758146",
+    "gmsv/data/npc/jaruga/event/hekisei06": "8aeb1e3954fd997064cc77200077f8acc6caedd864832e31686124e216937bfa",
+    "gmsv/data/npc/jaruga/event/ruri.create": "9d74de3b02599059f2b058a60bd3ab335eac15c9f9432d936b913de63412d6e1",
+    "gmsv/data/npc/jaruga/event/ruri01": "b27ad8f8d220950ed8c6330b2f32abdfa4458f47b69b32905973368fb63b188f",
+    "gmsv/data/npc/jaruga/event/ruri02": "8d775d18c31115466d672f91c35335b9ddce0ede79dc78dd055cad2b99a3765e",
+    "gmsv/data/npc/jaruga/event/ruri03": "9b4e4a6cca3cc9ff4ddd0c8cb2ebca52fdef45eabee7f1c35704971b91ca9006",
+    "gmsv/data/npc/jaruga/event/ruri04": "c66ce042ad1c0361a1bcde9a7da5d13deef3be071e84604982e16aa24cf3bdc3",
+    "gmsv/data/npc/jaruga/event/ruri05": "4b3c619def7a265765fd2c0d840361a421677fba6af1fe9b8087fef76af1ea7b",
+    "gmsv/data/npc/jaruga/event/ruri06": "0ca6ecafdf87121e731561c67ac7afbdd880032076a18aa9e4d348b79c773029",
+    "gmsv/data/npc/sainasu/event/event09-12.create": "518a76ea59394c61d3ae90af0f4838ea52f0d946057f10279809d5a10f5e469c",
+    "gmsv/data/npc/sainasu/event/event12": "5f3919a27cb9238bce8490c2379aa48db4655b07074205b18a19b144d5bb5cd4",
+    "gmsv/data/npc/sainasu/event/genou/genou.create": "cd6c11f26cde599be9ff0c251f70b1c1f8bd72e36eb6b16ba87f0121c669eb48",
+    "gmsv/data/npc/sainasu/event/genou_1": "ca43949a993e0cdc47b7baf007e9f47205b264c74282ddf147392f2962d5a3a6",
+    "gmsv/data/npc/sainasu/event/genou_2": "094b5f439dddf2f12b34218a1e3f4ee3356d1ef7e45e44ca759e1ebcc71b7106",
+    "gmsv/data/npc/sainasu/event/genou_3": "ad81ffcb84e5d2bf18434191a9cdc5a80bd8174152067b861010171e30b061f0",
+    "gmsv/data/npc/sainasu/event/genou_4": "5fec4e6c5ed1f844a63e874d6fe7878425b4ef44ed36c46bb3e6dd52ea2468ab",
+    "gmsv/data/petskill.txt": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+    "gmsv/npc/npc_eventaction.c": "c5dc5b17847ee0670a86cf9e9b713a9dbeffa7ef55b192e5ce51119479c73042",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/npc/npc_npcenemy.c": "80e139199d45b27252e2f107bcdddc0d97df814a48398fa4d9e97203c7aee447",
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/data/npc/genout/wpm_200_316_711": "cdec2ffcd68c1e65e2c6671cf97b74629d8689aad4bfbbc456acbde220c0766e",
+    "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+    "gmsv/data/npc/genout/wpm_200_73_696": "34d31582daf0153c4103b43cc0a833cf09b9f0899036684ed8e58e1a1089b809",
+    "gmsv/data/npc/genout/wpm_21308_20_10": "bb058e6eb341bebd19057ed7901eb79261933650537c01a42e2ebe46c7a88450",
+    "gmsv/data/npc/genout/wpm_40_13_1": "4080b33fc9c52e705bc93b84a72f36cd8a1e95362386002517ff2f1b28aa326b",
+    "gmsv/data/npc/genout/40npc.create": "11febc4fd8d83d89b16be32e8276934f5490fe8e5b049a8849424c69cb7aa593",
+    "gmsv/util.c": "fb2fc8a071d7f67125458cce882f74354d308f9682ca9ad0c7183a351c40d18b",
+    "gmsv/npc/npcutil.c": "47dd685fc91b2aa686c45a03e4fe49586649b345d6ab8c4bbf8da729e4c1064b",
+    "gmsv/data/npc/genout/deadroad.create": "64020507ce610ca777910683aca755a4ecb388664b9fdb930301d6150f40843d",
+    "gmsv/data/npc/genout/dungeon02.create": "7e7ff68ef8c434e1023b7453901c0306d571fa06803161099f358d71d774c7c7",
+    "gmsv/data/npc/genout/dungeon03.create": "baf71a27eb74958c37e85ea362e16e0cf515bf31f1a3c5c08ee3ed0c55e267e8",
+    "gmsv/data/npc/genout/warp_g2.create": "2cc5993e522cf48404c4486c8f8096ee63d0d983d0bc66fb0a76adb662702295",
+    "gmsv/map/map_warppoint.c": "79ddaf6792db324351cd17cd774dcdfb25afed0eaf954a07571a13d081189856",
+    "gmsv/map/readmap.c": "287ffda7b2307797759aea937d7ba1aee49d3d1abbfb3c8c12e815528c35dc2e",
+    "gmsv/object.c": "c63d28b685e6610053a69f8a435404a8a23dfb958ad367379f5995c99dc931ce",
+    "gmsv/char/event.c": "3903d241a6105c63bcf55b284eaf6399dfbe7689ad7e68624dd54db7c002e4f5",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
+    "gmsv/main.c": "05d5c1941a6114f456c14761c3f5891139c500f5cda045b7c4a7ef58887b914c"
+  },
+  "creates": [],
+  "scripts": {},
+  "items": [
+    2698,
+    2699,
+    2700,
+    2701,
+    2706,
+    2707,
+    2708,
+    2709,
+    2710,
+    2711,
+    2712,
+    2713,
+    2714,
+    2715,
+    2716,
+    2717,
+    2718,
+    2735,
+    2736,
+    2758,
+    2766,
+    2767,
+    2768,
+    2769,
+    2770,
+    2771,
+    2772,
+    2773,
+    2774
+  ],
+  "reward_enemies": [],
+  "jobs": [],
+  "staged_world": {
+    "map_sources": {
+      "30001": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-01",
+        "sha256": "3f3e4a82d1a9a6be3c0f6bc8329de582a681adbd313a0cd3be48b3b4ff2b8605"
+      },
+      "30002": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-02",
+        "sha256": "8cd024d9107840c89472684508430293a96043788c4d7066bbb86bed906a1609"
+      },
+      "30003": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-03",
+        "sha256": "478b53834206649fd14a38d9e2b66c74321d1d7022368230fe17307c6077cafe"
+      },
+      "30004": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-04",
+        "sha256": "8fbef36a78631c877f00cceba4fb3792eeed488537c2ad572efbdaf643bc2da8"
+      },
+      "30005": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-05",
+        "sha256": "412f13be23fba297a03c0d463c3b623701f640ae8465ba6cfa397bed746c2bff"
+      },
+      "30006": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-06",
+        "sha256": "dca2206d0a58ad9203661351a7201930445f454fadd31bcb8b189e4bb6be2be2"
+      },
+      "30007": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-07",
+        "sha256": "f565779d23581d14de993eac2a782265bce7ff674f27fc0fa22e6c3939ab3ed6"
+      },
+      "30008": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-08",
+        "sha256": "8b124904c58d4154f4b921ade2686c298f80aef0297bcd0ec1ba31f8d086d7f3"
+      },
+      "30009": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-09",
+        "sha256": "76b167fd2782d65d242b0396bbaa0df7c3b4b16c1adce265d83e499e48cf1aab"
+      },
+      "30010": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-10",
+        "sha256": "43974a94066261bc48c08bcf8e4049ba2586a38a0118cb7daa0fb43f369c2493"
+      },
+      "30011": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-11",
+        "sha256": "b9afa76ceb1b3b7002e0be7fc3daf279e539087100c4ecceb0658315bfa63f97"
+      },
+      "30012": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-12",
+        "sha256": "0911053a19e90e563e51b34b8dc92b0f17e713adf657d4ff299a70ac1bbf6b99"
+      },
+      "30013": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-13",
+        "sha256": "c892332287c2ccb305afabda370fda38f2d4e96d862cf03d28273ccef2be4942"
+      },
+      "30014": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-14",
+        "sha256": "44ad607e3893f68276dc6c1e4c2199519a3ce1d7e3b03be10c97c2d37b18c459"
+      },
+      "30015": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-15",
+        "sha256": "250016ad9111d1983ff5082edae971feb6d69f987c4bd079bb2ab6540d06bf30"
+      },
+      "30016": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-00-16",
+        "sha256": "f3df6354e4ff06dd0e009a2fe9950c67e934697362ed53d51dae9022d7070b0b"
+      },
+      "31302": {
+        "path": "gmsv/data/map/giiru/dungeon/dan_3-13-02",
+        "sha256": "d4a2420d55ae85eec76217fe57f0ec72a02add3197750f14955a5c23adf28491"
+      },
+      "30501": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-05-01",
+        "sha256": "caa31adf83e2009e894970e483b130e4abaedf159d1ac1f425fb39e2b4556639"
+      },
+      "30502": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-05-02",
+        "sha256": "8a965a0132e9c699c3754f1d3f15b1777d7515192cd2e199b45f23117c9c676a"
+      },
+      "30503": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-05-03",
+        "sha256": "79c15988cb3f04e3fd3ee310159a111b99f75e9491989d66b04f4ac57e087c11"
+      },
+      "30504": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-05-04",
+        "sha256": "5ff3dece8877073da94058c2260ee77f157eb868f9379572fd65161338c6ac31"
+      },
+      "31301": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-13-01",
+        "sha256": "15cb6b47b14193576fa18a4b1189abc8c993214829ce6adf25a50a649accd3b1"
+      },
+      "32021": {
+        "path": "gmsv/data/map/giiru/dungeon/sikkoku/dan_3-20-21",
+        "sha256": "f270c4b1c45e152dffb580a1f596c645cc5c46251b57c7404e2e145de3a4935c"
+      },
+      "21201": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-01",
+        "sha256": "c6fa3e9c96fb40050399a2050cc575cf60f30efb6eca5140af8c50de4f339679"
+      },
+      "21202": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-02",
+        "sha256": "46bf269bd020e4336f0b27818f5251cec0d09d27df956bd3fbcd3408b08da258"
+      },
+      "21203": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-03",
+        "sha256": "f015cc3f7a76e4e6a334277436c34bf3fcb45d515105f1e568193fac7e75c719"
+      },
+      "21204": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-04",
+        "sha256": "6818bb10470b330d46ff7a9735b8cb328224ad0b1c259c61785f9c4f62b64378"
+      },
+      "21205": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-05",
+        "sha256": "7802c742486cbd14bf8b14183db9cb608eb4d3543cfdb553d5b963837369db28"
+      },
+      "21206": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-06",
+        "sha256": "f97a2d79a36795137aeaa21abb679594c3150d42e3feec449d6153efefbeb17d"
+      },
+      "21207": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-07",
+        "sha256": "0acc4c3cfff700a0ed6feb3749b907b5db04b3403ef9f7ad1590c6d5e44e235b"
+      },
+      "21208": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-08",
+        "sha256": "e71816ded2ad35250adef34386c58e2c8c5474b1f743dbb90832acb6969e1fc9"
+      },
+      "21209": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-09",
+        "sha256": "f7eb2f9dd13941809a8b4ccb44235c1b040aae32c7225bedb171e2d3cb7e6dd7"
+      },
+      "21210": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-10",
+        "sha256": "214a9f01c08466d7328c2371fb9b4bf606cbb2334df365a0ef1d40ae0206c3f2"
+      },
+      "21211": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-11",
+        "sha256": "7e976546add80b889b369499e52d17e57a73a03fb22c26c1d26475498ddde8b2"
+      },
+      "21212": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-12",
+        "sha256": "5ca0b7d94e9ccdd068739d378419849582756ab7a1bfd72514d0e13d2f7cdb65"
+      },
+      "21213": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-13",
+        "sha256": "8f65d7e72e10f6a5f4f4b7ced9e1e82128d29383ffaeca7f8e8fb020c94ce330"
+      },
+      "21214": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-14",
+        "sha256": "11c421a0b97ef06ca3c2c4857d3250230a035b9dc0aedf4f8ed95e640283721b"
+      },
+      "21215": {
+        "path": "gmsv/data/map/jyaruga/dungeon/hekisei/dan_2-12-15",
+        "sha256": "dd04baf90770ecda2bd2e7e07b753c0e725d5870c628da49f36cb54007139da0"
+      },
+      "21001": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_01",
+        "sha256": "b9093b5300314bca332f4dae93b058ff201476042c6a4005edcec12c522ca15b"
+      },
+      "21002": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_02",
+        "sha256": "7afb8915cf7caa74c9bc0d4112cf7e0599711c99bd3c68a0a0a27d7d28b37575"
+      },
+      "21003": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_03",
+        "sha256": "c09d462c2f2e37e7ff99ad62c61af764b50264774ca98b3c298ceb0c109f6c85"
+      },
+      "21004": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_04",
+        "sha256": "9af469116a59b65fe36b154ee1dc276542c84bf7211609242338a557012a20db"
+      },
+      "21005": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_05",
+        "sha256": "23f6f889c2a26986c810951d6d6ffede29502bc5b2a6f1bdc961d55d19e3501a"
+      },
+      "21006": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_06",
+        "sha256": "7fd6ba5639c13d525dc35678911d5f81ed66dedf6137c9b6ac08acb7ff231475"
+      },
+      "21007": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_07",
+        "sha256": "38b1654cfda4c98e2c1f8aec57a04419550d575228941f81b0dd50bdd1216b4f"
+      },
+      "21008": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_08",
+        "sha256": "81af97ba6c102f1996bb21e4a6979dec3724390101a6a71c8abca537ba060aef"
+      },
+      "21009": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_09",
+        "sha256": "bb9eea5cda81145f093a0e1a1223273527ec3fd6dc9cf1d232e90f6761e9fb95"
+      },
+      "21010": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_10",
+        "sha256": "b520313f1b7809f6902137dcd57c76a4bf03130b4f4779e04671975c02774135"
+      },
+      "21011": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_11",
+        "sha256": "44a47ef6ec598968baeddce291e9ecdb61108c3f296c6dfa644702379ca75ca9"
+      },
+      "21012": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_12",
+        "sha256": "45444e2c33abd31d0c3dbf9f42b6aa197cf388c60ff9772532e62f453d00115e"
+      },
+      "21016": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_12b",
+        "sha256": "89b19628dc913ec5fcd4cb43a935d5124789379bf824f7c44274db16af09511f"
+      },
+      "21013": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_13",
+        "sha256": "b97f9f2eb120a8df36e0a0f6823c2f5a4ee84572d1f3d588bb3af460f4a68def"
+      },
+      "21014": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_14",
+        "sha256": "d4fd935b32e057a55ac1ab01028635e6f8abbcee5db64483b35f4c62c65cb41a"
+      },
+      "21015": {
+        "path": "gmsv/data/map/jyaruga/dungeon/ruri/dan_2_10_15",
+        "sha256": "df8e5cf16010646d8fe2280f7d36e2da1317021df43be4d0b65fe264a248fed2"
+      },
+      "21301": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-01",
+        "sha256": "c169617f2b2ee700569dd066a6498fded977feef4c0511cecf7e79c7d3741d91"
+      },
+      "21302": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-02",
+        "sha256": "5e0457676c927ffc8992e5d0555b22eed1bae81f05d82ca40d23155f15fd7a58"
+      },
+      "21303": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-03",
+        "sha256": "3d279ef8055bc4058376606e62c40e708a807793c6aa090eddf2748d6482687a"
+      },
+      "21304": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-04",
+        "sha256": "1cb6262b8c6d47c0076c6709f96b23178994111830282499bd1b7c5cdc84b969"
+      },
+      "21305": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-05",
+        "sha256": "80818ea4c31e32221365433953f6b6731284e32e563fc8d12224f05d493939a6"
+      },
+      "21306": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-06",
+        "sha256": "7f755a875a9bcf49d58d07bf7459a4ee98a6634ddb94d5fd251f825ecab1f658"
+      },
+      "21307": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-07",
+        "sha256": "a210a0cc7371aa5d07ece867dc2bcbcc0d07a8863cd7a2f3f5d54fb668356c6c"
+      },
+      "21308": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-08",
+        "sha256": "883e179ec7a52c80b674b727c6fc27b39386fdeb56f9957de7337a88fa074239"
+      },
+      "21309": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-09",
+        "sha256": "b8d714f6583d835a6cda25ec9d37bfa57ab0295dfad382b76f61e5c49d690db5"
+      },
+      "21310": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-10",
+        "sha256": "cde888fbcce6759994b47d299c0d4de02a58f628653695f3298a385303878431"
+      },
+      "21311": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-11",
+        "sha256": "d8a7f89e9dd0ed9c93107f5414b0590a8edc07bbb8d8fedd1dc66b20cf317693"
+      },
+      "21312": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-12",
+        "sha256": "318da1ee5f625bf7cbf567c5bcd8f4704e3523bf9b0a3f1f733efe18946524b8"
+      },
+      "21313": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-13",
+        "sha256": "8a617567057329a5f49dc3eb347318daf79f92a9ef45850fc48979d7da702f5d"
+      },
+      "21314": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-14",
+        "sha256": "1945a2483652e8c6dbe31f610e380f95397dfeae1d8bdf453148504798f07e65"
+      },
+      "21315": {
+        "path": "gmsv/data/map/jyaruga/dungeon/suisou/dan_2-13-15",
+        "sha256": "a56fbb5c5a3ba516aa629e606ece28cbd3344ca5196e92f47a18d182db7def38"
+      },
+      "3413": {
+        "path": "gmsv/data/map/jyaruga/kikuku/3413",
+        "sha256": "a8793ee365adc41583b8c12284588a3bb76dfd14f89ef28fdc4d388da386f4b4"
+      },
+      "11201": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_01",
+        "sha256": "8f2478d01ce1d8073b06b0767cc47018b6a4e779202c21c670a4ab5cf1e9b458"
+      },
+      "11202": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_02",
+        "sha256": "9cc4bcf351389eb291a025aa77f88f64f2fbd1f6dbd400814755a4c2f6deb4a8"
+      },
+      "11203": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_03",
+        "sha256": "ebb522c422601bf661a6d8c286638a2c6b6e45ca9f683d7dc2de8d053f19964d"
+      },
+      "11204": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_04",
+        "sha256": "e1950638e4d68c5373921d079c2f4c18af72878af9bd20ee5554ada7e272db16"
+      },
+      "11205": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_05",
+        "sha256": "a9df31ea7e409acc2db5d88338ed12e31c5fd97f5cb9849528baf20255aa441a"
+      },
+      "11206": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_06",
+        "sha256": "226d7dd39fdaaeb8b5beab3b41bbe9e7caa736a0e5b42bd5866a9aef04e399ea"
+      },
+      "11207": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_07",
+        "sha256": "7b9c4fbb4007184ddfd2991027c0011f5236860fc187fc8aff409acb7622859a"
+      },
+      "11208": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_08",
+        "sha256": "d9caf838fb6a65707901949a8e14c9833626ff4f4455c38b0dd50703369f1889"
+      },
+      "11209": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_09",
+        "sha256": "903bc6ad2151e2d093567064dfb26d77448384e4288f63718e0e8cc9f66ef5c1"
+      },
+      "11210": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_10",
+        "sha256": "480ea603da7be92b63cc0d396a03f258e4b6bd8845905317c11f430c230090d7"
+      },
+      "11211": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_11",
+        "sha256": "95f0ba35836953d015806da3f75d72a7abcdd915d0db2a35bbc820814db4a999"
+      },
+      "11212": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_12",
+        "sha256": "36f2603695962e08c6a8c7134b5a674d349818863544ce9eb7c05ce054a66ed2"
+      },
+      "11213": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_13",
+        "sha256": "2796bed219d157955980060fc79ad7a38e3f7672fc2634736f256c792f750ece"
+      },
+      "11214": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_14",
+        "sha256": "9f9ec451d8b8aa75facbbf3a4241568a619b31a4154222b096ad9cf52c6d2414"
+      },
+      "11215": {
+        "path": "gmsv/data/map/sainasu/dungeon/genou/dan_1_12_15",
+        "sha256": "03a33a6824e7665f03f57027f61e2d68e49e615b1a0c4a7f5d21e7a63a32c1ea"
+      }
+    },
+    "portal_sources": {
+      "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+      "gmsv/data/npc/genout/deadroad.create": "64020507ce610ca777910683aca755a4ecb388664b9fdb930301d6150f40843d",
+      "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+      "gmsv/data/npc/genout/dungeon02.create": "7e7ff68ef8c434e1023b7453901c0306d571fa06803161099f358d71d774c7c7",
+      "gmsv/data/npc/genout/dungeon03.create": "baf71a27eb74958c37e85ea362e16e0cf515bf31f1a3c5c08ee3ed0c55e267e8",
+      "gmsv/data/npc/genout/genou.create": "bcc79018829a4db6477c96329f61409261e04b7785d005a8c79e5bcbd9515d50",
+      "gmsv/data/npc/genout/ruri.create": "294502d74314a202549462b34fd53707704727824d31ebf08af740a1f9d61a3d",
+      "gmsv/data/npc/genout/sikkoku.create": "5efb3afa1f44c1793874c1835e9013ac815c41e4bd3a117c3f3ac0fde4abe29b",
+      "gmsv/data/npc/genout/warp_g2.create": "2cc5993e522cf48404c4486c8f8096ee63d0d983d0bc66fb0a76adb662702295"
+    },
+    "portal_choices": [
+      {
+        "from_map": 30008,
+        "cell": [
+          50,
+          54
+        ],
+        "to_map": 30016,
+        "to_cell": [
+          28,
+          99
+        ],
+        "source": "gmsv/data/map/mapwarp.txt:1693; gmsv/data/npc/genout/dungeon02.create:277",
+        "reason": "First original destination in both data orders. map_warppoint.c:199 reads file order; readmap.c:1344 MAP_addNewObj appends tail; char/event.c:46-70 first matching object wins. Later alternate lands at29,99 on same entry; no invented destination."
+      }
+    ]
+  },
+  "reviewed_bindings": [
+    {
+      "create": "gmsv/data/npc/jaruga/event/ruri.create",
+      "source_create_index": 0,
+      "source_line": 8,
+      "script": "jaruga/event/ruri01",
+      "handler": "changeevent",
+      "map_id": 21015,
+      "cell": [
+        10,
+        8
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/ruri.create",
+      "source_create_index": 1,
+      "source_line": 20,
+      "script": "jaruga/event/ruri02",
+      "handler": "changeevent",
+      "map_id": 3413,
+      "cell": [
+        16,
+        18
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/ruri.create",
+      "source_create_index": 2,
+      "source_line": 32,
+      "script": "jaruga/event/ruri03",
+      "handler": "changeevent",
+      "map_id": 200,
+      "cell": [
+        158,
+        1005
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/ruri.create",
+      "source_create_index": 3,
+      "source_line": 44,
+      "script": "jaruga/event/ruri04",
+      "handler": "changeevent",
+      "map_id": 21015,
+      "cell": [
+        13,
+        9
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/ruri.create",
+      "source_create_index": 4,
+      "source_line": 56,
+      "script": "jaruga/event/ruri05",
+      "handler": "changeevent",
+      "map_id": 21015,
+      "cell": [
+        13,
+        8
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/ruri.create",
+      "source_create_index": 5,
+      "source_line": 68,
+      "script": "jaruga/event/ruri06",
+      "handler": "changeevent",
+      "map_id": 21015,
+      "cell": [
+        13,
+        10
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 0,
+      "source_line": 8,
+      "script": "jaruga/event/hekisei01",
+      "handler": "changeevent",
+      "map_id": 21215,
+      "cell": [
+        25,
+        30
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 1,
+      "source_line": 20,
+      "script": "jaruga/event/hekisei",
+      "handler": "changeevent",
+      "map_id": 3400,
+      "cell": [
+        63,
+        72
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 2,
+      "source_line": 32,
+      "script": "jaruga/event/hekisei02",
+      "handler": "changeevent",
+      "map_id": 21215,
+      "cell": [
+        22,
+        33
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 3,
+      "source_line": 44,
+      "script": "jaruga/event/hekisei03",
+      "handler": "changeevent",
+      "map_id": 21308,
+      "cell": [
+        20,
+        3
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 4,
+      "source_line": 56,
+      "script": "jaruga/event/hekisei04",
+      "handler": "changeevent",
+      "map_id": 31302,
+      "cell": [
+        27,
+        31
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 5,
+      "source_line": 68,
+      "script": "jaruga/event/hekisei06",
+      "handler": "changeevent",
+      "map_id": 21215,
+      "cell": [
+        21,
+        34
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/jaruga/event/hekisei.create",
+      "source_create_index": 6,
+      "source_line": 80,
+      "script": "jaruga/event/hekisei05",
+      "handler": "changeevent",
+      "map_id": 21215,
+      "cell": [
+        23,
+        34
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "giiru/banam.arg",
+      "handler": "bus",
+      "map_id": 300,
+      "cell": [
+        394,
+        340
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 1,
+      "source_line": 14,
+      "script": "giiru/event/sink/sink01",
+      "handler": "changeevent",
+      "map_id": 20309,
+      "cell": [
+        46,
+        45
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 2,
+      "source_line": 26,
+      "script": "giiru/event/sink/sink02",
+      "handler": "changeevent",
+      "map_id": 30016,
+      "cell": [
+        26,
+        30
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 3,
+      "source_line": 38,
+      "script": "giiru/event/sink/sink06",
+      "handler": "changeevent",
+      "map_id": 30016,
+      "cell": [
+        29,
+        36
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 4,
+      "source_line": 50,
+      "script": "giiru/event/sink/sink06",
+      "handler": "changeevent",
+      "map_id": 30016,
+      "cell": [
+        23,
+        36
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 5,
+      "source_line": 62,
+      "script": "giiru/event/sink/sink03",
+      "handler": "changeevent",
+      "map_id": 300,
+      "cell": [
+        407,
+        298
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 6,
+      "source_line": 74,
+      "script": "giiru/event/sink/sink044",
+      "handler": "changeevent",
+      "map_id": 30008,
+      "cell": [
+        30,
+        69
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 7,
+      "source_line": 86,
+      "script": "giiru/event/sink/sink044a",
+      "handler": "changeevent",
+      "map_id": 30008,
+      "cell": [
+        80,
+        14
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 8,
+      "source_line": 98,
+      "script": "giiru/event/sink/sink044b",
+      "handler": "changeevent",
+      "map_id": 30008,
+      "cell": [
+        84,
+        19
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 9,
+      "source_line": 110,
+      "script": "giiru/event/sink/sink044c",
+      "handler": "changeevent",
+      "map_id": 30011,
+      "cell": [
+        32,
+        34
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 10,
+      "source_line": 122,
+      "script": "giiru/event/sink/sink055",
+      "handler": "changeevent",
+      "map_id": 30012,
+      "cell": [
+        7,
+        4
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 11,
+      "source_line": 134,
+      "script": "giiru/event/sink/sink055a",
+      "handler": "changeevent",
+      "map_id": 30001,
+      "cell": [
+        38,
+        5
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sink/sink.create",
+      "source_create_index": 14,
+      "source_line": 171,
+      "script": "giiru/event/sink/sink07",
+      "handler": "changeevent",
+      "map_id": 5106,
+      "cell": [
+        26,
+        15
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 0,
+      "source_line": 8,
+      "script": "sainasu/event/genou_1",
+      "handler": "changeevent",
+      "map_id": 11215,
+      "cell": [
+        10,
+        10
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 1,
+      "source_line": 20,
+      "script": "sainasu/event/genou_2",
+      "handler": "changeevent",
+      "map_id": 11215,
+      "cell": [
+        13,
+        11
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 2,
+      "source_line": 32,
+      "script": "sainasu/event/genou_2",
+      "handler": "changeevent",
+      "map_id": 11215,
+      "cell": [
+        7,
+        11
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 3,
+      "source_line": 45,
+      "script": "sainasu/event/genou_3",
+      "handler": "changeevent",
+      "map_id": 100,
+      "cell": [
+        346,
+        356
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/sainasu/event/genou/genou.create",
+      "source_create_index": 4,
+      "source_line": 59,
+      "script": "sainasu/event/genou_4",
+      "handler": "changeevent",
+      "map_id": 11206,
+      "cell": [
+        5,
+        36
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/200/sb_ruri.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "200/sb_dtp.arg",
+      "handler": "sb_dtp",
+      "map_id": 21009,
+      "cell": [
+        43,
+        48
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/200/sb_ruri.create",
+      "source_create_index": 1,
+      "source_line": 15,
+      "script": "200/sb_dbt.arg",
+      "handler": "sb_dbt",
+      "map_id": 21014,
+      "cell": [
+        14,
+        14
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/200/sb_heki.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "200/sb_mzn.arg",
+      "handler": "sb_mzn",
+      "map_id": 21214,
+      "cell": [
+        30,
+        40
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/200/sb_heki.create",
+      "source_create_index": 1,
+      "source_line": 15,
+      "script": "200/sb_mzl.arg",
+      "handler": "sb_mzl",
+      "map_id": 21208,
+      "cell": [
+        30,
+        16
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sinku.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "300/sb_hba7.arg",
+      "handler": "sb_hba",
+      "map_id": 30007,
+      "cell": [
+        16,
+        11
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sinku.create",
+      "source_create_index": 1,
+      "source_line": 14,
+      "script": "300/sb_hba9.arg",
+      "handler": "sb_hba",
+      "map_id": 30009,
+      "cell": [
+        39,
+        20
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sinku.create",
+      "source_create_index": 2,
+      "source_line": 26,
+      "script": "300/sb_hpa.arg",
+      "handler": "sb_hpa",
+      "map_id": 30016,
+      "cell": [
+        26,
+        66
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/100/sb_geno.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "100/sb_kbu.arg",
+      "handler": "sb_kbu",
+      "map_id": 11208,
+      "cell": [
+        26,
+        40
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/100/sb_geno.create",
+      "source_create_index": 1,
+      "source_line": 14,
+      "script": "100/sb_kbu.arg",
+      "handler": "sb_kbu",
+      "map_id": 11208,
+      "cell": [
+        42,
+        38
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/100/sb_geno.create",
+      "source_create_index": 2,
+      "source_line": 26,
+      "script": "100/sb_kgi.arg",
+      "handler": "sb_kgi",
+      "map_id": 11214,
+      "cell": [
+        41,
+        36
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sikkoku.create",
+      "source_create_index": 0,
+      "source_line": 3,
+      "script": "300/sb_skr.arg",
+      "handler": "sb_skr",
+      "map_id": 32010,
+      "cell": [
+        54,
+        30
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/300/sb_sikkoku.create",
+      "source_create_index": 1,
+      "source_line": 15,
+      "script": "300/sb_skt.arg",
+      "handler": "sb_skt",
+      "map_id": 32020,
+      "cell": [
+        20,
+        9
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 0,
+      "source_line": 8,
+      "script": "giiru/event/sikkoku01",
+      "handler": "changeevent",
+      "map_id": 32002,
+      "cell": [
+        4,
+        23
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 1,
+      "source_line": 21,
+      "script": "giiru/event/sikkoku02",
+      "handler": "changeevent",
+      "map_id": 32006,
+      "cell": [
+        46,
+        46
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 2,
+      "source_line": 33,
+      "script": "giiru/event/sikkoku03",
+      "handler": "changeevent",
+      "map_id": 32009,
+      "cell": [
+        49,
+        20
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 3,
+      "source_line": 45,
+      "script": "giiru/event/sikkoku04",
+      "handler": "changeevent",
+      "map_id": 32014,
+      "cell": [
+        14,
+        48
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 4,
+      "source_line": 57,
+      "script": "giiru/event/sikkoku05",
+      "handler": "changeevent",
+      "map_id": 32016,
+      "cell": [
+        31,
+        43
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/giiru/event/sikkoku/sikkoku.create",
+      "source_create_index": 5,
+      "source_line": 71,
+      "script": "777/ten.arg",
+      "handler": "npc_transmigration",
+      "map_id": 32021,
+      "cell": [
+        31,
+        28
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/ruri.create",
+      "source_create_index": 53,
+      "source_line": 484,
+      "script": "genout/signb_21009_46_43",
+      "handler": "npcgen_signboard",
+      "map_id": 21009,
+      "cell": [
+        46,
+        43
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/ruri.create",
+      "source_create_index": 58,
+      "source_line": 532,
+      "script": "genout/wpm_21003_34_10",
+      "handler": "npcgen_warpman",
+      "map_id": 21003,
+      "cell": [
+        34,
+        10
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/ruri.create",
+      "source_create_index": 59,
+      "source_line": 544,
+      "script": "genout/msg_21001_14_17",
+      "handler": "npcgen_man",
+      "map_id": 21001,
+      "cell": [
+        14,
+        17
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/ruri.create",
+      "source_create_index": 60,
+      "source_line": 557,
+      "script": "genout/msg_21001_25_59",
+      "handler": "npcgen_man",
+      "map_id": 21001,
+      "cell": [
+        25,
+        59
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/ruri.create",
+      "source_create_index": 61,
+      "source_line": 570,
+      "script": "genout/msg_21003_59_62",
+      "handler": "npcgen_man",
+      "map_id": 21003,
+      "cell": [
+        59,
+        62
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/ruri.create",
+      "source_create_index": 62,
+      "source_line": 583,
+      "script": "genout/msg_21003_11_15",
+      "handler": "npcgen_man",
+      "map_id": 21003,
+      "cell": [
+        11,
+        15
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/genou.create",
+      "source_create_index": 54,
+      "source_line": 493,
+      "script": "genout/wpm_100_278_325",
+      "handler": "npcgen_warpman",
+      "map_id": 100,
+      "cell": [
+        278,
+        325
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/genou.create",
+      "source_create_index": 55,
+      "source_line": 505,
+      "script": "genout/wpm_200_359_671",
+      "handler": "npcgen_warpman",
+      "map_id": 200,
+      "cell": [
+        359,
+        671
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/genou.create",
+      "source_create_index": 56,
+      "source_line": 517,
+      "script": "genout/wpm_200_358_671",
+      "handler": "npcgen_warpman",
+      "map_id": 200,
+      "cell": [
+        358,
+        671
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/genou.create",
+      "source_create_index": 57,
+      "source_line": 529,
+      "script": "genout/wpm_30502_45_41",
+      "handler": "npcgen_warpman",
+      "map_id": 30502,
+      "cell": [
+        45,
+        41
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/genou.create",
+      "source_create_index": 58,
+      "source_line": 541,
+      "script": "genout/wpm_30503_26_5",
+      "handler": "npcgen_warpman",
+      "map_id": 30503,
+      "cell": [
+        26,
+        5
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/genou.create",
+      "source_create_index": 59,
+      "source_line": 553,
+      "script": "genout/wpm_11206_5_42",
+      "handler": "npcgen_warpman",
+      "map_id": 11206,
+      "cell": [
+        5,
+        42
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 83,
+      "source_line": 754,
+      "script": "genout/wpm_300_103_228",
+      "handler": "npcgen_warpman",
+      "map_id": 300,
+      "cell": [
+        103,
+        228
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 84,
+      "source_line": 766,
+      "script": "genout/wpm_300_108_225",
+      "handler": "npcgen_warpman",
+      "map_id": 300,
+      "cell": [
+        108,
+        225
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 85,
+      "source_line": 778,
+      "script": "genout/wpm_300_118_171",
+      "handler": "npcgen_warpman",
+      "map_id": 300,
+      "cell": [
+        118,
+        171
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 86,
+      "source_line": 790,
+      "script": "genout/wpm_32016_31_39",
+      "handler": "npcgen_warpman",
+      "map_id": 32016,
+      "cell": [
+        31,
+        39
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/sikkoku.create",
+      "source_create_index": 87,
+      "source_line": 802,
+      "script": "genout/wpm_32021_31_51",
+      "handler": "npcgen_warpman",
+      "map_id": 32021,
+      "cell": [
+        31,
+        51
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/sainasu/event/event09-12.create",
+      "source_create_index": 3,
+      "source_line": 41,
+      "script": "sainasu/event/event12",
+      "handler": "changeevent",
+      "map_id": 11107,
+      "cell": [
+        24,
+        6
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/dungeon01.create",
+      "source_create_index": 254,
+      "source_line": 2305,
+      "script": "genout/wpm_200_316_711",
+      "handler": "npcgen_warpman",
+      "map_id": 200,
+      "cell": [
+        316,
+        711
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/dungeon01.create",
+      "source_create_index": 251,
+      "source_line": 2272,
+      "script": "genout/wpm_200_73_696",
+      "handler": "npcgen_warpman",
+      "map_id": 200,
+      "cell": [
+        73,
+        696
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/dungeon01.create",
+      "source_create_index": 252,
+      "source_line": 2284,
+      "script": "genout/wpm_21308_20_10",
+      "handler": "npcgen_warpman",
+      "map_id": 21308,
+      "cell": [
+        20,
+        10
+      ]
+    },
+    {
+      "create": "gmsv/data/npc/genout/40npc.create",
+      "source_create_index": 1,
+      "source_line": 19,
+      "script": "genout/wpm_40_13_1",
+      "handler": "npcgen_warpman",
+      "map_id": 40,
+      "cell": [
+        13,
+        1
+      ]
+    }
+  ]
+}

@@ -7,6 +7,7 @@ const GoldenBui = preload("res://server/golden_bui_helper.gd")
 const Dream = preload("res://server/dream_cave_helper.gd")
 const Dragon = preload("res://server/dragon_cave_helper.gd")
 const Marju = preload("res://server/marju_helper.gd")
+var transmigration = preload("res://server/transmigration_foundation.gd").new()
 var places = WorldCatalog.new()
 var maps := {}
 var cached_key := ""
@@ -26,6 +27,7 @@ func navigation_key(backend) -> Array:
   var dream_stage:Array=Dream.stage_key(backend)
   if not dream_stage.is_empty():key=key+[dream_stage]
  if 13 in backend.quest_catalog.enabled_events:key.append_array(preload("res://server/saton_cave_helper.gd").stage_key(self,backend))
+ key.append_array(transmigration.stage_key(self,backend))
  return key
 
 func snapshot(backend) -> Dictionary:
@@ -44,7 +46,8 @@ func snapshot(backend) -> Dictionary:
   var ended := Rules.flag(profile,"ended",event)
   var quest := {"id":int(job.id),"event":event,"title":str(job.title),"status":"已完成" if ended else ("进行中" if Rules.flag(profile,"now",event) else "未开始"),"repeatable":false,"can_restart":false,"blocked_reason":"" if enabled else "尚未开放","steps":[]}
   if enabled:
-   if event==1:herb_steps(backend,profile,quest)
+   if event in transmigration.EVENTS:transmigration.steps(self,backend,profile,quest)
+   elif event==1:herb_steps(backend,profile,quest)
    elif event==4:adult_steps(backend,profile,quest)
    elif event==2:shell_steps(backend,profile,quest)
    elif event in [15,16]:doctor_steps(backend,profile,quest)
@@ -99,7 +102,7 @@ func candidates(backend,event:int,key:String,item:int) -> Array:
 
 func pick(backend,profile:Dictionary,options:Array) -> Dictionary:
  for entry in options:
-  if backend.original_quests.branch_for(entry.npc,profile)==entry.branch:return entry
+  if backend.original_quests.branch_for(entry.npc,profile,str(entry.branch.get("spoken_keyword","")))==entry.branch:return entry
  return options[0] if not options.is_empty() else {}
 
 func add_step(backend,profile:Dictionary,quest:Dictionary,id:String,entry:Dictionary,current:bool,done:bool,label:String="") -> void:
@@ -107,7 +110,7 @@ func add_step(backend,profile:Dictionary,quest:Dictionary,id:String,entry:Dictio
  var npc:Dictionary=entry.npc
  var branch:Dictionary=entry.branch
  if places.info(int(npc.map_id)).is_empty() or not FileAccess.file_exists(places.file(int(npc.map_id))):return
- var selected:Dictionary=backend.original_quests.branch_for(npc,profile)
+ var selected:Dictionary=backend.original_quests.branch_for(npc,profile,str(branch.get("spoken_keyword","")))
  var source:Dictionary=branch
  var blocked := ""
  var cancellation:bool=str(branch.type)=="REQUEST" and Rules.flag(profile,"now",int(branch.event))
@@ -265,7 +268,7 @@ func wood_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  var exchanges:Array=candidates(backend,18,"DelItem",2478)
  var entry:Dictionary=pick(backend,profile,exchanges)
  var caption:="向赛尚兑换木材（按原数量结算）"
- if not entry.is_empty() and backend.original_quests.branch_for(entry.npc,profile)==entry.branch:caption=label_for(backend.quest_catalog,entry.npc,entry.branch)
+ if not entry.is_empty() and backend.original_quests.branch_for(entry.npc,profile,str(entry.branch.get("spoken_keyword","")))==entry.branch:caption=label_for(backend.quest_catalog,entry.npc,entry.branch)
  add_step(backend,profile,quest,"wood:exchange",entry,stage==7,false,caption)
  if ended:quest.completion_detail="交斧已完成；当前许可证、推荐书与木材继续按原分支处理"
 
@@ -310,6 +313,7 @@ func resolve_step(backend,quest_id:int,step_id:String) -> Dictionary:
   if int(quest.id)!=quest_id:continue
   for step in quest.steps:
    if str(step.id)==step_id:
+    if int(quest.event) in transmigration.EVENTS and not transmigration.can_visit(self,backend,int(quest.event),step):return {}
     if int(quest.event)==44 and not GoldenBui.can_visit(step):return {}
     if int(quest.event) in [20,21,22] and not preload("res://server/jan_cave_helper.gd").can_visit(step):return {}
     if int(quest.event)==13 and not preload("res://server/saton_cave_helper.gd").can_visit(self,backend,step):return {}

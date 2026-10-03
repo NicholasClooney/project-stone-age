@@ -7,10 +7,31 @@ def keyword_warp(source, script, events):
     for line in source.splitlines():
         if not line.strip() or line.lstrip().startswith('#'):
             continue
+        # This original PartyMsg is empty; the following unkeyed text is not
+        # a condition/action and the original delimiter lookup ignores it.
+        if script == 'genout/wpm_21308_20_10' and line == '团队无法进入这里\\n':continue
         key, separator, value = line.partition(':')
         if not separator or key in fields:
             raise ValueError('Unsupported keyword source line')
         fields[key] = value
+    # Explicit phase-one gate review, activation remains with each chain.
+    import json
+    from pathlib import Path
+    gates = json.loads(Path(__file__).with_name('transmigration_gate_reviews.json').read_text())
+    if script in gates:
+        review = gates[script]
+        allowed = {'WARP','FREE','MONEY','FreeMsg','PayMsg','PartyMsg','MoneyMsg','NomalMsg','DelItem'}
+        if set(fields) - allowed or any(fields.get(k) != v for k,v in review.items()) or any(k in fields and k not in review for k in ['WARP','FREE','MONEY','DelItem']):
+            raise ValueError('Transmigration gate differs from reviewed source')
+        actions = {'Warp':fields['WARP']}
+        if 'DelItem' in fields:actions['DelItem']=fields['DelItem']
+        if fields['MONEY'] != '-1':actions['DelStone']=fields['MONEY']
+        return fields.get('PayMsg', fields.get('NomalMsg','')).replace('\\n','\n'), [dict(
+            event=-1,type='FREEWARP',condition=fields['FREE'] or 'LV>0',
+            texts={'AcceptMsg':fields.get('FreeMsg' if fields['MONEY']=='-1' else 'PayMsg','').replace('\\n','\n')},
+            actions=actions,enabled=True,events=events,source=script,source_fields=fields,
+            item_deletion_scope='bag',
+            source_rule='gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate')]
     if set(fields) == {'WARP','FREE','MONEY','FreeMsg','PayMsg','PartyMsg','MoneyMsg'}:
         level_gate = fields['FREE'] == 'LV>49' and re.fullmatch(r'\d+,\d+,\d+', fields['WARP'])
         dragon_gate = fields['FREE'] == 'ITEM=2457&ITEM=2458&ITEM=2459' and fields['WARP'] == '20807,13,35'
@@ -56,7 +77,10 @@ def npc_enemy(source, script, events):
         fields[key] = value
     allowed = {'entype','dieact','enemyno','startmsg','end msg','deniedmsg',
                'warpfl','warpx','warpy','item','steal','time'} | {f'askbattlemsg{i}' for i in range(1,7)}
-    if script in ('400/sb_muge1.arg','400/sb_muge2.arg') and fields.get('start msg') == '':
+    if 'onebattle' in fields:
+        if fields['onebattle'] != '0':raise ValueError('Exclusive NPCEnemy battle is not supported')
+        allowed.add('onebattle')
+    if script in ('400/sb_muge1.arg','400/sb_muge2.arg','300/sb_skr.arg','300/sb_skt.arg') and fields.get('start msg') == '':
         allowed.add('start msg')  # Original unused empty spelling, not a new message action.
     if set(fields) - allowed or fields.get('entype') != '2' or fields.get('dieact') not in ('0','1'):
         raise ValueError('Unreviewed NPCEnemy behavior')
@@ -77,11 +101,13 @@ def npc_enemy(source, script, events):
             raise ValueError('Invalid guard victory destination')
         actions['Warp']=','.join(destination)
     else:
-        if fields.get('time') != '300' or fields.get('steal','0') not in ('0','1') or not re.fullmatch(r'\d+(?:,\d+)*',fields.get('item','')):
+        if script == '100/sb_kbu.arg' and fields.get('time') == '180' and not any(k in fields for k in ('item','steal')):
+            guard.update(required_items=[],steal=0,cooldown=180)
+        elif fields.get('time') != '300' or fields.get('steal','0') not in ('0','1') or not re.fullmatch(r'\d+(?:,\d+)*',fields.get('item','')):
             raise ValueError('Unreviewed personal guard cooldown or item rule')
         if any(key in fields for key in ('warpfl','warpx','warpy')):
             raise ValueError('Mixed guard death behavior')
-        guard.update(required_items=list(map(int,fields['item'].split(','))),steal=int(fields.get('steal','0')),cooldown=300)
+        if 'item' in fields:guard.update(required_items=list(map(int,fields['item'].split(','))),steal=int(fields.get('steal','0')),cooldown=300)
         # Missing steal does not consume items; explicit steal:0 is deferred.
         if fields.get('steal') == '0':raise ValueError('Entry item theft is not yet supported')
     texts={f'AcceptMsg{i}':fields[f'askbattlemsg{i}'].replace('\\n','\n')

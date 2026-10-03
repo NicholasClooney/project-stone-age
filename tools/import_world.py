@@ -319,12 +319,16 @@ def import_residents(archive, reference, root):
 def run(source, reference, output, fallback_source=None):
     reference=Path(reference); output=Path(output); root=output/'world'
     root.mkdir(parents=True,exist_ok=True);(output/'images').mkdir(exist_ok=True)
-    from quest_import_common import module_world_reviews, apply_module_portal_choices
+    from quest_import_common import module_world_reviews, staged_module_world_reviews, apply_module_portal_choices
     modules = module_world_reviews(reference)
+    staged = staged_module_world_reviews(reference)
+    staged_maps = {int(i) for review in staged for i in review.get("map_sources", {})}
     quest_maps = QUEST_MAPS | {int(ident) for module in modules for ident in module.get('map_sources', {})}
     all_portals=read_portals(reference/'gmsv/data/npc/genout')
     all_portals.extend(read_scenic_gates(reference/'gmsv/data/npc/genout'))
-    all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS))
+    from transmigration_foundation import portals as module_portals
+    all_portals=merge_portals(all_portals+read_reviewed_portals(reference,REGION_REVIEWS)+module_portals(reference,modules))
+    staged_portals=module_portals(reference,staged)
     all_portals=apply_module_portal_choices(all_portals, modules)
     from quest_time_gates import apply_time_gates
     all_portals=apply_time_gates(all_portals,modules)
@@ -340,7 +344,7 @@ def run(source, reference, output, fallback_source=None):
             variants.setdefault(ident,[]).append(path)
             if ident in maps and maps[ident].read_bytes()!=path.read_bytes():conflicting.add(ident)
             maps[ident]=path
-    for review in list(REGION_REVIEWS.values()) + [json.loads(BROTHERS_SPEC.read_text())] + modules:
+    for review in list(REGION_REVIEWS.values()) + [json.loads(BROTHERS_SPEC.read_text())] + modules + staged:
         for key, record in review.get('map_sources',{}).items():
             ident=int(key);chosen=reference/record['path'];raw=chosen.read_bytes()
             if hashlib.sha256(raw).hexdigest()!=record['sha256']:
@@ -349,7 +353,7 @@ def run(source, reference, output, fallback_source=None):
                 raise ValueError(f'Reviewed alias has different map geometry: {ident}')
             maps[ident]=chosen;conflicting.discard(ident)
     ordinary=select_connected_maps(maps,all_portals) | quest_maps
-    selected=ordinary | DEV_TRAINING_MAPS
+    selected=ordinary | DEV_TRAINING_MAPS | staged_maps
     if selected & conflicting:raise ValueError(f'Conflicting selected map IDs: {sorted(selected & conflicting)}')
     absent=selected-maps.keys()
     if absent:raise ValueError(f'Missing original maps: {absent}')
@@ -397,7 +401,7 @@ def run(source, reference, output, fallback_source=None):
         metadata[str(ident)]=dict(path=f'world/{ident}.map',name=data['name'],width=data['width'],height=data['height'],kind=kind,spawn=spawn,music=music)
         owner=settlement_owner(ident,maps)
         if owner:metadata[str(ident)]['village_id']=owner
-        if ident in DEV_TRAINING_MAPS and ident not in quest_maps:metadata[str(ident)]['dev_only']=True
+        if (ident in DEV_TRAINING_MAPS and ident not in quest_maps) or (ident in staged_maps and ident not in ordinary):metadata[str(ident)]['dev_only']=True
         for p in portals:
             points=[]
             if p['from_map']==ident:points.append(('cell',p['cell']))
@@ -425,6 +429,8 @@ def run(source, reference, output, fallback_source=None):
     portals=[p for p in portals if p['from_map'] not in removed and p['to_map'] not in removed]
     if removed:print(f'Unreachable reviewed maps remain deferred: {sorted(removed)}',flush=True)
     manifest=dict(maps=metadata,residents=residents,portals=portals,teleports=[dict(map_id=i,name=metadata[str(i)]['name'],cell=metadata[str(i)]['spawn']) for i in [1000,2000,3000,4000,100,200]+sorted(TOWNS-VILLAGES)],provenance=dict(server_revision='0c58fb6683a49a178a8ad845a8c296c2cb83bd81',fallback_graphics=dict(source=str(fallback_source) if fallback_ids else None,logical_ids=fallback_ids,bitmap_namespace=1000000000),maps=reports,unsupported_portals=unsupported,blocked_portals=blocked_portals,music='Original map object markers40/41/44/45/46; client system/t_music.cpp play_map_bgm and bgm_tbl. Interiors with no marker preserve preceding track.',limitations=['Original cross-island tunnel imported; its floor10202 quest gate requires original passage permit; runtime must implement gate or label developer bypass.','Imported interiors restore scenery and original doors only; no invented NPC services or quests.','Reviewed settlements and Jyaruga scenery connected by original warps are expanded. Explicit scenic NPC gates are directly open as a developer convenience; quests and NPC services are not restored. Unconnected maps and other special areas remain excluded.', 'Explicit dev_only training maps restore scenery and ordinary source encounters. Giru 300 additionally has reviewed original doors to villages 5000/5100 and their ordinary interiors; other training entrances, quest gates, NPCs, bosses and internal travel links are not restored.']))
+    manifest['provenance']['staged_maps'] = sorted(staged_maps - ordinary)
+    manifest['provenance']['staged_portals'] = staged_portals
     (root/'manifest.json').write_text(json.dumps(manifest,ensure_ascii=False,indent=2)+'\n')
     print(f'{len(metadata)} maps, {len(portals)} portals, {len(blocked_portals)} blocked endpoints, {len(images)} images')
 

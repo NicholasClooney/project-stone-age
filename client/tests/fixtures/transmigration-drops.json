@@ -1,0 +1,157 @@
+{
+  "manifest": {
+    "items": [
+      2698,
+      2699,
+      2700,
+      2701,
+      2706,
+      2707,
+      2708,
+      2709,
+      2710,
+      2711,
+      2712,
+      2713,
+      2714,
+      2715,
+      2716,
+      2717,
+      2718,
+      2735,
+      2736,
+      2758,
+      2766,
+      2767,
+      2768,
+      2769,
+      2770,
+      2771,
+      2772,
+      2773,
+      2774
+    ],
+    "drops": [
+      {
+        "source": "gmsv/data/enemy.txt",
+        "enemy_id": 1146,
+        "item_id": 2700,
+        "probability": 1000,
+        "audit": "earth group605 excludes diary2698; enemy.txt:784"
+      },
+      {
+        "source": "gmsv/data/enemy.txt",
+        "enemy_id": 1324,
+        "item_id": 2767,
+        "probability": 800,
+        "audit": "water stone group718 area570 map30305; enemy.txt:956"
+      }
+    ]
+  },
+  "entries": [
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1146,
+      "item_id": 2700,
+      "probability": 1000,
+      "audit": "earth group605 excludes diary2698; enemy.txt:784",
+      "source_line": 784,
+      "source_slots": [
+        {
+          "slot": 0,
+          "item_id": 2700,
+          "probability": 1000,
+          "denominator": 1000
+        }
+      ],
+      "source_raw_columns": [
+        "逃走鲁尼帖斯",
+        "at:4;1;1|gu:0|es:1|wa:0;0;0;0;0;0;0;",
+        "",
+        "1146",
+        "575",
+        "54",
+        "55",
+        "1",
+        "1",
+        "1",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "2700",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "1000",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    },
+    {
+      "source": "gmsv/data/enemy.txt",
+      "enemy_id": 1324,
+      "item_id": 2767,
+      "probability": 800,
+      "audit": "water stone group718 area570 map30305; enemy.txt:956",
+      "source_line": 956,
+      "source_slots": [
+        {
+          "slot": 0,
+          "item_id": 2767,
+          "probability": 800,
+          "denominator": 1000
+        }
+      ],
+      "source_raw_columns": [
+        "深蓝色石头",
+        "at:0;1;1|gu:0|es:0|wa:1;0;0;0;0;0;0;",
+        "",
+        "1324",
+        "599",
+        "1",
+        "1",
+        "1",
+        "1",
+        "1",
+        "0",
+        "-1",
+        "0",
+        "0",
+        "2767",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "800",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        "",
+        ""
+      ]
+    }
+  ]
+}

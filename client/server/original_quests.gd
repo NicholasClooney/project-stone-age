@@ -122,8 +122,9 @@ func npc_by_id(id: String) -> Dictionary:
 		if str(npc.id)==id:return npc
 	return {}
 
-func branch_for(npc: Dictionary, profile: Dictionary) -> Dictionary:
+func branch_for(npc: Dictionary, profile: Dictionary, spoken: String = "") -> Dictionary:
 	for branch in npc.get("branches",[]):
+		if branch.has("spoken_keyword") and str(branch.spoken_keyword)!=spoken:continue
 		if int(branch.event)>=0 and flag(profile,"ended",int(branch.event)):continue
 		if matches(profile,str(branch.condition)):return branch
 	return {}
@@ -139,6 +140,7 @@ func allowed(backend, npc: Dictionary) -> bool:
 func window(npc: Dictionary, branch: Dictionary, phase: String, text: String, confirm: bool) -> Dictionary:
 	if int(branch.get("guard",{}).get("dieact",1))==0 or branch.get("actions",{}).has("NpcWarp"):
 		text+="\n【项目规则】原版为全服共享，本项目按角色各自计算；服务器重启复位。"
+	if branch.get("source_break",false):text+="\n原版行为：交付道具会损坏并消失。"
 	serial+=1
 	var token := "%d-%d" % [Time.get_ticks_usec(),serial]
 	pending={"token":token,"npc":npc,"branch":branch,"phase":phase}
@@ -181,6 +183,14 @@ func talk(backend, id: String) -> Dictionary:
 			return window(npc,{},"end",str(gate.source_fields.get("PartyMsg","无法加入团队。请解散团队。")).replace("\\n","\n"),false)
 	var profile: Dictionary=backend.session.snapshot()
 	var branch := branch_for(npc,profile)
+	if npc.get("branches",[]).any(func(candidate):return candidate.has("spoken_keyword") and matches(profile,str(candidate.condition))):
+		var prompt := message(branch.get("texts",{}),"NomalWindowMsg") if not branch.is_empty() else str(npc.get("text",""))
+		var reply := window(npc,{},"SCRIPT_KEYWORD",prompt,false)
+		reply.dialogue.merge({"kind":"original_keyword","input":"text","choices":[{"id":"submit","text":"说出口令"},{"id":"no","text":"取消"}]},true)
+		return reply
+	return open_branch(backend,npc,profile,branch)
+
+func open_branch(backend, npc:Dictionary, profile:Dictionary, branch:Dictionary) -> Dictionary:
 	if branch.is_empty():return window(npc,branch,"end",str(npc.get("text","")),false)
 	for action in branch.actions:
 		if action not in ["GetItem","DelItem","GetStone","DelStone","EndSetFlg","CleanFlg","DelPet","GetPet","GetRandItem","Charm","Warp","Battle","NpcWarp"]:return {"ok":false,"reason":"尚未支持的任务动作。"}
@@ -220,8 +230,15 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 	if phase=="end":return {"ok":choice=="ok","closed":true}
 	if str(npc.get("handler",""))=="Charm":return Charm.choose(self,backend,current,choice)
 	var profile: Dictionary=backend.session.snapshot()
+	if phase=="SCRIPT_KEYWORD":
+		if choice=="no":return {"ok":true,"closed":true}
+		if choice!="submit" or text.length()>120:return {"ok":false,"reason":"无效口令输入。"}
+		var selected := branch_for(npc,profile,text)
+		var reply := open_branch(backend,npc,profile,selected)
+		if not pending.is_empty():pending.spoken=text
+		return reply
 	if (phase=="REQUEST" and flag(profile,"now",int(branch.event))) or (phase=="cancel" and not flag(profile,"now",int(branch.event))):return {"ok":false,"reason":"任务状态已经改变。"}
-	if branch_for(npc,profile)!=branch:return {"ok":false,"reason":"任务状态已经改变。"}
+	if branch_for(npc,profile,str(current.get("spoken","")))!=branch:return {"ok":false,"reason":"任务状态已经改变。"}
 	if choice=="no":
 		if phase=="cancel":return window(npc,branch,"end",str(branch.texts.get("NoStopMsg","")),false)
 		return {"ok":true,"closed":true}
@@ -240,6 +257,7 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 	if phase=="ACCEPT" and choice=="yes":
 		var reply := window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
 		if current.has("pet_ids"):pending.pet_ids=current.pet_ids
+		if current.has("spoken"):pending.spoken=current.spoken
 		return reply
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
 	var result := transact(backend,profile,branch,phase,"",str(npc.id))

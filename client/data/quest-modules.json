@@ -96,6 +96,27 @@
         13,
         14
       ]
+    },
+    {
+      "id": "transmigration-foundation",
+      "manifest": "tools/transmigration_foundation_sources.json",
+      "enabled_events": []
+    },
+    {
+      "id": "transmigration-earth",
+      "configuration": "client/data/quests/transmigration-earth.json"
+    },
+    {
+      "id": "transmigration-fire",
+      "configuration": "client/data/quests/transmigration-fire.json"
+    },
+    {
+      "id": "transmigration-wind",
+      "configuration": "client/data/quests/transmigration-wind.json"
+    },
+    {
+      "id": "transmigration-water",
+      "configuration": "client/data/quests/transmigration-water.json"
     }
   ]
 }
