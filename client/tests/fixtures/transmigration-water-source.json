@@ -31,7 +31,9 @@
       "gmsv/include/item.h": "64a8616bac3607b8494b1b5efa0b4c3a3e8018af44228431f248762055a559b9",
       "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
       "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
-      "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539"
+      "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539",
+      "gmsv/data/npc/genout/wpm_300_247_222": "ed8c37230c2a6e13d4e4d14e7091959a6ff4fd6d1202ede01b6083ae6fc0bc5e",
+      "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
     },
     "creates": [
       "gmsv/data/npc/jaruga/event/hekisei.create",
@@ -231,6 +233,13 @@
       "genout/wpm_40_13_1": {
         "kind": "warpman",
         "events": [
+          46
+        ]
+      },
+      "genout/wpm_300_247_222": {
+        "kind": "warpman",
+        "events": [
+          4,
           46
         ]
       }
@@ -475,7 +484,8 @@
       "portal_sources": {
         "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
         "gmsv/data/npc/genout/deadroad.create": "64020507ce610ca777910683aca755a4ecb388664b9fdb930301d6150f40843d",
-        "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c"
+        "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+        "gmsv/data/npc/genout/warp_g2.create": "2cc5993e522cf48404c4486c8f8096ee63d0d983d0bc66fb0a76adb662702295"
       },
       "restored_scripts": [
         "200/sb_mzl.arg",
@@ -483,7 +493,8 @@
         "genout/wpm_200_73_696",
         "genout/wpm_200_316_711",
         "genout/wpm_21308_20_10",
-        "genout/wpm_40_13_1"
+        "genout/wpm_40_13_1",
+        "genout/wpm_300_247_222"
       ],
       "portal_choices": [
         {
@@ -538,6 +549,7 @@
     {"id": "genout/wpm_200_73_696@200:73:696", "source_script": "genout/wpm_200_73_696", "source_create": "gmsv/data/npc/genout/dungeon01.create", "source_create_index": 251, "events": [46], "name": "看门人", "map_id": 200, "cell": [73, 696], "graphic": 16203, "facing": 4, "role": "quest", "text": "\n这里是有很恐怖的恐龙出没的地方\n以你的等级还太危险了\n你还是不要进去比较好。", "branches": [{"event": -1, "type": "FREEWARP", "condition": "LV>64&ENDEV=4", "texts": {"AcceptMsg": "\n看来你进入这个洞窟\n也不会有问题啊\n这个地方对等级低的人\n很危险，所以设立了限制。\n来，请进吧。"}, "actions": {"Warp": "21201,61,46"}, "enabled": true, "events": [46], "source": "genout/wpm_200_73_696", "source_fields": {"WARP": "21201,61,46", "FREE": "LV>64&ENDEV=4", "MONEY": "-1", "FreeMsg": "\\n看来你进入这个洞窟\\n也不会有问题啊\\n这个地方对等级低的人\\n很危险，所以设立了限制。\\n来，请进吧。", "PayMsg": "\\n这里是有很恐怖的恐龙出没的地方\\n以你的等级还太危险了\\n你还是不要进去比较好。", "PartyMsg": "团队不能进入这里\\n", "MoneyMsg": "你的实力还不够进入这里\\n等你变强一点之后再来比较好。"}, "item_deletion_scope": "bag", "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"}]},
     {"id": "genout/wpm_21308_20_10@21308:20:10", "source_script": "genout/wpm_21308_20_10", "source_create": "gmsv/data/npc/genout/dungeon01.create", "source_create_index": 252, "events": [46], "name": "贤者的看门人", "map_id": 21308, "cell": [20, 10], "graphic": 16202, "facing": 4, "role": "quest", "text": "\n没有达到某个条件\n是无法进入这里的\n请回吧。", "branches": [{"event": -1, "type": "FREEWARP", "condition": "LV>64&ENDEV=4&NOWEV=46&ITEM=2767&ITEM=2768", "texts": {"AcceptMsg": "\n想要继续前进的条件\n你毫无问题的已经达到了\n来，请进吧。"}, "actions": {"Warp": "21308,20,7"}, "enabled": true, "events": [46], "source": "genout/wpm_21308_20_10", "source_fields": {"WARP": "21308,20,7", "FREE": "LV>64&ENDEV=4&NOWEV=46&ITEM=2767&ITEM=2768", "MONEY": "-1", "FreeMsg": "\\n想要继续前进的条件\\n你毫无问题的已经达到了\\n来，请进吧。", "PayMsg": "\\n没有达到某个条件\\n是无法进入这里的\\n请回吧。", "PartyMsg": "", "MoneyMsg": "\\n没有达到某个条件\\n是无法进入这里的\\n请回吧。"}, "item_deletion_scope": "bag", "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"}]},
     {"id": "genout/wpm_200_316_711@200:316:711", "source_script": "genout/wpm_200_316_711", "source_create": "gmsv/data/npc/genout/dungeon01.create", "source_create_index": 254, "events": [46], "name": "看门人", "map_id": 200, "cell": [316, 711], "graphic": 16200, "facing": 4, "role": "quest", "text": "\n你不能从这里进入洞。水苍之贝可以造访碧青洞窟的人的证物。水苍之贝一定会是证明你实力的东西吧。", "branches": [{"event": -1, "type": "FREEWARP", "condition": "LV>64&ENDEV=46&ITEM=2766", "texts": {"AcceptMsg": "\n看来你进入这个洞窟\n也不会有问题啊\n这个地方对等级低的人\n很危险，所以设立了限制。\n来，请进吧。"}, "actions": {"Warp": "21301,7,3"}, "enabled": true, "events": [46], "source": "genout/wpm_200_316_711", "source_fields": {"WARP": "21301,7,3", "FREE": "LV>64&ENDEV=46&ITEM=2766", "MONEY": "-1", "FreeMsg": "\\n看来你进入这个洞窟\\n也不会有问题啊\\n这个地方对等级低的人\\n很危险，所以设立了限制。\\n来，请进吧。", "PayMsg": "\\n你不能从这里进入洞。水苍之贝可以造访碧青洞窟的人的证物。水苍之贝一定会是证明你实力的东西吧。"}, "item_deletion_scope": "bag", "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"}]},
+    {"id": "genout/wpm_300_247_222@300:247:222", "source_script": "genout/wpm_300_247_222", "source_create": "gmsv/data/npc/genout/dungeon01.create", "source_create_index": 255, "events": [4, 46], "name": "洞窟的守门人", "map_id": 300, "cell": [247, 222], "graphic": 16201, "facing": 4, "role": "quest", "text": "\n这里是有很可怕的恐龙出没的地方\n以你的等级还太危险了\n你还是不要进去比较好。", "branches": [{"event": -1, "type": "FREEWARP", "condition": "LV>64&ENDEV=4", "texts": {"AcceptMsg": "\n看来你进入这个洞窟\n也不会有问题啊\n这个地方对等级低的人\n很危险，所以设立了限制。\n来，请进吧。"}, "actions": {"Warp": "30301,23,37"}, "enabled": true, "events": [4, 46], "source": "genout/wpm_300_247_222", "source_fields": {"WARP": "30301,23,37", "FREE": "LV>64&ENDEV=4", "MONEY": "-1", "FreeMsg": "\\n看来你进入这个洞窟\\n也不会有问题啊\\n这个地方对等级低的人\\n很危险，所以设立了限制。\\n来，请进吧。", "PayMsg": "\\n这里是有很可怕的恐龙出没的地方\\n以你的等级还太危险了\\n你还是不要进去比较好。", "PartyMsg": "团队不能进入这里\\n", "MoneyMsg": "你的实力还不够进入这里\\n等你变强一点之后再来比较好。"}, "item_deletion_scope": "bag", "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"}]},
     {"id": "genout/wpm_40_13_1@40:13:1", "source_script": "genout/wpm_40_13_1", "source_create": "gmsv/data/npc/genout/40npc.create", "source_create_index": 1, "events": [46], "name": "海底通路的通关处", "map_id": 40, "cell": [13, 1], "graphic": 16204, "facing": 4, "role": "quest", "text": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\n\n这里是通往吉鲁岛的海底通路。\n要有这个%8ds才可以通过这里。", "branches": [{"event": -1, "type": "FREEWARP", "condition": "LV>0", "texts": {"AcceptMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\n\n这里是通往吉鲁岛的海底通路。\n要有这个%8ds才可以通过这里。"}, "actions": {"Warp": "31301,10,104", "DelStone": "300"}, "enabled": true, "events": [46], "source": "genout/wpm_40_13_1", "source_fields": {"WARP": "31301,10,104", "FREE": "", "MONEY": "300", "FreeMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你持有通行证，请通关。\\n请多加小心！", "PayMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n这里是通往吉鲁岛的海底通路。\\n要有这个%8ds才可以通过这里。", "PartyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n无法以团队进入。", "MoneyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你钱不够哦。"}, "item_deletion_scope": "bag", "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"}]}
   ],
   "items": {
