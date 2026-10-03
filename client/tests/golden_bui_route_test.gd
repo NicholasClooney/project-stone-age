@@ -1,5 +1,6 @@
 extends SceneTree
 ## Real source catalog, collision paths, Backend transactions and random battles.
+const Route=preload("res://tests/support/original_route_driver.gd")
 const Backend = preload("res://server/backend.gd")
 const Rules = preload("res://server/original_quests.gd")
 const Session = preload("res://server/game_session.gd")
@@ -20,7 +21,9 @@ func check(ok: bool, note: String) -> bool:
 func fresh(level: int):
 	var b = Backend.new()
 	b.set_process(false)
-	if not 44 in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(44)
+	b.quest_catalog.enabled_events=[44]
+	b.encounter_rng.seed=44000+level
+	b.original_quests.services.rng.seed=44000+level
 	b.session.gm_raise_level(-1,level)
 	b.session._profile.player.gold = 100000
 	b.session._profile.pets = []
@@ -45,33 +48,10 @@ func approach(b, id: String) -> bool:
 			if walk(b,Vector2i(int(npc.cell[0])+x,int(npc.cell[1])+y),false):return true
 	return check(false,"Real source NPC has reachable neighbour "+id)
 func walk(b, target: Vector2i, report_missing := true) -> bool:
-	var map_id: int = b.automation.position_map
-	var data := MapFile.load_map(b.session.world_catalog.file(map_id))
-	if not check(not data.is_empty(),"Real original map loaded %d"%map_id):return false
-	var start: Vector2i = b.automation.position_cell
-	var queue: Array[Vector2i] = [start]
-	var prior := {start:start}
-	var doors: Dictionary = b.session.world_catalog.links(map_id)
-	while not queue.is_empty() and not prior.has(target):
-		var cell: Vector2i = queue.pop_front()
-		for offset in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
-			var next: Vector2i = cell+offset
-			if next.x<0 or next.y<0 or next.x>=int(data.width) or next.y>=int(data.height) or prior.has(next):continue
-			if int(data.blocked[next.y*int(data.width)+next.x])!=0:continue
-			if doors.has(next) and next!=target:continue
-			prior[next]=cell
-			queue.append(next)
-	if not prior.has(target):
-		if report_missing:check(false,"Natural collision path %d %s→%s"%[map_id,start,target])
-		return false
-	var path: Array[Vector2i] = []
-	var cursor := target
-	while cursor!=start:
-		path.push_front(cursor)
-		cursor=prior[cursor]
-	for cell in path:
-		if not check(b.handle({"type":"report_position","map_id":map_id,"cell":[cell.x,cell.y]}).ok,"Real session step report"):return false
-	return true
+	var map_id:int=b.automation.position_map
+	var result:Dictionary=Route.walk(b,map_id,target,[map_id])
+	if not result.get("ok",false) and report_missing:check(false,"Natural collision/NPC/portal path %d %s"%[map_id,target])
+	return bool(result.get("ok",false))
 func portal(b, to_map: int) -> bool:
 	var doors: Dictionary = b.session.world_catalog.links(b.automation.position_map)
 	for point in doors:
@@ -98,8 +78,22 @@ func fight(b) -> void:
 		b.handle({"type":"battle_command","action":"attack","target":target})
 	check(false,"Original disciple battle terminates")
 func earn(b, item: int) -> bool:
+	# Leave the original stair landing once, then walk within the reviewed
+	# encounter area. Oscillating back onto a portal is not ordinary walking.
+	var floor_id:int=b.automation.position_map
+	if not walk(b,Vector2i(29 if floor_id%2==0 else 18,21)):return false
+	if not check(b.quest_arrival.has_arrival(b,floor_id,b.automation.position_cell),"Natural coupon route retains real gate/portal authority"):return false
 	if not check(b.session.world_catalog.field(b.automation.position_map),"Natural route classified as encounter field"):return false
 	for attempt in range(120):
+		# Natural random drops can fill the original fifteen slots with the
+		# other coupon during repeated losses. Explicit player discard frees
+		# duplicates through the real UID transaction; no fixture inventory edit.
+		for coupon in [2751,2752,2754]:
+			while b.session.snapshot().original_items.count(coupon)>(1 if coupon==2754 else 2):
+				var uid:int=0
+				for instance in b.session.snapshot().original_instances:
+					if int(instance.item_id)==coupon:uid=int(instance.uid);break
+				if not check(b.handle({"type":"quest_discard","item_id":coupon,"instance_uid":uid}).ok,"Explicit duplicate coupon UID discard preserves source bag capacity"):return false
 		if item in b.session.snapshot().original_items:return true
 		var started := {}
 		var origin: Vector2i=b.automation.position_cell
@@ -131,7 +125,7 @@ func earn(b, item: int) -> bool:
 		if not check(b.handle({"type":"battle_close"}).ok,"Actual battle settles and closes"):return false
 		var settled:Dictionary=b.session.snapshot()
 		check(not b.handle({"type":"battle_close"}).ok and b.session.snapshot()==settled,"Repeated close never awards another random coupon")
-	return check(false,"Random disciple actually earns entry coupon")
+	return check(false,"Random disciple actually earns entry coupon at %d; bag=%s"%[b.automation.position_map,str(b.session.snapshot().original_items)])
 func correct_answer(npc: Dictionary, reply: Dictionary) -> Dictionary:
 	var rule: Dictionary = private_catalog.services[npc.service_id]
 	var dialogue: Dictionary = reply.get("dialogue",{})
@@ -145,7 +139,7 @@ func quiz(b, npc: Dictionary) -> bool:
 	if not earn(b,2752):return false
 	var reply := choose(b,talk(b,str(npc.id)),"yes")
 	for index in range(11):
-		if not check(reply.get("ok",false),"Real quiz reply accepted"):return false
+		if not check(reply.get("ok",false),"Real quiz reply accepted: "+str(reply.get("reason",""))):return false
 		if reply.get("closed",false):return true
 		var answer := correct_answer(npc,reply)
 		if not check(not answer.is_empty(),"Original source question resolved in server-side fixture"):return false
