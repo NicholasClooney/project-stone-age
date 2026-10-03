@@ -3,6 +3,8 @@ const Backend=preload("res://server/backend.gd")
 const Rules=preload("res://server/original_quests.gd")
 const Session=preload("res://server/game_session.gd")
 var proof_dir:=""
+var authority
+const Route=preload("res://tests/support/original_route_driver.gd")
 func proof(name:String) -> void:
  if proof_dir.is_empty():return
  if not check(DisplayServer.get_name()!="headless","Pixel proofs require a real renderer"):return
@@ -10,7 +12,53 @@ func proof(name:String) -> void:
  var pixels:=root.get_texture().get_image()
  if check(not pixels.is_empty(),"Rendered viewport pixels exist"):
   check(pixels.save_png(proof_dir.path_join(name+".png"))==OK,"Saved actual rendered proof "+name)
+func report_route(map_id:int,goal:Vector2i)->bool:
+ var path:Array=Route.path(authority,map_id,goal,[map_id])
+ if path.is_empty():return authority.automation.position_map==map_id and authority.automation.position_cell==goal
+ for step in path:
+  var reply:=[{}]
+  world.link.request({"type":"report_position","map_id":step.map_id,"cell":step.cell},func(r):reply[0]=r)
+  if not await ready(func():return not reply[0].is_empty(),"Remote original walking acknowledgement"):return false
+  if not check(reply[0].get("ok",false),"Remote original walking step accepted"):return false
+ return true
+func brothers_route(id:String)->bool:
+ var npc:Dictionary=authority.original_quests.npc_by_id(id)
+ if authority.automation.position_map not in range(31701,31707):
+  var entered:=[{}]
+  world.link.request({"type":"quest_visit","npc_id":"giiru/event/ev28_0","mode":"near"},func(r):entered[0]=r)
+  if not await ready(func():return not entered[0].is_empty(),"Public brothers entrance guidance"):return false
+  if not check(entered[0].get("ok",false) and entered[0].target.npc_id=="","Public entrance never auto-talks remote NPC"):return false
+  if not await ready(func():return int(world.data.map_id)==300 and not world.moving,"Original outside map loaded"):return false
+  await Wait.settle(self,world)
+ var queue:Array=[authority.automation.position_map];var parents:Dictionary={queue[0]:queue[0]};var cursor:=0
+ while cursor<queue.size() and not parents.has(int(npc.map_id)):
+  var current:int=queue[cursor];cursor+=1
+  for portal in authority.quest_helper.places.links(current).values():
+   var next:int=int(portal.to_map)
+   if next in range(31701,31707) and not parents.has(next):parents[next]=current;queue.append(next)
+ if not parents.has(int(npc.map_id)):return false
+ var maps:Array=[];var goal:int=int(npc.map_id)
+ while goal!=int(queue[0]):maps.push_front(goal);goal=int(parents[goal])
+ for next in maps:
+  var crossed:=false
+  for portal in authority.quest_helper.places.links(authority.automation.position_map).values():
+   if int(portal.to_map)!=int(next) or portal.has("gate_source") or portal.get("disabled",false):continue
+   if not await report_route(authority.automation.position_map,Vector2i(int(portal.cell[0]),int(portal.cell[1]))):continue
+   var reply:=[{}]
+   world.link.request({"type":"report_position","map_id":int(next),"cell":portal.target},func(r):reply[0]=r)
+   if not await ready(func():return not reply[0].is_empty(),"Remote original staircase reply"):return false
+   if not reply[0].get("ok",false):return false
+   if not await ready(func():return int(world.data.map_id)==int(next) and not world.moving,"Original staircase map loaded"):return false
+   await Wait.settle(self,world)
+   crossed=true;break
+  if not crossed:return false
+ var cell:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ for offset in preload("res://scripts/npc_interaction.gd").offsets():
+  if await report_route(int(npc.map_id),cell+offset):return true
+ return false
 func visit(id:String) -> bool:
+ if preload("res://server/brothers_arrival_helper.gd").owns(authority.original_quests.npc_by_id(id)):
+  if not check(await brothers_route(id),"Remote original brothers route"):return false
  var answer:=[{}]
  world.link.request({"type":"quest_visit","npc_id":id,"mode":"near"},func(r):answer[0]=r)
  if not await ready(func():return not answer[0].is_empty(),"Remote helper visit reply"):return false
@@ -27,6 +75,7 @@ func run() -> void:
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
  var backend=Backend.new();root.add_child(backend)
+ authority=backend
  backend.session._profile.default_companions_claimed=true
  backend.session.gm_raise_level(-1,80)
  backend.session._profile.no_random_encounters=true

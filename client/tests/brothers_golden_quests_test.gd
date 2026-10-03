@@ -17,8 +17,22 @@ func fresh():
  preload("res://server/progression.gd").refresh(b.session._profile.player)
  b.session._profile.player.hp=b.session._profile.player.max_hp
  return b
+func brother_walk(b,id:String)->bool:
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if npc.is_empty():return false
+ if b.automation.position_map not in range(31701,31707):
+  var entrance:Dictionary={}
+  for link in b.quest_helper.places.links(300).values():
+   if int(link.to_map)==31701 and not bool(link.get("disabled",false)):entrance=link;break
+  if entrance.is_empty():return false
+  b.automation.position_changed(300,Vector2i(int(entrance.cell[0]),int(entrance.cell[1])))
+  if not b.handle({"type":"report_position","map_id":31701,"cell":entrance.target}).get("ok",false):return false
+ return preload("res://tests/support/water_route_driver.gd").walk_near(b,npc,range(31701,31707))
 func talk(b,id:String) -> Dictionary:
  b.original_quests.pending={}
+ if preload("res://server/brothers_arrival_helper.gd").owns(b.original_quests.npc_by_id(id)):
+  check(brother_walk(b,id),"walk original brothers route to "+id)
+  return b.handle({"type":"quest_talk","npc_id":id})
  var visit:Dictionary=b.handle({"type":"quest_visit","npc_id":id,"mode":"near"})
  check(visit.ok,"safe original NPC "+id)
  return b.handle({"type":"quest_talk","npc_id":id})
@@ -34,6 +48,25 @@ func trade(b,id:String) -> Dictionary:
 func adult(b) -> void:
  check(preload("res://tests/support/original_route_driver.gd").complete_adult(b).get("ok",false),"adult actual original level gate and channel prerequisite")
 
+func return_from_brother_trap(b,choice:int)->bool:
+ # Four original corridors are decoys, not alternative entrances to the
+ # reward hall. Follow their actual portal, then challenge brother five.
+ var source:Vector2i=[Vector2i(45,58),Vector2i(5,60),Vector2i(35,60),Vector2i(25,60)][choice-1]
+ var link:Dictionary=b.quest_helper.places.links(31706).get(source,{})
+ if link.is_empty():return false
+ var route=preload("res://tests/support/original_route_driver.gd")
+ if not route.walk(b,31706,source,[31706]).get("ok",false):return false
+ if not b.handle({"type":"report_position","map_id":int(link.to_map),"cell":link.target}).get("ok",false):return false
+ check(b.automation.position_map==([300,31705,31705,300][choice-1]),"original decoy corridor destination")
+ if b.automation.position_map==300:
+  var root_link:Dictionary=b.quest_helper.places.links(300).get(b.automation.position_cell,{})
+  if int(root_link.get("to_map",-1))!=31701:return false
+  if not b.handle({"type":"report_position","map_id":31701,"cell":root_link.target}).get("ok",false):return false
+ if not trade(b,"genout/wpm_31705_25_8").get("ok",false):return false
+ if not trade(b,"300/sb_5b5.arg").get("ok",false) or not b.battle_open:return false
+ check(int(b.session._pending.enemies[0].source_enemy_id)==1015,"original fifth guard required after decoy corridor")
+ fight(b)
+ return bool(b.handle({"type":"battle_close"}).get("ok",false))
 func brothers(b,choice:int=5) -> void:
  check(trade(b,"giiru/event/ev28_0").ok,"brothers REQUEST28")
  # Select the actual source branch that issues each correct paper.
@@ -55,7 +88,10 @@ func brothers(b,choice:int=5) -> void:
  check(not b.handle({"type":"battle_close"}).ok,"failed settlement remains retryable")
  b.save_path=""
  check(b.handle({"type":"battle_close"}).ok and b.automation.position_map==31706 and b.automation.position_cell.y in [16,17],"guard retry commits exact original warp")
+ if choice!=5:
+  check(return_from_brother_trap(b,choice),"walk original decoy return, reenter and win fifth guard")
  var reward_id:="giiru/event/ev28_ed%d"%choice
+ check(brother_walk(b,reward_id),"walk original victory corridor and reward portal")
  var before_reward:Dictionary=b.session.snapshot()
  b.save_path="user://missing-brothers/save.json"
  check(not trade(b,reward_id).ok and b.session.snapshot()==before_reward,"pet reward failed save preserves UID, crystal and flags")
@@ -131,7 +167,7 @@ func run() -> void:
  for npc in b.quest_catalog.active_npcs():
   if not npc.events.any(func(e):return int(e) in [28,29,30,31,54]):continue
   check(FileAccess.file_exists("res://assets/legacy/"+str(npc.path)),"original NPC graphic "+str(npc.id))
-  check(not b.quest_helper.destination(b,npc,"near").is_empty(),"NPC reachable neighbour "+str(npc.id))
+  if not preload("res://server/brothers_arrival_helper.gd").owns(npc):check(not b.quest_helper.destination(b,npc,"near").is_empty(),"NPC reachable neighbour "+str(npc.id))
  check(b.original_quests.npc_by_id("giiru/event/event30_5").is_empty() and not b.original_quests.npc_by_id(KUY).is_empty(),"actual create binding only")
  adult(b);brothers(b);golden(b)
  b.free()
@@ -155,7 +191,7 @@ func lan() -> void:
  check(hub.start(),"LAN profile hub starts")
  check(hub.handle(1,{"type":"create_profile","name":"Alice","pin":"1111"}).ok and hub.handle(2,{"type":"login","name":"Alice","pin":"1111"}).ok,"two devices share authority")
  var b=hub.backend_of(1);b.session.gm_raise_level(-1,40)
- b.handle({"type":"quest_visit","npc_id":"giiru/event/ev28_0","mode":"near"})
+ check(brother_walk(b,"giiru/event/ev28_0"),"LAN original brothers entrance")
  var one:Dictionary=hub.handle(1,{"type":"quest_talk","npc_id":"giiru/event/ev28_0"})
  var two:Dictionary=hub.handle(2,{"type":"quest_talk","npc_id":"giiru/event/ev28_0"})
  check(not hub.handle(1,{"type":"quest_choose","token":one.dialogue.token,"choice":"yes"}).ok,"second device invalidates first token")
