@@ -7,10 +7,12 @@ static func path(backend, goal_map: int, goal: Vector2i, allowed_maps: Array) ->
 	var places=backend.quest_helper.places
 	var maps: Dictionary={}
 	var blockers: Dictionary={}
+	var portal_maps: Dictionary={}
 	for map_id in allowed_maps:
 		var data: Dictionary=MapFile.load_map(places.file(int(map_id)))
 		if data.is_empty():return []
 		maps[int(map_id)]=data;blockers[int(map_id)]={}
+		portal_maps[int(map_id)]=places.links(int(map_id))
 	for npc in backend.quest_catalog.active_npcs():
 		if blockers.has(int(npc.map_id)):blockers[int(npc.map_id)][Vector2i(int(npc.cell[0]),int(npc.cell[1]))]=true
 	var initial_map: int=backend.automation.position_map
@@ -28,7 +30,7 @@ static func path(backend, goal_map: int, goal: Vector2i, allowed_maps: Array) ->
 		var point:=Vector2i(node.y,node.z)
 		if node.x==goal_map and point==goal:found=node;break
 		var successors: Array[Vector4i]=[]
-		var portal: Dictionary=places.links(node.x).get(point,{})
+		var portal: Dictionary=portal_maps[node.x].get(point,{})
 		if not portal.is_empty() and node.w==0:
 			if maps.has(int(portal.to_map)) and not bool(portal.get("disabled",false)) and not portal.has("gate_source"):
 				successors.append(Vector4i(int(portal.to_map),int(portal.target[0]),int(portal.target[1]),1))
