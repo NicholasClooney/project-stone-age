@@ -100,3 +100,9 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 此前项目助手能直接进入10204，旧`original_adult_quest_test`甚至断言“explicit helper bypasses entrance”；这是已确认的绕门证据，不能把旧fixture当合法前置。新的`OriginalRouteDriver.complete_adult`只将角色放在公开村庄门口，真实report进入、两段逐格通道、三次真实NPC交换，获取END4。测试工具不会写旗标、物品、scope或grant；初始角色等级/能力由调用方普通fixture负责。`quest_arrival_adult_test`在此基础上复用真实梦幻终战和最终奖励savefail/旧token测试；直接瞬移仪式NPC旁的请求另有拒绝断言。普通生产GameScene像素或UI自动行走未由该工具验证。
 
 集成依赖为b2c9ad1后端、3b5790a普通NPC事务、372481b服务身份。补片交付仍不表示旧成人助手/自动任务fixture已迁移；这些旧项目瞬移会被正确拒绝，需其owner调整路线后才能称功能回归全部完成。其它洞窟政策另片审核，不随此片宣称完成。
+
+### Stone Island green material: two original entrances, separate wild-drop decision
+
+The original connected cave is `30301–30307`. `genout/wpm_300_247_222:1–3` and `genout/wpm_300_182_162:1–3` both require LV>64 and END4, charge no gold (`MONEY:-1`), and Warp to `30301(23,37)` and `30307(10,6)` respectively. `map/mapwarp.txt:1975–1994` preserves both return entrances, the front route to30305, three30305/30306 passages, and the rear route through30307. Both actual saved gate transactions are roots of `water_stone`; the replaced convenience portals are not roots. The gate restoration is owned by water (`188f648`, `0bb3ccf`), with reviewed maps pinned there; this policy adds no parser or source-condition change.
+
+`quest_arrival_stone_island_test` completes the real adult ritual, enters each source gate with failed-save/retry coverage, and walks the original portal graph to30305. Inventory item2767 is still produced under the unchanged ordinary wild-drop rule, pending the explicit dedicated-drop decision. Arrival evidence is available but this slice does not restrict wild production or claim that the full material-acquisition path is closed. The previous all-cases/drop report has been updated to distinguish missing source gates from unprotected wild drops.
