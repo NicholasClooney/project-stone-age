@@ -90,13 +90,55 @@ class FinalSources(unittest.TestCase):
 
     def test_source_handoff_does_not_enable_production(self):
         registry = json.loads((ROOT/'client/data/quest-modules.json').read_text())
-        self.assertNotIn('transmigration-final', [m['id'] for m in registry['modules']])
+        entry=next(m for m in registry['modules'] if m['id']=='transmigration-final')
+        descriptor=json.loads((ROOT/entry['configuration']).read_text())
+        self.assertEqual(descriptor['enabled_events'], [])
         module = load_quest_module(REF, self.spec)
-        self.assertEqual(module['npcs'], [])
-        self.assertEqual(set(module['items']), {'2771','2772','2773','2774'})
-        for item in module['items'].values():
+        self.assertEqual(len(module['npcs']), 12)
+        self.assertEqual(module, json.loads((ROOT/'client/tests/fixtures/transmigration-final-source.json').read_text()))
+        self.assertEqual(set(module['items']), {'2138','2771','2772','2773','2774'})
+        for ident,item in module['items'].items():
+            if ident=='2138':continue
             self.assertEqual(item['raw_columns'][78:82], ['1','1','1','0'])
             self.assertTrue(item['logout_vanish'])
+
+    def test_exact_service_texts_and_rejected_substitution(self):
+        from quest_transmigration_service import parse, CREATE, SCRIPT
+        actor=next(a for a in self.fixture['npcs'] if a['source_script']==SCRIPT)
+        review=self.spec['handlers'][SCRIPT]
+        parsed=parse(self.spec,self.texts,SCRIPT,CREATE,5,actor['source_fields'],review)
+        service=parsed['transmigration']
+        self.assertEqual([r['count'] for r in service['rounds']], [1,2,3,4,5])
+        for row in service['rounds']:
+            text=self.texts['gmsv/data/npc/'+SCRIPT].split('TENSEI:'+str(row['count'])+'\n',1)[1].split('TENSEI:',1)[0]
+            expected=dict(line.split(':',1) for line in text.splitlines() if ':' in line)
+            self.assertEqual(row['texts'], {k:v.replace('\\n','\n') for k,v in expected.items()})
+        for key,value in [('enemy','npc_transmigration|file:777.old/ten.arg'),('floorid','32020'),('graphicname','100443')]:
+            fields=dict(actor['source_fields']);fields[key]=value
+            with self.assertRaises(ValueError):parse(self.spec,self.texts,SCRIPT,CREATE,5,fields,review)
+        with self.assertRaises(ValueError):parse(self.spec,self.texts,SCRIPT,CREATE,6,actor['source_fields'],review)
+
+    def test_normal_boss_meat_source_and_inactive_recovery(self):
+        import csv
+        from quest_single_items import AUDIT
+        module=load_quest_module(REF,self.spec)
+        meat=module['items']['2138'];row=meat['raw_columns']
+        self.assertEqual(meat['source_line'],1857)
+        self.assertEqual([row[i] for i in [3,10,16,18,19,22,24,25]], ['体125','ITEM_useRecovery','2138','125','20','0','','1'])
+        self.assertEqual(row[78:83], ['0','0','1','1','1'])
+        self.assertEqual(self.spec['single_item_pile_reviews'],[AUDIT['items']['2138']])
+        self.assertEqual(meat['source_pile']['creation_quantity'],1)
+        self.assertFalse(meat['stackable'])
+        self.assertEqual([(e['type'],e['active']) for e in meat['effects']], [('use',False)])
+        self.assertNotIn('use',meat)
+        drops=module['drops'];self.assertEqual(len(drops),1)
+        self.assertEqual((drops[0]['enemy_id'],drops[0]['item_id'],drops[0]['probability'],drops[0]['source_line']), (1405,2138,100,1037))
+        enemy=next(r for r in csv.reader(self.texts['gmsv/data/enemy.txt'].splitlines()) if len(r)>24 and r[3]=='1405')
+        self.assertEqual((enemy[14],enemy[24]),('2138','100'))
+        self.assertEqual(self.fixture['bosses']['300/sb_skt.arg']['enemies'][3],1405)
+        self.assertIn('#define _FIX_ITEMPROB', self.texts['gmsv/include/version.h'])
+        self.assertIn('RAND( 0,999)', self.texts['gmsv/char/enemy.c'])
+        for path,digest in AUDIT['sources'].items():self.assertEqual(self.spec['sources'][path],digest)
 
 if __name__ == '__main__':
     unittest.main()
