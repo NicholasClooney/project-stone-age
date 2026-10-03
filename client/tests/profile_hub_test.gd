@@ -218,6 +218,7 @@ func routing() -> void:
 	# Both play (a hunt each), then the server stops gracefully and restarts.
 	for pair in [[1,"alice","1111"],[2,"bob","2222"]]:
 		hub.handle(pair[0],{"type":"login","name":pair[1],"pin":pair[2]})
+		hub.handle(pair[0],{"type":"report_position","map_id":MAP,"cell":CELL})
 		var started: Dictionary = hub.handle(pair[0],{"type":"auto_start","kind":"hunt","map_id":MAP,"cell":CELL,"filter":{"template":92,"level_one":true,"total":8,"offsets":[2,2,2,2],"auto_capture":false,"limit":0,"rate":1,"fast":false}})
 		check(started.ok,"%s starts a hunt %s" % [pair[1],str(started)])
 	a.automation.tick(0.5)

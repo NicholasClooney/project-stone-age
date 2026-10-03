@@ -280,8 +280,10 @@ func setting_and_position() -> void:
 	fresh.automation.try_resume();fresh._record_releases()
 	check(not fresh.automation.flow_active() and not fresh.automation.hunt_running,"nothing resumes")
 	fresh.handle({"type":"set_automation_settings","settings":{"hunt":{"resume":true}}})
-
-	fresh.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y]})
+	# Resume was disabled: no saved run restores a position. A real device
+	# must report its actual location before explicitly starting a new run.
+	check(fresh.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x,CELL.y]}).ok,"new explicit run confirms position after disabled resume")
+	check(fresh.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y]}).ok and fresh.automation.flow_active(),"new run really starts before changed-position restart test")
 	fresh = restart(fresh)
 	# A device reports another cell before the cycle could resume.
 	fresh.handle({"type":"report_position","map_id":MAP,"cell":[CELL.x+2,CELL.y]})

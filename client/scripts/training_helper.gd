@@ -77,13 +77,8 @@ var stop_reason: String:
 var clone_override_active: bool:
 	get:return bool(_status().get("clone_override",false))
 
-## In-process test seam: write one backend runner field directly.
-func _seam(fields: Dictionary) -> void:
-	world.link.request({"type":"auto","name":"set","fields":fields})
-
 var starting_ride: int:
 	get:return int(world.backend.automation.starting_ride)
-	set(value):_seam({"starting_ride":value})
 
 func configure(owner: Node) -> void:world=owner
 func _ready() -> void:

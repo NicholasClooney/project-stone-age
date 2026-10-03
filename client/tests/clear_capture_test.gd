@@ -24,6 +24,7 @@ func troop_for(backend) -> Dictionary:
 func backend_for():
  var backend=Backend.new();backend.set_process(false);root.add_child(backend)
  backend.automation.client_attached=false;backend.automation.auto_tick=false
+ backend.handle({"type":"report_position","map_id":500,"cell":[400,400]})
  backend.session.gm_raise_level(-1,120)
  for stat in ["vitality","strength","toughness","dexterity"]:backend.session.gm_set_base_stat(-1,stat,10000)
  backend.session.gm_heal(-1)

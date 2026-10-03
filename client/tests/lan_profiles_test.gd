@@ -153,6 +153,7 @@ func coordinator() -> void:
 	ServerSettings.threads_override = 4
 	check(not ServerSettings.set_fast_hunt_threads(2).is_empty() and ServerSettings.fast_hunt_threads()==4,"--fast-threads fixes this server's budget; 线程数 cannot change it")
 	var backend = Backend.new()
+	backend.handle({"type":"report_position","map_id":MAP,"cell":CELL})
 	backend.set_process(false)
 	root.add_child(backend)
 	var automation = backend.automation

@@ -1,4 +1,5 @@
 extends SceneTree
+const AutomationFixture=preload("res://tests/support/automation_fixture.gd")
 var failures:=0
 func _initialize() -> void:call_deferred("run")
 func check(ok: bool, note: String) -> void:
@@ -110,7 +111,7 @@ func run() -> void:
 	automation.settings.protect = true
 	check(helper.health_reason(low_pet).is_empty(),"with 练级保护 a low pet does not stop the run (it may fall and is brought back)")
 	check(not helper.health_reason({"player_hp":100,"player_max_hp":100,"active_pet":-1,"ride_pet":0,"pets":[{"hp":1,"max_hp":100,"name":"mount"}]}).is_empty(),"ridden pet health triggers protection")
-	helper.starting_ride=0
+	AutomationFixture.set_fields(game,{"starting_ride":0})
 	check(not helper.health_reason({"player_hp":100,"player_max_hp":100,"active_pet":-1,"ride_pet":-1,"pets":[{"hp":0,"max_hp":100,"name":"mount"}]}).is_empty(),"dead dismounted pet still triggers protection")
 	# Source art failures are retried without substituting a different enemy.
 	var missing_seed:=-1

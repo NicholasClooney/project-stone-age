@@ -12,19 +12,12 @@ func configure(owner: Node) -> void:world=owner
 func _flow() -> Dictionary:
 	return world.state.automation.get("flow",{}) if is_instance_valid(world) else {}
 
-## In-process test seam: write backend workflow fields directly.
-func _seam(fields: Dictionary) -> void:
-	world.link.request({"type":"auto","name":"set","fields":fields})
-
 var phase: String:
 	get:return str(_flow().get("phase","idle"))
-	set(value):_seam({"flow_phase":value})
 var reason: String:
 	get:return str(_flow().get("reason",""))
-	set(value):_seam({"flow_reason":value})
 var pet_id: String:
 	get:return str(_flow().get("pet_id",""))
-	set(value):_seam({"flow_pet_id":value})
 ## In-process reads come straight from the runner; a remote client reads status.
 func _live(field: String, key: String) -> Variant:
 	if world.link.is_local():return world.backend.automation.get(field)
@@ -32,29 +25,21 @@ func _live(field: String, key: String) -> Variant:
 
 var stored_count: int:
 	get:return int(_live("flow_stored_count","stored_count"))
-	set(value):_seam({"flow_stored_count":value})
 var last_result: String:
 	get:return str(_live("flow_last_result","last_result"))
-	set(value):_seam({"flow_last_result":value})
 var last_stored_id: String:
 	get:return str(_live("flow_last_stored_id","last_stored_id"))
-	set(value):_seam({"flow_last_stored_id":value})
 var last_stored_total: int:
 	get:return int(_live("flow_last_stored_total","last_stored_total"))
-	set(value):_seam({"flow_last_stored_total":value})
 var kept_count: int:
 	get:return int(_live("flow_kept_count","kept_count"))
-	set(value):_seam({"flow_kept_count":value})
 var collected_count: int:
 	get:return int(_live("flow_collected_count","collected_count"))
-	set(value):_seam({"flow_collected_count":value})
 var pruned_count: int:
 	get:return int(_live("flow_pruned_count","pruned_count"))
-	set(value):_seam({"flow_pruned_count":value})
 ## 保留规则 auto tidy: pets it released this run, and the species count left.
 var released_count: int:
 	get:return int(_live("flow_released_count","released_count"))
-	set(value):_seam({"flow_released_count":value})
 var held_count: int:
 	get:
 		return int(_live("flow_held_count","held_count"))
@@ -70,12 +55,10 @@ var skip_note: String:
 	get:return str(_live("flow_skip_note","skip_note"))
 var predicted_rejects: int:
 	get:return int(_live("flow_predicted_rejects","predicted_rejects"))
-	set(value):_seam({"flow_predicted_rejects":value})
 var best_predicted: Dictionary:
 	get:
 		var best = _live("flow_best_predicted","best_predicted")
 		return best if best is Dictionary else {}
-	set(value):_seam({"flow_best_predicted":value})
 ## In-process test seam: the clock the workflow timer reads.
 var timer_clock: Callable:
 	get:return world.backend.automation.timer_clock
