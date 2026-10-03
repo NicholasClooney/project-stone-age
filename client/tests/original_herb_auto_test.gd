@@ -5,21 +5,56 @@ func start(b) -> Dictionary:
 func fresh(load_saved:bool=false):
  var b=Backend.new()
  b.quest_catalog.enabled_events=[1,15,16]
+ b.session._profile.no_random_encounters=true
  if load_saved:check(b.load_profile(SAVE),"Real herb profile reloads")
  b.save_path=SAVE
  b.keep_resume_current=true
  return b
 func reach(b,id:String,wanted:String) -> void:
- for index in range(60):
+ for index in range(3000):
   if str(b.quest_auto.step.get("id",""))==id and b.quest_auto.phase==wanted:return
   advance(b,false)
   if b.quest_auto.phase=="landing" and not (wanted=="landing" and str(b.quest_auto.step.get("id",""))==id):
    b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test"})
  check(false,"Reach herb checkpoint "+id+"/"+wanted)
+func finish(b) -> void:
+ for index in range(3000):
+  if not b.quest_auto.running:return
+  advance(b)
+ check(false,"Herb runner completes the finite original five-floor path")
 func clear_save() -> void:
  for path in [SAVE,SAVE+".bak",SAVE+".tmp",SAVE.get_basename()+".resume.json",SAVE.get_basename()+".resume.json.tmp"]:
   if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+func route_checks()->void:
+ var b=Backend.new();b.quest_catalog.enabled_events=[1]
+ b.session._profile.no_random_encounters=true
+ check(b.handle({"type":"quest_auto_start","quest_id":30,"client":"test"}).ok,"existing herb auto starts without adult prerequisite")
+ var visited:Dictionary={};var interrupted:=false;var failed_save:=false
+ for index in range(3000):
+  if not b.quest_auto.running:break
+  var map_id:int=b.automation.position_map
+  if map_id in range(20101,20106):
+   visited[map_id]=true
+   check(b.quest_arrival.has_arrival(b,map_id,b.automation.position_cell),"automatic cave step retains actual original route")
+  if map_id==20103 and not interrupted:
+   var cell:Vector2i=b.automation.position_cell
+   b.handle({"type":"quest_auto_stop"})
+   check(b.handle({"type":"quest_auto_start","quest_id":30,"client":"test"}).ok and b.automation.position_cell==cell,"stop/restart resumes original current cave position")
+   interrupted=true
+  if str(b.quest_auto.step.get("id",""))=="herb:medicine" and b.quest_auto.phase=="ok" and not failed_save:
+   var before:Dictionary=b.session.snapshot()
+   b.save_path="user://missing-herb-route-auto/save.json"
+   advance(b)
+   check(not b.quest_auto.running and b.quest_auto.message=="save_failed" and b.session.snapshot()==before,"medicine save failure preserves material and flags")
+   b.save_path="";failed_save=true
+   check(b.handle({"type":"quest_auto_start","quest_id":30,"client":"test"}).ok,"explicit restart retries source transaction after save repair")
+  advance(b)
+ check(not b.quest_auto.running and Rules.flag(b.session.snapshot(),"ended",1) and b.session.snapshot().original_items==[2427],"full original five-floor herb auto ends with one amulet")
+ check(visited.size()==5 and interrupted and failed_save,"all five original floors, interruption and save failure exercised")
+ b.free()
+
 func run() -> void:
+ route_checks()
  for id in ["herb:request","herb:medicine","herb:return"]:
   for phase in ["landing","talk","yes","ok"]:
    for graceful in [false,true]:
@@ -35,7 +70,7 @@ func run() -> void:
     b=fresh(true);b.load_resume()
     check(b.quest_auto.running and b.quest_auto.restored and b.original_quests.pending.is_empty(),"Real file restores intent and discards dialogue")
     if not token.is_empty():check(not b.original_quests.choose(b,token,"ok").ok,"Old token rejected")
-    for index in range(60):
+    for index in range(3000):
      if not b.quest_auto.running:break
      advance(b,false)
     check(Rules.flag(b.session._profile,"ended",1) and b.session._profile.original_items==[2427],"Three original transactions yield one amulet")
@@ -94,6 +129,7 @@ func run() -> void:
 func remote_auto() -> void:
  var backend=Backend.new()
  backend.quest_catalog.enabled_events=[1]
+ backend.session._profile.no_random_encounters=true
  root.add_child(backend)
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1")
  root.add_child(server)
@@ -138,7 +174,7 @@ func remote_auto() -> void:
  world.quest_helper_menu.open_menu()
  if not await click(world.quest_helper_menu.find_child("QuestHelper_30",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_30",true,false)):return
- if not await ready(func():return Rules.flag(backend.session._profile,"ended",1) and not backend.quest_auto.running,"Remote automatically confirms three original herb steps and completes"):return
+ if not check(await Wait.until(self,func():return Rules.flag(backend.session._profile,"ended",1) and not backend.quest_auto.running,150.0),"Remote walks original five-floor route and confirms three herb transactions"):return
  if not check(await Wait.settle(self,world),"Completion settles"):return
  check(world.session.snapshot().original_items==[2427],"Remote reads original server reward")
  world.link.close()

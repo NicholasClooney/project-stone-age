@@ -18,6 +18,7 @@ var internal:=false
 var restored:=false
 var shutdown_intent:Dictionary={}
 var path:Array[Vector2i]=[]
+var herb_path:Array=[]
 var issued:Array=[]
 var position_serial:=0
 var owns_battle:=false
@@ -82,7 +83,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  if not persist:shutdown_intent=resume_state()
  if owns_battle and b.automation.running:b.automation.stop(reason)
  owns_battle=false
- path.clear()
+ path.clear();herb_path.clear()
  issued.clear()
  running=false
  phase="stopped"
@@ -115,7 +116,7 @@ func load_resume(b,state:Dictionary) -> void:
  elapsed=0.0
  waited=0.0
  message="服务器重启后已恢复"+title(b)+"自动任务。"
- if b.battle_open and quest_id==1:start_battle(b)
+ if b.battle_open and quest_id in [1,30]:start_battle(b)
  b.publish()
 func row(b,id:int) -> Dictionary:
  for quest in b.quest_helper.snapshot(b).quests:
@@ -154,7 +155,7 @@ func start(b,command:Dictionary) -> Dictionary:
  running=true
  phase="travel"
  message=title(b)+"自动任务：准备前往原 NPC。"
- path.clear()
+ path.clear();herb_path.clear()
  issued.clear()
  owns_battle=false
  elapsed=0.0
@@ -166,7 +167,7 @@ func report(b,command:Dictionary) -> void:
  var same:bool=int(command.get("map_id",-1))==b.automation.position_map and b._cell(command)==b.automation.position_cell
  if not same:stop(b,"移动停止了自动任务。");return
  if phase=="landing" and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
-  phase="travel" if event(b)==4 else "talk"
+  phase="travel" if event(b)==4 or (event(b)==1 and int(target.get("map_id",-1)) in [200,20101,20102,20103,20104,20105]) else "talk"
   waited=0.0
   message="已确认抵达，准备原任务对话。"
   b.publish()
@@ -179,7 +180,7 @@ func tick(b,delta:float) -> void:
   owns_battle=false
   if str(b.battle_state.get("outcome","")) not in ["win","captured"]:stop(b,"沿途战斗未获胜。");return
   if not b.save():stop(b,"沿途战斗保存失败，停止自动任务。");return
-  path.clear()
+  path.clear();herb_path.clear()
   phase="travel"
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():stop(b,"其他活动停止了自动任务。");return
  if Rules.flag(b.session._profile,"ended",event(b)) and not clean_authorized:
@@ -195,6 +196,52 @@ func tick(b,delta:float) -> void:
  internal=true
  advance(b)
  internal=false
+func herb_travel(b,npc:Dictionary)->void:
+ var geometry=preload("res://server/legacy_cave_helper.gd")
+ var map_id:int=b.automation.position_map
+ var cell:Vector2i=b.automation.position_cell
+ var portal:Dictionary=geometry.entrance(b.quest_helper,npc)
+ if portal.is_empty():stop(b,"哈罗山原入口资料缺失。");return
+ if map_id not in range(20101,20106) or not b.quest_arrival.has_arrival(b,map_id,cell):
+  herb_path.clear()
+  var source:=Vector2i(int(portal.cell[0]),int(portal.cell[1]))
+  if map_id!=int(portal.from_map) or absi(cell.x-source.x)+absi(cell.y-source.y)>1:
+   target=geometry.destination(b.quest_helper,b,npc,"near")
+   if target.is_empty():stop(b,"哈罗山公开入口没有安全落点。");return
+   b.automation.position_changed(int(target.map_id),Vector2i(int(target.cell[0]),int(target.cell[1])),map_id!=int(target.map_id))
+  elif cell!=source:
+   target={"map_id":map_id,"cell":portal.cell.duplicate()}
+   b.automation.position_changed(map_id,source,false,"walk")
+  else:
+   var passage:Dictionary=b._cmd_check_passage({"from_map":map_id,"to_map":int(portal.to_map)})
+   if not passage.ok:stop(b,str(passage.get("reason","原入口拒绝通行。")));return
+   target={"map_id":int(portal.to_map),"cell":portal.target.duplicate()}
+   b.automation.position_changed(int(target.map_id),Vector2i(int(target.cell[0]),int(target.cell[1])),true,"walk")
+   if not b.quest_arrival.has_arrival(b,int(target.map_id),b.automation.position_cell):stop(b,"原入口未授予山洞路线。");return
+  phase="travel" if restored else "landing"
+  waited=0.0;emit_position(b,target);b.publish();return
+ var close:Vector2i=cell-Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ if map_id==int(npc.map_id) and maxi(absi(close.x),absi(close.y))<=2 and b.quest_arrival.check_action(b,npc,step.source.branch_data,str(step.source.type)).is_empty():
+  phase="talk";herb_path.clear();b.publish();return
+ if herb_path.is_empty():herb_path=geometry.path_to_npc(b.quest_helper,b,npc)
+ if herb_path.is_empty():stop(b,"哈罗山原路线不可步行抵达医生。");return
+ target=herb_path.pop_front()
+ var next:=Vector2i(int(target.cell[0]),int(target.cell[1]))
+ var changed:bool=int(target.map_id)!=map_id
+ if changed:
+  var passage:Dictionary=b._cmd_check_passage({"from_map":map_id,"to_map":int(target.map_id)})
+  if not passage.ok:stop(b,str(passage.get("reason","原楼梯拒绝通行。")));return
+ b.automation.position_changed(int(target.map_id),next,changed,"walk")
+ if not b.quest_arrival.has_arrival(b,int(target.map_id),next):stop(b,"原路步行资格已变化。");return
+ emit_position(b,target)
+ if changed:
+  phase="travel" if restored else "landing";waited=0.0
+ else:
+  var reply:Dictionary=b._cmd_field_step({"map_id":map_id,"cell":[next.x,next.y],"encounter":true})
+  if reply.get("battle",false):start_battle(b);return
+ message="沿哈罗山原楼梯与通道步行前往医生。"
+ b.publish()
+
 func adult_enter(b)->void:
  var portal:Dictionary=b.quest_helper.places.links(10202).get(Vector2i(31,13),{})
  if portal.is_empty() or int(portal.get("to_map",-1))!=10204 or (portal.get("target",[]).size()!=2 or Vector2i(int(portal.target[0]),int(portal.target[1]))!=Vector2i(2,6)) or int(portal.get("requires_level",-1))!=30:
@@ -223,6 +270,9 @@ func advance(b) -> void:
   if step.is_empty():stop(b,title(b)+"已完成。" if Rules.flag(b.session._profile,"ended",event(b)) else "原任务条件已变化。");return
   var npc:Dictionary=b.original_quests.npc_by_id(str(step.npc_id))
   if npc.is_empty() or b.original_quests.branch_for(npc,b.session._profile)!=step.source.branch_data:stop(b,"原任务分支已变化。");return
+  if event(b)==1 and int(npc.map_id)==20105:
+   herb_travel(b,npc)
+   return
   if event(b)==4:
    if b.automation.position_map!=10204 or not b.quest_arrival.has_arrival(b,10204,b.automation.position_cell):
     adult_enter(b)
