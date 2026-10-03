@@ -14,7 +14,7 @@ func stage_key(helper,backend)->Array:
   if owns(npc) and int(npc.map_id)==map_id:eligibility.append([str(npc.id),legitimate(backend,npc)])
  return [map_id,backend.original_quests.npc_state.version,region_at(helper,backend,map_id,backend.automation.position_cell) if map_id in range(11201,11216) else -1,eligibility]
 func entry(backend,script:String,index:int=-1,npc_id:String="")->Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source(script):
   if str(npc.get("source_script",""))!=script or not npc_id.is_empty() and str(npc.id)!=npc_id:continue
   for branch in npc.branches:
    if index<0 or int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}

@@ -27,7 +27,7 @@ static func stage_key(backend)->Array:
    ready.append([npc.id,backend.original_quests.branch_for(npc,backend.session.snapshot()),can_navigate(backend,npc)])
  return ["dragon17",map_id,inside(backend),backend.quest_arrival.has_arrival(backend,map_id,backend.automation.position_cell),ready]
 static func entry(backend,script:String,index:int=-1)->Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source(script):
   if str(npc.get("source_script",""))!=script:continue
   for branch in npc.branches:
    if index<0 or int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}

@@ -2,7 +2,7 @@ extends RefCounted
 const Rules=preload("res://server/original_quests.gd")
 const NAMES={221:"克邦凯斯",222:"加克拉",223:"加格",224:"邦恩吉"}
 static func entry(backend,index:int) -> Dictionary:
- for npc in backend.quest_catalog.active_npcs():
+ for npc in backend.quest_catalog.active_npcs_by_source("seimu/event/event02_1"):
   if str(npc.get("source_script",""))!="seimu/event/event02_1":continue
   for branch in npc.branches:
    if int(branch.get("source_branch_index",-1))==index:return {"npc":npc,"branch":branch}
