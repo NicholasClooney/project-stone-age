@@ -3,6 +3,7 @@ const Dream=preload("res://server/dream_cave_helper.gd")
 const Equipment=preload("res://server/original_equipment.gd")
 const ELDER="seimu/event/event01_1@6000:73:54"
 const SAGE="seimu/event/event01_2@41:34:25"
+const Natural=preload("res://tests/support/dream_backend_route.gd")
 const POOL=[450,451,449,549,552,543,653,646,12623,12648,11895,11926,11936,12052,11803,11814,11824,11833,11843,11853]
 func local_trade(b,id:String,map_id:int,point:Vector2i)->Dictionary:
  b.automation.position_changed(map_id,point)
@@ -16,10 +17,13 @@ func run()->void:
  var elder:Dictionary=b.original_quests.npc_by_id(ELDER)
  check(b.original_quests.branch_for(elder,b.session.snapshot()).is_empty(),"level34 without prerequisite cannot receive free light")
  b.session.gm_raise_level(-1,35)
+ b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
+ preload("res://server/progression.gd").refresh(b.session._profile.player)
+ b.session._profile.player.hp=b.session._profile.player.max_hp
  check(int(b.original_quests.branch_for(elder,b.session.snapshot()).source_branch_index)==4,"original LV>34 OR alternative permits repeat branch without adult flag")
  check(trade(b,ELDER).ok and b.session.snapshot().original_items.count(2603)==1,"actual elder free repeat light")
  var initial_flags:Dictionary=b.session.snapshot().original_events.duplicate(true)
- b.automation.position_changed(41,Vector2i(34,39))
+ check(Natural.win(b).ok,"actual original entrance maze battle and saved Warp grant reward arrival")
  var r:=choose(b,talk(b,SAGE),"yes")
  var before:Dictionary=b.session.snapshot();b.save_path="user://dream-repeat-no-parent/save.json"
  check(not choose(b,r,"ok").ok and b.session.snapshot()==before,"repeat exchange failed save retains light flags and UID")
@@ -32,11 +36,10 @@ func run()->void:
  var seen:Dictionary={}
  for i in range(3):
   for item in b.session.snapshot().original_items:Equipment.remove(b.session._profile,int(item))
-  # Each iteration uses actual original REQUEST then ACCEPT tokens. The final
-  # room is a transaction fixture here; full route is in dream_cave_quest_test.
+  # Every new visit completes the actual maze and final guard before exchange.
   if not local_trade(b,ELDER,6000,Vector2i(73,55)).ok:check(false,"repeated source request");break
-  b.automation.position_changed(41,Vector2i(34,39))
-  if not local_trade(b,SAGE,41,Vector2i(34,26)).ok:check(false,"repeated source reward");break
+  check(Natural.win(b).ok,"actual original entrance maze battle and saved Warp grant reward arrival")
+  if not trade(b,SAGE).ok:check(false,"repeated source reward");break
   state=b.session.snapshot()
   if state.original_items.size()!=1 or int(state.original_items[0]) not in POOL:check(false,"pool item integrity");break
   seen[int(state.original_items[0])]=true

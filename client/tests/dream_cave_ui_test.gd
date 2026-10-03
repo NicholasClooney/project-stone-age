@@ -22,6 +22,7 @@ func click_enemy(button: Button) -> bool:
   event.position=point[0];event.global_position=point[0]
   root.push_input(event,true)
  return true
+const Natural=preload("res://tests/support/dream_backend_route.gd")
 func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
@@ -46,9 +47,8 @@ func run()->void:
  await proof("dream-quest-01-third-request")
  if not await choose("yes") or not await choose("ok"):return
  if not check(2603 in world.session.snapshot().original_items and not Rules.flag(world.session.snapshot(),"ended",34),"third request gives light but does not complete34"):return
- # Isolated maze-arrival fixture. Natural timed walking and full original
- # maze traversal are independently verified; no helper bypass is used.
- backend.automation.position_changed(41,Vector2i(34,42))
+ # Prepare the real server route; mobile proof below covers original guard clicks.
+ if not check(Natural.guard(backend).ok,"backend completes actual entrance and every original maze step"):return
  backend._emit({"type":"position","map_id":41,"cell":[34,42],"client":"server"});backend.publish()
  if not await ready(func():return int(world.data.map_id)==41 and world.cell==Vector2i(34,42),"remote presents source final-room arrival fixture"):return
  if not await stage("dream34:battle:1",34):return
@@ -69,6 +69,9 @@ func run()->void:
  if not await ready(func():return not world.battle_view.is_animating() and world.battle_view.return_button.is_visible_in_tree(),"dream battle result ready"):return
  if not await click(world.battle_view.return_button):return
  if not await ready(func():return not world.battle_view.visible and int(world.data.map_id)==41,"saved victory enters original reward side"):return
+ if not check(Natural.sage(backend).ok,"backend walks reward room to actual conversation range"):return
+ backend._emit({"type":"position","map_id":41,"cell":[34,27],"client":"server"})
+ if not check(await Wait.settle(self,world),"reward room walking settles"):return
  if not await stage("dream34:reward",34):return
  if not await choose("yes"):return
  await proof("dream-quest-03-third-reward")

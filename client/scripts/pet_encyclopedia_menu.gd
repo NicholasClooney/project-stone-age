@@ -61,6 +61,8 @@ var _scroll_view := ""
 ## Seams for tests: travel(plan) -> bool moves the character (default
 ## _travel: a verified teleport), open_hunt(plan) opens 自动抓极品 on the
 ## plan's species (default _open_hunt).
+var _reviewed_pending:=false
+var _travel_ticket:=0
 var travel: Callable
 var open_hunt: Callable
 ## The plan of the last 瞬移去抓, until the character stands at its cell.
@@ -820,6 +822,7 @@ func _go_button(entry: Dictionary, place: Dictionary, control_name: String, widt
 	if place.is_empty():go.tooltip_text = "没有能传送去抓的地点：%s" % Encyclopedia.where_text(entry)
 	elif go.disabled:go.tooltip_text = str(place.reason)
 	else:go.tooltip_text = "传送到%s (%d, %d)，Lv.%d–%d，并打开自动抓极品选中%s。" % [_place_name(place),int(place.cell[0]),int(place.cell[1]),int(place.level_min),int(place.level_max),entry.name]
+	if not place.is_empty() and not preload("res://server/reviewed_hunt_travel.gd").reviewed_target(int(place.map_id),int(place.area_id),int(place.template_id)).is_empty():go.tooltip_text+="\n"+preload("res://server/reviewed_hunt_travel.gd").POLICY
 	return go
 
 static func _place_name(place: Dictionary) -> String:
@@ -1251,6 +1254,8 @@ func _detail_places(entry: Dictionary) -> VBoxContainer:
 			var tag := PetTable.text(origin,"meta",PetTable.MUTED if place.origin == "original_area" else PetTable.GOLD)
 			tag.name = "Origin"
 			words.add_child(tag)
+		if not preload("res://server/reviewed_hunt_travel.gd").reviewed_target(int(place.map_id),int(place.area_id),int(place.template_id)).is_empty():
+			words.add_child(PetTable.text(preload("res://server/reviewed_hunt_travel.gd").POLICY,"meta",PetTable.GOLD))
 		for label in words.get_children():
 			label.autowrap_mode = TextServer.AUTOWRAP_WORD_SMART
 		row.add_child(_go_button(entry,place,"GoPlace%d_%d%s" % [int(place.map_id),int(place.area_id),suffix]))
@@ -1285,11 +1290,14 @@ func go_catch(place: Dictionary) -> bool:
 	return true
 
 func _await_arrival(plan: Dictionary) -> void:
+	_travel_ticket+=1
+	_reviewed_pending=false
 	pending_hunt = plan
 	_pending_deadline = Time.get_ticks_msec()+60000
 
 ## Back to 宠物大全 with why the teleport did not happen.
 func _travel_failed(why: String) -> void:
+	_reviewed_pending=false
 	pending_hunt = {}
 	open_menu()
 	feedback = why if not why.is_empty() else "传送失败。"
@@ -1297,8 +1305,11 @@ func _travel_failed(why: String) -> void:
 
 func _check_arrival() -> void:
 	if Time.get_ticks_msec() > _pending_deadline:
+		_travel_ticket+=1
+		_reviewed_pending=false
 		pending_hunt = {}
 		return
+	if _reviewed_pending or not is_instance_valid(world) or world.is_queued_for_deletion():return
 	if world.area_transition_busy or int(world.data.get("map_id",-1)) != int(pending_hunt.map_id) or world.cell != pending_hunt.cell:return
 	var plan := pending_hunt
 	pending_hunt = {}
@@ -1320,6 +1331,16 @@ func _travel(plan: Dictionary) -> bool:
 		feedback = "该落点已不可用。"
 		return false
 	if is_instance_valid(world.travel_router):world.travel_router.cancel("瞬移去抓。")
+	var reviewed=preload("res://server/reviewed_hunt_travel.gd")
+	if not reviewed.reviewed_target(int(plan.map_id),int(plan.area_id),int(plan.template_id)).is_empty():
+		_reviewed_pending=true
+		var ticket:=_travel_ticket
+		var response:Dictionary=world.link.request({"type":"reviewed_hunt_travel","map_id":int(plan.map_id),"area_id":int(plan.area_id),"template_id":int(plan.template_id)},func(reply:Dictionary):
+			if ticket!=_travel_ticket or not is_instance_valid(world) or world.is_queued_for_deletion() or is_queued_for_deletion():return
+			_reviewed_pending=false
+			if not reply.get("ok",false):_travel_failed(str(reply.get("reason","捕宠直达被服务器拒绝。")))
+			elif not pending_hunt.is_empty():_check_arrival())
+		return bool(response.get("ok",false)) or bool(response.get("pending",false))
 	return world.load_area_id(int(plan.map_id),plan.cell)
 
 func _travel_after_download(plan: Dictionary, needed: Array) -> void:
@@ -1336,7 +1357,9 @@ func _travel_after_download(plan: Dictionary, needed: Array) -> void:
 ## so the window shows them however it is opened, and shown at once, before a
 ## remote client's settings come back.
 func _open_hunt(plan: Dictionary) -> void:
-	world.link.request({"type":"set_automation_settings","settings":{"hunt":{"template":int(plan.template_id),"level_one":bool(plan.level_one),"stat_species":int(plan.template_id)}}})
+	world.link.request({"type":"set_automation_settings","settings":{"hunt":{"template":int(plan.template_id),"templates":[int(plan.template_id)],"level_one":bool(plan.level_one),"stat_species":int(plan.template_id)}}})
 	var menu: Control = world.pet_hunt_menu
 	if not menu.visible:menu.open_menu()
-	if menu.visible:menu.show_target(int(plan.template_id),bool(plan.level_one))
+	if menu.visible:
+		menu.show_target(int(plan.template_id),bool(plan.level_one))
+		menu.choose_target(int(plan.template_id))
