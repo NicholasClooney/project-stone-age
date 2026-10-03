@@ -3,12 +3,13 @@ extends RefCounted
 ## Other audited chains are added separately; staged rebirth bosses stay closed.
 static func scope(map_id: int) -> String:
 	if map_id in [41,42]:return "dream"
+	if map_id==10204:return "adult"
 	if map_id>=11101 and map_id<=11107:return "munde"
 	if map_id>=11201 and map_id<=11215:return "wind"
 	return ""
 
 static func portal_root(from_map: int, to_map: int) -> bool:
-	return from_map==400 and to_map in [41,42]
+	return (from_map==400 and to_map in [41,42]) or (from_map==10202 and to_map==10204)
 
 static func script_root(source_id: String, to_map: int) -> bool:
 	return (source_id=="genout/wpm_100_443_127" and to_map==11101) or (source_id=="genout/wpm_100_278_325" and to_map==11201)
