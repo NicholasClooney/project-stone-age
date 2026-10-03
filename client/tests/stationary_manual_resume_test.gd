@@ -9,7 +9,7 @@ func check(ok: bool, note: String):
 	print(("PASS: " if ok else "FAIL: ")+note)
 	if not ok:failures += 1
 func click(control: Control):
-	check(await Wait.until(self,func():return control.is_visible_in_tree() and control.size.x>0),"real mouse target laid out")
+	check(await Wait.until(self,func():return control.is_visible_in_tree() and control.size.x>0 and (not control is BaseButton or not control.disabled)),"real mouse target laid out")
 	var point: Vector2 = control.get_global_transform_with_canvas()*(control.size/2)
 	var motion := InputEventMouseMotion.new();motion.position=point;root.push_input(motion,true)
 	await process_frame
@@ -35,8 +35,14 @@ func win(game,b,tag:String):
 		for j in range(state.enemies.size()):
 			if int(state.enemies[j].hp)>0:target=j;break
 		var view=game.battle_view
-		check(await Wait.until(self,func():return not view.is_animating() and view.command_phase=="player"),"manual player turn ready")
+		print("MANUAL_WAIT server_turn=",state.turn," viewer_turn=",view.state.get("turn")," animating=",view.is_animating())
+		# Authority can advance before its WebSocket battle_turn reaches the
+		# viewer. Waiting only on the old view's idle animation races that
+		# packet: it replaces the selection between Attack and target clicks.
+		check(await Wait.until(self,func():return str(view.state.get("battle_id",""))==str(state.battle_id) and int(view.state.get("turn",-1))==int(state.turn) and not view.is_animating() and view.command_phase=="player" and view.commands[0].is_visible_in_tree() and not view.commands[0].disabled),"matching client turn and enabled manual commands ready")
+		print("MANUAL_READY battle=",view.state.get("battle_id")," server_turn=",state.turn," viewer_turn=",view.state.get("turn")," animating=",view.is_animating()," attack_disabled=",view.commands[0].disabled)
 		await click(view.commands[0])
+		check(await Wait.until(self,func():return view.selected_action=="attack"),"real attack selection accepted")
 		var actor_index:int=1 if target==0 else target+2
 		await click(view.target_buttons[actor_index])
 		if view.command_phase=="pet":
