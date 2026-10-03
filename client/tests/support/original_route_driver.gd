@@ -72,7 +72,12 @@ static func complete_adult(backend) -> Dictionary:
 static func exchange_from_route(backend, npc_id: String, allowed_maps: Array) -> Dictionary:
 	var npc: Dictionary=backend.original_quests.npc_by_id(npc_id)
 	if npc.is_empty():return {"ok":false,"reason":"Missing original NPC"}
-	var near: Dictionary=backend.quest_helper.destination(backend,npc,"near")
+	var near: Dictionary=backend.quest_helper.adult_walk_destination(backend,npc) if int(npc.map_id)==10204 and backend.quest_helper.has_method("adult_walk_destination") else backend.quest_helper.destination(backend,npc,"near")
+	# Tightened production helpers only return a public entrance or the
+	# current nearby cell. Tests need the owner's pure geometry to walk.
+	if backend.quest_helper.has_method("geometric_destination") and ResourceLoader.exists("res://server/legacy_cave_helper.gd"):
+		var legacy: Script=load("res://server/legacy_cave_helper.gd")
+		if legacy.owns(npc):near=legacy.walk_destination(backend.quest_helper,backend,npc)
 	if near.is_empty():return {"ok":false,"reason":"Missing original dialogue position"}
 	var moved: Dictionary=walk(backend,int(near.map_id),Vector2i(int(near.cell[0]),int(near.cell[1])),allowed_maps)
 	if not moved.get("ok",false):return moved
