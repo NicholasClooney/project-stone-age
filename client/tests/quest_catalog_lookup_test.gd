@@ -10,13 +10,24 @@ func first(rows:Array,id:String)->Dictionary:
   if str(npc.id)==id:return npc
  return {}
 func compare(catalog,label:String)->void:
+ var source_before:Array=catalog.npcs.duplicate(true)
  var expected:Array=reference(catalog)
  check(catalog.active_npcs()==expected,label+" full projection retains original order and fields")
  var same:bool=true
  for row in catalog.npcs+catalog.service_npcs:
   if catalog.active_npc(str(row.id))!=first(expected,str(row.id)):same=false;push_error(label+" differs "+str(row.id))
  check(same,label+" every catalog ID equals original full-array lookup")
+ var returned:Array=catalog.active_npcs()
+ for row in returned:mutate_nested(row)
+ check(catalog.npcs==source_before and catalog.active_npcs()==expected,label+" all nested returns isolated and source branch order unchanged")
  check(catalog.active_npc("missing/source@0:0:0").is_empty(),label+" absent ID remains empty")
+func mutate_nested(value)->void:
+ if value is Dictionary:
+  for key in value.keys():mutate_nested(value[key])
+  value["isolation_probe"]=[-909]
+ elif value is Array:
+  for entry in value:mutate_nested(entry)
+  value.append(-909)
 func run()->void:
  var catalog=Catalog.new();var other=Catalog.new()
  compare(catalog,"all actual enabled modules")
@@ -26,6 +37,15 @@ func run()->void:
  var old_usec:int=Time.get_ticks_usec()-start;start=Time.get_ticks_usec()
  for id in ids:catalog.active_npc(id)
  print("LOOKUP COST ids=",ids.size()," original_us=",old_usec," single_us=",Time.get_ticks_usec()-start)
+ var ordinary_branches:int=0
+ for npc in catalog.npcs:
+  if npc.get("handler","")=="TimeMan" or str(npc.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_jug_shop"]:continue
+  if catalog._enabled(npc.get("events",[])) and not npc.has("source_spawn"):ordinary_branches+=npc.get("branches",[]).size()
+ start=Time.get_ticks_usec()
+ for i in 100:reference(catalog)
+ var reference_us:int=Time.get_ticks_usec()-start;start=Time.get_ticks_usec()
+ for i in 100:catalog.active_npcs()
+ print("PROJECTION COST iterations=100 old_us=",reference_us," new_us=",Time.get_ticks_usec()-start," discarded_branch_copies_avoided_per_projection=",ordinary_branches)
  var events:Array=catalog.enabled_events.duplicate();catalog.enabled_events.erase(46)
  compare(catalog,"water46 disabled with independent event4 gates")
  catalog.enabled_events=events
