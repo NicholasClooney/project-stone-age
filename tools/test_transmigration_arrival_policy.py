@@ -32,6 +32,15 @@ class ArrivalSource(unittest.TestCase):
         self.assertFalse(any(p['from_map'] in range(32001,32011) and p['to_map'] in range(32011,32022) for p in expected))
         self.assertFalse(any(p['from_map'] != 32021 and p['to_map'] == 32021 for p in expected))
 
+    def test_prison_oracle_keeps_all_eighteen_reviewed_endpoints(self):
+        fixture = json.loads((ROOT/'client/tests/fixtures/prison-arrival-portals.json').read_text())
+        review = json.loads((ROOT/'tools/prison_world_sources.json').read_text())
+        self.assertEqual(fixture['portals'], review['ordinary_portals'])
+        self.assertEqual(fixture['source_sha'], review['portal_sources'])
+        self.assertEqual(len(fixture['portals']),18)
+        for source, digest in fixture['source_sha'].items():
+            self.assertEqual(hashlib.sha256((ROOT/'references/chenmingbiao-stone-age'/source).read_bytes()).hexdigest(),digest)
+
     def test_public_pocket_is_complete_original_component(self):
         data = json.loads((ROOT/'client/tests/fixtures/transmigration-arrival-portals.json').read_text())
         m = load_map(ROOT/'client/assets/legacy/world/300.map')

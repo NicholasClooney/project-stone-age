@@ -3,7 +3,7 @@ extends RefCounted
 const Route=preload("res://tests/support/original_route_driver.gd")
 const Interaction=preload("res://scripts/npc_interaction.gd")
 const Travel=preload("res://tests/support/water_route_driver.gd")
-static func install(b)->void:
+static func install(b, portal_fixture:bool=true)->void:
  var source:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-final-source.json"))
  var ids:Array=source.npcs.map(func(n):return str(n.id))
  b.quest_catalog.npcs=b.quest_catalog.npcs.filter(func(n):return str(n.id) not in ids)
@@ -12,8 +12,10 @@ static func install(b)->void:
  for event in [48,49,50,51,52]:
   if event not in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(event)
  b.quest_helper.places.set_quest_catalog(b.quest_catalog)
+ if not portal_fixture:return
  var oracle:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-arrival-portals.json"))
- # Prison117 exits remain source-only pending the explicit fee decision.
+ # The basic cave fixture does not add public prison endpoints; dedicated
+ # prison tests use the actual imported world with portal_fixture=false.
  for p in oracle.portals:
   if int(p.to_map)==117:continue
   var key:=str(int(p.from_map))
