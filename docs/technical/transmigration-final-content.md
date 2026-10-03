@@ -75,7 +75,7 @@ in the manifest. Original special Boss skills remain metadata.
 ## Verification and import
 
 Use `.tools/asset-venv/bin/python -m unittest discover -s tools -p
-test_transmigration_final_sources.py -v` on one shell line: seven tests cover
+test_transmigration_final_sources.py -v` on one shell line: eight tests cover
 exact source identities, map and source SHA mutation rejection, service texts,
 normal drop fields/pile sources, and closed descriptor. The shared single-item
 source suite covers all34 explicit definitions after this one-ID addition.
@@ -98,3 +98,27 @@ and only2138 as a new item (2771–2774 already existed in the foundation).
 Production activation remains closed. World import/route geometry, helper and
 independent final public oracle are subsequent work; settlement/arrival are
 owned by their designated modules.
+
+## Complete king reward pets
+
+The reward catalog now includes exactly enemies1377–1381 using the existing
+GetPet schema, not just species IDs. Source enemy.txt lines1009–1013 map to
+base IDs6/232/244/272/304 at enemybase.txt lines6/206/212/225/236. Level1,
+initial stats, growth weights, elements, AI scalar, skill_slots, sprite and size
+are retained with both source locations and pinned SHA. This uses the existing
+skill-slot representation; it does not introduce a new executable skill list.
+Enemy1380's encounter label says 转生诺加洛, while its actual base272 names
+洛卡伦恩; the source mapping and base name are preserved without substitution.
+
+| Village | Original first through fifth reward enemy |
+| --- | --- |
+| samugiru | 1377, 1380, 1379, 1378, 1381 |
+| marinasu | 1380, 1379, 1378, 1377, 1381 |
+| jaja | 1379, 1378, 1377, 1380, 1381 |
+| karutarna | 1378, 1377, 1380, 1379, 1381 |
+
+The independent source test compares the complete five records and all twenty
+village/round selections against pinned source lines. The runtime test fixture
+and private imported catalog include these records. NPC/item counts remain
+309/339 and production events remain disabled. Settlement construction is
+owned by I and is unchanged by this content correction.
