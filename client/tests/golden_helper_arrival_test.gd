@@ -1,0 +1,86 @@
+extends "res://tests/brothers_helper_arrival_test.gd"
+const GoldenArrival=preload("res://server/golden_arrival_helper.gd")
+func run()->void:
+ var b=fresh();root.add_child(b)
+ b.save_path="user://golden-helper-arrival.json"
+ var giver:Dictionary=b.original_quests.npc_by_id("giiru/event/event30_1")
+ var final:Dictionary=b.original_quests.npc_by_id("giiru/event/event30_6")
+ var target:Dictionary=b.quest_helper.destination(b,giver,"near")
+ check(int(target.get("map_id",-1))==300 and str(target.get("npc_id","bad")).is_empty(),"golden outside guidance has no NPC auto-talk")
+ check(GoldenArrival.stage_key(b).is_empty(),"golden outside named key empty")
+ for npc in b.quest_catalog.active_npcs():
+  if not GoldenArrival.owns(npc):continue
+  var route:Dictionary=b.quest_helper.destination(b,npc,"near")
+  check(not route.is_empty() if str(npc.id)==str(giver.id) else route.is_empty(),"all original cave NPCs preserve external route boundary "+str(npc.id))
+ check(not b.quest_helper.destination(b,b.original_quests.npc_by_id(KUY),"near").is_empty(),"public Kuy keeps public navigation")
+ b.automation.position_changed(31911,Vector2i(10,7))
+ check(b.quest_helper.destination(b,final,"near").is_empty(),"project final-room placement is not legitimate arrival")
+ # Explicit earlier inventory/progression fixture, not natural eye acquisition.
+ for flag in [["ended",4],["ended",30],["now",29],["now",54]]:Rules.set_flag(b.session._profile,flag[0],flag[1],true)
+ for item in [2549,2548]:Session.OriginalEquipment.add(b.session._profile,item)
+ var earlier:Dictionary=b.session.snapshot()
+ Rules.set_flag(b.session._profile,"ended",29,true)
+ Session.OriginalEquipment.add(b.session._profile,2547);Session.OriginalEquipment.add(b.session._profile,2551)
+ b.automation.position_changed(300,Vector2i(1,1))
+ for quest in b.quest_helper.snapshot(b).quests:
+  if int(quest.event)!=54:continue
+  check(quest.steps.any(func(step):return str(step.npc_id)==KUY and bool(step.current)),"ready public Kuy return remains current")
+  check(not quest.steps.any(func(step):return str(step.npc_id)==str(giver.id) and bool(step.current)),"ready public return is not superseded by cave entrance guidance")
+ b.session._profile=earlier
+ b.automation.position_changed(300,Vector2i(1,1))
+ check(golden_walk(b,"genout/wpm_31910_8_9"),"actual original entrance key gate middle floors and guide")
+ var truth:Dictionary=b.original_quests.npc_by_id("genout/wpm_31910_8_9")
+ var position:Vector2i=b.automation.position_cell
+ target=b.quest_helper.destination(b,truth,"near")
+ check(target.get("cell",[])==[position.x,position.y],"golden near helper never moves closer")
+ check(not b.quest_arrival.check_action(b,final,final.branches[0],"reward").is_empty(),"guide alone is not truth door")
+ var server=preload("res://server/ws_server.gd").new(b,0,"127.0.0.1")
+ root.add_child(server);check(server.start()==OK,"golden ephemeral two-device server")
+ for i in range(2):
+  var link=preload("res://network/ws_link.gd").new("ws://127.0.0.1:%d"%server.port)
+  links.append(link);link.connect_now()
+ check(await Wait.until(self,func():poll_links();return links.all(func(link):return link.online)),"two actual golden sockets connect")
+ await request(links[0],{"type":"ping"});await request(links[1],{"type":"ping"})
+ var first:Dictionary=await request(links[0],{"type":"quest_talk","npc_id":truth.id})
+ var second:Dictionary=await request(links[1],{"type":"quest_talk","npc_id":truth.id})
+ if first.has("dialogue") and second.has("dialogue"):
+  check(not (await request(links[0],{"type":"quest_choose","token":first.dialogue.token,"choice":"yes"})).get("ok",false),"golden old device token rejected")
+  var offer:Dictionary=await request(links[1],{"type":"quest_choose","token":second.dialogue.token,"choice":"yes"})
+  var before:Dictionary=b.session.snapshot();b.save_path="user://missing-golden-helper/save.json"
+  var failed:Dictionary=await request(links[1],{"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"ok"})
+  check(not failed.get("ok",false) and b.session.snapshot()==before and b.automation.position_map==31910,"remote truth save failure preserves eye and position")
+  check(not b.quest_arrival.check_action(b,final,final.branches[0],"reward").is_empty(),"failed save has no golden truth mark")
+  b.save_path="user://golden-helper-arrival.json"
+  var retry:Dictionary=await request(links[1],{"type":"quest_talk","npc_id":truth.id})
+  retry=await request(links[1],{"type":"quest_choose","token":retry.get("dialogue",{}).get("token",""),"choice":"yes"})
+  var token:String=str(retry.get("dialogue",{}).get("token",""))
+  retry=await request(links[1],{"type":"quest_choose","token":token,"choice":"ok"})
+  check(retry.get("ok",false) and b.automation.position_map==31911 and 2548 not in b.session.snapshot().original_items,"saved remote truth gate consumes one eye and original Warp")
+  check(not (await request(links[0],{"type":"quest_choose","token":token,"choice":"ok"})).get("ok",false),"consumed truth token cannot replay on other device")
+ else:check(false,"both golden sockets receive original truth offer")
+ var loaded=Session.new()
+ check(loaded.load_game("user://golden-helper-arrival.json") and 2548 not in loaded.snapshot().original_items and int(loaded.snapshot().location.map_id)==31911,"successful remote retry persisted original consumption and Warp")
+ check(golden_walk(b,str(final.id)),"original final hall approach")
+ check(not b.quest_helper.destination(b,final,"near").is_empty(),"actual saved truth mark permits near final interaction")
+ var before_final:Dictionary=b.session.snapshot()
+ var offer:Dictionary=await request(links[1],{"type":"quest_talk","npc_id":final.id})
+ offer=await request(links[1],{"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"yes"})
+ b.save_path="user://missing-golden-helper/save.json"
+ var failed_final:Dictionary=await request(links[1],{"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"ok"})
+ check(not failed_final.get("ok",false) and b.session.snapshot()==before_final,"final failed save preserves charm armor flag and UIDs together")
+ b.save_path="user://golden-helper-arrival.json"
+ offer=await request(links[1],{"type":"quest_talk","npc_id":final.id})
+ offer=await request(links[1],{"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"yes"})
+ var final_token:String=str(offer.get("dialogue",{}).get("token",""))
+ var final_reply:Dictionary=await request(links[1],{"type":"quest_choose","token":final_token,"choice":"ok"})
+ check(final_reply.get("ok",false) and Rules.flag(b.session.snapshot(),"ended",29) and 2551 in b.session.snapshot().original_items and int(b.session.snapshot().player.charm)==mini(100,int(before_final.player.charm)+1),"saved final source armor END29 and Charm1 commit together")
+ check(not (await request(links[0],{"type":"quest_choose","token":final_token,"choice":"ok"})).get("ok",false),"other socket cannot replay final charm or armor token")
+ var final_loaded=Session.new()
+ check(final_loaded.load_game(b.save_path) and final_loaded.snapshot().original_instances==b.session.snapshot().original_instances and final_loaded.snapshot().player.charm==b.session.snapshot().player.charm and Rules.flag(final_loaded.snapshot(),"ended",29),"final reward UID charm and flag survive actual save readback")
+ b.quest_arrival.reset()
+ check(b.quest_helper.destination(b,final,"near").is_empty(),"restart rejects inherited truth-room position")
+ for link in links:link.close()
+ links=[];server.stop();server.queue_free();b.queue_free()
+ for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path("user://golden-helper-arrival.json"+suffix))
+ print("GOLDEN HELPER ARRIVAL: %d failures"%failures)
+ quit(1 if failures else 0)
