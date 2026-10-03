@@ -13,7 +13,7 @@ Depends on the reviewed six-cave arrival policy (`7c8cc27`) and final original t
 
 Validated headlessly: `original_herb_quest_test`, `original_doctor_quest_test`, `original_doctor_quest_ui_test`, `original_herb_use_test`, `original_herb_use_ui_test`, `quest_helper_ui_test`. Doctor tests retain level boundaries, event-pet rejection, save failure and independent WebSocket device tokens. Helper UI verifies the public entrance first, then real-route setup and nearby original dialogue. Headless UI tests do not verify rendered pixels.
 
-The existing herb automatic runner and its restart matrix are a subsequent adaptation; this first slice does not claim that old automatic cave teleportation works with the route policy. Goya, wood, Saton and miner helper adaptations are also subsequent slices. No new automatic quest is introduced.
+The existing herb automatic runner and the remaining cave adaptations are described below. No new automatic quest is introduced.
 
 ## Existing herb automatic runner
 
@@ -33,10 +33,16 @@ The original public root is map 300 (483,196) to 31801 (37,49); the disabled dup
 
 The source encounter fixture previously called `wild_encounter(31801, Vector2i(24,24))` from the fifth-floor NPC. The original map marks (24,24) blocked; its four neighbours also have no original path. Tests now walk back down the real stairs to (37,48), 435 steps from the rival fixture position, in the same imported encounter area 356. Seed 27 still produces original group 508 / ore enemy 1043. This is no implicit battle teleport and no arrival grant. `original_drops_test` uses an explicit isolated server position at its original wood-drop point; it makes no quest-route claim.
 
-Current arrival integration passes `miner_contest_quest_test`, `miner_contest_ui_test` and `miner_ore_ui_test`, retaining low-level rejection, original ticket/economy, save rollback, source battle retry, strict personal cooldown and two-device replay. Final verification with the separate backend strict-wild commit is pending its owner's actual hash; these results do not claim that dependency is integrated.
+Current arrival integration passes `miner_contest_quest_test`, `miner_contest_ui_test` and `miner_ore_ui_test`, retaining low-level rejection, original ticket/economy, save rollback, source battle retry, strict personal cooldown and two-device replay. The separate backend strict-wild commit `c55fd28548589f2a0e40d91cff98683f99c0e5ad` is now integrated for union verification (local equivalent `ca4ca1c`). The three targeted suites `miner_contest_quest_test`, `miner_ore_ui_test` and `original_drops_test` pass with that implementation; no production command was relaxed for a fixture.
 
 ## Saton
 
 The public original root remains south island map 100 (132,421) to 10701 (76,67). The helper now combines shared legitimate-arrival evidence, final read-only action validation, nearby stationary behavior and the existing original connected-component guard. The old component geometry is retained as `Saton.walk_destination` for read-only audit callers. A project placement in any floor/component can only navigate back to the public entrance, never issue a protected guard interaction. Navigation cache state includes route evidence and nearby guard identities, so walking into or out of interaction range updates the helper without rebuilding it at every cell.
 
 `Saton` source guard route, navigation, remote UI and complete GameScene walking tests pass. Navigation retains the component matrix, raw NPC/old helper/two-mode boundary, save rollback, shared-device token handling and independent character guard state. The UI executes two full three-treasure reward/repeat cycles; fixtures walk original paths before each protected interaction. The standalone GameScene walking test now begins outside the public original root, crosses it and all four natural stairs, walks to all three guard neighbours and asserts final server-owned arrival. Public Saton hand-in retains the original item conditions and supplemental END14 decision. Original strict 300-second personal cooldown and source special-AI limitations remain unchanged.
+
+## Final strict-wild union
+
+With original strict-wild commit `c55fd28548589f2a0e40d91cff98683f99c0e5ad` integrated, the three targeted suites passed: miner transactions 8 s, miner ore UI 29 s, original drops 152 s (3/3). The existing herb automatic matrix also passed, but an initial union run took 196.08 s, exceeding the unchanged 180-second shell budget. Its explicit-stop block had run twice identically inside the graceful/crash restart loop. The final fixture retains all 24 restart cases and all 12 distinct stop cases, moves that duplicate block outside the restart-mode loop, and passes in 171.56 s. Measured sections: matrix 93.472 s; total non-UI fixtures 100.779 s; remote UI 68.497 s. No route grant, case coverage or production threshold was relaxed. No runner exception was added for herb.
+
+All six-chain work is complete against this union. The Saton exchange suite additionally passed its public repeat/save-failure/LAN assertions. These are targeted headless results; no full suite or live game process was run, and no new pixel verification is claimed.
