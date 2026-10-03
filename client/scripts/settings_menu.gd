@@ -173,8 +173,10 @@ func _main_page() -> void:
 	layout_row.add_child(palette)
 	# 声音
 	var sound := _section("声音")
-	sound.add_child(_check("音乐","SettingsSound",not world.muted,func(on: bool):
-		if on==world.muted:world.toggle_mute()))
+	var music_switch := _check("音乐","SettingsSound",not world.muted,func(on: bool):
+		if on==world.muted:world.toggle_mute())
+	music_switch.tooltip_text = "项目改动：胜利结算音效与捕获成功曲播完后恢复地图音乐。曲库中的「胜利」是捕获成功曲；普通胜利不另加音乐。新战斗会切换音乐，已响起的音效继续收尾。"
+	sound.add_child(music_switch)
 	sound.add_child(_check("音效","SettingsEffects",world.effects_on,world.set_effects_on))
 	var volume_row := _section("")
 	volume_row.add_child(world.text("音乐音量",14))
