@@ -5790,7 +5790,158 @@
     }
   ],
   "jobs": [],
-  "reward_pets": {},
+  "reward_pets": {
+    "1377": {
+      "enemy_id": 1377,
+      "template_id": 6,
+      "species": "original_6",
+      "level": 1,
+      "name": "乌力斯坦",
+      "initial": 25,
+      "wild_growth": 4.5,
+      "weights": [
+        30,
+        24,
+        27,
+        24
+      ],
+      "modai": 100,
+      "variable_ai": 0,
+      "elements": [
+        50,
+        0,
+        0,
+        50
+      ],
+      "skill_slots": 1,
+      "sprite": 100252,
+      "size": 0,
+      "source": "gmsv/data/enemy.txt",
+      "source_line": 1009,
+      "base_source": "gmsv/data/enemybase.txt",
+      "base_source_line": 6
+    },
+    "1378": {
+      "enemy_id": 1378,
+      "template_id": 232,
+      "species": "original_232",
+      "level": 1,
+      "name": "奇娜",
+      "initial": 24,
+      "wild_growth": 4.5,
+      "weights": [
+        33,
+        28,
+        31,
+        11
+      ],
+      "modai": 300,
+      "variable_ai": 0,
+      "elements": [
+        40,
+        60,
+        0,
+        0
+      ],
+      "skill_slots": 0,
+      "sprite": 100344,
+      "size": 1,
+      "source": "gmsv/data/enemy.txt",
+      "source_line": 1010,
+      "base_source": "gmsv/data/enemybase.txt",
+      "base_source_line": 206
+    },
+    "1379": {
+      "enemy_id": 1379,
+      "template_id": 244,
+      "species": "original_244",
+      "level": 1,
+      "name": "多鲁宝",
+      "initial": 24,
+      "wild_growth": 4.5,
+      "weights": [
+        33,
+        23,
+        24,
+        10
+      ],
+      "modai": 240,
+      "variable_ai": 0,
+      "elements": [
+        0,
+        50,
+        50,
+        0
+      ],
+      "skill_slots": 0,
+      "sprite": 100350,
+      "size": 1,
+      "source": "gmsv/data/enemy.txt",
+      "source_line": 1011,
+      "base_source": "gmsv/data/enemybase.txt",
+      "base_source_line": 212
+    },
+    "1380": {
+      "enemy_id": 1380,
+      "template_id": 272,
+      "species": "original_272",
+      "level": 1,
+      "name": "洛卡伦恩",
+      "initial": 26,
+      "wild_growth": 4.5,
+      "weights": [
+        22,
+        33,
+        24,
+        24
+      ],
+      "modai": 300,
+      "variable_ai": 0,
+      "elements": [
+        0,
+        0,
+        80,
+        20
+      ],
+      "skill_slots": 5,
+      "sprite": 100360,
+      "size": 1,
+      "source": "gmsv/data/enemy.txt",
+      "source_line": 1012,
+      "base_source": "gmsv/data/enemybase.txt",
+      "base_source_line": 225
+    },
+    "1381": {
+      "enemy_id": 1381,
+      "template_id": 304,
+      "species": "original_304",
+      "level": 1,
+      "name": "帖拉所伊朵",
+      "initial": 28,
+      "wild_growth": 4.5,
+      "weights": [
+        23,
+        35,
+        25,
+        21
+      ],
+      "modai": 300,
+      "variable_ai": 0,
+      "elements": [
+        0,
+        0,
+        50,
+        50
+      ],
+      "skill_slots": 2,
+      "sprite": 100374,
+      "size": 1,
+      "source": "gmsv/data/enemy.txt",
+      "source_line": 1013,
+      "base_source": "gmsv/data/enemybase.txt",
+      "base_source_line": 236
+    }
+  },
   "provenance": {
     "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
     "sources": {
