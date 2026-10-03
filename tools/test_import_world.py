@@ -26,15 +26,16 @@ class WorldImportTests(unittest.TestCase):
             module_ids={800,802,809,820,840}
             selected=module_ids | importer.TOWNS | {100,200,20508,900}
             sources={}
-            for ident in selected:
+            for ident in selected | {901}:
                 raw=bytearray(44+3*3*4); raw[:6]=b'LS2MAP'
                 struct.pack_into('>H',raw,6,ident)
                 struct.pack_into('>HH',raw,40,3,3)
                 raw[44:62]=struct.pack('>H',100)*9
                 path=maps/str(ident); path.write_bytes(raw)
-                if ident in module_ids:
+                if ident in module_ids or ident==901:
                     sources[str(ident)]=dict(path=str(path.relative_to(root)),sha256=hashlib.sha256(raw).hexdigest())
-            stack.enter_context(patch.object(quest_import_common,'module_world_reviews',return_value=[dict(map_sources=sources)]))
+            stack.enter_context(patch.object(quest_import_common,'module_world_reviews',return_value=[dict(map_sources={k:v for k,v in sources.items() if k!='901'})]))
+            stack.enter_context(patch.object(quest_import_common,'staged_module_world_reviews',return_value=[dict(map_sources={'901':sources['901']})]))
             for name,value in dict(QUEST_MAPS=set(),REGION_REVIEWS={},REVIEWED_REGION_MAPS=set(),DEV_TRAINING_MAPS={800,900}).items():
                 stack.enter_context(patch.object(importer,name,value))
             spec=root/'brothers.json'; spec.write_text('{"scripts":[]}')
@@ -51,6 +52,10 @@ class WorldImportTests(unittest.TestCase):
             self.assertEqual(metadata['1000']['kind'],'village')
             self.assertEqual(metadata['900']['kind'],'training')
             self.assertTrue(metadata['900']['dev_only'])
+            self.assertTrue(metadata['901']['dev_only'])
+            manifest=json.loads((output/'world/manifest.json').read_text())
+            self.assertEqual(manifest['provenance']['staged_maps'],[901])
+            self.assertFalse(any(p['to_map']==901 for p in manifest['portals']))
 
     def test_expansion_follows_only_reviewed_unconditional_connected_maps(self):
         paths={1300:Path('map/sainasu/hotoru/hotoru'),1301:Path('map/sainasu/hotoru/1301'),

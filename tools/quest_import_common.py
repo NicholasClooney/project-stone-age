@@ -155,6 +155,9 @@ def load_quest_module(reference, manifest):
     if spec.get('version') != 1 or not re.fullmatch(r'[a-z][a-z0-9-]*', spec.get('id', '')):
         raise ValueError('Invalid quest module identity')
     texts = {path: source_text(reference, path, spec) for path in spec['sources']}
+    if spec['id'] == 'transmigration-foundation':
+        from transmigration_foundation import validate
+        validate(reference, spec, texts)
     # Reuse the audited item/reward importers without importing their NPCs.
     base_spec = dict(spec, creates=[], scripts=[], script_events={})
     result = catalog(reference, base_spec)
@@ -233,7 +236,19 @@ def load_quest_module(reference, manifest):
                             if entry not in result.setdefault('drops',[]):result['drops'].append(entry)
 
             else:
-                default, branches = parse_script(texts[PREFIX + script], review['branches'])
+                script_text = texts[PREFIX + script]
+                # Explicitly documented unkeyed source headings are not NPC
+                # actions. Replace with blank lines to preserve line evidence.
+                lines = script_text.splitlines()
+                for ignored in review.get('ignored_source_lines', []):
+                    number = ignored.get('line')
+                    if (type(number) is not int or not 1 <= number <= len(lines)
+                            or lines[number-1] != ignored.get('text') or not ignored.get('audit')
+                            or ':' in lines[number-1] or '=' in lines[number-1]
+                            or lines[number-1].strip() in ('Break','EventEnd')):
+                        raise ValueError('Invalid unkeyed source heading review')
+                    lines[number-1] = ''
+                default, branches = parse_script('\n'.join(lines), review['branches'])
                 apply_branch_supplements(spec, script, branches)
             events = review['events']
             if not events or any(type(e) is not int or not 0 < e < 192 for e in events):
@@ -277,6 +292,8 @@ def load_quest_module(reference, manifest):
         if key not in result['items'] or not isinstance(note, str):
             raise ValueError('Invalid item limitation note')
         result['items'][key]['description'] += '\n' + note
+    if spec.get('staged_world'):
+        result['staged_world'] = copy.deepcopy(spec['staged_world'])
     if spec.get('world'):
         result['world'] = copy.deepcopy(spec['world'])
         from quest_time_gates import reviewed_time_gates
@@ -295,7 +312,21 @@ def merge_quest_module(result, module):
         if 'kind' in npc and (module['module_id'] != 'golden-bui' or npc.get('service_id') not in module.get('services', {})):
             raise ValueError('Unreviewed service identity')
         if npc['id'] in ids:
-            raise ValueError('Duplicate quest instance: ' + npc['id'])
+            # The wind harp and Munde rewards share one original Event12 NPC.
+            # Merge only disjoint audited branches of that exact create, never
+            # create a second NPC or change first-match source branch ordering.
+            old = next(n for n in merged['npcs'] if n['id'] == npc['id'])
+            if npc.get('source_script') != 'sainasu/event/event12' or any(
+                    old.get(k) != npc.get(k) for k in
+                    ('source_script','source_create','source_create_index','map_id','cell','graphic','facing','name','text')):
+                raise ValueError('Duplicate quest instance: ' + npc['id'])
+            indices = {b['source_branch_index'] for b in old['branches']}
+            if any(b['source_branch_index'] in indices for b in npc['branches']):
+                raise ValueError('Overlapping shared NPC source branches')
+            old['branches'].extend(copy.deepcopy(npc['branches']))
+            old['branches'].sort(key=lambda b: b['source_branch_index'])
+            old['events'] = sorted(set(old['events'] + npc['events']))
+            continue
         ids.add(npc['id'])
         merged['npcs'].append(copy.deepcopy(npc))
     for kind in ('items', 'reward_pets'):
@@ -335,11 +366,35 @@ def merge_quest_module(result, module):
     return merged
 
 
+def registry_entries(registry=REGISTRY):
+    """Each parallel chain owns its descriptor; the shared index stays fixed."""
+    configuration = json.loads(Path(registry).read_text())
+    if configuration.get('version') != 1 or not isinstance(configuration.get('modules'), list):
+        raise ValueError('Invalid quest module registry')
+    root = Path(__file__).resolve().parents[1]
+    result = []
+    seen = set()
+    for raw in configuration['modules']:
+        entry = copy.deepcopy(raw)
+        if 'configuration' in entry:
+            expected = f"client/data/quests/{entry['id']}.json"
+            if set(entry) != {'id', 'configuration'} or entry['configuration'] != expected:
+                raise ValueError('Invalid quest descriptor path')
+            entry = json.loads((root / expected).read_text())
+            if entry.get('id') != raw['id']:
+                raise ValueError('Quest descriptor identity mismatch')
+        if entry['id'] in seen:
+            raise ValueError('Duplicate quest registry id')
+        seen.add(entry['id'])
+        result.append(entry)
+    return result
+
+
 def registered_quest_modules(reference, registry=REGISTRY):
     configuration = json.loads(Path(registry).read_text())
     if configuration.get('version') != 1 or not isinstance(configuration.get('modules'), list):
         raise ValueError('Invalid quest module registry')
-    entries = configuration['modules']
+    entries = registry_entries(registry)
     root = Path(__file__).resolve().parents[1]
     for entry in entries:
         if 'builder' in entry:
@@ -369,6 +424,11 @@ def extend_registered_modules(reference, result, registry=REGISTRY):
     for module in registered_quest_modules(reference, registry):
         result = merge_quest_module(result, module)
     return result
+
+
+def staged_module_world_reviews(reference, registry=REGISTRY):
+    return [copy.deepcopy(module['staged_world']) for module in registered_quest_modules(reference, registry)
+            if module.get('staged_world')]
 
 
 def module_world_reviews(reference, registry=REGISTRY):

@@ -54,7 +54,7 @@ def parse_script(text, branch_indices=None):
                 if not (re.fullmatch(r'(?:ENDEV|NOWEV|ITEM|SP|LV)(?:!=|=|>|<)\d+(?:\*\d+)?', clause) or re.fullmatch(r'PET>\d+-\d+|PET=\d+-\d+(?:\*1)?', clause)):
                     raise ValueError(f'Unsupported predicate: {clause}')
             texts = {k: v.replace('\\n', '\n') for k, v in current.items() if 'Msg' in k}
-            actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k}
+            actions = {k: v for k, v in current.items() if k not in required and 'Msg' not in k and k not in ('KeyWord','Break')}
             if not actions.keys() <= {'GetItem', 'DelItem', 'GetStone', 'DelStone', 'EndSetFlg', 'CleanFlg', 'DelPet', 'GetPet', 'GetRandItem', 'Charm', 'NpcWarp'}:
                 raise ValueError('Unsupported quest action')
             if 'NpcWarp' in actions and not re.fullmatch(r'\d+\.\d+\.\d+(?:,\d+\.\d+\.\d+)*',actions['NpcWarp']):
@@ -67,8 +67,21 @@ def parse_script(text, branch_indices=None):
                 pattern = r'PET[>=]\d+-\d+\*1(?:,PET[>=]\d+-\d+\*1)*' if key == 'DelPet' else (r'\d+' if key == 'GetPet' else r'\d+(?:,\d+)+')
                 if not re.fullmatch(pattern, actions[key]):
                     raise ValueError(f'Unsupported {key}: {actions[key]}')
-            branches.append(dict(event=int(current['EventNo']), type=current['TYPE'], condition=current['EVENT'], texts=texts, actions=actions))
+            branch = dict(event=int(current['EventNo']), type=current['TYPE'], condition=current['EVENT'], texts=texts, actions=actions)
+            if 'KeyWord' in current:
+                if current['TYPE'] != 'ACCEPT' or not current['KeyWord'] or len(current['KeyWord']) > 120:
+                    raise ValueError('Unsupported changeevent keyword')
+                branch['spoken_keyword'] = current['KeyWord']
+            if current.get('Break'):
+                if not re.fullmatch(r'\d+(?:,\d+)*', current.get('DelItem','')):
+                    raise ValueError('Only unquantified source Break deletion is reviewed')
+                branch['source_break'] = True
+            branches.append(branch)
             current = None
+            continue
+        if line == 'Break' and current is not None:
+            if 'Break' in current:raise ValueError('Duplicate Break marker')
+            current['Break'] = True
             continue
         if ':' not in line:
             raise ValueError(f'Unsupported script line: {line}')

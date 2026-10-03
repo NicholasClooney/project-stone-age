@@ -1,0 +1,17 @@
+{
+  "version": 1,
+  "id": "transmigration-water",
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612"
+  },
+  "creates": [],
+  "scripts": {},
+  "items": [],
+  "reward_enemies": [],
+  "jobs": [],
+  "reserved_events": [
+    46
+  ]
+}
