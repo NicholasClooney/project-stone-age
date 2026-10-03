@@ -3,6 +3,7 @@ const Backend=preload("res://server/backend.gd")
 const Rules=preload("res://server/original_quests.gd")
 const Session=preload("res://server/game_session.gd")
 const Progression=preload("res://server/progression.gd")
+const CaveRoute=preload("res://tests/support/legacy_cave_route.gd")
 const Hub=preload("res://server/profile_hub.gd")
 const DOCTOR="sainasu/event/event15_1"
 const ASSISTANT="sainasu/event/event15_2"
@@ -19,7 +20,7 @@ func current(b,event:int,id:String) -> bool:
  return row(b,event).steps.any(func(s):return s.id=="doctor%d:"%event+id and s.current and s.actionable)
 func talk(b,id:String=DOCTOR) -> Dictionary:
  if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
- check(b.handle({"type":"quest_visit","npc_id":id,"mode":"near"}).ok,"safe real NPC visit")
+ check(CaveRoute.approach(b,b.original_quests.npc_by_id(id)).ok,"actual cave route reaches original NPC")
  return b.handle({"type":"quest_talk","npc_id":id})
 func choose(b,r:Dictionary,c:String) -> Dictionary:
  return b.handle({"type":"quest_choose","token":r.get("dialogue",{}).get("token",""),"choice":c})
@@ -39,7 +40,9 @@ func run() -> void:
  for id in [DOCTOR,ASSISTANT]:
   var npc:Dictionary=b.original_quests.npc_by_id(id)
   check(npc.map_id==11006 and FileAccess.file_exists("res://assets/legacy/"+str(npc.path)),"real doctor map and static art")
-  for mode in ["arrival","near"]:check(b.handle({"type":"quest_visit","npc_id":id,"mode":mode}).ok,"safe doctor visit "+mode)
+  for mode in ["arrival","near"]:
+   var target:Dictionary=b.quest_helper.destination(b,npc,mode)
+   check(int(target.get("map_id",-1))==100,"doctor helper reaches public entrance without END4 "+mode)
  var definition:Dictionary=b.quest_catalog.reward_pets["95"]
  check(definition.template_id==173 and definition.level==1 and definition.weights.map(func(v):return int(v))==[26,26,26,17] and definition.initial==25 and definition.sprite==100321 and definition.skill_slots==5 and definition.modai==270,"GetPet95 maps source enemy to exact species and birth parameters")
  b.session.gm_raise_level(-1,9)
@@ -118,7 +121,9 @@ func run() -> void:
  for event in [15,16]:
   for step in row(b,event).steps:
    if not step.has("map_id"):continue
-   for mode in ["arrival","near"]:check(b.handle({"type":"quest_visit","quest_id":row(b,event).id,"step_id":step.id,"mode":mode}).ok,"helper place mode "+str(step.id)+" "+mode)
+   for mode in ["arrival","near"]:
+    var visit:Dictionary=b.handle({"type":"quest_visit","quest_id":row(b,event).id,"step_id":step.id,"mode":mode})
+    if not str(step.get("npc_id","")).is_empty() and visit.ok:check(b.automation.position_map==100 or b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell),"helper never manufactures cave route")
  migration(b)
  b.free()
  lan()
@@ -149,7 +154,7 @@ func lan() -> void:
  var a=hub.backend_of(1);var b=hub.backend_of(2)
  for backend in [a,b]:
   backend.session.gm_raise_level(-1,10)
-  check(backend.handle({"type":"quest_visit","npc_id":DOCTOR,"mode":"near"}).ok,"LAN actual visit")
+  check(CaveRoute.approach(backend,backend.original_quests.npc_by_id(DOCTOR)).ok,"LAN each character walks original cave")
  var one:Dictionary=hub.handle(1,{"type":"quest_talk","npc_id":DOCTOR})
  var bob:Dictionary=hub.handle(2,{"type":"quest_talk","npc_id":DOCTOR})
  var two:Dictionary=hub.handle(3,{"type":"quest_talk","npc_id":DOCTOR})

@@ -1,4 +1,5 @@
 extends SceneTree
+const CaveRoute=preload("res://tests/support/legacy_cave_route.gd")
 const Backend=preload("res://server/backend.gd")
 const Rules=preload("res://server/original_quests.gd")
 const Session=preload("res://server/game_session.gd")
@@ -17,7 +18,7 @@ func current(b,id:String) -> bool:
  return row(b).steps.any(func(s):return s.id=="herb:"+id and s.current and s.actionable)
 func trade(b,id:String) -> Dictionary:
  if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
- check(b.handle({"type":"quest_visit","npc_id":id,"mode":"near"}).ok,"source herb safe visit")
+ check((CaveRoute.approach(b,b.original_quests.npc_by_id(id)) if id==DOCTOR else b.handle({"type":"quest_visit","npc_id":id,"mode":"near"})).ok,"source herb safe visit")
  var r:Dictionary=b.handle({"type":"quest_talk","npc_id":id})
  r=b.handle({"type":"quest_choose","token":r.dialogue.token,"choice":"yes"})
  if r.has("dialogue"):r=b.handle({"type":"quest_choose","token":r.dialogue.token,"choice":"ok"})

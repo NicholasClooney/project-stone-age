@@ -127,8 +127,20 @@ func run() -> void:
 	if not await choose("ok"):return
 	world.quest_helper_menu.open_menu()
 	if not await click(visit_button("herb:medicine","arrival",30)):return
-	if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Mountain arrival walks to doctor and opens original dialogue"):return
-	if not check(int(world.data.map_id)==20105 and world.backend==null,"Doctor reached through remote map download and server-owned position"):return
+	if not await ready(func():return not world.quest_helper_travel.active,"Mountain helper stops at public entrance"):return
+	if not check(int(world.data.map_id)==200 and not world.world_travel.quest_dialogue.active,"Arrival mode cannot teleport into cave or approach an unrelated outdoor cell"):return
+	if not check(await Wait.settle(self,world),"Public entrance settles before route fixture"):return
+	backend.session._profile.no_random_encounters=true
+	var doctor:Dictionary=backend.original_quests.npc_by_id("jaruga/event/event01_2")
+	if not check(preload("res://tests/support/legacy_cave_route.gd").approach(backend,doctor).ok,"Fixture walks all five original floors through real authority"):return
+	var reached:Vector2i=backend.automation.position_cell
+	backend._emit({"type":"position","map_id":20105,"cell":[reached.x,reached.y],"client":"route_fixture"})
+	if not await ready(func():return int(world.data.map_id)==20105 and not world.area_transition_busy,"Remote renders legitimate route endpoint"):return
+	if not check(await Wait.settle(self,world),"Original route endpoint settles"):return
+	world.quest_helper_menu.open_menu()
+	if not await click(visit_button("herb:medicine","arrival",30)):return
+	if not await ready(func():return world.world_travel.quest_dialogue.active and not world.world_travel.quest_dialogue.busy,"Legitimate nearby helper opens doctor dialogue"):return
+	if not check(int(world.data.map_id)==20105 and world.backend==null,"Doctor reached through original route and server-owned position"):return
 	if not await choose("yes"):return
 	if not check(world.world_travel.body.text.contains("这可是医生的职责所在呢") and not 2401 in world.session.snapshot().original_items,"Numbered doctor thanks visible before receipt"):return
 	if not await choose("ok"):return

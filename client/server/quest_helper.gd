@@ -1,5 +1,6 @@
 extends RefCounted
 ## Canonical server projection; every NPC action keeps its original source.
+const LegacyCave=preload("res://server/legacy_cave_helper.gd")
 const Rules = preload("res://server/original_quests.gd")
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
 const MapFile = preload("res://scripts/map_file.gd")
@@ -160,6 +161,7 @@ func shell_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
  add_step(backend,profile,quest,"shell:exchange",exchange,started and not ended,ended)
 
 func herb_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
+ quest.completion_detail="洞内医生须从哈罗山原入口沿五层原路抵达；助手只送公开入口或合法近处原地，不能跳过洞内路线。回村交付保留原持药条件。"
  var ended:=Rules.flag(profile,"ended",1)
  var started:=Rules.flag(profile,"now",1)
  var held:bool=2401 in profile.original_items
@@ -206,7 +208,7 @@ func doctor_steps(backend,profile:Dictionary,quest:Dictionary) -> void:
   quest.steps.append(target)
  add_step(backend,profile,quest,prefix+"return",exchange,started and eligible>=0 and not ended,ended,"交付%s%s，领取%s"%[name,"（"+str(profile.pets[eligible].pet_id)+"）" if eligible>=0 else "", "八种原物品之一" if event==15 else "1级布克布克"])
  if started and eligible<0 and not ended:quest.blocked_reason="需要普通%s至少%d级；事件宠和来源不明宠不能交付"%[name,level]
- quest.completion_detail="原任务无重做入口；博士自动任务尚未开放"
+ quest.completion_detail="博士须从深红洞窟公开入口沿六层原路抵达；不增成人礼条件。助手只送公开入口或合法近处原地。原任务无重做入口；博士自动任务尚未开放"
 
 func capture_step(backend,species:int) -> Dictionary:
  var data:Dictionary=backend.encounter_catalog.data
@@ -367,6 +369,7 @@ func adult_destination(backend,npc:Dictionary)->Dictionary:
  return {"map_id":10204,"cell":[current.x,current.y],"npc_id":str(npc.id)}
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
+ if LegacyCave.owns(npc):return LegacyCave.destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==4):return adult_destination(backend,npc)
  if npc.get("events",[]).any(func(event):return int(event) in [32,33,34]):return Dream.destination(self,backend,npc,mode)
  if preload("res://server/saton_cave_helper.gd").owns(npc) and int(npc.map_id) in range(10701,10706):return preload("res://server/saton_cave_helper.gd").destination(self,backend,npc,mode)
@@ -388,6 +391,9 @@ func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
   if cell.size()!=2 or munde.region_at(self,backend,Vector2i(int(cell[0]),int(cell[1])))!=munde.region_at(self,backend,backend.automation.position_cell):return {}
   return target
  if transmigration.owns(npc):return transmigration.destination(self,backend,npc,mode)
+ return geometric_destination(backend,npc,mode)
+
+func geometric_destination(backend,npc:Dictionary,mode:String)->Dictionary:
  var world = places
  world.set_quest_catalog(backend.quest_catalog)
  var map_id := int(npc.map_id)
