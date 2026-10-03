@@ -36,6 +36,7 @@ class FoundationTests(unittest.TestCase):
 
     def test_foundation_has_no_settlement(self):
         modules=list(registered_quest_modules(REF))
+        reviewed=json.loads((ROOT/"client/tests/fixtures/public-quest-npcs.json").read_text())["groups"]
         staged=[m for m in modules if m['module_id'].startswith('transmigration-')]
         self.assertEqual({m['module_id'] for m in staged},{'transmigration-'+name for name in ['foundation','earth','fire','wind','water']})
         foundation=next(m for m in staged if m['module_id']=='transmigration-foundation')
@@ -44,6 +45,12 @@ class FoundationTests(unittest.TestCase):
         self.assertEqual(set(map(int,foundation['items'])),{2698,2699,2700,2701,*range(2706,2719),2735,2736,2758,*range(2766,2775)})
         self.assertIn('32021',foundation['staged_world']['map_sources'])
         self.assertNotIn('world',foundation)
+        for module in staged:
+            group=reviewed[module['module_id']]
+            self.assertEqual(module['enabled_events'],group['enabled_events'])
+            expected=[n['id'] for n in group['npcs']]
+            if module['module_id']=='transmigration-wind':expected.append('sainasu/event/event12@11107:24:6')
+            self.assertEqual(sorted(n['id'] for n in module['npcs']),sorted(expected))
         for entry in registry_entries():
             if entry['id'] in ['transmigration-earth','transmigration-fire','transmigration-wind','transmigration-water']:
                 self.assertTrue((ROOT/entry['manifest']).is_file())
