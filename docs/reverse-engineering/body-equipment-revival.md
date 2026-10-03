@@ -38,7 +38,7 @@ Ordinary modifiers participate in admission stats, per-owner party stats, captur
 - `battle_magic.c:1563–1673` ignores a living target and excludes a human target in P_vs_P (pets are not excluded). It rolls `RAND(power*0.9,power*1.1)` for nonzero power, applies at least 1, adds to HP and caps at max HP, then clears death. Thus **500 is the source parameter, not a guaranteed 500 HP**. The implementation's death representation is HP=0, consistent with existing battle actors. Its PvP eligibility predicate preserves the source restriction; no new PvP mode is introduced and clients cannot inject one.
 - Friendly people, their participating pets and present enemy actors can be selected. A dead caster cannot act. A living target, or one already revived by a faster teammate, consumes the item with no extra healing: **原版行为**. Battle ending on the last enemy's defeat or the whole party's defeat remains unchanged; the item cannot reopen a finished battle.
 
-Successful owned-pet resurrection in non-`norisk` P_vs_E records the original `AI_FIX_PETRESSURECT=300` variable-AI increase (`battle.h:450`). A server-created per-battle item budget bounds per-pet counters, party slices assign them to the pet owner, and settlement applies the gain once through the existing loyalty clamp. Failure rolls it back with HP and inventory. Client-provided budgets and risk/PvP flags are cleared at admission. The caster animation ID is the source `SPR_item3=100612`; the existing imported effect pack does not contain that sequence, so the caster flash is currently absent rather than substituted with a spell animation. The target resurrection sequence 100609 is imported and renders normally. This task does not run a shared asset importer.
+Successful owned-pet resurrection in non-`norisk` P_vs_E records the original `AI_FIX_PETRESSURECT=300` variable-AI increase (`battle.h:450`). A server-created per-battle item budget bounds per-pet counters, party slices assign them to the pet owner, and settlement applies the gain once through the existing loyalty clamp. Failure rolls it back with HP and inventory. Client-provided budgets and risk/PvP flags are cleared at admission. The caster animation ID is the source `SPR_item3=100612`; the importer now includes that original sequence. Existing installations must rerun the supplemental import below before the caster flash is available; no spell animation is substituted. The target resurrection sequence 100609 is imported and renders normally. This task does not run a shared asset importer.
 
 The original function also parses `%`, and the shared source routine overwrites that calculation with its random-power branch. This task does not implement arbitrary functions, arguments or percent items. Only trusted 2450 power 500 is reachable. Existing field herb behavior and existing spell behavior remain separate.
 
@@ -77,6 +77,28 @@ STONE_AGE_FOREGROUND_TEST=1 ./scripts/run.sh --position -2000,-2000 --script res
 
 Log: `/private/tmp/body-revival-desktop.log`. Six `1280-*.png` images in `/private/tmp/body-revival-shots` were individually opened for review. This confirms the desktop medicine/dead-pet click path, not an exhaustive desktop layout audit. The native medicine menu retains the existing small canvas-scaled presentation.
 
-100612 is **available in the original pack**, but absent from the current imported index. Read-only decoding with the existing `Archive` and `import_battle.animations` found action `0_0`, duration 1500 ms, 14 frames, bitmaps 7232–7245, all decoded successfully. Source root: `.tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5`; animation files `data/spradrn_5.bin` and `data/spr_4.bin`, bitmap file `data/real_15.bin`. Evidence and decoded PNGs are isolated under `/private/tmp/body-revival-100612/audit.json` and its directory. Shared assets were not written.
+100612 is **available in the original pack**. Earlier generated indexes omitted it; the supplemental importer fix now includes it. Read-only decoding with the existing `Archive` and `import_battle.animations` found action `0_0`, duration 1500 ms, 14 frames, bitmaps 7232–7245, all decoded successfully. Source root: `.tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5`; animation files `data/spradrn_5.bin` and `data/spr_4.bin`, bitmap file `data/real_15.bin`. Evidence and decoded PNGs are isolated under `/private/tmp/body-revival-100612/audit.json` and its directory. Shared assets were not written.
 
-The minimal supplemental import is to add 100612 to `tools/import_mirror.py:EFFECTS` and its provenance, then run that existing importer against the above source in the coordinator's asset checkout (or an approved cloned asset worktree). It emits the 14 PNGs and the `characters["100612"]["0_0"]`/image metadata consumed directly by `mirror_effect.gd`; no new runtime interface or magic implementation is needed. Its normal run also rewrites the existing mirror item images/manifest entries and effect index, so it must not run through this worktree's shared asset symlink. A full export was also validated under `/private/tmp/body-revival-100612/export` by extending the imported module's `EFFECTS` tuple only in the temporary Python process: 167 total effect PNGs exported, including all 14 new frames and matching index entries; log `/private/tmp/body-revival-100612/export.log`. No tracked importer or shared asset changed. Importer modification/asset regeneration remains a separately coordinated step; this follow-up commits only the desktop test option and source evidence.
+The supplemental fix adds only 100612 to `tools/import_mirror.py:EFFECTS` and its source provenance. It emits 14 PNGs and the `characters["100612"]["0_0"]`/image metadata already consumed by `mirror_effect.gd`; no new runtime interface or magic implementation is needed. The importer also rewrites the existing mirror item images/manifest entries and effect index. Do not run it through a shared asset symlink.
+
+`tools/test_revival_effect_import.py` exports into a temporary directory, verifies the exact frame sequence/duration, offsets/sound markers, index dimensions, preservation of all 8 earlier effects and 153 existing images (decoded pixels), and runs the production pack planner with isolated unrelated catalogs. All 14 new PNGs and the effect JSON belong to **core**, not a new sprite pack. Log: `/private/tmp/body-revival-100612-fix.log`. No shared asset was written.
+
+### Coordinator supplemental asset commands
+
+Run only from the coordinator's asset-owning checkout or an approved cloned asset worktree, after merging the importer fix:
+
+```sh
+.tools/asset-venv/bin/python tools/import_mirror.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+.tools/asset-venv/bin/python tools/test_revival_effect_import.py .tools/legacy/extracted/SA2.5-20260823/SA2.5/stoneage2.5
+./scripts/run.sh --headless --editor --import --quit
+```
+
+No `palette_images.py`, `pack_frame_sheets.py`, `split_manifests.py`, thumbnail rebuild or sound import is needed for this change: the new art lives in `mvp/mirror-effects/`, read directly by `mirror_effect.gd`, outside the map palette, battle/character sheet and split-manifest targets; all original sound markers are zero. The importer does not change the battle/character manifests. The editor import makes the new PNG resources available to native runtime.
+
+If shipping the web client, follow with:
+
+```sh
+./scripts/build-web.sh
+```
+
+That script runs `tools/plan_web_packs.py`, performs the editor export/import, builds content-hashed packs and swaps the completed pack set. The new PNGs plus modified effect index change `core`; no pack routing code changes or manual cache deletion are required. The explicit editor step above can be omitted when immediately doing this web build, because export performs it. This worker verified source export and pack ownership, not a live/native/web rollout; the coordinator owns asset regeneration and rollout.

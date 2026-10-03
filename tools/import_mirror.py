@@ -3,7 +3,8 @@ graphics and the battle effects (caster, mirror defence, heal and revive).
 
 Effects (gmsv include/anim_tbl.h, battle_magic.h): 100600 MAGIC_EFFECT_USER
 on the caster, 100610 SPR_difence (the mirror), 100601-100603 SPR_heal..3 on
-a healed member, 100607-100609 SPR_fukkatu1..3 on a revived one. Items
+a healed member, 100607-100609 SPR_fukkatu1..3 on a revived one, and
+100612 SPR_item3 on the medicine user (battle_item.c ITEM_useRessurect). Items
 (gmsv data/itemset.txt): 1460 美丽尼亚护身符1 graphic 22018, 1011 哈鲁Lv1铠2
 21027, 1112 芙雷雅Lv1服2 and 1113 提欧Lv1服2 21009, 1450 柯雅拉Lv1护身符
 22017. No stock rules; no generated artwork."""
@@ -13,7 +14,7 @@ from pathlib import Path
 from import_legacy import Archive
 from import_battle import animations
 
-EFFECTS = (100600, 100601, 100602, 100603, 100607, 100608, 100609, 100610)
+EFFECTS = (100600, 100601, 100602, 100603, 100607, 100608, 100609, 100610, 100612)
 ITEMS = [('mirror_charm', 22018, '美丽尼亚护身符1', 1460), ('haru_armor', 21027, '哈鲁Lv1铠2', 1011),
          ('freya_robe', 21009, '芙雷雅Lv1服2', 1112), ('teo_robe', 21009, '提欧Lv1服2', 1113),
          ('koyala_charm', 22017, '柯雅拉Lv1护身符', 1450)]
@@ -42,7 +43,7 @@ def run(source, output):
         archive.image(bitmap).save(root / 'mirror-effects' / f'{bitmap}.png')
         images[str(bitmap)] = {key: archive.entries[bitmap][key] for key in ('x', 'y', 'w', 'h')}
     result = dict(characters=characters, images=images, image_root='res://assets/legacy/mvp/mirror-effects/',
-                  provenance='Original SPR magic100600, heal100601-100603, revive100607-100609 and defence100610; items '
+                  provenance='Original SPR magic100600, heal100601-100603, revive100607-100609, defence100610 and medicine-user SPR_item3=100612 (anim_tbl.h; battle_item.c ITEM_useRessurect); items '
                   + ', '.join(f'{item_id} graphic{number}' for _, number, _, item_id in ITEMS) + '. No generated artwork.')
     (root / 'mirror-effects.json').write_text(json.dumps(result, ensure_ascii=False, indent=2) + '\n')
     print(f'Spirit items {len(items)} and {len(images)} original effect images exported')
