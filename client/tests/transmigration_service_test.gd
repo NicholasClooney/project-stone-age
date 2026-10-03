@@ -1,6 +1,9 @@
 extends "res://tests/quest_arrival_transmigration_test.gd"
 const Candidates=preload("res://tests/transmigration_candidate_test.gd")
 const KING="777/ten.arg@32021:31:28"
+var discard_confirmation_ack:=false
+func prepare_round_state(_b)->void:pass
+func verify_round_state(_b)->void:pass
 func actual_guard(b,source:String,stage:String)->void:
  var opened:Dictionary=b.handle({"type":"quest_talk","npc_id":FinalRoute.npc(b,source).id})
  check(opened.get("ok",false) and choose(b,opened,"yes").get("ok",false) and b.battle_open,"source guardian begins: "+source)
@@ -66,8 +69,20 @@ func run()->void:
   var failed:Dictionary=await request(links[1],{"type":"transmigration","action":"confirm","token":current})
   check(failed.get("reason")=="save_failed" and b.session.snapshot()==before and b.transmigration.pending.candidate==frozen and b.quest_arrival.check_action_context(b,proof).is_empty(),"failed save keeps complete original state/proof/seed for retry %d"%retry)
  b.save_path="user://king-transaction.json"
- var success:Dictionary=await request(links[1],{"type":"transmigration","action":"confirm","token":current})
- check(success.ok and success.get("closed",false) and success.transaction_id==current,"real king confirms exactly one atomic transaction")
+ prepare_round_state(b)
+ if discard_confirmation_ack:
+  # Do not poll this client or register a callback: discard the actual ACK.
+  links[1].request({"type":"transmigration","action":"confirm","token":current})
+  check(await Wait.until(self,func():return int(b.session._profile.player.transmigration)==1),"server commits while confirming client never observes ACK")
+  links[1].close()
+  var reconnected=Link.new("ws://127.0.0.1:%d"%server.port);links[1]=reconnected;reconnected.connect_now()
+  check(await Wait.until(self,func():poll();return reconnected.online),"confirming device reconnects after discarded ACK")
+  await request(reconnected,{"type":"ping"})
+  check(not (await request(reconnected,{"type":"transmigration","action":"confirm","token":current})).ok,"reconnected device retry cannot repeat committed transaction")
+ else:
+  var success:Dictionary=await request(links[1],{"type":"transmigration","action":"confirm","token":current})
+  check(success.ok and success.get("closed",false) and success.transaction_id==current,"real king confirms exactly one atomic transaction")
+ verify_round_state(b)
  var after:Dictionary=b.session.snapshot()
  for key in after:
   if after[key]!=frozen.get(key):print("POST-SAVE DIFF ",key," frozen=",frozen.get(key)," actual=",after[key])
