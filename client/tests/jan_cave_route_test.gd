@@ -1,4 +1,5 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const JanRoute=preload("res://tests/support/jan_route_driver.gd")
 const FRIEND="jaruga/event/event20_1@3400:59:66"
 const JIDE="jaruga/event/event20_2@3406:27:14"
 const SON="jaruga/event/event20_3@3406:28:17"
@@ -10,6 +11,13 @@ func setup():
  for npc in b.quest_catalog.active_npcs():
   if str(npc.get("source_script","")) in ["200/sb_jan1.arg","200/sb_jan2.arg","200/sb_jan3.arg"]:guards.append(npc)
  return b
+func talk(b,id:String)->Dictionary:
+ b.original_quests.pending={}
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ if not JanRoute.approach(b,npc):check(false,"real original route reaches "+id);return {"ok":false}
+ return b.handle({"type":"quest_talk","npc_id":id})
+func source_talk(b,npc:Dictionary)->Dictionary:
+ return talk(b,str(npc.id))
 func answer(b,r:Dictionary,text:String)->Dictionary:
  return b.handle({"type":"quest_choose","token":r.get("dialogue",{}).get("token",""),"choice":"submit","text":text})
 func run()->void:
@@ -21,18 +29,14 @@ func run()->void:
  var jobs:Dictionary={}
  for job in b.quest_helper.snapshot(b).quests:
   if int(job.event) in [20,21,22]:jobs[int(job.event)]=job
- check(jobs.size()==3 and jobs[20].steps.size()==8 and jobs[21].steps.size()==4 and jobs[22].steps.size()==1,"all three original logs have independent actionable helper stages")
+ check(jobs.size()==3 and jobs[20].steps.size()==9 and jobs[21].steps.size()==4 and jobs[22].steps.size()==1,"all three original logs have independent actionable helper stages")
  for script in ["genout/wpm_20604_11_53","genout/wpm_20605_51_4","genout/wpm_20606_9_23"]:
   var npc:Dictionary={}
   for entry in b.quest_catalog.active_npcs():
    if str(entry.get("source_script",""))==script:npc=entry;break
   check(not npc.is_empty(),"original keyword actual create binding")
   if npc.is_empty():continue
-  # Fixture positions isolate each original transaction; walking is a separate suite.
-  var gate_cell:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
-  var labels:Dictionary=preload("res://server/jan_cave_helper.gd").region_data(b.quest_helper,b,int(npc.map_id)).get("labels",{})
-  for offset in preload("res://scripts/npc_interaction.gd").offsets():
-   if labels.has(gate_cell+offset):b.automation.position_changed(int(npc.map_id),gate_cell+offset);break
+  check(JanRoute.approach(b,npc),"actual walking route reaches original keyword")
   var phrase:String=npc.branches[0].keyword
   var r:=talk(b,npc.id);var before:Dictionary=b.session.snapshot()
   check(not answer(b,r,phrase+" ").ok and b.session.snapshot()==before,"exact source phrase rejects extra space")
@@ -42,8 +46,14 @@ func run()->void:
   check(answer(b,talk(b,npc.id),phrase).ok,"actual original keyword accepted")
   var target:PackedStringArray=str(npc.branches[0].actions.Warp).split(",")
   check(b.automation.position_map==int(target[0]) and b.automation.position_cell==Vector2i(int(target[1]),int(target[2])),"original keyword server destination")
- for npc in guards:
+ for guard_index in range(guards.size()):
+  var npc:Dictionary=guards[guard_index]
+  # Each alternative must establish its own final proof; an earlier guard's
+  # proof must not mask a missing battle_mark mapping on a later alternative.
+  if guard_index>0:check(JanRoute.enter(b),"independent original root for guard alternative %d"%guard_index)
   var r:=source_talk(b,npc)
+  var leader:Dictionary=b.original_quests.npc_by_id(JAN)
+  check(not b.quest_arrival.check_action(b,leader,leader.branches[0],"reward").is_empty(),"this guard starts without any earlier victory proof")
   check(choose(b,r,"yes").ok,"each original three-enemy guard begins")
   check(b.session._pending.enemies.map(func(e):return int(e.source_enemy_id))==[961,963,962],"exact source bandit troop order")
   check(preload("res://server/troop_art.gd").can_render(b.session._pending.enemies),"all three original bandit sprites available")
@@ -52,17 +62,16 @@ func run()->void:
   fight(b)
   check(not b.battle_state.get("settled",false) and b.session.snapshot()==before,"failed guard save preserves profile and location")
   check(not b.handle({"type":"battle_close"}).ok,"failed guard settlement remains retryable")
+  check(not b.quest_arrival.check_action(b,leader,leader.branches[0],"reward").is_empty(),"failed guard save grants no final proof")
   b.save_path=""
   check(b.handle({"type":"battle_close"}).ok and b.automation.position_map==20607 and b.automation.position_cell==Vector2i(36,31),"successful retry commits original bandit Warp once")
+  check(b.quest_arrival.check_action(b,leader,leader.branches[0],"reward").is_empty(),"this exact source guard independently grants final proof after save")
   check(not choose(b,r,"yes").ok,"old guard token cannot replay")
  check(trade(b,JAN).ok and Rules.flag(b.session.snapshot(),"ended",20),"ornament reveals Jan and completes20")
  check(trade(b,WIFE).ok,"source mother story")
- b.automation.position_changed(20608,Vector2i(0,7)) # Exact original portal landing fixture.
  check(trade(b,SARAH).ok and Rules.flag(b.session.snapshot(),"now",21),"source Sarah request21")
  talk(b,SARAH);check(not 2488 in b.session.snapshot().original_items,"source letter waits for22")
- b.automation.position_changed(20607,Vector2i(75,13)) # Exact original return portal fixture.
  check(trade(b,JAN).ok and Rules.flag(b.session.snapshot(),"ended",22),"source random equipment completes22 first")
- b.automation.position_changed(20608,Vector2i(0,7))
  check(trade(b,SARAH).ok and 2488 in b.session.snapshot().original_items,"then Sarah issues letter")
  check(trade(b,JIDE).ok and Rules.flag(b.session.snapshot(),"ended",21) and 2489 in b.session.snapshot().original_items,"original flute and final21")
  for quest in b.quest_helper.snapshot(b).quests:

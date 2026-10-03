@@ -1,6 +1,16 @@
 extends "res://tests/yam_axe_ui_test.gd"
+var authority
+
 func stage(step:String,job:int)->bool:
  print("UI STAGE: "+step)
+ var source_step:Dictionary={}
+ for quest in world.state.derived.get("quest_helper",{}).get("quests",[]):
+  if int(quest.id)==job:
+   for candidate in quest.steps:
+    if str(candidate.id)==step:source_step=candidate
+ var npc:Dictionary=authority.original_quests.npc_by_id(str(source_step.get("npc_id","")))
+ if not npc.is_empty() and int(npc.map_id) in range(20601,20609):
+  if not await walk_near(npc):return false
  world.quest_helper_menu.open_menu()
  if not await ready(func():return visit_button(step,"arrival",job)!=null,"Original stage button exists"):return false
  if not await click(visit_button(step,"arrival",job)):return false
@@ -14,7 +24,7 @@ func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
- var host=Backend.new();root.add_child(host)
+ var host=Backend.new();authority=host;root.add_child(host)
  host.session._profile.no_random_encounters=true
  host.session.gm_raise_level(-1,80)
  for stat in ["vitality","strength","toughness","dexterity"]:host.session.gm_set_base_stat(-1,stat,10000)
@@ -34,7 +44,11 @@ func run()->void:
  if not check(world.quest_helper_menu.find_child("QuestVisit_27_jan20_meet_near",true,false)==null,"Jan remains locked before original route"):return
  await proof("jan-01-locked-before-entry")
  world.quest_helper_menu.close_menu()
- # Original entrance/stair collision fixtures; a separate suite walks the complete connecting paths.
+ world.quest_helper_menu.open_menu()
+ if not await click(visit_button("jan20:entrance","arrival",27)):return
+ if not await ready(func():return int(world.data.map_id)==200 and not world.quest_helper_travel.active and not world.area_transition_busy,"Real helper click stops at public entrance"):return
+ if not check(str(world.quest_helper_travel.target.get("npc_id",""))=="","Public entry never carries an interior NPC target"):return
+ await proof("jan-01b-public-entrance")
  if not await portal(200,Vector2i(285,926),20601):return
  for floor_id in range(20601,20604):
   var door:Dictionary={}
@@ -117,9 +131,19 @@ func run()->void:
  await process_frame
  print("JAN CAVE UI: %d failures"%failures)
  quit(1 if failures else 0)
+func walk_near(npc:Dictionary)->bool:
+ world.quest_helper_menu.close_menu()
+ if not check(int(world.data.map_id)==int(npc.map_id),"NPC approach starts on naturally reached floor"):return false
+ var target:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ for offset in preload("res://scripts/npc_interaction.gd").offsets():
+  var point:Vector2i=target+offset
+  if world.cell!=point and world.navigation.get_id_path(world.cell,point).is_empty():continue
+  world.walk_to(point)
+  if not check(await Wait.until(self,func():return world.cell==point and world.path.is_empty() and not world.moving,180.0),"Actual client walks to original NPC "+str(npc.id)):return false
+  return check(await Wait.settle(self,world),"Actual walking position settles before helper action")
+ return check(false,"Original geometry contains a reachable talk neighbour")
 func portal(map_id:int,cell:Vector2i,to_map:int)->bool:
- if not check(world.load_area_id(map_id,cell),"Original portal cell fixture"):return false
- world.arrival_lock=Vector2i(-1,-1)
- if not check(world.handle_arrival(),"Production original portal trigger"):return false
- if not await ready(func():return not world.area_transition_busy and int(world.data.map_id)==to_map,"Original portal destination loads"):return false
+ if not check(int(world.data.map_id)==map_id,"Portal begins at naturally reached current floor"):return false
+ world.walk_to(cell)
+ if not check(await Wait.until(self,func():return not world.area_transition_busy and int(world.data.map_id)==to_map,180.0),"Actual walking triggers original portal"):return false
  return check(await Wait.settle(self,world),"Original portal server position settles")
