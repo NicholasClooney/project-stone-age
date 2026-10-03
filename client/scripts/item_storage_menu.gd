@@ -23,9 +23,11 @@ func _ready() -> void:
 	name="ItemStorageMenu"
 	set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	z_index=50
-	var shade:=ColorRect.new();shade.color=Color(0.025,0.04,0.04,1.0)
+	# Parent inventory is z50 too; do not add it into a visual-only z100.
+	z_as_relative=false
+	var shade:=ColorRect.new();shade.z_index=1;shade.color=Color(0.025,0.04,0.04,1.0)
 	shade.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT);add_child(shade)
-	var margin:=MarginContainer.new();margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
+	var margin:=MarginContainer.new();margin.z_index=1;margin.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	for side in ["left","top","right","bottom"]:margin.add_theme_constant_override("margin_"+side,48 if side=="bottom" else 16)
 	add_child(margin)
 	var box:=VBoxContainer.new();box.add_theme_constant_override("separation",10);margin.add_child(box)
