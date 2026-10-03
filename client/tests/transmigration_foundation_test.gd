@@ -16,6 +16,7 @@ func setup():
    if not int(event) in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(int(event))
  check(b.quest_catalog.npcs==fixture.module.npcs,"fixture exact NPC catalog has no production duplicates")
  b.quest_catalog.npc_overrides={};b.original_quests.pending={}
+ check(b.quest_catalog.active_npcs_by_source("777/ten.arg").is_empty() and b.quest_catalog.active_npcs_by_source("genout/wpm_300_108_225").is_empty(),"explicit closed fixture hides king and entrance")
  b.quest_helper.transmigration.helpers.clear();b.quest_helper.cached_key=""
  b.quest_catalog.items.merge(fixture.module.items)
 
@@ -31,14 +32,15 @@ func run()->void:
  var plain=Backend.new()
  var reviewed:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/public-quest-npcs.json"))
  var enabled:Array=plain.quest_catalog.enabled_events.duplicate();enabled.sort()
- check(enabled==reviewed.enabled_events.map(func(value):return int(value)),"production activation equals independent reviewed four-chain union")
- check(plain.quest_catalog.npcs.filter(func(n):return str(n.get("source_script",""))=="777/ten.arg").size()==1,"production catalog contains exactly one reviewed inactive king")
+ check(enabled==reviewed.enabled_events.map(func(value):return int(value)),"production activation equals independent reviewed enabled chain union")
+ check(plain.quest_catalog.npcs.filter(func(n):return str(n.get("source_script",""))=="777/ten.arg").size()==1,"production catalog contains exactly one reviewed king")
  check(not plain.quest_catalog.enabled_events.has(47),"unrelated original quiz event47 remains disabled")
- check(not plain.handle({"type":"transmigration"}).get("ok",false),"production has no transmigration command")
- check(plain.quest_catalog.active_npcs().all(func(n):return not str(n.id).contains("777/ten.arg")),"32021 import does not spawn spirit king")
- check(not plain.session.world_catalog.info(32021).is_empty(),"32021 reviewed source map exists while service is disabled")
- check(plain.quest_catalog.active_npcs_by_source("genout/wpm_300_108_225").is_empty(),"production registered third-stage entrance remains inactive")
- check(not plain.quest_helper.places.links(300).values().any(func(door):return int(door.to_map)==32001),"production has no ordinary portal bypassing closed third-stage entrance")
+ check(not plain.handle({"type":"transmigration"}).get("ok",false),"malformed transmigration request cannot start a transaction")
+ check(plain.quest_catalog.active_npcs_by_source("777/ten.arg").size()==1,"production enables exactly the original spirit king")
+ check(plain.quest_catalog.enabled_events.filter(func(e):return int(e) in [48,49,50,51,52])==[48,49,50,51,52],"production final labels match approved activation")
+ check(not plain.session.world_catalog.info(32021).is_empty(),"32021 reviewed source map exists")
+ check(plain.quest_catalog.active_npcs_by_source("genout/wpm_300_108_225").size()==1,"production enables exactly the original cave entrance")
+ check(not plain.quest_helper.places.links(300).values().any(func(door):return int(door.to_map)==32001),"production has no ordinary portal bypassing original scripted entrance")
  closed_fixture(plain)
  plain.free()
  keyword_transactions()
@@ -48,10 +50,11 @@ func run()->void:
  print("TRANSMIGRATION FOUNDATION: %d failures"%failures)
  quit(1 if failures else 0)
 func closed_fixture(b)->void:
- var spirits:Array=b.quest_catalog.npcs.filter(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46]))
- b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(e):return not int(e) in [39,40,41,42,46])
+ var spirits:Array=b.quest_catalog.npcs.filter(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46,48,49,50,51,52]))
+ b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(e):return not int(e) in [39,40,41,42,46,48,49,50,51,52])
+ check(b.quest_catalog.active_npcs_by_source("777/ten.arg").is_empty() and b.quest_catalog.active_npcs_by_source("genout/wpm_300_108_225").is_empty(),"explicit closed fixture hides king and entrance")
  b.quest_helper.transmigration.helpers.clear();b.quest_helper.cached_key="";b.original_quests.pending={}
- check(not b.quest_catalog.active_npcs().any(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46])),"disabled fixture hides spirit-only NPCs")
+ check(not b.quest_catalog.active_npcs().any(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46,48,49,50,51,52])),"disabled fixture hides spirit-only NPCs")
  for npc in spirits:
   b.automation.position_changed(int(npc.map_id),Vector2i(int(npc.cell[0]),int(npc.cell[1])))
   check(not b.handle({"type":"quest_talk","npc_id":npc.id}).ok,"disabled fixture rejects raw spirit talk")

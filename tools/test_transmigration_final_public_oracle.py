@@ -12,6 +12,9 @@ class FinalOracle(unittest.TestCase):
         self.public=json.loads((ROOT/'client/tests/fixtures/public-quest-npcs.json').read_text())
     def test_prior_297_338_union_is_byte_semantically_preserved(self):
         old=copy.deepcopy(self.public)
+        final_ids={n['id'] for n in old['groups']['transmigration-final']['npcs']}
+        old['active_npc_ids']=[i for i in old['active_npc_ids'] if i not in final_ids]
+        old['enabled_events']=[e for e in old['enabled_events'] if e not in [48,49,50,51,52]]
         del old['groups']['transmigration-final']
         del old['reviewed_source_extensions']['transmigration-final']
         old['item_ids'].remove(2138)
@@ -22,7 +25,8 @@ class FinalOracle(unittest.TestCase):
         self.assertEqual(digest,'b81d6f249e75b53427652e1d16ce61cb25607ed0720c3cc962c7206e84663a55')
     def test_exact_final_original_identity_branch_union(self):
         group=self.public['groups']['transmigration-final']
-        self.assertEqual(group['enabled_events'],[])
+        self.assertEqual(group['enabled_events'],[48,49,50,51,52])
+        self.assertEqual(set(n['id'] for n in group['npcs']) & set(self.public['active_npc_ids']),set(n['id'] for n in group['npcs']))
         self.assertEqual(len(group['npcs']),17)
         ids=[n['id'] for g in self.public['groups'].values() for n in g['npcs']]
         self.assertEqual(len(ids),314);self.assertEqual(len(set(ids)),314)

@@ -13610,7 +13610,13 @@
       "manifest": "tools/transmigration_final_quest_sources.json",
       "configuration": "client/data/quests/transmigration-final.json",
       "helper": null,
-      "enabled_events": [],
+      "enabled_events": [
+        48,
+        49,
+        50,
+        51,
+        52
+      ],
       "npcs": [
         {
           "id": "genout/wpm_300_103_228@300:103:228",
@@ -14856,6 +14862,11 @@
     44,
     45,
     46,
+    48,
+    49,
+    50,
+    51,
+    52,
     54
   ],
   "active_npc_ids": [
@@ -14883,10 +14894,13 @@
     "300/sb_hba7.arg@30007:16:11",
     "300/sb_hba9.arg@30009:39:20",
     "300/sb_hpa.arg@30016:26:66",
+    "300/sb_skr.arg@32010:54:30",
+    "300/sb_skt.arg@32020:20:9",
     "400/sb_muge1.arg@41:34:41",
     "400/sb_muge1.arg@42:34:41",
     "400/sb_muge2.arg@41:33:41",
     "400/sb_muge2.arg@42:33:41",
+    "777/ten.arg@32021:31:28",
     "extra/event/hougyoku@6000:58:44",
     "extra/event/marju01@119:97:88",
     "extra/event/marju@1300:70:51",
@@ -14957,7 +14971,12 @@
     "genout/tman_400_98_120@400:98:120",
     "genout/wpm_100_278_325@100:278:325",
     "genout/wpm_100_443_127@100:443:127",
+    "genout/wpm_110_37_20@110:37:20",
+    "genout/wpm_110_37_24@110:37:24",
+    "genout/wpm_110_37_28@110:37:28",
+    "genout/wpm_110_37_32@110:37:32",
     "genout/wpm_11206_5_42@11206:5:42",
+    "genout/wpm_117_6_5@117:6:5",
     "genout/wpm_120_19_15@120:19:15",
     "genout/wpm_200_316_711@200:316:711",
     "genout/wpm_200_358_671@200:358:671",
@@ -14970,6 +14989,8 @@
     "genout/wpm_20807_11_37@20807:11:37",
     "genout/wpm_21003_34_10@21003:34:10",
     "genout/wpm_21308_20_10@21308:20:10",
+    "genout/wpm_300_103_228@300:103:228",
+    "genout/wpm_300_108_225@300:108:225",
     "genout/wpm_300_182_162@300:182:162",
     "genout/wpm_300_247_222@300:247:222",
     "genout/wpm_30502_45_41@30502:45:41",
@@ -14991,6 +15012,8 @@
     "genout/wpm_31910_6_6",
     "genout/wpm_31910_8_9",
     "genout/wpm_31910_9_5",
+    "genout/wpm_32016_31_39@32016:31:39",
+    "genout/wpm_32021_31_51@32021:31:51",
     "genout/wpm_40_13_1@40:13:1",
     "genout/wpm_800_34_23@800:34:23",
     "genout/wpm_801_34_23@801:34:23",
@@ -15070,6 +15093,11 @@
     "giiru/event/event30_7",
     "giiru/event/giruev2_1@31805:19:21",
     "giiru/event/giruev2_2@31805:33:23",
+    "giiru/event/sikkoku01@32002:4:23",
+    "giiru/event/sikkoku02@32006:46:46",
+    "giiru/event/sikkoku03@32009:49:20",
+    "giiru/event/sikkoku04@32014:14:48",
+    "giiru/event/sikkoku05@32016:31:43",
     "giiru/event/sink/sink01@20309:46:45",
     "giiru/event/sink/sink02@30016:26:30",
     "giiru/event/sink/sink03@300:407:298",
@@ -15248,7 +15276,7 @@
       "new_item_ids": [
         2138
       ],
-      "activation": "disabled until independent integration approval; 48..52 directory labels only"
+      "activation": "integration 7b358be3618e82b1b74406c8cedb8ff234dcd535 enables 48..52 as directory labels, never player prerequisites"
     }
   }
 }
