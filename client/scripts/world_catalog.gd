@@ -96,7 +96,11 @@ func navigation_maps() -> Array:
 
 ## Test/provider seam: use the real catalog with locally enabled source events.
 func set_quest_catalog(provider) -> void:
+ # Remove the previous provider's NPCs in one pass. Refiltering every
+ # resident once per quest NPC made each map change quadratic in the catalog.
+ var previous_ids: Dictionary = {}
  for entry in quest_catalog.npcs+quest_catalog.service_npcs:
-  residents = residents.filter(func(resident):return str(resident.get("id",""))!=str(entry.id))
+  previous_ids[str(entry.id)] = true
+ residents = residents.filter(func(resident):return not previous_ids.has(str(resident.get("id",""))))
  quest_catalog=provider
  residents.append_array(quest_catalog.active_npcs())
