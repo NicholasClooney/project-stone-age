@@ -82,3 +82,12 @@ STONE_AGE_FOREGROUND_TEST=1 STONE_AGE_PROOF_DIR=/private/tmp/item-storage-shots 
 ```
 
 `/private/tmp/item-storage-shots/`共10张PNG，逐张view_image核对：桌面背包入口、多选存入/取出；390×844多选、LAN旧选择、保存失败、满包、满仓、64堆输入3与拆完剩62。未提交PNG或导入资源。日志为`/private/tmp/item-storage-test.log`、`item-storage-visual.log`、`item-storage-capacity-lan.log`、`item-storage-inventory.log`。
+
+
+## 集成旧版本fixture回归审计（92f0ec0）
+
+集成 `original_quests_test.migration()` 出现8个失败：v1/v2/v3/v4各一次load失败、一次非默认药数量/位置保留失败。根因是测试从当前 `Session.snapshot()` 构造旧档，仅降低version并移除 `ORIGINAL_DEFAULT`，却携带新仓库的三字段；这不是历史旧档，而是v1–v4版本号与v6仓库schema混合。权威校验拒绝该组合是正确行为，不能为修测试放宽或静默丢弃仓库内容。
+
+最小修复仅在该函数构造old fixture时移除 `Session.ItemStorage.FIELDS`，并断言迁移后空仓/revision=0；产品迁移、半缺schema拒绝和跨容器UID校验均未修改。独立 `item_storage_legacy_test` 同时调用整个原migration函数，另外覆盖v1–v6移除相应未来字段的真实可接受旧格式，以非默认药37、石币4321、位置2000(55,92)及通行证检查真正的读取结果。每个版本清理测试备份，使用全新Session读取并保存，再以另一新Session验证完整快照一致，避免沿用fixture会话或备份掩盖读取失败。混合版本、每种半缺仓库字段、重复UID磁盘档仍拒绝。
+
+基于 `92f0ec0de48848004de44166875b0a888bd264e8` 的专项复现日志 `/private/tmp/item-storage-legacy-before.log` 精确8fail；修后 `/private/tmp/item-storage-legacy-after.log` 为0fail。只运行迁移专项，不运行并行代理正在修改的目录oracle；未运行full、未改main/live/真实存档。
