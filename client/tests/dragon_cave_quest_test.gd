@@ -49,8 +49,10 @@ func run()->void:
  var b=fresh()
  check(17 in b.quest_catalog.enabled_events,"registered17")
  var original_events:Array=b.quest_catalog.enabled_events.duplicate()
- b.quest_catalog.enabled_events=[17]
- check(Dragon.stage_key(b).is_empty() and b.quest_helper.navigation_key(b).is_empty(),"outside dragon map stage key contributes nothing")
+ var key_with_dragon:Array=b.quest_helper.navigation_key(b)
+ b.quest_catalog.enabled_events=original_events.filter(func(event):return int(event)!=17)
+ check(Dragon.stage_key(b).is_empty() and b.quest_helper.navigation_key(b)==key_with_dragon,"outside dragon contributes nothing while every other module key remains intact")
+ b.quest_catalog.enabled_events=original_events
  b.automation.position_changed(-999,Vector2i.ZERO)
  check(Dragon.stage_key(b).is_empty() and not Dragon.inside(b),"unknown map fails closed without global stage key")
  b.quest_catalog.enabled_events=original_events

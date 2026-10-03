@@ -1,11 +1,18 @@
 extends "res://tests/golden_bui_route_test.gd"
 ## Natural collision walking and original doors, with no synthetic cave visits.
+func fresh(level:int):
+ var b=super.fresh(level)
+ # The Golden route parent intentionally enables only44. Earth uses the
+ # production registered catalogue, without minting any arrival authority.
+ b.quest_catalog.enabled_events=preload("res://scripts/quest_catalog.gd").new().enabled_events.duplicate()
+ return b
 func source(b,script:String)->Dictionary:
  for n in b.quest_catalog.active_npcs():
   if str(n.get("source_script",""))==script:return n
  return {}
 func outside_trade(b,script:String)->Dictionary:
  var n:=source(b,script)
+ if not check(not n.is_empty(),"enabled original source "+script):return {"ok":false}
  check(b.handle({"type":"quest_visit","npc_id":n.id,"mode":"near"}).ok,"surface helper convenience")
  return trade(b,n.id)
 func run()->void:

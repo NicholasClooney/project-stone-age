@@ -35,7 +35,14 @@ func run():
  await travel(game,4020,Vector2i(12,9),851,Vector2i(28,29))
  await travel(game,851,Vector2i(28,29),4020,Vector2i(12,9))
  await travel(game,851,Vector2i(29,29),4020,Vector2i(11,9))
- await travel(game,21014,Vector2i(14,14),21015,Vector2i(9,17))
+ # The former scenic shortcut is the original dbt battle, not a portal.
+ check(not game.world_catalog.links(21014).has(Vector2i(14,14)),"restored final guard has no scenic forward portal")
+ var guard:Dictionary=preload("res://scripts/quest_catalog.gd").new().npcs.filter(func(n):return str(n.id)=="200/sb_dbt.arg@21014:14:14")[0]
+ check(guard.branches[0].actions.Warp=="21015,9,17","original dbt victory retains exact goddess landing")
+ # Isolate return-door rendering/movement here. The Earth route suite earns
+ # this arrival through both real guards; this fixture grants no quest proof.
+ check(game.load_area_id(21015,Vector2i(9,17)),"load original return landing fixture")
+ game.arrival_lock=Vector2i(9,17)
  check(not game.handle_arrival(),"arrival on original return door is suppressed")
  check(int(game.data.map_id)==21015,"arrival does not immediately bounce to floor14")
  game.walk_to(Vector2i(9,16))

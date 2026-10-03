@@ -1,0 +1,256 @@
+{
+  "sources": {
+    "gmsv/data/npc/genout/airway.create": "96df30362752d41bd01abfc1e195f9b8a107c6b9a6d9d94b16d07367b9b2e91d",
+    "gmsv/data/npc/genout/shop_m3.create": "3afe6385430b772455f78e6bc7933e9591fde6e2f0f149a2c0cd85924643501a",
+    "gmsv/data/npc/genout/shop_nuke1.create": "c39950487d24cdfc45266c3c6368b1631852cfe433bdfc7ca9f50a7fa9f0aa70",
+    "gmsv/data/npc/genout/sp.create": "d8a6e5d0643a4005ec4a05844c715dda74c9467d39921f4489da42310b9b56ed",
+    "gmsv/data/npc/giiru/event/sink/sink.create": "6bb50775cd34e76814388bdff2bdd09f0f5815da9193f44f43ffd2b15def6124",
+    "gmsv/data/npc/giiru/event/sink/sink07": "3046efb4dafa637231f3801dd9dfd96c9677ac8bf9fd8a2e42a49dbf7f68e590"
+  },
+  "actors": [
+    {
+      "map_id": 5100,
+      "cell": [
+        40,
+        35
+      ],
+      "name": "加美航空",
+      "graphic": 16027,
+      "facing": 4,
+      "role": "resident"
+    },
+    {
+      "map_id": 5100,
+      "cell": [
+        43,
+        36
+      ],
+      "name": "往奇努伊",
+      "graphic": 10401,
+      "facing": 4,
+      "role": "sign"
+    },
+    {
+      "map_id": 5101,
+      "cell": [
+        39,
+        7
+      ],
+      "name": "达那的武器店",
+      "graphic": 16048,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5101,
+      "cell": [
+        34,
+        4
+      ],
+      "name": "达那的防具店",
+      "graphic": 16048,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5101,
+      "cell": [
+        13,
+        9
+      ],
+      "name": "达那的道具店",
+      "graphic": 16049,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5101,
+      "cell": [
+        42,
+        26
+      ],
+      "name": "达那的肉店",
+      "graphic": 16054,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5103,
+      "cell": [
+        13,
+        12
+      ],
+      "name": "店主",
+      "graphic": 16019,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5103,
+      "cell": [
+        11,
+        10
+      ],
+      "name": "达那的饲育员",
+      "graphic": 16047,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5103,
+      "cell": [
+        15,
+        6
+      ],
+      "name": "老爷爷",
+      "graphic": 16057,
+      "facing": 4,
+      "role": "resident"
+    },
+    {
+      "map_id": 5103,
+      "cell": [
+        10,
+        3
+      ],
+      "name": "克雷尔",
+      "graphic": 100291,
+      "facing": 4,
+      "role": "decoration"
+    },
+    {
+      "map_id": 5103,
+      "cell": [
+        12,
+        3
+      ],
+      "name": "火鸡",
+      "graphic": 100367,
+      "facing": 4,
+      "role": "decoration"
+    },
+    {
+      "map_id": 5103,
+      "cell": [
+        18,
+        5
+      ],
+      "name": "布洛多斯",
+      "graphic": 100351,
+      "facing": 6,
+      "role": "decoration"
+    },
+    {
+      "map_id": 5105,
+      "cell": [
+        26,
+        12
+      ],
+      "name": "达那的护士",
+      "graphic": 16058,
+      "facing": 6,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5105,
+      "cell": [
+        22,
+        8
+      ],
+      "name": "达那的药师",
+      "graphic": 16021,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        13,
+        16
+      ],
+      "name": "假占卜师",
+      "graphic": 16028,
+      "facing": 5,
+      "role": "resident"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        19,
+        13
+      ],
+      "name": "小孩",
+      "graphic": 16011,
+      "facing": 4,
+      "role": "resident"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        18,
+        17
+      ],
+      "name": "小孩",
+      "graphic": 16003,
+      "facing": 0,
+      "role": "resident"
+    },
+    {
+      "map_id": 5101,
+      "cell": [
+        25,
+        24
+      ],
+      "name": "达那的传言板",
+      "graphic": 10062,
+      "facing": 6,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        16,
+        12
+      ],
+      "name": "巫女",
+      "graphic": 16300,
+      "facing": 6,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        22,
+        36
+      ],
+      "name": "达那村的储存点",
+      "graphic": 10048,
+      "facing": 4,
+      "role": "deferred_service"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        26,
+        15
+      ],
+      "name": "真红",
+      "graphic": 16031,
+      "facing": 4,
+      "role": "quest",
+      "id": "giiru/event/sink/sink07@5106:26:15"
+    },
+    {
+      "map_id": 5106,
+      "cell": [
+        25,
+        15
+      ],
+      "name": "达那的长老",
+      "graphic": 16024,
+      "facing": 4,
+      "role": "quest",
+      "id": "giiru/event/event30_3"
+    }
+  ]
+}
