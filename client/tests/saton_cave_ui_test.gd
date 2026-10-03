@@ -74,9 +74,15 @@ func run()->void:
    world.show_adventure_menu("inventory")
    var index:int=world.session.snapshot().original_items.find(2450)
    if not await click(world.adventure_menu.panel.get_node("OriginalItemSlot_%d"%index)):return
-   var metadata:Label=world.adventure_menu.panel.find_child("OriginalEffectsMetadata",true,false)
-   if not check(metadata.text.contains("未生效") and metadata.text.contains("复活至500"),"Medicine source resurrection explicitly inactive"):return
-   await proof("saton-05-medicine-inactive")
+   var panel=world.adventure_menu.panel
+   var description:Label=panel.find_child("OriginalItemDescription",true,false)
+   if not check(is_instance_valid(description),"Medicine description exists in inventory scroll content"):return
+   if not check(description.text.contains("仅战斗复活道具（战斗→道具）") and not panel.has_node("OriginalItemUse"),"Earned medicine explains battle-only use without a field action"):return
+   if not check(description.text.contains("原标示500，实际450～550，封顶最大HP"),"Medicine description states original power, random healing and HP cap"):return
+   if not check(description.text.contains("原版行为：活目标或出手前已复活仍消耗"),"Medicine description preserves original ineffective-target consumption"):return
+   var metadata:Label=panel.find_child("OriginalEffectsMetadata",true,false)
+   if not check(metadata==null or not metadata.text.contains("复活"),"Implemented medicine is not labelled as inactive resurrection"):return
+   await proof("saton-05-medicine-battle-use")
    world.close_adventure_menu()
    var restart:="restart:sainasu/event/event13_2@1100:86:99"
    if not await stage(restart,10):return

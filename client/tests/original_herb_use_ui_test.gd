@@ -51,7 +51,10 @@ func run() -> void:
  await click(menu.panel.get_node("OriginalItemSlot_0"))
  check(await Wait.until(self,func():return menu.panel.has_node("OriginalItemUse")),"actual slot click reveals original herb use action")
  var description:Label=menu.panel.find_child("OriginalItemDescription",true,false)
- check(description.text.contains("90～110") and description.text.contains("满血仍消耗") and description.text.contains("战斗道具未接入"),"description states actual field effect and limitations")
+ if not check(is_instance_valid(description),"field herb description exists in scroll content"):
+  quit(1);return
+ check(description.text.contains("野外回复90～110（原标示100）") and description.text.contains("自己或随身宠物") and description.text.contains("满血仍消耗"),"description states precise field recovery, owned targets and full-HP consumption")
+ check(description.text.contains("零HP宠物可回复") and description.text.contains("香草战斗使用未接入"),"description preserves zero-HP pet recovery and herb-specific battle limitation")
  check(await Wait.until(self,func():return description.position.y+description.size.y<=404),"description fits above use controls")
  check(not menu.panel.get_node("OriginalItemUse").disabled and world.session.snapshot().player.hp==world.session.snapshot().player.max_hp,"full owner HP keeps original consumption action enabled")
  await click(menu.panel.get_node("OriginalItemUse"))
