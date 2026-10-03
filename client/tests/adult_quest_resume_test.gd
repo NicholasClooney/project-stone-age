@@ -5,7 +5,7 @@ func fresh(load_saved:bool=false):
  b.set_process(false)
  b.save_path=SAVE
  b.keep_resume_current=true
- if load_saved:check(b.load_profile(SAVE),"real save reloads under v6 authority")
+ if load_saved:check(b.load_profile(SAVE),"real save reloads under current authority")
  else:
   clear_bag(b)
   b.session.gm_raise_level(-1,30)
@@ -52,11 +52,11 @@ func run() -> void:
   b.load_resume()
   check(b.session.snapshot()==completed,"consumed checkpoint cannot re-award")
   b.free()
- # Real checkpoint files bridge v5/v6 without reinitializing valid v6 gear.
- for legacy in [true,false]:
+ # Real checkpoint files bridge v5/v6/v7 without reinitializing valid gear.
+ for legacy in [5,6,Session.SAVE_VERSION]:
   clear_save()
   var migrated=fresh()
-  if not legacy:
+  if legacy>=6:
    migrated.session._profile.player.level=30
    Session.OriginalEquipment.add(migrated.session._profile,2427)
    var uid:int=migrated.session._profile.original_instances[0].uid
@@ -65,27 +65,36 @@ func run() -> void:
   first_battle(migrated)
   var checkpoint:Dictionary=preload("res://server/adult_battle_checkpoint.gd").snapshot(migrated)
   var expected:Dictionary=migrated.session.snapshot()
-  if legacy:
-   checkpoint.profile.version=5
-   check(not migrated.session._valid_profile(checkpoint.profile),"v5 checkpoint with v6 warehouse fields is an invalid hybrid")
-   for key in Session.ItemStorage.FIELDS:checkpoint.profile.erase(key)
-   for key in ["original_instances","original_equipment","next_original_uid"]:checkpoint.profile.erase(key)
+  if legacy<Session.SAVE_VERSION:
+   checkpoint.profile.version=legacy
+   checkpoint.profile.erase("rebirth");checkpoint.profile.player.erase("transmigration") # Historical format predates v7.
+   if legacy<6:
+    check(not migrated.session._valid_profile(checkpoint.profile),"v5 checkpoint with v6 warehouse fields is an invalid hybrid")
+    for key in Session.ItemStorage.FIELDS:checkpoint.profile.erase(key)
+    for key in ["original_instances","original_equipment","next_original_uid"]:checkpoint.profile.erase(key)
    var disk:Dictionary=JSON.parse_string(FileAccess.get_file_as_string(SAVE))
-   disk.version=5
-   check(not migrated.session._valid_profile(disk),"v5 disk profile with v6 warehouse fields is an invalid hybrid")
-   for key in Session.ItemStorage.FIELDS:disk.erase(key)
-   for key in ["original_instances","original_equipment","next_original_uid"]:disk.erase(key)
+   disk.version=legacy
+   disk.erase("rebirth");disk.player.erase("transmigration") # Historical format predates v7.
+   if legacy<6:
+    check(not migrated.session._valid_profile(disk),"v5 disk profile with v6 warehouse fields is an invalid hybrid")
+    for key in Session.ItemStorage.FIELDS:disk.erase(key)
+    for key in ["original_instances","original_equipment","next_original_uid"]:disk.erase(key)
    DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE+".bak"))
    var out=FileAccess.open(SAVE,FileAccess.WRITE)
    out.store_string(JSON.stringify(disk));out.close()
   migrated._write_resume_file(migrated._resume_file(),{"quest_auto":migrated.quest_auto.resume_state(),"adult_battle":checkpoint,"map_id":10204,"cell":checkpoint.cell})
   migrated.free()
-  migrated=fresh(true);migrated.load_resume()
+  migrated=fresh(true)
+  var before_bad:Dictionary=migrated.session.snapshot()
+  var bad_checkpoint:Dictionary=checkpoint.duplicate(true)
+  bad_checkpoint.profile.version=6;bad_checkpoint.profile.rebirth={"schema":1}
+  check(not preload("res://server/adult_battle_checkpoint.gd").restore(migrated,bad_checkpoint) and migrated.session.snapshot()==before_bad and not migrated.battle_open and migrated.session._pending.is_empty(),"partial future group cannot overwrite profile or battle checkpoint")
+  migrated.load_resume()
   var after:Dictionary=migrated.session.snapshot()
-  check(migrated.battle_open and migrated.quest_auto.running and after.version==6 and migrated.session._valid_profile(after),"real v5/v6 checkpoint resumes validated v6 battle "+str(legacy))
+  check(migrated.battle_open and migrated.quest_auto.running and after.version==Session.SAVE_VERSION and migrated.session._valid_profile(after),"real v5/v6 checkpoint resumes validated current battle "+str(legacy))
   check(after==expected,"v5/v6 checkpoint preserves entire migrated profile, including pets/stats/MP/storage")
   check(migrated.session._pending==checkpoint.pending and migrated.battle.snapshot()==checkpoint.state and migrated.battle._rng.state==int(checkpoint.rng_state),"v5/v6 checkpoint preserves full pending/live state and RNG")
-  if not legacy:check(after.original_instances==expected.original_instances and after.original_equipment==expected.original_equipment,"v6 equipment UID and partial durability unchanged")
+  if legacy>=6:check(after.original_instances==expected.original_instances and after.original_equipment==expected.original_equipment,"v6 equipment UID and partial durability unchanged")
   migrated.handle({"type":"quest_auto_stop"});migrated.free()
  # Source-position receipt acknowledges only bounded server-issued positions.
  clear_save()

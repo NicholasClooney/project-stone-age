@@ -77,6 +77,7 @@ func mp_and_saves() -> void:
 	# A version 3 save (before 气力): loads with full 气力 and no spirit equipment.
 	var old: Dictionary = s.snapshot()
 	old.version = 3
+	old.erase("rebirth");old.player.erase("transmigration") # Historical format predates v7.
 	check(not s._valid_profile(old),"v3 MP profile with v6 warehouse fields is an invalid hybrid")
 	for key in Session.ItemStorage.FIELDS:old.erase(key)
 	old.player.erase("mp")

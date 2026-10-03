@@ -46,6 +46,7 @@ func _initialize():
  malformed=session.snapshot().duplicate(true);malformed.pet_storage[0].hp=-1
  check(not session._valid_profile(malformed),"stored actors receive full save validation")
  var old:Dictionary=before.duplicate(true);old.version=2;old.erase("pet_storage");old.erase("next_pet_id")
+ old.erase("rebirth");old.player.erase("transmigration") # Historical format predates v7.
  check(not session._valid_profile(old),"v2 pet profile with v6 warehouse fields is an invalid hybrid")
  for key in Session.ItemStorage.FIELDS:old.erase(key)
  for pet in old.pets:pet.erase("pet_id")

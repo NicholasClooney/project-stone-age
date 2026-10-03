@@ -88,6 +88,7 @@ const AdultCheckpoint=preload("res://server/adult_battle_checkpoint.gd")
 var stationary = preload("res://server/stationary_encounters.gd").new()
 var stationary_party_member: Callable
 var quest_auto = preload("res://server/quest_auto.gd").new()
+var transmigration = preload("res://server/transmigration_service.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
 var _npc_state_published_version := 0
 var session = GameSession.new()
@@ -193,6 +194,7 @@ func load_profile(path: String) -> bool:
 	original_quests.pending={}
 	if not session.load_game(path):return false
 	quest_arrival.reset()
+	transmigration.reset()
 	last_saved_payload = JSON.stringify(session.snapshot())
 	_publish()
 	return true
@@ -1369,3 +1371,6 @@ func _revival_transaction() -> bool:
 
 func _cmd_item_storage_transfer(command: Dictionary) -> Dictionary:
 	return GameSession.ItemStorage.transfer(self,command)
+
+func _cmd_transmigration(command:Dictionary)->Dictionary:
+	return transmigration.command(self,command)

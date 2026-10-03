@@ -142,6 +142,7 @@ func migration() -> void:
 		session.set_character("100010")
 		var old: Dictionary=session.snapshot()
 		old.version=version
+		old.erase("rebirth") # Historical schema predates the v7 group.
 		# These optional v6 fields did not exist in a v1-v4 save. Merely
 		# lowering the version on today's snapshot creates an invalid hybrid.
 		for key in Session.ItemStorage.FIELDS:old.erase(key)

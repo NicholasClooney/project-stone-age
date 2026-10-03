@@ -189,6 +189,7 @@ func talk(backend, id: String) -> Dictionary:
 	if npc.is_empty() or not allowed(backend,npc):return {"ok":false,"reason":"任务人物不在附近，或当前正忙。"}
 	if str(npc.get("handler",""))=="Charm":return Charm.talk(self,backend,npc)
 	if str(npc.get("handler",""))=="TimeMan":return window(npc,{},"end",str(npc.text),false)
+	if str(npc.get("kind",""))=="original_transmigration":return backend.transmigration.open(backend,npc)
 	if npc.has("kind"):
 		if str(npc.kind) not in services.KINDS:return {"ok":false,"reason":"尚未开放的原服务类型。"}
 		return services.open(self,backend,npc)

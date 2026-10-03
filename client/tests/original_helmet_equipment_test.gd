@@ -41,7 +41,7 @@ func helmet_saves():
  var loaded=Session.new()
  check(loaded.load_game(path),"genuine v6 without optional HEAD loads")
  var migrated:Dictionary=loaded.snapshot()
- check(migrated.original_items==old.original_items and int(migrated.original_instances[0].uid)==uid and int(migrated.original_instances[0].durability)==2500000 and int(migrated.original_instances[1].durability)==4321 and int(migrated.original_equipment.arm)==axe and int(migrated.original_equipment.head)==0 and int(migrated.version)==6,"legacy reward initialized once, other UID/wear/ownership preserved without gifts")
+ check(migrated.original_items==old.original_items and int(migrated.original_instances[0].uid)==uid and int(migrated.original_instances[0].durability)==2500000 and int(migrated.original_instances[1].durability)==4321 and int(migrated.original_equipment.arm)==axe and int(migrated.original_equipment.head)==0 and int(migrated.version)==Session.SAVE_VERSION,"legacy reward initialized once, other UID/wear/ownership preserved without gifts")
  check(equip(loaded,uid),"migrated real reward equips")
  loaded._profile.original_instances[0].durability=12345
  check(loaded.save_game(path),"worn helmet saves")
