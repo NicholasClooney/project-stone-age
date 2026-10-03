@@ -14,6 +14,7 @@ var _warp: Dictionary={}
 var _battles: Dictionary={}
 var _maps: Dictionary={}
 var _can_leave_portal: bool=false
+var _rooms: Dictionary={}
 
 func reset() -> void:
 	_invalidate()
@@ -41,6 +42,7 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 			_can_leave_portal=true
 			var mark: String=str(receipt.get("mark",""))
 			if not mark.is_empty():_marks[mark]=true
+			_expire_marks(backend,to_map,to_cell)
 			return
 		_invalidate()
 		return
@@ -56,15 +58,15 @@ func observe_move(backend, from_map: int, from_cell: Vector2i, to_map: int, to_c
 		if int(evidence.get("leader_to_map",-1))!=to_map or _point(evidence.get("leader_to_cell",[]))!=to_cell or leader_map!=from_map:
 			_invalidate();return
 		if valid_before and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell):
-			_map=to_map;_cell=to_cell;_can_leave_portal=false;return
+			_map=to_map;_cell=to_cell;_can_leave_portal=false;_expire_marks(backend,to_map,to_cell);return
 		if not _same_room(backend,from_map,from_cell,leader_cell):_invalidate();return
 		if _portal(backend,leader_map,leader_cell,to_map,to_cell) and ((valid_before and _scope==target_scope) or (Policy.scope(from_map).is_empty() and Policy.portal_root(from_map,to_map))):
-			_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;return
+			_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;_expire_marks(backend,to_map,to_cell);return
 		_invalidate();return
 	if valid_before and _scope==target_scope and from_map==to_map and (_can_leave_portal or not backend.quest_helper.places.links(from_map).has(from_cell)) and _walk_step(backend,from_map,from_cell,to_cell):
-		_map=to_map;_cell=to_cell;_can_leave_portal=false;return
+		_map=to_map;_cell=to_cell;_can_leave_portal=false;_expire_marks(backend,to_map,to_cell);return
 	if _portal(backend,from_map,from_cell,to_map,to_cell) and ((valid_before and _scope==target_scope) or (Policy.scope(from_map).is_empty() and Policy.portal_root(from_map,to_map))):
-		_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;return
+		_scope=target_scope;_map=to_map;_cell=to_cell;_can_leave_portal=true;_expire_marks(backend,to_map,to_cell);return
 	_invalidate()
 
 func has_arrival(backend, map_id: int, cell: Vector2i) -> bool:
@@ -172,21 +174,52 @@ func _walk_step(backend, map_id: int, start: Vector2i, finish: Vector2i) -> bool
 	return true
 
 func _same_room(backend, map_id: int, start: Vector2i, finish: Vector2i) -> bool:
-	if not _walkable(backend,map_id,start) or not _walkable(backend,map_id,finish):return false
+	var data: Dictionary=_map_data(backend,map_id)
+	if data.is_empty():return false
+	var npcs: Dictionary={}
+	for npc in backend.quest_catalog.active_npcs():
+		if int(npc.map_id)==map_id:npcs[_point(npc.cell)]=true
 	var links: Dictionary=backend.quest_helper.places.links(map_id)
-	var queue: Array[Vector2i]=[start]
-	var seen: Dictionary={start:true}
-	var cursor: int=0
-	while cursor<queue.size():
-		var point: Vector2i=queue[cursor];cursor+=1
-		if point==finish:return true
-		# A portal is a boundary, not an ordinary floor tile in a room flood.
-		if point!=start and links.has(point):continue
-		for delta in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
-			var next: Vector2i=point+delta
-			if seen.has(next) or not _walkable(backend,map_id,next):continue
-			seen[next]=true;queue.append(next)
-	return false
+	var signature: Array=[hash(data.blocked),hash(npcs),hash(links)]
+	if not _rooms.has(map_id) or _rooms[map_id].signature!=signature:
+		var labels: Dictionary={}
+		var serial: int=0
+		for y in range(int(data.height)):
+			for x in range(int(data.width)):
+				var seed:=Vector2i(x,y)
+				if labels.has(seed) or links.has(seed) or not _floor(data,npcs,seed):continue
+				serial+=1
+				var queue: Array[Vector2i]=[seed]
+				labels[seed]=serial
+				var cursor: int=0
+				while cursor<queue.size():
+					var point: Vector2i=queue[cursor];cursor+=1
+					for delta in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+						var next: Vector2i=point+delta
+						if labels.has(next) or links.has(next) or not _floor(data,npcs,next):continue
+						labels[next]=serial;queue.append(next)
+		_rooms[map_id]={"signature":signature,"labels":labels}
+	var labels: Dictionary=_rooms[map_id].labels
+	var first: int=_room_at(data,npcs,labels,links,start)
+	return first>=0 and first==_room_at(data,npcs,labels,links,finish)
+
+func _expire_marks(backend, map_id: int, cell: Vector2i) -> void:
+	for mark in _marks.keys():
+		var allowed: bool=false
+		for region in Policy.mark_regions(str(mark)):
+			if int(region[0])==map_id and _same_room(backend,map_id,Vector2i(int(region[1]),int(region[2])),cell):allowed=true;break
+		if not allowed:_marks.erase(mark)
+
+static func _floor(data: Dictionary, npcs: Dictionary, cell: Vector2i) -> bool:
+	return cell.x>=0 and cell.y>=0 and cell.x<int(data.width) and cell.y<int(data.height) and not npcs.has(cell) and int(data.blocked[cell.y*int(data.width)+cell.x])==0
+
+static func _room_at(data: Dictionary, npcs: Dictionary, labels: Dictionary, links: Dictionary, cell: Vector2i) -> int:
+	if labels.has(cell):return int(labels[cell])
+	if not links.has(cell) or not _floor(data,npcs,cell):return -1
+	var neighbours: Dictionary={}
+	for delta in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
+		if labels.has(cell+delta):neighbours[labels[cell+delta]]=true
+	return int(neighbours.keys()[0]) if neighbours.size()==1 else -1
 
 static func _point(value) -> Vector2i:
 	if not value is Array or value.size()!=2:return Vector2i(-1,-1)
