@@ -84,6 +84,8 @@ func run() -> void:
 	check(excluded_every_time,"mixed area excludes wood without permit")
 	check(wood_seen and ordinary_seen,"permit preserves weighted ordinary encounters")
 	var gate_backend = backend()
+	# Isolated source-drop fixture: explicit authority start, not a quest-route receipt.
+	gate_backend.automation.position_changed(1099,Vector2i(24,42),true)
 	check(not gate_backend.wild_encounter(1099,Vector2i(24,42)).ok,"Backend uses its own empty inventory to exclude wood")
 	gate_backend.session._profile.original_items = [2478]
 	# Find a server RNG seed that produces the source wood drop through the

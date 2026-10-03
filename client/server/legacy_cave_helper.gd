@@ -1,6 +1,6 @@
 extends RefCounted
 ## Reviewed legacy cave geometry; this module never grants arrival evidence.
-const RANGES=[[20101,20105,200],[11001,11006,100],[20401,20406,200],[20501,20508,200]]
+const RANGES=[[20101,20105,200],[11001,11006,100],[20401,20406,200],[20501,20508,200],[31801,31806,300]]
 static func cave(map_id:int)->Array:
  for entry in RANGES:
   if map_id>=int(entry[0]) and map_id<=int(entry[1]):return entry
