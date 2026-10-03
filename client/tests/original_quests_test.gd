@@ -35,8 +35,8 @@ func run() -> void:
 # Frozen reviewed identities are independent of the runtime catalog and importer.
 # Registry additions must bring their own reviewed group; deleting a baseline NPC,
 # changing its binding/transaction, or substituting another instance must fail.
-# public-quest-npcs.json pins reviewed main 4854c86: 101 baseline instances
-# plus 141 module instances. Never regenerate expected data during the test.
+# Frozen union preserves all242 prior instances plus55 reviewed additions.
+# The one shared event12 remains in Munde source order. Never generate expected data here.
 func public_catalog(catalog) -> void:
 	var fixture:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/public-quest-npcs.json"))
 	var registry:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://data/quest-modules.json"))
@@ -70,13 +70,24 @@ func public_catalog(catalog) -> void:
 		for field in expected[id]:
 			if field!="branches":check(npc.get(field)==expected[id][field],"NPC identity "+id+"/"+field)
 		var behavior:Array=[]
-		for branch in npc.get("branches",[]):
+		for branch_index in range(npc.get("branches",[]).size()):
+			var branch:Dictionary=npc.branches[branch_index]
 			var entry:Dictionary={}
-			for field in ["event","type","condition","actions","enabled","events","guard","keyword","item_deletion_scope","confirmation_text","disabled_conditions"]:
+			for field in ["event","type","condition","actions","enabled","events","guard","keyword","item_deletion_scope","confirmation_text","disabled_conditions","source_branch_index","spoken_keyword","source_break","project_pet_selection"]:
 				if branch.has(field):entry[field]=branch[field]
+			# Approved wind normalization still locks the complete original source.
+			if branch_index<expected[id].branches.size():
+				for source_field in ["source_condition","source_actions"]:
+					if expected[id].branches[branch_index].has(source_field):
+						entry[source_field]=branch.get(source_field)
 			behavior.append(entry)
 		check(behavior==expected[id].branches,"original branch conditions/actions preserved: "+id)
-	check(actual.size()==242,"foundation adds no public NPC instances")
+	check(expected.size()==int(fixture.reviewed_counts.catalog_npcs) and actual.size()==expected.size(),"exact independently reviewed NPC count")
+	var actual_items:Array=catalog.items.keys().map(func(id):return int(id));actual_items.sort()
+	check(actual_items==sorted_ints(fixture.item_ids),"exact reviewed original item union")
+	check(sorted_ints(catalog.enabled_events)==sorted_ints(fixture.enabled_events),"independent production event activation union")
+	var shared:Dictionary=actual.get("sainasu/event/event12@11107:24:6",{})
+	check(shared.get("branches",[]).map(func(b):return int(b.get("source_branch_index",-1)))==[0,1,2,3,4],"single Munde/wind instance retains original source order")
 	for item in [2698,2699,2700,2701,2706,2707,2708,2709,2710,2711,2712,2713,2714,2715,2716,2717,2718,2735,2736,2758,2766,2767,2768,2769,2770,2771,2772,2773,2774]:
 		check(catalog.items.has(str(item)),"reviewed shared item "+str(item))
 	var expected_ids:Array=expected.keys();expected_ids.sort()
@@ -91,16 +102,18 @@ func public_catalog(catalog) -> void:
 	# Area-spawn NPCs have no public position until the server chooses a valid
 	# birth cell. Test both projections explicitly instead of assuming all spawn.
 	var projection=preload("res://scripts/quest_catalog.gd").new()
-	var area_id:String="seimu/event/event02_1@100:230:180:area:525:200"
-	var active_expected:Array=expected_ids.duplicate()
-	active_expected.erase(area_id);active_expected.append_array(services);active_expected.sort()
-	check(npc_ids(projection.active_npcs())==active_expected,"unplaced area NPC excluded; every fixed instance/function stays public")
-	projection.npc_overrides[area_id]={"map_id":100,"cell":[230,180]}
-	active_expected.append(area_id);active_expected.sort()
-	check(npc_ids(projection.active_npcs())==active_expected,"placed area NPC joins the exact public union")
-	projection.npc_overrides[area_id]={"hidden":true}
-	active_expected.erase(area_id)
-	check(npc_ids(projection.active_npcs())==active_expected,"hidden area NPC does not remove any other original instance")
+	var active_expected:Array=fixture.active_npc_ids.duplicate()
+	active_expected.append_array(services);active_expected.sort()
+	check(npc_ids(projection.active_npcs())==active_expected,"exact enabled fixed/service set excludes all unplaced areas")
+	for area in fixture.unplaced_area_npcs:
+		projection.npc_overrides[area.id]={"map_id":int(area.map_id),"cell":area.cell.duplicate()}
+		active_expected.append(str(area.id));active_expected.sort()
+		check(npc_ids(projection.active_npcs())==active_expected,"placed reviewed area joins exact public union: "+str(area.id))
+		projection.npc_overrides[area.id]={"hidden":true}
+		active_expected.erase(str(area.id))
+		check(npc_ids(projection.active_npcs())==active_expected,"hiding one area preserves all other original instances")
+func sorted_ints(values:Array)->Array:
+	var result:Array=values.map(func(value):return int(value));result.sort();return result
 func npc_ids(npcs:Array) -> Array:
 	var ids:Array=[]
 	for npc in npcs:ids.append(str(npc.id))

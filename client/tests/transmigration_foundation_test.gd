@@ -29,6 +29,9 @@ func submit(b,r:Dictionary,text:String)->Dictionary:
  return b.handle({"type":"quest_choose","token":r.get("dialogue",{}).get("token",""),"choice":"submit","text":text})
 func run()->void:
  var plain=Backend.new()
+ var reviewed:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/public-quest-npcs.json"))
+ var enabled:Array=plain.quest_catalog.enabled_events.duplicate();enabled.sort()
+ check(enabled==reviewed.enabled_events.map(func(value):return int(value)),"production activation equals independent reviewed four-chain union")
  check(not plain.quest_catalog.npcs.any(func(n):return str(n.get("source_script",""))=="777/ten.arg"),"production catalog has no spirit king instance")
  check(not plain.quest_catalog.enabled_events.has(47),"unrelated original quiz event47 remains disabled")
  check(not plain.handle({"type":"transmigration"}).get("ok",false),"production has no transmigration command")
@@ -45,7 +48,7 @@ func run()->void:
  print("TRANSMIGRATION FOUNDATION: %d failures"%failures)
  quit(1 if failures else 0)
 func closed_fixture(b)->void:
- var spirits:Array=b.quest_catalog.npcs.filter(func(n):return n.get("events",[]).any(func(e):return int(e) in [39,40,41,42,46]) and str(n.get("source_script",""))!="sainasu/event/event12")
+ var spirits:Array=b.quest_catalog.npcs.filter(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46]))
  b.quest_catalog.enabled_events=b.quest_catalog.enabled_events.filter(func(e):return not int(e) in [39,40,41,42,46])
  b.quest_helper.transmigration.helpers.clear();b.quest_helper.cached_key="";b.original_quests.pending={}
  check(not b.quest_catalog.active_npcs().any(func(n):return not n.get("events",[]).is_empty() and n.get("events",[]).all(func(e):return int(e) in [39,40,41,42,46])),"disabled fixture hides spirit-only NPCs")
@@ -56,6 +59,8 @@ func closed_fixture(b)->void:
    check(not b.handle({"type":"quest_visit","npc_id":npc.id,"mode":mode}).ok,"disabled fixture rejects raw visit "+mode)
    check(not b.handle({"type":"quest_visit","quest_id":36,"step_id":"earth39:deliver","mode":mode}).ok,"disabled fixture rejects previous step "+mode)
  check(not b.original_quests.npc_by_id("sainasu/event/event12@11107:24:6").is_empty(),"closing spirits retains shared Munde NPC")
+ for id in ["genout/wpm_300_247_222@300:247:222","genout/wpm_300_182_162@300:182:162"]:
+  check(not b.original_quests.npc_by_id(id).is_empty(),"closed water retains independently enabled adult gate "+id)
 func keyword_transactions()->void:
  var b=setup();var npc:=source("giiru/event/sink/sink03")
  b.session._profile.player.base_stats={"vitality":10,"strength":10,"toughness":10,"dexterity":10}
@@ -104,11 +109,27 @@ func gates()->void:
  b.free()
 func fixed_troops()->void:
  var b=setup()
- for npc in fixture.module.npcs:
-  var branch:Dictionary=npc.branches[0]
+ var production=Backend.new()
+ var tested:int=0
+ for original in fixture.module.npcs:
+  var branch:Dictionary=original.branches[0]
   if branch.type!="BATTLE":continue
+  tested+=1
+  # Actual bindings stay protected. This checks every instance, including
+  # both kbu guards; route success belongs to the documented chain suites.
+  var actual:Dictionary=production.original_quests.npc_by_id(original.id)
+  check(not actual.is_empty() and actual.map_id==original.map_id and actual.cell==original.cell,"production guard retains original binding "+str(original.id))
+  if actual.is_empty():continue
+  production.automation.position_changed(int(actual.map_id),Vector2i(actual.cell[0],actual.cell[1]))
+  check(not production.quest_arrival.check_action(production,actual,actual.branches[0],"BATTLE").is_empty(),"project arrival denies actual guard authority "+str(original.id))
+  check(not production.handle({"type":"quest_talk","npc_id":actual.id}).ok and not production.battle_open,"project arrival cannot start original guard "+str(original.id))
+  # Source transaction fixture ONLY: relocate the private catalog copy to a
+  # public test position. No route grant, policy override or production edit.
+  var npc:Dictionary=b.quest_catalog.npcs.filter(func(n):return n.id==original.id)[0]
+  npc.map_id=1000;npc.cell=[55,92]
+  check(npc.id==original.id and npc.source_script==original.source_script and npc.branches==original.branches,"isolated guard retains exact source transaction "+str(original.id))
   var r:=source_talk(b,npc)
-  check(choose(b,r,"yes").ok and b.battle_open,"actual four-spirit fixed troop opens")
+  check(choose(b,r,"yes").ok and b.battle_open,"isolated source fixed troop opens "+str(original.id))
   if not b.battle_open:continue
   check(b.session._pending.enemies.map(func(e):return int(e.source_enemy_id))==branch.guard.enemy_ids.map(func(i):return int(i)),"all ten original enemy ids and order")
   var before:Dictionary=b.session.snapshot();b.save_path="user://missing-transmigration-parent/fail.json"
@@ -127,7 +148,8 @@ func fixed_troops()->void:
    var warp:PackedStringArray=str(branch.actions.Warp).split(",")
    check(b.automation.position_map==int(warp[0]) and b.automation.position_cell==Vector2i(int(warp[1]),int(warp[2])),"source fixed victory target preserved")
   check(not choose(b,r,"yes").ok,"fixed troop token cannot replay")
- b.free()
+ check(tested==10,"all ten reviewed guard instances receive isolated transaction and actual rejection checks")
+ production.free();b.free()
 func keyword_lan()->void:
  var b=setup();root.add_child(b);var npc:=source("giiru/event/sink/sink03");grant(b,2708)
  source_talk(b,npc);b.original_quests.pending={}
