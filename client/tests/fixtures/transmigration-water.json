@@ -702,6 +702,40 @@
       ]
     },
     {
+      "id": "genout/wpm_300_182_162@300:182:162",
+      "source_script": "genout/wpm_300_182_162",
+      "source_create": "gmsv/data/npc/genout/dungeon01.create",
+      "source_create_index": 256,
+      "events": [
+        4,
+        46
+      ],
+      "name": "洞窟的守门人",
+      "map_id": 300,
+      "cell": [
+        182,
+        162
+      ],
+      "graphic": 16208,
+      "facing": 6,
+      "role": "quest",
+      "branches": [
+        {
+          "event": -1,
+          "type": "FREEWARP",
+          "condition": "LV>64&ENDEV=4",
+          "actions": {
+            "Warp": "30307,10,6"
+          },
+          "enabled": true,
+          "events": [
+            4,
+            46
+          ]
+        }
+      ]
+    },
+    {
       "id": "genout/wpm_40_13_1@40:13:1",
       "source_script": "genout/wpm_40_13_1",
       "source_create": "gmsv/data/npc/genout/40npc.create",
@@ -737,6 +771,7 @@
     }
   ],
   "always_active_npc_ids": [
-    "genout/wpm_300_247_222@300:247:222"
+    "genout/wpm_300_247_222@300:247:222",
+    "genout/wpm_300_182_162@300:182:162"
   ]
 }

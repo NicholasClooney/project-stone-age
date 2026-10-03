@@ -7,7 +7,9 @@
     "gmsv/data/jobdaily.txt": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
     "gmsv/data/npc/genout/wpm_300_247_222": "ed8c37230c2a6e13d4e4d14e7091959a6ff4fd6d1202ede01b6083ae6fc0bc5e",
     "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
-    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1"
+    "gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "gmsv/data/npc/genout/wpm_300_182_162": "b88b2f19b5614a07d36e5d5fd01f60c262b0462b37fd99404de6a387f7db9659",
+    "gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3"
   },
   "creates": [
     "gmsv/data/npc/genout/dungeon01.create"
@@ -26,17 +28,54 @@
         4,
         46
       ]
+    },
+    "genout/wpm_300_182_162": {
+      "kind": "warpman",
+      "events": [
+        4,
+        46
+      ]
     }
   },
   "world": {
-    "map_sources": {},
+    "map_sources": {
+      "30301": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-01",
+        "sha256": "637e195f2ffc842dc0818cf754aca8bd6567a2678485fd164b29dcd20c196dbb"
+      },
+      "30302": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-02",
+        "sha256": "2f5b6e4c7b7f8de61fd2cdb659c57c60a694591e1400151cdce5a61b75fbbd74"
+      },
+      "30303": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-03",
+        "sha256": "e5e9513c0b0f4b0fac512c0e1796350e43eadbc9a719bfecaaca57e10c1f20b2"
+      },
+      "30304": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-04",
+        "sha256": "e105ce27a4c5736aa28abd5469f80dff2e3241d7652da1878188f650de0725a8"
+      },
+      "30305": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-05",
+        "sha256": "247c8638c83d0d61aef46dbe411a43dd392e78f6ef8656ad3e4cb3b424a3983b"
+      },
+      "30306": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-06",
+        "sha256": "1b29e362fe58789731482ab4fb991a635ce3c09a65c92baa7e2d779d5f22e402"
+      },
+      "30307": {
+        "path": "gmsv/data/map/giiru/dungeon/dun_3-03-07",
+        "sha256": "b60c34a3667b68837a7d65331c88ff1e6d6d7d2ba88062a459d78d653b550029"
+      }
+    },
     "portal_sources": {
       "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
       "gmsv/data/npc/genout/warp_g2.create": "2cc5993e522cf48404c4486c8f8096ee63d0d983d0bc66fb0a76adb662702295",
       "gmsv/data/npc/genout/dungeon01.create": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c"
     },
     "restored_scripts": [
-      "genout/wpm_300_247_222"
+      "genout/wpm_300_247_222",
+      "genout/wpm_300_182_162"
     ]
   }
 }
