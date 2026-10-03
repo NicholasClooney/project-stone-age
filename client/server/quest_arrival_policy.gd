@@ -18,6 +18,10 @@ static func battle_mark(source_id: String) -> String:
 	if source_id in ["400/sb_muge1.arg","400/sb_muge2.arg"]:return "dream_final"
 	return ""
 
+static func mark_regions(mark: String) -> Array:
+	if mark=="dream_final":return [[41,34,39],[42,34,39]]
+	return []
+
 static func blocked_guard_items(pending_guard: Dictionary) -> Array:
 	match str(pending_guard.get("npc_id","")).split("@")[0]:
 		"100/sb_nusu1.arg":return [2428]

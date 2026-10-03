@@ -57,3 +57,13 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 内存proof额外含instance/serial，与私有签发记录逐字段相等才有效。项目移动增加epoch但保留未结战的真实来源记录，只用于精确去除未获授权任务物；reset/reload清掉记录，不恢复凭证。普通合法步行与保存失败不换epoch。成功battle_committed仅安排单次待发布Warp；script移动匹配真实旧坐标、目标和epoch后才授胜后mark，重复结算不能再次安排。
 
 `quest_legitimate_arrival_test` 已运行headless：真实时间入口、独立四向地图oracle连续走完整梦幻迷宫（含原portal到达锁）、真实十敌战/真实文件系统savefail/原结果重试、胜Warp后授予、项目传入撤销、旧proof/不同角色/重启拒绝与精确守卫物品白名单。测试显式调用待集成hook，未把它说成共享入口已接通或双设备已验收。只运行此定向suite，未触live/import/full。
+
+## 领奖区域生命周期补片
+
+梦幻终战mark绑定领奖连通区域，而非整个scope。基于实际41/42碰撞网格、阻挡两终战守卫与仙人后，两个地图的领奖组件各227格；穷举该组件所有原portal，41只有(34,40)→41(34,43)、(33,40)→41(33,43)，源`genout/mugendungeon.create:484,493`；42对应同坐标到42，源`genout/mugendungeon2.create:43,52`。因此原出口确实留在dream scope但离开领奖组件。逐格走到出口源格仍有mark，执行原portal后立即删除；route本身可继续，不能复用终战资格。测试补真实胜战后(34,39)→(34,40)→(34,43)与旧战斗不能重授。
+
+`Policy.mark_regions`集中声明每个mark可保留的地图/源落点；每次可信移动后重新核区域，离区清除。房间组件排除原portal与当前NPC占格，缓存随碰撞、portal或角色NPC位置/隐藏状态改变而失效；不是每格BFS后反复枚举全部NPC。缺失地图仍失败关闭。
+
+`has_arrival`只表达当前合法路线及同组件，不能替代奖励分支的`check_action`。helper显示/导航真实奖励步骤应调用只读check_action；真正项目移位会撤资格，同区也不构成免检授权。已在可对话范围内可以返回当前格（无位移）；远处提示沿原路步行。
+
+本轮不新增组队固定NPC战：生产Brothers.begin仍由Hub拒绝in_party。party验收限于原普通移动/portal的成员独立路线；NPC战savefail为单人真实战，不能把人工复制quest_guard的party fixture当可玩证明。
