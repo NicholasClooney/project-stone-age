@@ -50,7 +50,11 @@ While a multi-agent batch runs (currently: bonus quests, then the rebirth main l
 
 ## Working in the main checkout (the coordinator session, not subagents)
 
-The main checkout serves the user's live game (`./scripts/relaunch.sh`). When a fix or feature there is ready:
+The main checkout serves the user's live game (`./scripts/relaunch.sh`).
+
+**Big packages go through an integration branch first.** A multi-agent or multi-chain merge (for example the rebirth stage two package) is cherry-picked onto an `integrate/<name>` branch off `main`, imported, and must pass the full suite there before `main` fast-forwards and the server relaunches. Small targeted fixes can still merge after their targeted suites, following the steps below.
+
+When a fix or feature there is ready:
 
 1. **Relaunch first so the user can test.** Back up the save (`single-player.json.before-<name>-<stamp>`). Stop the running server **cleanly** before anything else: `./scripts/stop-server.sh` (asks the backend through `build/server-8781.shutdown` to record the stop, save and write `<save>.resume.json`, waits until 8780/8781 are free, and falls back to TERM after 30 s). Don't `kill` it yourself: Godot skips its shutdown on TERM/INT, and then only the periodic resume snapshot (up to 10 s old) keeps the hunt. Only then stop the previous relaunch task, run `./scripts/relaunch.sh` in the background and wait for `Ready:`. Tell the user it is up.
 2. **Then run the tests** while the user plays: the changed suites, then `STONE_AGE_TEST_LOGS=<private dir> ./scripts/test-all.sh`. Don't make the user wait on tests before they can try the change.
