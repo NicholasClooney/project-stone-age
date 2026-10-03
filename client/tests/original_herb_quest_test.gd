@@ -2,6 +2,8 @@ extends SceneTree
 const Backend=preload("res://server/backend.gd")
 const Rules=preload("res://server/original_quests.gd")
 const Session=preload("res://server/game_session.gd")
+const CaveRoute=preload("res://tests/support/legacy_cave_route.gd")
+const CaveGeometry=preload("res://server/legacy_cave_helper.gd")
 const MapFile=preload("res://scripts/map_file.gd")
 const GIRL="jaruga/event/event01_1"
 const DOCTOR="jaruga/event/event01_2"
@@ -18,7 +20,8 @@ func current(b,id:String) -> bool:
  return row(b).steps.any(func(s):return s.id==id and s.current and s.actionable)
 func talk(b,id:String) -> Dictionary:
  if not b.original_quests.pending.is_empty():b.handle({"type":"quest_close","token":b.original_quests.pending.token})
- var visit:Dictionary=b.handle({"type":"quest_visit","npc_id":id,"mode":"near"})
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ var visit:Dictionary=CaveRoute.approach(b,npc) if CaveGeometry.owns(npc) else b.handle({"type":"quest_visit","npc_id":id,"mode":"near"})
  check(visit.ok,"real safe visit "+id)
  return b.handle({"type":"quest_talk","npc_id":id})
 func choose(b,r:Dictionary,c:String) -> Dictionary:
@@ -40,15 +43,19 @@ func run() -> void:
    for x in range(int(map.width)):
     var point:=Vector2i(x,y)
     nav.set_point_solid(point,not b.quest_helper.safe(map,point,{Vector2i(npc.cell[0],npc.cell[1]):true},b.quest_helper.places.links(int(npc.map_id))))
-  var arrival:Dictionary=b.quest_helper.destination(b,npc,"arrival")
-  var neighbour:Dictionary=b.quest_helper.destination(b,npc,"near")
+  var arrival:Dictionary=b.quest_helper.geometric_destination(b,npc,"arrival")
+  var neighbour:Dictionary=b.quest_helper.geometric_destination(b,npc,"near")
   check(not nav.get_id_path(Vector2i(arrival.cell[0],arrival.cell[1]),Vector2i(neighbour.cell[0],neighbour.cell[1])).is_empty(),"actual arrival walking grid reaches NPC neighbour")
   for mode in ["near","arrival"]:
-   var target:Dictionary=b.quest_helper.destination(b,npc,mode)
+   var target:Dictionary=b.quest_helper.geometric_destination(b,npc,mode)
    check(not target.is_empty(),"NPC reachable landing "+mode)
    if target.is_empty():continue
    var cell:=Vector2i(target.cell[0],target.cell[1])
    check(b.quest_helper.safe(map,cell,{Vector2i(npc.cell[0],npc.cell[1]):true},b.quest_helper.places.links(int(npc.map_id))),"no portal, occupied or blocked landing")
+ var guarded:Dictionary=b.original_quests.npc_by_id(DOCTOR)
+ for mode in ["near","arrival"]:
+  var outside:Dictionary=b.quest_helper.destination(b,guarded,mode)
+  check(int(outside.get("map_id",-1))==200,"herb helper reaches only public original entrance")
  # Event87 alone and unreviewed grinding items cannot grant medicine.
  Rules.set_flag(b.session._profile,"now",87,true)
  check(not b.original_quests.branch_for(b.original_quests.npc_by_id(DOCTOR),b.session.snapshot()).has("actions"),"event87 disabled")
