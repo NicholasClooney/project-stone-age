@@ -64,4 +64,49 @@ remote reconnect and complete disk readback into a new Backend. The real actor
 snapshot uses `species=original_N`; candidate display now reads that field rather
 than assuming the preview's separate `template_id` also exists on actor snapshots.
 `save_failed` is translated to a clear Chinese retry message. Both dedicated suites
-are registered; no full run, import or production activation is included.
+are registered; no full run or production activation is included. The separate
+GameScene acceptance below records its explicitly authorized private resource
+cache import.
+
+
+## Imported GameScene acceptance
+
+`transmigration_confirmation_game_scene_test.gd` adds the actual production
+`main.tscn`, remote-only game and original NPC sprite input at1280×900 and390×844.
+It uses C's privately imported product catalog/world (314 NPCs,339 items,452 maps,
+1717 portals), not FinalRoute.install or an injected portal/catalog fixture.
+The only initial placement is public300(102,228). The existing route driver sends
+ordinary authority movement through actual gates/portals, wins and saves both
+original battles, crosses the final door and walks near the king. Only that
+already reached position is copied into the profile location before the new
+remote scene takes its initial snapshot. There is no interior project movement
+or synthetic arrival mark. Prior quest END flags and combat strength remain
+explicit fixtures; this test does not replay the earlier spirit quest chains.
+
+The GameScene loads the actual king room, renders the original100444 NPC art,
+receives real viewport mouse input on the sprite, presents the server preview,
+and receives a real hover-checked confirmation click. The actual transaction
+returns the scene to1006(15,22), consumes the exact sacrifice once, leaves no
+blocking dialogue/input pause, and survives scene teardown and remote reconnect
+without replay. Eight rendered images cover king room, confirmation, return and
+reconnection in both sizes. Long-route establishment uses the authority movement
+driver; it is not a claim of animated client walking through every prior floor.
+The separate real-WS suite retains the full multi-device/save-failure matrix.
+
+Resource provenance: C's handoff SHA256 values are
+`ef172502a45c447d6777c30abd868ca49c90f5780e1ca4b8aeaca86520a19cb0`
+for quests/catalog.json and
+`3a8c48a515f48ff2c4ed0991783c5fcd81b9fabf2af15ae58755bb498493bb73`
+for world/manifest.json. The consumer verified these before/after an independent
+APFS COW copy. The first GameScene run correctly failed because the king PNG had
+no Godot .import sidecar in the supplied copy. After explicit coordinator approval,
+the consumer verified legacy and .godot were private directories without external
+symlinks, then ran **one private Godot headless editor resource import**. It did
+not run Python source importers or modify C/main/shared assets. The king .import
+and .ctex then existed, and the unchanged texture/click assertions passed.
+Generated sidecars/cache and proof images are not committed.
+
+The production activation descriptor is still unchanged and disabled; only test
+catalog activation labels are isolated. C's five source-wall portal declarations
+remain disabled. Prison transactions and final package full-suite/release remain
+with their assigned owners; this test does not enable or claim those outcomes.
