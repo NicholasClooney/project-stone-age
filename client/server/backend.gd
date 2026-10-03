@@ -1062,7 +1062,7 @@ func _cmd_presented(command: Dictionary) -> Dictionary:
 func _cmd_check_passage(command: Dictionary) -> Dictionary:
 	var timed_reason:=TimePassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("to_map",-1)))
 	if not timed_reason.is_empty():return _reject(timed_reason)
-	if int(command.get("to_map",-1))==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30；任务助手瞬移为项目便利。")
+	if int(command.get("to_map",-1))==10204 and automation.position_map!=10204 and int(session._profile.player.level)<30:return _reject("原仪式入口需要等级30。")
 	if int(command.get("from_map",-1))!=automation.position_map:return _reject("位置已经改变。")
 	if preload("res://scripts/passage_rules.gd").requires_permit(automation.position_map,int(command.get("to_map",-1))) and not session.has_travel_pass():
 		return _reject("穿过海底关卡需要通行证。")

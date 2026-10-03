@@ -8,10 +8,12 @@ func fresh(load_saved:bool=false):
  if load_saved:check(b.load_profile(SAVE),"real save reloads under v6 authority")
  else:
   clear_bag(b)
+  b.session.gm_raise_level(-1,30)
   b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
   preload("res://server/progression.gd").refresh(b.session._profile.player)
   b.session._profile.player.hp=b.session._profile.player.max_hp
   b.encounter_rng.seed=7
+  check(b.save(),"new level30 profile has a durable initial save before entrance encounters")
  return b
 func clear_save() -> void:
  for path in [SAVE,SAVE+".bak",SAVE+".tmp",SAVE.get_basename()+".resume.json",SAVE.get_basename()+".resume.json.tmp"]:

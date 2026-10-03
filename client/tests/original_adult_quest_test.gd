@@ -1,4 +1,5 @@
 extends "res://tests/original_herb_quest_test.gd"
+const Route=preload("res://tests/support/original_route_driver.gd")
 const JUDGE="jaruga/event/event04_1"
 const MESSENGER="jaruga/event/event04_2"
 func adult_row(b) -> Dictionary:
@@ -11,7 +12,19 @@ func tick(b) -> void:
  b.automation.tick(1.0)
  b.quest_auto.tick(b,0.21)
  if b.quest_auto.phase=="landing":b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test"})
+func trade(b,id:String)->Dictionary:
+ var npc:Dictionary=b.original_quests.npc_by_id(id)
+ var goal:Dictionary=b.quest_helper.adult_walk_destination(b,npc)
+ if goal.is_empty():return {"ok":false,"reason":"missing original adult target"}
+ var walked:Dictionary=Route.walk(b,10204,Vector2i(int(goal.cell[0]),int(goal.cell[1])),[10204])
+ if not walked.ok:return walked
+ return super.trade(b,id)
+func enter(b)->void:
+ b.session.gm_raise_level(-1,30)
+ b.automation.position_changed(10202,Vector2i(31,13))
+ check(b.handle({"type":"check_passage","from_map":10202,"to_map":10204}).ok and b.handle({"type":"report_position","map_id":10204,"cell":[2,6],"client":"test"}).ok,"level30 uses exact original entry and receives continuous route")
 func run() -> void:
+ check(preload("res://scripts/quest_auto_policy.gd").JOB_MAPS[1]==[10202,10204],"adult preloads only original gate map and ritual channel")
  var b=Backend.new()
  clear_bag(b)
  check(adult_row(b).steps.size()==3 and not adult_row(b).repeatable,"three original adult stages, no CLEAN")
@@ -20,8 +33,12 @@ func run() -> void:
  check(b.quest_helper.places.links(10202)[Vector2i(31,13)].requires_level==30,"source-backed original entrance level metadata")
  check(not b.handle({"type":"check_passage","from_map":10202,"to_map":10204}).ok,"original entrance rejects low level")
  check(not b.handle({"type":"report_position","map_id":10204,"cell":[2,6],"client":"test"}).ok,"forged low-level walk arrival rejected")
- check(b.handle({"type":"quest_visit","npc_id":JUDGE,"mode":"near"}).ok,"explicit helper bypasses entrance")
- check(trade(b,JUDGE).ok and Rules.flag(b.session._profile,"now",4),"level1 follows original LV>0 REQUEST")
+ check(b.handle({"type":"quest_visit","npc_id":JUDGE,"mode":"near"}).ok and b.automation.position_map==10202,"helper stops outside original gate even at low level")
+ check(not b.handle({"type":"quest_talk","npc_id":JUDGE}).ok and not Rules.flag(b.session._profile,"now",4),"outside helper cannot talk through level gate")
+ check(not b.handle({"type":"quest_auto_start","quest_id":1,"client":"test"}).ok,"automatic ritual does not bypass original level requirement")
+ enter(b)
+ check(not b.handle({"type":"quest_visit","npc_id":MESSENGER,"mode":"near"}).ok and b.quest_arrival.has_arrival(b,10204,b.automation.position_cell),"distant helper refusal leaves legitimate route intact")
+ check(trade(b,JUDGE).ok and Rules.flag(b.session._profile,"now",4),"original request commits only after actual entry and walking")
  b.session._profile.inventory.potion=1
  check(not trade(b,MESSENGER).ok and b.session._profile.original_items.is_empty(),"fifteen jade require fifteen independent empty slots")
  clear_bag(b)
@@ -35,14 +52,14 @@ func run() -> void:
  for id in [JUDGE,MESSENGER]:
   var npc:Dictionary=b.original_quests.npc_by_id(id)
   check(npc.map_id==10204 and FileAccess.file_exists("res://assets/legacy/"+str(npc.path)),"original NPC art and location "+id)
-  var near:Dictionary=b.quest_helper.destination(b,npc,"near")
-  var arrival:Dictionary=b.quest_helper.destination(b,npc,"arrival")
-  b.automation.position_changed(10204,Vector2i(arrival.cell[0],arrival.cell[1]),true)
+  enter(b)
+  var near:Dictionary=b.quest_helper.adult_walk_destination(b,npc)
+  var arrival:Dictionary={"cell":[2,6]}
   var path:Array=b.quest_auto.walk_path(b,Vector2i(near.cell[0],near.cell[1]))
   check(arrival.cell==near.cell or not path.is_empty(),"actual walkable component reaches "+id)
  b.free()
  for encounters in [false,true]:
-  b=Backend.new();clear_bag(b)
+  b=Backend.new();clear_bag(b);b.session.gm_raise_level(-1,30)
   # Strong ordinary character fixture; combat, policy, enemies and settlement stay real.
   b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
   preload("res://server/progression.gd").refresh(b.session._profile.player)
