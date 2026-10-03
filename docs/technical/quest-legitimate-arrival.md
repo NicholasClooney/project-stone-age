@@ -92,3 +92,11 @@ func has_arrival(backend, map_id: int, cell: Vector2i) -> bool
 免费湖入口源`mapwarp.txt:2739–2743`及`genout/dungeon03.create:67,76,94,103`含双向入口和31301↔31302；保留所有这些原边，不创造唯一收费入口。材料房mark在成功原门事务后排队、真实Warp发布才激活，重启/离组件/项目移动同通用生命周期。
 
 独立water suite 1/1通过（71秒），只用water owner生产命令driver，不自造凭证。隔离前置fixture明确为已有NOW46、1000金币和普通已持2767；成人END4、湖石2768、洞内两战、材料门与2769/END46均真实完成。此suite不声称复测从地/火/风完成后村庄REQUEST46的全串链，也不声称普通专用掉落来源已封闭。
+
+## 成人仪式与真实前置测试工具
+
+`genout/wpm_10202_31_13:1–3` 原门为 `WARP:10204,2,6 / FREE:LV>29 / MONEY:-1`（源 SHA 及导入依据见 `early-original-quests.md:178`）。10204现在属于独立adult路线；公开10202入口前可项目到达，必须通过真实等级门，之后沿原通道行走。`jaruga/event/event04_1:3–11`收15仪玉、给2418并写END4，15–23请求NOW4；`event04_2:3–10`按NOW4发15仪玉，均由同一最终事务重验路线。这里不新增原等级门以外的任务条件。
+
+此前项目助手能直接进入10204，旧`original_adult_quest_test`甚至断言“explicit helper bypasses entrance”；这是已确认的绕门证据，不能把旧fixture当合法前置。新的`OriginalRouteDriver.complete_adult`只将角色放在公开村庄门口，真实report进入、两段逐格通道、三次真实NPC交换，获取END4。测试工具不会写旗标、物品、scope或grant；初始角色等级/能力由调用方普通fixture负责。`quest_arrival_adult_test`在此基础上复用真实梦幻终战和最终奖励savefail/旧token测试；直接瞬移仪式NPC旁的请求另有拒绝断言。普通生产GameScene像素或UI自动行走未由该工具验证。
+
+集成依赖为b2c9ad1后端、3b5790a普通NPC事务、372481b服务身份。补片交付仍不表示旧成人助手/自动任务fixture已迁移；这些旧项目瞬移会被正确拒绝，需其owner调整路线后才能称功能回归全部完成。其它洞窟政策另片审核，不随此片宣称完成。
