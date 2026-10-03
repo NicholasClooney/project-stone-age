@@ -1239,3 +1239,6 @@ func _cmd_quest_auto_stop(_command: Dictionary) -> Dictionary:
 
 func _revival_transaction() -> bool:
 	return bool(session._pending.get("revival_transaction",false)) or not session._pending.get("original_revival_items",[]).is_empty()
+
+func _cmd_item_storage_transfer(command: Dictionary) -> Dictionary:
+	return GameSession.ItemStorage.transfer(self,command)

@@ -74,7 +74,7 @@ func connect_now() -> void:
 	_since_heard = 0.0
 	_since_ping = 0.0
 	_peer = WebSocketPeer.new()
-	_peer.inbound_buffer_size = 8 << 20
+	_peer.inbound_buffer_size = 32 << 20
 	_peer.outbound_buffer_size = 1 << 20
 	var error := _peer.connect_to_url(url)
 	print("[link] connecting to %s: error %d" % [url,error])
