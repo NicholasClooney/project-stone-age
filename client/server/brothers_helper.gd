@@ -16,8 +16,8 @@ static func steps(helper, backend, profile: Dictionary, quest: Dictionary) -> vo
    for i in range(1,6):ids.append("300/sb_5b%d.arg"%i)
    for i in range(1,6):ids.append("giiru/event/ev28_ed%d"%i)
   30:ids=["giiru/event/event30_1","giiru/event/event30_2","giiru/event/event30_3","giiru/event/event30_4","king/event69_1"]
-  29:ids=["giiru/event/event30_2","giiru/event/event30_7","genout/wpm_31910_8_9","giiru/event/event30_6"]
-  54:ids=["giiru/event/event30_2","king/event69_1"]
+  29:ids=["giiru/event/event30_1","giiru/event/event30_2","giiru/event/event30_7","genout/wpm_31910_8_9","giiru/event/event30_6"]
+  54:ids=["giiru/event/event30_1","giiru/event/event30_2","king/event69_1"]
  # Resolve one authoritative projection per snapshot, rather than cloning
  # the whole catalog for every sign while walking past nearby NPCs.
  backend.original_quests.refresh_npc_state()
@@ -42,3 +42,4 @@ static func steps(helper, backend, profile: Dictionary, quest: Dictionary) -> vo
  if event==54 and 2532 in profile.original_items and not 2547 in profile.original_items:quest.blocked_reason="你持有补发镜子；按原分支，归还只结束任务，不发黄金羚羊。"
 
  if event in [28,31]:preload("res://server/brothers_arrival_helper.gd").project(helper,backend,quest)
+ if event in [29,30,54]:preload("res://server/golden_arrival_helper.gd").project(helper,backend,quest)

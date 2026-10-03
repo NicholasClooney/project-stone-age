@@ -8,8 +8,11 @@ uses 14/15,60 → 14,5 (439–448) into the reward hall. All five pet choices
 remain available there: reward choice is not a matching guard number.
 The enabled `_MAP_WARPPOINT` table independently agrees at
 `gmsv/data/map/mapwarp.txt:2057–2066`; no convenience exit is substituted.
-The fixture keeps all five guard and pet assertions and walks each decoy
-exit, returns through the original gate and defeats guard five before rewards.
+The fixture keeps all five guard and pet assertions: it obtains the original
+papers/crystal once, walks guards1–5 and their four decoy exits in order, then
+uses the fifth corridor. At the legitimate hall, alternative reward cases
+restore only the actual pre-reward profile; they never assign arrival proof.
+See golden-legitimate-helper.md for the split targeted suite coverage.
 REQUEST31 is not gated on a prior final victory. Arrival marks and successful-save
 commit rules belong to the existing server arrival policy, not this helper.
 

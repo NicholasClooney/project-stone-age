@@ -29,6 +29,7 @@ func navigation_key(backend) -> Array:
   if not dream_stage.is_empty():key=key+[dream_stage]
  if 13 in backend.quest_catalog.enabled_events:key.append_array(preload("res://server/saton_cave_helper.gd").stage_key(self,backend))
  if 28 in backend.quest_catalog.enabled_events or 31 in backend.quest_catalog.enabled_events:key.append_array(preload("res://server/brothers_arrival_helper.gd").stage_key(backend))
+ if [29,30,54].any(func(event):return event in backend.quest_catalog.enabled_events):key.append_array(preload("res://server/golden_arrival_helper.gd").stage_key(backend))
  key.append_array(transmigration.stage_key(self,backend))
  return key
 
@@ -378,6 +379,7 @@ func resolve_step(backend,quest_id:int,step_id:String) -> Dictionary:
    if str(step.id)==step_id:
     if int(quest.event) in transmigration.EVENTS and not transmigration.can_visit(self,backend,int(quest.event),step):return {}
     if int(quest.event) in [28,31] and not preload("res://server/brothers_arrival_helper.gd").can_visit(self,backend,step):return {}
+    if int(quest.event) in [29,30,54] and not preload("res://server/golden_arrival_helper.gd").can_visit(self,backend,step):return {}
     if int(quest.event)==44 and not GoldenBui.can_visit(step):return {}
     if int(quest.event) in [20,21,22] and not preload("res://server/jan_cave_helper.gd").can_visit(step):return {}
     if int(quest.event)==13 and not preload("res://server/saton_cave_helper.gd").can_visit(self,backend,step):return {}
@@ -432,6 +434,7 @@ func adult_destination(backend,npc:Dictionary)->Dictionary:
 
 func destination(backend, npc: Dictionary, mode: String) -> Dictionary:
  if LegacyCave.owns(npc) and int(npc.map_id) not in range(10701,10706):return LegacyCave.destination(self,backend,npc,mode)
+ if preload("res://server/golden_arrival_helper.gd").owns(npc):return preload("res://server/golden_arrival_helper.gd").destination(self,backend,npc,mode)
  if preload("res://server/brothers_arrival_helper.gd").owns(npc):return preload("res://server/brothers_arrival_helper.gd").destination(self,backend,npc,mode)
  if npc.get("events",[]).any(func(event):return int(event)==4):return adult_destination(backend,npc)
  if npc.get("events",[]).any(func(event):return int(event) in [32,33,34]):return Dream.destination(self,backend,npc,mode)
