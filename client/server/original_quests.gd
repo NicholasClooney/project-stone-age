@@ -109,6 +109,23 @@ static func _select_pets(profile: Dictionary, predicates: Array, offset: int, us
 static func pet_ids(profile: Dictionary, raw: String) -> Array:
 	return pet_indices(profile,raw).map(func(index):return str(profile.pets[index].pet_id))
 
+## Only explicitly reviewed single-pet exchanges use this UID selection path.
+static func selectable_pet_ids(profile:Dictionary, raw:String)->Array:
+	var result:Array=[]
+	if not raw in ["PET>59-95*1","PET>42-95*1","PET>0-95*1"]:return result
+	for pet in profile.pets:
+		var uid:String=str(pet.get("pet_id",""))
+		if uid.is_empty() or profile.pets.filter(func(p):return str(p.get("pet_id",""))==uid).size()!=1:continue
+		if not pet_indices({"pets":[pet]},raw).is_empty():result.append(uid)
+	return result
+
+static func selected_pet_indices(profile:Dictionary, raw:String, selected:Array)->Array:
+	if selected.size()!=1 or not selected[0] is String:return []
+	if not selected[0] in selectable_pet_ids(profile,raw):return []
+	for index in range(profile.pets.size()):
+		if str(profile.pets[index].pet_id)==selected[0]:return [index]
+	return []
+
 func refresh_npc_state() -> bool:
 	var changed:bool=npc_state.expire()
 	changed=npc_state.spawn_areas(catalog.npcs,catalog.enabled_events) or changed
@@ -213,14 +230,22 @@ func open_branch(backend, npc:Dictionary, profile:Dictionary, branch:Dictionary)
 	if phase=="KEYWORD":
 		reply.dialogue.merge({"kind":"original_keyword","input":"text","choices":[{"id":"submit","text":"说出口令"},{"id":"no","text":"取消"}]},true)
 	if phase=="ACCEPT" and branch.actions.has("DelPet"):
-		var selected := pet_ids(profile,str(branch.actions.DelPet))
+		var selectable:bool=bool(branch.get("project_pet_selection",false))
+		var selected := selectable_pet_ids(profile,str(branch.actions.DelPet)) if selectable else pet_ids(profile,str(branch.actions.DelPet))
 		if selected.is_empty():
 			pending={}
 			return {"ok":false,"reason":"交付宠物已经改变。"}
-		pending.pet_ids=selected
+		if selectable:
+			pending.pet_candidates=selected
+			if selected.size()==1:pending.selected_pet_ids=selected.duplicate()
+			var candidates:Array=[]
+			for pet in profile.pets:
+				if str(pet.pet_id) in selected:candidates.append({"pet_id":str(pet.pet_id),"name":str(pet.name),"level":int(pet.level)})
+			reply.dialogue.merge({"kind":"original_pet_selection","pet_candidates":candidates,"selection_note":"项目补充：选择交付哪一只布鲁顿。原版行为：高档需完成成人礼及风任务、随身普通布鲁顿≥61级，不需手环；交付可选≥60级。中档≥43级、低档≥1级均需手环，不查上述完成标记。档位按全体随身宠物及原顺序判定，每次仅交一只宠物，收走所有风之手环。"},true)
+		else:pending.pet_ids=selected
 	return reply
 
-func choose(backend, token: String, choice: String, text: String = "") -> Dictionary:
+func choose(backend, token: String, choice: String, text: String = "", selected_ids: Variant = []) -> Dictionary:
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
 	var current: Dictionary=pending.duplicate(true)
 	pending={}
@@ -255,21 +280,31 @@ func choose(backend, token: String, choice: String, text: String = "") -> Dictio
 		if text!=str(branch.get("keyword","")):return {"ok":false,"reason":message(branch.texts,"AcceptMsg")}
 		var committed := transact(backend,profile,branch,"KEYWORD","",str(npc.id))
 		return {"ok":true,"closed":true} if committed.ok else committed
+	if bool(branch.get("project_pet_selection",false)):
+		if not selected_ids is Array:return {"ok":false,"reason":"无效宠物选择。"}
+		var selected:Array=current.get("selected_pet_ids",[])
+		if phase=="ACCEPT":
+			if not selected_ids.is_empty():selected=selected_ids.duplicate()
+			if selected.size()!=1 or not selected[0] in current.get("pet_candidates",[]):return {"ok":false,"reason":"请选择要交付的宠物。"}
+		elif not selected_ids.is_empty() and selected_ids!=selected:return {"ok":false,"reason":"确认后不可更换交付宠物。"}
+		if selected_pet_indices(profile,str(branch.actions.DelPet),selected).is_empty():return {"ok":false,"reason":"所选宠物已经改变，请重新确认。"}
+		current.selected_pet_ids=selected
 	if current.has("pet_ids"):
 		if pet_ids(profile,str(branch.actions.DelPet))!=current.pet_ids:return {"ok":false,"reason":"交付宠物已经改变，请重新确认。"}
 	if phase=="BATTLE" and choice=="yes":return Brothers.begin(self,backend,npc,branch)
 	if phase=="ACCEPT" and choice=="yes":
 		var reply := window(npc,branch,"reward",message(branch.texts,"ThanksMsg"),false)
 		if current.has("pet_ids"):pending.pet_ids=current.pet_ids
+		if current.has("selected_pet_ids"):pending.selected_pet_ids=current.selected_pet_ids.duplicate()
 		if current.has("spoken"):pending.spoken=current.spoken
 		return reply
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
-	var result := transact(backend,profile,branch,phase,"",str(npc.id))
+	var result := transact(backend,profile,branch,phase,"",str(npc.id),current.get("selected_pet_ids",[]))
 	if not result.ok:return result
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
-func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "") -> Dictionary:
+func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "", selected_ids: Array = []) -> Dictionary:
 	# Resolve from the explicit trusted context, never the already-cleared token.
 	var source_npc:Dictionary=npc_by_id(npc_id)
 	var arrival_reason:String=backend.quest_arrival.check_action(backend,source_npc,branch,phase)
@@ -307,7 +342,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 		var reward_count := received.size()+(1 if not random_items.is_empty() else 0)
 		var consumed := []
 		if branch.actions.has("DelPet"):
-			consumed=pet_indices(candidate,str(branch.actions.DelPet))
+			consumed=selected_pet_indices(candidate,str(branch.actions.DelPet),selected_ids) if bool(branch.get("project_pet_selection",false)) else pet_indices(candidate,str(branch.actions.DelPet))
 			if consumed.is_empty():return {"ok":false,"reason":"交付宠物不符合原条件。"}
 		if branch.actions.has("DelStone"):
 			var fee := stone_cost(profile,str(branch.actions.DelStone))

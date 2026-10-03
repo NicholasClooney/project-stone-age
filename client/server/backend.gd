@@ -1214,7 +1214,7 @@ func _cmd_quest_talk(command: Dictionary) -> Dictionary:
 	return original_quests.talk(self,str(command.get("npc_id","")))
 
 func _cmd_quest_choose(command: Dictionary) -> Dictionary:
-	return original_quests.choose(self,str(command.get("token","")),str(command.get("choice","")),str(command.get("text","")))
+	return original_quests.choose(self,str(command.get("token","")),str(command.get("choice","")),str(command.get("text","")),command.get("pet_ids",[]))
 
 func _cmd_quest_close(command: Dictionary) -> Dictionary:
 	if original_quests.pending.is_empty() or str(command.get("token",""))!=str(original_quests.pending.token):return _reject("对话已过期。")
