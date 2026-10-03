@@ -1,4 +1,5 @@
 extends SceneTree
+const Wait=preload("res://tests/support/wait.gd")
 var failures:=0
 func check(value:bool,note:String)->void:
 	if value:print("PASS: "+note)
@@ -8,7 +9,7 @@ func run()->void:
 	var world=load("res://scenes/main.tscn").instantiate()
 	world.profile_persistence=false
 	root.add_child(world)
-	await process_frame
+	check(await Wait.until(self,func():return not world.data.is_empty() and not world.area_transition_busy),"initial world ready")
 	world.muted=true
 	var menu=world.dev_map_overview
 	menu.open_map()
@@ -30,8 +31,9 @@ func run()->void:
 	root.push_input(click,true)
 	click.pressed=false
 	root.push_input(click,true)
-	check(world.cell==safe and not menu.visible and not world.paused_input,"actual map click teleports and closesmodal")
+	check(await Wait.until(self,func():return world.cell==safe and not menu.visible and not world.paused_input),"actual map click teleports and closesmodal")
 	world.load_area_id(200,Vector2i(570,377))
+	check(await Wait.until(self,func():return int(world.data.get("map_id",-1))==200 and not world.area_transition_busy),"large island asynchronous map load finished")
 	menu=world.dev_map_overview
 	menu.open_map()
 	check(menu.map_dimensions==Vector2i(800,1200),"entirelargeisland represented")

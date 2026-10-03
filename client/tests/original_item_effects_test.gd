@@ -58,7 +58,22 @@ func run()->void:
    if step.has("reward_effects"):
     advertised=true
     check(step.reward_effects[0].effects[0].has("active"),"server helper exports resolved active flags")
-   if step.has("effects_notice"):check(str(step.label).contains("未生效"),"existing helper UI receives explicit unsupported reward label")
+   if step.has("effects_notice"):
+    var notice:=str(step.effects_notice)
+    check(str(step.label).contains(notice),"helper label includes its exact effect notice")
+    var random_items:Array=Quests.item_list(str(step.get("source",{}).get("actions",{}).get("GetRandItem","")))
+    if not random_items.is_empty():
+     var unique:Dictionary={}
+     for item_id in random_items:unique[item_id]=true
+     check(notice.contains("原奖池%d槽、%d种物品"%[random_items.size(),unique.size()]) and notice.contains("重复槽保持原权重") and notice.contains("完整效果见物品说明"),"random reward notice retains exact pool cardinality and weighted-slot semantics")
+     check(notice.length()<400,"random reward summary is bounded rather than enumerating all item effects")
+     var inactive:bool=step.get("reward_effects",[]).any(func(reward):return reward.effects.any(func(effect):return not effect.get("active",false)))
+     check(notice.contains("未实现效果类别") if inactive else notice.contains("无未实现效果标记"),"pool summary accurately distinguishes supported equipment from inactive categories")
+    else:
+     for reward in step.get("reward_effects",[]):
+      var definition:Dictionary=b.quest_catalog.items.get(str(reward.item_id),{})
+      for line in Effects.lines(definition):
+       check(notice.contains(line),"deterministic reward explicitly retains each unsupported effect")
  check(advertised,"real original helper rewards include effect source metadata")
  b.queue_free();await process_frame
  remove_files("user://effect-equipment.json");remove_files("user://effect-old-equipment.json")

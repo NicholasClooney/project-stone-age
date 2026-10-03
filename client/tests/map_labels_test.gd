@@ -1,4 +1,5 @@
 extends SceneTree
+const Wait=preload("res://tests/support/wait.gd")
 ## 地图导航 names every marker: exits (manifest portals and the not yet
 ## imported caves/mountains), NPCs and Lv.1 pet areas, visible without zooming.
 const Encyclopedia = preload("res://scripts/pet_encyclopedia.gd")
@@ -21,8 +22,9 @@ func click(menu,point: Vector2) -> void:
 		var event:=InputEventMouseButton.new()
 		event.button_index=MOUSE_BUTTON_LEFT
 		event.pressed=pressed
-		event.position=point
-		menu._gui_input(event)
+		event.position=menu.get_global_transform_with_canvas()*point
+		event.global_position=event.position
+		root.push_input(event,true)
 
 func run():
 	# Pure helpers.
@@ -83,18 +85,18 @@ func run():
 	# Clicking a name travels to its marker (DEV teleport on the same map).
 	var spawn: Array=game.world_catalog.info(300).spawn
 	game.load_area_id(300,Vector2i(spawn[0],spawn[1]))
-	await process_frame;await process_frame
+	check(await Wait.until(self,func():return int(game.data.get("map_id",-1))==300 and not game.area_transition_busy),"original island asynchronous load settles")
 	menu=game.dev_map_overview
 	menu.open_map();menu.walk_mode=false;menu.select_category(0)
 	bangino=find_label(menu,"pet","邦奇诺")
 	var node: Label=bangino.node
 	click(menu,menu.view_rect.position+node.position+node.size*Vector2(0.8,0.5))
 	var target: Vector2i=bangino.poi.cell
-	check(not menu.visible and game.cell==target,"clicking the 邦奇诺 name teleports to its verified landing %s (at %s)"%[target,game.cell])
+	check(await Wait.until(self,func():return not menu.visible and game.cell==target),"clicking the 邦奇诺 name teleports to its verified landing %s (at %s)"%[target,game.cell])
 	menu.open_map();menu.walk_mode=false;menu.select_category(0)
 	var village: Dictionary=find_label(menu,"place","福尔德村")
 	click(menu,menu.cell_to_point(village.cell))
-	check(not menu.visible and game.cell.distance_to(village.cell)<3,"clicking a place dot still travels beside it (%s)"%game.cell)
+	check(await Wait.until(self,func():return not menu.visible and game.cell.distance_to(village.cell)<3),"clicking a place dot still travels beside it (%s)"%game.cell)
 	game.process_mode=Node.PROCESS_MODE_DISABLED
 	game.music.stop();game.effect.stop();game.queue_free()
 	await process_frame;await create_timer(0.3).timeout

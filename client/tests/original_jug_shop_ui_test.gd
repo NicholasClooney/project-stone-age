@@ -26,18 +26,25 @@ func run()->void:
  world.world_catalog.set_quest_catalog(catalog);root.add_child(world)
  if not await ready(func():return not world.data.is_empty() and world.link.online,"jug phone remote world"):return
  if not check(world.backend==null and await Wait.settle(self,world),"jug UI remote authority only"):return
- if not await place_and_click(Jug.ID):return
+ # This public shop fixture already stands adjacent to the original NPC.
+ # The inherited DojoRoute.near uses y22 for dojo lobbies, which moved this
+ # unrelated shop fixture eleven cells away from its y11 merchant.
+ if not check(host.automation.position_cell==Vector2i(10,12) and world.cell==Vector2i(10,12),"Public shop adjacent source position settled"):return
+ if not await click_source(Jug.ID):return
  if not bounded():return
  var controls=world.world_travel.quest_dialogue.service_controls
  if not check(controls.buttons[0].text.contains("1150") and controls.buttons[0].size.x<=348,"purchase full price fits service controls"):return
  await proof("jug-01-390-purchase-confirm")
  world.world_travel.quest_dialogue.service_scroll.ensure_control_visible(controls.buttons[0])
- await RenderingServer.frame_post_draw
+ if not await ready(func():
+  var scroll:ScrollContainer=world.world_travel.quest_dialogue.service_scroll
+  scroll.ensure_control_visible(controls.buttons[0])
+  return scroll.get_global_rect().encloses(controls.buttons[0].get_global_rect()),"Purchase button scroll layout settled"):return
  await proof("jug-01b-390-price-button")
  if not await choose("buy_one"):return
  if not check(host.session.snapshot().player.gold==1150 and host.session.snapshot().original_items==[2708],"phone actual click buys one UID jug for1150"):return
  await proof("jug-02-390-purchased")
- if not await place_and_click(Jug.ID) or not await choose("no"):return
+ if not await click_source(Jug.ID) or not await choose("no"):return
  if not check(host.session.snapshot().player.gold==1150 and host.session.snapshot().original_items==[2708],"phone cancel preserves purchase"):return
  world.link.close();world.music.stop();world.effect.stop();world.queue_free();server.stop();server.queue_free();host.queue_free();await process_frame
  print("ORIGINAL JUG SHOP UI: %d failures"%failures);quit(1 if failures else 0)
