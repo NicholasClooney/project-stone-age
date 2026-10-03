@@ -1,0 +1,343 @@
+{
+  "version": 1,
+  "sources": {
+    "gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "gmsv/item/item.c": "6982fbc17350d5ee438fa8709e5fd653c59efc369e3b6c96baa97b876b519471",
+    "gmsv/include/item.h": "64a8616bac3607b8494b1b5efa0b4c3a3e8018af44228431f248762055a559b9",
+    "gmsv/include/version.h": "081d634dd5c9f87ff6ce28952c96a2e110b51158daadd52dad15a32972da7d94",
+    "gmsv/npc/npc_exchangeman.c": "89fbfab08d473d6dc772cac08d93e9f9f4b100fbe04a211314e7293bcc9d4435",
+    "gmsv/char/char_item.c": "37a4440159a26ca9a4c394958f66ca673044d0037bb6b57fcabc9e0746b79539"
+  },
+  "items": {
+    "1238": {
+      "id": 1238,
+      "source_line": 1233,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "1249": {
+      "id": 1249,
+      "source_line": 1244,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11803": {
+      "id": 11803,
+      "source_line": 6812,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11804": {
+      "id": 11804,
+      "source_line": 6813,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11805": {
+      "id": 11805,
+      "source_line": 6814,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11806": {
+      "id": 11806,
+      "source_line": 6815,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11813": {
+      "id": 11813,
+      "source_line": 6822,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11814": {
+      "id": 11814,
+      "source_line": 6823,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11815": {
+      "id": 11815,
+      "source_line": 6824,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11824": {
+      "id": 11824,
+      "source_line": 6833,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11833": {
+      "id": 11833,
+      "source_line": 6842,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11834": {
+      "id": 11834,
+      "source_line": 6843,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11835": {
+      "id": 11835,
+      "source_line": 6844,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11836": {
+      "id": 11836,
+      "source_line": 6845,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11843": {
+      "id": 11843,
+      "source_line": 6852,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11844": {
+      "id": 11844,
+      "source_line": 6853,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11845": {
+      "id": 11845,
+      "source_line": 6854,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11846": {
+      "id": 11846,
+      "source_line": 6855,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11853": {
+      "id": 11853,
+      "source_line": 6862,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11855": {
+      "id": 11855,
+      "source_line": 6864,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11856": {
+      "id": 11856,
+      "source_line": 6865,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11864": {
+      "id": 11864,
+      "source_line": 6873,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11865": {
+      "id": 11865,
+      "source_line": 6874,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11875": {
+      "id": 11875,
+      "source_line": 6884,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11883": {
+      "id": 11883,
+      "source_line": 6892,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11884": {
+      "id": 11884,
+      "source_line": 6893,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11895": {
+      "id": 11895,
+      "source_line": 6904,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11902": {
+      "id": 11902,
+      "source_line": 6911,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11904": {
+      "id": 11904,
+      "source_line": 6913,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11907": {
+      "id": 11907,
+      "source_line": 6916,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11926": {
+      "id": 11926,
+      "source_line": 6935,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "11936": {
+      "id": 11936,
+      "source_line": 6945,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    },
+    "12052": {
+      "id": 12052,
+      "source_line": 7061,
+      "columns": [
+        "",
+        "1"
+      ],
+      "creation_quantity": 1,
+      "audit": "original-single-item-v1"
+    }
+  }
+}
