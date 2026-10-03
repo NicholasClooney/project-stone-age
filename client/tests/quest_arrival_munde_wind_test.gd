@@ -12,7 +12,8 @@ func run() -> void:
 	check(Policy.action_marks(sage,{"source_branch_index":0})==["munde_final"] and Policy.action_marks(sage,{"source_branch_index":2})==["munde_final"] and Policy.action_marks(sage,{"source_branch_index":3})==["munde_final"],"legacy stones and wind replacement/new lute share original Munde access")
 	for map_id in range(11201,11216):
 		check(Policy.scope(map_id)=="wind","all actual wind maps share continuous route without invented numeric order")
-	check(Policy.scope(100).is_empty() and Policy.scope(32021).is_empty(),"public return and staged spirit king do not acquire an active policy")
+	check(Policy.scope(100).is_empty(),"public wind return adds no cave scope")
+	check(Policy.scope(32021)=="transmigration" and Policy.action_marks({"source_script":"777/ten.arg"},{})==["transmigration_king"],"king uses its own final-cave scope and final-room mark, never wind proof")
 	check(Policy.script_root("genout/wpm_100_278_325",11201) and not Policy.portal_root(100,11201),"wind root requires original gate transaction, scenic portal is insufficient")
 	check(Policy.battle_mark("100/sb_kgi.arg")=="wind_final" and Policy.battle_mark("100/sb_kbu.arg").is_empty(),"middle guard cannot issue summit proof")
 	for script in ["sainasu/event/genou_1","sainasu/event/genou_2"]:
