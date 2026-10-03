@@ -9,6 +9,7 @@ var status_timer := 0.0
 var status_pending := false
 var status: Dictionary = {}
 var feedback := ""
+var feedback_revision := 0
 
 func connected(world) -> bool:
 	return world.link!=null and (world.link.is_local() or world.link.online)
@@ -25,7 +26,7 @@ func pause(world) -> void:
 	canceled = true
 	if pause_sent or not connected(world):return
 	pause_sent = true
-	world.link.request({"type":"stationary_pause"})
+	world.link.request({"type":"stationary_pause","paused_input":world.paused_input,"battle_visible":world.battle_view.visible,"menu_visible":world.helper_menu.visible})
 
 func refresh_status(world, menu) -> void:
 	if status_pending or not connected(world):return
@@ -60,6 +61,7 @@ func toggle(world, menu, enabled: bool) -> void:
 				menu.close_menu()
 		else:
 			feedback = str(reply.get("reason",""))
+			if not feedback.is_empty():feedback_revision += 1
 			if menu.visible:menu.rebuild();menu._center())
 	if menu.visible:menu.rebuild();menu._center()
 

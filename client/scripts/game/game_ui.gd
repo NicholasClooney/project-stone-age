@@ -143,6 +143,9 @@ func build_ui() -> void:
 	game.helper_menu = preload("res://scripts/helper_menu.gd").new()
 	root.add_child(game.helper_menu)
 	game.helper_menu.configure(game)
+	var stationary_chip=preload("res://scripts/stationary_encounter_chip.gd").new()
+	stationary_chip.configure(game)
+	root.add_child(stationary_chip)
 	game.remote_players = preload("res://scripts/remote_players.gd").new()
 	game.remote_players.name = "RemotePlayers"
 	game.remote_players.configure(game)

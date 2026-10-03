@@ -201,7 +201,11 @@ func load_profile(path: String) -> bool:
 
 func handle(command: Dictionary) -> Dictionary:
 	_depth += 1
+	stationary.diagnostic_command = command
 	var reply := _handle(command)
+	if str(command.get("type","")).begins_with("stationary_") and not bool(reply.get("ok",false)):
+		stationary.audit(self,"reject",str(reply.get("reason","")),command)
+	stationary.diagnostic_command = {}
 	_depth -= 1
 	_record_releases()
 	_flush()
