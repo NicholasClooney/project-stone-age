@@ -12,6 +12,17 @@ var own_route:=false
 var auto_requested:=false
 var auto_reported:=false
 func configure(owner: Node) -> void:world=owner
+func auto_status() -> String:
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	if auto_pending():return "正在准备任务地图…"
+	if str(auto.get("phase",""))=="manual":
+		return str(auto.get("pause_reason","")) if not str(auto.get("pause_reason","")).is_empty() else str(auto.get("message",""))
+	var message:=str(auto.get("message",""))
+	if auto.get("detached",false):return "等待设备确认当前位置 · "+message
+	return message
+func auto_mode() -> String:
+	if auto_pending():return "自动任务准备中"
+	return "连续原路自动推进" if world.state.derived.get("quest_auto",{}).get("strict_walk",false) else "自动任务 · 便利导航模式"
 func auto_pending() -> bool:
 	return active and phase in ["auto_download","auto_request"]
 func cancel_navigation() -> void:
@@ -112,8 +123,8 @@ func start_auto(quest_id: int) -> void:
 func _process(_delta: float) -> void:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false):
-		world.last_adventure_message=str(auto.get("message",""))
-		if (world.link.is_local() or world.link.online) and ((world.battle_view.visible and str(auto.get("phase",""))!="battle") or world.party_locked()):cancel("自动任务已停止。")
+		world.last_adventure_message=auto_status()
+		if (world.link.is_local() or world.link.online) and ((world.battle_view.visible and not auto.get("strict_walk",false) and str(auto.get("phase",""))!="battle") or world.party_locked()):cancel("自动任务已停止。")
 		var landing:bool=str(auto.get("phase",""))=="landing" or auto.get("detached",false)
 		if not landing:auto_reported=false
 		var destination:Dictionary=world.state.automation.get("position",{}) if auto.get("detached",false) else auto.get("target",{})
