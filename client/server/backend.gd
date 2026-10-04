@@ -1310,7 +1310,10 @@ func _emit(message: Dictionary) -> void:
 		var warp:Array=source.get("warp",[])
 		if warp.size()==3 and quest_auto.Motion.same_integer(message.get("map_id"),warp[0]) and quest_auto.Motion.cell(message.get("cell"))==[warp[1],warp[2]]:
 			source.position_claimed=true
-			queued={"_source_position":source,"message":message}
+			# Prepare authority before later snapshots are constructed. Delivery
+			# still owns the final capability check and the original plain event.
+			var packet:Dictionary=quest_auto.source_position_packet(self,source,message)
+			queued={"_source_position":source,"message":message,"packet":packet}
 	if _depth > 0:
 		_queue.append(queued)
 		return
@@ -1321,8 +1324,8 @@ func _deliver_event(queued:Dictionary)->void:
 	if queued.has("_source_position"):
 		var source:Dictionary=queued._source_position
 		message=queued.message
-		if quest_source_call_live(source):
-			message=quest_auto.source_position_packet(self,source,message)
+		var packet:Dictionary=queued.packet
+		if quest_auto.source_position_current(self,source,packet):message=packet
 	# Observers are independent manual calls, even at depth zero. They must
 	# never inherit a save capability, suppress a manual tail or steal a Warp.
 	var source_scope:Dictionary=_quest_source_call
