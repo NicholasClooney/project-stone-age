@@ -905,7 +905,13 @@ func advance_source(b)->void:
  if not checked.ok:handoff(b,str(checked.reason));return
  if source_frame!=null:
   source_frame.cancel();source_frame=null
- if identity.step_id!=str(proposal.id):clear_motion();navigation.clear()
+ if identity.step_id!=str(proposal.id):
+  var previous_identity:Dictionary=identity.checkpoint()
+  var previous_connection:int=connection
+  # Clearing an old receipt must not follow a stale automation position.
+  b.emit_event({"type":"auto_status","status":b.automation.status()})
+  if not running or detached or connection!=previous_connection or identity.checkpoint()!=previous_identity:return
+  clear_motion();navigation.clear()
  step=proposal.duplicate(true);identity.select_step(str(step.id))
  execution_mode="A"
  if step.action=="walk_portal":
