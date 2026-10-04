@@ -131,6 +131,8 @@ const RESUME_INTERVAL_MSEC := 10000
 var resume_clock: Callable = Time.get_ticks_msec
 ## Writes of the resume file, for tests.
 var resume_writes := 0
+## Successful persistence boundaries for synchronous quest transactions.
+var quest_save_serial:=0
 var _resume_key := ""
 var _resume_written_msec := -1
 static var _map_names: Dictionary = {}
@@ -398,6 +400,7 @@ func _handle(command: Dictionary) -> Dictionary:
 	if not position_error.is_empty():return {"ok":false,"reason":position_error,"seq":command.get("seq",0),"type":"rejected"}
 	stationary.command(self,type)
 	var quest_conflict:bool=quest_auto.running and type in ["quest_talk","quest_choose","quest_close","quest_visit","quest_discard"]
+	if quest_conflict and type in ["quest_choose","quest_close"] and quest_auto.accepts_waiting_command(self,command):quest_conflict=false
 	if quest_auto.running:
 		if type in ["warp","auto","auto_start","flow_start","hunt_start","start_hunt","open_battle","begin_battle","start_battle_config","start_wild_battle_config","start_wild_battle","field_step","wild_encounter"]:quest_auto.stop(self,"其他操作停止了自动任务。")
 	var before_position := [automation.position_map,automation.position_cell]
@@ -961,6 +964,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			session._pending = pending_before
 			session.capture_events = capture_events_before
 			stationary.settled(self,state,false)
+			if quest_auto.running and quest_auto.phase=="waiting_boss":quest_auto.handoff(self,"守卫战保存失败，停止自动任务。")
 			state.settled = false
 			state.settlement_error = "复活道具战保存失败，已回滚道具、体力与奖励；再次结束战斗可重试。" if revival_transaction else "任务战保存失败，已回滚奖励与传送；请检查保存位置后再次结束战斗。" if quest_transaction else "只抓不练捕获保存失败，已回滚库存与奖励；请检查保存位置后再次结束战斗。"
 			state.xp = 0;state.gold = 0;state.result_summary = []
@@ -1201,11 +1205,16 @@ func presence_state() -> Dictionary:
 # ---- persistence and events ------------------------------------------------
 
 func save() -> bool:
-	if save_path.is_empty():return true
+	if save_path.is_empty():
+		quest_save_serial+=1
+		return true
 	var payload := JSON.stringify(session.snapshot())
-	if payload==last_saved_payload:return true
+	if payload==last_saved_payload:
+		quest_save_serial+=1
+		return true
 	if not session.save_game(save_path):return false
 	last_saved_payload = payload
+	quest_save_serial+=1
 	return true
 
 func publish() -> void:
@@ -1292,9 +1301,14 @@ func _cmd_quest_talk(command: Dictionary) -> Dictionary:
 	return original_quests.talk(self,str(command.get("npc_id","")))
 
 func _cmd_quest_choose(command: Dictionary) -> Dictionary:
+	if quest_auto.running:return quest_auto.choose_waiting(self,command)
 	return original_quests.choose(self,str(command.get("token","")),str(command.get("choice","")),str(command.get("text","")),command.get("pet_ids",[]))
 
 func _cmd_quest_close(command: Dictionary) -> Dictionary:
+	if quest_auto.running:
+		if not quest_auto.accepts_waiting_command(self,command):return _reject("自动任务等待已过期。")
+		quest_auto.stop(self,"已取消奖励选择，停止自动任务。")
+		return {"ok":true,"closed":true}
 	if original_quests.pending.is_empty() or str(command.get("token",""))!=str(original_quests.pending.token):return _reject("对话已过期。")
 	original_quests.pending={}
 	return {"ok":true,"closed":true}
@@ -1369,6 +1383,9 @@ func _restore_wood_battle(saved: Dictionary) -> bool:
 	battle_open = true
 	_publish()
 	return true
+
+func _cmd_quest_auto_continue(command:Dictionary)->Dictionary:
+	return quest_auto.continue_boss(self,command)
 
 func _cmd_quest_auto_start(command: Dictionary) -> Dictionary:
 	return quest_auto.start(self,command)
