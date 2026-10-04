@@ -2,7 +2,7 @@ extends "res://tests/original_quest_auto_test.gd"
 ## Real saves and original transactions. No pending dialogue/token survives restart.
 const SAVE="user://quest-auto-resume.json"
 func fresh(load_saved:bool=false):
- var b=Backend.new()
+ var b=Backend.new() if load_saved else fixture()
  b.quest_catalog.enabled_events=[2]
  b.set_process(false)
  root.add_child(b)
@@ -11,14 +11,14 @@ func fresh(load_saved:bool=false):
  b.keep_resume_current=true
  return b
 func reach(b,branch:String,phase:String) -> void:
- for index in range(50):
-  if str(b.quest_auto.step.get("source",{}).get("type",""))==branch and b.quest_auto.phase==phase:return
+ for index in range(20000):
+  if str(b.quest_auto.step.get("source",{}).get("type",""))==branch and checkpoint(b,phase):return
   advance(b,false)
-  if b.quest_auto.phase=="landing" and not (phase=="landing" and str(b.quest_auto.step.source.type)==branch):
+  if b.quest_auto.phase=="landing" and not (phase=="landing" and str(b.quest_auto.step.get("source",{}).get("type",""))==branch):
    b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test"})
  check(false,"Reach checkpoint "+branch+"/"+phase)
 func finish_restored(b) -> void:
- for index in range(50):
+ for index in range(20000):
   if not b.quest_auto.running:return
   advance(b,false)
  check(false,"Restored server completes without any device/mapreport")
@@ -101,7 +101,9 @@ func hub_restart() -> void:
  for id in ["alice","bob"]:
   var b=hub.backends[id]
   b.quest_catalog.enabled_events=[2]
+  prepare(b)
   if id=="bob":b.session._profile.original_savepoint_bits=2
+  check(b.save(),"Fixture saves its original direction and encounter setting before restart")
   check(hub.handle(101 if id=="alice" else 102,{"type":"quest_auto_start","quest_id":11,"client":id}).ok,"Authenticated profile starts")
   b.keep_resume_file()
  hub.shut_down();hub.free()

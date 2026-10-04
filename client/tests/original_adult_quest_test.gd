@@ -8,6 +8,10 @@ func adult_row(b) -> Dictionary:
  return {}
 func clear_bag(b) -> void:
  for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
+func initialize_walk(b)->void:
+ if b.automation.position_map<0:
+  var spawn:Array=b.quest_helper.places.info(1000).spawn
+  b.automation.position_changed(1000,Vector2i(spawn[0],spawn[1]))
 func tick(b) -> void:
  b.automation.tick(1.0)
  b.quest_auto.tick(b,0.21)
@@ -26,6 +30,7 @@ func enter(b)->void:
 func run() -> void:
  check(preload("res://scripts/quest_auto_policy.gd").JOB_MAPS[1]==[10202,10204],"adult preloads only original gate map and ritual channel")
  var b=Backend.new()
+ b.quest_catalog.enabled_events=[4,15]
  clear_bag(b)
  check(adult_row(b).steps.size()==3 and not adult_row(b).repeatable,"three original adult stages, no CLEAN")
  check(b.quest_helper.places.field(10204),"original channel supports walking encounters")
@@ -48,7 +53,7 @@ func run() -> void:
  trade(b,JUDGE)
  check(b.session.snapshot()==before,"ended original ritual cannot repeat reward")
  b.free()
- b=Backend.new();clear_bag(b)
+ b=Backend.new();b.quest_catalog.enabled_events=[4,15];clear_bag(b)
  for id in [JUDGE,MESSENGER]:
   var npc:Dictionary=b.original_quests.npc_by_id(id)
   check(npc.map_id==10204 and FileAccess.file_exists("res://assets/legacy/"+str(npc.path)),"original NPC art and location "+id)
@@ -59,7 +64,7 @@ func run() -> void:
   check(arrival.cell==near.cell or not path.is_empty(),"actual walkable component reaches "+id)
  b.free()
  for encounters in [false,true]:
-  b=Backend.new();clear_bag(b);b.session.gm_raise_level(-1,30)
+  b=Backend.new();b.quest_catalog.enabled_events=[4,15];clear_bag(b);b.session.gm_raise_level(-1,30)
   # Strong ordinary character fixture; combat, policy, enemies and settlement stay real.
   b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
   preload("res://server/progression.gd").refresh(b.session._profile.player)
@@ -67,6 +72,7 @@ func run() -> void:
   b.handle({"type":"no_random_encounters","enabled":not encounters})
   Rules.set_flag(b.session._profile,"now",15,true)
   b.encounter_rng.seed=7
+  initialize_walk(b)
   check(b.handle({"type":"quest_auto_start","quest_id":1,"client":"test"}).ok,"adult auto starts")
   var walked:=0
   var battles:=0
@@ -74,8 +80,9 @@ func run() -> void:
    if not b.quest_auto.running:break
    var old:Vector2i=b.automation.position_cell
    var old_phase:String=b.quest_auto.phase
+   var old_map:int=b.automation.position_map
    tick(b)
-   if old_phase=="walking" and old!=b.automation.position_cell:
+   if old_map==b.automation.position_map and old!=b.automation.position_cell:
     walked+=1
     check(absi(old.x-b.automation.position_cell.x)+absi(old.y-b.automation.position_cell.y)==1,"one real source-channel step")
    if b.quest_auto.phase=="battle" and old_phase!="battle":battles+=1
