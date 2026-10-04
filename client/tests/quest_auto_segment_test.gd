@@ -69,7 +69,7 @@ func run()->void:
  check(cursor.packet(identity,2,true).is_empty(),"Cleared cursor has no replay packet")
  ack_matrix(identity)
  var b=Backend.new()
- check(b.quest_auto.snapshot(b).available_modes==["A"] and b.quest_auto.snapshot(b).effective_mode=="A","Cursor preparation does not enable B/C")
+ check(b.quest_auto.snapshot(b).available_modes==["A","B","C"] and b.quest_auto.snapshot(b).effective_mode=="A","Accepted modes still default to A")
  b.quest_auto.segment.begin(proposal(),"C",origin,identity,4)
  b.quest_auto.clear_motion()
  check(b.quest_auto.segment.proposal.is_empty(),"Cancel/detach/battle clear_motion also drops pending tail")

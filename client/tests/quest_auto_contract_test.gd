@@ -36,7 +36,7 @@ func run()->void:
  var origin:Vector2i=b.automation.position_cell
  b.quest_auto.tick(b,0.21)
  check(b.automation.position_map==1000 and (b.automation.position_cell-origin).length()<=1.0,"Default A cannot jump to far shell NPC")
- check(b.quest_auto.snapshot(b).available_modes==["A"] and b.quest_auto.snapshot(b).settings.mode=="C","Unavailable requested C remains explicit with effective A")
+ check(b.quest_auto.snapshot(b).available_modes==["A","B","C"] and b.quest_auto.snapshot(b).settings.mode=="C","Accepted requested C stays explicit, with protected segments still walking")
  b.quest_auto.stop(b)
  var state=State.new()
  state.begin();state.select_step("reward:one");state.wait_for("reward","token","npc","character")
