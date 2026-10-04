@@ -474,3 +474,24 @@ regeneration equality and protected-pixel assertions passed. These mechanical
 checks do not certify all rider semantics. No importer, riding mapping,
 Godot invocation or main/live asset mutation is included. Processing timestamps
 and separate wall/child-CPU counters remain in `offline-processing.jsonl`.
+
+## Rear landing and diagonal wing drafts: 535 unique rules
+
+Poses 039–041 add 36 records, for 535 unique bitmaps (3881 absent), with zero
+complete semantic receipts. Each twelve-body source/change sheet and both final
+reference revision crops were viewed, and the ten non-reference outputs per
+pose remain hash-identical to the reviewed candidate outputs. Rear pose 039
+covers the dragon rump and legs while retaining original white tail-tip/claws.
+Diagonal poses 040/041 separate the rider's reaching hands and white garment
+from the ventral cheek; the large dorsal wing regions receive red body colour.
+Contact edges still retain unresolved yellow and must be finished before
+production use. No generated output or bitmap source enters Git.
+
+For 281425 (pose040), a suspected lower-hair change was checked against the
+coordinate source and a new independent hair/braid polygon. No actual candidate
+change intersects that polygon. The nearby changes are on the visible wing and
+dragon back; this inspection is not reported as a restored rider-colour bug.
+The guard is retained as explicit protection. Latest outputs are
+`pose039-refined`, `pose040-refined`, `pose041-refined`, each with a corresponding
+`*-final-revision` directory and source/output hashes. All processing was
+single-process and logged; no Godot, import, long suite or live action ran.
