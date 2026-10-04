@@ -2,6 +2,7 @@ extends RefCounted
 ## Audited public corridors, not a map-ID permission list. Each corridor is
 ## the original A path between an exact original landing and the next portal.
 ## Only its exact suffix may accelerate; doors themselves always remain walk.
+const Extra=preload("res://server/quest_auto_public_corridors.gd")
 const Arrival=preload("res://server/quest_arrival_policy.gd")
 const LANES=[
  {"id":"samgir-marinas-field","map":100,"start":Vector2i(637,494),"door":Vector2i(78,614),"to_map":2000,"target":Vector2i(72,33),"source":"100warp.create:169"},
@@ -13,8 +14,9 @@ const LANES=[
  {"id":"haro-tamutamu-field","map":200,"start":Vector2i(452,162),"door":Vector2i(427,94),"to_map":3100,"target":Vector2i(33,79),"source":"200warp.create:439"},
 ]
 var cached:Dictionary={}
+func lanes()->Array:return LANES+Extra.LANES
 func public_cell(nav,b,map_id:int,cell:Vector2i)->bool:
- if map_id not in [100,200,1100,3100] or not Arrival.scope(map_id).is_empty():return false
+ if map_id not in [100,200,1100,3100,5000] or not Arrival.scope(map_id).is_empty():return false
  if Arrival.approach_cell("transmigration_entry",map_id,cell):return false
  if b.quest_helper.places.links(map_id).has(cell):return false
  return nav.floor_cell(b,map_id,cell,nav.blocked(b,map_id))
@@ -22,6 +24,7 @@ func corridor(nav,b,lane:Dictionary)->Array:
  var links:Dictionary=b.quest_helper.places.links(int(lane.map))
  var door:Dictionary=links.get(lane.door,{})
  if door.is_empty() or not nav.usable(b,door) or door.has("gate_source") or door.has("requires_time") or str(door.get("source",""))!=lane.source or int(door.to_map)!=int(lane.to_map) or Vector2i(door.target[0],door.target[1])!=lane.target:return []
+ if lane.has("link") and not Extra.source_valid(b,lane,door):return []
  var occupied:Dictionary=nav.blocked(b,int(lane.map))
  var signature:=str(lane.id)+str(hash(links))+str(hash(occupied))
  if cached.has(signature):return cached[signature]
@@ -42,8 +45,10 @@ func audit(nav,b,route:Array)->Dictionary:
  if not public_cell(nav,b,map_id,origin) or route.size()<3:return {}
  var portal:Dictionary=route[-1].get("portal",{})
  if portal.is_empty():return {}
- for lane in LANES:
+ for lane in lanes():
   if int(lane.map)!=map_id or Vector2i(portal.cell[0],portal.cell[1])!=lane.door or int(portal.to_map)!=int(lane.to_map):continue
+  if lane.has("link") and not Extra.same(portal,lane.link):continue
+  if route[-2]!={"map_id":map_id,"cell":[lane.door.x,lane.door.y]}:continue
   var cells:=corridor(nav,b,lane)
   var index:=-1
   for cursor in range(cells.size()):
@@ -67,7 +72,7 @@ func validate_audit(nav,b,segment:Dictionary)->bool:
  if from.size()!=2:return false
  var expected:Vector2i=Vector2i(from[0],from[1]) if skipped==0 else Vector2i(points[skipped-1].cell[0],points[skipped-1].cell[1])
  if b.automation.position_cell!=expected or b.automation.position_map!=int(segment.get("from_map",-1)):return false
- for lane in LANES:
+ for lane in lanes():
   if lane.id!=audit_id or int(lane.map)!=b.automation.position_map:continue
   var cells:=corridor(nav,b,lane)
   var index:=-1
