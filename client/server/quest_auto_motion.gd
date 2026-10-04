@@ -25,6 +25,7 @@ static func matches(command:Dictionary,receipt:Dictionary,identity)->bool:
  var complete:=false
  for field in IDENTITY_FIELDS:
   if command.has(field):complete=true
+ if receipt.get("quest_segment",{}).get("mode","A") in ["B","C"] and not complete:return false
  if complete:
   for field in IDENTITY_FIELDS:
    if not command.has(field):return false

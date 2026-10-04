@@ -5,6 +5,8 @@ const Settings=preload("res://server/quest_auto_settings_rules.gd")
 const PermitGate=preload("res://server/quest_auto_permit_gate.gd")
 const Motion=preload("res://server/quest_auto_motion.gd")
 var motion:Dictionary={}
+# Dormant until real navigation geometry and integrated mode acceptance land.
+var segment=preload("res://server/quest_auto_segment.gd").new()
 const Registry=preload("res://server/quest_auto_registry.gd")
 var identity=preload("res://server/quest_auto_state.gd").new()
 const Rules=preload("res://server/original_quests.gd")
@@ -94,6 +96,7 @@ func emit_position(b,point:Dictionary,origin:Dictionary={},ack_required:bool=fal
  motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":packet.map_id,"cell":packet.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":"A"}
  b._emit(packet)
 func clear_motion()->void:
+ segment.clear()
  issued.clear()
  motion={}
 func detach(b, peer:int) -> void:
