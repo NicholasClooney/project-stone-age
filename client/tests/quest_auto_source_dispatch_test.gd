@@ -51,8 +51,7 @@ func run()->void:
  if "--numeric-only" in OS.get_cmdline_user_args():
   await numeric_ws();quit(1 if failures else 0);return
  var b=fresh();b.save_path="user://source-dispatch.json";check(b.save(),"Real baseline save")
- check(not b.handle({"type":"quest_auto_start","quest_id":2,"client":"dispatch","_quest_connection":17}).ok,"Public job2 still closed")
- check(b.quest_auto.begin_source_run(b,"dispatch",17).ok,"Narrow internal admission uses actual pure plan")
+ check(b.handle({"type":"quest_auto_start","quest_id":2,"client":"dispatch","_quest_connection":17}).ok,"Public job2 admission uses actual pure plan")
  var events:Array=[];b.event.connect(func(m):
   if m.get("type")=="position":events.append(m.duplicate(true))
  )

@@ -255,7 +255,7 @@ func run()->void:
  quiz_warp()
  pet_exchange()
  var b=fresh()
- check(not b.quest_auto.delivery_supports(2) and not b.handle({"type":"quest_auto_start","quest_id":2,"client":"hook-device","_quest_connection":17}).get("ok",false),"Job2 remains unregistered at public entry")
+ check(b.quest_auto.delivery_supports(2) and not b.handle({"type":"quest_auto_start","quest_id":2,"client":"hook-device","_quest_connection":17}).get("ok",false),"Registered job2 still refuses unqualified public entry")
  check(not Source.transaction(service("genout/quz_800_29_19"),{"event":-1,"texts":{},"actions":{"Warp":"810,29,18"}},"SERVICE"),"No arbitrary service destination")
  check(not Source.transaction(claim(true),Source.CLAIM_BRANCH,"reward"),"No generic branch/GetPet substitution")
  b.free()
