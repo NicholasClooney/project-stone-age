@@ -28,6 +28,11 @@ var _result_voices: Array[AudioStreamPlayer] = []
 func _init(owner: GameScene) -> void:
 	game = owner
 
+func _ready() -> void:
+	# Owned from scene construction, but startup may still await asset/login.
+	# Do not process until setup and a battle transition actually need it.
+	set_process(false)
+
 ## The map's own music. Tracks load when a map asks for them and are freed
 ## once nothing plays or remembers them (the previous map's music goes when
 ## the next map's starts); only paths are kept for the village and wilderness.
@@ -226,7 +231,6 @@ func end_showcase_music() -> void:
 	elif not game.battle_view.visible:set_music(exploration_music())
 
 func setup_audio() -> void:
-	game.add_child(self)
 	set_process(false)
 	game.music = MusicTracks.music_player()
 	game.village_music = VILLAGE_MUSIC

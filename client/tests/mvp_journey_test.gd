@@ -149,7 +149,9 @@ func run() -> void:
 	var expected: Dictionary = game.session.snapshot()
 	game.profile_persistence = false
 	game.music.stop();game.effect.stop();await create_timer(0.2).timeout
+	var first_audio_lifetime: WeakRef = weakref(game._audio)
 	game.queue_free();await frames()
+	check(first_audio_lifetime.get_ref()==null,"normal scene exit releases its audio node")
 	game = load("res://scenes/main.tscn").instantiate()
 	game.profile_persistence = false
 	game.save_path = SAVE
@@ -168,7 +170,9 @@ func run() -> void:
 	check(int(game.data.map_id)==1002 and game.cell==Vector2i(16,15),"reload restores safe interior position")
 	check(is_instance_valid(game.pet_follower),"reload restores companion")
 	game.music.stop();game.effect.stop();await create_timer(0.2).timeout
+	var restored_audio_lifetime: WeakRef = weakref(game._audio)
 	game.queue_free();await frames()
+	check(restored_audio_lifetime.get_ref()==null,"restored scene exit releases its audio node")
 	for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE+suffix))
 	var bad_file := FileAccess.open(SAVE,FileAccess.WRITE)
 	bad_file.store_string("unreadable original")
@@ -177,7 +181,10 @@ func run() -> void:
 	fresh.save_path = SAVE
 	check(not fresh.load_profile() and not fresh.profile_persistence,"unreadable saves disable autosave rather than overwrite originals")
 	check(FileAccess.get_file_as_string(SAVE)=="unreadable original","unreadable original file is preserved")
+	var audio_lifetime: WeakRef = weakref(fresh._audio)
+	check(fresh._audio.get_parent()==fresh,"unstarted scene owns its audio node")
 	fresh.free()
+	check(audio_lifetime.get_ref()==null,"freeing an unstarted scene releases its audio node")
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(SAVE))
 	print("MVP JOURNEY: %d failures" % failures)
 	quit(1 if failures else 0)

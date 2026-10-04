@@ -307,6 +307,8 @@ func _init() -> void:
 	_automation = GameAutomation.new(self)
 	_device = GameDevice.new(self)
 	_audio = GameAudio.new(self)
+	# Own the audio node even when startup fails before setup_audio/_ready.
+	add_child(_audio)
 	_remote = GameRemote.new(self)
 	remote_url = _server_url()
 	state = ClientState.new()
