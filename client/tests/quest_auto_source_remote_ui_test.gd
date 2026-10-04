@@ -1,5 +1,5 @@
 extends "res://tests/quest_delivery_loading_ui_test.gd"
-## Internal job2 admission is an explicit fixture: no public start UI exists.
+## Real public WS admission; button-click proof lives in the public-entry UI suite.
 ## All subsequent map loading, following and receipt ACKs use the real remote
 ## scene. Natural encounters/source RNG; strong stats are not normal Lv35 power.
 const Equipment=preload("res://server/original_equipment.gd")
@@ -89,14 +89,12 @@ func fresh_source()->bool:
    trace_scene("after-client-consume"))
  if not await ready(shown,"Remote scene restores actual public811 entrance"):return false
  if not check(await Wait.settle(self,world),"Public initial position settles"):return false
- if not check(not (await rpc(world.link,{"type":"quest_auto_start","quest_id":2,"client":world._client_id})).get("ok",false),"Job2 public entry remains closed"):return false
  if not check(server_node.clients().size()==1,"One real authenticated owner transport"):return false
- var peer:int=server_node.clients()[0].get_instance_id()
- if not check(backend_node.quest_auto.begin_source_run(backend_node,world._client_id,peer).get("ok",false),"Explicit internal fixture admits source plan using actual socket identity"):return false
- return check(await Wait.settle(self,world) and world.backend==null,"Production remote snapshot sees internal run without a backend reference")
+ if not check((await rpc(world.link,{"type":"quest_auto_start","quest_id":2,"client":world._client_id})).get("ok",false),"Public source start binds actual owner WebSocket"):return false
+ return check(await Wait.settle(self,world) and world.backend==null,"Production remote snapshot sees publicly admitted run without a backend reference")
 func run()->void:
  root.gui_embed_subwindows=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844);remote_mode=true
- print("SOURCE REMOTE INPUT: Lv35/base_stats50000, 2755x1/2752x7, natural RNG, public811(30,22), internal begin_source_run only")
+ print("SOURCE REMOTE INPUT: Lv35/base_stats50000, 2755x1/2752x7, natural RNG, public811(30,22), actual public WebSocket start")
  if not await fresh_source():return
  var original_packs=world.asset_packs
  var cold:=ColdMapPacks.new();root.add_child(cold);world.asset_packs=cold
