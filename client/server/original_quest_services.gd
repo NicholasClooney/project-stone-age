@@ -31,7 +31,6 @@ func reply(router,backend,current:Dictionary,choice:String,text:String)->Diction
  if authority.in_party:return {"ok":false,"reason":"请先退出团队再挑战。"}
  return apply(router,backend,current.npc,GoldenBui.reply(current.npc,backend.session.snapshot(),current.service_state,choice,text,authority))
 func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
- var source_call:Dictionary=backend.capture_quest_source_call(str(npc.id))
  if not bool(plan.get("ok",false)):return {"ok":false,"reason":str(plan.get("reason","无法交谈。"))}
  var actions:Dictionary=plan.get("actions",{})
  if str(npc.get("kind",""))==Prison.KIND:
@@ -47,6 +46,10 @@ func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
   if str(npc.get("kind","")) not in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate"]:return {"ok":false,"reason":"尚未支持的原服务。"}
   for key in actions:
    if key not in ["GetItem","DelItem","Warp"]:return {"ok":false,"reason":"尚未支持的原服务动作。"}
+ # Preserve original rejection paths before reading service identity. Capture
+ # only after validation, still before any transaction/result publication.
+ if not npc.get("id") is String or str(npc.id).is_empty():return {"ok":false,"reason":"原服务来源无效。"}
+ var source_call:Dictionary=backend.capture_quest_source_call(npc.id)
  var result:Dictionary=plan.get("result",{})
  var notice := result_text(result)
  if not actions.is_empty():
