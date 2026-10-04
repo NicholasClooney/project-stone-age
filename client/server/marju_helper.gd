@@ -46,7 +46,7 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary) -> void:
  var mail:bool=2687 in profile.original_items
  var stone:bool=2697 in profile.original_items
  var inside:bool=int(backend.automation.position_map) in MAZE
- quest.completion_detail="角色50级后替霍特尔村马祖送信。送到卡伊特仅完成37，回马祖领取三种随机武器之一才完成加点项38。原入口须50级且不组队；助手在洞外仅引导到原入口，洞内须沿原迷宫步行，合法到达且符合原分支时仅支持近处原地交谈。出洞回村按原物品与旗标领奖。切绳石与补发保留，宝袋支线尚未开放；奖励精灵魔法仅保留原标签，未生效。自动执行尚未开放。"
+ quest.completion_detail="角色50级后替霍特尔村马祖送信。送到卡伊特仅完成37，回马祖领取三种随机武器之一才完成加点项38。原入口须50级且不组队；助手在洞外仅引导到原入口，洞内须沿原迷宫步行，合法到达且符合原分支时仅支持近处原地交谈。出洞回村按原物品与旗标领奖。切绳石与补发保留，宝袋支线尚未开放；奖励精灵魔法仅保留原标签，未生效。送物自动推进沿原路步行，普通遇敌沿用现有自动战斗，失败或选择时交回手动，处理后可重新启动；换宠与支线不自动执行。"
  if int(quest.event)==37:
   helper.add_step(backend,profile,quest,"marju:request",entry(backend,"extra/event/marju",0),not started and not delivered and not ended,started or delivered or ended,"向马祖领取邮件（角色50级）")
   var gate:Dictionary=backend.original_quests.npc_by_id(GATE)
