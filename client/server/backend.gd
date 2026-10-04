@@ -563,6 +563,7 @@ func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
 		session._profile.automation_settings=previous_settings
 		return _reject("save_failed")
 	automation.profile_settings_changed()
+	quest_auto.settings_changed(self,previous_settings)
 	_publish()
 	return {"ok":true}
 

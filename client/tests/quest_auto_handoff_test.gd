@@ -29,6 +29,7 @@ func run()->void:
  var b=fixture()
  check(b.quest_auto.phase=="waiting_reward" and b.quest_auto.snapshot(b).waiting.dialogue.has("choices"),"Snapshot supplies actual public choices to another device")
  var first:Dictionary=command(b,"yes")
+ check(b.handle({"type":"set_automation_settings","settings":{"quest":{"mode":"C"}}}).ok and command(b,"yes")==first,"Saved future movement mode does not invalidate the current manual reward token")
  var invalid:Dictionary=first.duplicate();invalid.quest_run_id="old"
  check(not b.handle(invalid).ok and b.quest_auto.running,"Wrong run rejected without killing current waiting")
  check(not b.handle({"type":"quest_talk","npc_id":b.quest_auto.identity.waiting.npc_id}).ok,"Unrelated talk stays locked")
