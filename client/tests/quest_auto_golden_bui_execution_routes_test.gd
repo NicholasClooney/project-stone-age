@@ -1,5 +1,5 @@
 extends SceneTree
-## One separately authorized level35 or level55 pilot. No retry, refill, private answers or RNG seed.
+## One separately authorized level35, level55 or level75 pilot. No retry, refill, private answers or RNG seed.
 ## Controlled audit only, not routine full: legitimate RNG ticket exhaustion
 ## returns boundary status/exit2 and must not be hidden by automatic retries.
 const Session=preload("res://server/game_session.gd")
@@ -12,7 +12,7 @@ class Backend extends "res://server/backend.gd":
  var trace_tick:=0
  var field_steps:=0
  var saved_transactions:Array=[]
- var spent:Dictionary={"2755":0,"2756":0,"2752":0,"2751":0,"2753":0}
+ var spent:Dictionary={"2755":0,"2756":0,"2757":0,"2752":0,"2751":0,"2753":0}
  static func items(profile:Dictionary,id:int)->int:
   var total:=0
   for item in profile.get("original_items",[]):
@@ -71,10 +71,11 @@ func record_draw()->void:
  var entry:Dictionary={"tick":b.trace_tick,"map_id":b.automation.position_map,"step":b.quest_auto.identity.step_id,"text":page.text}
  public_results.append(entry);print("PUBLIC_DRAW ",JSON.stringify(entry))
 func run()->void:
- if pilot_level not in [35,55]:
+ if pilot_level not in [35,55,75]:
   printerr("Unsupported pilot level; no run started");quit(3);return
- var entrance_ticket:=2756 if pilot_level==55 else 2755
- var start_x:=28 if pilot_level==55 else 30
+ var entrance_ticket:=2757 if pilot_level==75 else (2756 if pilot_level==55 else 2755)
+ var start_x:=29 if pilot_level==75 else (28 if pilot_level==55 else 30)
+ var start_map:=851 if pilot_level==75 else 811
  b=Backend.new();b.set_process(false)
  b.session._profile.player.level=pilot_level
  b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
@@ -84,10 +85,10 @@ func run()->void:
  b.session._profile.no_random_encounters=false
  Equipment.add(b.session._profile,entrance_ticket)
  for index in range(14):Equipment.add(b.session._profile,2752)
- b.automation.position_changed(811,Vector2i(start_x,22),true)
+ b.automation.position_changed(start_map,Vector2i(start_x,22),true)
  b.save_path="user://golden-bui-pilot%d.json"%pilot_level
  var initial:Dictionary=b.session.snapshot()
- var input:Dictionary={"level":initial.player.level,"hp":initial.player.hp,"max_hp":initial.player.max_hp,"attack":initial.player.attack,"defence":initial.player.defence,"speed":initial.player.speed,"base_stats":initial.player.base_stats,"gold":initial.player.gold,"tickets":{str(entrance_ticket):1,"2752":14},"bag_slots":Session.bag_slots(initial),"start":{"map_id":811,"cell":[start_x,22]},"rng":"original randomized; no seed selection or inspection","budget_ms":BUDGET_MS,"max_ticks":MAX_TICKS}
+ var input:Dictionary={"level":initial.player.level,"hp":initial.player.hp,"max_hp":initial.player.max_hp,"attack":initial.player.attack,"defence":initial.player.defence,"speed":initial.player.speed,"base_stats":initial.player.base_stats,"gold":initial.player.gold,"tickets":{str(entrance_ticket):1,"2752":14},"bag_slots":Session.bag_slots(initial),"start":{"map_id":start_map,"cell":[start_x,22]},"rng":"original randomized; no seed selection or inspection","budget_ms":BUDGET_MS,"max_ticks":MAX_TICKS}
  print("INPUT ",JSON.stringify(input))
  var outcome:="setup_failed"
  var reason:=""
