@@ -54,6 +54,24 @@ def merge_references(references):
     return original,red,known,conflict
 
 
+def matching_references(target, references):
+    """Draft evidence for this exact input colour; never select by vote.
+
+    Two independently labelled dragon edges may have different source colours.
+    Only references matching the target input contribute. If they prescribe
+    different output colours, that pixel is rejected regardless of counts.
+    Target semantics and occlusion still require independent inspection.
+    """
+    original=target.copy();red=target.copy()
+    known=np.zeros_like(target,dtype=bool);conflict=known.copy()
+    for pixels,changed,label in references:
+        eligible=label & (pixels==target)
+        conflict |= known & eligible & (red!=changed)
+        fresh=eligible & ~known
+        red[fresh]=changed[fresh];known |= eligible
+    return original,red,known & ~conflict,conflict
+
+
 def draft_guard(pixels,original,known,fill_enclosed=True):
     visible=(pixels!=0)&(pixels!=168)
     unexplained=visible & (~known | (pixels!=original))
@@ -73,7 +91,7 @@ def respect_target_protection(candidate, rider, unknown):
     return candidate & ~collisions, collisions
 
 
-def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True):
+def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_source_variants=False):
     archive=Archive(source);ledger=json.loads(ledger_path.read_text());annotated={};padding={}
     for path in rule_paths:
         book=json.loads(path.read_text())
@@ -108,6 +126,8 @@ def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True):
                 raise ValueError(f'Source hash mismatch: {bitmap}')
             slot=next(s for s in record['slots'] if s['clip']==page['slots'][0]['clip'] and s['frame']==page['slots'][0]['frame'])
             target,(x,y)=align(archive,bitmap,p,slot['sprite_frame']);h,w=p.shape
+            if allow_source_variants:
+                original,red,known,conflict=matching_references(target,[refs[b] for b in used])
             guard,unexplained,holes=draft_guard(target,original,known,fill_enclosed)
             dragon=known & (target==original) & ~guard & (target!=0) & (target!=168)
             protected=np.zeros_like(dragon);collisions=np.zeros_like(dragon)
@@ -127,7 +147,7 @@ def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True):
                         ventral_runs=row_runs(cut(ventral)),underwing_preserve_runs=row_runs(cut(underwing)),
                         review_status='DRAFT: independent reference regions; target rider/occlusion not yet reviewed',
                         review='No colour majority. Conflicts rejected. Unknown includes rider and unresolved dragon, not a rider label.',
-                        reference_regions={'pose_page':page_no,'bitmaps':used,'fill_enclosed_guard':fill_enclosed,
+                        reference_regions={'pose_page':page_no,'bitmaps':used,'fill_enclosed_guard':fill_enclosed,'allow_source_variants':allow_source_variants,
                           'source_rule_hashes':{str(b):digest(json.dumps(annotated[str(b)],sort_keys=True).encode()) for b in used},
                           'known_pixels':int(known.sum()),'conflict_pixels':int(conflict.sum()),
                           'nonmatching_visible_pixels':int(cut(unexplained).sum()),'closure_pixels':int(cut(holes).sum()),
@@ -147,4 +167,5 @@ if __name__=='__main__':
     parser.add_argument('--rules',type=Path,nargs='+',required=True)
     parser.add_argument('--pages',type=int,nargs='+',required=True)
     parser.add_argument('--local-guard',action='store_true',help='Draft only: do not fill regions enclosed by rider arms; requires renewed target inspection')
-    args=parser.parse_args();run(args.source,args.ledger,args.rules,args.pages,args.output,not args.local_guard)
+    parser.add_argument('--source-variants',action='store_true',help='Draft only: consider independently labelled alternative edge colours; ambiguous output colours still rejected')
+    args=parser.parse_args();run(args.source,args.ledger,args.rules,args.pages,args.output,not args.local_guard,args.source_variants)

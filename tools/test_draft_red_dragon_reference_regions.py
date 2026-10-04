@@ -1,6 +1,6 @@
 import unittest
 import numpy as np
-from draft_red_dragon_reference_regions import merge_references, row_runs, enclosed, respect_target_protection, draft_guard
+from draft_red_dragon_reference_regions import merge_references, row_runs, enclosed, respect_target_protection, draft_guard, matching_references
 from recolor_red_dragon_samples import raster_runs
 
 
@@ -13,6 +13,17 @@ class ReferenceRegionTest(unittest.TestCase):
         _,_,result,conflict=merge_references([(original,red,known),(original,red,known),
                                              (original,conflicting,known),(original,red,known)])
         self.assertTrue(conflict[5,5]);self.assertFalse(result[5,5])
+
+    def test_source_variants_require_exact_target_colour_and_unambiguous_output(self):
+        label=np.ones((2,2),bool)
+        first=np.full((2,2),213,np.uint8);second=np.full((2,2),214,np.uint8)
+        r1=np.full((2,2),225,np.uint8);r2=np.full((2,2),226,np.uint8)
+        _,red,known,conflict=matching_references(second,[(first,r1,label),(second,r2,label)])
+        self.assertTrue(known.all());self.assertTrue((red==226).all());self.assertFalse(conflict.any())
+        _,_,known,conflict=matching_references(second,[(second,r2,label),(second,r1,label),(second,r2,label)])
+        self.assertFalse(known.any());self.assertTrue(conflict.all())
+        unknown=np.full((2,2),80,np.uint8)
+        self.assertFalse(matching_references(unknown,[(first,r1,label),(second,r2,label)])[2].any())
 
     def test_inclusive_runs_preserve_disconnected_single_pixels(self):
         mask=np.zeros((5,8),bool);mask[1,0]=True;mask[1,3:6]=True;mask[3,7]=True

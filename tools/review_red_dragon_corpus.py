@@ -11,6 +11,7 @@ from pathlib import Path
 from PIL import Image, ImageDraw
 from audit_red_dragon_recolor import BODIES, digest, indices, rgba
 from import_legacy import Archive, sprite_animations
+import recolor_red_dragon_samples as generator
 
 
 def stable_hash(value):
@@ -53,7 +54,23 @@ def inventory(archive):
                 coverage=coverage, records={str(k):v for k,v in records.items()}, pages=pages)
 
 
-def approved_rule(record, rule, receipt):
+def generation_hash(rule, book):
+    """Bind inspection to effective palette, padding and generator implementation.
+
+    A unchanged per-bitmap rule is insufficient if a book-level default or the
+    rasterisation/recolour implementation changes underneath it.
+    """
+    padding=rule.get('rider_boundary_dilation',book.get('rider_boundary_dilation'))
+    if type(padding) is not int or padding < 0:
+        raise ValueError('Invalid effective rider boundary dilation')
+    return stable_hash(dict(
+        source_palette_sha256=book['source_palette_sha256'],
+        effective_rider_boundary_dilation=padding,
+        body_palette=generator.BODY,ventral_palette=generator.VENTRAL,
+        generator_sha256=digest(Path(generator.__file__).read_bytes())))
+
+
+def approved_rule(record, rule, receipt, book):
     """Fail closed after any source/geometry/slot/mask change or missing review.
 
     A receipt records actual independent inspection; this tool does not create
@@ -65,6 +82,7 @@ def approved_rule(record, rule, receipt):
     return (all(rule.get(k) == v for k,v in source.items())
             and receipt.get('source_sha256') == stable_hash(source)
             and receipt.get('rule_sha256') == stable_hash(rule)
+            and receipt.get('generation_sha256') == generation_hash(rule,book)
             and all(receipt.get(k) is True for k in
                     ('rider_complete','dragon_materials_complete','occlusion_reviewed')))
 
@@ -77,7 +95,7 @@ def require_complete_review(ledger, rules, receipts):
     if rules.get('source_palette_sha256') != ledger['source_palette_sha256']:
         raise ValueError('Rule palette mismatch')
     failed=[bitmap for bitmap in sorted(expected) if not approved_rule(
-        ledger['records'][bitmap],rules['records'][bitmap],receipts.get(bitmap,{}))]
+        ledger['records'][bitmap],rules['records'][bitmap],receipts.get(bitmap,{}),rules)]
     if failed:
         raise ValueError(f'Independent semantic review missing or stale: {len(failed)} bitmaps; first {failed[:8]}')
     return len(expected)

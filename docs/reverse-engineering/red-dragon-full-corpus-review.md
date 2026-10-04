@@ -103,3 +103,54 @@ known dragon pixels are rider. This remains a draft method, not semantic proof.
 with explicit lower-leg restoration below all rider feet and a body5 forehead
 correction. Conservative rider-contact borders are still unfinished. No
 production review receipt has been created from these visual checks.
+
+## Further source-bound drafts (after 9ba5c57e)
+
+The books have 159 distinct draft records at this checkpoint: 36 original
+samples, all 96 bitmaps for front attack `0_0`, 24 bitmaps for the first two diagonal
+attack poses, and three prior side references.
+This is rule-draft coverage only. No complete semantic review receipt has been
+issued; 4257 source bitmaps still lack a rule. None of the mappings is enabled.
+
+For poses 005 and 006, the twelve-body source/red sheets and all four actual
+change sheets were individually viewed before and after lower-leg restoration.
+Pose 007's originals, candidate output and all four change sheets were viewed;
+explicit local forehead polygons recover visible dragon between the hands of
+256946 and 259978. Its refined output and all four change sheets were also
+viewed. These drafts retain unresolved contact colours, including dragon-side
+colours, and are not final material coverage. Pose 008 received independently
+outlined hair/helmet, clothing and both hands; enlarged inspection corrected a
+missed white abdomen arc. All twelve candidate and refined source/red outputs
+and all four change sheets for each were viewed. The visible lower-left dragon
+legs were restored independently of the rider/dragon ankle contact on the right.
+
+Same-pose dragon outlines can have different indexed edge colours. The optional
+`--source-variants` draft mode considers only independently dragon-labelled
+references whose input colour exactly equals the target input at that location.
+Different output colours for the same input are still rejected without voting.
+The flag does not approve target occlusion. Existing independent target
+protection continues to take precedence; all generated targets require review.
+
+Receipt validity now also binds the effective per-rule/default boundary padding,
+source palette, colour mappings and generator implementation file hash. Changing
+a book-level default or rasterisation code cannot silently keep an older receipt
+valid. This closes a gap before any production receipts are created. Twenty
+focused Python tests pass. Generation continues to assert source hashes, SPR
+slots, unchanged protected/unknown regions, transparency, shadows and repeat
+output; these mechanical assertions are not a semantic proof about every rider.
+
+Latest private evidence: `corpus-v1/pose005-refined-review`,
+`pose006-refined-review`, `pose007-refined-review`, and `pose008-refined-review`.
+`pose009-reference` contains two independently outlined references, both viewed.
+The subsequent candidate and refined twelve-body source/red outputs and all
+four change sheets were inspected. That review caught extra far-foot exposure
+in 263050 and 269114: a lower-left restoration rectangle was too broad for
+this pose. `pose009-feet-v2` adds independent local foot guards (also retaining
+some adjacent dragon colour). Both changed comparison images were viewed;
+output hashes of the other ten images match the already inspected output.
+The older `pose009-refined` is superseded and must not be treated as approved.
+This is a concrete example of why same-pose reuse still requires body-specific
+foot/occlusion inspection. Previous 99-record reports remain historical
+snapshots. No imported source art or verification PNG is tracked, and no Godot,
+production import, main-asset write, live operation or final image approval has
+occurred during this checkpoint.
