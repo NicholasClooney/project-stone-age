@@ -33,18 +33,32 @@ def raster(size, polygons):
     return np.array(image) != 0
 
 
+def raster_runs(size, runs):
+    result=np.zeros((size[1],size[0]),dtype=bool)
+    for run in runs:
+        if len(run)!=3 or any(type(v) is not int for v in run):
+            raise ValueError('Invalid inclusive row interval')
+        y,left,right=run
+        if not (0<=y<size[1] and 0<=left<=right<size[0]):
+            raise ValueError(f'Row interval outside {size}: {run}')
+        result[y,left:right+1]=True
+    return result
+
+
 def masks(rule, padding):
     size = rule['geometry']['w'], rule['geometry']['h']
     padding = rule.get('rider_boundary_dilation', padding)
-    rider = raster(size, rule['rider_envelopes'])
+    def region(polygons,runs):
+        return raster(size,rule.get(polygons,[])) | raster_runs(size,rule.get(runs,[]))
+    rider = region('rider_envelopes','rider_runs')
     expanded = np.array(Image.fromarray(rider.astype(np.uint8)*255).filter(
         ImageFilter.MaxFilter(padding*2+1))) != 0
-    unknown = raster(size, rule['uncertain_polygons']) | (expanded & ~rider)
+    unknown = region('uncertain_polygons','uncertain_runs') | (expanded & ~rider)
     # Unknown has priority even if a conservative rider envelope overlaps it.
     rider &= ~unknown
-    dragon = raster(size, rule['dragon_envelopes']) & ~rider & ~unknown
-    ventral = raster(size, rule['ventral_polygons']) & dragon
-    underwing = raster(size, rule.get("underwing_preserve_polygons", [])) & dragon
+    dragon = region('dragon_envelopes','dragon_runs') & ~rider & ~unknown
+    ventral = region('ventral_polygons','ventral_runs') & dragon
+    underwing = region('underwing_preserve_polygons','underwing_preserve_runs') & dragon
     return rider, unknown, dragon, ventral, underwing
 
 
