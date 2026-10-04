@@ -1,0 +1,1873 @@
+{
+  "version": 1,
+  "reference_revision": "0c58fb6683a49a178a8ad845a8c296c2cb83bd81",
+  "sources": {
+    "gmsv/data/enemy.txt": "69fc9f603cc9ee24bbc30511e6a0407254b62ba68651b71cb68f50a58f9f6629",
+    "gmsv/data/enemybase.txt": "3868f26a02d60aa810a21f0abba76fe1334619862c7ba9fe21ad4417de39dc17",
+    "gmsv/data/map/mapwarp.txt": "b7b50f42efa8e5a3f740d49a8d0c01cbf994d1bb66151b16ff5b5e7c14e7595c",
+    "gmsv/data/npc/genout/jan_802_29_19": "e157c84d66cc644bd424d2b38ce5cbf3f6d8ed08d906c015cebd7f215c350419",
+    "gmsv/data/npc/genout/jan_804_29_19": "757ef9f3309769624a6889227b666ec0bb2e393991e7a3dac90ae623ffbbdd8f",
+    "gmsv/data/npc/genout/jan_807_18_19": "9b7ed78f355f2721c2cbf894bef25375ff968eb9f71e1f0c7c7ebb807b0b4bc9",
+    "gmsv/data/npc/genout/jan_822_29_19": "c1736c2287cbb83ca9b66d20ca487335d1934827aafce61a0922d08d49e53cc9",
+    "gmsv/data/npc/genout/jan_824_29_19": "a515db924b4e14e7ec780df86490525f9ca7d2480d17ff8c6d94a02bb9f3e90c",
+    "gmsv/data/npc/genout/jan_827_18_19": "04fb8471ea37f358e3e9e72a49a31200252fae9b4c849e1d2e2e4bbdca6dbf52",
+    "gmsv/data/npc/genout/jan_842_29_19": "98cd8a1326f1baf4f3a3ffca92318cb10dca52184442cf9c1f99e459d5cd4a13",
+    "gmsv/data/npc/genout/jan_844_29_19": "8201576baee8ea875d13269db816d462b8971ca54605996e94dab5802cf483c5",
+    "gmsv/data/npc/genout/jan_847_18_19": "1cf72c224c4d7e6a84f94c7680746db7d9dc2040171c8ec3fe87cfc3a582dfff",
+    "gmsv/data/npc/genout/janken.create": "f04af05473855c80127e91acc0ac13ab88c30248b5d3fb62654a2827a9b6edf4",
+    "gmsv/data/npc/genout/quiz.create": "2cea75c94aad409bc0f7f9df07281d7f47421972956aa00331a90224692570bb",
+    "gmsv/data/npc/genout/quizman.create": "fd03715c723a7e63d9200a425c97ca22595c84f823be861b8facf7993a83b3ba",
+    "gmsv/data/npc/genout/quz_800_29_19": "ccedfecc1971acb89f460530ecc49331884a6103f22e231d5ce90f60b6211340",
+    "gmsv/data/npc/genout/quz_801_18_19": "2b31b5ad18657bd23b5eed610e06e7b9d2c33f8e9a27c2cde3b0de73d492ad4b",
+    "gmsv/data/npc/genout/quz_803_18_19": "b86ca84c382a63a308a3e78603df4fd14e60ffdb608774e64e5736c2d6bdded3",
+    "gmsv/data/npc/genout/quz_805_18_19": "e5d02312a3ac691338247ee8adf0ab462e88f5c08400c6389d8225145d2d095c",
+    "gmsv/data/npc/genout/quz_806_29_19": "fd17f5bbdf93badce16b7ef03dc77906e83f9e092752125366e0ac0d11c3ea70",
+    "gmsv/data/npc/genout/quz_808_29_19": "2af2e17cc4c9d9f76e2bfb745eb7dc7926c43c63861d5a38af2b3b090729a90c",
+    "gmsv/data/npc/genout/quz_809_18_19": "cd3db560b516720b52cdfb0241c00bba9941b71532bb94183168b82572a07627",
+    "gmsv/data/npc/genout/quz_820_29_19": "ddb4b6ce8f827ff9c9972cffea33caededa60b4b13b0d4450fac66e1936de9fa",
+    "gmsv/data/npc/genout/quz_821_18_19": "1ade8665186f818d8c25a17f288f3699173117fa1003c8fca0db26f4368c12bf",
+    "gmsv/data/npc/genout/quz_823_18_19": "755718c7b3e636bb21ad2951e700c56c8c7c66e2a01122dc0f3ed061fe5a0185",
+    "gmsv/data/npc/genout/quz_825_18_19": "875d0feb7a20cbca55c335a0a28d8419f82febc7ecf4d4917d7d5cb1ce57182e",
+    "gmsv/data/npc/genout/quz_826_29_19": "1ca23787d46cabeb490593edd7ec2c6a9bdafe1c077bda34e89e7d7455f0962d",
+    "gmsv/data/npc/genout/quz_828_29_19": "227b54ce9134ca70ee25ffdc56f59f6bfd15052ec6018970c27cb677671a303c",
+    "gmsv/data/npc/genout/quz_829_18_19": "476c9b348709e18d5e04971530c66a5bfc53b204053cc631d6b42149123d83e9",
+    "gmsv/data/npc/genout/quz_840_29_19": "993132a85dfba1eaf16b00ef00c3f545b45d4bf4318e5118bf3fd3c7895fbea4",
+    "gmsv/data/npc/genout/quz_841_18_19": "c9393ee19f7dad7cc585e5738805a365715943354ed920078d5851cd7f939f0d",
+    "gmsv/data/npc/genout/quz_843_18_19": "f4fa6bded3d4cabc0dab7d7705ea0eec20162e7566631d7ca01843b5d53dffdf",
+    "gmsv/data/npc/genout/quz_845_18_19": "bada17318c23f98bc871cd356df91b8dea1f90e98bbd88999fa4c8558635beb9",
+    "gmsv/data/npc/genout/quz_846_29_19": "e8c15842084dffd4e924ad71987d7b4cfdbc1f739906635d9a20a3b75f2bd19b",
+    "gmsv/data/npc/genout/quz_848_29_19": "3ab4bd38eedce92426e824e4afe253dca263c476644d80cedea5cf8dbbe7c689",
+    "gmsv/data/npc/genout/quz_849_18_19": "b686babbfaca93d828ef07895efd178ae0758498444799d108afc312d1e42271",
+    "gmsv/data/npc/genout/wpm_811_28_20": "f9c5905b6a7d4f1e3dfe3c06d96a36794731432108b204fd2c7f7512b44a0b23",
+    "gmsv/data/npc/genout/wpm_811_30_20": "ae018723c636fabb5e8c2fea5581a9ff6dcf2c9709f9c7b53180665259338fd7",
+    "gmsv/data/npc/genout/wpm_831_28_20": "cddd68029659330566b724ffa2489d951d84541839a18251d323457ea37be31b",
+    "gmsv/data/npc/genout/wpm_831_30_20": "ead62b5dc1376db2a0d3f19e2de3481ad71858f1b57138775cf3f012ff9e80c9",
+    "gmsv/data/npc/genout/wpm_851_29_20": "1046d94fa80b45c285f5dac1a8419fe0df9946c486925bbf2e98fa6e4a9a24fa",
+    "gmsv/data/npc/quiz/equiz_01": "70af9ae74d61b2153bd889a72f47f895ce6b15f09ad0617f5fede055c715c22b",
+    "gmsv/data/npc/quiz/equiz_02": "f4678b82565b864c3e027d519bcc3f84ae4b1f3079e4e497ef190d961f63ed76",
+    "gmsv/data/npc/quiz/quiz.create": "f1d2b193f55b45b75813c390b95963cf819a938eb4b9827911ebcc07023ed459"
+  },
+  "portals": [
+    {
+      "from_map": 800,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 801,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1180,
+      "create_line": 359,
+      "live_link": {
+        "from_map": 800,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 801,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:359"
+      }
+    },
+    {
+      "from_map": 801,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 802,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1184,
+      "create_line": 395,
+      "live_link": {
+        "from_map": 801,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 802,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:395"
+      }
+    },
+    {
+      "from_map": 802,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 803,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1188,
+      "create_line": 431,
+      "live_link": {
+        "from_map": 802,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 803,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:431"
+      }
+    },
+    {
+      "from_map": 803,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 804,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1192,
+      "create_line": 467,
+      "live_link": {
+        "from_map": 803,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 804,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:467"
+      }
+    },
+    {
+      "from_map": 804,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 805,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1196,
+      "create_line": 503,
+      "live_link": {
+        "from_map": 804,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 805,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:503"
+      }
+    },
+    {
+      "from_map": 805,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 806,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1200,
+      "create_line": 539,
+      "live_link": {
+        "from_map": 805,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 806,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:539"
+      }
+    },
+    {
+      "from_map": 806,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 807,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1204,
+      "create_line": 575,
+      "live_link": {
+        "from_map": 806,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 807,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:575"
+      }
+    },
+    {
+      "from_map": 807,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 808,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1208,
+      "create_line": 611,
+      "live_link": {
+        "from_map": 807,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 808,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:611"
+      }
+    },
+    {
+      "from_map": 808,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 809,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1212,
+      "create_line": 647,
+      "live_link": {
+        "from_map": 808,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 809,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:647"
+      }
+    },
+    {
+      "from_map": 809,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 810,
+      "to_cell": [
+        28,
+        27
+      ],
+      "mapwarp_line": 1216,
+      "create_line": 683,
+      "live_link": {
+        "from_map": 809,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 810,
+        "target": [
+          28,
+          27
+        ],
+        "source": "quiz.create:683"
+      }
+    },
+    {
+      "from_map": 820,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 821,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1224,
+      "create_line": 960,
+      "live_link": {
+        "from_map": 820,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 821,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:960"
+      }
+    },
+    {
+      "from_map": 821,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 822,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1228,
+      "create_line": 996,
+      "live_link": {
+        "from_map": 821,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 822,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:996"
+      }
+    },
+    {
+      "from_map": 822,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 823,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1232,
+      "create_line": 1032,
+      "live_link": {
+        "from_map": 822,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 823,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1032"
+      }
+    },
+    {
+      "from_map": 823,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 824,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1236,
+      "create_line": 1068,
+      "live_link": {
+        "from_map": 823,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 824,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1068"
+      }
+    },
+    {
+      "from_map": 824,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 825,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1240,
+      "create_line": 1104,
+      "live_link": {
+        "from_map": 824,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 825,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1104"
+      }
+    },
+    {
+      "from_map": 825,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 826,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1244,
+      "create_line": 1140,
+      "live_link": {
+        "from_map": 825,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 826,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1140"
+      }
+    },
+    {
+      "from_map": 826,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 827,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1248,
+      "create_line": 1176,
+      "live_link": {
+        "from_map": 826,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 827,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1176"
+      }
+    },
+    {
+      "from_map": 827,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 828,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1252,
+      "create_line": 1212,
+      "live_link": {
+        "from_map": 827,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 828,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1212"
+      }
+    },
+    {
+      "from_map": 828,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 829,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1256,
+      "create_line": 1248,
+      "live_link": {
+        "from_map": 828,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 829,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1248"
+      }
+    },
+    {
+      "from_map": 829,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 810,
+      "to_cell": [
+        28,
+        27
+      ],
+      "mapwarp_line": 1260,
+      "create_line": 1284,
+      "live_link": {
+        "from_map": 829,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 810,
+        "target": [
+          28,
+          27
+        ],
+        "source": "quiz.create:1284"
+      }
+    },
+    {
+      "from_map": 840,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 841,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1276,
+      "create_line": 1621,
+      "live_link": {
+        "from_map": 840,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 841,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1621"
+      }
+    },
+    {
+      "from_map": 841,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 842,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1280,
+      "create_line": 1657,
+      "live_link": {
+        "from_map": 841,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 842,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1657"
+      }
+    },
+    {
+      "from_map": 842,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 843,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1284,
+      "create_line": 1693,
+      "live_link": {
+        "from_map": 842,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 843,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1693"
+      }
+    },
+    {
+      "from_map": 843,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 844,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1288,
+      "create_line": 1729,
+      "live_link": {
+        "from_map": 843,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 844,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1729"
+      }
+    },
+    {
+      "from_map": 844,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 845,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1292,
+      "create_line": 1765,
+      "live_link": {
+        "from_map": 844,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 845,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1765"
+      }
+    },
+    {
+      "from_map": 845,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 846,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1296,
+      "create_line": 1801,
+      "live_link": {
+        "from_map": 845,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 846,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1801"
+      }
+    },
+    {
+      "from_map": 846,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 847,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1300,
+      "create_line": 1837,
+      "live_link": {
+        "from_map": 846,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 847,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1837"
+      }
+    },
+    {
+      "from_map": 847,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 848,
+      "to_cell": [
+        14,
+        26
+      ],
+      "mapwarp_line": 1304,
+      "create_line": 1873,
+      "live_link": {
+        "from_map": 847,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 848,
+        "target": [
+          14,
+          26
+        ],
+        "source": "quiz.create:1873"
+      }
+    },
+    {
+      "from_map": 848,
+      "from_cell": [
+        29,
+        13
+      ],
+      "to_map": 849,
+      "to_cell": [
+        32,
+        26
+      ],
+      "mapwarp_line": 1308,
+      "create_line": 1909,
+      "live_link": {
+        "from_map": 848,
+        "cell": [
+          29,
+          13
+        ],
+        "to_map": 849,
+        "target": [
+          32,
+          26
+        ],
+        "source": "quiz.create:1909"
+      }
+    },
+    {
+      "from_map": 849,
+      "from_cell": [
+        18,
+        13
+      ],
+      "to_map": 850,
+      "to_cell": [
+        28,
+        27
+      ],
+      "mapwarp_line": 1312,
+      "create_line": 1945,
+      "live_link": {
+        "from_map": 849,
+        "cell": [
+          18,
+          13
+        ],
+        "to_map": 850,
+        "target": [
+          28,
+          27
+        ],
+        "source": "quiz.create:1945"
+      }
+    }
+  ],
+  "npcs": [
+    {
+      "id": "quiz/equiz_01@810:29:16",
+      "source_script": "quiz/equiz_01",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 1,
+      "map_id": 810,
+      "cell": [
+        29,
+        16
+      ],
+      "name": "魁司",
+      "graphic": 100000,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "text": "你也以猜谜大师为目标吧！",
+      "branches": [
+        {
+          "event": 44,
+          "type": "REQUEST",
+          "condition": "LV>0",
+          "texts": {
+            "RequestMsg": "\n\n厉害！没想到能够来到12楼呀！\n给来到这里的你猜谜大师的\n入门证吧！可以收下吗？",
+            "ThanksMsg": "\n\n把这个入门证交给隔壁的伊那多\n询问成为猜谜大师的课题吧！\n你也以猜谜大师为目标！",
+            "StopMsg": "\n\n\n不想成为猜谜大师？",
+            "EndStopMsg": "\n\n\n那么，等你想来的时候再来吧！",
+            "NoStopMsg": "\n\n\n这样的话，快点把入门证交给伊那多喔！",
+            "ItemFullMsg": "\n\n\n道具已经满了无法收下的样子喔。"
+          },
+          "actions": {
+            "GetItem": "2753"
+          },
+          "source_branch_index": 3,
+          "source_line": 29,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/equiz_01"
+        }
+      ]
+    },
+    {
+      "id": "quiz/equiz_02@810:28:16",
+      "source_script": "quiz/equiz_02",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 2,
+      "map_id": 810,
+      "cell": [
+        28,
+        16
+      ],
+      "name": "伊那多",
+      "graphic": 100015,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "text": "你也以猜谜大师为目标吧！",
+      "branches": [
+        {
+          "event": 44,
+          "type": "ACCEPT",
+          "condition": "NOWEV=44&ITEM=2753",
+          "texts": {
+            "AcceptMsg": "\n\n哎呀！那个是猜谜大师的入门证吧！\n你也迈向猜谜大师之路了吗？",
+            "ThanksMsg": "\n很好，很有干劲喔！\n那么的话我就出成为猜谜大师的课题啰\n等到现在交给你的稀有宠物\n等级成为LV77之后是否可以带来给我呢？\n如果无法达成这个条件的话我就没有办法带你到成为\n猜谜大师的认定场\n认定场喔。那么、加油啰！",
+            "PetFullMsg": "\n\n因为宠物太多而无法交给你喔。\n能否把宠物的数量减少之后再来呢？"
+          },
+          "actions": {
+            "GetPet": "14",
+            "DelItem": "2753",
+            "EndSetFlg": "44"
+          },
+          "source_branch_index": 4,
+          "source_line": 38,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/equiz_02"
+        }
+      ]
+    },
+    {
+      "id": "quiz/equiz_01@850:29:16",
+      "source_script": "quiz/equiz_01",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 4,
+      "map_id": 850,
+      "cell": [
+        29,
+        16
+      ],
+      "name": "魁司",
+      "graphic": 100000,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "text": "你也以猜谜大师为目标吧！",
+      "branches": [
+        {
+          "event": 44,
+          "type": "REQUEST",
+          "condition": "LV>0",
+          "texts": {
+            "RequestMsg": "\n\n厉害！没想到能够来到12楼呀！\n给来到这里的你猜谜大师的\n入门证吧！可以收下吗？",
+            "ThanksMsg": "\n\n把这个入门证交给隔壁的伊那多\n询问成为猜谜大师的课题吧！\n你也以猜谜大师为目标！",
+            "StopMsg": "\n\n\n不想成为猜谜大师？",
+            "EndStopMsg": "\n\n\n那么，等你想来的时候再来吧！",
+            "NoStopMsg": "\n\n\n这样的话，快点把入门证交给伊那多喔！",
+            "ItemFullMsg": "\n\n\n道具已经满了无法收下的样子喔。"
+          },
+          "actions": {
+            "GetItem": "2753"
+          },
+          "source_branch_index": 3,
+          "source_line": 29,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/equiz_01"
+        }
+      ]
+    },
+    {
+      "id": "quiz/equiz_02@850:28:16",
+      "source_script": "quiz/equiz_02",
+      "source_create": "gmsv/data/npc/quiz/quiz.create",
+      "source_create_index": 5,
+      "map_id": 850,
+      "cell": [
+        28,
+        16
+      ],
+      "name": "伊那多",
+      "graphic": 100015,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "text": "你也以猜谜大师为目标吧！",
+      "branches": [
+        {
+          "event": 44,
+          "type": "ACCEPT",
+          "condition": "NOWEV=44&ITEM=2753",
+          "texts": {
+            "AcceptMsg": "\n\n哎呀！那个是猜谜大师的入门证吧！\n你也迈向猜谜大师之路了吗？",
+            "ThanksMsg": "\n很好，很有干劲喔！\n那么的话我就出成为猜谜大师的课题啰\n等到现在交给你的稀有宠物\n等级成为LV77之后是否可以带来给我呢？\n如果无法达成这个条件的话我就没有办法带你到成为\n猜谜大师的认定场\n认定场喔。那么、加油啰！",
+            "PetFullMsg": "\n\n因为宠物太多而无法交给你喔。\n能否把宠物的数量减少之后再来呢？"
+          },
+          "actions": {
+            "GetPet": "14",
+            "DelItem": "2753",
+            "EndSetFlg": "44"
+          },
+          "source_branch_index": 4,
+          "source_line": 38,
+          "enabled": true,
+          "events": [
+            44
+          ],
+          "source": "quiz/equiz_02"
+        }
+      ]
+    },
+    {
+      "id": "genout/quz_800_29_19@800:29:19",
+      "source_script": "genout/quz_800_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 0,
+      "source_line": 7,
+      "map_id": 800,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "邦拉吉",
+      "graphic": 100060,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_800_29_19"
+    },
+    {
+      "id": "genout/quz_801_18_19@801:18:19",
+      "source_script": "genout/quz_801_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 1,
+      "source_line": 19,
+      "map_id": 801,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "查克",
+      "graphic": 100065,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_801_18_19"
+    },
+    {
+      "id": "genout/quz_803_18_19@803:18:19",
+      "source_script": "genout/quz_803_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 2,
+      "source_line": 31,
+      "map_id": 803,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "伊欧力",
+      "graphic": 100070,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_803_18_19"
+    },
+    {
+      "id": "genout/quz_805_18_19@805:18:19",
+      "source_script": "genout/quz_805_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 3,
+      "source_line": 43,
+      "map_id": 805,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "吉朴",
+      "graphic": 100075,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_805_18_19"
+    },
+    {
+      "id": "genout/quz_806_29_19@806:29:19",
+      "source_script": "genout/quz_806_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 4,
+      "source_line": 55,
+      "map_id": 806,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "派克拉",
+      "graphic": 100060,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_806_29_19"
+    },
+    {
+      "id": "genout/quz_808_29_19@808:29:19",
+      "source_script": "genout/quz_808_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 5,
+      "source_line": 67,
+      "map_id": 808,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "斯尔吉",
+      "graphic": 100065,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_808_29_19"
+    },
+    {
+      "id": "genout/quz_809_18_19@809:18:19",
+      "source_script": "genout/quz_809_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 6,
+      "source_line": 79,
+      "map_id": 809,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "特鲁克",
+      "graphic": 100070,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_809_18_19"
+    },
+    {
+      "id": "genout/quz_820_29_19@820:29:19",
+      "source_script": "genout/quz_820_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 7,
+      "source_line": 91,
+      "map_id": 820,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "克里斯吉",
+      "graphic": 100060,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_820_29_19"
+    },
+    {
+      "id": "genout/quz_821_18_19@821:18:19",
+      "source_script": "genout/quz_821_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 8,
+      "source_line": 103,
+      "map_id": 821,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "邦恩多克",
+      "graphic": 100065,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_821_18_19"
+    },
+    {
+      "id": "genout/quz_823_18_19@823:18:19",
+      "source_script": "genout/quz_823_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 9,
+      "source_line": 115,
+      "map_id": 823,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "福尔斯",
+      "graphic": 100070,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_823_18_19"
+    },
+    {
+      "id": "genout/quz_825_18_19@825:18:19",
+      "source_script": "genout/quz_825_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 10,
+      "source_line": 127,
+      "map_id": 825,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "索吉拉",
+      "graphic": 100075,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_825_18_19"
+    },
+    {
+      "id": "genout/quz_826_29_19@826:29:19",
+      "source_script": "genout/quz_826_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 11,
+      "source_line": 139,
+      "map_id": 826,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "朴力",
+      "graphic": 100060,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_826_29_19"
+    },
+    {
+      "id": "genout/quz_828_29_19@828:29:19",
+      "source_script": "genout/quz_828_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 12,
+      "source_line": 151,
+      "map_id": 828,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "吉尔",
+      "graphic": 100065,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_828_29_19"
+    },
+    {
+      "id": "genout/quz_829_18_19@829:18:19",
+      "source_script": "genout/quz_829_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 13,
+      "source_line": 163,
+      "map_id": 829,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "伊拉吉",
+      "graphic": 100070,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_829_18_19"
+    },
+    {
+      "id": "genout/quz_840_29_19@840:29:19",
+      "source_script": "genout/quz_840_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 14,
+      "source_line": 175,
+      "map_id": 840,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "鲁欧力",
+      "graphic": 100060,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_840_29_19"
+    },
+    {
+      "id": "genout/quz_841_18_19@841:18:19",
+      "source_script": "genout/quz_841_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 15,
+      "source_line": 187,
+      "map_id": 841,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "斯拉克",
+      "graphic": 100065,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_841_18_19"
+    },
+    {
+      "id": "genout/quz_843_18_19@843:18:19",
+      "source_script": "genout/quz_843_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 16,
+      "source_line": 199,
+      "map_id": 843,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "帖拉",
+      "graphic": 100070,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_843_18_19"
+    },
+    {
+      "id": "genout/quz_845_18_19@845:18:19",
+      "source_script": "genout/quz_845_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 17,
+      "source_line": 211,
+      "map_id": 845,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "多恩",
+      "graphic": 100075,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_845_18_19"
+    },
+    {
+      "id": "genout/quz_846_29_19@846:29:19",
+      "source_script": "genout/quz_846_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 18,
+      "source_line": 223,
+      "map_id": 846,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "尔斯吉",
+      "graphic": 100060,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_846_29_19"
+    },
+    {
+      "id": "genout/quz_848_29_19@848:29:19",
+      "source_script": "genout/quz_848_29_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 19,
+      "source_line": 235,
+      "map_id": 848,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "帖鲁力",
+      "graphic": 100065,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_848_29_19"
+    },
+    {
+      "id": "genout/quz_849_18_19@849:18:19",
+      "source_script": "genout/quz_849_18_19",
+      "source_create": "gmsv/data/npc/genout/quizman.create",
+      "source_create_index": 20,
+      "source_line": 247,
+      "map_id": 849,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "福尔",
+      "graphic": 100070,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_quiz",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/quz_849_18_19"
+    },
+    {
+      "id": "genout/jan_802_29_19@802:29:19",
+      "source_script": "genout/jan_802_29_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 0,
+      "source_line": 7,
+      "map_id": 802,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "拉伊奇",
+      "graphic": 100120,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_802_29_19"
+    },
+    {
+      "id": "genout/jan_804_29_19@804:29:19",
+      "source_script": "genout/jan_804_29_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 1,
+      "source_line": 19,
+      "map_id": 804,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "布拉姆",
+      "graphic": 100125,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_804_29_19"
+    },
+    {
+      "id": "genout/jan_807_18_19@807:18:19",
+      "source_script": "genout/jan_807_18_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 2,
+      "source_line": 31,
+      "map_id": 807,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "札克罗",
+      "graphic": 100130,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_807_18_19"
+    },
+    {
+      "id": "genout/jan_822_29_19@822:29:19",
+      "source_script": "genout/jan_822_29_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 3,
+      "source_line": 43,
+      "map_id": 822,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "拉伊奇",
+      "graphic": 100120,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_822_29_19"
+    },
+    {
+      "id": "genout/jan_824_29_19@824:29:19",
+      "source_script": "genout/jan_824_29_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 4,
+      "source_line": 55,
+      "map_id": 824,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "布拉姆",
+      "graphic": 100125,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_824_29_19"
+    },
+    {
+      "id": "genout/jan_827_18_19@827:18:19",
+      "source_script": "genout/jan_827_18_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 5,
+      "source_line": 67,
+      "map_id": 827,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "札克罗",
+      "graphic": 100130,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_827_18_19"
+    },
+    {
+      "id": "genout/jan_842_29_19@842:29:19",
+      "source_script": "genout/jan_842_29_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 6,
+      "source_line": 79,
+      "map_id": 842,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "拉伊奇",
+      "graphic": 100120,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_842_29_19"
+    },
+    {
+      "id": "genout/jan_844_29_19@844:29:19",
+      "source_script": "genout/jan_844_29_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 7,
+      "source_line": 91,
+      "map_id": 844,
+      "cell": [
+        29,
+        19
+      ],
+      "name": "布拉姆",
+      "graphic": 100125,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_844_29_19"
+    },
+    {
+      "id": "genout/jan_847_18_19@847:18:19",
+      "source_script": "genout/jan_847_18_19",
+      "source_create": "gmsv/data/npc/genout/janken.create",
+      "source_create_index": 8,
+      "source_line": 103,
+      "map_id": 847,
+      "cell": [
+        18,
+        19
+      ],
+      "name": "札克罗",
+      "graphic": 100130,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_janken",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/jan_847_18_19"
+    },
+    {
+      "id": "genout/wpm_811_30_20@811:30:20",
+      "source_script": "genout/wpm_811_30_20",
+      "source_create": "gmsv/data/npc/genout/quiz.create",
+      "source_create_index": 12,
+      "source_line": 118,
+      "map_id": 811,
+      "cell": [
+        30,
+        20
+      ],
+      "name": "受理A",
+      "graphic": 16202,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_gate",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/wpm_811_30_20"
+    },
+    {
+      "id": "genout/wpm_811_28_20@811:28:20",
+      "source_script": "genout/wpm_811_28_20",
+      "source_create": "gmsv/data/npc/genout/quiz.create",
+      "source_create_index": 13,
+      "source_line": 130,
+      "map_id": 811,
+      "cell": [
+        28,
+        20
+      ],
+      "name": "受理B",
+      "graphic": 16202,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_gate",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/wpm_811_28_20"
+    },
+    {
+      "id": "genout/wpm_831_30_20@831:30:20",
+      "source_script": "genout/wpm_831_30_20",
+      "source_create": "gmsv/data/npc/genout/quiz.create",
+      "source_create_index": 73,
+      "source_line": 719,
+      "map_id": 831,
+      "cell": [
+        30,
+        20
+      ],
+      "name": "受理A",
+      "graphic": 16202,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_gate",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/wpm_831_30_20"
+    },
+    {
+      "id": "genout/wpm_831_28_20@831:28:20",
+      "source_script": "genout/wpm_831_28_20",
+      "source_create": "gmsv/data/npc/genout/quiz.create",
+      "source_create_index": 74,
+      "source_line": 731,
+      "map_id": 831,
+      "cell": [
+        28,
+        20
+      ],
+      "name": "受理B",
+      "graphic": 16202,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_gate",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/wpm_831_28_20"
+    },
+    {
+      "id": "genout/wpm_851_29_20@851:29:20",
+      "source_script": "genout/wpm_851_29_20",
+      "source_create": "gmsv/data/npc/genout/quiz.create",
+      "source_create_index": 134,
+      "source_line": 1320,
+      "map_id": 851,
+      "cell": [
+        29,
+        20
+      ],
+      "name": "受理A",
+      "graphic": 16202,
+      "facing": 4,
+      "role": "quest",
+      "events": [
+        44
+      ],
+      "kind": "golden_bui_gate",
+      "text": "",
+      "branches": [],
+      "service_id": "genout/wpm_851_29_20"
+    }
+  ],
+  "reward_pet": {
+    "enemy_id": 14,
+    "template_id": 12,
+    "species": "original_12",
+    "level": 1,
+    "name": "金布伊",
+    "initial": 25,
+    "wild_growth": 4.5,
+    "weights": [
+      31,
+      20,
+      32,
+      12
+    ],
+    "modai": 270,
+    "variable_ai": 0,
+    "elements": [
+      0,
+      0,
+      30,
+      70
+    ],
+    "skill_slots": 10,
+    "sprite": 100255,
+    "size": 0,
+    "source": "gmsv/data/enemy.txt",
+    "source_line": 10,
+    "base_source": "gmsv/data/enemybase.txt",
+    "base_source_line": 12
+  }
+}
