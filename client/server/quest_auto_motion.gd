@@ -6,17 +6,38 @@ static func tagged(command:Dictionary)->bool:
  for field in IDENTITY_FIELDS:
   if command.has(field):return true
  return false
+static func integer(value:Variant)->Variant:
+ if not (value is int or value is float):return null
+ if not is_finite(float(value)) or float(value)!=floor(float(value)) or value<0 or value>2147483647:return null
+ return int(value)
+static func cell(value:Variant)->Array:
+ if not value is Array or value.size()!=2:return []
+ var x=integer(value[0])
+ var y=integer(value[1])
+ return [] if x==null or y==null else [x,y]
+static func same_integer(first:Variant,second:Variant)->bool:
+ var value=integer(first)
+ return value!=null and value==integer(second)
 static func matches(command:Dictionary,receipt:Dictionary,identity)->bool:
- if receipt.get("quest_run_id","")!=identity.run_id or receipt.get("quest_step_id","")!=identity.step_id or receipt.get("quest_revision",-1)!=identity.revision:return false
- if command.get("quest_position_seq",-1)!=receipt.get("seq",-2) or command.get("map_id",-1)!=receipt.get("map_id",-2) or command.get("cell",[])!=receipt.get("cell",[]):return false
+ if receipt.get("quest_run_id","")!=identity.run_id or receipt.get("quest_step_id","")!=identity.step_id or not same_integer(receipt.get("quest_revision"),identity.revision):return false
+ var actual:Array=cell(command.get("cell"))
+ if actual.is_empty() or actual!=cell(receipt.get("cell")) or not same_integer(command.get("quest_position_seq"),receipt.get("seq")) or not same_integer(command.get("map_id"),receipt.get("map_id")):return false
  var complete:=false
  for field in IDENTITY_FIELDS:
   if command.has(field):complete=true
  if complete:
   for field in IDENTITY_FIELDS:
-   if not command.has(field) or command[field]!=receipt.get(field):return false
+   if not command.has(field):return false
+   if field=="quest_revision":
+    if not same_integer(command[field],receipt.get(field)):return false
+   elif command[field]!=receipt.get(field):return false
  # No identity fields is the old A client protocol, scoped to current receipts.
  return true
 static func packet(identity,serial:int,point:Dictionary,origin:Dictionary,ack_required:bool)->Dictionary:
+ var map_id=integer(point.get("map_id"))
+ var position:Array=cell(point.get("cell"))
+ var from_map=integer(origin.get("map_id",point.get("map_id")))
+ var from_cell:Array=cell(origin.get("cell",point.get("cell")))
+ if map_id==null or from_map==null or position.is_empty() or from_cell.is_empty():return {}
  var segment_id:String=identity.run_id+":"+str(serial)
- return {"type":"position","map_id":int(point.map_id),"cell":point.cell.duplicate(),"client":"quest_auto","quest_position_seq":serial,"quest_run_id":identity.run_id,"quest_step_id":identity.step_id,"quest_revision":identity.revision,"quest_segment_id":segment_id,"quest_segment_index":1,"quest_segment_done":true,"quest_ack_required":ack_required,"quest_segment":{"id":segment_id,"mode":"A","kind":"walk","from_map":int(origin.get("map_id",point.map_id)),"from_cell":origin.get("cell",point.cell).duplicate(),"cells":[{"map_id":int(point.map_id),"cell":point.cell.duplicate()}],"interval_seconds":0.2}}
+ return {"type":"position","map_id":map_id,"cell":position,"client":"quest_auto","quest_position_seq":serial,"quest_run_id":identity.run_id,"quest_step_id":identity.step_id,"quest_revision":identity.revision,"quest_segment_id":segment_id,"quest_segment_index":1,"quest_segment_done":true,"quest_ack_required":ack_required,"quest_segment":{"id":segment_id,"mode":"A","kind":"walk","from_map":from_map,"from_cell":from_cell,"cells":[{"map_id":map_id,"cell":position.duplicate()}],"interval_seconds":0.2}}
