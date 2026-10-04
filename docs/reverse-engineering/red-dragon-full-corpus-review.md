@@ -769,3 +769,18 @@ padding are compared with inspected inputs without repeating the render.
 735 unique drafts (36 samples + 699 pose rules), 3681 missing drafts, zero
 complete semantic receipts. This remains incomplete and closed to import or
 integration. Original outputs, rules and UTC/wall/child CPU logs are retained.
+
+## Pose059: 747 unique drafts
+
+Both independent reference outputs and all twelve upright diagonal attack
+source/change pairs were individually viewed. The foreground olive-tan wing
+membrane crosses the rider and retains its material; the dorsal rim and far
+wing are red. Broad cheek, raised neck and belly are ventral. Visible heads,
+hand contacts, lower clothing and feet were inspected separately per body;
+remaining unresolved contact yellow includes dragon regions.
+Latest output: primary 248168/266360 from `pose059-reference`, other ten from
+`pose059-render`. Initial candidate totals: 23722 changes, 8350 ventral
+recolours, 6228 retained unknown body-colour pixels. Saved fields and padding
+are checked against inspected candidate inputs, without rerendering unchanged
+images. Total 747 unique drafts (36 samples + 711 pose rules), 3669 missing
+drafts, zero complete semantic receipts. No import or gameplay activation.
