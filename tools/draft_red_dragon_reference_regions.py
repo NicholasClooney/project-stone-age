@@ -91,7 +91,7 @@ def respect_target_protection(candidate, rider, unknown):
     return candidate & ~collisions, collisions
 
 
-def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_source_variants=False):
+def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_source_variants=False,target_rule_paths=()):
     archive=Archive(source);ledger=json.loads(ledger_path.read_text());annotated={};padding={}
     for path in rule_paths:
         book=json.loads(path.read_text())
@@ -99,6 +99,18 @@ def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_sour
             raise ValueError('Reference palette mismatch')
         for key,rule in book['records'].items():
             annotated[key]=rule;padding[key]=book['rider_boundary_dilation']
+    # Protection-only inputs must never contribute inferred dragon semantics.
+    # This permits retaining older independently drawn rider boundaries while
+    # replacing the material interpretation in a new reference draft.
+    protected_rules=dict(annotated);protected_padding=dict(padding)
+    for path in target_rule_paths:
+        book=json.loads(path.read_text())
+        if book['source_palette_sha256']!=ledger['source_palette_sha256']:
+            raise ValueError('Target protection palette mismatch')
+        for key,rule in book['records'].items():
+            if key in protected_rules:
+                raise ValueError(f'Duplicate target protection input: {key}')
+            protected_rules[key]=rule;protected_padding[key]=book['rider_boundary_dilation']
     result=dict(format=1,status='UNREVIEWED_REFERENCE_REGION_DRAFTS',
                 source_palette_sha256=ledger['source_palette_sha256'],rider_boundary_dilation=0,records={})
     summaries=[]
@@ -131,10 +143,10 @@ def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_sour
             guard,unexplained,holes=draft_guard(target,original,known,fill_enclosed)
             dragon=known & (target==original) & ~guard & (target!=0) & (target!=168)
             protected=np.zeros_like(dragon);collisions=np.zeros_like(dragon)
-            if str(bitmap) in annotated:
-                target_rule=annotated[str(bitmap)]
+            if str(bitmap) in protected_rules:
+                target_rule=protected_rules[str(bitmap)]
                 validate_source(archive,bitmap,target_rule)
-                rider,unknown,*_=masks(target_rule,padding[str(bitmap)])
+                rider,unknown,*_=masks(target_rule,protected_padding[str(bitmap)])
                 protected[y:y+h,x:x+w]=rider | unknown
                 dragon,collisions=respect_target_protection(dragon,protected,np.zeros_like(protected))
             ventral=np.zeros_like(dragon);underwing=np.zeros_like(dragon)
@@ -155,7 +167,8 @@ def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_sour
                           'source_rule_hashes':{str(b):digest(json.dumps(annotated[str(b)],sort_keys=True).encode()) for b in used},
                           'known_pixels':int(known.sum()),'conflict_pixels':int(conflict.sum()),
                           'nonmatching_visible_pixels':int(cut(unexplained).sum()),'closure_pixels':int(cut(holes).sum()),
-                          'existing_target_protection_applied':str(bitmap) in annotated,
+                          'existing_target_protection_applied':str(bitmap) in protected_rules,
+                          'target_protection_rule_sha256':digest(json.dumps(protected_rules[str(bitmap)],sort_keys=True).encode()) if str(bitmap) in protected_rules else None,
                           'candidate_collisions_with_existing_protection':int(collisions.sum()),
                           'new_semantic_approval':False})
             result['records'][str(bitmap)]=rule
@@ -169,7 +182,8 @@ if __name__=='__main__':
     parser=argparse.ArgumentParser(description=__doc__)
     for name in ('source','ledger','output'):parser.add_argument('--'+name,type=Path,required=True)
     parser.add_argument('--rules',type=Path,nargs='+',required=True)
+    parser.add_argument('--target-rules',type=Path,nargs='+',default=[],help='Protection-only books: their dragon/material labels never become references')
     parser.add_argument('--pages',type=int,nargs='+',required=True)
     parser.add_argument('--local-guard',action='store_true',help='Draft only: do not fill regions enclosed by rider arms; requires renewed target inspection')
     parser.add_argument('--source-variants',action='store_true',help='Draft only: consider independently labelled alternative edge colours; ambiguous output colours still rejected')
-    args=parser.parse_args();run(args.source,args.ledger,args.rules,args.pages,args.output,not args.local_guard,args.source_variants)
+    args=parser.parse_args();run(args.source,args.ledger,args.rules,args.pages,args.output,not args.local_guard,args.source_variants,args.target_rules)

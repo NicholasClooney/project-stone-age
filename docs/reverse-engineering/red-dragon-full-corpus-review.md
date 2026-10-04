@@ -442,3 +442,35 @@ synchronous and returned exit code zero. This is not a claim about historical
 whole-machine CPU or the external view service. The additional rules remain
 uncommitted drafts during the paused window; no generated original assets,
 Godot/import/game mapping or live operations are included.
+
+## Resumed rear poses: 499 unique drafts
+
+After the explicit fourth-full release, poses 037 and 038 were processed in
+sequential batches of at most twelve bitmaps. Pose 037 adds twelve records;
+pose 038 adds ten because 251065 and 272289 already belong to the 36-sample
+book. The books remain disjoint: 499 unique records, 3917 absent, zero complete
+semantic receipts. Each pose's twelve source/change pairs, both independent
+reference comparisons, and the two changed final-reference revision crops
+were viewed. All other final outputs match their inspected candidate hashes.
+Pose 038 retains the two older sample rider/unknown masks; those masks are not
+reclassified as fully semantic rider truth. Unresolved contact yellow remains.
+
+The draft tool now accepts `--target-rules` for protection-only input. These
+books cannot supply reference dragon or material labels; their source-bound
+rider/unknown regions only remove candidate pixels. The result records the
+protection rule hash. Duplicate protection inputs fail instead of silently
+choosing one. This separates pose038's independently drawn new dragon material
+references from its older conservative sample guards. A synthetic end-to-end
+contract verifies that a protection-only target never enters the reference
+set, that both rider and unknown pixels are retained, and that a clear dragon
+pixel remains eligible. All seven reference-region tests passed in 0.042 s
+(test runner wall 0.201324208 s, child user 0.147222 s, system 0.034246 s).
+
+Evidence: `pose037-refined`, `pose037-final-revision`, `pose038-refined`,
+`pose038-retained-samples`, `pose038-final-revision`, and
+`pose038-sample-revision` under the private corpus directory. Source palette,
+bitmap hashes, geometry and SPR slots are checked during each generation;
+regeneration equality and protected-pixel assertions passed. These mechanical
+checks do not certify all rider semantics. No importer, riding mapping,
+Godot invocation or main/live asset mutation is included. Processing timestamps
+and separate wall/child-CPU counters remain in `offline-processing.jsonl`.
