@@ -1,5 +1,5 @@
 extends SceneTree
-## One authorized level35 pilot. No retry, refill, private answers or RNG seed.
+## One separately authorized level35 or level55 pilot. No retry, refill, private answers or RNG seed.
 ## Controlled audit only, not routine full: legitimate RNG ticket exhaustion
 ## returns boundary status/exit2 and must not be hidden by automatic retries.
 const Session=preload("res://server/game_session.gd")
@@ -12,7 +12,7 @@ class Backend extends "res://server/backend.gd":
  var trace_tick:=0
  var field_steps:=0
  var saved_transactions:Array=[]
- var spent:Dictionary={"2755":0,"2752":0,"2751":0,"2753":0}
+ var spent:Dictionary={"2755":0,"2756":0,"2752":0,"2751":0,"2753":0}
  static func items(profile:Dictionary,id:int)->int:
   var total:=0
   for item in profile.get("original_items",[]):
@@ -35,6 +35,7 @@ class Backend extends "res://server/backend.gd":
   saved_transactions.append(entry)
   print("SAVED ",JSON.stringify(entry))
   return ok
+var pilot_level:=int(OS.get_environment("STONE_AGE_GOLDEN_PILOT_LEVEL")) if not OS.get_environment("STONE_AGE_GOLDEN_PILOT_LEVEL").is_empty() else 35
 var started_ms:=Time.get_ticks_msec()
 var layers:Array=[]
 var public_results:Array=[]
@@ -58,7 +59,7 @@ func on_event(message:Dictionary)->void:
 func ack()->Dictionary:
  if b.quest_auto.issued.is_empty():return {}
  var p:Dictionary=b.quest_auto.issued[-1]
- var result:Dictionary={"type":"report_position","client":"pilot35","_quest_connection":35,"map_id":p.map_id,"cell":p.cell.duplicate(),"quest_position_seq":p.seq}
+ var result:Dictionary={"type":"report_position","client":"pilot%d"%pilot_level,"_quest_connection":pilot_level,"map_id":p.map_id,"cell":p.cell.duplicate(),"quest_position_seq":p.seq}
  for key in Motion.IDENTITY_FIELDS:result[key]=p[key]
  return result
 func record_draw()->void:
@@ -70,24 +71,28 @@ func record_draw()->void:
  var entry:Dictionary={"tick":b.trace_tick,"map_id":b.automation.position_map,"step":b.quest_auto.identity.step_id,"text":page.text}
  public_results.append(entry);print("PUBLIC_DRAW ",JSON.stringify(entry))
 func run()->void:
+ if pilot_level not in [35,55]:
+  printerr("Unsupported pilot level; no run started");quit(3);return
+ var entrance_ticket:=2756 if pilot_level==55 else 2755
+ var start_x:=28 if pilot_level==55 else 30
  b=Backend.new();b.set_process(false)
- b.session._profile.player.level=35
+ b.session._profile.player.level=pilot_level
  b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
  preload("res://server/progression.gd").refresh(b.session._profile.player)
  b.session._profile.player.hp=b.session._profile.player.max_hp
  for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
  b.session._profile.no_random_encounters=false
- Equipment.add(b.session._profile,2755)
+ Equipment.add(b.session._profile,entrance_ticket)
  for index in range(14):Equipment.add(b.session._profile,2752)
- b.automation.position_changed(811,Vector2i(30,22),true)
- b.save_path="user://golden-bui-pilot35.json"
+ b.automation.position_changed(811,Vector2i(start_x,22),true)
+ b.save_path="user://golden-bui-pilot%d.json"%pilot_level
  var initial:Dictionary=b.session.snapshot()
- var input:Dictionary={"level":initial.player.level,"hp":initial.player.hp,"max_hp":initial.player.max_hp,"attack":initial.player.attack,"defence":initial.player.defence,"speed":initial.player.speed,"base_stats":initial.player.base_stats,"gold":initial.player.gold,"tickets":{"2755":1,"2752":14},"bag_slots":Session.bag_slots(initial),"start":{"map_id":811,"cell":[30,22]},"rng":"original randomized; no seed selection or inspection","budget_ms":BUDGET_MS,"max_ticks":MAX_TICKS}
+ var input:Dictionary={"level":initial.player.level,"hp":initial.player.hp,"max_hp":initial.player.max_hp,"attack":initial.player.attack,"defence":initial.player.defence,"speed":initial.player.speed,"base_stats":initial.player.base_stats,"gold":initial.player.gold,"tickets":{str(entrance_ticket):1,"2752":14},"bag_slots":Session.bag_slots(initial),"start":{"map_id":811,"cell":[start_x,22]},"rng":"original randomized; no seed selection or inspection","budget_ms":BUDGET_MS,"max_ticks":MAX_TICKS}
  print("INPUT ",JSON.stringify(input))
  var outcome:="setup_failed"
  var reason:=""
  var setup_ok:bool=Session.bag_slots(initial)==15 and initial.pets.is_empty() and not Rules.flag(initial,"ended",44) and not Rules.flag(initial,"now",44) and b.save()
- var admitted:Dictionary=b.quest_auto.begin_source_run(b,"pilot35",35) if setup_ok else {"ok":false,"reason":"initial input/save mismatch"}
+ var admitted:Dictionary=b.quest_auto.begin_source_run(b,"pilot%d"%pilot_level,pilot_level) if setup_ok else {"ok":false,"reason":"initial input/save mismatch"}
  b.event.connect(on_event)
  var ticks:=0
  var last_step:=""
@@ -123,10 +128,10 @@ func run()->void:
  var reward_ok:bool=pets.size()==1 and int(pets[0].get("source_enemy_id",-1))==14 and int(pets[0].get("template_id",-1))==12 and int(pets[0].get("quest_reward_event",-1))==44 and int(pets[0].get("level",-1))==1
  var disk_ok:bool=reloaded and Rules.flag(disk,"ended",44) and disk.pets.size()==1 and reward_ok and str(disk.pets[0].pet_id)==str(pets[0].pet_id) and int(disk.pets[0].source_enemy_id)==14 and int(disk.pets[0].level)==1 and Backend.items(disk,2753)==0 and disk.completed_battles==final_profile.completed_battles
  if outcome=="candidate_complete":outcome="complete" if reward_ok and disk_ok and Rules.flag(final_profile,"ended",44) else "completion_validation_failed"
- var report:Dictionary={"outcome":outcome,"reason":reason,"input":input,"ticks":ticks,"simulated_seconds":ticks*0.21,"engine_wall_seconds":(Time.get_ticks_msec()-started_ms)/1000.0,"layers":layers,"fists":fists,"ticket_consumption_saved":b.spent,"remaining_2752":Backend.items(final_profile,2752),"ordinary_battles_saved":final_profile.completed_battles.size(),"field_steps":b.field_steps,"save_receipts":b.saved_transactions,"public_results":public_results,"end44":Rules.flag(final_profile,"ended",44),"reward_exact":reward_ok,"primary_valid":primary_valid,"disk_reloaded":reloaded,"disk_complete":disk_ok,"final":{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"phase":b.quest_auto.phase,"step":b.quest_auto.identity.step_id,"hp":final_profile.player.hp,"pets":pets.size(),"running":b.quest_auto.running},"save_path":ProjectSettings.globalize_path(b.save_path)}
- var file=FileAccess.open("user://golden-bui-pilot35-result.json",FileAccess.WRITE)
+ var report:Dictionary={"outcome":outcome,"reason":reason,"input":input,"ticks":ticks,"simulated_seconds":ticks*0.21,"engine_wall_seconds":(Time.get_ticks_msec()-started_ms)/1000.0,"layers":layers,"fists":fists,"ticket_consumption_saved":b.spent,"remaining_2752":Backend.items(final_profile,2752),"ordinary_battles_saved":final_profile.completed_battles.size(),"field_steps":b.field_steps,"save_receipts":b.saved_transactions,"public_results":public_results,"end44":Rules.flag(final_profile,"ended",44),"reward_exact":reward_ok,"primary_valid":primary_valid,"disk_reloaded":reloaded,"disk_complete":disk_ok,"disk_location":disk.get("location",{}),"disk_end44":Rules.flag(disk,"ended",44) if reloaded else false,"disk_pets":disk.get("pets",[]).size(),"final":{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"phase":b.quest_auto.phase,"step":b.quest_auto.identity.step_id,"hp":final_profile.player.hp,"pets":pets.size(),"running":b.quest_auto.running},"save_path":ProjectSettings.globalize_path(b.save_path)}
+ var file=FileAccess.open("user://golden-bui-pilot%d-result.json"%pilot_level,FileAccess.WRITE)
  if file!=null:file.store_string(JSON.stringify(report,"  "));file.close()
  print("PILOT_RESULT ",JSON.stringify(report))
- print("PILOT_REPORT ",ProjectSettings.globalize_path("user://golden-bui-pilot35-result.json"))
+ print("PILOT_REPORT ",ProjectSettings.globalize_path("user://golden-bui-pilot%d-result.json"%pilot_level))
  b.free()
  quit(0 if outcome=="complete" else 2)
