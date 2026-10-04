@@ -417,3 +417,28 @@ reference revisions retain their independent head/robe/foot outlines. Latest
 outputs are `pose034-refined`, with source/output hashes and actual revision
 crops in `pose034-final-revision`. Contact boundaries are still draft, and no
 riding mapping, gameplay rule, importer or live asset is enabled.
+
+## Paused after two further rear poses: 477 unique drafts
+
+Poses 035 and 036 add 24 drafts, for 477 unique source bitmaps (36 samples +
+441 pose rules); 3939 still lack rules and complete semantic receipts remain
+zero. Both books were checked for an empty intersection when saving each pose.
+All twelve source/change pairs per pose and the two final reference revision
+crops per pose were viewed. The other ten outputs per pose retain candidate
+hashes from the inspected source/change evidence. Pose 035 separately maps the
+outer white dragon cheek rim while preserving central spikes. Pose 036 keeps
+the rider's visible white forehead separate from the narrow dragon cheek rim.
+Both still contain unresolved contact colour. Current evidence is in
+`pose035-refined` / `pose035-final-revision` and
+`pose036-refined` / `pose036-final-revision`.
+
+The coordinator's new LAN/full window pauses further image decoding, rendering,
+batches and Python tests. The last processing command finished at
+2026-10-04T13:22:36.278958+00:00 according to `offline-processing.jsonl`.
+It was the pose036 final revision renderer (0.141280792 s wall,
+0.109691 s child user CPU, 0.026496 s child system CPU). Its revision sheet
+was subsequently viewed. No processing command was left running; all were
+synchronous and returned exit code zero. This is not a claim about historical
+whole-machine CPU or the external view service. The additional rules remain
+uncommitted drafts during the paused window; no generated original assets,
+Godot/import/game mapping or live operations are included.
