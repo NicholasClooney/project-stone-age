@@ -52,7 +52,7 @@ func run()->void:
  check(not b.quest_auto.safe_step(unsafe),"unreviewed freewarp rejected")
  b.quest_auto.running=true;b.quest_auto.strict_walk=true;b.quest_auto.quest_id=11
  var resume:Dictionary=b.quest_auto.resume_state()
- check(resume.version==2 and resume.strict_walk and not resume.has("arrival"),"intent stores mode without arrival proof")
+ check(resume.version==3 and resume.strict_walk and not resume.has("arrival"),"intent stores mode without arrival proof")
  b.quest_auto.stop(b)
  # A restart inside a protected cave does not recreate authority proof.
  b.automation.position_changed(20101,Vector2i(14,15))
