@@ -1,0 +1,2456 @@
+{
+  "version": 1,
+  "policy": "harn_axe_source_review_v1",
+  "job_id": 22,
+  "stop": {
+    "event": 19,
+    "item": 2465
+  },
+  "sources": {
+    "jaruga/event/20501ev1": {
+      "sha256": "aee96c9f2db7134e3b30ce2d3d372776ecb45d5bfc2c0b51e425e87b1f7dc225",
+      "raw_base64": "CiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKIyDO0srH1Oy4q9eovNK5/rb3oaPU9dH5o7/A97qmsMmjv6iUIwojqXipeKl4qXipeKl4qXipeKl4qXipeKl4qXipeLWjyM7V36O6yrjR0yMKIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIwoKTm9tYWxNYWluTXNnOs7SysfU7Lir16i80rn+tvejrM7S16HU2tXi0rLS0b6t09CjtKO1xOrBy6GjsrvKx8O/uPbIy87Stry74bDvy/vU7Lirzbe1xKGjCgpFdmVudE5vOi0xClRZUEU6TUVTU0FHRQpFVkVOVDpOT1dFVj0xOSZJVEVNIT0yNDY2Ck5vbWFsV2luZG93TXNnOuDFo7/X3L71tcO6w8/x1NrExL+0uf3E46GtoaNcbsrH09DAtMfrztKw78Omoa2ho1xuu7nKx7j5sb7Du8C0uf2hraGjXG7T0MO709DIy86vzdDE48C0sKGjv1xuxOPT0MO709C0+M6vzdDK6cC0sKGjvwpFdmVudEVuZAoKRXZlbnRObzoxOQpUWVBFOkFDQ0VQVApFVkVOVDpOT1dFVj0xOSZJVEVNPTI0NjQmSVRFTT0yNDY2CkFjY2VwdE1zZzrgxaGtzOHAtMHLwu+hrVxuusOjocTj1NrV4rXI0rvPwqOhClRoYW5rc01zZzrfy6Gk38uhpMXSoaSG56GkuuTCoaGkoaShpKGjXG66w6Oh1/a6w8HLo6FcbsC0o6Gw787SsNHV4rj2XG7Ew7W9sM22+8THsd/IpaOhCkdldEl0ZW06MjQ2NSoxCkRlbEl0ZW06MjQ2NCwyNDY2LDI0NjMKRW5kU2V0RmxnOjE5Ckl0ZW1GdWxsTXNnOs65o6HE47XEtcC+37T80tG+rcL6wctcbsTj0qrU9cO0sNG4q823tPi72MilsKFcbr/sxbKz9tK7uPa/1c67wLSjoQpFdmVudEVuZAoKRXZlbnRObzoxOQpUWVBFOk1FU1NBR0UKRVZFTlQ6Tk9XRVY9MTkmSVRFTSE9MjQ2MyZJVEVNPTI0NjYKTm9tYWxXaW5kb3dNc2c6yrLDtKO/xaq2qsHLXG7V5sTDxOPDu7Dst6ihrVxuusOwyaGtxMehrVxuvs2w0cv81Nm4+MTj0ru0zgpHZXRJdGVtOjI0NjMKSXRlbUZ1bGxNc2c6xOO0+MHLxMfDtLbgtqvO91xuw7vT0LDst6jM4cuu4LihrVxuvPXH4dK7tePW2MG/1NnAtLDJo6EKRXZlbnRFbmQKCkV2ZW50Tm86LTEKVFlQRTpNRVNTQUdFCkVWRU5UOkVOREVWPTE5JklURU09MjQ2NQpOb21hbFdpbmRvd01zZzrE47/steOw787SsNG4q823tPjIpaOhz+ux2Mv70rK63MCnyMWwyaOhCkV2ZW50RW5kCgpFdmVudE5vOjE5ClRZUEU6UkVRVUVTVApFVkVOVDpJVEVNPTI0NjYKUmVxdWVzdE1zZzrgxaO/1eKyu8rHsM22+7XEzq/N0MrpwvCjv1xuvMjIu8rHy/u1xNKqx/PEx77NsrvE3L7cvviho1xuzrmjobK7usPS4su8o6FcbsTjv8nS1LDvztK49sOmwvCjvwpUaGFua3NNc2c6uty6w7rcusOjob+0wLTE49e8sbi6w8HLo6FcbsTjsO/O0sil1+7PwrLjXG64+r+0ytjTw8uutcTIy9KqtePLrsC0oaNcbsTHvs29u7j4xOPBy6Os0qqw0cuu17DC+uC4oaMKU3RvcE1zZzrEx8Tjyseyu8/rsO/O0oaqoa0KRW5kU3RvcE1zZzrV4tH5tcS7sM7Svs3O3reosO/E49bG1Oy4q823wctcbtXmv8nPp6GtCk5vU3RvcE1zZzrFtqO/ysfC8KO/xMfE47/syKWw787SsNHLrsTDwLShowpHZXRJdGVtOjI0NjMKSXRlbUZ1bGxNc2c6xOO0+MHLxMfDtLbgtqvO91xuw7vT0LDst6jM4cuu4LihrVxuvPXH4dK7tePW2MG/1NnAtLDJo6EKRXZlbnRFbmQKCkV2ZW50Tm86LTEKVFlQRTpSRVFVRVNUCkVWRU5UOklURU09MjQ4NApSZXF1ZXN0TXNnOuDFo7/E48TDtcTKx1xuztLX9rXEuKvNt7DJo79cbuC44Lijobu5ysfSu9H5XG63x7OjtcS35sD7wu+hrVxu1eLKx87S1/a4+LDNtvtcbrXExMfSu7DRsMmjvwpUaGFua3NNc2c64MWhrc7S0rLKx9Xiw7TP66GjXG7V5sTRtcPE48O7sNHV4rirzbe2qrX0oaNcbrrDo6HO0tTZsO/E47TT1/bSu7TOo6Fcbu/PoaLvz6Gi78+hou/PoaLvz6GtXG7AtKOhxOO/ydLUsNHL/LT419/By6OhCkdldEl0ZW06MjQ4NSoxCkRlbEl0ZW06MjQ4NCoxCkl0ZW1GdWxsTXNnOsqyw7TC76OhxOO1xLXAvt/Iq8L6wcvC76OhXG7E47jDsru74crHXG6yu8/r0qrO0rXEuKvNt8HLsMmjvwpFdmVudEVuZAoKRXZlbnRObzotMQpUWVBFOk1FU1NBR0UKRVZFTlQ6SVRFTT0yNDY1Ck5vbWFsV2luZG93TXNnOtXisNHKx87S1/a1xLirzbfC76GtXG7U9dH5oa26w9PDwvCjvwpFdmVudEVuZAoKRXZlbnRObzotMQpUWVBFOkNMRUFOCkVWRU5UOkVOREVWPTE5CkNsZWFuRmxnOjE5CkNsZWFuRmxnTXNnOs7Sv8myu8rHXG7L5rHjvs2w78jL1sHU7Lirzbe1xOC4o6EKQ2xlYW5NYWluTXNnOsqyw7Sjv8/rx+vO0tf2uKvNt8Lwo78KRXZlbnRFbmQKCgpFdmVudE5vOi0xClRZUEU6UkVRVUVTVApFVkVOVDpJVEVNPTE4MzcKUmVxdWVzdE1zZzrV4tK7sNHUv7PXu7nV5srH0KHHyb6r1sKjrML5zNix8LXEo6zE0bnWw7vT0MjLu+HQ3sDt1eLSu7DR1L+z16GjClRoYW5rc01zZzq6w6OhztKw78Tj0N64tMv8sMmjoVxu78+hou/PoaLvz6Gi78+hou/Poa1cbsC0o6HE47/J0tSw0cv8tPjX38HLo6EKR2V0SXRlbToxODM4KjEKRGVsSXRlbToxODM3KjEKSXRlbUZ1bGxNc2c6yrLDtMLvo6HE47XEtcC+38irwvrBy8Lvo6EKRXZlbnRFbmQKCgpFdmVudE5vOi0xClRZUEU6TUVTU0FHRQpFVkVOVDpJVEVNPTE4MzgKTm9tYWxXaW5kb3dNc2c61eLKwL3n1ebG5sPuoa1cbsGs1L+z17a8v8nS1Nf2tb3V4sO00KGjoQpFdmVudEVuZA==",
+      "lines": [
+        {
+          "line": 1,
+          "text": ""
+        },
+        {
+          "line": 2,
+          "text": "########################################"
+        },
+        {
+          "line": 3,
+          "text": "# 我是造斧专家哈恩。怎样？厉害吧？〝#"
+        },
+        {
+          "line": 4,
+          "text": "#﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛担任者：矢延#"
+        },
+        {
+          "line": 5,
+          "text": "########################################"
+        },
+        {
+          "line": 6,
+          "text": ""
+        },
+        {
+          "line": 7,
+          "text": "NomalMainMsg:我是造斧专家哈恩，我住在这也已经有４５年了。不是每个人我都会帮他造斧头的。"
+        },
+        {
+          "line": 8,
+          "text": ""
+        },
+        {
+          "line": 9,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 10,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 11,
+          "text": "EVENT:NOWEV=19&ITEM!=2466"
+        },
+        {
+          "line": 12,
+          "text": "NomalWindowMsg:嗯？总觉得好像在哪看过你…。\\n是有来请我帮忙…。\\n还是根本没来过…。\\n有没有人委托你来啊？\\n你有没有带委托书来啊？"
+        },
+        {
+          "line": 13,
+          "text": "EventEnd"
+        },
+        {
+          "line": 14,
+          "text": ""
+        },
+        {
+          "line": 15,
+          "text": "EventNo:19"
+        },
+        {
+          "line": 16,
+          "text": "TYPE:ACCEPT"
+        },
+        {
+          "line": 17,
+          "text": "EVENT:NOWEV=19&ITEM=2464&ITEM=2466"
+        },
+        {
+          "line": 18,
+          "text": "AcceptMsg:嗯…提来了嘛…\\n好！你在这等一下！"
+        },
+        {
+          "line": 19,
+          "text": "ThanksMsg:咚·咚·乓·嗙·轰隆···。\\n好！做好了！\\n来！帮我把这个\\n拿到巴尔那边去！"
+        },
+        {
+          "line": 20,
+          "text": "GetItem:2465*1"
+        },
+        {
+          "line": 21,
+          "text": "DelItem:2464,2466,2463"
+        },
+        {
+          "line": 22,
+          "text": "EndSetFlg:19"
+        },
+        {
+          "line": 23,
+          "text": "ItemFullMsg:喂！你的道具袋已经满了\\n你要怎么把斧头带回去啊\\n快挪出一个空位来！"
+        },
+        {
+          "line": 24,
+          "text": "EventEnd"
+        },
+        {
+          "line": 25,
+          "text": ""
+        },
+        {
+          "line": 26,
+          "text": "EventNo:19"
+        },
+        {
+          "line": 27,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 28,
+          "text": "EVENT:NOWEV=19&ITEM!=2463&ITEM=2466"
+        },
+        {
+          "line": 29,
+          "text": "NomalWindowMsg:什么？弄丢了\\n真拿你没办法…\\n好吧…那…\\n就把它再给你一次"
+        },
+        {
+          "line": 30,
+          "text": "GetItem:2463"
+        },
+        {
+          "line": 31,
+          "text": "ItemFullMsg:你带了那么多东西\\n没有办法提水喔…\\n减轻一点重量再来吧！"
+        },
+        {
+          "line": 32,
+          "text": "EventEnd"
+        },
+        {
+          "line": 33,
+          "text": ""
+        },
+        {
+          "line": 34,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 35,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 36,
+          "text": "EVENT:ENDEV=19&ITEM=2465"
+        },
+        {
+          "line": 37,
+          "text": "NomalWindowMsg:你快点帮我把斧头带去！想必他也很困扰吧！"
+        },
+        {
+          "line": 38,
+          "text": "EventEnd"
+        },
+        {
+          "line": 39,
+          "text": ""
+        },
+        {
+          "line": 40,
+          "text": "EventNo:19"
+        },
+        {
+          "line": 41,
+          "text": "TYPE:REQUEST"
+        },
+        {
+          "line": 42,
+          "text": "EVENT:ITEM=2466"
+        },
+        {
+          "line": 43,
+          "text": "RequestMsg:嗯？这不是巴尔的委托书吗？\\n既然是他的要求那就不能拒绝。\\n喂！不好意思！\\n你可以帮我个忙吗？"
+        },
+        {
+          "line": 44,
+          "text": "ThanksMsg:很好很好！看来你准备好了！\\n你帮我去最下层\\n跟看守用水的人要点水来。\\n那就交给你了，要把水装满喔。"
+        },
+        {
+          "line": 45,
+          "text": "StopMsg:那你是不想帮我啰…"
+        },
+        {
+          "line": 46,
+          "text": "EndStopMsg:这样的话我就无法帮你制造斧头了\\n真可惜…"
+        },
+        {
+          "line": 47,
+          "text": "NoStopMsg:哦？是吗？那你快去帮我把水拿来。"
+        },
+        {
+          "line": 48,
+          "text": "GetItem:2463"
+        },
+        {
+          "line": 49,
+          "text": "ItemFullMsg:你带了那么多东西\\n没有办法提水喔…\\n减轻一点重量再来吧！"
+        },
+        {
+          "line": 50,
+          "text": "EventEnd"
+        },
+        {
+          "line": 51,
+          "text": ""
+        },
+        {
+          "line": 52,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 53,
+          "text": "TYPE:REQUEST"
+        },
+        {
+          "line": 54,
+          "text": "EVENT:ITEM=2484"
+        },
+        {
+          "line": 55,
+          "text": "RequestMsg:嗯？你拿的是\\n我做的斧头吧？\\n喔喔！还是一样\\n非常的锋利嘛…\\n这是我做给巴尔\\n的那一把吧？"
+        },
+        {
+          "line": 56,
+          "text": "ThanksMsg:嗯…我也是这么想。\\n真难得你没把这斧头丢掉。\\n好！我再帮你从做一次！\\n锵、锵、锵、锵、锵…\\n来！你可以把它带走了！"
+        },
+        {
+          "line": 57,
+          "text": "GetItem:2485*1"
+        },
+        {
+          "line": 58,
+          "text": "DelItem:2484*1"
+        },
+        {
+          "line": 59,
+          "text": "ItemFullMsg:什么嘛！你的道具全满了嘛！\\n你该不会是\\n不想要我的斧头了吧？"
+        },
+        {
+          "line": 60,
+          "text": "EventEnd"
+        },
+        {
+          "line": 61,
+          "text": ""
+        },
+        {
+          "line": 62,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 63,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 64,
+          "text": "EVENT:ITEM=2465"
+        },
+        {
+          "line": 65,
+          "text": "NomalWindowMsg:这把是我做的斧头嘛…\\n怎样…好用吗？"
+        },
+        {
+          "line": 66,
+          "text": "EventEnd"
+        },
+        {
+          "line": 67,
+          "text": ""
+        },
+        {
+          "line": 68,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 69,
+          "text": "TYPE:CLEAN"
+        },
+        {
+          "line": 70,
+          "text": "EVENT:ENDEV=19"
+        },
+        {
+          "line": 71,
+          "text": "CleanFlg:19"
+        },
+        {
+          "line": 72,
+          "text": "CleanFlgMsg:我可不是\\n随便就帮人至造斧头的喔！"
+        },
+        {
+          "line": 73,
+          "text": "CleanMainMsg:什么？想请我做斧头吗？"
+        },
+        {
+          "line": 74,
+          "text": "EventEnd"
+        },
+        {
+          "line": 75,
+          "text": ""
+        },
+        {
+          "line": 76,
+          "text": ""
+        },
+        {
+          "line": 77,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 78,
+          "text": "TYPE:REQUEST"
+        },
+        {
+          "line": 79,
+          "text": "EVENT:ITEM=1837"
+        },
+        {
+          "line": 80,
+          "text": "RequestMsg:这一把钥匙还真是小巧精致，蛮特别的，难怪没有人会修理这一把钥匙。"
+        },
+        {
+          "line": 81,
+          "text": "ThanksMsg:好！我帮你修复它吧！\\n锵、锵、锵、锵、锵…\\n来！你可以把它带走了！"
+        },
+        {
+          "line": 82,
+          "text": "GetItem:1838*1"
+        },
+        {
+          "line": 83,
+          "text": "DelItem:1837*1"
+        },
+        {
+          "line": 84,
+          "text": "ItemFullMsg:什么嘛！你的道具全满了嘛！"
+        },
+        {
+          "line": 85,
+          "text": "EventEnd"
+        },
+        {
+          "line": 86,
+          "text": ""
+        },
+        {
+          "line": 87,
+          "text": ""
+        },
+        {
+          "line": 88,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 89,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 90,
+          "text": "EVENT:ITEM=1838"
+        },
+        {
+          "line": 91,
+          "text": "NomalWindowMsg:这世界真奇妙…\\n连钥匙都可以做到这么小！"
+        },
+        {
+          "line": 92,
+          "text": "EventEnd"
+        }
+      ]
+    },
+    "jaruga/event/20501ev2": {
+      "sha256": "6edd9bf9abe39b75234a06a3affe4c16d3487a5a36a8657d53c8c59eda9450c4",
+      "raw_base64": "CiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKI87Syse/tMrYy661xL/GsM22+8zY0tS687u5x+u24LbgudjV1SMKI6l4qXipeKl4qXipeKl4qXipeKl4qXipeKl4qXi1o8jO1d+jusq40dMjCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKCk5vbWFsTWFpbk1zZzrO0srH1NrV4r+0ytjLrrXEv8awzbb7zNihoyzV4sDvtcTLrrrcydnT0LK7tL/O79bKoaMszqrBy7fA1rm/1sH6yLq1xMbGu7W2+NTa1eLA77+0ytihowoKRXZlbnRObzotMQpUWVBFOk1FU1NBR0UKRVZFTlQ6SVRFTT0yNDY0Ck5vbWFsV2luZG93TXNnOsfr0KHQxLHwyPez9sC0wcuho1xuu7nT0MenzfLSqtei0uK/1sH64LijoQpFdmVudEVuZAoKRXZlbnRObzotMQpUWVBFOkFDQ0VQVApFVkVOVDpJVEVNPTI0NjMKQWNjZXB0TXNnOtXitcTIt8rHuf6298/Iyfq1xMuuuviho1xuxOPKx9KqwLTV4sDvvLPLrrXEsMmjoQpUaGFua3NNc2c6ztLWqrXAwcujrMfrtcjSu8/CoaNcbtXi0fnSu8C0xMfQqc/rx8DLrrXEv9bB+lxuu+G2osTjtqK1xLj8vfTguKOhXG672MiltcTCt8nPx6fN8tKq0KHQxKOhCkdldEl0ZW06MjQ2NCoxCkRlbEl0ZW06MjQ2MyoxCkl0ZW1GdWxsTXNnOsTjtPjBy9Xiw7S24Larzve6w8/x0rKyu8Tc1NnM4cuuwcvC76OhXG7PyNC2z8LSu9CptqvO99TZwLSwyaOhCkV2ZW50RW5kCgoKCgoKCg==",
+      "lines": [
+        {
+          "line": 1,
+          "text": ""
+        },
+        {
+          "line": 2,
+          "text": "########################################"
+        },
+        {
+          "line": 3,
+          "text": "#我是看守水的科巴尔特以后还请多多关照#"
+        },
+        {
+          "line": 4,
+          "text": "#﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛担任者：矢延#"
+        },
+        {
+          "line": 5,
+          "text": "########################################"
+        },
+        {
+          "line": 6,
+          "text": ""
+        },
+        {
+          "line": 7,
+          "text": "NomalMainMsg:我是在这看守水的科巴尔特。,这里的水很少有不纯物质。,为了防止恐龙群的破坏而在这里看守。"
+        },
+        {
+          "line": 8,
+          "text": ""
+        },
+        {
+          "line": 9,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 10,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 11,
+          "text": "EVENT:ITEM=2464"
+        },
+        {
+          "line": 12,
+          "text": "NomalWindowMsg:请小心别洒出来了。\\n还有千万要注意恐龙喔！"
+        },
+        {
+          "line": 13,
+          "text": "EventEnd"
+        },
+        {
+          "line": 14,
+          "text": ""
+        },
+        {
+          "line": 15,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 16,
+          "text": "TYPE:ACCEPT"
+        },
+        {
+          "line": 17,
+          "text": "EVENT:ITEM=2463"
+        },
+        {
+          "line": 18,
+          "text": "AcceptMsg:这的确是哈恩先生的水壶。\\n你是要来这里汲水的吧！"
+        },
+        {
+          "line": 19,
+          "text": "ThanksMsg:我知道了，请等一下。\\n这样一来那些想抢水的恐龙\\n会盯你盯的更紧喔！\\n回去的路上千万要小心！"
+        },
+        {
+          "line": 20,
+          "text": "GetItem:2464*1"
+        },
+        {
+          "line": 21,
+          "text": "DelItem:2463*1"
+        },
+        {
+          "line": 22,
+          "text": "ItemFullMsg:你带了这么多东西好像也不能再提水了嘛！\\n先卸下一些东西再来吧！"
+        },
+        {
+          "line": 23,
+          "text": "EventEnd"
+        },
+        {
+          "line": 24,
+          "text": ""
+        },
+        {
+          "line": 25,
+          "text": ""
+        },
+        {
+          "line": 26,
+          "text": ""
+        },
+        {
+          "line": 27,
+          "text": ""
+        },
+        {
+          "line": 28,
+          "text": ""
+        },
+        {
+          "line": 29,
+          "text": ""
+        }
+      ]
+    },
+    "jaruga/event/20501ev3": {
+      "sha256": "a617d09f9cf1b4983d2665ecefcd42b4ab85f673ed26e886f54a79f73e7e34de",
+      "raw_base64": "CiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKI87Sysfp1Lfyo6HSssrH1K3KvMjLo6GpeKl4qXipeKl4IwojqXipeKl4qXipeKl4qXipeKl4qXipeKl4qXipeLWjyM7V36O6yrjR0yMKIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIwoKTm9tYWxNYWluTXNnOs7S1tjSqrXEuKvNt7bPtfTBy6GtoaMKRXZlbnRObzotMQpUWVBFOk1FU1NBR0UKRVZFTlQ6RU5ERVY9MTgKTm9tYWxXaW5kb3dNc2c6sKGjobirzbe1xMrCx+nV5srHzKvQu9C7xOPBy6GjXG7O0s/W1NrTw8THsNG4q823w7/M7NDBx9q12Lmk1/fXxcTYo6Fcbs7Su+HXotLisrvSqtTZyMPL/NXbts/By6OhCkV2ZW50RW5kCgpFdmVudE5vOi0xClRZUEU6TUVTU0FHRQpFVkVOVDpJVEVNPTI0NjcKTm9tYWxXaW5kb3dNc2c60qq6w7rDtcTFrMGm4LihowpFdmVudEVuZAoKRXZlbnRObzoxOApUWVBFOkFDQ0VQVApFVkVOVDpOT1dFVj0xOCZJVEVNPTI0NjUKQWNjZXB0TXNnOsW2o6HV4rK7yse5/rb31/a1xMqvuKvC8KO/XG7V4srHzqrBy87SXG62+MihwLS1xMLwo78KVGhhbmtzTXNnOsrHwvCjodXmysfMq7jQ0LvBy6OhXG7OqsHLtPDQu8TjXG6+zb3pydy49rrDuaTX97j4xOOwyaOhXG7E47T418XV4rj2yKW807zTXG7V0tK7uPa90Mj8ydC1xMS+ssTJzMjLsMmho1xusKGjodXisNG2z7X0tcS4q823y7Ox48vNxOOhowpHZXRJdGVtOjI0NjcsMjQ4NApEZWxJdGVtOjI0NjUqMQpFbmRTZXRGbGc6MTgKSXRlbUZ1bGxNc2c6xMe49qGtxOO1xLXAvt+0/ML6wcvguKGtXG7V4tH5vs2yu8TcuPjE473pydzQxcHLo6FcbrXIxOOw0bXAvt+0/Mfls/a49r/VzrvWrrrz1NnAtNXSztKwyaOhCkV2ZW50RW5kCgpFdmVudE5vOi0xClRZUEU6QUNDRVBUCkVWRU5UOklURU09MjQ2NQpBY2NlcHRNc2c6xbajodXisrvKx7n+tvfX9rXEyq+4q8Lwo79cbs7S1Nq/s7LEtcTKsbrysNG4q823uPjV27bPwctcbtXmycvE1L3uo6FcbtT10fmjv8Tj0qqyu9KqsNHL/MvNuPjO0sTYo78KVGhhbmtzTXNnOsrHwvCjodXmysfMq7jQ0LvBy6OhXG7OqsHLtPDQu8TjXG6+zb3pydy49rrDuaTX97j4xOOwyaOhXG7E47T418XV4rj2yKW807zTXG7V0tK7uPa90Mj8ydC1xMS+ssTJzMjLsMmho1xusKGjodXisNG2z7X0tcS4q823y7Ox48vNxOOhowpHZXRJdGVtOjI0NjcsMjQ4NApEZWxJdGVtOjI0NjUqMQpFbmRTZXRGbGc6MTgKSXRlbUZ1bGxNc2c6zrnOuaOhtcC+37T8wvrBy+C4o6FcbtXi0fnO0r7NsrvE3MvNxOPA8c7vwcujoVxutcjE47DRtcC+37T8x+Wz9rj2v9XOu9auuvPU2cC01dLO0rDJo6EKRXZlbnRFbmQKCkV2ZW50Tm86MTgKVFlQRTpNRVNTQUdFCkVWRU5UOk5PV0VWPTE4JklURU0hPTI0NjYKTm9tYWxXaW5kb3dNc2c6zq/N0Mrpsru8+8HLwvCjv1xu1ebEw8Tjw7uw7Leooa1cbsTHztLU2dC00rvVxcTjtcjSu8/CoaNcbsrHsKLCs8S3yb21xLn+tve21LDJoaMKR2V0SXRlbToyNDY2Ckl0ZW1GdWxsTXNnOs65zrmjoVxuxOO1xLXAvt+0/Fxu17Cyu8/Czq/N0Mrpwu+joVxutqq19NK70Km2q8731q6689TZwLSjoQpFdmVudEVuZAoKRXZlbnRObzoxOApUWVBFOlJFUVVFU1QKRVZFTlQ6TFY+MTQKUmVxdWVzdE1zZzq/ydLUy7XKx+nUt/K12rb+zPXD/LXEuKvNt1xusbvO0tTauaTX97XEyrG68tXbts/By6GjXG7I57n7xOPT0L/VtcS7sFxuv8nS1LDvztLEw8C0wvCjv1xuyOe5+8TjsO/O0sTDwLS1xLuwXG7O0r3pydy49rrDuaTX97j4xOMKVGhhbmtzTXNnOsW2xbajocTj1LjS4rDvztLC8KO/XG7Su9axsO/O0tf2uKvNt7XEXG690Nf2uf6297XE1Oy4q9eovNLXodTasKLCs8S3yb1cbr7Nv7/E47DvztLF3NK7zMvBy6GjXG7V4srHzq/N0MrpXG7U2ru5w7vEw7W9uKvNt9aux7BcbsenzfKx8LDRzq/N0Mrpxaq2quC4o6EKU3RvcE1zZzrOuc65o6HE47jDsru74cu1xOPN6sir1/ayu7W9sMmjvwpFbmRTdG9wTXNnOsqyw7TC76OhyMPO0sbatP3By9K7z8KjoVxu1ebKx7K7v8m/v7XEvNK776GtCk5vU3RvcE1zZzq21LCho6HE49K7tqjDu87KzOK1xMCyoaNcbr/syKW/7LvY4LijoQpHZXRJdGVtOjI0NjYKSXRlbUZ1bGxNc2c6zrnOuaOhxOPV4rXAvt+0/FxuuPmxvtewsrvPws6vzdDK6cLvoaNcbs/It8XPwtK70Km2q873XG7U2cC01dLO0qGjCkV2ZW50RW5kCgoK",
+      "lines": [
+        {
+          "line": 1,
+          "text": ""
+        },
+        {
+          "line": 2,
+          "text": "########################################"
+        },
+        {
+          "line": 3,
+          "text": "#我是樵夫！也是原始人！﹛﹛﹛﹛﹛#"
+        },
+        {
+          "line": 4,
+          "text": "#﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛﹛担任者：矢延#"
+        },
+        {
+          "line": 5,
+          "text": "########################################"
+        },
+        {
+          "line": 6,
+          "text": ""
+        },
+        {
+          "line": 7,
+          "text": "NomalMainMsg:我重要的斧头断掉了…。"
+        },
+        {
+          "line": 8,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 9,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 10,
+          "text": "EVENT:ENDEV=18"
+        },
+        {
+          "line": 11,
+          "text": "NomalWindowMsg:啊！斧头的事情真是太谢谢你了。\\n我现在用那把斧头每天辛勤地工作着呢！\\n我会注意不要再让它折断了！"
+        },
+        {
+          "line": 12,
+          "text": "EventEnd"
+        },
+        {
+          "line": 13,
+          "text": ""
+        },
+        {
+          "line": 14,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 15,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 16,
+          "text": "EVENT:ITEM=2467"
+        },
+        {
+          "line": 17,
+          "text": "NomalWindowMsg:要好好的努力喔。"
+        },
+        {
+          "line": 18,
+          "text": "EventEnd"
+        },
+        {
+          "line": 19,
+          "text": ""
+        },
+        {
+          "line": 20,
+          "text": "EventNo:18"
+        },
+        {
+          "line": 21,
+          "text": "TYPE:ACCEPT"
+        },
+        {
+          "line": 22,
+          "text": "EVENT:NOWEV=18&ITEM=2465"
+        },
+        {
+          "line": 23,
+          "text": "AcceptMsg:哦！这不是哈恩做的石斧吗？\\n这是为了我\\n而取来的吗？"
+        },
+        {
+          "line": 24,
+          "text": "ThanksMsg:是吗！真是太感谢了！\\n为了答谢你\\n就介绍个好工作给你吧！\\n你带着这个去加加\\n找一个叫赛尚的木材商人吧。\\n啊！这把断掉的斧头顺便送你。"
+        },
+        {
+          "line": 25,
+          "text": "GetItem:2467,2484"
+        },
+        {
+          "line": 26,
+          "text": "DelItem:2465*1"
+        },
+        {
+          "line": 27,
+          "text": "EndSetFlg:18"
+        },
+        {
+          "line": 28,
+          "text": "ItemFullMsg:那个…你的道具袋满了喔…\\n这样就不能给你介绍信了！\\n等你把道具袋清出个空位之后再来找我吧！"
+        },
+        {
+          "line": 29,
+          "text": "EventEnd"
+        },
+        {
+          "line": 30,
+          "text": ""
+        },
+        {
+          "line": 31,
+          "text": "EventNo:-1"
+        },
+        {
+          "line": 32,
+          "text": "TYPE:ACCEPT"
+        },
+        {
+          "line": 33,
+          "text": "EVENT:ITEM=2465"
+        },
+        {
+          "line": 34,
+          "text": "AcceptMsg:哦！这不是哈恩做的石斧吗？\\n我在砍材的时候把斧头给折断了\\n真伤脑筋！\\n怎样？你要不要把它送给我呢？"
+        },
+        {
+          "line": 35,
+          "text": "ThanksMsg:是吗！真是太感谢了！\\n为了答谢你\\n就介绍个好工作给你吧！\\n你带着这个去加加\\n找一个叫赛尚的木材商人吧。\\n啊！这把断掉的斧头顺便送你。"
+        },
+        {
+          "line": 36,
+          "text": "GetItem:2467,2484"
+        },
+        {
+          "line": 37,
+          "text": "DelItem:2465*1"
+        },
+        {
+          "line": 38,
+          "text": "EndSetFlg:18"
+        },
+        {
+          "line": 39,
+          "text": "ItemFullMsg:喂喂！道具袋满了喔！\\n这样我就不能送你礼物了！\\n等你把道具袋清出个空位之后再来找我吧！"
+        },
+        {
+          "line": 40,
+          "text": "EventEnd"
+        },
+        {
+          "line": 41,
+          "text": ""
+        },
+        {
+          "line": 42,
+          "text": "EventNo:18"
+        },
+        {
+          "line": 43,
+          "text": "TYPE:MESSAGE"
+        },
+        {
+          "line": 44,
+          "text": "EVENT:NOWEV=18&ITEM!=2466"
+        },
+        {
+          "line": 45,
+          "text": "NomalWindowMsg:委托书不见了吗？\\n真拿你没办法…\\n那我再写一张你等一下。\\n是阿鲁姆山的哈恩对吧。"
+        },
+        {
+          "line": 46,
+          "text": "GetItem:2466"
+        },
+        {
+          "line": 47,
+          "text": "ItemFullMsg:喂喂！\\n你的道具袋\\n装不下委托书嘛！\\n丢掉一些东西之后再来！"
+        },
+        {
+          "line": 48,
+          "text": "EventEnd"
+        },
+        {
+          "line": 49,
+          "text": ""
+        },
+        {
+          "line": 50,
+          "text": "EventNo:18"
+        },
+        {
+          "line": 51,
+          "text": "TYPE:REQUEST"
+        },
+        {
+          "line": 52,
+          "text": "EVENT:LV>14"
+        },
+        {
+          "line": 53,
+          "text": "RequestMsg:可以说是樵夫第二条命的斧头\\n被我在工作的时候折断了。\\n如果你有空的话\\n可以帮我拿来吗？\\n如果你帮我拿来的话\\n我介绍个好工作给你"
+        },
+        {
+          "line": 54,
+          "text": "ThanksMsg:哦哦！你愿意帮我吗？\\n一直帮我做斧头的\\n叫做哈恩的造斧专家住在阿鲁姆山\\n就靠你帮我跑一趟了。\\n这是委托书\\n在还没拿到斧头之前\\n千万别把委托书弄丢喔！"
+        },
+        {
+          "line": 55,
+          "text": "StopMsg:喂喂！你该不会说你完全做不到吧？"
+        },
+        {
+          "line": 56,
+          "text": "EndStopMsg:什么嘛！让我期待了一下！\\n真是不可靠的家伙…"
+        },
+        {
+          "line": 57,
+          "text": "NoStopMsg:对啊！你一定没问题的啦。\\n快去快回喔！"
+        },
+        {
+          "line": 58,
+          "text": "GetItem:2466"
+        },
+        {
+          "line": 59,
+          "text": "ItemFullMsg:喂喂！你这道具袋\\n根本装不下委托书嘛。\\n先放下一些东西\\n再来找我。"
+        },
+        {
+          "line": 60,
+          "text": "EventEnd"
+        },
+        {
+          "line": 61,
+          "text": ""
+        },
+        {
+          "line": 62,
+          "text": ""
+        }
+      ]
+    },
+    "jaruga/event/20501ev.create": {
+      "sha256": "9956eaf25f0ec4f6c126aee2086014ec98de2cdf7b7c1a39a1f3acee76fdc5d5",
+      "raw_base64": "TlBDQ1JFQVRFCgojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCiO0qdS9wt3Q/ba0v9/Kwrz+IwojtaPIztXfo7rKuNHTIwojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCgoKewpmbG9vcmlkPTIwNTA4CmJvcm5jb3JuZXI9MTIsMTEsMTIsMTEKdGltZT0wCmNyZWF0ZW51bT0xCmRpcj00Cmlnbm9yZWludmluY2libGU9MQpncmFwaGljbmFtZT0xNjAyNApuYW1lPdTsuKvXqLzSuf629wplbmVteT1jaGFuZ2VldmVudHxmaWxlOmphcnVnYS9ldmVudC8yMDUwMWV2MQp9CgojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKCnsKZmxvb3JpZD0yMDUwNwpib3JuY29ybmVyPTMyLDI5LDMyLDI5CnRpbWU9MApjcmVhdGVudW09MQpkaXI9NgppZ25vcmVpbnZpbmNpYmxlPTEKZ3JhcGhpY25hbWU9MTYyMDcKbmFtZT2/tMrY08PLrrXEv8awzbb7zNgKZW5lbXk9Y2hhbmdlZXZlbnR8ZmlsZTpqYXJ1Z2EvZXZlbnQvMjA1MDFldjIKfQoKIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKCnsKZmxvb3JpZD0zMzAwCmJvcm5jb3JuZXI9NjAsNzUsNjAsNzUKdGltZT0wCmNyZWF0ZW51bT0xCmRpcj02Cmlnbm9yZWludmluY2libGU9MQpncmFwaGljbmFtZT0xNjAxOApuYW1lPenUt/Kwzbb7CmVuZW15PWNoYW5nZWV2ZW50fGZpbGU6amFydWdhL2V2ZW50LzIwNTAxZXYzCn0KCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIwoKewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj00Niw1NSw0Niw1NQp0aW1lPTAKY3JlYXRlbnVtPTEKZGlyPTQKaWdub3JlaW52aW5jaWJsZT0xCmdyYXBoaWNuYW1lPTE2MDQ3Cm5hbWU9z7K7trDL2NS1xMTqx+HIywplbmVteT1jaGFuZ2VldmVudHxmaWxlOmphcnVnYS9ldmVudC8yMDUwMWV2NAp9CgojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCgp7CmZsb29yaWQ9MzAwMApib3JuY29ybmVyPTExNCw2OSwxMTQsNjkKdGltZT0wCmNyZWF0ZW51bT0xCmRpcj02Cmlnbm9yZWludmluY2libGU9MQpncmFwaGljbmFtZT0xNjAwMApuYW1lPcS+ssTJzMjLyPzJ0AplbmVteT1jaGFuZ2VldmVudHxmaWxlOmphcnVnYS9ldmVudC8yMDUwMWV2NQp9Cgo=",
+      "lines": [
+        {
+          "line": 1,
+          "text": "NPCCREATE"
+        },
+        {
+          "line": 2,
+          "text": ""
+        },
+        {
+          "line": 3,
+          "text": "########################################"
+        },
+        {
+          "line": 4,
+          "text": "#穿越螺旋洞窟事件#"
+        },
+        {
+          "line": 5,
+          "text": "#担任者：矢延#"
+        },
+        {
+          "line": 6,
+          "text": "########################################"
+        },
+        {
+          "line": 7,
+          "text": ""
+        },
+        {
+          "line": 8,
+          "text": ""
+        },
+        {
+          "line": 9,
+          "text": "{"
+        },
+        {
+          "line": 10,
+          "text": "floorid=20508"
+        },
+        {
+          "line": 11,
+          "text": "borncorner=12,11,12,11"
+        },
+        {
+          "line": 12,
+          "text": "time=0"
+        },
+        {
+          "line": 13,
+          "text": "createnum=1"
+        },
+        {
+          "line": 14,
+          "text": "dir=4"
+        },
+        {
+          "line": 15,
+          "text": "ignoreinvincible=1"
+        },
+        {
+          "line": 16,
+          "text": "graphicname=16024"
+        },
+        {
+          "line": 17,
+          "text": "name=造斧专家哈恩"
+        },
+        {
+          "line": 18,
+          "text": "enemy=changeevent|file:jaruga/event/20501ev1"
+        },
+        {
+          "line": 19,
+          "text": "}"
+        },
+        {
+          "line": 20,
+          "text": ""
+        },
+        {
+          "line": 21,
+          "text": "################################################"
+        },
+        {
+          "line": 22,
+          "text": ""
+        },
+        {
+          "line": 23,
+          "text": "{"
+        },
+        {
+          "line": 24,
+          "text": "floorid=20507"
+        },
+        {
+          "line": 25,
+          "text": "borncorner=32,29,32,29"
+        },
+        {
+          "line": 26,
+          "text": "time=0"
+        },
+        {
+          "line": 27,
+          "text": "createnum=1"
+        },
+        {
+          "line": 28,
+          "text": "dir=6"
+        },
+        {
+          "line": 29,
+          "text": "ignoreinvincible=1"
+        },
+        {
+          "line": 30,
+          "text": "graphicname=16207"
+        },
+        {
+          "line": 31,
+          "text": "name=看守用水的科巴尔特"
+        },
+        {
+          "line": 32,
+          "text": "enemy=changeevent|file:jaruga/event/20501ev2"
+        },
+        {
+          "line": 33,
+          "text": "}"
+        },
+        {
+          "line": 34,
+          "text": ""
+        },
+        {
+          "line": 35,
+          "text": "#####################################################"
+        },
+        {
+          "line": 36,
+          "text": ""
+        },
+        {
+          "line": 37,
+          "text": "{"
+        },
+        {
+          "line": 38,
+          "text": "floorid=3300"
+        },
+        {
+          "line": 39,
+          "text": "borncorner=60,75,60,75"
+        },
+        {
+          "line": 40,
+          "text": "time=0"
+        },
+        {
+          "line": 41,
+          "text": "createnum=1"
+        },
+        {
+          "line": 42,
+          "text": "dir=6"
+        },
+        {
+          "line": 43,
+          "text": "ignoreinvincible=1"
+        },
+        {
+          "line": 44,
+          "text": "graphicname=16018"
+        },
+        {
+          "line": 45,
+          "text": "name=樵夫巴尔"
+        },
+        {
+          "line": 46,
+          "text": "enemy=changeevent|file:jaruga/event/20501ev3"
+        },
+        {
+          "line": 47,
+          "text": "}"
+        },
+        {
+          "line": 48,
+          "text": ""
+        },
+        {
+          "line": 49,
+          "text": "#########################################################"
+        },
+        {
+          "line": 50,
+          "text": ""
+        },
+        {
+          "line": 51,
+          "text": "{"
+        },
+        {
+          "line": 52,
+          "text": "floorid=3300"
+        },
+        {
+          "line": 53,
+          "text": "borncorner=46,55,46,55"
+        },
+        {
+          "line": 54,
+          "text": "time=0"
+        },
+        {
+          "line": 55,
+          "text": "createnum=1"
+        },
+        {
+          "line": 56,
+          "text": "dir=4"
+        },
+        {
+          "line": 57,
+          "text": "ignoreinvincible=1"
+        },
+        {
+          "line": 58,
+          "text": "graphicname=16047"
+        },
+        {
+          "line": 59,
+          "text": "name=喜欢八卦的年轻人"
+        },
+        {
+          "line": 60,
+          "text": "enemy=changeevent|file:jaruga/event/20501ev4"
+        },
+        {
+          "line": 61,
+          "text": "}"
+        },
+        {
+          "line": 62,
+          "text": ""
+        },
+        {
+          "line": 63,
+          "text": "##########################################################"
+        },
+        {
+          "line": 64,
+          "text": ""
+        },
+        {
+          "line": 65,
+          "text": "{"
+        },
+        {
+          "line": 66,
+          "text": "floorid=3000"
+        },
+        {
+          "line": 67,
+          "text": "borncorner=114,69,114,69"
+        },
+        {
+          "line": 68,
+          "text": "time=0"
+        },
+        {
+          "line": 69,
+          "text": "createnum=1"
+        },
+        {
+          "line": 70,
+          "text": "dir=6"
+        },
+        {
+          "line": 71,
+          "text": "ignoreinvincible=1"
+        },
+        {
+          "line": 72,
+          "text": "graphicname=16000"
+        },
+        {
+          "line": 73,
+          "text": "name=木材商人赛尚"
+        },
+        {
+          "line": 74,
+          "text": "enemy=changeevent|file:jaruga/event/20501ev5"
+        },
+        {
+          "line": 75,
+          "text": "}"
+        },
+        {
+          "line": 76,
+          "text": ""
+        }
+      ]
+    }
+  },
+  "npcs": [
+    {
+      "events": [
+        18,
+        19
+      ],
+      "id": "jaruga/event/20501ev1",
+      "name": "造斧专家哈恩",
+      "map_id": 20508,
+      "cell": [
+        12,
+        11
+      ],
+      "graphic": 16024,
+      "facing": 4,
+      "role": "quest",
+      "text": "我是造斧专家哈恩，我住在这也已经有４５年了。不是每个人我都会帮他造斧头的。",
+      "branches": [
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "NOWEV=19&ITEM!=2466",
+          "texts": {
+            "NomalWindowMsg": "嗯？总觉得好像在哪看过你…。\n是有来请我帮忙…。\n还是根本没来过…。\n有没有人委托你来啊？\n你有没有带委托书来啊？"
+          },
+          "actions": {},
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": 19,
+          "type": "ACCEPT",
+          "condition": "NOWEV=19&ITEM=2464&ITEM=2466",
+          "texts": {
+            "AcceptMsg": "嗯…提来了嘛…\n好！你在这等一下！",
+            "ThanksMsg": "咚·咚·乓·嗙·轰隆···。\n好！做好了！\n来！帮我把这个\n拿到巴尔那边去！",
+            "ItemFullMsg": "喂！你的道具袋已经满了\n你要怎么把斧头带回去啊\n快挪出一个空位来！"
+          },
+          "actions": {
+            "GetItem": "2465*1",
+            "DelItem": "2464,2466,2463",
+            "EndSetFlg": "19"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": 19,
+          "type": "MESSAGE",
+          "condition": "NOWEV=19&ITEM!=2463&ITEM=2466",
+          "texts": {
+            "NomalWindowMsg": "什么？弄丢了\n真拿你没办法…\n好吧…那…\n就把它再给你一次",
+            "ItemFullMsg": "你带了那么多东西\n没有办法提水喔…\n减轻一点重量再来吧！"
+          },
+          "actions": {
+            "GetItem": "2463"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ENDEV=19&ITEM=2465",
+          "texts": {
+            "NomalWindowMsg": "你快点帮我把斧头带去！想必他也很困扰吧！"
+          },
+          "actions": {},
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": 19,
+          "type": "REQUEST",
+          "condition": "ITEM=2466",
+          "texts": {
+            "RequestMsg": "嗯？这不是巴尔的委托书吗？\n既然是他的要求那就不能拒绝。\n喂！不好意思！\n你可以帮我个忙吗？",
+            "ThanksMsg": "很好很好！看来你准备好了！\n你帮我去最下层\n跟看守用水的人要点水来。\n那就交给你了，要把水装满喔。",
+            "StopMsg": "那你是不想帮我啰…",
+            "EndStopMsg": "这样的话我就无法帮你制造斧头了\n真可惜…",
+            "NoStopMsg": "哦？是吗？那你快去帮我把水拿来。",
+            "ItemFullMsg": "你带了那么多东西\n没有办法提水喔…\n减轻一点重量再来吧！"
+          },
+          "actions": {
+            "GetItem": "2463"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "REQUEST",
+          "condition": "ITEM=2484",
+          "texts": {
+            "RequestMsg": "嗯？你拿的是\n我做的斧头吧？\n喔喔！还是一样\n非常的锋利嘛…\n这是我做给巴尔\n的那一把吧？",
+            "ThanksMsg": "嗯…我也是这么想。\n真难得你没把这斧头丢掉。\n好！我再帮你从做一次！\n锵、锵、锵、锵、锵…\n来！你可以把它带走了！",
+            "ItemFullMsg": "什么嘛！你的道具全满了嘛！\n你该不会是\n不想要我的斧头了吧？"
+          },
+          "actions": {
+            "GetItem": "2485*1",
+            "DelItem": "2484*1"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ITEM=2465",
+          "texts": {
+            "NomalWindowMsg": "这把是我做的斧头嘛…\n怎样…好用吗？"
+          },
+          "actions": {},
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "CLEAN",
+          "condition": "ENDEV=19",
+          "texts": {
+            "CleanFlgMsg": "我可不是\n随便就帮人至造斧头的喔！",
+            "CleanMainMsg": "什么？想请我做斧头吗？"
+          },
+          "actions": {
+            "CleanFlg": "19"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "REQUEST",
+          "condition": "ITEM=1837",
+          "texts": {
+            "RequestMsg": "这一把钥匙还真是小巧精致，蛮特别的，难怪没有人会修理这一把钥匙。",
+            "ThanksMsg": "好！我帮你修复它吧！\n锵、锵、锵、锵、锵…\n来！你可以把它带走了！",
+            "ItemFullMsg": "什么嘛！你的道具全满了嘛！"
+          },
+          "actions": {
+            "GetItem": "1838*1",
+            "DelItem": "1837*1"
+          },
+          "enabled": false,
+          "events": []
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ITEM=1838",
+          "texts": {
+            "NomalWindowMsg": "这世界真奇妙…\n连钥匙都可以做到这么小！"
+          },
+          "actions": {},
+          "enabled": false,
+          "events": []
+        }
+      ],
+      "bitmap_id": 5870,
+      "path": "quests/npcs/n-6a61727567612f6576656e742f3230353031657631.png",
+      "offset": [
+        -19,
+        -52
+      ]
+    },
+    {
+      "events": [
+        18,
+        19
+      ],
+      "id": "jaruga/event/20501ev2",
+      "name": "看守用水的科巴尔特",
+      "map_id": 20507,
+      "cell": [
+        32,
+        29
+      ],
+      "graphic": 16207,
+      "facing": 6,
+      "role": "quest",
+      "text": "我是在这看守水的科巴尔特。,这里的水很少有不纯物质。,为了防止恐龙群的破坏而在这里看守。",
+      "branches": [
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ITEM=2464",
+          "texts": {
+            "NomalWindowMsg": "请小心别洒出来了。\n还有千万要注意恐龙喔！"
+          },
+          "actions": {},
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "ITEM=2463",
+          "texts": {
+            "AcceptMsg": "这的确是哈恩先生的水壶。\n你是要来这里汲水的吧！",
+            "ThanksMsg": "我知道了，请等一下。\n这样一来那些想抢水的恐龙\n会盯你盯的更紧喔！\n回去的路上千万要小心！",
+            "ItemFullMsg": "你带了这么多东西好像也不能再提水了嘛！\n先卸下一些东西再来吧！"
+          },
+          "actions": {
+            "GetItem": "2464*1",
+            "DelItem": "2463*1"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        }
+      ],
+      "bitmap_id": 5927,
+      "path": "quests/npcs/n-6a61727567612f6576656e742f3230353031657632.png",
+      "offset": [
+        -23,
+        -84
+      ]
+    },
+    {
+      "events": [
+        18,
+        19
+      ],
+      "id": "jaruga/event/20501ev3",
+      "name": "樵夫巴尔",
+      "map_id": 3300,
+      "cell": [
+        60,
+        75
+      ],
+      "graphic": 16018,
+      "facing": 6,
+      "role": "quest",
+      "text": "我重要的斧头断掉了…。",
+      "branches": [
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ENDEV=18",
+          "texts": {
+            "NomalWindowMsg": "啊！斧头的事情真是太谢谢你了。\n我现在用那把斧头每天辛勤地工作着呢！\n我会注意不要再让它折断了！"
+          },
+          "actions": {},
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ITEM=2467",
+          "texts": {
+            "NomalWindowMsg": "要好好的努力喔。"
+          },
+          "actions": {},
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": 18,
+          "type": "ACCEPT",
+          "condition": "NOWEV=18&ITEM=2465",
+          "texts": {
+            "AcceptMsg": "哦！这不是哈恩做的石斧吗？\n这是为了我\n而取来的吗？",
+            "ThanksMsg": "是吗！真是太感谢了！\n为了答谢你\n就介绍个好工作给你吧！\n你带着这个去加加\n找一个叫赛尚的木材商人吧。\n啊！这把断掉的斧头顺便送你。",
+            "ItemFullMsg": "那个…你的道具袋满了喔…\n这样就不能给你介绍信了！\n等你把道具袋清出个空位之后再来找我吧！"
+          },
+          "actions": {
+            "GetItem": "2467,2484",
+            "DelItem": "2465*1",
+            "EndSetFlg": "18"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": -1,
+          "type": "ACCEPT",
+          "condition": "ITEM=2465",
+          "texts": {
+            "AcceptMsg": "哦！这不是哈恩做的石斧吗？\n我在砍材的时候把斧头给折断了\n真伤脑筋！\n怎样？你要不要把它送给我呢？",
+            "ThanksMsg": "是吗！真是太感谢了！\n为了答谢你\n就介绍个好工作给你吧！\n你带着这个去加加\n找一个叫赛尚的木材商人吧。\n啊！这把断掉的斧头顺便送你。",
+            "ItemFullMsg": "喂喂！道具袋满了喔！\n这样我就不能送你礼物了！\n等你把道具袋清出个空位之后再来找我吧！"
+          },
+          "actions": {
+            "GetItem": "2467,2484",
+            "DelItem": "2465*1",
+            "EndSetFlg": "18"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": 18,
+          "type": "MESSAGE",
+          "condition": "NOWEV=18&ITEM!=2466",
+          "texts": {
+            "NomalWindowMsg": "委托书不见了吗？\n真拿你没办法…\n那我再写一张你等一下。\n是阿鲁姆山的哈恩对吧。",
+            "ItemFullMsg": "喂喂！\n你的道具袋\n装不下委托书嘛！\n丢掉一些东西之后再来！"
+          },
+          "actions": {
+            "GetItem": "2466"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        },
+        {
+          "event": 18,
+          "type": "REQUEST",
+          "condition": "LV>14",
+          "texts": {
+            "RequestMsg": "可以说是樵夫第二条命的斧头\n被我在工作的时候折断了。\n如果你有空的话\n可以帮我拿来吗？\n如果你帮我拿来的话\n我介绍个好工作给你",
+            "ThanksMsg": "哦哦！你愿意帮我吗？\n一直帮我做斧头的\n叫做哈恩的造斧专家住在阿鲁姆山\n就靠你帮我跑一趟了。\n这是委托书\n在还没拿到斧头之前\n千万别把委托书弄丢喔！",
+            "StopMsg": "喂喂！你该不会说你完全做不到吧？",
+            "EndStopMsg": "什么嘛！让我期待了一下！\n真是不可靠的家伙…",
+            "NoStopMsg": "对啊！你一定没问题的啦。\n快去快回喔！",
+            "ItemFullMsg": "喂喂！你这道具袋\n根本装不下委托书嘛。\n先放下一些东西\n再来找我。"
+          },
+          "actions": {
+            "GetItem": "2466"
+          },
+          "enabled": true,
+          "events": [
+            18,
+            19
+          ]
+        }
+      ],
+      "bitmap_id": 5864,
+      "path": "quests/npcs/n-6a61727567612f6576656e742f3230353031657633.png",
+      "offset": [
+        -17,
+        -70
+      ]
+    }
+  ],
+  "recipes": {
+    "commission": {
+      "npc_id": "jaruga/event/20501ev3",
+      "branch_index": 5,
+      "source_line": 50
+    },
+    "replace_commission": {
+      "npc_id": "jaruga/event/20501ev3",
+      "branch_index": 4,
+      "source_line": 42
+    },
+    "request_axe": {
+      "npc_id": "jaruga/event/20501ev1",
+      "branch_index": 4,
+      "source_line": 40
+    },
+    "replace_pot": {
+      "npc_id": "jaruga/event/20501ev1",
+      "branch_index": 2,
+      "source_line": 26
+    },
+    "fill_water": {
+      "npc_id": "jaruga/event/20501ev2",
+      "branch_index": 1,
+      "source_line": 15
+    },
+    "claim_axe": {
+      "npc_id": "jaruga/event/20501ev1",
+      "branch_index": 1,
+      "source_line": 15
+    }
+  },
+  "portals": [
+    {
+      "from_map": 200,
+      "cell": [
+        518,
+        766
+      ],
+      "to_map": 3300,
+      "target": [
+        44,
+        66
+      ],
+      "source": "200warp.create:475"
+    },
+    {
+      "from_map": 200,
+      "cell": [
+        518,
+        767
+      ],
+      "to_map": 3300,
+      "target": [
+        44,
+        67
+      ],
+      "source": "200warp.create:484"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        43,
+        66
+      ],
+      "to_map": 200,
+      "target": [
+        517,
+        766
+      ],
+      "source": "200warp.create:493"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        43,
+        67
+      ],
+      "to_map": 200,
+      "target": [
+        517,
+        767
+      ],
+      "source": "200warp.create:502"
+    },
+    {
+      "from_map": 200,
+      "cell": [
+        548,
+        745
+      ],
+      "to_map": 3300,
+      "target": [
+        72,
+        45
+      ],
+      "source": "200warp.create:511"
+    },
+    {
+      "from_map": 200,
+      "cell": [
+        548,
+        746
+      ],
+      "to_map": 3300,
+      "target": [
+        72,
+        46
+      ],
+      "source": "200warp.create:520"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        73,
+        45
+      ],
+      "to_map": 200,
+      "target": [
+        549,
+        745
+      ],
+      "source": "200warp.create:529"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        73,
+        46
+      ],
+      "to_map": 200,
+      "target": [
+        549,
+        746
+      ],
+      "source": "200warp.create:538"
+    },
+    {
+      "from_map": 200,
+      "cell": [
+        396,
+        821
+      ],
+      "to_map": 20501,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1000"
+    },
+    {
+      "from_map": 20501,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 200,
+      "target": [
+        396,
+        821
+      ],
+      "source": "dungeon01.create:1009"
+    },
+    {
+      "from_map": 20501,
+      "cell": [
+        27,
+        22
+      ],
+      "to_map": 20502,
+      "target": [
+        27,
+        22
+      ],
+      "source": "dungeon01.create:1018"
+    },
+    {
+      "from_map": 20502,
+      "cell": [
+        27,
+        22
+      ],
+      "to_map": 20501,
+      "target": [
+        27,
+        22
+      ],
+      "source": "dungeon01.create:1027"
+    },
+    {
+      "from_map": 20501,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20508,
+      "target": [
+        7,
+        24
+      ],
+      "source": "dungeon01.create:1036",
+      "convenience": "重复原版入口采用已核对的一个原始落点"
+    },
+    {
+      "from_map": 20508,
+      "cell": [
+        7,
+        24
+      ],
+      "to_map": 20501,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1045"
+    },
+    {
+      "from_map": 20501,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20508,
+      "target": [
+        8,
+        24
+      ],
+      "source": "dungeon01.create:1054",
+      "disabled": true,
+      "reason": "Reviewed scenery door uses another original destination"
+    },
+    {
+      "from_map": 20508,
+      "cell": [
+        8,
+        24
+      ],
+      "to_map": 20501,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1063"
+    },
+    {
+      "from_map": 20502,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20503,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1072"
+    },
+    {
+      "from_map": 20503,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20502,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1081"
+    },
+    {
+      "from_map": 20502,
+      "cell": [
+        37,
+        34
+      ],
+      "to_map": 20501,
+      "target": [
+        37,
+        34
+      ],
+      "source": "dungeon01.create:1090"
+    },
+    {
+      "from_map": 20501,
+      "cell": [
+        37,
+        34
+      ],
+      "to_map": 20502,
+      "target": [
+        37,
+        34
+      ],
+      "source": "dungeon01.create:1099"
+    },
+    {
+      "from_map": 20503,
+      "cell": [
+        37,
+        34
+      ],
+      "to_map": 20504,
+      "target": [
+        37,
+        34
+      ],
+      "source": "dungeon01.create:1108"
+    },
+    {
+      "from_map": 20504,
+      "cell": [
+        37,
+        34
+      ],
+      "to_map": 20503,
+      "target": [
+        37,
+        34
+      ],
+      "source": "dungeon01.create:1117"
+    },
+    {
+      "from_map": 20503,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 20502,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1126"
+    },
+    {
+      "from_map": 20502,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 20503,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1135"
+    },
+    {
+      "from_map": 20504,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 20505,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1144"
+    },
+    {
+      "from_map": 20505,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 20504,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1153"
+    },
+    {
+      "from_map": 20504,
+      "cell": [
+        27,
+        22
+      ],
+      "to_map": 20503,
+      "target": [
+        27,
+        22
+      ],
+      "source": "dungeon01.create:1162"
+    },
+    {
+      "from_map": 20503,
+      "cell": [
+        27,
+        22
+      ],
+      "to_map": 20504,
+      "target": [
+        27,
+        22
+      ],
+      "source": "dungeon01.create:1171"
+    },
+    {
+      "from_map": 20505,
+      "cell": [
+        27,
+        22
+      ],
+      "to_map": 20506,
+      "target": [
+        27,
+        22
+      ],
+      "source": "dungeon01.create:1180"
+    },
+    {
+      "from_map": 20506,
+      "cell": [
+        27,
+        22
+      ],
+      "to_map": 20505,
+      "target": [
+        27,
+        22
+      ],
+      "source": "dungeon01.create:1189"
+    },
+    {
+      "from_map": 20505,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20504,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1198"
+    },
+    {
+      "from_map": 20504,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20505,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1207"
+    },
+    {
+      "from_map": 20506,
+      "cell": [
+        37,
+        34
+      ],
+      "to_map": 20505,
+      "target": [
+        37,
+        34
+      ],
+      "source": "dungeon01.create:1216"
+    },
+    {
+      "from_map": 20505,
+      "cell": [
+        37,
+        34
+      ],
+      "to_map": 20506,
+      "target": [
+        37,
+        34
+      ],
+      "source": "dungeon01.create:1225"
+    },
+    {
+      "from_map": 20506,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20507,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1234"
+    },
+    {
+      "from_map": 20507,
+      "cell": [
+        8,
+        53
+      ],
+      "to_map": 20506,
+      "target": [
+        8,
+        53
+      ],
+      "source": "dungeon01.create:1243"
+    },
+    {
+      "from_map": 20507,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 20506,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1252"
+    },
+    {
+      "from_map": 20506,
+      "cell": [
+        56,
+        5
+      ],
+      "to_map": 20507,
+      "target": [
+        56,
+        5
+      ],
+      "source": "dungeon01.create:1261"
+    },
+    {
+      "from_map": 20508,
+      "cell": [
+        20,
+        11
+      ],
+      "to_map": 200,
+      "target": [
+        396,
+        821
+      ],
+      "source": "dungeon01.create:1270"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        51,
+        60
+      ],
+      "to_map": 3303,
+      "target": [
+        15,
+        20
+      ],
+      "source": "warp_y2.create:1105"
+    },
+    {
+      "from_map": 3303,
+      "cell": [
+        15,
+        20
+      ],
+      "to_map": 3300,
+      "target": [
+        51,
+        60
+      ],
+      "source": "warp_y2.create:1114"
+    },
+    {
+      "from_map": 3303,
+      "cell": [
+        16,
+        20
+      ],
+      "to_map": 3300,
+      "target": [
+        51,
+        60
+      ],
+      "source": "warp_y2.create:1123"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        48,
+        64
+      ],
+      "to_map": 3304,
+      "target": [
+        11,
+        15
+      ],
+      "source": "warp_y2.create:1132"
+    },
+    {
+      "from_map": 3304,
+      "cell": [
+        11,
+        15
+      ],
+      "to_map": 3300,
+      "target": [
+        48,
+        64
+      ],
+      "source": "warp_y2.create:1141"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        48,
+        65
+      ],
+      "to_map": 3304,
+      "target": [
+        11,
+        16
+      ],
+      "source": "warp_y2.create:1150"
+    },
+    {
+      "from_map": 3304,
+      "cell": [
+        11,
+        16
+      ],
+      "to_map": 3300,
+      "target": [
+        48,
+        65
+      ],
+      "source": "warp_y2.create:1159"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        59,
+        45
+      ],
+      "to_map": 3305,
+      "target": [
+        11,
+        15
+      ],
+      "source": "warp_y2.create:1168"
+    },
+    {
+      "from_map": 3305,
+      "cell": [
+        11,
+        15
+      ],
+      "to_map": 3300,
+      "target": [
+        59,
+        45
+      ],
+      "source": "warp_y2.create:1177"
+    },
+    {
+      "from_map": 3305,
+      "cell": [
+        11,
+        16
+      ],
+      "to_map": 3300,
+      "target": [
+        59,
+        45
+      ],
+      "source": "warp_y2.create:1186"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        54,
+        43
+      ],
+      "to_map": 3306,
+      "target": [
+        15,
+        20
+      ],
+      "source": "warp_y2.create:1195"
+    },
+    {
+      "from_map": 3306,
+      "cell": [
+        15,
+        20
+      ],
+      "to_map": 3300,
+      "target": [
+        54,
+        43
+      ],
+      "source": "warp_y2.create:1204"
+    },
+    {
+      "from_map": 3306,
+      "cell": [
+        16,
+        20
+      ],
+      "to_map": 3300,
+      "target": [
+        54,
+        43
+      ],
+      "source": "warp_y2.create:1213"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        54,
+        70
+      ],
+      "to_map": 3309,
+      "target": [
+        11,
+        15
+      ],
+      "source": "warp_y2.create:1222"
+    },
+    {
+      "from_map": 3309,
+      "cell": [
+        11,
+        15
+      ],
+      "to_map": 3300,
+      "target": [
+        54,
+        70
+      ],
+      "source": "warp_y2.create:1231"
+    },
+    {
+      "from_map": 3300,
+      "cell": [
+        54,
+        71
+      ],
+      "to_map": 3309,
+      "target": [
+        11,
+        16
+      ],
+      "source": "warp_y2.create:1240"
+    },
+    {
+      "from_map": 3309,
+      "cell": [
+        11,
+        16
+      ],
+      "to_map": 3300,
+      "target": [
+        54,
+        71
+      ],
+      "source": "warp_y2.create:1249"
+    }
+  ],
+  "portal_sources": {
+    "200warp.create": {
+      "sha256": "913438aafea6ebb9d491b80fce34a830bd28cdf919b097ef7deb09d4c0943ba2",
+      "blocks": [
+        {
+          "line": 475,
+          "raw_base64": "ewpmbG9vcmlkPTIwMApib3JuY29ybmVyPTUxOCw3NjYsNTE4LDc2Ngp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NDR8NjYKfQojbGluZSAxMTgK"
+        },
+        {
+          "line": 484,
+          "raw_base64": "ewpmbG9vcmlkPTIwMApib3JuY29ybmVyPTUxOCw3NjcsNTE4LDc2Nwp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NDR8NjcKfQojbGluZSAxMjMK"
+        },
+        {
+          "line": 493,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj00Myw2Niw0Myw2Ngp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDIwMHw1MTd8NzY2Cn0KI2xpbmUgMTI0Cg=="
+        },
+        {
+          "line": 502,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj00Myw2Nyw0Myw2Nwp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDIwMHw1MTd8NzY3Cn0KI2xpbmUgMTI4Cg=="
+        },
+        {
+          "line": 511,
+          "raw_base64": "ewpmbG9vcmlkPTIwMApib3JuY29ybmVyPTU0OCw3NDUsNTQ4LDc0NQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NzJ8NDUKfQojbGluZSAxMjkK"
+        },
+        {
+          "line": 520,
+          "raw_base64": "ewpmbG9vcmlkPTIwMApib3JuY29ybmVyPTU0OCw3NDYsNTQ4LDc0Ngp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NzJ8NDYKfQojbGluZSAxMzQK"
+        },
+        {
+          "line": 529,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj03Myw0NSw3Myw0NQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDIwMHw1NDl8NzQ1Cn0KI2xpbmUgMTM1Cg=="
+        },
+        {
+          "line": 538,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj03Myw0Niw3Myw0Ngp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDIwMHw1NDl8NzQ2Cn0KI2xpbmUgMTQyCg=="
+        }
+      ]
+    },
+    "dungeon01.create": {
+      "sha256": "8269611a72fab9c757f06ca7debed7a6a2c5591e4ab39b88e14f5599ba6c3b5c",
+      "blocks": [
+        {
+          "line": 1000,
+          "raw_base64": "ewpmbG9vcmlkPTIwMApib3JuY29ybmVyPTM5Niw4MjEsMzk2LDgyMQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDIwNTAxfDU2fDUKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1009,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAxCmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjAwfDM5Nnw4MjEKfQojbGluZSAxMTUK"
+        },
+        {
+          "line": 1018,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAxCmJvcm5jb3JuZXI9MjcsMjIsMjcsMjIKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwMnwyN3wyMgp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1027,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAyCmJvcm5jb3JuZXI9MjcsMjIsMjcsMjIKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwMXwyN3wyMgp9CiNsaW5lIDExNgo="
+        },
+        {
+          "line": 1036,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAxCmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDh8N3wyNAp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1045,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA4CmJvcm5jb3JuZXI9NywyNCw3LDI0CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDF8OHw1Mwp9CiNsaW5lIDExNwo="
+        },
+        {
+          "line": 1054,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAxCmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDh8OHwyNAp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1063,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA4CmJvcm5jb3JuZXI9OCwyNCw4LDI0CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDF8OHw1Mwp9CiNsaW5lIDExOAo="
+        },
+        {
+          "line": 1072,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAyCmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDN8OHw1Mwp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1081,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAzCmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDJ8OHw1Mwp9CiNsaW5lIDExOQo="
+        },
+        {
+          "line": 1090,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAyCmJvcm5jb3JuZXI9MzcsMzQsMzcsMzQKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwMXwzN3wzNAp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1099,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAxCmJvcm5jb3JuZXI9MzcsMzQsMzcsMzQKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwMnwzN3wzNAp9CiNsaW5lIDEyMAo="
+        },
+        {
+          "line": 1108,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAzCmJvcm5jb3JuZXI9MzcsMzQsMzcsMzQKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwNHwzN3wzNAp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1117,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA0CmJvcm5jb3JuZXI9MzcsMzQsMzcsMzQKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwM3wzN3wzNAp9CiNsaW5lIDEyMQo="
+        },
+        {
+          "line": 1126,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAzCmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDJ8NTZ8NQp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1135,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAyCmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDN8NTZ8NQp9CiNsaW5lIDEyMgo="
+        },
+        {
+          "line": 1144,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA0CmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDV8NTZ8NQp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1153,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA1CmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDR8NTZ8NQp9CiNsaW5lIDEyMwo="
+        },
+        {
+          "line": 1162,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA0CmJvcm5jb3JuZXI9MjcsMjIsMjcsMjIKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwM3wyN3wyMgp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1171,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTAzCmJvcm5jb3JuZXI9MjcsMjIsMjcsMjIKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwNHwyN3wyMgp9CiNsaW5lIDEyNAo="
+        },
+        {
+          "line": 1180,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA1CmJvcm5jb3JuZXI9MjcsMjIsMjcsMjIKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwNnwyN3wyMgp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1189,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA2CmJvcm5jb3JuZXI9MjcsMjIsMjcsMjIKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwNXwyN3wyMgp9CiNsaW5lIDEyNQo="
+        },
+        {
+          "line": 1198,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA1CmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDR8OHw1Mwp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1207,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA0CmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDV8OHw1Mwp9CiNsaW5lIDEyNgo="
+        },
+        {
+          "line": 1216,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA2CmJvcm5jb3JuZXI9MzcsMzQsMzcsMzQKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwNXwzN3wzNAp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1225,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA1CmJvcm5jb3JuZXI9MzcsMzQsMzcsMzQKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDUwNnwzN3wzNAp9CiNsaW5lIDEyNwo="
+        },
+        {
+          "line": 1234,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA2CmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDd8OHw1Mwp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1243,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA3CmJvcm5jb3JuZXI9OCw1Myw4LDUzCnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDZ8OHw1Mwp9CiNsaW5lIDEyOAo="
+        },
+        {
+          "line": 1252,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA3CmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDZ8NTZ8NQp9CiMgYmV0d2Vlbgo="
+        },
+        {
+          "line": 1261,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA2CmJvcm5jb3JuZXI9NTYsNSw1Niw1CnRpbWU9MAppZ25vcmVpbnZpbmNpYmxlPTEKY3JlYXRlbnVtPTEKZW5lbXk9bnBjZ2VuX3dhcnB8MjA1MDd8NTZ8NQp9CiNsaW5lIDEyOQo="
+        },
+        {
+          "line": 1270,
+          "raw_base64": "ewpmbG9vcmlkPTIwNTA4CmJvcm5jb3JuZXI9MjAsMTEsMjAsMTEKdGltZT0wCmlnbm9yZWludmluY2libGU9MQpjcmVhdGVudW09MQplbmVteT1ucGNnZW5fd2FycHwyMDB8Mzk2fDgyMQp9CiNsaW5lIDEzOAo="
+        }
+      ]
+    },
+    "warp_y2.create": {
+      "sha256": "a2e60d39af1d008b1f1d3c8d084cfdf36ad275c896a83895b4c295531a361352",
+      "blocks": [
+        {
+          "line": 1105,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj01MSw2MCw1MSw2MAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDN8MTV8MjAKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1114,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDMKYm9ybmNvcm5lcj0xNSwyMCwxNSwyMAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTF8NjAKfQojbGluZSAxODkK"
+        },
+        {
+          "line": 1123,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDMKYm9ybmNvcm5lcj0xNiwyMCwxNiwyMAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTF8NjAKfQojbGluZSAxOTEK"
+        },
+        {
+          "line": 1132,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj00OCw2NCw0OCw2NAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDR8MTF8MTUKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1141,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDQKYm9ybmNvcm5lcj0xMSwxNSwxMSwxNQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NDh8NjQKfQojbGluZSAxOTIK"
+        },
+        {
+          "line": 1150,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj00OCw2NSw0OCw2NQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDR8MTF8MTYKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1159,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDQKYm9ybmNvcm5lcj0xMSwxNiwxMSwxNgp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NDh8NjUKfQojbGluZSAxOTQK"
+        },
+        {
+          "line": 1168,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj01OSw0NSw1OSw0NQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDV8MTF8MTUKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1177,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDUKYm9ybmNvcm5lcj0xMSwxNSwxMSwxNQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTl8NDUKfQojbGluZSAxOTUK"
+        },
+        {
+          "line": 1186,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDUKYm9ybmNvcm5lcj0xMSwxNiwxMSwxNgp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTl8NDUKfQojbGluZSAxOTcK"
+        },
+        {
+          "line": 1195,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj01NCw0Myw1NCw0Mwp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDZ8MTV8MjAKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1204,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDYKYm9ybmNvcm5lcj0xNSwyMCwxNSwyMAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTR8NDMKfQojbGluZSAxOTgK"
+        },
+        {
+          "line": 1213,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDYKYm9ybmNvcm5lcj0xNiwyMCwxNiwyMAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTR8NDMKfQojbGluZSAyMDMK"
+        },
+        {
+          "line": 1222,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj01NCw3MCw1NCw3MAp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDl8MTF8MTUKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1231,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDkKYm9ybmNvcm5lcj0xMSwxNSwxMSwxNQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTR8NzAKfQojbGluZSAyMDQK"
+        },
+        {
+          "line": 1240,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDAKYm9ybmNvcm5lcj01NCw3MSw1NCw3MQp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDl8MTF8MTYKfQojIGJldHdlZW4K"
+        },
+        {
+          "line": 1249,
+          "raw_base64": "ewpmbG9vcmlkPTMzMDkKYm9ybmNvcm5lcj0xMSwxNiwxMSwxNgp0aW1lPTAKaWdub3JlaW52aW5jaWJsZT0xCmNyZWF0ZW51bT0xCmVuZW15PW5wY2dlbl93YXJwfDMzMDB8NTR8NzEKfQojbGluZSAyMTUK"
+        }
+      ]
+    }
+  }
+}
