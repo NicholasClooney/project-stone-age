@@ -12,7 +12,7 @@ The suite disables ordinary encounters using the existing profile setting to iso
 
 These routes do not prove travel from every possible starting island. In particular, the two permit guards at 10202 are distinct from the level-30 adult entrance. Their original scripts `genout/wpm_10202_22_28` and `genout/wpm_10202_22_32` require the existing travel permit and warp across disconnected same-map chambers. The separately audited server transaction saves the fixed destination before a script move and requires a new same-map acknowledgement. Navigation proposes only the exact source identity from the reachable guard side. With an existing permit, the new cross-island route test completes both original gate directions; without one it remains manual. It never buys a permit or substitutes a project jump. Protected cave restarts still require new legitimate arrival.
 
-B/C remain unavailable until their geometry, authority executor and client acknowledgements are separately integrated and tested. Neither a public map ID nor a successful geometry path authorizes project movement.
+The integrated authority executor exposes A/B/C for these reviewed corridors. This is a project movement feature, not an original-game travel ability. Neither a public map ID nor a successful geometry path authorizes project movement. Client presentation and map-ready acknowledgement acceptance remain separate from the server tests below.
 
 ## Audited public segment proposals
 
@@ -35,3 +35,11 @@ The initial reviewed corridors are:
 The return landing at 200 (452,162) overlaps a portal and first leaves it with an ordinary walk. No corridor contains a portal, a current NPC, a protected cave or the map-300 approach pocket. In fact, none of map 300 is accelerated by this initial review. Unreviewed public routes use A; missing A routes remain manual.
 
 `next_segment` returns local `from_map`, `from_cell` and `navigation_key` metadata in addition to the frozen kind/points/audit_id fields. The core preserves the proposal and adds `remaining` as an exact suffix after each committed cell. `validate_segment` checks the current authoritative cell against the executed prefix and rechecks the corridor, NPC state, level and permit; B additionally replans the current A route. These local fields are not client movement authority. Core-generated run/step/revision/segment/sequence identity and acknowledgement handling are separate.
+
+## Integrated execution acceptance
+
+`quest_auto_modes_route_test.gd` starts from the original Samgir spawn and completes the actual shell request, full journey and saved exchange in each mode. A and C must commit identical complete cell/portal sequences. B may make exactly the audited field jump and must stop outside its original door. C publishes only committed prefixes of at most three cells, preserves turns and runs at approximately twice A on the same public leg. The fixture acknowledges the exact server-issued identities; it does not validate rendered client animation.
+
+`quest_auto_stride_encounter_test.gd` first walks out through the original village portal, then searches the original encounter RNG for a seed whose first hit is the second cell of a real three-cell proposal. It observes the unchanged field-step handler: exactly two logical cells roll, the character stops on the hit cell, and the ordinary attack/compact battle opens. An old prefix acknowledgement and a large tick cannot execute the discarded third cell. A real saved victory replans with a new segment identity; cancellation rejects the old prefix.
+
+The six migrated legacy suites retain full original walks, authentic source-dialogue checkpoints, save rollback, cancellation, transport and reward coverage. Fresh test fixtures initialize a manifest spawn once; restored backends use the real saved profile location. Protected arrival proof never survives restart. Actual adult battle checkpoints take precedence over ordinary saved location and settle once; any new protected quest attempt must earn arrival again through the original path.
