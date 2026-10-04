@@ -2,14 +2,23 @@ extends "res://tests/quest_delivery_routes_test.gd"
 const Wait=preload("res://tests/support/wait.gd")
 func begin(b,job:int)->void:
  check(b.handle({"type":"quest_auto_start","quest_id":job,"client":"delivery-boundary"}).get("ok",false),"start boundary job %d"%job)
+func expect_start_rejected(b,job:int,note:String)->void:
+ var before:Dictionary=b.session.snapshot()
+ var identity:Dictionary=b.quest_auto.identity.checkpoint()
+ var map_id:int=b.automation.position_map
+ var cell:Vector2i=b.automation.position_cell
+ var phase:String=b.quest_auto.phase
+ var reply:Dictionary=b.handle({"type":"quest_auto_start","quest_id":job,"client":"delivery-boundary"})
+ check(not reply.get("ok",false) and not str(reply.get("reason","")).is_empty(),note+" immediately rejects start")
+ check(b.session.snapshot()==before and b.quest_auto.identity.checkpoint()==identity and b.automation.position_map==map_id and b.automation.position_cell==cell and b.quest_auto.phase==phase and not b.quest_auto.running,note+" leaves profile, position and run unchanged")
 func expect_manual(b,note:String)->void:
  b.quest_auto.tick(b,0.21)
  check(not b.quest_auto.running and b.quest_auto.phase=="manual" and not b.quest_auto.message.is_empty() and b.original_quests.pending.is_empty(),note)
 func run()->void:
  var b=fixture(1400,Vector2i(68,90))
  for job in [13,24,25,9]:
-  var before:Dictionary=b.session.snapshot();begin(b,job)
-  expect_manual(b,"missing prerequisite stops %d"%job)
+  var before:Dictionary=b.session.snapshot()
+  expect_start_rejected(b,job,"missing prerequisite %d"%job)
   check(b.session.snapshot()==before,"no fabricated prerequisite %d"%job)
  check(not b.handle({"type":"quest_auto_start","quest_id":23,"client":"delivery-boundary"}).get("ok",false),"Goya pet exchange6 remains unsupported")
  begin(b,12);b.quest_auto.tick(b,0.21)
@@ -23,9 +32,20 @@ func run()->void:
  check(2416 in b.session.snapshot().original_items,"manual restart accepts original request")
  b.quest_auto.stop(b)
  check(b.handle({"type":"quest_discard","item_id":2416}).get("ok",false),"lose axe through production discard")
- before=b.session.snapshot();begin(b,12)
- expect_manual(b,"lost quest item never cancels or auto-reissues")
+ before=b.session.snapshot()
+ expect_start_rejected(b,12,"lost quest item never cancels or auto-reissues")
  check(b.session.snapshot()==before,"no charm loss on lost item stop")
+ b.free()
+ # A legally started run must also notice a later authoritative item loss.
+ # This is an explicit server-state fault fixture, not permission for a client
+ # to bypass the running quest_discard lock. The real stopped discard is above.
+ b=fixture(1400,Vector2i(68,90));begin(b,12)
+ b.quest_auto.tick(b,0.21);b.quest_auto.tick(b,0.21);b.quest_auto.tick(b,0.21)
+ check(b.quest_auto.running and 2416 in b.session.snapshot().original_items,"legal active request actually saved axe before loss fixture")
+ Session.OriginalEquipment.remove(b.session._profile,2416)
+ before=b.session.snapshot()
+ expect_manual(b,"loss after legal start stops the active runner")
+ check(b.session.snapshot()==before,"active loss neither reissues quest item nor charges charm")
  b.free()
  # Real plan source, with a deliberately unexpected choice response. This is
  # a dialogue boundary fixture, not an invented reward step in the six jobs.
