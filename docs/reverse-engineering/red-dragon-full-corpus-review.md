@@ -605,3 +605,29 @@ unique records, not twelve. Latest outputs: `pose048-refined` for primary refs,
 Counts are samples 36 plus pose rules 581, disjoint, total 617. There are still
 3799 missing drafts and zero complete semantic receipts. Images remain private;
 no mapping activation, import, Godot test or shared/live resource modification.
+
+## Poses049–050: 641 unique drafts
+
+All twelve source/change pairs for each pose were inspected. In pose049,
+248120's small hair/forearm-enclosed contact has seven tentative recolour pixels
+restored to source colour by an explicit uncertain polygon; this is not asserted
+to be rider. The restoration crop was viewed. A third independent local 257216
+neck polygon labels 111 body-index pixels above the reaching hand. Eleven
+changed revision crops were inspected, with 260248 unchanged. Current output
+`pose049-neck-render` changes 18513 pixels, including 2054 ventral pixels; it
+adds 491 changes relative to the initial candidate, including restoration of
+the two independently outlined primary references. No candidate labels become
+reference truth.
+
+Pose050's visible face, raised arms, folded legs and feet were checked in all
+twelve source/change pairs. Both final primary-reference crops were viewed
+(209 and 172 revised pixels). Latest outputs are `pose050-refined` for
+248121/266313 and `pose050-render` for the other ten. White cheek is ventral;
+eye and horns keep original pixels; the curled near wing is dorsal red.
+
+Saved material/mask fields and boundary dilation are checked against inspected
+inputs without another full render. There are 641 unique drafts (36 samples,
+605 pose rules, empty intersection), 3775 missing drafts, and zero complete
+semantic receipts. Contact yellow and previously listed material conflicts
+remain incomplete. Pilot timing pauses were observed; work resumed only after
+explicit release. No Godot, import, mapping activation or live asset change.
