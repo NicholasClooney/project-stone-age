@@ -784,3 +784,27 @@ recolours, 6228 retained unknown body-colour pixels. Saved fields and padding
 are checked against inspected candidate inputs, without rerendering unchanged
 images. Total 747 unique drafts (36 samples + 711 pose rules), 3669 missing
 drafts, zero complete semantic receipts. No import or gameplay activation.
+
+## Pose060: 759 unique drafts
+
+Viewed both independent reference outputs, all twelve source/change pairs and
+all twelve subsequent revision crops separately. In source bitmap 257265,
+an independently drawn foreground-wing polygon identifies 125 body-palette
+pixels, excluding the lower rider-foot boundary. This partial reference uses
+the source hash and does not adopt automatic candidate labels as truth.
+Derivation uses only the two independent primary references and this partial
+reference; each reused result was inspected for its own rider occlusion.
+
+Latest output for all twelve: `pose060-wing-render`. It includes restoration
+of the independently inspected primary rules as well as the wing refinement;
+the net 673 additional changes must not all be attributed to the new polygon.
+Totals: 22774 changes, 6542 ventral recolours, 5186 retained unknown body-colour
+pixels. Narrow-wing body surfaces are dorsal; cheek, neck and belly ventral.
+No obvious rider recolour was found in these views, but unresolved contact
+yellow remains and these views are not complete semantic receipts. Unknown
+regions include dragon pixels and must not be presented as entirely riders.
+
+759 unique drafts (36 samples + 723 pose rules), 3657 missing drafts, zero
+complete semantic receipts. Source rules, original candidates, revision images
+and UTC/wall/child CPU measurements remain available. No import, gameplay
+mapping, main/live asset writes or integration is enabled.
