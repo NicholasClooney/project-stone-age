@@ -5,7 +5,7 @@ const Settings=preload("res://server/quest_auto_settings_rules.gd")
 const PermitGate=preload("res://server/quest_auto_permit_gate.gd")
 const Motion=preload("res://server/quest_auto_motion.gd")
 var motion:Dictionary={}
-# Dormant until real navigation geometry and integrated mode acceptance land.
+# Geometry proposes; core alone advances and publishes committed cells.
 var segment=preload("res://server/quest_auto_segment.gd").new()
 const Registry=preload("res://server/quest_auto_registry.gd")
 var identity=preload("res://server/quest_auto_state.gd").new()
@@ -20,6 +20,8 @@ var target:Dictionary={}
 var step:Dictionary={}
 var clean_authorized:=false
 var elapsed:=0.0
+var defer_tick:=false
+var execution_mode:="A"
 var waited:=0.0
 var internal:=false
 ## Only a restart-restored intent may continue without the initiating socket.
@@ -85,15 +87,30 @@ func event(b) -> int:
  return int(row(b,quest_id).get("event",-1))
 func title(b) -> String:
  return str(row(b,quest_id).get("title","原任务"))
+func selected_mode(b)->String:
+ return "A" if restored else str(Settings.effective(b.session.automation_settings()).mode)
+func settings_changed(b,previous:Dictionary)->void:
+ if Settings.effective(previous).mode==Settings.effective(b.session.automation_settings()).mode:return
+ if not running or phase not in ["travel","landing","segment_landing"]:return
+ var awaiting:bool=phase in ["landing","segment_landing"]
+ identity.invalidate()
+ clear_motion()
+ navigation.clear()
+ elapsed=0.0
+ if awaiting:
+  emit_position(b,{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}, {},true)
 func emit_position(b,point:Dictionary,origin:Dictionary={},ack_required:bool=false) -> void:
  position_serial+=1
  var packet:Dictionary=Motion.packet(identity,position_serial,point,origin,ack_required or phase=="landing")
  if packet.is_empty():handoff(b,"原任务位置资料不是有效整数坐标。");return
+ issue_position(b,packet)
+func issue_position(b,packet:Dictionary)->void:
  var receipt:Dictionary=packet.duplicate(true)
  receipt.seq=position_serial
+ receipt.require_full_identity=phase=="segment_landing"
  issued.append(receipt)
  while issued.size()>16:issued.pop_front()
- motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":packet.map_id,"cell":packet.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":"A"}
+ motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":packet.map_id,"cell":packet.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":packet.quest_segment.mode}
  b._emit(packet)
 func clear_motion()->void:
  segment.clear()
@@ -115,7 +132,12 @@ func accept_report(b,command:Dictionary) -> bool:
     if Motion.matches(command,receipt,identity):
      if int(receipt.seq)==position_serial:
       motion.awaiting_ack=false
-      if phase=="landing":report(b,command)
+      if phase=="segment_landing":
+       segment.clear()
+       phase="travel"
+       waited=0.0
+       b.publish()
+      elif phase=="landing":report(b,command)
      break
   return true
  # Backend profile routing and transport own identity. Reconnection requires
@@ -127,7 +149,7 @@ func accept_report(b,command:Dictionary) -> bool:
    detached=false
    waited=0.0
    report(b,command)
-   emit_position(b,{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]})
+   emit_position(b,{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}, {},phase=="segment_landing")
    b.publish()
    return true
  report(b,command)
@@ -173,9 +195,10 @@ func snapshot(b=null) -> Dictionary:
  var result:Dictionary={"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client,"detached":detached,"strict_walk":strict_walk,"pause_reason":pause_reason}
  result.merge(identity.snapshot())
  result.settings=Settings.effective(b.session.automation_settings() if b!=null else {})
- result.effective_mode="A"
- result.available_modes=["A"]
- result.mode_notice="B/C执行器尚未接入，当前沿A原路推进。" if result.settings.mode!="A" else ""
+ result.effective_mode=execution_mode if running else result.settings.mode
+ result.available_modes=["A","B","C"]
+ result.mode_notice="B/C只用于已审核的七条公开走廊；保护段和未知公开段仍沿A逐格。" if result.settings.mode!="A" else ""
+ if running and restored and result.settings.mode!="A":result.mode_notice="重启恢复先沿A原路推进；重新启动任务后应用所选模式。"
  result.can_continue=running and phase=="waiting_boss" and boss_ready
  result.budget={}
  result.motion=motion.duplicate(true)
@@ -229,6 +252,7 @@ func load_resume(b,state:Dictionary) -> void:
  restored=true
  detached=false
  running=true
+ execution_mode=selected_mode(b)
  phase="travel"
  elapsed=0.0
  waited=0.0
@@ -280,6 +304,7 @@ func start(b,command:Dictionary) -> Dictionary:
  client=str(command.client)
  connection=int(command.get("_quest_connection",-1))
  running=true
+ execution_mode=selected_mode(b)
  phase="travel"
  message=title(b)+"自动任务：准备前往原 NPC。"
  path.clear();herb_path.clear()
@@ -313,7 +338,9 @@ func tick(b,delta:float) -> void:
   if b.battle_open or not b.session._pending.is_empty():fail(b,"沿途自动战斗已停止，请手动处理。");return
   owns_battle=false
   if str(b.battle_state.get("outcome","")) not in ["win","captured"]:fail(b,"沿途战斗未获胜。");return
+  var saved_identity:Dictionary=identity.checkpoint()
   if not b.save():fail(b,"沿途战斗保存失败，停止自动任务。");return
+  if not running or identity.checkpoint()!=saved_identity:return
   path.clear();herb_path.clear()
   navigation.clear()
   phase="travel"
@@ -322,16 +349,19 @@ func tick(b,delta:float) -> void:
   stop(b,title(b)+"已完成。")
   return
  if detached:return
- if phase=="landing":
+ if phase in ["landing","segment_landing"]:
   waited+=delta
   if waited>=30.0:fail(b,"等待地图位置确认超时。")
   return
- elapsed+=delta
- if elapsed<0.2:return
- elapsed=0.0
+ elapsed+=maxf(0.0,delta)
+ var desired:String=selected_mode(b)
+ var cadence:float=0.2/Settings.C_SPEED_MULTIPLIER if phase=="travel" and desired=="C" else 0.2
+ if elapsed<cadence:return
+ defer_tick=false
  internal=true
  advance(b)
  internal=false
+ if not defer_tick:elapsed=0.0
 func herb_travel(b,npc:Dictionary)->void:
  var geometry=preload("res://server/legacy_cave_helper.gd")
  var map_id:int=b.automation.position_map
@@ -496,7 +526,17 @@ func strict_advance(b)->void:
    phase="strict_dialogue"
    strict_dialogue_reply(b,reply)
    return
-  var point:Dictionary=navigation.next(b,npc)
+  execution_mode=selected_mode(b)
+  var point:Dictionary={}
+  if execution_mode=="A":point=navigation.next(b,npc)
+  else:
+   point=segment_point(b,npc)
+   if point.is_empty():handoff(b,"当前审核路线不可用，请沿原路手动处理。");return
+   if segment.proposal.get("kind")!="walk":
+    advance_public_segment(b,point)
+    return
+   if elapsed<0.2:defer_tick=true;return
+   segment.clear()
   if point.has("gate"):
    advance_permit_gate(b,point)
    return
@@ -536,6 +576,46 @@ func strict_advance(b)->void:
    waited=0.0
    emit_position(b,target,{"map_id":before_map,"cell":[before_cell.x,before_cell.y]},not restored)
   b.publish()
+
+## Replan once after any geometry/eligibility invalidation, always from authority.
+func segment_point(b,npc:Dictionary)->Dictionary:
+ var attempts:=2
+ if segment.active(identity) and not segment.complete():
+  var retained:Dictionary=segment.next_point(b,npc,navigation,identity)
+  if not retained.is_empty():return retained
+  navigation.clear()
+  attempts=1
+ for attempt in range(attempts):
+  var proposal:Dictionary=navigation.next_segment(b,npc,execution_mode,Settings.C_MAX_CELLS)
+  var origin:Dictionary={"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}
+  if not segment.begin(proposal,execution_mode,origin,identity,position_serial+1):return {}
+  var point:Dictionary=segment.next_point(b,npc,navigation,identity)
+  if not point.is_empty():return point
+  navigation.clear()
+ return {}
+func advance_public_segment(b,point:Dictionary)->void:
+ if elapsed<segment.interval():defer_tick=true;return
+ var checkpoint:Dictionary=identity.checkpoint()
+ var map_id:int=b.automation.position_map
+ # Every point was just checked by real geometry, including protected cells.
+ b.automation.position_changed(map_id,Vector2i(int(point.cell[0]),int(point.cell[1])),false,"project")
+ if not segment.commit(point,identity):handoff(b,"移动段身份已失效。");return
+ target={"map_id":map_id,"cell":Motion.cell(point.cell)}
+ var done:bool=segment.complete()
+ if done and not restored:phase="segment_landing";waited=0.0
+ position_serial+=1
+ var packet:Dictionary=segment.packet(identity,position_serial,done and not restored)
+ issue_position(b,packet)
+ # Position publication can synchronously cancel/detach or change settings.
+ if not running or detached or identity.checkpoint()!=checkpoint:return
+ var encounter:Dictionary=b._cmd_field_step({"map_id":map_id,"cell":target.cell.duplicate(),"encounter":true})
+ if not running or detached or identity.checkpoint()!=checkpoint:return
+ if encounter.get("battle",false):start_battle(b);return
+ if not encounter.get("ok",false) or encounter.get("hit",false):handoff(b,str(encounter.get("reason","原遇敌已命中但战斗未能开启，请手动处理。")));return
+ if done and restored:segment.clear()
+ message="沿已审核公开走廊推进；原门和保护段仍逐格。"
+ b.publish()
+
 func strict_dialogue_reply(b,reply:Dictionary)->void:
  if not reply.has("dialogue"):
   if str(step.get("source",{}).get("type",""))=="CLEAN":clean_authorized=false
