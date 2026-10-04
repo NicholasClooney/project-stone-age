@@ -648,3 +648,23 @@ There are 653 unique drafts (36 samples plus 617 pose rules), 3763 missing
 drafts, and zero complete semantic receipts. Remaining contact colour is still
 incomplete; this is not an importable or approved feature. Timing pauses were
 observed, and no Godot/import/full or shared asset operation was started.
+
+## Pose052: 665 unique drafts
+
+All twelve lowered-wing attack source/change pairs and all twelve revision
+crops were individually viewed. A third independently drawn local neck region
+for 257219 contributes only its 145 body-index pixels, below the pale neck
+strip and right of the reaching hand. Primary references remain 248123 and
+266315. No generated candidate was promoted to independent reference evidence.
+Latest output `pose052-neck-render` changes 19755 pixels, including 3763 ventral
+pixels, and retains 7029 unknown body-colour pixels. The net increase of 418
+changes also includes restoring the independently drawn primary rules; it is
+not all attributable to the third local annotation. Remaining yellow contacts
+include unresolved dragon regions and are not classified as rider by default.
+
+Saved fields and effective padding are checked against the exact rendered
+candidate book, without repeating a render. There are 665 unique drafts
+(36 samples and 629 pose rules), 3751 missing drafts and zero complete semantic
+receipts. This remains incomplete and unavailable for import/integration.
+Timing pauses were observed; command UTC/wall/child CPU evidence is retained in
+the private offline-processing log. No Godot, import or live operation ran.
