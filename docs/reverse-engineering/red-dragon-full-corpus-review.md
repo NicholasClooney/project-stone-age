@@ -320,3 +320,53 @@ separate child user/system CPU deltas from `RUSAGE_CHILDREN`. Those measurements
 exclude the wrapper and external image-view service; they cannot reconstruct
 previous-window CPU or attribute whole-machine load. Batches contain at most
 one twelve-body pose; no full-corpus decode/render or repeat green test ran.
+
+## Rear view and a partial-reference boundary correction: 431 drafts
+
+Pose 032 adds twelve drafts (431 total, 3985 absent, zero complete semantic
+receipts). All original/change pairs and actual final revision crops were
+viewed. Naked 100360 rear view shows red on both visible wings; the yellow
+mount's dark olive left wing is therefore drafted as dorsal shadow material,
+not preserved merely because it is olive. Earlier rear-diagonal underside
+classifications need renewed material review against original red poses;
+this is an explicit outstanding issue, not a claim that prior drafts are final.
+
+A partial white-cheek reference from 251059 fills a shared-occlusion gap.
+Enlarged inspection found thirteen adjacent body-colour pixels admitted by
+its initial polygon. Their ownership was not sufficiently established, so the
+partial rule now admits only VENTRAL source indices inside that independently
+outlined region. All thirteen return to their exact source values in
+`pose032-cheek-material-v2`; its correction crop was viewed. Propagating the
+restricted partial reference restores two further conservative cheek-border
+pixels in 254091/272283, with inspected revision evidence. The three affected
+propagation crops include the manual reference 266219, whose independent
+original rule remains authoritative rather than being replaced by a candidate.
+Other final output hashes retain their previous inspected evidence.
+
+The latest pose032 outputs are `pose032-cheek-material-v2` for 251059,
+`pose032-cheek-material-v2-propagation` for 254091/272283 and
+`pose032-cheek-final` for the other nine. Substantial gray cheek and yellow
+contact regions remain unresolved; no semantic approval or integration follows.
+
+## Swept rear wings, highlights and target-head counterexample: 443 drafts
+
+Pose 033 adds twelve drafts (443/4416, 3973 absent, zero complete receipts).
+All twelve source/change pairs, ten third-reference revision crops and six
+final revision crops were independently viewed. Two primary reference images
+each receive 22 additional explicitly spatial dorsal-highlight changes on
+swept wing edges and lower dragon body; those crops were inspected separately.
+A partial independent 257124 dragon-crown/white-cheek outline reveals anatomy
+hidden by both primary riders. Its cheek portion is gated to source VENTRAL
+indices inside the polygon, following the pose032 correction.
+
+The third reference produced a concrete target-occlusion counterexample:
+272284's yellow rider forehead matched source colours in the exposed dragon
+crown. The generated candidate recoloured two forehead pixels. The revision
+inspection found it, and a separately drawn target-head polygon restores both
+exact source values. Conservative independently inspected hairline rectangles
+also restore seven pixels in 275316 and thirteen in 281380; some restored
+border pixels may be dragon, so those borders remain incomplete. The six final
+revision crops in `pose033-final-revision` include these three restorations,
+the two primary references and the third reference's own exposed region.
+The approved provenance remains draft: matching source colours, even with
+multiple independently outlined references, is not semantic proof.
