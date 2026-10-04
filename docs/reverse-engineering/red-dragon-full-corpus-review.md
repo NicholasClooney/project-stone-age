@@ -734,3 +734,22 @@ and effective padding are compared against inspected render inputs.
 711 unique drafts (36 samples + 675 pose records), 3705 missing drafts, zero
 complete semantic receipts. Unresolved dragon/rider contacts remain explicit;
 no import, gameplay activation, Godot or shared asset changes occurred.
+
+## Pose057: 723 unique drafts
+
+The first primary render exposed one incorrectly recoloured rider hair-edge
+pixel in 248166 at (34,10), source index 82. An independent local hair polygon
+restores that pixel; the enlarged one-pixel revision was inspected. The original
+failed render remains available. Both primary outputs and all twelve candidate
+source/change pairs were individually viewed. Broad cheek and belly are ventral;
+wing is dorsal. Rider head/arm outlines use each bitmap's local coordinates;
+only dragon material polygons use the geometry offset.
+
+Latest output: 248166 from `pose057-hair-guard`, 266358 from
+`pose057-reference`, other ten from `pose057-render`. Candidate totals before
+restoring the two primary rules: 20178 changed, 3873 ventral, 7714 retained
+unknown body-colour pixels. Saved candidate fields and effective padding are
+checked without regenerating unchanged images. Total 723 unique drafts
+(36 samples + 687 pose rules), 3693 missing drafts, zero complete semantic
+receipts. Unresolved contact colour remains incomplete; no gameplay mapping,
+Godot, import or shared asset operation occurred.
