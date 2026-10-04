@@ -696,3 +696,24 @@ hash comparison. Total 687 (36 samples + 651 pose rules), empty intersection,
 3729 missing drafts and zero complete semantic receipts. Remaining contact
 yellow includes unresolved dragon regions. This remains incomplete and closed
 to import/integration; no Godot, shared assets or live operations occurred.
+
+## Pose055: 699 unique drafts; helmet collision corrected
+
+All twelve forward-leaning attack source/change pairs were individually viewed.
+The initial automatic candidate incorrectly recoloured 43 pixels inside rider
+272382's round helmet crown. Independent inspection of its source coordinate
+image established the helmet region; an explicit target rider polygon restores
+all 43 pixels. The enlarged before/after/difference crop was viewed. This is a
+concrete counterexample to treating source-colour agreement or mechanical
+protected-mask assertions as independent rider semantic proof.
+
+Primary references 248126/266318 had their ventral cheek envelope expanded to
+cover the missed left white edge (+104 ventral pixels across two references).
+Both revised reference outputs were viewed. Latest outputs: those two from
+`pose055-cheek-reference`, 272382 from `pose055-helmet-guard`, the other nine
+from `pose055-render`. Initial failed output and polygon evidence are retained.
+Raised wing and shoulder are dorsal red; hanging cheek is ventral yellow.
+
+699 unique drafts (36 samples, 663 pose rules), 3717 missing drafts, zero complete
+semantic receipts. Contact colour remains unresolved and not all retained pixels
+are rider. No import activation, gameplay mapping, Godot or shared assets changed.
