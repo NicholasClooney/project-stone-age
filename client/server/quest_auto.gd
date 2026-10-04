@@ -838,7 +838,7 @@ func source_next(b)->Dictionary:
  if choice.is_empty():return b._reject("原对话回复已经消费。")
  return b.call_quest_source(source_frame,step,choice)
 
-## Called immediately before delivery, after any earlier queued observer.
+## Prepare before subsequent snapshots; delivery revalidates after observers.
 ## The original transaction has already moved/saved/granted its own proof.
 func source_position_packet(b,source:Dictionary,original:Dictionary)->Dictionary:
  if not b.quest_source_call_live(source):return original
@@ -857,6 +857,14 @@ func source_position_packet(b,source:Dictionary,original:Dictionary)->Dictionary
  packet.v=b.PROTOCOL
  remember_position(packet)
  return packet
+
+## Never mint another capability at dispatch, or rewrite queued snapshots.
+func source_position_current(b,source:Dictionary,packet:Dictionary)->bool:
+ if not b.quest_source_call_live(source) or not packet.get("quest_source_landing",false):return false
+ if not Motion.same_integer(packet.get("map_id"),b.automation.position_map) or Motion.cell(packet.get("cell"))!=[b.automation.position_cell.x,b.automation.position_cell.y]:return false
+ if issued.is_empty():return false
+ var command:Dictionary=packet.duplicate()
+ return Motion.matches(command,issued[-1],identity)
 
 ## Server-only admission for the still-unregistered dispatcher. Not an RPC or
 ## a test bypass: pure source selection and normal authority guards apply.
