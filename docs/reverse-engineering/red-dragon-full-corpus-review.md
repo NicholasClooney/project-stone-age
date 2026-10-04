@@ -578,3 +578,30 @@ empty, total 595; 3821 bitmaps still have no draft, and all 4416 still lack
 complete semantic approval. No game mapping, importer activation, source art,
 Godot execution or live resources change. Timed child CPU and wall measurements
 remain separate in the private offline processing ledger.
+
+## Forward/side attack drafts through pose048: 617 unique
+
+Pose047's twelve source/change pairs and all twelve revision crops were viewed.
+Independent 257176 head/neck labels (318 body-index pixels) expose dragon areas
+covered by the primary references; its abdominal strip has 47 ventral-index
+labels. No automatic candidate was used as an independent reference. Current
+`pose047-neck-render` changes 24981 pixels, up 1601 from the initial candidate;
+ventral count falls 65 because conflicting material labels retain their source
+colour. This is explicitly incomplete abdominal material reconciliation, not
+rider protection or a complete colour claim. Contact yellow also remains.
+
+Pose048 retains the narrow gray-olive underside wing, checked against naked-red
+direction6 material, while its upright dorsal wing and body are red and cheek
+yellow. All twelve source/change pairs were viewed. 263279's five top changes
+are `(35,8),(35,9),(36,9),(36,10),(36,12)`, checked on its coordinate source as
+exposed wing tip left of the helmet crest; crest pixels at x>=38/y<20 are
+unchanged. Both final primary-reference revision crops were viewed separately.
+The existing samples 251151/272375 enter only as target protection and remain
+in the sample book, retaining all prior rider/unknown constraints; their saved
+outputs are hash-identical to the reviewed candidate images. This pose adds ten
+unique records, not twelve. Latest outputs: `pose048-refined` for primary refs,
+`pose048-retained-samples` for those two samples, `pose048-render` for the others.
+
+Counts are samples 36 plus pose rules 581, disjoint, total 617. There are still
+3799 missing drafts and zero complete semantic receipts. Images remain private;
+no mapping activation, import, Godot test or shared/live resource modification.
