@@ -1,0 +1,229 @@
+extends SceneTree
+## Independent public25 support. Player deliberately walks back to Jaja
+## AFTER earning END7. This is never continuous25 or a planner detour.
+const Rules=preload("res://server/original_quests.gd")
+const Session=preload("res://server/game_session.gd")
+const Arrival=preload("res://server/quest_arrival_policy.gd")
+const Extra=preload("res://server/quest_auto_public_corridors.gd")
+const PublicRoutes=preload("res://server/quest_auto_public_routes.gd")
+class CountedBackend extends "res://server/backend.gd":
+ var field_calls:Array=[]
+ func _cmd_field_step(command:Dictionary)->Dictionary:
+  var result:Dictionary=super._cmd_field_step(command)
+  field_calls.append({"map_id":int(command.map_id),"cell":command.cell.duplicate(),"result":result.duplicate(true)})
+  return result
+var assertions:=0
+var failures:=0
+var began:int=Time.get_ticks_msec()
+var deadline:int=0
+var summaries:Array=[]
+var outbound_portals:Array=[]
+var manual_trace:Array=[]
+const Nav=preload("res://server/quest_auto_navigation.gd")
+const Motion=preload("res://server/quest_auto_motion.gd")
+func check(value:bool,label:String)->bool:
+ assertions+=1
+ if not value:failures+=1;push_error(label)
+ return value
+func _initialize()->void:call_deferred("run")
+func fixture(mode:String):
+ var b=CountedBackend.new()
+ # Fixed a priori NPC birth seed only, before any refresh. Normal births run;
+ # no field/battle RNG manipulation or clearing existing NPC records.
+ check(b.original_quests.npc_state.version==0 and b.original_quests.npc_state.records.is_empty() and b.original_quests.npc_state.spawn_attempts.is_empty(),"Fresh original NPC world before deterministic birth fixture")
+ b.original_quests.npc_state.spawn_rng.seed=1
+ # Explicit strong legal-level/stat fixture used by original route acceptance.
+ b.session._profile.player.level=140
+ b.session._profile.player.base_stats={"vitality":12000,"strength":14000,"toughness":14000,"dexterity":3700}
+ b.session._profile.player.allocated_stats={"vitality":111,"strength":133,"toughness":140,"dexterity":33}
+ b.session._profile.player.stat_points=0
+ preload("res://server/progression.gd").refresh(b.session._profile.player)
+ b.session._profile.player.hp=b.session._profile.player.max_hp
+ b.session._profile.no_random_encounters=true
+ b.automation.position_changed(200,Vector2i(570,376))
+ # Explicit prerequisite only: original language-shell job6 pet exchange is
+ # outside this test and is NOT credited. No END6/END7/END8 or proof injection.
+ Session.OriginalEquipment.add(b.session._profile,2414)
+ check(b.session._profile.original_items==[2414] and not Rules.flag(b.session._profile,"ended",7) and not Rules.flag(b.session._profile,"ended",8),"Only disclosed language shell exists before real tasks24/25")
+ check(b.handle({"type":"set_automation_settings","settings":{"quest":{"mode":mode}}}).get("ok",false),"Mode preference saves normally "+mode)
+ check(b.quest_auto.snapshot(b).available_modes.has(mode),"Mode is actually available "+mode)
+ return b
+func ack(b,packet:Dictionary)->void:
+ var command:Dictionary={"type":"report_position","map_id":packet.map_id,"cell":packet.cell.duplicate(),"client":"public-goya","_quest_connection":17}
+ for field in ["quest_run_id","quest_step_id","quest_revision","quest_segment_id","quest_position_seq"]:command[field]=packet[field]
+ check(b.handle(command).get("ok",false),"Full exact initiating-client position ACK")
+func readback(b,label:String)->void:
+ var path:String="user://public-goya-"+label+".json"
+ var before:Dictionary=b.session.snapshot()
+ check(b.session.save_game(path),"Actual earned chain state saves "+label)
+ var restored=Session.new()
+ var loaded:bool=restored.load_game(path)
+ check(loaded,"Actual saved state reloads "+label)
+ if loaded:
+  var after:Dictionary=restored.snapshot()
+  check(after.original_events==before.original_events and after.original_items==before.original_items,"Original END/NOW and reward/consumption survive readback "+label)
+  check(after.location==b.session._profile.location,"Normal saved location survives readback, no forced endpoint "+label)
+ for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
+func walk_protected(map_id:int,cell:Vector2i)->bool:
+ return not Arrival.scope(map_id).is_empty() or map_id in [10201,10202,10203,120,121] or Arrival.approach_cell("transmigration_entry",map_id,cell)
+func reviewed_lane(id:String)->Dictionary:
+ for lane in Extra.LANES+PublicRoutes.LANES:
+  if lane.id==id:return lane
+ return {}
+func drive(b,mode:String,job:int)->bool:
+ var started:int=Time.get_ticks_msec()
+ var event_id:int=7 if job==24 else 8
+ var letter:int=2425 if job==24 else 2426
+ if job==25:
+  check(b.automation.position_map==200 and b.automation.position_cell==Vector2i(570,376) and Rules.flag(b.session._profile,"ended",7),"Independent25 starts only after actual earned END7 and player walk to Jaja")
+  check(not Rules.flag(b.session._profile,"now",8) and not Rules.flag(b.session._profile,"ended",8) and 2426 not in b.session._profile.original_items,"No prior25 request or forged reply before manual start")
+ var packets:Array=[]
+ var observer:Callable=func(event:Dictionary):
+  if event.get("type")=="position" and event.has("quest_segment_id"):
+   packets.append({"packet":event.duplicate(true),"proposal":b.quest_auto.segment.proposal.duplicate(true)})
+ b.event.connect(observer)
+ var stats:Dictionary={"mode":mode,"job":job,"moves":0,"field_calls":0,"new_audits":{},"old_audits":{},"fast_packets":0,"fast_segments":0,"protected_walk":0,"unaudited_walk":0,"door_walk":0,"original_portals":0,"simulated_total_seconds":0.0,"public_map200_simulated_seconds":0.0,"protected_simulated_seconds":0.0,"stayed_in_goya":true}
+ var segment_ids:Dictionary={}
+ var saw_letter:=false
+ var saw_flower:=false
+ var start_fields:int=b.field_calls.size()
+ var response:Dictionary=b.handle({"type":"quest_auto_start","quest_id":job,"client":"public-goya","_quest_connection":17})
+ var started_ok:bool=check(response.get("ok",false) and b.quest_auto.strict_walk,"Actual original job starts %s/%d"%[mode,job])
+ var ticks:=0
+ while started_ok and b.quest_auto.running and Time.get_ticks_msec()<deadline:
+  var old_map:int=b.automation.position_map
+  var old:Vector2i=b.automation.position_cell
+  b.quest_auto.tick(b,0.05)
+  stats.simulated_total_seconds+=0.05
+  if old_map==200:stats.public_map200_simulated_seconds+=0.05
+  if walk_protected(old_map,old):stats.protected_simulated_seconds+=0.05
+  if letter in b.session._profile.original_items and Rules.flag(b.session._profile,"now",event_id):saw_letter=true
+  if job==24 and 2424 in b.session._profile.original_items:saw_flower=true
+  var map_id:int=b.automation.position_map
+  var cell:Vector2i=b.automation.position_cell
+  if job==25 and (old_map not in range(20401,20407) or map_id not in range(20401,20407)):
+   stats.stayed_in_goya=false
+  if old_map!=map_id or old!=cell:
+   stats.moves+=1
+   check(not packets.is_empty(),"Actual movement publishes a task receipt")
+   var observed:Dictionary=packets[-1] if not packets.is_empty() else {}
+   var packet:Dictionary=observed.get("packet",{})
+   var proposal:Dictionary=observed.get("proposal",{})
+   var kind:String=str(packet.get("quest_segment",{}).get("kind","walk"))
+   if kind in ["public_jump","public_stride"]:
+    var id:String=str(proposal.get("audit_id",""))
+    var lane:Dictionary=reviewed_lane(id)
+    check(not lane.is_empty(),"Actual fast movement has an exact reviewed lane identity")
+    check(old_map==map_id and not walk_protected(map_id,cell) and not b.quest_helper.places.links(map_id).has(cell),"Fast movement stays outside original doors and all protected/approach cells")
+    check((mode=="B" and kind=="public_jump") or (mode=="C" and kind=="public_stride"),"Actual fast kind follows selected mode")
+    if not lane.is_empty():check(int(lane.map)==map_id,"Exact reviewed lane matches authority map")
+    var prefix:Array=packet.quest_segment.get("cells",[])
+    check(not prefix.is_empty() and prefix[-1].cell==packet.cell and (mode!="C" or prefix.size()<=3),"Actual committed prefix is bounded and ends at authority")
+    stats.fast_packets+=1
+    var group:Dictionary=stats.new_audits if Extra.LANES.any(func(value):return value.id==id) else stats.old_audits
+    if not group.has(id):group[id]={"packets":0,"segments":0}
+    group[id].packets+=1
+    var segment_id:String=str(packet.quest_segment_id)
+    if not segment_ids.has(segment_id):
+     segment_ids[segment_id]=true;stats.fast_segments+=1;group[id].segments+=1
+   elif old_map!=map_id:
+    var portal:Dictionary=b.quest_helper.places.links(old_map).get(old,{})
+    check(not portal.is_empty() and int(portal.to_map)==map_id and Vector2i(portal.target[0],portal.target[1])==cell,"Map change is the actual original portal independent of fast movement")
+    stats.original_portals+=1
+    if job==24:outbound_portals.append(portal.duplicate(true))
+   else:
+    check(absi(old.x-cell.x)+absi(old.y-cell.y)==1,"All non-fast movement is one original logical cell")
+    if walk_protected(old_map,old) or walk_protected(map_id,cell):stats.protected_walk+=1
+    elif b.quest_helper.places.links(map_id).has(cell):stats.door_walk+=1
+    else:stats.unaudited_walk+=1
+   check(b.quest_arrival.has_arrival(b,map_id,cell),"Original route retains any required legitimate arrival")
+  while not packets.is_empty():
+   var observed:Dictionary=packets.pop_front()
+   if observed.packet.get("quest_ack_required",false):ack(b,observed.packet)
+  check(not b.battle_open,"Explicit encounter-off compatibility fixture remains battle-free")
+  ticks+=1
+  if ticks%100==0:await process_frame
+ var complete:bool=not b.quest_auto.running and Rules.flag(b.session._profile,"ended",event_id)
+ check(complete,"Actual original chain job completes %s/%d: %s"%[mode,job,b.quest_auto.message])
+ check(saw_letter,"Observed actual request grant and NOW before original delivery")
+ if complete:
+  check(letter not in b.session._profile.original_items,"Original delivery consumes actual held letter")
+  check(b.session._profile.original_items.count(2414)==1,"Original language-shell prerequisite is retained, not consumed")
+  if job==24:
+   check(saw_flower and 2424 not in b.session._profile.original_items,"Actual flower retrieval observed before original flower/letter consumption")
+   check(1206 not in b.session._profile.original_items,"Job24 does not prematurely grant reply reward")
+  else:check(b.session._profile.original_items.count(1206)==1 and Rules.flag(b.session._profile,"ended",7),"Original reply grants exactly one1206 and preserves END7")
+  readback(b,"%s-%d"%[mode,job])
+ stats.field_calls=b.field_calls.size()-start_fields
+ stats.wall_ms=Time.get_ticks_msec()-started
+ stats.complete=complete
+ stats.saw_actual_letter=saw_letter
+ stats.saw_actual_flower=saw_flower
+ check(stats.field_calls==stats.moves-stats.original_portals,"Logical original field-step calls match every committed same-map move")
+ check(stats.protected_walk>0,"Each actual Goya task preserves protected one-cell cave walking")
+ if job==24:
+  check(not stats.new_audits.is_empty(),"Actual public approach has new reviewed-lane benefit; do not change A if it misses")
+ else:
+  stats.new_benefit=not stats.new_audits.is_empty()
+  stats.fallback=stats.new_audits.is_empty()
+  check(stats.public_map200_simulated_seconds>0.0,"Independent25 includes the actual public start; empty new hits remain truthful fallback")
+ summaries.append(stats)
+ print("PUBLIC GOYA JOB ",JSON.stringify(stats))
+ b.event.disconnect(observer)
+ return complete
+func point(value:Variant)->Vector2i:
+ var normalized:Array=Motion.cell(value)
+ if not check(normalized.size()==2,"Source/path coordinate is a finite exact integer pair"):return Vector2i(-1,-1)
+ return Vector2i(normalized[0],normalized[1])
+func manual_report(b,map_id:int,cell:Vector2i,changed:bool)->bool:
+ var old_map:int=b.automation.position_map
+ var old:Vector2i=b.automation.position_cell
+ var response:Dictionary=b.handle({"type":"report_position","map_id":map_id,"cell":[cell.x,cell.y],"map_changed":changed,"client":"public-goya"})
+ var ok:bool=check(response.get("ok",false) and b.automation.position_map==map_id and b.automation.position_cell==cell,"Normal manual report reaches only the next original point")
+ manual_trace.append({"from_map":old_map,"from":[old.x,old.y],"map_id":map_id,"cell":[cell.x,cell.y],"portal":changed,"reply":response.duplicate(true)})
+ check(not b.quest_auto.running and Rules.flag(b.session._profile,"ended",7) and not Rules.flag(b.session._profile,"now",8) and not Rules.flag(b.session._profile,"ended",8),"Manual excursion never starts25 or changes earned event boundaries")
+ return ok
+func manual_walk(b,nav,goal:Vector2i)->bool:
+ var map_id:int=b.automation.position_map
+ var origin:Vector2i=b.automation.position_cell
+ var path:Array=nav.local_path(b,map_id,origin,goal,nav.blocked(b,map_id))
+ if not check(not path.is_empty() and point(path[0].cell)==origin and point(path[-1].cell)==goal,"Actual manual original geometry reaches requested original endpoint without teleport"):return false
+ for index in range(1,path.size()):
+  if Time.get_ticks_msec()>=deadline:return check(false,"Manual walk condition deadline")
+  var old:Vector2i=b.automation.position_cell
+  var cell:Vector2i=point(path[index].cell)
+  if not check(absi(old.x-cell.x)+absi(old.y-cell.y)==1 and int(path[index].map_id)==map_id,"Manual excursion uses adjacent same-map logical cells"):return false
+  var link:Dictionary=b.quest_helper.places.links(map_id).get(cell,{})
+  if not check(link.is_empty() or index==path.size()-1,"Manual path never crosses an unselected original portal"):return false
+  if not manual_report(b,map_id,cell,false):return false
+  check(b.quest_arrival.has_arrival(b,map_id,cell),"Original manual protected route keeps legitimate arrival without injected proof")
+  if link.is_empty() and b.quest_helper.places.field(map_id):
+   var field:Dictionary=b.handle({"type":"field_step","map_id":map_id,"cell":[cell.x,cell.y],"encounter":true})
+   if not check(field.get("ok",false) and not field.get("battle",false),"Normal manual field_step under disclosed encounter-off fixture"):return false
+  if index%100==0:await process_frame
+ return true
+func return_to_jaja(b)->bool:
+ var began_manual:int=Time.get_ticks_msec()
+ if not check(not b.quest_auto.running and b.automation.position_map==20406 and Rules.flag(b.session._profile,"ended",7),"Start actual player excursion only after completed24"):return false
+ var nav=Nav.new()
+ var reversed:Array=outbound_portals.duplicate(true)
+ reversed.reverse()
+ var used:Array=[]
+ for inbound in reversed:
+  var map_id:int=b.automation.position_map
+  if not check(map_id==int(inbound.to_map),"Reverse only this run's actual24 portal order"):return false
+  var door:Vector2i=point(inbound.target)
+  var reverse:Dictionary=b.quest_helper.places.links(map_id).get(door,{})
+  if not check(not reverse.is_empty() and int(reverse.to_map)==int(inbound.from_map) and point(reverse.target)==point(inbound.cell) and str(reverse.get("source","")).begins_with("dungeon01.create:") and not reverse.has("gate_source") and nav.usable(b,reverse),"Exact original inverse portal exists with fixed source identity and endpoints"):return false
+  if not await manual_walk(b,nav,door):return false
+  if not manual_report(b,int(reverse.to_map),point(reverse.target),true):return false
+  used.append(reverse.duplicate(true))
+ if not check(b.automation.position_map==200,"Actual six-layer original exit reaches public map200"):return false
+ var exit_cell:Vector2i=b.automation.position_cell
+ # This is an explicitly chosen PLAYER excursion, never a quest planner route.
+ # Original landing portal is allowed only as the origin; all other doors stay
+ # blocked by local_path. Do not choose alternate goals to manufacture a hit.
+ if not await manual_walk(b,nav,Vector2i(570,376)):return false
+ readback(b,"B-independent-public-start")
+ summaries.append({"phase":"player_excursion_after24_before25","wall_ms":Time.get_ticks_msec()-began_manual,"moves":manual_trace.size(),"exit_cell":[exit_cell.x,exit_cell.y],"original_reverse_portals":used,"start25":{"map_id":200,"cell":[570,376]},"trace":manual_trace.duplicate(true),"credited_to_quest25":false})
+ return true
