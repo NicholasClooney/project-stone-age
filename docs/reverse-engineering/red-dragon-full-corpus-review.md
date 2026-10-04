@@ -495,3 +495,24 @@ The guard is retained as explicit protection. Latest outputs are
 `pose039-refined`, `pose040-refined`, `pose041-refined`, each with a corresponding
 `*-final-revision` directory and source/output hashes. All processing was
 single-process and logged; no Godot, import, long suite or live action ran.
+
+## Tilted-head diagonal drafts: 571 unique rules
+
+Poses 042–044 add 36 source-bound records, reaching 571 unique bitmaps with
+3845 absent and zero complete semantic receipts. All twelve original/change
+pairs per pose, primary reference comparisons and final reference revision
+crops were viewed. The other ten final outputs per pose have unchanged hashes
+against their inspected candidates. Pose042's reference 248075 initially missed
+one rider hair pixel `(7,48)` at the lower-left outline. Coordinate inspection
+identified it; an independently extended hair polygon restored the original
+pixel before any candidate propagation. The one-pixel restoration is recorded
+in `pose042-hair-revision/revision-0.png`. This is a real annotation correction,
+not relaxed rider preservation. Poses043/044 use concave visible helmet outlines
+where the dragon beak occludes the rider, separate reaching arms and feet, and
+ventral colour on the large curved white dragon cheek.
+
+Latest outputs: `pose042-refined`, `pose043-refined`, `pose044-refined`, with
+matching `*-final-revision` evidence. Clear wing/torso/leg regions receive red;
+contact boundaries still contain unresolved dragon yellow, so these remain
+research drafts. Per-command timestamps/wall/child CPU continue in the private
+offline log. No further algorithm change or repeated green test was needed.
