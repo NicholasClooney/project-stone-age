@@ -9,6 +9,14 @@ func run() -> void:
 		world.set_process(false)
 		var chip=world.find_child("QuestAutoChip",true,false)
 		var menu=world.quest_helper_menu
+		menu.open_menu()
+		for job in [12,13,24,25,5,9]:
+			menu.select_quest(job)
+			var entry=menu.find_child("QuestAutoStart_%d"%job,true,false)
+			if not check(is_instance_valid(entry) and entry.text=="自动推进","Reviewed job exposes original-route entry %d"%job):return
+		menu.select_quest(23)
+		if not check(menu.find_child("QuestAutoStart_23",true,false)==null,"Goya pet exchange has no automatic entry"):return
+		menu.close_menu()
 		world.state.derived.quest_auto={"running":true,"quest_id":11,"strict_walk":true,"phase":"walking","message":"正在原路前往交付地点","pause_reason":""}
 		if not await ready(func():return chip.visible and chip.restore_button.text.contains("连续原路自动推进"),"Strict snapshot labels original walking"):return
 		if not check(chip.restore_button.text.contains("正在原路前往交付地点"),"Authority message is not replaced by helper step"):return
