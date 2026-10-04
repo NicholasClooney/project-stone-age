@@ -1,7 +1,9 @@
 extends RefCounted
 ## Production walk planner. Plans are geometry only, never arrival receipts.
 const MapFile=preload("res://scripts/map_file.gd")
+const Gates=preload("res://server/quest_auto_route_gates.gd")
 const Passage=preload("res://scripts/passage_rules.gd")
+var public_routes=preload("res://server/quest_auto_public_routes.gd").new()
 var maps:Dictionary={}
 var route:Array=[]
 var key:=""
@@ -86,12 +88,14 @@ func plan(b,npc:Dictionary)->Array:
  var origin:Vector2i=b.automation.position_cell
  var occupied:=blocked(b,map_id)
  var best:Array=[]
+ var goals:Array=[]
  if map_id==int(npc.map_id):
   var anchor:=Vector2i(int(npc.cell[0]),int(npc.cell[1]))
   for dy in range(-2,3):
    for dx in range(-2,3):
     var goal:=anchor+Vector2i(dx,dy)
     if b.quest_helper.places.links(map_id).has(goal) or not floor_cell(b,map_id,goal,occupied):continue
+    goals.append(goal)
     var candidate:=local_path(b,map_id,origin,goal,occupied)
     if not candidate.is_empty() and (best.is_empty() or candidate.size()<best.size()):best=candidate
  else:
@@ -99,22 +103,28 @@ func plan(b,npc:Dictionary)->Array:
   if chain.size()<2:return []
   for link in b.quest_helper.places.links(map_id).values():
    if int(link.to_map)!=int(chain[1]) or not usable(b,link):continue
-   var candidate:=local_path(b,map_id,origin,Vector2i(int(link.cell[0]),int(link.cell[1])),occupied)
+   var goal:=Vector2i(int(link.cell[0]),int(link.cell[1]))
+   goals.append(goal)
+   var candidate:=local_path(b,map_id,origin,goal,occupied)
    if candidate.is_empty():continue
    candidate.append({"map_id":int(link.to_map),"cell":link.target.duplicate(),"portal":link.duplicate(true)})
    if best.is_empty() or candidate.size()<best.size():best=candidate
+ if best.is_empty():best=Gates.path(self,b,goals,occupied)
  if not best.is_empty():best.pop_front()
  return best
-func next(b,npc:Dictionary)->Dictionary:
+func prepare_route(b,npc:Dictionary)->void:
  var signature:=str(npc.id)+str(npc.map_id)+str(npc.cell)+str(b.original_quests.npc_state.version)+str(hash(b.quest_catalog.npc_overrides))+str(hash(b.quest_catalog.enabled_events))
  if key!=signature:clear();key=signature
  # Cached geometry is never an instruction to keep walking from an old cell.
  # A battle, relocated resident or changed gate may invalidate the next point.
  if not route.is_empty() and not validate(b,route[0]):route.clear()
  if route.is_empty():route=plan(b,npc)
+func next(b,npc:Dictionary)->Dictionary:
+ prepare_route(b,npc)
  if route.is_empty():return {}
  return route.pop_front()
 func validate(b,point:Dictionary)->bool:
+ if point.has("gate"):return Gates.valid(self,b,point)
  var map_id:int=b.automation.position_map
  var origin:Vector2i=b.automation.position_cell
  var goal:=Vector2i(int(point.cell[0]),int(point.cell[1]))
@@ -127,3 +137,33 @@ func validate(b,point:Dictionary)->bool:
   var link:Dictionary=b.quest_helper.places.links(map_id)[goal]
   return usable(b,link) and floor_cell(b,map_id,goal,{})
  return floor_cell(b,map_id,goal,occupied)
+
+func segment_key(b,npc:Dictionary)->String:
+ return str(npc)+str(b.original_quests.npc_state.version)+str(hash(b.quest_catalog.npc_overrides))+str(hash(b.quest_catalog.enabled_events))+str(b.session.has_travel_pass())+str(b.session._profile.player.level)
+func next_segment(b,npc:Dictionary,mode:String,max_cells:int)->Dictionary:
+ prepare_route(b,npc)
+ if route.is_empty():return {}
+ var segment:Dictionary={"kind":"walk","points":[route[0].duplicate(true)]}
+ var audit:Dictionary=public_routes.audit(self,b,route) if mode in ["B","C"] else {}
+ if not audit.is_empty():
+  if mode=="B":segment={"kind":"public_jump","points":[audit.points[-1].duplicate(true)],"audit_id":audit.id}
+  else:
+   var limit:=mini(clampi(max_cells,1,preload("res://server/quest_auto_settings_rules.gd").C_MAX_CELLS),audit.points.size())
+   segment={"kind":"public_stride","points":audit.points.slice(0,limit).duplicate(true),"audit_id":audit.id}
+ segment.from_map=b.automation.position_map
+ segment.from_cell=[b.automation.position_cell.x,b.automation.position_cell.y]
+ segment.navigation_key=segment_key(b,npc)
+ if segment.kind=="public_jump":route=route.slice(audit.points.size())
+ else:route=route.slice(segment.points.size())
+ return segment
+func validate_segment(b,npc:Dictionary,segment:Dictionary)->bool:
+ if segment.get("navigation_key","")!=segment_key(b,npc):return false
+ var points:Array=segment.get("remaining",segment.get("points",[]))
+ if points.is_empty():return false
+ if str(segment.get("kind",""))=="walk":
+  var source:Array=segment.get("from_cell",[])
+  return source.size()==2 and b.automation.position_map==int(segment.get("from_map",-1)) and b.automation.position_cell==Vector2i(source[0],source[1]) and segment.get("points",[]).size()==1 and points==segment.points and validate(b,points[0])
+ if str(segment.get("kind",""))=="public_jump":
+  var audit:Dictionary=public_routes.audit(self,b,plan(b,npc))
+  if audit.is_empty() or audit.id!=segment.get("audit_id","") or audit.points[-1]!=points[0]:return false
+ return public_routes.validate_audit(self,b,segment)
