@@ -54,7 +54,7 @@ static func steps(helper,backend,profile:Dictionary,quest:Dictionary) -> void:
 	var coupon:bool=2753 in profile.original_items
 	var ticket:bool=int(route.ticket) in profile.original_items
 	if not ended and (on_floor or reward_ready or ticket):quest.status="进行中"
-	quest.completion_detail="原任务“猜谜3兄弟”。30–49／50–69／70级以上分别购买初／中／高级门票，收费等级×20／40／40。每条十层有七组问答（1、2、3、5、5、7、10题）和三次猜拳；题库Level不是角色等级。首层答对另得道具交换卷；通关后先领取猜谜专家的会员证，再兑换1级金布伊。原版行为：没有猜拳的参加券也能玩，有券扣一张，平局不再扣。助手只送公开售票入口或票门；洞内须经过真实票门和原路，合法近谈时仅保持原地。问答、猜拳和取券战需亲自进行；不开放47、77级后续或自动执行。"
+	quest.completion_detail="原任务“猜谜3兄弟”。30–49／50–69／70级以上分别购买初／中／高级门票，收费等级×20／40／40。每条十层有七组问答（1、2、3、5、5、7、10题）和三次猜拳；题库Level不是角色等级。首层答对另得道具交换卷；通关后先领取猜谜专家的会员证，再兑换1级金布伊。原版行为：没有猜拳的参加券也能玩，有券扣一张，平局不再扣。助手只送公开售票入口或票门；洞内须经过真实票门和原路，合法近谈时仅保持原地。手动玩法保持原规则；自动推进仅本任务，自动查原公开题目答案是项目便利，猜拳沿用原随机结果并合法重试。缺猜谜票时停下交由玩家处理，不自动买票或刷券；全程原路，普通战自动攻击并快速结算，通关自动领取会员证并兑换一次金布伊。不开放47、77级后续。"
 	if ended:
 		row(quest,"complete","已领取金布伊，任务已完成；不会重复发宠物。",false,true)
 		return

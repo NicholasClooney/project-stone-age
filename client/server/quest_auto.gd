@@ -96,6 +96,8 @@ func title(b) -> String:
 func selected_mode(b)->String:
  return "A" if restored else str(Settings.effective(b.session.automation_settings()).mode)
 func settings_changed(b,previous:Dictionary)->void:
+ # Source routes always use A; stored global preferences do not revoke pages.
+ if quest_id==2:return
  if Settings.effective(previous).mode==Settings.effective(b.session.automation_settings()).mode:return
  if not running or phase not in ["travel","landing","segment_landing"]:return
  var awaiting:bool=phase in ["landing","segment_landing"]
@@ -213,8 +215,13 @@ func snapshot(b=null) -> Dictionary:
  result.settings=Settings.effective(b.session.automation_settings() if b!=null else {})
  result.effective_mode=execution_mode if running else result.settings.mode
  result.available_modes=["A","B","C"]
- result.mode_notice="B/C只用于已审核的七条公开走廊；保护段和未知公开段仍沿A逐格。" if result.settings.mode!="A" else ""
+ result.mode_notice="B/C只用于已审核的公开走廊；保护段和未知公开段仍沿A逐格。" if result.settings.mode!="A" else ""
  if running and restored and result.settings.mode!="A":result.mode_notice="重启恢复先沿A原路推进；重新启动任务后应用所选模式。"
+ if running and quest_id==2:
+  result.available_modes=["A"]
+  result.effective_mode="A"
+  result.mode_notice="金布伊自动任务全程按A原路；B/C偏好保留供其他已开放任务使用。"
+ result.source_entry=source_entry(b) if b!=null else {"job_id":2,"enabled":false,"can_start":false,"reason":"服务未连接。","effective_mode":"A"}
  result.can_continue=running and phase=="waiting_boss" and boss_ready
  result.budget={}
  result.motion=motion.duplicate(true)
@@ -306,6 +313,9 @@ func start(b,command:Dictionary) -> Dictionary:
   var reason:=str(b.quest_visit_guard.call())
   if not reason.is_empty():return b._reject(reason)
  if str(command.get("client","")).is_empty():return b._reject("缺少发起设备。")
+ if int(id)==2:
+  if not command.get("_quest_connection") is int or int(command._quest_connection)==-1:return b._reject("缺少可信发起连接。")
+  return begin_source_run(b,str(command.client),int(command._quest_connection))
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  var first:Dictionary=strict_select(b,int(id),bool(quest.get("can_restart",false)))
  if first.get("status","")!="step" or not safe_step(first.get("step",{}),int(id),bool(quest.get("can_restart",false))):return b._reject(str(first.get("reason",quest.get("blocked_reason","")))+" 当前没有可自动执行的已审核原任务步骤。")
@@ -875,15 +885,24 @@ func source_position_current(b,source:Dictionary,packet:Dictionary)->bool:
  var command:Dictionary=packet.duplicate()
  return Motion.matches(command,issued[-1],identity)
 
-## Server-only admission for the still-unregistered dispatcher. Not an RPC or
-## a test bypass: pure source selection and normal authority guards apply.
-func begin_source_run(b,device:String,peer:int)->Dictionary:
- if running or device.is_empty() or peer==-1 or b.battle_open or not b.session._pending.is_empty() or not b.original_quests.pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():return b._reject("当前无法开始原源任务。")
- if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():return b._reject("请先退出团队。")
+## Read-only eligibility, never a reusable permission or a source-page export.
+func source_admission(b)->Dictionary:
+ if not Source.job_enabled(b,2):return {"ok":false,"reason":"此任务尚未开放自动推进。"}
+ if running or b.battle_open or not b.session._pending.is_empty() or not b.original_quests.pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():return {"ok":false,"reason":"当前无法开始原源任务。"}
+ if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():return {"ok":false,"reason":"请先退出团队。"}
+ if Rules.flag(b.session._profile,"ended",44):return {"ok":false,"reason":"已领取金布伊，任务已完成。"}
  var selected:Dictionary=SourcePlan.select(b,2)
- if selected.get("status")!="step":return b._reject(str(selected.get("reason","原任务不需要继续。")))
+ if selected.get("status")!="step":return {"ok":false,"reason":str(selected.get("reason","原任务不需要继续。"))}
  var checked:Dictionary=Source.validate_step(b,2,selected.step)
- if not checked.ok:return checked
+ return {"ok":bool(checked.ok),"reason":str(checked.get("reason",""))}
+func source_entry(b)->Dictionary:
+ var admission:Dictionary=source_admission(b)
+ return {"job_id":2,"enabled":Source.job_enabled(b,2),"can_start":bool(admission.ok),"reason":str(admission.reason),"effective_mode":"A"}
+## Public start dispatch and internal callers share the same original guards.
+func begin_source_run(b,device:String,peer:int)->Dictionary:
+ if device.is_empty() or peer==-1:return b._reject("缺少可信发起连接。")
+ var checked:Dictionary=source_admission(b)
+ if not checked.ok:return b._reject(str(checked.reason))
  quest_id=2;client=device;connection=peer;running=true;strict_walk=true
  restored=false;detached=false;owns_battle=false;shutdown_intent={}
  source_frame=null;source_after_landing="travel"
