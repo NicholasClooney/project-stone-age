@@ -1404,12 +1404,33 @@ func commit_transmigration_candidate(candidate:Dictionary,path:String)->bool:
 	_profile=before
 	return false
 
+## A battle may change preferences, but must not persist its unsettled profile.
+## The backend supplies its last successful save/load payload, never a client
+## candidate. Only settings are replaced; live profile and pending stay untouched.
+func save_settings_on_saved_profile(saved_payload:String,overrides:Dictionary,path:String)->Dictionary:
+	last_error = ""
+	if path.is_empty() or saved_payload.is_empty():return {"ok":false}
+	var baseline = _parse_save(saved_payload)
+	if not _valid_profile(baseline):return {"ok":false}
+	var checked:Dictionary=AutomationSettings.apply_patch({},overrides)
+	if not checked.ok or checked.overrides!=overrides:return {"ok":false}
+	var candidate:Dictionary=baseline.duplicate(true)
+	candidate.automation_settings=overrides.duplicate(true)
+	if not _valid_profile(candidate):return {"ok":false}
+	if not _write_profile_candidate(candidate,path):return {"ok":false}
+	return {"ok":true,"payload":JSON.stringify(candidate)}
+
 func _write_profile(path:String)->bool:
+	return _write_profile_candidate(_profile,path)
+
+## Pure candidate writer: no profile swaps, normalization or publication.
+## Callers retain their own admission rules, including save_game's battle ban.
+func _write_profile_candidate(candidate:Dictionary,path:String)->bool:
 	var file := FileAccess.open(path + ".tmp",FileAccess.WRITE)
 	if file == null:
 		last_error = "Cannot create save."
 		return false
-	file.store_string(JSON.stringify(_profile))
+	file.store_string(JSON.stringify(candidate))
 	file.flush()
 	var error := file.get_error()
 	file.close()

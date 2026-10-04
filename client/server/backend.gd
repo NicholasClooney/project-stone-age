@@ -558,10 +558,22 @@ func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
 	if not command.has("settings"):return _reject("missing settings")
 	var previous_settings:Dictionary=session.automation_settings()
 	session.last_error = ""
-	if not session.set_automation_settings(command.settings):return _reject(session.last_error)
-	if not save():
-		session._profile.automation_settings=previous_settings
-		return _reject("save_failed")
+	var validated:Dictionary=AutomationSettings.apply_patch(previous_settings,command.settings)
+	if not validated.ok:return _reject(str(validated.reason))
+	if not save_path.is_empty() and not session._pending.is_empty():
+		# Persist only preferences against the trusted pre-battle save. Never
+		# mark the live HP/items/rewards/location as already saved by this write.
+		var saved:Dictionary=session.save_settings_on_saved_profile(last_saved_payload,validated.overrides,save_path)
+		if not saved.ok:return _reject("save_failed")
+		last_saved_payload=saved.payload
+		quest_save_serial+=1
+		session._profile.automation_settings=validated.overrides.duplicate(true)
+	else:
+		# Preserve ordinary and memory-only backend save semantics.
+		session._profile.automation_settings=validated.overrides.duplicate(true)
+		if not save():
+			session._profile.automation_settings=previous_settings
+			return _reject("save_failed")
 	automation.profile_settings_changed()
 	quest_auto.settings_changed(self,previous_settings)
 	_publish()
