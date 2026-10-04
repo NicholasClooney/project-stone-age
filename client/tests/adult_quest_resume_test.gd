@@ -2,11 +2,13 @@ extends "res://tests/original_adult_quest_test.gd"
 const SAVE="user://adult-quest-resume.json"
 func fresh(load_saved:bool=false):
  var b=Backend.new()
+ b.quest_catalog.enabled_events=[4,15]
  b.set_process(false)
  b.save_path=SAVE
  b.keep_resume_current=true
  if load_saved:check(b.load_profile(SAVE),"real save reloads under current authority")
  else:
+  initialize_walk(b)
   clear_bag(b)
   b.session.gm_raise_level(-1,30)
   b.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
@@ -22,6 +24,7 @@ func first_battle(b) -> void:
  check(b.handle({"type":"quest_auto_start","quest_id":1,"client":"test"}).ok,"adult automatic intent starts")
  for i in range(1500):
   if b.quest_auto.phase=="battle":return
+  b.session._profile.no_random_encounters=b.automation.position_map!=10204
   tick(b)
  check(false,"original channel opens real random battle")
 func run() -> void:
@@ -46,7 +49,17 @@ func run() -> void:
   for i in range(6500):
    if not b.quest_auto.running:break
    tick(b)
-  check(Rules.flag(b.session._profile,"ended",4) and b.session._profile.original_items==[2418],"restart completes original exchanges exactly once")
+  check(not b.quest_auto.running and b.quest_auto.phase=="manual" and not b.quest_arrival.has_arrival(b,10204,b.automation.position_cell),"Battle restore never reconstructs the protected walking receipt")
+  check(str(pending.battle_id) in b.session._profile.completed_battles and b.session._profile.original_items.count(2418)==0,"The restored real battle settles once without granting the quest reward")
+  # Battle state is durable, arrival proof is not. An explicit new run walks
+  # from the public village through the original level gate again.
+  var spawn:Array=b.quest_helper.places.info(1000).spawn
+  b.automation.position_changed(1000,Vector2i(spawn[0],spawn[1]))
+  check(b.handle({"type":"quest_auto_start","quest_id":1,"client":"test"}).ok,"Player explicitly restarts from the public village")
+  for i in range(6500):
+   if not b.quest_auto.running:break
+   tick(b)
+  check(Rules.flag(b.session._profile,"ended",4) and b.session._profile.original_items==[2418],"Explicit original re-entry completes the exchanges exactly once")
   var completed:Dictionary=b.session.snapshot()
   check(not preload("res://server/adult_battle_checkpoint.gd").restore(b,checkpoint),"settled battle id refuses stale checkpoint and duplicate drops")
   b.load_resume()
@@ -101,13 +114,18 @@ func run() -> void:
  var b=fresh()
  b.handle({"type":"no_random_encounters","enabled":true})
  b.handle({"type":"quest_auto_start","quest_id":1,"client":"test"})
- for i in range(12):tick(b)
+ for i in range(5000):
+  if b.automation.position_map==10204 and b.quest_auto.issued.size()>=2:break
+  tick(b)
+ check(b.automation.position_map==10204,"Receipt fixture crosses the original entrance first")
  var receipt:Dictionary=b.quest_auto.issued[-1].duplicate(true)
  tick(b)
  var position:Vector2i=b.automation.position_cell
  check(b.handle({"type":"report_position","map_id":receipt.map_id,"cell":receipt.cell,"quest_position_seq":receipt.seq,"client":"test"}).ok and b.automation.position_cell==position and b.quest_auto.running,"delayed valid receipt cannot rewind or stop task")
  b.handle({"type":"report_position","map_id":10204,"cell":[50,20],"quest_position_seq":receipt.seq,"client":"test"})
- check(not b.quest_auto.running,"forged receipt and real manual displacement stop task")
+ check(b.quest_auto.running and b.automation.position_cell==position,"Forged tagged receipt neither moves nor stops the current task")
+ b.handle({"type":"report_position","map_id":10204,"cell":[50,20],"client":"test"})
+ check(not b.quest_auto.running,"Untagged real manual displacement stops task")
  b.free()
  for reason in ["manual","stop","party","auto_stop","save_failed"]:
   clear_save();b=fresh();first_battle(b)

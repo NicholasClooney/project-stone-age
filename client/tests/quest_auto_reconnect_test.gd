@@ -17,8 +17,9 @@ func run() -> void:
 	if not check((await rpc(first,{"type":"create_profile","name":"Alice","pin":"1111"})).ok,"Create Alice"):return
 	if not check((await rpc(other,{"type":"create_profile","name":"Bob","pin":"2222"})).ok,"Create Bob"):return
 	var b=hub.backends.alice
+	prepare(b)
 	if not check((await rpc(first,{"type":"quest_auto_start","quest_id":11,"client":"first"})).ok,"Start original shell task"):return
-	b.quest_auto.tick(b,0.21)
+	reach_landing(b)
 	if not check(b.quest_auto.phase=="landing","Task waits for genuine map confirmation"):return
 	var point:Dictionary=b.quest_auto.target.duplicate(true)
 	var step:Dictionary=b.quest_auto.step.duplicate(true)
@@ -39,7 +40,7 @@ func run() -> void:
 	if not check((await rpc(returning,{"type":"login","name":"Alice","pin":"1111"})).ok,"Same profile reconnects"):return
 	if not check(b.quest_auto.detached and b.quest_auto.phase=="landing","Login alone grants no arrival"):return
 	if not check((await rpc(returning,{"type":"report_position","map_id":point.map_id,"cell":point.cell,"client":"new-client","_quest_connection":999})).ok,"New client confirms actual authority location"):return
-	if not check(not b.quest_auto.detached and b.quest_auto.phase=="talk" and b.quest_auto.client=="new-client" and b.quest_auto.connection!=999 and b.quest_auto.step==step,"Transport identity rebinds existing task after valid report"):return
+	if not check(not b.quest_auto.detached and b.quest_auto.phase=="travel" and b.quest_auto.client=="new-client" and b.quest_auto.connection!=999 and b.quest_auto.step==step,"Transport identity rebinds existing task after valid report"):return
 	if not check((await rpc(other,{"type":"login","name":"Alice","pin":"1111"})).ok,"Second device authenticates as Alice"):return
 	if not check((await rpc(other,{"type":"quest_auto_stop"})).ok and not b.quest_auto.running,"Second same-profile device can stop"):return
 	if not check((await rpc(returning,{"type":"quest_auto_start","quest_id":11,"client":"new-client"})).ok,"Restart before explicit logout"):return
@@ -54,6 +55,8 @@ func run() -> void:
 
 func detached_defeat() -> bool:
 	var b=Backend.new()
+	var spawn:Array=b.quest_helper.places.info(1000).spawn
+	b.automation.position_changed(1000,Vector2i(spawn[0],spawn[1]))
 	for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
 	# Meet only the real entrance level: leave every new stat point unspent so
 	# the original weak character still loses a genuine channel encounter.
@@ -63,14 +66,17 @@ func detached_defeat() -> bool:
 	b.encounter_rng.seed=7
 	var route:Array=[]
 	if not check(b.handle({"type":"quest_auto_start","quest_id":1,"client":"test","_quest_connection":123}).ok,"Weak adult fixture starts original task"):return false
-	for index in range(1500):
+	for index in range(5000):
 		if b.quest_auto.phase=="battle":break
+		# Keep the original weak-defeat fixture at the ritual encounter: public
+		# approach still walks every cell, with the existing no-encounter toggle.
+		b.session._profile.no_random_encounters=b.automation.position_map!=10204
 		b.quest_auto.tick(b,0.21)
 		var position:Array=[b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y]
 		if route.is_empty() or route[-1]!=position:route.append(position)
 		if b.quest_auto.phase=="landing":b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test","_quest_connection":123})
 	if not check(b.quest_auto.phase=="battle","Original walk creates real battle before disconnect"):return false
-	if not check(route.slice(0,3)==[[10202,30,13],[10202,31,13],[10204,2,6]] and b.quest_arrival.has_arrival(b,10204,b.automation.position_cell),"Runner crosses level30 original gate and earns continuous walking authority"):return false
+	if not check(route.has([10202,31,13]) and route.has([10204,2,6]) and route[0][0]==1000 and b.quest_arrival.has_arrival(b,10204,b.automation.position_cell),"Runner crosses level30 original gate and earns continuous walking authority"):return false
 	b.quest_auto.detach(b,123)
 	for index in range(200):
 		if not b.quest_auto.running:break

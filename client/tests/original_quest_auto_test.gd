@@ -17,6 +17,30 @@ func remove_tree(path:String) -> void:
  for entry in DirAccess.get_files_at(path):DirAccess.remove_absolute(path.path_join(entry))
  for entry in DirAccess.get_directories_at(path):remove_tree(path.path_join(entry))
  DirAccess.remove_absolute(path)
+func fixture():
+ var b=Backend.new()
+ prepare(b)
+ return b
+func prepare(b,map_id:int=1002)->void:
+ b.session._profile.no_random_encounters=true
+ if b.automation.position_map<0:
+  var spawn:Array=b.quest_helper.places.info(map_id).spawn
+  b.automation.position_changed(map_id,Vector2i(spawn[0],spawn[1]))
+func checkpoint(b,wanted:String)->bool:
+ if wanted in ["travel","landing"]:return b.quest_auto.phase==wanted
+ if wanted=="talk":
+  if b.quest_auto.phase!="travel" or b.quest_auto.step.is_empty():return false
+  var npc:Dictionary=b.original_quests.npc_by_id(str(b.quest_auto.step.npc_id))
+  var delta:Vector2i=b.automation.position_cell-Vector2i(npc.cell[0],npc.cell[1])
+  return b.automation.position_map==int(npc.map_id) and maxi(absi(delta.x),absi(delta.y))<=2
+ if b.quest_auto.phase!="strict_dialogue":return false
+ var phase:String=str(b.original_quests.pending.get("phase",""))
+ return phase in ["REQUEST","ACCEPT","CLEAN"] if wanted=="yes" else phase in ["end","reward"]
+func reach_landing(b)->void:
+ for index in range(20000):
+  if not b.quest_auto.running or b.quest_auto.phase=="landing":break
+  advance(b,false)
+ check(b.quest_auto.running and b.quest_auto.phase=="landing","Original walk reaches an actual map boundary")
 func start(b) -> Dictionary:
  return b.handle({"type":"quest_auto_start","quest_id":11,"client":"test"})
 func advance(b,confirm:bool=true) -> void:
@@ -24,19 +48,19 @@ func advance(b,confirm:bool=true) -> void:
  if confirm and b.quest_auto.phase=="landing":
   b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test"})
 func finish(b) -> void:
- for index in range(40):
+ for index in range(20000):
   if not b.quest_auto.running:return
   advance(b)
  check(false,"Runner completes within its finite source steps")
 func run() -> void:
  for bit in range(4):
-  var b=Backend.new()
+  var b=fixture()
   b.quest_catalog.enabled_events=[2]
   b.session._profile.original_savepoint_bits=1<<bit
   var before:Dictionary=b.session.snapshot()
   check(start(b).ok,"SP%d starts real shell direction" % bit)
   check(not start(b).ok,"Duplicate start refused")
-  advance(b,false)
+  reach_landing(b)
   var target:Dictionary=b.quest_auto.target.duplicate(true)
   for i in range(10):advance(b,false)
   check(b.quest_auto.phase=="landing" and b.session.snapshot()==before,"No exchange before client confirms authoritative landing")
@@ -54,17 +78,19 @@ func run() -> void:
   check(b.session._profile.original_items==[reward] and Rules.flag(b.session._profile,"ended",2),"Eligible repeat completes once without CLEAN loop")
   b.free()
  for wanted in ["travel","landing","talk","yes","ok"]:
-  var b=Backend.new()
+  var b=fixture()
   b.quest_catalog.enabled_events=[2]
   check(start(b).ok,"Stop fixture starts")
-  while b.quest_auto.phase!=wanted and b.quest_auto.running:
+  for index in range(20000):
+   if checkpoint(b,wanted) or not b.quest_auto.running:break
    advance(b,wanted!="landing")
+  check(checkpoint(b,wanted),"Reached checkpoint "+wanted)
   var before:Dictionary=b.session.snapshot()
   check(b.handle({"type":"quest_auto_stop"}).ok,"Stop accepted at "+wanted)
   for i in range(15):advance(b)
   check(not b.quest_auto.running and b.session.snapshot()==before and b.original_quests.pending.is_empty(),"Stop at %s never executes pending token or REQUEST cancel" % wanted)
   b.free()
- var b=Backend.new()
+ var b=fixture()
  b.quest_catalog.enabled_events=[2]
  start(b)
  advance(b,false)
@@ -73,7 +99,7 @@ func run() -> void:
  b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[1,1],"client":"test"})
  check(not b.quest_auto.running,"Different manual position stops server runner")
  b.free()
- b=Backend.new()
+ b=fixture()
  b.quest_catalog.enabled_events=[2]
  b.quest_visit_guard=func():return "party"
  check(not start(b).ok,"Party locks start")
@@ -81,7 +107,7 @@ func run() -> void:
  b.session._profile.original_savepoint_bits=0
  check(not start(b).ok,"Invalid source savepoint refuses start")
  b.free()
- var failed=Backend.new()
+ var failed=fixture()
  failed.quest_catalog.enabled_events=[2]
  var before:Dictionary=failed.session.snapshot()
  start(failed)
@@ -90,7 +116,7 @@ func run() -> void:
  finish(failed)
  check(failed.session.snapshot()==before and failed.quest_auto.message=="save_failed","Failed original save rolls back and stops")
  failed.free()
- b=Backend.new()
+ b=fixture()
  b.quest_catalog.enabled_events=[2]
  for i in range(15):b.session._profile.original_items.append(2410)
  before=b.session.snapshot()
@@ -105,7 +131,7 @@ func run() -> void:
  print("ORIGINAL QUEST AUTO: %d failures" % failures)
  quit(1 if failures else 0)
 func remote_auto() -> void:
- var backend=Backend.new()
+ var backend=fixture()
  backend.quest_catalog.enabled_events=[2]
  root.add_child(backend)
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1")
@@ -153,7 +179,7 @@ func remote_auto() -> void:
  world.quest_helper_menu.open_menu()
  if not await click(world.quest_helper_menu.find_child("QuestHelper_11",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_11",true,false)):return
- if not await ready(func():return Rules.flag(backend.session._profile,"ended",2) and not backend.quest_auto.running,"Remote automatically confirms both downloaded maps and completes"):return
+ if not check(await Wait.until(self,func():return Rules.flag(backend.session._profile,"ended",2) and not backend.quest_auto.running,360.0),"Remote walks every original cell and confirms loaded maps: %s / %s / %s"%[backend.quest_auto.phase,backend.quest_auto.message,backend.automation.position_cell]):return
  if not check(await Wait.settle(self,world),"Completion settles"):return
  check(world.session.snapshot().original_items==[2414],"Remote reads original server reward")
  world.link.close()
@@ -167,30 +193,30 @@ func extra_stops_and_failures() -> void:
  for bit in [0,1]:
   for branch_type in ["REQUEST","ACCEPT","CLEAN"]:
    for wanted in ["landing","talk","yes","ok"]:
-    var b=Backend.new()
+    var b=fixture()
     b.quest_catalog.enabled_events=[2]
     b.session._profile.original_savepoint_bits=1<<bit
     if branch_type=="CLEAN":Rules.set_flag(b.session._profile,"ended",2,true)
     check(start(b).ok,"Stop fixture %s/%s starts" % [branch_type,wanted])
-    for index in range(40):
-     if str(b.quest_auto.step.get("source",{}).get("type",""))==branch_type and b.quest_auto.phase==wanted:break
+    for index in range(20000):
+     if str(b.quest_auto.step.get("source",{}).get("type",""))==branch_type and checkpoint(b,wanted):break
      advance(b,false)
-     if b.quest_auto.phase=="landing" and not (str(b.quest_auto.step.source.type)==branch_type and wanted=="landing"):
+     if b.quest_auto.phase=="landing" and not (str(b.quest_auto.step.get("source",{}).get("type",""))==branch_type and wanted=="landing"):
       b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test"})
-    check(b.quest_auto.running and b.quest_auto.phase==wanted and str(b.quest_auto.step.source.type)==branch_type,"Reach specific original %s/%s" % [branch_type,wanted])
+    check(b.quest_auto.running and checkpoint(b,wanted) and str(b.quest_auto.step.get("source",{}).get("type",""))==branch_type,"Reach specific original %s/%s" % [branch_type,wanted])
     var before:Dictionary=b.session.snapshot()
     b.handle({"type":"quest_auto_stop"})
     for i in range(20):advance(b)
     check(b.session.snapshot()==before and b.original_quests.pending.is_empty(),"Stop preserves finished transactions at %s/%s" % [branch_type,wanted])
     b.free()
   for branch_type in ["REQUEST","ACCEPT","CLEAN"]:
-   var b=Backend.new()
+   var b=fixture()
    b.quest_catalog.enabled_events=[2]
    b.session._profile.original_savepoint_bits=1<<bit
    if branch_type=="CLEAN":Rules.set_flag(b.session._profile,"ended",2,true)
    start(b)
-   for index in range(40):
-    if str(b.quest_auto.step.source.type)==branch_type and b.quest_auto.phase==("ok" if branch_type=="ACCEPT" else "yes"):break
+   for index in range(20000):
+    if str(b.quest_auto.step.get("source",{}).get("type",""))==branch_type and checkpoint(b,"ok" if branch_type=="ACCEPT" else "yes"):break
     advance(b)
    var before:Dictionary=b.session.snapshot()
    remove_tree("user://quest-auto-missing")
@@ -198,14 +224,14 @@ func extra_stops_and_failures() -> void:
    finish(b)
    check(b.session.snapshot()==before and b.quest_auto.message=="save_failed","%s original save fails atomically" % branch_type)
    b.free()
- var b=Backend.new()
+ var b=fixture()
  b.quest_catalog.enabled_events=[2]
  start(b)
  b.battle_open=true
  advance(b)
  check(not b.quest_auto.running,"Battle stops runner before its next step")
  b.free()
- b=Backend.new()
+ b=fixture()
  b.quest_catalog.enabled_events=[2]
  start(b)
  b.quest_visit_guard=func():return "party changed"
@@ -213,7 +239,7 @@ func extra_stops_and_failures() -> void:
  check(not b.quest_auto.running,"Party changes stop before next transaction")
  b.free()
 func drive_remote(link,b,client_id:String) -> void:
- for index in range(40):
+ for index in range(20000):
   if not b.quest_auto.running:return
   b.quest_auto.tick(b,0.21)
   if b.quest_auto.phase=="landing":
@@ -222,7 +248,7 @@ func drive_remote(link,b,client_id:String) -> void:
    if not check(reply.ok,"Initiator confirms authoritative profile landing"):return
  check(false,"Remote profile finite chain completes")
 func devices() -> void:
- var b=Backend.new()
+ var b=fixture()
  b.quest_catalog.enabled_events=[2]
  b.set_process(false)
  root.add_child(b)
@@ -241,7 +267,7 @@ func devices() -> void:
  check(reply.ok and b.quest_auto.connection!=-777,"Transport overrides forged ownership tag")
  var conflict:Dictionary=await rpc(first,{"type":"quest_visit","quest_id":11,"step_id":"shell:request"})
  check(not conflict.ok and conflict.type=="rejected","Remote conflict returns normal RPC rejection")
- b.quest_auto.tick(b,0.21)
+ reach_landing(b)
  var target:Dictionary=b.quest_auto.target
  await rpc(second,{"type":"report_position","map_id":target.map_id,"cell":target.cell,"client":"initiator","_quest_connection":b.quest_auto.connection})
  check(b.quest_auto.phase=="landing","Other socket cannot spoof initiator landing confirmation")
@@ -293,6 +319,7 @@ func profiles() -> void:
  var ba=hub.backends.alice
  var bb=hub.backends.bob
  ba.quest_catalog.enabled_events=[2];bb.quest_catalog.enabled_events=[2]
+ prepare(ba);prepare(bb)
  bb.session._profile.original_savepoint_bits=2
  var reply:Dictionary=await rpc(alice,{"type":"quest_auto_start","quest_id":11,"client":"alice","_quest_connection":-777})
  check(reply.ok and ba.quest_auto.connection!=-777 and not bb.quest_auto.running,"Hub binds initiator and keeps accounts separate")
