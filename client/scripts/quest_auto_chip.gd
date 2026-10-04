@@ -27,6 +27,7 @@ func configure(owner:Node) -> void:
 	row.add_child(stop_button)
 	hide()
 func restore() -> void:
+	world.quest_helper_menu.settings_open=false
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false) or str(auto.get("phase",""))=="manual":
 		world.quest_helper_menu.selected_id=int(auto.get("quest_id",-1))
@@ -40,7 +41,7 @@ func _process(_delta:float) -> void:
 	visible=shown
 	if not visible:return
 	var step:String=world.quest_helper_travel.auto_status()
-	var heading:String="已停止 · 待手动处理" if manual else world.quest_helper_travel.auto_mode()
+	var heading:String=world.quest_helper_travel.auto_heading()
 	if world.quest_helper_travel.auto_pending():heading="自动任务准备中"
 	restore_button.text=heading+"\n"+step
 	stop_button.visible=not manual

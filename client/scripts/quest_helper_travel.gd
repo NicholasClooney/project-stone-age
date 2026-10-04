@@ -19,9 +19,32 @@ func auto_status() -> String:
 		return str(auto.get("pause_reason","")) if not str(auto.get("pause_reason","")).is_empty() else str(auto.get("message",""))
 	var message:=str(auto.get("message",""))
 	if auto.get("detached",false):return "等待设备确认当前位置 · "+message
+	var budget:Dictionary=auto.get("budget",{})
+	if not budget.is_empty():
+		message+="\n本步 %.1f / %.1f 分钟 · 已保存 %d 场 · 本步新增 %s · 已有 %s"%[float(budget.get("used_seconds",0))/60.0,float(budget.get("limit_seconds",0))/60.0,int(budget.get("saved_battles",0)),str(budget.get("new_items",{})),str(budget.get("existing_items",{}))]
 	return message
+func auto_heading()->String:
+	match str(world.state.derived.get("quest_auto",{}).get("phase","")):
+		"waiting_reward":return "等待选择奖励 · 成功后自动继续"
+		"waiting_boss":return "等待手动 Boss 战 · 胜利后按继续"
+		"manual":return "已停止 · 待手动处理"
+	return auto_mode()
+func continue_auto(expected:Dictionary)->void:
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	for key in ["run_id","step_id","revision"]:
+		if auto.get(key)!=expected.get(key):return
+	if str(auto.get("phase",""))!="waiting_boss" or not auto.get("can_continue",false) or not (world.link.is_local() or world.link.online):return
+	world.link.request({"type":"quest_auto_continue","quest_run_id":str(auto.get("run_id","")),"quest_step_id":str(auto.get("step_id","")),"quest_revision":int(auto.get("revision",-1)),"client":world._client_id},func(reply:Dictionary):
+		if not reply.get("ok",false):world.last_adventure_message=str(reply.get("reason","当前任务无法继续。")))
 func auto_mode() -> String:
 	if auto_pending():return "自动任务准备中"
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	if auto.has("effective_mode"):
+		var actual:=str(auto.effective_mode)
+		var desired:=str(auto.get("settings",{}).get("mode","A"))
+		var title:String={"A":"连续原路自动推进 · 实际 A","B":"公开入口直达 · 实际 B（项目改动）","C":"原路分段快移 · 实际 C（项目改动；单位时间遇敌更多）"}.get(actual,"未知执行模式")
+		if desired!=actual:title+=" · 设置意图 %s 尚未生效"%desired
+		return title
 	return "连续原路自动推进" if world.state.derived.get("quest_auto",{}).get("strict_walk",false) else "自动任务 · 便利导航模式"
 func auto_pending() -> bool:
 	return active and phase in ["auto_download","auto_request"]
@@ -167,3 +190,8 @@ func _process(_delta: float) -> void:
 	elif phase=="approaching" and world.world_travel.pending<0:
 		active=false
 		phase=""
+
+func open_auto_reward()->void:
+	if not (world.link.is_local() or world.link.online) or world.battle_view.visible:return
+	if not is_instance_valid(world.world_travel):return
+	world.world_travel.quest_dialogue.open_auto(world.state.derived.get("quest_auto",{}))
