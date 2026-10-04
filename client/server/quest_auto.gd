@@ -5,6 +5,8 @@ const Settings=preload("res://server/quest_auto_settings_rules.gd")
 const PermitGate=preload("res://server/quest_auto_permit_gate.gd")
 const Motion=preload("res://server/quest_auto_motion.gd")
 const Source=preload("res://server/quest_auto_source_actions.gd")
+const SourcePlan=preload("res://server/quest_auto_golden_bui_plan.gd")
+var source_after_landing:="travel"
 const SourceFrame=preload("res://server/quest_auto_source_frame.gd")
 var source_frame:RefCounted
 var source_answers:RefCounted
@@ -107,6 +109,7 @@ func emit_position(b,point:Dictionary,origin:Dictionary={},ack_required:bool=fal
  position_serial+=1
  var packet:Dictionary=Motion.packet(identity,position_serial,point,origin,ack_required or phase=="landing")
  if packet.is_empty():handoff(b,"原任务位置资料不是有效整数坐标。");return
+ if quest_id==2:packet.quest_source_landing=true
  issue_position(b,packet)
 func issue_position(b,packet:Dictionary)->void:
  remember_position(packet)
@@ -150,6 +153,7 @@ func accept_report(b,command:Dictionary) -> bool:
  # Backend profile routing and transport own identity. Reconnection requires
  # an untagged handshake at the current authoritative cell, not an old ack.
  if running and detached and int(command.get("_quest_connection",-1))!=-1 and not str(command.get("client","")).is_empty():
+  if quest_id==2:return reconnect_source(b,command)
   if int(command.get("map_id",-1))==b.automation.position_map and b._cell(command)==b.automation.position_cell:
    connection=int(command._quest_connection)
    client=str(command.client)
@@ -330,7 +334,8 @@ func report(b,command:Dictionary) -> void:
  if not same:stop(b,"移动停止了自动任务。");return
  if phase=="landing" and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
   motion.awaiting_ack=false
-  phase="travel" if strict_walk or event(b)==4 or (event(b)==1 and int(target.get("map_id",-1)) in [200,20101,20102,20103,20104,20105]) else "talk"
+  phase=source_after_landing if quest_id==2 else ("travel" if strict_walk or event(b)==4 or (event(b)==1 and int(target.get("map_id",-1)) in [200,20101,20102,20103,20104,20105]) else "talk")
+  source_after_landing="travel"
   waited=0.0
   message="已确认抵达，准备原任务对话。"
   b.publish()
@@ -364,7 +369,7 @@ func tick(b,delta:float) -> void:
   if waited>=30.0:fail(b,"等待地图位置确认超时。")
   return
  elapsed+=maxf(0.0,delta)
- var desired:String=selected_mode(b)
+ var desired:String="A" if quest_id==2 else selected_mode(b)
  var cadence:float=0.2/Settings.C_SPEED_MULTIPLIER if phase=="travel" and desired=="C" else 0.2
  if elapsed<cadence:return
  defer_tick=false
@@ -441,6 +446,9 @@ func adult_enter(b)->void:
  waited=0.0;emit_position(b,target);b.publish()
 
 func advance(b) -> void:
+ if quest_id==2 and strict_walk:
+  advance_source(b)
+  return
  if strict_walk:
   strict_advance(b)
   return
@@ -797,10 +805,10 @@ func advance_permit_gate(b,point:Dictionary)->Dictionary:
 
 ## Dormant 4c internal hooks. Registry/start/tick do not dispatch job2 yet.
 func source_live(frame)->bool:
- return frame!=null and frame==source_frame and running and quest_id==2 and not detached and connection>=0 and frame.matches(identity.checkpoint(),connection)
+ return frame!=null and frame==source_frame and running and quest_id==2 and not detached and connection!=-1 and frame.matches(identity.checkpoint(),connection)
 func source_open(b,proposal:Dictionary)->Dictionary:
  if proposal.get("action") not in ["source_service","source_exchange"]:return b._reject("此接点不执行原楼梯或其他动作。")
- if not internal or not running or quest_id!=2 or detached or connection<0 or identity.step_id!=str(proposal.get("id","")) or step!=proposal:return b._reject("原服务执行身份无效。")
+ if not internal or not running or quest_id!=2 or detached or connection==-1 or identity.step_id!=str(proposal.get("id","")) or step!=proposal:return b._reject("原服务执行身份无效。")
  var checked:Dictionary=Source.validate_open(b,2,proposal)
  if not checked.ok:return checked
  if source_frame!=null:source_frame.cancel()
@@ -849,3 +857,96 @@ func source_position_packet(b,source:Dictionary,original:Dictionary)->Dictionary
  packet.v=b.PROTOCOL
  remember_position(packet)
  return packet
+
+## Server-only admission for the still-unregistered dispatcher. Not an RPC or
+## a test bypass: pure source selection and normal authority guards apply.
+func begin_source_run(b,device:String,peer:int)->Dictionary:
+ if running or device.is_empty() or peer==-1 or b.battle_open or not b.session._pending.is_empty() or not b.original_quests.pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():return b._reject("当前无法开始原源任务。")
+ if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():return b._reject("请先退出团队。")
+ var selected:Dictionary=SourcePlan.select(b,2)
+ if selected.get("status")!="step":return b._reject(str(selected.get("reason","原任务不需要继续。")))
+ var checked:Dictionary=Source.validate_step(b,2,selected.step)
+ if not checked.ok:return checked
+ quest_id=2;client=device;connection=peer;running=true;strict_walk=true
+ restored=false;detached=false;owns_battle=false;shutdown_intent={}
+ source_frame=null;source_after_landing="travel"
+ identity.begin();step={};target={};path.clear();herb_path.clear();navigation.clear();clear_motion()
+ phase="travel";elapsed=0.0;waited=0.0;execution_mode="A";pause_reason=""
+ message="沿审核原路前往原道场人物。"
+ b.publish()
+ return {"ok":true}
+func advance_source(b)->void:
+ if phase=="source_dialogue":
+  source_reply(b,source_next(b))
+  return
+ if phase!="travel":return
+ var selected:Dictionary=SourcePlan.select(b,2)
+ if selected.get("status")=="done":stop(b,"原金布伊任务已完成。");return
+ if selected.get("status")!="step":handoff(b,str(selected.get("reason","原源路线不可用。")));return
+ var proposal:Dictionary=selected.step
+ var checked:Dictionary=Source.validate_step(b,2,proposal)
+ if not checked.ok:handoff(b,str(checked.reason));return
+ if source_frame!=null:
+  source_frame.cancel();source_frame=null
+ if identity.step_id!=str(proposal.id):clear_motion();navigation.clear()
+ step=proposal.duplicate(true);identity.select_step(str(step.id))
+ execution_mode="A"
+ if step.action=="walk_portal":
+  if not b.original_quests.pending.is_empty():handoff(b,"原对话尚未结束。");return
+  source_walk(b,navigation.next_portal(b,step.portal))
+  return
+ var npc:Dictionary=checked.npc
+ var offset:Vector2i=b.automation.position_cell-Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+ if b.automation.position_map==int(npc.map_id) and maxi(absi(offset.x),absi(offset.y))<=2:
+  source_reply(b,source_open(b,step))
+ else:source_walk(b,navigation.next(b,npc))
+func source_reply(b,reply:Dictionary)->void:
+ if not running:return
+ if not reply.get("ok",false):handoff(b,str(reply.get("reason","原服务失败。")));return
+ if detached:return
+ if not reply.get("source_commit",{}).get("continued",false):handoff(b,"原服务调用身份已失效。");return
+ if reply.get("dialogue") is Dictionary:
+  if source_frame==null or source_frame.page.is_empty():handoff(b,"原公开对白已变化。");return
+  phase="source_dialogue"
+ elif reply.get("closed",false):
+  phase="landing" if reply.get("source_commit",{}).get("warp",false) else "travel"
+  source_after_landing="travel";waited=0.0
+ else:handoff(b,"原服务未返回可审核的后续。");return
+ b.publish()
+func source_walk(b,point:Dictionary)->void:
+ if point.is_empty() or point.has("gate") or not navigation.validate(b,point):handoff(b,"原源路线不能连续逐格通过。");return
+ var from_map:int=b.automation.position_map
+ var from_cell:Vector2i=b.automation.position_cell
+ if not b.quest_arrival.has_arrival(b,from_map,from_cell):handoff(b,"原路资格已失效。");return
+ var changed:bool=int(point.map_id)!=from_map
+ if point.has("portal"):
+  if step.action!="walk_portal" or not Source.validate_portal(b,step).ok:handoff(b,"原楼梯来源已变化。");return
+  var passage:Dictionary=b._cmd_check_passage({"from_map":from_map,"to_map":int(point.map_id)})
+  if not passage.get("ok",false):handoff(b,str(passage.get("reason","原楼梯拒绝通行。")));return
+ b.automation.position_changed(int(point.map_id),Vector2i(int(point.cell[0]),int(point.cell[1])),changed,"walk")
+ if not b.quest_arrival.has_arrival(b,int(point.map_id),b.automation.position_cell):handoff(b,"原路移动未保有到达资格。");return
+ target={"map_id":int(point.map_id),"cell":point.cell.duplicate()}
+ if changed:phase="landing";source_after_landing="travel";waited=0.0;navigation.clear()
+ var current:Dictionary=identity.checkpoint()
+ emit_position(b,target,{"map_id":from_map,"cell":[from_cell.x,from_cell.y]},changed)
+ if not running or detached or identity.checkpoint()!=current:return
+ if not changed:
+  var encounter:Dictionary=b._cmd_field_step({"map_id":from_map,"cell":point.cell.duplicate(),"encounter":true})
+  if encounter.get("battle",false):start_battle(b);return
+ b.publish()
+func reconnect_source(b,command:Dictionary)->bool:
+ # The generic legacy handshake may truncate numbers; source runs may not.
+ if not Motion.same_integer(command.get("map_id"),b.automation.position_map) or Motion.cell(command.get("cell"))!=[b.automation.position_cell.x,b.automation.position_cell.y]:return true
+ var next_phase:String=source_after_landing if phase=="landing" else phase
+ connection=int(command._quest_connection);client=str(command.client);detached=false
+ identity.invalidate();clear_motion();waited=0.0
+ if next_phase=="source_dialogue":
+  if source_frame==null or not source_frame.rebind(identity.checkpoint(),connection,str(b.original_quests.pending.get("token",""))):handoff(b,"原服务页在断线期间失效，请手动核对已保存进度。");return true
+ else:
+  if source_frame!=null:source_frame.cancel();source_frame=null
+ if phase!="battle":
+  source_after_landing=next_phase
+  phase="landing"
+ emit_position(b,{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}, {},phase=="landing")
+ b.publish()
+ return true

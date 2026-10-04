@@ -4,6 +4,8 @@ const Motion=preload("res://server/quest_auto_motion.gd")
 const Source=preload("res://server/quest_auto_source_actions.gd")
 var identity:Dictionary={}
 var owner_profile:Dictionary={}
+## Godot RefCounted transport ObjectIDs are signed (often negative).
+## Only -1 is our disconnected sentinel; IDs never come from client fields.
 var connection:=-1
 var npc_id:=""
 var source_id:=""
@@ -21,7 +23,7 @@ var _detached:=false
 static func valid_identity(value:Dictionary)->bool:
  return Source.exact_keys(value,["run_id","step_id","revision"]) and value.get("run_id") is String and value.run_id.length()==32 and value.run_id.is_valid_hex_number() and value.get("step_id") is String and not value.step_id.is_empty() and Motion.integer(value.get("revision"))!=null
 func configure(value:Dictionary,peer:int,npc:String,source:String)->bool:
- if not identity.is_empty() or not valid_identity(value) or peer<0 or npc.is_empty() or source.is_empty():return false
+ if not identity.is_empty() or not valid_identity(value) or peer==-1 or npc.is_empty() or source.is_empty():return false
  identity=value.duplicate(true);connection=peer;npc_id=npc;source_id=source
  return true
 func matches(value:Dictionary,peer:int)->bool:
@@ -91,7 +93,7 @@ func cancel()->void:
 func detach()->void:
  _detached=true
 func rebind(value:Dictionary,peer:int,pending_token:String)->bool:
- if _cancelled or not _detached or _call!=null or peer<0 or not valid_identity(value) or page.is_empty() or page.token!=pending_token or consumed.has(pending_token):return false
+ if _cancelled or not _detached or _call!=null or peer==-1 or not valid_identity(value) or page.is_empty() or page.token!=pending_token or consumed.has(pending_token):return false
  if value.run_id!=identity.run_id or value.step_id!=identity.step_id or int(value.revision)<=int(identity.revision):return false
  identity=value.duplicate(true);connection=peer;_detached=false
  return true
