@@ -197,6 +197,11 @@ func start_battle(b) -> void:
   return
  owns_battle=true
  phase="battle"
+ var transition_identity:Dictionary=identity.checkpoint()
+ var transition_connection:int=connection
+ # Receipt-clearing battle profiles must follow the current authority cell.
+ b.emit_event({"type":"auto_status","status":b.automation.status()})
+ if not running or detached or connection!=transition_connection or identity.checkpoint()!=transition_identity:return
  b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}})
  b.automation.compact_active=true
  message="沿途遇敌：原自动战斗中，结算后继续。"
@@ -359,6 +364,10 @@ func tick(b,delta:float) -> void:
   path.clear();herb_path.clear()
   navigation.clear()
   phase="travel"
+  # A client must leave its battle gate before the first post-win receipt.
+  var transition_connection:int=connection
+  b.publish()
+  if not running or detached or connection!=transition_connection or identity.checkpoint()!=saved_identity:return
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():stop(b,"其他活动停止了自动任务。");return
  if not strict_walk and Rules.flag(b.session._profile,"ended",event(b)) and not clean_authorized:
   stop(b,title(b)+"已完成。")
