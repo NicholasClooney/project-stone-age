@@ -29,8 +29,8 @@ func _init()->void:
 	add_child(mode)
 	description=add_text("",14)
 	description.name="QuestAutoModeDescription"
-	add_text("保护洞窟、门、迷宫及入口保护段始终逐格原路；项目快移不会获得到达资格。",14)
-	add_text("每个刷物步骤的时间上限（分钟）",16)
+	add_text("仅审核公开走廊可快移；其余公开段、保护洞窟、门、迷宫及入口保护段始终逐格原路。项目快移不会获得到达资格。",14)
+	add_text("后续刷物任务时限偏好（分钟，尚未开放）",16)
 	budget=SpinBox.new()
 	budget.name="QuestAutoLootMinutes"
 	budget.min_value=1
@@ -40,7 +40,7 @@ func _init()->void:
 	budget.custom_minimum_size.y=44
 	budget.size_flags_horizontal=Control.SIZE_EXPAND_FILL
 	add_child(budget)
-	add_text("默认 30 分钟，可设 1–180 分钟；包括本步战斗与结算，到限后结算当前战，不再开新战。重连或重新开始不会清零已用时间。",14)
+	add_text("当前仅保存偏好，不会启动刷物或计时。供后续刷物任务使用，默认 30 分钟，可设 1–180 分钟。",14)
 	feedback=add_text("",14)
 	feedback.name="QuestAutoSettingsFeedback"
 	apply_button=Button.new()
