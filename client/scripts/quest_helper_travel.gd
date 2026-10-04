@@ -19,6 +19,7 @@ func auto_status() -> String:
 		return str(auto.get("pause_reason","")) if not str(auto.get("pause_reason","")).is_empty() else str(auto.get("message",""))
 	var message:=str(auto.get("message",""))
 	if auto.get("detached",false):return "等待设备确认当前位置 · "+message
+	if not str(auto.get("mode_notice","")).is_empty():message+="\n"+str(auto.mode_notice)
 	var budget:Dictionary=auto.get("budget",{})
 	if not budget.is_empty():
 		message+="\n本步 %.1f / %.1f 分钟 · 已保存 %d 场 · 本步新增 %s · 已有 %s"%[float(budget.get("used_seconds",0))/60.0,float(budget.get("limit_seconds",0))/60.0,int(budget.get("saved_battles",0)),str(budget.get("new_items",{})),str(budget.get("existing_items",{}))]
@@ -148,7 +149,8 @@ func _process(_delta: float) -> void:
 	if auto.get("running",false):
 		world.last_adventure_message=auto_status()
 		if (world.link.is_local() or world.link.online) and ((world.battle_view.visible and not auto.get("strict_walk",false) and str(auto.get("phase",""))!="battle") or world.party_locked()):cancel("自动任务已停止。")
-		var landing:bool=str(auto.get("phase",""))=="landing" or auto.get("detached",false)
+		var receipt:Dictionary=world.get_meta("quest_position_receipt",{})
+		var landing:bool=str(auto.get("phase","")) in ["landing","segment_landing"] or bool(receipt.get("quest_ack_required",false)) or auto.get("detached",false)
 		if not landing:auto_reported=false
 		var destination:Dictionary=world.state.automation.get("position",{}) if auto.get("detached",false) else auto.get("target",{})
 		if landing and not auto_reported and (str(auto.get("client",""))==world._client_id or auto.get("detached",false)) and not destination.is_empty() and not world.area_transition_busy and not world.moving and not world.data.is_empty() and int(world.data.map_id)==int(destination.map_id) and world.cell==Vector2i(int(destination.cell[0]),int(destination.cell[1])):

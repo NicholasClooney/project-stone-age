@@ -148,7 +148,8 @@ func step_frame(delta: float) -> void:
 	if game.moving:
 		var d := game.target_cell-game.from_cell
 		var distance_scale := sqrt(2.0) if d.x != 0 and d.y != 0 else 1.0
-		game.step_progress = minf(1,game.step_progress+delta/(GameScene.STEP_TIME*distance_scale))
+		var interval:float=game._remote.follow_interval() if game._following_step else GameScene.STEP_TIME
+		game.step_progress = minf(1,game.step_progress+delta/(interval*distance_scale))
 		game.logical_position = Vector2(game.from_cell).lerp(Vector2(game.target_cell),game.step_progress)
 		game.player.position = game.project(game.logical_position)
 		if game.step_progress>=1:

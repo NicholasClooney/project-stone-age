@@ -19,7 +19,7 @@ func run()->void:
 	if not check(await Wait.settle(self,world),"Settings save roundtrip"):return
 	if not await ready(func():return not menu.settings_pending and panel.feedback.text.contains("已保存"),"Successful save acknowledged"):return
 	if not check(backend_node.session.automation_settings().quest=={"mode":"C","loot_minutes":45} and world.state.derived.quest_auto.settings.mode=="C","Real server and remote snapshot persist requested C/45"):return
-	if not check(world.state.derived.quest_auto.effective_mode=="A" and world.state.derived.quest_auto.available_modes==["A"] and panel.feedback.text.contains("当前可执行模式：A"),"Unimplemented C is never an effective mode"):return
+	if not check(world.state.derived.quest_auto.effective_mode=="C" and world.state.derived.quest_auto.available_modes==["A","B","C"] and panel.feedback.text.contains("七条公开走廊"),"Authority exposes C policy with exact audited-corridor limitation"):return
 	var reloaded=Backend.new()
 	if not check(reloaded.load_profile(backend_node.save_path) and reloaded.session.automation_settings().quest.mode=="C","Real saved profile reload retains preference"):return
 	reloaded.free()
