@@ -201,3 +201,48 @@ areas remain unfinished and are not relabelled as rider pixels. The three
 permanently retained dark-edge pixels in 250973 are unchanged. No Godot,
 production import, mapping enablement, main-asset write or live operation has
 occurred at this checkpoint.
+
+## Side-facing attack checkpoint: 323 distinct drafts
+
+The two rule books now contain 323 distinct source bitmaps (36 + 287), with
+4093 still lacking rules and zero complete semantic receipts. Poses 016–023
+add the eight `0_2` attack poses across twelve bodies. Four of these bitmaps
+already belonged to the sample book (250967, 272191, 250973, 272197); their
+updated rules remain there and are removed from the pose book. Counts must
+use the union, not add duplicate samples. This is still an incomplete research
+checkpoint, not a functional delivery.
+
+Every new twelve-body source/change sheet was viewed. Independent references
+separate head decorations, clothing fragments, fingers and exposed feet from
+the dragon. White jaw/abdomen regions receive spatial ventral material rules;
+olive underside regions remain distinct from yellow dorsal structure. New
+reference outputs and all changed revision crops were also viewed. Unchanged
+outputs were linked by hashes to their already viewed candidate images.
+Evidence is in the private `corpus-v1/pose016-*` through `pose023-*` folders.
+
+Review found and corrected an overbroad dragon restoration in bitmap 263099:
+its far foot wraps below the left wing, and an explicit conservative boundary
+guard restores 69 pixels to their original colours. The superseding output is
+`pose020-foot-v2`; the older `pose020-refined` output is rejected. Reinspection
+of the adjacent poses added guards to 263097 and 263098, restoring 1 and 9
+pixels (`pose018-foot-v2`, `pose019-foot-v2`). These guards also include nearby
+uncertain dragon pixels and are not labelled entirely as rider. Each revision
+crop was viewed. Other bodies retain the prior inspected outputs.
+
+Bitmap 247941's top hair decoration had two shared-colour pixels outside its
+initial outline, at (66,13) and (67,13). The small independent guard restores
+both (`pose022-hair-v2`). Regenerating the same-pose candidates with that
+corrected reference produced identical outputs for all twelve targets; the
+existing target protection prevented propagation. The source, previous output,
+new output and differences are recorded independently in the corresponding
+revision evidence and propagation hashes.
+
+Bitmap 250973 retains its previous uncertainty polygon and the permanently
+original pixels (51,67), (51,69), (49,72). The indexed source values 81,80,81
+and exact output equality were asserted after updating its pose rule. No
+blanket lower-half restoration was applied to poses 021–023, whose feet overlap
+the abdomen and tail. Pose 023 still has unfinished yellow neck/upper-wing
+areas; these are explicitly unresolved dragon regions, not presumed rider.
+Contact-edge cleanup and per-bitmap semantic approval remain required across
+all drafts. No Godot, resource import, mapping enablement, main-asset write or
+live operation is included.
