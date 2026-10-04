@@ -391,3 +391,29 @@ further independent local refinement. Current outputs for both deduplicated
 records are in `pose032-deduplicated`; other pose032 outputs retain the source
 listed above, and pose033 outputs remain unchanged. No semantic approval is
 inferred from restored protection or from eliminating duplicate rule entries.
+
+### Explicit local refinement after deduplication
+
+The old broad protection is not treated as semantic truth. Independent local
+source-coordinate polygons now identify visible left/right dorsal wing-root
+islands and central dragon back below the garments in 251059/272283. Both
+actual revision crops were viewed: 119 and 294 further dragon pixels receive
+red body colour in `pose032-clear-dragon`. No whole lower-half restoration is
+used; the adjacent legs and garment contacts remain protected/unresolved.
+These outputs supersede `pose032-deduplicated` for the two bitmaps. The count
+remains 441 and complete semantic receipts remain zero.
+
+## Raised rear-wing drafts: 453 unique rules
+
+Pose 034 adds twelve drafts, with the sample/pose-book intersection explicitly
+asserted empty before saving: 453 unique, 3963 absent, zero complete receipts.
+All twelve originals/change pairs and the three changed final revision crops
+were viewed. An independently outlined target-head region restores five
+candidate-selected yellow hair pixels in 275317. Separate bent-leg/foot guards
+for 281381 were checked from its coordinate image and single-frame comparison;
+they do not change that candidate output. The other nine non-reference outputs
+are hash-identical to their previously viewed candidates. The two primary
+reference revisions retain their independent head/robe/foot outlines. Latest
+outputs are `pose034-refined`, with source/output hashes and actual revision
+crops in `pose034-final-revision`. Contact boundaries are still draft, and no
+riding mapping, gameplay rule, importer or live asset is enabled.
