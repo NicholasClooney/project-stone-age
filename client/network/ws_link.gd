@@ -28,6 +28,7 @@ var backend = null
 var online := false
 var _closed := false
 var _peer: WebSocketPeer
+var _lifecycle := 0 # Local callback ownership only; never a wire revision.
 var _seq := 0
 var _callbacks: Dictionary = {}
 var _retry_in := 0.0
@@ -65,8 +66,11 @@ func is_local() -> bool:
 
 ## Starts (or restarts) the connection; the link stays idle until called.
 func connect_now() -> void:
+	var retired := _lifecycle+1
+	close() # Revoke the old online capability and finish its callbacks first.
+	if _lifecycle!=retired:return # A cancellation callback already changed owner.
+	_closed = false
 	_started = true
-	if _peer!=null:_peer.close()
 	_hello_seq = -1
 	awaiting_login = false
 	_login_seq = -1
@@ -79,11 +83,11 @@ func connect_now() -> void:
 	var error := _peer.connect_to_url(url)
 	print("[link] connecting to %s: error %d" % [url,error])
 	if error!=OK:
-		_peer = null
-		_schedule_retry()
+		_drop()
 
 func request(command: Dictionary, done: Callable = Callable()) -> Dictionary:
-	if not online:
+	if not online or not _open_peer():
+		if online:_drop()
 		var offline := {"ok":false,"reason":"offline","type":"rejected"}
 		if done.is_valid():done.call(offline)
 		return offline
@@ -91,13 +95,25 @@ func request(command: Dictionary, done: Callable = Callable()) -> Dictionary:
 	var sent: Dictionary = command.duplicate(true)
 	sent.seq = _seq
 	if done.is_valid():_callbacks[_seq] = done
-	_send(Codec.encode(sent))
+	if not _send(Codec.encode(sent)):return {"ok":false,"reason":"offline","type":"rejected"}
 	return {"ok":false,"pending":true}
 
-func _send(text: String) -> void:
+func _open_peer() -> bool:
+	return not _closed and _peer!=null and _peer.get_ready_state()==WebSocketPeer.STATE_OPEN
+
+func _same_owner(peer:WebSocketPeer,lifecycle:int)->bool:
+	return _peer==peer and _lifecycle==lifecycle and not _closed
+
+func _send(text: String) -> bool:
+	if not _open_peer():
+		_drop() # Any already registered callback receives one offline rejection.
+		return false
 	messages_out += 1
 	bytes_out += text.to_utf8_buffer().size()
-	_peer.send_text(text)
+	if _peer.send_text(text)!=OK:
+		_drop()
+		return false
+	return true
 
 func stats() -> Dictionary:
 	return {"kind":"remote","messages_in":messages_in,"messages_out":messages_out,"bytes_in":bytes_in,"bytes_out":bytes_out,"latency_ms":latency_ms}
@@ -108,6 +124,8 @@ func poll(delta: float) -> void:
 		_retry_in -= delta
 		if _retry_in <= 0:connect_now()
 		return
+	var polled_peer := _peer
+	var lifecycle := _lifecycle
 	_peer.poll()
 	var ready_state := _peer.get_ready_state()
 	if ready_state!=_last_state:
@@ -116,15 +134,16 @@ func poll(delta: float) -> void:
 	match ready_state:
 		WebSocketPeer.STATE_OPEN:
 			if _hello_seq < 0:_send_hello()
+			if not _same_owner(polled_peer,lifecycle):return
 			_drain()
-			_heartbeat(delta)
+			if _same_owner(polled_peer,lifecycle):_heartbeat(delta)
 		WebSocketPeer.STATE_CONNECTING:
 			_heartbeat(delta)
 		WebSocketPeer.STATE_CLOSING:
 			_drain()
 		WebSocketPeer.STATE_CLOSED:
 			_drain()
-			_drop()
+			if _same_owner(polled_peer,lifecycle):_drop()
 
 ## Counts frame time rather than wall time, so a browser tab that was hidden
 ## (and not polling) is not mistaken for a dead server when it comes back.
@@ -133,7 +152,6 @@ func _heartbeat(delta: float) -> void:
 	_since_heard += delta
 	if _since_heard > silence_limit:
 		print("[link] %s silent for %.0f s, dropping" % [url,_since_heard])
-		_peer.close()
 		_drop()
 		return
 	_since_ping += delta
@@ -145,24 +163,34 @@ func _heartbeat(delta: float) -> void:
 		_send(Codec.encode({"type":"ping","seq":_seq}))
 
 func _drop() -> void:
+	_lifecycle += 1
+	var lifecycle := _lifecycle
 	var was_online := online
+	var retired_peer := _peer
 	online = false
 	_peer = null
 	_hello_seq = -1
 	awaiting_login = false
 	_login_seq = -1
+	_ping_seq = -1
+	_ping_msec = 0
 	var pending := _callbacks
 	_callbacks = {}
+	# Release only the captured old transport, before user callbacks may replace it.
+	if retired_peer!=null:retired_peer.close()
 	for seq in pending:pending[seq].call({"ok":false,"reason":"offline","type":"rejected"})
+	if lifecycle!=_lifecycle:return
 	if was_online:disconnected.emit()
-	_schedule_retry()
+	if lifecycle==_lifecycle:_schedule_retry()
 
 ## Seconds until the next reconnection attempt; 0 while one is in progress.
 func retry_seconds() -> int:
 	return ceili(maxf(_retry_in,0.0)) if _peer==null else 0
 
 func _drain() -> void:
-	while _peer!=null and _peer.get_available_packet_count() > 0:
+	var peer := _peer
+	var lifecycle := _lifecycle
+	while peer!=null and _same_owner(peer,lifecycle) and peer.get_available_packet_count() > 0:
 		_since_heard = 0.0
 		var packet := _peer.get_packet()
 		messages_in += 1
@@ -171,7 +199,7 @@ func _drain() -> void:
 
 func close() -> void:
 	_closed = true
-	if _peer!=null:_peer.close()
+	_drop() # Synchronous capability revocation, not a later poll side effect.
 
 func _send_hello() -> void:
 	_seq += 1
@@ -185,9 +213,10 @@ func _send_hello() -> void:
 ## success the link goes online as after a hello, and keeps the token for
 ## reconnects. `done` gets the reply either way.
 func login(command: Dictionary, done: Callable = Callable()) -> void:
-	if _peer==null or _peer.get_ready_state()!=WebSocketPeer.STATE_OPEN or not awaiting_login:
+	if not _open_peer() or not awaiting_login:
 		if done.is_valid():done.call({"ok":false,"reason":"offline","type":"rejected"})
 		return
+	_lifecycle += 1 # A new accepted login supersedes an older auth callback.
 	_seq += 1
 	_login_seq = _seq
 	var sent := command.duplicate(true)
@@ -201,6 +230,9 @@ func logout(done: Callable = Callable()) -> void:
 	request({"type":"logout"},done)
 
 func _logged_in(incoming: Dictionary) -> void:
+	var peer := _peer
+	var lifecycle := _lifecycle
+	if not _open_peer():return
 	account = incoming.get("account",{})
 	if account.has("name"):login_name = str(account.name)
 	if incoming.has("token"):login_token = str(incoming.token)
@@ -208,9 +240,11 @@ func _logged_in(incoming: Dictionary) -> void:
 	online = true
 	_backoff = 1.0
 	message.emit(incoming.snapshot)
-	connected.emit()
+	if _same_owner(peer,lifecycle) and online and _open_peer():connected.emit()
 
 func _receive(text: String) -> void:
+	var peer := _peer
+	var lifecycle := _lifecycle
 	var incoming := Codec.decode(text)
 	if incoming.is_empty():return
 	if bool(incoming.get("reply",false)):
@@ -233,12 +267,14 @@ func _receive(text: String) -> void:
 				var answer: Callable = _callbacks[seq]
 				_callbacks.erase(seq)
 				answer.call(incoming)
+			if not _same_owner(peer,lifecycle):return
 			if bool(incoming.get("ok",false)) and incoming.has("snapshot"):_logged_in(incoming)
 			return
 		if _callbacks.has(seq):
 			var done: Callable = _callbacks[seq]
 			_callbacks.erase(seq)
 			done.call(incoming)
+		if not _same_owner(peer,lifecycle):return
 		# Skipped encounters are ordinary outcomes the caller explains itself;
 		# stale commands lost a race with another device and need no notice.
 		if not bool(incoming.get("ok",false)) and not incoming.has("skipped") and not incoming.has("stale") and not str(incoming.get("reason","")).is_empty():
