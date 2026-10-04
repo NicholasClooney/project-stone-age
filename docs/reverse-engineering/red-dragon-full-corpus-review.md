@@ -548,3 +548,33 @@ The accepted refinement adds 618 changed pixels, including 14 cheek pixels.
 Latest pose041 output is `pose041-neck-render` except 260202, superseded by
 `pose041-finger-guard`; the one-pixel restoration crop was viewed separately.
 The 571 count and zero complete semantic receipts do not change.
+
+## Poses045–046: 595 unique drafts, zero complete receipts
+
+Two further twelve-body source pages and their four three-body actual-change
+sheets were inspected independently. Pose045's 248078 reference initially
+changed hair-fringe pixel `(2,57)`; an independent source polygon restores it
+before derivation. Target 272334's helmet then exposed eight candidate leakage
+pixels; its independently drawn helmet region restores all eight. The top
+head/dragon-fin contact in 275366 and 281430 retains six pixels each as unknown,
+not asserted to be rider. The two restoration crops and both final reference
+revisions were viewed. Remaining yellow near rider contacts is incomplete.
+
+Pose046 adds an independent local 257175 source polygon for exposed dragon neck
+(194 body-index pixels) and far white cheek (58 ventral-index pixels). Only those
+local labels join the two manual references; automatic target masks are not
+promoted to references. The resulting twelve revision crops were all viewed,
+including 260207's isolated far-cheek change checked against its coordinate
+source. The revision adds 998 changed pixels, including 219 additional ventral
+pixels compared with the initial candidate batch. This count includes restoring
+the two primary manual reference regions after leave-one-reference-out drafting.
+
+Latest evidence: pose045 uses `pose045-refined` for 248078/266270,
+`pose045-target-guards` for 272334/275366/281430, and `pose045-render` for the
+other seven. Pose046 uses `pose046-neck-render` for all twelve. Saved mask and
+material fields are checked against those inspected inputs without another
+full batch render. Unique counts: samples 36 plus pose rules 559, intersection
+empty, total 595; 3821 bitmaps still have no draft, and all 4416 still lack
+complete semantic approval. No game mapping, importer activation, source art,
+Godot execution or live resources change. Timed child CPU and wall measurements
+remain separate in the private offline processing ledger.
