@@ -47,6 +47,18 @@ func exercise(remote:bool,dimensions:Vector2i) -> bool:
 		server_node=preload("res://server/ws_server.gd").new(backend_node,0,"127.0.0.1");root.add_child(server_node)
 		if not check(server_node.start()==OK,"Background UI server port0"):return false
 	if not await create_world():return false
+	# A single strict tick crosses an actual original portal, not a convenience
+	# teleport to the NPC. Placement is a map-readiness fixture, not route proof.
+	var portal:Dictionary={}
+	for candidate in backend_node.quest_helper.places.links(1300).values():
+		if int(candidate.to_map)==100:portal=candidate;break
+	if not check(not portal.is_empty(),"Background fixture uses original village exit"):return false
+	backend_node.session._profile.no_random_encounters=true
+	backend_node.automation.position_changed(1300,Vector2i(portal.cell[0],portal.cell[1]))
+	backend_node.publish()
+	backend_node.emit_event({"type":"position","map_id":1300,"cell":portal.cell.duplicate(),"client":"fixture"})
+	if not await ready(func():return int(world.data.map_id)==1300 and world.cell==Vector2i(portal.cell[0],portal.cell[1]) and not world.moving and not world.area_transition_busy,"Original portal fixture reaches real UI"):return false
+	if not check(await Wait.settle(self,world),"Fixture placement settles before real start button"):return false
 	if not await begin():return false
 	var menu=world.quest_helper_menu
 	var chip=world.find_child("QuestAutoChip",true,false)
@@ -54,7 +66,8 @@ func exercise(remote:bool,dimensions:Vector2i) -> bool:
 	if not await click(menu.find_child("QuestHelperClose",true,false)):return false
 	if not await ready(func():return chip.visible and not menu.visible,"Close leaves background chip"):return false
 	backend_node.quest_auto.tick(backend_node,0.21)
-	if not await ready(func():return backend_node.quest_auto.phase=="talk","Closed helper still loads and confirms server step"):return false
+	if not check(backend_node.quest_auto.phase=="landing" and backend_node.automation.position_map==100,"Strict tick crosses actual original portal and waits for UI"):return false
+	if not await ready(func():return backend_node.quest_auto.phase=="travel" and int(world.data.map_id)==100 and world.cell==Vector2i(portal.target[0],portal.target[1]) and not world.area_transition_busy and not world.moving,"Closed helper still loads and confirms original portal step"):return false
 	if not check(await Wait.settle(self,world),"Background step settles"):return false
 	if not check(backend_node.quest_auto.running and root.get_visible_rect().encloses(chip.get_global_rect()),"Running chip fits viewport"):return false
 	if not await ready(func():return not chip.restore_button.text.ends_with("当前步骤\n"),"Chip has current step"):return false

@@ -75,6 +75,13 @@ func run() -> void:
  preload("res://server/progression.gd").refresh(backend.session._profile.player)
  backend.session._profile.player.hp=backend.session._profile.player.max_hp
  backend.encounter_rng.seed=7
+ var completed_before:Array=backend.session._profile.completed_battles.duplicate()
+ var first_battle:Dictionary={}
+ backend.event.connect(func(_event:Dictionary):
+  if first_battle.is_empty() and backend.quest_auto.phase=="battle" and backend.session._pending.has("battle_id"):
+   first_battle.merge({"id":str(backend.session._pending.battle_id),"map":backend.automation.position_map,"cell":backend.automation.position_cell})
+   print("ADULT AUTO actual battle: ",first_battle)
+ )
  backend.publish()
  if not check(await Wait.settle(self,world),"Remote fresh original task fixture settles"):return
  world.helper_menu.open_menu()
@@ -86,7 +93,9 @@ func run() -> void:
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_1",true,false)):return
  world.quest_helper_menu.hide()
  world.paused_input=false
- if not await ready(func():return not backend.session._profile.completed_battles.is_empty() and backend.quest_auto.running and backend.quest_auto.phase=="walking","Remote auto walks, settles real battle and continues task"):return
+ if not await ready(func():
+  if first_battle.is_empty():return false
+  return first_battle.id not in completed_before and first_battle.id in backend.session._profile.completed_battles and backend.quest_auto.running and backend.quest_auto.phase=="travel" and (backend.automation.position_map!=first_battle.map or backend.automation.position_cell!=first_battle.cell),"Remote auto walks, saves real battle and resumes original movement"):return
  if not check(world.backend==null,"Automatic battle still controlled by remote server"):return
  world.quest_helper_menu.open_menu()
  if not await click(world.quest_helper_menu.find_child("QuestAutoStop",true,false)):return
