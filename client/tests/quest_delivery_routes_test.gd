@@ -6,11 +6,13 @@ const Plan=preload("res://server/quest_delivery_plan.gd")
 var failures:=0
 var battles:=0
 var moves:=0
+var suite_started:int=Time.get_ticks_msec()
 func check(value:bool,label:String)->void:
  print(("PASS: " if value else "FAIL: ")+label)
  if not value:failures+=1
 func _initialize()->void:call_deferred("run")
 func fixture(map_id:int,cell:Vector2i):
+ var started:int=Time.get_ticks_msec()
  var b=Backend.new()
  # Public starting position and a legal level/stat allocation are fixtures.
  # No event flags, arrival proof, RNG seeds, encounter suppression or GM calls.
@@ -21,6 +23,7 @@ func fixture(map_id:int,cell:Vector2i):
  preload("res://server/progression.gd").refresh(b.session._profile.player)
  b.session._profile.player.hp=b.session._profile.player.max_hp
  b.automation.position_changed(map_id,cell)
+ print("TIMING delivery_fixture map=%d wall_ms=%d"%[map_id,Time.get_ticks_msec()-started])
  return b
 func rpc(link,command:Dictionary)->Dictionary:
  var replies:Array=[]
@@ -29,6 +32,7 @@ func rpc(link,command:Dictionary)->Dictionary:
  check(ready,"real socket roundtrip")
  return replies[0] if ready else {}
 func drive(b,job:int,link=null)->bool:
+ var started:int=Time.get_ticks_msec()
  var start:Dictionary={"type":"quest_auto_start","quest_id":job,"client":"delivery-route"}
  var reply:Dictionary=b.handle(start) if link==null else await rpc(link,start)
  check(reply.get("ok",false) and b.quest_auto.strict_walk,"start strict actual runner job %d"%job)
@@ -66,6 +70,7 @@ func drive(b,job:int,link=null)->bool:
   if iterations%500==0:print("PROGRESS job=%d map=%d cell=%s moves=%d battles=%d phase=%s"%[job,map_id,point,moves-start_moves,battles-start_battles,b.quest_auto.phase])
  var success:bool=not b.quest_auto.running and Rules.flag(b.session.snapshot(),"ended",Plan.JOB_EVENTS[job])
  check(success,"job %d complete; moves=%d battles=%d position=%d%s phase=%s reason=%s"%[job,moves-start_moves,battles-start_battles,b.automation.position_map,b.automation.position_cell,b.quest_auto.phase,b.quest_auto.message])
+ print("TIMING delivery_job=%d wall_ms=%d moves=%d battles=%d"%[job,Time.get_ticks_msec()-started,moves-start_moves,battles-start_battles])
  return success
 func persisted(b,label:String)->void:
  var path:String="user://delivery-route-"+label+".json"
@@ -91,5 +96,6 @@ func run()->void:
  if await drive(b,5):
   if await drive(b,9):persisted(b,"marju")
  b.free()
+ print("TIMING delivery_suite wall_ms=%d"%(Time.get_ticks_msec()-suite_started))
  print("QUEST DELIVERY ROUTES: %d failures; %d real moves; %d natural encounters"%[failures,moves,battles])
  quit(1 if failures else 0)
