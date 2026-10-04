@@ -31,6 +31,7 @@ func reply(router,backend,current:Dictionary,choice:String,text:String)->Diction
  if authority.in_party:return {"ok":false,"reason":"请先退出团队再挑战。"}
  return apply(router,backend,current.npc,GoldenBui.reply(current.npc,backend.session.snapshot(),current.service_state,choice,text,authority))
 func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
+ var source_call:Dictionary=backend.capture_quest_source_call(str(npc.id))
  if not bool(plan.get("ok",false)):return {"ok":false,"reason":str(plan.get("reason","无法交谈。"))}
  var actions:Dictionary=plan.get("actions",{})
  if str(npc.get("kind",""))==Prison.KIND:
@@ -53,6 +54,7 @@ func apply(router,backend,npc:Dictionary,plan:Dictionary)->Dictionary:
   if not transaction.ok:return transaction
  elif not notice.is_empty():backend._emit({"type":"quest_result","text":notice})
  if bool(plan.get("close",false)):return {"ok":true,"closed":true}
+ if not source_call.is_empty() and not backend.quest_source_call_live(source_call):return {"ok":true,"closed":true}
  var raw:Dictionary=plan.get("dialogue",{})
  if raw.is_empty():return {"ok":false,"reason":"原服务没有返回对白。"}
  router.serial+=1
