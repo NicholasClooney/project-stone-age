@@ -988837,7 +988837,7 @@
         [
           22,
           29,
-          59
+          55
         ],
         [
           22,
@@ -988852,7 +988852,7 @@
         [
           23,
           30,
-          59
+          55
         ],
         [
           23,
@@ -988867,7 +988867,7 @@
         [
           24,
           30,
-          59
+          55
         ],
         [
           24,
@@ -988882,7 +988882,7 @@
         [
           25,
           29,
-          58
+          54
         ],
         [
           25,
@@ -988897,7 +988897,7 @@
         [
           26,
           25,
-          57
+          53
         ],
         [
           26,
@@ -988912,7 +988912,7 @@
         [
           27,
           22,
-          56
+          53
         ],
         [
           27,
@@ -988927,7 +988927,7 @@
         [
           28,
           21,
-          55
+          53
         ],
         [
           28,
@@ -989032,7 +989032,7 @@
         [
           35,
           22,
-          54
+          53
         ],
         [
           35,
@@ -989047,7 +989047,7 @@
         [
           36,
           22,
-          55
+          53
         ],
         [
           36,
@@ -990228,7 +990228,7 @@
         ],
         [
           22,
-          60,
+          56,
           72
         ],
         [
@@ -990238,7 +990238,7 @@
         ],
         [
           23,
-          60,
+          56,
           72
         ],
         [
@@ -990248,7 +990248,7 @@
         ],
         [
           24,
-          60,
+          56,
           72
         ],
         [
@@ -990258,7 +990258,7 @@
         ],
         [
           25,
-          59,
+          55,
           71
         ],
         [
@@ -990268,7 +990268,7 @@
         ],
         [
           26,
-          58,
+          54,
           71
         ],
         [
@@ -990278,7 +990278,7 @@
         ],
         [
           27,
-          57,
+          54,
           71
         ],
         [
@@ -990288,7 +990288,7 @@
         ],
         [
           28,
-          56,
+          54,
           71
         ],
         [
@@ -990358,7 +990358,7 @@
         ],
         [
           35,
-          55,
+          54,
           71
         ],
         [
@@ -990368,7 +990368,7 @@
         ],
         [
           36,
-          56,
+          54,
           71
         ],
         [
@@ -991197,23 +991197,25 @@
           46
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 2195,
+        "known_pixels": 2225,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1810,
+        "nonmatching_visible_pixels": 1780,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -991222,7 +991224,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "a4223edc9dc1a26c43f118f4cd2fd308686122671d26336ae3a4b54abcd341e7",
         "new_semantic_approval": false
       }
     },
@@ -991528,7 +991531,7 @@
         [
           18,
           28,
-          59
+          58
         ],
         [
           18,
@@ -991543,7 +991546,7 @@
         [
           19,
           29,
-          59
+          56
         ],
         [
           19,
@@ -991558,7 +991561,7 @@
         [
           20,
           30,
-          59
+          56
         ],
         [
           20,
@@ -991573,7 +991576,7 @@
         [
           21,
           31,
-          59
+          52
         ],
         [
           21,
@@ -991588,7 +991591,7 @@
         [
           22,
           31,
-          58
+          53
         ],
         [
           22,
@@ -991608,7 +991611,7 @@
         [
           23,
           31,
-          57
+          53
         ],
         [
           23,
@@ -991623,7 +991626,7 @@
         [
           24,
           25,
-          56
+          53
         ],
         [
           24,
@@ -991638,7 +991641,7 @@
         [
           25,
           24,
-          55
+          53
         ],
         [
           25,
@@ -991743,7 +991746,7 @@
         [
           32,
           23,
-          54
+          53
         ],
         [
           32,
@@ -992949,7 +992952,7 @@
         ],
         [
           18,
-          60,
+          59,
           73
         ],
         [
@@ -992959,7 +992962,7 @@
         ],
         [
           19,
-          60,
+          57,
           72
         ],
         [
@@ -992969,7 +992972,7 @@
         ],
         [
           20,
-          60,
+          57,
           72
         ],
         [
@@ -992979,7 +992982,7 @@
         ],
         [
           21,
-          60,
+          53,
           72
         ],
         [
@@ -992989,7 +992992,7 @@
         ],
         [
           22,
-          59,
+          54,
           71
         ],
         [
@@ -993004,7 +993007,7 @@
         ],
         [
           23,
-          58,
+          54,
           71
         ],
         [
@@ -993014,7 +993017,7 @@
         ],
         [
           24,
-          57,
+          54,
           71
         ],
         [
@@ -993024,7 +993027,7 @@
         ],
         [
           25,
-          56,
+          54,
           71
         ],
         [
@@ -993094,7 +993097,7 @@
         ],
         [
           32,
-          55,
+          54,
           71
         ],
         [
@@ -993928,23 +993931,25 @@
           47
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 2288,
+        "known_pixels": 2320,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1590,
+        "nonmatching_visible_pixels": 1558,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -993953,7 +993958,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "c14e617616950220628a83a8b5c4a2013f89281193a112da890ab024d0199496",
         "new_semantic_approval": false
       }
     },
@@ -994194,6 +994200,11 @@
         [
           15,
           24,
+          49
+        ],
+        [
+          15,
+          51,
           57
         ],
         [
@@ -994214,6 +994225,11 @@
         [
           16,
           25,
+          49
+        ],
+        [
+          16,
+          53,
           59
         ],
         [
@@ -994234,6 +994250,11 @@
         [
           17,
           26,
+          49
+        ],
+        [
+          17,
+          56,
           59
         ],
         [
@@ -994254,7 +994275,7 @@
         [
           18,
           28,
-          59
+          48
         ],
         [
           18,
@@ -994269,7 +994290,7 @@
         [
           19,
           29,
-          59
+          48
         ],
         [
           19,
@@ -994284,7 +994305,7 @@
         [
           20,
           29,
-          59
+          49
         ],
         [
           20,
@@ -994299,7 +994320,7 @@
         [
           21,
           25,
-          59
+          50
         ],
         [
           21,
@@ -994314,7 +994335,7 @@
         [
           22,
           24,
-          58
+          50
         ],
         [
           22,
@@ -994329,7 +994350,12 @@
         [
           23,
           24,
-          57
+          49
+        ],
+        [
+          23,
+          51,
+          51
         ],
         [
           23,
@@ -994344,7 +994370,12 @@
         [
           24,
           24,
-          56
+          48
+        ],
+        [
+          24,
+          50,
+          51
         ],
         [
           24,
@@ -994359,7 +994390,12 @@
         [
           25,
           25,
-          55
+          48
+        ],
+        [
+          25,
+          50,
+          51
         ],
         [
           25,
@@ -994374,7 +994410,12 @@
         [
           26,
           25,
-          53
+          48
+        ],
+        [
+          26,
+          51,
+          51
         ],
         [
           26,
@@ -994389,7 +994430,7 @@
         [
           27,
           27,
-          53
+          51
         ],
         [
           27,
@@ -994404,7 +994445,12 @@
         [
           28,
           25,
-          53
+          48
+        ],
+        [
+          28,
+          50,
+          51
         ],
         [
           28,
@@ -994419,7 +994465,7 @@
         [
           29,
           22,
-          53
+          51
         ],
         [
           29,
@@ -994434,7 +994480,7 @@
         [
           30,
           22,
-          53
+          51
         ],
         [
           30,
@@ -994449,7 +994495,7 @@
         [
           31,
           21,
-          53
+          51
         ],
         [
           31,
@@ -994464,7 +994510,7 @@
         [
           32,
           21,
-          54
+          51
         ],
         [
           32,
@@ -994479,7 +994525,7 @@
         [
           33,
           21,
-          55
+          50
         ],
         [
           33,
@@ -994494,7 +994540,7 @@
         [
           34,
           23,
-          55
+          50
         ],
         [
           34,
@@ -994509,7 +994555,7 @@
         [
           35,
           22,
-          55
+          50
         ],
         [
           35,
@@ -994529,6 +994575,11 @@
         [
           36,
           22,
+          49
+        ],
+        [
+          36,
+          55,
           55
         ],
         [
@@ -994549,6 +994600,11 @@
         [
           37,
           21,
+          50
+        ],
+        [
+          37,
+          54,
           56
         ],
         [
@@ -994564,6 +994620,11 @@
         [
           38,
           0,
+          51
+        ],
+        [
+          38,
+          53,
           60
         ],
         [
@@ -995620,6 +995681,11 @@
         ],
         [
           15,
+          50,
+          50
+        ],
+        [
+          15,
           58,
           67
         ],
@@ -995632,6 +995698,11 @@
           16,
           6,
           24
+        ],
+        [
+          16,
+          50,
+          52
         ],
         [
           16,
@@ -995650,6 +995721,11 @@
         ],
         [
           17,
+          50,
+          55
+        ],
+        [
+          17,
           60,
           73
         ],
@@ -995665,7 +995741,7 @@
         ],
         [
           18,
-          60,
+          49,
           73
         ],
         [
@@ -995675,7 +995751,7 @@
         ],
         [
           19,
-          60,
+          49,
           72
         ],
         [
@@ -995685,7 +995761,7 @@
         ],
         [
           20,
-          60,
+          50,
           72
         ],
         [
@@ -995695,7 +995771,7 @@
         ],
         [
           21,
-          60,
+          51,
           72
         ],
         [
@@ -995705,7 +995781,7 @@
         ],
         [
           22,
-          59,
+          51,
           71
         ],
         [
@@ -995715,7 +995791,12 @@
         ],
         [
           23,
-          58,
+          50,
+          50
+        ],
+        [
+          23,
+          52,
           71
         ],
         [
@@ -995725,7 +995806,12 @@
         ],
         [
           24,
-          57,
+          49,
+          49
+        ],
+        [
+          24,
+          52,
           71
         ],
         [
@@ -995735,7 +995821,12 @@
         ],
         [
           25,
-          56,
+          49,
+          49
+        ],
+        [
+          25,
+          52,
           71
         ],
         [
@@ -995745,7 +995836,12 @@
         ],
         [
           26,
-          54,
+          49,
+          50
+        ],
+        [
+          26,
+          52,
           71
         ],
         [
@@ -995755,7 +995851,7 @@
         ],
         [
           27,
-          54,
+          52,
           71
         ],
         [
@@ -995765,7 +995861,12 @@
         ],
         [
           28,
-          54,
+          49,
+          49
+        ],
+        [
+          28,
+          52,
           71
         ],
         [
@@ -995775,7 +995876,7 @@
         ],
         [
           29,
-          54,
+          52,
           71
         ],
         [
@@ -995785,7 +995886,7 @@
         ],
         [
           30,
-          54,
+          52,
           70
         ],
         [
@@ -995795,7 +995896,7 @@
         ],
         [
           31,
-          54,
+          52,
           71
         ],
         [
@@ -995805,7 +995906,7 @@
         ],
         [
           32,
-          55,
+          52,
           71
         ],
         [
@@ -995815,7 +995916,7 @@
         ],
         [
           33,
-          56,
+          51,
           71
         ],
         [
@@ -995825,7 +995926,7 @@
         ],
         [
           34,
-          56,
+          51,
           70
         ],
         [
@@ -995835,7 +995936,7 @@
         ],
         [
           35,
-          56,
+          51,
           70
         ],
         [
@@ -995847,6 +995948,11 @@
           36,
           18,
           21
+        ],
+        [
+          36,
+          50,
+          54
         ],
         [
           36,
@@ -995865,6 +995971,11 @@
         ],
         [
           37,
+          51,
+          53
+        ],
+        [
+          37,
           57,
           69
         ],
@@ -995872,6 +995983,11 @@
           37,
           71,
           76
+        ],
+        [
+          38,
+          52,
+          52
         ],
         [
           38,
@@ -996634,8 +996750,8 @@
           22
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
@@ -996645,21 +996761,82 @@
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
         "known_pixels": 2255,
         "conflict_pixels": 0,
         "nonmatching_visible_pixels": 1563,
         "closure_pixels": 0,
-        "existing_target_protection_applied": false,
-        "target_protection_rule_sha256": null,
+        "existing_target_protection_applied": true,
+        "target_protection_rule_sha256": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
         "candidate_collisions_with_existing_protection": 0,
         "new_semantic_approval": false
       },
+      "independent_dragon_neck_polygons": [
+        [
+          [
+            50,
+            15
+          ],
+          [
+            55,
+            17
+          ],
+          [
+            60,
+            18
+          ],
+          [
+            65,
+            18
+          ],
+          [
+            66,
+            22
+          ],
+          [
+            62,
+            24
+          ],
+          [
+            60,
+            28
+          ],
+          [
+            57,
+            33
+          ],
+          [
+            54,
+            39
+          ],
+          [
+            50,
+            39
+          ],
+          [
+            50,
+            35
+          ],
+          [
+            49,
+            31
+          ],
+          [
+            49,
+            26
+          ],
+          [
+            49,
+            20
+          ]
+        ]
+      ],
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "cc851cbc5ca12c4c0359d318ad8373fe76c8f5fbbac0c3b1b1e3c3d8f3474bcc",
         "new_semantic_approval": false
       }
     },
@@ -999541,7 +999718,7 @@
         [
           50,
           0,
-          55
+          53
         ],
         [
           50,
@@ -1000727,7 +1000904,7 @@
         ],
         [
           50,
-          56,
+          54,
           70
         ],
         [
@@ -1001386,23 +1001563,25 @@
           22
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 1468,
+        "known_pixels": 1488,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 3269,
+        "nonmatching_visible_pixels": 3249,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1001411,7 +1001590,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "1dd9bbede41d5543b37bbc21a5c4c65add2f46f108bacef7859bf62c17e17e3d",
         "new_semantic_approval": false
       }
     },
@@ -1001727,7 +1001907,7 @@
         [
           20,
           14,
-          59
+          55
         ],
         [
           20,
@@ -1001742,7 +1001922,7 @@
         [
           21,
           14,
-          59
+          55
         ],
         [
           21,
@@ -1001757,7 +1001937,7 @@
         [
           22,
           14,
-          59
+          54
         ],
         [
           22,
@@ -1001772,7 +1001952,7 @@
         [
           23,
           12,
-          58
+          53
         ],
         [
           23,
@@ -1001787,7 +1001967,7 @@
         [
           24,
           11,
-          57
+          53
         ],
         [
           24,
@@ -1001802,7 +1001982,7 @@
         [
           25,
           11,
-          56
+          53
         ],
         [
           25,
@@ -1001817,7 +1001997,7 @@
         [
           26,
           11,
-          55
+          53
         ],
         [
           26,
@@ -1001887,7 +1002067,7 @@
         [
           33,
           0,
-          54
+          53
         ],
         [
           33,
@@ -1001897,7 +1002077,7 @@
         [
           34,
           0,
-          55
+          53
         ],
         [
           34,
@@ -1001907,7 +1002087,7 @@
         [
           35,
           0,
-          55
+          54
         ],
         [
           35,
@@ -1003063,7 +1003243,7 @@
         ],
         [
           20,
-          60,
+          56,
           72
         ],
         [
@@ -1003073,7 +1003253,7 @@
         ],
         [
           21,
-          60,
+          56,
           72
         ],
         [
@@ -1003083,7 +1003263,7 @@
         ],
         [
           22,
-          60,
+          55,
           72
         ],
         [
@@ -1003093,7 +1003273,7 @@
         ],
         [
           23,
-          59,
+          54,
           71
         ],
         [
@@ -1003103,7 +1003283,7 @@
         ],
         [
           24,
-          58,
+          54,
           71
         ],
         [
@@ -1003113,7 +1003293,7 @@
         ],
         [
           25,
-          57,
+          54,
           71
         ],
         [
@@ -1003123,7 +1003303,7 @@
         ],
         [
           26,
-          56,
+          54,
           71
         ],
         [
@@ -1003158,17 +1003338,17 @@
         ],
         [
           33,
-          55,
+          54,
           71
         ],
         [
           34,
-          56,
+          54,
           71
         ],
         [
           35,
-          56,
+          55,
           70
         ],
         [
@@ -1003922,23 +1004102,25 @@
           22
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 1932,
+        "known_pixels": 1965,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 2351,
+        "nonmatching_visible_pixels": 2318,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1003947,7 +1004129,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "20c9d8e7a56bff405cb6b88bb6a7077e15b2764eb182a83b3c2d2f3dcf6007dc",
         "new_semantic_approval": false
       }
     },
@@ -1004243,6 +1004426,11 @@
         [
           18,
           25,
+          53
+        ],
+        [
+          18,
+          55,
           59
         ],
         [
@@ -1004258,7 +1004446,7 @@
         [
           19,
           25,
-          59
+          51
         ],
         [
           19,
@@ -1004273,7 +1004461,7 @@
         [
           20,
           26,
-          59
+          52
         ],
         [
           20,
@@ -1004288,7 +1004476,7 @@
         [
           21,
           29,
-          59
+          52
         ],
         [
           21,
@@ -1004303,7 +1004491,7 @@
         [
           22,
           29,
-          58
+          53
         ],
         [
           22,
@@ -1004318,7 +1004506,7 @@
         [
           23,
           27,
-          57
+          53
         ],
         [
           23,
@@ -1004333,7 +1004521,7 @@
         [
           24,
           27,
-          56
+          53
         ],
         [
           24,
@@ -1004348,7 +1004536,7 @@
         [
           25,
           27,
-          55
+          53
         ],
         [
           25,
@@ -1005649,6 +1005837,11 @@
         ],
         [
           18,
+          54,
+          54
+        ],
+        [
+          18,
           60,
           73
         ],
@@ -1005659,7 +1005852,7 @@
         ],
         [
           19,
-          60,
+          52,
           72
         ],
         [
@@ -1005669,7 +1005862,7 @@
         ],
         [
           20,
-          60,
+          53,
           72
         ],
         [
@@ -1005679,7 +1005872,7 @@
         ],
         [
           21,
-          60,
+          53,
           72
         ],
         [
@@ -1005689,7 +1005882,7 @@
         ],
         [
           22,
-          59,
+          54,
           71
         ],
         [
@@ -1005699,7 +1005892,7 @@
         ],
         [
           23,
-          58,
+          54,
           71
         ],
         [
@@ -1005709,7 +1005902,7 @@
         ],
         [
           24,
-          57,
+          54,
           71
         ],
         [
@@ -1005719,7 +1005912,7 @@
         ],
         [
           25,
-          56,
+          54,
           71
         ],
         [
@@ -1006608,23 +1006801,25 @@
           22
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 2318,
+        "known_pixels": 2362,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1632,
+        "nonmatching_visible_pixels": 1588,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1006633,7 +1006828,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "86c92852152e0fcf497f7703b834e5de345fe2946d6052e8a8d8727f3ad9ad33",
         "new_semantic_approval": false
       }
     },
@@ -1006929,6 +1007125,11 @@
         [
           18,
           20,
+          52
+        ],
+        [
+          18,
+          55,
           59
         ],
         [
@@ -1006944,7 +1007145,7 @@
         [
           19,
           20,
-          59
+          51
         ],
         [
           19,
@@ -1006959,7 +1007160,7 @@
         [
           20,
           20,
-          59
+          52
         ],
         [
           20,
@@ -1006974,7 +1007175,7 @@
         [
           21,
           20,
-          59
+          52
         ],
         [
           21,
@@ -1006989,7 +1007190,7 @@
         [
           22,
           20,
-          58
+          53
         ],
         [
           22,
@@ -1007004,7 +1007205,7 @@
         [
           23,
           20,
-          57
+          53
         ],
         [
           23,
@@ -1007019,7 +1007220,7 @@
         [
           24,
           22,
-          56
+          53
         ],
         [
           24,
@@ -1007034,7 +1007235,7 @@
         [
           25,
           22,
-          55
+          53
         ],
         [
           25,
@@ -1007139,7 +1007340,7 @@
         [
           32,
           24,
-          54
+          53
         ],
         [
           32,
@@ -1007154,7 +1007355,7 @@
         [
           33,
           24,
-          55
+          53
         ],
         [
           33,
@@ -1007169,7 +1007370,7 @@
         [
           34,
           21,
-          55
+          53
         ],
         [
           34,
@@ -1008300,6 +1008501,11 @@
         ],
         [
           18,
+          53,
+          54
+        ],
+        [
+          18,
           60,
           73
         ],
@@ -1008310,7 +1008516,7 @@
         ],
         [
           19,
-          60,
+          52,
           72
         ],
         [
@@ -1008320,7 +1008526,7 @@
         ],
         [
           20,
-          60,
+          53,
           72
         ],
         [
@@ -1008330,7 +1008536,7 @@
         ],
         [
           21,
-          60,
+          53,
           72
         ],
         [
@@ -1008340,7 +1008546,7 @@
         ],
         [
           22,
-          59,
+          54,
           71
         ],
         [
@@ -1008350,7 +1008556,7 @@
         ],
         [
           23,
-          58,
+          54,
           71
         ],
         [
@@ -1008360,7 +1008566,7 @@
         ],
         [
           24,
-          57,
+          54,
           71
         ],
         [
@@ -1008370,7 +1008576,7 @@
         ],
         [
           25,
-          56,
+          54,
           71
         ],
         [
@@ -1008440,7 +1008646,7 @@
         ],
         [
           32,
-          55,
+          54,
           71
         ],
         [
@@ -1008450,7 +1008656,7 @@
         ],
         [
           33,
-          56,
+          54,
           71
         ],
         [
@@ -1008460,7 +1008666,7 @@
         ],
         [
           34,
-          56,
+          54,
           70
         ],
         [
@@ -1009229,23 +1009435,25 @@
           22
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 2211,
+        "known_pixels": 2265,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1818,
+        "nonmatching_visible_pixels": 1764,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1009254,7 +1009462,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "2030b5ffa5ae6fb05696b29a20dbab6ad26b82237451fd6763806e2618b1058a",
         "new_semantic_approval": false
       }
     },
@@ -1009550,6 +1009759,11 @@
         [
           18,
           21,
+          51
+        ],
+        [
+          18,
+          55,
           59
         ],
         [
@@ -1009565,7 +1009779,7 @@
         [
           19,
           20,
-          59
+          51
         ],
         [
           19,
@@ -1009580,7 +1009794,7 @@
         [
           20,
           20,
-          59
+          52
         ],
         [
           20,
@@ -1009595,7 +1009809,7 @@
         [
           21,
           20,
-          59
+          52
         ],
         [
           21,
@@ -1009610,7 +1009824,7 @@
         [
           22,
           20,
-          58
+          53
         ],
         [
           22,
@@ -1009630,7 +1009844,7 @@
         [
           23,
           26,
-          57
+          53
         ],
         [
           23,
@@ -1009645,7 +1009859,7 @@
         [
           24,
           29,
-          56
+          53
         ],
         [
           24,
@@ -1009660,7 +1009874,7 @@
         [
           25,
           24,
-          55
+          53
         ],
         [
           25,
@@ -1009765,7 +1009979,7 @@
         [
           32,
           20,
-          54
+          53
         ],
         [
           32,
@@ -1009780,7 +1009994,7 @@
         [
           33,
           19,
-          55
+          53
         ],
         [
           33,
@@ -1009795,7 +1010009,7 @@
         [
           34,
           19,
-          55
+          52
         ],
         [
           34,
@@ -1009810,7 +1010024,7 @@
         [
           35,
           18,
-          55
+          52
         ],
         [
           35,
@@ -1009825,7 +1010039,7 @@
         [
           36,
           0,
-          55
+          52
         ],
         [
           36,
@@ -1010981,6 +1011195,11 @@
         ],
         [
           18,
+          52,
+          54
+        ],
+        [
+          18,
           60,
           73
         ],
@@ -1010991,7 +1011210,7 @@
         ],
         [
           19,
-          60,
+          52,
           72
         ],
         [
@@ -1011001,7 +1011220,7 @@
         ],
         [
           20,
-          60,
+          53,
           72
         ],
         [
@@ -1011011,7 +1011230,7 @@
         ],
         [
           21,
-          60,
+          53,
           72
         ],
         [
@@ -1011021,7 +1011240,7 @@
         ],
         [
           22,
-          59,
+          54,
           71
         ],
         [
@@ -1011036,7 +1011255,7 @@
         ],
         [
           23,
-          58,
+          54,
           71
         ],
         [
@@ -1011046,7 +1011265,7 @@
         ],
         [
           24,
-          57,
+          54,
           71
         ],
         [
@@ -1011056,7 +1011275,7 @@
         ],
         [
           25,
-          56,
+          54,
           71
         ],
         [
@@ -1011126,7 +1011345,7 @@
         ],
         [
           32,
-          55,
+          54,
           71
         ],
         [
@@ -1011136,7 +1011355,7 @@
         ],
         [
           33,
-          56,
+          54,
           71
         ],
         [
@@ -1011146,7 +1011365,7 @@
         ],
         [
           34,
-          56,
+          53,
           70
         ],
         [
@@ -1011156,7 +1011375,7 @@
         ],
         [
           35,
-          56,
+          53,
           70
         ],
         [
@@ -1011166,7 +1011385,7 @@
         ],
         [
           36,
-          56,
+          53,
           70
         ],
         [
@@ -1011970,23 +1012189,25 @@
           22
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 2233,
+        "known_pixels": 2296,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1906,
+        "nonmatching_visible_pixels": 1843,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1011995,7 +1012216,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "a9a65366da8f8c3a95216bad995777cf2c48d18da48baa313b1c541bc3df8ba3",
         "new_semantic_approval": false
       }
     },
@@ -1012276,6 +1012498,11 @@
         [
           17,
           21,
+          50
+        ],
+        [
+          17,
+          52,
           59
         ],
         [
@@ -1012291,6 +1012518,11 @@
         [
           18,
           20,
+          51
+        ],
+        [
+          18,
+          55,
           59
         ],
         [
@@ -1012306,7 +1012538,7 @@
         [
           19,
           20,
-          59
+          51
         ],
         [
           19,
@@ -1012321,7 +1012553,7 @@
         [
           20,
           20,
-          59
+          52
         ],
         [
           20,
@@ -1012336,7 +1012568,7 @@
         [
           21,
           19,
-          59
+          52
         ],
         [
           21,
@@ -1012351,7 +1012583,7 @@
         [
           22,
           19,
-          58
+          53
         ],
         [
           22,
@@ -1012366,7 +1012598,7 @@
         [
           23,
           19,
-          57
+          53
         ],
         [
           23,
@@ -1012381,7 +1012613,7 @@
         [
           24,
           20,
-          56
+          53
         ],
         [
           24,
@@ -1012396,7 +1012628,7 @@
         [
           25,
           20,
-          55
+          53
         ],
         [
           25,
@@ -1013697,6 +1013929,11 @@
         ],
         [
           17,
+          51,
+          51
+        ],
+        [
+          17,
           60,
           73
         ],
@@ -1013704,6 +1013941,11 @@
           18,
           7,
           19
+        ],
+        [
+          18,
+          52,
+          54
         ],
         [
           18,
@@ -1013717,7 +1013959,7 @@
         ],
         [
           19,
-          60,
+          52,
           72
         ],
         [
@@ -1013727,7 +1013969,7 @@
         ],
         [
           20,
-          60,
+          53,
           72
         ],
         [
@@ -1013737,7 +1013979,7 @@
         ],
         [
           21,
-          60,
+          53,
           72
         ],
         [
@@ -1013747,7 +1013989,7 @@
         ],
         [
           22,
-          59,
+          54,
           71
         ],
         [
@@ -1013757,7 +1013999,7 @@
         ],
         [
           23,
-          58,
+          54,
           71
         ],
         [
@@ -1013767,7 +1014009,7 @@
         ],
         [
           24,
-          57,
+          54,
           71
         ],
         [
@@ -1013777,7 +1014019,7 @@
         ],
         [
           25,
-          56,
+          54,
           71
         ],
         [
@@ -1014681,29 +1014923,32 @@
           46
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Twelve source/change pairs independently viewed. Visible cheek white maps to ventral yellow; dorsal wings, torso and dragon feet map to red. Rider bent knees, hands and hair vary per target; retained unknown includes unresolved dragon contacts. 281425 lower hair/braid outlined from coordinate source as an additional independent guard; no candidate change intersects this guard, so no rider miscolour is asserted or restored. Nearby visible change islands are wing/dragon back. No complete semantic approval.",
+      "review_status": "DRAFT: independently viewed neck revision; contacts incomplete",
+      "review": "Source/change pairs were already viewed; all nine changed neck revision crops have now been independently inspected. 257169 supplies only a locally hand-outlined exposed dragon neck, intersected with body palette indices; no automatic candidate labels serve as a new reference. 263233 (54,50) independently checked on source coordinate image: visible dragon neck below the forearm, not skin. 281425 independent braid guard retained. Existing three unchanged outputs remain hash-identical. Residual contact yellow and complete semantic approval still pending.",
       "reference_regions": {
         "pose_page": 40,
         "bitmaps": [
           248073,
+          257169,
           266265
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248073": "6f3b0c91806491c796d430721e19ad28318f8c4e899124be971a49960aaff95c",
-          "266265": "74fd248e5cd34a30c39982b204f2b3f3a9c63415d9261e3cb69c379caf1adf5c"
+          "248073": "9754f0649de5b3533b47a28deb01df346dbe11333a74ac1db17d7fd9eab03d5a",
+          "257169": "70a2dd5a8c7ede1bd339378a2ab3e380c2624feba734ad6f1615c573ddd76a33",
+          "266265": "3dd11e1837b1b6e569efb5d8855736af83ec56810db47611cc6c92e63b787815"
         },
-        "known_pixels": 2215,
+        "known_pixels": 2267,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1769,
+        "nonmatching_visible_pixels": 1717,
         "closure_pixels": 0,
-        "existing_target_protection_applied": false,
-        "target_protection_rule_sha256": null,
+        "existing_target_protection_applied": true,
+        "target_protection_rule_sha256": "911c3adfb5b587fa1989604ea24bd4081f0e6615ec1a4d546a127dc77cddc9a5",
         "candidate_collisions_with_existing_protection": 0,
         "new_semantic_approval": false
       },
+      "rider_boundary_dilation": 0,
       "independent_target_hair_polygons": [
         [
           [
@@ -1014810,9 +1015055,9 @@
           ]
         ]
       ],
-      "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "ad98148d2cdcc8ece24cc52ed4f619b88f66537817f34b2762c8a36f82aa0410",
+        "base_rules_sha256": "8785cb9ebd01570619ad8a8ed773be74157e808a7b618377ddc64a0400ae3c2a",
+        "previous_rule_sha256": "850d71001d2624351edcb8cdd265ff184eec87cd28b24763a50e09cd0226572f",
         "new_semantic_approval": false
       }
     },
@@ -1015982,7 +1016227,7 @@
         [
           20,
           0,
-          51
+          49
         ],
         [
           20,
@@ -1015992,6 +1016237,11 @@
         [
           21,
           0,
+          46
+        ],
+        [
+          21,
+          48,
           51
         ],
         [
@@ -1017258,8 +1017508,13 @@
         ],
         [
           20,
-          52,
+          50,
           61
+        ],
+        [
+          21,
+          47,
+          47
         ],
         [
           21,
@@ -1018162,23 +1018417,25 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1728,
+        "known_pixels": 1763,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1789,
+        "nonmatching_visible_pixels": 1754,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1018187,7 +1018444,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "9b6998b7d3758ef13177fcc450faeae2800b0a919c454b72f463c268f7593ab0",
         "new_semantic_approval": false
       }
     },
@@ -1018423,7 +1018681,7 @@
         [
           18,
           0,
-          51
+          50
         ],
         [
           18,
@@ -1018433,7 +1018691,7 @@
         [
           19,
           0,
-          51
+          50
         ],
         [
           19,
@@ -1018443,7 +1018701,7 @@
         [
           20,
           0,
-          51
+          50
         ],
         [
           20,
@@ -1018513,6 +1018771,11 @@
         [
           27,
           0,
+          42
+        ],
+        [
+          27,
+          45,
           50
         ],
         [
@@ -1018523,6 +1018786,11 @@
         [
           28,
           0,
+          42
+        ],
+        [
+          28,
+          44,
           49
         ],
         [
@@ -1018533,6 +1018801,11 @@
         [
           29,
           0,
+          42
+        ],
+        [
+          29,
+          44,
           49
         ],
         [
@@ -1019664,17 +1019937,17 @@
         ],
         [
           18,
-          52,
+          51,
           62
         ],
         [
           19,
-          52,
+          51,
           61
         ],
         [
           20,
-          52,
+          51,
           61
         ],
         [
@@ -1019709,13 +1019982,28 @@
         ],
         [
           27,
+          43,
+          44
+        ],
+        [
+          27,
           51,
           59
         ],
         [
           28,
+          43,
+          43
+        ],
+        [
+          28,
           50,
           59
+        ],
+        [
+          29,
+          43,
+          43
         ],
         [
           29,
@@ -1020568,23 +1020856,25 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1835,
+        "known_pixels": 1880,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1632,
+        "nonmatching_visible_pixels": 1587,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1020593,7 +1020883,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "dcab157d38acc669a6d9561d4e4ad193b0e60e448892de4c8d1235e6914b00ec",
         "new_semantic_approval": false
       }
     },
@@ -1020764,6 +1021055,11 @@
         [
           12,
           0,
+          40
+        ],
+        [
+          12,
+          42,
           45
         ],
         [
@@ -1020774,6 +1021070,11 @@
         [
           13,
           0,
+          40
+        ],
+        [
+          13,
+          44,
           45
         ],
         [
@@ -1020784,6 +1021085,11 @@
         [
           14,
           0,
+          40
+        ],
+        [
+          14,
+          47,
           47
         ],
         [
@@ -1020794,7 +1021100,12 @@
         [
           15,
           0,
-          48
+          38
+        ],
+        [
+          15,
+          40,
+          40
         ],
         [
           15,
@@ -1020804,7 +1021115,7 @@
         [
           16,
           0,
-          50
+          37
         ],
         [
           16,
@@ -1020814,7 +1021125,12 @@
         [
           17,
           0,
-          50
+          36
+        ],
+        [
+          17,
+          39,
+          39
         ],
         [
           17,
@@ -1020824,7 +1021140,12 @@
         [
           18,
           0,
-          51
+          36
+        ],
+        [
+          18,
+          39,
+          39
         ],
         [
           18,
@@ -1020834,7 +1021155,12 @@
         [
           19,
           0,
-          51
+          35
+        ],
+        [
+          19,
+          39,
+          39
         ],
         [
           19,
@@ -1020844,7 +1021170,12 @@
         [
           20,
           0,
-          51
+          35
+        ],
+        [
+          20,
+          39,
+          39
         ],
         [
           20,
@@ -1020854,6 +1021185,16 @@
         [
           21,
           0,
+          36
+        ],
+        [
+          21,
+          38,
+          39
+        ],
+        [
+          21,
+          51,
           51
         ],
         [
@@ -1020864,6 +1021205,11 @@
         [
           22,
           0,
+          39
+        ],
+        [
+          22,
+          49,
           51
         ],
         [
@@ -1020874,6 +1021220,11 @@
         [
           23,
           0,
+          39
+        ],
+        [
+          23,
+          48,
           51
         ],
         [
@@ -1020884,6 +1021235,11 @@
         [
           24,
           0,
+          39
+        ],
+        [
+          24,
+          47,
           51
         ],
         [
@@ -1020894,6 +1021250,11 @@
         [
           25,
           0,
+          39
+        ],
+        [
+          25,
+          47,
           51
         ],
         [
@@ -1020904,6 +1021265,11 @@
         [
           26,
           0,
+          39
+        ],
+        [
+          26,
+          47,
           50
         ],
         [
@@ -1020914,6 +1021280,11 @@
         [
           27,
           0,
+          39
+        ],
+        [
+          27,
+          46,
           50
         ],
         [
@@ -1020924,6 +1021295,11 @@
         [
           28,
           0,
+          39
+        ],
+        [
+          28,
+          46,
           49
         ],
         [
@@ -1020934,6 +1021310,11 @@
         [
           29,
           0,
+          39
+        ],
+        [
+          29,
+          45,
           49
         ],
         [
@@ -1020944,6 +1021325,11 @@
         [
           30,
           0,
+          40
+        ],
+        [
+          30,
+          45,
           48
         ],
         [
@@ -1020954,6 +1021340,11 @@
         [
           31,
           0,
+          40
+        ],
+        [
+          31,
+          44,
           47
         ],
         [
@@ -1020964,6 +1021355,11 @@
         [
           32,
           0,
+          40
+        ],
+        [
+          32,
+          43,
           47
         ],
         [
@@ -1020974,6 +1021370,11 @@
         [
           33,
           0,
+          40
+        ],
+        [
+          33,
+          43,
           47
         ],
         [
@@ -1021995,8 +1022396,18 @@
         ],
         [
           12,
+          41,
+          41
+        ],
+        [
+          12,
           46,
           64
+        ],
+        [
+          13,
+          41,
+          43
         ],
         [
           13,
@@ -1022005,38 +1022416,78 @@
         ],
         [
           14,
+          41,
+          46
+        ],
+        [
+          14,
           48,
           63
         ],
         [
           15,
-          49,
+          39,
+          39
+        ],
+        [
+          15,
+          41,
           63
         ],
         [
           16,
-          51,
+          38,
           63
         ],
         [
           17,
-          51,
+          37,
+          38
+        ],
+        [
+          17,
+          40,
           63
         ],
         [
           18,
-          52,
+          37,
+          38
+        ],
+        [
+          18,
+          40,
           62
         ],
         [
           19,
-          52,
+          36,
+          38
+        ],
+        [
+          19,
+          40,
           61
         ],
         [
           20,
-          52,
+          36,
+          38
+        ],
+        [
+          20,
+          40,
           61
+        ],
+        [
+          21,
+          37,
+          37
+        ],
+        [
+          21,
+          40,
+          50
         ],
         [
           21,
@@ -1022045,8 +1022496,18 @@
         ],
         [
           22,
+          40,
+          48
+        ],
+        [
+          22,
           52,
           60
+        ],
+        [
+          23,
+          40,
+          47
         ],
         [
           23,
@@ -1022055,8 +1022516,18 @@
         ],
         [
           24,
+          40,
+          46
+        ],
+        [
+          24,
           52,
           60
+        ],
+        [
+          25,
+          40,
+          46
         ],
         [
           25,
@@ -1022065,8 +1022536,18 @@
         ],
         [
           26,
+          40,
+          46
+        ],
+        [
+          26,
           51,
           59
+        ],
+        [
+          27,
+          40,
+          45
         ],
         [
           27,
@@ -1022075,8 +1022556,18 @@
         ],
         [
           28,
+          40,
+          45
+        ],
+        [
+          28,
           50,
           59
+        ],
+        [
+          29,
+          40,
+          44
         ],
         [
           29,
@@ -1022085,8 +1022576,18 @@
         ],
         [
           30,
+          41,
+          44
+        ],
+        [
+          30,
           49,
           59
+        ],
+        [
+          31,
+          41,
+          43
         ],
         [
           31,
@@ -1022095,8 +1022596,18 @@
         ],
         [
           32,
+          41,
+          42
+        ],
+        [
+          32,
           48,
           59
+        ],
+        [
+          33,
+          41,
+          42
         ],
         [
           33,
@@ -1022711,9 +1023222,39 @@
       ],
       "ventral_runs": [
         [
+          15,
+          39,
+          39
+        ],
+        [
+          16,
+          38,
+          39
+        ],
+        [
+          17,
+          37,
+          38
+        ],
+        [
+          18,
+          37,
+          38
+        ],
+        [
+          19,
+          36,
+          38
+        ],
+        [
           19,
           56,
           56
+        ],
+        [
+          20,
+          36,
+          38
         ],
         [
           20,
@@ -1022724,6 +1023265,11 @@
           20,
           56,
           56
+        ],
+        [
+          21,
+          37,
+          37
         ],
         [
           21,
@@ -1022874,8 +1023420,8 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
@@ -1022885,21 +1023431,114 @@
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
         "known_pixels": 1790,
         "conflict_pixels": 0,
         "nonmatching_visible_pixels": 1705,
         "closure_pixels": 0,
-        "existing_target_protection_applied": false,
-        "target_protection_rule_sha256": null,
+        "existing_target_protection_applied": true,
+        "target_protection_rule_sha256": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
         "candidate_collisions_with_existing_protection": 0,
         "new_semantic_approval": false
       },
+      "independent_dragon_neck_polygons": [
+        [
+          [
+            41,
+            12
+          ],
+          [
+            46,
+            14
+          ],
+          [
+            51,
+            15
+          ],
+          [
+            54,
+            18
+          ],
+          [
+            54,
+            21
+          ],
+          [
+            50,
+            22
+          ],
+          [
+            47,
+            26
+          ],
+          [
+            44,
+            31
+          ],
+          [
+            42,
+            34
+          ],
+          [
+            40,
+            34
+          ],
+          [
+            40,
+            29
+          ],
+          [
+            40,
+            23
+          ],
+          [
+            40,
+            18
+          ]
+        ]
+      ],
+      "independent_far_cheek_polygons": [
+        [
+          [
+            38,
+            14
+          ],
+          [
+            39,
+            13
+          ],
+          [
+            40,
+            14
+          ],
+          [
+            40,
+            18
+          ],
+          [
+            39,
+            22
+          ],
+          [
+            38,
+            22
+          ],
+          [
+            36,
+            21
+          ],
+          [
+            36,
+            18
+          ]
+        ]
+      ],
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "65c0bd9d086bb515b4c45b30d2834d85fb8b19b518d4e7594008c7256d670626",
         "new_semantic_approval": false
       }
     },
@@ -1023115,6 +1023754,11 @@
         [
           14,
           0,
+          63
+        ],
+        [
+          14,
+          65,
           69
         ],
         [
@@ -1023130,6 +1023774,16 @@
         [
           15,
           0,
+          63
+        ],
+        [
+          15,
+          65,
+          69
+        ],
+        [
+          15,
+          71,
           81
         ],
         [
@@ -1023140,6 +1023794,11 @@
         [
           16,
           0,
+          63
+        ],
+        [
+          16,
+          65,
           81
         ],
         [
@@ -1023150,6 +1023809,11 @@
         [
           17,
           0,
+          63
+        ],
+        [
+          17,
+          65,
           81
         ],
         [
@@ -1024131,6 +1024795,11 @@
           116,
           0,
           95
+        ],
+        [
+          15,
+          70,
+          70
         ]
       ],
       "dragon_runs": [
@@ -1024246,6 +1024915,11 @@
         ],
         [
           14,
+          64,
+          64
+        ],
+        [
+          14,
           70,
           71
         ],
@@ -1024256,13 +1024930,33 @@
         ],
         [
           15,
+          64,
+          64
+        ],
+        [
+          15,
+          70,
+          70
+        ],
+        [
+          15,
           82,
           85
         ],
         [
           16,
+          64,
+          64
+        ],
+        [
+          16,
           82,
           85
+        ],
+        [
+          17,
+          64,
+          64
         ],
         [
           17,
@@ -1024850,32 +1025544,42 @@
           34
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1304,
+        "known_pixels": 1335,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 3885,
+        "nonmatching_visible_pixels": 3854,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
         "candidate_collisions_with_existing_protection": 0,
         "new_semantic_approval": false
       },
+      "independent_uncertain_contacts": [
+        {
+          "x": 70,
+          "y": 15,
+          "reason": "Yellow edge adjoining raised fingertip; not independently proven dragon. Retain original, not labelled rider."
+        }
+      ],
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "ef2c7716259881c5fd1001ac1b0a253ab6b5fd1595468460ebe39c699f3369b4",
         "new_semantic_approval": false
       }
     },
@@ -1025061,16 +1025765,31 @@
         [
           16,
           0,
+          44
+        ],
+        [
+          16,
+          46,
           79
         ],
         [
           17,
           0,
+          44
+        ],
+        [
+          17,
+          47,
           79
         ],
         [
           18,
           0,
+          44
+        ],
+        [
+          18,
+          46,
           65
         ],
         [
@@ -1025081,6 +1025800,11 @@
         [
           19,
           0,
+          44
+        ],
+        [
+          19,
+          46,
           65
         ],
         [
@@ -1026221,9 +1026945,29 @@
           67
         ],
         [
+          16,
+          45,
+          45
+        ],
+        [
+          17,
+          45,
+          46
+        ],
+        [
+          18,
+          45,
+          45
+        ],
+        [
           18,
           66,
           66
+        ],
+        [
+          19,
+          45,
+          45
         ],
         [
           19,
@@ -1026936,23 +1027680,25 @@
           15
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1347,
+        "known_pixels": 1379,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 3154,
+        "nonmatching_visible_pixels": 3122,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1026961,7 +1027707,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "6579316c324814c7ecd39710dbc253f83b8093aa77c42535df6717c524132ab3",
         "new_semantic_approval": false
       }
     },
@@ -1027152,7 +1027899,12 @@
         [
           14,
           0,
-          54
+          48
+        ],
+        [
+          14,
+          50,
+          52
         ],
         [
           14,
@@ -1027162,7 +1027914,7 @@
         [
           15,
           0,
-          55
+          48
         ],
         [
           15,
@@ -1027172,7 +1027924,7 @@
         [
           16,
           0,
-          57
+          49
         ],
         [
           16,
@@ -1027182,7 +1027934,7 @@
         [
           17,
           0,
-          57
+          49
         ],
         [
           17,
@@ -1027192,7 +1027944,7 @@
         [
           18,
           0,
-          58
+          49
         ],
         [
           18,
@@ -1027202,7 +1027954,7 @@
         [
           19,
           0,
-          58
+          49
         ],
         [
           19,
@@ -1027212,7 +1027964,7 @@
         [
           20,
           0,
-          58
+          49
         ],
         [
           20,
@@ -1027222,6 +1027974,11 @@
         [
           21,
           0,
+          49
+        ],
+        [
+          21,
+          55,
           58
         ],
         [
@@ -1027232,6 +1027989,11 @@
         [
           22,
           0,
+          48
+        ],
+        [
+          22,
+          54,
           58
         ],
         [
@@ -1027242,6 +1028004,11 @@
         [
           23,
           0,
+          48
+        ],
+        [
+          23,
+          53,
           58
         ],
         [
@@ -1027252,6 +1028019,11 @@
         [
           24,
           0,
+          48
+        ],
+        [
+          24,
+          53,
           58
         ],
         [
@@ -1027262,6 +1028034,11 @@
         [
           25,
           0,
+          48
+        ],
+        [
+          25,
+          53,
           58
         ],
         [
@@ -1027272,6 +1028049,11 @@
         [
           26,
           0,
+          49
+        ],
+        [
+          26,
+          52,
           57
         ],
         [
@@ -1027282,6 +1028064,11 @@
         [
           27,
           0,
+          50
+        ],
+        [
+          27,
+          52,
           57
         ],
         [
@@ -1028363,38 +1029150,48 @@
         ],
         [
           14,
-          55,
+          49,
+          49
+        ],
+        [
+          14,
+          53,
           70
         ],
         [
           15,
-          56,
+          49,
           70
         ],
         [
           16,
-          58,
+          50,
           70
         ],
         [
           17,
-          58,
+          50,
           70
         ],
         [
           18,
-          59,
+          50,
           69
         ],
         [
           19,
-          59,
+          50,
           68
         ],
         [
           20,
-          59,
+          50,
           68
+        ],
+        [
+          21,
+          50,
+          54
         ],
         [
           21,
@@ -1028403,8 +1029200,18 @@
         ],
         [
           22,
+          49,
+          53
+        ],
+        [
+          22,
           59,
           67
+        ],
+        [
+          23,
+          49,
+          52
         ],
         [
           23,
@@ -1028413,8 +1029220,18 @@
         ],
         [
           24,
+          49,
+          52
+        ],
+        [
+          24,
           59,
           67
+        ],
+        [
+          25,
+          49,
+          52
         ],
         [
           25,
@@ -1028423,8 +1029240,18 @@
         ],
         [
           26,
+          50,
+          51
+        ],
+        [
+          26,
           58,
           66
+        ],
+        [
+          27,
+          51,
+          51
         ],
         [
           27,
@@ -1029152,23 +1029979,25 @@
           19
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1810,
+        "known_pixels": 1917,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 2521,
+        "nonmatching_visible_pixels": 2414,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1029177,7 +1030006,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "e41068c00e0b6c93de93d121081fd81d736103d8e8c4e6bc8796454881cd0337",
         "new_semantic_approval": false
       }
     },
@@ -1029368,7 +1030198,7 @@
         [
           14,
           0,
-          47
+          45
         ],
         [
           14,
@@ -1029378,7 +1030208,7 @@
         [
           15,
           0,
-          48
+          43
         ],
         [
           15,
@@ -1029388,7 +1030218,7 @@
         [
           16,
           0,
-          50
+          43
         ],
         [
           16,
@@ -1029398,7 +1030228,7 @@
         [
           17,
           0,
-          50
+          43
         ],
         [
           17,
@@ -1029408,7 +1030238,7 @@
         [
           18,
           0,
-          51
+          43
         ],
         [
           18,
@@ -1029418,7 +1030248,7 @@
         [
           19,
           0,
-          51
+          43
         ],
         [
           19,
@@ -1029428,7 +1030258,7 @@
         [
           20,
           0,
-          51
+          43
         ],
         [
           20,
@@ -1029438,6 +1030268,11 @@
         [
           21,
           0,
+          42
+        ],
+        [
+          21,
+          48,
           51
         ],
         [
@@ -1029448,6 +1030283,11 @@
         [
           22,
           0,
+          40
+        ],
+        [
+          22,
+          47,
           51
         ],
         [
@@ -1029458,6 +1030298,11 @@
         [
           23,
           0,
+          40
+        ],
+        [
+          23,
+          46,
           51
         ],
         [
@@ -1029468,6 +1030313,11 @@
         [
           24,
           0,
+          40
+        ],
+        [
+          24,
+          46,
           51
         ],
         [
@@ -1029478,6 +1030328,11 @@
         [
           25,
           0,
+          41
+        ],
+        [
+          25,
+          46,
           51
         ],
         [
@@ -1029488,6 +1030343,11 @@
         [
           26,
           0,
+          41
+        ],
+        [
+          26,
+          45,
           50
         ],
         [
@@ -1029498,6 +1030358,11 @@
         [
           27,
           0,
+          41
+        ],
+        [
+          27,
+          45,
           50
         ],
         [
@@ -1029508,6 +1030373,11 @@
         [
           28,
           0,
+          42
+        ],
+        [
+          28,
+          44,
           49
         ],
         [
@@ -1030699,38 +1031569,43 @@
         ],
         [
           14,
-          48,
+          46,
           63
         ],
         [
           15,
-          49,
+          44,
           63
         ],
         [
           16,
-          51,
+          44,
           63
         ],
         [
           17,
-          51,
+          44,
           63
         ],
         [
           18,
-          52,
+          44,
           62
         ],
         [
           19,
-          52,
+          44,
           61
         ],
         [
           20,
-          52,
+          44,
           61
+        ],
+        [
+          21,
+          43,
+          47
         ],
         [
           21,
@@ -1030739,8 +1031614,18 @@
         ],
         [
           22,
+          41,
+          46
+        ],
+        [
+          22,
           52,
           60
+        ],
+        [
+          23,
+          41,
+          45
         ],
         [
           23,
@@ -1030749,8 +1031634,18 @@
         ],
         [
           24,
+          41,
+          45
+        ],
+        [
+          24,
           52,
           60
+        ],
+        [
+          25,
+          42,
+          45
         ],
         [
           25,
@@ -1030759,13 +1031654,28 @@
         ],
         [
           26,
+          42,
+          44
+        ],
+        [
+          26,
           51,
           59
         ],
         [
           27,
+          42,
+          44
+        ],
+        [
+          27,
           51,
           59
+        ],
+        [
+          28,
+          43,
+          43
         ],
         [
           28,
@@ -1031663,23 +1032573,25 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1869,
+        "known_pixels": 1980,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1832,
+        "nonmatching_visible_pixels": 1721,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1031688,7 +1032600,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "594eedb540d32e9dbe09706a6ccc538f514d9d7f480a376e51ac2f6c601528ec",
         "new_semantic_approval": false
       }
     },
@@ -1031879,7 +1032792,12 @@
         [
           14,
           0,
-          47
+          41
+        ],
+        [
+          14,
+          43,
+          45
         ],
         [
           14,
@@ -1031889,7 +1032807,7 @@
         [
           15,
           0,
-          48
+          41
         ],
         [
           15,
@@ -1031899,7 +1032817,7 @@
         [
           16,
           0,
-          50
+          42
         ],
         [
           16,
@@ -1031909,7 +1032827,7 @@
         [
           17,
           0,
-          50
+          42
         ],
         [
           17,
@@ -1031919,7 +1032837,7 @@
         [
           18,
           0,
-          51
+          42
         ],
         [
           18,
@@ -1031929,7 +1032847,7 @@
         [
           19,
           0,
-          51
+          42
         ],
         [
           19,
@@ -1031939,7 +1032857,7 @@
         [
           20,
           0,
-          51
+          42
         ],
         [
           20,
@@ -1031949,6 +1032867,11 @@
         [
           21,
           0,
+          42
+        ],
+        [
+          21,
+          48,
           51
         ],
         [
@@ -1031959,6 +1032882,11 @@
         [
           22,
           0,
+          42
+        ],
+        [
+          22,
+          47,
           51
         ],
         [
@@ -1031969,6 +1032897,11 @@
         [
           23,
           0,
+          42
+        ],
+        [
+          23,
+          46,
           51
         ],
         [
@@ -1031979,6 +1032912,11 @@
         [
           24,
           0,
+          42
+        ],
+        [
+          24,
+          46,
           51
         ],
         [
@@ -1031989,6 +1032927,11 @@
         [
           25,
           0,
+          41
+        ],
+        [
+          25,
+          46,
           51
         ],
         [
@@ -1031999,6 +1032942,11 @@
         [
           26,
           0,
+          41
+        ],
+        [
+          26,
+          45,
           50
         ],
         [
@@ -1032009,6 +1032957,11 @@
         [
           27,
           0,
+          41
+        ],
+        [
+          27,
+          45,
           50
         ],
         [
@@ -1032019,6 +1032972,11 @@
         [
           28,
           0,
+          41
+        ],
+        [
+          28,
+          44,
           49
         ],
         [
@@ -1032029,6 +1032987,11 @@
         [
           29,
           0,
+          42
+        ],
+        [
+          29,
+          44,
           49
         ],
         [
@@ -1033130,38 +1034093,48 @@
         ],
         [
           14,
-          48,
+          42,
+          42
+        ],
+        [
+          14,
+          46,
           63
         ],
         [
           15,
-          49,
+          42,
           63
         ],
         [
           16,
-          51,
+          43,
           63
         ],
         [
           17,
-          51,
+          43,
           63
         ],
         [
           18,
-          52,
+          43,
           62
         ],
         [
           19,
-          52,
+          43,
           61
         ],
         [
           20,
-          52,
+          43,
           61
+        ],
+        [
+          21,
+          43,
+          47
         ],
         [
           21,
@@ -1033170,8 +1034143,18 @@
         ],
         [
           22,
+          43,
+          46
+        ],
+        [
+          22,
           52,
           60
+        ],
+        [
+          23,
+          43,
+          45
         ],
         [
           23,
@@ -1033180,8 +1034163,18 @@
         ],
         [
           24,
+          43,
+          45
+        ],
+        [
+          24,
           52,
           60
+        ],
+        [
+          25,
+          42,
+          45
         ],
         [
           25,
@@ -1033190,8 +1034183,18 @@
         ],
         [
           26,
+          42,
+          44
+        ],
+        [
+          26,
           51,
           59
+        ],
+        [
+          27,
+          42,
+          44
         ],
         [
           27,
@@ -1033200,8 +1034203,18 @@
         ],
         [
           28,
+          42,
+          43
+        ],
+        [
+          28,
           50,
           59
+        ],
+        [
+          29,
+          43,
+          43
         ],
         [
           29,
@@ -1034019,23 +1035032,25 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1821,
+        "known_pixels": 1941,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1967,
+        "nonmatching_visible_pixels": 1847,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1034044,7 +1035059,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "87fb07f1df0ffdc7c43d96493678cc44530afc757aa0633156559d6054182be7",
         "new_semantic_approval": false
       }
     },
@@ -1034235,7 +1035251,12 @@
         [
           14,
           0,
-          47
+          41
+        ],
+        [
+          14,
+          43,
+          45
         ],
         [
           14,
@@ -1034245,7 +1035266,7 @@
         [
           15,
           0,
-          48
+          41
         ],
         [
           15,
@@ -1034255,7 +1035276,7 @@
         [
           16,
           0,
-          50
+          41
         ],
         [
           16,
@@ -1034265,7 +1035286,7 @@
         [
           17,
           0,
-          50
+          40
         ],
         [
           17,
@@ -1034275,7 +1035296,7 @@
         [
           18,
           0,
-          51
+          40
         ],
         [
           18,
@@ -1034285,7 +1035306,7 @@
         [
           19,
           0,
-          51
+          40
         ],
         [
           19,
@@ -1034295,7 +1035316,7 @@
         [
           20,
           0,
-          51
+          40
         ],
         [
           20,
@@ -1034305,6 +1035326,11 @@
         [
           21,
           0,
+          40
+        ],
+        [
+          21,
+          48,
           51
         ],
         [
@@ -1034315,6 +1035341,11 @@
         [
           22,
           0,
+          40
+        ],
+        [
+          22,
+          47,
           51
         ],
         [
@@ -1034325,6 +1035356,11 @@
         [
           23,
           0,
+          40
+        ],
+        [
+          23,
+          46,
           51
         ],
         [
@@ -1034335,6 +1035371,11 @@
         [
           24,
           0,
+          40
+        ],
+        [
+          24,
+          46,
           51
         ],
         [
@@ -1034345,6 +1035386,11 @@
         [
           25,
           0,
+          41
+        ],
+        [
+          25,
+          46,
           51
         ],
         [
@@ -1034355,6 +1035401,11 @@
         [
           26,
           0,
+          41
+        ],
+        [
+          26,
+          45,
           50
         ],
         [
@@ -1034365,6 +1035416,11 @@
         [
           27,
           0,
+          41
+        ],
+        [
+          27,
+          45,
           50
         ],
         [
@@ -1034375,6 +1035431,11 @@
         [
           28,
           0,
+          41
+        ],
+        [
+          28,
+          44,
           49
         ],
         [
@@ -1034385,6 +1035446,11 @@
         [
           29,
           0,
+          42
+        ],
+        [
+          29,
+          44,
           49
         ],
         [
@@ -1035441,38 +1036507,48 @@
         ],
         [
           14,
-          48,
+          42,
+          42
+        ],
+        [
+          14,
+          46,
           63
         ],
         [
           15,
-          49,
+          42,
           63
         ],
         [
           16,
-          51,
+          42,
           63
         ],
         [
           17,
-          51,
+          41,
           63
         ],
         [
           18,
-          52,
+          41,
           62
         ],
         [
           19,
-          52,
+          41,
           61
         ],
         [
           20,
-          52,
+          41,
           61
+        ],
+        [
+          21,
+          41,
+          47
         ],
         [
           21,
@@ -1035481,8 +1036557,18 @@
         ],
         [
           22,
+          41,
+          46
+        ],
+        [
+          22,
           52,
           60
+        ],
+        [
+          23,
+          41,
+          45
         ],
         [
           23,
@@ -1035491,8 +1036577,18 @@
         ],
         [
           24,
+          41,
+          45
+        ],
+        [
+          24,
           52,
           60
+        ],
+        [
+          25,
+          42,
+          45
         ],
         [
           25,
@@ -1035501,8 +1036597,18 @@
         ],
         [
           26,
+          42,
+          44
+        ],
+        [
+          26,
           51,
           59
+        ],
+        [
+          27,
+          42,
+          44
         ],
         [
           27,
@@ -1035511,8 +1036617,18 @@
         ],
         [
           28,
+          42,
+          43
+        ],
+        [
+          28,
           50,
           59
+        ],
+        [
+          29,
+          43,
+          43
         ],
         [
           29,
@@ -1036305,23 +1037421,25 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1770,
+        "known_pixels": 1917,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 2154,
+        "nonmatching_visible_pixels": 2007,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1036330,7 +1037448,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "99f48664507514e2889613ba7353bf93bdb911b13b9ff77dbdb30eedfae8ef4f",
         "new_semantic_approval": false
       }
     },
@@ -1036521,7 +1037640,12 @@
         [
           14,
           0,
-          47
+          41
+        ],
+        [
+          14,
+          43,
+          45
         ],
         [
           14,
@@ -1036531,7 +1037655,7 @@
         [
           15,
           0,
-          48
+          41
         ],
         [
           15,
@@ -1036541,7 +1037665,7 @@
         [
           16,
           0,
-          50
+          41
         ],
         [
           16,
@@ -1036551,7 +1037675,7 @@
         [
           17,
           0,
-          50
+          40
         ],
         [
           17,
@@ -1036561,7 +1037685,7 @@
         [
           18,
           0,
-          51
+          40
         ],
         [
           18,
@@ -1036571,7 +1037695,7 @@
         [
           19,
           0,
-          51
+          40
         ],
         [
           19,
@@ -1036581,7 +1037705,7 @@
         [
           20,
           0,
-          51
+          40
         ],
         [
           20,
@@ -1036591,6 +1037715,11 @@
         [
           21,
           0,
+          40
+        ],
+        [
+          21,
+          48,
           51
         ],
         [
@@ -1036601,6 +1037730,11 @@
         [
           22,
           0,
+          40
+        ],
+        [
+          22,
+          47,
           51
         ],
         [
@@ -1036611,6 +1037745,11 @@
         [
           23,
           0,
+          40
+        ],
+        [
+          23,
+          46,
           51
         ],
         [
@@ -1036621,6 +1037760,11 @@
         [
           24,
           0,
+          40
+        ],
+        [
+          24,
+          46,
           51
         ],
         [
@@ -1036631,6 +1037775,11 @@
         [
           25,
           0,
+          41
+        ],
+        [
+          25,
+          46,
           51
         ],
         [
@@ -1036641,6 +1037790,11 @@
         [
           26,
           0,
+          41
+        ],
+        [
+          26,
+          45,
           50
         ],
         [
@@ -1036651,6 +1037805,11 @@
         [
           27,
           0,
+          41
+        ],
+        [
+          27,
+          45,
           50
         ],
         [
@@ -1036661,6 +1037820,11 @@
         [
           28,
           0,
+          41
+        ],
+        [
+          28,
+          44,
           49
         ],
         [
@@ -1036671,6 +1037835,11 @@
         [
           29,
           0,
+          42
+        ],
+        [
+          29,
+          44,
           49
         ],
         [
@@ -1037837,38 +1039006,48 @@
         ],
         [
           14,
-          48,
+          42,
+          42
+        ],
+        [
+          14,
+          46,
           63
         ],
         [
           15,
-          49,
+          42,
           63
         ],
         [
           16,
-          51,
+          42,
           63
         ],
         [
           17,
-          51,
+          41,
           63
         ],
         [
           18,
-          52,
+          41,
           62
         ],
         [
           19,
-          52,
+          41,
           61
         ],
         [
           20,
-          52,
+          41,
           61
+        ],
+        [
+          21,
+          41,
+          47
         ],
         [
           21,
@@ -1037877,8 +1039056,18 @@
         ],
         [
           22,
+          41,
+          46
+        ],
+        [
+          22,
           52,
           60
+        ],
+        [
+          23,
+          41,
+          45
         ],
         [
           23,
@@ -1037887,8 +1039076,18 @@
         ],
         [
           24,
+          41,
+          45
+        ],
+        [
+          24,
           52,
           60
+        ],
+        [
+          25,
+          42,
+          45
         ],
         [
           25,
@@ -1037897,8 +1039096,18 @@
         ],
         [
           26,
+          42,
+          44
+        ],
+        [
+          26,
           51,
           59
+        ],
+        [
+          27,
+          42,
+          44
         ],
         [
           27,
@@ -1037907,8 +1039116,18 @@
         ],
         [
           28,
+          42,
+          43
+        ],
+        [
+          28,
           50,
           59
+        ],
+        [
+          29,
+          43,
+          43
         ],
         [
           29,
@@ -1038791,23 +1040010,25 @@
           12
         ]
       ],
-      "review_status": "DRAFT: twelve source/change pairs viewed; contacts incomplete",
-      "review": "Each of twelve source/change pairs independently viewed in four three-body sheets. Visible white cheek uses ventral palette and both wings are dorsal. Rider helmet/hair, raised arms, robe and dangling feet differ by body. Unknown retains unresolved dragon contacts as well as rider pixels; no complete semantic approval. Reference output inspection is separate from automatic candidate derivation.",
+      "review_status": "DRAFT: independent neck/cheek revision viewed; contacts incomplete",
+      "review": "All ten local revision crops viewed. 257170 provides independent exposed-neck polygon with body-index gate and far-cheek polygon with ventral-index gate. No automatic candidate is a semantic reference. 260202/263234 finger-adjacent changes additionally checked on their source coordinate images. 260202 (70,15) withheld as unresolved yellow edge at fingertip and restored original; not asserted to be rider. Remaining revised neck pixels are visible dragon. Full boundary cleanup and semantic approval remain pending.",
       "reference_regions": {
         "pose_page": 41,
         "bitmaps": [
           248074,
+          257170,
           266266
         ],
         "fill_enclosed_guard": false,
         "allow_source_variants": true,
         "source_rule_hashes": {
-          "248074": "beb23108d4daf63150816167929fa8e79106b237c7b5c69ab687b95784deba0b",
-          "266266": "fd457ece1881a5fff2e4c3d033d1616c38d10bb8d8fb61209ba2fc7beb7268b1"
+          "248074": "97f995abe3f6ee56e33b34854dcf5e2132bb31816075755345299643f0ea27e7",
+          "257170": "b8df18b045b7ee71a39c46c1a0619a9dc3aafd213cae3e8cc196b0cf0facefaf",
+          "266266": "19f9a34776acb0d68f52b26b304263b207126c2302336b8a87cddb89fdf369fb"
         },
-        "known_pixels": 1838,
+        "known_pixels": 1972,
         "conflict_pixels": 0,
-        "nonmatching_visible_pixels": 1857,
+        "nonmatching_visible_pixels": 1723,
         "closure_pixels": 0,
         "existing_target_protection_applied": false,
         "target_protection_rule_sha256": null,
@@ -1038816,7 +1040037,8 @@
       },
       "rider_boundary_dilation": 0,
       "manual_refinement": {
-        "base_rules_sha256": "adfa8ccc649faa905e37e2700cf4eb32a3173971d7d01d9323929f96bba57fe7",
+        "base_rules_sha256": "20af158407ade3d792177789e719a5900988a0b240ae774cbb1379b8e66f1a3e",
+        "previous_rule_sha256": "e9e1e3c54dc7a289478f7856dfdd41e9224607b4e8acee9388c4bebf586df369",
         "new_semantic_approval": false
       }
     },

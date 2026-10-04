@@ -516,3 +516,35 @@ matching `*-final-revision` evidence. Clear wing/torso/leg regions receive red;
 contact boundaries still contain unresolved dragon yellow, so these remain
 research drafts. Per-command timestamps/wall/child CPU continue in the private
 offline log. No further algorithm change or repeated green test was needed.
+
+## Exposed-neck refinement without enlarging the count
+
+Pose040's 257169 exposes dragon neck hidden by the two primary reference
+riders. A new independent local polygon, intersected with body palette indices,
+provides 197 labelled neck pixels; it does not reuse any automatic candidate
+region as semantic evidence. The three-reference input retains the original
+248073/266265 annotations. Only 281425's independently drawn braid guard enters
+as protection-only input. Newly inferred unknown regions are not passed back
+as independent rider labels.
+
+All nine changed revision crops were viewed before replacing those drafts,
+adding 378 recoloured pixels across the pose. The other three outputs are
+hash-identical. 263233's isolated `(54,50)` change was separately checked in its
+source coordinate view: visible dragon neck below the forearm. Current output
+for pose040 is `pose040-neck-render`; evidence is `pose040-neck-revision`.
+`pose040-three-reference-input.json` is a reproducible independent-reference
+input; `pose040-neck-candidates.json` contains the inspected candidates and
+explicit own-neck refinement for 257169. These remain 571 unique drafts and
+zero full semantic receipts; other contact yellow is unresolved.
+
+Pose041 adds a separate independent 257170 neck polygon (168 body-index pixels)
+and far-cheek sliver (14 ventral-index pixels). All ten changed local revision
+crops were viewed; 260202 and 263234 were also checked on their source coordinate
+images because the changes approach the hands. Pixel `(70,15)` in 260202 remains
+an unresolved yellow fingertip-edge contact and is restored to its original
+colour, explicitly not labelled rider. This retains one potentially dragon
+pixel pending further semantic resolution; it is not claimed complete colour.
+The accepted refinement adds 618 changed pixels, including 14 cheek pixels.
+Latest pose041 output is `pose041-neck-render` except 260202, superseded by
+`pose041-finger-guard`; the one-pixel restoration crop was viewed separately.
+The 571 count and zero complete semantic receipts do not change.
