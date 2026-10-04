@@ -22,7 +22,11 @@ func auto_status() -> String:
 	if not str(auto.get("mode_notice","")).is_empty():message+="\n"+str(auto.mode_notice)
 	var budget:Dictionary=auto.get("budget",{})
 	if not budget.is_empty():
-		message+="\n本步 %.1f / %.1f 分钟 · 已保存 %d 场 · 本步新增 %s · 已有 %s"%[float(budget.get("used_seconds",0))/60.0,float(budget.get("limit_seconds",0))/60.0,int(budget.get("saved_battles",0)),str(budget.get("new_items",{})),str(budget.get("existing_items",{}))]
+		# Render one cached authoritative projection; never interpret old seconds.
+		var view=preload("res://scripts/quest_auto_loot_view.gd").new()
+		view.replace_snapshot(auto,true)
+		if not world.link.is_local() and not world.link.online:view.disconnected()
+		message+="\n"+"\n".join(view.lines())
 	return message
 func auto_heading()->String:
 	match str(world.state.derived.get("quest_auto",{}).get("phase","")):
