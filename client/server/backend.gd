@@ -533,9 +533,12 @@ func _cmd_set_fast_hunt_threads(command: Dictionary) -> Dictionary:
 
 func _cmd_set_automation_settings(command: Dictionary) -> Dictionary:
 	if not command.has("settings"):return _reject("missing settings")
+	var previous_settings:Dictionary=session.automation_settings()
 	session.last_error = ""
 	if not session.set_automation_settings(command.settings):return _reject(session.last_error)
-	save()
+	if not save():
+		session._profile.automation_settings=previous_settings
+		return _reject("save_failed")
 	automation.profile_settings_changed()
 	_publish()
 	return {"ok":true}
@@ -1240,7 +1243,7 @@ func _derived() -> Dictionary:
 	# battle_pets: pet_id -> reason for the open battle's participants, which
 	# release, store, deploy and ride refuse until it ends.
 	_published_battle_pets = session.battle_pets()
-	return {"quest_npcs":original_quests.npc_state.snapshot(),"stationary":stationary.snapshot(self),"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
+	return {"quest_npcs":original_quests.npc_state.snapshot(),"stationary":stationary.snapshot(self),"no_random_encounters":bool(session._profile.get("no_random_encounters",false)),"quest_auto":quest_auto.snapshot(self),"quest_helper":quest_helper.snapshot(self),"has_travel_pass":session.has_travel_pass(),"can_fight_boss":session.can_fight_boss(),"effective_stats":session.effective_player_stats(),"gm_pending":not session._pending.is_empty(),"battle_pets":_published_battle_pets.duplicate(),"pet_capacity":GameSession.PET_CAPACITY,"max_level":GameSession.MAX_LEVEL}
 
 func _options() -> Dictionary:
 	var options := {"clone_squad":session.clone_squad_enabled,"experience_multiplier":session.experience_multiplier,"admin":admin}

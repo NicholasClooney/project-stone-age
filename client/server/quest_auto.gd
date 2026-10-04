@@ -1,6 +1,9 @@
 extends RefCounted
 ## Source-derived delivery runner: shell/herb visits and adult channel walking. Every exchange stays in OriginalQuests/save().
 const Policy=preload("res://scripts/quest_auto_policy.gd")
+const Settings=preload("res://server/quest_auto_settings_rules.gd")
+const Registry=preload("res://server/quest_auto_registry.gd")
+var identity=preload("res://server/quest_auto_state.gd").new()
 const Rules=preload("res://server/original_quests.gd")
 var running:=false
 var quest_id:=-1
@@ -27,12 +30,9 @@ var owns_battle:=false
 var strict_walk:=false
 var pause_reason:=""
 var navigation=preload("res://server/quest_auto_navigation.gd").new()
-var delivery_plan:Script
 var dialogue_choices:Array=[]
 func delivery_supports(id:int)->bool:
- if delivery_plan==null and ResourceLoader.exists("res://server/quest_delivery_plan.gd"):
-  delivery_plan=load("res://server/quest_delivery_plan.gd")
- return delivery_plan!=null and delivery_plan.supports(id)
+ return Registry.supports(id)
 func handoff(b,reason:String)->void:
  stop(b,reason)
  phase="manual"
@@ -42,7 +42,7 @@ func fail(b,reason:String)->void:
  if strict_walk:handoff(b,reason)
  else:stop(b,reason)
 func strict_select(b)->Dictionary:
- if delivery_supports(quest_id):return delivery_plan.select(b,quest_id)
+ if delivery_supports(quest_id):return Registry.select(b,quest_id)
  var selected:=select(b)
  if not selected.is_empty():return {"status":"step","step":selected}
  if Rules.flag(b.session._profile,"ended",event(b)):return {"status":"done"}
@@ -124,9 +124,18 @@ func start_battle(b) -> void:
  message="沿途遇敌：原自动战斗中，结算后继续。"
  b.publish()
 
-func snapshot() -> Dictionary:
- return {"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client,"detached":detached,"strict_walk":strict_walk,"pause_reason":pause_reason}
+func snapshot(b=null) -> Dictionary:
+ var result:Dictionary={"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client,"detached":detached,"strict_walk":strict_walk,"pause_reason":pause_reason}
+ result.merge(identity.snapshot())
+ result.settings=Settings.effective(b.session.automation_settings() if b!=null else {})
+ result.effective_mode="A"
+ result.available_modes=["A"]
+ result.mode_notice="B/C执行器尚未接入，当前沿A原路推进。" if result.settings.mode!="A" else ""
+ result.can_continue=false
+ result.budget={}
+ return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
+ identity.invalidate()
  var had_shutdown_intent:=not shutdown_intent.is_empty()
  if persist:shutdown_intent={}
  if not running:
@@ -146,7 +155,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  b.publish()
 func resume_state() -> Dictionary:
  if not running:return shutdown_intent.duplicate(true)
- return {"version":2,"quest_id":quest_id,"clean_authorized":clean_authorized,"strict_walk":strict_walk}
+ return {"version":3,"quest_id":quest_id,"clean_authorized":clean_authorized,"strict_walk":true,"identity":identity.checkpoint(),"phase":phase}
 func suspend(b) -> void:
  # Transport shutdown must checkpoint before clearing the running intent.
  if running:
@@ -154,10 +163,12 @@ func suspend(b) -> void:
   b.keep_resume_file()
  stop(b,"服务器已停止。",false)
 func load_resume(b,state:Dictionary) -> void:
- if int(state.get("version",0)) not in [1,2] or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
+ if int(state.get("version",0)) not in [1,2,3] or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
  if int(Policy.JOB_EVENTS[int(state.quest_id)]) not in b.quest_catalog.enabled_events:return
  quest_id=int(state.quest_id)
- strict_walk=bool(state.get("strict_walk",false)) or delivery_supports(quest_id)
+ strict_walk=true
+ identity.begin()
+ if int(state.get("version",0))==3 and not identity.restore(state.get("identity",{})):return
  pause_reason=""
  navigation.clear()
  clean_authorized=bool(state.get("clean_authorized",false))
@@ -202,7 +213,8 @@ func start(b,command:Dictionary) -> Dictionary:
  if str(command.get("client","")).is_empty():return b._reject("缺少发起设备。")
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  quest_id=int(id)
- strict_walk=bool(command.get("strict_walk",false)) or delivery_supports(quest_id)
+ strict_walk=true
+ identity.begin()
  pause_reason=""
  navigation.clear()
  clean_authorized=bool(quest.get("can_restart",false))
@@ -403,6 +415,7 @@ func strict_advance(b)->void:
   if str(selection.get("status","manual"))=="done":stop(b,title(b)+"已完成。");return
   if str(selection.get("status","manual"))!="step":handoff(b,str(selection.get("reason","请手动处理当前任务步骤。")));return
   step=selection.get("step",{})
+  identity.select_step(str(step.get("id","")))
   if not safe_step(step):handoff(b,"此步骤包含选择、消费、战斗或未审核动作，请手动处理后重新启动。");return
   var npc:Dictionary=b.original_quests.npc_by_id(str(step.get("npc_id","")))
   if npc.is_empty():handoff(b,"原任务人物当前不可用。");return

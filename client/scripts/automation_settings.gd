@@ -53,7 +53,9 @@ const CONDITION_SPEC := {"enabled":["bool"],"minus":["int",-100,1000],"value":["
 const KEEP_RULE_SPEC := {"tiers":["int",0,20],"per_tier":["int",0,1000],"order":["rank"],"champions":["int",0,1000],"champion_stats":["stats"],"auto":["bool"]}
 const FILTER_SPEC := {"mode":["enum",["all","any"]],"threshold_mode":["enum",["relative","absolute"]],
 	"conditions":{"sum":CONDITION_SPEC,"attack":CONDITION_SPEC,"defence":CONDITION_SPEC,"speed":CONDITION_SPEC}}
+const QuestAutoSettings=preload("res://server/quest_auto_settings_rules.gd")
 const SPEC := {
+	"quest":QuestAutoSettings.SPEC,
 	"training":{"xp":["enum",[1,2,10,100]],"compact":["bool"],"spirit":["bool"],"protect":["bool"],"select_troops":["bool"],"borrow_troops":["bool"],"side_heal":["int",0,100],"hp":["int",1,100],"level":["int",0,120],"level_explicit":["bool"],"limit":["int",1,100000],"preset":["enum",["attack","capture","train_pet"]]},
 	"party":{"auto":["bool"],"compact":["bool"]},
 	"capture":{"hp":["int",1,100],"pet":["int",-2,29],"pet_id":["string",32],"pet_max_level":["int",1,120],"fallback_attempts":["int",1,30],"fallback_rate":["int",0,98],"fallback_hp":["int",1,99]},
@@ -65,6 +67,7 @@ static func defaults() -> Dictionary:
 	if _defaults.is_empty():
 		var parsed = JSON.parse_string(FileAccess.get_file_as_string(PATH))
 		_defaults = _clean(parsed) if parsed is Dictionary else {}
+	_defaults["quest"] = QuestAutoSettings.effective({"quest":_defaults.get("quest",{})})
 	return _defaults
 
 ## Effective training, capture and hunt settings: defaults merged with overrides.
