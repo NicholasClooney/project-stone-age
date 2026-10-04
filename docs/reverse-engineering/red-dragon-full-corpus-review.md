@@ -287,3 +287,36 @@ highlight region, existing rider/unknown/ventral/wing protection and rejection
 when no dragon region authorizes the change. These checks do not certify art
 semantics. Unresolved contact colour and the remaining corpus still need work;
 no new semantic receipt, game mapping, import or live operation is included.
+
+## Restarted small batches: 419 draft rules
+
+After the coordinator explicitly reopened offline work, poses 029–031 added
+36 source-bound drafts, bringing the distinct count to 419/4416 (36 sample
+rules + 383 pose rules). 3997 bitmaps still lack rules; complete semantic
+receipts remain zero. These are review drafts, not a functional delivery.
+Every new pose received twelve-body original/change inspection and every
+changed final revision crop was viewed. Existing ten-body final outputs for
+poses 029 and 031 were hash-identical to the inspected candidates.
+
+Pose 030's two primary references both conceal the far white cheek. A third,
+independently outlined partial cheek in 257083 supplies that missing evidence;
+its coordinates are bound to the indexed source hash. Nine propagated cheek
+revision crops were inspected separately, then the three final changes (two
+manual references and the third reference's own cheek) were inspected. This
+maps white ventral material to the derived yellow palette, rather than leaving
+uncoloured gray as presumed rider. Evidence is in `pose030-cheek-revision` and
+`pose030-final-revision`; the third partial outline is not a full rider mask.
+Pose 031 applies dragon material polygons with each bitmap's actual origin,
+keeping independently outlined rider parts in their local coordinates.
+
+Unfinished wing-root, neck, leg-contact and highlight regions remain visible.
+They are not all rider pixels and must be resolved before semantic approval.
+No approval receipt, game mapping, original-asset write, Godot run, import or
+live operation is part of this checkpoint.
+
+Each restarted processing command is serialized by a nonblocking file lock;
+`offline-processing.jsonl` records UTC start/end, monotonic wall duration and
+separate child user/system CPU deltas from `RUSAGE_CHILDREN`. Those measurements
+exclude the wrapper and external image-view service; they cannot reconstruct
+previous-window CPU or attribute whole-machine load. Batches contain at most
+one twelve-body pose; no full-corpus decode/render or repeat green test ran.
