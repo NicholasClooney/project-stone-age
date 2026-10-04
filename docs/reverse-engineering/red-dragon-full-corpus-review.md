@@ -154,3 +154,50 @@ foot/occlusion inspection. Previous 99-record reports remain historical
 snapshots. No imported source art or verification PNG is tracked, and no Godot,
 production import, main-asset write, live operation or final image approval has
 occurred during this checkpoint.
+
+## Diagonal attack draft coverage (231-record checkpoint)
+
+There are now 231 distinct source-bound rules: the original 36 samples, 192
+bitmaps covering all eight poses of each of `0_0` and `0_1`, and three side
+references. 4185 bitmaps still have no rule, and complete semantic receipts
+remain zero. This checkpoint is not a functional release or an integration
+request. The 4416 indexed-source hashes plus dimensions are all distinct;
+identical-source deduplication cannot remove the remaining per-bitmap review.
+
+Poses 010 through 015 received independent reference outlines and twelve-body
+source/change-sheet inspection. Changes specifically separate white coat and
+exposed foot fragments from the dragon's jaw, abdomen and wing structure.
+The latest private outputs are `pose010-refined`, `pose011-refined`,
+`pose012-refined`, `pose013-belly-v2`, `pose014-refined` and
+`pose015-three-refined`, under the existing `corpus-v1` evidence directory.
+
+For pose 010, all four refined difference sheets and the source/red sheet were
+viewed. For pose 011, the added white-throat region in 260020 was viewed in its
+new comparison; other outputs matched already viewed reference/candidate PNG
+hashes. For pose 012, the separate throat polygons in 260021 and 263053 were
+viewed in their new comparisons, with the other output hashes likewise checked.
+Pose 013's initial ventral polygon missed an unambiguously exposed abdomen
+patch: source index 159 remained at common x34..40/y51..59. A spatial ventral
+rectangle at x32..44/y51..64, subordinate to existing dragon/rider/unknown
+masks, restores that patch. All twelve source/previous/current/delta abdomen
+crops were viewed in `pose013-belly-v2-review/belly-local.png`. This does not
+turn protected white clothing into ventral material.
+
+Pose 014's final source/red sheet and all four refined change sheets were
+viewed. The small left forepaw restoration excludes the body5 far foot below
+it. Pose 015 required a third independently outlined reference (256992) because
+the first two riders both obscure part of the left wing and neck. All four
+new candidate change sheets were viewed. The subsequent lower-forelimb
+restoration stays within common x0..60/y60..85, left of body5's lowest exposed
+foot; every actual revision was viewed in `pose015-final-revision`.
+
+`render_red_dragon_revision.py` creates source/previous/current/delta crops
+around every changed pixel and records source/output hashes. It rejects changed
+source images or geometry and asserts that no revision pixel lies outside the
+crop. This is review evidence only, not a source of semantic receipts. Identical
+output hashes may refer back to an already viewed output; revised pixels still
+need direct inspection. Conservative contact borders and larger masked wing
+areas remain unfinished and are not relabelled as rider pixels. The three
+permanently retained dark-edge pixels in 250973 are unchanged. No Godot,
+production import, mapping enablement, main-asset write or live operation has
+occurred at this checkpoint.
