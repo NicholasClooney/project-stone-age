@@ -31,6 +31,9 @@ var strict_walk:=false
 var pause_reason:=""
 var navigation=preload("res://server/quest_auto_navigation.gd").new()
 var dialogue_choices:Array=[]
+var waiting_saved:=false
+var boss_id:=""
+var boss_ready:=false
 func delivery_supports(id:int)->bool:
  return Registry.supports(id)
 func handoff(b,reason:String)->void:
@@ -115,7 +118,7 @@ func walk_path(b,goal:Vector2i) -> Array[Vector2i]:
  return result
 func start_battle(b) -> void:
  if strict_walk and b.session._pending.has("quest_guard"):
-  handoff(b,"守卫战斗不在本批自动推进范围，请手动处理。")
+  wait_boss(b)
   return
  owns_battle=true
  phase="battle"
@@ -131,11 +134,13 @@ func snapshot(b=null) -> Dictionary:
  result.effective_mode="A"
  result.available_modes=["A"]
  result.mode_notice="B/C执行器尚未接入，当前沿A原路推进。" if result.settings.mode!="A" else ""
- result.can_continue=false
+ result.can_continue=running and phase=="waiting_boss" and boss_ready
  result.budget={}
  return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
  identity.invalidate()
+ waiting_saved=false
+ boss_ready=false
  var had_shutdown_intent:=not shutdown_intent.is_empty()
  if persist:shutdown_intent={}
  if not running:
@@ -184,6 +189,9 @@ func load_resume(b,state:Dictionary) -> void:
  elapsed=0.0
  waited=0.0
  message="服务器重启后已恢复"+title(b)+"自动任务。"
+ if str(state.get("phase","")) in ["waiting_reward","waiting_boss"]:
+  handoff(b,"重启后人工交接需重新核对，请手动操作后再启动。")
+  return
  if b.battle_open and (strict_walk or quest_id in [1,30]):start_battle(b)
  b.publish()
 func row(b,id:int) -> Dictionary:
@@ -247,6 +255,12 @@ func report(b,command:Dictionary) -> void:
 func tick(b,delta:float) -> void:
  if not running:return
  if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():stop(b,"组队变化停止了自动任务。");return
+ if phase=="waiting_reward":
+  if b.original_quests.pending.is_empty():handoff(b,"奖励窗口已失效，请重新操作。")
+  return
+ if phase=="waiting_boss":
+  poll_boss(b)
+  return
  if phase=="battle":
   if b.automation.running:return
   if b.battle_open or not b.session._pending.is_empty():fail(b,"沿途自动战斗已停止，请手动处理。");return
@@ -485,3 +499,119 @@ func strict_dialogue_reply(b,reply:Dictionary)->void:
  if not ((next=="yes" and ids==["yes","no"]) or (next=="ok" and ids==["ok"])):handoff(b,"此对话需要玩家选择，请手动处理后重新启动。");return
  message="准备确认已审核的原送物步骤。"
  b.publish()
+
+
+## Only a reviewed server-side plan may open this handoff. No client command
+## accepts a dialogue or action kind. Services and UID/king confirmations must
+## be reviewed by their owning plan before calling this entry point.
+func wait_reward(b,reply:Dictionary)->void:
+ if not running or not reply.get("ok",false) or not reply.get("dialogue") is Dictionary or b.original_quests.pending.is_empty():
+  handoff(b,"奖励对话不可用。")
+  return
+ var pending:Dictionary=b.original_quests.pending
+ var branch:Dictionary=pending.get("branch",{})
+ if bool(branch.get("project_pet_selection",false)) or branch.get("actions",{}).has("DelPet") or str(pending.get("npc",{}).get("handler",""))=="Transmigration":
+  handoff(b,"交宠与精灵王确认需独立人工操作。")
+  return
+ var dialogue:Dictionary=reply.dialogue
+ if str(dialogue.get("token",""))!=str(b.original_quests.pending.get("token","")):
+  handoff(b,"奖励对话已经改变。")
+  return
+ phase="waiting_reward"
+ waiting_saved=false
+ _reward_window(b,dialogue)
+ message="请选择原任务奖励；成功保存后自动继续。"
+ b.publish()
+func _reward_window(b,dialogue:Dictionary)->void:
+ identity.wait_for("reward",str(dialogue.get("token","")),str(dialogue.get("npc_id","")),str(b.session._profile.get("character_id","")))
+ identity.waiting.dialogue=dialogue.duplicate(true)
+func accepts_waiting_command(b,command:Dictionary)->bool:
+ if not running or phase!="waiting_reward" or not identity.matches(command,str(b.session._profile.get("character_id",""))):return false
+ var pending:Dictionary=b.original_quests.pending
+ return not pending.is_empty() and str(pending.get("token",""))==str(identity.waiting.get("token","")) and str(pending.get("npc",{}).get("id",""))==str(identity.waiting.get("npc_id",""))
+func choose_waiting(b,command:Dictionary)->Dictionary:
+ if not accepts_waiting_command(b,command):return b._reject("自动任务等待已过期。")
+ var expected_run:String=identity.run_id
+ var expected_step:String=identity.step_id
+ var expected_revision:int=identity.revision
+ var saved_before:int=b.quest_save_serial
+ var choice:=str(command.get("choice",""))
+ internal=true
+ var reply:Dictionary=b.original_quests.choose(b,str(command.get("token","")),choice,str(command.get("text","")),command.get("pet_ids",[]))
+ internal=false
+ # Synchronous publish observers may cancel while the transaction saves.
+ # The successful transaction remains committed, but its old run cannot revive.
+ if not running or phase!="waiting_reward" or identity.run_id!=expected_run or identity.step_id!=expected_step or identity.revision!=expected_revision:
+  if not running:b.original_quests.pending={}
+  reply.erase("dialogue")
+  reply.closed=true
+  return reply
+ if not reply.get("ok",false) or choice in ["no","cancel"]:
+  handoff(b,str(reply.get("reason","已取消奖励选择，停止自动任务。")))
+  return reply
+ waiting_saved=waiting_saved or b.quest_save_serial>saved_before
+ # An already-saved plain end acknowledgement contains no further choice.
+ # Close it through the original handler so saved rewards need no extra click.
+ if waiting_saved and reply.get("dialogue") is Dictionary and str(b.original_quests.pending.get("phase",""))=="end":
+  var choices:Array=reply.dialogue.get("choices",[])
+  if choices.map(func(item):return str(item.get("id","")))==["ok"]:
+   internal=true
+   reply=b.original_quests.choose(b,str(reply.dialogue.get("token","")),"ok")
+   internal=false
+   if not reply.get("ok",false):handoff(b,"奖励已保存但结果确认已失效。 ");return reply
+ if reply.get("dialogue") is Dictionary:
+  _reward_window(b,reply.dialogue)
+  b.publish()
+  return reply
+ if not waiting_saved:
+  handoff(b,"本次选择未保存任务进展，请手动处理。")
+  return reply
+ identity.invalidate()
+ waiting_saved=false
+ navigation.clear()
+ path.clear()
+ var next:Dictionary=strict_select(b)
+ if str(next.get("status","manual"))=="done":stop(b,title(b)+"已完成。")
+ elif str(next.get("status","manual"))=="step":
+  phase="travel"
+  identity.select_step(str(next.get("step",{}).get("id","")))
+  message="奖励已保存，继续原任务。"
+  b.publish()
+ else:handoff(b,str(next.get("reason","奖励已保存；下一步需手动处理。")))
+ return reply
+
+## Called only after an audited plan starts the actual original guard battle.
+func wait_boss(b)->void:
+ var id:=str(b.session._pending.get("battle_id",""))
+ if not running or id.is_empty() or not b.session._pending.has("quest_guard"):
+  handoff(b,"守卫战斗身份不可用，请手动处理。")
+  return
+ boss_id=id
+ boss_ready=false
+ owns_battle=false
+ identity.invalidate()
+ phase="waiting_boss"
+ message="请手动完成守卫战；胜利保存后按继续。"
+ b.publish()
+func poll_boss(b)->void:
+ if b.battle_open or not b.session._pending.is_empty():return
+ if boss_ready:return
+ if str(b.battle_state.get("battle_id",""))!=boss_id or str(b.battle_state.get("outcome",""))!="win" or not bool(b.battle_state.get("settled",false)) or not str(b.battle_state.get("quest_arrival_denied","")).is_empty() or boss_id not in b.session._profile.completed_battles:
+  handoff(b,"守卫战未成功完成，请手动处理。")
+  return
+ if not b.save():handoff(b,"守卫战保存失败，停止自动任务。");return
+ boss_ready=true
+ identity.invalidate()
+ message="守卫战已胜利保存，请按继续。"
+ b.publish()
+func continue_boss(b,command:Dictionary)->Dictionary:
+ if not running or phase!="waiting_boss" or not boss_ready or str(command.get("quest_run_id",""))!=identity.run_id or str(command.get("quest_step_id",""))!=identity.step_id or command.get("quest_revision",-1)!=identity.revision:return b._reject("守卫战继续请求已过期或尚未完成。")
+ if b.battle_open or not b.session._pending.is_empty() or boss_id not in b.session._profile.completed_battles:return b._reject("守卫战状态已改变。")
+ boss_ready=false
+ identity.invalidate()
+ phase="travel"
+ navigation.clear()
+ path.clear()
+ message="继续原任务。"
+ b.publish()
+ return {"ok":true}
