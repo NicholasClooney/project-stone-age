@@ -24,6 +24,35 @@ var herb_path:Array=[]
 var issued:Array=[]
 var position_serial:=0
 var owns_battle:=false
+var strict_walk:=false
+var pause_reason:=""
+var navigation=preload("res://server/quest_auto_navigation.gd").new()
+var delivery_plan:Script
+var dialogue_choices:Array=[]
+func delivery_supports(id:int)->bool:
+ if delivery_plan==null and ResourceLoader.exists("res://server/quest_delivery_plan.gd"):
+  delivery_plan=load("res://server/quest_delivery_plan.gd")
+ return delivery_plan!=null and delivery_plan.supports(id)
+func handoff(b,reason:String)->void:
+ stop(b,reason)
+ phase="manual"
+ pause_reason=reason
+ b.publish()
+func strict_select(b)->Dictionary:
+ if delivery_supports(quest_id):return delivery_plan.select(b,quest_id)
+ var selected:=select(b)
+ if not selected.is_empty():return {"status":"step","step":selected}
+ if Rules.flag(b.session._profile,"ended",event(b)):return {"status":"done"}
+ return {"status":"manual","reason":"当前原任务条件不满足，请手动处理后重新启动。"}
+func safe_step(value:Dictionary)->bool:
+ var source:Dictionary=value.get("source",{})
+ var branch:Dictionary=source.get("branch_data",{})
+ if str(source.get("type","")) not in ["REQUEST","ACCEPT","MESSAGE","FREEWARP"]:return false
+ if str(source.get("type",""))=="FREEWARP" and (str(value.get("npc_id",""))!="genout/wpm_120_19_15@120:19:15" or str(branch.get("actions",{}).get("Warp",""))!="122,6,5"):return false
+ if branch.has("spoken_keyword") or branch.has("keyword") or branch.get("project_pet_selection",false):return false
+ for action in branch.get("actions",{}):
+  if action not in ["GetItem","DelItem","GetStone","EndSetFlg","GetRandItem","Warp"]:return false
+ return not branch.is_empty()
 func event(b) -> int:
  return int(row(b,quest_id).get("event",-1))
 func title(b) -> String:
@@ -82,6 +111,9 @@ func walk_path(b,goal:Vector2i) -> Array[Vector2i]:
  if not result.is_empty():result.pop_front()
  return result
 func start_battle(b) -> void:
+ if strict_walk and b.session._pending.has("quest_guard"):
+  handoff(b,"守卫战斗不在本批自动推进范围，请手动处理。")
+  return
  owns_battle=true
  phase="battle"
  b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}})
@@ -90,7 +122,7 @@ func start_battle(b) -> void:
  b.publish()
 
 func snapshot() -> Dictionary:
- return {"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client,"detached":detached}
+ return {"running":running,"quest_id":quest_id,"phase":phase,"message":message,"target":target.duplicate(true),"client":client,"detached":detached,"strict_walk":strict_walk,"pause_reason":pause_reason}
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
  var had_shutdown_intent:=not shutdown_intent.is_empty()
  if persist:shutdown_intent={}
@@ -101,6 +133,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  if owns_battle and b.automation.running:b.automation.stop(reason)
  owns_battle=false
  path.clear();herb_path.clear()
+ navigation.clear()
  issued.clear()
  running=false
  phase="stopped"
@@ -110,7 +143,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  b.publish()
 func resume_state() -> Dictionary:
  if not running:return shutdown_intent.duplicate(true)
- return {"version":1,"quest_id":quest_id,"clean_authorized":clean_authorized}
+ return {"version":2,"quest_id":quest_id,"clean_authorized":clean_authorized,"strict_walk":strict_walk}
 func suspend(b) -> void:
  # Transport shutdown must checkpoint before clearing the running intent.
  if running:
@@ -118,13 +151,16 @@ func suspend(b) -> void:
   b.keep_resume_file()
  stop(b,"服务器已停止。",false)
 func load_resume(b,state:Dictionary) -> void:
- if int(state.get("version",0))!=1 or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
+ if int(state.get("version",0)) not in [1,2] or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
  if int(Policy.JOB_EVENTS[int(state.quest_id)]) not in b.quest_catalog.enabled_events:return
  quest_id=int(state.quest_id)
+ strict_walk=bool(state.get("strict_walk",false)) or delivery_supports(quest_id)
+ pause_reason=""
+ navigation.clear()
  clean_authorized=bool(state.get("clean_authorized",false))
  b.original_quests.pending={}
- step=select(b)
- if step.is_empty():return
+ step={} if strict_walk else select(b)
+ if not strict_walk and step.is_empty():return
  client=""
  connection=-1
  restored=true
@@ -134,7 +170,7 @@ func load_resume(b,state:Dictionary) -> void:
  elapsed=0.0
  waited=0.0
  message="服务器重启后已恢复"+title(b)+"自动任务。"
- if b.battle_open and quest_id in [1,30]:start_battle(b)
+ if b.battle_open and (strict_walk or quest_id in [1,30]):start_battle(b)
  b.publish()
 func row(b,id:int) -> Dictionary:
  for quest in b.quest_helper.snapshot(b).quests:
@@ -155,7 +191,7 @@ func start(b,command:Dictionary) -> Dictionary:
  var id=command.get("quest_id",-1)
  if not (id is int or id is float) or float(id)!=floor(float(id)):return b._reject("无效任务编号。")
  var quest:=row(b,int(id))
- if quest.is_empty() or not Policy.supports(id,int(quest.event)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("仅开放贝壳、药草与成人仪式自动任务。")
+ if quest.is_empty() or not Policy.supports(id,int(quest.event)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("此任务尚未开放自动推进。")
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active() or not b.original_quests.pending.is_empty():return b._reject("当前正忙。")
  if b.quest_visit_guard.is_valid():
   var reason:=str(b.quest_visit_guard.call())
@@ -163,9 +199,12 @@ func start(b,command:Dictionary) -> Dictionary:
  if str(command.get("client","")).is_empty():return b._reject("缺少发起设备。")
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  quest_id=int(id)
+ strict_walk=bool(command.get("strict_walk",false)) or delivery_supports(quest_id)
+ pause_reason=""
+ navigation.clear()
  clean_authorized=bool(quest.get("can_restart",false))
- step=select(b)
- if step.is_empty():return b._reject(str(quest.get("blocked_reason",""))+" 当前没有可自动执行的原任务步骤。")
+ step={} if strict_walk else select(b)
+ if not strict_walk and step.is_empty():return b._reject(str(quest.get("blocked_reason",""))+" 当前没有可自动执行的原任务步骤。")
  shutdown_intent={}
  restored=false
  detached=false
@@ -186,7 +225,7 @@ func report(b,command:Dictionary) -> void:
  var same:bool=int(command.get("map_id",-1))==b.automation.position_map and b._cell(command)==b.automation.position_cell
  if not same:stop(b,"移动停止了自动任务。");return
  if phase=="landing" and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
-  phase="travel" if event(b)==4 or (event(b)==1 and int(target.get("map_id",-1)) in [200,20101,20102,20103,20104,20105]) else "talk"
+  phase="travel" if strict_walk or event(b)==4 or (event(b)==1 and int(target.get("map_id",-1)) in [200,20101,20102,20103,20104,20105]) else "talk"
   waited=0.0
   message="已确认抵达，准备原任务对话。"
   b.publish()
@@ -200,9 +239,10 @@ func tick(b,delta:float) -> void:
   if str(b.battle_state.get("outcome","")) not in ["win","captured"]:stop(b,"沿途战斗未获胜。");return
   if not b.save():stop(b,"沿途战斗保存失败，停止自动任务。");return
   path.clear();herb_path.clear()
+  navigation.clear()
   phase="travel"
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active():stop(b,"其他活动停止了自动任务。");return
- if Rules.flag(b.session._profile,"ended",event(b)) and not clean_authorized:
+ if not strict_walk and Rules.flag(b.session._profile,"ended",event(b)) and not clean_authorized:
   stop(b,title(b)+"已完成。")
   return
  if detached:return
@@ -285,6 +325,9 @@ func adult_enter(b)->void:
  waited=0.0;emit_position(b,target);b.publish()
 
 func advance(b) -> void:
+ if strict_walk:
+  strict_advance(b)
+  return
  if phase=="travel":
   step=select(b)
   if step.is_empty():stop(b,title(b)+"已完成。" if Rules.flag(b.session._profile,"ended",event(b)) else "原任务条件已变化。");return
@@ -349,4 +392,80 @@ func advance(b) -> void:
   if str(step.source.type)=="CLEAN":clean_authorized=false
   phase="travel"
   message="原任务步骤已完成。"
+ b.publish()
+
+func strict_advance(b)->void:
+ if phase=="travel":
+  var selection:=strict_select(b)
+  if str(selection.get("status","manual"))=="done":stop(b,title(b)+"已完成。");return
+  if str(selection.get("status","manual"))!="step":handoff(b,str(selection.get("reason","请手动处理当前任务步骤。")));return
+  step=selection.get("step",{})
+  if not safe_step(step):handoff(b,"此步骤包含选择、消费、战斗或未审核动作，请手动处理后重新启动。");return
+  var npc:Dictionary=b.original_quests.npc_by_id(str(step.get("npc_id","")))
+  if npc.is_empty():handoff(b,"原任务人物当前不可用。");return
+  var map_id:int=b.automation.position_map
+  var origin:Vector2i=b.automation.position_cell
+  if not b.quest_arrival.has_arrival(b,map_id,origin):handoff(b,"当前原路到达资格已失效，请手动沿原入口重新进入后启动。");return
+  var offset:=origin-Vector2i(int(npc.cell[0]),int(npc.cell[1]))
+  if map_id==int(npc.map_id) and maxi(absi(offset.x),absi(offset.y))<=2:
+   if b.original_quests.branch_for(npc,b.session._profile)!=step.source.branch_data:handoff(b,"原任务分支已经变化，请手动处理。");return
+   var denied:String=b.quest_arrival.check_action(b,npc,step.source.branch_data,str(step.source.type))
+   if not denied.is_empty():handoff(b,denied);return
+   navigation.clear()
+   var reply:Dictionary=b.original_quests.talk(b,str(npc.id))
+   if not reply.get("ok",false):handoff(b,str(reply.get("reason","原对话失败。")));return
+   dialogue_choices=step.get("auto_choices",["ok"] if str(step.source.type)=="MESSAGE" else ["yes","ok"]).duplicate()
+   phase="strict_dialogue"
+   strict_dialogue_reply(b,reply)
+   return
+  var point:Dictionary=navigation.next(b,npc)
+  if point.is_empty() or not navigation.validate(b,point):handoff(b,"没有可连续步行的原路线；请手动处理原门或当前位置后重新启动。");return
+  var changed:bool=int(point.map_id)!=map_id
+  if point.has("portal"):
+   var passage:Dictionary=b._cmd_check_passage({"from_map":map_id,"to_map":int(point.map_id)})
+   if not passage.get("ok",false):handoff(b,str(passage.get("reason","原入口拒绝通行。")));return
+  b.automation.position_changed(int(point.map_id),Vector2i(int(point.cell[0]),int(point.cell[1])),changed,"walk")
+  if not b.quest_arrival.has_arrival(b,int(point.map_id),b.automation.position_cell):handoff(b,"原路线资格已变化，停止推进。");return
+  target={"map_id":int(point.map_id),"cell":point.cell.duplicate()}
+  emit_position(b,target)
+  if changed:
+   navigation.clear()
+   phase="travel" if restored else "landing"
+   waited=0.0
+  else:
+   var encounter:Dictionary=b._cmd_field_step({"map_id":map_id,"cell":point.cell.duplicate(),"encounter":true})
+   if encounter.get("battle",false):start_battle(b);return
+  message="沿原路线步行前往"+str(npc.get("name","任务人物"))+"；沿途普通遇敌自动战斗后继续。"
+  b.publish()
+  return
+ if phase=="strict_dialogue":
+  var pending:Dictionary=b.original_quests.pending
+  if pending.get("branch",{})!=step.source.branch_data or dialogue_choices.is_empty():handoff(b,"原对话已变化，请手动处理。");return
+  var before_map:int=b.automation.position_map
+  var before_cell:Vector2i=b.automation.position_cell
+  var reply:Dictionary=b.original_quests.choose(b,str(pending.get("token","")),str(dialogue_choices.pop_front()))
+  if not reply.get("ok",false):handoff(b,str(reply.get("reason","原交易失败。")));return
+  strict_dialogue_reply(b,reply)
+  if running and (before_map!=b.automation.position_map or before_cell!=b.automation.position_cell):
+   target={"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}
+   navigation.clear()
+   emit_position(b,target)
+   phase="travel" if restored else "landing"
+   waited=0.0
+  b.publish()
+func strict_dialogue_reply(b,reply:Dictionary)->void:
+ if not reply.has("dialogue"):
+  phase="travel"
+  navigation.clear()
+  b.publish()
+  return
+ var dialogue:Dictionary=reply.dialogue
+ if dialogue.has("kind") or dialogue_choices.is_empty():handoff(b,"此对话需要玩家选择，请手动处理后重新启动。");return
+ var choices:Array=dialogue.get("choices",[])
+ var next:=str(dialogue_choices[0])
+ # yes/no is the reviewed ordinary transaction confirmation; any reward
+ # choice, input field or extra alternative is never auto-accepted.
+ var ids:Array=choices.map(func(choice):return str(choice.get("id","")))
+ if not ((next=="yes" and ids==["yes","no"]) or (next=="ok" and ids==["ok"])):handoff(b,"此对话需要玩家选择，请手动处理后重新启动。");return
+ message="准备确认已审核的原送物步骤。"
  b.publish()
