@@ -6,6 +6,10 @@ extends RefCounted
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const LoginScreen = preload("res://scripts/login_screen.gd")
 const QUEST_RECEIPT_FIELDS=["quest_run_id","quest_step_id","quest_revision","quest_segment_id","quest_position_seq"]
+var quest_prefix:Array=[]
+var quest_prefix_id:=""
+var quest_prefix_count:=0
+var quest_follow_interval:=0.0
 var quest_position_epoch:=0
 var quest_handshake_pending:=false
 var quest_handshake_sent:=false
@@ -29,7 +33,7 @@ func _server_url() -> String:
 	return ""
 
 func report_position() -> bool:
-	if game.data.is_empty() or game.area_transition_busy or game.moving:return false
+	if game.data.is_empty() or game.area_transition_busy or game.moving or not quest_prefix.is_empty():return false
 	if not game.link.is_local() and not game.link.online:return false
 	var command:Dictionary={"type":"report_position","map_id":int(game.data.map_id),"cell":[game.cell.x,game.cell.y],"client":game._client_id}
 	var auto:Dictionary=game.state.derived.get("quest_auto",{})
@@ -56,6 +60,7 @@ func report_position() -> bool:
 	return true
 
 func clear_quest_receipt()->void:
+	quest_prefix=[];quest_prefix_id="";quest_prefix_count=0;quest_follow_interval=0.0
 	quest_position_epoch+=1
 	game.set_meta("quest_position_receipt",{})
 
@@ -75,10 +80,42 @@ func accept_quest_position(event:Dictionary)->bool:
 	if previous.get("quest_run_id","")==event.get("quest_run_id","") and int(previous.get("seq",-1))>=int(event.quest_position_seq):return false
 	var receipt:Dictionary=event.duplicate(true)
 	receipt.seq=event.quest_position_seq
-	quest_position_epoch+=1
+	if previous.get("quest_segment_id","")!=event.get("quest_segment_id","") or previous.get("quest_revision",-1)!=event.get("quest_revision",-1):quest_position_epoch+=1
+	queue_committed_prefix(receipt,previous)
 	game.set_meta("quest_position_receipt",receipt)
 	if is_instance_valid(game.quest_helper_travel):game.quest_helper_travel.auto_reported=false
 	return true
+
+## Keep only cells already committed by the server. A later prefix extends
+## this queue; it cannot replace the remaining bends with a straight shortcut.
+func queue_committed_prefix(receipt:Dictionary,previous:Dictionary)->void:
+	var segment:Dictionary=receipt.get("quest_segment",{})
+	if segment.get("kind","")!="public_stride":
+		quest_prefix=[];quest_prefix_id="";quest_prefix_count=0;quest_follow_interval=0.0
+		return
+	var cells:Array=segment.get("cells",[])
+	var id:String=str(receipt.quest_segment_id)
+	if id!=quest_prefix_id:
+		# Another device may acknowledge faster than this observer can render.
+		# Preserve already committed bends across contiguous segments as well.
+		var continuous:bool=previous.get("quest_run_id")==receipt.get("quest_run_id") and previous.get("quest_revision")==receipt.get("quest_revision") and previous.get("quest_step_id")==receipt.get("quest_step_id") and previous.get("map_id")==segment.get("from_map") and previous.get("cell")==segment.get("from_cell")
+		if not continuous:quest_prefix=[]
+		quest_prefix_count=0;quest_prefix_id=id
+		if not continuous and not game.moving:
+			# A newly connected observer can already be on a committed prefix cell.
+			for index in range(cells.size()):
+				if int(game.data.get("map_id",-1))==int(cells[index].map_id) and game.cell==Vector2i(int(cells[index].cell[0]),int(cells[index].cell[1])):quest_prefix_count=index+1
+		# A cold observer starts at the confirmed origin before drawing the bend.
+		if int(game.data.get("map_id",-1))!=int(segment.from_map):
+			quest_prefix.append([int(segment.from_map),Vector2i(int(segment.from_cell[0]),int(segment.from_cell[1]))])
+	for index in range(quest_prefix_count,cells.size()):
+		var point:Dictionary=cells[index]
+		quest_prefix.append([int(point.map_id),Vector2i(int(point.cell[0]),int(point.cell[1]))])
+	quest_prefix_count=cells.size()
+	quest_follow_interval=maxf(0.01,float(segment.get("interval_seconds",GameScene.STEP_TIME)))
+
+func follow_interval()->float:
+	return quest_follow_interval if quest_follow_interval>0.0 else GameScene.STEP_TIME
 
 func sync_quest_receipt()->void:
 	if not game.state.derived.get("quest_auto",{}).get("detached",false):quest_handshake_sent=false
@@ -100,6 +137,9 @@ func sync_quest_receipt()->void:
 ## Walks (one cell) or jumps to where another device put the character, and
 ## loads its map when that differs. Returns true while a mirrored move runs.
 func _step_follow() -> bool:
+	if not quest_prefix.is_empty():
+		while not quest_prefix.is_empty() and quest_prefix.front()==[int(game.data.map_id),game.cell]:quest_prefix.pop_front()
+		game._follow=[] if quest_prefix.is_empty() else quest_prefix.front().duplicate()
 	if game._follow.is_empty() or game.area_transition_busy or game.battle_view.visible:return false
 	var map_id: int = game._follow[0]
 	var target: Vector2i = game._follow[1]
@@ -351,7 +391,7 @@ func _on_backend_message(event: Dictionary) -> void:
 				if not accept_quest_position(event):return
 			else:clear_quest_receipt()
 			if str(event.get("client",""))!=game._client_id:
-				game._follow = [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
+				game._follow = quest_prefix.front().duplicate() if not quest_prefix.is_empty() else [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
 				game.pending_talk = false
 				game.path.clear()
 				# "party": the server moved this 组队 member after its leader.
