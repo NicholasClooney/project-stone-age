@@ -50,10 +50,14 @@ def suite_timeout(name):
     # Water transactions: 310.610 s (init 22.488 + route/gates 139.569 + transactions/LAN 148.553).
     # Water UI: 367.194 s (walking 325.562 + battle 8.238 + remaining 33.394).
     # Jan UI: 248.932 s; route: 257.920 s (three independent original guard routes/save retries).
+    # Delivery routes: six jobs / 7,082 real steps; serial 225.64 s (169 natural battles).
+    # Controlled eight-suite batch: 210.09 s (141 battles), only 15.22 s of eight-way overlap.
+    # Full eight-job run hit 300 s at final job 477/882 steps; ~320-330 s projected, not measured.
+    # 420 s leaves ~90-100 s for sustained load/RNG without shortening routes or changing other budgets.
     # Exact names only; every other suite retains TIMEOUT (300 s).
     return {"transmigration_wind_ui_test": 480, "transmigration_water_test": 420,
             "transmigration_water_ui_test": 480, "jan_cave_ui_test": 360,
-            "jan_cave_route_test": 300}.get(name, TIMEOUT)
+            "jan_cave_route_test": 300, "quest_delivery_routes_test": 420}.get(name, TIMEOUT)
 
 
 def suites_from_test_sh():
