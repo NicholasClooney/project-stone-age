@@ -26,6 +26,7 @@ var now := 10000
 var battle_now := 500000
 var dir := ""
 var _hubs := 0
+var fixture_seed:=int(OS.get_environment("LAN_PARTY_AUTO_SEED")) if not OS.get_environment("LAN_PARTY_AUTO_SEED").is_empty() else 4101
 
 func _initialize() -> void:call_deferred("run")
 
@@ -49,6 +50,7 @@ static func remove_tree(folder: String) -> void:
 	DirAccess.remove_absolute(folder)
 
 func run() -> void:
+	print("LAN PARTY AUTO seed=",fixture_seed," started=",Time.get_unix_time_from_system())
 	dir = "user://lan-party-auto-test-%d" % OS.get_process_id()
 	remove_tree(dir)
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -103,6 +105,8 @@ func party_hub(names: Array = ["Alice","Bob","Cid"]) -> Array:
 	return [server,wire]
 
 func setup(server, id: String, hp: int = 5000) -> void:
+	server.backends[id].encounter_rng.seed=fixture_seed+_hubs*10+["alice","bob","cid"].find(id)
+	server.backends[id].training_pool_rng.seed=fixture_seed+_hubs*10+["alice","bob","cid"].find(id)
 	server.backends[id].session.set_automation_settings({"training":{"borrow_troops":false}}) # Local turn/healing fixtures; borrowed LAN is tested separately.
 	var session = server.backends[id].session
 	var player: Dictionary = session._profile.player
@@ -377,7 +381,17 @@ func budget() -> void:
 		if int(alice.battles)>=3:break
 	check(int(alice.battles)>=3 and alice.running,"compact frames fight several party battles without waiting on any device (%d)" % int(alice.battles))
 	check(int(server.backends.bob.session._profile.player.xp)>0,"the members are paid each time")
-	server.handle(3,{"type":"set_automation_settings","settings":{"party":{"auto":false}}})
+	# A wall-clock compact frame may end between troops or mid-turn. Exercise
+	# the supported active-battle switch deterministically, not by scheduler luck.
+	check(drive(server,func():
+		var entry:=entry_of(server,"alice")
+		return not entry.is_empty() and bool(entry.session._state.active)),"Cid switches during a real active party battle")
+	var current:=entry_of(server,"alice")
+	var pending:Dictionary=server.backends.cid.session._pending.duplicate(true)
+	var changed:Dictionary=server.handle(3,{"type":"set_automation_settings","settings":{"party":{"auto":false}}})
+	print("LAN PARTY SWITCH seed=",fixture_seed," battle_seed=",current.session.rng_seed," turn=",current.session._state.turn," ack=",changed)
+	check(changed.get("ok",false) and server.party_auto("cid").is_empty(),"Cid manual switch is acknowledged and applied during battle")
+	check(server.backends.cid.session._pending==pending,"Changing settings preserves Cid's pending battle")
 	check(drive(server,func():return alice.party_waiting()),"with Cid back to commanding by hand the run soon waits for him")
 	check(server.share_budget()==0,"a waiting run does not count as busy")
 	server.handle(1,{"type":"auto_stop"})
@@ -413,6 +427,7 @@ func client() -> void:
 	server.share_dir = ""
 	root.add_child(server)
 	check(server.start(),"a hub for the client")
+	var switch_replies:Dictionary={}
 	var ws = WsServer.new(server,0,"127.0.0.1")
 	root.add_child(ws)
 	check(ws.start()==OK,"it listens")
@@ -457,6 +472,32 @@ func client() -> void:
 	check(await Wait.until(self,func():return game.state.battle_open and panel.auto_line.visible),"Alice meets enemies: Bob sees the status line")
 	check(not view.visible and panel.auto_text.text.begins_with("组队战斗 · 自动 · 第 1 回合"),"not the battle view: %s" % panel.auto_text.text)
 	check(server.party_battles.fighting.bob.session.auto_slots.has(1),"his slot commands itself from his preset")
+	var bob_pending:Dictionary=server.backends.bob.session._pending.duplicate(true)
+	panel.auto_box.button_pressed=false
+	var off_seq:int=game.link._seq
+	observe_reply(game.link,off_seq,switch_replies)
+	check(await Wait.until(self,func():return switch_replies.has(off_seq)),"Real WS mid-battle manual toggle ACK arrives")
+	check(switch_replies.get(off_seq,{}).get("ok",false),"Real WS accepts manual mode without ending battle")
+	check(await Wait.until(self,func():return server.party_auto("bob").is_empty() and not panel.party_setting("auto") and not panel.auto_box.button_pressed and view.visible and not panel.auto_line.visible and not server.party_battles.fighting.bob.session.auto_slots.has(1)),"Server slot, profile switch and manual battle presentation agree")
+	check(server.backends.bob.session._pending==bob_pending,"WS setting transaction leaves live battle pending intact")
+	panel.auto_box.button_pressed=true
+	var on_seq:int=game.link._seq
+	observe_reply(game.link,on_seq,switch_replies)
+	check(await Wait.until(self,func():return switch_replies.has(on_seq)),"Real WS mid-battle auto toggle ACK arrives")
+	check(switch_replies.get(on_seq,{}).get("ok",false),"Real WS accepts automatic mode again in same battle")
+	check(await Wait.until(self,func():return not server.party_auto("bob").is_empty() and panel.party_setting("auto") and panel.auto_box.button_pressed and server.party_battles.fighting.bob.session.auto_slots.has(1)),"Server and UI agree after restoring battle automation")
+	var real_save_path:String=server.backends.bob.save_path
+	server.backends.bob.save_path=dir.path_join("missing-settings-parent/bob.json")
+	panel.auto_box.button_pressed=false
+	var fail_seq:int=game.link._seq
+	observe_reply(game.link,fail_seq,switch_replies)
+	check(await Wait.until(self,func():return switch_replies.has(fail_seq)),"Real failed settings write returns WS ACK")
+	check(not switch_replies.get(fail_seq,{}).get("ok",true),"Actual persistence failure remains rejected")
+	check(await Wait.settle(self,game),"Failed toggle settles before checking profile and UI")
+	check(await Wait.until(self,func():return not server.party_auto("bob").is_empty() and panel.party_setting("auto") and panel.auto_box.button_pressed),"Failed toggle rolls back server and UI to automatic mode")
+	check(server.backends.bob.session._pending==bob_pending,"Failed setting save also preserves pending battle")
+	server.backends.bob.save_path=real_save_path
+
 	var state: Dictionary = server.backends.alice.battle.snapshot()
 	server.handle(900001,{"type":"battle_command","action":"attack","target":0,"battle_id":state.battle_id,"turn":state.turn,"slot":0})
 	check(await Wait.until(self,func():return panel.auto_text.text.contains("第 2 回合") or not bool(game.state.battle.get("active",true))),"Alice's command alone resolves the turn; his line follows it: %s" % panel.auto_text.text)
@@ -479,3 +520,10 @@ func client() -> void:
 	server.shut_down()
 	server.queue_free()
 	await process_frame
+
+# Observe the actual WS response while retaining the panel's original callback.
+func observe_reply(link,seq:int,replies:Dictionary) -> void:
+	var original:Callable=link._callbacks[seq]
+	link._callbacks[seq]=func(reply:Dictionary):
+		replies[seq]=reply.duplicate(true)
+		original.call(reply)
