@@ -321,9 +321,9 @@ exclude the wrapper and external image-view service; they cannot reconstruct
 previous-window CPU or attribute whole-machine load. Batches contain at most
 one twelve-body pose; no full-corpus decode/render or repeat green test ran.
 
-## Rear view and a partial-reference boundary correction: 431 drafts
+## Rear view and a partial-reference boundary correction: 429 unique drafts
 
-Pose 032 adds twelve drafts (431 total, 3985 absent, zero complete semantic
+Pose 032 adds twelve drafts (429 total, 3987 absent, zero complete semantic
 receipts). All original/change pairs and actual final revision crops were
 viewed. Naked 100360 rear view shows red on both visible wings; the yellow
 mount's dark olive left wing is therefore drafted as dorsal shadow material,
@@ -348,9 +348,9 @@ The latest pose032 outputs are `pose032-cheek-material-v2` for 251059,
 `pose032-cheek-final` for the other nine. Substantial gray cheek and yellow
 contact regions remain unresolved; no semantic approval or integration follows.
 
-## Swept rear wings, highlights and target-head counterexample: 443 drafts
+## Swept rear wings, highlights and target-head counterexample: 441 unique drafts
 
-Pose 033 adds twelve drafts (443/4416, 3973 absent, zero complete receipts).
+Pose 033 adds twelve drafts (441/4416, 3975 absent, zero complete receipts).
 All twelve source/change pairs, ten third-reference revision crops and six
 final revision crops were independently viewed. Two primary reference images
 each receive 22 additional explicitly spatial dorsal-highlight changes on
@@ -370,3 +370,24 @@ revision crops in `pose033-final-revision` include these three restorations,
 the two primary references and the third reference's own exposed region.
 The approved provenance remains draft: matching source colours, even with
 multiple independently outlined references, is not semantic proof.
+
+
+## Count correction and restored prior sample protection
+
+The first pose032/033 totals double-counted 251059 and 272283, already present
+in the initial sample book. The independent hash-export intersection assertion
+caught this before a hash file was produced. The corrected distinct total is
+441 = 36 sample + 405 pose rules; 3975 bitmaps are absent. The earlier 443
+private report and commit wording are retained as history, explicitly superseded.
+The two records now live only in the sample book. Prior independently outlined
+sample protection was restored, except for the 66 separately inspected white/gray
+cheek pixels of 251059 that refine its older conservative envelope.
+
+The resulting two revision crops were viewed: 157 pixels in 251059 and 283 in
+272283 return to their original values. These include clearly visible dragon
+wing-root/back areas inside the old broad protective outline; they are unresolved
+dragon colour, not newly identified rider. That conservative coverage needs
+further independent local refinement. Current outputs for both deduplicated
+records are in `pose032-deduplicated`; other pose032 outputs retain the source
+listed above, and pose033 outputs remain unchanged. No semantic approval is
+inferred from restored protection or from eliminating duplicate rule entries.
