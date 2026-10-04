@@ -29,7 +29,13 @@ func run() -> void:
 	if not await click(world.helper_menu.find_child("HelperQuest",true,false)):return
 	if not await click(world.quest_helper_menu.find_child("QuestHelper_2",true,false)):return
 	if not check(model().title=="猜谜3兄弟" and model().steps.size()>=5,"Original job2 title and real step list published remotely"):return
-	if not check(world.quest_helper_menu.find_child("QuestAutoStart_2",true,false)==null,"No unauthorized auto44 control"):return
+	var source_entry:Dictionary=world.state.derived.get("quest_auto",{}).get("source_entry",{})
+	var auto_start=world.quest_helper_menu.find_child("QuestAutoStart_2",true,false)
+	var source_reason=world.quest_helper_menu.find_child("QuestAutoSourceReason",true,false)
+	if not check(not 2755 in world.session.snapshot().original_items and int(world.data.get("map_id",-1))!=811,"Original helper fixture still lacks a ticket and is outside the public lobby"):return
+	if not check(int(source_entry.get("job_id",-1))==2 and source_entry.get("enabled",false) and not source_entry.get("can_start",true),"Authority exposes auto44 but denies this original helper fixture"):return
+	if not check(is_instance_valid(auto_start) and auto_start.disabled,"Auto44 control is visible but disabled for unmet prerequisites"):return
+	if not check(is_instance_valid(source_reason) and not str(source_entry.get("reason","")).is_empty() and source_reason.text==str(source_entry.reason),"Disabled auto44 displays the exact authoritative admission reason"):return
 	await proof("390x844-helper-entry-detail")
 	if not await click(visit_button("golden44:buy:2755","arrival",2)):return
 	if not await ready(func():return int(world.data.get("map_id",-1))==2020 and not world.area_transition_busy and not world.moving and not world.quest_helper_travel.active,"Helper stops at public ticket entrance"):return
