@@ -133,6 +133,8 @@ var resume_clock: Callable = Time.get_ticks_msec
 var resume_writes := 0
 ## Successful persistence boundaries for synchronous quest transactions.
 var quest_save_serial:=0
+# Server-only dynamic scope. Never accepted from commands or serialized.
+var _quest_source_call:Dictionary={}
 var _resume_key := ""
 var _resume_written_msec := -1
 static var _map_names: Dictionary = {}
@@ -202,6 +204,10 @@ func load_profile(path: String) -> bool:
 	return true
 
 func handle(command: Dictionary) -> Dictionary:
+	var source_scope:Dictionary=_quest_source_call
+	var source_internal:bool=quest_auto.internal
+	if not source_scope.is_empty():quest_auto.internal=false
+	_quest_source_call={}
 	_depth += 1
 	stationary.diagnostic_command = command
 	var reply := _handle(command)
@@ -211,6 +217,8 @@ func handle(command: Dictionary) -> Dictionary:
 	_depth -= 1
 	_record_releases()
 	_flush()
+	_quest_source_call=source_scope
+	if not source_scope.is_empty():quest_auto.internal=source_internal
 	return reply
 
 ## Appends the pets released or caught by the last command or tick to
@@ -1260,6 +1268,9 @@ func presence_state() -> Dictionary:
 # ---- persistence and events ------------------------------------------------
 
 func save() -> bool:
+	return _save_profile_boundary()
+
+func _save_profile_boundary() -> bool:
 	if save_path.is_empty():
 		quest_save_serial+=1
 		return true
@@ -1293,15 +1304,90 @@ func emit_event(message: Dictionary) -> void:
 
 func _emit(message: Dictionary) -> void:
 	message.v = PROTOCOL
+	var queued:Dictionary=message
+	var source:Dictionary=_quest_source_call
+	if not source.is_empty() and source.get("saved",false) and not source.get("position_claimed",false) and message.get("type")=="position" and message.get("client","")=="":
+		var warp:Array=source.get("warp",[])
+		if warp.size()==3 and message.get("map_id")==warp[0] and message.get("cell")==[warp[1],warp[2]]:
+			source.position_claimed=true
+			queued={"_source_position":source,"message":message}
 	if _depth > 0:
-		_queue.append(message)
+		_queue.append(queued)
 		return
+	_deliver_event(queued)
+
+func _deliver_event(queued:Dictionary)->void:
+	var message:Dictionary=queued
+	if queued.has("_source_position"):
+		var source:Dictionary=queued._source_position
+		message=queued.message
+		if quest_source_call_live(source):
+			message=quest_auto.source_position_packet(self,source,message)
+	# Observers are independent manual calls, even at depth zero. They must
+	# never inherit a save capability, suppress a manual tail or steal a Warp.
+	var source_scope:Dictionary=_quest_source_call
+	var source_internal:bool=quest_auto.internal
+	if not source_scope.is_empty():quest_auto.internal=false
+	_quest_source_call={}
 	event.emit(message)
+	_quest_source_call=source_scope
+	if not source_scope.is_empty():quest_auto.internal=source_internal
 
 func _flush() -> void:
 	if _depth > 0:return
 	while not _queue.is_empty():
-		event.emit(_queue.pop_front())
+		_deliver_event(_queue.pop_front())
+
+## Called only by the runner's dormant internal source entry points.
+func call_quest_source(frame,proposal:Dictionary,choice:Dictionary={}) -> Dictionary:
+	if not _quest_source_call.is_empty() or not quest_auto.source_live(frame) or not quest_auto.internal:return _reject("原服务调用身份已失效。")
+	if frame.owner_profile!={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}:return _reject("原服务所属角色已经变化。")
+	var checked:Dictionary=quest_auto.Source.validate_step(self,2,proposal)
+	if not checked.ok or proposal!=quest_auto.step:return _reject("原服务步骤已变化。")
+	if not choice.is_empty() and not frame.claim_choice(choice):return _reject("原服务回复未绑定当前公开页。")
+	if choice.is_empty() and (not frame.page.is_empty() or not frame.consumed.is_empty()):return _reject("原服务窗口不可重开。")
+	var call=frame.begin_call(quest_auto.identity.checkpoint(),quest_auto.connection)
+	if call==null:return _reject("原服务调用已在进行。")
+	var source:Dictionary={"frame":frame,"call":call,"step":proposal.duplicate(true),"identity":quest_auto.identity.checkpoint(),"connection":quest_auto.connection,"character_id":str(session._profile.get("character_id","")),"profile_id":str(session._profile.get("profile_id","")),"saved":false,"origin":{"map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y]}}
+	_quest_source_call=source
+	var reply:Dictionary=original_quests.talk(self,str(proposal.npc_id)) if choice.is_empty() else original_quests.choose(self,str(choice.token),str(choice.choice),str(choice.get("text","")))
+	frame.close_save_window(call)
+	if not reply.get("ok",false):frame.cancel()
+	if reply.get("dialogue") is Dictionary:
+		frame.receive_page(call,reply.dialogue,str(original_quests.pending.get("token","")))
+	var result:Dictionary=frame.complete_call(call,quest_auto.identity.checkpoint(),quest_auto.connection)
+	result.continued=quest_source_call_live(source)
+	result.durable=bool(source.get("durable",false))
+	result.candidate_sha=str(source.get("candidate_sha",""))
+	_quest_source_call={}
+	# Clean only pages issued by this frame, never a newer manual window.
+	if not result.continued and frame.owns_pending(str(original_quests.pending.get("token",""))):original_quests.pending={}
+	reply.source_commit=result
+	return reply
+
+func capture_quest_source_call(npc_id:String)->Dictionary:
+	return _quest_source_call if not _quest_source_call.is_empty() and str(_quest_source_call.step.get("npc_id",""))==npc_id else {}
+
+func quest_source_call_live(source:Dictionary)->bool:
+	return not source.is_empty() and quest_auto.source_live(source.frame) and source.frame.matches(source.identity,int(source.connection)) and str(session._profile.get("character_id",""))==str(source.character_id) and str(session._profile.get("profile_id",""))==str(source.profile_id)
+
+func save_quest_source_transaction(npc_id:String,branch:Dictionary,phase:String)->bool:
+	if _quest_source_call.is_empty():return save()
+	var source:Dictionary=capture_quest_source_call(npc_id)
+	if source.is_empty() or not quest_source_call_live(source) or source.saved or not source.frame.can_save(source.call) or not quest_auto.Source.transaction(source.step,branch,phase):return false
+	# Snapshot the actual transaction candidate at its one synchronous save
+	# boundary. Generic observer saves cannot update this record.
+	var candidate:String=JSON.stringify(session.snapshot())
+	if not _save_profile_boundary():return false
+	source.saved=true
+	source.durable=not save_path.is_empty()
+	source.candidate_sha=candidate.sha256_text()
+	source.frame.record_saved(source.call,quest_save_serial)
+	var raw:String=str(branch.actions.get("Warp",""))
+	if not raw.is_empty():
+		var parts:PackedStringArray=raw.split(",")
+		source.warp=[int(parts[0]),int(parts[1]),int(parts[2])]
+	return true
 
 func _derived() -> Dictionary:
 	# battle_pets: pet_id -> reason for the open battle's participants, which

@@ -3,12 +3,14 @@ extends RefCounted
 const Motion=preload("res://server/quest_auto_motion.gd")
 const Source=preload("res://server/quest_auto_source_actions.gd")
 var identity:Dictionary={}
+var owner_profile:Dictionary={}
 var connection:=-1
 var npc_id:=""
 var source_id:=""
 var page:Dictionary={}
 var consumed:Dictionary={}
 var produced:Dictionary={}
+var _reserved_choice:Dictionary={}
 var _call:RefCounted
 var _publication_depth:=0
 var _saved_serial:=-1
@@ -74,9 +76,17 @@ func take_choice(value:Dictionary,peer:int,token:String,choice:String,text:Strin
  # only a genuinely new public reply may ever be attempted again.
  consumed[token]=true
  page.clear()
- return {"token":token,"choice":choice,"text":text}
+ _reserved_choice={"token":token,"choice":choice,"text":text}
+ return _reserved_choice.duplicate(true)
+func claim_choice(value:Dictionary)->bool:
+ if _reserved_choice.is_empty() or value!=_reserved_choice:return false
+ _reserved_choice={}
+ return true
+func can_save(call:RefCounted)->bool:
+ return call!=null and call==_call and _save_open and _publication_depth==0
 func cancel()->void:
  _cancelled=true
+ _reserved_choice={}
  page.clear()
 func detach()->void:
  _detached=true

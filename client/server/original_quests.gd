@@ -246,6 +246,7 @@ func open_branch(backend, npc:Dictionary, profile:Dictionary, branch:Dictionary)
 func choose(backend, token: String, choice: String, text: String = "", selected_ids: Variant = []) -> Dictionary:
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
 	var current: Dictionary=pending.duplicate(true)
+	var source_call:Dictionary=backend.capture_quest_source_call(str(current.npc.id))
 	pending={}
 	var npc: Dictionary=current.npc
 	if not allowed(backend,npc):return {"ok":false,"reason":"位置或活动状态已经改变。"}
@@ -299,6 +300,7 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
 	var result := transact(backend,profile,branch,phase,"",str(npc.id),current.get("selected_pet_ids",[]))
 	if not result.ok:return result
+	if not source_call.is_empty() and not backend.quest_source_call_live(source_call):return {"ok":true,"closed":true}
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
@@ -401,7 +403,7 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 		if branch.actions.has("Charm"):candidate.player.charm=clampi(int(candidate.player.get("charm",0))+int(branch.actions.Charm),0,100)
 		if branch.actions.has("Warp"):Brothers.warp_profile(candidate,str(branch.actions.Warp))
 	backend.session._profile=candidate
-	if not backend.save():
+	if not backend.save_quest_source_transaction(npc_id,branch,phase):
 		backend.session._profile=profile
 		return {"ok":false,"reason":"save_failed"}
 	backend.quest_arrival.action_committed(backend,source_npc,branch,phase)

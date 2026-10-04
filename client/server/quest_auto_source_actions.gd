@@ -144,9 +144,38 @@ static func validate_open(b,job_id:int,step:Dictionary)->Dictionary:
   elif npc.kind=="golden_bui_quiz" and not 2752 in profile.original_items:return denied("缺少猜谜参加票，请手动取得后继续。")
  else:
   var branch:Dictionary=step.source.branch_data
-  if b.original_quests.branch_for(npc,profile)!=branch:return denied("原兑换条件已经变化。")
+  if not same_source(b.original_quests.branch_for(npc,profile),branch):return denied("原兑换条件已经变化。")
   if step.source.policy=="golden44_claim_v1":
    if Rules.flag(profile,"now",44) or 2753 in profile.original_items:return denied("会员证已领取或已丢失，请手动核对。")
    if Rules.Session.bag_slots(profile)>=15:return denied("道具栏已满。")
   elif not Rules.flag(profile,"now",44) or not 2753 in profile.original_items or profile.pets.size()>=Rules.Session.PET_CAPACITY:return denied("会员证或宠物栏条件不满足。")
  return checked
+
+## Exact possible original transaction results, not a generic SERVICE grant.
+## These are public source action boundaries, independent of private questions
+## and opponent RNG. The original service still decides which result occurred.
+static func transaction(step:Dictionary,branch:Dictionary,phase:String)->bool:
+ if step.get("action")=="source_exchange":
+  return same_source(branch,step.source.branch_data) and phase==("REQUEST" if step.source.policy=="golden44_claim_v1" else "reward")
+ if step.get("action")!="source_service" or phase!="SERVICE" or not exact_keys(branch,["event","actions","texts"]) or branch.event!=-1 or branch.texts!={}:return false
+ var source:String=step.source.source_id
+ var actions:Dictionary=branch.actions
+ if GATES.has(source):
+  var gate:Array=GATES[source]
+  return actions=={"DelItem":"%d*1"%gate[3],"Warp":"%d,14,26"%gate[2]}
+ var rule:=recipe(source)
+ if rule.is_empty():return false
+ var map_id:int=int(rule.map_id)
+ var offset:int=map_id%20
+ var base:int=map_id-offset
+ var win:String="%d,%d,15"%[map_id,int(rule.cell[0])]
+ if rule.kind=="golden_bui_janken":
+  var lose:String="%d,%d,%d"%[map_id-1,20 if offset==7 else 27,22 if offset==7 else 21]
+  return actions=={"DelItem":"2751*1"} or actions=={"Warp":win} or actions=={"Warp":lose}
+ if actions=={"DelItem":"2752*1"}:return true
+ if offset==0:return actions=={"GetItem":"2754","Warp":win}
+ if actions=={"Warp":win}:return true
+ var failures:Dictionary={3:[2,20,22],5:[4,20,22],6:[5,27,21],8:[6,20,22],9:[1,27,21]}
+ if not failures.has(offset):return false
+ var point:Array=failures[offset]
+ return actions=={"Warp":"%d,%d,%d"%[base+int(point[0]),point[1],point[2]]}
