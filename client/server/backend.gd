@@ -1001,7 +1001,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			state.events.append((("随身已满，已存仓" if pending_before.has("capture_destination") else "只抓不练：Lv.1伙伴已留在旧仓库。") if str(pending_before.get("capture_destination","storage"))=="storage" else "只抓不练：Lv.1伙伴已加入随身。") if capture_only else "伙伴已加入宠物栏，可为它取名并选择出战。")
 		var saved_ok := save()
 		stationary.settled(self,state,saved_ok)
-		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.stop(self,"沿途战斗保存失败，停止自动任务。")
+		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.fail(self,"沿途战斗保存失败，停止自动任务。")
 		_publish()
 	if capture_only and not bool(state.get("active",true)) and not bool(state.get("settled",false)):
 		state.settlement_error = session.last_error if not session.last_error.is_empty() else "只抓不练捕获结算校验失败，已暂停，未发放奖励。"
