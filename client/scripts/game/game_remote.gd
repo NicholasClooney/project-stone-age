@@ -5,6 +5,10 @@ extends RefCounted
 ## the state; see docs/technical/game-scripts.md.
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const LoginScreen = preload("res://scripts/login_screen.gd")
+const QUEST_RECEIPT_FIELDS=["quest_run_id","quest_step_id","quest_revision","quest_segment_id","quest_position_seq"]
+var quest_position_epoch:=0
+var quest_handshake_pending:=false
+var quest_handshake_sent:=false
 var game: GameScene
 
 func _init(owner: GameScene) -> void:
@@ -24,11 +28,74 @@ func _server_url() -> String:
 		return "%s://%s:8781" % ["wss" if secure else "ws",str(host) if host is String and not str(host).is_empty() else "localhost"]
 	return ""
 
-func report_position() -> void:
+func report_position() -> bool:
+	if game.data.is_empty() or game.area_transition_busy or game.moving:return false
+	if not game.link.is_local() and not game.link.online:return false
 	var command:Dictionary={"type":"report_position","map_id":int(game.data.map_id),"cell":[game.cell.x,game.cell.y],"client":game._client_id}
+	var auto:Dictionary=game.state.derived.get("quest_auto",{})
 	var receipt:Dictionary=game.get_meta("quest_position_receipt",{})
-	if receipt.get("map_id",-1)==int(game.data.map_id) and receipt.get("cell",[])==command.cell and game._followed==[int(game.data.map_id),game.cell]:command.quest_position_seq=receipt.get("seq",-1)
+	if auto.get("running",false) and (auto.get("detached",false) or quest_handshake_pending):
+		if quest_handshake_sent:return false
+		var authority:Dictionary=game.state.automation.get("position",{})
+		if authority.get("map_id",-1)!=command.map_id or authority.get("cell",[])!=command.cell:return false
+		# Transport reconnection is an untagged authority-cell handshake. Never
+		# copy a prior socket's seq/segment into it, even at the same location.
+		clear_quest_receipt()
+		quest_handshake_pending=false
+		quest_handshake_sent=true
+	elif not receipt.is_empty() and receipt.get("map_id",-1)==command.map_id and receipt.get("cell",[])==command.cell and game._followed==[command.map_id,game.cell]:
+		if not quest_receipt_current(receipt,auto):return false
+		command.quest_position_seq=receipt.seq
+		for field in QUEST_RECEIPT_FIELDS:
+			if receipt.has(field):command[field]=receipt[field]
+	elif auto.get("running",false) and auto.has("motion"):
+		# A new client must receive this move's packet; snapshot identity is not
+		# a replacement capability for an old animation or missing packet.
+		return false
 	game.link.request(command)
+	return true
+
+func clear_quest_receipt()->void:
+	quest_position_epoch+=1
+	game.set_meta("quest_position_receipt",{})
+
+func quest_receipt_current(receipt:Dictionary,auto:Dictionary)->bool:
+	if not receipt.has("quest_run_id"):return true # old A server, seq only
+	if not auto.get("running",false) or (auto.get("detached",false) and not quest_handshake_sent):return false
+	if str(auto.get("run_id",""))!=str(receipt.quest_run_id):return false
+	var revision:=int(auto.get("revision",-1))
+	if revision>int(receipt.quest_revision):return false
+	if revision==int(receipt.quest_revision) and str(auto.get("step_id",""))!=str(receipt.quest_step_id):return false
+	return str(auto.get("phase","")) not in ["battle","waiting_reward","waiting_boss","manual","done"]
+
+func accept_quest_position(event:Dictionary)->bool:
+	var auto:Dictionary=game.state.derived.get("quest_auto",{})
+	if not quest_receipt_current(event,auto):return false
+	var previous:Dictionary=game.get_meta("quest_position_receipt",{})
+	if previous.get("quest_run_id","")==event.get("quest_run_id","") and int(previous.get("seq",-1))>=int(event.quest_position_seq):return false
+	var receipt:Dictionary=event.duplicate(true)
+	receipt.seq=event.quest_position_seq
+	quest_position_epoch+=1
+	game.set_meta("quest_position_receipt",receipt)
+	if is_instance_valid(game.quest_helper_travel):game.quest_helper_travel.auto_reported=false
+	return true
+
+func sync_quest_receipt()->void:
+	if not game.state.derived.get("quest_auto",{}).get("detached",false):quest_handshake_sent=false
+	var receipt:Dictionary=game.get_meta("quest_position_receipt",{})
+	if receipt.is_empty():return
+	var auto:Dictionary=game.state.derived.get("quest_auto",{})
+	if quest_receipt_current(receipt,auto) and (not auto.has("motion") or not auto.motion.is_empty()):return
+	clear_quest_receipt()
+	game._follow=[]
+	if game._following_step:
+		game._following_step=false
+		game.moving=false
+		game.logical_position=Vector2(game.cell)
+		game.player.position=game.project(game.logical_position)
+	# Resync only to the confirmed authority cell, never the cancelled tail.
+	var authority:Dictionary=game.state.automation.get("position",{})
+	if auto.get("running",false) and not authority.is_empty():game._follow=[int(authority.map_id),Vector2i(int(authority.cell[0]),int(authority.cell[1]))]
 
 ## Walks (one cell) or jumps to where another device put the character, and
 ## loads its map when that differs. Returns true while a mirrored move runs.
@@ -174,6 +241,9 @@ func _update_link_overlay() -> void:
 		game._link_status.text = "与 MacBook 上的服务器断开连接\n%s\n自动战斗和找宠会在服务器上继续。" % ("%d 秒后重试…" % retry if retry > 0 else "正在重连…")
 
 func _on_link_connected() -> void:
+	quest_handshake_sent=false
+	clear_quest_receipt()
+	quest_handshake_pending=game.state.derived.get("quest_auto",{}).get("running",false)
 	if is_instance_valid(game.login_screen):
 		game.login_screen.hide()
 		if bool(game.login_screen.last_login.get("created",false)):game.new_character = true
@@ -198,6 +268,16 @@ func _on_link_connected() -> void:
 	game.message.text = _offline_summary()
 
 func _on_link_disconnected() -> void:
+	quest_handshake_sent=false
+	clear_quest_receipt()
+	game._follow=[]
+	game._followed=[]
+	if game._following_step:
+		game._following_step=false
+		game.moving=false
+		game.logical_position=Vector2(game.cell)
+		if is_instance_valid(game.player):game.player.position=game.project(game.logical_position)
+	quest_handshake_pending=true
 	# The server sends everyone on the map again after the reconnect.
 	if is_instance_valid(game.remote_players):game.remote_players.reset()
 	if is_instance_valid(game.party_panel):game.party_panel.reset()
@@ -246,6 +326,7 @@ func _on_backend_message(event: Dictionary) -> void:
 			if game.battle_view.visible and event.state.has("party"):game.battle_view.update_party(event.state)
 		"battle_closed":game.present_battle_close(str(event.outcome))
 		"profile":
+			sync_quest_receipt()
 			if is_instance_valid(game.clone_button):game.clone_button.set_pressed_no_signal(bool(game.state.options.get("clone_squad",false)))
 			game._mark_ui_stale()
 			game._on_automation_settings()
@@ -266,7 +347,9 @@ func _on_backend_message(event: Dictionary) -> void:
 			game.last_adventure_message=str(event.get("text",""))
 			game.message.text=game.last_adventure_message
 		"position":
-			if event.has("quest_position_seq"):game.set_meta("quest_position_receipt",{"seq":event.quest_position_seq,"map_id":int(event.map_id),"cell":event.cell.duplicate()})
+			if event.has("quest_position_seq"):
+				if not accept_quest_position(event):return
+			else:clear_quest_receipt()
 			if str(event.get("client",""))!=game._client_id:
 				game._follow = [int(event.map_id),Vector2i(int(event.cell[0]),int(event.cell[1]))]
 				game.pending_talk = false

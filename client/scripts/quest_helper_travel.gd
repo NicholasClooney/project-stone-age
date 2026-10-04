@@ -152,8 +152,7 @@ func _process(_delta: float) -> void:
 		if not landing:auto_reported=false
 		var destination:Dictionary=world.state.automation.get("position",{}) if auto.get("detached",false) else auto.get("target",{})
 		if landing and not auto_reported and (str(auto.get("client",""))==world._client_id or auto.get("detached",false)) and not destination.is_empty() and not world.area_transition_busy and not world.moving and not world.data.is_empty() and int(world.data.map_id)==int(destination.map_id) and world.cell==Vector2i(int(destination.cell[0]),int(destination.cell[1])):
-			auto_reported=true
-			world.report_position()
+			auto_reported=world._remote.report_position()
 	else:
 		auto_reported=false
 		if phase!="auto_request":auto_requested=false

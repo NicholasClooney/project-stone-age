@@ -25,7 +25,8 @@ func prepare_wait(reset:bool)->bool:
 	var reply:Dictionary=backend_node.original_quests.talk(backend_node,str(npc.id))
 	backend_node.quest_auto.internal=false
 	backend_node.quest_auto.wait_reward(backend_node,reply)
-	backend_node.quest_auto.emit_position(backend_node,point)
+	# Fixture placement is not an automation move issued during reward wait.
+	backend_node.emit_event({"type":"position","map_id":point.map_id,"cell":point.cell.duplicate(),"client":"fixture"})
 	return check(backend_node.quest_auto.phase=="waiting_reward","Real original dialogue is waiting")
 func sync_wait()->bool:
 	if not check(await Wait.settle(self,world),"Reward snapshot settles"):return false

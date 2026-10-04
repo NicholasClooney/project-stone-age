@@ -148,10 +148,13 @@ func area_packs(map_id: int) -> Array:
 	return packs
 
 func _load_area_after_download(map_id: int, destination: Vector2i, needed: Array) -> void:
+	var position_epoch:int=game._remote.quest_position_epoch
+	var followed:bool=game._followed==[map_id,destination]
 	game.clear_input()
 	game.paused_input = true
 	var ok := await game.await_packs(needed,"地图 %s" % str(game.world_catalog.info(map_id).get("name",map_id)))
 	game.paused_input = false
+	if followed and position_epoch!=game._remote.quest_position_epoch:return
 	if ok:load_area_id(map_id,destination)
 	elif is_instance_valid(game.message):game.message.text = "地图素材下载失败，请稍后再试。"
 
