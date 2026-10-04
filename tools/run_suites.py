@@ -54,10 +54,15 @@ def suite_timeout(name):
     # Controlled eight-suite batch: 210.09 s (141 battles), only 15.22 s of eight-way overlap.
     # Full eight-job run hit 300 s at final job 477/882 steps; ~320-330 s projected, not measured.
     # 420 s leaves ~90-100 s for sustained load/RNG without shortening routes or changing other budgets.
+    # Original quest auto: full original walks and real remote client, serial 239.59 s.
+    # 480 s is selected load headroom; sustained parallel execution was not measured.
+    # Herb auto: serial 300.84 s (fixtures 98.65 + real remote route 201.05 + startup).
+    # 600 s provides chosen load headroom; no sustained-parallel timing is claimed.
     # Exact names only; every other suite retains TIMEOUT (300 s).
     return {"transmigration_wind_ui_test": 480, "transmigration_water_test": 420,
             "transmigration_water_ui_test": 480, "jan_cave_ui_test": 360,
-            "jan_cave_route_test": 300, "quest_delivery_routes_test": 420}.get(name, TIMEOUT)
+            "jan_cave_route_test": 300, "quest_delivery_routes_test": 420,
+            "original_quest_auto_test": 480, "original_herb_auto_test": 600}.get(name, TIMEOUT)
 
 
 def suites_from_test_sh():
