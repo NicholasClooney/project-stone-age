@@ -1119,6 +1119,28 @@ func _cmd_presented(command: Dictionary) -> Dictionary:
 	automation.presented(str(command.get("battle_id","")),int(command.get("turn",-1)))
 	return {"ok":true}
 
+## Internal-only original undersea permit transaction. No _cmd_ dispatcher entry.
+func commit_undersea_permit_gate(source_id:String,run_id:String,step_id:String,revision:int)->Dictionary:
+	if not quest_auto.running or not quest_auto.internal or quest_auto.phase!="travel" or run_id.is_empty() or step_id.is_empty() or quest_auto.identity.run_id!=run_id or quest_auto.identity.step_id!=step_id or quest_auto.identity.revision!=revision:return _reject("原守卫推进请求已过期。")
+	if battle_open or not session._pending.is_empty() or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return _reject("当前正忙，不能通过持证守卫。")
+	if quest_visit_guard.is_valid():
+		var reason:=str(quest_visit_guard.call())
+		if not reason.is_empty():return _reject(reason)
+	var checked:Dictionary=preload("res://server/quest_auto_permit_gate.gd").validate(self,source_id)
+	if not checked.get("ok",false):return checked
+	if not quest_auto.running or not quest_auto.internal or quest_auto.phase!="travel" or quest_auto.identity.run_id!=run_id or quest_auto.identity.step_id!=step_id or quest_auto.identity.revision!=revision:return _reject("原守卫推进请求已过期。")
+	if battle_open or not session._pending.is_empty() or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return _reject("当前状态已改变，不能通过持证守卫。")
+	var target:Dictionary=checked.target
+	var before:Dictionary=session.snapshot()
+	if not session.set_location(10202,int(target.cell[0]),int(target.cell[1])):return _reject("无法保存原守卫目的位置。")
+	if not save():
+		session._profile=before
+		return _reject("save_failed")
+	# Saving is the commit boundary. Even a cancellation observer inside save
+	# must not turn a committed source Warp into a fictitious failed transaction.
+	automation.position_changed(10202,Vector2i(int(target.cell[0]),int(target.cell[1])),false,"script")
+	return {"ok":true,"committed":true,"target":target}
+
 ## Authorize the guarded sea portal using this backend's current map and permit.
 func _cmd_check_passage(command: Dictionary) -> Dictionary:
 	var timed_reason:=TimePassage.check(quest_helper.places,automation.position_map,automation.position_cell,int(command.get("to_map",-1)))
