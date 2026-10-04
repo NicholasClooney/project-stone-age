@@ -13,7 +13,7 @@ import numpy as np
 from PIL import Image, ImageFilter
 from audit_red_dragon_recolor import align, digest, indices
 from import_legacy import Archive
-from recolor_red_dragon_samples import BODY, VENTRAL, masks, recolor, validate_source
+from recolor_red_dragon_samples import BODY, VENTRAL, DORSAL_HIGHLIGHT, masks, recolor, validate_source
 
 
 def row_runs(mask):
@@ -140,11 +140,15 @@ def run(source,ledger_path,rule_paths,pages,output,fill_enclosed=True,allow_sour
             ventral=np.zeros_like(dragon);underwing=np.zeros_like(dragon)
             for old,new in VENTRAL.items():ventral |= dragon & (original==old) & (red==new) & (original!=red)
             for old in BODY:underwing |= dragon & (original==old) & (red==old)
+            highlight=np.zeros_like(dragon)
+            for old,new in DORSAL_HIGHLIGHT.items():
+                highlight |= dragon & (original==old) & (red==new)
             cut=lambda a:a[y:y+h,x:x+w]
             rule={k:copy.deepcopy(record[k]) for k in ('source_rd_sha256','source_indices_sha256','geometry','slots')}
             rule.update(rider_envelopes=[],uncertain_polygons=[],dragon_envelopes=[],ventral_polygons=[],
                         rider_runs=[],uncertain_runs=row_runs(cut(~dragon)),dragon_runs=row_runs(cut(dragon)),
                         ventral_runs=row_runs(cut(ventral)),underwing_preserve_runs=row_runs(cut(underwing)),
+                        dorsal_highlight_runs=row_runs(cut(highlight)),
                         review_status='DRAFT: independent reference regions; target rider/occlusion not yet reviewed',
                         review='No colour majority. Conflicts rejected. Unknown includes rider and unresolved dragon, not a rider label.',
                         reference_regions={'pose_page':page_no,'bitmaps':used,'fill_enclosed_guard':fill_enclosed,'allow_source_variants':allow_source_variants,

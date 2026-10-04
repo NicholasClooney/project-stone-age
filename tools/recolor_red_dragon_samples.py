@@ -19,6 +19,10 @@ BODY = {**dict(zip(range(212,223), [224,225,226,227,228,229,230,231,232,233,233]
 VENTRAL = {**dict(zip(range(159,168), [212,213,214,215,216,217,218,80,81])),
            **dict(zip(range(175,192), [212,212,213,213,214,214,215,215,216,
                                       216,217,217,218,218,80,80,81]))}
+# Pale yellow edge highlights require their own reviewed dorsal region.
+# Both destination indices occur in original red-dragon bitmaps; this map is
+# intentionally not applied to every dragon pixel (eyes/claws share colours).
+DORSAL_HIGHLIGHT = {210: 222, 211: 223}
 
 
 def raster(size, polygons):
@@ -72,6 +76,12 @@ def recolor(pixels, rule, padding):
         output[dragon & ~underwing & (pixels == old)] = new
     for old,new in VENTRAL.items():
         output[ventral & ~underwing & (pixels == old)] = new
+    size = rule['geometry']['w'], rule['geometry']['h']
+    highlight = (raster(size, rule.get('dorsal_highlight_polygons', [])) |
+                 raster_runs(size, rule.get('dorsal_highlight_runs', [])))
+    highlight &= dragon & ~underwing & ~ventral
+    for old,new in DORSAL_HIGHLIGHT.items():
+        output[highlight & (pixels == old)] = new
     return output, (rider, unknown, dragon, ventral, underwing)
 
 

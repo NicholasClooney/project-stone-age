@@ -18,6 +18,18 @@ def rule():
 
 
 class SpatialContractTest(unittest.TestCase):
+    def test_dorsal_highlight_requires_explicit_region_and_keeps_protection(self):
+        p=np.full((12,12),211,np.uint8);p[0,0]=210
+        r=rule();r['ventral_polygons']=[[[9,0],[11,0],[11,2],[9,2]]]
+        self.assertTrue(np.array_equal(recolor(p,r,1)[0],p))
+        r['dorsal_highlight_polygons']=[[[0,0],[9,0],[9,11],[0,11]]]
+        out,(rider,unknown,dragon,ventral,wing)=recolor(p,r,1)
+        self.assertEqual(out[0,0],222);self.assertEqual(out[0,2],223)
+        self.assertTrue(np.array_equal(out[rider|unknown|ventral|wing],p[rider|unknown|ventral|wing]))
+        self.assertTrue(np.array_equal(out[:,10:],p[:,10:]))
+        r['dragon_envelopes']=[]
+        self.assertTrue(np.array_equal(recolor(p,r,1)[0],p))
+
     def test_protected_and_unknown_override_material(self):
         p=np.full((12,12),213,np.uint8);p[0,0]=0;p[0,1]=168;p[10,10]=159
         out,(rider,unknown,dragon,ventral,wing)=recolor(p,rule(),1)

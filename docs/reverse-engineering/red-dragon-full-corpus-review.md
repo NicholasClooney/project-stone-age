@@ -246,3 +246,44 @@ areas; these are explicitly unresolved dragon regions, not presumed rider.
 Contact-edge cleanup and per-bitmap semantic approval remain required across
 all drafts. No Godot, resource import, mapping enablement, main-asset write or
 live operation is included.
+
+## Rear-diagonal drafts and explicit dorsal highlights: 383 rules
+
+Poses 024–028 now add 60 independently inspected source/change drafts, bringing
+the distinct count to 383 (36 sample rules + 347 pose rules). 4033 bitmaps still
+have no rule and complete semantic receipts remain zero. This is not a release.
+The five new poses received local reference outlines, twelve-body source and
+actual-difference inspection, and inspection of every changed final revision
+crop. Evidence lives in `corpus-v1/pose024-*` through `pose028-*`.
+
+For pose 025 the two original references both obscure part of the dragon neck.
+An independently drawn partial neck reference in 278302 exposes that area.
+All ten changed target crops in `pose025-neck-v2-revision` were inspected;
+three final reference/local-region revisions were inspected separately.
+The first neck draft omitted the overlapping jaw material and is superseded by
+v2; candidate disagreement rejected those white pixels rather than guessing.
+The third reference is explicitly a partial semantic region, not a complete
+rider mask. Poses 026–028 separately protect hands at the jaw, inverted head
+shapes, garment fragments and near/far feet. There is no global lower-body
+restoration.
+
+A separate remaining-yellow cause was identified on the lower-left dorsal wing
+of 247985 and 266177: source palette indices 210 (255,255,95) and 211
+(255,255,63) are outside the original body map. A new optional spatial material
+region (`dorsal_highlight_polygons` / `dorsal_highlight_runs`) maps only those
+indices to 222 (245,86,0) and 223 (235,72,1), both present in the original
+100360 red-dragon bitmaps 120196/120254/120312/120370. The chosen tonal mapping
+is a project derivation, not an original shared-sprite palette swap. Only the
+explicit dorsal region is eligible, and dragon, rider, unknown, ventral and
+preserved-underwing priority still applies. This is not an automatic expansion
+of every rule's body palette. Existing rules without that region keep their
+outputs. The two reference edge revisions each affect eight independently
+viewed dorsal pixels (`pose028-highlight-revision`). Candidate propagation
+retains an explicit highlight interval and still requires per-body inspection.
+
+Generation receipts now also bind this optional palette. Twenty-one narrow
+Python contract checks pass, including same-index pixels inside/outside the
+highlight region, existing rider/unknown/ventral/wing protection and rejection
+when no dragon region authorizes the change. These checks do not certify art
+semantics. Unresolved contact colour and the remaining corpus still need work;
+no new semantic receipt, game mapping, import or live operation is included.

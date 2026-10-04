@@ -67,6 +67,7 @@ def generation_hash(rule, book):
         source_palette_sha256=book['source_palette_sha256'],
         effective_rider_boundary_dilation=padding,
         body_palette=generator.BODY,ventral_palette=generator.VENTRAL,
+        dorsal_highlight_palette=generator.DORSAL_HIGHLIGHT,
         generator_sha256=digest(Path(generator.__file__).read_bytes())))
 
 
