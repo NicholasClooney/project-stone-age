@@ -48,7 +48,7 @@ func model() -> Dictionary:
 	return world.state.derived.get("quest_helper",{})
 func refresh_key() -> String:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
-	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase","")),auto.get("can_continue",false),auto.get("revision",-1),auto.get("effective_mode",""),auto.get("strict_walk",false),world.quest_helper_travel.active])
+	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase","")),auto.get("can_continue",false),auto.get("revision",-1),auto.get("effective_mode",""),auto.get("strict_walk",false),world.quest_helper_travel.active,auto.get("source_entry",{})])
 func _process(_delta: float) -> void:
 	if not visible:return
 	if settings_open:
@@ -204,14 +204,26 @@ func rebuild(save_scroll:bool=true) -> void:
 	detail_scroll.set_deferred("scroll_vertical",int(detail_positions.get(selected_id,0)))
 	relayout()
 func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
+	var source_job:bool=int(quest.id)==2
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	var source_entry:Dictionary=auto.get("source_entry",{})
 	label(content,str(quest.title),20)
 	label(content,str(quest.status)+(" · 可重做" if quest.get("can_restart",false) else ""),12)
-	if not str(quest.get("blocked_reason","")).is_empty():label(content,str(quest.blocked_reason),13)
+	if source_job:
+		var reason:String=str(source_entry.get("reason","当前服务尚未提供原道场自动入口。"))
+		if not reason.is_empty():label(content,reason,13).name="QuestAutoSourceReason"
+	elif not str(quest.get("blocked_reason","")).is_empty():label(content,str(quest.blocked_reason),13)
 	if AutoPolicy.supports(int(quest.id),int(quest.event)) and not world.state.derived.get("quest_auto",{}).get("running",false):
-		var strict:bool=int(quest.id) in [12,13,24,25,5,9]
+		var strict:bool=source_job or int(quest.id) in [12,13,24,25,5,9]
 		var action:=button(content,("自动推进" if strict else ("自动重做" if quest.get("can_restart",false) else "自动执行")),func():world.quest_helper_travel.start_auto(int(quest.id));rebuild(),"QuestAutoStart_%s"%quest.id)
-		action.disabled=(str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty()
-		label(content,("仅推进当前所选任务，不会自动接续尚未开放的任务链。普通随机战成功后继续；Boss 由玩家手动战斗，胜利后按继续；奖励等待玩家选择，成功保存后继续当前任务。最终转生确认和交宠仍由玩家操作。" if world.state.derived.get("quest_auto",{}).has("settings") else ("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。"))+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
+		if source_job:
+			action.disabled=int(source_entry.get("job_id",-1))!=2 or not source_entry.get("enabled",false) or not source_entry.get("can_start",false) or not (world.link.is_local() or world.link.online)
+		else:action.disabled=(str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty()
+		if not source_job:
+			label(content,("仅推进当前所选任务，不会自动接续尚未开放的任务链。普通随机战成功后继续；Boss 由玩家手动战斗，胜利后按继续；奖励等待玩家选择，成功保存后继续当前任务。最终转生确认和交宠仍由玩家操作。" if world.state.derived.get("quest_auto",{}).has("settings") else ("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。"))+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
+	if source_job:
+		label(content,"金布伊原路自动：请先自行到合资格的原大厅，或处于已有真实到达资格的运行路线；不会自动送往大厅、购票或刷物（尚未开放）。自动模式查原公开题目答案是项目便利；猜拳沿用原随机规则和合法重试，不保证获胜，缺票即停止。按原流程自动领取会员证并兑换唯一 Lv1 金布伊，此任务无需每次手选奖励。",12).name="QuestAutoSourceDetails"
+		label(content,"本任务实际执行 %s（正常原路）；已保存的 B/C 偏好保留给其他支持任务，不改变全局偏好。"%str(source_entry.get("effective_mode","A")),12).name="QuestAutoSourceMode"
 	var steps:Array=quest.get("steps",[])
 	var chosen:Dictionary={}
 	for step in steps:
@@ -250,6 +262,9 @@ func present_auto_settings()->void:
 	if auto.has("settings"):
 		reason+="\n已保存移动意图：%s；当前实际执行：%s。"%[str(settings.get("mode","A")),str(auto.get("effective_mode","A"))]
 		reason+="\n当前可执行模式：%s。%s"%[", ".join(auto.get("available_modes",["A"])),str(auto.get("mode_notice",""))]
+	if selected_id==2:
+		var source_entry:Dictionary=auto.get("source_entry",{})
+		reason+="\n金布伊任务实际执行 %s（正常原路）；B/C 可作为其他支持任务的偏好保存。"%str(source_entry.get("effective_mode","A"))
 	settings_panel.present(maxi(index,0),int(settings.get("loot_minutes",30)),[0,1,2],auto.has("settings") and not settings_pending and (world.link.is_local() or world.link.online),reason)
 
 func save_auto_settings(mode_index:int,minutes:int)->void:
