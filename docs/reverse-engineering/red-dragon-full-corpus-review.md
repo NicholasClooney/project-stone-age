@@ -631,3 +631,20 @@ inputs without another full render. There are 641 unique drafts (36 samples,
 semantic receipts. Contact yellow and previously listed material conflicts
 remain incomplete. Pilot timing pauses were observed; work resumed only after
 explicit release. No Godot, import, mapping activation or live asset change.
+
+## Pose051: 653 unique drafts
+
+All twelve raised-neck attack source/change pairs were viewed after the timing
+pause was explicitly released. The foreground gray-olive underside wing crosses
+the rider and retains its original material; white cheek and exposed ventral
+neck/abdominal strips use the yellow ventral palette. Rider faces, hands, lower
+clothing and feet were inspected separately per body. Both final reference
+revision crops were then viewed (248122: 251 pixels; 266314: 89 pixels).
+Latest outputs: `pose051-refined` for those two references, `pose051-render`
+for the other ten. Saved mask/material fields are checked against the inspected
+candidate input, with explicit zero padding for generated runs.
+
+There are 653 unique drafts (36 samples plus 617 pose rules), 3763 missing
+drafts, and zero complete semantic receipts. Remaining contact colour is still
+incomplete; this is not an importable or approved feature. Timing pauses were
+observed, and no Godot/import/full or shared asset operation was started.
