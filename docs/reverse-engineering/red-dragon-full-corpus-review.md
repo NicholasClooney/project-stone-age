@@ -717,3 +717,20 @@ Raised wing and shoulder are dorsal red; hanging cheek is ventral yellow.
 699 unique drafts (36 samples, 663 pose rules), 3717 missing drafts, zero complete
 semantic receipts. Contact colour remains unresolved and not all retained pixels
 are rider. No import activation, gameplay mapping, Godot or shared assets changed.
+
+## Pose056: 711 unique drafts
+
+All twelve diagonal front-attack source/change pairs and eight changed revision
+crops were individually viewed. A 142-body-pixel independent far-wing patch in
+257261 contributes local dragon evidence beside rider hair; private helper
+filenames retain the `neck` template name. Four unchanged revisions were not
+rerendered separately. Latest `pose056-neck-render` changes 22127 pixels,
+including 2651 ventral recolours, retaining 8377 unknown body-colour pixels.
+Net +528 includes restoring the two independently drawn primary rules as well
+as the new local patch. Broad far wing and narrow near wing use dorsal red;
+pale cheek and lower neck use ventral yellow. Saved source/mask/material fields
+and effective padding are compared against inspected render inputs.
+
+711 unique drafts (36 samples + 675 pose records), 3705 missing drafts, zero
+complete semantic receipts. Unresolved dragon/rider contacts remain explicit;
+no import, gameplay activation, Godot or shared asset changes occurred.
