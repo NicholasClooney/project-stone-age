@@ -43,12 +43,12 @@ func model() -> Dictionary:
 	return world.state.derived.get("quest_helper",{})
 func refresh_key() -> String:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
-	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),world.quest_helper_travel.active])
+	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase",""))=="manual",auto.get("strict_walk",false),world.quest_helper_travel.active])
 func _process(_delta: float) -> void:
 	if not visible:return
 	if refresh_key()!=last_model or viewport_size!=world.get_viewport_rect().size:rebuild()
 	var status=find_child("QuestAutoMessage",true,false)
-	if status is Label:status.text=str(world.state.derived.get("quest_auto",{}).get("message",""))
+	if status is Label:status.text=world.quest_helper_travel.auto_status()
 	# Container minimum sizes settle after rebuilding; keep window chrome on screen.
 	relayout()
 func remember_scroll() -> void:
@@ -125,7 +125,11 @@ func rebuild(save_scroll:bool=true) -> void:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false) or world.quest_helper_travel.active:
 		button(body,"停止自动任务 / 导航",func():world.quest_helper_travel.cancel();rebuild(),"QuestAutoStop")
-		label(body,str(auto.get("message","")),12).name="QuestAutoMessage"
+		label(body,world.quest_helper_travel.auto_mode(),12)
+		label(body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
+	elif str(auto.get("phase",""))=="manual":
+		label(body,"已停止 · 待手动处理；处理后请再次点击自动推进。",12)
+		label(body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
 	var panes:=HBoxContainer.new();panes.size_flags_vertical=Control.SIZE_EXPAND_FILL;panes.add_theme_constant_override("separation",20);body.add_child(panes)
 	var quests:Array=model().get("quests",[])
 	var selected:Dictionary={}
@@ -173,9 +177,10 @@ func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 	label(content,str(quest.status)+(" · 可重做" if quest.get("can_restart",false) else ""),12)
 	if not str(quest.get("blocked_reason","")).is_empty():label(content,str(quest.blocked_reason),13)
 	if AutoPolicy.supports(int(quest.id),int(quest.event)) and not world.state.derived.get("quest_auto",{}).get("running",false):
-		var action:=button(content,"自动重做" if quest.get("can_restart",false) else "自动执行",func():world.quest_helper_travel.start_auto(int(quest.id));rebuild(),"QuestAutoStart_%s"%quest.id)
+		var strict:bool=int(quest.id) in [12,13,24,25,5,9]
+		var action:=button(content,("自动推进" if strict else ("自动重做" if quest.get("can_restart",false) else "自动执行")),func():world.quest_helper_travel.start_auto(int(quest.id));rebuild(),"QuestAutoStart_%s"%quest.id)
 		action.disabled=(str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty()
-		label(content,"自动执行会确认原交易；关窗、Esc 或最小化后继续，点击停止可中止。",12)
+		label(content,("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。")+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
 	var steps:Array=quest.get("steps",[])
 	var chosen:Dictionary={}
 	for step in steps:
