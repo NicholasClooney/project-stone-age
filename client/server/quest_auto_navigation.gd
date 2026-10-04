@@ -68,6 +68,43 @@ func local_path(b,map_id:int,origin:Vector2i,goal:Vector2i,occupied:Dictionary)-
  nav.set_point_solid(origin,origin_solid)
  nav.set_point_solid(goal,goal_solid)
  return result
+## Exact frozen golden44 stairs only; recomputed each call, no route cache.
+## Arrival is observed, never granted. The caller still executes/validates it.
+func next_portal(b,portal:Dictionary)->Dictionary:
+ var sources=preload("res://server/quest_auto_golden_bui_sources.gd")
+ var row:Dictionary=sources.portal_row(portal)
+ if row.is_empty():return {}
+ var map_id:int=b.automation.position_map
+ var origin:Vector2i=b.automation.position_cell
+ if map_id!=int(row.from_map) or not b.quest_arrival.has_arrival(b,map_id,origin):return {}
+ var goal:=Vector2i(int(row.from_cell[0]),int(row.from_cell[1]))
+ var links:Dictionary=b.quest_helper.places.links(map_id)
+ var link:Dictionary=links.get(goal,{})
+ if link.is_empty() or link.has("gate_source") or bool(link.get("disabled",false)):return {}
+ # Full source identity (including create line), not only a destination map.
+ if not sources.same(link,row.live_link) or not usable(b,link):return {}
+ var matches:=0
+ for candidate in links.values():
+  if sources.same(candidate,row.live_link):matches+=1
+ if matches!=1:return {}
+ # Do not let local_path's portal exception erase a live actor blocker.
+ var occupied:=_portal_occupied(b,map_id)
+ if not floor_cell(b,map_id,goal,occupied):return {}
+ if origin==goal:return {"map_id":int(row.to_map),"cell":row.to_cell.duplicate(),"portal":link.duplicate(true)}
+ var path:=local_path(b,map_id,origin,goal,occupied)
+ if path.size()<2:return {}
+ var next_point:Dictionary=path[1]
+ if not b.quest_arrival.has_arrival(b,map_id,Vector2i(int(next_point.cell[0]),int(next_point.cell[1]))):return {}
+ return next_point.duplicate(true)
+func _portal_occupied(b,map_id:int)->Dictionary:
+ var occupied:Dictionary={}
+ var known:Dictionary={}
+ for actor in b.quest_catalog.npcs+b.quest_catalog.service_npcs:known[str(actor.id)]=true
+ for actor in b.quest_helper.places.residents:
+  if not known.has(str(actor.get("id",""))) and int(actor.map_id)==map_id:occupied[Vector2i(int(actor.cell[0]),int(actor.cell[1]))]=true
+ for actor in b.quest_catalog.active_npcs():
+  if int(actor.map_id)==map_id:occupied[Vector2i(int(actor.cell[0]),int(actor.cell[1]))]=true
+ return occupied
 func map_route(b,origin:int,goal:int)->Array:
  var queue:Array=[origin]
  var parents:Dictionary={origin:-1}
