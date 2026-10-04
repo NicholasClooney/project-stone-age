@@ -354,8 +354,28 @@ func load_resume() -> void:
 		if state.get("adult_battle") is Dictionary:
 			if not AdultCheckpoint.restore(self,state.adult_battle) and str(state.adult_battle.get("battle_id","")) not in session._profile.completed_battles:return
 		if state.get("wood_battle") is Dictionary:_restore_wood_battle(state.wood_battle)
+		var quest_intent:bool=state.get("quest_auto") is Dictionary and automation.resume_wanted()
+		# A real restored battle owns its exact authority position. Ordinary quest
+		# intent has no coordinate authority: use only the validated saved profile.
+		if quest_intent and not battle_open and session._pending.is_empty():
+			if not _restore_quest_saved_position():return
 		if state.has("kind"):automation.load_resume(state)
-		if state.get("quest_auto") is Dictionary and automation.resume_wanted():quest_auto.load_resume(self,state.quest_auto)
+		if quest_intent:quest_auto.load_resume(self,state.quest_auto)
+
+func _restore_quest_saved_position()->bool:
+	var persisted=JSON.parse_string(last_saved_payload)
+	if not persisted is Dictionary or not persisted.get("location") is Dictionary:return false
+	var location:Dictionary=persisted.location
+	var numeric=preload("res://server/quest_auto_motion.gd")
+	var map_id=numeric.integer(location.get("map_id"))
+	var x=numeric.integer(location.get("x"))
+	var y=numeric.integer(location.get("y"))
+	if map_id==null or x==null or y==null or not session._location_valid(location):return false
+	var data:Dictionary=preload("res://scripts/map_file.gd").load_map(quest_helper.places.file(map_id))
+	if data.is_empty() or x>=int(data.width) or y>=int(data.height) or int(data.blocked[y*int(data.width)+x])!=0:return false
+	# Project placement deliberately grants no walk/arrival/approach proof.
+	automation.position_changed(map_id,Vector2i(x,y),false,"project")
+	return true
 
 ## 重启后自动恢复's file: <save>.resume.json, or tests' resume_path.
 func _resume_file() -> String:
