@@ -106,8 +106,11 @@ func plan(b,npc:Dictionary)->Array:
  if not best.is_empty():best.pop_front()
  return best
 func next(b,npc:Dictionary)->Dictionary:
- var signature:=str(npc.id)+str(npc.map_id)+str(npc.cell)+str(b.original_quests.npc_state.version)
+ var signature:=str(npc.id)+str(npc.map_id)+str(npc.cell)+str(b.original_quests.npc_state.version)+str(hash(b.quest_catalog.npc_overrides))+str(hash(b.quest_catalog.enabled_events))
  if key!=signature:clear();key=signature
+ # Cached geometry is never an instruction to keep walking from an old cell.
+ # A battle, relocated resident or changed gate may invalidate the next point.
+ if not route.is_empty() and not validate(b,route[0]):route.clear()
  if route.is_empty():route=plan(b,npc)
  if route.is_empty():return {}
  return route.pop_front()
