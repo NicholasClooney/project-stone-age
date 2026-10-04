@@ -20,20 +20,28 @@ func window_flow(remote:bool)->void:
  check(await Wait.until(self,func():return not game.data.is_empty() and (game.link.is_local() or game.link.online)) and await Wait.settle(self,game),"local/remote world ready %s"%remote)
  if not remote:b=game.backend
  b.automation.auto_tick=false;b.set_process(false)
+ # This suite tests buttons/settings/hunt authority, not random battle results.
+ # The local helper sends tick_battle itself, even with backend ticking frozen.
+ game.training_helper.set_process(false)
  check((game.backend==null)==remote,"remote scene has no Backend reference")
  game.random_encounters=false
  if int(game.data.map_id)!=100:check(game.load_area_id(100,Vector2i(637,493)),"test scene loads ordinary field")
  check(await Wait.settle(self,game) and await Wait.until(self,func():return not game.paused_input and not game.area_transition_busy),"scene initial position synchronizes")
  check(b.automation.position_map==100 and b.automation.position_cell==game.cell,"UI starts at authoritative actual location")
+ var original_cell:Vector2i=game.cell
  game.link.request({"type":"set_automation_settings","settings":{"training":{"select_troops":false,"borrow_troops":false},"hunt":{"fast":false,"rate":1,"total":8,"offsets":[2,2,2,2],"level_one":true,"train_after_capture":false}}})
  check(await Wait.settle(self,game),"explicit public settings settled")
  var helper=game.training_helper;helper.open_menu()
  helper.hp_floor.value=23;helper.battle_limit.value=7
  await click(helper.start_button)
  check(await Wait.settle(self,game) and b.automation.running,"actual training button starts authoritative runner")
+ check(not b.battle_open and not bool(b.battle.snapshot().get("active",false)),"training buttons do not advance an unrequested battle")
+ check(int(game.data.map_id)==100 and game.cell==original_cell and b.automation.position_map==100 and b.automation.position_cell==original_cell,"training start preserves the original authoritative location")
  check(int(b.session.automation_settings().training.hp)==23 and int(b.session.automation_settings().training.limit)==7,"normal window settings use validated public API")
  await click(helper.stop_button)
  check(await Wait.settle(self,game) and not b.automation.running,"actual stop ends training")
+ check(not b.battle_open and not bool(b.battle.snapshot().get("active",false)),"training stop leaves no unrequested battle")
+ check(int(game.data.map_id)==100 and game.cell==original_cell and b.automation.position_map==100 and b.automation.position_cell==original_cell,"training stop preserves the original authoritative location")
  if b.battle_open:
   b.abandon_battle();b.publish()
   check(await Wait.settle(self,game),"test battle cleanup broadcasts")
