@@ -211,7 +211,7 @@ func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 		var strict:bool=int(quest.id) in [12,13,24,25,5,9]
 		var action:=button(content,("自动推进" if strict else ("自动重做" if quest.get("can_restart",false) else "自动执行")),func():world.quest_helper_travel.start_auto(int(quest.id));rebuild(),"QuestAutoStart_%s"%quest.id)
 		action.disabled=(str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty()
-		label(content,("普通随机战成功后继续；Boss 由玩家手动战斗，胜利后按继续；奖励等待玩家选择，成功保存后自动后续。最终转生确认和交宠仍由玩家操作。" if world.state.derived.get("quest_auto",{}).has("settings") else ("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。"))+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
+		label(content,("仅推进当前所选任务，不会自动接续尚未开放的任务链。普通随机战成功后继续；Boss 由玩家手动战斗，胜利后按继续；奖励等待玩家选择，成功保存后继续当前任务。最终转生确认和交宠仍由玩家操作。" if world.state.derived.get("quest_auto",{}).has("settings") else ("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。"))+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
 	var steps:Array=quest.get("steps",[])
 	var chosen:Dictionary={}
 	for step in steps:
