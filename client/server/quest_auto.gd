@@ -2,6 +2,7 @@ extends RefCounted
 ## Source-derived delivery runner: shell/herb visits and adult channel walking. Every exchange stays in OriginalQuests/save().
 const Policy=preload("res://scripts/quest_auto_policy.gd")
 const Settings=preload("res://server/quest_auto_settings_rules.gd")
+const PermitGate=preload("res://server/quest_auto_permit_gate.gd")
 const Motion=preload("res://server/quest_auto_motion.gd")
 var motion:Dictionary={}
 const Registry=preload("res://server/quest_auto_registry.gd")
@@ -493,6 +494,9 @@ func strict_advance(b)->void:
    strict_dialogue_reply(b,reply)
    return
   var point:Dictionary=navigation.next(b,npc)
+  if point.has("gate"):
+   advance_permit_gate(b,point)
+   return
   if point.is_empty() or not navigation.validate(b,point):handoff(b,"没有可连续步行的原路线；请手动处理原门或当前位置后重新启动。");return
   var changed:bool=int(point.map_id)!=map_id
   if point.has("portal"):
@@ -665,3 +669,35 @@ func continue_boss(b,command:Dictionary)->Dictionary:
  message="继续原任务。"
  b.publish()
  return {"ok":true}
+
+
+## The navigation proposal names a reviewed resident; it never supplies authority.
+func advance_permit_gate(b,point:Dictionary)->Dictionary:
+ var denied:String=PermitGate.point_error(point)
+ if not denied.is_empty():
+  handoff(b,denied)
+  return {"ok":false,"reason":denied}
+ var expected:Dictionary=identity.checkpoint()
+ var origin:Dictionary={"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}
+ var reply:Dictionary=b.commit_undersea_permit_gate(str(point.gate.source_id),identity.run_id,identity.step_id,identity.revision)
+ if not reply.get("ok",false):
+  if running and identity.checkpoint()==expected:handoff(b,str(reply.get("reason","原守卫拒绝通行。")))
+  return reply
+ # A committed move survives cancellation; its automation capability does not.
+ if not running or identity.checkpoint()!=expected:
+  reply.continued=false
+  b._emit({"type":"position","map_id":int(reply.target.map_id),"cell":reply.target.cell.duplicate(),"client":"server"})
+  b.publish()
+  return reply
+ reply.continued=true
+ identity.invalidate()
+ clear_motion()
+ navigation.clear()
+ path.clear()
+ target=reply.target.duplicate(true)
+ phase="travel" if restored else "landing"
+ waited=0.0
+ message="已出示原通行证，等待确认原守卫目的位置。"
+ emit_position(b,target,origin,not restored)
+ b.publish()
+ return reply
