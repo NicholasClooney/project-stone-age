@@ -68,11 +68,12 @@ func title(b) -> String:
 func emit_position(b,point:Dictionary,origin:Dictionary={},ack_required:bool=false) -> void:
  position_serial+=1
  var packet:Dictionary=Motion.packet(identity,position_serial,point,origin,ack_required or phase=="landing")
+ if packet.is_empty():handoff(b,"原任务位置资料不是有效整数坐标。");return
  var receipt:Dictionary=packet.duplicate(true)
  receipt.seq=position_serial
  issued.append(receipt)
  while issued.size()>16:issued.pop_front()
- motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":int(point.map_id),"cell":point.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":"A"}
+ motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":packet.map_id,"cell":packet.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":"A"}
  b._emit(packet)
 func clear_motion()->void:
  issued.clear()
