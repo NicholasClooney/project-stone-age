@@ -1308,7 +1308,7 @@ func _emit(message: Dictionary) -> void:
 	var source:Dictionary=_quest_source_call
 	if not source.is_empty() and source.get("saved",false) and not source.get("position_claimed",false) and message.get("type")=="position" and message.get("client","")=="":
 		var warp:Array=source.get("warp",[])
-		if warp.size()==3 and message.get("map_id")==warp[0] and message.get("cell")==[warp[1],warp[2]]:
+		if warp.size()==3 and quest_auto.Motion.same_integer(message.get("map_id"),warp[0]) and quest_auto.Motion.cell(message.get("cell"))==[warp[1],warp[2]]:
 			source.position_claimed=true
 			queued={"_source_position":source,"message":message}
 	if _depth > 0:
@@ -1357,6 +1357,7 @@ func call_quest_source(frame,proposal:Dictionary,choice:Dictionary={}) -> Dictio
 		frame.receive_page(call,reply.dialogue,str(original_quests.pending.get("token","")))
 	var result:Dictionary=frame.complete_call(call,quest_auto.identity.checkpoint(),quest_auto.connection)
 	result.continued=quest_source_call_live(source)
+	result.warp=source.has("warp")
 	result.durable=bool(source.get("durable",false))
 	result.candidate_sha=str(source.get("candidate_sha",""))
 	_quest_source_call={}
