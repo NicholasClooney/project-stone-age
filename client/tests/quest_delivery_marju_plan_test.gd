@@ -1,0 +1,38 @@
+extends "res://tests/quest_arrival_marju_test.gd"
+const Plan=preload("res://server/quest_delivery_plan.gd")
+func planned(b,job:int,key:String)->void:
+ var before:Dictionary=b.session.snapshot()
+ var selection:Dictionary=Plan.select(b,job)
+ check(selection.get("status","")=="step" and selection.get("step",{}).get("id","")=="delivery:"+key,"route-aware plan "+key+" "+str(selection.get("reason","")))
+ check(b.session.snapshot()==before,"plan reads without transaction "+key)
+func run()->void:
+ # Fixture level/initial public position only. This is an independent source
+ # route oracle, not an automatic-runner E2E or natural battle-strength test.
+ var b=fresh()
+ var sender:Dictionary=Travel.npc(b,"extra/event/marju")
+ var receiver:Dictionary=Travel.npc(b,"extra/event/marju01")
+ var gate:Dictionary=Travel.npc(b,"genout/wpm_120_19_15")
+ planned(b,5,"marju_request")
+ b.automation.position_changed(1300,Vector2i(70,52))
+ check(Travel.commit(b,sender),"earned mail through original request")
+ planned(b,5,"marju_gate")
+ b.automation.position_changed(120,Vector2i(19,16))
+ check(Travel.commit(b,gate),"original FREEWARP grants legitimate entrance")
+ planned(b,5,"marju_deliver")
+ check(not b.quest_helper.snapshot(b).quests.filter(func(q):return int(q.id)==5)[0].steps.any(func(s):return s.get("npc_id","")==Plan.KAITE and s.get("actionable",false)),"helper hides remote cave action")
+ check(Travel.walk_near(b,receiver,[122,118,119]),"actual maze portals and legal near-talk")
+ planned(b,5,"marju_deliver")
+ var before:Dictionary=b.session.snapshot();b.save_path="user://missing-delivery-plan-route/save.json"
+ check(not Travel.commit(b,receiver) and b.session.snapshot()==before,"failed mail save retains state")
+ b.save_path="";planned(b,5,"marju_deliver")
+ check(Travel.commit(b,receiver),"original REQUEST event38 writes END37")
+ check(Plan.select(b,5).status=="done","own END37 stops first job")
+ planned(b,9,"marju_return")
+ check(Route.walk(b,119,Vector2i(103,93),[119]).get("ok",false),"walk to one-way original exit")
+ check(b.handle({"type":"report_position","map_id":121,"cell":[17,15]}).ok,"cross one-way exit")
+ planned(b,9,"marju_return")
+ b.automation.position_changed(1300,Vector2i(70,52))
+ check(Travel.commit(b,sender) and Plan.select(b,9).status=="done","one random reward ends job38")
+ b.free()
+ print("QUEST DELIVERY MARJU PLAN: %d failures"%failures)
+ quit(1 if failures else 0)
