@@ -61,6 +61,7 @@ func run()->void:
  check(not b.quest_auto.running and b.quest_auto.phase=="manual","restart without cave proof hands off")
  b.free()
  test_cave_navigation()
+ test_battle_handoffs()
  print("QUEST AUTO STRICT: %d failures"%failures)
  quit(1 if failures else 0)
 
@@ -84,4 +85,27 @@ func test_cave_navigation()->void:
   check(b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell),"each cave move keeps original authority proof")
   if changed:nav.clear()
  check(reached,"production planner crosses all six Goya floors using original portals")
+ b.free()
+
+func test_battle_handoffs()->void:
+ for failure in ["unfinished","defeat","escaped","save"]:
+  var b=Backend.new()
+  b.quest_auto.running=true
+  b.quest_auto.strict_walk=true
+  b.quest_auto.phase="battle"
+  b.quest_auto.quest_id=11
+  b.quest_auto.owns_battle=true
+  if failure=="unfinished":b.battle_open=true
+  elif failure=="save":
+   b.battle_state={"outcome":"win"}
+   b.save_path="user://missing-strict-battle/save.json"
+  else:b.battle_state={"outcome":failure}
+  b.quest_auto.tick(b,0.21)
+  check(not b.quest_auto.running and b.quest_auto.phase=="manual" and not b.quest_auto.pause_reason.is_empty(),"strict battle failure retains authoritative manual reason: "+failure)
+  check(b.quest_auto.resume_state().is_empty(),"failed battle cannot revive intent: "+failure)
+  b.free()
+ var b=Backend.new()
+ b.quest_auto.running=true;b.quest_auto.strict_walk=true
+ b.quest_auto.stop(b)
+ check(b.quest_auto.phase=="stopped","explicit stop is not a manual failure")
  b.free()

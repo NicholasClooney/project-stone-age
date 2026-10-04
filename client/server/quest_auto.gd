@@ -38,6 +38,9 @@ func handoff(b,reason:String)->void:
  phase="manual"
  pause_reason=reason
  b.publish()
+func fail(b,reason:String)->void:
+ if strict_walk:handoff(b,reason)
+ else:stop(b,reason)
 func strict_select(b)->Dictionary:
  if delivery_supports(quest_id):return delivery_plan.select(b,quest_id)
  var selected:=select(b)
@@ -234,10 +237,10 @@ func tick(b,delta:float) -> void:
  if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():stop(b,"组队变化停止了自动任务。");return
  if phase=="battle":
   if b.automation.running:return
-  if b.battle_open or not b.session._pending.is_empty():stop(b,"沿途自动战斗已停止，请手动处理。");return
+  if b.battle_open or not b.session._pending.is_empty():fail(b,"沿途自动战斗已停止，请手动处理。");return
   owns_battle=false
-  if str(b.battle_state.get("outcome","")) not in ["win","captured"]:stop(b,"沿途战斗未获胜。");return
-  if not b.save():stop(b,"沿途战斗保存失败，停止自动任务。");return
+  if str(b.battle_state.get("outcome","")) not in ["win","captured"]:fail(b,"沿途战斗未获胜。");return
+  if not b.save():fail(b,"沿途战斗保存失败，停止自动任务。");return
   path.clear();herb_path.clear()
   navigation.clear()
   phase="travel"
@@ -248,7 +251,7 @@ func tick(b,delta:float) -> void:
  if detached:return
  if phase=="landing":
   waited+=delta
-  if waited>=30.0:stop(b,"等待地图位置确认超时。")
+  if waited>=30.0:fail(b,"等待地图位置确认超时。")
   return
  elapsed+=delta
  if elapsed<0.2:return
