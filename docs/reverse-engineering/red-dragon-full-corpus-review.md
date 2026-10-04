@@ -753,3 +753,19 @@ checked without regenerating unchanged images. Total 723 unique drafts
 (36 samples + 687 pose rules), 3693 missing drafts, zero complete semantic
 receipts. Unresolved contact colour remains incomplete; no gameplay mapping,
 Godot, import or shared asset operation occurred.
+
+## Pose058: 735 unique drafts
+
+Both independent references and all twelve raised-head diagonal attack
+source/change pairs were individually viewed. Pale cheek, neck and belly use
+ventral yellow; tan far-wing membrane and gray-olive near-wing interior retain
+their material, with dorsal rims red. Face/beak contacts, visible hands and
+feet differ by body and remain subject to final semantic completion.
+Latest output: primary 248167/266359 from `pose058-reference`, other ten from
+`pose058-render`. Initial candidate totals: 17927 changed pixels, 4802 ventral
+recolours, 5811 retained unknown body-colour pixels. Saved candidate fields and
+padding are compared with inspected inputs without repeating the render.
+
+735 unique drafts (36 samples + 699 pose rules), 3681 missing drafts, zero
+complete semantic receipts. This remains incomplete and closed to import or
+integration. Original outputs, rules and UTC/wall/child CPU logs are retained.
