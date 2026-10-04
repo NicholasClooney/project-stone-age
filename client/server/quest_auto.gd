@@ -2,6 +2,8 @@ extends RefCounted
 ## Source-derived delivery runner: shell/herb visits and adult channel walking. Every exchange stays in OriginalQuests/save().
 const Policy=preload("res://scripts/quest_auto_policy.gd")
 const Settings=preload("res://server/quest_auto_settings_rules.gd")
+const Motion=preload("res://server/quest_auto_motion.gd")
+var motion:Dictionary={}
 const Registry=preload("res://server/quest_auto_registry.gd")
 var identity=preload("res://server/quest_auto_state.gd").new()
 const Rules=preload("res://server/original_quests.gd")
@@ -63,32 +65,49 @@ func event(b) -> int:
  return int(row(b,quest_id).get("event",-1))
 func title(b) -> String:
  return str(row(b,quest_id).get("title","原任务"))
-func emit_position(b,point:Dictionary) -> void:
+func emit_position(b,point:Dictionary,origin:Dictionary={},ack_required:bool=false) -> void:
  position_serial+=1
- issued.append({"seq":position_serial,"map_id":int(point.map_id),"cell":point.cell.duplicate()})
+ var packet:Dictionary=Motion.packet(identity,position_serial,point,origin,ack_required or phase=="landing")
+ var receipt:Dictionary=packet.duplicate(true)
+ receipt.seq=position_serial
+ issued.append(receipt)
  while issued.size()>16:issued.pop_front()
- b._emit({"type":"position","map_id":point.map_id,"cell":point.cell,"quest_position_seq":position_serial,"client":"quest_auto"})
+ motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":int(point.map_id),"cell":point.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":"A"}
+ b._emit(packet)
+func clear_motion()->void:
+ issued.clear()
+ motion={}
 func detach(b, peer:int) -> void:
  if not running or connection!=peer:return
  detached=true
  connection=-1
  client=""
+ clear_motion()
  b.publish()
 func accept_report(b,command:Dictionary) -> bool:
- # Backend routing has already authenticated the profile; transport overwrites
- # the connection tag. Only an actual report at the authoritative cell rebinds.
+ # A tagged report only acknowledges a server-issued move. Even a malformed,
+ # old-run or cancelled receipt must never fall through to report_position.
+ if Motion.tagged(command):
+  if running and not detached and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
+   for receipt in issued:
+    if Motion.matches(command,receipt,identity):
+     if int(receipt.seq)==position_serial:
+      motion.awaiting_ack=false
+      if phase=="landing":report(b,command)
+     break
+  return true
+ # Backend profile routing and transport own identity. Reconnection requires
+ # an untagged handshake at the current authoritative cell, not an old ack.
  if running and detached and int(command.get("_quest_connection",-1))!=-1 and not str(command.get("client","")).is_empty():
   if int(command.get("map_id",-1))==b.automation.position_map and b._cell(command)==b.automation.position_cell:
    connection=int(command._quest_connection)
    client=str(command.client)
    detached=false
    waited=0.0
+   report(b,command)
+   emit_position(b,{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]})
    b.publish()
- if running and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
-  for receipt in issued:
-   if int(command.get("quest_position_seq",-1))==int(receipt.seq) and int(command.get("map_id",-1))==int(receipt.map_id) and command.get("cell",[])==receipt.cell:
-    if phase=="landing" and int(receipt.seq)==position_serial:report(b,command)
-    return true
+   return true
  report(b,command)
  return false
 func walk_path(b,goal:Vector2i) -> Array[Vector2i]:
@@ -117,6 +136,7 @@ func walk_path(b,goal:Vector2i) -> Array[Vector2i]:
  if not result.is_empty():result.pop_front()
  return result
 func start_battle(b) -> void:
+ clear_motion()
  if strict_walk and b.session._pending.has("quest_guard"):
   wait_boss(b)
   return
@@ -136,6 +156,7 @@ func snapshot(b=null) -> Dictionary:
  result.mode_notice="B/C执行器尚未接入，当前沿A原路推进。" if result.settings.mode!="A" else ""
  result.can_continue=running and phase=="waiting_boss" and boss_ready
  result.budget={}
+ result.motion=motion.duplicate(true)
  return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
  identity.invalidate()
@@ -151,7 +172,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  owns_battle=false
  path.clear();herb_path.clear()
  navigation.clear()
- issued.clear()
+ clear_motion()
  running=false
  phase="stopped"
  message=reason
@@ -172,6 +193,7 @@ func load_resume(b,state:Dictionary) -> void:
  if int(Policy.JOB_EVENTS[int(state.quest_id)]) not in b.quest_catalog.enabled_events:return
  quest_id=int(state.quest_id)
  strict_walk=true
+ clear_motion()
  identity.begin()
  if int(state.get("version",0))==3 and not identity.restore(state.get("identity",{})):return
  pause_reason=""
@@ -222,6 +244,7 @@ func start(b,command:Dictionary) -> Dictionary:
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  quest_id=int(id)
  strict_walk=true
+ clear_motion()
  identity.begin()
  pause_reason=""
  navigation.clear()
@@ -237,7 +260,7 @@ func start(b,command:Dictionary) -> Dictionary:
  phase="travel"
  message=title(b)+"自动任务：准备前往原 NPC。"
  path.clear();herb_path.clear()
- issued.clear()
+ clear_motion()
  owns_battle=false
  elapsed=0.0
  waited=0.0
@@ -248,6 +271,7 @@ func report(b,command:Dictionary) -> void:
  var same:bool=int(command.get("map_id",-1))==b.automation.position_map and b._cell(command)==b.automation.position_cell
  if not same:stop(b,"移动停止了自动任务。");return
  if phase=="landing" and str(command.get("client",""))==client and int(command.get("_quest_connection",-1))==connection:
+  motion.awaiting_ack=false
   phase="travel" if strict_walk or event(b)==4 or (event(b)==1 and int(target.get("map_id",-1)) in [200,20101,20102,20103,20104,20105]) else "talk"
   waited=0.0
   message="已确认抵达，准备原任务对话。"
@@ -429,6 +453,7 @@ func strict_advance(b)->void:
   if str(selection.get("status","manual"))=="done":stop(b,title(b)+"已完成。");return
   if str(selection.get("status","manual"))!="step":handoff(b,str(selection.get("reason","请手动处理当前任务步骤。")));return
   step=selection.get("step",{})
+  if identity.step_id!=str(step.get("id","")):clear_motion()
   identity.select_step(str(step.get("id","")))
   if not safe_step(step):handoff(b,"此步骤包含选择、消费、战斗或未审核动作，请手动处理后重新启动。");return
   var npc:Dictionary=b.original_quests.npc_by_id(str(step.get("npc_id","")))
@@ -457,12 +482,14 @@ func strict_advance(b)->void:
   b.automation.position_changed(int(point.map_id),Vector2i(int(point.cell[0]),int(point.cell[1])),changed,"walk")
   if not b.quest_arrival.has_arrival(b,int(point.map_id),b.automation.position_cell):handoff(b,"原路线资格已变化，停止推进。");return
   target={"map_id":int(point.map_id),"cell":point.cell.duplicate()}
-  emit_position(b,target)
   if changed:
    navigation.clear()
    phase="travel" if restored else "landing"
    waited=0.0
-  else:
+  var move_identity:Dictionary=identity.checkpoint()
+  emit_position(b,target,{"map_id":map_id,"cell":[origin.x,origin.y]},changed and not restored)
+  if not running or identity.checkpoint()!=move_identity:return
+  if not changed:
    var encounter:Dictionary=b._cmd_field_step({"map_id":map_id,"cell":point.cell.duplicate(),"encounter":true})
    if encounter.get("battle",false):start_battle(b);return
   message="沿原路线步行前往"+str(npc.get("name","任务人物"))+"；沿途普通遇敌自动战斗后继续。"
@@ -479,9 +506,9 @@ func strict_advance(b)->void:
   if running and (before_map!=b.automation.position_map or before_cell!=b.automation.position_cell):
    target={"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}
    navigation.clear()
-   emit_position(b,target)
    phase="travel" if restored else "landing"
    waited=0.0
+   emit_position(b,target,{"map_id":before_map,"cell":[before_cell.x,before_cell.y]},not restored)
   b.publish()
 func strict_dialogue_reply(b,reply:Dictionary)->void:
  if not reply.has("dialogue"):
@@ -517,6 +544,7 @@ func wait_reward(b,reply:Dictionary)->void:
  if str(dialogue.get("token",""))!=str(b.original_quests.pending.get("token","")):
   handoff(b,"奖励对话已经改变。")
   return
+ clear_motion()
  phase="waiting_reward"
  waiting_saved=false
  _reward_window(b,dialogue)
@@ -574,6 +602,7 @@ func choose_waiting(b,command:Dictionary)->Dictionary:
  if str(next.get("status","manual"))=="done":stop(b,title(b)+"已完成。")
  elif str(next.get("status","manual"))=="step":
   phase="travel"
+  clear_motion()
   identity.select_step(str(next.get("step",{}).get("id","")))
   message="奖励已保存，继续原任务。"
   b.publish()
@@ -586,6 +615,7 @@ func wait_boss(b)->void:
  if not running or id.is_empty() or not b.session._pending.has("quest_guard"):
   handoff(b,"守卫战斗身份不可用，请手动处理。")
   return
+ clear_motion()
  boss_id=id
  boss_ready=false
  owns_battle=false
