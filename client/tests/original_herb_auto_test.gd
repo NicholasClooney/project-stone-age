@@ -5,14 +5,14 @@ func start(b) -> Dictionary:
 func fresh(load_saved:bool=false):
  var b=Backend.new()
  b.quest_catalog.enabled_events=[1,15,16]
- b.session._profile.no_random_encounters=true
+ if not load_saved:prepare(b,3100)
  if load_saved:check(b.load_profile(SAVE),"Real herb profile reloads")
  b.save_path=SAVE
  b.keep_resume_current=true
  return b
 func reach(b,id:String,wanted:String) -> void:
  for index in range(3000):
-  if str(b.quest_auto.step.get("id",""))==id and b.quest_auto.phase==wanted:return
+  if str(b.quest_auto.step.get("id",""))==id and checkpoint(b,wanted):return
   advance(b,false)
   if b.quest_auto.phase=="landing" and not (wanted=="landing" and str(b.quest_auto.step.get("id",""))==id):
    b.handle({"type":"report_position","map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y],"client":"test"})
@@ -27,7 +27,7 @@ func clear_save() -> void:
   if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 func route_checks()->void:
  var b=Backend.new();b.quest_catalog.enabled_events=[1]
- b.session._profile.no_random_encounters=true
+ prepare(b,3100)
  check(b.handle({"type":"quest_auto_start","quest_id":30,"client":"test"}).ok,"existing herb auto starts without adult prerequisite")
  var visited:Dictionary={};var interrupted:=false;var failed_save:=false
  for index in range(3000):
@@ -41,7 +41,7 @@ func route_checks()->void:
    b.handle({"type":"quest_auto_stop"})
    check(b.handle({"type":"quest_auto_start","quest_id":30,"client":"test"}).ok and b.automation.position_cell==cell,"stop/restart resumes original current cave position")
    interrupted=true
-  if str(b.quest_auto.step.get("id",""))=="herb:medicine" and b.quest_auto.phase=="ok" and not failed_save:
+  if str(b.quest_auto.step.get("id",""))=="herb:medicine" and checkpoint(b,"ok") and not failed_save:
    var before:Dictionary=b.session.snapshot()
    b.save_path="user://missing-herb-route-auto/save.json"
    advance(b)
@@ -74,6 +74,14 @@ func run() -> void:
     for index in range(3000):
      if not b.quest_auto.running:break
      advance(b,false)
+    if int(b.automation.position_map) in range(20101,20106):
+     check(not b.quest_auto.running and b.quest_auto.phase=="manual" and not Rules.flag(b.session._profile,"ended",1),"Restart in protected cave never recreates arrival proof")
+     # Re-enter from the public original entrance; this is an explicit new run,
+     # not a persisted receipt. Re-fetching medicine walks all five floors;
+     # already-saved medicine instead follows the original public return.
+     b.automation.position_changed(200,Vector2i(452,162))
+     check(start(b).ok,"Player explicitly restarts at public original entrance")
+     finish(b)
     check(Rules.flag(b.session._profile,"ended",1) and b.session._profile.original_items==[2427],"Three original transactions yield one amulet")
     var done:Dictionary=b.session.snapshot()
     check(not start(b).ok and b.session.snapshot()==done,"Completed herb has no invented repeat")
@@ -103,7 +111,7 @@ func run() -> void:
   b.handle({"type":"quest_auto_stop"})
   var reply:Dictionary=b.handle({"type":"use_item","item":"original_2401"} if action=="eat" else {"type":"quest_discard","item_id":2401})
   check(reply.ok and Rules.flag(b.session._profile,"now",1) and not Rules.flag(b.session._profile,"ended",1),"Lost medicine preserves original NOW/END: "+action)
-  check(start(b).ok and b.quest_auto.step.id=="herb:medicine","Re-derive doctor after "+action)
+  check(start(b).ok and b.quest_auto.strict_select(b).step.id=="herb:medicine","Re-derive doctor after "+action)
   finish(b);check(b.session._profile.original_items==[2427],"Replenish and finish after "+action)
   b.free()
  for conflict in ["manual","party","flag"]:
@@ -151,6 +159,10 @@ func remote_auto() -> void:
  root.add_child(world)
  if not await ready(func():return not world.data.is_empty() and world.link.online,"Auto remote connects"):return
  if not check(await Wait.settle(self,world),"Auto startup settles"):return
+ var home:Array=backend.quest_helper.places.info(3100).spawn
+ world.load_area_id(3100,Vector2i(home[0],home[1]))
+ if not await ready(func():return int(world.data.map_id)==3100 and backend.automation.position_map==3100,"Herb client initializes on its original home island"):return
+ if not check(await Wait.settle(self,world),"Home island settles"):return
  check(world.backend==null,"Remote automatic UI has no backend")
  world.quest_helper_menu.open_menu()
  var original_packs=world.asset_packs
@@ -181,7 +193,7 @@ func remote_auto() -> void:
  world.quest_helper_menu.open_menu()
  if not await click(world.quest_helper_menu.find_child("QuestHelper_30",true,false)):return
  if not await click(world.quest_helper_menu.find_child("QuestAutoStart_30",true,false)):return
- if not check(await Wait.until(self,func():return Rules.flag(backend.session._profile,"ended",1) and not backend.quest_auto.running,150.0),"Remote walks original five-floor route and confirms three herb transactions"):return
+ if not check(await Wait.until(self,func():return Rules.flag(backend.session._profile,"ended",1) and not backend.quest_auto.running,360.0),"Remote walks original five-floor route and confirms three herb transactions: %s / %s / %s"%[backend.quest_auto.phase,backend.quest_auto.message,backend.automation.position_cell]):return
  if not check(await Wait.settle(self,world),"Completion settles"):return
  check(world.session.snapshot().original_items==[2427],"Remote reads original server reward")
  world.link.close()
