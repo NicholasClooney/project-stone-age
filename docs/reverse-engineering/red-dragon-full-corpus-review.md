@@ -668,3 +668,31 @@ candidate book, without repeating a render. There are 665 unique drafts
 receipts. This remains incomplete and unavailable for import/integration.
 Timing pauses were observed; command UTC/wall/child CPU evidence is retained in
 the private offline-processing log. No Godot, import or live operation ran.
+
+## Poses053–054: 687 unique drafts
+
+Pose053: all twelve source/change pairs and eleven changed revision crops were
+individually viewed (260252 unchanged). The third independent reference is a
+105-body-pixel curved neck patch in 257220, above the reaching hand and beside
+the rider forehead. Latest `pose053-neck-render`: 18968 changed pixels, 2625
+ventral recolours, 7749 retained unknown body-colour pixels. Net +554 changes
+includes restoration of the two independent primary references, not just the
+new local region. Folded wing is dorsal; pale cheek-neck is ventral.
+
+Pose054: all twelve source/change pairs and six changed revision crops were
+viewed. A 97-body-pixel independent far-wing blade region in 257221 reduces
+yellow above the rider's forehead. Private helper filenames retain `neck` for
+historical template reuse; the annotated region and review text identify a
+far-wing blade. Foreground gray-olive underside retains its material; cheek
+and neck are ventral. Latest `pose054-neck-render`: 18868 changed pixels,
+2708 ventral recolours, 8524 retained unknown body-colour pixels. Net +371 also
+includes restoring manual primary rules. Unchanged revisions were not rerun.
+
+251157/272381 remain in the sample book, with their previous rider and unknown
+protection retained; they supply no dragon reference truth. Pose054 therefore
+adds ten unique drafts, not twelve. Saved rules are checked against inspected
+render inputs, and the two rewritten sample records receive a narrow output
+hash comparison. Total 687 (36 samples + 651 pose rules), empty intersection,
+3729 missing drafts and zero complete semantic receipts. Remaining contact
+yellow includes unresolved dragon regions. This remains incomplete and closed
+to import/integration; no Godot, shared assets or live operations occurred.
