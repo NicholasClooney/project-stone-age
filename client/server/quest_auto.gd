@@ -46,15 +46,32 @@ func handoff(b,reason:String)->void:
 func fail(b,reason:String)->void:
  if strict_walk:handoff(b,reason)
  else:stop(b,reason)
-func strict_select(b)->Dictionary:
- if delivery_supports(quest_id):return Registry.select(b,quest_id)
- var selected:=select(b)
+func strict_select(b,selected_id:int=-1,allow_clean:Variant=null)->Dictionary:
+ var id:int=quest_id if selected_id<0 else selected_id
+ if delivery_supports(id):return Registry.select(b,id)
+ var selected:=select(b,id,allow_clean)
  if not selected.is_empty():return {"status":"step","step":selected}
- if Rules.flag(b.session._profile,"ended",event(b)):return {"status":"done"}
+ if Rules.flag(b.session._profile,"ended",int(row(b,id).get("event",-1))):return {"status":"done"}
  return {"status":"manual","reason":"当前原任务条件不满足，请手动处理后重新启动。"}
-func safe_step(value:Dictionary)->bool:
+func safe_shell_clean(value:Dictionary,id:int,authorized:bool)->bool:
+ if id!=11 or not authorized:return false
+ var recipes:Dictionary={
+  "sainasu/event/event02_1":[2000,[55,92],"ENDEV=2&ITEM!=2414&SP=0,ENDEV=2&ITEM!=2414&SP=3"],
+  "sainasu/event/event02_2":[1000,[57,124],"ENDEV=2&ITEM!=2415&SP=1,ENDEV=2&ITEM!=2415&SP=2"]
+ }
+ var npc_id:=str(value.get("npc_id",""))
+ if not recipes.has(npc_id):return false
+ var recipe:Array=recipes[npc_id]
  var source:Dictionary=value.get("source",{})
  var branch:Dictionary=source.get("branch_data",{})
+ if not Motion.same_integer(value.get("map_id"),recipe[0]) or Motion.cell(value.get("cell"))!=recipe[1] or str(source.get("npc_id",""))!=npc_id:return false
+ for field in branch:
+  if field not in ["event","type","condition","texts","actions","enabled","events"]:return false
+ return branch.get("event",0)==-1 and branch.get("type","")=="CLEAN" and branch.get("condition","")==recipe[2] and branch.get("actions",{})=={"CleanFlg":"2"} and branch.get("events",[]).size()==1 and Motion.same_integer(branch.events[0],2) and branch.get("enabled",false)==true
+func safe_step(value:Dictionary,selected_id:int=-1,allow_clean:Variant=null)->bool:
+ var source:Dictionary=value.get("source",{})
+ var branch:Dictionary=source.get("branch_data",{})
+ if str(source.get("type",""))=="CLEAN":return safe_shell_clean(value,quest_id if selected_id<0 else selected_id,clean_authorized if allow_clean==null else bool(allow_clean))
  if str(source.get("type","")) not in ["REQUEST","ACCEPT","MESSAGE","FREEWARP"]:return false
  if str(source.get("type",""))=="FREEWARP" and (str(value.get("npc_id",""))!="genout/wpm_120_19_15@120:19:15" or str(branch.get("actions",{}).get("Warp",""))!="122,6,5"):return false
  if branch.has("spoken_keyword") or branch.has("keyword") or branch.get("project_pet_selection",false):return false
@@ -221,10 +238,10 @@ func row(b,id:int) -> Dictionary:
  for quest in b.quest_helper.snapshot(b).quests:
   if int(quest.id)==id:return quest
  return {}
-func select(b) -> Dictionary:
- var quest:=row(b,quest_id)
- if Rules.flag(b.session._profile,"ended",event(b)):
-  if clean_authorized and quest.get("can_restart",false):
+func select(b,selected_id:int=-1,allow_clean:Variant=null) -> Dictionary:
+ var quest:=row(b,quest_id if selected_id<0 else selected_id)
+ if Rules.flag(b.session._profile,"ended",int(quest.get("event",-1))):
+  if (clean_authorized if allow_clean==null else bool(allow_clean)) and quest.get("can_restart",false):
    for candidate in quest.steps:
     if str(candidate.source.type)=="CLEAN":return candidate
   return {}
@@ -243,6 +260,8 @@ func start(b,command:Dictionary) -> Dictionary:
   if not reason.is_empty():return b._reject(reason)
  if str(command.get("client","")).is_empty():return b._reject("缺少发起设备。")
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
+ var first:Dictionary=strict_select(b,int(id),bool(quest.get("can_restart",false)))
+ if first.get("status","")!="step" or not safe_step(first.get("step",{}),int(id),bool(quest.get("can_restart",false))):return b._reject(str(first.get("reason",quest.get("blocked_reason","")))+" 当前没有可自动执行的已审核原任务步骤。")
  quest_id=int(id)
  strict_walk=true
  clear_motion()
@@ -250,8 +269,7 @@ func start(b,command:Dictionary) -> Dictionary:
  pause_reason=""
  navigation.clear()
  clean_authorized=bool(quest.get("can_restart",false))
- step={} if strict_walk else select(b)
- if not strict_walk and step.is_empty():return b._reject(str(quest.get("blocked_reason",""))+" 当前没有可自动执行的原任务步骤。")
+ step=first.step.duplicate(true)
  shutdown_intent={}
  restored=false
  detached=false
@@ -513,6 +531,7 @@ func strict_advance(b)->void:
   b.publish()
 func strict_dialogue_reply(b,reply:Dictionary)->void:
  if not reply.has("dialogue"):
+  if str(step.get("source",{}).get("type",""))=="CLEAN":clean_authorized=false
   phase="travel"
   navigation.clear()
   b.publish()
