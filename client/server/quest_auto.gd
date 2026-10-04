@@ -4,6 +4,10 @@ const Policy=preload("res://scripts/quest_auto_policy.gd")
 const Settings=preload("res://server/quest_auto_settings_rules.gd")
 const PermitGate=preload("res://server/quest_auto_permit_gate.gd")
 const Motion=preload("res://server/quest_auto_motion.gd")
+const Source=preload("res://server/quest_auto_source_actions.gd")
+const SourceFrame=preload("res://server/quest_auto_source_frame.gd")
+var source_frame:RefCounted
+var source_answers:RefCounted
 var motion:Dictionary={}
 # Geometry proposes; core alone advances and publishes committed cells.
 var segment=preload("res://server/quest_auto_segment.gd").new()
@@ -105,13 +109,15 @@ func emit_position(b,point:Dictionary,origin:Dictionary={},ack_required:bool=fal
  if packet.is_empty():handoff(b,"原任务位置资料不是有效整数坐标。");return
  issue_position(b,packet)
 func issue_position(b,packet:Dictionary)->void:
+ remember_position(packet)
+ b._emit(packet)
+func remember_position(packet:Dictionary)->void:
  var receipt:Dictionary=packet.duplicate(true)
  receipt.seq=position_serial
- receipt.require_full_identity=phase=="segment_landing"
+ receipt.require_full_identity=phase=="segment_landing" or packet.get("quest_source_landing",false)
  issued.append(receipt)
  while issued.size()>16:issued.pop_front()
  motion={"segment_id":packet.quest_segment_id,"position_seq":position_serial,"map_id":packet.map_id,"cell":packet.cell.duplicate(),"awaiting_ack":packet.quest_ack_required,"mode":packet.quest_segment.mode}
- b._emit(packet)
 func clear_motion()->void:
  segment.clear()
  issued.clear()
@@ -119,6 +125,7 @@ func clear_motion()->void:
 func detach(b, peer:int) -> void:
  if not running or connection!=peer:return
  detached=true
+ if source_frame!=null:source_frame.detach()
  connection=-1
  client=""
  clear_motion()
@@ -204,6 +211,9 @@ func snapshot(b=null) -> Dictionary:
  result.motion=motion.duplicate(true)
  return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
+ var old_source=source_frame
+ if old_source!=null:old_source.cancel()
+ source_frame=null
  identity.invalidate()
  waiting_saved=false
  boss_ready=false
@@ -221,7 +231,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  running=false
  phase="stopped"
  message=reason
- b.original_quests.pending={}
+ if old_source==null or old_source.owns_pending(str(b.original_quests.pending.get("token",""))):b.original_quests.pending={}
  if persist:b.keep_resume_file()
  b.publish()
 func resume_state() -> Dictionary:
@@ -784,3 +794,58 @@ func advance_permit_gate(b,point:Dictionary)->Dictionary:
  emit_position(b,target,origin,not restored)
  b.publish()
  return reply
+
+## Dormant 4c internal hooks. Registry/start/tick do not dispatch job2 yet.
+func source_live(frame)->bool:
+ return frame!=null and frame==source_frame and running and quest_id==2 and not detached and connection>=0 and frame.matches(identity.checkpoint(),connection)
+func source_open(b,proposal:Dictionary)->Dictionary:
+ if proposal.get("action") not in ["source_service","source_exchange"]:return b._reject("此接点不执行原楼梯或其他动作。")
+ if not internal or not running or quest_id!=2 or detached or connection<0 or identity.step_id!=str(proposal.get("id","")) or step!=proposal:return b._reject("原服务执行身份无效。")
+ var checked:Dictionary=Source.validate_open(b,2,proposal)
+ if not checked.ok:return checked
+ if source_frame!=null:source_frame.cancel()
+ source_frame=SourceFrame.new()
+ source_frame.owner_profile={"profile_id":str(b.session._profile.get("profile_id","")),"character_id":str(b.session._profile.get("character_id",""))}
+ if not source_frame.configure(identity.checkpoint(),connection,str(proposal.npc_id),str(proposal.source.source_id)):return b._reject("原服务身份不完整。")
+ return b.call_quest_source(source_frame,proposal)
+func source_next(b)->Dictionary:
+ if not internal or not source_live(source_frame):return b._reject("原服务执行身份已失效。")
+ var checked:Dictionary=Source.validate_step(b,2,step)
+ if not checked.ok or b.battle_open or not b.session._pending.is_empty():return b._reject("原服务资格已变化。")
+ if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():return b._reject("请先退出团队。")
+ if not b.original_quests.allowed(b,checked.npc) or not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return b._reject("原路近距资格已失效。")
+ var page:Dictionary=source_frame.page
+ if page.is_empty() or str(b.original_quests.pending.get("token",""))!=str(page.token) or str(b.original_quests.pending.get("npc",{}).get("id",""))!=str(step.npc_id):return b._reject("原对话已失效。")
+ var ids:Array=page.choices.map(func(option):return option.id)
+ var answer:Dictionary={}
+ if ids==["yes","no"]:answer={"choice":"yes"}
+ elif ids==["ok"]:answer={"choice":"ok"}
+ elif step.source.get("kind")=="golden_bui_janken" and ids==["rock","scissors","paper"]:answer={"choice":"rock"}
+ elif step.source.get("kind")=="golden_bui_quiz":
+  if source_answers==null:source_answers=preload("res://server/quest_auto_source_answers.gd").new()
+  answer=source_answers.resolve_quiz(str(step.source.source_id),page)
+  if answer.get("status")!="answer":return b._reject(str(answer.get("reason","原公开题目未能匹配。")))
+ else:return b._reject("原公开选项未审核。")
+ var choice:Dictionary=source_frame.take_choice(identity.checkpoint(),connection,str(page.token),str(answer.choice),str(answer.get("text","")))
+ if choice.is_empty():return b._reject("原对话回复已经消费。")
+ return b.call_quest_source(source_frame,step,choice)
+
+## Called immediately before delivery, after any earlier queued observer.
+## The original transaction has already moved/saved/granted its own proof.
+func source_position_packet(b,source:Dictionary,original:Dictionary)->Dictionary:
+ if not b.quest_source_call_live(source):return original
+ if b.automation.position_map!=int(original.map_id) or b.automation.position_cell!=Vector2i(int(original.cell[0]),int(original.cell[1])):return original
+ identity.invalidate()
+ source.frame.identity=identity.checkpoint()
+ source.identity=identity.checkpoint()
+ clear_motion()
+ navigation.clear()
+ target={"map_id":original.map_id,"cell":original.cell.duplicate()}
+ phase="landing"
+ waited=0.0
+ position_serial+=1
+ var packet:Dictionary=Motion.packet(identity,position_serial,target,source.origin,true)
+ packet.quest_source_landing=true
+ packet.v=b.PROTOCOL
+ remember_position(packet)
+ return packet
