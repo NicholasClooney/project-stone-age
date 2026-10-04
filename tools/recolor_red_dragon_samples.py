@@ -35,6 +35,7 @@ def raster(size, polygons):
 
 def masks(rule, padding):
     size = rule['geometry']['w'], rule['geometry']['h']
+    padding = rule.get('rider_boundary_dilation', padding)
     rider = raster(size, rule['rider_envelopes'])
     expanded = np.array(Image.fromarray(rider.astype(np.uint8)*255).filter(
         ImageFilter.MaxFilter(padding*2+1))) != 0
@@ -75,10 +76,14 @@ def validate_source(archive, bitmap, rule):
     return p
 
 
-def run(source, rules_path, output):
+def run(source, rules_path, output, bitmaps=None, overviews=True):
     rules = json.loads(rules_path.read_text()); archive = Archive(source)
     if digest(archive.palette_path.read_bytes()) != rules['source_palette_sha256']:
         raise ValueError('Palette hash mismatch')
+    if bitmaps is not None:
+        missing = set(map(str,bitmaps)) - set(rules['records'])
+        if missing: raise ValueError(f'Unreviewed bitmaps: {sorted(missing)}')
+        rules['records'] = {k:v for k,v in rules['records'].items() if int(k) in bitmaps}
     output.mkdir(parents=True, exist_ok=True)
     records=[];pictures={};padding=rules['rider_boundary_dilation']
     for key,rule in rules['records'].items():
@@ -126,17 +131,18 @@ def run(source, rules_path, output):
                 'unknown_potential_body_colour':int((unknown&np.isin(p,list(BODY))).sum()),
                 'protected_envelope_potential_body_colour':int((rider&np.isin(p,list(BODY))).sum()),
                 'geometry_timing_verified':True,'alpha_identical':True,'shadow_identical':True,
-                'annotation_status':'agent-reviewed conservative sample; user art review pending'}
+                'annotation_status':rule.get('review_status', 'agent-reviewed conservative sample; user art review pending')}
         record['review_points'] = [dict(point, original_index=int(p[point['xy'][1], point['xy'][0]]), output_index=int(changed[point['xy'][1],point['xy'][0]]), changed=bool(diff[point['xy'][1],point['xy'][0]])) for point in rule.get('review_points', [])]
-        assert not any(point['changed'] for point in record['review_points'])
+        assert all(point['changed'] != point.get('expected_unchanged',True) for point in record['review_points'])
         records.append(record);pictures[bitmap]=(before,after,overlay)
-    for action in (3,4,0):
+    for action in ((3,4,0) if overviews else ()):
         for kind in ('first','middle'):
             rows=[r for r in records if r['slots'][0]['clip'].startswith(str(action)+'_')
                   and ((r['slots'][0]['frame']==0)==(kind=='first'))]
             rows.sort(key=lambda r:(r['slots'][0]['body'],r['slots'][0]['clip']))
             for column,name in [(1,'red'),(2,'labels')]:
-                canvas=Image.new('RGB',(1320,1060),'#555555');draw=ImageDraw.Draw(canvas)
+                canvas=Image.new('RGB',(1320,max(1060,530*((len(rows)+2)//3))))
+                canvas.paste('#555555',(0,0,canvas.width,canvas.height));draw=ImageDraw.Draw(canvas)
                 for n,r in enumerate(rows):
                     b=r['bitmap'];im=pictures[b][column];w,h=im.size
                     im=im.resize((w*3,h*3),Image.Resampling.NEAREST)
@@ -153,7 +159,7 @@ def run(source, rules_path, output):
                 canvas.save(output/f'{name}-{action}-{kind}.png')
     # Every sampled original record re-read after output generation.
     for key,rule in rules['records'].items():validate_source(archive,int(key),rule)
-    report={'status':'REVIEWED_SPATIAL_SAMPLES_NOT_PRODUCTION','rules_sha256':digest(rules_path.read_bytes()),
+    report={'status':'SPATIAL_ANNOTATIONS_NOT_PRODUCTION','rules_sha256':digest(rules_path.read_bytes()),
             'source_palette_sha256':digest(archive.palette_path.read_bytes()),
             'material_maps':{'body':BODY,'ventral':VENTRAL},'source_records_unchanged':True,
             'semantic_limit':'Protection is conditional on reviewed polygons; no vote or blanket identity claim. Envelope includes some dragon; uncertain edges retain original colour.',
@@ -170,4 +176,6 @@ if __name__=='__main__':
     parser.add_argument('--source',required=True,type=Path)
     parser.add_argument('--rules',type=Path,default=Path('tools/asset_rules/red_dragon_samples.json'))
     parser.add_argument('--output',required=True,type=Path)
-    args=parser.parse_args();run(args.source,args.rules,args.output)
+    parser.add_argument('--bitmaps',type=int,nargs='+',help='Only explicitly reviewed source bitmaps')
+    parser.add_argument('--no-overviews',action='store_true',help='Skip action sheets while preparing a larger review corpus')
+    args=parser.parse_args();run(args.source,args.rules,args.output,args.bitmaps,not args.no_overviews)

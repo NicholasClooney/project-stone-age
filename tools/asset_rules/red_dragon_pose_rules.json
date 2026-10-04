@@ -1,0 +1,3194 @@
+{
+  "format": 1,
+  "status": "pose_rules_pending_individual_diff_review",
+  "coordinate_system": "source bitmap after vertical flip; integer XY pixel centres; inclusive polygon edges",
+  "rider_boundary_dilation": 1,
+  "source_palette_sha256": "32870080c47537a59beaf770b6df7bd79820fd52a23825058460900494f0b4b0",
+  "rule_reuse": "Only identical bitmap under a bound RD/index hash and geometry; all its source SPR slots verified. No cross-body or differing-bitmap extrapolation.",
+  "records": {
+    "247843": {
+      "source_rd_sha256": "6fb10c42c75a043bc10edcafc4cf33ab0d7a437a13b73d905f54a8144529100e",
+      "source_indices_sha256": "649f265f50cb1874b6e61db5de44c6cf7d9255dd249b5e34bd90d246488fd13b",
+      "geometry": {
+        "x": -54,
+        "y": -93,
+        "w": 104,
+        "h": 116
+      },
+      "slots": [
+        {
+          "body": 101307,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 247843,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            29
+          ],
+          [
+            60,
+            29
+          ],
+          [
+            57,
+            32
+          ],
+          [
+            53,
+            33
+          ],
+          [
+            49,
+            32
+          ],
+          [
+            45,
+            30
+          ],
+          [
+            25,
+            29
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            115
+          ],
+          [
+            0,
+            115
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            50
+          ],
+          [
+            44,
+            53
+          ],
+          [
+            48,
+            57
+          ],
+          [
+            60,
+            55
+          ],
+          [
+            66,
+            49
+          ],
+          [
+            68,
+            62
+          ],
+          [
+            65,
+            70
+          ],
+          [
+            59,
+            73
+          ],
+          [
+            45,
+            73
+          ],
+          [
+            38,
+            68
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            20
+          ],
+          [
+            12,
+            29
+          ],
+          [
+            20,
+            34
+          ],
+          [
+            31,
+            40
+          ],
+          [
+            38,
+            43
+          ],
+          [
+            40,
+            47
+          ],
+          [
+            35,
+            49
+          ],
+          [
+            28,
+            49
+          ],
+          [
+            20,
+            42
+          ],
+          [
+            12,
+            33
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 0
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "250875": {
+      "source_rd_sha256": "2b36843be00f74c432dd0aa27ccdc958d8c226657c3dcd558c775f5bf28ddf32",
+      "source_indices_sha256": "f5b5a7d8217aa87afcef76b33fa55e08f39cb57e66461058dc3d955e15718f75",
+      "geometry": {
+        "x": -54,
+        "y": -85,
+        "w": 104,
+        "h": 111
+      },
+      "slots": [
+        {
+          "body": 101315,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 250875,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            21
+          ],
+          [
+            60,
+            21
+          ],
+          [
+            57,
+            23
+          ],
+          [
+            55,
+            25
+          ],
+          [
+            51,
+            25
+          ],
+          [
+            46,
+            23
+          ],
+          [
+            40,
+            21
+          ],
+          [
+            25,
+            21
+          ]
+        ],
+        [
+          [
+            38,
+            27
+          ],
+          [
+            40,
+            27
+          ],
+          [
+            40,
+            32
+          ],
+          [
+            38,
+            34
+          ],
+          [
+            34,
+            33
+          ],
+          [
+            36,
+            30
+          ]
+        ],
+        [
+          [
+            30,
+            41
+          ],
+          [
+            38,
+            41
+          ],
+          [
+            38,
+            45
+          ],
+          [
+            33,
+            45
+          ],
+          [
+            30,
+            44
+          ]
+        ],
+        [
+          [
+            67,
+            45
+          ],
+          [
+            69,
+            46
+          ],
+          [
+            70,
+            49
+          ],
+          [
+            74,
+            51
+          ],
+          [
+            72,
+            54
+          ],
+          [
+            66,
+            54
+          ],
+          [
+            65,
+            50
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            110
+          ],
+          [
+            0,
+            110
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            42
+          ],
+          [
+            44,
+            45
+          ],
+          [
+            48,
+            49
+          ],
+          [
+            60,
+            47
+          ],
+          [
+            66,
+            41
+          ],
+          [
+            68,
+            54
+          ],
+          [
+            65,
+            62
+          ],
+          [
+            59,
+            65
+          ],
+          [
+            45,
+            65
+          ],
+          [
+            38,
+            60
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            12
+          ],
+          [
+            12,
+            21
+          ],
+          [
+            20,
+            26
+          ],
+          [
+            31,
+            32
+          ],
+          [
+            38,
+            35
+          ],
+          [
+            40,
+            39
+          ],
+          [
+            35,
+            41
+          ],
+          [
+            28,
+            41
+          ],
+          [
+            20,
+            34
+          ],
+          [
+            12,
+            25
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 1
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "253907": {
+      "source_rd_sha256": "6fda1d8682deffa9c6ba4d1072a58a50f392b679776ce9756dc7b04d4f37636b",
+      "source_indices_sha256": "3d821e6ee3bc98b28b305130efe2c7bf953dc75222242e3fa85f889c31d439df",
+      "geometry": {
+        "x": -54,
+        "y": -88,
+        "w": 104,
+        "h": 114
+      },
+      "slots": [
+        {
+          "body": 101323,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 253907,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            24
+          ],
+          [
+            61,
+            24
+          ],
+          [
+            58,
+            27
+          ],
+          [
+            53,
+            28
+          ],
+          [
+            50,
+            26
+          ],
+          [
+            45,
+            25
+          ],
+          [
+            25,
+            24
+          ]
+        ],
+        [
+          [
+            31,
+            44
+          ],
+          [
+            38,
+            44
+          ],
+          [
+            38,
+            51
+          ],
+          [
+            35,
+            51
+          ],
+          [
+            31,
+            49
+          ],
+          [
+            29,
+            48
+          ]
+        ],
+        [
+          [
+            66,
+            48
+          ],
+          [
+            69,
+            49
+          ],
+          [
+            69,
+            52
+          ],
+          [
+            74,
+            55
+          ],
+          [
+            75,
+            58
+          ],
+          [
+            70,
+            60
+          ],
+          [
+            66,
+            59
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            113
+          ],
+          [
+            0,
+            113
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            45
+          ],
+          [
+            44,
+            48
+          ],
+          [
+            48,
+            52
+          ],
+          [
+            60,
+            50
+          ],
+          [
+            66,
+            44
+          ],
+          [
+            68,
+            57
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            59,
+            68
+          ],
+          [
+            45,
+            68
+          ],
+          [
+            38,
+            63
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            15
+          ],
+          [
+            12,
+            24
+          ],
+          [
+            20,
+            29
+          ],
+          [
+            31,
+            35
+          ],
+          [
+            38,
+            38
+          ],
+          [
+            40,
+            42
+          ],
+          [
+            35,
+            44
+          ],
+          [
+            28,
+            44
+          ],
+          [
+            20,
+            37
+          ],
+          [
+            12,
+            28
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 2
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "256939": {
+      "source_rd_sha256": "01aa26d41b97141bd9a5f20ccc0260bd778f9f18ef10d7000a1323701a51dbb1",
+      "source_indices_sha256": "70969a0cbcc06c3318fb695ebb9c1b6b186599e1b27aa7fff6348a8e0e642889",
+      "geometry": {
+        "x": -54,
+        "y": -80,
+        "w": 104,
+        "h": 106
+      },
+      "slots": [
+        {
+          "body": 101331,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 256939,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            16
+          ],
+          [
+            60,
+            16
+          ],
+          [
+            57,
+            18
+          ],
+          [
+            53,
+            19
+          ],
+          [
+            49,
+            18
+          ],
+          [
+            46,
+            17
+          ],
+          [
+            25,
+            16
+          ]
+        ],
+        [
+          [
+            37,
+            23
+          ],
+          [
+            40,
+            22
+          ],
+          [
+            40,
+            28
+          ],
+          [
+            35,
+            28
+          ],
+          [
+            34,
+            27
+          ]
+        ],
+        [
+          [
+            30,
+            36
+          ],
+          [
+            38,
+            36
+          ],
+          [
+            38,
+            41
+          ],
+          [
+            33,
+            40
+          ],
+          [
+            30,
+            39
+          ]
+        ],
+        [
+          [
+            66,
+            41
+          ],
+          [
+            69,
+            42
+          ],
+          [
+            70,
+            46
+          ],
+          [
+            73,
+            47
+          ],
+          [
+            73,
+            50
+          ],
+          [
+            68,
+            51
+          ],
+          [
+            65,
+            48
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            105
+          ],
+          [
+            0,
+            105
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            37
+          ],
+          [
+            44,
+            40
+          ],
+          [
+            48,
+            44
+          ],
+          [
+            60,
+            42
+          ],
+          [
+            66,
+            36
+          ],
+          [
+            68,
+            49
+          ],
+          [
+            65,
+            57
+          ],
+          [
+            59,
+            60
+          ],
+          [
+            45,
+            60
+          ],
+          [
+            38,
+            55
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            7
+          ],
+          [
+            12,
+            16
+          ],
+          [
+            20,
+            21
+          ],
+          [
+            31,
+            27
+          ],
+          [
+            38,
+            30
+          ],
+          [
+            40,
+            34
+          ],
+          [
+            35,
+            36
+          ],
+          [
+            28,
+            36
+          ],
+          [
+            20,
+            29
+          ],
+          [
+            12,
+            20
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 3
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "259971": {
+      "source_rd_sha256": "37a53dd031e0fe093ce26e8b2757beff82e2a3560b4424e25979445ab822b7a6",
+      "source_indices_sha256": "860a208ea7691fc2a851e1fc465c3129ed12ff2a05c177fe3f6f810fee3d7a0d",
+      "geometry": {
+        "x": -54,
+        "y": -95,
+        "w": 104,
+        "h": 121
+      },
+      "slots": [
+        {
+          "body": 101339,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 259971,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            31
+          ],
+          [
+            62,
+            31
+          ],
+          [
+            60,
+            34
+          ],
+          [
+            56,
+            37
+          ],
+          [
+            50,
+            36
+          ],
+          [
+            46,
+            34
+          ],
+          [
+            42,
+            33
+          ],
+          [
+            25,
+            31
+          ]
+        ],
+        [
+          [
+            31,
+            30
+          ],
+          [
+            36,
+            30
+          ],
+          [
+            40,
+            33
+          ],
+          [
+            42,
+            37
+          ],
+          [
+            42,
+            43
+          ],
+          [
+            39,
+            46
+          ],
+          [
+            36,
+            44
+          ],
+          [
+            35,
+            41
+          ],
+          [
+            31,
+            38
+          ]
+        ],
+        [
+          [
+            64,
+            30
+          ],
+          [
+            70,
+            31
+          ],
+          [
+            73,
+            34
+          ],
+          [
+            71,
+            38
+          ],
+          [
+            67,
+            41
+          ],
+          [
+            64,
+            42
+          ],
+          [
+            64,
+            38
+          ]
+        ],
+        [
+          [
+            32,
+            52
+          ],
+          [
+            38,
+            52
+          ],
+          [
+            38,
+            56
+          ],
+          [
+            35,
+            59
+          ],
+          [
+            35,
+            62
+          ],
+          [
+            30,
+            65
+          ],
+          [
+            26,
+            62
+          ],
+          [
+            24,
+            59
+          ],
+          [
+            27,
+            56
+          ]
+        ],
+        [
+          [
+            66,
+            54
+          ],
+          [
+            71,
+            57
+          ],
+          [
+            75,
+            59
+          ],
+          [
+            80,
+            61
+          ],
+          [
+            81,
+            63
+          ],
+          [
+            78,
+            66
+          ],
+          [
+            76,
+            69
+          ],
+          [
+            72,
+            70
+          ],
+          [
+            69,
+            66
+          ],
+          [
+            65,
+            63
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            120
+          ],
+          [
+            0,
+            120
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            52
+          ],
+          [
+            44,
+            55
+          ],
+          [
+            48,
+            59
+          ],
+          [
+            60,
+            57
+          ],
+          [
+            66,
+            51
+          ],
+          [
+            68,
+            64
+          ],
+          [
+            65,
+            72
+          ],
+          [
+            59,
+            75
+          ],
+          [
+            45,
+            75
+          ],
+          [
+            38,
+            70
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            22
+          ],
+          [
+            12,
+            31
+          ],
+          [
+            20,
+            36
+          ],
+          [
+            31,
+            42
+          ],
+          [
+            38,
+            45
+          ],
+          [
+            40,
+            49
+          ],
+          [
+            35,
+            51
+          ],
+          [
+            28,
+            51
+          ],
+          [
+            20,
+            44
+          ],
+          [
+            12,
+            35
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 4
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "263003": {
+      "source_rd_sha256": "0d64803eb522f63175b4a5b293f3ef7e1bf5e1846f2aa29892e41948edbec56f",
+      "source_indices_sha256": "700c89e1490d15ab65143032b4d0e04e4fabb43ea118a7e957cc2ab6b0af64e6",
+      "geometry": {
+        "x": -54,
+        "y": -104,
+        "w": 104,
+        "h": 130
+      },
+      "slots": [
+        {
+          "body": 101347,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 263003,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            40
+          ],
+          [
+            64,
+            42
+          ],
+          [
+            59,
+            43
+          ],
+          [
+            57,
+            46
+          ],
+          [
+            53,
+            47
+          ],
+          [
+            48,
+            45
+          ],
+          [
+            44,
+            43
+          ],
+          [
+            25,
+            40
+          ]
+        ],
+        [
+          [
+            30,
+            38
+          ],
+          [
+            37,
+            38
+          ],
+          [
+            40,
+            42
+          ],
+          [
+            43,
+            45
+          ],
+          [
+            43,
+            49
+          ],
+          [
+            41,
+            53
+          ],
+          [
+            40,
+            56
+          ],
+          [
+            38,
+            56
+          ],
+          [
+            35,
+            51
+          ],
+          [
+            34,
+            46
+          ]
+        ],
+        [
+          [
+            65,
+            39
+          ],
+          [
+            73,
+            40
+          ],
+          [
+            72,
+            45
+          ],
+          [
+            70,
+            49
+          ],
+          [
+            69,
+            53
+          ],
+          [
+            65,
+            56
+          ],
+          [
+            65,
+            49
+          ]
+        ],
+        [
+          [
+            34,
+            63
+          ],
+          [
+            39,
+            63
+          ],
+          [
+            39,
+            75
+          ],
+          [
+            38,
+            78
+          ],
+          [
+            33,
+            78
+          ],
+          [
+            31,
+            77
+          ],
+          [
+            29,
+            76
+          ],
+          [
+            31,
+            72
+          ]
+        ],
+        [
+          [
+            67,
+            61
+          ],
+          [
+            70,
+            64
+          ],
+          [
+            70,
+            70
+          ],
+          [
+            72,
+            74
+          ],
+          [
+            75,
+            76
+          ],
+          [
+            74,
+            78
+          ],
+          [
+            68,
+            78
+          ],
+          [
+            65,
+            76
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            129
+          ],
+          [
+            0,
+            129
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            61
+          ],
+          [
+            44,
+            64
+          ],
+          [
+            48,
+            68
+          ],
+          [
+            60,
+            66
+          ],
+          [
+            66,
+            60
+          ],
+          [
+            68,
+            73
+          ],
+          [
+            65,
+            81
+          ],
+          [
+            59,
+            84
+          ],
+          [
+            45,
+            84
+          ],
+          [
+            38,
+            79
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            31
+          ],
+          [
+            12,
+            40
+          ],
+          [
+            20,
+            45
+          ],
+          [
+            31,
+            51
+          ],
+          [
+            38,
+            54
+          ],
+          [
+            40,
+            58
+          ],
+          [
+            35,
+            60
+          ],
+          [
+            28,
+            60
+          ],
+          [
+            20,
+            53
+          ],
+          [
+            12,
+            44
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 5
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "266035": {
+      "source_rd_sha256": "5a8bc09a35f1ab257ce20925a46146f30b728c37cb831e5640921a0994f25fb2",
+      "source_indices_sha256": "9f9d6bd107f23f907de8f423b9da0773f899f8e26fa6a51544c9b73fd4b01dc2",
+      "geometry": {
+        "x": -54,
+        "y": -83,
+        "w": 104,
+        "h": 106
+      },
+      "slots": [
+        {
+          "body": 101355,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 266035,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            19
+          ],
+          [
+            60,
+            19
+          ],
+          [
+            56,
+            21
+          ],
+          [
+            54,
+            23
+          ],
+          [
+            50,
+            22
+          ],
+          [
+            47,
+            20
+          ],
+          [
+            25,
+            19
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            105
+          ],
+          [
+            0,
+            105
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            40
+          ],
+          [
+            44,
+            43
+          ],
+          [
+            48,
+            47
+          ],
+          [
+            60,
+            45
+          ],
+          [
+            66,
+            39
+          ],
+          [
+            68,
+            52
+          ],
+          [
+            65,
+            60
+          ],
+          [
+            59,
+            63
+          ],
+          [
+            45,
+            63
+          ],
+          [
+            38,
+            58
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            10
+          ],
+          [
+            12,
+            19
+          ],
+          [
+            20,
+            24
+          ],
+          [
+            31,
+            30
+          ],
+          [
+            38,
+            33
+          ],
+          [
+            40,
+            37
+          ],
+          [
+            35,
+            39
+          ],
+          [
+            28,
+            39
+          ],
+          [
+            20,
+            32
+          ],
+          [
+            12,
+            23
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 6
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "269067": {
+      "source_rd_sha256": "b44c3d283a3c94fe445ebf8fe822d22eec26bd72cd8d41d619b6e4aecc16ced9",
+      "source_indices_sha256": "c234a2fdb22d8ced5eee2725bdbc72c115977d2c1f29441a1d1f037c8ceba695",
+      "geometry": {
+        "x": -54,
+        "y": -89,
+        "w": 104,
+        "h": 115
+      },
+      "slots": [
+        {
+          "body": 101363,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 269067,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            25
+          ],
+          [
+            61,
+            25
+          ],
+          [
+            58,
+            28
+          ],
+          [
+            54,
+            30
+          ],
+          [
+            50,
+            29
+          ],
+          [
+            45,
+            26
+          ],
+          [
+            25,
+            25
+          ]
+        ],
+        [
+          [
+            34,
+            47
+          ],
+          [
+            39,
+            46
+          ],
+          [
+            38,
+            53
+          ],
+          [
+            36,
+            58
+          ],
+          [
+            36,
+            61
+          ],
+          [
+            34,
+            62
+          ],
+          [
+            30,
+            61
+          ],
+          [
+            27,
+            60
+          ],
+          [
+            27,
+            58
+          ],
+          [
+            30,
+            55
+          ]
+        ],
+        [
+          [
+            66,
+            48
+          ],
+          [
+            69,
+            51
+          ],
+          [
+            70,
+            54
+          ],
+          [
+            74,
+            57
+          ],
+          [
+            75,
+            59
+          ],
+          [
+            71,
+            62
+          ],
+          [
+            68,
+            61
+          ],
+          [
+            65,
+            58
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            114
+          ],
+          [
+            0,
+            114
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            46
+          ],
+          [
+            44,
+            49
+          ],
+          [
+            48,
+            53
+          ],
+          [
+            60,
+            51
+          ],
+          [
+            66,
+            45
+          ],
+          [
+            68,
+            58
+          ],
+          [
+            65,
+            66
+          ],
+          [
+            59,
+            69
+          ],
+          [
+            45,
+            69
+          ],
+          [
+            38,
+            64
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            16
+          ],
+          [
+            12,
+            25
+          ],
+          [
+            20,
+            30
+          ],
+          [
+            31,
+            36
+          ],
+          [
+            38,
+            39
+          ],
+          [
+            40,
+            43
+          ],
+          [
+            35,
+            45
+          ],
+          [
+            28,
+            45
+          ],
+          [
+            20,
+            38
+          ],
+          [
+            12,
+            29
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 7
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "272099": {
+      "source_rd_sha256": "17009f473ab3db8e9ec4dfb70994cf798fc259faac28a9e101d0c519abd82fb2",
+      "source_indices_sha256": "d8bee65dc112ef8ee1063e60dc1cb1865559b252636823665a09a69040d08efd",
+      "geometry": {
+        "x": -54,
+        "y": -86,
+        "w": 104,
+        "h": 112
+      },
+      "slots": [
+        {
+          "body": 101371,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 272099,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            22
+          ],
+          [
+            60,
+            22
+          ],
+          [
+            57,
+            25
+          ],
+          [
+            53,
+            26
+          ],
+          [
+            49,
+            25
+          ],
+          [
+            46,
+            23
+          ],
+          [
+            25,
+            22
+          ]
+        ],
+        [
+          [
+            34,
+            43
+          ],
+          [
+            39,
+            43
+          ],
+          [
+            38,
+            48
+          ],
+          [
+            37,
+            52
+          ],
+          [
+            38,
+            54
+          ],
+          [
+            36,
+            56
+          ],
+          [
+            31,
+            56
+          ],
+          [
+            30,
+            54
+          ],
+          [
+            32,
+            50
+          ]
+        ],
+        [
+          [
+            66,
+            47
+          ],
+          [
+            69,
+            49
+          ],
+          [
+            70,
+            52
+          ],
+          [
+            73,
+            54
+          ],
+          [
+            72,
+            57
+          ],
+          [
+            67,
+            58
+          ],
+          [
+            65,
+            55
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            111
+          ],
+          [
+            0,
+            111
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            43
+          ],
+          [
+            44,
+            46
+          ],
+          [
+            48,
+            50
+          ],
+          [
+            60,
+            48
+          ],
+          [
+            66,
+            42
+          ],
+          [
+            68,
+            55
+          ],
+          [
+            65,
+            63
+          ],
+          [
+            59,
+            66
+          ],
+          [
+            45,
+            66
+          ],
+          [
+            38,
+            61
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            13
+          ],
+          [
+            12,
+            22
+          ],
+          [
+            20,
+            27
+          ],
+          [
+            31,
+            33
+          ],
+          [
+            38,
+            36
+          ],
+          [
+            40,
+            40
+          ],
+          [
+            35,
+            42
+          ],
+          [
+            28,
+            42
+          ],
+          [
+            20,
+            35
+          ],
+          [
+            12,
+            26
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 8
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "275131": {
+      "source_rd_sha256": "f2cf6b06b63cfd19654b0939e72f7090c62fd28f3f762f1ca10054d9717a774c",
+      "source_indices_sha256": "0a2350233d21e3caa42251b2f47917df5b1ae5fa5fdf4f3c041d3739e2a94b69",
+      "geometry": {
+        "x": -54,
+        "y": -87,
+        "w": 104,
+        "h": 113
+      },
+      "slots": [
+        {
+          "body": 101379,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 275131,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            23
+          ],
+          [
+            60,
+            23
+          ],
+          [
+            57,
+            26
+          ],
+          [
+            53,
+            28
+          ],
+          [
+            49,
+            26
+          ],
+          [
+            46,
+            24
+          ],
+          [
+            25,
+            23
+          ]
+        ],
+        [
+          [
+            33,
+            45
+          ],
+          [
+            39,
+            44
+          ],
+          [
+            38,
+            50
+          ],
+          [
+            36,
+            55
+          ],
+          [
+            36,
+            57
+          ],
+          [
+            32,
+            57
+          ],
+          [
+            29,
+            56
+          ],
+          [
+            31,
+            54
+          ]
+        ],
+        [
+          [
+            66,
+            47
+          ],
+          [
+            69,
+            49
+          ],
+          [
+            70,
+            52
+          ],
+          [
+            73,
+            55
+          ],
+          [
+            72,
+            58
+          ],
+          [
+            67,
+            58
+          ],
+          [
+            65,
+            56
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            112
+          ],
+          [
+            0,
+            112
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            44
+          ],
+          [
+            44,
+            47
+          ],
+          [
+            48,
+            51
+          ],
+          [
+            60,
+            49
+          ],
+          [
+            66,
+            43
+          ],
+          [
+            68,
+            56
+          ],
+          [
+            65,
+            64
+          ],
+          [
+            59,
+            67
+          ],
+          [
+            45,
+            67
+          ],
+          [
+            38,
+            62
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            14
+          ],
+          [
+            12,
+            23
+          ],
+          [
+            20,
+            28
+          ],
+          [
+            31,
+            34
+          ],
+          [
+            38,
+            37
+          ],
+          [
+            40,
+            41
+          ],
+          [
+            35,
+            43
+          ],
+          [
+            28,
+            43
+          ],
+          [
+            20,
+            36
+          ],
+          [
+            12,
+            27
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 9
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "278163": {
+      "source_rd_sha256": "25d094699f577619d03dce57a211b5338fbf363d03333a61fd32961d40fe1314",
+      "source_indices_sha256": "88ce66301df395fa73333e10a7801bac5052ad0f4fa61de2a9d56f8a4423d1b1",
+      "geometry": {
+        "x": -54,
+        "y": -88,
+        "w": 104,
+        "h": 114
+      },
+      "slots": [
+        {
+          "body": 101387,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 278163,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            24
+          ],
+          [
+            63,
+            26
+          ],
+          [
+            60,
+            29
+          ],
+          [
+            55,
+            30
+          ],
+          [
+            50,
+            29
+          ],
+          [
+            47,
+            27
+          ],
+          [
+            42,
+            24
+          ],
+          [
+            25,
+            24
+          ]
+        ],
+        [
+          [
+            39,
+            25
+          ],
+          [
+            42,
+            26
+          ],
+          [
+            42,
+            31
+          ],
+          [
+            40,
+            33
+          ],
+          [
+            39,
+            37
+          ],
+          [
+            36,
+            37
+          ],
+          [
+            35,
+            35
+          ],
+          [
+            36,
+            29
+          ]
+        ],
+        [
+          [
+            64,
+            24
+          ],
+          [
+            67,
+            26
+          ],
+          [
+            69,
+            29
+          ],
+          [
+            72,
+            33
+          ],
+          [
+            71,
+            35
+          ],
+          [
+            68,
+            37
+          ],
+          [
+            65,
+            35
+          ]
+        ],
+        [
+          [
+            34,
+            44
+          ],
+          [
+            39,
+            43
+          ],
+          [
+            39,
+            48
+          ],
+          [
+            35,
+            49
+          ],
+          [
+            32,
+            48
+          ],
+          [
+            30,
+            47
+          ]
+        ],
+        [
+          [
+            66,
+            45
+          ],
+          [
+            70,
+            46
+          ],
+          [
+            72,
+            48
+          ],
+          [
+            75,
+            49
+          ],
+          [
+            75,
+            51
+          ],
+          [
+            69,
+            53
+          ],
+          [
+            66,
+            52
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            113
+          ],
+          [
+            0,
+            113
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            45
+          ],
+          [
+            44,
+            48
+          ],
+          [
+            48,
+            52
+          ],
+          [
+            60,
+            50
+          ],
+          [
+            66,
+            44
+          ],
+          [
+            68,
+            57
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            59,
+            68
+          ],
+          [
+            45,
+            68
+          ],
+          [
+            38,
+            63
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            15
+          ],
+          [
+            12,
+            24
+          ],
+          [
+            20,
+            29
+          ],
+          [
+            31,
+            35
+          ],
+          [
+            38,
+            38
+          ],
+          [
+            40,
+            42
+          ],
+          [
+            35,
+            44
+          ],
+          [
+            28,
+            44
+          ],
+          [
+            20,
+            37
+          ],
+          [
+            12,
+            28
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 10
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    },
+    "281195": {
+      "source_rd_sha256": "d8d89a1d12ce321f188a02b87e02a511942886417a9c92a65a5e90369863bf8c",
+      "source_indices_sha256": "2211dedec50e7389b6f5467648e5f2ec114cd2da9b75ca43d3f076a889e00fe8",
+      "geometry": {
+        "x": -54,
+        "y": -88,
+        "w": 104,
+        "h": 114
+      },
+      "slots": [
+        {
+          "body": 101395,
+          "clip": "0_0",
+          "frame": 0,
+          "sprite_frame": {
+            "image": 281195,
+            "x": 0,
+            "y": 0,
+            "sound": 0
+          },
+          "duration_ms": 1700
+        }
+      ],
+      "rider_envelopes": [
+        [
+          [
+            25,
+            0
+          ],
+          [
+            78,
+            0
+          ],
+          [
+            78,
+            24
+          ],
+          [
+            61,
+            24
+          ],
+          [
+            58,
+            27
+          ],
+          [
+            54,
+            29
+          ],
+          [
+            49,
+            29
+          ],
+          [
+            46,
+            26
+          ],
+          [
+            41,
+            24
+          ],
+          [
+            25,
+            24
+          ]
+        ],
+        [
+          [
+            38,
+            28
+          ],
+          [
+            41,
+            27
+          ],
+          [
+            42,
+            31
+          ],
+          [
+            40,
+            35
+          ],
+          [
+            37,
+            37
+          ],
+          [
+            34,
+            36
+          ],
+          [
+            34,
+            34
+          ]
+        ],
+        [
+          [
+            65,
+            29
+          ],
+          [
+            67,
+            30
+          ],
+          [
+            70,
+            34
+          ],
+          [
+            69,
+            36
+          ],
+          [
+            66,
+            36
+          ]
+        ],
+        [
+          [
+            33,
+            45
+          ],
+          [
+            39,
+            45
+          ],
+          [
+            38,
+            50
+          ],
+          [
+            36,
+            52
+          ],
+          [
+            32,
+            52
+          ],
+          [
+            30,
+            50
+          ]
+        ],
+        [
+          [
+            66,
+            49
+          ],
+          [
+            69,
+            51
+          ],
+          [
+            70,
+            54
+          ],
+          [
+            73,
+            56
+          ],
+          [
+            73,
+            59
+          ],
+          [
+            68,
+            61
+          ],
+          [
+            65,
+            58
+          ]
+        ]
+      ],
+      "dragon_envelopes": [
+        [
+          [
+            0,
+            0
+          ],
+          [
+            103,
+            0
+          ],
+          [
+            103,
+            113
+          ],
+          [
+            0,
+            113
+          ]
+        ]
+      ],
+      "uncertain_polygons": [],
+      "ventral_polygons": [
+        [
+          [
+            36,
+            45
+          ],
+          [
+            44,
+            48
+          ],
+          [
+            48,
+            52
+          ],
+          [
+            60,
+            50
+          ],
+          [
+            66,
+            44
+          ],
+          [
+            68,
+            57
+          ],
+          [
+            65,
+            65
+          ],
+          [
+            59,
+            68
+          ],
+          [
+            45,
+            68
+          ],
+          [
+            38,
+            63
+          ]
+        ]
+      ],
+      "underwing_preserve_polygons": [
+        [
+          [
+            2,
+            15
+          ],
+          [
+            12,
+            24
+          ],
+          [
+            20,
+            29
+          ],
+          [
+            31,
+            35
+          ],
+          [
+            38,
+            38
+          ],
+          [
+            40,
+            42
+          ],
+          [
+            35,
+            44
+          ],
+          [
+            28,
+            44
+          ],
+          [
+            20,
+            37
+          ],
+          [
+            12,
+            28
+          ]
+        ]
+      ],
+      "review": "Draft from independent source pose-000 inspection; body-specific face/arm/foot boundaries. Diff and boundary review still required; not shipping.",
+      "template_provenance": {
+        "reference_bitmap": 247843,
+        "reference_geometry": {
+          "x": -54,
+          "y": -93,
+          "w": 104,
+          "h": 116
+        },
+        "pose": "0_0#0",
+        "manual_body_exception": 11
+      },
+      "review_status": "DRAFT: source inspected, per-bitmap diff and edge review incomplete"
+    }
+  }
+}
