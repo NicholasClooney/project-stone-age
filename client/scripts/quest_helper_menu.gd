@@ -1,6 +1,11 @@
 extends PanelContainer
 ## Server-owned quest projection. Selection and navigation are purely local UI state.
+const AutoSettings=preload("res://scripts/quest_auto_settings.gd")
 const AutoPolicy=preload("res://scripts/quest_auto_policy.gd")
+var settings_open:=false
+var settings_pending:=false
+var settings_feedback:=""
+var settings_panel:Control
 var world: Node
 var body: VBoxContainer
 var last_model := ""
@@ -43,9 +48,15 @@ func model() -> Dictionary:
 	return world.state.derived.get("quest_helper",{})
 func refresh_key() -> String:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
-	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase",""))=="manual",auto.get("strict_walk",false),world.quest_helper_travel.active])
+	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase","")),auto.get("can_continue",false),auto.get("revision",-1),auto.get("effective_mode",""),auto.get("strict_walk",false),world.quest_helper_travel.active])
 func _process(_delta: float) -> void:
 	if not visible:return
+	if settings_open:
+		if is_instance_valid(settings_panel):
+			var online:bool=world.link.is_local() or world.link.online
+			settings_panel.apply_button.disabled=settings_pending or not online or not world.state.derived.get("quest_auto",{}).has("settings")
+		relayout()
+		return
 	if refresh_key()!=last_model or viewport_size!=world.get_viewport_rect().size:rebuild()
 	var status=find_child("QuestAutoMessage",true,false)
 	if status is Label:status.text=world.quest_helper_travel.auto_status()
@@ -122,10 +133,30 @@ func rebuild(save_scroll:bool=true) -> void:
 	close.size_flags_horizontal=Control.SIZE_SHRINK_END
 	close.custom_minimum_size.x=110
 	close.autowrap_mode=TextServer.AUTOWRAP_OFF
+	if settings_open:
+		var settings_scroll:=scroll(body,"QuestAutoSettingsScroll")
+		settings_panel=AutoSettings.new()
+		settings_scroll.add_child(settings_panel)
+		settings_panel.apply_requested.connect(save_auto_settings)
+		settings_panel.back_requested.connect(func():settings_open=false;rebuild())
+		present_auto_settings()
+		relayout()
+		return
+	button(body,"自动任务设置",func():settings_open=true;settings_feedback="";rebuild(),"QuestAutoSettingsOpen")
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false) or world.quest_helper_travel.active:
 		button(body,"停止自动任务 / 导航",func():world.quest_helper_travel.cancel();rebuild(),"QuestAutoStop")
-		label(body,world.quest_helper_travel.auto_mode(),12)
+		label(body,world.quest_helper_travel.auto_heading(),12)
+		if str(auto.get("phase","")) in ["waiting_boss","waiting_reward"]:
+			label(body,world.quest_helper_travel.auto_mode(),12)
+		if str(auto.get("phase",""))=="waiting_boss":
+			var resume:=button(body,"胜利后继续任务",func():world.quest_helper_travel.continue_auto(auto.duplicate(true)),"QuestAutoContinue")
+			resume.disabled=not auto.get("can_continue",false) or not (world.link.is_local() or world.link.online)
+		if str(auto.get("phase",""))=="waiting_reward":
+			var reward:=button(body,"选择任务奖励",func():
+				close_menu();world.quest_helper_travel.open_auto_reward(),"QuestAutoReward")
+			reward.disabled=auto.get("waiting",{}).get("dialogue",{}).is_empty() or not (world.link.is_local() or world.link.online)
+			label(body,"请选择原任务奖励；成功选择并保存后自动继续。取消或失败不会继续。",12)
 		label(body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
 	elif str(auto.get("phase",""))=="manual":
 		label(body,"已停止 · 待手动处理；处理后请再次点击自动推进。",12)
@@ -180,7 +211,7 @@ func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 		var strict:bool=int(quest.id) in [12,13,24,25,5,9]
 		var action:=button(content,("自动推进" if strict else ("自动重做" if quest.get("can_restart",false) else "自动执行")),func():world.quest_helper_travel.start_auto(int(quest.id));rebuild(),"QuestAutoStart_%s"%quest.id)
 		action.disabled=(str(quest.status)=="已完成" and not quest.get("can_restart",false)) or not str(quest.get("blocked_reason","")).is_empty()
-		label(content,("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。")+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
+		label(content,("普通随机战成功后继续；Boss 由玩家手动战斗，胜利后按继续；奖励等待玩家选择，成功保存后自动后续。最终转生确认和交宠仍由玩家操作。" if world.state.derived.get("quest_auto",{}).has("settings") else ("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。"))+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
 	var steps:Array=quest.get("steps",[])
 	var chosen:Dictionary={}
 	for step in steps:
@@ -207,3 +238,26 @@ func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 		row.alignment=HORIZONTAL_ALIGNMENT_LEFT
 		row.toggle_mode=true;row.button_pressed=str(step.id)==str(chosen.get("id",""))
 	if not str(quest.get("completion_detail","")).is_empty():label(content,str(quest.completion_detail),12)
+
+func present_auto_settings()->void:
+	if not is_instance_valid(settings_panel):return
+	var auto:Dictionary=world.state.derived.get("quest_auto",{})
+	var settings:Dictionary=auto.get("settings",{})
+	var index:int=["A","B","C"].find(str(settings.get("mode","A")))
+	var reason:=settings_feedback
+	if reason.is_empty():
+		reason="模式在安全路段边界应用。" if auto.has("settings") else "当前服务尚未提供自动任务设置。"
+	if auto.has("settings"):
+		reason+="\n已保存移动意图：%s；当前实际执行：%s。"%[str(settings.get("mode","A")),str(auto.get("effective_mode","A"))]
+		reason+="\n当前可执行模式：%s。%s"%[", ".join(auto.get("available_modes",["A"])),str(auto.get("mode_notice",""))]
+	settings_panel.present(maxi(index,0),int(settings.get("loot_minutes",30)),[0,1,2],auto.has("settings") and not settings_pending and (world.link.is_local() or world.link.online),reason)
+
+func save_auto_settings(mode_index:int,minutes:int)->void:
+	if settings_pending or not (world.link.is_local() or world.link.online):return
+	settings_pending=true
+	settings_feedback="正在保存设置…"
+	present_auto_settings()
+	world.link.request({"type":"set_automation_settings","settings":{"quest":{"mode":["A","B","C"][mode_index],"loot_minutes":minutes}}},func(reply:Dictionary):
+		settings_pending=false
+		settings_feedback="设置已保存；实际执行模式以任务状态为准。" if reply.get("ok",false) else str(reply.get("reason","设置保存失败。"))
+		present_auto_settings())
