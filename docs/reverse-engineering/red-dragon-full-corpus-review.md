@@ -1294,3 +1294,11 @@ Viewed twelve aligned sources (248042 through281394,stride3032), grids248042/266
 Independent275330 two exposed feet identify205 BODY pixels, excluding white claws, adjacent rider shoulder and shadow. Initial draft SHA256 `6a5cd2cbcbb823c5d6de75bca2197f6913f5a341cf05a8442c44257f4f380dab`; three-reference draft `1a2b59339c12aeb6369d6d5e5d7351f86e7735e31e6ea2018ec479a4882187e8`. Latest output changes23865 pixels (initial23376), maps528 ventral pixels and retains6609 unknown body-colour pixels. Remaining contact margins contain unfinished dragon colour, not solely protected rider. No complete semantic approval.
 
 Private evidence: `corpus-v1/pose109-*` and `progress-1347-hashes.json`. 1347/4416 unique drafts;3069 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 110: 1359 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248083 through281435,stride3032), grids248083/266275/275371, both independent primary reference outputs, twelve initial differences, eleven revised crops across four sheets, and full263243/275371/281435 comparisons. One output unchanged. Primary72x106 geometry checked. Source-drawn hair/helmet, lifted arm and garment regions exclude upper wing triangle. White jaw ventral, eye and horn preserved.
+
+Independent275371 exposed-wing polygon identifies305 BODY pixels right of raised arm, excluding adjacent skin and neck. Initial draft SHA256 `8762214ca6686bf65fc8f11f68831ea2bc2ad886e6bd4ed385fd938f8bf97bc7`; three-reference draft `d7117d6cf7e5de2a63358fdc3a6b22cfcade67ec2993b018b66f152233c5efe0`. Latest output changes17780 pixels (initial16536), maps1385 ventral pixels and retains10491 unknown body-colour pixels. Remaining wing rim, neck and rider contact margins include unfinished dragon colour, not solely protected rider. No complete semantic approval.
+
+Private evidence: `corpus-v1/pose110-*` and `progress-1359-hashes.json`. 1359/4416 unique drafts;3057 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
