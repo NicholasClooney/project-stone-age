@@ -88,6 +88,7 @@ const AdultCheckpoint=preload("res://server/adult_battle_checkpoint.gd")
 var stationary = preload("res://server/stationary_encounters.gd").new()
 var stationary_party_member: Callable
 var quest_auto = preload("res://server/quest_auto.gd").new()
+var quest_loot = preload("res://server/quest_auto_loot.gd").new()
 var transmigration = preload("res://server/transmigration_service.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
 var _npc_state_published_version := 0
@@ -827,6 +828,7 @@ func training_borrow_config(troop: Dictionary) -> Dictionary:
 
 func open_battle(config: Dictionary) -> Dictionary:
 	WildLoot.freeze(self)
+	quest_loot.bind_battle(self)
 	session.battle_pets_hook = _live_battle_pets
 	session.capture_entry_hook = _capture_entry
 	encounter_serial += 1
@@ -968,7 +970,8 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	var capture_only := bool(session._pending.get("capture_only",false)) and not party_battle()
 	var quest_transaction: bool=session._pending.has("quest_guard") or session._pending.has("wild_drop_receipt") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0))))
 	var revival_transaction: bool=_revival_transaction()
-	var atomic: bool=capture_only or quest_transaction or revival_transaction
+	var loot_transaction:bool=session._pending.has("quest_loot_receipt")
+	var atomic: bool=capture_only or quest_transaction or revival_transaction or loot_transaction
 	var pending_before: Dictionary = session._pending.duplicate(true) if atomic and not bool(state.active) else {}
 	var capture_events_before: Array = session.capture_events.duplicate(true) if atomic and not bool(state.active) else []
 	# A party battle settles this player's own slice (its own battle id and
@@ -995,12 +998,27 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			if party:drop_claims=filtered.claims
 			else:session._pending.loot_claims=filtered.claims
 	var applied:bool=not bool(state.active) and wild_error.is_empty() and session.apply_battle_result(result,drop_claims)
-	if not applied and (not arrival_denied.is_empty() or pending_before.has("wild_drop_receipt")):session._pending=pending_before
+	if not applied and not bool(state.active) and (not arrival_denied.is_empty() or pending_before.has("wild_drop_receipt") or loot_transaction):session._pending=pending_before
 	if not wild_error.is_empty():state.settlement_error=wild_error
 	if applied:
 		if pending_before.has("quest_guard") and str(state.outcome)=="win" and arrival_denied.is_empty():
 			preload("res://server/brothers_quests.gd").settle_profile(self,pending_before.quest_guard)
-		if atomic and not save():
+		var loot_frame:Dictionary={}
+		var loot_saved:Dictionary={}
+		if loot_transaction:
+			loot_frame=_prepare_loot_settlement(pending_before,result)
+			if loot_frame.get("ok",false):loot_saved=_commit_loot_settlement(loot_frame)
+			if loot_saved.get("ok",false):
+				loot_frame.timer.settlement_committed(loot_frame.lifetime,loot_frame.receipt,loot_saved.profile.quest_loot)
+			# The disk result is real even if a callback installed another run or
+			# manual pending. Do not publish/rollback this old frame over it.
+			if not _owns_loot_settlement(loot_frame):
+				state.settled=bool(loot_saved.get("ok",false))
+				if not state.settled:state.settlement_error="刷物结算上下文已改变；旧事务停止，未覆盖新状态。"
+				return state.duplicate(true)
+		var failed:bool=not loot_saved.get("ok",false) if loot_transaction else (atomic and not save())
+		if failed:
+			if loot_transaction:return _rollback_loot_settlement(loot_frame,before,pending_before,capture_events_before,state)
 			session._profile = before
 			session._pending = pending_before
 			session.capture_events = capture_events_before
@@ -1031,7 +1049,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			state.events.append("获得%s。"%item_name if drop.received else "背包已满，%s已销毁。"%item_name)
 		if state.outcome in ["win","captured"] and int(state.get("xp",0)) > 0:
 			state.events.append("获得经验 %d，石币 %d。" % [int(state.get("xp",0)),int(state.get("gold",0))])
-			var after: Dictionary = session.snapshot()
+			var after: Dictionary = loot_saved.profile if loot_transaction else session.snapshot()
 			state.result_summary = [{"name":"你","xp":int(state.get("xp",0)),"level_up":int(after.player.level)>int(before.player.level)}]
 			var pet_rewards: Array = state.get("pet_reward_xp",[])
 			for pet_index in range(mini(before.pets.size(),pet_rewards.size())):
@@ -1047,10 +1065,18 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 						state.events.append("可以向饲育员学习伙伴技能。")
 		elif state.outcome=="captured":
 			state.events.append((("随身已满，已存仓" if pending_before.has("capture_destination") else "只抓不练：Lv.1伙伴已留在旧仓库。") if str(pending_before.get("capture_destination","storage"))=="storage" else "只抓不练：Lv.1伙伴已加入随身。") if capture_only else "伙伴已加入宠物栏，可为它取名并选择出战。")
-		var saved_ok := save()
+		# The first atomic loot save already committed both rewards and counters.
+		var saved_ok:bool = true if loot_transaction else save()
 		stationary.settled(self,state,saved_ok)
 		if not saved_ok and quest_auto.running and quest_auto.owns_battle:quest_auto.fail(self,"沿途战斗保存失败，停止自动任务。")
 		_publish()
+		if loot_transaction:
+			if not _owns_loot_settlement(loot_frame):return state.duplicate(true)
+			state.capture_assist=battle.capture_assist
+			battle_state=state
+			_publish_battle_pets()
+			if _owns_loot_settlement(loot_frame):_emit({"type":"battle_turn","state":state.duplicate(true)})
+			return state.duplicate(true)
 	if capture_only and not bool(state.get("active",true)) and not bool(state.get("settled",false)):
 		state.settlement_error = session.last_error if not session.last_error.is_empty() else "只抓不练捕获结算校验失败，已暂停，未发放奖励。"
 		state.xp = 0;state.gold = 0;state.result_summary = []
@@ -1059,6 +1085,63 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 	battle_state = state
 	_emit({"type":"battle_turn","state":state.duplicate(true)})
 	return state.duplicate(true)
+
+## Narrow loot frame, independent of a later runner or live profile snapshot.
+func _prepare_loot_settlement(pending:Dictionary,result:Dictionary)->Dictionary:
+	var timer=quest_loot
+	var frame:Dictionary={"ok":false,"session":session,"path":save_path,"battle":battle,
+		"timer":timer,"lifetime":timer.lifetime,"receipt":pending.quest_loot_receipt.duplicate(true),"battle_id":str(pending.battle_id),
+		"run_identity":quest_auto.identity.checkpoint(),"profile_ref":session._profile,
+		"profile":session._profile.duplicate(true),"pending_ref":session._pending,
+		"pending":session._pending.duplicate(true),"captures_ref":session.capture_events,
+		"captures":session.capture_events.duplicate(true)}
+	var prepared:Dictionary=session.prepare_loot_settlement(frame.receipt,str(pending.battle_id))
+	if prepared.is_empty():
+		timer.pause_storage_for(frame.lifetime);frame.reason="原战结算候选无法绑定。";return frame
+	frame.capability=prepared.capability
+	var candidate:Dictionary=timer.settlement_candidate(self,pending,result)
+	if not candidate.ok:
+		timer.pause_storage_for(frame.lifetime);frame.reason=str(candidate.reason);return frame
+	if not _owns_loot_settlement(frame):
+		frame.reason="刷物候选构建期间上下文已改变。";return frame
+	frame.profile=prepared.profile
+	frame.profile.quest_loot=candidate.ledger
+	session._profile.quest_loot=candidate.ledger.duplicate(true)
+	frame.ok=true
+	return frame
+
+func _owns_loot_settlement(frame:Dictionary)->bool:
+	return not frame.is_empty() and is_same(session,frame.session) and save_path==frame.path and is_same(battle,frame.battle) and str(battle.snapshot().get("battle_id",""))==frame.battle_id and is_same(session._profile,frame.profile_ref) and session._profile==frame.profile and is_same(session._pending,frame.pending_ref) and session._pending==frame.pending and is_same(session.capture_events,frame.captures_ref) and session.capture_events==frame.captures
+
+func _rollback_loot_settlement(frame:Dictionary,before:Dictionary,pending:Dictionary,captures:Array,state:Dictionary)->Dictionary:
+	# Caller has already checked ownership after the failed synchronous write.
+	session._profile=before;session._pending=pending;session.capture_events=captures
+	session.abandon_loot_settlement(frame.get("capability"))
+	frame.timer.pause_storage_for(frame.lifetime)
+	# Bind the restored objects before callbacks; no write follows a lost frame.
+	frame.profile_ref=session._profile;frame.profile=before.duplicate(true)
+	frame.pending_ref=session._pending;frame.pending=pending.duplicate(true)
+	frame.captures_ref=session.capture_events;frame.captures=captures.duplicate(true)
+	state.settled=false
+	state.settlement_error=frame.get("reason","刷物战保存失败，战果与预算均已回滚；原战结算可重试。")
+	state.xp=0;state.gold=0;state.result_summary=[]
+	battle_state=state
+	stationary.settled(self,state,false)
+	if not _owns_loot_settlement(frame):return state.duplicate(true)
+	if is_same(quest_loot,frame.timer) and is_same(frame.timer.lifetime,frame.lifetime) and quest_auto.running and quest_auto.identity.checkpoint()==frame.run_identity:quest_auto.handoff(self,"刷物战结算未保存，停止新尝试。")
+	if _owns_loot_settlement(frame):_emit({"type":"battle_turn","state":state.duplicate(true)})
+	return state.duplicate(true)
+
+func _commit_loot_settlement(frame:Dictionary)->Dictionary:
+	if not frame.get("ok",false) or not _owns_loot_settlement(frame):return {"ok":false}
+	return frame.session.commit_loot_settlement(frame.capability,frame.profile,frame.path,_loot_settlement_written.bind(frame.session,frame.path))
+
+func _loot_settlement_written(payload:String,owner,path:String)->void:
+	# Called synchronously at the actual candidate write boundary. A later
+	# observer's save updates this cache afterwards and wins normally.
+	if not is_same(session,owner) or save_path!=path:return
+	last_saved_payload=payload
+	quest_save_serial+=1
 
 ## Validate the entire original list before either task filter. Invalid claims
 ## stay untouched for the normal Session rejection; suppression cannot repair them.
@@ -1090,8 +1173,13 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	# 自动练级 met the next troop, LAN phase 4c) is not an error.
 	if command.has("battle_id") and str(command.battle_id)!=str(battle.snapshot().get("battle_id","")):return _stale("battle already closed")
 	if battle.snapshot().active:return _reject("battle not finished")
-	if _revival_transaction() or bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.has("wild_drop_receipt") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
+	if _revival_transaction() or session._pending.has("quest_loot_receipt") or bool(session._pending.get("capture_only",false)) or session._pending.has("quest_guard") or session._pending.has("wild_drop_receipt") or session._pending.get("enemies",[]).any(func(enemy):return EncounterCatalog.transactional_drop_enemy(int(enemy.get("source_enemy_id",0)))):
+		var loot_retry:bool=session._pending.has("quest_loot_receipt")
+		var retry_session=session
+		var retry_battle=battle
+		var retry_id:=str(battle.snapshot().get("battle_id",""))
 		var retried := _after_turn(battle.snapshot())
+		if loot_retry and (not is_same(session,retry_session) or not is_same(battle,retry_battle) or str(battle.snapshot().get("battle_id",""))!=retry_id or (bool(retried.get("settled",false)) and not session._pending.is_empty())):return _stale("loot settlement context replaced")
 		if not bool(retried.get("settled",false)):return _reject(str(retried.get("settlement_error","捕获未结算")))
 	return {"ok":true,"outcome":close_battle()}
 

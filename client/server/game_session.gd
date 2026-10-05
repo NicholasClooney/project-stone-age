@@ -2,7 +2,8 @@ extends RefCounted
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
-const SAVE_VERSION := 7
+const SAVE_VERSION := 8
+const LootState=preload("res://server/quest_auto_loot_state.gd")
 const TransmigrationState=preload("res://server/transmigration_state.gd")
 const ItemStorage=preload("res://server/item_storage.gd")
 const OriginalRevival = preload("res://server/original_revival.gd")
@@ -47,6 +48,8 @@ const SPECIES := {
 }
 var _profile: Dictionary
 var _pending: Dictionary = {}
+# Capability issued only by successful original loot battle application.
+var _loot_settlement: Dictionary = {}
 var _training_preview
 ## Pets the open battle's live state adds to battle_pets() (pet_id -> reason):
 ## one switched in, one that already has kill credit, the capture helpers.
@@ -74,7 +77,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	login_clock=clock
 	login_rng=luck_random if luck_random!=null else RandomNumberGenerator.new()
 	if luck_random==null:login_rng.randomize()
-	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0,"haru_armor":0,"freya_robe":0,"teo_robe":0,"koyala_charm":0},"equipped_mirror":false,"equipment":{"body":"","amulet":""},"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"no_random_encounters":false,"automation_settings":{},"music":MusicLibrary.empty()}
+	_profile = {"version":SAVE_VERSION,"character_id":"100000","profile_id":"samgir-singleplayer-v1","player":{"hp":48,"max_hp":48,"level":1,"xp":0,"gold":20,"attack":10,"defence":0,"speed":10,"stat_points":0,"allocated_stats":{"vitality":0,"strength":0,"toughness":0,"dexterity":0},"elements":Elements.PLAYER_DEFAULT.duplicate()},"inventory":{"potion":2,"club":0,"mirror_charm":0,"haru_armor":0,"freya_robe":0,"teo_robe":0,"koyala_charm":0},"equipped_mirror":false,"equipment":{"body":"","amulet":""},"equipped":false,"travel_pass":false,"pets":[],"pet_storage":[],"next_pet_id":1,"active_pet":-1,"ride_pet":-1,"quest":{"accepted":false,"wins":0,"boss_defeated":false,"claimed":false},"location":{"map_id":1000,"x":80,"y":90},"completed_battles":[],"next_battle":1,"no_random_encounters":false,"automation_settings":{},"quest_loot":LootState.empty(),"music":MusicLibrary.empty()}
 	_profile.merge(ORIGINAL_DEFAULT.duplicate(true),true)
 
 	_profile.player.base_stats = Progression.START.duplicate()
@@ -586,8 +589,15 @@ func apply_battle_result(result: Dictionary, party_drop_claims: Array = []) -> b
 	# Monotonic IDs plus a bounded replay log keep save size bounded.
 	if _profile.completed_battles.size() > 128:
 		_profile.completed_battles.pop_front()
+	var loot_receipt:Dictionary=_pending.get("quest_loot_receipt",{}).duplicate(true)
 	_pending.clear()
 	_refresh_loyalty()
+	if not loot_receipt.is_empty():
+		var normalized:Dictionary=snapshot()
+		var received:=0
+		for drop in result.get("drop_summary",[]):
+			if drop.get("item_id")==2760 and drop.get("received",false)==true:received+=1
+		_loot_settlement={"capability":RefCounted.new(),"receipt":loot_receipt,"battle_id":id,"profile":normalized,"received":received}
 	return true
 
 ## Charm and loyalty the battle changed, before experience and level-ups
@@ -1391,7 +1401,44 @@ func save_game(path: String) -> bool:
 	if not _pending.is_empty():
 		last_error = "Finish the battle before saving."
 		return false
+	if not LootState.valid_profile(_profile):
+		last_error = "Invalid persistent loot budget."
+		return false
 	return _write_profile(path)
+
+## Only the actual original apply_battle_result can mint this capability.
+## Normalization precedes the timer's final settlement sample.
+func prepare_loot_settlement(receipt:Dictionary,battle_id:String)->Dictionary:
+	if not _pending.is_empty() or _loot_settlement.is_empty():return {}
+	if _loot_settlement.receipt!=receipt or _loot_settlement.battle_id!=battle_id or _profile!=_loot_settlement.profile:return {}
+	return {"capability":_loot_settlement.capability,"profile":_loot_settlement.profile.duplicate(true)}
+
+## No arbitrary profile writer: every non-ledger field must equal the actual
+## original battle result, and counters must be its exact one-shot transition.
+func commit_loot_settlement(capability:RefCounted,candidate:Dictionary,path:String,committed:Callable)->Dictionary:
+	if path.is_empty() or not committed.is_valid() or not _pending.is_empty() or _loot_settlement.is_empty():return {"ok":false}
+	var frame:Dictionary=_loot_settlement
+	if not is_same(capability,frame.capability) or not _valid_profile(candidate) or _profile!=candidate:return {"ok":false}
+	var receipt:Dictionary=frame.receipt
+	if receipt.get("owner_session_id")!=get_instance_id() or not receipt.get("ledger") is Dictionary:return {"ok":false}
+	var entry:Dictionary=candidate.quest_loot.entries.get(LootState.STEP,{})
+	if entry.is_empty() or not str(frame.battle_id) in candidate.completed_battles:return {"ok":false}
+	var transition:=LootState.settle(frame.profile.quest_loot,LootState.STEP,receipt.ledger,str(frame.battle_id),entry.used_ms,frame.received)
+	if not transition.ok:return {"ok":false}
+	var expected:Dictionary=frame.profile.duplicate(true)
+	expected.quest_loot=transition.ledger
+	if candidate!=expected:return {"ok":false}
+	# Never give a writer/observer the mutable live profile or the stored frame.
+	var frozen:Dictionary=expected.duplicate(true)
+	var payload:=JSON.stringify(frozen)
+	if not _write_profile_candidate(frozen,path):return {"ok":false}
+	if is_same(_loot_settlement,frame):_loot_settlement={}
+	# Backend cache is updated here, before the caller can observe the return.
+	committed.call(payload)
+	return {"ok":true,"payload":payload,"profile":expected}
+
+func abandon_loot_settlement(capability:RefCounted)->void:
+	if not _loot_settlement.is_empty() and is_same(_loot_settlement.capability,capability):_loot_settlement={}
 
 ## Candidate is already normalized/validated; do not run equipment migration here.
 func commit_transmigration_candidate(candidate:Dictionary,path:String)->bool:
@@ -1450,7 +1497,12 @@ func load_game(path: String) -> bool:
 			continue
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
+			var previous_profile:Dictionary=_profile
+			var previous_login_rng_state:int=login_rng.state
+			var ledger:Dictionary=LootState.recovered(parsed,candidate!=path)
+			var persist_recovery:bool=ledger!=parsed.get("quest_loot",LootState.empty())
 			_profile = _normalize_numbers(parsed)
+			_profile.quest_loot=_normalize_numbers(ledger)
 			if int(_profile.version)<6:
 				for key in ["original_instances","original_equipment","next_original_uid"]:_profile.erase(key)
 			_refresh_login_luck()
@@ -1508,6 +1560,12 @@ func load_game(path: String) -> bool:
 			TransmigrationState.migrate(_profile)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
+			# Recovery uncertainty must survive the next restart before play resumes.
+			if persist_recovery and not _write_profile(path):
+				_profile=previous_profile
+				login_rng.state=previous_login_rng_state
+				last_error="Cannot persist uncertain loot budget recovery."
+				return false
 			return true
 	last_error = "No valid save or backup."
 	return false
@@ -1524,6 +1582,7 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
+	if not LootState.valid_profile(value):return false
 	if not TransmigrationState.valid(value):return false
 	if int(value.version)>=5 and not original_state_valid(value):return false
 	if not ItemStorage.valid(value):return false
