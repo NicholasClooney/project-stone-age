@@ -1,0 +1,717 @@
+{
+  "version": 1,
+  "npc": {
+    "id": "100/sb_nusu1.arg@10701:23:51",
+    "source_script": "100/sb_nusu1.arg",
+    "source_create": "gmsv/data/npc/100/sb_nusu.create",
+    "source_create_index": 0,
+    "events": [
+      13,
+      14
+    ],
+    "name": "┣皚",
+    "map_id": 10701,
+    "cell": [
+      23,
+      51
+    ],
+    "graphic": 100405,
+    "facing": 6,
+    "role": "quest",
+    "text": "",
+    "branches": [
+      {
+        "event": -1,
+        "type": "BATTLE",
+        "condition": "LV>0",
+        "texts": {
+          "AcceptMsg1": "那、那是我们的脚印…",
+          "AcceptMsg2": "被发现了就没办法了。",
+          "AcceptMsg3": "过来！抢走它！！"
+        },
+        "actions": {
+          "Battle": "513,516"
+        },
+        "enabled": true,
+        "events": [
+          13,
+          14
+        ],
+        "source": "100/sb_nusu1.arg",
+        "source_fields": {
+          "entype": "2",
+          "askbattlemsg1": "那、那是我们的脚印…",
+          "askbattlemsg2": "被发现了就没办法了。",
+          "askbattlemsg3": "过来！抢走它！！",
+          "startmsg": "嘿嘿嘿。现在才道歉已经太晚了。",
+          "dieact": "0",
+          "item": "2431",
+          "end msg": "畜、畜生…",
+          "enemyno": "513,516",
+          "deniedmsg": "你做什么？我可是很忙的。到那边去。真是麻烦的家伙…。",
+          "time": "300"
+        },
+        "guard": {
+          "enemy_ids": [
+            513,
+            516
+          ],
+          "dieact": 0,
+          "required_items": [
+            2431
+          ],
+          "steal": 0,
+          "cooldown": 300
+        },
+        "source_rule": "gmsv/npc/npc_npcenemy.c:83-109,354-397,453-486; existing battle AI only",
+        "combat_audit": {
+          "enemies": {
+            "513": {
+              "source": "gmsv/data/enemy.txt",
+              "source_line": 352,
+              "raw_columns": [
+                "怪力的小马",
+                "at:10;1;1|gu:1|es:0|wa:5;0;0;0;0;0;0;",
+                "",
+                "513",
+                "515",
+                "36",
+                "38",
+                "1",
+                "1",
+                "1",
+                "0",
+                "-1",
+                "0",
+                "0",
+                "2428",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "1000",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "tactics": "at:10;1;1|gu:1|es:0|wa:5;0;0;0;0;0;0;",
+              "template_id": 515
+            },
+            "516": {
+              "source": "gmsv/data/enemy.txt",
+              "source_line": 355,
+              "raw_columns": [
+                "小马的宠物",
+                "at:10;1;1|gu:1|es:0|wa:0;0;3;0;0;0;0;",
+                "",
+                "516",
+                "518",
+                "30",
+                "32",
+                "1",
+                "1",
+                "1",
+                "0",
+                "-1",
+                "0",
+                "0",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                ""
+              ],
+              "tactics": "at:10;1;1|gu:1|es:0|wa:0;0;3;0;0;0;0;",
+              "template_id": 518
+            }
+          },
+          "bases": {
+            "515": {
+              "source": "gmsv/data/enemybase.txt",
+              "source_line": 337,
+              "raw_columns": [
+                "怪力的小马",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "515",
+                "20",
+                "5.00",
+                "15",
+                "45",
+                "10",
+                "30",
+                "100",
+                "0",
+                "0",
+                "0",
+                "100",
+                "0",
+                "5",
+                "5",
+                "5",
+                "5",
+                "5",
+                "5",
+                "40",
+                "-1",
+                "-1",
+                "-1",
+                "-1",
+                "-1",
+                "-1",
+                "0",
+                "5",
+                "5",
+                "7",
+                "100405",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "",
+                "-1"
+              ],
+              "skills": [
+                {
+                  "slot": 0,
+                  "id": 40,
+                  "raw": "40",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 12,
+                  "raw_columns": [
+                    "一击必杀",
+                    "给予两倍的攻击伤害但是命中率下降",
+                    "PETSKILL_Mighty",
+                    "倍2 回避30",
+                    "",
+                    "",
+                    "40",
+                    "1",
+                    "6",
+                    "2",
+                    "2500",
+                    "PETSKILL_MIGHTY1"
+                  ],
+                  "name": "一击必杀",
+                  "function": "PETSKILL_Mighty",
+                  "argument": "倍2 回避30"
+                },
+                {
+                  "slot": 1,
+                  "id": -1,
+                  "raw": "-1",
+                  "original_skill_runtime_restored": false
+                },
+                {
+                  "slot": 2,
+                  "id": -1,
+                  "raw": "-1",
+                  "original_skill_runtime_restored": false
+                },
+                {
+                  "slot": 3,
+                  "id": -1,
+                  "raw": "-1",
+                  "original_skill_runtime_restored": false
+                },
+                {
+                  "slot": 4,
+                  "id": -1,
+                  "raw": "-1",
+                  "original_skill_runtime_restored": false
+                },
+                {
+                  "slot": 5,
+                  "id": -1,
+                  "raw": "-1",
+                  "original_skill_runtime_restored": false
+                },
+                {
+                  "slot": 6,
+                  "id": -1,
+                  "raw": "-1",
+                  "original_skill_runtime_restored": false
+                }
+              ]
+            },
+            "518": {
+              "source": "gmsv/data/enemybase.txt",
+              "source_line": 340,
+              "raw_columns": [
+                "库",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "518",
+                "24",
+                "5.00",
+                "23",
+                "28",
+                "16",
+                "25",
+                "240",
+                "5",
+                "60",
+                "40",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "0",
+                "1",
+                "2",
+                "61",
+                "",
+                "",
+                "",
+                "",
+                "0",
+                "3",
+                "3",
+                "5",
+                "100327",
+                "0",
+                "1",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "",
+                "-1"
+              ],
+              "skills": [
+                {
+                  "slot": 0,
+                  "id": 1,
+                  "raw": "1",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 2,
+                  "raw_columns": [
+                    "攻击",
+                    "通常攻击",
+                    "PETSKILL_NormalAttack",
+                    "",
+                    "",
+                    "",
+                    "1",
+                    "1",
+                    "6",
+                    "2",
+                    "1000",
+                    "PETSKILL_NORMALATTACK"
+                  ],
+                  "name": "攻击",
+                  "function": "PETSKILL_NormalAttack",
+                  "argument": ""
+                },
+                {
+                  "slot": 1,
+                  "id": 2,
+                  "raw": "2",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 3,
+                  "raw_columns": [
+                    "防御",
+                    "通常防御",
+                    "PETSKILL_NormalGuard",
+                    "",
+                    "",
+                    "",
+                    "2",
+                    "1",
+                    "5",
+                    "2",
+                    "1000",
+                    "PETSKILL_NORMALGUARD"
+                  ],
+                  "name": "防御",
+                  "function": "PETSKILL_NormalGuard",
+                  "argument": ""
+                },
+                {
+                  "slot": 2,
+                  "id": 61,
+                  "raw": "61",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 18,
+                  "raw_columns": [
+                    "猛毒攻击",
+                    "攻击力减50%五回合前后让敌人中毒",
+                    "PETSKILL_StatusChange",
+                    "毒 turn 5  攻%-50",
+                    "",
+                    "",
+                    "61",
+                    "1",
+                    "6",
+                    "2",
+                    "4000",
+                    "PETSKILL_POISON_ATTACK2"
+                  ],
+                  "name": "猛毒攻击",
+                  "function": "PETSKILL_StatusChange",
+                  "argument": "毒 turn 5  攻%-50"
+                },
+                {
+                  "slot": 3,
+                  "id": 0,
+                  "raw": "",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 1,
+                  "raw_columns": [
+                    "待机",
+                    "什么也不做",
+                    "PETSKILL_None",
+                    "",
+                    "",
+                    "",
+                    "0",
+                    "1",
+                    "5",
+                    "2",
+                    "500",
+                    "PETSKILL_NONE"
+                  ],
+                  "name": "待机",
+                  "function": "PETSKILL_None",
+                  "argument": ""
+                },
+                {
+                  "slot": 4,
+                  "id": 0,
+                  "raw": "",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 1,
+                  "raw_columns": [
+                    "待机",
+                    "什么也不做",
+                    "PETSKILL_None",
+                    "",
+                    "",
+                    "",
+                    "0",
+                    "1",
+                    "5",
+                    "2",
+                    "500",
+                    "PETSKILL_NONE"
+                  ],
+                  "name": "待机",
+                  "function": "PETSKILL_None",
+                  "argument": ""
+                },
+                {
+                  "slot": 5,
+                  "id": 0,
+                  "raw": "",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 1,
+                  "raw_columns": [
+                    "待机",
+                    "什么也不做",
+                    "PETSKILL_None",
+                    "",
+                    "",
+                    "",
+                    "0",
+                    "1",
+                    "5",
+                    "2",
+                    "500",
+                    "PETSKILL_NONE"
+                  ],
+                  "name": "待机",
+                  "function": "PETSKILL_None",
+                  "argument": ""
+                },
+                {
+                  "slot": 6,
+                  "id": 0,
+                  "raw": "",
+                  "original_skill_runtime_restored": false,
+                  "source": "gmsv/data/petskill.txt",
+                  "source_line": 1,
+                  "raw_columns": [
+                    "待机",
+                    "什么也不做",
+                    "PETSKILL_None",
+                    "",
+                    "",
+                    "",
+                    "0",
+                    "1",
+                    "5",
+                    "2",
+                    "500",
+                    "PETSKILL_NONE"
+                  ],
+                  "name": "待机",
+                  "function": "PETSKILL_None",
+                  "argument": ""
+                }
+              ]
+            }
+          },
+          "runtime": "existing-ai-only",
+          "skills_source_sha256": "c5a72c857da85b793bf5d4f1a9960db6f3f0eccd229f5ccef637d6eb0e91d242",
+          "review_document": {
+            "path": "docs/reverse-engineering/bonus-cave-chains-sources.json",
+            "sha256": "ff542942f43782fbcd1038db63588d9557b2f0f704ef819523d442b472f8b92b"
+          }
+        }
+      }
+    ],
+    "source_spawn_mode": "NPCEnemy borncenter 1x1; original movement not simulated",
+    "bitmap_id": 85401,
+    "source_pose": {
+      "action": 0,
+      "direction": 6,
+      "frame": 0
+    },
+    "path": "quests/npcs/n-3130302f73625f6e757375312e6172674031303730313a32333a3531.png",
+    "offset": [
+      -16,
+      -84
+    ]
+  },
+  "source_key": "100/sb_nusu1.arg",
+  "source_sha256": "c902fc462652073459c66423be15da9e581912fe55765d685ec19ed6e549d6e4",
+  "doors": [
+    {
+      "row": {
+        "from_map": 1100,
+        "cell": [
+          63,
+          34
+        ],
+        "to_map": 100,
+        "target": [
+          470,
+          630
+        ],
+        "source": "100warp.create:358"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/100warp.create",
+      "source_sha256": "d61d5ada11e28a2cd22603d071fe69396f6f02cf04769226e6826184cd59af60",
+      "source_line": 358,
+      "raw_block": "{\nfloorid=1100\nborncorner=63,34,63,34\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|100|470|630\n}"
+    },
+    {
+      "row": {
+        "from_map": 1100,
+        "cell": [
+          64,
+          34
+        ],
+        "to_map": 100,
+        "target": [
+          471,
+          630
+        ],
+        "source": "100warp.create:367"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/100warp.create",
+      "source_sha256": "d61d5ada11e28a2cd22603d071fe69396f6f02cf04769226e6826184cd59af60",
+      "source_line": 367,
+      "raw_block": "{\nfloorid=1100\nborncorner=64,34,64,34\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|100|471|630\n}"
+    },
+    {
+      "row": {
+        "from_map": 1100,
+        "cell": [
+          65,
+          34
+        ],
+        "to_map": 100,
+        "target": [
+          472,
+          630
+        ],
+        "source": "100warp.create:376"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/100warp.create",
+      "source_sha256": "d61d5ada11e28a2cd22603d071fe69396f6f02cf04769226e6826184cd59af60",
+      "source_line": 376,
+      "raw_block": "{\nfloorid=1100\nborncorner=65,34,65,34\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|100|472|630\n}"
+    },
+    {
+      "row": {
+        "from_map": 1100,
+        "cell": [
+          66,
+          34
+        ],
+        "to_map": 100,
+        "target": [
+          473,
+          630
+        ],
+        "source": "100warp.create:385"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/100warp.create",
+      "source_sha256": "d61d5ada11e28a2cd22603d071fe69396f6f02cf04769226e6826184cd59af60",
+      "source_line": 385,
+      "raw_block": "{\nfloorid=1100\nborncorner=66,34,66,34\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|100|473|630\n}"
+    },
+    {
+      "row": {
+        "from_map": 1100,
+        "cell": [
+          67,
+          34
+        ],
+        "to_map": 100,
+        "target": [
+          474,
+          630
+        ],
+        "source": "100warp.create:394"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/100warp.create",
+      "source_sha256": "d61d5ada11e28a2cd22603d071fe69396f6f02cf04769226e6826184cd59af60",
+      "source_line": 394,
+      "raw_block": "{\nfloorid=1100\nborncorner=67,34,67,34\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|100|474|630\n}"
+    },
+    {
+      "row": {
+        "from_map": 100,
+        "cell": [
+          132,
+          421
+        ],
+        "to_map": 10701,
+        "target": [
+          76,
+          67
+        ],
+        "source": "10701d.create:7"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/10701d.create",
+      "source_sha256": "e9b93abc20bef10520892010f5dbdb10efa4575436a45538a9aa1f66c68738ba",
+      "source_line": 7,
+      "raw_block": "{\nfloorid=100\nborncorner=132,421,132,421\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|10701|76|67\n}"
+    },
+    {
+      "row": {
+        "from_map": 10701,
+        "cell": [
+          76,
+          67
+        ],
+        "to_map": 100,
+        "target": [
+          132,
+          421
+        ],
+        "source": "10701d.create:16"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/10701d.create",
+      "source_sha256": "e9b93abc20bef10520892010f5dbdb10efa4575436a45538a9aa1f66c68738ba",
+      "source_line": 16,
+      "raw_block": "{\nfloorid=10701\nborncorner=76,67,76,67\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|100|132|421\n}"
+    },
+    {
+      "row": {
+        "from_map": 1112,
+        "cell": [
+          10,
+          15
+        ],
+        "to_map": 1100,
+        "target": [
+          82,
+          112
+        ],
+        "source": "warp_y.create:673"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/warp_y.create",
+      "source_sha256": "859ff2ed23baadb20382508874cd3a63e603b84c7205c6f5d8998229f4f4c8b1",
+      "source_line": 673,
+      "raw_block": "{\nfloorid=1112\nborncorner=10,15,10,15\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|1100|82|112\n}"
+    },
+    {
+      "row": {
+        "from_map": 1112,
+        "cell": [
+          10,
+          16
+        ],
+        "to_map": 1100,
+        "target": [
+          82,
+          113
+        ],
+        "source": "warp_y.create:691"
+      },
+      "source_path": "references/chenmingbiao-stone-age/gmsv/data/npc/genout/warp_y.create",
+      "source_sha256": "859ff2ed23baadb20382508874cd3a63e603b84c7205c6f5d8998229f4f4c8b1",
+      "source_line": 691,
+      "raw_block": "{\nfloorid=1112\nborncorner=10,16,10,16\ntime=0\nignoreinvincible=1\ncreatenum=1\nenemy=npcgen_warp|1100|82|113\n}"
+    }
+  ]
+}
