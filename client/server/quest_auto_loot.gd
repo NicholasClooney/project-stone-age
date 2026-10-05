@@ -356,7 +356,8 @@ func attempt_locked(b,frame:Dictionary)->Dictionary:
  # Compact flag must be set BEFORE automation.start's synchronous publication.
  # Its existing single_battle runner stops after this original battle only.
  b.automation.compact_active=true
- var started:Dictionary=b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}})
+ var execution:Dictionary=make_auto_context(b,frame)
+ var started:Dictionary=b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}},execution)
  if not attempt_owned(b,frame):return {"ok":false,"attempted":true,"battle":true,"reason":"战斗启动发布后旧执行已取消。"}
  return {"ok":bool(started.get("ok",false)),"attempted":true,"battle":true,"battle_id":battle_id}
 
@@ -438,3 +439,70 @@ func retry_idle_close(b,token:RefCounted)->Dictionary:
   resume_attempted=true
   b.keep_resume_file()
  return {"ok":true,"persisted":true,"retired":retired,"resume_attempted":resume_attempted,"profile":result.profile}
+
+# E3b draft: cancellation owns only an already-issued original battle receipt.
+var cancelled_battle:Dictionary={}
+func cancelled_battle_owner(b,ticket:Dictionary)->bool:
+ if ticket.is_empty():return false
+ var q=b.quest_auto
+ if not ticket.auto_scope.is_empty() and not is_same(ticket.automation.start_lifetime,ticket.auto_token):return false
+ return is_same(b.quest_loot,self) and is_same(b.session,ticket.session) and b.save_path==ticket.path and is_same(b.battle,ticket.battle) and is_same(b.automation,ticket.automation) and is_same(q,ticket.runner) and is_same(lifetime,ticket.lifetime) and q.identity.checkpoint()==ticket.identity and q.connection==ticket.connection and q.client==ticket.client
+func capture_battle_cancel(b)->Dictionary:
+ var q=b.quest_auto
+ if not cancelled_battle.is_empty():
+  return cancelled_battle if cancelled_battle_owner(b,cancelled_battle) and b.session._pending.get("quest_loot_receipt",{})==cancelled_battle.receipt else {}
+ if not q.running or q.identity.checkpoint()!=binding or q.step.get("id")!=State.STEP or owner_session_id!=b.session.get_instance_id() or battle_receipt.is_empty():return {}
+ var pending:Dictionary=b.session._pending
+ if not b.battle_open or pending.get("quest_loot_receipt",{})!=battle_receipt or pending.get("wild_drop_source",{})!=battle_receipt.source or str(pending.get("battle_id",""))!=str(battle_receipt.ledger.battle_id) or str(b.battle.snapshot().get("battle_id",""))!=str(pending.get("battle_id","")):return {}
+ if pending.get("party",false) or pending.get("capture_only",false) or pending.has("training_borrow") or pending.has("quest_guard") or not same_span(b.session._profile.get("quest_loot",{})):return {}
+ var auto=b.automation
+ # Never keep a foreign multi-battle runner alive under this receipt.
+ if auto.running and (not auto.single_battle or auto.settings.get("preset")!="attack" or not auto.settings.get("compact",false) or auto.clone_override_active or auto.hunt_running or auto.flow_active() or not auto.training_borrow_pending.is_empty()):return {}
+ cancelled_battle={"session":b.session,"path":b.save_path,"battle":b.battle,"automation":auto,"runner":q,"lifetime":lifetime,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"receipt":battle_receipt.duplicate(true),"auto_token":auto.start_lifetime,"auto_scope":auto._loot_frame()}
+ ready_frame={};admission=RefCounted.new()
+ # Do not pause/sample: current battle remains active through final settlement.
+ return cancelled_battle
+func prepare_battle_revocation(b,ticket:Dictionary,operation:String)->bool:
+ if not cancelled_battle_owner(b,ticket) or operation not in ["stop","detach"]:return false
+ if operation=="stop":ticket.identity.revision+=1
+ else:ticket.connection=-1;ticket.client=""
+ var scope:Dictionary=ticket.auto_scope
+ if not scope.is_empty() and is_same(ticket.automation.start_lifetime,ticket.auto_token):
+  scope.authority.identity=ticket.identity.duplicate(true)
+  scope.authority.connection=ticket.connection;scope.authority.client=ticket.client
+ return true
+func retire_cancelled_battle(b,expected_lifetime:RefCounted,receipt:Dictionary)->void:
+ var ticket:Dictionary=cancelled_battle
+ if ticket.is_empty() or not is_same(ticket.lifetime,expected_lifetime) or ticket.receipt!=receipt or not cancelled_battle_owner(b,ticket):return
+ # The immutable original battle candidate is already committed. No replan or
+ # new span is opened; a detached runner also becomes stopped at this boundary.
+ ticket.runner.running=false;ticket.runner.owns_battle=false
+ ticket.runner.phase="stopped"
+ if is_same(cancelled_battle,ticket):cancelled_battle={}
+
+func make_auto_context(b,frame:Dictionary)->Dictionary:
+ # Stored by automation and copied into cancellation tickets. Owner backlinks
+ # must stay weak in ALL copies; a strong self/timer link creates persistent cycles.
+ return {"capability":RefCounted.new(),"session":weakref(b.session),"path":b.save_path,"battle":weakref(b.battle),"battle_id":str(b.session._pending.get("battle_id","")),"automation":weakref(b.automation),"runner":weakref(b.quest_auto),"timer":weakref(self),"lifetime":lifetime,"receipt":battle_receipt.duplicate(true),"authority":{"identity":frame.identity.duplicate(true),"connection":frame.connection,"client":frame.client}}
+static func scope_owner_matches(frame:Dictionary,key:String,expected:Object)->bool:
+ if not is_instance_valid(expected):return false
+ var reference=frame.get(key)
+ if not reference is WeakRef:return false
+ # Local resolution holds the exact live object for this comparison only.
+ # An expired weak reference cannot resolve a replacement or an ObjectID reuse.
+ var owner=reference.get_ref()
+ return is_instance_valid(owner) and is_same(owner,expected)
+func auto_context_current(b,frame:Dictionary)->bool:
+ if frame.is_empty():return false
+ var q=b.quest_auto;var expected:Dictionary=frame.authority
+ return is_same(b.quest_loot,self) and scope_owner_matches(frame,"timer",self) and is_same(lifetime,frame.lifetime) and scope_owner_matches(frame,"session",b.session) and b.save_path==frame.path and scope_owner_matches(frame,"battle",b.battle) and str(b.battle.snapshot().get("battle_id",""))==frame.battle_id and scope_owner_matches(frame,"automation",b.automation) and scope_owner_matches(frame,"runner",q) and q.identity.checkpoint()==expected.identity and q.connection==expected.connection and q.client==expected.client
+func freeze_failed_auto(b,frame:Dictionary)->void:
+ if not is_same(b.quest_loot,self) or not is_same(lifetime,frame.lifetime) or not is_same(b.automation,frame.automation) or not is_same(b.automation.start_lifetime,frame.auto_token):return
+ var auto=b.automation;var scope:Dictionary=frame.auto_scope
+ if scope.is_empty() or not auto._loot_current(scope) or scope.receipt!=frame.receipt or b.session._pending.get("quest_loot_receipt",{})!=frame.receipt:return
+ # Disarm compact FIRST: original stop must never close an uncommitted battle.
+ # This exact E2 runner has no clone/flow obligation capable of early publish.
+ if auto.clone_override_active or auto.hunt_running or auto.flow_active() or not auto.training_borrow_pending.is_empty():return
+ ready_frame={};admission=RefCounted.new()
+ auto.compact_active=false
+ auto.stop("刷物战结算未保存，停止自动战斗等待修复。")

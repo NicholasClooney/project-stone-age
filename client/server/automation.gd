@@ -271,25 +271,60 @@ func _init(owner) -> void:
 
 # ---- commands --------------------------------------------------------------
 
-func start(command: Dictionary) -> Dictionary:
+# Ephemeral invocation identity; never serialized into automation settings.
+var start_lifetime:RefCounted=RefCounted.new()
+var loot_scope:Dictionary={}
+func _loot_frame()->Dictionary:
+	return loot_scope.duplicate() if not loot_scope.is_empty() else {}
+func _loot_current(frame:Dictionary)->bool:
+	if frame.is_empty():return true
+	return is_same(start_lifetime,frame.token) and not loot_scope.is_empty() and is_same(loot_scope.capability,frame.capability) and backend.quest_loot.auto_context_current(backend,frame)
+func _loot_step_current(frame:Dictionary)->bool:
+	return _loot_current(frame) and (frame.is_empty() or running)
+
+# Invocation-local strong owners; never stored in automation/scope/timer/tickets.
+func _start_entry()->Dictionary:
+	var q=backend.quest_auto
+	return {"backend":backend,"session":backend.session,"path":backend.save_path,"battle":backend.battle,"battle_id":str(backend.battle.snapshot().get("battle_id","")),"automation":backend.automation,"token":start_lifetime,"runner":q,"identity_object":q.identity,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client}
+func _start_entry_current(entry:Dictionary)->bool:
+	if entry.is_empty() or not is_instance_valid(entry.backend) or not is_same(backend,entry.backend):return false
+	var b=entry.backend;var q=b.quest_auto
+	return is_same(b.session,entry.session) and b.save_path==entry.path and is_same(b.battle,entry.battle) and str(b.battle.snapshot().get("battle_id",""))==entry.battle_id and is_same(b.automation,self) and is_same(b.automation,entry.automation) and is_same(start_lifetime,entry.token) and is_same(q,entry.runner) and is_same(q.identity,entry.identity_object) and q.identity.checkpoint()==entry.identity and q.connection==entry.connection and q.client==entry.client
+func _start_internal_current(loot_start:Dictionary,prior_scope:Dictionary)->bool:
+	if loot_start.is_empty():return true
+	return _loot_current(prior_scope) and backend.quest_loot.auto_context_current(backend,loot_start) and backend.session._pending.get("quest_loot_receipt",{})==loot_start.get("receipt",{})
+
+func start(command: Dictionary, loot_start:Dictionary={}) -> Dictionary:
+	var entry:Dictionary=_start_entry()
+	var prior_scope:Dictionary=_loot_frame()
+	var guarded:bool=not loot_scope.is_empty() or not loot_start.is_empty()
+	if backend.session._pending.has("quest_loot_receipt") and not backend.battle.snapshot().active and not backend.battle_state.get("settled",false):return _reply(false,"请先修复并保存当前刷物战果")
 	if command.get("filter") is Dictionary and command.filter.has("capture_only") and not command.filter.capture_only is bool:return _reply(false,"capture_only must be boolean")
 	for flag in ["select_troops","borrow_troops"]:
 		if command.get("settings") is Dictionary and command.settings.has(flag) and not command.settings[flag] is bool:return _reply(false,"%s must be bool"%flag)
+	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"旧自动启动已失效")
 	var position_error: String=backend.encounter_command_error(command,false)
+	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"启动检查期间归属已改变")
 	if not position_error.is_empty():return _reply(false,position_error)
+	if str(command.get("kind","")) not in ["battle","capture_battle","pet_train","hunt","find_pet"]:return {"ok":false,"reason":"unknown automation"}
+	var call:RefCounted=RefCounted.new()
 	match str(command.get("kind","")):
-		"battle":return _start_battle_runner(command)
+		"battle":return _start_battle_runner(command,loot_start,call,guarded,entry,prior_scope)
 		"capture_battle":
+			if not backend.battle.snapshot().active:return _reply(false,stop_reason)
+			if guarded and not _training_refusal({"preset":"capture"}).is_empty():return _reply(false,"当前不能启动自动捕捉")
 			_set_speed(command)
 			return _reply(start_capture_battle(int(command.get("target",-1)),bool(command.get("finish_battle",false)),command.get("settings",{})),stop_reason)
 		"pet_train":
-			_set_speed(command)
+			if running or backend.battle.snapshot().active:return _reply(false,stop_reason)
 			return _reply(start_pet_training(str(command.get("pet_id","")),int(command.get("target_level",120)),command.get("settings",{})),stop_reason)
 		"hunt":
 			if hunt_running or running or flow_active():return _reply(false,"自动流程进行中")
+			if guarded and backend.battle_open:return _reply(false,"请先结束当前战斗")
 			_load_settings(command)
 			return _reply(start_hunt(hunt_request(command)),hunt_status)
 		"find_pet":
+			if not loot_scope.is_empty() and (backend.battle.snapshot().active or backend.battle_open):return _reply(false,"请先结束战斗或移动，再开始一轮找宠。")
 			if flow_active():return _reply(false,"找宠流程进行中")
 			# The cycle takes the profile's stat conditions (and follows the
 			# player's later edits: apply_stat_filters). Older clients may still
@@ -504,13 +539,18 @@ func tick(delta: float) -> void:
 	if flow_active():flow_step()
 
 func tick_battle(delta: float) -> void:
+	var loot_tick:Dictionary=_loot_frame()
 	_flush_progress_status()
+	if not _loot_current(loot_tick):return
 	if not running:return
 	_training_yield=false
 	# Compact battles have nothing to watch: run steps back to back within a frame budget.
 	if bool(settings.compact) and (compact_active or not backend.battle_open):
 		var until := Time.get_ticks_usec()+frame_budget(COMPACT_BUDGET_USEC)
-		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until and not party_waiting() and not _training_yield:step()
+		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until and not party_waiting() and not _training_yield:
+			if not _loot_step_current(loot_tick):return
+			step()
+			if not _loot_step_current(loot_tick):return
 		return
 	cooldown -= delta
 	if cooldown > 0:return
@@ -520,10 +560,14 @@ func tick_battle(delta: float) -> void:
 ## One battle-runner step.
 func step() -> void:
 	if not running:return
+	var loot_call:Dictionary=_loot_frame()
+	if not _loot_step_current(loot_call):return
 	if not training_borrow_pending.is_empty():
 		_advance_training_borrow();return
 	if position_map!=origin_map or position_cell!=origin_cell:
 		stop("位置发生变化");return
+	if not loot_call.is_empty() and not backend.battle_open:
+		stop("本场刷物战斗已结束");return
 	var state: Dictionary = backend.battle.snapshot()
 	if backend.battle_open:
 		if not compact_active and not _presentation_done(state):return
@@ -537,6 +581,7 @@ func step() -> void:
 			# this run's own command (LAN phase 4c).
 			if backend.party_battle() and bool(backend.battle_state.get("settled",false)):record_result(backend.battle_state)
 			_close_battle()
+			if not _loot_step_current(loot_call):return
 			if outcome=="defeat":
 				# Defeat returns the player to the village and ends the run. An
 				# attached client reports that arrival itself.
@@ -544,11 +589,14 @@ func step() -> void:
 					var pause := position_changed(backend.VILLAGE.map_id,Vector2i(backend.VILLAGE.x,backend.VILLAGE.y),true)
 					if not pause.is_empty():_emit_event({"kind":"flow_paused","reason":pause})
 				release_clone_override()
+				if not _loot_step_current(loot_call):return
 				running = false
 				stop_reason = "战斗失败"
 				_emit_status()
+				if not _loot_step_current(loot_call):return
 				return
 			_emit_status()
+			if not _loot_step_current(loot_call):return
 			var clear_caught := int(state.get("clear_capture_target",-1))>=0 and bool(state.enemies[int(state.clear_capture_target)].get("captured",false))
 			# A capture run leaves after the catch (no experience for the weaken
 			# pet): escaping with the target caught is a finished capture.
@@ -559,11 +607,13 @@ func step() -> void:
 		if party_waiting():return
 		# Reset before healing too, matching the forecast turn for turn.
 		backend.set_capture_assist(str(settings.preset)=="capture")
+		if not _loot_step_current(loot_call):return
 		# The 恢复护符 heals the battle pet for free (no 气力): before any 精灵,
 		# and before the 停机线 could stop the run.
 		if not backend.party_battle() and bool(state.get("healing_available",false)) and int(state.get("pet_hp",0))>0 and int(state.get("pet_hp",0))*100<=int(state.get("pet_max_hp",1))*maxi(50,int(settings.hp)):
 			backend.battle.set_pet_command("defend")
 			var charmed: Dictionary = backend.battle_command({"action":"heal_pet","target":-1})
+			if not _loot_step_current(loot_call):return
 			turns += 1
 			if charmed.get("settled",false):record_result(charmed)
 			turn_text = "第 %d 回合 · 恢复护符治疗宠物" % turns
@@ -577,6 +627,7 @@ func step() -> void:
 			if not cast.is_empty():
 				backend.battle.set_pet_command("defend")
 				var healed: Dictionary = backend.battle_command({"action":str(cast.action),"target":int(cast.target)})
+				if not _loot_step_current(loot_call):return
 				turns += 1
 				if healed.get("settled",false) and not backend.party_battle():record_result(healed)
 				turn_text = "第 %d 回合 · 用精灵补血 · 气力 %d" % [turns,int(healed.get("player_mp",0))]
@@ -590,6 +641,7 @@ func step() -> void:
 			if not heal.is_empty():
 				backend.battle.set_pet_command("defend")
 				backend.battle_command({"action":heal,"target":-1})
+				if not _loot_step_current(loot_call):return
 				turns += 1
 				turn_text = "第 %d 回合 · %s" % [turns,"喝回复药" if heal=="item" else "恢复护符治疗宠物"]
 				_emit_status(true)
@@ -609,10 +661,12 @@ func step() -> void:
 		else:decision = Policy.decide(state,settings,capture_target)
 		if decision.has("stop"):stop(str(decision.stop));return
 		backend.set_capture_assist(bool(decision.get("assist",str(settings.preset)=="capture")))
+		if not _loot_step_current(loot_call):return
 		# A disobeying pet only skips its action in a run (battle_session.gd).
 		backend.battle.automated = true
 		backend.battle.set_pet_command(str(decision.pet))
 		var next: Dictionary = backend.battle_command({"action":str(decision.action),"target":int(decision.target),"pet_target":int(decision.target),"switch_pet":int(decision.get("switch",-2))})
+		if not _loot_step_current(loot_call):return
 		turns += 1
 		if next.get("settled",false) and not backend.party_battle():record_result(next)
 		turn_text = "第 %d 回合 · 体力 %d/%d · 气力 %d\n%s" % [turns,next.player_hp,next.player_max_hp,int(next.get("player_mp",0))," / ".join(next.events)]
@@ -663,6 +717,7 @@ func step() -> void:
 
 	compact_active = bool(settings.compact)
 	_emit_status()
+	if not _loot_step_current(loot_call):return
 	backend.session.protect_pets = bool(settings.get("protect",true))
 	var training_groups: Variant=null
 	if (bool(settings.get("select_troops",true)) or bool(settings.get("borrow_troops",true))) and str(settings.get("preset","attack"))!="capture" and not single_battle:
@@ -701,7 +756,9 @@ func step() -> void:
 		for i in range(battle_state.enemies.size()):
 			if battle_state.enemies[i].get("can_capture",false) and int(battle_state.enemies[i].hp) > 0:capture_target = i;break
 	backend.set_capture_assist(str(settings.preset)=="capture")
+	if not _loot_step_current(loot_call):return
 	_emit_status()
+	if not _loot_step_current(loot_call):return
 
 func _presentation_done(state: Dictionary) -> bool:
 	if not client_attached:return true
@@ -744,63 +801,111 @@ func _close_battle() -> void:
 
 # ---- battle runner lifecycle -----------------------------------------------
 
-func _start_battle_runner(command: Dictionary) -> Dictionary:
+func _start_battle_runner(command: Dictionary, loot_start:Dictionary={}, call:RefCounted=null, guarded:bool=false, entry:Dictionary={}, prior_scope:Dictionary={}) -> Dictionary:
+	# Both encounter checks share the outermost entry, never adopt a successor.
+	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"旧自动启动已失效")
 	var position_error: String=backend.encounter_command_error(command,false)
+	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"启动检查期间归属已改变")
 	if not position_error.is_empty():return _reply(false,position_error)
+	# Pure preflight before changing this runner's settings or capability.
+	if guarded:
+		var candidate:Dictionary=profile_settings()
+		if command.get("settings") is Dictionary:candidate.merge(command.settings,true)
+		var refusal:String=_training_refusal(candidate)
+		if not refusal.is_empty():return _reply(false,refusal)
 	_load_settings(command)
 	if command.has("capture_target"):capture_target = int(command.capture_target)
-	start_training()
-	return _reply(running,stop_reason)
+	var started:bool=start_training(loot_start,call)
+	if guarded and not is_same(start_lifetime,call):return _reply(false,"启动发布期间自动任务已替换")
+	return _reply(started and running if guarded else running,stop_reason)
 
-func start_training() -> void:
+func _training_refusal(candidate:Dictionary)->String:
+	var single:bool=bool(backend.battle.snapshot().active) and backend.battle_open
+	if not single and not backend.session.world_catalog.field(position_map):return "请先到野外再开始自动练级。"
+	if str(candidate.preset)=="train_pet" and single and backend.battle.snapshot().get("allies",[]).is_empty():return "带宠升级请在遇敌前开启，以生成完整镜像队。"
+	return ""
+
+func _training_call_current(frame:Dictionary,call:RefCounted,guarded:bool)->bool:
+	return (not guarded or is_same(start_lifetime,call)) and _loot_current(frame)
+
+func start_training(loot_start:Dictionary={}, call:RefCounted=null) -> bool:
+	if backend.session._pending.has("quest_loot_receipt") and not backend.battle.snapshot().active and not backend.battle_state.get("settled",false):return false
+	var guarded:bool=not loot_scope.is_empty() or not loot_start.is_empty()
+	if not loot_start.is_empty() and not backend.quest_loot.auto_context_current(backend,loot_start):return false
+	var refusal:String=_training_refusal(settings)
+	if not refusal.is_empty():
+		# Preserve an existing loot scope, including its status, on refusal.
+		if guarded:return false
+		stop_reason=refusal
+		_emit_event({"kind":"battle_refused","reason":stop_reason})
+		return false
+	if call==null:call=RefCounted.new()
+	# Accepted boundary: no refusal remains; subsequent false means superseded.
+	start_lifetime=call
+	loot_scope=loot_start.duplicate()
+	if not loot_scope.is_empty():loot_scope.token=call
+	var frame:Dictionary=_loot_frame()
 	training_pet_id = ""
 	finish_after_capture = false
 	backend.session.experience_multiplier = int(settings.xp)
 	single_battle = bool(backend.battle.snapshot().active) and backend.battle_open
-	if not single_battle and not backend.session.world_catalog.field(position_map):
-		stop_reason = "请先到野外再开始自动练级。"
-		_emit_event({"kind":"battle_refused","reason":stop_reason})
-		return
 	origin_map = position_map
 	origin_cell = position_cell
 	initial_level = int(backend.session.snapshot().player.level)
 	battles = 0;skipped = 0;training_skipped = 0;training_borrowed=0;training_borrow_pending={};unavailable_streak = 0;earned_xp = 0;earned_pet_xp = 0;turns = 0;cooldown = 0;stop_reason = "";starting_ride = -1;turn_text = ""
 	if str(settings.preset)=="train_pet":
-		if single_battle and backend.battle.snapshot().get("allies",[]).is_empty():
-			stop_reason = "带宠升级请在遇敌前开启，以生成完整镜像队。"
-			_emit_event({"kind":"battle_refused","reason":stop_reason})
-			return
 		acquire_clone_override()
+		if not _training_call_current(frame,call,guarded):return false
 	backend.set_capture_assist(str(settings.preset)=="capture")
+	if not _training_call_current(frame,call,guarded):return false
 	running = true
 	backend.publish()
+	if not _training_call_current(frame,call,guarded):return false
 	_emit_status()
+	return _training_call_current(frame,call,guarded)
 
 func start_capture_battle(target: int, finish_battle: bool = false, extra: Dictionary = {}) -> bool:
 	if not backend.battle.snapshot().active:return false
+	if not loot_scope.is_empty() and not _training_refusal({"preset":"capture"}).is_empty():return false
 	_load_settings({"settings":extra})
 	capture_target = target
 	settings.preset = "capture"
-	start_training()
+	var guarded:bool=not loot_scope.is_empty()
+	var call:RefCounted=RefCounted.new()
+	var started:bool=start_training({},call)
+	if guarded and (not started or not is_same(start_lifetime,call)):return false
 	finish_after_capture = finish_battle
 	_emit_status()
+	if guarded and not is_same(start_lifetime,call):return false
 	return running
 
 ## `overrides` replace the preset's defaults before the first battle opens.
 func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Dictionary = {}, overrides: Dictionary = {}) -> bool:
 	if running or backend.battle.snapshot().active:return false
+	var guarded:bool=not loot_scope.is_empty()
+	if guarded and not _training_refusal({"preset":"train_pet"}).is_empty():return false
+	var frame:Dictionary=_loot_frame()
 	var profile: Dictionary = backend.session.snapshot()
 	var chosen := -1
 	for i in range(profile.pets.size()):
 		if str(profile.pets[i].get("pet_id",""))==pet_id:chosen = i;break
-	if chosen < 0:stop_reason = "目标宠物不在随身队伍";return false
-	if int(profile.get("ride_pet",-1))==chosen:stop_reason = "目标宠物正在骑乘，请先下骑";return false
+	if chosen < 0:
+		if not guarded:stop_reason = "目标宠物不在随身队伍"
+		return false
+	if int(profile.get("ride_pet",-1))==chosen:
+		if not guarded:stop_reason = "目标宠物正在骑乘，请先下骑"
+		return false
+	if guarded and not backend.session._pending.is_empty():return false
 	if not backend.session.select_pet(chosen):stop_reason = "无法让目标宠物出战";return false
+	var prior:RefCounted=start_lifetime
 	backend.publish()
+	if guarded and (not is_same(start_lifetime,prior) or not _loot_current(frame)):return false
 	_load_settings({"settings":extra})
 	settings.merge({"preset":"train_pet","speed":8.0,"xp":10,"compact":true,"level":0,"level_explicit":true},true)
 	settings.merge(overrides,true)
-	start_training()
+	var call:RefCounted=RefCounted.new()
+	var started:bool=start_training({},call)
+	if guarded and (not started or not is_same(start_lifetime,call)):return false
 	if not running:return false
 	if training_pet_id!=pet_id:
 		training_falls = 0
@@ -808,6 +913,7 @@ func start_pet_training(pet_id: String, target_level_value: int = 120, extra: Di
 	training_pet_id = pet_id
 	training_pet_level = clampi(target_level_value,1,120)
 	_emit_status()
+	if guarded and not is_same(start_lifetime,call):return false
 	return true
 
 ## `line`: the 停机线 in percent; -1 is this run's (settings.hp), and then
@@ -857,12 +963,16 @@ func _protect_pets() -> void:
 	backend.session.protect_pets = bool(profile_settings().get("protect",true))
 
 func stop(reason: String) -> void:
+	var loot_call:Dictionary=_loot_frame()
+	if not _loot_current(loot_call):return
 	training_borrow_pending={}
 	release_clone_override()
+	if not _loot_current(loot_call):return
 	backend.session.protect_pets = false
 	running = false
 	stop_reason = reason
 	backend.set_capture_assist(false)
+	if not _loot_current(loot_call):return
 	# A battle the player takes over obeys the full loyalty rules again.
 	backend.battle.automated = false
 	var takeover := false
@@ -871,11 +981,13 @@ func stop(reason: String) -> void:
 	if compact_active and not backend.battle.snapshot().active and not unsettled_capture:
 		battles += 1
 		_close_battle()
+		if not _loot_current(loot_call):return
 	if compact_active:
 		# The battle continues under manual control in the full battle view.
 		compact_active = false
 		takeover = true
 	_emit_status()
+	if not _loot_current(loot_call):return
 	_emit_event({"kind":"battle_stopped","reason":reason,"battles":battles,"takeover":takeover})
 
 func record_result(state: Dictionary) -> void:
@@ -928,6 +1040,8 @@ func start_hunt(filter: Dictionary) -> bool:
 	var usable: Array = filter.get("usable",[])
 	if usable.is_empty() or HuntRules.targets(filter).is_empty():
 		hunt_status = "当前没有素材齐全的目标宠物。";return false
+	start_lifetime=RefCounted.new()
+	loot_scope={}
 	_hunt_profile_targets_key=_profile_targets_key()
 	_prepare_catalog(filter)
 	hunt_rolls = 0;hunt_inspected = 0;hunt_best = -9;hunt_mixed_skips = 0;hunt_elapsed = 0;hunt_credit = 0;hunt_last_hit = {}

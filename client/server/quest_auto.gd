@@ -49,8 +49,15 @@ var boss_id:=""
 var boss_ready:=false
 func delivery_supports(id:int)->bool:
  return Registry.supports(id)
+func transition_frame(b)->Dictionary:
+ return {"session":b.session,"path":b.save_path,"automation":b.automation,"auto_token":b.automation.start_lifetime,"identity_object":identity,"identity":identity.checkpoint(),"connection":connection,"client":client}
+func transition_current(b,frame:Dictionary)->bool:
+ return is_same(b.quest_auto,self) and is_same(b.session,frame.session) and b.save_path==frame.path and is_same(b.automation,frame.automation) and is_same(b.automation.start_lifetime,frame.auto_token) and is_same(identity,frame.identity_object) and identity.checkpoint()==frame.identity and connection==frame.connection and client==frame.client
 func handoff(b,reason:String)->void:
+ var call:Dictionary=transition_frame(b)
+ call.identity.revision+=1
  stop(b,reason)
+ if not transition_current(b,call):return
  phase="manual"
  pause_reason=reason
  b.publish()
@@ -129,8 +136,10 @@ func clear_motion()->void:
  motion={}
 func detach(b, peer:int) -> void:
  if not running or connection!=peer:return
+ var loot_battle:Dictionary=b.quest_loot.capture_battle_cancel(b)
  var loot_close:Dictionary=b.quest_loot.capture_idle_close(b)
  if not loot_close.is_empty() and not b.quest_loot.prepare_idle_revocation(b,loot_close,"detach"):return
+ if not loot_battle.is_empty() and not b.quest_loot.prepare_battle_revocation(b,loot_battle,"detach"):return
  detached=true
  if source_frame!=null:source_frame.detach()
  connection=-1
@@ -232,10 +241,14 @@ func snapshot(b=null) -> Dictionary:
  result.motion=motion.duplicate(true)
  return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true, captured_idle_close:Dictionary={}) -> void:
+ var call:Dictionary=transition_frame(b)
+ call.identity.revision+=1
+ var loot_battle:Dictionary=b.quest_loot.capture_battle_cancel(b)
  var loot_close:Dictionary=captured_idle_close if not captured_idle_close.is_empty() else b.quest_loot.capture_idle_close(b)
  if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
  # Repeated stop while repair is pending must not rotate its retry identity.
- if not running and not loot_close.is_empty():return
+ if not running and (not loot_close.is_empty() or not loot_battle.is_empty()):return
+ if not persist and not loot_battle.is_empty():shutdown_intent=resume_state()
  if not loot_close.is_empty():
   # Preserve intent before invalidation; close must precede resume location I/O.
   if not persist:shutdown_intent=resume_state()
@@ -243,6 +256,7 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true, captur
  var old_source=source_frame
  if old_source!=null:old_source.cancel()
  if not loot_close.is_empty() and not b.quest_loot.prepare_idle_revocation(b,loot_close,"stop"):return
+ if not loot_battle.is_empty() and not b.quest_loot.prepare_battle_revocation(b,loot_battle,"stop"):return
  source_frame=null
  identity.invalidate()
  waiting_saved=false
@@ -252,10 +266,11 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true, captur
  if not running:
   if persist and had_shutdown_intent:b.keep_resume_file()
   return
- if not persist and loot_close.is_empty():shutdown_intent=resume_state()
+ if not persist and loot_close.is_empty() and loot_battle.is_empty():shutdown_intent=resume_state()
  # A captured idle obligation proves no battle/pending/receipt is owned.
  # Do not enter automation.stop (which can publish midway) for this idle run.
- if loot_close.is_empty() and owns_battle and b.automation.running:b.automation.stop(reason)
+ if loot_close.is_empty() and loot_battle.is_empty() and owns_battle and b.automation.running:b.automation.stop(reason)
+ if not transition_current(b,call):return
  if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
  owns_battle=false
  path.clear();herb_path.clear()
@@ -269,12 +284,19 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true, captur
   b.quest_loot.finish_idle_close(b,loot_close)
   if not b.quest_loot.idle_close_context(b,loot_close):return
  if persist and loot_close.is_empty():b.keep_resume_file()
+ if not transition_current(b,call):return
  if not loot_close.is_empty() and not b.quest_loot.idle_close_context(b,loot_close):return
  b.publish()
 func resume_state() -> Dictionary:
  if not running:return shutdown_intent.duplicate(true)
  return {"version":3,"quest_id":quest_id,"clean_authorized":clean_authorized,"strict_walk":true,"identity":identity.checkpoint(),"phase":phase}
 func suspend(b) -> void:
+ var loot_battle:Dictionary=b.quest_loot.capture_battle_cancel(b)
+ if not loot_battle.is_empty():
+  stop(b,"服务器已停止。",false)
+  if not b.quest_loot.cancelled_battle_owner(b,loot_battle):return
+  b.keep_resume_file()
+  return
  # Capture before resume-clock/publication callbacks, as well as identity loss.
  var loot_close:Dictionary=b.quest_loot.capture_idle_close(b)
  if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
@@ -386,6 +408,8 @@ func report(b,command:Dictionary) -> void:
   b.publish()
 func tick(b,delta:float) -> void:
  if not running:return
+ # A cancelled receipt may finish only its already-running original battle.
+ if b.quest_loot.cancelled_battle_owner(b,b.quest_loot.cancelled_battle):return
  if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():stop(b,"组队变化停止了自动任务。");return
  if phase=="waiting_reward":
   if b.original_quests.pending.is_empty():handoff(b,"奖励窗口已失效，请重新操作。")
