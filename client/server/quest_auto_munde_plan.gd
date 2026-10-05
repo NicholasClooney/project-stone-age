@@ -83,3 +83,53 @@ static func request_proposal(b,job_id:int=8)->Dictionary:
  if locked.is_empty() or not same_source(branch,locked) or branch.get("source_branch_index")!=1 or branch.get("source_line")!=14 or branch.get("event")!=9 or branch.get("type")!="REQUEST" or branch.get("condition")!="LV>29&ENDEV=4" or not branch.get("actions",{}).is_empty():return hold("source_changed","当前首匹配分支不是原空动作REQUEST9。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持原受保护地图合法到达资格。")
  return {"status":"step","step":{"id":"munde:request:9","npc_id":REQUEST_NPC,"map_id":1200,"cell":[97,75],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REQUEST_NPC,"type":"REQUEST","condition":str(branch.condition),"actions":{},"branch_index":1,"branch_data":branch.duplicate(true),"source_line":14,"source_sha":str(table.sources["npc/sainasu/event/event09"].sha256),"audit_policy":"munde_request9_v1"}}}
+
+# Unopened next-stage proposal. No talk/choose/save or source-service permission.
+const REQUEST11_SOURCE_PATH="res://server/quest_auto_munde_request11_sources.json"
+const REQUEST11_SOURCE_SHA="6536357117ff4d08b58bf8a4bab67ce01b37b21797da06eebe806bd8e2d591de"
+const REQUEST11_NPC="sainasu/event/event11@1400:71:76"
+static func request11_source_table()->Dictionary:
+ if not FileAccess.file_exists(REQUEST11_SOURCE_PATH):return {}
+ var raw:String=FileAccess.get_file_as_string(REQUEST11_SOURCE_PATH)
+ if raw.sha256_text()!=REQUEST11_SOURCE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(raw)
+ return parsed if parsed is Dictionary else {}
+static func request11_proposal(b,job_id:int=8)->Dictionary:
+ if job_id!=8:return hold("unsupported_job","仅本任务的精确下一原事务。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="request11":return stage
+ var table:Dictionary=request11_source_table()
+ if table.is_empty():return hold("source_changed","完整源锁缺失或改变。")
+ for expected_job in table.jobs:
+  var job_count:int=0
+  for job in b.quest_catalog.jobs:
+   if job.get("id")==expected_job.id:
+    job_count+=1
+    if not same_source(job,expected_job):return hold("source_changed","完整job/event记录改变。")
+  if job_count!=1:return hold("source_changed","任务身份不唯一。")
+ if not 11 in b.quest_catalog.enabled_events:return hold("disabled","所需原事件未启用。")
+ var active_target:Dictionary={}
+ var expected_target:Dictionary={}
+ for expected in table.npcs:
+  var count:int=0
+  for npc in b.quest_catalog.npcs:
+   if npc.get("id")==expected.id:
+    count+=1
+    if not same_source(npc,expected):return hold("source_changed","完整原人物字段/原分支顺序改变。")
+  if count!=1:return hold("source_changed","原人物身份不唯一。")
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for candidate in expected.branches:
+   if candidate.get("enabled",false) and candidate.get("events",[]).any(func(value):return int(value) in b.quest_catalog.enabled_events):projected.branches.append(candidate.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return hold("source_changed","原位置/隐藏/完整活动投影改变。")
+  if expected.id==REQUEST11_NPC:
+   active_target=active;expected_target=expected
+ if active_target.is_empty():return hold("source_changed","目标原人物缺失。")
+ var branch:Dictionary=b.original_quests.branch_for(active_target,b.session._profile)
+ var locked:Dictionary={}
+ for original in expected_target.branches:
+  if (same_source(original.get("source_branch_index"),2) or same_source(original.get("source_branch_index"),3)) and same_source(branch,original):locked=original
+ if locked.is_empty():return hold("branch_unavailable","当前最高原支不是本片获审事务。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","当前原地图合法到达资格不足。")
+ return {"status":"step","step":{"id":"munde:request11","npc_id":REQUEST11_NPC,"map_id":int(active_target.map_id),"cell":active_target.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REQUEST11_NPC,"type":str(branch.type),"condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":int(branch.source_branch_index),"branch_data":branch.duplicate(true),"source_line":int(branch.source_line),"source_sha":str(table.sources["npc/"+str(active_target.source_script)].sha256),"audit_policy":"munde_request11_v1"}}}

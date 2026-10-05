@@ -75,3 +75,53 @@ static func request_proposal(b,job_id:int=26)->Dictionary:
  if locked.is_empty() or not same_source(branch,locked) or branch.get("source_branch_index")!=1 or branch.get("source_line")!=13 or branch.get("event")!=17 or branch.get("type")!="REQUEST" or branch.get("condition")!="LV>0&ITEM!=2505" or not same_source(branch.get("actions",{}),{"GetItem":"2505"}):return hold("source_changed","当前首匹配分支不是原领笛REQUEST17。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持原受保护地图合法到达资格。")
  return {"status":"step","step":{"id":"dragon:request:17","npc_id":REQUEST_NPC,"map_id":20801,"cell":[13,63],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REQUEST_NPC,"type":"REQUEST","condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":1,"branch_data":branch.duplicate(true),"source_line":13,"source_sha":str(table.sources["npc/jaruga/event/event17_4"].sha256),"audit_policy":"dragon_request17_v1"}}}
+
+# Unopened next-stage proposal. No talk/choose/save or source-service permission.
+const REPLACE_FLUTE_SOURCE_PATH="res://server/quest_auto_dragon_replace_flute_sources.json"
+const REPLACE_FLUTE_SOURCE_SHA="a68c81fd8add929b79088cfc19dd2362cd5d9b03cd6c74c0485108361dec43ee"
+const REPLACE_FLUTE_NPC="jaruga/event/event17_4@20801:13:63"
+static func replace_flute_source_table()->Dictionary:
+ if not FileAccess.file_exists(REPLACE_FLUTE_SOURCE_PATH):return {}
+ var raw:String=FileAccess.get_file_as_string(REPLACE_FLUTE_SOURCE_PATH)
+ if raw.sha256_text()!=REPLACE_FLUTE_SOURCE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(raw)
+ return parsed if parsed is Dictionary else {}
+static func replace_flute_proposal(b,job_id:int=26)->Dictionary:
+ if job_id!=26:return hold("unsupported_job","仅本任务的精确下一原事务。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="replace_token":return stage
+ var table:Dictionary=replace_flute_source_table()
+ if table.is_empty():return hold("source_changed","完整源锁缺失或改变。")
+ for expected_job in table.jobs:
+  var job_count:int=0
+  for job in b.quest_catalog.jobs:
+   if job.get("id")==expected_job.id:
+    job_count+=1
+    if not same_source(job,expected_job):return hold("source_changed","完整job/event记录改变。")
+  if job_count!=1:return hold("source_changed","任务身份不唯一。")
+ if not 17 in b.quest_catalog.enabled_events:return hold("disabled","所需原事件未启用。")
+ var active_target:Dictionary={}
+ var expected_target:Dictionary={}
+ for expected in table.npcs:
+  var count:int=0
+  for npc in b.quest_catalog.npcs:
+   if npc.get("id")==expected.id:
+    count+=1
+    if not same_source(npc,expected):return hold("source_changed","完整原人物字段/原分支顺序改变。")
+  if count!=1:return hold("source_changed","原人物身份不唯一。")
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for candidate in expected.branches:
+   if candidate.get("enabled",false) and candidate.get("events",[]).any(func(value):return int(value) in b.quest_catalog.enabled_events):projected.branches.append(candidate.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return hold("source_changed","原位置/隐藏/完整活动投影改变。")
+  if expected.id==REPLACE_FLUTE_NPC:
+   active_target=active;expected_target=expected
+ if active_target.is_empty():return hold("source_changed","目标原人物缺失。")
+ var branch:Dictionary=b.original_quests.branch_for(active_target,b.session._profile)
+ var locked:Dictionary={}
+ for original in expected_target.branches:
+  if (same_source(original.get("source_branch_index"),0)) and same_source(branch,original):locked=original
+ if locked.is_empty():return hold("branch_unavailable","当前最高原支不是本片获审事务。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","当前原地图合法到达资格不足。")
+ return {"status":"step","step":{"id":"dragon:replace_flute","npc_id":REPLACE_FLUTE_NPC,"map_id":int(active_target.map_id),"cell":active_target.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REPLACE_FLUTE_NPC,"type":str(branch.type),"condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":int(branch.source_branch_index),"branch_data":branch.duplicate(true),"source_line":int(branch.source_line),"source_sha":str(table.sources["npc/"+str(active_target.source_script)].sha256),"audit_policy":"dragon_replace_flute_v1"}}}
