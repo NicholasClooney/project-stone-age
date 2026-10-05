@@ -2,7 +2,6 @@ extends SceneTree
 ## UNRUN: requires actual core A0/A1/A2/A3 original commits, not yet supplied.
 ## Internal server acquire/open/sample/close fixture, NOT public loot admission.
 ## Actual two remote scenes consume production publication; no ClientState injection.
-const Backend=preload("res://server/backend.gd")
 const Server=preload("res://server/ws_server.gd")
 const Session=preload("res://server/game_session.gd")
 const ProfileCompare=preload("res://tests/support/quest_auto_loot_profile_compare.gd")
@@ -79,7 +78,7 @@ func published_sample(used:int)->bool:
  return check(budget(worlds[0])==budget(worlds[1]),"Both clients consume complete identical budget projection")
 func run()->void:
  root.size=Vector2i(390,844);root.content_scale_size=Vector2i.ZERO
- host=Backend.new();root.add_child(host);host.set_process(false);host.save_path=path
+ host=preload("res://tests/support/loot_display_enabled_backend.gd").new();root.add_child(host);host.set_process(false);host.save_path=path
  if not check(host.save(),"Actual independent disk baseline before projection"):return
  if not persisted("initial"):return
  host.publish()
@@ -87,6 +86,7 @@ func run()->void:
  if not check(server.start()==OK,"Real isolated server port0"):return
  var first=await connect_scene("a")
  if first==null:return
+ if not check(first.state.quest_loot_enabled(),"Test-only backend explicitly enables budget display for this real-WS consumer suite"):return
  var second=await connect_scene("b")
  if second==null:return
  for world in worlds:

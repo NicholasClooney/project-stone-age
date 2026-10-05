@@ -44,7 +44,7 @@ func run()->void:
  # DO NOT RUN before final E3 ownership/failure publication review.
  path="user://loot-battle-storage-remote.json"
  root.size=Vector2i(390,844);root.content_scale_size=Vector2i.ZERO
- host=Backend.new();root.add_child(host);host.set_process(false);host.save_path=path
+ host=preload("res://tests/support/loot_display_enabled_backend.gd").new();root.add_child(host);host.set_process(false);host.save_path=path
  if not source_fixture():return
  host.event.connect(func(event):observe("backend-final",event))
  server=Server.new(host,0,"127.0.0.1");root.add_child(server)

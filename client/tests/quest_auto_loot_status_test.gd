@@ -5,8 +5,14 @@ const Travel=preload("res://scripts/quest_helper_travel.gd")
 class StubLink extends RefCounted:
 	var online:bool=true
 	func is_local()->bool:return false
+class StubState extends RefCounted:
+	var derived:Dictionary={"quest_auto":{}}
+	var capabilities:Dictionary={"quest_loot_enabled":true}
+	func quest_loot_enabled()->bool:
+		var value=capabilities.get("quest_loot_enabled",false)
+		return value is bool and value
 class StubWorld extends Node:
-	var state:Dictionary={"derived":{"quest_auto":{}}}
+	var state:=StubState.new()
 	var link=StubLink.new()
 func _initialize()->void:
 	var world=StubWorld.new()
@@ -20,6 +26,11 @@ func _initialize()->void:
 	var shown:String=travel.auto_status()
 	assert(shown.begins_with("原任务状态\n原模式说明\n"))
 	assert(shown.contains("限时刷物尚未开放。") and not shown.contains("本步已用") and not shown.contains("0.0 / 0.0"))
+	world.state.capabilities={"quest_loot_enabled":false}
+	auto.budget.entry={"step_id":"jewels:hunt:2760","budget_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","generation":0,"revision":1,"target_item_id":2760,"target_count":1,"limit_ms":1800000,"saved_used_ms":1000,"used_ms":1250,"limit_reached":false,"existing_items":2,"new_items":1,"saved_battles":3}
+	assert(travel.auto_status()=="原任务状态\n原模式说明") # Disabled nonempty ledger never expands the ordinary status.
+	world.state.capabilities={"quest_loot_enabled":true}
+	auto.budget.entry=null
 	auto.budget.recovery_blocked=true
 	assert(travel.auto_status().contains("中断时段用时不确定，需确认预算"))
 	auto.budget.recovery_blocked=false

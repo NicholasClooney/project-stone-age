@@ -30,7 +30,7 @@ func archive(stage:String)->Dictionary:
 func run()->void:
  path="user://loot-recovery-remote.json"
  root.size=Vector2i(390,844);root.content_scale_size=Vector2i.ZERO
- host=Backend.new();root.add_child(host);host.set_process(false);host.save_path=path
+ host=preload("res://tests/support/loot_display_enabled_backend.gd").new();root.add_child(host);host.set_process(false);host.save_path=path
  if not check(host.save(),"H1 actual primary baseline"):return
  var first_host:int=host.get_instance_id()
  var first_session:int=host.session.get_instance_id()
@@ -68,7 +68,7 @@ func run()->void:
  host.queue_free()
  if not await ready(func():return not is_instance_id_valid(retired_host_id),"H1 retired before new owner exists"):return
  # H2 is first loader of primary R. Do not independently load R beforehand.
- host=Backend.new();host.set_process(false);host.save_path=path
+ host=preload("res://tests/support/loot_display_enabled_backend.gd").new();host.set_process(false);host.save_path=path
  if not check(host.get_instance_id()!=first_host and host.session.get_instance_id()!=first_session,"New H2 naturally owns new Session"):return
  var second_session:int=host.session.get_instance_id()
  if not check(host.load_profile(path),"H2 production load is first primary recovery loader"):return

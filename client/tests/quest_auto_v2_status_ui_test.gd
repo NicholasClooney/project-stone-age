@@ -24,6 +24,10 @@ func run()->void:
 		if not await ready(func():return not menu.find_child("QuestAutoContinue",true,false).disabled,"Saved Boss win may enable continuation"):return
 		world.state.derived.quest_auto.phase="battle"
 		if not await ready(func():return menu.find_child("QuestAutoContinue",true,false)==null,"Ordinary battle never offers Boss continue"):return
+		# Formatter expectations below use an explicit synthetic display capability;
+		# production's immutable default remains closed.
+		world.state.capabilities={"quest_loot_enabled":true}
+		if not check(world.state.quest_loot_enabled(),"Synthetic budget formatter fixture has strict-true display capability"):return
 		world.state.derived.quest_auto.budget={"enabled":false,"reason":"限时刷物尚未开放。","default_limit_minutes":30,"activity":"battle","finish_current_battle":false,"recovery_blocked":false,"can_start":false,"can_stop":false,"can_adjust_limit":false,"can_reset":false,"entry":{"step_id":"jewels:hunt:2760","budget_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","generation":0,"revision":1,"target_item_id":2760,"target_count":1,"limit_ms":1800000,"saved_used_ms":60000,"used_ms":60000,"limit_reached":false,"saved_battles":3,"new_items":2,"existing_items":5}}
 		if not check(world.quest_helper_travel.auto_status().contains("本步已用 60000 ms / 上限 1800000 ms") and world.quest_helper_travel.auto_status().contains("已保存战数 3") and world.quest_helper_travel.auto_status().contains("本步累计实际获得 2 · 初始已有 5（非当前库存）"),"Budget projection keeps elapsed, fights, new and existing separate"):return
 		if not await click(menu.find_child("QuestAutoSettingsOpen",true,false)):return
