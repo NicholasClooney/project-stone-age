@@ -1,9 +1,18 @@
 {
-  "version": "v0.280.0",
-  "count": 487,
-  "feature_count": 264,
+  "version": "v0.281.0",
+  "count": 488,
+  "feature_count": 265,
   "fix_count": 223,
   "entries": [
+    {
+      "version": "v0.281.0",
+      "date": "2026-10-05",
+      "kind": "feat",
+      "title": "常规任务后续提案与阶段边界准备（尚未开放）",
+      "details": [
+        "补充开发用梦德后续提案、强恩口令接近建议及龙洞/矿工阶段边界；尚未接入自动执行，不代表真实路线或事务已完成。"
+      ]
+    },
     {
       "version": "v0.280.0",
       "date": "2026-10-05",

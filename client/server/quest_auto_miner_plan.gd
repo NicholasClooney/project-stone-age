@@ -177,3 +177,49 @@ static func post_pass_boundary(b,job_id:int=14)->Dictionary:
  result["execution_available"]=false
  result["boundary"]="2536后原MESSAGE不推进；2534材料loot未冻结；持2534的原Get2535/Del2534*1,2536独立事务仍待审核；2535优先Boss人工；END27停止，1000复入manual。"
  return result
+
+# UNRUN candidate; source identity only, never execution authority.
+const EXCHANGE_ORE_PATH="res://server/quest_auto_miner_exchange_ore_sources.json"
+const EXCHANGE_ORE_SHA="8e1e88bfb560514091c7359fd5f9955fae1bf57e17284709e83f3c55eb219e97"
+static func exchange_ore_table()->Dictionary:
+ var text:String=FileAccess.get_file_as_string(EXCHANGE_ORE_PATH)
+ if text.sha256_text()!=EXCHANGE_ORE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(text)
+ return parsed if parsed is Dictionary else {}
+static func exchange_ore_active(b,id:String)->Dictionary:
+ var table:Dictionary=exchange_ore_table()
+ if table.is_empty():return {}
+ for job in table.jobs:
+  var matches:int=0
+  for current in b.quest_catalog.jobs:
+   if same_source(current.get("id"),job.id):
+    matches+=1
+    if not same_source(current,job):return {}
+  if matches!=1:return {}
+ for expected in table.npcs:
+  var matches:int=0
+  for current in b.quest_catalog.npcs:
+   if current.get("id")==expected.id:
+    matches+=1
+    if not same_source(current,expected):return {}
+  if matches!=1:return {}
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for branch in expected.branches:
+   if branch.get("enabled",false) and branch.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(branch.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return {}
+  if expected.id==id:return active
+ return {}
+static func exchange_ore_proposal(b,job_id:int=14)->Dictionary:
+ if job_id!=14:return hold("unsupported_job","仅矿工原交换，不启动任何其它任务。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="exchange_ore":return stage
+ if not 27 in b.quest_catalog.enabled_events:return hold("disabled","原event27未启用。")
+ var active:Dictionary=exchange_ore_active(b,"giiru/event/giruev2_2@31805:33:23")
+ if active.is_empty():return hold("source_changed","完整巴巴洛原分支或活动投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session._profile)
+ var expected:Dictionary=exchange_ore_table().npcs[0].branches[3]
+ if not same_source(branch.get("source_branch_index"),3) or not same_source(branch,expected):return hold("branch_unavailable","原最高分支不是矿石交换；不越过2533/2535。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","必须保持原合法到达，提案不授proof。")
+ return {"status":"step","step":{"id":"miner:exchange:2534","npc_id":active.id,"map_id":int(active.map_id),"cell":active.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":active.id,"type":"ACCEPT","condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":3,"branch_data":branch.duplicate(true),"source_line":27,"source_sha":str(exchange_ore_table().sources["npc/giiru/event/giruev2_2"].sha256),"audit_policy":"miner_exchange2534_v1"}}}
