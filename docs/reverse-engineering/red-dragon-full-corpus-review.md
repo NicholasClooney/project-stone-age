@@ -1628,3 +1628,11 @@ Viewed twelve aligned sources (248008 through281360,stride3032), primary248008/2
 Initial draft SHA256 `55c7fe9a610d48cb69d397b237ae1f5a352d51bec1fb1daf8559d0efa3726b55`; three-reference draft `2e9cf11412d2d58f60d0bcc046594c75ef0c411f4b1a4b3bc4a7f9c8b5785e82`. Independent275296 lower belly x34..49/y65..74 identifies115 BODY pixels, adds14 changes (272264:1,275296:13). Revision and full contact inspected. Final15692 changes (initial15678),715 ventral mappings,10872 unknown body-colour pixels. Neck/hand/leg contact and wing-root residual yellow remain unresolved; unknown is not rider proof. Complete ownership/material review remains outstanding.
 
 Private evidence: `corpus-v1/pose149-*` and `progress-1822-hashes.json`.1822/4416 unique drafts;2594 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 150: 1834 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248009 through281361,stride3032), primary248009/266201 grids and references,275297 grid, four initial difference sheets, side revision-0 and full263169/275297/281361. Primary60x106/60x104 localdy-2. Head/hair, hands and garment guards checked against current source (relative to146: left6/body6 up2), including body6 braid-tip extension. Golden outer wing exposed, no pale inner membrane identified; white jaw ventral. Final primary outputs byte-equal references.
+
+Initial draft SHA256 `c22b5c09b6e2cb6c70da8b28752e942f8aae264a4e3ebc1b401f9acd4e8d98c0`; three-reference draft `f55d86beae147e5cb63cac9b3475e257d73e3039fc72dd7bd04fcef6c28aa621`. Independent275297 lower belly x26..41/y65..74 identifies114 BODY pixels, adds15 changes (272265:1,275297:14). Revision and full contact inspected. Final14161 changes (initial14146),739 ventral mappings,10430 unknown body-colour pixels. Neck/hand/leg contact and residual yellow remain unresolved; unknown is not rider proof. Complete ownership/material review remains outstanding.
+
+Private evidence: `corpus-v1/pose150-*` and `progress-1834-hashes.json`.1834/4416 unique drafts;2582 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
