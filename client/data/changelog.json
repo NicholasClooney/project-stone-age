@@ -1,9 +1,18 @@
 {
-  "version": "v0.268.0",
-  "count": 464,
-  "feature_count": 252,
+  "version": "v0.269.0",
+  "count": 465,
+  "feature_count": 253,
   "fix_count": 212,
   "entries": [
+    {
+      "version": "v0.269.0",
+      "date": "2026-10-05",
+      "kind": "feat",
+      "title": "矿工原矿石交换提案准备（尚未开放）",
+      "details": [
+        "补充开发用原矿石交换提案与来源核验，尚未接入真实材料取得或交换执行；后续首领确认仍由玩家进行。"
+      ]
+    },
     {
       "version": "v0.268.0",
       "date": "2026-10-05",
