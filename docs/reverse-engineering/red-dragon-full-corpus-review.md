@@ -847,3 +847,23 @@ ten use `pose062-render`. Initial twelve-candidate totals: 19301 changes,
 and padding are compared with inspected candidate inputs without rerendering.
 783 unique drafts (36 samples + 747 pose rules), 3633 missing drafts, zero
 complete semantic receipts. No import, gameplay mapping or integration.
+
+## Pose063: 795 unique drafts
+
+Viewed all twelve diving-attack sources, both independent local reference
+coordinates and outputs, all twelve initial source/change pairs, and all
+twelve revision crops. A third independently drawn partial reference on
+257268 identifies 138 body-palette neck pixels below the face and beside
+the near hand. It uses source-bound geometry, not automatic labels. The
+three-reference derivation is followed by per-body occlusion inspection;
+no obvious rider recolour was found, but contacts remain incomplete.
+
+Latest all-twelve output: `pose063-neck-render`, with 23378 changes, 2146
+ventral recolours and 9139 retained unknown body-colour pixels. Net increase
+842 includes restoring the two manually outlined primary reference rules,
+so it must not all be attributed to the additional neck polygon. Lower cheek
+and belly are ventral; dorsal wings/body red. Remaining yellow includes
+unresolved dragon neck/wing contacts and is not all protected rider material.
+Saved fields and padding are checked against inspected candidate inputs.
+795 unique drafts (36 samples + 759 pose rules), 3621 missing drafts, zero
+complete semantic receipts. No importer, gameplay activation or integration.
