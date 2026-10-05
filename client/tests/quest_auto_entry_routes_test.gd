@@ -10,6 +10,7 @@ class TinyPointEntry:
  func _point_budget()->int:return 6
 class GeometryNav:
  extends "res://server/quest_auto_navigation.gd"
+ func _init()->void:_entry_fallback_enabled=true
  var decisions:Array=[]
  var plan_calls:=0
  var fallback_calls:=0
@@ -182,6 +183,15 @@ func continuation_guards()->void:
   else:
    check(p.next(b,target()).is_empty() and not p.entry_active,"same-map matching coordinates alone cannot acknowledge portal")
 func run()->void:
+ var closed_nav=Navigation.new();closed_nav.entry_routes=GeometryEntry.new()
+ closed_nav.entry_active=true;closed_nav.entry_anchor=[7,8];closed_nav.entry_context={"id":"sentinel"};closed_nav.entry_pending={"pending":true};closed_nav.entry_repeat={"repeat":true};closed_nav.route=[Vector2i(2,3)]
+ var closed_before:Dictionary={"active":closed_nav.entry_active,"anchor":closed_nav.entry_anchor.duplicate(true),"context":closed_nav.entry_context.duplicate(true),"pending":closed_nav.entry_pending.duplicate(true),"repeat":closed_nav.entry_repeat.duplicate(true),"route":closed_nav.route.duplicate()}
+ check(closed_nav._entry_fallback(null,target()).is_empty() and closed_nav.entry_routes.searches==0 and closed_nav.entry_active==closed_before.active and closed_nav.entry_anchor==closed_before.anchor and closed_nav.entry_context==closed_before.context and closed_nav.entry_pending==closed_before.pending and closed_nav.entry_repeat==closed_before.repeat and closed_nav.route==closed_before.route,"Direct disabled fallback returns before search and preserves existing Entry state (unit boundary)")
+ if failures:quit(1);return
+ var closed_plan=GeometryNav.new();closed_plan.entry_routes=GeometryEntry.new();closed_plan._entry_fallback_enabled=false
+ var closed_world=fixture()
+ check(closed_plan.plan(closed_world,target()).is_empty() and closed_plan.fallback_calls==1 and closed_plan.entry_routes.searches==0 and not closed_plan.entry_active and closed_plan.entry_context.is_empty(),"Synthetic disconnected plan stays on the old route path when Entry fallback is explicitly disabled")
+ if failures:quit(1);return
  var b=fixture();var nav=planner()
  var start:Vector2i=b.automation.position_cell
  var result:Array=nav.plan(b,target())

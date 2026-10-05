@@ -5,6 +5,10 @@ extends Node
 signal event(message: Dictionary)
 
 const PROTOCOL := 1
+## Public loot controls remain closed until the complete server entry and
+## client integration have passed their acceptance windows. This is also the
+## authority source for the display-only capability; clients cannot set it.
+const QUEST_LOOT_PUBLIC_ENABLED := false
 const GameSession = preload("res://server/game_session.gd")
 const BattleSession = preload("res://server/battle_session.gd")
 const SquadBattleSession = preload("res://server/squad_battle_session.gd")
@@ -505,7 +509,10 @@ func full_snapshot() -> Dictionary:
 	var profile: Dictionary = session.snapshot()
 	# The receiver now holds this storage; later changes are relative to it.
 	_storage_json = JSON.stringify(profile.get("pet_storage",[]))
-	return {"type":"snapshot","v":PROTOCOL,"rev":rev,"profile":profile,"derived":_derived(),"options":_options(),"battle":_live_battle_state(),"battle_open":battle_open,"automation":automation.status()}
+	return {"type":"snapshot","v":PROTOCOL,"rev":rev,"profile":profile,"derived":_derived(),"options":_options(),"battle":_live_battle_state(),"battle_open":battle_open,"automation":automation.status(),"capabilities":_capabilities()}
+
+func _capabilities() -> Dictionary:
+	return {"quest_loot_enabled":QUEST_LOOT_PUBLIC_ENABLED}
 
 # ---- session ---------------------------------------------------------------
 
@@ -1442,7 +1449,7 @@ func _publish() -> void:
 	if storage_json!=_storage_json:
 		_storage_json = storage_json
 		_emit({"type":"pet_storage","rev":rev,"pet_storage":storage})
-	_emit({"type":"profile","rev":rev,"profile":profile,"derived":_derived(),"options":_options()})
+	_emit({"type":"profile","rev":rev,"profile":profile,"derived":_derived(),"options":_options(),"capabilities":_capabilities()})
 
 func emit_event(message: Dictionary) -> void:
 	_emit(message)
