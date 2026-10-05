@@ -1380,3 +1380,13 @@ Viewed twelve aligned sources (248132 through281484,stride3032), primary248132/2
 Independent275420 tail and hind-leg-root polygons identify114 BODY pixels excluding skin and intervening gray rim; eight additional changes on this body only. Initial draft SHA256 `fd1f8bb98a11a46910b80ac9ed9224f6ab5444dda4b21b42bc5ba42c743eedd6`; three-reference draft `4ed0c55ae62c4f63bdd8bd2d3712d9d2a000f463902db1188f5d95e9d1b6c1f3`. Final31176 changes (initial31168),2556 ventral mappings,4766 unknown body-colour pixels. Foot/contact margins still include unfinished dragon colour; unknown is not rider proof. No complete semantic approval.
 
 Private evidence: `corpus-v1/pose119-*` and `progress-1467-hashes.json`. 1467/4416 unique drafts;2949 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 120: 1479 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248133 through281485,stride3032), primary248133/266325 and third275421 grids, both references, four initial difference sheets, ten revised crops across four sheets, and full263293/275421/281485. Primary160x90 geometries and three-pixel offset checked independently. Hair/helmet, hands, garment and feet traced separately around rear legs. Both visible gold wing surfaces treated as outer BODY, without borrowing earlier inner-membrane masks. White jaw ventral; final primaries byte-equal references.
+
+Independent275421 rear-leg polygons identify129 BODY pixels excluding skin above and white claw ends;90 added changes across ten bodies. Initial draft SHA256 `42d835894527582a6561684c8df88555c45112872faa343463aeab6e46ccadff`; three-reference draft `11edaccef99bdd4f4ced59ce70fd6bcc0497620421cb9d82fa5d078610726c63`. Final30018 changes (initial29928),2321 ventral mappings,5123 unknown body-colour pixels. Foot margins still contain unfinished dragon colour; unknown is not rider proof.
+
+An isolated281485 difference initially looked like a rider-edge issue in the reduced full sheet. Its source coordinate grid and probes corrected this interpretation: no changes at x<35,y>58; eight differences at x59–62,y59–60 are yellow dragon leg above white claw, away from the rider hand and foot. No unsupported restoration was applied. Both probe scripts/output timings retained; this clarification is not full semantic approval.
+
+Private evidence: `corpus-v1/pose120-*` and `progress-1479-hashes.json`. 1479/4416 unique drafts;2937 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
