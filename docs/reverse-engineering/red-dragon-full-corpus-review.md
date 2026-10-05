@@ -1312,3 +1312,11 @@ Original266276 reference incorrectly recoloured helmet(8,29). Broad v2 protectio
 Independent275372 lower belly polygon identifies116 BODY pixels below the rider foot. Initial draft SHA256 `fcc128294434d1eb39b3548440a4499b4bd08bbf1e9b88adb2ed3a4083f46300`; three-reference draft `5ae027779f61d88fa3543a8b45fee31efb9a6ad598a930f644024bfe1ade5df6`. Latest output changes20216 pixels (initial20022), maps1248 ventral pixels and retains8204 unknown body-colour pixels. Contact margins retain unfinished dragon colour; unknown does not mean proven rider. No complete semantic approval.
 
 Private evidence: `corpus-v1/pose111-*`, including v1/v2/v3 and head restoration reports, and `progress-1371-hashes.json`. 1371/4416 unique drafts;3045 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 112: 1383 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248085 through281437,stride3032), grids248085/266277/275373, both independent reference outputs, twelve initial differences, five revised crops across two sheets, and full263245/275373/281437 comparisons. Primary104x108/100x106 geometry checked separately. Inverted rider hair/helmet, raised hand and garment source contours exclude dragon foot. White jaw ventral; eye preserved.
+
+Independent275373 left dragon-foot polygon identifies71 BODY pixels below separated rider foot, excluding claw and shadow. Initial draft SHA256 `c9f39ccd358430adb5be3fdbc14a192c3c8424cdcc7827132ecbd6d1b28c55e8`; three-reference draft `8c027908b35bd6b834b1c701b82b9f61b890c3449039c601e7ae87e99383a5dd`. Latest output changes25075 pixels (initial24999), maps1596 ventral pixels and retains6829 unknown body-colour pixels. Remaining contact margins include unfinished dragon colour, not solely protected rider. No complete semantic approval.
+
+Private evidence: `corpus-v1/pose112-*` and `progress-1383-hashes.json`. 1383/4416 unique drafts;3033 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
