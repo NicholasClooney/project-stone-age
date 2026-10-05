@@ -554,6 +554,7 @@ func record_followup_close(b,ticket:Dictionary,saved:bool)->void:
   if is_same(followup,ticket):followup={}
   return
  ticket.serial=b.quest_save_serial;ticket.closed=true
+ ticket.dispatch_barrier=b.continuation_dispatch_checkpoint()
 func followup_status(b)->Dictionary:
  var ticket:Dictionary=followup
  if ticket.is_empty():return {}
