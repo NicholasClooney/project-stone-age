@@ -1328,3 +1328,13 @@ Viewed twelve aligned sources (248086 through281438,stride3032), grids248086/266
 Independent275374 far-foot polygon identifies68 BODY pixels right of rider, excluding rider foot and shadow. Initial draft SHA256 `8848a76660fde4bb1b1c221222fc49ae96e67451cc2a746d05db0023f0f416c9`; three-reference draft `4abd6f0e4056fc623ea3e8d93416861265e20cb6c39d48d480c0aecaf394c7d0`. Latest output changes29523 pixels (initial29519), maps1049 ventral pixels and retains6049 unknown body-colour pixels. Remaining contact margins include unfinished dragon colour, not solely protected rider. No complete semantic approval.
 
 Private evidence: `corpus-v1/pose113-*` and `progress-1395-hashes.json`. 1395/4416 unique drafts;3021 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 114: 1407 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248087 through281439,stride3032), primary/275375 grids, primary references including corrected266279 v2, twelve initial differences and twelve revised crops across four sheets, plus full263247/275375/278407/281439 comparisons. Actual primary124x94/120x92 geometry checked. Source-drawn skirt/skin/arm boundaries adjoin rear dragon legs.
+
+Original266279 reference incorrectly changed hand(35,77),(35,78). Independent local hand protection restores exactly these two points; guard pixels source-exact, other primary unchanged. Final primary renders equal v2. Original failure and restoration report retained; this local assertion is not complete rider proof.
+
+Independent275375 rear-leg polygons identify190 BODY pixels, excluding rider footwear and white claws. Initial draft SHA256 `da56ba5c08890625632c42ae52e4f0c26b8739de763b933e9efede96336b401e`; three-reference draft `69ff7e725a5a6953a3665a126fcc07044155021d1d3af98fc56d7822f3b29f57`. Latest output changes23728 pixels (initial23304), maps1922 ventral pixels and retains5997 unknown body-colour pixels. White jaw/belly rim ventral, eye/claws preserved. Contact margins retain unfinished dragon colour; unknown is not proven rider. No complete semantic approval.
+
+Private evidence: `corpus-v1/pose114-*`, including `pose114-hand-restoration.json`, and `progress-1407-hashes.json`. 1407/4416 unique drafts;3009 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
