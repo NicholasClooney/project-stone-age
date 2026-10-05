@@ -1416,3 +1416,13 @@ Initial248176 reference changed hair pixel(4,3). Independent hair polygon restor
 Independent275464 snout polygon identifies50 BODY pixels, adds42 changes across ten bodies. Actual third geometry88x111; temporary reference prose erroneously said88x112, while raster/bounds always used ledger88x111. Saved review corrects the prose without rewriting initial draft evidence. Initial draft SHA256 `abf09a2d3daf249dab470587a92606ec7cad5fd2a948add1423aad0c904e4b9f`; three-reference draft `ed32ed448aa202cda1a6c0995b38bc6f8b9118c5379a4f841fc5a93b746e5bc4`. Final20844 changes (initial20802),5107 ventral mappings,4778 unknown body-colour pixels. Foot/wing-root contact margins still contain unfinished dragon colour; unknown is not rider proof.
 
 Private evidence: `corpus-v1/pose123-*` and `progress-1515-hashes.json`. 1515/4416 unique drafts;2901 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 124: 1527 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248177 through281529,stride3032), primary248177/266369 and third275465 grids, both references, four initial difference sheets, one revised crop and full263337/275465/281529. Primary96x103/88x103 geometries, six-pixel x-origin difference; third80x103 checked independently. Independent hair/head, raised hand and garment beneath wing. Pale near membrane preserved separately, gold rim BODY; white jaw/chest/belly ventral. Final primaries byte-equal references.
+
+Independent275465 upright far-wing polygon identifies65 BODY pixels, adds27 changes on that body; excludes hair/face to left. Initial draft SHA256 `3a6e4e847dedf21f888d26d7d30d0aeb8fbc0f93f6ed549993266ebb5662f67f`; three-reference draft `c44ddc49ec88f19f81f8422b1575d5fd6698619076744976a8c44b797e98cf7b`. Final20841 changes (initial20814),6243 ventral mappings,4132 unknown body-colour pixels. Contact margins and far-wing strip retain unfinished dragon colour, not all protected as rider.
+
+Full281529 revealed isolated difference near helmet. Probe and its local source grid place it at(14,26), the diagonal wing rim in front of helmet. It was not treated as a proven rider error and no unsupported restoration applied. Probe/source evidence retained; complete material/ownership review remains outstanding.
+
+Private evidence: `corpus-v1/pose124-*` and `progress-1527-hashes.json`. 1527/4416 unique drafts;2889 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
