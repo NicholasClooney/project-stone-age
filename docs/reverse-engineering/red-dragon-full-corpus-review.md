@@ -1390,3 +1390,11 @@ Independent275421 rear-leg polygons identify129 BODY pixels excluding skin above
 An isolated281485 difference initially looked like a rider-edge issue in the reduced full sheet. Its source coordinate grid and probes corrected this interpretation: no changes at x<35,y>58; eight differences at x59–62,y59–60 are yellow dragon leg above white claw, away from the rider hand and foot. No unsupported restoration was applied. Both probe scripts/output timings retained; this clarification is not full semantic approval.
 
 Private evidence: `corpus-v1/pose120-*` and `progress-1479-hashes.json`. 1479/4416 unique drafts;2937 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 121: 1491 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248134 through281486,stride3032), primary248134/266326 and third275422 grids, both references, four initial difference sheets, four revised crops across two sheets, and full263294/275422/281486. Primary160x61/152x61 geometries and eight-pixel origin offset checked independently. Third275422 uses140x82 and y=-53 rather than primary y=-32: local coordinates independently drawn. Hair/helmet, hands, garment and feet traced around rear-leg contacts; gold wing surfaces outer BODY, white jaw/lower rim ventral. Final primaries byte-equal references.
+
+Independent275422 rear-leg polygons identify90 BODY pixels, add39 changes across four bodies, excluding skin and white claw ends. Initial draft SHA256 `4fea22019cd61a0afca0d99e18d7a48b039d945e167c32ec26c35aa6b3e51eed`; three-reference draft `980a2939a178c6722be91a849ab0b7d0ea4c456a2accbf26b2069af793c58f05`. Final28895 changes (initial28856),2178 ventral mappings,5446 unknown body-colour pixels. Foot/contact margins still include unfinished dragon colour. Unknown is not rider proof; no complete semantic approval.
+
+Private evidence: `corpus-v1/pose121-*` and `progress-1491-hashes.json`. 1491/4416 unique drafts;2925 not yet drafted; **0 complete semantic receipts**. Field/padding checks mechanical only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
