@@ -1612,3 +1612,11 @@ Viewed twelve aligned sources (248006 through281358,stride3032), primary248006/2
 Initial draft SHA256 `e6cb0cd01c53497acbe77543caa0dbe379d4e0434490bd4080e7137d0ec6445c`; three-reference draft `d484448521e42e51cf7a62edbd82c24238ab239568c6cc799472e96713910e82`. Independent275294 far-wing x55..64/y25..38 identifies68 BODY pixels, adds15 changes only on275294. Revision and full contact inspected. Final14646 changes (initial14631),533 ventral mappings,10728 unknown body-colour pixels. Unresolved neck/hand/leg contact and wing-root residual yellow remain; unknown is not rider proof. Membrane preservation alone does not establish complete material semantics.
 
 Private evidence: `corpus-v1/pose147-*` and `progress-1798-hashes.json`.1798/4416 unique drafts;2618 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 148: 1810 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248007 through281359,stride3032), primary248007/266199 grids and references,275295 grid, four initial difference sheets, side revision-0 and full263167/275295/281359. Primary80x114/80x112 localdy-2. Head/hair, hands and garment guards checked against current source (relative to146: left4/body6 up2). Narrow foreground grey olive membrane independently redrawn; golden rims/far wing BODY, white jaw ventral. Final primary outputs byte-equal references.
+
+Initial draft SHA256 `8e1550c7532a64745521ae46ad9a452bdb000c1c7dc24beff925a194b38a794c`; three-reference draft `e1e047359eb83103bbdc2a44b45e8dbe0af43110f140e33be12e56f3339ec718`. Independent275295 far-wing x60..69/y22..35 identifies73 BODY pixels, adds only2 changes on275295. Revision and full contact inspected; no claim of larger residual cleanup. Final14384 changes (initial14382),601 ventral mappings,11170 unknown body-colour pixels. Unresolved neck/hand/leg contact and wing-root residual yellow remain; unknown is not rider proof. Complete ownership/material review remains outstanding.
+
+Private evidence: `corpus-v1/pose148-*` and `progress-1810-hashes.json`.1810/4416 unique drafts;2606 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
