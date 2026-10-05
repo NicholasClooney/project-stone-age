@@ -3,6 +3,15 @@ const Backend=preload("res://server/backend.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
 func run()->void:
  var b=Backend.new();b.set_process(false);b.save_path="user://loot-projection.json"
+ var full:Dictionary=b.full_snapshot()
+ check(full.get("capabilities") is Dictionary and full.capabilities.get("quest_loot_enabled") is bool and not full.capabilities.quest_loot_enabled,"Full snapshot exposes the strict server-owned disabled loot capability")
+ if failures:b.free();quit(1);return
+ var published:Array=[]
+ b.event.connect(func(message:Dictionary):published.append(message.duplicate(true)))
+ b.publish()
+ var profile_events:Array=published.filter(func(message):return message.get("type","")=="profile")
+ check(profile_events.size()==1 and profile_events[0].get("capabilities") is Dictionary and profile_events[0].capabilities.get("quest_loot_enabled") is bool and not profile_events[0].capabilities.quest_loot_enabled,"Ordinary profile publication carries the same strict disabled capability")
+ if failures:b.free();quit(1);return
  var created:Dictionary=State.acquire(State.empty(),KEY,ID,RUN,1,0)
  check(created.get("ok",false),"Projection ledger acquire fixture succeeds")
  if failures:b.free();quit(1);return
