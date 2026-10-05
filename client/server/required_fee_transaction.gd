@@ -93,7 +93,7 @@ static func open_shop(b,id:String,command:Dictionary)->Dictionary:
  b.original_quests.serial+=1
  var token:String="permit-%d-%d"%[Time.get_ticks_usec(),b.original_quests.serial]
  b.original_quests.pending={"token":token,"permit_source":id,"phase":"permit_shop","open_id":command.open_id,"permit_connection":command._quest_connection,"permit_binding":command._fee_binding,"permit_session":weakref(b.session),"permit_path":b.save_path}
- return {"ok":true,"dialogue":{"token":token,"kind":"original_permit_shop","open_id":command.open_id,"name":npc.name,"text":"通行证：200 石币。购买一张？（项目确认窗口）","choices":[{"id":"buy_one","text":"购买一张"},{"id":"no","text":"取消"}]}}
+ return {"ok":true,"dialogue":{"token":token,"kind":"original_permit_shop","open_id":command.open_id,"name":npc.name,"text":"原售证：支付 200 石币后永久开放海底通路。确认购买？","choices":[{"id":"buy_one","text":"确认购买"},{"id":"no","text":"取消"}]}}
 static func choose_shop(b,token:String,choice:String,command:Dictionary)->Dictionary:
  var p:Dictionary=b.original_quests.pending
  if not page_owned(b,p,command) or p.get("token","")!=token:return refused("对话已过期。")
@@ -112,9 +112,11 @@ static func candidate(b,f:Dictionary)->Dictionary:
  if not current(b,f) or busy(b):return {}
  var c:Dictionary=f.before.duplicate(true)
  if f.kind=="permit":
-  if not near(b,vendor(b,f.source)) or b.session.has_travel_pass() or Session.bag_slots(c)>=15 or int(c.player.gold)<200:return {}
+  if not near(b,vendor(b,f.source)) or b.session.has_travel_pass() or int(c.player.gold)<200:return {}
   c.player.gold-=200
-  Session.OriginalEquipment.add(c,2422)
+  # Preserve the shipped permanent boolean entitlement. The new physical
+  # 2422 inventory feature remains closed; never mint or require a slot.
+  c.travel_pass=true
  elif f.kind=="seimu":
   var branch:Dictionary=f.branch
   if not gate_matches(b,f.source,branch) or not b.original_quests.allowed(b,lock_data().seimu) or b.original_quests.branch_for(lock_data().seimu,c)!=branch or not b.session.has_travel_pass() or int(c.player.gold)<300:return {}
@@ -136,7 +138,7 @@ static func seimu(b,profile:Dictionary,branch:Dictionary,f:Dictionary)->Dictiona
 static func commit(b,f:Dictionary)->Dictionary:
  if b._depth<=0:return refused("原收费事务必须由请求分发执行。")
  var c:Dictionary=candidate(b,f)
- if c.is_empty():return refused("费用不足、道具栏已满或原条件已经改变。")
+ if c.is_empty():return refused("余额不足或原售证/收费条件已经改变。")
  # No user callback from final checks through candidate installation.
  f.candidate=c
  f.expected=c.duplicate(true)
@@ -161,7 +163,8 @@ static func publish_committed(b,f:Dictionary)->void:
   b.quest_arrival.action_committed(b,lock_data().seimu,f.branch,"FREEWARP")
   Brothers.publish_warp(b,"31301,10,104")
  var fee:int=200 if f.kind=="permit" else 300
- b._emit({"type":"quest_result","text":("原商店通行证" if f.kind=="permit" else "赛姆原通行费")+"：扣除%d石币，提交后余额%d。"%[fee,int(f.committed.player.gold)]})
+ var fact:String="原售证：永久海底通行资格已生效" if f.kind=="permit" else "赛姆原通行费"
+ b._emit({"type":"quest_result","text":fact+"，扣除%d石币，提交后余额%d。"%[fee,int(f.committed.player.gold)]})
  b.publish()
 static func writer_ready(b,f:Dictionary)->bool:
  if not current(b,f) or f.marked or b.save_path.is_empty() or not b.session._pending.is_empty():return false

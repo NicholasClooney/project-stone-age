@@ -75,7 +75,7 @@ func run()->void:
    if failures:b.free();quit(1);return
    before.page={} # original one-use confirmation is consumed even on refusal
    var expected:Dictionary=before.profile.duplicate(true)
-   if kind=="permit":Session.OriginalEquipment.add(expected,2422)
+   if kind=="permit":expected.travel_pass=true
    else:expected.location={"map_id":31301,"x":10,"y":104}
    expected.player.gold-=cost
    if mode=="savefail":

@@ -3,6 +3,9 @@ var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
 const SAVE_VERSION := 8
+## Physical permit entitlement is an inert, server-only candidate feature.
+## The shipped permanent boolean remains the only active qualification.
+const ENTITY_TRAVEL_PASS_ENABLED := false
 const LootState=preload("res://server/quest_auto_loot_state.gd")
 const TransmigrationState=preload("res://server/transmigration_state.gd")
 const ItemStorage=preload("res://server/item_storage.gd")
@@ -103,7 +106,7 @@ func buy_travel_pass() -> bool:
 	return true
 
 func has_travel_pass() -> bool:
-	return _profile.get("travel_pass",false) or 2422 in _profile.original_items
+	return bool(_profile.get("travel_pass",false)) or (ENTITY_TRAVEL_PASS_ENABLED and 2422 in _profile.original_items)
 
 const ORIGINAL_DEFAULT := {"original_events":{"now":[0,0,0,0,0,0],"ended":[0,0,0,0,0,0]},"original_items":[],"origin":{"village_id":1000,"savepoint_bit":0,"provenance":"prototype_default"},"original_savepoint_bits":1}
 
