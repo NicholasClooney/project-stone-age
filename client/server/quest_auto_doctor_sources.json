@@ -1,0 +1,380 @@
+{
+  "version": 1,
+  "jobs": [
+    {
+      "id": 6,
+      "event": 15,
+      "title": "恐龙博士 抓鲁尼帖斯",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    },
+    {
+      "id": 7,
+      "event": 16,
+      "title": "恐龙博士 抓贝鲁卡",
+      "completed_label": "已完成",
+      "active_label": "进行中"
+    }
+  ],
+  "npc": {
+    "events": [
+      15,
+      16
+    ],
+    "id": "sainasu/event/event15_1",
+    "name": "恐龙博士哈鲁",
+    "map_id": 11006,
+    "cell": [
+      11,
+      11
+    ],
+    "graphic": 16024,
+    "facing": 4,
+    "role": "quest",
+    "text": "嗯…你有什么事吗？,我是在这儿研究恐龙的哈鲁。",
+    "branches": [
+      {
+        "event": 15,
+        "type": "ACCEPT",
+        "condition": "NOWEV=15&PET>14-74",
+        "texts": {
+          "AcceptMsg": "喂喂、就是那一只。要是有两只以上\n的话，把可以给我的那一只鲁尼帖斯先拿好，\n要不然我就自己挑了唷！",
+          "ThanksMsg": "长得真是好的鲁尼帖斯！\n啊！真是谢谢你了。\n就以这个作为谢礼吧！",
+          "ItemFullMsg": "咦？你的东西装满了唷！丢掉一些什么吧！"
+        },
+        "actions": {
+          "DelPet": "PET>14-74*1",
+          "GetRandItem": "1350,1351,1352,1354,700,1455,1102,1122",
+          "EndSetFlg": "15"
+        },
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      },
+      {
+        "event": 16,
+        "type": "ACCEPT",
+        "condition": "ENDEV=15&NOWEV=16&PET>29-191",
+        "texts": {
+          "AcceptMsg": "喂喂！就是那一只。如果你有两只以上的话，\n就把可以给我的那一只先拿着，\n不然的话，我就自己挑了唷！",
+          "ThanksMsg": "长得真是好的贝鲁卡啊！\n我就给你这只宠物作为谢礼吧！\n这是很稀有的动物，\n你要好好珍惜。",
+          "PetFullMsg": "你的宠物带太多了唷！\n你要丢掉哪一只？"
+        },
+        "actions": {
+          "DelPet": "PET>29-191*1",
+          "GetPet": "95",
+          "EndSetFlg": "16"
+        },
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      },
+      {
+        "event": 15,
+        "type": "REQUEST",
+        "condition": "LV>9",
+        "texts": {
+          "RequestMsg": "我是在这儿研究动物的\n哈鲁。\n真是抱歉啊！你能不能帮我做一件事呢？\n因为我已经这把年纪了…",
+          "ThanksMsg": "是吗？你愿意帮我吗？\n事实上，接下来我要朝另一种恐龙\n来做研究，无奈我已经老了啊…。\n在渡过贯穿萨伊那斯东西向的河流处，不是有咖啡色的恐龙吗？\n希望你能\n帮我抓来。关于详情，\n你就去问在那边的助手吧！",
+          "StopMsg": "嗯…没有１５级的鲁尼帖斯啊…。\n这样啊…不太可能啊…。\n怎么样都没办法吗？",
+          "EndStopMsg": "我明白了…太勉强你了真是不好意思。\n那我找别人帮忙好了。",
+          "NoStopMsg": "那就拜托你了喔！因为这关系到我的研究呢！"
+        },
+        "actions": {},
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      },
+      {
+        "event": 16,
+        "type": "REQUEST",
+        "condition": "LV>15&ENDEV=15",
+        "texts": {
+          "RequestMsg": "可以的话，能否再帮我一件事呢？",
+          "ThanksMsg": "太好了！你肯帮我啊！事实上，\n在南边的岛上，有一种叫贝鲁卡的恐龙，\n可以的话，也请你抓来。\n我希望你能帮我带３０级的贝鲁卡回来。\n真是不好意思，麻烦你了。",
+          "StopMsg": "这样啊…不能帮我啊…\n再怎么样都不行吗？",
+          "EndStopMsg": "真是不好意思啊…要到隔壁的那座岛的确要费一番功夫啊！",
+          "NoStopMsg": "那就拜托你了唷！因为这关系到我长久以来的研究啊…"
+        },
+        "actions": {},
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      },
+      {
+        "event": -1,
+        "type": "MESSAGE",
+        "condition": "ENDEV=15&PET>0-74",
+        "texts": {
+          "NomalMsg": "谢谢你帮我抓来啊！就把你当作我的助手吧！"
+        },
+        "actions": {},
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      },
+      {
+        "event": -1,
+        "type": "MESSAGE",
+        "condition": "ENDEV=15&NOWEV=16&PET>29-191",
+        "texts": {
+          "NomalMsg": "你好像还没有经过成年的仪式吧！等完成了再来吧！"
+        },
+        "actions": {},
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      },
+      {
+        "event": -1,
+        "type": "MESSAGE",
+        "condition": "ENDEV=15&ENDEV=16",
+        "texts": {
+          "NomalMsg": "谢谢你帮我抓来啊！如此一来，就可以开始我的研究了。那么，我教你一些好东西吧！"
+        },
+        "actions": {},
+        "enabled": true,
+        "events": [
+          15,
+          16
+        ]
+      }
+    ],
+    "bitmap_id": 5870,
+    "path": "quests/npcs/n-7361696e6173752f6576656e742f6576656e7431355f31.png",
+    "offset": [
+      -19,
+      -52
+    ]
+  },
+  "sources": {
+    "npc/sainasu/event/event15_1": {
+      "sha256": "bdd68415498806f66ea795da05ac52f9c5122ade98df21581e63859515e77042",
+      "bytes_base64": "I7Dvuf7Cs9Kv0q/XpbW9wrPE4cz7y7nWrsrCvP68sMvNMzC8trXEsbTCs7+otcTKwrz+Ck5vbWFsTWFpbk1zZzrgxaGtxOPT0Mqyw7TKwsLwo78sztLKx9Ta1eK2+dHQvr+/1sH6tcS5/sKzoaMKCkV2ZW50Tm86MTUKVFlQRTpBQ0NFUFQKRVZFTlQ6Tk9XRVY9MTUmUEVUPjE0LTc0CkFjY2VwdE1zZzrOuc65oaK+zcrHxMfSu9a7oaPSqsrH09DBvda70tTJz1xutcS7sKOssNG/ydLUuPjO0rXExMfSu9a7wrPE4cz7y7nPyMTDusOjrFxu0qqyu8i7ztK+zdfUvLrM9MHL4KGjoQpUaGFua3NNc2c6s6S1w9Xmyse6w7XEwrPE4cz7y7mjoVxusKGjodXmysfQu9C7xOPBy6GjXG6+zdLU1eK49tf3zqrQu8DxsMmjoQpJdGVtRnVsbE1zZzrf16O/xOO1xLarzvfXsML6wcvgoaOhtqq19NK70KnKssO0sMmjoQpEZWxQZXQ6UEVUPjE0LTc0KjEKR2V0UmFuZEl0ZW06MTM1MCwxMzUxLDEzNTIsMTM1NCw3MDAsMTQ1NSwxMTAyLDExMjIKRW5kU2V0RmxnOjE1CkV2ZW50RW5kCgpFdmVudE5vOjE2ClRZUEU6QUNDRVBUCkVWRU5UOkVOREVWPTE1Jk5PV0VWPTE2JlBFVD4yOS0xOTEKQWNjZXB0TXNnOs65zrmjob7NysfEx9K71ruho8jnufvE49PQwb3Wu9LUyc+1xLuwo6xcbr7NsNG/ydLUuPjO0rXExMfSu9a7z8jEw9fFo6xcbrK7yLu1xLuwo6zO0r7N19S8usz0wcvgoaOhClRoYW5rc01zZzqzpLXD1ebKx7rDtcSxtMKzv6iwoaOhXG7O0r7NuPjE49Xi1ruz6M7v1/fOqtC7wPGwyaOhXG7V4srHutzPodPQtcS2r87vo6xcbsTj0qq6w7rD1eTPp6GjClBldEZ1bGxNc2c6xOO1xLPozu+0+MyrtuDBy+Cho6FcbsTj0qq2qrX0xMTSu9a7o78KRGVsUGV0OlBFVD4yOS0xOTEqMQpHZXRQZXQ6OTUKRW5kU2V0RmxnOjE2CkV2ZW50RW5kCgpFdmVudE5vOjE1ClRZUEU6UkVRVUVTVApFVkVOVDpMVj45ClJlcXVlc3RNc2c6ztLKx9Ta1eK2+dHQvr+2r87vtcRcbrn+wrOho1xu1ebKx7Gnx7iwoaOhxOPE3LK7xNyw787S1/bSu7z+ysLE2KO/XG7S8s6qztLS0b6t1eKw0cTqvM3By6GtClRoYW5rc01zZzrKx8Lwo7/E49S40uKw787SwvCjv1xuysLKtcnPo6y908/CwLTO0tKqs6/B7dK71ta/1sH6XG7AtNf20dC+v6Oszt7Ezs7S0tG+rcDPwcuwoaGtoaNcbtTatsm5/bnhtKnI+NLBxMfLubarzvfP8rXEutPB97Smo6yyu8rH09C/p7fIyau1xL/WwfrC8KO/XG7Po837xOPE3FxusO/O0telwLSho7nY09rP6sfpo6xcbsTjvs3Ipc7K1NrEx7HftcTW+srWsMmjoQpTdG9wTXNnOuDFoa3Du9PQo7Gjtby2tcTCs8ThzPvLubChoa2ho1xu1eLR+bChoa2yu8yrv8nE3LChoa2ho1xu1PXDtNH5trzDu7Dst6jC8KO/CkVuZFN0b3BNc2c6ztLD97DXwcuhrcyrw+PHv8TjwcvV5srHsru6w9Liy7yho1xuxMfO0tXSsfDIy7Dvw6a6w8HLoaMKTm9TdG9wTXNnOsTHvs2w3c3QxOPBy+C4o6HS8s6q1eK52M+1tb3O0rXE0dC+v8TYo6EKRXZlbnRFbmQKCgpFdmVudE5vOjE2ClRZUEU6UkVRVUVTVApFVkVOVDpMVj4xNSZFTkRFVj0xNQpSZXF1ZXN0TXNnOr/J0tS1xLuwo6zE3Lfx1Nmw787S0ru8/srCxNijvwpUaGFua3NNc2c6zKu6w8HLo6HE47/PsO/O0rCho6HKwsq1yc+jrFxu1NrEz7HftcS1usnPo6zT0NK71ta90LG0wrO/qLXEv9bB+qOsXG6/ydLUtcS7sKOs0rLH68Tj16XAtKGjXG7O0s+jzfvE48TcsO/O0rT4o7OjsLy2tcSxtMKzv6i72MC0oaNcbtXmyseyu7rD0uLLvKOswum3s8TjwcuhowpTdG9wTXNnOtXi0fmwoaGtsrvE3LDvztKwoaGtXG7U2dT1w7TR+ba8srvQ0MLwo78KRW5kU3RvcE1zZzrV5srHsru6w9Liy7ywoaGt0qq1vbj0sdq1xMTH1/m1urXEyLfSqrfR0ru3rLmmt/KwoaOhCk5vU3RvcE1zZzrEx77NsN3N0MTjwcvgoaOh0vLOqtXiudjPtbW9ztKzpL7D0tTAtLXE0dC+v7Choa0KRXZlbnRFbmQKCkV2ZW50Tm86LTEKVFlQRTpNRVNTQUdFCkVWRU5UOkVOREVWPTE1JlBFVD4wLTc0Ck5vbWFsTXNnOtC70LvE47DvztLXpcC0sKGjob7NsNHE47Wx1/fO0rXE1vrK1rDJo6EKRXZlbnRFbmQKCkV2ZW50Tm86LTEKVFlQRTpNRVNTQUdFCkVWRU5UOkVOREVWPTE1Jk5PV0VWPTE2JlBFVD4yOS0xOTEKTm9tYWxNc2c6xOO6w8/xu7nDu9PQvq25/bPJxOq1xNLHyr2wyaOhtcjN6rPJwcvU2cC0sMmjoQpFdmVudEVuZAoKRXZlbnRObzotMQpUWVBFOk1FU1NBR0UKRVZFTlQ6RU5ERVY9MTUmRU5ERVY9MTYKTm9tYWxNc2c60LvQu8TjsO/O0telwLSwoaOhyOe0y9K7wLSjrL7Nv8nS1L+qyrzO0rXE0dC+v8HLoaPEx8O0o6zO0r3MxOPSu9CpusO2q873sMmjoQpFdmVudEVuZAoKCgoKCgo="
+    },
+    "npc/sainasu/event/event15.create": {
+      "sha256": "1c4cbcc3c51fe33393f13712eb3754214605807ededf8892057069a0d9b51c64",
+      "bytes_base64": "TlBDQ1JFQVRFCnsKZmxvb3JpZD0xMTAwNgpib3JuY29ybmVyPTExLDExLDExLDExCnRpbWU9MApjcmVhdGVudW09MQpkaXI9NAppZ25vcmVpbnZpbmNpYmxlPTEKZ3JhcGhpY25hbWU9MTYwMjQKbmFtZT2/1sH6sqnKv7n+wrMKZW5lbXk9Y2hhbmdlZXZlbnR8ZmlsZTpzYWluYXN1L2V2ZW50L2V2ZW50MTVfMQp9Cgp7CmZsb29yaWQ9MTEwMDYKYm9ybmNvcm5lcj0xMSw3LDExLDcKdGltZT0wCmNyZWF0ZW51bT0xCmRpcj02Cmlnbm9yZWludmluY2libGU9MQpncmFwaGljbmFtZT0xNjA0NgpuYW1lPdb6yta8qsKzCmVuZW15PWNoYW5nZWV2ZW50fGZpbGU6c2FpbmFzdS9ldmVudC9ldmVudDE1XzIKfQo="
+    },
+    "jobdaily.txt": {
+      "sha256": "0c073ce1cc455cc65a3e3118e5db25985441d433ef4745e7ea752e3235358612",
+      "bytes_base64": "MXxFTkRFVj00fLPJyMvSx8q9fNLRzeqzyQoxfE5PV0VWPTR8s8nIy9LHyr18vfjQ0NbQCjJ8RU5ERVY9NDR8ssLD1TPQ1rXcfNLRzeqzyQoyfE5PV0VWPTQ0fLLCw9Uz0Na13Hy9+NDQ1tAKM3xFTkRFVj00N3yywsPVM9DWtdwgIMTDwLaxqXzS0c3qs8kKM3xOT1dFVj00N3yywsPVM9DWtdwgIMTDwLaxqXy9+NDQ1tAKNHxFTkRFVj0zNXy/qMy5ICDV0jTWu/bo0+N80tHN6rPJCjR8Tk9XRVY9MzV8v6jMuSAg1dI01rv26NPjfL340NDW0Ao1fEVOREVWPTM3fMLt1+bIzs7xfNLRzeqzyQo1fE5PV0VWPTM3fMLt1+bIzs7xfL340NDW0Ao2fEVOREVWPTE1fL/Wwfqyqcq/INelwrPE4cz7y7l80tHN6rPJCjZ8Tk9XRVY9MTV8v9bB+rKpyr8g16XCs8ThzPvLuXy9+NDQ1tAKN3xFTkRFVj0xNny/1sH6sqnKvyDXpbG0wrO/qHzS0c3qs8kKN3xOT1dFVj0xNny/1sH6sqnKvyDXpbG0wrO/qHy9+NDQ1tAKOHxFTkRFVj05fMPOtcK2tL/ffNLRzeqzyQo4fE5PV0VWPTl8w861wra0v998vfjQ0NbQCjl8RU5ERVY9Mzh8y67M78PUuax80tHN6rPJCjl8Tk9XRVY9Mzh8y67M78PUuax8vfjQ0NbQCjEwfEVOREVWPTEzfMe/tcG2tL/ffNLRzeqzyQoxMHxOT1dFVj0xM3zHv7XBtrS/33y9+NDQ1tAKMTF8RU5ERVY9Mnyyu7/Jy7zS6bXEsbS/x3zS0c3qs8kKMTF8Tk9XRVY9Mnyyu7/Jy7zS6bXEsbS/x3y9+NDQ1tAKMTJ8RU5ERVY9M3zRx8S30cfEt7XEuKvNtyAgy824q823fNLRzeqzyQoxMnxOT1dFVj0zfNHHxLfRx8S3tcS4q823ICDLzbirzbd8vfjQ0NbQCjEzfEVOREVWPTV80cfEt9HHxLe1xLirzbcgILu50MV80tHN6rPJCjEzfE5PV0VWPTV80cfEt9HHxLe1xLirzbcgILu50MV8vfjQ0NbQCjE0fEVOREVWPTI3fLGpwfrWrsK3fNLRzeqzyQoxNHxOT1dFVj0yN3yxqcH61q7Ct3y9+NDQ1tAKMTV8RU5ERVY9MzB8u8a98MHn0fLWrsK3ICDEw7W90MTQ1NauvrV80tHN6rPJCjE1fE5PV0VWPTMwfLvGvfDB59Hy1q7CtyAgxMO1vdDE0NTWrr61fL340NDW0AoxNnxFTkRFVj0yOXy7xr3wwefR8tauwrcgIMTDtb3K2LukvqvB6bXE0sK3/nzS0c3qs8kKMTZ8Tk9XRVY9Mjl8u8a98MHn0fLWrsK3ICDEw7W9yti7pL6rwem1xNLCt/58vfjQ0NbQCjE3fEVOREVWPTU0fLvGvfDB59Hy1q7CtyAgxMO1vbvGvfDB59HyfNLRzeqzyQoxN3xOT1dFVj01NHy7xr3wwefR8tauwrcgIMTDtb27xr3wwefR8ny9+NDQ1tAKMTh8RU5ERVY9Mjh8zuXQ1rXc1q7D1CAgIMTDtb3Wx7vby66+p3zS0c3qs8kKMTh8Tk9XRVY9Mjh8zuXQ1rXc1q7D1CAgxMO1vdbHu9vLrr6nfL340NDW0AoxOXxFTkRFVj0zMXzO5dDWtdzWrsPUICAgxMO1vcjLwfp80tHN6rPJCjE5fE5PV0VWPTMxfM7l0Na13Nauw9QgIMTDtb3Iy8H6fL340NDW0AoyMHxFTkRFVj0yM3zQodbtsK7H6bnKysIgILzTwrPEx3zS0c3qs8kKMjB8Tk9XRVY9MjN80KHW7bCux+m5ysrCICC808KzxMd8vfjQ0NbQCjIxfEVOREVWPTI0fNCh1u2wrsfpucrKwiAgvNPM2MLltrR80tHN6rPJCjIxfE5PV0VWPTI0fNCh1u2wrsfpucrKwiAgvNPM2MLltrR8vfjQ0NbQCjIyfEVOREVWPTE4fLelxL7Izs7xfNLRzeqzyQoyMnxOT1dFVj0xOHy3pcS+yM7O8Xy9+NDQ1tAKMjN8RU5ERVY9Nny459HHyb22tL/fICC9u7K7v8nLvNLptcSxtL/HfNLRzeqzyQoyM3xOT1dFVj02fLjn0cfJvba0v98gIL27sru/ycu80um1xLG0v8d8vfjQ0NbQCjI0fEVOREVWPTd8uOfRx8m9trS/3yAgsNG7qLrN0MW4+M7awabDwHzS0c3qs8kKMjR8Tk9XRVY9N3y459HHyb22tL/fICCw0buous3Qxbj4ztrBpsPAfL340NDW0AoyNXxFTkRFVj04fLjn0cfJvba0v98gILvY0MW4+DHCpbXE1u180tHN6rPJCjI1fE5PV0VWPTh8uOfRx8m9trS/3yAgu9jQxbj4McKltcTW7Xy9+NDQ1tAKMjZ8RU5ERVY9MTd8wfq2tMjOzvF80tHN6rPJCjI2fE5PV0VWPTE3fMH6trTIzs7xfL340NDW0AoyN3xFTkRFVj0yMHzHv7b3trS/3yAg1dK1vce/tvd80tHN6rPJCjI3fE5PV0VWPTIwfMe/tve2tL/fICDV0rW9x7+293y9+NDQ1tAKMjh8RU5ERVY9MjF8x7+297a0v98gINXStb28qrXCtcTFrrb5fNLRzeqzyQoyOHxOT1dFVj0yMXzHv7b3trS/3yAg1dK1vbyqtcK1xMWutvl8vfjQ0NbQCjI5fEVOREVWPTIyfMe/tve2tL/fICCw0bzSyum4+LyqtcJ80tHN6rPJCjI5fE5PV0VWPTIyfMe/tve2tL/fICCw0bzSyum4+LyqtcJ8vfjQ0NbQCjMwfEVOREVWPTF8y/7Et8v+xLe05bXE0qmy3XzS0c3qs8kKMzB8Tk9XRVY9MXzL/sS3y/7Et7TltcTSqbLdfL340NDW0AozMXxFTkRFVj00NXzLxLGm0/HWrsPUfNLRzeqzyQozMXxOT1dFVj00NXzLxLGm0/HWrsPUfL340NDW0AozMnxFTkRFVj0zMnzDzrvDtrS/3yAgxMPK+sfZfNLRzeqzyQozMnxOT1dFVj0zMnzDzrvDtrS/3yAgxMPK+sfZfL340NDW0AozM3xFTkRFVj0zM3zDzrvDtrS/3yAgxMPDsdfTfNLRzeqzyQozM3xOT1dFVj0zM3zDzrvDtrS/3yAgxMPDsdfTfL340NDW0AozNHxFTkRFVj0zNHzDzrvDtrS/3yAgxMPSwrf+fNLRzeqzyQozNHxOT1dFVj0zNHzDzrvDtrS/3yAgxMPSwrf+fL340NDW0AozNXxFTkRFVj00NnyxzMfgtrS/33zS0c3qs8kKMzV8Tk9XRVY9NDZ8sczH4La0v998vfjQ0NbQCjM2fEVOREVWPTM5fMHwwae2tL/ffNLRzeqzyQozNnxOT1dFVj0zOXzB8MGntrS/33y9+NDQ1tAKMzd8RU5ERVY9NDB8ye667La0v9980tHN6rPJCjM3fE5PV0VWPTQwfMnuuuy2tL/ffL340NDW0AozOHxFTkRFVj00MXzQ/rvGtrS/3y0xfNLRzeqzyQozOHxOT1dFVj00MXzQ/rvGtrS/3y0xfL340NDW0AozOXxFTkRFVj00MnzQ/rvGtrS/3y0yfNLRzeqzyQozOXxOT1dFVj00MnzQ/rvGtrS/3y0yfL340NDW0Ao0MHxFTkRFVj02M3y67LGpyM7O8XzS0c3qs8kKNDB8Tk9XRVY9NjN8uuyxqcjOzvF8vfjQ0NbQCjQxfEVOREVWPTY0fMvEyqXKr8jOzvEgIL3TyM7O8XzS0c3qs8kKNDF8Tk9XRVY9NjR8y8TKpcqvyM7O8SAgvdPIzs7xfL340NDW0Ao0MnxFTkRFVj02NXzLxMqlyq/Izs7xICDEw7mrzsR80tHN6rPJCjQyfE5PV0VWPTY1fMvEyqXKr8jOzvEgIMTDuavOxHy9+NDQ1tAKNDN8RU5ERVY9NTV8y8TKpcqvyM7O8SAgwbfCs87afNLRzeqzyQo0M3xOT1dFVj01NXzLxMqlyq/Izs7xICDBt8Kzztp8vfjQ0NbQCjQ0fEVOREVWPTY2fMvEyqXKr8jOzvEgIMG3wrPO2nzS0c3qs8kKNDR8Tk9XRVY9NjZ8y8TKpcqvyM7O8SAgwbfCs87afL340NDW0Ao0NXxFTkRFVj01NnzLxMqlyq/Izs7xICDBt7XPxbd80tHN6rPJCjQ1fE5PV0VWPTU2fMvEyqXKr8jOzvEgIMG3tc/Ft3y9+NDQ1tAKNDZ8RU5ERVY9Njd8y8TKpcqvyM7O8SAgwbe1z8W3fNLRzeqzyQo0NnxOT1dFVj02N3zLxMqlyq/Izs7xICDBt7XPxbd8vfjQ0NbQCjQ3fEVOREVWPTU3fMvEyqXKr8jOzvEgIMG3vNPDwHzS0c3qs8kKNDd8Tk9XRVY9NTd8y8TKpcqvyM7O8SAgwbe808PAfL340NDW0Ao0OHxFTkRFVj02OHzLxMqlyq/Izs7xICDBt7zTw8B80tHN6rPJCjQ4fE5PV0VWPTY4fMvEyqXKr8jOzvEgIMG3vNPDwHy9+NDQ1tAKNDl8RU5ERVY9Njl8vqvB6c31tcS0q8u1IMewtKt80tHN6rPJCjQ5fE5PV0VWPTY5fL6rwenN9bXEtKvLtSDHsLSrfL340NDW0Ao1MHxFTkRFVj03MHy+q8HpzfW1xLSry7Ug16qz6HzS0c3qs8kKNTB8Tk9XRVY9NzB8vqvB6c31tcS0q8u1INeqs+h8vfjQ0NbQCjUxfEVOREVWPTcxfL6rwenN9bXEtKvLtSC08rfi06G+q8HpzfV80tHN6rPJCjUxfE5PV0VWPTcxfL6rwenN9bXEtKvLtSC08rfi06G+q8HpzfV8vfjQ0NbQCjUyfEVOREVWPTEyMny+q8HpzfW1xLSry7Ug1/bB6cGmv60tMXzS0c3qs8kKNTJ8Tk9XRVY9MTIyfL6rwenN9bXEtKvLtSDX9sHpwaa/rS0xfL340NDW0Ao1M3xFTkRFVj0xMjN8vqvB6c31tcS0q8u1INf2wenBpr+tLTJ80tHN6rPJCjUzfE5PV0VWPTEyM3y+q8HpzfW1xLSry7Ug1/bB6cGmv60tMny9+NDQ1tAKNTR8RU5ERVY9NzJ8vqvB6c31tcS0q8u1ILTyzeq087rafNLRzeqzyQo1NHxOT1dFVj03Mny+q8HpzfW1xLSry7UgtPLN6rTzutp8vfjQ0NbQCjU1fEVOREVWPTIwMny98LfJur2/1cjOzvEgIL27t8nB+nzS0c3qs8kKNTV8Tk9XRVY9MjAyfL3wt8m6vb/VyM7O8SAgvbu3ycH6fL340NDW0Ao1NnxFTkRFVj04MXy98LfJur2/1cjOzvEgILTyUEO9u7vauf3K6XzS0c3qs8kKNTZ8Tk9XRVY9ODF8vfC3ybq9v9XIzs7xICC08lBDvbu72rn9yul8vfjQ0NbQCjU3fEVOREVWPTg5fMuuudbIzs7xICDEw7W9wszN3HzS0c3qs8kKNTd8Tk9XRVY9ODl8y6651sjOzvEgIMTDtb3CzM3cfL340NDW0Ao1OHxFTkRFVj04OHzLrrnWyM7O8SAgvbvIzs7xxMO1vcurzbey5nzS0c3qs8kKNTh8Tk9XRVY9ODh8y6651sjOzvEgIL27yM7O8cTDtb3Lq823suZ8vfjQ0NbQCjU5fEVOREVWPTgzfLavzu/UsMjOzvEgILTyzerPr7jxfNLRzeqzyQo1OXxOT1dFVj04M3y2r87v1LDIzs7xICC08s3qz6+48Xy9+NDQ1tAKNjB8RU5ERVY9ODJ8tq/O79SwyM7O8SAgvbvN6sjOzvHEw7W9srzSwsXWfNLRzeqzyQo2MHxOT1dFVj04Mny2r87v1LDIzs7xICC9u83qyM7O8cTDtb2yvNLCxdZ8vfjQ0NbQCjYxfEVOREVWPTB8tq/O79SwyM7O8SAgxMPA78CtwK21xL+tfNLRzeqzyQo2MXxOT1dFVj0wfLavzu/UsMjOzvEgIMTDwO/ArcCttcS/rXy9+NDQ1tAKNjJ8RU5ERVY9ODR81Nm8+76rwenN9XzS0c3qs8kKNjJ8Tk9XRVY9ODR81Nm8+76rwenN9Xy9+NDQ1tAKNjN8RU5ERVY9OTJ80MShosGm1q67t8jOzvEgIL27s/a7qMimuvN80tHN6rPJCjYzfE5PV0VWPTkyfNDEoaLBptauu7fIzs7xICC9u7P2u6jIprrzfL340NDW0Ao2NHxFTkRFVj05M3zQxKGiwabWrru3yM7O8SAg0MS7t8jOzvF80tHN6rPJCjY0fE5PV0VWPTkzfNDEoaLBptauu7fIzs7xICDQxLu3yM7O8Xy9+NDQ1tAKNjV8RU5ERVY9OTR80MShosGm1q67t8jOzvEgIMGmu7fIzs7xfNLRzeqzyQo2NXxOT1dFVj05NHzQxKGiwabWrru3yM7O8SAgwaa7t8jOzvF8vfjQ0NbQCjY2fEVOREVWPTg3fNHOv/PIzs7xICCw0dKpuPjJs7b7zNh80tHN6rPJCjY2fE5PV0VWPTg3fNHOv/PIzs7xICCw0dKpuPjJs7b7zNh8vfjQ0NbQCjY3fEVOREVWPTg2fNHOv/PIzs7xfNLRzeqzyQo2N3xOT1dFVj04NnzRzr/zyM7O8Xy9+NDQ1tAKNjh8RU5ERVY9NjV8ucW5z8jOzvEgIL27wc/A7bj4ucW5z3zS0c3qs8kKNjh8Tk9XRVY9NjV8ucW5z8jOzvEgIL27wc/A7bj4ucW5z3y9+NDQ1tAKNjl8RU5ERVY9MTAzfLnFuc/Izs7xICC0+LnFuc/IpdLBtel80tHN6rPJCjY5fE5PV0VWPTEwM3y5xbnPyM7O8SAgtPi5xbnPyKXSwbXpfL340NDW0Ao3MHxFTkRFVj05OXy5xbnPyM7O8SAgvNO807DZyMu5/brzfNLRzeqzyQo3MHxOT1dFVj05OXy5xbnPyM7O8SAgvNO807DZyMu5/brzfL340NDW0Ao3MXxFTkRFVj0xMDB8ucW5z8jOzvEgILLCw9UxMsKlxMO5xbnPfNLRzeqzyQo3MXxOT1dFVj0xMDB8ucW5z8jOzvEgILLCw9UxMsKlxMO5xbnPfL340NDW0Ao3MnxFTkRFVj0xMDF8ucW5z8jOzvEgINXS06K8zsTDtb3Hp8Tqx7m/rXzS0c3qs8kKNzJ8Tk9XRVY9MTAxfLnFuc/Izs7xICDV0tOivM7Ew7W9x6fE6se5v618vfjQ0NbQCjczfEVOREVWPTEwMny5xbnPyM7O8SAgvbuz9senxOrHub+tfNLRzeqzyQo3M3xOT1dFVj0xMDJ8ucW5z8jOzvEgIL27s/bHp8Tqx7m/rXy9+NDQ1tAKNzR8RU5ERVY9MTA0fLnFuc/Izs7xICDU2dXS06K8zsTDtb295Na4fNLRzeqzyQo3NHxOT1dFVj0xMDR8ucW5z8jOzvEgINTZ1dLTorzOxMO1vb3k1rh8vfjQ0NbQCjc1fEVOREVWPTExMHy78MnxvMDIzs7xfNLRzeqzyQo3NXxOT1dFVj0xMTB8u/DJ8bzAyM7O8Xy9+NDQ1tAKNzZ8RU5ERVY9MTExfLvwwenTwsq/fNLRzeqzyQo3NnxOT1dFVj0xMTF8u/DB6dPCyr98vfjQ0NbQCjc3fEVOREVWPTExMny/qMLetcS72NLkLbrau6J80tHN6rPJCjc3fE5PV0VWPTExMny/qMLetcS72NLkLbrau6J8vfjQ0NbQCjc4fEVOREVWPTExM3y357PH0KHW7cjOzvF80tHN6rPJCjc4fE5PV0VWPTExM3y357PH0KHW7cjOzvF8vfjQ0NbQCjc5fEVOREVWPTExNHy357PHzfXX08jOzvF80tHN6rPJCjc5fE5PV0VWPTExNHy357PHzfXX08jOzvF8vfjQ0NbQCjgwfEVOREVWPTExNXzMsMC3tcTB1s7xvtazpHzS0c3qs8kKODB8Tk9XRVY9MTE1fMywwLe1xMHWzvG+1rOkfL340NDW0Ao4MXxFTkRFVj0xMTZ8y66zx83nxqS5q9b3LTF80tHN6rPJCjgxfE5PV0VWPTExNnzLrrPHzefGpLmr1vctMXy9+NDQ1tAKODJ8RU5ERVY9MTIxfMuus8fN58akuavW9y0yfNLRzeqzyQo4MnxOT1dFVj0xMjF8y66zx83nxqS5q9b3LTJ8vfjQ0NbQCjgzfEVOREVWPTEyNHzLrrPHzefGpLmr1vctM3zS0c3qs8kKODN8Tk9XRVY9MTI0fMuus8fN58akuavW9y0zfL340NDW0Ao4NHxFTkRFVj0xMjV81fy+yLK8wuW24LbgfNLRzeqzyQo4NHxOT1dFVj0xMjV81fy+yLK8wuW24LbgfL340NDW0Ao4NXxFTkRFVj0xMjZ8uqPU9M31tcTD3LGmfNLRzeqzyQo4NXxOT1dFVj0xMjZ8uqPU9M31tcTD3LGmfL340NDW0Ao4NnxFTkRFVj0xMzl8sK61xMDxzu980tHN6rPJCjg2fE5PV0VWPTEzOXywrrXEwPHO73y9+NDQ1tAKODd8RU5ERVY9MTMzfLqj1PTN9dLFvKN80tHN6rPJCjg3fE5PV0VWPTEzM3y6o9T0zfXSxbyjfL340NDW0Ao4OHxFTkRFVj0xNDB8zbWz1LXEwM/K83zS0c3qs8kKODh8Tk9XRVY9MTQwfM21s9S1xMDPyvN8vfjQ0NbQCjg5fEVOREVWPTEzOHzJ39auv63Izs7xfNLRzeqzyQo4OXxOT1dFVj0xMzh8yd/Wrr+tyM7O8Xy9+NDQ1tAKOTB8RU5ERVY9MTM2fMDh1q7Kr8jOzvF80tHN6rPJCjkwfE5PV0VWPTEzNnzA4dauyq/Izs7xfL340NDW0Ao5MXxFTkRFVj0xNDJ8sK6z1Ma7ufu1xNChxa66onzS0c3qs8kKOTF8Tk9XRVY9MTQyfLCus9TGu7n7tcTQocWuuqJ8vfjQ0NbQCjkyfEVOREVWPTE0NXy28bDUyP3Q1rXcfNLRzeqzyQo5MnxOT1dFVj0xNDV8tvGw1Mj90Na13Hy9+NDQ1tAKOTN8RU5ERVY9MTQwfLbjw6jDqMjOzvF80tHN6rPJCjkzfE5PV0VWPTE0MHy248Oow6jIzs7xfL340NDW0Ao5NHxFTkRFVj0xNDd8vs3WsMjOzvEtwdTIy3zS0c3qs8kKOTR8Tk9XRVY9MTQ3fL7N1rDIzs7xLcHUyMt8vfjQ0NbQCjk1fEVOREVWPTE0Nny+zdawyM7O8S23qMqmfNLRzeqzyQo5NXxOT1dFVj0xNDZ8vs3WsMjOzvEtt6jKpny9+NDQ1tAKOTZ8RU5ERVY9MTQ1fL7N1rDIzs7xLbDXwMd80tHN6rPJCjk2fE5PV0VWPTE0NXy+zdawyM7O8S2w18DHfL340NDW0Ao5N3xFTkRFVj0xNDR8wLTX1Lqjtde1xMn50vR80tHN6rPJCjk3fE5PV0VWPTE0NHzAtNfUuqO117XEyfnS9Hy9+NDQ1tAKOTh8RU5ERVY9MTQzfMSqt8e1xMe5fNLRzeqzyQo5OHxOT1dFVj0xNDN8xKq3x7XEx7l8vfjQ0NbQCjk5fEVOREVWPTIyNny+q8Hp1dm7vS212HzS0c3qs8kKOTl8Tk9XRVY9MjI2fL6rwenV2bu9LbXYfL340NDW0AoxMDB8RU5ERVY9MjI1fL6rwenV2bu9LbvwfNLRzeqzyQoxMDB8Tk9XRVY9MjI1fL6rwenV2bu9LbvwfL340NDW0AoxMDF8RU5ERVY9MjI1fL6rwenV2bu9LcuufNLRzeqzyQoxMDF8Tk9XRVY9MjI1fL6rwenV2bu9LcuufL340NDW0AoxMDJ8RU5ERVY9MjI0fL6rwenV2bu9LbfnfNLRzeqzyQoxMDJ8Tk9XRVY9MjI0fL6rwenV2bu9LbfnfL340NDW0AoxMDN8RU5ERVY9MTc0fMDXtvstMXzS0c3qs8kKMTAzfE5PV0VWPTE3NHzA17b7LTF8vfjQ0NbQCjEwNHxFTkRFVj0xNzV8wNe2+y0yfNLRzeqzyQoxMDR8Tk9XRVY9MTc1fMDXtvstMny9+NDQ1tAKMTA1fEVOREVWPTE3NnzA17b7LTN80tHN6rPJCjEwNXxOT1dFVj0xNzZ8wNe2+y0zfL340NDW0AoxMDZ8RU5ERVY9NTJ8wNe2+y00fNLRzeqzyQoxMDZ8Tk9XRVY9NTJ8wNe2+y00fL340NDW0AoxMDd8RU5ERVY9MTM2fMDXtvstNXzS0c3qs8kKMTA3fE5PV0VWPTEzNnzA17b7LTV8vfjQ0NbQCjEwOHxFTkRFVj0xNzd8s+gy16otMXzS0c3qs8kKMTA4fE5PV0VWPTE3N3yz6DLXqi0xfL340NDW0AoxMDl8RU5ERVY9MTc4fLPoMteqLTJ80tHN6rPJCjEwOXxOT1dFVj0xNzh8s+gy16otMny9+NDQ1tAKMTEwfEVOREVWPTE4MHyz6DLXqi0zfNLRzeqzyQoxMTB8Tk9XRVY9MTgwfLPoMteqLTN8vfjQ0NbQ"
+    },
+    "npc/genout/dungeon00.create": {
+      "sha256": "1b3d189ea8ae5e42de4321efce19d3fb9517f0b25b6130ff0cb73761cd62514b"
+    }
+  },
+  "doors": [
+    {
+      "from_map": 100,
+      "cell": [
+        328,
+        633
+      ],
+      "to_map": 11001,
+      "target": [
+        0,
+        43
+      ],
+      "source": "dungeon00.create:1204",
+      "convenience": "重复原版入口采用已核对的一个原始落点"
+    },
+    {
+      "from_map": 11001,
+      "cell": [
+        0,
+        43
+      ],
+      "to_map": 100,
+      "target": [
+        328,
+        633
+      ],
+      "source": "dungeon00.create:1213"
+    },
+    {
+      "from_map": 100,
+      "cell": [
+        328,
+        633
+      ],
+      "to_map": 11001,
+      "target": [
+        0,
+        44
+      ],
+      "source": "dungeon00.create:1222",
+      "disabled": true,
+      "reason": "Reviewed scenery door uses another original destination"
+    },
+    {
+      "from_map": 11001,
+      "cell": [
+        0,
+        44
+      ],
+      "to_map": 100,
+      "target": [
+        328,
+        633
+      ],
+      "source": "dungeon00.create:1231"
+    },
+    {
+      "from_map": 11001,
+      "cell": [
+        44,
+        5
+      ],
+      "to_map": 11002,
+      "target": [
+        46,
+        42
+      ],
+      "source": "dungeon00.create:1240"
+    },
+    {
+      "from_map": 11002,
+      "cell": [
+        46,
+        42
+      ],
+      "to_map": 11001,
+      "target": [
+        44,
+        5
+      ],
+      "source": "dungeon00.create:1249"
+    },
+    {
+      "from_map": 11002,
+      "cell": [
+        7,
+        6
+      ],
+      "to_map": 11003,
+      "target": [
+        42,
+        3
+      ],
+      "source": "dungeon00.create:1258"
+    },
+    {
+      "from_map": 11003,
+      "cell": [
+        42,
+        3
+      ],
+      "to_map": 11002,
+      "target": [
+        7,
+        6
+      ],
+      "source": "dungeon00.create:1267"
+    },
+    {
+      "from_map": 11003,
+      "cell": [
+        6,
+        5
+      ],
+      "to_map": 11004,
+      "target": [
+        7,
+        5
+      ],
+      "source": "dungeon00.create:1276"
+    },
+    {
+      "from_map": 11004,
+      "cell": [
+        7,
+        5
+      ],
+      "to_map": 11003,
+      "target": [
+        6,
+        5
+      ],
+      "source": "dungeon00.create:1285"
+    },
+    {
+      "from_map": 11004,
+      "cell": [
+        45,
+        3
+      ],
+      "to_map": 11005,
+      "target": [
+        45,
+        30
+      ],
+      "source": "dungeon00.create:1294"
+    },
+    {
+      "from_map": 11005,
+      "cell": [
+        45,
+        30
+      ],
+      "to_map": 11004,
+      "target": [
+        45,
+        3
+      ],
+      "source": "dungeon00.create:1303"
+    },
+    {
+      "from_map": 11005,
+      "cell": [
+        7,
+        27
+      ],
+      "to_map": 11006,
+      "target": [
+        43,
+        3
+      ],
+      "source": "dungeon00.create:1312"
+    },
+    {
+      "from_map": 11006,
+      "cell": [
+        43,
+        3
+      ],
+      "to_map": 11005,
+      "target": [
+        7,
+        27
+      ],
+      "source": "dungeon00.create:1321"
+    }
+  ],
+  "request": {
+    "job": 6,
+    "event": 15,
+    "branch_index": 2,
+    "source_line": 26,
+    "actions": {}
+  },
+  "manual": [
+    "pet_uid",
+    "DelPet",
+    "GetPet95",
+    "GetRandItem",
+    "job7_request_pending"
+  ]
+}
