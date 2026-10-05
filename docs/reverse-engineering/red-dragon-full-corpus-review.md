@@ -1652,3 +1652,11 @@ Private evidence: `corpus-v1/pose151-*` and `progress-1846-hashes.json`.1846/441
 - Independently labelled the exposed lower dragon torso of 275339 at x37..57/y70..77, below the rider coat and above the feet: 130 BODY-index pixels in the rule, only two additional recoloured pixels in this bitmap. The other eleven candidate outputs did not change. This is a small edge refinement, not completion of the remaining yellow regions.
 - Candidate derive SHA256: `f9d4562c77cd402cf061ccb4bcafdf928b45921427a25596799b38feeefb2a7b`. Private evidence: `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose152-*`; measured processing: `../offline-processing.jsonl`.
 - Wings, lower body and feet have draft recolouring, but wing roots and rider/coat/foot contacts still retain unresolved dragon colours. Conservative unknown regions are not evidence of rider ownership. Full per-pixel ownership/material review remains outstanding: **1856 drafts, zero complete receipts**, no riding mapping or integration enabled.
+
+### Pose 153 draft checkpoint (1868 unique, no complete receipts)
+
+- Viewed twelve aligned sources, independently drawn 248052/266244 coordinate grids and reference outputs,275340 source grid, all four initial difference sheets, all three revision sheets and complete comparisons for263212/275340/281404.
+- Separate hair/head, hands and garment protection follows these source grids; the dark olive left-wing surface is preserved and the small pale lower belly uses ventral mapping. These are draft material interpretations, not complete approval.
+- Third source region: exposed lower dragon head band x23..45/y12..18, above the rider hair,115 BODY pixels. Added335 recoloured pixels across eight bodies after individual revision inspection; both primary outputs remain byte-identical to their reference renders.
+- Derive SHA256 `22c2d1eead0ac6a8c9546dac8e450def7fcd1499f14d0cdae6a8b99a75ec1de8`; evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose153-*`, hashes `progress-1868-hashes.json`, UTC/wall/child CPU in `offline-processing.jsonl`.
+- Remaining yellow head/wing-root/garment contact regions still need ownership/material review. Unknown is not proof of rider ownership. Added12 draft records only: **1868 drafts, zero complete receipts**; no gameplay mapping, import or integration.
