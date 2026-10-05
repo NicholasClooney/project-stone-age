@@ -1426,3 +1426,11 @@ Independent275465 upright far-wing polygon identifies65 BODY pixels, adds27 chan
 Full281529 revealed isolated difference near helmet. Probe and its local source grid place it at(14,26), the diagonal wing rim in front of helmet. It was not treated as a proven rider error and no unsupported restoration applied. Probe/source evidence retained; complete material/ownership review remains outstanding.
 
 Private evidence: `corpus-v1/pose124-*` and `progress-1527-hashes.json`. 1527/4416 unique drafts;2889 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 125: 1539 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248178 through281530,stride3032), primary248178/266370 and third275466 grids, both references, four initial difference sheets, two revised crops on one sheet and full251210/263338/275466/281530. Primary116x98/108x98 geometries with ten-pixel x-offset; third76x98 checked independently. Independent hair/head, lifted hands and body left of wing. Gold wing surfaces treated as outer BODY material; white jaw/lower belly ventral. Final primaries byte-equal references.
+
+Independent275466 exposed back below wing polygon identifies32 BODY pixels, adds18 changes across two bodies, excluding rider above and wing shaft. Initial draft SHA256 `0437dae03c4d0cb9058c13616948fbbddaa2b94e944f1b402c10be572ba468e1`; three-reference draft `b975d3832bd17bd6562526d83e9aca20567c0461ce9222e92baeed44cbda35bb`. Final26443 changes (initial26425),3233 ventral mappings,3308 unknown body-colour pixels. Foot/wing-tip margins still include unfinished dragon colour, not all rider protection.
+
+Private evidence: `corpus-v1/pose125-*` and `progress-1539-hashes.json`. 1539/4416 unique drafts;2877 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
