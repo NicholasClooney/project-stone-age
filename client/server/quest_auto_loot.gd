@@ -182,3 +182,98 @@ func projection(b)->Dictionary:
   view.activity="running"
  else:view.activity="stopped"
  return view
+
+# E1 only: internal prepared-run admission. No public caller/tick/roll is wired.
+const MapFile=preload("res://scripts/map_file.gd")
+const JewelPlan=preload("res://server/quest_auto_jewel_loot_plan.gd")
+var admission:RefCounted
+static func admission_terrain_valid(data:Dictionary)->bool:
+ # MapFile normalizes JSON/packed maps to these packed grids; safe reads both.
+ if not State.integer(data.get("width"),1,2147483647) or not State.integer(data.get("height"),1,2147483647):return false
+ var width:int=int(data.width)
+ var height:int=int(data.height)
+ if width>2147483647/height:return false
+ return data.get("blocked") is PackedByteArray and data.blocked.size()==width*height and data.get("ground") is PackedInt32Array and data.ground.size()==width*height
+func admission_error(b,frame:Dictionary)->String:
+ if not admission_owner(b,frame):return "准入调用归属已失效。"
+ var q=frame.runner
+ if not is_same(b.quest_loot,self) or not q.running or not q.internal or q.detached or q.restored or q.connection<0 or q.client.is_empty() or q.phase!="loot_admission" or q.identity.step_id!=State.STEP:return "刷物内部执行身份无效。"
+ if not Sources.same(q.step,Sources.step()):return "刷物步骤来源无效。"
+ if b.save_path.is_empty() or b.last_saved_payload.is_empty():return "刷物需要可信真实存档。"
+ if b.battle_open or b.battle.snapshot().get("active",false) or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or not b.original_quests.pending.is_empty():return "当前事务尚未完成。"
+ if b.automation.running or b.automation.hunt_running or b.automation.flow_active() or b.stationary.running:return "当前有其他自动活动。"
+ # Guards are host Callables and may synchronously cancel or replace a run.
+ # Check each boundary before invoking the next guard or selecting a candidate.
+ for guard in [b.quest_visit_guard,b.party_guard]:
+  if not admission_owner(b,frame):return "准入回调前归属已改变。"
+  if not guard.is_valid():continue
+  var profile_ref:Dictionary=frame.owner._profile
+  var before:Dictionary=frame.owner.snapshot()
+  var saved:String=b.last_saved_payload
+  var denied:String=str(guard.call())
+  if not admission_owner(b,frame):return "准入回调改变了执行归属。"
+  if not is_same(frame.owner._profile,profile_ref) or frame.owner.snapshot()!=before or b.last_saved_payload!=saved:return "准入回调改变了角色或存档。"
+  if not denied.is_empty():return "当前连接或组队状态不允许刷物。"
+ var profile:Dictionary=b.session.snapshot()
+ if not b.session._valid_profile(profile) or int(profile.player.hp)<=0:return "角色状态无效或已倒下。"
+ if profile.get("no_random_encounters",false):return "随机遇敌已关闭，请手动调整；不会自动开启。"
+ if b.session.bag_slots(profile)>=15:return "道具栏已满。"
+ if b.automation.position_map!=100 or b.encounter_catalog.area_at(100,b.automation.position_cell).get("id")!=56:return "当前实际区域不是原区域56。"
+ if b.quest_helper.places.file(100)!=frame.terrain_path:return "准入期间原地图路径已改变。"
+ # One independent load per invocation, reused across guards/acquire/open.
+ # Never populate or trust quest_helper.maps; dynamic occupancy stays live.
+ if not frame.has("terrain"):frame.terrain=MapFile.load_map(frame.terrain_path)
+ var data:Dictionary=frame.terrain
+ if not admission_terrain_valid(data):return "原地图缺失或结构无效。"
+ var occupied:Dictionary={}
+ for npc in b.quest_catalog.active_npcs():
+  if int(npc.map_id)==100:occupied[Vector2i(int(npc.cell[0]),int(npc.cell[1]))]=true
+ for npc in b.quest_helper.places.residents:
+  if int(npc.map_id)==100:occupied[Vector2i(int(npc.cell[0]),int(npc.cell[1]))]=true
+ if not b.quest_helper.safe(data,b.automation.position_cell,occupied,b.quest_helper.places.links(100)):return "当前格不是可用原普通格。"
+ if not Sources.matches_backend(b,q.step.source):return "完整原来源校验失败。"
+ if not admission_owner(b,frame):return "准入结束时归属已改变。"
+ return ""
+func admission_owner(b,frame:Dictionary)->bool:
+ var q=b.quest_auto
+ return b.quest_visit_guard==frame.visit_guard and b.party_guard==frame.party_guard and is_same(b.session,frame.owner) and b.save_path==frame.path and is_same(b.quest_loot,self) and is_same(lifetime,frame.lifetime) and is_same(admission,frame.capability) and is_same(q,frame.runner) and q.identity.checkpoint()==frame.identity and q.connection==frame.connection and q.client==frame.client and q.running and q.internal and not q.detached and not q.restored and q.phase=="loot_admission" and q.step==frame.step and b.automation.position_map==frame.map_id and b.automation.position_cell==frame.cell
+func admit_prepared_run(b)->Dictionary:
+ # Capture this invocation BEFORE any reentrant guard, never adopt its successor.
+ admission=RefCounted.new()
+ var q=b.quest_auto
+ var frame:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":b.automation.position_map,"cell":b.automation.position_cell,"lifetime":lifetime,"capability":admission,"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"terrain_path":b.quest_helper.places.file(100)}
+ var reason:=admission_error(b,frame)
+ if not reason.is_empty():return State.denied(reason)
+ if anchor_ms>=0 or not battle_receipt.is_empty():return State.denied("旧刷物时段尚未退休。")
+ var planned:Dictionary=JewelPlan.select(b,Sources.matches_backend)
+ if planned.get("status")!="step" or not Sources.same(planned.get("step"),b.quest_auto.step):return State.denied(str(planned.get("reason","目标已满足或原步骤无效。")))
+ var baseline=JSON.parse_string(b.last_saved_payload)
+ if not baseline is Dictionary or not b.session._valid_profile(baseline) or b.session._normalize_numbers(baseline)!=b.session.snapshot():return State.denied("当前角色未匹配已存基线。")
+ var ledger:Dictionary=b.session._profile.quest_loot
+ if ledger.recovery_blocked:return State.denied("预算历史需要人工恢复。")
+ if ledger.entries.has(State.STEP):
+  var entry:Dictionary=ledger.entries[State.STEP]
+  if entry.recovery_blocked or entry.open_span or entry.used_ms>=entry.limit_ms:return State.denied("既有预算不能隐式重开或重置。")
+ var operations:Array=["open"] if ledger.entries.has(State.STEP) else ["acquire","open"]
+ var persisted:=false
+ for operation in operations:
+  if not admission_owner(b,frame):return {"ok":false,"persisted":persisted,"reason":"写前执行归属已变化。"}
+  reason=admission_error(b,frame)
+  if not reason.is_empty():return {"ok":false,"persisted":persisted,"reason":reason}
+  var expected:Dictionary=frame.owner.snapshot()
+  var args:Dictionary={"step_id":State.STEP}
+  if operation=="acquire":
+   args.merge({"budget_id":Crypto.new().generate_random_bytes(16).hex_encode(),"run_id":frame.identity.run_id,"minutes":Settings.effective(frame.owner.automation_settings()).loot_minutes,"existing_items":0})
+  else:args.expected_entry=State.identity(expected.quest_loot.entries[State.STEP])
+  var result:Dictionary=frame.owner.commit_loot_idle_transition(expected,expected.quest_loot.duplicate(true),operation,args,frame.path,b._loot_settlement_written.bind(frame.owner,frame.path))
+  if not result.get("ok",false):return {"ok":false,"persisted":persisted,"reason":"预算保存失败，未启动尝试。"}
+  persisted=true
+  # A later observer may replace any owner/profile/cache. Never undo that save.
+  if not result.get("installed",false) or not admission_owner(b,frame):return {"ok":false,"persisted":true,"reason":"已存事务后执行归属改变，停止旧调用。"}
+  if frame.owner.snapshot()!=result.profile or b.last_saved_payload!=result.payload:return {"ok":false,"persisted":true,"reason":"已存事务后角色或保存基线改变。"}
+  reason=admission_error(b,frame)
+  if not reason.is_empty():return {"ok":false,"persisted":true,"reason":reason}
+  planned=JewelPlan.select(b,Sources.matches_backend)
+  if planned.get("status")!="step" or not Sources.same(planned.get("step"),frame.step):return {"ok":false,"persisted":true,"reason":"写后原计划条件改变。"}
+ if not start_after_commit(State.STEP,frame.owner._profile.quest_loot.entries[State.STEP],frame.identity):return {"ok":false,"persisted":true,"reason":"已存时段无法启动计时，停止等待恢复。"}
+ return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true)}
