@@ -736,3 +736,32 @@ func tick_internal(b)->void:
   # an independent fact; never route it through this old idle-close tail.
   if is_same(ready_frame,ready) and admission_owner(b,ready) and not b.battle_open and b.session._pending.is_empty():
    b.quest_auto.stop(b,str(reply.get("reason","刷物尝试停止。")))
+
+# Exact checkpoint-origin same-payload continuation. No global save exemption.
+func capture_followup_checkpoint(b,command:Dictionary)->Dictionary:
+ var ticket:Dictionary=followup
+ if ticket.is_empty() or not followup_current(b,ticket) or b.save_path.is_empty():return {}
+ if b.battle.snapshot().active or not b.battle_state.get("settled",false):return {}
+ for field in ["map_id","x","y"]:
+  if not State.integer(command.get(field),0,2147483647):return {}
+ var location:Dictionary={"map_id":int(command.map_id),"x":int(command.x),"y":int(command.y)}
+ if location!={"map_id":b.automation.position_map,"x":b.automation.position_cell.x,"y":b.automation.position_cell.y}:return {}
+ if b.session._profile.get("location",{})!=location or JSON.stringify(b.session.snapshot())!=ticket.payload:return {}
+ return {"call":RefCounted.new(),"timer":self,"session":b.session,"profile_ref":b.session._profile,"path":b.save_path,"ticket":ticket,"ticket_before":ticket.duplicate(true),"serial":b.quest_save_serial,"payload":ticket.payload,"location":location,"written":false}
+func followup_checkpoint_owner(b,c:Dictionary,expected_serial:int)->bool:
+ if c.is_empty() or not is_same(c.timer,self) or not is_same(b.quest_loot,self) or not is_same(b.session,c.session) or b.save_path!=c.path:return false
+ if not is_same(followup,c.ticket) or c.ticket!=c.ticket_before or not followup_owner(b,c.ticket):return false
+ if not is_same(b.session._profile,c.profile_ref) or b.session.snapshot()!=c.ticket_before.profile or b.last_saved_payload!=c.payload or b.quest_save_serial!=expected_serial:return false
+ if not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or b.battle.snapshot().active or not b.battle_state.get("settled",false):return false
+ return b.session._profile.get("location",{})==c.location and c.location=={"map_id":b.automation.position_map,"x":b.automation.position_cell.x,"y":b.automation.position_cell.y}
+func mark_followup_checkpoint_saved(b,c:Dictionary,payload:String)->void:
+ # Only the actual original same-payload branch receives this exact argument.
+ # No callback between the branch's serial increment and this mark.
+ if c.get("written",true) or payload!=c.get("payload") or not followup_checkpoint_owner(b,c,int(c.serial)+1):return
+ c.written=true;c.saved_call=c.call;c.saved_serial=b.quest_save_serial
+func finish_followup_checkpoint(b,c:Dictionary,saved:bool)->void:
+ if not saved or not c.get("written",false) or not is_same(c.get("saved_call"),c.call) or c.get("saved_serial")!=int(c.serial)+1:return
+ if not followup_checkpoint_owner(b,c,c.saved_serial):return
+ # Preserve original immutable candidate/profile/payload/closed/barrier and
+ # owner identity. Only this exact successful no-op checkpoint advances serial.
+ c.ticket.serial=c.saved_serial

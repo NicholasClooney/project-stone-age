@@ -518,11 +518,16 @@ func _cmd_set_options(command: Dictionary) -> Dictionary:
 
 func _cmd_checkpoint(command: Dictionary) -> Dictionary:
 	if battle.snapshot().active:return _stale("battle active")
+	var loot_checkpoint:Dictionary=quest_loot.capture_followup_checkpoint(self,command)
 	if battle_open and str(battle.snapshot().outcome)=="defeat":
 		session.set_location(VILLAGE.map_id,VILLAGE.x,VILLAGE.y)
 	elif command.has("map_id"):
 		session.set_location(int(command.map_id),int(command.x),int(command.y))
-	var saved := save()
+	# A nonempty call is an exact read-only same-payload checkpoint candidate.
+	# Pass it explicitly to the original private save body; ordinary save()
+	# and unrelated checkpoint paths never inherit a dynamic capability.
+	var saved:bool=save() if loot_checkpoint.is_empty() else _save_profile_boundary(loot_checkpoint)
+	if not loot_checkpoint.is_empty():loot_checkpoint.timer.finish_followup_checkpoint(self,loot_checkpoint,saved)
 	_publish()
 	if not saved:return _reject("save_failed")
 	return {"ok":true}
@@ -1399,13 +1404,14 @@ func presence_state() -> Dictionary:
 func save() -> bool:
 	return _save_profile_boundary()
 
-func _save_profile_boundary() -> bool:
+func _save_profile_boundary(checkpoint:Dictionary={}) -> bool:
 	if save_path.is_empty():
 		quest_save_serial+=1
 		return true
 	var payload := JSON.stringify(session.snapshot())
 	if payload==last_saved_payload:
 		quest_save_serial+=1
+		if not checkpoint.is_empty():checkpoint.timer.mark_followup_checkpoint_saved(self,checkpoint,payload)
 		return true
 	if not session.save_game(save_path):return false
 	last_saved_payload = payload
