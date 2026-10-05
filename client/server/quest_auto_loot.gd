@@ -255,7 +255,7 @@ func admit_prepared_run(b)->Dictionary:
  # Capture this invocation BEFORE any reentrant guard, never adopt its successor.
  admission=RefCounted.new()
  var q=b.quest_auto
- var frame:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":b.automation.position_map,"cell":b.automation.position_cell,"lifetime":lifetime,"capability":admission,"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"terrain_path":b.quest_helper.places.file(100)}
+ var frame:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":b.automation.position_map,"cell":b.automation.position_cell,"lifetime":lifetime,"capability":admission,"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"terrain_path":b.quest_helper.places.file(100),"clock":clock}
  var reason:=admission_error(b,frame)
  if not reason.is_empty():return State.denied(reason)
  if anchor_ms>=0 or not battle_receipt.is_empty():return State.denied("旧刷物时段尚未退休。")
@@ -270,6 +270,7 @@ func admit_prepared_run(b)->Dictionary:
   if entry.recovery_blocked or entry.open_span or entry.used_ms>=entry.limit_ms:return State.denied("既有预算不能隐式重开或重置。")
  var operations:Array=["open"] if ledger.entries.has(State.STEP) else ["acquire","open"]
  var persisted:=false
+ var opened:Dictionary={}
  for operation in operations:
   if not admission_owner(b,frame):return {"ok":false,"persisted":persisted,"reason":"写前执行归属已变化。"}
   reason=admission_error(b,frame)
@@ -282,6 +283,7 @@ func admit_prepared_run(b)->Dictionary:
   var result:Dictionary=frame.owner.commit_loot_idle_transition(expected,expected.quest_loot.duplicate(true),operation,args,frame.path,_admission_written.bind(b,frame,operation))
   if not result.get("ok",false):return {"ok":false,"persisted":persisted,"reason":"预算保存失败，未启动尝试。"}
   persisted=true
+  if operation=="open":opened=result
   # A later observer may replace any owner/profile/cache. Never undo that save.
   if not result.get("installed",false) or not admission_owner(b,frame):return {"ok":false,"persisted":true,"reason":"已存事务后执行归属改变，停止旧调用。"}
   if frame.owner.snapshot()!=result.profile or b.last_saved_payload!=result.payload:return {"ok":false,"persisted":true,"reason":"已存事务后角色或保存基线改变。"}
@@ -289,13 +291,44 @@ func admit_prepared_run(b)->Dictionary:
   if not reason.is_empty():return {"ok":false,"persisted":true,"reason":reason}
   planned=JewelPlan.select(b,Sources.matches_backend)
   if planned.get("status")!="step" or not Sources.same(planned.get("step"),frame.step):return {"ok":false,"persisted":true,"reason":"写后原计划条件改变。"}
- if not start_after_commit(State.STEP,frame.owner._profile.quest_loot.entries[State.STEP],frame.identity):return {"ok":false,"persisted":true,"reason":"已存时段无法启动计时，停止等待恢复。"}
+ return start_admission_after_commit(b,frame,opened)
+
+# E1-only clock boundary. Public timer APIs remain unchanged.
+func admission_timer_snapshot()->Dictionary:
+ return {"key":key,"binding":binding.duplicate(true),"span":span.duplicate(true),"anchor_ms":anchor_ms,"base_used_ms":base_used_ms,"last_ms":last_ms,"blocked":blocked,"frozen":frozen,"frozen_ms":frozen_ms,"storage_paused":storage_paused,"cached_sample":cached_sample.duplicate(true),"ready_frame":ready_frame.duplicate(true),"next_attempt_ms":next_attempt_ms,"attempt_frame":attempt_frame.duplicate(true),"attempt_call":attempt_call,"battle_receipt":battle_receipt.duplicate(true),"open_obligation":open_obligation.duplicate(true),"close_pending":close_pending.duplicate(true)}
+func start_admission_after_commit(b,frame:Dictionary,opened:Dictionary)->Dictionary:
+ var denied:Dictionary={"ok":false,"persisted":true,"reason":"已存时段无法启动计时，停止等待恢复。"}
+ if not admission_owner(b,frame) or clock!=frame.clock or not opened.get("ok",false) or not opened.get("installed",false):return denied
+ if frame.owner.snapshot()!=opened.profile or b.last_saved_payload!=opened.payload:return denied
+ var entry:Dictionary=opened.profile.quest_loot.entries[State.STEP]
+ if anchor_ms>=0 or not State.valid_entry(entry) or not entry.open_span or entry.recovery_blocked:return denied
+ if not State.exact(frame.identity,["run_id","step_id","revision"]) or not State.opaque(frame.identity.run_id) or frame.identity.step_id!=State.STEP or not State.integer(frame.identity.revision):return denied
+ var profile_ref:Dictionary=frame.owner._profile
+ var entry_ref:Dictionary=profile_ref.quest_loot.entries[State.STEP]
+ var serial:int=b.quest_save_serial
+ var timer_before:Dictionary=admission_timer_snapshot()
+ # Local only: do not call now(), which writes last_ms after its callback.
+ var sampled=frame.clock.call()
+ if not admission_owner(b,frame) or clock!=frame.clock or not is_same(frame.owner._profile,profile_ref) or not is_same(frame.owner._profile.quest_loot.entries.get(State.STEP),entry_ref):return denied
+ if frame.owner.snapshot()!=opened.profile or b.last_saved_payload!=opened.payload or b.quest_save_serial!=serial or entry_ref!=entry or admission_timer_snapshot()!=timer_before:return denied
+ # Still the same owner: retain original invalid/backward-clock rejection.
+ if not State.integer(sampled,0,State.MAX_MSEC):blocked=true;return denied
+ var current:int=int(sampled)
+ if last_ms>=0 and current<last_ms:blocked=true;return denied
+ # No Callable/save/emit from this point through ready installation/return.
+ last_ms=current
+ lifetime=RefCounted.new()
+ key=State.STEP;binding=frame.identity.duplicate(true)
+ span={"budget_id":entry.budget_id,"generation":entry.generation,"issued_seq":entry.issued_seq}
+ anchor_ms=current;base_used_ms=int(entry.used_ms);frozen=false;blocked=false;storage_paused=false
+ cached_sample={"lifetime":lifetime,"span":span.duplicate(true),"used_ms":base_used_ms}
  frame.lifetime=lifetime
+ frame.ready_token=RefCounted.new()
  if not open_obligation.is_empty() and is_same(open_obligation.capability,frame.capability):open_obligation.lifetime=lifetime
  ready_frame=frame.duplicate()
- ready_frame.erase("terrain") # Attempts each read fresh immutable terrain once.
+ ready_frame.erase("terrain")
  next_attempt_ms=last_ms
- return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true)}
+ return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true),"ready_token":frame.ready_token,"open_anchor_ms":current}
 
 # E2: one explicit internal drive call, never a loop or a public RPC.
 const ATTEMPT_INTERVAL_MS=500
