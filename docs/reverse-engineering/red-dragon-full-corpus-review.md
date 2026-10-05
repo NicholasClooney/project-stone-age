@@ -1596,3 +1596,11 @@ Viewed twelve aligned sources (247964 through281316,stride3032), primary247964/2
 Initial draft SHA256 `1489ad098358d3c9f0625063fba5ab775ee66279eaa90826503de36d45e8da87`; three-reference draft `c0899e09374b2ae1fdfcdbfae24ff86147a1181dcf7099834ad8bd7ae47bbe90`. Independent275252 upright far wing x28..33/y17..30 identifies46 BODY pixels, adds46 changes only on275252; revised crop and full contact viewed. Final16455 changes (initial16409),1879 ventral mappings,8533 unknown body-colour pixels. Other bodies still retain unreviewed upright-wing yellow edges and hand/leg contacts; unknown is not rider proof.
 
 Private evidence: `corpus-v1/pose145-*` and `progress-1774-hashes.json`.1774/4416 unique drafts;2642 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 146: 1786 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248005 through281357,stride3032), primary248005/266197 grids and references,275293 grid, four initial difference sheets, side revision-0 and full263165/275293/281357. Both primary geometry76x109. Head/hair, hands and garments independently redrawn against current grids. Golden wings BODY, white jaw and lower belly ventral; final primary outputs byte-equal references.
+
+Initial draft SHA256 `2bc57b8ff5ac6df664e62c7dc6dc39284c5219a398e041e0e70d58e81950a29e`; three-reference draft `b37ba52995e835205cb5ecaef6894b98c6f9b15bd36f18224dacfda91ca8574e`. Independent275293 far-wing x64..71/y6..27 identifies91 BODY pixels, adds20 changes (260133:1,275293:19). Revision crop and full contact inspected. Final16603 changes (initial16583),493 ventral mappings,11028 unknown body-colour pixels. Neck/hand/leg contact and wing-root residual yellow remain unresolved; unknown is not rider proof and these images do not establish complete ownership/material semantics.
+
+Private evidence: `corpus-v1/pose146-*` and `progress-1786-hashes.json`.1786/4416 unique drafts;2630 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
