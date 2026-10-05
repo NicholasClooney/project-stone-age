@@ -11,6 +11,9 @@ var options: Dictionary = {}
 var battle: Dictionary = {}
 var battle_open := false
 var automation: Dictionary = {"running":false}
+## Server-owned feature publication. Missing or malformed capability data fails
+## closed, including on a profile update from an older server.
+var capabilities: Dictionary = {}
 ## Set when a test seam touched authority internals directly; the next read resyncs.
 var stale := false
 ## Once a seam hands out authority internals, later writes through that
@@ -33,12 +36,14 @@ func apply(message: Dictionary) -> void:
 			battle = message.battle
 			battle_open = bool(message.battle_open)
 			automation = message.automation
+			capabilities = message.get("capabilities",{}) if message.get("capabilities",{}) is Dictionary else {}
 			stale = false
 		"profile":
 			rev = int(message.rev)
 			profile = message.profile
 			derived = message.derived
 			options = message.options
+			capabilities = message.get("capabilities",{}) if message.get("capabilities",{}) is Dictionary else {}
 		"pet_storage":
 			pet_storage = message.pet_storage
 		"battle_started":
@@ -59,3 +64,7 @@ func full_profile() -> Dictionary:
 	var result: Dictionary = profile.duplicate(true)
 	result.pet_storage = pet_storage.duplicate(true)
 	return result
+
+func quest_loot_enabled() -> bool:
+	var value = capabilities.get("quest_loot_enabled",false)
+	return value is bool and value

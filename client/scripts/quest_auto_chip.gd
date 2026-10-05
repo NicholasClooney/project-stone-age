@@ -43,8 +43,10 @@ func _process(_delta:float) -> void:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	var manual:bool=not auto.get("running",false) and str(auto.get("phase",""))=="manual"
 	var budget:Dictionary=auto.get("budget",{})
-	var history:bool=budget.get("entry",null) is Dictionary or budget.get("recovery_blocked",false)==true
-	var shown:bool=not world.quest_helper_menu.visible and (auto.get("running",false) or manual or world.quest_helper_travel.auto_pending() or history)
+	var loot_enabled:bool=world.state.quest_loot_enabled()
+	var recovery_locked:bool=budget.get("recovery_blocked",false)==true
+	var history:bool=budget.get("entry",null) is Dictionary or recovery_locked
+	var shown:bool=not world.quest_helper_menu.visible and (auto.get("running",false) or manual or world.quest_helper_travel.auto_pending() or recovery_locked or (loot_enabled and history))
 	if shown and not visible:move_to_front()
 	visible=shown
 	if not visible:return
@@ -52,7 +54,7 @@ func _process(_delta:float) -> void:
 	var heading:String=world.quest_helper_travel.auto_heading()
 	if world.quest_helper_travel.auto_pending():heading="自动任务准备中"
 	elif history and not auto.get("running",false) and not manual:heading="任务预算记录"
-	loot_panel.visible=not budget.is_empty()
+	loot_panel.visible=loot_enabled and not budget.is_empty()
 	if loot_panel.visible:loot_panel.present_snapshot(auto,not world.link.is_local() and not world.link.online)
 	restore_button.text=heading if loot_panel.visible else heading+"\n"+step
 	stop_button.visible=not manual and (auto.get("running",false) or world.quest_helper_travel.auto_pending())
