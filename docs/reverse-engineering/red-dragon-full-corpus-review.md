@@ -1588,3 +1588,11 @@ Viewed twelve aligned sources (247963 through281315,stride3032), primary247963/2
 Initial draft SHA256 `6d27db78dbac80e4201dd286d6db2082e0e204cf1bbc3fb51e9644580ec737d2`; three-reference draft `9bda963434afb84523a258af080381f63a65f81d03c3062bf0672f85ef2cf64a`. Independent275251 outer-wing polygon x31..39/y44..54 identifies68 BODY pixels, adds31 output changes across9 bodies. All three revision sheets inspected for rider-hand occlusion. Final17561 changes (initial17530),1706 ventral mappings,8175 unknown body-colour pixels. Neck/hand/leg contacts and residual dragon colour remain unreviewed; unknown is not rider proof.
 
 Private evidence: `corpus-v1/pose144-*` and `progress-1762-hashes.json`.1762/4416 unique drafts;2654 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 145: 1774 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (247964 through281316,stride3032), primary247964/266156 grids and references,275252 grid, four initial difference sheets, side revision-0 and full263124/275252/281316. Primary68x119/68x114 localdy-5. Head/hand/torso and braid-tip guards from144 checked against current grids; independent current ventral belly-white polygon shifted left to match newly exposed edge. Golden outer wing BODY, no pale inner-membrane region; final primary outputs byte-equal references.
+
+Initial draft SHA256 `1489ad098358d3c9f0625063fba5ab775ee66279eaa90826503de36d45e8da87`; three-reference draft `c0899e09374b2ae1fdfcdbfae24ff86147a1181dcf7099834ad8bd7ae47bbe90`. Independent275252 upright far wing x28..33/y17..30 identifies46 BODY pixels, adds46 changes only on275252; revised crop and full contact viewed. Final16455 changes (initial16409),1879 ventral mappings,8533 unknown body-colour pixels. Other bodies still retain unreviewed upright-wing yellow edges and hand/leg contacts; unknown is not rider proof.
+
+Private evidence: `corpus-v1/pose145-*` and `progress-1774-hashes.json`.1774/4416 unique drafts;2642 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
