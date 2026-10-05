@@ -109,6 +109,7 @@ func run()->void:
    if mode in ["disabled","missing_item","connection","savefail"]:
     check(b.session.snapshot()==before and FileAccess.get_file_as_string(b.save_path)==disk and b.commits==0,"Admission refusal/failure preserves complete profile and bytes")
    elif mode=="cancel_acquire":check(b.commits==1 and not b.session._profile.quest_loot.entries[KEY].open_span,"Cancel first commit forbids second write")
+   elif mode=="cancel_open":check(result.get("persisted",false) and b.commits==3 and not b.session._profile.quest_loot.entries[KEY].open_span,"E3 closes the actual saved open cancelled before timer startup")
    else:check(result.get("persisted",false) and b.session._profile.quest_loot.entries[KEY].open_span,"Already saved open is reported, never pretended rollback")
   if failures:b.free();quit(1);return
   # Do not remove blocker or proceed to next fixture after any failed assertion.

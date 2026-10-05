@@ -129,11 +129,16 @@ func clear_motion()->void:
  motion={}
 func detach(b, peer:int) -> void:
  if not running or connection!=peer:return
+ var loot_close:Dictionary=b.quest_loot.capture_idle_close(b)
+ if not loot_close.is_empty() and not b.quest_loot.prepare_idle_revocation(b,loot_close,"detach"):return
  detached=true
  if source_frame!=null:source_frame.detach()
  connection=-1
  client=""
  clear_motion()
+ if not loot_close.is_empty():
+  b.quest_loot.finish_idle_close(b,loot_close)
+  if not b.quest_loot.idle_close_context(b,loot_close):return
  b.publish()
 func accept_report(b,command:Dictionary) -> bool:
  # A tagged report only acknowledges a server-issued move. Even a malformed,
@@ -226,9 +231,18 @@ func snapshot(b=null) -> Dictionary:
  result.budget=b.quest_loot.projection(b) if b!=null else {}
  result.motion=motion.duplicate(true)
  return result
-func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
+func stop(b, reason:String="已停止自动任务。", persist:bool=true, captured_idle_close:Dictionary={}) -> void:
+ var loot_close:Dictionary=captured_idle_close if not captured_idle_close.is_empty() else b.quest_loot.capture_idle_close(b)
+ if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
+ # Repeated stop while repair is pending must not rotate its retry identity.
+ if not running and not loot_close.is_empty():return
+ if not loot_close.is_empty():
+  # Preserve intent before invalidation; close must precede resume location I/O.
+  if not persist:shutdown_intent=resume_state()
+  loot_close.keep_resume_after_close=persist or bool(loot_close.get("keep_resume_after_close",false))
  var old_source=source_frame
  if old_source!=null:old_source.cancel()
+ if not loot_close.is_empty() and not b.quest_loot.prepare_idle_revocation(b,loot_close,"stop"):return
  source_frame=null
  identity.invalidate()
  waiting_saved=false
@@ -238,8 +252,11 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  if not running:
   if persist and had_shutdown_intent:b.keep_resume_file()
   return
- if not persist:shutdown_intent=resume_state()
- if owns_battle and b.automation.running:b.automation.stop(reason)
+ if not persist and loot_close.is_empty():shutdown_intent=resume_state()
+ # A captured idle obligation proves no battle/pending/receipt is owned.
+ # Do not enter automation.stop (which can publish midway) for this idle run.
+ if loot_close.is_empty() and owns_battle and b.automation.running:b.automation.stop(reason)
+ if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
  owns_battle=false
  path.clear();herb_path.clear()
  navigation.clear()
@@ -248,17 +265,30 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> voi
  phase="stopped"
  message=reason
  if old_source==null or old_source.owns_pending(str(b.original_quests.pending.get("token",""))):b.original_quests.pending={}
- if persist:b.keep_resume_file()
+ if not loot_close.is_empty():
+  b.quest_loot.finish_idle_close(b,loot_close)
+  if not b.quest_loot.idle_close_context(b,loot_close):return
+ if persist and loot_close.is_empty():b.keep_resume_file()
+ if not loot_close.is_empty() and not b.quest_loot.idle_close_context(b,loot_close):return
  b.publish()
 func resume_state() -> Dictionary:
  if not running:return shutdown_intent.duplicate(true)
  return {"version":3,"quest_id":quest_id,"clean_authorized":clean_authorized,"strict_walk":true,"identity":identity.checkpoint(),"phase":phase}
 func suspend(b) -> void:
+ # Capture before resume-clock/publication callbacks, as well as identity loss.
+ var loot_close:Dictionary=b.quest_loot.capture_idle_close(b)
+ if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
+ if not loot_close.is_empty():
+  loot_close.keep_resume_after_close=true
+  stop(b,"服务器已停止。",false,loot_close)
+  return
+ # Non-loot behavior is unchanged; idle loot commits before resume location I/O.
  # Transport shutdown must checkpoint before clearing the running intent.
  if running:
   shutdown_intent=resume_state()
   b.keep_resume_file()
- stop(b,"服务器已停止。",false)
+ if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
+ stop(b,"服务器已停止。",false,loot_close)
 func load_resume(b,state:Dictionary) -> void:
  if int(state.get("version",0)) not in [1,2,3] or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
  if int(Policy.JOB_EVENTS[int(state.quest_id)]) not in b.quest_catalog.enabled_events:return
