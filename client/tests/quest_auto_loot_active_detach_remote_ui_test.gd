@@ -7,6 +7,18 @@ class ReportObservedBackend:
  var observer_server:WeakRef
  var guard_reports:=false
  var guard_battle_scope:=false
+ var battle_obligation:Dictionary={}
+ var battle_guard_phase:String="active"
+ var committed_obligation:Dictionary={}
+ func original_battle_owner()->bool:
+  if battle_obligation.is_empty():return false
+  return get_instance_id()==battle_obligation.backend and session.get_instance_id()==battle_obligation.session and battle.get_instance_id()==battle_obligation.battle and automation.get_instance_id()==battle_obligation.automation and quest_auto.get_instance_id()==battle_obligation.runner and quest_loot.get_instance_id()==battle_obligation.timer and str(battle.snapshot().get("battle_id",""))==battle_obligation.battle_id and automation.start_lifetime.get_instance_id()==battle_obligation.token_id and automation.loot_scope.get("capability") is RefCounted and automation.loot_scope.capability.get_instance_id()==battle_obligation.scope_id
+ func battle_guard_state()->Dictionary:
+  var scope:Dictionary=automation.loot_scope
+  if battle_guard_phase=="settled_await_close":
+   var saved:Dictionary=committed_obligation
+   return {"owner_current":original_battle_owner(),"settled":not battle.snapshot().get("active",true) and battle_state.get("settled",false),"pending_empty":session._pending.is_empty(),"profile_current":session._profile==saved.get("profile"),"entry_current":session._profile.quest_loot.entries.get("jewels:hunt:2760")==saved.get("entry"),"token_current":automation.start_lifetime.get_instance_id()==saved.get("token_id"),"scope_current":not scope.is_empty() and scope.get("capability") is RefCounted and scope.capability.get_instance_id()==saved.get("scope_id") and scope.get("authority",{})==saved.get("authority") and automation._loot_current(scope),"runner_stopped":not quest_auto.running and not quest_auto.owns_battle}
+  return {"owner_current":original_battle_owner(),"receipt_current":session._pending.get("quest_loot_receipt",{})==battle_obligation.get("receipt"),"active":bool(battle.snapshot().get("active",false)),"open":battle_open,"auto_running":automation.running,"scope_valid":not scope.is_empty() and automation._loot_current(scope)}
  var report_violation:String=""
  func report_state()->Dictionary:
   var q=quest_auto
@@ -14,6 +26,7 @@ class ReportObservedBackend:
   return {"identity":q.identity.checkpoint().duplicate(true),"quest_id":q.quest_id,"connection":str(q.connection),"client":q.client,"running":q.running,"owns_battle":q.owns_battle,"internal":q.internal,"detached":q.detached,"restored":q.restored,"phase":q.phase,"step":q.step.duplicate(true),"scope_present":not scope.is_empty(),"scope_valid":automation._loot_current(scope) if not scope.is_empty() else false,"scope_authority":scope.get("authority",{}).duplicate(true),"auto_running":automation.running,"battle_open":battle_open,"battle_id":str(battle.snapshot().get("battle_id","")),"pending_receipt":session._pending.get("quest_loot_receipt",{}).duplicate(true),"ready_frame_present":not quest_loot.ready_frame.is_empty(),"close_pending_present":not quest_loot.close_pending.is_empty(),"timer_anchor":quest_loot.anchor_ms,"timer_frozen":quest_loot.frozen,"storage_paused":quest_loot.storage_paused,"backend_id":str(get_instance_id()),"session_id":str(session.get_instance_id()),"map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y]}
  func _cmd_report_position(command:Dictionary)->Dictionary:
   var before:Dictionary=report_state()
+  var obligation_before:Dictionary=battle_guard_state() if guard_battle_scope else {}
   var observed:Dictionary=command.duplicate(true)
   var transport:Dictionary={"available":false,"incoming_member":false,"members":[]}
   var current_server=observer_server.get_ref() if observer_server!=null else null
@@ -24,13 +37,19 @@ class ReportObservedBackend:
     transport.members.append({"peer":str(peer.get_instance_id()),"state":peer.get_ready_state()})
     if peer.get_instance_id()==command.get("_quest_connection",-1):transport.incoming_member=true
   var reply:Dictionary=super._cmd_report_position(command) # Exactly once; unchanged production consumer.
-  var record:Dictionary={"transport":transport,"command":observed,"injected_peer_text":str(observed.get("_quest_connection",-1)),"before":before,"after":report_state(),"reply":reply.duplicate(true)}
+  var record:Dictionary={"transport":transport,"command":observed,"injected_peer_text":str(observed.get("_quest_connection",-1)),"before":before,"after":report_state(),"reply":reply.duplicate(true),"obligation_phase":battle_guard_phase,"obligation_before":obligation_before,"obligation_after":battle_guard_state() if guard_battle_scope else {}}
   report_records.append(record);print("LOOT ACTUAL REPORT ",JSON.stringify(record))
   if guard_reports:
    var different:bool=int(observed.get("map_id",-1))!=int(before.map_id) or observed.get("cell",[])!=before.cell
    if different:report_violation="Natural report changed actual source map/cell"
-   elif guard_battle_scope and before.scope_present and not record.after.scope_valid:report_violation="Natural report invalidated original cancelled battle scope"
-   elif guard_battle_scope and before.auto_running and not record.after.auto_running:report_violation="Natural same-cell report stopped retained original battle"
+   elif guard_battle_scope:
+    if not obligation_before.values().all(func(value):return value==true):report_violation="Original battle obligation already invalid BEFORE natural report"
+    elif battle_guard_phase=="settled_await_close":
+     if not record.obligation_after.values().all(func(value):return value==true):report_violation="Natural report changed immutable committed battle obligation"
+     elif before.auto_running!=record.after.auto_running or before.battle_open!=record.after.battle_open:report_violation="Natural report closed/stopped original auto instead of original driver"
+    elif not record.obligation_after.owner_current or not record.obligation_after.receipt_current:report_violation="Natural report replaced original battle owner or receipt"
+    elif not record.obligation_after.scope_valid:report_violation="Natural report invalidated previously valid cancelled battle scope"
+    elif not record.obligation_after.active or not record.obligation_after.open or not record.obligation_after.auto_running:report_violation="Natural report stopped original active battle; not accepted as normal settlement"
    if not report_violation.is_empty():
     print("FAIL ",report_violation);get_tree().quit(1)
   return reply
