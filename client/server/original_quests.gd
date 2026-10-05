@@ -1,5 +1,6 @@
 extends RefCounted
 ## Source-script interpreter. Pending dialogues are server-owned and single use.
+const RequiredFee=preload("res://server/required_fee_transaction.gd")
 const Session = preload("res://server/game_session.gd")
 const Progression = preload("res://server/progression.gd")
 const Charm = preload("res://server/original_charm.gd")
@@ -245,9 +246,11 @@ func open_branch(backend, npc:Dictionary, profile:Dictionary, branch:Dictionary)
 
 func choose(backend, token: String, choice: String, text: String = "", selected_ids: Variant = []) -> Dictionary:
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
+	if pending.get("phase","")=="permit_shop":return {"ok":false,"reason":"请使用原售证确认。"}
 	var current: Dictionary=pending.duplicate(true)
 	var source_call:Dictionary=backend.capture_quest_source_call(str(current.npc.id))
 	pending={}
+	var fee_frame:Dictionary=RequiredFee.capture(backend,"seimu",RequiredFee.GATE) if str(current.npc.id)==RequiredFee.GATE and str(current.phase)=="FREEWARP" else {}
 	var npc: Dictionary=current.npc
 	if not allowed(backend,npc):return {"ok":false,"reason":"位置或活动状态已经改变。"}
 	if current.has("service_state"):return services.reply(self,backend,current,choice,text)
@@ -272,8 +275,8 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 		return {"ok":true,"closed":true}
 	if phase=="FREEWARP":
 		if choice!="yes":return {"ok":false,"reason":"无效选择。"}
-		var committed := transact(backend,profile,branch,"FREEWARP","",str(npc.id))
-		return {"ok":true,"closed":true} if committed.ok else committed
+		var committed := transact(backend,profile,branch,"FREEWARP","",str(npc.id),[],fee_frame)
+		return committed if not fee_frame.is_empty() else ({"ok":true,"closed":true} if committed.ok else committed)
 	if phase=="KEYWORD":
 		if choice!="submit" or text.length()>120:return {"ok":false,"reason":"无效口令输入。"}
 		if text!=str(branch.get("keyword","")):return {"ok":false,"reason":message(branch.texts,"AcceptMsg")}
@@ -304,7 +307,10 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
-func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "", selected_ids: Array = []) -> Dictionary:
+func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "", selected_ids: Array = [], fee_frame:Dictionary = {}) -> Dictionary:
+	if npc_id==RequiredFee.GATE and phase=="FREEWARP":
+		if fee_frame.is_empty():return {"ok":false,"reason":"原收费确认已过期。"}
+		return RequiredFee.seimu(backend,profile,branch,fee_frame)
 	# Resolve from the explicit trusted context, never the already-cleared token.
 	var source_npc:Dictionary=npc_by_id(npc_id)
 	var arrival_reason:String=backend.quest_arrival.check_action(backend,source_npc,branch,phase)

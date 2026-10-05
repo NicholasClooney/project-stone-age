@@ -1,0 +1,137 @@
+{
+  "shops": {
+    "genout/ss_1100_86_107": {
+      "map_id": 1100,
+      "cell": [
+        86,
+        107
+      ],
+      "graphic": 16018,
+      "name": "贩卖通行证",
+      "role": "vendor",
+      "destination": null,
+      "path": "world/npcs/16018.png",
+      "offset": [
+        -17,
+        -70
+      ],
+      "facing": 6,
+      "text": "要通过海底洞窟需要通行证",
+      "source": "gmsv/data/npc/genout/shop_m.create",
+      "free_text": "",
+      "dialogue_source": "gmsv/data/npc/genout/ss_1100_86_107"
+    },
+    "genout/ss_4000_99_85": {
+      "map_id": 4000,
+      "cell": [
+        99,
+        85
+      ],
+      "graphic": 16018,
+      "name": "通行证贩卖",
+      "role": "vendor",
+      "destination": null,
+      "path": "world/npcs/16018.png",
+      "offset": [
+        -17,
+        -70
+      ],
+      "facing": 6,
+      "text": "要通过海底洞窟，是需要通行证的。",
+      "source": "gmsv/data/npc/genout/shop_m2.create",
+      "free_text": "",
+      "dialogue_source": "gmsv/data/npc/genout/ss_4000_99_85"
+    }
+  },
+  "seimu": {
+    "id": "genout/wpm_40_13_1@40:13:1",
+    "source_script": "genout/wpm_40_13_1",
+    "source_create": "gmsv/data/npc/genout/40npc.create",
+    "source_create_index": 1,
+    "events": [
+      46
+    ],
+    "name": "海底通路的通关处",
+    "map_id": 40,
+    "cell": [
+      13,
+      1
+    ],
+    "graphic": 16204,
+    "facing": 4,
+    "role": "quest",
+    "text": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\n\n这里是通往吉鲁岛的海底通路。\n要有这个%8ds才可以通过这里。",
+    "branches": [
+      {
+        "event": -1,
+        "type": "FREEWARP",
+        "condition": "LV>0",
+        "texts": {
+          "AcceptMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\n\n这里是通往吉鲁岛的海底通路。\n要有这个%8ds才可以通过这里。"
+        },
+        "actions": {
+          "Warp": "31301,10,104",
+          "DelStone": "300"
+        },
+        "enabled": true,
+        "events": [
+          46
+        ],
+        "source": "genout/wpm_40_13_1",
+        "source_fields": {
+          "WARP": "31301,10,104",
+          "FREE": "",
+          "MONEY": "300",
+          "FreeMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你持有通行证，请通关。\\n请多加小心！",
+          "PayMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n这里是通往吉鲁岛的海底通路。\\n要有这个%8ds才可以通过这里。",
+          "PartyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n无法以团队进入。",
+          "MoneyMsg": "＝＝＝＝＝＝　通关处看守者　＝＝＝＝＝＝\\n\\n你钱不够哦。"
+        },
+        "item_deletion_scope": "bag",
+        "source_rule": "gmsv/npc/npc_warpman.c:228-268,300-309,393-400,560-566; pinned free condition / paid 300-stone gate"
+      }
+    ],
+    "bitmap_id": 5924,
+    "path": "quests/npcs/n-67656e6f75742f77706d5f34305f31335f314034303a31333a31.png",
+    "offset": [
+      -21,
+      -79
+    ]
+  },
+  "provenance": {
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/ss_1100_86_107": "58c6352c9553d839e3c23576faa35870badfea45b6755ee6e548e5662cada15e",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/ss_4000_99_85": "e5f172028d19df9d3e550e6271500b9a60e9cf385f7350d53afba062ddad77b2",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/shop_m.create": "1b168508524ca1ad012a65169aad7d19a9f6e4fc28201237972c17b4524564c9",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/shop_m2.create": "bf74faf9e2d0acf183482a91cc093ba8a2e797f5006594fb53a8bde88d7ef164",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/npcgen.template": "0c5a58d5e31cafd3b58ccc1fa88fee7d1f95d12c0b87b04db9f06fea3b2a4df3",
+    "references/chenmingbiao-stone-age/gmsv/data/itemset.txt": "c997393a4806f01833de102939830fc0000bb2a9d445eb214b8501c2b28c4f5d",
+    "references/chenmingbiao-stone-age/gmsv/npc/npc_itemshop.c": "ce1bf934f19fba940ed97e0111bc859b38f821fc14f7a1c95e0bae73ed71d4d5",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/40npc.create": "11febc4fd8d83d89b16be32e8276934f5490fe8e5b049a8849424c69cb7aa593",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/wpm_40_13_1": "4080b33fc9c52e705bc93b84a72f36cd8a1e95362386002517ff2f1b28aa326b",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/wpm_40_1_8": "6612953bfd4f8a7350b9239a199e6406112e469beff6ec940f3581832e35ab8d",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/wpm_40_12_18": "af0bca9a816db2d70d703ce96e5eb8879b7d4a79385fe4d7e3c0e9cf4a9ef579",
+    "references/chenmingbiao-stone-age/gmsv/npc/npc_warpman.c": "a3a83fc34159a49f4c51c58b53f9c9babf1ade9e599b5e4f7164be06cdd6f7e1",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/ss_30504_10_11": "c58937e9590b5106529b300432ce8a166ef13b7c19b31cbbc7cd52968a1a8684",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/genout/shop_m3.create": "3afe6385430b772455f78e6bc7933e9591fde6e2f0f149a2c0cd85924643501a",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/quiz/uketuke": "5e593e9a0f9ae58a50c0b7555cbb4de29e83e8f48ff8755c1954a35beae910ed",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/quiz/uketuke2": "ca05a1ca788c5d3914d6de454cecfe27c48678c907ae41661cb649510f930e82",
+    "references/chenmingbiao-stone-age/gmsv/data/npc/giiru/event/giruev2_1": "4900c660529650d9315c5d54c3b5f1d7a48b26fae7685ccb965ef1f37b48328a",
+    "references/chenmingbiao-stone-age/gmsv/npc/npc_charm.c": "87f0c3c30ffb0a1040e991b17749469e9eb01436decf14d201f5162a681c9f69",
+    "client/server/game_session.gd": "b83eeec0839cb49e70798c34e1138d91e44dcde0076e250f0bea24eca5d2bdcd",
+    "client/server/backend.gd": "8cf6be321f5d052dcaa3b2ee105d57e20acf34238f7a262328ce105b6abe15f2",
+    "client/server/original_quests.gd": "03866544f13e83b551c737b7f7b57ba267126114e0b85f9507b227e380f7840c",
+    "client/server/original_quest_services.gd": "f0239e15e913392caa441d70b94b6d7b78994bc595e170a55c0ec48d05851f28",
+    "client/server/original_jug_shop_service.gd": "155acd99ae822a96d3aef330e61eba5f1c3c422be7acbcf6f2b0ddf43bd5cade",
+    "client/server/original_charm.gd": "61bea59bbb6985ef0edccd19e8ec2b379862517393b39a81cff41eb1ff563f7f",
+    "client/server/quest_auto_permit_gate.gd": "0bcf81959daff818a0b544ea6ccbda42ad5b7b4787cdbad8ff7fca1de92533b4",
+    "client/server/quest_auto_navigation.gd": "595df9c586e857d4e14e0eb71b2c20356f3544f6b95c8d8264326890400077e3",
+    "client/scripts/world_travel.gd": "74bcec129d87a376d229b91c28591973ee8e09e308efe53ef6bba06e1514b306",
+    "client/scripts/passage_rules.gd": "0ffe042d78b066c96a58f3b3ad6bf307054fbe09531e5f7b42aee8d6e5e64352",
+    "client/assets/legacy/quests/catalog.json": "c5679bb2e23d0e00eb47ccba0fd581b161cf66df35fabe461ca52c95d9a9ff92",
+    "client/assets/legacy/world/manifest.json": "5bec114a4ee4571f08f2f4fd453ee1d40324ee876206ef3487d6e171b844d639",
+    "tools/import_world.py": "1ec47e8ebfbf49a341fa4d1d226a70eb6e3928bfe0472301775b9daae66fe075",
+    "tools/quest_source_handlers.py": "ee85f3a76e8c1d22879c1197b7bb06af46c3b91206e4168b4531e1f2c661c28a",
+    "tools/quest_jug_shop.py": "c29dd788a682cd96751078a23f8ace59ee0b2bb3c7951ed8075f094730132df2",
+    "client/data/quests/transmigration-water.json": "85d4907e6b795ac9ffb1703cfd677521ffbff11682de278c24adb6348d265f2b"
+  }
+}

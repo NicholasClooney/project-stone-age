@@ -26,7 +26,6 @@ const PROFILE_COMMANDS := {
 	"sell_item":["sell_item",["item"]],
 	"use_item":["use_item",["item","pet_id"]],
 	"equip_item":["equip_item",["item"]],
-	"buy_travel_pass":["buy_travel_pass",[]],
 	"heal":["heal",[]],
 	"heal_carried_pets":["heal_carried_pets",[]],
 	"use_spirit":["use_spirit",["slot","target"]],
@@ -223,6 +222,8 @@ func load_profile(path: String) -> bool:
 	return true
 
 func handle(command: Dictionary) -> Dictionary:
+	var fee_refusal:Dictionary=_permit_entry_refusal(command)
+	if not fee_refusal.is_empty():return fee_refusal
 	_dispatch_boundary_depth+=1
 	var source_scope:Dictionary=_quest_source_call
 	var source_internal:bool=quest_auto.internal
@@ -454,8 +455,15 @@ func _handle(command: Dictionary) -> Dictionary:
 	elif type in ["wild_encounter","field_step","auto_start","auto","auto_step","stationary_encounters","stationary_keepalive"]:
 		position_error=encounter_command_error(command,type in ["wild_encounter","field_step"])
 	if not position_error.is_empty():return {"ok":false,"reason":position_error,"seq":command.get("seq",0),"type":"rejected"}
+	# Exact service cancellation precedes generic activity/quest conflicts.
+	if type=="permit_shop_cancel" or (type=="quest_close" and original_quests.pending.get("phase","")=="permit_shop"):
+		var closed:Dictionary=RequiredFee.close_shop(self,command)
+		closed.seq=command.get("seq",0);closed.type="ack" if closed.get("ok",false) else "rejected"
+		return closed
+	var fee_refusal:Dictionary=_permit_entry_refusal(command)
+	if not fee_refusal.is_empty():return fee_refusal
 	stationary.command(self,type)
-	var quest_conflict:bool=quest_auto.running and type in ["quest_talk","quest_choose","quest_close","quest_visit","quest_discard"]
+	var quest_conflict:bool=quest_auto.running and type in ["quest_talk","quest_choose","quest_close","quest_visit","quest_discard","permit_shop_open","permit_shop_choose"]
 	if quest_conflict and type in ["quest_choose","quest_close"] and quest_auto.accepts_waiting_command(self,command):quest_conflict=false
 	if quest_auto.running:
 		if type in ["warp","auto","auto_start","flow_start","hunt_start","start_hunt","open_battle","begin_battle","start_battle_config","start_wild_battle_config","start_wild_battle","field_step","wild_encounter"]:quest_auto.stop(self,"其他操作停止了自动任务。")
@@ -470,7 +478,9 @@ func _handle(command: Dictionary) -> Dictionary:
 	elif PROFILE_COMMANDS.has(type):reply = _profile_command(type,command)
 	elif has_method("_cmd_"+type):reply = call("_cmd_"+type,command)
 	else:reply = _reject("unknown command "+type)
-	if before_position!=[automation.position_map,automation.position_cell]:
+	var fee_completed:bool=reply.get("_required_fee_call") is RefCounted
+	reply.erase("_required_fee_call")
+	if not fee_completed and before_position!=[automation.position_map,automation.position_cell]:
 		original_quests.pending={}
 		stationary.stop(self,"位置改变，已停止原地遇敌。")
 	reply.seq = command.get("seq",0)
@@ -1574,6 +1584,49 @@ func _reject(reason: String) -> Dictionary:
 ## A command overtaken by another device's: rejected, but not an error to show.
 func _stale(reason: String) -> Dictionary:
 	return {"ok":false,"reason":reason,"stale":true}
+
+# Exact original ItemShop adapter, separate from quest REQUEST/ACCEPT.
+# Opaque transport epochs only, no backend/session backreference. Never serialized.
+var _fee_bindings:Dictionary={}
+func fee_attach(connection:int)->RefCounted:
+	fee_detach(connection)
+	var binding=RefCounted.new()
+	_fee_bindings[connection]=binding
+	return binding
+func fee_detach(connection:int)->void:
+	var binding=_fee_bindings.get(connection)
+	var page:Dictionary=original_quests.pending
+	if binding!=null and page.get("phase","")=="permit_shop" and page.get("permit_connection")==connection and page.get("permit_binding")==binding:
+		original_quests.pending={}
+	_fee_bindings.erase(connection)
+const RequiredFee=preload("res://server/required_fee_transaction.gd")
+func _permit_entry_refusal(command:Dictionary)->Dictionary:
+	if str(command.get("type","")) not in ["permit_shop_open","permit_shop_choose"]:return {}
+	var reason:String=RequiredFee.entry_error(self,command)
+	return {} if reason.is_empty() else {"ok":false,"reason":reason,"seq":command.get("seq",0),"type":"rejected"}
+func _cmd_buy_travel_pass(_command:Dictionary)->Dictionary:
+	return _reject("请到原售证商人处确认购买；旧无人物购买命令已停用。")
+func _cmd_permit_shop_open(command:Dictionary)->Dictionary:
+	if not command.get("source_id") is String:return _reject("无效的原售证来源。")
+	return RequiredFee.open_shop(self,command.source_id,command)
+func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
+	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
+	return RequiredFee.choose_shop(self,command.token,command.choice,command)
+func _save_required_fee(frame:Dictionary)->bool:
+	if not RequiredFee.writer_ready(self,frame):return false
+	# Actual standard writer, not arbitrary profile RPC or pending bypass.
+	session._profile=frame.candidate
+	if not session.save_game(save_path):
+		# Roll back our exact uncommitted candidate BEFORE virtual return observers.
+		if RequiredFee.same_owner(self,frame) and is_same(session._profile,frame.candidate) and session._profile==frame.expected and last_saved_payload==frame.cache and quest_save_serial==frame.serial:
+			session._profile=frame.profile
+		return false
+	last_saved_payload=JSON.stringify(session.snapshot())
+	quest_save_serial+=1
+	RequiredFee.mark_written(self,frame)
+	if not frame.marked:return false
+	RequiredFee.publish_committed(self,frame)
+	return true
 
 func _cmd_quest_visit(command: Dictionary) -> Dictionary:
 	var mode := str(command.get("mode","near"))
