@@ -17,6 +17,8 @@ var bind_address := "*"
 ## Set for wss://: TLS is negotiated on each connection before the WebSocket.
 var tls_options: TLSOptions
 var _server := TCPServer.new()
+var _stopping:=false
+var _stopped:=false
 var _handshakes: Array[StreamPeerTLS] = []
 var _pending: Array[WebSocketPeer] = []
 var _clients: Array[WebSocketPeer] = []
@@ -37,22 +39,43 @@ func _ready() -> void:
 
 ## Port 0 picks any free port (tests); `port` then holds the one chosen.
 func start() -> Error:
+	if _stopping:return ERR_BUSY
 	var error := _server.listen(port,bind_address)
-	if error==OK:port = _server.get_local_port()
+	if error==OK:
+		port = _server.get_local_port()
+		_stopped=false
 	return error
 
 func stop() -> void:
-	if backend!=null:backend.quest_auto.suspend(backend)
-	if hub!=null:
-		for profile_backend in hub.backends.values():profile_backend.quest_auto.suspend(profile_backend)
-	for peer in _pending:peer.close()
-	for peer in _clients:peer.close()
+	if _stopping or _stopped:return
+	_stopping=true
+	var old_clients:Array=_clients.duplicate()
+	var old_pending:Array=_pending.duplicate()
+	var old_backends:Array=[]
+	if backend!=null:old_backends.append(backend)
+	elif hub!=null:old_backends=hub.backends.values().duplicate()
+	# No observer runs before ALL captured transport fee epochs are retired.
+	for peer in old_clients:
+		var owner=backend if hub==null else hub.backend_of(peer.get_instance_id())
+		if owner!=null:owner.fee_detach(peer.get_instance_id())
+	for owner in old_backends:
+		if not is_instance_valid(owner):continue
+		if hub!=null and not owner in hub.backends.values():continue
+		owner.quest_auto.suspend(owner)
+	# Promotions/receives/process/start are gated during the callbacks above.
+	# Close only captured physical peers; never iterate a callback-mutated live list.
+	for peer in old_pending:peer.close()
+	for peer in old_clients:peer.close()
 	_server.stop()
+	_stopped=true
+	_stopping=false
 
 func is_listening() -> bool:
 	return _server.is_listening()
 
 func _process(_delta: float) -> void:
+	if _stopping:return
+	# After stop, still poll captured closing peers so original disconnect cleanup runs.
 	while _server.is_connection_available():
 		var connection := _server.take_connection()
 		if tls_options==null:
@@ -88,6 +111,7 @@ func _process(_delta: float) -> void:
 			_clients.erase(peer)
 			if hub!=null:hub.disconnect_connection(peer.get_instance_id())
 			else:
+				backend.fee_detach(peer.get_instance_id())
 				backend.quest_auto.detach(backend,peer.get_instance_id())
 				backend.automation.client_attached = not _clients.is_empty()
 
@@ -96,22 +120,30 @@ func clients() -> Array[WebSocketPeer]:
 	return _clients
 
 func _accept(stream: StreamPeer) -> void:
+	if _stopping or _stopped:return
 	var peer := WebSocketPeer.new()
 	peer.inbound_buffer_size = MAX_MESSAGE_BYTES
 	peer.outbound_buffer_size = 32 << 20
 	if peer.accept_stream(stream)==OK:_pending.append(peer)
 
 func _promote(peer: WebSocketPeer) -> void:
+	if _stopping or _stopped:
+		peer.close();return
 	_clients.append(peer)
-	if hub==null:backend.automation.client_attached = true
+	if hub==null:
+		backend.fee_attach(peer.get_instance_id())
+		backend.automation.client_attached = true
 
 func _receive(peer: WebSocketPeer, text: String) -> void:
+	if _stopping or _stopped:return
 	var command := Codec.decode(text)
 	if command.is_empty():
 		_send(peer,{"type":"rejected","seq":0,"ok":false,"reason":"malformed command","v":1})
 		return
 	# Connection ownership is transport identity, never a client-provided tag.
 	command["_quest_connection"]=peer.get_instance_id()
+	command.erase("_fee_binding")
+	if hub==null and str(command.get("type","")) in ["permit_shop_open","permit_shop_choose","permit_shop_cancel","quest_close"]:command["_fee_binding"]=backend._fee_bindings.get(peer.get_instance_id())
 	# Events raised by the command reach every client before this reply.
 	var reply: Dictionary = hub.handle(peer.get_instance_id(),command) if hub!=null else backend.handle(command)
 	reply.reply = true
