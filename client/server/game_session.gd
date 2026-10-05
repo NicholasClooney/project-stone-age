@@ -1440,6 +1440,46 @@ func commit_loot_settlement(capability:RefCounted,candidate:Dictionary,path:Stri
 func abandon_loot_settlement(capability:RefCounted)->void:
 	if not _loot_settlement.is_empty() and is_same(_loot_settlement.capability,capability):_loot_settlement={}
 
+## Internal non-battle ledger transaction. No caller-supplied resulting profile
+## or ledger; every operation reconstructs its own finite transition.
+func commit_loot_idle_transition(expected_profile:Dictionary,expected_ledger:Dictionary,operation:String,args:Dictionary,path:String,committed:Callable)->Dictionary:
+	if path.is_empty() or not committed.is_valid() or not _pending.is_empty() or not _loot_settlement.is_empty():return {"ok":false}
+	if not _valid_profile(expected_profile) or _profile!=expected_profile or expected_profile.quest_loot!=expected_ledger:return {"ok":false}
+	var fields:Dictionary={
+		"acquire":["step_id","budget_id","run_id","minutes","existing_items"],
+		"open":["step_id","expected_entry"],
+		"close":["step_id","expected_entry","total_used_ms"],
+		"adjust":["step_id","expected_entry","minutes"],
+		"reset":["step_id","expected_entry","minutes","acknowledge_recovery"],
+		"reset_missing":["step_id","budget_id","run_id","minutes","existing_items","acknowledge_recovery"]}
+	if not fields.has(operation) or not LootState.exact(args,fields[operation]) or args.step_id!=LootState.STEP:return {"ok":false}
+	if args.has("expected_entry") and not args.expected_entry is Dictionary:return {"ok":false}
+	if args.has("acknowledge_recovery") and not args.acknowledge_recovery is bool:return {"ok":false}
+	if args.has("existing_items") and (not LootState.integer(args.existing_items) or args.existing_items!=expected_profile.original_items.filter(func(item):return LootState.integer(item,2760,2760)).size()):return {"ok":false}
+	if args.has("budget_id") and (not LootState.opaque(args.budget_id) or not LootState.opaque(args.run_id)):return {"ok":false}
+	var next:Dictionary={}
+	match operation:
+		"acquire":next=LootState.acquire(expected_ledger,args.step_id,args.budget_id,args.run_id,args.minutes,args.existing_items)
+		"open":next=LootState.open(expected_ledger,args.step_id,args.expected_entry)
+		"close":next=LootState.progress(expected_ledger,args.step_id,args.expected_entry,args.total_used_ms,true)
+		"adjust":next=LootState.adjust(expected_ledger,args.step_id,args.expected_entry,args.minutes)
+		"reset":next=LootState.reset(expected_ledger,args.step_id,args.expected_entry,args.minutes,args.acknowledge_recovery)
+		"reset_missing":next=LootState.reset_missing(expected_ledger,expected_ledger,args.step_id,args.budget_id,args.run_id,args.minutes,args.existing_items,args.acknowledge_recovery)
+	if not next.get("ok",false):return {"ok":false}
+	var candidate:Dictionary=expected_profile.duplicate(true)
+	candidate.quest_loot=next.ledger
+	if not _valid_profile(candidate):return {"ok":false}
+	var before:Dictionary=_profile
+	var pending_before:Dictionary=_pending
+	var payload:=JSON.stringify(candidate)
+	if not _write_profile_candidate(candidate.duplicate(true),path):return {"ok":false}
+	# The original writer has no callbacks. Installation precedes the ONLY
+	# observer boundary; never assign either profile or cache after that callback.
+	var installed:bool=is_same(_profile,before) and _profile==expected_profile and is_same(_pending,pending_before) and _pending.is_empty()
+	if installed:_profile=candidate.duplicate(true)
+	committed.call(payload)
+	return {"ok":true,"installed":installed,"payload":payload,"profile":candidate}
+
 ## Candidate is already normalized/validated; do not run equipment migration here.
 func commit_transmigration_candidate(candidate:Dictionary,path:String)->bool:
 	if not _pending.is_empty() or path.is_empty() or not TransmigrationState.continuation_error(_profile).is_empty():return false
