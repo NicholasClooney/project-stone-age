@@ -1009,7 +1009,8 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 			loot_frame=_prepare_loot_settlement(pending_before,result)
 			if loot_frame.get("ok",false):loot_saved=_commit_loot_settlement(loot_frame)
 			if loot_saved.get("ok",false):
-				loot_frame.timer.settlement_committed(loot_frame.lifetime,loot_frame.receipt,loot_saved.profile.quest_loot)
+				if loot_frame.timer.settlement_committed(loot_frame.lifetime,loot_frame.receipt,loot_saved.profile.quest_loot):
+					loot_frame.timer.retire_cancelled_battle(self,loot_frame.lifetime,loot_frame.receipt)
 			# The disk result is real even if a callback installed another run or
 			# manual pending. Do not publish/rollback this old frame over it.
 			if not _owns_loot_settlement(loot_frame):
@@ -1090,7 +1091,7 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 func _prepare_loot_settlement(pending:Dictionary,result:Dictionary)->Dictionary:
 	var timer=quest_loot
 	var frame:Dictionary={"ok":false,"session":session,"path":save_path,"battle":battle,
-		"timer":timer,"lifetime":timer.lifetime,"receipt":pending.quest_loot_receipt.duplicate(true),"battle_id":str(pending.battle_id),
+		"timer":timer,"lifetime":timer.lifetime,"automation":automation,"auto_token":automation.start_lifetime,"auto_scope":automation._loot_frame(),"receipt":pending.quest_loot_receipt.duplicate(true),"battle_id":str(pending.battle_id),
 		"run_identity":quest_auto.identity.checkpoint(),"profile_ref":session._profile,
 		"profile":session._profile.duplicate(true),"pending_ref":session._pending,
 		"pending":session._pending.duplicate(true),"captures_ref":session.capture_events,
@@ -1126,9 +1127,11 @@ func _rollback_loot_settlement(frame:Dictionary,before:Dictionary,pending:Dictio
 	state.settlement_error=frame.get("reason","刷物战保存失败，战果与预算均已回滚；原战结算可重试。")
 	state.xp=0;state.gold=0;state.result_summary=[]
 	battle_state=state
+	frame.timer.freeze_failed_auto(self,frame)
+	if not _owns_loot_settlement(frame):return state.duplicate(true)
 	stationary.settled(self,state,false)
 	if not _owns_loot_settlement(frame):return state.duplicate(true)
-	if is_same(quest_loot,frame.timer) and is_same(frame.timer.lifetime,frame.lifetime) and quest_auto.running and quest_auto.identity.checkpoint()==frame.run_identity:quest_auto.handoff(self,"刷物战结算未保存，停止新尝试。")
+	if is_same(quest_loot,frame.timer) and is_same(frame.timer.lifetime,frame.lifetime) and is_same(automation,frame.automation) and is_same(automation.start_lifetime,frame.auto_token) and quest_auto.running and quest_auto.identity.checkpoint()==frame.run_identity:quest_auto.handoff(self,"刷物战结算未保存，停止新尝试。")
 	if _owns_loot_settlement(frame):_emit({"type":"battle_turn","state":state.duplicate(true)})
 	return state.duplicate(true)
 
