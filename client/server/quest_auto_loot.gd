@@ -1,6 +1,6 @@
 extends RefCounted
 ## Internal timer/candidate preparation with dormant battle settlement hooks.
-## No public registration or automatic attempt scheduler is connected.
+## No public registration; only the sealed internal continuation driver is wired.
 ## Authoritative commit hooks must accept a candidate before accept_commit;
 ## Internal drivers use original transactions only; no proof or reward is invented.
 const State=preload("res://server/quest_auto_loot_state.gd")
@@ -197,7 +197,7 @@ func projection(b)->Dictionary:
  else:view.activity="stopped"
  return view
 
-# E1 only: internal prepared-run admission. No public caller/tick/roll is wired.
+# E1 internal prepared-run admission. No public caller or new acquisition via C2.
 const MapFile=preload("res://scripts/map_file.gd")
 const JewelPlan=preload("res://server/quest_auto_jewel_loot_plan.gd")
 var admission:RefCounted
@@ -249,13 +249,15 @@ func admission_error(b,frame:Dictionary)->String:
  if not admission_owner(b,frame):return "准入结束时归属已改变。"
  return ""
 func admission_owner(b,frame:Dictionary)->bool:
+ if not frame.get("continuation",{}).is_empty() and not continuation_current(b,frame.continuation):return false
  var q=b.quest_auto
  return b.quest_visit_guard==frame.visit_guard and b.party_guard==frame.party_guard and is_same(b.session,frame.owner) and b.save_path==frame.path and is_same(b.quest_loot,self) and is_same(lifetime,frame.lifetime) and is_same(admission,frame.capability) and is_same(q,frame.runner) and q.identity.checkpoint()==frame.identity and q.connection==frame.connection and q.client==frame.client and q.running and q.internal and not q.detached and not q.restored and q.phase==str(frame.get("phase","loot_admission")) and q.step==frame.step and b.automation.position_map==frame.map_id and b.automation.position_cell==frame.cell
-func admit_prepared_run(b)->Dictionary:
+func admit_prepared_run(b,continuation:Dictionary={})->Dictionary:
+ if not continuation.is_empty() and not continuation_current(b,continuation):return State.denied("续行调用归属已失效。")
  # Capture this invocation BEFORE any reentrant guard, never adopt its successor.
  admission=RefCounted.new()
  var q=b.quest_auto
- var frame:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":b.automation.position_map,"cell":b.automation.position_cell,"lifetime":lifetime,"capability":admission,"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"terrain_path":b.quest_helper.places.file(100),"clock":clock}
+ var frame:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":b.automation.position_map,"cell":b.automation.position_cell,"lifetime":lifetime,"capability":admission,"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"terrain_path":b.quest_helper.places.file(100),"clock":clock,"continuation":continuation}
  var reason:=admission_error(b,frame)
  if not reason.is_empty():return State.denied(reason)
  if anchor_ms>=0 or not battle_receipt.is_empty():return State.denied("旧刷物时段尚未退休。")
@@ -268,6 +270,7 @@ func admit_prepared_run(b)->Dictionary:
  if ledger.entries.has(State.STEP):
   var entry:Dictionary=ledger.entries[State.STEP]
   if entry.recovery_blocked or entry.open_span or entry.used_ms>=entry.limit_ms:return State.denied("既有预算不能隐式重开或重置。")
+ if not continuation.is_empty() and not ledger.entries.has(State.STEP):return State.denied("续行不能创建新预算。")
  var operations:Array=["open"] if ledger.entries.has(State.STEP) else ["acquire","open"]
  var persisted:=false
  var opened:Dictionary={}
@@ -280,6 +283,13 @@ func admit_prepared_run(b)->Dictionary:
   if operation=="acquire":
    args.merge({"budget_id":Crypto.new().generate_random_bytes(16).hex_encode(),"run_id":frame.identity.run_id,"minutes":Settings.effective(frame.owner.automation_settings()).loot_minutes,"existing_items":0})
   else:args.expected_entry=State.identity(expected.quest_loot.entries[State.STEP])
+  if not continuation.is_empty():
+   if operation!="open" or not continuation_current(b,continuation):return {"ok":false,"persisted":persisted,"reason":"续行写前归属失效。"}
+   var transition:Dictionary=State.open(expected.quest_loot,State.STEP,args.expected_entry)
+   if not transition.get("ok",false):return transition
+   continuation.expected_open=expected.duplicate(true)
+   continuation.expected_open.quest_loot=transition.ledger
+   continuation.open_payload=JSON.stringify(continuation.expected_open)
   var result:Dictionary=frame.owner.commit_loot_idle_transition(expected,expected.quest_loot.duplicate(true),operation,args,frame.path,_admission_written.bind(b,frame,operation))
   if not result.get("ok",false):return {"ok":false,"persisted":persisted,"reason":"预算保存失败，未启动尝试。"}
   persisted=true
@@ -295,7 +305,7 @@ func admit_prepared_run(b)->Dictionary:
 
 # E1-only clock boundary. Public timer APIs remain unchanged.
 func admission_timer_snapshot()->Dictionary:
- return {"key":key,"binding":binding.duplicate(true),"span":span.duplicate(true),"anchor_ms":anchor_ms,"base_used_ms":base_used_ms,"last_ms":last_ms,"blocked":blocked,"frozen":frozen,"frozen_ms":frozen_ms,"storage_paused":storage_paused,"cached_sample":cached_sample.duplicate(true),"ready_frame":ready_frame.duplicate(true),"next_attempt_ms":next_attempt_ms,"attempt_frame":attempt_frame.duplicate(true),"attempt_call":attempt_call,"battle_receipt":battle_receipt.duplicate(true),"open_obligation":open_obligation.duplicate(true),"close_pending":close_pending.duplicate(true)}
+ return {"key":key,"binding":binding.duplicate(true),"span":span.duplicate(true),"anchor_ms":anchor_ms,"base_used_ms":base_used_ms,"last_ms":last_ms,"blocked":blocked,"frozen":frozen,"frozen_ms":frozen_ms,"storage_paused":storage_paused,"cached_sample":cached_sample.duplicate(true),"ready_frame":ready_frame.duplicate(true),"next_attempt_ms":next_attempt_ms,"last_attempt_ms":last_attempt_ms,"attempt_frame":attempt_frame.duplicate(true),"attempt_call":attempt_call,"battle_receipt":battle_receipt.duplicate(true),"open_obligation":open_obligation.duplicate(true),"close_pending":close_pending.duplicate(true)}
 func start_admission_after_commit(b,frame:Dictionary,opened:Dictionary)->Dictionary:
  var denied:Dictionary={"ok":false,"persisted":true,"reason":"已存时段无法启动计时，停止等待恢复。"}
  if not admission_owner(b,frame) or clock!=frame.clock or not opened.get("ok",false) or not opened.get("installed",false):return denied
@@ -323,12 +333,16 @@ func start_admission_after_commit(b,frame:Dictionary,opened:Dictionary)->Diction
  anchor_ms=current;base_used_ms=int(entry.used_ms);frozen=false;blocked=false;storage_paused=false
  cached_sample={"lifetime":lifetime,"span":span.duplicate(true),"used_ms":base_used_ms}
  frame.lifetime=lifetime
+ if not frame.continuation.is_empty():
+  frame.continuation.expected_lifetime=lifetime
+  frame.continuation.expected_deadline=current
  frame.ready_token=RefCounted.new()
  if not open_obligation.is_empty() and is_same(open_obligation.capability,frame.capability):open_obligation.lifetime=lifetime
  ready_frame=frame.duplicate()
  ready_frame.erase("terrain")
+ ready_frame.erase("continuation") # Never retain a consumed call envelope.
  next_attempt_ms=last_ms
- return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true),"ready_token":frame.ready_token,"open_anchor_ms":current}
+ return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true),"ready_token":frame.ready_token,"open_anchor_ms":current,"continuation_call":frame.continuation.get("call"),"candidate_payload":opened.payload,"candidate_serial":serial}
 
 # E2: one explicit internal drive call, never a loop or a public RPC.
 const ATTEMPT_INTERVAL_MS=500
@@ -336,11 +350,13 @@ var ready_frame:Dictionary={}
 var attempt_frame:Dictionary={}
 var attempt_call:RefCounted
 var next_attempt_ms:=-1
+var last_attempt_ms:=-1
 func attempt_owned(b,frame:Dictionary)->bool:
  return is_same(attempt_call,frame.get("attempt_call")) and admission_owner(b,frame)
 func retire_attempt_frame(frame:Dictionary,call:RefCounted)->void:
  if is_same(attempt_frame,frame) and is_same(attempt_frame.get("attempt_call"),call):attempt_frame={}
 func attempt_once(b)->Dictionary:
+ if ready_frame.has("continuation_gate") and not b.continuation_dispatch_ready(ready_frame.continuation_gate):return {"ok":true,"attempted":false,"reason":"等待后续正常处理代。"}
  # Acquire BEFORE host guards or clock Callables. Every inner early return
  # unwinds through this one identity-checked retirement boundary.
  if attempt_call!=null or ready_frame.is_empty() or not attempt_frame.is_empty():return {"ok":false,"attempted":false,"reason":"刷物尝试未就绪或已有调用。"}
@@ -369,7 +385,11 @@ func attempt_locked(b,frame:Dictionary)->Dictionary:
  # No callback occurs between this final complete guard and field_step entry.
  reason=admission_error(b,frame)
  if not reason.is_empty() or not attempt_owned(b,frame):return State.denied("原尝试前条件已变化。" if reason.is_empty() else reason)
- next_attempt_ms=last_ms+ATTEMPT_INTERVAL_MS
+ if last_ms>State.MAX_MSEC-ATTEMPT_INTERVAL_MS:return State.denied("尝试时钟截止超出合法范围。")
+ last_attempt_ms=last_ms
+ next_attempt_ms=last_attempt_ms+ATTEMPT_INTERVAL_MS
+ if ready_frame.has("continuation_gate"):
+  ready_frame.continuation_gate.generation=b.continuation_dispatch_checkpoint().generation
  attempt_frame=frame
  var reply:Dictionary=b._cmd_field_step({"map_id":frame.map_id,"cell":[frame.cell.x,frame.cell.y],"encounter":true})
  retire_attempt_frame(frame,frame.attempt_call)
@@ -398,6 +418,10 @@ func attempt_locked(b,frame:Dictionary)->Dictionary:
 var open_obligation:Dictionary={}
 var close_pending:Dictionary={}
 func _admission_written(payload:String,b,frame:Dictionary,operation:String)->void:
+ var continuation:Dictionary=frame.get("continuation",{})
+ # Bind the installed candidate object before Backend's first observer callback.
+ if operation=="open" and not continuation.is_empty() and continuation_current(b,continuation) and payload==continuation.get("open_payload","") and frame.owner.snapshot()==continuation.get("expected_open",{}):
+  continuation.open_profile_ref=frame.owner._profile
  # Session installed the immutable candidate before this callback. Capture its
  # exact open obligation BEFORE the backend observer can synchronously cancel.
  if operation=="open" and admission_owner(b,frame):
@@ -406,6 +430,7 @@ func _admission_written(payload:String,b,frame:Dictionary,operation:String)->voi
    var committed:Dictionary=frame.owner._normalize_numbers(parsed)
    if committed==frame.owner.snapshot() and committed.quest_loot.entries[State.STEP].open_span:
     open_obligation=frame.duplicate()
+    open_obligation.erase("continuation")
     open_obligation.entry=State.identity(committed.quest_loot.entries[State.STEP])
  b._loot_settlement_written(payload,frame.owner,frame.path)
 func idle_close_context(b,ticket:Dictionary)->bool:
@@ -550,7 +575,7 @@ func capture_followup(b,receipt:Dictionary)->Dictionary:
  var scope:Dictionary=auto._loot_frame()
  if not q.running or not q.internal or q.detached or q.restored or q.phase!="loot_battle" or not auto._loot_current(scope) or scope.is_empty() or scope.receipt!=receipt:return {}
  if not Sources.same(q.step,Sources.step()) or str(b.battle.snapshot().get("outcome",""))!="win":return {}
- return {"token":RefCounted.new(),"session":weakref(b.session),"path":b.save_path,"battle":weakref(b.battle),"battle_id":str(receipt.ledger.battle_id),"automation":weakref(auto),"runner":weakref(q),"identity_object":weakref(q.identity),"timer":weakref(self),"lifetime":lifetime,"auto_token":auto.start_lifetime,"scope_capability":scope.capability,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":auto.position_map,"cell":auto.position_cell,"serial":b.quest_save_serial,"receipt":receipt.duplicate(true),"closed":false,"scope_retired":false}
+ return {"token":RefCounted.new(),"session":weakref(b.session),"path":b.save_path,"battle":weakref(b.battle),"battle_id":str(receipt.ledger.battle_id),"automation":weakref(auto),"runner":weakref(q),"identity_object":weakref(q.identity),"timer":weakref(self),"lifetime":lifetime,"auto_token":auto.start_lifetime,"scope_capability":scope.capability,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":auto.position_map,"cell":auto.position_cell,"serial":b.quest_save_serial,"receipt":receipt.duplicate(true),"closed":false,"scope_retired":false,"clock":clock,"last_attempt_ms":last_attempt_ms,"deadline_ms":next_attempt_ms}
 func followup_owner(b,ticket:Dictionary)->bool:
  if ticket.is_empty() or not is_same(b.quest_loot,self):return false
  var q=b.quest_auto;var auto=b.automation
@@ -605,3 +630,87 @@ func retire_followup_scope(b,token:RefCounted)->bool:
  # No Callable/emit/save between owner check and exact stopped-scope retirement.
  auto.loot_scope={};ticket.scope_retired=true
  return true
+
+# Internal continuous followup. No public job/RPC; original E1/E2 own all writes/rolls.
+var consume_call:RefCounted
+func continuation_owner(b,c:Dictionary)->bool:
+ if c.is_empty() or not is_same(consume_call,c.call) or not is_same(b.quest_loot,self) or not is_same(lifetime,c.expected_lifetime) or clock!=c.clock:return false
+ var q=b.quest_auto;var auto=b.automation
+ for pair in [["session",b.session],["battle",b.battle],["automation",auto],["runner",q],["identity_object",q.identity],["timer",self]]:
+  if not scope_owner_matches(c,pair[0],pair[1]):return false
+ if c.get("retired",false):
+  if not auto.loot_scope.is_empty():return false
+ elif not is_same(auto.loot_scope.get("capability"),c.scope_capability) or not is_same(auto.loot_scope.get("token"),c.auto_token):return false
+ return b.save_path==c.path and is_same(auto.start_lifetime,c.auto_token) and str(b.battle.snapshot().get("battle_id",""))==c.battle_id and q.running and q.internal and not q.detached and not q.restored and q.phase==c.phase and q.identity.checkpoint()==c.identity and q.connection==c.connection and q.client==c.client and q.step==c.step and auto.position_map==c.map_id and auto.position_cell==c.cell and not b.battle_open and not auto.running and b.session._pending.is_empty() and b.session._loot_settlement.is_empty() and last_attempt_ms==c.last_attempt_ms and next_attempt_ms==c.expected_deadline and b.quest_visit_guard==c.visit_guard and b.party_guard==c.party_guard
+func continuation_current(b,c:Dictionary)->bool:
+ if not continuation_owner(b,c):return false
+ # Exactly old closed state or this call's precomputed open candidate. The
+ # installed-before-cache bridge exists only inside the original writer callback.
+ if b.session.snapshot()==c.profile and is_same(b.session._profile,c.profile_ref):
+  return b.last_saved_payload==c.payload and b.quest_save_serial==c.serial
+ if c.get("expected_open",{}).is_empty() or b.session.snapshot()!=c.expected_open:return false
+ if c.has("open_profile_ref") and not is_same(b.session._profile,c.open_profile_ref):return false
+ return (b.last_saved_payload==c.payload and b.quest_save_serial==c.serial) or (b.last_saved_payload==c.open_payload and b.quest_save_serial==c.serial+1)
+static func followup_decision(planned:Dictionary,entry:Dictionary)->String:
+ if planned.get("status")=="done":return "completed"
+ if entry.used_ms>=entry.limit_ms:return "limit_reached"
+ return "open" if planned.get("status")=="step" else "manual"
+func consume_followup(b)->Dictionary:
+ if consume_call!=null:return State.denied("续行调用正在进行。")
+ var call:=RefCounted.new()
+ consume_call=call
+ var result:Dictionary=consume_followup_locked(b,call)
+ if is_same(consume_call,call):consume_call=null
+ return result
+func consume_followup_locked(b,call:RefCounted)->Dictionary:
+ var ticket:Dictionary=followup
+ if ticket.is_empty() or not followup_current(b,ticket) or not ticket.closed or b.automation.running or b.battle_open:return {"ok":false,"persisted":false,"reason":"没有当前已关闭战果凭据。"}
+ if not b.continuation_dispatch_ready(ticket.get("dispatch_barrier",{})):return {"ok":true,"waiting":true}
+ if ticket.clock!=clock or not State.integer(ticket.last_attempt_ms,0,State.MAX_MSEC-ATTEMPT_INTERVAL_MS) or ticket.deadline_ms!=ticket.last_attempt_ms+ATTEMPT_INTERVAL_MS or last_attempt_ms!=ticket.last_attempt_ms or next_attempt_ms!=ticket.deadline_ms:return State.denied("原尝试节拍身份已变化。")
+ var c:Dictionary=ticket.duplicate(true)
+ c.call=call;c.phase="loot_battle";c.expected_lifetime=lifetime;c.expected_deadline=ticket.deadline_ms
+ c.profile_ref=b.session._profile;c.visit_guard=b.quest_visit_guard;c.party_guard=b.party_guard
+ if not continuation_current(b,c):return State.denied("续行归属已变化。")
+ var planned:Dictionary=JewelPlan.select(b,Sources.matches_backend)
+ if not continuation_current(b,c):return State.denied("重规划回调改变了旧归属。")
+ var decision:String=followup_decision(planned,c.profile.quest_loot.entries[State.STEP])
+ if decision=="open" and not Sources.same(planned.get("step"),c.step):decision="manual"
+ if not retire_followup_scope(b,ticket.token):return State.denied("原自动战斗身份不可退休。")
+ c.retired=true
+ if not continuation_current(b,c):return State.denied("原自动战斗退休归属已变化。")
+ # Exact stopped scope retirement above is callback-free; never clear a successor.
+ if is_same(followup,ticket):followup={}
+ if decision!="open":
+  b.quest_auto.running=false;b.quest_auto.owns_battle=false
+  b.quest_auto.phase="completed" if decision=="completed" else "manual"
+  b.quest_auto.message="目标已满足，刷物结束。" if decision=="completed" else "本步预算已到限。" if decision=="limit_reached" else str(planned.get("reason","原刷物步骤需要手动处理。"))
+  b.publish()
+  return {"ok":true,"status":decision,"persisted":false}
+ c.phase="loot_admission";b.quest_auto.phase=c.phase
+ var reply:Dictionary=admit_prepared_run(b,c)
+ if not reply.get("ok",false):
+  # A persisted open may have been cancelled or superseded. Do not clean it
+  # with this old call; E1's actual obligation and callback owner rules apply.
+  return reply
+ if not continuation_current(b,c) or not is_same(reply.get("continuation_call"),call):return {"ok":false,"persisted":true,"reason":"已存续开返回归属已改变。"}
+ var ready:Dictionary=ready_frame
+ if not is_same(reply.capability,admission) or not is_same(reply.capability,ready.get("capability")) or not is_same(reply.lifetime,lifetime) or not is_same(reply.lifetime,ready.get("lifetime")) or not is_same(reply.ready_token,ready.get("ready_token")) or reply.identity!=c.identity or not admission_owner(b,ready):return {"ok":false,"persisted":true,"reason":"已存续开安装凭据不匹配。"}
+ if reply.candidate_payload!=c.open_payload or b.last_saved_payload!=reply.candidate_payload or reply.candidate_serial!=c.serial+1 or b.quest_save_serial!=reply.candidate_serial:return {"ok":false,"persisted":true,"reason":"已存续开候选已被替换。"}
+ # No callback from seal validation through deadline installation. Never roll
+ # in the consumer; the next normal process must also satisfy the real clock.
+ next_attempt_ms=maxi(int(c.deadline_ms),int(reply.open_anchor_ms))
+ ready.continuation_gate={"epoch":c.dispatch_barrier.epoch,"generation":b.continuation_dispatch_checkpoint().generation}
+ return {"ok":true,"status":"reopened","persisted":true,"identity":reply.identity,"entry":State.identity(b.session._profile.quest_loot.entries[State.STEP])}
+func tick_internal(b)->void:
+ if not cancelled_battle.is_empty() or not close_pending.is_empty():return
+ if b.quest_auto.phase=="loot_battle":
+  consume_followup(b)
+  return
+ if b.quest_auto.phase=="loot_admission" and ready_frame.has("continuation_gate"):
+  var ready:Dictionary=ready_frame
+  var reply:Dictionary=attempt_once(b)
+  if reply.get("ok",false):return
+  # Stop only the same idle execution. A published battle or a successor is
+  # an independent fact; never route it through this old idle-close tail.
+  if is_same(ready_frame,ready) and admission_owner(b,ready) and not b.battle_open and b.session._pending.is_empty():
+   b.quest_auto.stop(b,str(reply.get("reason","刷物尝试停止。")))
