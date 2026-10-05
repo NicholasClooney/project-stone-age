@@ -18,7 +18,13 @@ func auto_status() -> String:
 	if str(auto.get("phase",""))=="manual":
 		return str(auto.get("pause_reason","")) if not str(auto.get("pause_reason","")).is_empty() else str(auto.get("message",""))
 	var message:=str(auto.get("message",""))
-	if auto.get("detached",false):return "等待设备确认当前位置 · "+message
+	if auto.get("budget",{}).get("finish_current_battle",false):
+		message="仅结算当前场，不再开始下一场 · "+message
+	elif auto.get("detached",false):
+		if auto.get("running",false):return "等待设备确认当前位置 · "+message
+		if auto.get("budget",{}).get("recovery_blocked",false):message="任务已停止，预算恢复锁定 · "+message
+		elif auto.get("budget",{}).get("entry",null) is Dictionary:message="任务已停止，保留预算历史 · "+message
+		else:message="任务已停止 · "+message
 	if not str(auto.get("mode_notice","")).is_empty():message+="\n"+str(auto.mode_notice)
 	var budget:Dictionary=auto.get("budget",{})
 	if not budget.is_empty():

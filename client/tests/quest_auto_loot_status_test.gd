@@ -39,8 +39,35 @@ func _initialize()->void:
 	assert(shown.contains("限时刷物尚未开放。") and not shown.contains("本步已用") and not shown.contains("0.0 / 0.0"))
 	auto.phase="manual";auto.pause_reason="未支持服务，请人工处理"
 	assert(travel.auto_status()=="未支持服务，请人工处理")
-	auto.phase="travel";auto.detached=true
+	auto.phase="travel";auto.detached=true;auto.running=true
 	assert(travel.auto_status()=="等待设备确认当前位置 · 原任务状态")
+	auto.running=false
+	assert(travel.auto_status().begins_with("任务已停止 · 原任务状态\n原模式说明\n"))
+	auto.budget={"enabled":false,"reason":"服务端原原因","default_limit_minutes":30,"activity":"stopped","finish_current_battle":false,"recovery_blocked":false,"can_start":false,"can_stop":false,"can_adjust_limit":false,"can_reset":false,"entry":null}
+	assert(travel.auto_status().begins_with("任务已停止 · 原任务状态\n原模式说明\n"))
+	assert(not travel.auto_status().contains("本步已用"))
+	auto.budget.entry={"step_id":"jewels:hunt:2760","budget_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","generation":0,"revision":2,"target_item_id":2760,"target_count":1,"limit_ms":1800000,"saved_used_ms":1500,"used_ms":1500,"limit_reached":false,"existing_items":2,"new_items":1,"saved_battles":3}
+	assert(travel.auto_status().begins_with("任务已停止，保留预算历史 · 原任务状态\n原模式说明\n"))
+	auto.budget.recovery_blocked=true;auto.budget.activity="recovery_locked"
+	assert(travel.auto_status().begins_with("任务已停止，预算恢复锁定 · 原任务状态\n原模式说明\n"))
+	assert(travel.auto_status().contains("本步已用 1500 ms / 上限 1800000 ms"))
+	auto.budget.entry=null
+	assert(travel.auto_status().begins_with("任务已停止，预算恢复锁定 · 原任务状态\n原模式说明\n"))
+	assert(not travel.auto_status().contains("保留预算历史") and not travel.auto_status().contains("本步已用"))
+	assert(travel.auto_status().contains("服务端原原因") and travel.auto_status().contains("恢复锁定，不自动开战"))
+	# Copy priority fixture: actual producer boolean, never infer battle from detached.
+	auto.budget.finish_current_battle=true
+	for running in [false,true]:
+		for detached in [false,true]:
+			auto.running=running;auto.detached=detached
+			shown=travel.auto_status()
+			assert(shown.begins_with("仅结算当前场，不再开始下一场 · 原任务状态\n原模式说明\n"))
+			assert(shown.contains("服务端原原因") and shown.contains("恢复锁定，不自动开战"))
+			assert(not shown.contains("等待设备确认") and not shown.contains("任务已停止"))
+	auto.phase="manual";auto.pause_reason="服务端当前原因"
+	assert(travel.auto_status()=="服务端当前原因")
+	auto.pause_reason=""
+	assert(travel.auto_status()=="原任务状态")
 	travel.active=true;travel.phase="auto_download"
 	assert(travel.auto_status()=="正在准备任务地图…")
 	travel.free();world.free()
