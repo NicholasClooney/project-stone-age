@@ -125,3 +125,50 @@ static func replace_flute_proposal(b,job_id:int=26)->Dictionary:
  if locked.is_empty():return hold("branch_unavailable","当前最高原支不是本片获审事务。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","当前原地图合法到达资格不足。")
  return {"status":"step","step":{"id":"dragon:replace_flute","npc_id":REPLACE_FLUTE_NPC,"map_id":int(active_target.map_id),"cell":active_target.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REPLACE_FLUTE_NPC,"type":str(branch.type),"condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":int(branch.source_branch_index),"branch_data":branch.duplicate(true),"source_line":int(branch.source_line),"source_sha":str(table.sources["npc/"+str(active_target.source_script)].sha256),"audit_policy":"dragon_replace_flute_v1"}}}
+
+# UNRUN candidate; source identity only, never execution authority.
+const POST_FLUTE_PATH="res://server/quest_auto_dragon_post_flute_sources.json"
+const POST_FLUTE_SHA="5d715ebd8bf87bff8055868a0be763b09df554bb5cefa9ee5fcf88964f1de3dd"
+static func post_flute_table()->Dictionary:
+ var text:String=FileAccess.get_file_as_string(POST_FLUTE_PATH)
+ if text.sha256_text()!=POST_FLUTE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(text)
+ return parsed if parsed is Dictionary else {}
+static func post_flute_active(b,id:String)->Dictionary:
+ var table:Dictionary=post_flute_table()
+ if table.is_empty():return {}
+ for job in table.jobs:
+  var matches:int=0
+  for current in b.quest_catalog.jobs:
+   if same_source(current.get("id"),job.id):
+    matches+=1
+    if not same_source(current,job):return {}
+  if matches!=1:return {}
+ for expected in table.npcs:
+  var matches:int=0
+  for current in b.quest_catalog.npcs:
+   if current.get("id")==expected.id:
+    matches+=1
+    if not same_source(current,expected):return {}
+  if matches!=1:return {}
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for branch in expected.branches:
+   if branch.get("enabled",false) and branch.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(branch.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return {}
+  if expected.id==id:return active
+ return {}
+static func post_flute_boundary(b,job_id:int=26)->Dictionary:
+ if job_id!=26:return hold("unsupported_job","仅原本任务；无跨job执行。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done":return stage
+ if not 17 in b.quest_catalog.enabled_events:return hold("disabled","原事件未启用。")
+ var active:Dictionary=post_flute_active(b,"jaruga/event/event17_4@20801:13:63")
+ if active.is_empty():return hold("source_changed","原人物全分支或活动投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session._profile)
+ var result:Dictionary=stage.duplicate(true)
+ result["observed_branch"]=branch.duplicate(true)
+ result["execution_available"]=false
+ result["boundary"]="笛已持有后原MESSAGE不推进；三玉完整loot签名/三玉门与人选奖励未冻结；不得丢笛造补领进度。"
+ return result
