@@ -15,7 +15,7 @@ func run()->void:
  path="user://loot-root-backup-remote.json"
  root.size=Vector2i(390,844);root.content_scale_size=Vector2i.ZERO
  if not check(not FileAccess.file_exists(path) and not FileAccess.file_exists(path+".bak"),"Fault fixture starts in a fresh isolated user directory"):return
- host=Backend.new();root.add_child(host);host.set_process(false);host.save_path=path
+ host=preload("res://tests/support/loot_display_enabled_backend.gd").new();root.add_child(host);host.set_process(false);host.save_path=path
  if not check(host.save(),"H1 actual initial save"):return
  var first_host_id:int=host.get_instance_id()
  var first_session_id:int=host.session.get_instance_id()
@@ -68,7 +68,7 @@ func run()->void:
  print("ROOT PRIMARY FAULT ",JSON.stringify({"parse_error":parse_error,"line":parser.get_error_line(),"message":parser.get_error_message()}))
  if not check(parse_error!=OK,"JSON.new.parse rejects fault without parse_string error logging"):return
  # A fresh H2 is the FIRST actual loader; archive does not load or mutate saves.
- host=Backend.new();host.set_process(false);host.save_path=path
+ host=preload("res://tests/support/loot_display_enabled_backend.gd").new();host.set_process(false);host.save_path=path
  if not check(host.get_instance_id()!=first_host_id and host.session.get_instance_id()!=first_session_id,"Root H2 has a distinct real host and Session"):return
  var corrupted:Dictionary=archive("root-corrupted-before-load")
  if corrupted.is_empty():return

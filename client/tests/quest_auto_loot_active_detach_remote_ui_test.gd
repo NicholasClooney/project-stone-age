@@ -2,7 +2,7 @@ extends "res://tests/quest_auto_loot_battle_storage_remote_ui_test.gd"
 ## UNRUN DIAGNOSTIC: real E1 idle detach, no attempt; frozen stop/no-adoption target.
 ## Target: idle close stops old execution; natural reports never revive it.
 class ReportObservedBackend:
- extends "res://server/backend.gd"
+ extends "res://tests/support/loot_display_enabled_backend.gd"
  var report_records:Array=[]
  var observer_server:WeakRef
  var guard_reports:=false
