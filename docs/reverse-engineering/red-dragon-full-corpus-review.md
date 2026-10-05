@@ -1434,3 +1434,11 @@ Viewed twelve aligned sources (248178 through281530,stride3032), primary248178/2
 Independent275466 exposed back below wing polygon identifies32 BODY pixels, adds18 changes across two bodies, excluding rider above and wing shaft. Initial draft SHA256 `0437dae03c4d0cb9058c13616948fbbddaa2b94e944f1b402c10be572ba468e1`; three-reference draft `b975d3832bd17bd6562526d83e9aca20567c0461ce9222e92baeed44cbda35bb`. Final26443 changes (initial26425),3233 ventral mappings,3308 unknown body-colour pixels. Foot/wing-tip margins still include unfinished dragon colour, not all rider protection.
 
 Private evidence: `corpus-v1/pose125-*` and `progress-1539-hashes.json`. 1539/4416 unique drafts;2877 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 126: 1551 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248179 through281531,stride3032), both primary grids/references, third275467 grid, four initial difference sheets, seven revised crops across three sheets and full263339/275467/281531. Primary120x80/116x76, local offset(-3,-4). Independent head/hair, hand, garment and foot guards above tail; gold wing surfaces outer BODY, white jaw ventral. Final primaries byte-equal references.
+
+Independent275467 left-tail polygon identifies54 BODY pixels and adds57 changes across seven bodies. Actual third geometry88x95, y=-63, independently drawn in local grid; temporary reference prose incorrectly said88x97, while actual raster/bounds used ledger88x95. Saved review corrects prose; original draft evidence retained. Initial draft SHA256 `b69112234036d146d23031b2c10c44e19e1294e0e038f3fb15e329e875eb6e5a`; three-reference draft `c11b34d3f1b91b5802200702a1e024d8d0d84ac2e345887ac1d466eeed33b95d`. Final33979 changes (initial33922),2616 ventral mappings,4193 unknown body-colour pixels. Foot and wing-edge contact margins retain unfinished dragon colour; unknown is not rider proof.
+
+Private evidence: `corpus-v1/pose126-*` and `progress-1551-hashes.json`. 1551/4416 unique drafts;2865 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
