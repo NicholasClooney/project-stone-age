@@ -80,3 +80,53 @@ static func request_proposal(b,job_id:int=14)->Dictionary:
  if not same_source(branch,locked_branch) or branch.get("source_line")!=41 or branch.get("source_branch_index")!=3 or branch.get("event")!=27 or branch.get("type")!="REQUEST" or branch.get("condition")!="LV>29&ENDEV!=27" or not branch.get("actions",{}).is_empty():return hold("source_changed","当前首匹配分支不是原空动作REQUEST27。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持原受保护地图合法到达资格。")
  return {"status":"step","step":{"id":"miner:request:27","npc_id":LEADER,"map_id":31805,"cell":[19,21],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":LEADER,"type":"REQUEST","condition":str(branch.condition),"actions":{},"branch_index":3,"branch_data":branch.duplicate(true),"source_line":41,"source_sha":str(table.sources["npc/giiru/event/giruev2_1"].sha256),"audit_policy":"miner_request27_v1"}}}
+
+# Unopened next-stage proposal. No talk/choose/save or source-service permission.
+const CLAIM_MINING_PASS_SOURCE_PATH="res://server/quest_auto_miner_claim_mining_pass_sources.json"
+const CLAIM_MINING_PASS_SOURCE_SHA="9145c85917f2ec312089479a2b5af89b8782665c5f5477a238d23adcd0e78096"
+const CLAIM_MINING_PASS_NPC="giiru/event/giruev2_2@31805:33:23"
+static func claim_mining_pass_source_table()->Dictionary:
+ if not FileAccess.file_exists(CLAIM_MINING_PASS_SOURCE_PATH):return {}
+ var raw:String=FileAccess.get_file_as_string(CLAIM_MINING_PASS_SOURCE_PATH)
+ if raw.sha256_text()!=CLAIM_MINING_PASS_SOURCE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(raw)
+ return parsed if parsed is Dictionary else {}
+static func claim_mining_pass_proposal(b,job_id:int=14)->Dictionary:
+ if job_id!=14:return hold("unsupported_job","仅本任务的精确下一原事务。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="claim_lunch":return stage
+ var table:Dictionary=claim_mining_pass_source_table()
+ if table.is_empty():return hold("source_changed","完整源锁缺失或改变。")
+ for expected_job in table.jobs:
+  var job_count:int=0
+  for job in b.quest_catalog.jobs:
+   if job.get("id")==expected_job.id:
+    job_count+=1
+    if not same_source(job,expected_job):return hold("source_changed","完整job/event记录改变。")
+  if job_count!=1:return hold("source_changed","任务身份不唯一。")
+ if not 27 in b.quest_catalog.enabled_events:return hold("disabled","所需原事件未启用。")
+ var active_target:Dictionary={}
+ var expected_target:Dictionary={}
+ for expected in table.npcs:
+  var count:int=0
+  for npc in b.quest_catalog.npcs:
+   if npc.get("id")==expected.id:
+    count+=1
+    if not same_source(npc,expected):return hold("source_changed","完整原人物字段/原分支顺序改变。")
+  if count!=1:return hold("source_changed","原人物身份不唯一。")
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for candidate in expected.branches:
+   if candidate.get("enabled",false) and candidate.get("events",[]).any(func(value):return int(value) in b.quest_catalog.enabled_events):projected.branches.append(candidate.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return hold("source_changed","原位置/隐藏/完整活动投影改变。")
+  if expected.id==CLAIM_MINING_PASS_NPC:
+   active_target=active;expected_target=expected
+ if active_target.is_empty():return hold("source_changed","目标原人物缺失。")
+ var branch:Dictionary=b.original_quests.branch_for(active_target,b.session._profile)
+ var locked:Dictionary={}
+ for original in expected_target.branches:
+  if (same_source(original.get("source_branch_index"),5)) and same_source(branch,original):locked=original
+ if locked.is_empty():return hold("branch_unavailable","当前最高原支不是本片获审事务。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","当前原地图合法到达资格不足。")
+ return {"status":"step","step":{"id":"miner:claim_mining_pass","npc_id":CLAIM_MINING_PASS_NPC,"map_id":int(active_target.map_id),"cell":active_target.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":CLAIM_MINING_PASS_NPC,"type":str(branch.type),"condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":int(branch.source_branch_index),"branch_data":branch.duplicate(true),"source_line":int(branch.source_line),"source_sha":str(table.sources["npc/"+str(active_target.source_script)].sha256),"audit_policy":"miner_claim_mining_pass_v1"}}}
