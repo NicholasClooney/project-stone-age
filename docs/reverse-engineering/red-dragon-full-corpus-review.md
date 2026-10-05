@@ -1406,3 +1406,13 @@ Viewed twelve aligned sources (248175 through281527,stride3032), primary248175/2
 Independent275463 projecting snout polygon identifies49 BODY pixels in local84x113 geometry, excluding face above, left hand and white lower jaw. Adds19 changes across two bodies. Initial draft SHA256 `3833cda780824340945b065f10e3ba18938fe5a18fbfe21d1bf3966210d4f332`; three-reference draft `18bcedf01792f52324484dcbd596cc9195da278aa3325a2090a4fb7269ea2403`. Final20129 changes (initial20110),4225 ventral mappings,5126 unknown body-colour pixels. Rear legs and wing-root margins retain unfinished dragon colour; unknown is not rider proof. No complete semantic approval.
 
 Private evidence: `corpus-v1/pose122-*` and `progress-1503-hashes.json`. 1503/4416 unique drafts;2913 not yet drafted; **0 complete semantic receipts**. Field/padding checks mechanical only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 123: 1515 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248176 through281528,stride3032), both primary grids/references, third275464 grid, four initial difference sheets, ten revised crops across four sheets and full263336/275464/281528. Primary92x112/88x107, local offset(-2,-5). Independent hair/head, raised hand and garment protection around projecting snout. Pale/olive membrane preserved separately; white jaw/belly ventral.
+
+Initial248176 reference changed hair pixel(4,3). Independent hair polygon restores it; corrected reference effectively viewed. Restoration assertion proves exactly this one pixel reverted to original, other primary unchanged. Initial failed render/script retained, final primaries byte-equal corrected reference-v2. This is a local restoration, not a complete rider receipt.
+
+Independent275464 snout polygon identifies50 BODY pixels, adds42 changes across ten bodies. Actual third geometry88x111; temporary reference prose erroneously said88x112, while raster/bounds always used ledger88x111. Saved review corrects the prose without rewriting initial draft evidence. Initial draft SHA256 `abf09a2d3daf249dab470587a92606ec7cad5fd2a948add1423aad0c904e4b9f`; three-reference draft `ed32ed448aa202cda1a6c0995b38bc6f8b9118c5379a4f841fc5a93b746e5bc4`. Final20844 changes (initial20802),5107 ventral mappings,4778 unknown body-colour pixels. Foot/wing-root contact margins still contain unfinished dragon colour; unknown is not rider proof.
+
+Private evidence: `corpus-v1/pose123-*` and `progress-1515-hashes.json`. 1515/4416 unique drafts;2901 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
