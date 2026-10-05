@@ -1466,3 +1466,11 @@ Viewed twelve aligned sources (247868 through281220,stride3032), primary247868/2
 Independent275156 left cheek x18..22/y23..33 identifies48 BODY pixels; adds58 changes across eight bodies, with every revised crop viewed. Initial draft SHA256 `9006bb9f1937103235cb9e68db3ea31d7d802aba6dc8298a108b3243bc4ace45`; three-reference draft `48b9751e0184ee2fc7ee98890c8c28732c1cdc1ce678fdffbfed527e1d4d654a`. Final19913 changes (initial19855),3323 ventral mappings,4399 unknown body-colour pixels. Hair/hand-to-face and foot-to-leg margins retain unfinished dragon colour, not blanket rider protection.
 
 Private evidence: `corpus-v1/pose129-*` and `progress-1587-hashes.json`. 1587/4416 unique drafts;2829 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 130: 1599 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (247869 through281221,stride3032), primary247869/266061 local grids and references, third275157 grid, four initial difference sheets, three revised crops on one sheet and full263029/275157/281221. Primary geometries88x118/88x113, local y-offset -5. Head guards translated11 columns from129 only after current source/grid inspection; output viewed independently. Golden outer wings BODY, white jaw and belly ventral. Primary final outputs byte-equal references.
+
+Independent275157 left cheek x29..33/y24..34 identifies46 BODY pixels; adds22 changes across three bodies. Initial draft SHA256 `41304337d6fc369953c4d04c7e67d90727f1e17959e2dc1b03ed5ff3b27458d2`; three-reference draft `874e342712bb4fa7cefcad11804164043e7d499818484e40e643721767cdfcc0`. Final25602 changes (initial25580),3309 ventral mappings,4445 unknown body-colour pixels. Hair/hand-to-face, wing roots and foot-to-leg margins retain unfinished dragon colour; unknown is not rider proof.
+
+Private evidence: `corpus-v1/pose130-*` and `progress-1599-hashes.json`. 1599/4416 unique drafts;2817 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
