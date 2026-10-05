@@ -130,3 +130,50 @@ static func claim_mining_pass_proposal(b,job_id:int=14)->Dictionary:
  if locked.is_empty():return hold("branch_unavailable","当前最高原支不是本片获审事务。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","当前原地图合法到达资格不足。")
  return {"status":"step","step":{"id":"miner:claim_mining_pass","npc_id":CLAIM_MINING_PASS_NPC,"map_id":int(active_target.map_id),"cell":active_target.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":CLAIM_MINING_PASS_NPC,"type":str(branch.type),"condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":int(branch.source_branch_index),"branch_data":branch.duplicate(true),"source_line":int(branch.source_line),"source_sha":str(table.sources["npc/"+str(active_target.source_script)].sha256),"audit_policy":"miner_claim_mining_pass_v1"}}}
+
+# UNRUN candidate; source identity only, never execution authority.
+const POST_PASS_PATH="res://server/quest_auto_miner_post_pass_sources.json"
+const POST_PASS_SHA="8e1e88bfb560514091c7359fd5f9955fae1bf57e17284709e83f3c55eb219e97"
+static func post_pass_table()->Dictionary:
+ var text:String=FileAccess.get_file_as_string(POST_PASS_PATH)
+ if text.sha256_text()!=POST_PASS_SHA:return {}
+ var parsed:Variant=JSON.parse_string(text)
+ return parsed if parsed is Dictionary else {}
+static func post_pass_active(b,id:String)->Dictionary:
+ var table:Dictionary=post_pass_table()
+ if table.is_empty():return {}
+ for job in table.jobs:
+  var matches:int=0
+  for current in b.quest_catalog.jobs:
+   if same_source(current.get("id"),job.id):
+    matches+=1
+    if not same_source(current,job):return {}
+  if matches!=1:return {}
+ for expected in table.npcs:
+  var matches:int=0
+  for current in b.quest_catalog.npcs:
+   if current.get("id")==expected.id:
+    matches+=1
+    if not same_source(current,expected):return {}
+  if matches!=1:return {}
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for branch in expected.branches:
+   if branch.get("enabled",false) and branch.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(branch.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return {}
+  if expected.id==id:return active
+ return {}
+static func post_pass_boundary(b,job_id:int=14)->Dictionary:
+ if job_id!=14:return hold("unsupported_job","仅原本任务；无跨job执行。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done":return stage
+ if not 27 in b.quest_catalog.enabled_events:return hold("disabled","原事件未启用。")
+ var active:Dictionary=post_pass_active(b,"giiru/event/giruev2_2@31805:33:23")
+ if active.is_empty():return hold("source_changed","原人物全分支或活动投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session._profile)
+ var result:Dictionary=stage.duplicate(true)
+ result["observed_branch"]=branch.duplicate(true)
+ result["execution_available"]=false
+ result["boundary"]="2536后原MESSAGE不推进；2534材料loot未冻结；持2534的原Get2535/Del2534*1,2536独立事务仍待审核；2535优先Boss人工；END27停止，1000复入manual。"
+ return result

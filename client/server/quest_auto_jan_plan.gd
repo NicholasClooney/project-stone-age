@@ -174,3 +174,54 @@ static func token_proposal(b,job_id:int=27)->Dictionary:
  if locked.is_empty() or not same_source(branch,locked) or branch.get("source_branch_index")!=0 or branch.get("source_line")!=6 or branch.get("event")!=20 or branch.get("type")!="ACCEPT" or branch.get("condition")!="NOWEV=20&ITEM!=2487" or not same_source(branch.get("actions",{}),{"GetItem":"2487"}):return hold("source_changed","当前首匹配分支不是原儿子领2487 ACCEPT。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持当前原地图合法到达资格。")
  return {"status":"step","step":{"id":"jan:token:2487","npc_id":TOKEN_NPC,"map_id":3406,"cell":[28,17],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":TOKEN_NPC,"type":"ACCEPT","condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":0,"branch_data":branch.duplicate(true),"source_line":6,"source_sha":str(table.sources["npc/jaruga/event/event20_3"].sha256),"audit_policy":"jan_token2487_v1"}}}
+
+# UNRUN candidate; source identity only, never execution authority.
+const KEYWORD_APPROACH_PATH="res://server/quest_auto_jan_keyword_approach_sources.json"
+const KEYWORD_APPROACH_SHA="8afbfb2f9ef475310d757e68e8f80ba429c8e3a5f2626151d2564e5b12ace18b"
+static func keyword_approach_table()->Dictionary:
+ var text:String=FileAccess.get_file_as_string(KEYWORD_APPROACH_PATH)
+ if text.sha256_text()!=KEYWORD_APPROACH_SHA:return {}
+ var parsed:Variant=JSON.parse_string(text)
+ return parsed if parsed is Dictionary else {}
+static func keyword_approach_active(b,id:String)->Dictionary:
+ var table:Dictionary=keyword_approach_table()
+ if table.is_empty():return {}
+ for job in table.jobs:
+  var matches:int=0
+  for current in b.quest_catalog.jobs:
+   if same_source(current.get("id"),job.id):
+    matches+=1
+    if not same_source(current,job):return {}
+  if matches!=1:return {}
+ for expected in table.npcs:
+  var matches:int=0
+  for current in b.quest_catalog.npcs:
+   if current.get("id")==expected.id:
+    matches+=1
+    if not same_source(current,expected):return {}
+  if matches!=1:return {}
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for branch in expected.branches:
+   if branch.get("enabled",false) and branch.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(branch.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return {}
+  if expected.id==id:return active
+ return {}
+static func keyword_approach_proposal(b,dialogue:Dictionary={},job_id:int=27)->Dictionary:
+ if job_id!=27:return hold("unsupported_job","此接近提案仅job27，不启动父链。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("stage")!="keyword_boss_return":return stage
+ if not 20 in b.quest_catalog.enabled_events:return hold("disabled","原event20未启用。")
+ var active:Dictionary=keyword_approach_active(b,"genout/wpm_20604_11_53@20604:11:53")
+ if active.is_empty():return hold("source_changed","原首口令门完整源或投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session._profile)
+ var expected:Dictionary=keyword_approach_table().npcs[0].branches[0]
+ if not same_source(branch,expected):return hold("branch_unavailable","原LV>0首口令分支不可用。")
+ var result:Dictionary=hold("keyword_hook_missing","只读目标和公开答案建议；KEYWORD/Warp保存/receipt执行未冻结，王确认人工。")
+ result["approach"]={"npc_id":active.id,"map_id":int(active.map_id),"cell":active.cell.duplicate(),"source":"genout/wpm_20604_11_53"}
+ result["required_hooks"]=["original_root_arrival","keyword_warp_transaction","post_warp_receipt","manual_boss_confirmation"]
+ if not dialogue.is_empty():
+  var resolver=preload("res://server/quest_auto_source_answers.gd").new()
+  result["answer_advisory"]=resolver.resolve_keyword("genout/wpm_20604_11_53",dialogue)
+ return result

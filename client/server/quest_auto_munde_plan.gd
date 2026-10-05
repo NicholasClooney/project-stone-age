@@ -133,3 +133,52 @@ static func request11_proposal(b,job_id:int=8)->Dictionary:
  if locked.is_empty():return hold("branch_unavailable","当前最高原支不是本片获审事务。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","当前原地图合法到达资格不足。")
  return {"status":"step","step":{"id":"munde:request11","npc_id":REQUEST11_NPC,"map_id":int(active_target.map_id),"cell":active_target.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REQUEST11_NPC,"type":str(branch.type),"condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":int(branch.source_branch_index),"branch_data":branch.duplicate(true),"source_line":int(branch.source_line),"source_sha":str(table.sources["npc/"+str(active_target.source_script)].sha256),"audit_policy":"munde_request11_v1"}}}
+
+# UNRUN candidate; source identity only, never execution authority.
+const REQUEST10_PATH="res://server/quest_auto_munde_request10_sources.json"
+const REQUEST10_SHA="9e0212350ffb3160531bf36c52203156e4b91d675d5fbadac8d86dab704b2935"
+static func request10_table()->Dictionary:
+ var text:String=FileAccess.get_file_as_string(REQUEST10_PATH)
+ if text.sha256_text()!=REQUEST10_SHA:return {}
+ var parsed:Variant=JSON.parse_string(text)
+ return parsed if parsed is Dictionary else {}
+static func request10_active(b,id:String)->Dictionary:
+ var table:Dictionary=request10_table()
+ if table.is_empty():return {}
+ for job in table.jobs:
+  var matches:int=0
+  for current in b.quest_catalog.jobs:
+   if same_source(current.get("id"),job.id):
+    matches+=1
+    if not same_source(current,job):return {}
+  if matches!=1:return {}
+ for expected in table.npcs:
+  var matches:int=0
+  for current in b.quest_catalog.npcs:
+   if current.get("id")==expected.id:
+    matches+=1
+    if not same_source(current,expected):return {}
+  if matches!=1:return {}
+  var projected:Dictionary=expected.duplicate(true)
+  projected.branches=[]
+  for branch in expected.branches:
+   if branch.get("enabled",false) and branch.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(branch.duplicate(true))
+  var active:Dictionary=b.quest_catalog.active_npc(str(expected.id))
+  if not same_source(active,projected):return {}
+  if expected.id==id:return active
+ return {}
+static func request10_proposal(b,job_id:int=8)->Dictionary:
+ if job_id!=8:return hold("unsupported_job","仅梦德job8。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="request10":return stage
+ if not Rules.flag(b.session._profile,"now",11):return hold("request11_required","本片必须承接原REQUEST11成功；不补NOW11。")
+ if not 10 in b.quest_catalog.enabled_events:return hold("disabled","原event10未启用。")
+ var active:Dictionary=request10_active(b,"sainasu/event/event10@1300:65:65")
+ if active.is_empty():return hold("source_changed","完整村姑源或活动投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session._profile)
+ # No bypass of higher reward branches, even if REQUEST qualification also holds.
+ if not same_source(branch.get("source_branch_index"),2):return hold("branch_unavailable","最高原支不是本片REQUEST10。")
+ var locked:Dictionary=request10_table().npcs[0].branches[2]
+ if not same_source(branch,locked):return hold("source_changed","完整原REQUEST分支改变。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","仍须原到达资格。")
+ return {"status":"step","step":{"id":"munde:request10","npc_id":active.id,"map_id":int(active.map_id),"cell":active.cell.duplicate(),"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":active.id,"type":branch.type,"condition":branch.condition,"actions":branch.actions.duplicate(true),"branch_index":2,"branch_data":branch.duplicate(true),"source_line":28,"source_sha":str(request10_table().sources["npc/sainasu/event/event10"].sha256),"audit_policy":"munde_request10_v1"}}}
