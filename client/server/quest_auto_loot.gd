@@ -1,8 +1,8 @@
 extends RefCounted
 ## Internal timer/candidate preparation with dormant battle settlement hooks.
-## No public registration or attempt scheduler is connected.
+## No public registration or automatic attempt scheduler is connected.
 ## Authoritative commit hooks must accept a candidate before accept_commit;
-## this object never saves, creates a battle, grants proof or counts a reward.
+## Internal drivers use original transactions only; no proof or reward is invented.
 const State=preload("res://server/quest_auto_loot_state.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
 const Settings=preload("res://server/quest_auto_settings_rules.gd")
@@ -99,14 +99,27 @@ func may_attempt(ledger:Dictionary,run_identity:Dictionary)->bool:
 var battle_receipt:Dictionary={}
 var owner_session_id:=0
 func bind_battle(b)->void:
+ # An admission guard may start an unrelated battle while E2 is CHECKING.
+ # A call lock alone is never permission to charge that battle to this span.
+ if attempt_call!=null and attempt_frame.is_empty():return
  if anchor_ms<0 or key.is_empty() or not battle_receipt.is_empty():return
  var q=b.quest_auto
  if not q.running or not q.internal or q.detached or q.identity.checkpoint()!=binding or q.step.get("action")!="loot" or q.identity.step_id!=State.STEP:return
- if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():return
- if b.party_guard.is_valid() and not str(b.party_guard.call()).is_empty():return
+ if not attempt_frame.is_empty():
+  # E2 already checked both host guards BEFORE consuming the original RNG.
+  # Do not call arbitrary guards a second time after pending has been created.
+  if not attempt_owned(b,attempt_frame):return
+ else:
+  if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():return
+  if b.party_guard.is_valid() and not str(b.party_guard.call()).is_empty():return
  if b.stationary.running or not Sources.same(q.step,Sources.step()) or not Sources.matches_backend(b,q.step.source):return
  var ledger:Dictionary=b.session._profile.get("quest_loot",{})
- if not may_attempt(ledger,binding) or b.save_path.is_empty():return
+ if b.save_path.is_empty():return
+ if not attempt_frame.is_empty():
+  # The attempt crossed the budget gate before the original roll. Its current
+  # battle must still be counted if loading crosses the time limit meanwhile.
+  if not same_span(ledger) or blocked or frozen or ledger.recovery_blocked or not ledger.entries[key].open_span or ledger.entries[key].recovery_blocked:return
+ elif not may_attempt(ledger,binding):return
  var saved=JSON.parse_string(b.last_saved_payload)
  if not saved is Dictionary or not same_span(saved.get("quest_loot",{})) or not saved.quest_loot.entries[key].open_span:return
  var pending:Dictionary=b.session._pending
@@ -236,7 +249,7 @@ func admission_error(b,frame:Dictionary)->String:
  return ""
 func admission_owner(b,frame:Dictionary)->bool:
  var q=b.quest_auto
- return b.quest_visit_guard==frame.visit_guard and b.party_guard==frame.party_guard and is_same(b.session,frame.owner) and b.save_path==frame.path and is_same(b.quest_loot,self) and is_same(lifetime,frame.lifetime) and is_same(admission,frame.capability) and is_same(q,frame.runner) and q.identity.checkpoint()==frame.identity and q.connection==frame.connection and q.client==frame.client and q.running and q.internal and not q.detached and not q.restored and q.phase=="loot_admission" and q.step==frame.step and b.automation.position_map==frame.map_id and b.automation.position_cell==frame.cell
+ return b.quest_visit_guard==frame.visit_guard and b.party_guard==frame.party_guard and is_same(b.session,frame.owner) and b.save_path==frame.path and is_same(b.quest_loot,self) and is_same(lifetime,frame.lifetime) and is_same(admission,frame.capability) and is_same(q,frame.runner) and q.identity.checkpoint()==frame.identity and q.connection==frame.connection and q.client==frame.client and q.running and q.internal and not q.detached and not q.restored and q.phase==str(frame.get("phase","loot_admission")) and q.step==frame.step and b.automation.position_map==frame.map_id and b.automation.position_cell==frame.cell
 func admit_prepared_run(b)->Dictionary:
  # Capture this invocation BEFORE any reentrant guard, never adopt its successor.
  admission=RefCounted.new()
@@ -276,4 +289,71 @@ func admit_prepared_run(b)->Dictionary:
   planned=JewelPlan.select(b,Sources.matches_backend)
   if planned.get("status")!="step" or not Sources.same(planned.get("step"),frame.step):return {"ok":false,"persisted":true,"reason":"写后原计划条件改变。"}
  if not start_after_commit(State.STEP,frame.owner._profile.quest_loot.entries[State.STEP],frame.identity):return {"ok":false,"persisted":true,"reason":"已存时段无法启动计时，停止等待恢复。"}
+ frame.lifetime=lifetime
+ ready_frame=frame.duplicate()
+ ready_frame.erase("terrain") # Attempts each read fresh immutable terrain once.
+ next_attempt_ms=last_ms
  return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true)}
+
+# E2: one explicit internal drive call, never a loop or a public RPC.
+const ATTEMPT_INTERVAL_MS=500
+var ready_frame:Dictionary={}
+var attempt_frame:Dictionary={}
+var attempt_call:RefCounted
+var next_attempt_ms:=-1
+func attempt_owned(b,frame:Dictionary)->bool:
+ return is_same(attempt_call,frame.get("attempt_call")) and admission_owner(b,frame)
+func retire_attempt_frame(frame:Dictionary,call:RefCounted)->void:
+ if is_same(attempt_frame,frame) and is_same(attempt_frame.get("attempt_call"),call):attempt_frame={}
+func attempt_once(b)->Dictionary:
+ # Acquire BEFORE host guards or clock Callables. Every inner early return
+ # unwinds through this one identity-checked retirement boundary.
+ if attempt_call!=null or ready_frame.is_empty() or not attempt_frame.is_empty():return {"ok":false,"attempted":false,"reason":"刷物尝试未就绪或已有调用。"}
+ var call:=RefCounted.new()
+ attempt_call=call
+ var frame:Dictionary=ready_frame.duplicate()
+ frame.attempt_call=call
+ var result:Dictionary=attempt_locked(b,frame)
+ retire_attempt_frame(frame,call)
+ if is_same(attempt_call,call):attempt_call=null
+ return result
+func attempt_locked(b,frame:Dictionary)->Dictionary:
+ if not attempt_owned(b,frame) or binding!=frame.identity or blocked or frozen or anchor_ms<0:return State.denied("刷物尝试归属已失效。")
+ var reason:=admission_error(b,frame)
+ if not reason.is_empty():return State.denied(reason)
+ var planned:Dictionary=JewelPlan.select(b,Sources.matches_backend)
+ if planned.get("status")!="step" or not Sources.same(planned.get("step"),frame.step):return State.denied("目标或来源条件已变化。")
+ var ledger:Dictionary=frame.owner._profile.quest_loot
+ var saved=JSON.parse_string(b.last_saved_payload)
+ if not saved is Dictionary or not frame.owner._valid_profile(saved) or frame.owner._normalize_numbers(saved)!=frame.owner.snapshot():return State.denied("刷物尝试前真实保存基线不匹配。")
+ if not same_span(ledger) or ledger.recovery_blocked or not ledger.entries[State.STEP].open_span or ledger.entries[State.STEP].recovery_blocked:return State.denied("当前持久时段不能尝试。")
+ # This explicit scheduler sample is outside snapshot. Sample failures never roll.
+ if not sample_active() or not attempt_owned(b,frame):return State.denied("刷物活跃采样或执行归属无效。")
+ if cached_sample.used_ms>=ledger.entries[State.STEP].limit_ms:return State.denied("本步预算已到限，停止新尝试。")
+ if last_ms<next_attempt_ms:return {"ok":true,"attempted":false,"reason":"等待下一逻辑步。"}
+ # No callback occurs between this final complete guard and field_step entry.
+ reason=admission_error(b,frame)
+ if not reason.is_empty() or not attempt_owned(b,frame):return State.denied("原尝试前条件已变化。" if reason.is_empty() else reason)
+ next_attempt_ms=last_ms+ATTEMPT_INTERVAL_MS
+ attempt_frame=frame
+ var reply:Dictionary=b._cmd_field_step({"map_id":frame.map_id,"cell":[frame.cell.x,frame.cell.y],"encounter":true})
+ retire_attempt_frame(frame,frame.attempt_call)
+ # field_step may already have rolled and published a battle. Never undo it.
+ var battle_happened:bool=bool(reply.get("battle",false))
+ if not attempt_owned(b,frame):return {"ok":false,"attempted":true,"battle":battle_happened,"reason":"原尝试已发生，旧执行归属不再继续。"}
+ if not battle_happened:return {"ok":bool(reply.get("ok",false)),"attempted":true,"battle":false,"hit":bool(reply.get("hit",false))}
+ var pending:Dictionary=frame.owner._pending
+ var battle_id:String=str(pending.get("battle_id",""))
+ if battle_id.is_empty() or battle_receipt.is_empty() or pending.get("quest_loot_receipt",{})!=battle_receipt or str(b.battle_state.get("battle_id",""))!=battle_id or not b.battle_open:return {"ok":false,"attempted":true,"battle":true,"reason":"原战斗已发生，凭据变化后需手动处理。"}
+ var q=frame.runner
+ q.owns_battle=true
+ q.phase="loot_battle"
+ frame.phase="loot_battle"
+ b.emit_event({"type":"auto_status","status":b.automation.status()})
+ if not attempt_owned(b,frame) or str(frame.owner._pending.get("battle_id",""))!=battle_id:return {"ok":false,"attempted":true,"battle":true,"reason":"战斗发布后旧执行已取消。"}
+ # Compact flag must be set BEFORE automation.start's synchronous publication.
+ # Its existing single_battle runner stops after this original battle only.
+ b.automation.compact_active=true
+ var started:Dictionary=b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}})
+ if not attempt_owned(b,frame):return {"ok":false,"attempted":true,"battle":true,"reason":"战斗启动发布后旧执行已取消。"}
+ return {"ok":bool(started.get("ok",false)),"attempted":true,"battle":true,"battle_id":battle_id}
