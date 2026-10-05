@@ -1684,3 +1684,11 @@ Private evidence: `corpus-v1/pose151-*` and `progress-1846-hashes.json`.1846/441
 - Independent275343 lower dragon-head band x14..36/y12..18 contains117 BODY pixels and adds302 recoloured pixels across seven bodies. Primary outputs remain identical to their references. Remaining head, wing-root, hand and garment contacts still require complete ownership/material review.
 - Derive SHA256 `54bfce2caac64133058d0c56102afafc346fb7bc6492625e2bdd1142c0e59ce8`; evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose156-*`, field/hash report `progress-1902-hashes.json`, UTC/wall/child CPU in `offline-processing.jsonl`.
 - Added12 drafts only: **1902 drafts, zero complete receipts**. No mapping/import/integration enabled; original and failed evidence retained.
+
+### Pose 157 draft checkpoint (1914 unique, no complete receipts)
+
+- Viewed twelve aligned sources,248056/266248 source grids and reference comparisons, all four initial difference sheets,275344 grid, all three revision sheets and full263216/275344/281408 comparisons. Revision rendering resumed only after the explicit trial/batch2 release.
+- Source-checked rider contours reuse153 at x+14/y+1; right head/dragon junction stays conservatively unknown, not rider evidence. Golden wing-tip shading uses BODY mapping; no separately identified pale membrane/ventral region is claimed.
+- Independent275344 dragon-head band x37..59/y12..18 contains114 BODY pixels, adding299 changed pixels across seven bodies. Both primary outputs remain byte-identical to their references. Shoulder, hand, garment and wing-root contacts still retain unresolved dragon colour.
+- Derive SHA256 `b30f0b36f4f72158138634e32741ca9190772c61ec0657ec41f6402fdcbd2d25`; private evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose157-*`, field/hash report `progress-1914-hashes.json`, UTC/wall/child CPU in `offline-processing.jsonl`.
+- Added12 drafts only: **1914 drafts, zero complete receipts**; full per-pixel ownership/material review outstanding. No mapping/import/integration enabled; all old and failed evidence retained.
