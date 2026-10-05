@@ -28,7 +28,7 @@ func candidate(s)->Dictionary:
  return p
 func _initialize()->void:
  var s=Session.new();var fresh:Dictionary=s.snapshot()
- check(s._valid_profile(fresh) and fresh.version==7 and fresh.player.transmigration==0 and fresh.rebirth==State.zero(),"new v7 zero history is explicit")
+ check(s._valid_profile(fresh) and fresh.version==Session.SAVE_VERSION and fresh.player.transmigration==0 and fresh.rebirth==State.zero(),"new v7 zero history is explicit")
  for version in range(1,7):
   var old:=legacy(version);var path:="user://rebirth-v%d.json"%version
   check(s._valid_profile(old),"genuine historical shape valid v%d"%version)
@@ -36,7 +36,7 @@ func _initialize()->void:
   var loaded=Session.new()
   check(loaded.load_game(path),"load v%d before migration"%version)
   var p:Dictionary=loaded.snapshot()
-  check(p.version==7 and p.rebirth==State.zero() and p.player.transmigration==0,"v%d gains no invented history"%version)
+  check(p.version==Session.SAVE_VERSION and p.rebirth==State.zero() and p.player.transmigration==0,"v%d gains no invented history"%version)
   check(p.player.level==33 and p.player.gold==1234567 and p.player.hp==40 and p.player.attack==10,"v%d preserves old stats/assets"%version)
   check(loaded.save_game(path),"v%d migrated save"%version)
   DirAccess.remove_absolute(ProjectSettings.globalize_path(path+".bak")) # No fallback may hide invalid v7.
