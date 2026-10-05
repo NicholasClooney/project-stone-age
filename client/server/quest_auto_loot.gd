@@ -5,6 +5,7 @@ extends RefCounted
 ## this object never saves, creates a battle, grants proof or counts a reward.
 const State=preload("res://server/quest_auto_loot_state.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
+const Settings=preload("res://server/quest_auto_settings_rules.gd")
 var clock:Callable=Time.get_ticks_msec
 var key:=""
 var binding:Dictionary={}
@@ -139,3 +140,45 @@ func settlement_committed(expected_lifetime:RefCounted,receipt:Dictionary,ledger
  if not accept_commit(ledger):return false
  battle_receipt={};owner_session_id=0
  return true
+
+## Frozen display-v1 only. No clock calls, normalization, source validation,
+## saving, allocation or mutation. Feature/commands remain unavailable.
+func projection(b)->Dictionary:
+ var view:Dictionary={"enabled":false,"reason":"限时刷物尚未开放。","default_limit_minutes":30,"activity":"unavailable","finish_current_battle":false,"recovery_blocked":false,"can_start":false,"can_stop":false,"can_adjust_limit":false,"can_reset":false,"entry":null}
+ if b.save_path.is_empty() or b.last_saved_payload.is_empty():return view
+ var baseline=JSON.parse_string(b.last_saved_payload)
+ if not baseline is Dictionary or not State.valid(baseline.get("quest_loot")):return view
+ view.default_limit_minutes=Settings.effective(baseline.get("automation_settings",{})).loot_minutes
+ var ledger:Dictionary=baseline.quest_loot
+ var entry:Dictionary=ledger.entries.get(State.STEP,{})
+ view.recovery_blocked=ledger.recovery_blocked or (not entry.is_empty() and entry.recovery_blocked)
+ if entry.is_empty():
+  if view.recovery_blocked:view.activity="recovery_locked";view.reason="备份预算历史不确定，尚未开放恢复操作。"
+  return view
+ var used:int=int(entry.used_ms)
+ var live_ledger:Dictionary=b.session._profile.get("quest_loot",{})
+ var span_current:bool=is_same(b.quest_loot,self) and anchor_ms>=0 and same_span(ledger) and same_span(live_ledger) and entry.open_span
+ var pending:Dictionary=b.session._pending
+ var battle_current:bool=span_current and not battle_receipt.is_empty() and owner_session_id==b.session.get_instance_id() and pending.get("quest_loot_receipt",{})==battle_receipt and str(pending.get("battle_id",""))==str(battle_receipt.ledger.battle_id)
+ var q=b.quest_auto
+ var run_current:bool=span_current and q.running and q.identity.checkpoint()==binding and q.step.get("id")==State.STEP
+ var sample_current:bool=(run_current or battle_current) and is_same(cached_sample.get("lifetime"),lifetime) and cached_sample.get("span")==span and State.integer(cached_sample.get("used_ms"),0,State.MAX_MSEC)
+ if sample_current:used=maxi(used,int(cached_sample.used_ms))
+ view.entry={"step_id":State.STEP,"budget_id":entry.budget_id,"generation":int(entry.generation),"revision":int(entry.revision),"target_item_id":2760,"target_count":1,"limit_ms":int(entry.limit_ms),"saved_used_ms":int(entry.used_ms),"used_ms":used,"limit_reached":used>=int(entry.limit_ms),"existing_items":int(entry.existing_items),"new_items":int(entry.new_items),"saved_battles":int(entry.saved_battles)}
+ view.finish_current_battle=battle_current and (view.entry.limit_reached or not run_current or q.detached)
+ if view.recovery_blocked:
+  view.activity="recovery_locked";view.reason="中断时段用时不确定，显示已存下界。"
+ elif sample_current and storage_paused:
+  view.activity="storage_paused"
+  view.reason=str(b.battle_state.get("settlement_error","")) if battle_current else ""
+  if view.reason.is_empty():view.reason="保存处理中或等待修复，预算暂停计时。"
+ elif battle_current:
+  view.activity="battle" if b.battle.snapshot().get("active",false) else "settling"
+ elif baseline.get("original_items",[]).any(func(item):return State.integer(item,2760,2760)):
+  view.activity="completed"
+ elif view.entry.limit_reached:
+  view.activity="limit_reached"
+ elif run_current and not q.detached and not frozen and not blocked:
+  view.activity="running"
+ else:view.activity="stopped"
+ return view

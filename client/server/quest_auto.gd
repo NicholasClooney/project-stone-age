@@ -223,7 +223,7 @@ func snapshot(b=null) -> Dictionary:
   result.mode_notice="金布伊自动任务全程按A原路；B/C偏好保留供其他已开放任务使用。"
  result.source_entry=source_entry(b) if b!=null else {"job_id":2,"enabled":false,"can_start":false,"reason":"服务未连接。","effective_mode":"A"}
  result.can_continue=running and phase=="waiting_boss" and boss_ready
- result.budget={}
+ result.budget=b.quest_loot.projection(b) if b!=null else {}
  result.motion=motion.duplicate(true)
  return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true) -> void:
