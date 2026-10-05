@@ -957,3 +957,12 @@ recolours, 8662 retained unknown body-colour pixels. Saved fields and padding
 are checked against inspected inputs without repeating renders. 855 unique
 drafts (36 samples + 819 pose rules), 3561 missing drafts, zero complete
 semantic receipts. No importer, gameplay mapping or integration.
+
+### Pose 069 checkpoint: 867 unique drafts, zero complete receipts
+
+- Independently inspected twelve aligned sources and local coordinate references 247952/266144. Protected rear-leaning rider hair/hat, arms and visible lower clothing; preserved the foreground tan membrane, with lower cheek/belly edge mapped to ventral material. Two reference outputs were viewed individually.
+- Viewed all four twelve-body change sheets. The clipped first-column bodies 257048 and 266144 were additionally inspected as standalone full comparisons.
+- Independently outlined the exposed rear dorsal wing in source 278272, above/left of the raised hands: 208 BODY-index pixels, source hash and geometry bound. Only this local region plus the two original manual references entered the extra-reference derivation; automatic labels were not promoted to reference truth.
+- Initial twelve candidates changed 18,286 pixels; revised twelve changed 19,221 (net +935, including restoring the two original manual reference rules), ventral 1,403 and unresolved BODY-colour pixels 6,095. All eleven changed revision crops were individually viewed; 260080 unchanged. Hand/wing and membrane contact remnants remain unresolved, including dragon pixels; they are not all claimed as riders.
+- Evidence: `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose069-{reference,render,review,wing-render,wing-revision}`. Final output for all twelve is `pose069-wing-render`. Initial draft SHA256 `032bca84187f550e4e03a4df16ab2afaca422e48f16a429d7f6d7af933121c78`; three-reference derivation SHA256 `87bb37328413ba9018cd92cfdfef7d7dc2a75624549c692402e24e05b9e9e828`.
+- Stored 867 unique drafts across the two disjoint books, leaving 3,549 without drafts. Complete semantic receipts remain **0**; no functional mapping/import/gameplay changes, no generated images committed. Per-command UTC/wall/child CPU are retained in `offline-processing.jsonl`; field/padding/hash checkpoint is `progress-867-hashes.json`.
