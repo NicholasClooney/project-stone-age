@@ -827,3 +827,23 @@ ten use `pose061-render`. Initial twelve-candidate totals: 20123 changes,
 and padding are compared with those inspected inputs without rerendering.
 771 unique drafts (36 samples + 735 pose rules), 3645 missing drafts, zero
 complete semantic receipts. No importer, gameplay mapping or live changes.
+
+## Pose062: 783 unique drafts
+
+Viewed twelve aligned sources, both local-coordinate references, initial and
+revised reference outputs, and all twelve source/change pairs. The foreground
+tan wing crosses clothing and feet; the narrow far wing is raised beside the
+head. Initial reference outputs incorrectly changed shared body-palette
+indices inside the tan membrane into dark spots. Independent membrane
+polygons restore 27 pixels across the two references; the initial outputs
+remain as failure evidence. Revised outputs were separately viewed before
+deriving the twelve candidates. Hair/helmet, arms and exposed feet were
+inspected per body; no obvious rider recolour was found, but unresolved
+contacts still include dragon pixels and no semantic receipt is complete.
+
+Latest primary outputs: `pose062-membrane-reference` for 248171/266363; other
+ten use `pose062-render`. Initial twelve-candidate totals: 19301 changes,
+3117 ventral recolours, 6247 retained unknown body-colour pixels. Saved fields
+and padding are compared with inspected candidate inputs without rerendering.
+783 unique drafts (36 samples + 747 pose rules), 3633 missing drafts, zero
+complete semantic receipts. No import, gameplay mapping or integration.
