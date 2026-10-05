@@ -103,7 +103,7 @@ func buy_travel_pass() -> bool:
 	return true
 
 func has_travel_pass() -> bool:
-	return _profile.get("travel_pass",false)
+	return _profile.get("travel_pass",false) or 2422 in _profile.original_items
 
 const ORIGINAL_DEFAULT := {"original_events":{"now":[0,0,0,0,0,0],"ended":[0,0,0,0,0,0]},"original_items":[],"origin":{"village_id":1000,"savepoint_bit":0,"provenance":"prototype_default"},"original_savepoint_bits":1}
 

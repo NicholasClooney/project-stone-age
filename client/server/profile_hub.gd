@@ -41,6 +41,8 @@ var backups := true
 var last_error := ""
 ## connection -> {id, token}
 var _connections: Dictionary = {}
+# Short operation tokens only; frames/owners are never stored here.
+var _connection_calls: Dictionary = {}
 ## LAN phase 2: who stands where, and 一般频道 chat (server/presence.gd).
 var presence = Presence.new()
 ## Milliseconds for presence ticks and the chat rate limit (tests fake it).
@@ -152,6 +154,8 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 					var before := [backend.automation.position_map,backend.automation.position_cell]
 					var trusted:=command.duplicate(true)
 					trusted["_quest_connection"]=connection
+					trusted.erase("_fee_binding")
+					if type in ["permit_shop_open","permit_shop_choose","permit_shop_cancel","quest_close"]:trusted["_fee_binding"]=backend._fee_bindings.get(connection)
 					var result: Dictionary = backend.handle(trusted)
 					if leading and bool(result.get("ok",false)):_party_follow(id,before)
 					return result
@@ -160,15 +164,55 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 	reply.v = Backend.PROTOCOL
 	return reply
 
-## A connection closed.
-func disconnect_connection(connection: int) -> void:
-	var id := profile_of(connection)
-	if backends.has(id):backends[id].quest_auto.detach(backends[id],connection)
-	_connections.erase(connection)
-	presence.forget(connection)
-	_party_sent.erase(connection)
-	_attach(id)
-	_party_gone(id)
+# Connection-map retirement guards. No PIN/token policy or account schema change.
+func _connection_call(connection:int)->Dictionary:
+	var call=RefCounted.new()
+	_connection_calls[connection]=call
+	var record:Dictionary=_connections.get(connection,{})
+	var id:String=str(record.get("id",""))
+	var owner=backends.get(id)
+	return {"connection":connection,"call":call,"accounts":accounts,"present":_connections.has(connection),"record":record,"value":record.duplicate(true),"owner_id":id,"owner":owner,"session":owner.session if owner!=null else null,"path":owner.save_path if owner!=null else "","binding":owner._fee_bindings.get(connection) if owner!=null else null}
+func _connection_current(f:Dictionary)->bool:
+	var c:int=f.connection
+	if _connection_calls.get(c)!=f.call or accounts!=f.accounts or _connections.has(c)!=f.present:return false
+	if f.present and (not is_same(_connections[c],f.record) or _connections[c]!=f.value):return false
+	if f.owner!=null:
+		if not is_instance_valid(f.owner) or backends.get(f.owner_id)!=f.owner or f.owner.session!=f.session or f.owner.save_path!=f.path or f.owner._fee_bindings.get(c)!=f.binding:return false
+	if f.has("previous_owner") and f.previous_owner!=null:
+		if not is_instance_valid(f.previous_owner) or backends.get(f.previous_id)!=f.previous_owner or f.previous_owner.session!=f.previous_session or f.previous_owner.save_path!=f.previous_path:return false
+	if f.has("target"):
+		if not is_instance_valid(f.target) or backends.get(f.target_id)!=f.target or f.target.session!=f.target_session or f.target.save_path!=f.target_path:return false
+	return true
+func _connection_done(f:Dictionary)->void:
+	if _connection_calls.get(f.connection)==f.call:_connection_calls.erase(f.connection)
+func _connection_superseded(f:Dictionary)->Dictionary:
+	_connection_done(f)
+	return {"ok":false,"reason":"连接操作已被后续操作替代。","stale":true}
+func _retire_fee(f:Dictionary)->bool:
+	if not _connection_current(f):return false
+	if f.owner!=null:
+		f.owner.fee_detach(f.connection) # base has no emit/Callable/save
+		f.binding=null # expected result, never adopt whatever is now current
+	return _connection_current(f)
+## A connection closed. Nested enter owns a different call and cannot be erased.
+func disconnect_connection(connection:int)->void:
+	var f:Dictionary=_connection_call(connection)
+	if _retire_fee(f):_disconnect_owned(f)
+	_connection_done(f)
+func _disconnect_owned(f:Dictionary)->bool:
+	if not _connection_current(f):return false
+	if f.owner!=null:
+		f.owner.quest_auto.detach(f.owner,f.connection)
+		if not _connection_current(f):return false
+	_connections.erase(f.connection)
+	f.present=false
+	presence.forget(f.connection)
+	if not _connection_current(f):return false
+	_party_sent.erase(f.connection)
+	_attach(f.owner_id)
+	if not _connection_current(f):return false
+	_party_gone(f.owner_id)
+	return _connection_current(f)
 
 func _hello(connection: int, command: Dictionary) -> Dictionary:
 	if int(command.get("protocol",Backend.PROTOCOL))!=Backend.PROTOCOL:return {"ok":false,"reason":"protocol %d required" % Backend.PROTOCOL}
@@ -200,33 +244,69 @@ func _create(connection: int, command: Dictionary) -> Dictionary:
 
 ## Forgets this device's token and leaves the profile; the connection stays
 ## open at the profile picker.
-func _logout(connection: int) -> Dictionary:
-	var id := profile_of(connection)
-	if id.is_empty():return {"ok":true}
-	if backends[id].quest_auto.connection==connection or backends[id].quest_auto.detached:backends[id].quest_auto.stop(backends[id],"已退出角色。")
-	accounts.revoke_token(id,str(_connections[connection].get("token","")))
-	disconnect_connection(connection)
-	return {"ok":true,"profiles":_listing(),"allow_create":accounts.allow_create()}
+func _logout(connection:int)->Dictionary:
+	var f:Dictionary=_connection_call(connection)
+	var id:String=f.owner_id
+	var old_token:String=str(f.value.get("token",""))
+	if id.is_empty():
+		_connection_done(f)
+		return {"ok":true}
+	if not _retire_fee(f):return _connection_superseded(f)
+	if f.owner.quest_auto.connection==connection or f.owner.quest_auto.detached:
+		f.owner.quest_auto.stop(f.owner,"已退出角色。")
+		if not _connection_current(f):return _connection_superseded(f)
+	# Never read a possibly replaced _connections entry after a callback.
+	f.accounts.revoke_token(id,old_token)
+	if not _connection_current(f):return _connection_superseded(f)
+	if not _disconnect_owned(f):return _connection_superseded(f)
+	var listing:Array=_listing()
+	if not _connection_current(f):return _connection_superseded(f)
+	_connection_done(f)
+	return {"ok":true,"profiles":listing,"allow_create":accounts.allow_create()}
 
-func _enter(connection: int, entry: Dictionary, token: String) -> Dictionary:
-	var id := str(entry.id)
-	var error := open_profile(id)
-	if not error.is_empty():return {"ok":false,"reason":error}
-	var backend = backends[id]
-	# The admin flag may have changed in the file since the backend opened.
-	if backend.admin!=bool(entry.admin):
-		backend.admin = bool(entry.admin)
+func _enter(connection:int,entry:Dictionary,token:String)->Dictionary:
+	var f:Dictionary=_connection_call(connection)
+	var id:String=str(entry.id)
+	var wanted_admin:bool=bool(entry.admin)
+	var error:String=open_profile(id)
+	if not _connection_current(f):return _connection_superseded(f)
+	if not error.is_empty():
+		_connection_done(f)
+		return {"ok":false,"reason":error}
+	var backend=backends[id]
+	f.target=backend;f.target_id=id;f.target_session=backend.session;f.target_path=backend.save_path
+	if not _retire_fee(f):return _connection_superseded(f)
+	if backend.admin!=wanted_admin:
+		backend.admin=wanted_admin
 		backend.publish()
-	var previous := profile_of(connection)
-	_connections[connection] = {"id":id,"token":token}
+		if not _connection_current(f):return _connection_superseded(f)
+	var previous:String=f.owner_id
+	f.previous_id=previous;f.previous_owner=f.owner;f.previous_session=f.session;f.previous_path=f.path
+	# Install only this call's intended record, with no callback between check/install.
+	var installed:Dictionary={"id":id,"token":token}
+	_connections[connection]=installed
+	f.present=true;f.record=installed;f.value=installed.duplicate(true)
+	f.owner_id=id;f.owner=backend;f.session=f.target_session;f.path=f.target_path
+	f.binding=backend.fee_attach(connection) # base no callback; verify exact returned epoch
+	if not _connection_current(f):return _connection_superseded(f)
 	presence.forget(connection)
+	if not _connection_current(f):return _connection_superseded(f)
 	_party_sent.erase(connection)
 	if previous!=id:
-		if backends.has(previous) and backends[previous].quest_auto.connection==connection:backends[previous].quest_auto.stop(backends[previous],"发起设备已切换角色。")
+		var old_backend=f.previous_owner
+		if old_backend!=null and old_backend.quest_auto.connection==connection:
+			old_backend.quest_auto.stop(old_backend,"发起设备已切换角色。")
+			if not _connection_current(f):return _connection_superseded(f)
 		_attach(previous)
+		if not _connection_current(f):return _connection_superseded(f)
 		_party_gone(previous)
+		if not _connection_current(f):return _connection_superseded(f)
 	_attach(id)
-	return {"ok":true,"snapshot":backend.full_snapshot(),"account":{"name":str(entry.name),"admin":bool(entry.admin)},"token":token}
+	if not _connection_current(f):return _connection_superseded(f)
+	var snapshot:Dictionary=backend.full_snapshot()
+	if not _connection_current(f):return _connection_superseded(f)
+	_connection_done(f)
+	return {"ok":true,"snapshot":snapshot,"account":{"name":str(entry.name),"admin":wanted_admin},"token":token}
 
 ## Paced automation waits for a device only while one of this profile's
 ## devices is connected.
