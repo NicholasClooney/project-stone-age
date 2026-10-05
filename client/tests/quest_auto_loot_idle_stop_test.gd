@@ -57,9 +57,57 @@ func after_close_resume_cases()->bool:
   if failures:b.free();return false
   b.free()
  return true
+func detach_reentry_cases()->bool:
+ for mode in ["save","publish"]:
+  var b=ObservedBackend.new()
+  if not setup(b,"user://loot-detach-reentry-"+mode+".json"):check(false,"Detach reentry setup");b.free();return false
+  var clock_ms:Array=[1000]
+  b.quest_loot.clock=func():return clock_ms[0]
+  check(b.quest_loot.admit_prepared_run(b).ok,"Detach callback real durable admission")
+  if failures:b.free();return false
+  clock_ms[0]=2500
+  var fired:Array=[false];var successor:Array=[];var payload:Array=[]
+  var replace:Callable=func(host):
+   if fired[0]:return
+   fired[0]=true
+   check(not host.quest_auto.running and host.quest_auto.phase=="stopped" and host.quest_auto.detached and host.quest_auto.connection==-1 and host.quest_auto.client.is_empty(),"Old execution is stopped before actual close save/publish callback")
+   if failures:return
+   check(host.commits==3 and not host.session._profile.quest_loot.entries[KEY].open_span,"Close is truly committed before successor callback")
+   if failures:return
+   host.quest_auto.identity.begin();host.quest_auto.identity.select_step(KEY)
+   host.quest_auto.connection=72;host.quest_auto.client="detach-successor"
+   host.quest_auto.detached=false;host.quest_auto.running=true;host.quest_auto.phase="successor"
+   host.quest_auto.navigation.key="detach-successor-navigation"
+   host.automation.running=true;host.automation.single_battle=true
+   host.session._profile.player.gold+=7
+   check(host.save(),"Detach callback successor full save")
+   if failures:return
+   successor.append(host.quest_auto.identity.checkpoint());payload.append(host.last_saved_payload)
+  if mode=="save":
+   b.observer=func(host):
+    if host.commits==3:replace.call(host)
+  else:
+   b.event.connect(func(message):
+    if message.get("type")=="profile":replace.call(b))
+  b.quest_auto.detach(b,71)
+  if failures:b.free();return false
+  check(fired[0] and successor.size()==1 and b.quest_auto.identity.checkpoint()==successor[0] and b.quest_auto.connection==72 and b.quest_auto.client=="detach-successor" and not b.quest_auto.detached,"Old detach return cannot adopt or revoke callback successor")
+  if failures:b.free();return false
+  check(b.quest_auto.running and b.quest_auto.phase=="successor" and b.quest_auto.navigation.key=="detach-successor-navigation" and b.automation.running,"Old detach tail cannot stop successor or clear its navigation")
+  if failures:b.free();return false
+  check(payload.size()==1 and b.last_saved_payload==payload[0] and FileAccess.get_file_as_string(b.save_path)==payload[0],"Callback successor exact disk/cache wins")
+  if failures:b.free();return false
+  var copied:Dictionary=ProfileCompare.validated_copy(b.session,FileAccess.get_file_as_string(b.save_path))
+  check(copied.get("ok",false),"Detach successor complete disk validates")
+  if failures:b.free();return false
+  check(copied.profile==b.session.snapshot(),"Detach successor entire native profile equals disk")
+  if failures:b.free();return false
+  b.free()
+ return true
 func run()->void:
+ if not detach_reentry_cases():quit(1);return
  if not after_close_resume_cases():quit(1);return
- for mode in ["stop","detach","suspend","savefail_retry","suspend_savefail_retry","observer_newsave","observer_newrun"]:
+ for mode in ["stop","detach","suspend","savefail_retry","suspend_savefail_retry","detach_savefail_retry","observer_newsave","observer_newrun"]:
   var b=ObservedBackend.new();var clock_ms:Array=[1000];var calls:Array=[0]
   if not setup(b,"user://loot-idle-stop-"+mode+".json"):check(false,"Close fixture setup");b.free();quit(1);return
   b.quest_loot.clock=func():calls[0]+=1;return clock_ms[0]
@@ -67,7 +115,7 @@ func run()->void:
   if failures:b.free();quit(1);return
   var timer=b.quest_loot;var life=timer.lifetime;clock_ms[0]=2500
   var before:Dictionary=b.session.snapshot();var disk:String=FileAccess.get_file_as_string(b.save_path)
-  if mode in ["savefail_retry","suspend_savefail_retry"]:
+  if mode in ["savefail_retry","suspend_savefail_retry","detach_savefail_retry"]:
    check(DirAccess.make_dir_absolute(b.save_path+".tmp")==OK,"Own close blocker")
    if failures:b.free();quit(1);return
   var later:Array=[]
@@ -84,16 +132,19 @@ func run()->void:
      host.quest_auto.identity.begin();host.quest_auto.identity.select_step(KEY)
      later.append(host.quest_auto.identity.checkpoint())
   var original_identity:Dictionary=b.quest_auto.identity.checkpoint()
-  if mode=="detach":b.quest_auto.detach(b,71)
+  if mode in ["detach","detach_savefail_retry"]:b.quest_auto.detach(b,71)
   elif mode in ["suspend","suspend_savefail_retry"]:b.quest_auto.suspend(b)
   else:b.quest_auto.stop(b,"Internal stop fixture")
   if failures:b.free();quit(1);return
+  if mode in ["detach","detach_savefail_retry"]:
+   check(not b.quest_auto.running and not b.quest_auto.owns_battle and b.quest_auto.phase=="stopped" and b.quest_auto.detached and b.quest_auto.connection==-1 and b.quest_auto.client.is_empty() and b.quest_auto.identity.checkpoint()==original_identity,"Idle detach stops execution without rotating exact close identity, including save failure")
+   if failures:b.free();quit(1);return
   if mode in ["suspend","suspend_savefail_retry"]:
    check(b.quest_auto.shutdown_intent.get("identity",{})==original_identity,"Shutdown intent preserves the pre-revocation identity")
    if failures:b.free();quit(1);return
   check(timer.ready_frame.is_empty() and not timer.attempt_once(b).ok,"Stop invalidates all next-attempt capability")
   if failures:b.free();quit(1);return
-  if mode in ["savefail_retry","suspend_savefail_retry"]:
+  if mode in ["savefail_retry","suspend_savefail_retry","detach_savefail_retry"]:
    check(b.session.snapshot()==before and FileAccess.get_file_as_string(b.save_path)==disk and timer.storage_paused and not timer.close_pending.is_empty(),"Real failed close leaves entire profile/disk and frozen repair obligation")
    if failures:b.free();quit(1);return
    check(b.quest_auto.snapshot(b).budget.activity=="storage_paused","Stopped failed-close projection remains storage paused")
