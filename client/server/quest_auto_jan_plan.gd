@@ -86,3 +86,47 @@ static func flower_proposal(b,job_id:int=27)->Dictionary:
  if locked.is_empty() or not same_source(branch,locked) or branch.get("source_branch_index")!=2 or branch.get("source_line")!=23 or branch.get("event")!=-1 or branch.get("type")!="ACCEPT" or branch.get("condition")!="ITEM!=2486" or not same_source(branch.get("actions",{}),{"GetItem":"2486"}):return hold("source_changed","当前首匹配分支不是原领花ACCEPT。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持原受保护地图合法到达资格。")
  return {"status":"step","step":{"id":"jan:flower:2486","npc_id":FLOWER_NPC,"map_id":3400,"cell":[59,66],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":FLOWER_NPC,"type":"ACCEPT","condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":2,"branch_data":branch.duplicate(true),"source_line":23,"source_sha":str(table.sources["npc/jaruga/event/event20_1"].sha256),"audit_policy":"jan_flower2486_v1"}}}
+
+# Independent first Gide REQUEST20 proposal; flower_proposal stays unchanged.
+const REQUEST_SOURCE_PATH="res://server/quest_auto_jan_request_sources.json"
+const REQUEST_SOURCE_SHA="5a9612aac8cac59fd0a7b8986dc5c25d300f44b5bed09033c1be330c93891e6a"
+const REQUEST_NPC="jaruga/event/event20_2@3406:27:14"
+static func request_source_table()->Dictionary:
+ if not FileAccess.file_exists(REQUEST_SOURCE_PATH):return {}
+ var raw:String=FileAccess.get_file_as_string(REQUEST_SOURCE_PATH)
+ if raw.sha256_text()!=REQUEST_SOURCE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(raw)
+ return parsed if parsed is Dictionary else {}
+static func request_proposal(b,job_id:int=27)->Dictionary:
+ if job_id!=27:return hold("unsupported_job","本提案仅job27原REQUEST20，不切父链。")
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="request20":return stage
+ var table:Dictionary=request_source_table()
+ if table.is_empty():return hold("source_changed","吉德REQUEST完整源锁缺失或改变。")
+ for locked_job in table.jobs:
+  var count:int=0
+  for job in b.quest_catalog.jobs:
+   if job.get("id")==locked_job.id:
+    count+=1
+    if not same_source(job,locked_job):return hold("source_changed","原job27/28/29完整映射改变。")
+  if count!=1:return hold("source_changed","强恩任务身份不唯一。")
+ if not 20 in b.quest_catalog.enabled_events:return hold("disabled","原event20未启用。")
+ var expected:Dictionary=table.npc
+ var count:int=0
+ for npc in b.quest_catalog.npcs:
+  if npc.get("id")==REQUEST_NPC:
+   count+=1
+   if not same_source(npc,expected):return hold("source_changed","吉德本人完整原字段或分支顺序改变。")
+ if count!=1:return hold("source_changed","吉德本人身份不唯一。")
+ var projected:Dictionary=expected.duplicate(true)
+ projected.branches=[]
+ var locked:Dictionary={}
+ for candidate in expected.branches:
+  if candidate.get("enabled",false) and candidate.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(candidate.duplicate(true))
+  if candidate.get("source_branch_index")==1:locked=candidate
+ var active:Dictionary=b.quest_catalog.active_npc(REQUEST_NPC)
+ if not same_source(active,projected):return hold("source_changed","吉德实际位置、隐藏或完整分支投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session.snapshot())
+ if locked.is_empty() or not same_source(branch,locked) or branch.get("source_branch_index")!=1 or branch.get("source_line")!=17 or branch.get("event")!=20 or branch.get("type")!="REQUEST" or branch.get("condition")!="ITEM=2486" or not same_source(branch.get("actions",{}),{"DelItem":"2486"}):return hold("source_changed","当前首匹配分支不是原吉德REQUEST20。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持当前原地图合法到达资格。")
+ return {"status":"step","step":{"id":"jan:request:20","npc_id":REQUEST_NPC,"map_id":3406,"cell":[27,14],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":REQUEST_NPC,"type":"REQUEST","condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":1,"branch_data":branch.duplicate(true),"source_line":17,"source_sha":str(table.sources["npc/jaruga/event/event20_2"].sha256),"audit_policy":"jan_request20_v1"}}}
