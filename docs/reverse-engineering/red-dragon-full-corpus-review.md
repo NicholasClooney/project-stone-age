@@ -867,3 +867,21 @@ unresolved dragon neck/wing contacts and is not all protected rider material.
 Saved fields and padding are checked against inspected candidate inputs.
 795 unique drafts (36 samples + 759 pose rules), 3621 missing drafts, zero
 complete semantic receipts. No importer, gameplay activation or integration.
+
+## Pose064: 807 unique drafts
+
+Viewed twelve front-facing sources, both independent local references and
+their rendered outputs, and all twelve candidate source/change pairs. Rider
+hair/headgear and exposed hand protection are separate polygons. Both tan
+inner-wing membranes preserve material, dorsal rims are red, and the white
+collar and belly use the ventral palette. Each body has different visible
+hands, robe and dangling legs; no obvious rider recolour was found in these
+views. Head and leg contact yellow remains unresolved, including dragon
+pixels. These inspections are not complete semantic receipts.
+
+Latest primary outputs: `pose064-reference` for 247859/266051; other ten use
+`pose064-render`. Initial candidate totals: 18369 changes, 4700 ventral
+recolours, 5203 retained unknown body-colour pixels. Saved fields and padding
+are checked against inspected candidate inputs without repeating renders.
+807 unique drafts (36 samples + 771 pose rules), 3609 missing drafts, zero
+complete semantic receipts. No import or gameplay activation.
