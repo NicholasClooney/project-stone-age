@@ -211,7 +211,7 @@ static func admission_terrain_valid(data:Dictionary)->bool:
 func admission_error(b,frame:Dictionary)->String:
  if not admission_owner(b,frame):return "准入调用归属已失效。"
  var q=frame.runner
- if not is_same(b.quest_loot,self) or not q.running or not q.internal or q.detached or q.restored or q.connection<0 or q.client.is_empty() or q.phase!="loot_admission" or q.identity.step_id!=State.STEP:return "刷物内部执行身份无效。"
+ if not is_same(b.quest_loot,self) or not q.running or not q.internal or q.detached or q.restored or q.connection==-1 or q.client.is_empty() or q.phase!="loot_admission" or q.identity.step_id!=State.STEP:return "刷物内部执行身份无效。"
  if not Sources.same(q.step,Sources.step()):return "刷物步骤来源无效。"
  if b.save_path.is_empty() or b.last_saved_payload.is_empty():return "刷物需要可信真实存档。"
  if b.battle_open or b.battle.snapshot().get("active",false) or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or not b.original_quests.pending.is_empty():return "当前事务尚未完成。"
