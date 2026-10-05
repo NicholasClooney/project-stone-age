@@ -1017,6 +1017,8 @@ func _after_turn(state: Dictionary, settle: Dictionary = {}, drop_claims: Array 
 				state.settled=bool(loot_saved.get("ok",false))
 				if not state.settled:state.settlement_error="刷物结算上下文已改变；旧事务停止，未覆盖新状态。"
 				return state.duplicate(true)
+		if loot_transaction and loot_saved.get("ok",false):
+			loot_frame.timer.record_followup(self,loot_frame.followup,loot_saved,loot_frame.receipt)
 		var failed:bool=not loot_saved.get("ok",false) if loot_transaction else (atomic and not save())
 		if failed:
 			if loot_transaction:return _rollback_loot_settlement(loot_frame,before,pending_before,capture_events_before,state)
@@ -1096,6 +1098,7 @@ func _prepare_loot_settlement(pending:Dictionary,result:Dictionary)->Dictionary:
 		"profile":session._profile.duplicate(true),"pending_ref":session._pending,
 		"pending":session._pending.duplicate(true),"captures_ref":session.capture_events,
 		"captures":session.capture_events.duplicate(true)}
+	frame.followup=timer.capture_followup(self,frame.receipt)
 	var prepared:Dictionary=session.prepare_loot_settlement(frame.receipt,str(pending.battle_id))
 	if prepared.is_empty():
 		timer.pause_storage_for(frame.lifetime);frame.reason="原战结算候选无法绑定。";return frame
@@ -1187,10 +1190,12 @@ func _cmd_battle_close(command: Dictionary) -> Dictionary:
 	return {"ok":true,"outcome":close_battle()}
 
 func close_battle() -> String:
+	var loot_close:Dictionary=quest_loot.capture_followup_close(self)
 	var outcome := str(battle.snapshot().outcome)
 	if outcome=="defeat":session.set_location(VILLAGE.map_id,VILLAGE.x,VILLAGE.y)
 	battle_open = false
-	save()
+	var close_saved:bool=save()
+	quest_loot.record_followup_close(self,loot_close,close_saved)
 	_publish_battle_pets()
 	_emit({"type":"battle_closed","battle_id":str(battle_state.get("battle_id","")),"outcome":outcome})
 	if battle_state.has("quest_warp"):preload("res://server/brothers_quests.gd").publish_warp(self,str(battle_state.quest_warp))
