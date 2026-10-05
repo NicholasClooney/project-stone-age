@@ -1668,3 +1668,11 @@ Private evidence: `corpus-v1/pose151-*` and `progress-1846-hashes.json`.1846/441
 - The source-checked rider template was shifted x+13 from153; shallow dark left wing and long pale lower belly use new polygons. Independent275341 dragon-head band x36..58/y12..18 contains117 BODY pixels; eight other/third-source targets gain329 changed pixels, while the five uncertain points are restored (net324). Reuse and colour agreement do not establish target semantics.
 - Derive SHA256 `314f9ef8100a0865053f62f74f5652304d41a4740aac9ff25340f88da7f7edea`; private evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose154-*`. Exact counts, field hashes and UTC/wall/child CPU are in `progress-1880-hashes.json` and `offline-processing.jsonl`.
 - Head/wing-root/garment contact colours and the five specified boundary points remain unresolved. Added12 drafts only: **1880 drafts, zero complete receipts**. No mapping/import/integration enabled.
+
+### Pose 155 draft checkpoint (1890 unique, no complete receipts)
+
+- Viewed twelve aligned sources,251086/272310 original grids and reference comparisons, all four initial difference sheets,275342 source grid, revision-0 and full263214/275342/281406 comparisons.
+- Old overlapping251086/272310 records remain unchanged and are not recounted. Original rule hashes/effective padding and byte-identical outputs are checked; only ten new drafts are saved.
+- Independent exposed lower torso x45..64/y70..77 below275342's coat contains123 BODY pixels, but adds only two recoloured edge pixels in this bitmap. Other eleven outputs do not change. This does not resolve the remaining shoulder/hand/garment contact colours or prove full rider preservation.
+- Derive SHA256 `74b1d42b9d12ead850f30ca5ed705c771c21c20113d5116cc65738b5b392e880`; evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose155-*`, field/hash report `progress-1890-hashes.json`, UTC/wall/child CPU in `offline-processing.jsonl`.
+- **1890 drafts, zero complete receipts**. Conservative unknown is not rider ownership evidence; original and failed versions remain retained. No mapping/import/integration enabled.
