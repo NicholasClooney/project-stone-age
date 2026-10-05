@@ -145,6 +145,15 @@ var _storage_json := ""
 var automation = Automation.new(self)
 ## Events raised while a command or tick runs are delivered after it finishes,
 ## so a client reacting to one never re-enters a half-applied change.
+# Stack-completion evidence; existing event order is unchanged.
+var _dispatch_boundary_depth:=0
+var _observer_depth:=0
+var _flush_depth:=0
+var _process_depth:=0
+var _dispatch_dirty:=false
+var _dispatch_epoch:=0
+var _normal_process_generation:=0
+var _normal_process_entry_epoch:=0
 var _depth := 0
 ## How long the last automation tick took, and a running average, for
 ## 开发者性能面板 (scripts/perf_monitor.gd reads them; nothing else does).
@@ -177,6 +186,12 @@ func _live_battle_pets() -> Dictionary:
 	return busy
 
 func _process(delta: float) -> void:
+	var normal:bool=_dispatch_boundary_depth==0 and _process_depth==0 and _observer_depth==0 and _flush_depth==0 and _depth==0
+	_dispatch_boundary_depth+=1
+	_process_depth+=1
+	if normal:
+		_normal_process_generation+=1
+		_normal_process_entry_epoch=_dispatch_epoch
 	var started := Time.get_ticks_usec()
 	_depth += 1
 	automation.tick(delta)
@@ -190,6 +205,9 @@ func _process(delta: float) -> void:
 	if keep_resume_current:keep_resume_file()
 	tick_usec = Time.get_ticks_usec()-started
 	tick_avg_usec = lerpf(tick_avg_usec,float(tick_usec),0.1)
+	_process_depth-=1
+	_dispatch_boundary_depth-=1
+	_complete_dispatch_barrier()
 
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
@@ -205,6 +223,7 @@ func load_profile(path: String) -> bool:
 	return true
 
 func handle(command: Dictionary) -> Dictionary:
+	_dispatch_boundary_depth+=1
 	var source_scope:Dictionary=_quest_source_call
 	var source_internal:bool=quest_auto.internal
 	if not source_scope.is_empty():quest_auto.internal=false
@@ -220,6 +239,8 @@ func handle(command: Dictionary) -> Dictionary:
 	_flush()
 	_quest_source_call=source_scope
 	if not source_scope.is_empty():quest_auto.internal=source_internal
+	_dispatch_boundary_depth-=1
+	_complete_dispatch_barrier()
 	return reply
 
 ## Appends the pets released or caught by the last command or tick to
@@ -292,6 +313,12 @@ func shut_down() -> void:
 ## Keeps the resume file in step with the running automation (see resume_path).
 ## Called after every tick; cheap unless the run moved on or the interval passed.
 func keep_resume_file() -> void:
+	_dispatch_boundary_depth+=1
+	_keep_resume_file()
+	_dispatch_boundary_depth-=1
+	_complete_dispatch_barrier()
+
+func _keep_resume_file() -> void:
 	var path := _resume_file()
 	if path.is_empty():return
 	var now := int(resume_clock.call())
@@ -872,17 +899,23 @@ func open_party_battle(view) -> Dictionary:
 ## A party battle turn resolved (or this player left it): present it, and
 ## settle `slice` (PartyBattleSession.slice_for) when this player is out.
 func party_turn(state: Dictionary, slice: Dictionary, drop_claims: Array = []) -> void:
+	_dispatch_boundary_depth+=1
 	_depth += 1
 	_after_turn(state,slice,drop_claims)
 	_depth -= 1
 	_flush()
+	_dispatch_boundary_depth-=1
+	_complete_dispatch_barrier()
 
 ## A party member sent a command; the turn still waits for others.
 func party_status() -> void:
+	_dispatch_boundary_depth+=1
 	_depth += 1
 	_refresh_battle_state()
 	_depth -= 1
 	_flush()
+	_dispatch_boundary_depth-=1
+	_complete_dispatch_barrier()
 
 func _cmd_battle_pet_command(command: Dictionary) -> Dictionary:
 	if not battle.set_pet_command(str(command.get("command",""))):return _reject("pet command refused")
@@ -1399,6 +1432,7 @@ func emit_event(message: Dictionary) -> void:
 	_emit(message)
 
 func _emit(message: Dictionary) -> void:
+	_dispatch_boundary_depth+=1
 	message.v = PROTOCOL
 	var queued:Dictionary=message
 	var source:Dictionary=_quest_source_call
@@ -1412,10 +1446,16 @@ func _emit(message: Dictionary) -> void:
 			queued={"_source_position":source,"message":message,"packet":packet}
 	if _depth > 0:
 		_queue.append(queued)
+		_dispatch_boundary_depth-=1
+		_complete_dispatch_barrier()
 		return
 	_deliver_event(queued)
+	_dispatch_boundary_depth-=1
+	_complete_dispatch_barrier()
 
 func _deliver_event(queued:Dictionary)->void:
+	_observer_depth+=1
+	_dispatch_dirty=true
 	var message:Dictionary=queued
 	if queued.has("_source_position"):
 		var source:Dictionary=queued._source_position
@@ -1431,11 +1471,29 @@ func _deliver_event(queued:Dictionary)->void:
 	event.emit(message)
 	_quest_source_call=source_scope
 	if not source_scope.is_empty():quest_auto.internal=source_internal
+	_observer_depth-=1
+	_complete_dispatch_barrier()
 
 func _flush() -> void:
 	if _depth > 0:return
+	_flush_depth+=1
 	while not _queue.is_empty():
 		_deliver_event(_queue.pop_front())
+	_flush_depth-=1
+	_complete_dispatch_barrier()
+
+func _complete_dispatch_barrier()->void:
+	if _dispatch_boundary_depth!=0 or _depth!=0 or _observer_depth!=0 or _flush_depth!=0 or not _queue.is_empty() or not _dispatch_dirty:return
+	_dispatch_dirty=false
+	_dispatch_epoch+=1
+
+func continuation_dispatch_checkpoint()->Dictionary:
+	return {"epoch":_dispatch_epoch,"generation":_normal_process_generation}
+
+func continuation_dispatch_ready(checkpoint:Dictionary)->bool:
+	# Internal checkpoint only; not a wire capability or success certificate.
+	if not checkpoint.get("epoch") is int or not checkpoint.get("generation") is int:return false
+	return _process_depth==1 and _dispatch_boundary_depth==1 and _observer_depth==0 and _flush_depth==0 and _depth==1 and _queue.is_empty() and _normal_process_generation>checkpoint.generation and _normal_process_entry_epoch>checkpoint.epoch
 
 ## Called only by the runner's dormant internal source entry points.
 func call_quest_source(frame,proposal:Dictionary,choice:Dictionary={}) -> Dictionary:
