@@ -1676,3 +1676,11 @@ Private evidence: `corpus-v1/pose151-*` and `progress-1846-hashes.json`.1846/441
 - Independent exposed lower torso x45..64/y70..77 below275342's coat contains123 BODY pixels, but adds only two recoloured edge pixels in this bitmap. Other eleven outputs do not change. This does not resolve the remaining shoulder/hand/garment contact colours or prove full rider preservation.
 - Derive SHA256 `74b1d42b9d12ead850f30ca5ed705c771c21c20113d5116cc65738b5b392e880`; evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose155-*`, field/hash report `progress-1890-hashes.json`, UTC/wall/child CPU in `offline-processing.jsonl`.
 - **1890 drafts, zero complete receipts**. Conservative unknown is not rider ownership evidence; original and failed versions remain retained. No mapping/import/integration enabled.
+
+### Pose 156 draft checkpoint (1902 unique, no complete receipts)
+
+- Viewed twelve aligned sources,248055/266247 coordinate grids and reference outputs, four initial difference sheets,275343 grid, all three revision sheets, and complete263215/275343/281407 comparisons.
+- Source-checked rider contours reuse the153 template at x-9/y+1, with the right head/dragon junction conservatively unknown. This is not proof of rider ownership. The folded dark right wing uses an independently drawn preserve region; the lower ventral polygon matches no ventral-index pixels here (zero ventral changes, not an unreported material repair).
+- Independent275343 lower dragon-head band x14..36/y12..18 contains117 BODY pixels and adds302 recoloured pixels across seven bodies. Primary outputs remain identical to their references. Remaining head, wing-root, hand and garment contacts still require complete ownership/material review.
+- Derive SHA256 `54bfce2caac64133058d0c56102afafc346fb7bc6492625e2bdd1142c0e59ce8`; evidence `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose156-*`, field/hash report `progress-1902-hashes.json`, UTC/wall/child CPU in `offline-processing.jsonl`.
+- Added12 drafts only: **1902 drafts, zero complete receipts**. No mapping/import/integration enabled; original and failed evidence retained.
