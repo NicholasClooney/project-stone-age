@@ -12,7 +12,7 @@ static func select(b,job_id:int)->Dictionary:
  if job_id==27:
   if not Rules.flag(p,"now",20):
    if not 2486 in held:return hold("flower","原吉德领花分支待核，不反复探测ACCEPT。","jaruga/event/event20_1",23)
-   return hold("request20","原妻子REQUEST消花。","jaruga/event/event20_2",17)
+   return hold("request20","原吉德REQUEST消花。","jaruga/event/event20_2",17)
   if not 2487 in held:return hold("claim_token","原领2487 ACCEPT。","jaruga/event/event20_3",6)
   return hold("keyword_boss_return","三个精确口令门需d878及新hook，山贼人工；原胜后区域通过才交强恩END20，持2487不授proof。","jaruga/event/event20_4",5)
  if not Rules.flag(p,"ended",20):return hold("prerequisite","须END20，不自动启动job27。")
@@ -28,3 +28,61 @@ static func select(b,job_id:int)->Dictionary:
   return result
  if not 2488 in held:return hold("claim_letter","沙拉原ACCEPT领家书。","jaruga/event/event20_6",5)
  return hold("deliver_letter","原event20_2交信END21；event20_1前页/转交效果须核完整分支，不发明额外消费。","jaruga/event/event20_2",5)
+
+# First flower ACCEPT only; no implicit parent-job start or service authority.
+const SOURCE_PATH="res://server/quest_auto_jan_sources.json"
+const SOURCE_SHA="c1b4ae1e6b03275977c371b33f3bd3ccb33982ba2c328536f124a466941e9c51"
+const FLOWER_NPC="jaruga/event/event20_1@3400:59:66"
+static func source_table()->Dictionary:
+ if not FileAccess.file_exists(SOURCE_PATH):return {}
+ var raw:String=FileAccess.get_file_as_string(SOURCE_PATH)
+ if raw.sha256_text()!=SOURCE_SHA:return {}
+ var parsed:Variant=JSON.parse_string(raw)
+ return parsed if parsed is Dictionary else {}
+static func same_source(a:Variant,b:Variant)->bool:
+ if a is bool or b is bool:return a is bool and b is bool and a==b
+ if a is int or a is float:
+  return (b is int or b is float) and is_finite(float(a)) and is_finite(float(b)) and float(a)==floor(float(a)) and float(b)==floor(float(b)) and a==b
+ if a is Dictionary and b is Dictionary:
+  if a.size()!=b.size():return false
+  for key in a:
+   if not b.has(key) or not same_source(a[key],b[key]):return false
+  return true
+ if a is Array and b is Array:
+  if a.size()!=b.size():return false
+  for index in range(a.size()):
+   if not same_source(a[index],b[index]):return false
+  return true
+ return typeof(a)==typeof(b) and a==b
+static func flower_proposal(b,job_id:int=27)->Dictionary:
+ var stage:Dictionary=select(b,job_id)
+ if stage.get("status")=="done" or stage.get("stage")!="flower":return stage
+ var table:Dictionary=source_table()
+ if table.is_empty():return hold("source_changed","强恩源锁缺失或改变。")
+ for locked_job in table.jobs:
+  var count:int=0
+  for job in b.quest_catalog.jobs:
+   if job.get("id")==locked_job.id:
+    count+=1
+    if not same_source(job,locked_job):return hold("source_changed","原job27/28/29完整映射改变。")
+  if count!=1:return hold("source_changed","强恩任务身份不唯一。")
+ if not 20 in b.quest_catalog.enabled_events:return hold("disabled","原event20未启用。")
+ var expected:Dictionary=table.npc
+ var count:int=0
+ for npc in b.quest_catalog.npcs:
+  if npc.get("id")==FLOWER_NPC:
+   count+=1
+   if not same_source(npc,expected):return hold("source_changed","凯伊完整原字段或分支顺序改变。")
+ if count!=1:return hold("source_changed","凯伊人物身份不唯一。")
+ var projected:Dictionary=expected.duplicate(true)
+ projected.branches=[]
+ var locked:Dictionary={}
+ for candidate in expected.branches:
+  if candidate.get("enabled",false) and candidate.get("events",[]).any(func(event):return int(event) in b.quest_catalog.enabled_events):projected.branches.append(candidate.duplicate(true))
+  if candidate.get("source_branch_index")==2:locked=candidate
+ var active:Dictionary=b.quest_catalog.active_npc(FLOWER_NPC)
+ if not same_source(active,projected):return hold("source_changed","凯伊实际位置、隐藏或分支投影改变。")
+ var branch:Dictionary=b.original_quests.branch_for(active,b.session.snapshot())
+ if locked.is_empty() or not same_source(branch,locked) or branch.get("source_branch_index")!=2 or branch.get("source_line")!=23 or branch.get("event")!=-1 or branch.get("type")!="ACCEPT" or branch.get("condition")!="ITEM!=2486" or not same_source(branch.get("actions",{}),{"GetItem":"2486"}):return hold("source_changed","当前首匹配分支不是原领花ACCEPT。")
+ if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):return hold("arrival_required","须保持原受保护地图合法到达资格。")
+ return {"status":"step","step":{"id":"jan:flower:2486","npc_id":FLOWER_NPC,"map_id":3400,"cell":[59,66],"current":true,"done":false,"actionable":true,"auto_choices":["yes","ok"],"source":{"npc_id":FLOWER_NPC,"type":"ACCEPT","condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_index":2,"branch_data":branch.duplicate(true),"source_line":23,"source_sha":str(table.sources["npc/jaruga/event/event20_1"].sha256),"audit_policy":"jan_flower2486_v1"}}}
