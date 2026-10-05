@@ -1,0 +1,338 @@
+{
+  "version": 1,
+  "sources": {
+    "sainasu/event/event13_1": {
+      "path": "gmsv/data/npc/sainasu/event/event13_1",
+      "sha256": "9a5eb18fa325f7dad0e9b25114e196c6c2b971cbff2c4662ec0c799a99eb09ac",
+      "bytes_base64": "CiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKI7TTtcHU9MrW1tDIobvYyP3W1snxxvfWrsrCvP4jCiMgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICC1o8jO1d+jusq40dMjCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKCk5vbWFsTWFpbk1zZzrT0MO709DE3LDvztKw0dTix9S1xLzSsabIobvYwLS1xMe/1d+woaGtoaMKCkV2ZW50Tm86MTMKVFlQRTpBQ0NFUFQKRVZFTlQ6Tk9XRVY9MTMmSVRFTT0yNDI4JklURU09MjQyOSZJVEVNPTI0MzAKQWNjZXB0TXNnOs65zrnOuc65zrnOuaOhXG7Ex7K71f3Kx87Sw8fU4sfUtcTI/bz+tKu80tausaZcbrG7xMO72MC0wcvC8KO/ClRoYW5rc01zZzq4w9T1w7S4+sT6y7XQu9C7xNihrVxu1eLKx87Ss8/QxLPP0uK12Fxux+vE+tK7tqjSqsrVz8KhowpHZXRJdGVtOjI0NTAKRGVsSXRlbToyNDI4LDI0MjksMjQzMCwyNDMxCkl0ZW1GdWxsTXNnOs65zrmjodXiysfU9cO00ru72MrCxNihrVxuxPq1xLXAvt+0/NLRvq3C+sHLsKGjoVxuv8nKx7K7xNyyu8/yxPq1wNC7sKGhrVxux+vE+rz1x+HSu9Cp1tjBv6Os1NnAtNK7zMuwyaGjCkVuZFNldEZsZzoxMwpFdmVudEVuZAoKRXZlbnRObzoxMwpUWVBFOk1FU1NBR0UKRVZFTlQ6Tk9XRVY9MTMmSVRFTSE9MjQzMQpOb21hbFdpbmRvd01zZzqwoaGt1+PS1M6q1qS1xL3F06HP+8qnwcuwoaGtXG7O0rvh1NnX9tK7tM6jrFxu1eLSu7vYx+uyu9Kqz/vKp6GjCkdldEl0ZW06MjQzMQpJdGVtRnVsbE1zZzq1wL7fwLjS0b6twvrBy+C4o6FcbrK71qogtb3E3LK7xNzC6bezxOPFsrP2v9W85MC0xNijvwpFdmVudEVuZAoKRXZlbnRObzoxMwpUWVBFOlJFUVVFU1QKRVZFTlQ6TFY+MTUKUmVxdWVzdE1zZzrO2M7YztihrVxutKu80rGmsbu1wdT0zbXX38HLoa2ho1xuyrXU2rrcz+uw0cv8xMO72MC0sKGhraGjXG6yu7n90tTO0tXi0fm1xMnt19OjrFxuy+TIu87S1qq1wNXiysfO3sDttcTH68fzo6xcbrWru7nKx8frxPpcbtK7tqjSqrDvztLIobvYvNK0q7XEyP3W1snxxvehowpUaGFua3NNc2c6zrnOuc65zrnOuc65o6FcbsTj1Liyu9S40uKw787SsKGjv1xu4MXgxeDFoaKyu8rH1NrV4rj2ysC958nPsru8+7XEsKGjoaO/XG7V4srHwfTU2s7SvNLA77XB1PS1xNfjvKOho1xu1rvSqrj618XV4rj219+1xLuwo6xcbs7Sz+vL+8PH0ru2qMzTsru19KGjXG7H67DR1eK49rT4yKWwyaOhXG61wdT0w8e2vNTav8K2+7/Lyb21xLa0v9/A78TYo6EKU3RvcE1zZzrU9cO0wLKjv8Tjw7vT0NDF0MTXpbW9tcHU9MLwo78KRW5kU3RvcE1zZzqhrdStwLTI57TLoaPV5rGnx7ijrMyrw+PHv8Tjwcuho1xuxMfH68TjsNHO0tXiv8nBr8DPyMu80rSrvNKxptTix9S1xMrCzfzBy7DJoa2howpOb1N0b3BNc2c61eLR+bCho6HEx87StcjE47XEusPP+8+i4LijoVxutavSsrK70qrMq8Pjx7/guKOhCkdldEl0ZW06MjQzMSoxCkl0ZW1GdWxsTXNnOsTjtcS1wL7ftPxcbrrDz/HS0b6t17Cyu8/CXG7V4rj2v8nS1Nfj0tSzyc6q1qS+3aOsXG7Iw7XB1PSw2b/axKqx57XEtqvO98HLoa2ho1xux+uw0bXAvt+0/Mfls/a/1c67o6zU2cC00ru0zrDJo6EKRXZlbnRFbmQKCgpFdmVudE5vOi0xClRZUEU6TUVTU0FHRQpFVkVOVDpFTkRFVj0xMwpOb21hbFdpbmRvd01zZzrEx9Xz19PV5rbgv/fE+rXEudjV1bChoaNcbs7S0tG+rbDRxMfI/dbWyfHG91xu0KHQxNLt0u212LCy1sPG8MC0wcuhowpFdmVudEVuZAo="
+    },
+    "sainasu/event/event13_2": {
+      "path": "gmsv/data/npc/sainasu/event/event13_2",
+      "sha256": "4aaf9abb7dd5c7549d1f5e78faafdf28f8a63f9f2e8167e63206adca8e21e614",
+      "bytes_base64": "CiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKI7nYu7PAz8jLtcTE6sfhyMuho8DPyMvKx7K7xNyxu9LFxvq1xKOhIwojICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICC1o7Wx1d+jusq40dMjCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKCk5vbWFsTWFpbk1zZzrU2sDr1eKyu9S2tcTHsLe9o6zT0Neh18XAz8jLsKGhraGjLM7SysfSu7z7tb3Az8jLvs2yu8Tcsru53Mv7w8ehowoKRXZlbnRObzotMQpUWVBFOkNMRUFOCkVWRU5UOkVOREVWPTEzCkNsZWFuRmxnOjEzCkNsZWFuRmxnTXNnOsrCyrXJz6Os16HU2seww+ayu9S2tdi3vbXEwM/Iy6OsXG7M/cu10rLS8rXB1PS2+Mrcuqaho1xu1ebKx8HuyMu1o9DEsKGhraGjCkNsZWFuTWFpbk1zZzrN27ChsKGwoaGtoaNcbt/Xo7/LtcC0ztK4ycLv1eLDtLWj0MSwoaO/CkV2ZW50RW5kCgoKCg=="
+    },
+    "100/sb_nusu1.arg": {
+      "path": "gmsv/data/npc/100/sb_nusu1.arg",
+      "sha256": "c902fc462652073459c66423be15da9e581912fe55765d685ec19ed6e549d6e4",
+      "bytes_base64": "ZW50eXBlOjIKYXNrYmF0dGxlbXNnMTrEx6GixMfKx87Sw8e1xL3F06GhrQphc2tiYXR0bGVtc2cyOrG7t6LP1sHLvs3Du7Dst6jBy6GjCmFza2JhdHRsZW1zZzM6uf3AtKOhx8DX38v8o6GjoQpzdGFydG1zZzq62brZutmho8/W1NqyxbXAx7jS0b6tzKvN7cHLoaMKZGllYWN0OjAKaXRlbToyNDMxCmVuZCBtc2c60POhotDzyfqhrQplbmVteW5vOjUxMyw1MTYKZGVuaWVkbXNnOsTj1/bKssO0o7/O0r/Jyse63MOmtcSho7W9xMex38iloaPV5srHwum3s7XEvNK776GtoaMKdGltZTozMDAKCg=="
+    },
+    "100/sb_nusu2.arg": {
+      "path": "gmsv/data/npc/100/sb_nusu2.arg",
+      "sha256": "487764d75155e60058822f21977f2aa4dc0f432da306eaf981252a28d0215d2e",
+      "bytes_base64": "ZW50eXBlOjIKYXNrYmF0dGxlbXNnMTrOqsqyw7TE47vh09DEx7j2vcXToaO/CmFza2JhdHRsZW1zZzI6xKq3x8TjysfAtMrVyrDO0sPHtcTC8KO/CnN0YXJ0bXNnOs3buf65/rn+oaO/tM7StPLL6cTjxMfM7NXmtcTP67eoo6EKZGllYWN0OjAKaXRlbToyNDMxCmVuZCBtc2c6ztjN283boa3O0qGiztLK5MHLoaMKZW5lbXlubzo1MTQsNTE4CmRlbmllZG1zZzrE48rHyrLDtMjLo7/E0bXAsrvWqrXAsru/ydLUy+ax4734yOux8MjLtcS3v7zkwvCjv8j0sru/7LP2yKXO0r7NyMPE47rDv7SjoQp0aW1lOjMwMAoK"
+    },
+    "100/sb_nusu3.arg": {
+      "path": "gmsv/data/npc/100/sb_nusu3.arg",
+      "sha256": "05c15614825df5025d2967b0e28f7ebd7f320079665741476b7a81b842986682",
+      "bytes_base64": "ZW50eXBlOjIKYXNrYmF0dGxlbXNnMTqwoaGixMfKx87Sw8e1xL3F06HSrqGtoaMKYXNrYmF0dGxlbXNnMjrI57n7ysfP1tTatcS7sM7Su7m/ydLU1K3BwsTjoaMKYXNrYmF0dGxlbXNnMzqw0cTHuPbEw7n9wLShowpzdGFydG1zZzq5/rn+uf6ho8Tjyc+1scHLo6EKZGllYWN0OjAKaXRlbToyNDMxCmVuZCBtc2c6ztK+08i7u+HK5KGtoaMKZW5lbXlubzo1MTUsNTE5CmRlbmllZG1zZzrDu8fDw8W+zb34yOvK58WutcS3v7zkyseyu7rPwPG/+9PmQKGjztLP1tTautzDpqOsv8nS1MfrxOOz9silwvCjv8jnufvE48yrzNbR4bXEu7DO0r7NvdDIy8C0xbajoQp0aW1lOjMwMAoK"
+    },
+    "sainasu/event/event13n.create": {
+      "path": "gmsv/data/npc/sainasu/event/event13n.create",
+      "sha256": "c3c3d1962cb8f618860d47593117b959e6633673cd990ce33b56d68e85794aa8",
+      "bytes_base64": "TlBDQ1JFQVRFCgojIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCiO007XB1PTK1tbQyKG72Mj91tbJ8cb3tcTKwrz+IwojICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICAgICC1o8jO1d+jusq40dMjCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMKCgp7CmZsb29yaWQ9MTExMgpib3JuY29ybmVyPTE2LDE1LDE2LDE1CnRpbWU9MApjcmVhdGVudW09MQpkaXI9NgppZ25vcmVpbnZpbmNpYmxlPTEKZ3JhcGhpY25hbWU9MTYwMDAKbmFtZT3Az8jLyPi22QplbmVteT1jaGFuZ2VldmVudHxmaWxlOnNhaW5hc3UvZXZlbnQvZXZlbnQxM18xCn0KCiMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjCgp7CmZsb29yaWQ9MTEwMApib3JuY29ybmVyPTg2LDk5LDg2LDk5CnRpbWU9MApjcmVhdGVudW09MQpkaXI9NAppZ25vcmVpbnZpbmNpYmxlPTEKZ3JhcGhpY25hbWU9MTYwNDgKbmFtZT252LuzwM/Iy7XExOrH4cjLCmVuZW15PWNoYW5nZWV2ZW50fGZpbGU6c2FpbmFzdS9ldmVudC9ldmVudDEzXzIKfQ=="
+    },
+    "100/sb_nusu.create": {
+      "path": "gmsv/data/npc/100/sb_nusu.create",
+      "sha256": "5738115e854f0eb69e4573f648b04e6d1eb0b631ea529dc2024fdc4f3cd9b667",
+      "bytes_base64": "TlBDQ1JFQVRFCiMjIyMjIyMjI8BwzoGkzqXeobykr6TzIyMjIyMjIyMKewpmbG9vcmlkPTEwNzAxCmJvcm5jZW50ZXI9MjMsNTEsMSwxCm1vdmVjZW50ZXI9MjAsMjAsMTAwLDEwMApjcmVhdGVudW09MQpkaXI9NgpncmFwaGljbmFtZT0xMDA0MDUKbmFtZT2px6RPqrqkcLB9CmVuZW15PXNiX24xfGZpbGU6MTAwL3NiX251c3UxLmFyZwp9CiMjIyMjIyMjIyPFtMrJpM6l3qXipK+k8yMjIyMjIyMKewpmbG9vcmlkPTEwNzAzCmJvcm5jZW50ZXI9Niw2MywxLDEKbW92ZWNlbnRlcj0yMCwyMCwxMDAsMTAwCmNyZWF0ZW51bT0xCmRpcj00CmdyYXBoaWNuYW1lPTEwMDQzNgpuYW1lPcVLvG2quqRwpnUKZW5lbXk9c2JfbjJ8ZmlsZToxMDAvc2JfbnVzdTIuYXJnCn0KIyMjIyMjIyO8wMn3pM6l36XjobwjIyMjIyMjIyMKewpmbG9vcmlkPTEwNzA1CmJvcm5jZW50ZXI9NDQsNDEsMSwxCm1vdmVjZW50ZXI9MjAsMjAsMTAwLDEwMApjcmVhdGVudW09MQpkaXI9NApncmFwaGljbmFtZT0xMDAyMzAKbmFtZT2vZa23qrqrfbauCmVuZW15PXNiX24zfGZpbGU6MTAwL3NiX251c3UzLmFyZwp9Cgo="
+    }
+  },
+  "npcs": [
+    {
+      "id": "sainasu/event/event13_1@1112:16:15",
+      "source_script": "sainasu/event/event13_1",
+      "source_create": "gmsv/data/npc/sainasu/event/event13n.create",
+      "source_create_index": 0,
+      "events": [
+        13,
+        14
+      ],
+      "name": "老人萨顿",
+      "map_id": 1112,
+      "cell": [
+        16,
+        15
+      ],
+      "graphic": 16000,
+      "facing": 6,
+      "role": "quest",
+      "text": "有没有能帮我把遭窃的家宝取回来的强者啊…。",
+      "branches": [
+        {
+          "event": 13,
+          "type": "ACCEPT",
+          "condition": "NOWEV=13&ITEM=2428&ITEM=2429&ITEM=2430",
+          "texts": {
+            "AcceptMsg": "喂喂喂喂喂喂！\n那不正是我们遭窃的三件传家之宝\n被拿回来了吗？",
+            "ThanksMsg": "该怎么跟您说谢谢呢…\n这是我诚心诚意地\n请您一定要收下。",
+            "ItemFullMsg": "喂喂！这是怎么一回事呢…\n您的道具袋已经满了啊！\n可是不能不向您道谢啊…\n请您减轻一些重量，再来一趟吧。"
+          },
+          "actions": {
+            "GetItem": "2450",
+            "DelItem": "2428,2429,2430,2431",
+            "EndSetFlg": "13,14"
+          },
+          "source_branch_index": 0,
+          "source_line": 9,
+          "source_actions": {
+            "GetItem": "2450",
+            "DelItem": "2428,2429,2430,2431",
+            "EndSetFlg": "13"
+          },
+          "source_texts": {
+            "AcceptMsg": "喂喂喂喂喂喂！\n那不正是我们遭窃的三件传家之宝\n被拿回来了吗？",
+            "ThanksMsg": "该怎么跟您说谢谢呢…\n这是我诚心诚意地\n请您一定要收下。",
+            "ItemFullMsg": "喂喂！这是怎么一回事呢…\n您的道具袋已经满了啊！\n可是不能不向您道谢啊…\n请您减轻一些重量，再来一趟吧。"
+          },
+          "project_supplement": {
+            "script": "sainasu/event/event13_1",
+            "branch": 0,
+            "end_flags_add": [
+              14
+            ],
+            "annotation": "补充·依据编号登记；用户授权萨顿完成时同时补记14",
+            "approval": "docs/reverse-engineering/rebirth-quest-bonus-audit.md"
+          },
+          "enabled": true,
+          "events": [
+            13,
+            14
+          ],
+          "source": "sainasu/event/event13_1"
+        },
+        {
+          "event": 13,
+          "type": "MESSAGE",
+          "condition": "NOWEV=13&ITEM!=2431",
+          "texts": {
+            "NomalWindowMsg": "啊…足以为证的脚印消失了啊…\n我会再做一次，\n这一回请不要消失。",
+            "ItemFullMsg": "道具栏已经满了喔！\n不知 到能不能麻烦你挪出空间来呢？"
+          },
+          "actions": {
+            "GetItem": "2431"
+          },
+          "source_branch_index": 1,
+          "source_line": 20,
+          "enabled": true,
+          "events": [
+            13,
+            14
+          ],
+          "source": "sainasu/event/event13_1"
+        },
+        {
+          "event": 13,
+          "type": "REQUEST",
+          "condition": "LV>15",
+          "texts": {
+            "RequestMsg": "呜呜呜…\n传家宝被盗贼偷走了…。\n实在很想把它拿回来啊…。\n不过以我这样的身子，\n虽然我知道这是无理的请求，\n但还是请您\n一定要帮我取回家传的三种神器。",
+            "ThanksMsg": "喂喂喂喂喂喂！\n你愿不愿意帮我啊？\n嗯嗯嗯、不是在这个世界上不见的啊！？\n这是留在我家里盗贼的足迹。\n只要跟着这个走的话，\n我想他们一定逃不掉。\n请把这个带去吧！\n盗贼们都在柯尔克山的洞窟里呢！",
+            "StopMsg": "怎么啦？你没有信心抓到盗贼吗？",
+            "EndStopMsg": "…原来如此。真抱歉，太勉强你了。\n那请你把我这可怜老人家传家宝遭窃的事忘了吧…。",
+            "NoStopMsg": "这样啊！那我等你的好消息喔！\n但也不要太勉强喔！",
+            "ItemFullMsg": "你的道具袋\n好像已经装不下\n这个可以足以成为证据，\n让盗贼百口莫辩的东西了…。\n请把道具袋清出空位，再来一次吧！"
+          },
+          "actions": {
+            "GetItem": "2431*1"
+          },
+          "source_branch_index": 2,
+          "source_line": 28,
+          "enabled": true,
+          "events": [
+            13,
+            14
+          ],
+          "source": "sainasu/event/event13_1"
+        },
+        {
+          "event": -1,
+          "type": "MESSAGE",
+          "condition": "ENDEV=13",
+          "texts": {
+            "NomalWindowMsg": "那阵子真多亏您的关照啊。\n我已经把那三种神器\n小心翼翼地安置起来了。"
+          },
+          "actions": {},
+          "source_branch_index": 3,
+          "source_line": 41,
+          "enabled": true,
+          "events": [
+            13,
+            14
+          ],
+          "source": "sainasu/event/event13_1"
+        }
+      ],
+      "bitmap_id": 5846,
+      "path": "quests/npcs/n-7361696e6173752f6576656e742f6576656e7431335f3140313131323a31363a3135.png",
+      "offset": [
+        -37,
+        -71
+      ]
+    },
+    {
+      "id": "sainasu/event/event13_2@1100:86:99",
+      "source_script": "sainasu/event/event13_2",
+      "source_create": "gmsv/data/npc/sainasu/event/event13n.create",
+      "source_create_index": 1,
+      "events": [
+        13,
+        14
+      ],
+      "name": "关怀老人的年轻人",
+      "map_id": 1100,
+      "cell": [
+        86,
+        99
+      ],
+      "graphic": 16048,
+      "facing": 4,
+      "role": "quest",
+      "text": "在离这不远的前方，有住着老人啊…。,我是一见到老人就不能不管他们。",
+      "branches": [
+        {
+          "event": -1,
+          "type": "CLEAN",
+          "condition": "ENDEV=13",
+          "texts": {
+            "CleanFlgMsg": "事实上，住在前面不远地方的老人，\n听说也因盗贼而受害。\n真是令人担心啊…。",
+            "CleanMainMsg": "哇啊啊啊…。\n咦？说来我干嘛这么担心啊？"
+          },
+          "actions": {
+            "CleanFlg": "13"
+          },
+          "source_branch_index": 0,
+          "source_line": 9,
+          "source_actions": {
+            "CleanFlg": "13"
+          },
+          "source_texts": {
+            "CleanFlgMsg": "事实上，住在前面不远地方的老人，\n听说也因盗贼而受害。\n真是令人担心啊…。",
+            "CleanMainMsg": "哇啊啊啊…。\n咦？说来我干嘛这么担心啊？"
+          },
+          "project_supplement": {
+            "script": "sainasu/event/event13_2",
+            "branch": 0,
+            "confirmation_text": "清除萨顿任务完成标记，可重新接取并领奖；加点项14保留，是否继续？",
+            "annotation": "项目补充：执行前确认；保留用户批准的原版重复领奖行为",
+            "approval": "docs/reverse-engineering/rebirth-quest-bonus-audit.md"
+          },
+          "confirmation_text": "清除萨顿任务完成标记，可重新接取并领奖；加点项14保留，是否继续？",
+          "enabled": true,
+          "events": [
+            13,
+            14
+          ],
+          "source": "sainasu/event/event13_2"
+        }
+      ],
+      "bitmap_id": 5894,
+      "path": "quests/npcs/n-7361696e6173752f6576656e742f6576656e7431335f3240313130303a38363a3939.png",
+      "offset": [
+        -18,
+        -70
+      ]
+    }
+  ],
+  "boss_boundaries": [
+    {
+      "id": "100/sb_nusu1.arg@10701:23:51",
+      "map_id": 10701,
+      "cell": [
+        23,
+        51
+      ],
+      "source_script": "100/sb_nusu1.arg",
+      "manual": true
+    },
+    {
+      "id": "100/sb_nusu2.arg@10703:6:63",
+      "map_id": 10703,
+      "cell": [
+        6,
+        63
+      ],
+      "source_script": "100/sb_nusu2.arg",
+      "manual": true
+    },
+    {
+      "id": "100/sb_nusu3.arg@10705:44:41",
+      "map_id": 10705,
+      "cell": [
+        44,
+        41
+      ],
+      "source_script": "100/sb_nusu3.arg",
+      "manual": true
+    }
+  ],
+  "request": {
+    "npc_id": "sainasu/event/event13_1@1112:16:15",
+    "branch_index": 2,
+    "source_branch_index": 2,
+    "source_line": 28,
+    "actions": {
+      "GetItem": "2431*1"
+    }
+  },
+  "stop": {
+    "source_end": 13,
+    "project_additional_end": 14,
+    "reward": 2450,
+    "never_clean": true
+  },
+  "public_doors": [
+    {
+      "from_map": 1100,
+      "cell": [
+        82,
+        112
+      ],
+      "to_map": 1112,
+      "target": [
+        10,
+        15
+      ],
+      "source": "warp_y.create:664"
+    },
+    {
+      "from_map": 1112,
+      "cell": [
+        10,
+        15
+      ],
+      "to_map": 1100,
+      "target": [
+        82,
+        112
+      ],
+      "source": "warp_y.create:673"
+    },
+    {
+      "from_map": 1100,
+      "cell": [
+        82,
+        113
+      ],
+      "to_map": 1112,
+      "target": [
+        10,
+        16
+      ],
+      "source": "warp_y.create:682"
+    },
+    {
+      "from_map": 1112,
+      "cell": [
+        10,
+        16
+      ],
+      "to_map": 1100,
+      "target": [
+        82,
+        113
+      ],
+      "source": "warp_y.create:691"
+    }
+  ],
+  "source_world_manifest_sha256": "5bec114a4ee4571f08f2f4fd453ee1d40324ee876206ef3487d6e171b844d639"
+}
