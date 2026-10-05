@@ -939,3 +939,21 @@ recolours, 5644 retained unknown body-colour pixels. Saved fields and padding
 are checked against inspected inputs without repeating renders. 843 unique
 drafts (36 samples + 807 pose rules), 3573 missing drafts, zero complete
 semantic receipts. No importer, gameplay mapping or integration.
+
+## Pose068: 855 unique drafts
+
+Viewed twelve side-on source bodies, both local coordinate references and
+rendered outputs, and all four three-body change sheets. The clipped 257047
+column was supplemented with its complete standalone comparison; 266143
+also has a complete independent reference view. Broad visible rider clothing,
+arms and headgear are independently protected beside the folded wing. Narrow
+tan/grey wing surfaces retain material; white cheek and belly edge are ventral.
+No obvious rider recolour was found in these views, but wing/hand contacts
+retain unresolved dragon yellow. These remain incomplete semantic drafts.
+
+Latest primary outputs: `pose068-reference` for 247951/266143; other ten use
+`pose068-render`. Initial candidate totals: 18779 changes, 2682 ventral
+recolours, 8662 retained unknown body-colour pixels. Saved fields and padding
+are checked against inspected inputs without repeating renders. 855 unique
+drafts (36 samples + 819 pose rules), 3561 missing drafts, zero complete
+semantic receipts. No importer, gameplay mapping or integration.
