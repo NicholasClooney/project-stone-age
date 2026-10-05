@@ -175,13 +175,14 @@ func projection(b)->Dictionary:
  var battle_current:bool=span_current and not battle_receipt.is_empty() and owner_session_id==b.session.get_instance_id() and pending.get("quest_loot_receipt",{})==battle_receipt and str(pending.get("battle_id",""))==str(battle_receipt.ledger.battle_id)
  var q=b.quest_auto
  var run_current:bool=span_current and q.running and q.identity.checkpoint()==binding and q.step.get("id")==State.STEP
- var sample_current:bool=(run_current or battle_current) and is_same(cached_sample.get("lifetime"),lifetime) and cached_sample.get("span")==span and State.integer(cached_sample.get("used_ms"),0,State.MAX_MSEC)
+ var closing_current:bool=idle_close_owner(b,close_pending)
+ var sample_current:bool=(run_current or battle_current or closing_current) and is_same(cached_sample.get("lifetime"),lifetime) and cached_sample.get("span")==span and State.integer(cached_sample.get("used_ms"),0,State.MAX_MSEC)
  if sample_current:used=maxi(used,int(cached_sample.used_ms))
  view.entry={"step_id":State.STEP,"budget_id":entry.budget_id,"generation":int(entry.generation),"revision":int(entry.revision),"target_item_id":2760,"target_count":1,"limit_ms":int(entry.limit_ms),"saved_used_ms":int(entry.used_ms),"used_ms":used,"limit_reached":used>=int(entry.limit_ms),"existing_items":int(entry.existing_items),"new_items":int(entry.new_items),"saved_battles":int(entry.saved_battles)}
  view.finish_current_battle=battle_current and (view.entry.limit_reached or not run_current or q.detached)
  if view.recovery_blocked:
   view.activity="recovery_locked";view.reason="中断时段用时不确定，显示已存下界。"
- elif sample_current and storage_paused:
+ elif closing_current or (sample_current and storage_paused):
   view.activity="storage_paused"
   view.reason=str(b.battle_state.get("settlement_error","")) if battle_current else ""
   if view.reason.is_empty():view.reason="保存处理中或等待修复，预算暂停计时。"
@@ -278,7 +279,7 @@ func admit_prepared_run(b)->Dictionary:
   if operation=="acquire":
    args.merge({"budget_id":Crypto.new().generate_random_bytes(16).hex_encode(),"run_id":frame.identity.run_id,"minutes":Settings.effective(frame.owner.automation_settings()).loot_minutes,"existing_items":0})
   else:args.expected_entry=State.identity(expected.quest_loot.entries[State.STEP])
-  var result:Dictionary=frame.owner.commit_loot_idle_transition(expected,expected.quest_loot.duplicate(true),operation,args,frame.path,b._loot_settlement_written.bind(frame.owner,frame.path))
+  var result:Dictionary=frame.owner.commit_loot_idle_transition(expected,expected.quest_loot.duplicate(true),operation,args,frame.path,_admission_written.bind(b,frame,operation))
   if not result.get("ok",false):return {"ok":false,"persisted":persisted,"reason":"预算保存失败，未启动尝试。"}
   persisted=true
   # A later observer may replace any owner/profile/cache. Never undo that save.
@@ -290,6 +291,7 @@ func admit_prepared_run(b)->Dictionary:
   if planned.get("status")!="step" or not Sources.same(planned.get("step"),frame.step):return {"ok":false,"persisted":true,"reason":"写后原计划条件改变。"}
  if not start_after_commit(State.STEP,frame.owner._profile.quest_loot.entries[State.STEP],frame.identity):return {"ok":false,"persisted":true,"reason":"已存时段无法启动计时，停止等待恢复。"}
  frame.lifetime=lifetime
+ if not open_obligation.is_empty() and is_same(open_obligation.capability,frame.capability):open_obligation.lifetime=lifetime
  ready_frame=frame.duplicate()
  ready_frame.erase("terrain") # Attempts each read fresh immutable terrain once.
  next_attempt_ms=last_ms
@@ -357,3 +359,82 @@ func attempt_locked(b,frame:Dictionary)->Dictionary:
  var started:Dictionary=b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}})
  if not attempt_owned(b,frame):return {"ok":false,"attempted":true,"battle":true,"reason":"战斗启动发布后旧执行已取消。"}
  return {"ok":bool(started.get("ok",false)),"attempted":true,"battle":true,"battle_id":battle_id}
+
+# E3a: only idle spans. Pending/actual battle cancellation is a separate slice.
+var open_obligation:Dictionary={}
+var close_pending:Dictionary={}
+func _admission_written(payload:String,b,frame:Dictionary,operation:String)->void:
+ # Session installed the immutable candidate before this callback. Capture its
+ # exact open obligation BEFORE the backend observer can synchronously cancel.
+ if operation=="open" and admission_owner(b,frame):
+  var parsed=JSON.parse_string(payload)
+  if parsed is Dictionary and frame.owner._valid_profile(parsed):
+   var committed:Dictionary=frame.owner._normalize_numbers(parsed)
+   if committed==frame.owner.snapshot() and committed.quest_loot.entries[State.STEP].open_span:
+    open_obligation=frame.duplicate()
+    open_obligation.entry=State.identity(committed.quest_loot.entries[State.STEP])
+ b._loot_settlement_written(payload,frame.owner,frame.path)
+func idle_close_context(b,ticket:Dictionary)->bool:
+ if ticket.is_empty():return false
+ var q=b.quest_auto
+ return is_same(b.quest_loot,self) and is_same(b.session,ticket.owner) and b.save_path==ticket.path and is_same(q,ticket.runner) and is_same(lifetime,ticket.lifetime) and q.identity.checkpoint()==ticket.expected_identity and q.connection==ticket.expected_connection and q.client==ticket.expected_client and not b.battle_open and b.session._pending.is_empty() and b.session._loot_settlement.is_empty()
+func idle_close_owner(b,ticket:Dictionary)->bool:
+ return is_same(close_pending,ticket) and idle_close_context(b,ticket)
+func capture_idle_close(b)->Dictionary:
+ var q=b.quest_auto
+ if not close_pending.is_empty():return close_pending if idle_close_owner(b,close_pending) else {}
+ if not q.running or q.step.get("id")!=State.STEP or open_obligation.is_empty():return {}
+ if b.battle_open or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or not battle_receipt.is_empty():return {}
+ var obligation:Dictionary=open_obligation
+ if not is_same(obligation.owner,b.session) or obligation.path!=b.save_path or not is_same(obligation.runner,q) or obligation.identity!=q.identity.checkpoint() or not is_same(obligation.lifetime,lifetime):return {}
+ if not State.valid(b.session._profile.get("quest_loot",{})):return {}
+ var entry:Dictionary=b.session._profile.quest_loot.entries.get(State.STEP,{})
+ if not State.valid_entry(entry) or not entry.open_span or State.identity(entry)!=obligation.entry:return {}
+ var ticket:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"lifetime":lifetime,"token":RefCounted.new(),"expected_identity":q.identity.checkpoint(),"expected_connection":q.connection,"expected_client":q.client,"entry":State.identity(entry),"used_ms":int(entry.used_ms),"profile":b.session.snapshot(),"sample_ok":false}
+ close_pending=ticket
+ # Revoke new attempts BEFORE any clock/sample/save callback.
+ ready_frame={}
+ admission=RefCounted.new()
+ if anchor_ms>=0:
+  ticket.sample_ok=pause_storage_for(ticket.lifetime)
+  if ticket.sample_ok and idle_close_owner(b,ticket):ticket.used_ms=int(cached_sample.used_ms)
+ else:
+  # E1 open committed, but its observer cancelled before timer startup.
+  ticket.sample_ok=true
+ return ticket
+func prepare_idle_revocation(b,ticket:Dictionary,operation:String)->bool:
+ # Freeze the ONLY allowed successor before the runner's pure local mutation.
+ # Never learn a successor identity from a later callback's current runner.
+ if not idle_close_owner(b,ticket) or operation not in ["stop","detach"]:return false
+ var expected:Dictionary=ticket.expected_identity.duplicate(true)
+ if operation=="stop":expected.revision+=1
+ ticket.expected_identity=expected
+ if operation=="detach":ticket.expected_connection=-1;ticket.expected_client=""
+ return true
+func finish_idle_close(b,ticket:Dictionary)->Dictionary:
+ if ticket.is_empty():return {"ok":true,"idle":false}
+ if not idle_close_owner(b,ticket):return State.denied("旧关闭调用归属已改变。")
+ return retry_idle_close(b,ticket.token)
+func retry_idle_close(b,token:RefCounted)->Dictionary:
+ # Internal repair entry only. No settings-only writer, RPC or timer resample.
+ var ticket:Dictionary=close_pending
+ if ticket.is_empty() or not is_same(ticket.token,token) or not idle_close_owner(b,ticket) or not ticket.sample_ok:return State.denied("关闭预算义务已失效。")
+ if b.session.snapshot()!=ticket.profile:return State.denied("关闭前完整角色状态已变化。")
+ var result:Dictionary=ticket.owner.commit_loot_idle_transition(ticket.profile,ticket.profile.quest_loot,"close",{"step_id":State.STEP,"expected_entry":ticket.entry,"total_used_ms":ticket.used_ms},ticket.path,b._loot_settlement_written.bind(ticket.owner,ticket.path))
+ if not result.get("ok",false):return {"ok":false,"persisted":false,"reason":"预算关闭保存失败，暂停等待修复。"}
+ # Never reinstall the return candidate/cache over a reentrant later save.
+ var same:bool=idle_close_owner(b,ticket)
+ var retired:bool=false
+ if same and b.session._profile.quest_loot==result.profile.quest_loot:
+  retired=true
+  if anchor_ms>=0:accept_commit(result.profile.quest_loot)
+  if is_same(close_pending,ticket):close_pending={}
+  if not open_obligation.is_empty() and is_same(open_obligation.lifetime,ticket.lifetime):open_obligation={}
+ # The close is already durable. Resume location/side-file I/O is a second
+ # original transaction, only on the exact returned candidate, never on an
+ # observer's newer profile/run. Failure leaves a safely CLOSED durable span.
+ var resume_attempted:bool=false
+ if retired and ticket.get("keep_resume_after_close",false) and idle_close_context(b,ticket) and b.session.snapshot()==result.profile:
+  resume_attempted=true
+  b.keep_resume_file()
+ return {"ok":true,"persisted":true,"retired":retired,"resume_attempted":resume_attempted,"profile":result.profile}
