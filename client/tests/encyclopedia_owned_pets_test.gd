@@ -224,9 +224,9 @@ func save_failure_retry(menu,game,backend,uid: String,other,tag: String):
  var before: Dictionary=backend.session.snapshot()
  var disk := FileAccess.get_file_as_string(path)
  var revision: int=backend.rev
+ var button=await show_button(menu,uid)
  var list=menu.body.find_child("OwnedList",true,false)
  var sort_before := [list.order,list.ascending,list.best_sum_uid,list.best_attack_uid]
- var button=await show_button(menu,uid)
  var original_row=row(menu,uid)
  var offset: int=menu.scroll.scroll_vertical
  var horizontal: int=menu.body.find_child("OwnedHorizontalScroll",true,false).scroll_horizontal
