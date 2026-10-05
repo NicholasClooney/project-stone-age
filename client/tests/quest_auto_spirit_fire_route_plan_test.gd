@@ -10,6 +10,16 @@ func _initialize()->void:call_deferred("run")
 func run()->void:
  var table:Dictionary=Plan.source_table()
  if not check(not table.is_empty(),"complete source lock"):finish();return
+ if not check(table.version==2 and table.runtime_raw_records.size()==7 and table.offline_audit.commit=="43432997e6069574c4b772ab00355c77b4e33fe3" and table.offline_audit.sha256=="46d203d0e0ad38d6aaef89fb5d96c4d9fac2aafa063309e515225e66b0dea976","layered source retains immutable full audit reference"):finish();return
+ for key in table.runtime_raw_records:
+  var row:Dictionary=table.runtime_raw_records[key]
+  var bytes:PackedByteArray=Marshalls.base64_to_raw(str(row.bytes_base64))
+  var context:HashingContext=HashingContext.new()
+  if not check(context.start(HashingContext.HASH_SHA256)==OK,"raw record hash starts"):finish();return
+  if not check(context.update(bytes)==OK,"raw record hash updates"):finish();return
+  if not check(bytes.size()==int(row.byte_length) and context.finish().hex_encode()==row.sha256 and row.full_source_sha256==table.offline_audit.source_hashes[row.source],"raw exact record bytes and full-source link"):finish();return
+ var price:Dictionary=table.runtime_raw_records.item2422_price
+ if not check(price.first_line==2005 and price.last_line==2005 and table.price_rows[0].full_columns[16]=="2422" and table.price_rows[0].full_columns[18]=="200","full original price row retained, no guessed field"):finish();return
  for pair in [["permit200",200],["seimu300",300]]:
   var fee:String=pair[0]
   var amount:int=pair[1]

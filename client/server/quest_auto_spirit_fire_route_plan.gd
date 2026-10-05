@@ -2,7 +2,7 @@ extends RefCounted
 ## Pure inspection only. No step, receipt, payment, battle or route execution.
 const Compare=preload("res://server/quest_auto_spirit_fire_plan.gd")
 const SOURCE_PATH="res://server/quest_auto_spirit_fire_route_sources.json"
-const SOURCE_SHA="46d203d0e0ad38d6aaef89fb5d96c4d9fac2aafa063309e515225e66b0dea976"
+const SOURCE_SHA="553f894b14569420d79d4ee3a93ba8c62a337e07dba3e30e1d7d6ec8610b2609"
 static func source_table()->Dictionary:
  var raw:String=FileAccess.get_file_as_string(SOURCE_PATH)
  if raw.sha256_text()!=SOURCE_SHA:return {}
