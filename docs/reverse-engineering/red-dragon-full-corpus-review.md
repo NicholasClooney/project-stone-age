@@ -921,3 +921,21 @@ recolours, 6269 retained unknown body-colour pixels. Saved fields and padding
 are checked against inspected inputs without repeating image generation.
 831 unique drafts (36 samples + 795 pose rules), 3585 missing drafts, zero
 complete semantic receipts. No import, gameplay mapping or integration.
+
+## Pose067: 843 unique drafts
+
+Viewed twelve raised diagonal source bodies, both independent local references
+and outputs, and all four three-body change sheets. The 257002 contact-sheet
+column was clipped, so its complete standalone comparison was separately
+viewed; the clipped 266098 column also has its complete independent reference
+view. Neck-back clothing is protected separately from the white cheek.
+Broad tan wing membrane preserves material; cheek, throat and belly are
+ventral, dorsal surfaces red. No obvious rider recolour was found, but contact
+yellow still includes unresolved dragon regions. No semantic receipt is complete.
+
+Latest primary outputs: `pose067-reference` for 247906/266098; other ten use
+`pose067-render`. Initial candidate totals: 19881 changes, 5349 ventral
+recolours, 5644 retained unknown body-colour pixels. Saved fields and padding
+are checked against inspected inputs without repeating renders. 843 unique
+drafts (36 samples + 807 pose rules), 3573 missing drafts, zero complete
+semantic receipts. No importer, gameplay mapping or integration.
