@@ -17,6 +17,9 @@ var entry_active:=false
 var entry_anchor:Array=[]
 var entry_pending:Dictionary={}
 var entry_repeat:Dictionary={}
+# The bounded entry-search continuation is not part of the public route set.
+# Tests may opt their isolated planner in; the production runner uses default-off.
+var _entry_fallback_enabled:bool=false
 func clear()->void:
  route.clear()
  key=""
@@ -159,6 +162,7 @@ func plan(b,npc:Dictionary)->Array:
  best.pop_front()
  return best
 func _entry_fallback(b,npc:Dictionary)->Array:
+ if not _entry_fallback_enabled:return []
  var result:Array=entry_routes.find(self,b,npc)
  # Owned frozen snapshot: share internally without another world-sized copy.
  entry_context=entry_routes.last_context if not result.is_empty() else {}
