@@ -333,6 +333,7 @@ func start_admission_after_commit(b,frame:Dictionary,opened:Dictionary)->Diction
  span={"budget_id":entry.budget_id,"generation":entry.generation,"issued_seq":entry.issued_seq}
  anchor_ms=current;base_used_ms=int(entry.used_ms);frozen=false;blocked=false;storage_paused=false
  cached_sample={"lifetime":lifetime,"span":span.duplicate(true),"used_ms":base_used_ms}
+ progress_stamp={"lifetime":lifetime,"span":span.duplicate(true),"ms":current,"used_ms":base_used_ms}
  frame.lifetime=lifetime
  if not frame.continuation.is_empty():
   frame.continuation.expected_lifetime=lifetime
@@ -360,18 +361,22 @@ func attempt_once(b)->Dictionary:
  if ready_frame.has("continuation_gate") and not b.continuation_dispatch_ready(ready_frame.continuation_gate):return {"ok":true,"attempted":false,"reason":"等待后续正常处理代。"}
  # Acquire BEFORE host guards or clock Callables. Every inner early return
  # unwinds through this one identity-checked retirement boundary.
- if attempt_call!=null or ready_frame.is_empty() or not attempt_frame.is_empty():return {"ok":false,"attempted":false,"reason":"刷物尝试未就绪或已有调用。"}
+ if attempt_call!=null or not attempt_frame.is_empty():return {"ok":false,"attempted":false,"_sample_stale":true,"reason":"刷物尝试已有调用。"}
+ if ready_frame.is_empty():return {"ok":false,"attempted":false,"reason":"刷物尝试未就绪。"}
  var call:=RefCounted.new()
  attempt_call=call
  var frame:Dictionary=ready_frame.duplicate()
  frame.attempt_call=call
- var result:Dictionary=attempt_locked(b,frame)
+ var fence:Dictionary=capture_attempt_sample(b,frame)
+ var result:Dictionary=attempt_locked(b,frame,fence)
+ if not result.get("ok",false) and not sample_attempt_current(b,fence,true):result._sample_stale=true
  retire_attempt_frame(frame,call)
  if is_same(attempt_call,call):attempt_call=null
  return result
-func attempt_locked(b,frame:Dictionary)->Dictionary:
+func attempt_locked(b,frame:Dictionary,fence:Dictionary)->Dictionary:
  if not attempt_owned(b,frame) or binding!=frame.identity or blocked or frozen or anchor_ms<0:return State.denied("刷物尝试归属已失效。")
  var reason:=admission_error(b,frame)
+ if not sample_attempt_current(b,fence,true):return {"ok":false,"_sample_stale":true,"reason":"准入回调改变原尝试。"}
  if not reason.is_empty():return State.denied(reason)
  var planned:Dictionary=JewelPlan.select(b,Sources.matches_backend)
  if planned.get("status")!="step" or not Sources.same(planned.get("step"),frame.step):return State.denied("目标或来源条件已变化。")
@@ -380,24 +385,29 @@ func attempt_locked(b,frame:Dictionary)->Dictionary:
  if not saved is Dictionary or not frame.owner._valid_profile(saved) or frame.owner._normalize_numbers(saved)!=frame.owner.snapshot():return State.denied("刷物尝试前真实保存基线不匹配。")
  if not same_span(ledger) or ledger.recovery_blocked or not ledger.entries[State.STEP].open_span or ledger.entries[State.STEP].recovery_blocked:return State.denied("当前持久时段不能尝试。")
  # This explicit scheduler sample is outside snapshot. Sample failures never roll.
- if not sample_active() or not attempt_owned(b,frame):return State.denied("刷物活跃采样或执行归属无效。")
+ var sampled:Dictionary=sample_attempt_sealed(b,frame,fence)
+ if not sampled.get("ok",false):return {"ok":false,"reason":"刷物活跃采样或执行归属无效。","_sample_stale":sampled.get("stale",false)}
+ var sample:Dictionary=sampled.seal
  if cached_sample.used_ms>=ledger.entries[State.STEP].limit_ms:return State.denied("本步预算已到限，停止新尝试。")
- if last_ms<next_attempt_ms:return {"ok":true,"attempted":false,"reason":"等待下一逻辑步。"}
+ if last_ms<next_attempt_ms:return {"ok":true,"attempted":false,"reason":"等待下一逻辑步。","_progress_sample":sample}
  # No callback occurs between this final complete guard and field_step entry.
  reason=admission_error(b,frame)
- if not reason.is_empty() or not attempt_owned(b,frame):return State.denied("原尝试前条件已变化。" if reason.is_empty() else reason)
+ if not sample_attempt_current(b,sample,true):return {"ok":false,"reason":"采样后原归属已变化。","_sample_stale":true}
+ if not reason.is_empty():return State.denied(reason)
  if last_ms>State.MAX_MSEC-ATTEMPT_INTERVAL_MS:return State.denied("尝试时钟截止超出合法范围。")
  last_attempt_ms=last_ms
  next_attempt_ms=last_attempt_ms+ATTEMPT_INTERVAL_MS
  if ready_frame.has("continuation_gate"):
   ready_frame.continuation_gate.generation=b.continuation_dispatch_checkpoint().generation
+ sample.timer=progress_timer_snapshot() # exact local cadence writes, before any callback
+ fence.timer=sample.timer
  attempt_frame=frame
  var reply:Dictionary=b._cmd_field_step({"map_id":frame.map_id,"cell":[frame.cell.x,frame.cell.y],"encounter":true})
  retire_attempt_frame(frame,frame.attempt_call)
  # field_step may already have rolled and published a battle. Never undo it.
  var battle_happened:bool=bool(reply.get("battle",false))
  if not attempt_owned(b,frame):return {"ok":false,"attempted":true,"battle":battle_happened,"reason":"原尝试已发生，旧执行归属不再继续。"}
- if not battle_happened:return {"ok":bool(reply.get("ok",false)),"attempted":true,"battle":false,"hit":bool(reply.get("hit",false))}
+ if not battle_happened:return {"ok":bool(reply.get("ok",false)),"attempted":true,"battle":false,"hit":bool(reply.get("hit",false)),"_progress_sample":sample}
  var pending:Dictionary=frame.owner._pending
  var battle_id:String=str(pending.get("battle_id",""))
  if battle_id.is_empty() or battle_receipt.is_empty() or pending.get("quest_loot_receipt",{})!=battle_receipt or str(b.battle_state.get("battle_id",""))!=battle_id or not b.battle_open:return {"ok":false,"attempted":true,"battle":true,"reason":"原战斗已发生，凭据变化后需手动处理。"}
@@ -731,11 +741,67 @@ func tick_internal(b)->void:
  if b.quest_auto.phase=="loot_admission" and ready_frame.has("continuation_gate"):
   var ready:Dictionary=ready_frame
   var reply:Dictionary=attempt_once(b)
-  if reply.get("ok",false):return
+  if reply.get("_sample_stale",false):return
+  if reply.get("ok",false):
+   publish_attempt_progress(b,reply.get("_progress_sample",{}))
+   return
   # Stop only the same idle execution. A published battle or a successor is
   # an independent fact; never route it through this old idle-close tail.
   if is_same(ready_frame,ready) and admission_owner(b,ready) and not b.battle_open and b.session._pending.is_empty():
    b.quest_auto.stop(b,str(reply.get("reason","刷物尝试停止。")))
+
+# P2 candidate: sealed idle samples only; no public timer API or battle heartbeat.
+const PROGRESS_INTERVAL_MS=1000
+var progress_stamp:Dictionary={}
+func progress_timer_snapshot()->Dictionary:
+ var value:Dictionary=admission_timer_snapshot()
+ # CHECKING/ROLLING transient lock retirement does not change sample authority.
+ # The captured call itself is separately checked while inside attempt_locked.
+ value.erase("attempt_frame");value.erase("attempt_call")
+ value.progress_stamp=progress_stamp.duplicate(true)
+ return value
+func sample_attempt_current(b,s:Dictionary,inside_call:bool)->bool:
+ if s.is_empty() or not is_same(ready_frame,s.ready) or not is_same(ready_frame.get("ready_token"),s.ready_token):return false
+ if not admission_owner(b,s.frame) or clock!=s.clock or not is_same(lifetime,s.lifetime):return false
+ if not is_same(b.quest_auto.identity,s.identity_object) or not is_same(b.automation,s.automation):return false
+ if [b.automation.running,b.automation.hunt_running,b.automation.flow_active(),b.stationary.running,b.original_quests.pending]!=s.activity:return false
+ if inside_call and not is_same(attempt_call,s.call):return false
+ if not is_same(b.session,s.session) or b.save_path!=s.path or not is_same(b.session._profile,s.profile_ref) or b.session.snapshot()!=s.profile:return false
+ if not is_same(b.session._pending,s.pending_ref) or b.session._pending!=s.pending or b.session._loot_settlement!=s.settlement:return false
+ if b.last_saved_payload!=s.payload or b.quest_save_serial!=s.serial:return false
+ if not is_same(b.battle,s.battle) or b.battle.snapshot()!=s.battle_state or b.battle_open!=s.battle_open:return false
+ return progress_timer_snapshot()==s.timer
+func sample_attempt_sealed(b,frame:Dictionary,fence:Dictionary)->Dictionary:
+ if not attempt_owned(b,frame) or frozen or blocked or storage_paused or anchor_ms<0 or not battle_receipt.is_empty() or b.battle_open or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty():return {"ok":false}
+ var s:Dictionary=fence.duplicate()
+ var value=s.clock.call()
+ # Invalid owner is not an invalid-clock policy: never poison its successor.
+ if not sample_attempt_current(b,s,true):return {"ok":false,"stale":true}
+ if not State.integer(value,0,State.MAX_MSEC):blocked=true;fence.timer=progress_timer_snapshot();return {"ok":false}
+ var current:int=int(value)
+ if last_ms>=0 and current<last_ms:blocked=true;fence.timer=progress_timer_snapshot();return {"ok":false}
+ # Preserve same-owner original now()->used_ms overflow ordering, not its
+ # stale-owner mutation. Public now/sample_active remain byte-identical.
+ if current<anchor_ms or base_used_ms>State.MAX_MSEC-(current-anchor_ms):
+  last_ms=current;blocked=true;fence.timer=progress_timer_snapshot();return {"ok":false}
+ last_ms=current
+ cached_sample={"lifetime":lifetime,"span":span.duplicate(true),"used_ms":base_used_ms+current-anchor_ms}
+ s.timer=progress_timer_snapshot()
+ fence.timer=s.timer
+ s.ms=current;s.used_ms=cached_sample.used_ms
+ return {"ok":true,"seal":s}
+func publish_attempt_progress(b,s:Dictionary)->void:
+ if s.is_empty() or attempt_call!=null or not attempt_frame.is_empty() or not sample_attempt_current(b,s,false):return
+ if frozen or blocked or storage_paused or b.battle_open or not battle_receipt.is_empty() or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty():return
+ if not is_same(progress_stamp.get("lifetime"),lifetime) or progress_stamp.get("span",{})!=span:return
+ if s.ms<int(progress_stamp.ms) or s.ms-int(progress_stamp.ms)<PROGRESS_INTERVAL_MS or s.used_ms==progress_stamp.used_ms:return
+ # No add-to-deadline overflow. Store only primitive time/span and lifetime,
+ # never the temporary seal/owner/frame, and never write after observers.
+ progress_stamp={"lifetime":lifetime,"span":span.duplicate(true),"ms":s.ms,"used_ms":s.used_ms}
+ b.publish()
+
+func capture_attempt_sample(b,frame:Dictionary)->Dictionary:
+ return {"identity_object":b.quest_auto.identity,"automation":b.automation,"activity":[b.automation.running,b.automation.hunt_running,b.automation.flow_active(),b.stationary.running,b.original_quests.pending.duplicate(true)],"frame":frame,"call":frame.attempt_call,"ready":ready_frame,"ready_token":ready_frame.ready_token,"clock":clock,"lifetime":lifetime,"session":b.session,"path":b.save_path,"profile_ref":b.session._profile,"profile":b.session.snapshot(),"pending_ref":b.session._pending,"pending":b.session._pending.duplicate(true),"settlement":b.session._loot_settlement.duplicate(true),"payload":b.last_saved_payload,"serial":b.quest_save_serial,"battle":b.battle,"battle_state":b.battle.snapshot(),"battle_open":b.battle_open,"timer":progress_timer_snapshot()}
 
 # Exact checkpoint-origin same-payload continuation. No global save exemption.
 func capture_followup_checkpoint(b,command:Dictionary)->Dictionary:
