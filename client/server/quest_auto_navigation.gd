@@ -11,9 +11,17 @@ var grid_key:=""
 var nav:AStarGrid2D
 var block_key:=""
 var block_cells:Dictionary={}
+var entry_routes=preload("res://server/quest_auto_entry_routes.gd").new()
+var entry_context:Dictionary={}
+var entry_active:=false
+var entry_anchor:Array=[]
+var entry_pending:Dictionary={}
+var entry_repeat:Dictionary={}
 func clear()->void:
  route.clear()
  key=""
+ entry_context={}
+ entry_active=false;entry_anchor=[];entry_pending={};entry_repeat={}
 func data(b,map_id:int)->Dictionary:
  if not maps.has(map_id):maps[map_id]=MapFile.load_map(b.quest_helper.places.file(map_id))
  return maps[map_id]
@@ -137,7 +145,7 @@ func plan(b,npc:Dictionary)->Array:
     if not candidate.is_empty() and (best.is_empty() or candidate.size()<best.size()):best=candidate
  else:
   var chain:=map_route(b,map_id,int(npc.map_id))
-  if chain.size()<2:return []
+  if chain.size()<2:return _entry_fallback(b,npc)
   for link in b.quest_helper.places.links(map_id).values():
    if int(link.to_map)!=int(chain[1]) or not usable(b,link):continue
    var goal:=Vector2i(int(link.cell[0]),int(link.cell[1]))
@@ -147,19 +155,75 @@ func plan(b,npc:Dictionary)->Array:
    candidate.append({"map_id":int(link.to_map),"cell":link.target.duplicate(),"portal":link.duplicate(true)})
    if best.is_empty() or candidate.size()<best.size():best=candidate
  if best.is_empty():best=Gates.path(self,b,goals,occupied)
- if not best.is_empty():best.pop_front()
+ if best.is_empty():return _entry_fallback(b,npc)
+ best.pop_front()
  return best
+func _entry_fallback(b,npc:Dictionary)->Array:
+ var result:Array=entry_routes.find(self,b,npc)
+ # Owned frozen snapshot: share internally without another world-sized copy.
+ entry_context=entry_routes.last_context if not result.is_empty() else {}
+ entry_active=not result.is_empty()
+ entry_anchor=[b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y] if entry_active else []
+ entry_pending={};entry_repeat={}
+ return result
+
+## Trusted executor notification AFTER a real ordinary portal committed and
+## arrival passed. Cancel/reset still uses clear(); this never writes authority.
+func portal_committed(b,point:Dictionary)->bool:
+ if not entry_active:
+  clear();return true
+ if entry_pending.is_empty() or not entry_pending.point.has("portal") or point!=entry_pending.point:
+  clear();return false
+ var expected:Dictionary=entry_pending.point
+ var actual:Array=[b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y]
+ var from:Array=entry_pending.origin
+ var link:Dictionary=b.quest_helper.places.links(int(from[0])).get(Vector2i(from[1],from[2]),{})
+ if actual!=[int(expected.map_id),int(expected.cell[0]),int(expected.cell[1])] or link!=expected.portal or not usable(b,link):
+  clear();return false
+ if not entry_routes.matches_context(b,entry_context.target,entry_context) or not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):
+  clear();return false
+ route.clear();entry_pending={};entry_repeat={};entry_anchor=actual
+ return true
+
+func _entry_take(b)->Dictionary:
+ if not entry_repeat.is_empty():return entry_repeat.duplicate(true)
+ if route.is_empty():return {}
+ var point:Dictionary=route.pop_front()
+ if entry_active:
+  entry_pending={"origin":[b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y],"point":point.duplicate(true)}
+ return point
+
 func prepare_route(b,npc:Dictionary)->void:
+ entry_repeat={}
+ if not entry_context.is_empty() and not entry_routes.matches_context(b,npc,entry_context):clear()
  var signature:=str(npc.id)+str(npc.map_id)+str(npc.cell)+str(b.original_quests.npc_state.version)+str(hash(b.quest_catalog.npc_overrides))+str(hash(b.quest_catalog.enabled_events))
  if key!=signature:clear();key=signature
+ if entry_active:
+  var actual:Array=[b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y]
+  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):clear();return
+  if not entry_pending.is_empty():
+   if actual==entry_pending.origin:
+    entry_repeat=entry_pending.point.duplicate(true);return
+   # A matching coordinate alone never acknowledges a portal transaction.
+   if entry_pending.point.has("portal"):clear();return
+   var expected:Dictionary=entry_pending.point
+   if actual!=[int(expected.map_id),int(expected.cell[0]),int(expected.cell[1])]:clear();return
+   entry_anchor=actual;entry_pending={}
+  if actual!=entry_anchor:clear();return
+  var distance:Vector2i=b.automation.position_cell-Vector2i(npc.cell[0],npc.cell[1])
+  if b.automation.position_map==int(npc.map_id) and maxi(absi(distance.x),absi(distance.y))<=2:clear();return
+  if route.is_empty():
+   route=_entry_fallback(b,npc)
+   if route.is_empty():clear();return
+  if not validate(b,route[0]):clear()
+  return
  # Cached geometry is never an instruction to keep walking from an old cell.
  # A battle, relocated resident or changed gate may invalidate the next point.
  if not route.is_empty() and not validate(b,route[0]):route.clear()
  if route.is_empty():route=plan(b,npc)
 func next(b,npc:Dictionary)->Dictionary:
  prepare_route(b,npc)
- if route.is_empty():return {}
- return route.pop_front()
+ return _entry_take(b)
 func validate(b,point:Dictionary)->bool:
  if point.has("gate"):return Gates.valid(self,b,point)
  var map_id:int=b.automation.position_map
@@ -179,6 +243,11 @@ func segment_key(b,npc:Dictionary)->String:
  return str(npc)+str(b.original_quests.npc_state.version)+str(hash(b.quest_catalog.npc_overrides))+str(hash(b.quest_catalog.enabled_events))+str(b.session.has_travel_pass())+str(b.session._profile.player.level)
 func next_segment(b,npc:Dictionary,mode:String,max_cells:int)->Dictionary:
  prepare_route(b,npc)
+ if entry_active:
+  # Unreviewed entry fallback is always one ordinary logical step in B/C too.
+  var point:=_entry_take(b)
+  if point.is_empty():return {}
+  return {"kind":"walk","points":[point],"from_map":b.automation.position_map,"from_cell":[b.automation.position_cell.x,b.automation.position_cell.y],"navigation_key":segment_key(b,npc)}
  if route.is_empty():return {}
  var segment:Dictionary={"kind":"walk","points":[route[0].duplicate(true)]}
  var audit:Dictionary=public_routes.audit(self,b,route) if mode in ["B","C"] else {}
