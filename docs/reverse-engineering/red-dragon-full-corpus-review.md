@@ -808,3 +808,22 @@ regions include dragon pixels and must not be presented as entirely riders.
 complete semantic receipts. Source rules, original candidates, revision images
 and UTC/wall/child CPU measurements remain available. No import, gameplay
 mapping, main/live asset writes or integration is enabled.
+
+## Pose061: 771 unique drafts
+
+Viewed twelve aligned sources, two independent local-coordinate references,
+both initial and belly-refined reference outputs, and all twelve candidate
+source/change pairs. The folded attack pose exposes grey-green near-wing
+and tan far-wing membranes; those materials remain, with dorsal rims red.
+Cheek and belly use the ventral palette. Extending the independently drawn
+belly polygons selected 20 additional ventral pixels across the two references.
+Visible hair/helmet, hands, and clothing/feet behind the wing were inspected
+per body. No obvious rider recolour was identified; unresolved contacts still
+include dragon regions and this is not a complete semantic receipt.
+
+Latest primary outputs: `pose061-belly-reference` for 248170/266362; the other
+ten use `pose061-render`. Initial twelve-candidate totals: 20123 changes,
+3414 ventral recolours, 6028 retained unknown body-colour pixels. Saved fields
+and padding are compared with those inspected inputs without rerendering.
+771 unique drafts (36 samples + 735 pose rules), 3645 missing drafts, zero
+complete semantic receipts. No importer, gameplay mapping or live changes.
