@@ -382,6 +382,7 @@ func idle_close_context(b,ticket:Dictionary)->bool:
 func idle_close_owner(b,ticket:Dictionary)->bool:
  return is_same(close_pending,ticket) and idle_close_context(b,ticket)
 func capture_idle_close(b)->Dictionary:
+ revoke_followup(b)
  var q=b.quest_auto
  if not close_pending.is_empty():return close_pending if idle_close_owner(b,close_pending) else {}
  if not q.running or q.step.get("id")!=State.STEP or open_obligation.is_empty():return {}
@@ -448,6 +449,7 @@ func cancelled_battle_owner(b,ticket:Dictionary)->bool:
  if not ticket.auto_scope.is_empty() and not is_same(ticket.automation.start_lifetime,ticket.auto_token):return false
  return is_same(b.quest_loot,self) and is_same(b.session,ticket.session) and b.save_path==ticket.path and is_same(b.battle,ticket.battle) and is_same(b.automation,ticket.automation) and is_same(q,ticket.runner) and is_same(lifetime,ticket.lifetime) and q.identity.checkpoint()==ticket.identity and q.connection==ticket.connection and q.client==ticket.client
 func capture_battle_cancel(b)->Dictionary:
+ revoke_followup(b)
  var q=b.quest_auto
  if not cancelled_battle.is_empty():
   return cancelled_battle if cancelled_battle_owner(b,cancelled_battle) and b.session._pending.get("quest_loot_receipt",{})==cancelled_battle.receipt else {}
@@ -506,3 +508,66 @@ func freeze_failed_auto(b,frame:Dictionary)->void:
  ready_frame={};admission=RefCounted.new()
  auto.compact_active=false
  auto.stop("刷物战结算未保存，停止自动战斗等待修复。")
+
+# C1 only: evidence for a later scheduler, never a command to open/roll a span.
+# Stored owners are weak; local backend settlement frames own their lifetimes.
+var followup:Dictionary={}
+func capture_followup(b,receipt:Dictionary)->Dictionary:
+ var q=b.quest_auto;var auto=b.automation
+ var scope:Dictionary=auto._loot_frame()
+ if not q.running or not q.internal or q.detached or q.restored or q.phase!="loot_battle" or not auto._loot_current(scope) or scope.is_empty() or scope.receipt!=receipt:return {}
+ if not Sources.same(q.step,Sources.step()) or str(b.battle.snapshot().get("outcome",""))!="win":return {}
+ return {"token":RefCounted.new(),"session":weakref(b.session),"path":b.save_path,"battle":weakref(b.battle),"battle_id":str(receipt.ledger.battle_id),"automation":weakref(auto),"runner":weakref(q),"identity_object":weakref(q.identity),"timer":weakref(self),"lifetime":lifetime,"auto_token":auto.start_lifetime,"scope_capability":scope.capability,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":auto.position_map,"cell":auto.position_cell,"serial":b.quest_save_serial,"receipt":receipt.duplicate(true),"closed":false,"scope_retired":false}
+func followup_owner(b,ticket:Dictionary)->bool:
+ if ticket.is_empty() or not is_same(b.quest_loot,self):return false
+ var q=b.quest_auto;var auto=b.automation
+ for pair in [["session",b.session],["battle",b.battle],["automation",auto],["runner",q],["identity_object",q.identity],["timer",self]]:
+  if not scope_owner_matches(ticket,pair[0],pair[1]):return false
+ return b.save_path==ticket.path and is_same(lifetime,ticket.lifetime) and is_same(auto.start_lifetime,ticket.auto_token) and str(b.battle.snapshot().get("battle_id",""))==ticket.battle_id and q.running and q.internal and not q.detached and not q.restored and q.phase=="loot_battle" and q.identity.checkpoint()==ticket.identity and q.connection==ticket.connection and q.client==ticket.client and q.step==ticket.step and auto.position_map==ticket.map_id and auto.position_cell==ticket.cell
+func record_followup(b,ticket:Dictionary,saved:Dictionary,receipt:Dictionary)->void:
+ # The actual immutable successful candidate/receipt is the fact. Serial only
+ # rejects additional intervening saves, including same-payload save calls.
+ if not saved.get("ok",false) or not followup_owner(b,ticket) or receipt!=ticket.receipt:return
+ if b.quest_save_serial!=ticket.serial+1 or b.session.snapshot()!=saved.profile or b.last_saved_payload!=saved.payload or not b.session._pending.is_empty():return
+ var entry:Dictionary=saved.profile.quest_loot.entries.get(State.STEP,{})
+ if not State.valid_entry(entry) or entry.open_span or entry.budget_id!=receipt.ledger.budget_id or entry.generation!=receipt.ledger.generation or not ticket.battle_id in saved.profile.completed_battles:return
+ ticket.profile=saved.profile.duplicate(true);ticket.payload=saved.payload;ticket.serial=b.quest_save_serial
+ followup=ticket
+func followup_current(b,ticket:Dictionary)->bool:
+ return is_same(followup,ticket) and followup_owner(b,ticket) and ticket.has("profile") and b.quest_save_serial==ticket.serial and b.session.snapshot()==ticket.profile and b.last_saved_payload==ticket.payload and b.session._pending.is_empty()
+func revoke_followup(b)->void:
+ var ticket:Dictionary=followup
+ # Called before cancellation's local mutations; stale old tickets are also
+ # discarded, never used to stop/clear/save a newer runner.
+ if not ticket.is_empty() and is_same(b.quest_loot,self) and is_same(followup,ticket):followup={}
+func capture_followup_close(b)->Dictionary:
+ var ticket:Dictionary=followup
+ if ticket.is_empty():return {}
+ if not followup_current(b,ticket) or ticket.closed or not b.battle_open or b.battle.snapshot().active or not b.battle_state.get("settled",false):
+  if is_same(followup,ticket):followup={}
+  return {}
+ return ticket
+func record_followup_close(b,ticket:Dictionary,saved:bool)->void:
+ if ticket.is_empty() or not is_same(followup,ticket):return
+ # This is the return of close_battle's one existing save, before any publish.
+ if not saved or not followup_owner(b,ticket) or b.battle_open or not b.session._pending.is_empty() or b.quest_save_serial!=ticket.serial+1 or b.session.snapshot()!=ticket.profile or b.last_saved_payload!=ticket.payload:
+  if is_same(followup,ticket):followup={}
+  return
+ ticket.serial=b.quest_save_serial;ticket.closed=true
+func followup_status(b)->Dictionary:
+ var ticket:Dictionary=followup
+ if ticket.is_empty():return {}
+ if not followup_current(b,ticket):
+  if is_same(followup,ticket):followup={}
+  return {}
+ # Does NOT mean callbacks were flushed. C2 must supply a real dispatch barrier.
+ return {"token":ticket.token,"closed":ticket.closed,"auto_stopped":not b.automation.running,"battle_id":ticket.battle_id}
+func retire_followup_scope(b,token:RefCounted)->bool:
+ var ticket:Dictionary=followup
+ if ticket.is_empty() or not is_same(ticket.token,token) or not followup_current(b,ticket) or not ticket.closed or b.battle_open or b.automation.running:return false
+ var auto=b.automation;var scope:Dictionary=auto.loot_scope
+ if ticket.scope_retired:return scope.is_empty()
+ if scope.is_empty() or not is_same(scope.get("capability"),ticket.scope_capability) or not is_same(scope.get("token"),ticket.auto_token) or not auto._loot_current(scope):return false
+ # No Callable/emit/save between owner check and exact stopped-scope retirement.
+ auto.loot_scope={};ticket.scope_retired=true
+ return true
