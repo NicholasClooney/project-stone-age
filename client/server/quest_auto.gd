@@ -416,6 +416,9 @@ func tick(b,delta:float) -> void:
  if not running:return
  # A cancelled receipt may finish only its already-running original battle.
  if b.quest_loot.cancelled_battle_owner(b,b.quest_loot.cancelled_battle):return
+ if internal and step.get("id")==b.quest_loot.State.STEP:
+  b.quest_loot.tick_internal(b)
+  return
  if b.quest_visit_guard.is_valid() and not str(b.quest_visit_guard.call()).is_empty():stop(b,"组队变化停止了自动任务。");return
  if phase=="waiting_reward":
   if b.original_quests.pending.is_empty():handoff(b,"奖励窗口已失效，请重新操作。")
