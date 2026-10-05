@@ -1302,3 +1302,13 @@ Viewed twelve aligned sources (248083 through281435,stride3032), grids248083/266
 Independent275371 exposed-wing polygon identifies305 BODY pixels right of raised arm, excluding adjacent skin and neck. Initial draft SHA256 `8762214ca6686bf65fc8f11f68831ea2bc2ad886e6bd4ed385fd938f8bf97bc7`; three-reference draft `d7117d6cf7e5de2a63358fdc3a6b22cfcade67ec2993b018b66f152233c5efe0`. Latest output changes17780 pixels (initial16536), maps1385 ventral pixels and retains10491 unknown body-colour pixels. Remaining wing rim, neck and rider contact margins include unfinished dragon colour, not solely protected rider. No complete semantic approval.
 
 Private evidence: `corpus-v1/pose110-*` and `progress-1359-hashes.json`. 1359/4416 unique drafts;3057 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 111: 1371 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (248084 through281436,stride3032), independent primary/275372 grids, primary references including corrected266276 v3, twelve initial differences, three revised crops on one sheet, and full263244/275372/281436 comparisons. Primary92x104/92x103 geometry checked separately. White jaw ventral; eye/horn preserved.
+
+Original266276 reference incorrectly recoloured helmet(8,29). Broad v2 protection restored that point plus six dragon-wing points; narrow source-drawn v3 restores only the helmet point. Failed versions and both restoration reports retained. Final output equals v3 for both primaries and its helmet guard is source-exact. This local assertion does not establish complete rider ownership.
+
+Independent275372 lower belly polygon identifies116 BODY pixels below the rider foot. Initial draft SHA256 `fcc128294434d1eb39b3548440a4499b4bd08bbf1e9b88adb2ed3a4083f46300`; three-reference draft `5ae027779f61d88fa3543a8b45fee31efb9a6ad598a930f644024bfe1ade5df6`. Latest output changes20216 pixels (initial20022), maps1248 ventral pixels and retains8204 unknown body-colour pixels. Contact margins retain unfinished dragon colour; unknown does not mean proven rider. No complete semantic approval.
+
+Private evidence: `corpus-v1/pose111-*`, including v1/v2/v3 and head restoration reports, and `progress-1371-hashes.json`. 1371/4416 unique drafts;3045 not yet drafted; **0 complete semantic receipts**. Field/padding checks are mechanical only. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
