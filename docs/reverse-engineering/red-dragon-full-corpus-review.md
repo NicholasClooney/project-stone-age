@@ -885,3 +885,21 @@ recolours, 5203 retained unknown body-colour pixels. Saved fields and padding
 are checked against inspected candidate inputs without repeating renders.
 807 unique drafts (36 samples + 771 pose rules), 3609 missing drafts, zero
 complete semantic receipts. No import or gameplay activation.
+
+## Pose065: 819 unique drafts
+
+Viewed twelve raised-head source poses, both independent local coordinates
+and reference outputs, and all twelve candidate source/change pairs. Separate
+polygons protect exposed hair, hands, small feet and narrow torso strips
+behind the long dragon throat. The large tan inner wing preserves material;
+cheek, throat and belly are ventral, with dorsal surfaces red. Each body's
+raised arms and side clothing were inspected individually. No obvious rider
+recolour was found, but unresolved contact yellow still includes dragon
+pixels. These remain incomplete drafts, not semantic receipts.
+
+Latest primary outputs: `pose065-reference` for 247860/266052; other ten use
+`pose065-render`. Initial candidate totals: 19676 changes, 7412 ventral
+recolours, 5162 retained unknown body-colour pixels. Saved fields and padding
+are checked against inspected inputs without repeating renders. 819 unique
+drafts (36 samples + 783 pose rules), 3597 missing drafts, zero complete
+semantic receipts. No importer, gameplay mapping or integration.
