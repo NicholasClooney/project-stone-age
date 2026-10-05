@@ -84,7 +84,8 @@ func use_item(item: String = "potion", pet_id: String = "", done: Callable = Cal
 	last_error="" if reply.get("ok",false) else str(reply.get("reason",""))
 	return bool(reply.get("ok",false))
 func equip_item(item: String = "club") -> bool:return request({"type":"equip_item","item":item})
-func buy_travel_pass() -> bool:return request({"type":"buy_travel_pass"})
+## No source-less purchase API: world_travel consumes the original shop token
+## through link.request's final callback, including over remote WebSocket.
 func heal() -> bool:return request({"type":"heal"})
 func heal_carried_pets() -> bool:return request({"type":"heal_carried_pets"})
 ## What the last field 精灵 did (耐久力回复N), when the reply came back at once.

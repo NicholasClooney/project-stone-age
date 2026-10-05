@@ -15,6 +15,11 @@ func run():
  check(await Wait.until(self,func():return not game.data.is_empty()),"isolated game ready")
  game.random_encounters=false
  var backend=Backend.new()
+ # The restored fee writer needs a real isolated primary/cache, not an empty path.
+ backend.save_path="user://seimu-passage-fee-test.json"
+ if not backend.save():
+  check(false,"initial isolated fee profile saves")
+  game.free();backend.free();quit(1);return
  var doors=[]
  for p in Catalog.new().links(40).values():
   if int(p.to_map) in [31301,31401,31501]:doors.append(p)
@@ -47,10 +52,12 @@ func run():
    if a==b:continue
    check(game.travel_router.map_route(a,b,false).is_empty(),"no permit route between islands %d and %d" % [a,b])
    check(game.travel_router.map_route(a,b,true).is_empty()==(b==300),"ordinary permit graph excludes only paid outbound Giru leg %d -> %d" % [a,b])
- backend.session._profile.player.gold=200
- check(backend.session.buy_travel_pass(),"server permit bought")
- game.backend.session._profile.player.gold=200
- check(game.session.buy_travel_pass(),"client permit bought")
+ # Explicit already-owned legacy compatibility fixtures, NOT purchases.
+ backend.session._profile.travel_pass=true
+ game.backend.session._profile.travel_pass=true
+ game.backend.publish()
+ check(backend.session.has_travel_pass(),"server legacy compatibility fixture grants passage")
+ check(game.session.has_travel_pass(),"authoritative legacy compatibility fixture reaches client")
  for door in doors:
   var origin=int(door.from_map)
   var target=int(door.to_map)
@@ -66,9 +73,15 @@ func run():
  # A travel permit does not waive this restored original MONEY300 branch.
  backend.session._profile.player.gold=299
  backend.automation.position_changed(40,Vector2i(13,2))
+ if not backend.save():
+  check(false,"insufficient fee fixture is actually saved")
+  game.free();backend.free();quit(1);return
  var offer:Dictionary=backend.handle({"type":"quest_talk","npc_id":paid.id})
  check(not backend.handle({"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"yes"}).ok and backend.automation.position_map==40,"permit cannot waive original300 fee")
  backend.session._profile.player.gold=300
+ if not backend.save():
+  check(false,"exact fee fixture is actually saved")
+  game.free();backend.free();quit(1);return
  offer=backend.handle({"type":"quest_talk","npc_id":paid.id})
  var pay:Dictionary={"type":"quest_choose","token":offer.get("dialogue",{}).get("token",""),"choice":"yes"}
  check(backend.handle(pay).ok and backend.session.snapshot().player.gold==0 and backend.automation.position_map==31301 and backend.automation.position_cell==Vector2i(10,104),"original paid sea NPC deducts300 and commits exact Warp")

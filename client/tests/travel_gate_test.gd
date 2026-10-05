@@ -22,10 +22,10 @@ func click(button: Control) -> void:
 func run() -> void:
 	var game = Game.new()
 	check(not game.has_travel_pass(),"new player has no undersea permit")
-	check(not game.buy_travel_pass() and game.snapshot().player.gold==20,"permit requires200gold without partialcharge")
+	check(not game.buy_travel_pass() and game.snapshot().player.gold==20,"legacy internal developer purchase requires200gold without partialcharge")
 	game._profile.player.gold = 250
-	check(game.buy_travel_pass() and game.snapshot().player.gold==50,"original2422 permit costs200")
-	check(game.has_travel_pass() and game.has_travel_pass(),"permit checks do not consume original reusable item")
+	check(game.buy_travel_pass() and game.snapshot().player.gold==50,"legacy internal developer purchase costs200 and grants compatibility flag")
+	check(game.has_travel_pass() and game.has_travel_pass(),"legacy compatibility flag checks do not consume it")
 	check(not game.buy_travel_pass() and game.snapshot().player.gold==50,"duplicate purchase does not charge")
 	var path := "user://travel-permit-test.json"
 	check(game.save_game(path),"permit saves")
@@ -65,8 +65,10 @@ func run() -> void:
 		world.classic_hud.toggle_map()
 		check(not world.adventure_menu.visible and not world.classic_hud.map_panel.visible,"original bottom menus cannot bypass travel dialogue")
 		gate._close()
-		world.session._profile.player.gold = 200
-		world.session.buy_travel_pass()
+		# Explicit already-owned legacy compatibility fixture, NOT a public purchase.
+		world.backend.session._profile.travel_pass = true
+		world.backend.publish()
+		check(world.session.has_travel_pass(),"authoritative legacy compatibility fixture reaches client")
 		gate._open()
 		check(gate.choice.visible,"permit enables crossingconfirmation")
 		await click(gate.choice)
