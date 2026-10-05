@@ -1644,3 +1644,11 @@ Viewed twelve aligned sources (248010 through281362,stride3032), primary248010/2
 Initial draft SHA256 `f728321a1263036cc4bbdda5632b82344c07bc69e3eeb3f25ec98a03d4a7c48d`; three-reference draft `792ca53cb32cf54a986afaa36f3614dee935d516c04d4665d06cb91c622aa4ac`. Independent275298 lower belly x44..59/y65..74 identifies115 BODY pixels, adds19 changes (272266:1,275298:18). Revision and full contact inspected. Final16419 changes (initial16400),645 ventral mappings,10683 unknown body-colour pixels. Occluded far wing, neck/hand/leg contact and residual yellow remain unresolved; unknown is not rider proof. Complete ownership/material review remains outstanding.
 
 Private evidence: `corpus-v1/pose151-*` and `progress-1846-hashes.json`.1846/4416 unique drafts;2570 not yet drafted; **0 complete semantic receipts**. No mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 152 draft checkpoint (1856 unique, no complete receipts)
+
+- Viewed twelve aligned sources, both old reference grids/outputs, all four initial difference sheets (diff-0 was re-viewed after truncated output), the 275339 coordinate grid, revision-0, and full comparisons for 263211/275339/281403.
+- Kept old 251083/272307 records unchanged and did not count them again. Added only ten new drafts; source rule hashes and original sample book bytes are checked, and both old rendered outputs remain byte-identical.
+- Independently labelled the exposed lower dragon torso of 275339 at x37..57/y70..77, below the rider coat and above the feet: 130 BODY-index pixels in the rule, only two additional recoloured pixels in this bitmap. The other eleven candidate outputs did not change. This is a small edge refinement, not completion of the remaining yellow regions.
+- Candidate derive SHA256: `f9d4562c77cd402cf061ccb4bcafdf928b45921427a25596799b38feeefb2a7b`. Private evidence: `/private/tmp/tmux-agents/red-dragon-riding-recolor/corpus-v1/pose152-*`; measured processing: `../offline-processing.jsonl`.
+- Wings, lower body and feet have draft recolouring, but wing roots and rider/coat/foot contacts still retain unresolved dragon colours. Conservative unknown regions are not evidence of rider ownership. Full per-pixel ownership/material review remains outstanding: **1856 drafts, zero complete receipts**, no riding mapping or integration enabled.
