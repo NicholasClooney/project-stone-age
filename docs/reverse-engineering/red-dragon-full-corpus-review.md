@@ -1474,3 +1474,11 @@ Viewed twelve aligned sources (247869 through281221,stride3032), primary247869/2
 Independent275157 left cheek x29..33/y24..34 identifies46 BODY pixels; adds22 changes across three bodies. Initial draft SHA256 `41304337d6fc369953c4d04c7e67d90727f1e17959e2dc1b03ed5ff3b27458d2`; three-reference draft `874e342712bb4fa7cefcad11804164043e7d499818484e40e643721767cdfcc0`. Final25602 changes (initial25580),3309 ventral mappings,4445 unknown body-colour pixels. Hair/hand-to-face, wing roots and foot-to-leg margins retain unfinished dragon colour; unknown is not rider proof.
 
 Private evidence: `corpus-v1/pose130-*` and `progress-1599-hashes.json`. 1599/4416 unique drafts;2817 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 131: 1611 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (247870 through281222,stride3032), primary247870/266062 local grids and references, third275158 grid, four initial difference sheets and full263030/275158/281222. Primary geometries112x120/112x114, local y-offset -6. Head guards translated23 columns from129 after current grid inspection; ventral rule independently realigned one row. Horizontal golden wing surfaces BODY; jaw and belly ventral. Primary final outputs byte-equal references.
+
+Third275158 cheek x41..45/y24..34 identifies46 BODY pixels but yields **zero additional output changes**: already covered by primary-derived regions. Revision report has zero changed bitmaps/zero sheets; no nonexistent sheet is counted viewed. Initial draft SHA256 `c60cdba05a05130dabd015e869db04a883af394d4be6da2ef7f3ad28b6c8edbc`; three-reference draft `16ef5915bd93975a8b5d16ba3b46f3184f3f76b5341afe6d09174475a35ead46`. Both outputs25868 changes,3402 ventral mappings,4920 unknown body-colour pixels. Wing roots beside rider limbs, face and feet retain unfinished dragon colour; the redundant cheek reference is not a residual-colour fix or ownership proof.
+
+Private evidence: `corpus-v1/pose131-*` and `progress-1611-hashes.json`. 1611/4416 unique drafts;2805 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
