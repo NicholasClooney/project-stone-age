@@ -1458,3 +1458,11 @@ Viewed twelve aligned sources (247867 through281219,stride3032), independent pri
 Independent275155 left-cheek polygon x38..42/y24..34 identifies46 BODY pixels, adds19 changes across six bodies. Initial draft SHA256 `936a6e7c607026fa9e3d477ebc9c73c7ac646eb56df282087d90eac8774a3bd3`; three-reference draft `a20efb692c877fe68d387b6329464fa7ce24e8bad848759da07011855bf97b73`. Final17437 changes (initial17418),3328 ventral mappings,4376 unknown body-colour pixels. Temporary third reference status inherited a left-tail label; actual polygon/prose and inspection are left cheek. Saved review states actual region. Hair/hand-to-face and foot-to-leg margins retain unfinished dragon colour; unknown is not rider proof.
 
 Private evidence: `corpus-v1/pose128-*` and `progress-1575-hashes.json`. 1575/4416 unique drafts;2841 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
+
+### Pose 129: 1587 draft records, no complete semantic receipt
+
+Viewed twelve aligned sources (247868 through281220,stride3032), primary247868/266060 local grids and references, third275156 grid, four initial difference sheets, eight revised crops across three sheets and full263028/275156/281220. Primary geometries68x116/68x111, local y-offset -5. Independent head/hair guards; raised golden outer wings BODY, white jaw and belly ventral. Primary final outputs byte-equal references.
+
+Independent275156 left cheek x18..22/y23..33 identifies48 BODY pixels; adds58 changes across eight bodies, with every revised crop viewed. Initial draft SHA256 `9006bb9f1937103235cb9e68db3ea31d7d802aba6dc8298a108b3243bc4ace45`; three-reference draft `48b9751e0184ee2fc7ee98890c8c28732c1cdc1ce678fdffbfed527e1d4d654a`. Final19913 changes (initial19855),3323 ventral mappings,4399 unknown body-colour pixels. Hair/hand-to-face and foot-to-leg margins retain unfinished dragon colour, not blanket rider protection.
+
+Private evidence: `corpus-v1/pose129-*` and `progress-1587-hashes.json`. 1587/4416 unique drafts;2829 not yet drafted; **0 complete semantic receipts**. Mechanical field/padding checks only; no mapping/import/gameplay/main/live changes. Sequential UTC/wall/childCPU retained.
