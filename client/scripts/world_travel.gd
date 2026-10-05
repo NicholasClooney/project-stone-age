@@ -1,5 +1,31 @@
 extends Node
 ## Source-backed residents and reusable item 2422 undersea travel permit.
+# Draft: final callback only; never interpret request.pending as committed.
+class PermitReply extends RefCounted:
+	var owner_ref: WeakRef
+	var generation: int
+	var delivered := false
+	static func deliver(reply: Dictionary, guard: PermitReply) -> void:
+		if guard.delivered:return
+		guard.delivered=true
+		var target=guard.owner_ref.get_ref()
+		if is_instance_valid(target):target._permit_receive(reply,guard.generation)
+
+var permit_link: WeakRef
+var permit_peer: WeakRef
+var permit_lifecycle := -1
+var permit_auth_generation := 0
+var permit_open_auth := -1
+var permit_auth_retired := false
+var permit_open_id := ""
+var permit_generation := 0
+var permit_active := false
+var permit_busy := false
+var permit_dismissed := false
+var permit_source := ""
+var permit_token := ""
+var permit_map := -1
+var permit_cell := Vector2i.ZERO
 var world: Node
 var entries: Array = []
 var sprites: Array[Sprite2D] = []
@@ -20,6 +46,7 @@ func setup(owner: Node, ui_root: Control, residents: Array) -> void:
 	quest_dialogue=preload("res://scripts/quest_dialogue.gd").new()
 	add_child(quest_dialogue)
 	quest_dialogue.setup(world,overlay,body)
+	if world.link.has_signal("disconnected"):world.link.disconnected.connect(_permit_disconnect)
 
 func _render_residents(residents:Array)->void:
 	entries = residents
@@ -118,6 +145,8 @@ func _process(_delta: float) -> void:
 	else:pending=-1
 
 func _open() -> void:
+	if permit_active or permit_auth_retired:return
+	choice.disabled=false
 	var resident: Dictionary=entries[selected]
 	if resident.get("role","")=="quest":
 		choice.hide()
@@ -137,9 +166,8 @@ func _open() -> void:
 	if entry.get("role","")=="deferred_service":body.text+="\n\n【尚未还原此服务】"
 	choice.hide()
 	if entry.get("role","")=="vendor":
-		body.text += "\n\n"+("持有通行证。" if world.session.has_travel_pass() else "通行证：200 石币")
-		choice.text = "购买通行证"
-		choice.visible = not world.session.has_travel_pass()
+		_permit_open(entry)
+		return
 	elif entry.get("role","")=="gate":
 		if world.session.has_travel_pass():body.text = str(entry.get("free_text", "你好像有通行证嘛，那请进去吧。路上请小心。"))
 		choice.text = "出示通行证"
@@ -148,20 +176,146 @@ func _open() -> void:
 	world.play_ui_sound(202)
 
 func _choose() -> void:
+	if permit_active:
+		if permit_busy or permit_token.is_empty() or permit_dismissed:return
+		if int(world.data.map_id)!=permit_map or world.cell!=permit_cell:
+			_close()
+			return
+		world.play_ui_sound(202)
+		_permit_send({"type":"permit_shop_choose","token":permit_token,"choice":"buy_one"})
+		return
+	if selected<0 or selected>=entries.size():return
 	var entry: Dictionary = entries[selected]
 	world.play_ui_sound(202)
-	if entry.get("role","")=="vendor":
-		if world.session.buy_travel_pass():
-			world.checkpoint()
-			body.text = "已取得通行证。\n\n可以重复使用。"
-			choice.hide()
-		else:body.text = "石币不足，需要 200 石币。"
-	elif entry.get("role","")=="gate" and world.session.has_travel_pass():
+	if entry.get("role","")=="gate" and world.session.has_travel_pass():
 		var destination: Array = entry.destination
 		_close()
 		world.call_deferred("load_area_id",int(world.data.map_id),Vector2i(destination[0],destination[1]))
 
+func _permit_open(entry:Dictionary)->void:
+	if permit_auth_retired:return
+	var random_bytes:PackedByteArray=Crypto.new().generate_random_bytes(32)
+	if random_bytes.size()!=32:
+		body.text="无法创建本次购买页。";choice.hide();overlay.show()
+		return
+	permit_generation+=1
+	permit_open_id=random_bytes.hex_encode()
+	permit_link=weakref(world.link);permit_peer=null;permit_lifecycle=-1
+	permit_open_auth=permit_auth_generation
+	if not world.link.is_local():
+		if not is_instance_valid(world.link._peer):return
+		permit_peer=weakref(world.link._peer);permit_lifecycle=world.link._lifecycle
+	permit_active=true;permit_dismissed=false;permit_token=""
+	permit_map=int(world.data.map_id);permit_cell=world.cell
+	var source:String=str(entry.get("dialogue_source",""))
+	var prefix:="gmsv/data/npc/"
+	permit_source=source.trim_prefix(prefix) if source.begins_with(prefix) else ""
+	choice.hide();overlay.show();body.text="正在读取原售证商人的确认页…"
+	world.play_ui_sound(202)
+	if permit_source.is_empty():
+		body.text="此商人的原服务来源不可用。"
+		return
+	_permit_send({"type":"permit_shop_open","source_id":permit_source,"open_id":permit_open_id})
+
+func _permit_send(command:Dictionary)->void:
+	var original=_permit_context()
+	if original==null:
+		_permit_disconnect()
+		return
+	permit_busy=true;choice.disabled=true
+	var receiver:=PermitReply.new()
+	receiver.owner_ref=weakref(self);receiver.generation=permit_generation
+	# Both LocalLink and WsLink deliver done once. Do not process the return too.
+	original.request(command,PermitReply.deliver.bind(receiver))
+
+func _permit_receive(reply:Dictionary,expected:int)->void:
+	if expected!=permit_generation or not permit_active or _permit_context()==null:return
+	permit_busy=false
+	if not bool(reply.get("ok",false)):
+		permit_token="";choice.hide()
+		body.text=str(reply.get("reason","购买未完成。"))
+		if permit_dismissed:_permit_retire()
+		return
+	if bool(reply.get("closed",false)):
+		permit_token="";choice.hide()
+		# Committed amount/balance stays in the server's quest_result message.
+		# Do not infer a fee from profile changes, already_owned, or pending.
+		body.text="原购买已提交。" if bool(reply.get("committed",false)) else ("已持有通行资格，无需购买。" if bool(reply.get("already_owned",false)) else "已关闭购买页。")
+		if permit_dismissed:_permit_retire()
+		return
+	var page=reply.get("dialogue",{})
+	if not page is Dictionary or page.get("kind","")!="original_permit_shop" or str(page.get("token","")).is_empty():
+		body.text="原购买页响应无效。";choice.hide()
+		return
+	permit_token=str(page.token)
+	if page.get("open_id","")!=permit_open_id:
+		_permit_abort(true)
+		return
+	body.text=str(page.get("name",""))+"\n\n"+str(page.get("text",""))
+	choice.hide()
+	for option in page.get("choices",[]):
+		if option is Dictionary and option.get("id","")=="buy_one":
+			choice.text=str(option.get("text","购买"));choice.disabled=false;choice.show()
+
+# A local authentication generation covers switch_profile's logout-start gap;
+# transport lifecycle alone does not change at WsLink.logout().
+func _permit_context():
+	if permit_link==null or permit_auth_retired or permit_open_auth!=permit_auth_generation:return null
+	var original=permit_link.get_ref()
+	if not is_instance_valid(original) or not is_instance_valid(world) or world.link!=original:return null
+	if original.is_local():return original
+	var peer=permit_peer.get_ref() if permit_peer!=null else null
+	if not is_instance_valid(peer) or original._peer!=peer or original._lifecycle!=permit_lifecycle:return null
+	if not original.online or original._closed or peer.get_ready_state()!=WebSocketPeer.STATE_OPEN:return null
+	return original
+
+func _permit_retire()->void:
+	permit_generation+=1
+	permit_active=false;permit_busy=false;permit_dismissed=false
+	permit_token="";permit_source="";permit_open_id=""
+	permit_link=null;permit_peer=null;permit_lifecycle=-1
+
+func _permit_abort(hide_page:bool)->void:
+	if not permit_active:return
+	# Capture only the still-current original context, revoke before any request.
+	var original=_permit_context()
+	var opened:=permit_open_id
+	_permit_retire()
+	if hide_page:
+		if is_instance_valid(overlay):overlay.hide()
+		if is_instance_valid(choice):choice.disabled=false
+		if is_instance_valid(world):world.paused_input=false;world.clear_input()
+	if original!=null and not opened.is_empty():
+		original.request({"type":"permit_shop_cancel","open_id":opened})
+
+func permit_logout_begin()->void:
+	# Called synchronously BEFORE logout is sent, never from its later ACK.
+	var was_active:=permit_active
+	var original=_permit_context()
+	var opened:=permit_open_id if permit_active else ""
+	_permit_retire()
+	permit_auth_generation+=1
+	permit_auth_retired=true
+	if was_active:
+		if is_instance_valid(overlay):overlay.hide()
+		if is_instance_valid(world):world.paused_input=false;world.clear_input()
+	if original!=null and not opened.is_empty():original.request({"type":"permit_shop_cancel","open_id":opened})
+
+func _permit_disconnect()->void:
+	if not permit_active:return
+	# Socket loss/changed owner must not send a cancellation on the new domain.
+	_permit_retire()
+	if is_instance_valid(overlay):overlay.hide()
+	if is_instance_valid(world):world.paused_input=false;world.clear_input()
+
+func _exit_tree()->void:
+	_permit_abort(false)
+
 func _close() -> void:
+	if permit_active:
+		_permit_abort(true)
+		world.play_ui_sound(203)
+		return
 	if is_instance_valid(quest_dialogue) and quest_dialogue.active:
 		quest_dialogue.close()
 		return
@@ -181,6 +335,7 @@ func _build_dialogue(root: Control) -> void:
 	overlay.set_anchors_and_offsets_preset(Control.PRESET_FULL_RECT)
 	overlay.mouse_filter = Control.MOUSE_FILTER_STOP
 	root.add_child(overlay)
+	overlay.tree_exiting.connect(_permit_abort.bind(false))
 	var panel := Control.new()
 	panel.size = Vector2(384,240)
 	panel.scale = Vector2.ONE*world.classic_hud.SCALE

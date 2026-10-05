@@ -6,6 +6,33 @@ extends RefCounted
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const LoginScreen = preload("res://scripts/login_screen.gd")
 const QUEST_RECEIPT_FIELDS=["quest_run_id","quest_step_id","quest_revision","quest_segment_id","quest_position_seq"]
+class LogoutReply extends RefCounted:
+	var owner_ref:WeakRef
+	var game_ref:WeakRef
+	var link_ref:WeakRef
+	var peer_ref:WeakRef
+	var lifecycle:int
+	var generation:int
+	var delivered:=false
+	static func deliver(reply:Dictionary,guard:LogoutReply)->void:
+		if guard.delivered:return
+		guard.delivered=true
+		var target=guard.owner_ref.get_ref()
+		var scene=guard.game_ref.get_ref()
+		var link=guard.link_ref.get_ref()
+		var peer=guard.peer_ref.get_ref()
+		if not is_instance_valid(target) or not is_instance_valid(scene) or not is_instance_valid(link) or not is_instance_valid(peer):return
+		if target.game!=scene or target.logout_generation!=guard.generation or scene.link!=link:return
+		if link._lifecycle!=guard.lifecycle or link._peer!=peer:return
+		if bool(reply.get("stale",false)):return
+		if not bool(reply.get("ok",false)):
+			if is_instance_valid(scene.message):scene.message.text=str(reply.get("reason","切换角色未完成。"))
+			return
+		target._remember_login()
+		if not is_instance_valid(scene) or scene.link!=link or link._lifecycle!=guard.lifecycle or link._peer!=peer or target.logout_generation!=guard.generation:return
+		if scene.is_inside_tree():scene.get_tree().reload_current_scene()
+
+var logout_generation:=0
 var quest_prefix:Array=[]
 var quest_prefix_id:=""
 var quest_prefix_count:=0
@@ -212,9 +239,18 @@ func _on_login_needed(info: Dictionary) -> void:
 ## 切换角色: forget this device's login and start over at the picker.
 func switch_profile() -> void:
 	if game.link.is_local():return
-	game.link.logout(func(_reply):
-		_remember_login()
-		game.get_tree().reload_current_scene())
+	var original=game.link
+	var lifecycle:int=original._lifecycle
+	var peer=weakref(original._peer) if is_instance_valid(original._peer) else null
+	if is_instance_valid(game.world_travel):game.world_travel.permit_logout_begin()
+	if not is_instance_valid(game) or game.link!=original or original._lifecycle!=lifecycle:return
+	if peer==null or not is_instance_valid(peer.get_ref()) or original._peer!=peer.get_ref():return
+	logout_generation+=1
+	var receiver:=LogoutReply.new()
+	receiver.owner_ref=weakref(self);receiver.game_ref=weakref(game)
+	receiver.link_ref=weakref(original);receiver.peer_ref=peer
+	receiver.lifecycle=lifecycle;receiver.generation=logout_generation
+	original.logout(LogoutReply.deliver.bind(receiver))
 
 func _build_link_overlay() -> void:
 	var layer := CanvasLayer.new()
