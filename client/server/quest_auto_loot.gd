@@ -256,6 +256,7 @@ func admit_prepared_run(b,continuation:Dictionary={})->Dictionary:
  if not continuation.is_empty() and not continuation_current(b,continuation):return State.denied("续行调用归属已失效。")
  # Capture this invocation BEFORE any reentrant guard, never adopt its successor.
  admission=RefCounted.new()
+ if not continuation.is_empty():continuation.e1_admission=admission
  var q=b.quest_auto
  var frame:Dictionary={"owner":b.session,"path":b.save_path,"runner":q,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"step":q.step.duplicate(true),"map_id":b.automation.position_map,"cell":b.automation.position_cell,"lifetime":lifetime,"capability":admission,"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"terrain_path":b.quest_helper.places.file(100),"clock":clock,"continuation":continuation}
  var reason:=admission_error(b,frame)
@@ -684,14 +685,16 @@ func consume_followup_locked(b,call:RefCounted)->Dictionary:
   b.quest_auto.running=false;b.quest_auto.owns_battle=false
   b.quest_auto.phase="completed" if decision=="completed" else "manual"
   b.quest_auto.message="目标已满足，刷物结束。" if decision=="completed" else "本步预算已到限。" if decision=="limit_reached" else str(planned.get("reason","原刷物步骤需要手动处理。"))
+  b.quest_auto.pause_reason="" if decision=="completed" else b.quest_auto.message
   b.publish()
   return {"ok":true,"status":decision,"persisted":false}
  c.phase="loot_admission";b.quest_auto.phase=c.phase
+ c.before_open_timer=admission_timer_snapshot()
  var reply:Dictionary=admit_prepared_run(b,c)
  if not reply.get("ok",false):
-  # A persisted open may have been cancelled or superseded. Do not clean it
-  # with this old call; E1's actual obligation and callback owner rules apply.
-  return reply
+  # Only a proved non-commit on the unchanged old closed owner may announce
+  # failure. Persisted opens and superseding callbacks keep their own facts.
+  return announce_failed_open(b,c,reply)
  if not continuation_current(b,c) or not is_same(reply.get("continuation_call"),call):return {"ok":false,"persisted":true,"reason":"已存续开返回归属已改变。"}
  var ready:Dictionary=ready_frame
  if not is_same(reply.capability,admission) or not is_same(reply.capability,ready.get("capability")) or not is_same(reply.lifetime,lifetime) or not is_same(reply.lifetime,ready.get("lifetime")) or not is_same(reply.ready_token,ready.get("ready_token")) or reply.identity!=c.identity or not admission_owner(b,ready):return {"ok":false,"persisted":true,"reason":"已存续开安装凭据不匹配。"}
@@ -700,7 +703,26 @@ func consume_followup_locked(b,call:RefCounted)->Dictionary:
  # in the consumer; the next normal process must also satisfy the real clock.
  next_attempt_ms=maxi(int(c.deadline_ms),int(reply.open_anchor_ms))
  ready.continuation_gate={"epoch":c.dispatch_barrier.epoch,"generation":b.continuation_dispatch_checkpoint().generation}
- return {"ok":true,"status":"reopened","persisted":true,"identity":reply.identity,"entry":State.identity(b.session._profile.quest_loot.entries[State.STEP])}
+ var committed:Dictionary={"ok":true,"status":"reopened","persisted":true,"identity":reply.identity.duplicate(true),"entry":State.identity(b.session._profile.quest_loot.entries[State.STEP])}
+ # Publish only AFTER seal/gate. No live-object reads or writes after observers.
+ b.publish()
+ return committed
+func announce_failed_open(b,c:Dictionary,reply:Dictionary)->Dictionary:
+ if not reply.get("persisted") is bool or reply.persisted or reply.get("ok",true):return reply
+ if not continuation_current(b,c) or not is_same(admission,c.get("e1_admission")):return reply
+ if c.has("open_profile_ref") or anchor_ms>=0 or not battle_receipt.is_empty() or not close_pending.is_empty():return reply
+ if not is_same(b.session._profile,c.profile_ref) or b.session.snapshot()!=c.profile or b.last_saved_payload!=c.payload or b.quest_save_serial!=c.serial:return reply
+ if b.session._profile.quest_loot.entries[State.STEP].open_span or admission_timer_snapshot()!=c.before_open_timer:return reply
+ # All checks above are read-only and callback-free. Do not generic-stop/save,
+ # create storage debt, or clear any later ready/timer/nav here.
+ var result:Dictionary=reply.duplicate(true)
+ result.status="manual"
+ var q=b.quest_auto
+ q.running=false;q.owns_battle=false;q.phase="manual"
+ q.message=str(reply.get("reason","预算续开失败，已停止。"))
+ q.pause_reason=q.message
+ b.publish()
+ return result
 func tick_internal(b)->void:
  if not cancelled_battle.is_empty() or not close_pending.is_empty():return
  if b.quest_auto.phase=="loot_battle":
