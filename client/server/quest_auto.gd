@@ -146,6 +146,12 @@ func detach(b, peer:int) -> void:
  client=""
  clear_motion()
  if not loot_close.is_empty():
+  # This exact idle obligation is revoked before the close can publish/reenter.
+  # Keep its identity/token intact for a failed save's frozen repair path.
+  if not b.quest_loot.idle_close_owner(b,loot_close):return
+  running=false
+  owns_battle=false
+  phase="stopped"
   b.quest_loot.finish_idle_close(b,loot_close)
   if not b.quest_loot.idle_close_context(b,loot_close):return
  b.publish()
