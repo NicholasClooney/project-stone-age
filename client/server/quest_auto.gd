@@ -172,6 +172,9 @@ func accept_report(b,command:Dictionary) -> bool:
       elif phase=="landing":report(b,command)
      break
   return true
+ # A revoked loot receipt owns only its existing battle, never a reconnect.
+ # Consume observations without rebinding or falling through to map_changed.
+ if b.quest_loot.cancelled_battle_owner(b,b.quest_loot.cancelled_battle):return true
  # Backend profile routing and transport own identity. Reconnection requires
  # an untagged handshake at the current authoritative cell, not an old ack.
  if running and detached and int(command.get("_quest_connection",-1))!=-1 and not str(command.get("client","")).is_empty():
