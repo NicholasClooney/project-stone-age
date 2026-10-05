@@ -28,11 +28,17 @@ func auto_status() -> String:
 	if not str(auto.get("mode_notice","")).is_empty():message+="\n"+str(auto.mode_notice)
 	var budget:Dictionary=auto.get("budget",{})
 	if not budget.is_empty():
-		# Render one cached authoritative projection; never interpret old seconds.
-		var view=preload("res://scripts/quest_auto_loot_view.gd").new()
-		view.replace_snapshot(auto,true)
-		if not world.link.is_local() and not world.link.online:view.disconnected()
-		message+="\n"+"\n".join(view.lines())
+		if world.state.quest_loot_enabled():
+			# Render one cached authoritative projection; never interpret old seconds.
+			var view=preload("res://scripts/quest_auto_loot_view.gd").new()
+			view.replace_snapshot(auto,true)
+			if not world.link.is_local() and not world.link.online:view.disconnected()
+			message+="\n"+"\n".join(view.lines())
+		elif budget.get("recovery_blocked",false)==true:
+			# Keep an actual recovery lock visible while its controls and ordinary
+			# budget panel stay closed until the server enables the feature.
+			var reason:=str(budget.get("reason",""))
+			message+="\n刷物预算恢复锁定（只读警告）"+("："+reason if not reason.is_empty() else "。")
 	return message
 func auto_heading()->String:
 	match str(world.state.derived.get("quest_auto",{}).get("phase","")):
