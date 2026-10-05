@@ -154,11 +154,18 @@ func start_auto(quest_id: int) -> void:
 		if not reply.get("ok",false):
 			auto_requested=false
 			world.last_adventure_message=str(reply.get("reason","自动任务无法开始。")))
+static func is_service_battle(auto:Dictionary)->bool:
+	if str(auto.get("phase",""))=="battle":return true
+	if str(auto.get("phase",""))!="loot_battle" or str(auto.get("step_id",""))!="jewels:hunt:2760":return false
+	var budget=auto.get("budget",null)
+	if not budget is Dictionary:return false
+	var entry=budget.get("entry",null)
+	return entry is Dictionary and str(entry.get("step_id",""))==str(auto.step_id)
 func _process(_delta: float) -> void:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false):
 		world.last_adventure_message=auto_status()
-		if (world.link.is_local() or world.link.online) and ((world.battle_view.visible and not auto.get("strict_walk",false) and str(auto.get("phase",""))!="battle") or world.party_locked()):cancel("自动任务已停止。")
+		if (world.link.is_local() or world.link.online) and ((world.battle_view.visible and not auto.get("strict_walk",false) and not is_service_battle(auto)) or world.party_locked()):cancel("自动任务已停止。")
 		var receipt:Dictionary=world.get_meta("quest_position_receipt",{})
 		var landing:bool=str(auto.get("phase","")) in ["landing","segment_landing"] or bool(receipt.get("quest_ack_required",false)) or auto.get("detached",false)
 		if not landing:auto_reported=false
