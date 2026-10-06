@@ -64,13 +64,23 @@ def suite_timeout(name):
             "jan_cave_route_test": 300, "quest_delivery_routes_test": 420,
             "original_quest_auto_test": 480, "original_herb_auto_test": 600,
             # Natural 2760 loot pilot: 313.5 s alone (180 s business cap plus setup); 480 s covers full-run load.
-            "quest_auto_loot_2760_natural_pilot_test": 480}.get(name, TIMEOUT)
+            "quest_auto_loot_2760_natural_pilot_test": 480,
+            # Same pilot with its isolated heartbeat-cancel test mode and its own process budget.
+            "quest_auto_loot_heartbeat_cancel_test": 360,
+            "quest_auto_loot_public_start_test": 180}.get(name, TIMEOUT)
 
 
 def suites_from_test_sh():
     text = (ROOT / "scripts" / "test.sh").read_text()
     match = re.search(r"^for suite in (.*); do$", text, re.M)
     return match.group(1).split()
+
+
+def suite_script(name):
+    """Map a registered logical suite to its script and fixed test-only args."""
+    if name == "quest_auto_loot_heartbeat_cancel_test":
+        return "quest_auto_loot_2760_natural_pilot_test", ["--p3-cancel-reentry"]
+    return name, []
 
 
 def user_dir_root():
@@ -127,8 +137,11 @@ def main():
             name = queue.pop(0)
             log = open(logs / f"{name}.log", "w")
             env = dict(os.environ, STONE_AGE_TEST_USER_DIR=f"{user_relative}/{name}")
-            process = subprocess.Popen(["sh", "./scripts/run.sh", "--headless", "--script", f"res://tests/{name}.gd"],
-                                       cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, env=env)
+            script, user_args = suite_script(name)
+            command = ["sh", "./scripts/run.sh", "--headless", "--script", f"res://tests/{script}.gd"]
+            if user_args:
+                command += ["--", *user_args]
+            process = subprocess.Popen(command, cwd=ROOT, stdout=log, stderr=subprocess.STDOUT, env=env)
             running[name] = (process, log, time.monotonic())
         time.sleep(0.2)
         for name, (process, log, begun) in list(running.items()):
