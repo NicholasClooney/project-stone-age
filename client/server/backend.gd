@@ -137,6 +137,10 @@ var resume_clock: Callable = Time.get_ticks_msec
 var resume_writes := 0
 ## Successful persistence boundaries for synchronous quest transactions.
 var quest_save_serial:=0
+## Short-lived server-only capability for a two-copy fee-attempt fence.
+var _fee_attempt_writer_call:RefCounted
+var _fee_attempt_writer_snapshot:Dictionary={}
+var _fee_attempt_writer_executing:=false
 # Server-only dynamic scope. Never accepted from commands or serialized.
 var _quest_source_call:Dictionary={}
 var _resume_key := ""
@@ -1634,6 +1638,177 @@ func _cmd_permit_shop_open(command:Dictionary)->Dictionary:
 func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
+const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
+
+## Internal-only frame factory. It is deliberately not a command or RPC. The
+## caller still has to prove the original route/offer facts before preparing
+## this candidate; this method only freezes the exact in-process writer owner.
+func _begin_fee_attempt_writer_frame(candidate:Dictionary)->Dictionary:
+	if _depth<=0 or save_path.is_empty() or _fee_attempt_writer_call!=null or _fee_attempt_writer_executing:return {}
+	if battle_open or not session._pending.is_empty() or not session._loot_settlement.is_empty() or stationary.running or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return {}
+	if not quest_auto.running or not quest_auto.internal or not quest_auto.identity is Object:return {}
+	var run_id:String=str(quest_auto.identity.run_id)
+	if run_id.is_empty() or not candidate.has("quest_auto_fee_lifecycle") or not session._valid_profile(candidate):return {}
+	var previous:Variant=session._profile.get("quest_auto_fee_lifecycle",null)
+	var journal:Variant=candidate.get("quest_auto_fee_lifecycle",null)
+	if not FeeAttemptJournal.valid(previous) or not FeeAttemptJournal.valid(journal):return {}
+	if previous.owner!={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}:return {}
+	if previous.current.run_id!=run_id or previous.current.run_status!="active":return {}
+	var purchase:Dictionary=journal.current.purchase
+	if journal.current.run_id!=run_id or journal.current.run_status!="active" or purchase.state!="attempting":return {}
+	var transition:Dictionary=FeeAttemptJournal.begin_attempt(previous,run_id,purchase.attempt_id,purchase.source_id,purchase.offer_id,purchase.item_id,purchase.amount,purchase.balance_before)
+	if not transition.get("ok",false) or transition.get("candidate")!=journal:return {}
+	var owner:Dictionary={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}
+	if journal.owner!=owner:return {}
+	var expected:Dictionary=session._profile.duplicate(true)
+	expected["quest_auto_fee_lifecycle"]=journal.duplicate(true)
+	if candidate!=expected:return {}
+	var cache_bytes:PackedByteArray=last_saved_payload.to_utf8_buffer()
+	if cache_bytes.is_empty() or JSON.stringify(session._profile)!=last_saved_payload:return {}
+	var primary_before:Dictionary=session._read_fee_attempt_file(save_path,cache_bytes)
+	if not primary_before.get("ok",false) or not primary_before.get("exists",false) or not primary_before.get("matches",false):return {}
+	var backup_before:Dictionary=session._read_fee_attempt_file(save_path+".bak",PackedByteArray())
+	var temporary_before:Dictionary=session._read_fee_attempt_file(save_path+".tmp",PackedByteArray())
+	if not backup_before.get("ok",false) or not temporary_before.get("ok",false):return {}
+	var candidate_bytes:PackedByteArray=JSON.stringify(candidate).to_utf8_buffer()
+	if candidate_bytes==cache_bytes or (backup_before.exists and candidate_bytes==backup_before.bytes):return {}
+	var call:=RefCounted.new()
+	_fee_attempt_writer_call=call
+	var refs:Dictionary={
+		"session":weakref(session),"profile":session._profile,"pending":session._pending,
+		"loot_settlement":session._loot_settlement,"page":original_quests.pending,
+		"quest_auto":weakref(quest_auto),"identity":weakref(quest_auto.identity),"automation":weakref(automation),
+		"stationary":weakref(stationary),"original_quests":weakref(original_quests),"battle":weakref(battle)
+	}
+	var values:Dictionary={
+		"profile":session._profile.duplicate(true),"pending":session._pending.duplicate(true),
+		"loot_settlement":session._loot_settlement.duplicate(true),"page":original_quests.pending.duplicate(true),
+		"candidate":candidate.duplicate(true),"owner":owner.duplicate(true),
+		"cache":last_saved_payload,"serial_before":quest_save_serial,
+		"auto_identity":quest_auto.identity.checkpoint(),"auto_client":quest_auto.client,"auto_connection":quest_auto.connection,
+		"auto_running":quest_auto.running,"auto_internal":quest_auto.internal,"auto_detached":quest_auto.detached,"auto_phase":quest_auto.phase,
+		"auto_token":automation.start_lifetime,"automation_running":automation.running,"hunt_running":automation.hunt_running,"flow_active":automation.flow_active(),"compact":automation.compact_active,
+		"stationary_running":stationary.running,"battle_open":battle_open,
+		"depth":_depth,"dispatch_boundary_depth":_dispatch_boundary_depth,"observer_depth":_observer_depth,"flush_depth":_flush_depth,"dispatch_epoch":_dispatch_epoch,
+		"primary_before":primary_before.bytes,"backup_before_exists":backup_before.exists,"backup_before":backup_before.bytes,
+		"temporary_before_exists":temporary_before.exists,"temporary_before":temporary_before.bytes,
+		"candidate_bytes":candidate_bytes
+	}
+	_fee_attempt_writer_snapshot={"call":call,"refs":refs,"values":values,"path":save_path,"account_name":account_name,"expected_serial":quest_save_serial,"phase":"prepared"}
+	return {"call":call}
+
+func _fee_attempt_writer_frame_current(frame:Dictionary)->bool:
+	if frame.is_empty() or not is_same(_fee_attempt_writer_call,frame.get("call")):return false
+	var refs:Dictionary=frame.refs
+	var v:Dictionary=frame.values
+	if not is_same(refs.session.get_ref(),session) or not is_same(refs.quest_auto.get_ref(),quest_auto) or not is_same(refs.identity.get_ref(),quest_auto.identity) or not is_same(refs.automation.get_ref(),automation) or not is_same(refs.stationary.get_ref(),stationary) or not is_same(refs.original_quests.get_ref(),original_quests) or not is_same(refs.battle.get_ref(),battle):return false
+	if save_path!=frame.path or account_name!=frame.account_name:return false
+	if quest_auto.identity.checkpoint()!=v.auto_identity or quest_auto.client!=v.auto_client or quest_auto.connection!=v.auto_connection or quest_auto.running!=v.auto_running or quest_auto.internal!=v.auto_internal or quest_auto.detached!=v.auto_detached or quest_auto.phase!=v.auto_phase:return false
+	if not is_same(automation.start_lifetime,v.auto_token) or automation.running!=v.automation_running or automation.hunt_running!=v.hunt_running or automation.flow_active()!=v.flow_active or automation.compact_active!=v.compact:return false
+	if stationary.running!=v.stationary_running or battle_open!=v.battle_open:return false
+	if _depth!=v.depth or _dispatch_boundary_depth!=v.dispatch_boundary_depth or _observer_depth!=v.observer_depth or _flush_depth!=v.flush_depth or _dispatch_epoch!=v.dispatch_epoch:return false
+	if not is_same(session._profile,refs.profile) or session._profile!=v.profile:return false
+	if not is_same(session._pending,refs.pending) or session._pending!=v.pending:return false
+	if not is_same(session._loot_settlement,refs.loot_settlement) or session._loot_settlement!=v.loot_settlement or not session._loot_settlement.is_empty():return false
+	if not is_same(original_quests.pending,refs.page) or original_quests.pending!=v.page:return false
+	if str(session._profile.get("profile_id",""))!=str(v.owner.profile_id) or str(session._profile.get("character_id",""))!=str(v.owner.character_id):return false
+	return last_saved_payload==v.cache and quest_save_serial==frame.expected_serial
+
+func _fee_attempt_file_same(row:Dictionary,exists:bool,bytes:PackedByteArray)->bool:
+	if not row.get("ok",false) or row.get("exists",false)!=exists:return false
+	return not exists or row.get("bytes") is PackedByteArray and row.bytes==bytes
+
+func _end_fee_attempt_writer_frame(handle:Dictionary)->void:
+	if handle.size()!=1 or not handle.has("call") or not is_same(_fee_attempt_writer_call,handle.call):return
+	_fee_attempt_writer_call=null
+	_fee_attempt_writer_snapshot={}
+	_fee_attempt_writer_executing=false
+
+## Two direct Session raw-candidate writes. Serial advances once when W1 is
+## installed in memory; W2 is a second physical write and never advances it.
+func _persist_fee_attempt_fence(handle:Dictionary)->Dictionary:
+	var outcome:Dictionary={"ok":false,"persisted":"unknown","stage":"invalid_handle"}
+	if handle.size()!=1 or not handle.has("call") or not is_same(_fee_attempt_writer_call,handle.get("call")):return outcome
+	if _fee_attempt_writer_executing:return {"ok":false,"persisted":"unknown","stage":"already_executing"}
+	if _fee_attempt_writer_snapshot.is_empty() or not is_same(handle.call,_fee_attempt_writer_snapshot.call):return outcome
+	_fee_attempt_writer_executing=true
+	var frame:Dictionary=_fee_attempt_writer_snapshot
+	var v:Dictionary=frame.values
+	var refs:Dictionary=frame.refs
+	if not _fee_attempt_writer_frame_current(frame):
+		_end_fee_attempt_writer_frame(handle)
+		return {"ok":false,"persisted":false,"stage":"owner_or_cas_rejected_before_w1"}
+	var primary_pre:Dictionary=session._read_fee_attempt_file(frame.path,v.cache.to_utf8_buffer())
+	var backup_pre:Dictionary=session._read_fee_attempt_file(frame.path+".bak",PackedByteArray())
+	var temporary_pre:Dictionary=session._read_fee_attempt_file(frame.path+".tmp",PackedByteArray())
+	if not _fee_attempt_file_same(primary_pre,true,v.primary_before) or not _fee_attempt_file_same(backup_pre,v.backup_before_exists,v.backup_before) or not _fee_attempt_file_same(temporary_pre,v.temporary_before_exists,v.temporary_before):
+		_end_fee_attempt_writer_frame(handle)
+		return {"ok":false,"persisted":"unknown","stage":"disk_changed_before_w1"}
+	if not _fee_attempt_writer_frame_current(frame):
+		_end_fee_attempt_writer_frame(handle)
+		return {"ok":false,"persisted":false,"stage":"owner_or_cas_changed_before_w1"}
+	var candidate:Dictionary=v.candidate
+	var candidate_text:String=JSON.stringify(candidate)
+	var candidate_bytes:PackedByteArray=v.candidate_bytes
+	var primary_old:PackedByteArray=v.primary_before
+	var s0:int=v.serial_before
+	if quest_save_serial!=s0:
+		_end_fee_attempt_writer_frame(handle)
+		return {"ok":false,"persisted":false,"stage":"serial_changed_before_w1"}
+	var first:Dictionary=session._write_fee_attempt_candidate_once(candidate,frame.path,refs.profile,v.profile)
+	var p1:Dictionary=first.get("primary",{})
+	var b1:Dictionary=first.get("backup",{})
+	var t1:Dictionary=first.get("temporary",{})
+	var primary_is_candidate:bool=p1.get("ok",false) and p1.get("exists",false) and p1.get("matches",false)
+	if primary_is_candidate:
+		if not _fee_attempt_writer_frame_current(frame):
+			_end_fee_attempt_writer_frame(handle)
+			return {"ok":false,"persisted":true,"primary_matches":true,"stage":"w1_landed_but_frame_changed_before_install"}
+		var installed:Dictionary=candidate.duplicate(true)
+		session._profile=installed
+		last_saved_payload=candidate_text
+		quest_save_serial=s0+1
+		frame.refs.profile=session._profile
+		frame.values.profile=session._profile.duplicate(true)
+		frame.values.cache=candidate_text
+		frame.expected_serial=s0+1
+		frame.phase="w1_installed"
+		if not bool(first.get("writer_return",false)):
+			_end_fee_attempt_writer_frame(handle)
+			return {"ok":false,"persisted":true,"stage":"w1_wrapper_false_after_primary_readback","w1_calls":1,"serial_before":s0,"serial_after_w1":s0+1}
+		if not _fee_attempt_file_same(b1,true,primary_old) or not _fee_attempt_file_same(t1,false,PackedByteArray()):
+			_end_fee_attempt_writer_frame(handle)
+			return {"ok":false,"persisted":true,"stage":"w1_backup_or_tmp_mismatch","w1_calls":1,"serial_before":s0,"serial_after_w1":s0+1}
+		if not _fee_attempt_writer_frame_current(frame):
+			_end_fee_attempt_writer_frame(handle)
+			return {"ok":false,"persisted":true,"stage":"w1_post_install_cas_changed","w1_calls":1,"serial_before":s0,"serial_after_w1":s0+1}
+		var p_before_w2:Dictionary=session._read_fee_attempt_file(frame.path,candidate_bytes)
+		var b_before_w2:Dictionary=session._read_fee_attempt_file(frame.path+".bak",PackedByteArray())
+		var t_before_w2:Dictionary=session._read_fee_attempt_file(frame.path+".tmp",PackedByteArray())
+		if not p_before_w2.get("ok",false) or not p_before_w2.get("exists",false) or not p_before_w2.get("matches",false) or not _fee_attempt_file_same(b_before_w2,true,b1.bytes) or not _fee_attempt_file_same(t_before_w2,false,PackedByteArray()):
+			_end_fee_attempt_writer_frame(handle)
+			return {"ok":false,"persisted":true,"stage":"disk_changed_before_w2","w1_calls":1,"serial_before":s0,"serial_after_w1":s0+1}
+		if quest_save_serial!=s0+1 or not _fee_attempt_writer_frame_current(frame):
+			_end_fee_attempt_writer_frame(handle)
+			return {"ok":false,"persisted":true,"stage":"serial_or_owner_changed_before_w2","w1_calls":1,"serial_before":s0,"serial_after_w1":s0+1}
+		var second:Dictionary=session._write_fee_attempt_candidate_once(candidate,frame.path,refs.profile,v.profile)
+		var p2:Dictionary=second.get("primary",{})
+		var b2:Dictionary=second.get("backup",{})
+		var t2:Dictionary=second.get("temporary",{})
+		var both_exact:bool=p2.get("ok",false) and p2.get("exists",false) and p2.get("matches",false) and b2.get("ok",false) and b2.get("exists",false) and b2.get("matches",false) and t2.get("ok",false) and not t2.get("exists",true)
+		var after_current:bool=quest_save_serial==s0+1 and _fee_attempt_writer_frame_current(frame)
+		_end_fee_attempt_writer_frame(handle)
+		return {"ok":bool(second.get("writer_return",false)) and both_exact and after_current,"persisted":true,"primary_matches":p2.get("matches",false),"backup_matches":b2.get("matches",false),"writer_return":second.get("writer_return",false),"stage":"pair_verified" if bool(second.get("writer_return",false)) and both_exact and after_current else "w2_incomplete_or_owner_changed","w1_calls":1,"w2_calls":1,"serial_before":s0,"serial_after_w1":s0+1,"serial_after_w2":quest_save_serial}
+	var p_known:bool=p1.get("ok",false) and p1.get("exists",false)
+	var b_known:bool=b1.get("ok",false) and (not b1.get("exists",false) or b1.get("bytes") is PackedByteArray)
+	var p_has_candidate:bool=p1.get("matches",false)
+	var b_has_candidate:bool=b1.get("exists",false) and b1.get("matches",false)
+	if p_known and b_known and not p_has_candidate and not b_has_candidate and not bool(first.get("writer_return",false)):
+		_end_fee_attempt_writer_frame(handle)
+		return {"ok":false,"persisted":false,"stage":"w1_candidate_absent_from_primary_and_backup","w1_calls":1,"serial_before":s0,"serial_after_w1":quest_save_serial,"primary":p1,"backup":b1,"temporary":t1}
+	_end_fee_attempt_writer_frame(handle)
+	return {"ok":false,"persisted":"unknown","stage":"w1_io_or_readback_ambiguous","w1_calls":1,"serial_before":s0,"serial_after_w1":quest_save_serial,"primary":p1,"backup":b1,"temporary":t1}
+
 func _save_required_fee(frame:Dictionary)->bool:
 	if not RequiredFee.writer_ready(self,frame):return false
 	# Preserve Backend.save()'s explicit memory-only contract without passing an
