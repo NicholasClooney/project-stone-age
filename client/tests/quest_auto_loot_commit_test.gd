@@ -6,6 +6,10 @@ const Session=preload("res://server/game_session.gd")
 const LootTimer=preload("res://server/quest_auto_loot.gd")
 class ObservedBackend:
  extends "res://server/backend.gd"
+ var fields_step_armed:=false
+ var fields_step_active:=false
+ var fields_step_clock:Array=[]
+ var fields_step_calls:=0
  var test_check:Callable
  var after_commit:Callable
  var observed:Dictionary={}
@@ -17,6 +21,25 @@ class ObservedBackend:
  var invalid_capability_rejected:=false
  var pending_rejected:=false
  var replay_rejected:=false
+ func wild_encounter(map_id:int,cell:Vector2i,training_groups:Variant=null)->Dictionary:
+  if not fields_step_armed or fields_step_active:return super.wild_encounter(map_id,cell,training_groups)
+  if fields_step_clock.size()!=1:return {"ok":false,"reason":"fields fixture clock unavailable"}
+  fields_step_active=true
+  var reply:Dictionary={}
+  var anchor:int=int(fields_step_clock[0])
+  for _step in range(200):
+   # Match E2's first call at the anchor and then its 500 ms minimum interval;
+   # each iteration still enters the real backend command/field-step path.
+   if fields_step_calls>0:fields_step_clock[0]=int(fields_step_clock[0])+500
+   fields_step_calls+=1
+   reply=super._cmd_field_step({"map_id":map_id,"cell":[cell.x,cell.y],"encounter":true})
+   if not reply.get("ok",false) or reply.get("battle",false):break
+  fields_step_active=false
+  fields_step_armed=false
+  var troop:Dictionary=reply.get("troop",{})
+  print("C FIELDS original field-step calls=%d elapsed_ms=%d group=%d battle=%s"%[fields_step_calls,int(fields_step_clock[0])-anchor,int(troop.get("group_id",-1)),str(reply.get("battle",false))])
+  if not reply.get("battle",false):return {"ok":false,"reason":"fields fixture reached field-step bound without a battle"}
+  return reply
  func _commit_loot_settlement(frame:Dictionary)->Dictionary:
   observed_frame=frame
   if candidate_tamper:
@@ -202,9 +225,20 @@ func run()->void:
   host.session._profile.player.xp=int(host.session._profile.player.level)*30-1
   host.session._profile.active_pet=0
   host.session.OriginalEquipment.add(host.session._profile,1052)
+  # Reuse the already reviewed original-pool seed convention. The assertion
+  # after setup makes a mismatch a fixture failure; this never retries a seed.
+  var fields_clock:Array=[Time.get_ticks_msec()]
+  host.fields_step_clock=fields_clock
+  host.quest_loot.clock=func():return fields_clock[0]
+  host.fields_step_armed=true
+  host.encounter_rng.seed=4101;host.encounter_catalog.pressure=50
  )
  if b==null:quit(1);return
  if b!=null:
+  check(int(b.session._pending.get("group_id",-1))==169,"Fixed original-pool seed4101 produces group169; no seed search")
+  if failures:b.free();quit(1);return
+  check(b.session._pending.get("enemies",[]).all(func(enemy):return int(enemy.get("reward_xp",0))>0),"Original group169 source enemies award actual XP")
+  if failures:b.free();quit(1);return
   var before:Dictionary=b.session.snapshot()
   b.candidate_tamper=true
   # Player defends so the original pet actions earn the level-up credit.
