@@ -7,6 +7,7 @@ const SAVE_VERSION := 8
 ## The shipped permanent boolean remains the only active qualification.
 const ENTITY_TRAVEL_PASS_ENABLED := false
 const LootState=preload("res://server/quest_auto_loot_state.gd")
+const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const TransmigrationState=preload("res://server/transmigration_state.gd")
 const ItemStorage=preload("res://server/item_storage.gd")
 const OriginalRevival = preload("res://server/original_revival.gd")
@@ -59,6 +60,8 @@ var _training_preview
 ## The backend sets it; without it only the battle's start roster counts.
 var battle_pets_hook: Callable
 var last_error := ""
+## Ephemeral provenance for the last successful load_game call.
+var last_load_source := ""
 # Injectable login clock/randomness; unrelated to combat and encounter RNG.
 var login_clock: Callable
 var login_rng: RandomNumberGenerator
@@ -1565,6 +1568,7 @@ func _read_fee_attempt_file(path:String,expected:PackedByteArray)->Dictionary:
 	return {"ok":true,"exists":true,"missing":false,"error":OK,"matches":bytes==expected,"length":declared,"bytes":bytes}
 
 func load_game(path: String) -> bool:
+	last_load_source = ""
 	if not _pending.is_empty():
 		return false
 	for candidate in [path,path + ".bak"]:
@@ -1572,11 +1576,16 @@ func load_game(path: String) -> bool:
 			continue
 		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
 		if _valid_profile(parsed):
+			var fee_boundary:Dictionary=_canonical_fee_attempt_profile(parsed)
+			if not fee_boundary.get("ok",false):continue
+			var fee_present:bool=fee_boundary.get("present",false)
+			var fee_expected:Dictionary=fee_boundary.get("record",{}).duplicate(true)
 			var previous_profile:Dictionary=_profile
 			var previous_login_rng_state:int=login_rng.state
 			var ledger:Dictionary=LootState.recovered(parsed,candidate!=path)
 			var persist_recovery:bool=ledger!=parsed.get("quest_loot",LootState.empty())
 			_profile = _normalize_numbers(parsed)
+			if fee_present:_profile["quest_auto_fee_lifecycle"]=fee_expected.duplicate(true)
 			_profile.quest_loot=_normalize_numbers(ledger)
 			if int(_profile.version)<6:
 				for key in ["original_instances","original_equipment","next_original_uid"]:_profile.erase(key)
@@ -1635,15 +1644,115 @@ func load_game(path: String) -> bool:
 			TransmigrationState.migrate(_profile)
 			_profile.version = SAVE_VERSION
 			_sync_stat_points()
+			# Validate the migrated live copy against the independent canonical
+			# journal made from the raw JSON boundary before accepting this source.
+			var post_fee:Dictionary=_canonical_fee_attempt_profile(_profile)
+			if post_fee.get("present",false)!=fee_present \
+				or (fee_present and post_fee.get("record",{})!=fee_expected) \
+				or not post_fee.get("ok",false) or not _valid_profile(_profile):
+				_profile=previous_profile
+				login_rng.state=previous_login_rng_state
+				continue
 			# Recovery uncertainty must survive the next restart before play resumes.
 			if persist_recovery and not _write_profile(path):
 				_profile=previous_profile
 				login_rng.state=previous_login_rng_state
 				last_error="Cannot persist uncertain loot budget recovery."
 				return false
+			last_load_source="primary" if candidate==path else "backup"
 			return true
 	last_error = "No valid save or backup."
 	return false
+
+## Validate only the optional fee journal's raw JSON boundary. JSON.parse may
+## represent integral JSON numbers as floats; never truncate: first validate the
+## entire exact journal tree, then normalize a detached copy for the strict helper.
+func _canonical_fee_attempt_profile(profile:Variant)->Dictionary:
+	if not profile is Dictionary:return {"ok":false,"present":false,"record":{}}
+	if not profile.has("quest_auto_fee_lifecycle"):return {"ok":true,"present":false,"record":{}}
+	if not _fee_raw_integer(profile.get("version",null),8,SAVE_VERSION):return {"ok":false,"present":true,"record":{}}
+	if not profile.has("profile_id") or not profile.get("profile_id") is String:return {"ok":false,"present":true,"record":{}}
+	if not profile.has("character_id") or not profile.get("character_id") is String:return {"ok":false,"present":true,"record":{}}
+	var raw:Variant=profile.get("quest_auto_fee_lifecycle",null)
+	if not _fee_raw_record_shape_valid(raw):return {"ok":false,"present":true,"record":{}}
+	if raw.owner.profile_id!=profile.profile_id or raw.owner.character_id!=profile.character_id:return {"ok":false,"present":true,"record":{}}
+	# Shape, exact keys, owner and every numeric range have now been checked.
+	# Normalize only a detached copy, then invoke the strict native-int helper.
+	var record:Dictionary=raw.duplicate(true)
+	record.schema=int(raw.schema)
+	if not record.unresolved_attempt.is_empty():
+		for key:String in ["item_id","amount","balance_before"]:record.unresolved_attempt[key]=int(raw.unresolved_attempt[key])
+	var purchase:Dictionary=record.current.purchase
+	if purchase.state in ["attempting","ticket_committed","entry_committed"]:
+		for key:String in ["item_id","amount","balance_before"]:purchase[key]=int(raw.current.purchase[key])
+	if purchase.state in ["ticket_committed","entry_committed"]:
+		for key:String in ["balance_after","ticket_uid"]:purchase[key]=int(raw.current.purchase[key])
+	if purchase.state=="entry_committed":purchase.consumed_ticket_uid=int(raw.current.purchase.consumed_ticket_uid)
+	if not FeeAttemptJournal.valid(record):return {"ok":false,"present":true,"record":{}}
+	return {"ok":true,"present":true,"record":record}
+
+func _fee_raw_record_shape_valid(value:Variant)->bool:
+	if not value is Dictionary or not FeeAttemptJournal.exact_keys(value,FeeAttemptJournal.ROOT_KEYS):return false
+	if not _fee_raw_integer(value.get("schema",null),FeeAttemptJournal.SCHEMA,FeeAttemptJournal.SCHEMA):return false
+	var owner:Variant=value.get("owner",null)
+	if not owner is Dictionary or not FeeAttemptJournal.exact_keys(owner,FeeAttemptJournal.OWNER_KEYS):return false
+	if not FeeAttemptJournal.nonempty(owner.get("profile_id",null)) or not FeeAttemptJournal.nonempty(owner.get("character_id",null)):return false
+	var current:Variant=value.get("current",null)
+	if not current is Dictionary or not FeeAttemptJournal.exact_keys(current,FeeAttemptJournal.CURRENT_KEYS):return false
+	if not FeeAttemptJournal.opaque(current.get("run_id",null)):return false
+	var run_status:Variant=current.get("run_status",null)
+	if not run_status is String or run_status not in ["active","closed"]:return false
+	var unknown:Variant=value.get("unresolved_attempt",null)
+	if not unknown is Dictionary:return false
+	var has_unknown:bool=not unknown.is_empty()
+	if has_unknown:
+		if not FeeAttemptJournal.exact_keys(unknown,FeeAttemptJournal.UNKNOWN_KEYS):return false
+		if not FeeAttemptJournal.opaque(unknown.get("origin_run_id",null)) or not FeeAttemptJournal.opaque(unknown.get("attempt_id",null)):return false
+		if not FeeAttemptJournal.nonempty(unknown.get("source_id",null)) or not FeeAttemptJournal.nonempty(unknown.get("offer_id",null)):return false
+		if not _fee_raw_integer(unknown.get("item_id",null),1,FeeAttemptJournal.MAX_INT) or not _fee_raw_integer(unknown.get("amount",null),1,FeeAttemptJournal.MAX_INT):return false
+		if not _fee_raw_integer(unknown.get("balance_before",null),0,FeeAttemptJournal.MAX_INT) or unknown.balance_before<unknown.amount:return false
+	var purchase:Variant=current.get("purchase",null)
+	if not purchase is Dictionary:return false
+	var state:Variant=purchase.get("state",null)
+	if not state is String:return false
+	match state:
+		"none":
+			if not FeeAttemptJournal.exact_keys(purchase,["state"]) or has_unknown:return false
+		"manual_only":
+			if not FeeAttemptJournal.exact_keys(purchase,["state"]):return false
+		"attempting":
+			if not FeeAttemptJournal.exact_keys(purchase,FeeAttemptJournal.ATTEMPT_KEYS) or has_unknown:return false
+			if not _fee_raw_purchase_base_valid(purchase):return false
+		"ticket_committed":
+			if not FeeAttemptJournal.exact_keys(purchase,FeeAttemptJournal.TICKET_KEYS) or has_unknown:return false
+			if not _fee_raw_purchase_base_valid(purchase):return false
+			if not _fee_raw_integer(purchase.get("balance_after",null),0,FeeAttemptJournal.MAX_INT) or purchase.balance_before-purchase.amount!=purchase.balance_after:return false
+			if not _fee_raw_integer(purchase.get("ticket_uid",null),1,FeeAttemptJournal.MAX_INT):return false
+		"entry_committed":
+			if not FeeAttemptJournal.exact_keys(purchase,FeeAttemptJournal.ENTRY_KEYS) or has_unknown:return false
+			if not _fee_raw_purchase_base_valid(purchase):return false
+			if not _fee_raw_integer(purchase.get("balance_after",null),0,FeeAttemptJournal.MAX_INT) or purchase.balance_before-purchase.amount!=purchase.balance_after:return false
+			if not _fee_raw_integer(purchase.get("ticket_uid",null),1,FeeAttemptJournal.MAX_INT) or not _fee_raw_integer(purchase.get("consumed_ticket_uid",null),1,FeeAttemptJournal.MAX_INT):return false
+		_:
+			return false
+	if state in ["attempting","ticket_committed","entry_committed"] and purchase.attempt_id==current.run_id:return false
+	if has_unknown:
+		if unknown.attempt_id==unknown.origin_run_id or unknown.attempt_id==current.run_id:return false
+		if state!="manual_only":return false
+		if unknown.origin_run_id==current.run_id and run_status!="closed":return false
+	return true
+
+func _fee_raw_purchase_base_valid(purchase:Dictionary)->bool:
+	if not FeeAttemptJournal.opaque(purchase.get("attempt_id",null)):return false
+	if not FeeAttemptJournal.nonempty(purchase.get("source_id",null)) or not FeeAttemptJournal.nonempty(purchase.get("offer_id",null)):return false
+	if not _fee_raw_integer(purchase.get("item_id",null),1,FeeAttemptJournal.MAX_INT) or not _fee_raw_integer(purchase.get("amount",null),1,FeeAttemptJournal.MAX_INT):return false
+	if not _fee_raw_integer(purchase.get("balance_before",null),0,FeeAttemptJournal.MAX_INT) or purchase.balance_before<purchase.amount:return false
+	return true
+
+func _fee_raw_integer(value:Variant,low:int,high:int)->bool:
+	if value is bool or not (value is int or value is float):return false
+	var numeric:float=float(value)
+	return is_finite(numeric) and numeric==floor(numeric) and numeric>=low and numeric<=high
 
 func _valid_profile(value: Variant) -> bool:
 	if value is Dictionary and value.has("training_borrow_rng") and not preload("res://server/training_borrow.gd").valid_rng(value.training_borrow_rng):return false
@@ -1657,6 +1766,7 @@ func _valid_profile(value: Variant) -> bool:
 		return false
 	if not value is Dictionary or not _integer(value.get("version",0),1,SAVE_VERSION) or value.get("profile_id", "") != "samgir-singleplayer-v1":
 		return false
+	if not _canonical_fee_attempt_profile(value).get("ok",false):return false
 	if not LootState.valid_profile(value):return false
 	if not TransmigrationState.valid(value):return false
 	if int(value.version)>=5 and not original_state_valid(value):return false
