@@ -48,7 +48,8 @@ func model() -> Dictionary:
 	return world.state.derived.get("quest_helper",{})
 func refresh_key() -> String:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
-	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase","")),auto.get("can_continue",false),auto.get("revision",-1),auto.get("effective_mode",""),auto.get("strict_walk",false),world.quest_helper_travel.active,auto.get("source_entry",{})])
+	var loot:Dictionary=world.quest_helper_travel.public_loot_ui_state()
+	return JSON.stringify([model(),auto.get("running",false),auto.get("quest_id",-1),str(auto.get("phase","")),auto.get("can_continue",false),auto.get("revision",-1),auto.get("effective_mode",""),auto.get("strict_walk",false),world.quest_helper_travel.active,auto.get("source_entry",{}),loot.visible,loot.can_start,loot.reason,loot.link_ready,loot.pending,loot.waiting_snapshot,loot.feedback])
 func _process(_delta: float) -> void:
 	if not visible:return
 	if settings_open:
@@ -143,6 +144,7 @@ func rebuild(save_scroll:bool=true) -> void:
 		relayout()
 		return
 	button(body,"自动任务设置",func():settings_open=true;settings_feedback="";rebuild(),"QuestAutoSettingsOpen")
+	append_public_loot_start(body)
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false) or world.quest_helper_travel.active:
 		button(body,"停止自动任务 / 导航",func():world.quest_helper_travel.cancel();rebuild(),"QuestAutoStop")
@@ -203,6 +205,25 @@ func rebuild(save_scroll:bool=true) -> void:
 	else:build_detail(content,selected)
 	detail_scroll.set_deferred("scroll_vertical",int(detail_positions.get(selected_id,0)))
 	relayout()
+
+func append_public_loot_start(parent:Node)->void:
+	var state:Dictionary=world.quest_helper_travel.public_loot_ui_state()
+	if not state.visible:return
+	var action:=button(parent,"开始限时刷物",func():world.quest_helper_travel.start_public_loot(),"QuestLootStart")
+	action.disabled=not state.can_start or state.pending or state.waiting_snapshot or not state.link_ready
+	if state.pending:
+		label(parent,str(state.feedback),12).name="QuestLootStartFeedback"
+	elif state.waiting_snapshot:
+		label(parent,str(state.feedback),12).name="QuestLootStartFeedback"
+	elif not state.can_start:
+		var reason:String=str(state.reason)
+		if reason.is_empty():reason="服务端当前未提供开始资格。"
+		label(parent,reason,12).name="QuestLootStartReason"
+	elif not state.link_ready:
+		label(parent,"服务连接尚未就绪。",12).name="QuestLootStartReason"
+	if not state.feedback.is_empty() and not state.pending and not state.waiting_snapshot:
+		label(parent,str(state.feedback),12).name="QuestLootStartFeedback"
+
 func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 	var source_job:bool=int(quest.id)==2
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})

@@ -3,6 +3,9 @@ extends SceneTree
 const Travel=preload("res://scripts/quest_helper_travel.gd")
 const STEP="jewels:hunt:2760"
 class Link extends RefCounted:
+
+ signal connected
+ signal disconnected
  var online:bool=true
  var local_mode:bool=false
  var requests:Array=[]
@@ -17,6 +20,8 @@ class Router extends RefCounted:
 class LocalTravel extends Node:
  var pending:int=7
 class State extends RefCounted:
+
+ signal changed(kind:String)
  var derived:Dictionary={"quest_auto":{}}
  func quest_loot_enabled()->bool:return false
 class World extends Node:
