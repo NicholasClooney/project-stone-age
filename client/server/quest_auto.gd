@@ -363,12 +363,14 @@ func select(b,selected_id:int=-1,allow_clean:Variant=null) -> Dictionary:
  for candidate in quest.get("steps",[]):
   if candidate.current and candidate.actionable and str(candidate.source.type) in ["REQUEST","ACCEPT"]:return candidate
  return {}
+func _supports_automatic_start(job_id:int,event_id:int)->bool:
+ return Policy.supports(job_id,event_id)
 func start(b,command:Dictionary) -> Dictionary:
  if running:return b._reject("自动任务已在运行。")
  var id=command.get("quest_id",-1)
  if not (id is int or id is float) or float(id)!=floor(float(id)):return b._reject("无效任务编号。")
  var quest:=row(b,int(id))
- if quest.is_empty() or not Policy.supports(id,int(quest.event)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("此任务尚未开放自动推进。")
+ if quest.is_empty() or not _supports_automatic_start(int(id),int(quest.event)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("此任务尚未开放自动推进。")
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active() or not b.original_quests.pending.is_empty():return b._reject("当前正忙。")
  if b.quest_visit_guard.is_valid():
   var reason:=str(b.quest_visit_guard.call())
