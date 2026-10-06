@@ -1532,6 +1532,38 @@ func _write_profile_candidate(candidate:Dictionary,path:String)->bool:
 			return false
 	return DirAccess.rename_absolute(absolute + ".tmp",absolute) == OK
 
+## One forced physical fee-fence write. This deliberately bypasses Backend.save()'s
+## same-payload fast path, but does not install/normalize profile state. The
+## Backend must perform owner/profile/cache/serial CAS around every invocation.
+func _write_fee_attempt_candidate_once(candidate:Dictionary,path:String,expected_profile_ref:Dictionary,expected_profile_value:Dictionary)->Dictionary:
+	if path.is_empty() or not _pending.is_empty() or not _loot_settlement.is_empty():return {"ok":false,"stage":"session_admission"}
+	if not is_same(_profile,expected_profile_ref) or _profile!=expected_profile_value:return {"ok":false,"stage":"session_profile_changed"}
+	if not _valid_profile(candidate):return {"ok":false,"stage":"candidate_invalid"}
+	var payload:PackedByteArray=JSON.stringify(candidate).to_utf8_buffer()
+	var writer_return:bool=_write_profile_candidate(candidate.duplicate(true),path)
+	var primary:Dictionary=_read_fee_attempt_file(path,payload)
+	var backup:Dictionary=_read_fee_attempt_file(path+".bak",payload)
+	var temporary:Dictionary=_read_fee_attempt_file(path+".tmp",PackedByteArray())
+	return {"ok":writer_return and primary.get("ok",false) and primary.get("exists",false) and primary.get("matches",false) and backup.get("ok",false) and temporary.get("ok",false) and not temporary.get("exists",true),"writer_return":writer_return,"primary":primary,"backup":backup,"temporary":temporary}
+
+## Missing is distinct from unreadable, and a successful read checks the declared
+## length, actual buffer length and FileAccess error before returning exact bytes.
+func _read_fee_attempt_file(path:String,expected:PackedByteArray)->Dictionary:
+	var file:=FileAccess.open(path,FileAccess.READ)
+	if file==null:
+		var open_error:int=FileAccess.get_open_error()
+		return {"ok":open_error==ERR_FILE_NOT_FOUND,"exists":false,"missing":open_error==ERR_FILE_NOT_FOUND,"error":open_error,"matches":false,"length":-1,"bytes":PackedByteArray()}
+	var declared:int=file.get_length()
+	if declared<0 or declared>2147483647:
+		file.close()
+		return {"ok":false,"exists":true,"missing":false,"error":ERR_FILE_CANT_READ,"matches":false,"length":declared,"bytes":PackedByteArray()}
+	var bytes:PackedByteArray=file.get_buffer(declared)
+	var read_error:int=file.get_error()
+	file.close()
+	if read_error!=OK or bytes.size()!=declared:
+		return {"ok":false,"exists":true,"missing":false,"error":read_error,"matches":false,"length":declared,"bytes":bytes}
+	return {"ok":true,"exists":true,"missing":false,"error":OK,"matches":bytes==expected,"length":declared,"bytes":bytes}
+
 func load_game(path: String) -> bool:
 	if not _pending.is_empty():
 		return false
