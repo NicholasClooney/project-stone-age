@@ -1,6 +1,18 @@
 extends "res://tests/quest_auto_loot_state_test.gd"
 const Backend=preload("res://server/backend.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
+class EnabledCapabilityBackend:
+ extends "res://server/backend.gd"
+ func _quest_loot_public_enabled()->bool:return true
+class PreflightCountingLoot:
+ extends "res://server/quest_auto_loot.gd"
+ var full_preflight_calls:=0
+ func public_start_reason(b)->String:
+  full_preflight_calls+=1
+  return super.public_start_reason(b)
+class ProjectionBackend:
+ extends "res://server/backend.gd"
+ func _quest_loot_public_enabled()->bool:return true
 func run()->void:
  var b=Backend.new();b.set_process(false);b.save_path="user://loot-projection.json"
  var full:Dictionary=b.full_snapshot()
@@ -32,12 +44,15 @@ func run()->void:
  time[0]=2000;check(t.sample_active(),"Scheduling sample explicit outside snapshot")
  if failures:b.free();quit(1);return
  var before:Dictionary=b.session._profile.duplicate(true)
+ var battle_capture_before:Dictionary=b.battle._state.get("capture_player",{}).duplicate(true)
  var sample:Dictionary=t.cached_sample.duplicate(true);var sampled_last:int=t.last_ms
  var clock_calls:int=calls[0];var serial:int=b.quest_save_serial
  var pressure:int=b.encounter_catalog.pressure;var rng:int=b.encounter_rng.state
  var disk:=FileAccess.get_file_as_string(b.save_path)
  var first:Dictionary=q.snapshot(b).budget
  check(first.get("entry") is Dictionary,"Persisted projection exposes current entry")
+ if failures:b.free();quit(1);return
+ check(b.battle._state.get("capture_player",{})==battle_capture_before,"Budget projection does not call BattleSession.snapshot or refresh capture_player")
  if failures:b.free();quit(1);return
  for i in range(3):q.snapshot(b)
  check(calls[0]==clock_calls and t.last_ms==sampled_last and t.cached_sample==sample,"Snapshots do not call clock or advance cached sample")
@@ -115,5 +130,17 @@ func run()->void:
  check(next.entry==null and next.recovery_blocked and next.activity=="recovery_locked","Root OR lock remains with null entry")
  if failures:b.free();quit(1);return
  b.free()
+ var enabled:=EnabledCapabilityBackend.new()
+ var enabled_capabilities:Dictionary=enabled._capabilities()
+ var enabled_projection:Dictionary=enabled.quest_loot.projection(enabled)
+ check(enabled_capabilities.get("quest_loot_enabled",false)==true and enabled_projection.get("enabled",false)==true and not enabled_projection.get("can_start",true) and not enabled_projection.get("can_stop",true) and not enabled_projection.get("can_adjust_limit",true) and not enabled_projection.get("can_reset",true),"One server-owned immutable test getter feeds both projection and capability; enabling display alone creates no command")
+ if failures:enabled.free();quit(1);return
+ enabled.free()
+ var projection_only:=ProjectionBackend.new()
+ projection_only.quest_loot=PreflightCountingLoot.new()
+ var projection_view:Dictionary=projection_only.quest_loot.projection(projection_only)
+ check(projection_view.enabled and not projection_view.can_start and projection_only.quest_loot.full_preflight_calls==0,"Projection uses only resident advisory checks and never invokes the authoritative full-source command preflight")
+ if failures:projection_only.free();quit(1);return
+ projection_only.free()
  print("QUEST AUTO LOOT PROJECTION: %d failures; snapshots only, no UI or transport acceptance"%failures)
  quit(1 if failures else 0)

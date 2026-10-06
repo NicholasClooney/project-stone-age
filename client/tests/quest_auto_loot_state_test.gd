@@ -37,6 +37,17 @@ func run()->void:
  check(adjusted.ok and adjusted.ledger.entries[KEY].used_ms==1800100,"Explicit increase preserves used time")
  check(not State.adjust(adjusted.ledger,KEY,State.identity(ledger.entries[KEY]),90).ok,"Same-generation stale revision cannot overwrite adjustment")
  ledger=adjusted.ledger
+ var closed_result:Dictionary=State.settle(opened,KEY,receipt,"real-battle-fixture",5000,0)
+ check(closed_result.ok,"Closed under-limit fixture settles through the pure original candidate")
+ if failures:quit(1);return
+ var closed_for_reopen:Dictionary=closed_result.ledger
+ var closed_entry:Dictionary=closed_for_reopen.entries[KEY].duplicate(true)
+ var reopen_result:Dictionary=State.open(closed_for_reopen,KEY,State.identity(closed_entry))
+ check(reopen_result.ok,"Same closed budget permits a new span below its limit")
+ if failures:quit(1);return
+ var reopened:Dictionary=reopen_result.ledger
+ var reopened_entry:Dictionary=reopened.entries[KEY]
+ check(not closed_entry.open_span and reopened_entry.open_span and reopened_entry.budget_id==closed_entry.budget_id and reopened_entry.generation==closed_entry.generation and reopened_entry.limit_ms==closed_entry.limit_ms and reopened_entry.used_ms==closed_entry.used_ms and reopened_entry.existing_items==closed_entry.existing_items and reopened_entry.saved_battles==closed_entry.saved_battles and reopened_entry.new_items==closed_entry.new_items and reopened_entry.settled_seq==closed_entry.settled_seq and reopened_entry.revision==closed_entry.revision+1 and reopened_entry.issued_seq==closed_entry.issued_seq+1,"A closed under-limit budget reopens the same identity generation/limit/counters and advances only revision/issued sequence")
  for seq in range(2,133):
   ledger=State.open(ledger,KEY,State.identity(ledger.entries[KEY])).ledger
   receipt.issued_seq=seq;receipt.battle_id="battle-%d"%seq
