@@ -151,7 +151,7 @@ func purchase_case(map_id:int,cell:Vector2i,source:String,gold:int,blocked:bool)
   if not check(await Wait.settle(self,w),"Before transaction natural checkpoint barrier"):return false
  var before:Dictionary=host.session._profile.duplicate(true);var expected:Dictionary=before.duplicate(true)
  if gold>=200 and not blocked:
-  expected.player.gold-=200;Equipment.add(expected,2422)
+  expected.player.gold-=200;expected.travel_pass=true
  var disk_before:Dictionary=raw_record("before")
  if failures>0:return false
  if blocked:
@@ -171,7 +171,7 @@ func purchase_case(map_id:int,cell:Vector2i,source:String,gold:int,blocked:bool)
  for w in worlds:
   if not check(w.state.full_profile()==expected,"Both production clients consume full authoritative profile"):return false
  if success:
-  if not check(events.size()==1 and str(events[0].text).contains("扣除200石币") and str(events[0].text).contains("提交后余额%d"%int(expected.player.gold)),"Exact committed fee fact"):return false
+  if not check(events.size()==1 and str(events[0].text).contains("永久海底通行资格已生效") and str(events[0].text).contains("扣除200石币") and str(events[0].text).contains("提交后余额%d"%int(expected.player.gold)),"Exact committed permanent entitlement and fee fact"):return false
  else:
   var failure_disk:Dictionary=raw_record("failure")
   if failures>0:return false
