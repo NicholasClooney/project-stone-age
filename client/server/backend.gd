@@ -1621,8 +1621,19 @@ func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
 func _save_required_fee(frame:Dictionary)->bool:
 	if not RequiredFee.writer_ready(self,frame):return false
-	# Actual standard writer, not arbitrary profile RPC or pending bypass.
+	# Preserve Backend.save()'s explicit memory-only contract without passing an
+	# empty path to GameSession.save_game() (which would attempt a disk write).
 	session._profile=frame.candidate
+	if save_path.is_empty():
+		if not RequiredFee.mark_memory_committed(self,frame):
+			if RequiredFee.same_owner(self,frame) and is_same(session._profile,frame.candidate) and session._profile==frame.expected and last_saved_payload==frame.cache and quest_save_serial==frame.serial:
+				session._profile=frame.profile
+			return false
+		quest_save_serial+=1
+		frame.committed_serial=quest_save_serial
+		RequiredFee.publish_committed(self,frame)
+		return true
+	# Disk-backed transactions still use the original normalized atomic writer.
 	if not session.save_game(save_path):
 		# Roll back our exact uncommitted candidate BEFORE virtual return observers.
 		if RequiredFee.same_owner(self,frame) and is_same(session._profile,frame.candidate) and session._profile==frame.expected and last_saved_payload==frame.cache and quest_save_serial==frame.serial:
