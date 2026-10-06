@@ -21,9 +21,6 @@ Three agents work together in tmux panes: main agent → coordinator → worker.
 - **main agent (Claude, `claude-projects-stone-age-2`)**: interfaces with the user and the other agents: clarifies intent, turns it into self-contained tasks and relays user decisions. Does not investigate or implement.
 - **coordinator (Claude, `claude-projects-stone-age-1`)**: coordinates Codex and owns the main checkout: merges Codex commits, runs importers, backs up saves, relaunches the server, runs tests and records decisions in docs. Sends anything that needs a user decision to the main agent, not to the user.
 - **worker (Codex, `codex-projects-stone-age-1` and its sub agents)**: main implementer. Sub agents split work by file ownership to avoid conflicts (for example, one owns `quest_helper_menu.gd`).
-  - **At most 3 Codex sub agents work at a time** (the Codex main pane does not count). Others stay idle until a slot frees up. User rule since 2026-10-06, after batch 2 used up a Codex account's quota in about 1.5 days.
-  - If the Codex usage limit is hit again, pause everything and tell the main agent instead of improvising.
-
 Messages:
 
 - Everything goes through `tmux-ask`. Long reports go in a file; the message is a short summary plus the path.
@@ -48,7 +45,6 @@ While a multi-agent batch runs (currently: auto-quest batch 2, resumed 2026-10-0
 
 - Idle with pending work (commits not forwarded for merging, waiting on an interface that has already landed, a free pool slot while planned tasks have not started): nudge Codex via `tmux-ask` with exactly what to do next.
 - Tell the main agent only when something waits on a permission prompt, needs a user decision, or the same nudge already failed once.
-- Count the Codex sub agents that are working. More than 3 at once breaks the limit above: tell Codex to idle the extras.
 - The scheduled job lives only in the coordinator's Claude session: re-create it after a restart. Stop it when the batch is done or the user says so.
 
 ## Working in the main checkout (the coordinator session, not subagents)
