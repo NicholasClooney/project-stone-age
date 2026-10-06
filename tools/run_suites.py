@@ -62,7 +62,9 @@ def suite_timeout(name):
     return {"transmigration_wind_ui_test": 480, "transmigration_water_test": 420,
             "transmigration_water_ui_test": 480, "jan_cave_ui_test": 360,
             "jan_cave_route_test": 300, "quest_delivery_routes_test": 420,
-            "original_quest_auto_test": 480, "original_herb_auto_test": 600}.get(name, TIMEOUT)
+            "original_quest_auto_test": 480, "original_herb_auto_test": 600,
+            # Natural 2760 loot pilot: 313.5 s alone (180 s business cap plus setup); 480 s covers full-run load.
+            "quest_auto_loot_2760_natural_pilot_test": 480}.get(name, TIMEOUT)
 
 
 def suites_from_test_sh():
