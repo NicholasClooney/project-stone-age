@@ -32,7 +32,7 @@ static func arrival(b)->Dictionary:
 static func capture(b,kind:String,source:String)->Dictionary:
  # Short stack frame only. Never install this dictionary on b/session/router.
  var q=b.quest_auto
- return {"call":RefCounted.new(),"backend":b,"session":b.session,"path":b.save_path,"router":b.original_quests,"q":q,"identity":q.identity,"identity_value":q.identity.snapshot().duplicate(true),"connection":q.connection,"client":q.client,"running":q.running,"internal":q.internal,"detached":q.detached,"phase":q.phase,"auto":b.automation,"auto_token":b.automation.start_lifetime,"auto_settings":b.automation.settings.duplicate(true),"auto_running":b.automation.running,"hunt_running":b.automation.hunt_running,"compact":b.automation.compact_active,"profile":b.session._profile,"before":b.session.snapshot(),"cache":b.last_saved_payload,"serial":b.quest_save_serial,"pending":b.session._pending.duplicate(true),"page":b.original_quests.pending.duplicate(true),"battle":b.battle,"battle_open":b.battle_open,"map":b.automation.position_map,"cell":b.automation.position_cell,"arrival":arrival(b),"guard":b.quest_visit_guard,"kind":kind,"source":source,"marked":false}
+ return {"call":RefCounted.new(),"backend":b,"session":b.session,"path":b.save_path,"router":b.original_quests,"q":q,"identity":q.identity,"identity_value":q.identity.snapshot().duplicate(true),"connection":q.connection,"client":q.client,"running":q.running,"internal":q.internal,"detached":q.detached,"phase":q.phase,"auto":b.automation,"auto_token":b.automation.start_lifetime,"auto_settings":b.automation.settings.duplicate(true),"auto_running":b.automation.running,"hunt_running":b.automation.hunt_running,"compact":b.automation.compact_active,"profile":b.session._profile,"before":b.session.snapshot(),"cache":b.last_saved_payload,"serial":b.quest_save_serial,"pending":b.session._pending.duplicate(true),"page":b.original_quests.pending.duplicate(true),"battle":b.battle,"battle_open":b.battle_open,"map":b.automation.position_map,"cell":b.automation.position_cell,"arrival":arrival(b),"guard":b.quest_visit_guard,"kind":kind,"source":source,"marked":false,"durable":false}
 static func same_owner(b,f:Dictionary)->bool:
  if f.is_empty() or b!=f.backend or b.session!=f.session or b.save_path!=f.path or b.original_quests!=f.router or b.quest_auto!=f.q or b.automation!=f.auto or b.battle!=f.battle:return false
  if f.has("transport") and b._fee_bindings.get(f.transport_connection)!=f.transport:return false
@@ -119,7 +119,7 @@ static func candidate(b,f:Dictionary)->Dictionary:
   c.travel_pass=true
  elif f.kind=="seimu":
   var branch:Dictionary=f.branch
-  if not gate_matches(b,f.source,branch) or not b.original_quests.allowed(b,lock_data().seimu) or b.original_quests.branch_for(lock_data().seimu,c)!=branch or not b.session.has_travel_pass() or int(c.player.gold)<300:return {}
+  if not gate_matches(b,f.source,branch) or not b.original_quests.allowed(b,lock_data().seimu) or b.original_quests.branch_for(lock_data().seimu,c)!=branch or int(c.player.gold)<300:return {}
   var info:Dictionary=b.session.world_catalog.info(31301)
   if info.is_empty() or int(info.width)<=10 or int(info.height)<=104:return {}
   c.player.gold-=300
@@ -167,12 +167,22 @@ static func publish_committed(b,f:Dictionary)->void:
  b._emit({"type":"quest_result","text":fact+"，扣除%d石币，提交后余额%d。"%[fee,int(f.committed.player.gold)]})
  b.publish()
 static func writer_ready(b,f:Dictionary)->bool:
- if not current(b,f) or f.marked or b.save_path.is_empty() or not b.session._pending.is_empty():return false
+ if not current(b,f) or f.marked or not b.session._pending.is_empty():return false
  var rebuilt:Dictionary=candidate(b,f)
  return not rebuilt.is_empty() and rebuilt==f.expected and f.candidate==f.expected and JSON.stringify(rebuilt)==f.payload
+static func mark_memory_committed(b,f:Dictionary)->bool:
+ # Backend.save() with no path is a volatile in-memory success, never durable.
+ if f.marked or not f.path.is_empty() or not same_owner(b,f) or not is_same(b.session._profile,f.candidate) or b.session._profile!=f.expected or JSON.stringify(b.session._profile)!=f.payload:return false
+ if b.last_saved_payload!=f.cache or b.quest_save_serial!=f.serial or not b.session._pending.is_empty():return false
+ f.marked=true
+ f.durable=false
+ f.committed=f.expected.duplicate(true)
+ f.committed_serial=f.serial+1
+ return true
 static func mark_written(b,f:Dictionary)->void:
  # Called only by the actual private save body, after its cache update; no callbacks.
  if f.marked or not same_owner(b,f) or not is_same(b.session._profile,f.candidate) or JSON.stringify(b.session._profile)!=f.payload:return
  f.marked=true
+ f.durable=true
  f.committed=f.expected.duplicate(true)
  f.committed_serial=b.quest_save_serial
