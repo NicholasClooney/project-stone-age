@@ -3,9 +3,12 @@ extends SceneTree
 ## No scene, panel, transport, backend, persistence or command execution.
 const Travel=preload("res://scripts/quest_helper_travel.gd")
 class StubLink extends RefCounted:
+	signal connected
+	signal disconnected
 	var online:bool=true
 	func is_local()->bool:return false
 class StubState extends RefCounted:
+	signal changed(kind:String)
 	var derived:Dictionary={"quest_auto":{}}
 	var capabilities:Dictionary={"quest_loot_enabled":true}
 	func quest_loot_enabled()->bool:
