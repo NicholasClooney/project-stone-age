@@ -198,6 +198,11 @@ func _process(delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	_depth += 1
 	automation.tick(delta)
+	# Passive P3 sample at the original outer-process boundary. This follows
+	# the complete automation tick and precedes quest-auto consumption; nested
+	# dispatches do not own a heartbeat generation.
+	if normal and _process_depth==1 and _dispatch_boundary_depth==1 and _observer_depth==0 and _flush_depth==0 and _depth==1 and _normal_process_generation>0 and _normal_process_entry_epoch==_dispatch_epoch:
+		quest_loot.heartbeat_normal_process(self,_normal_process_generation,_normal_process_entry_epoch)
 	quest_auto.tick(self,delta)
 	stationary.tick(self,delta)
 	original_quests.refresh_npc_state()
@@ -452,6 +457,10 @@ const TURN_COMMANDS := ["battle_command","battle_pet_command","battle_pet_skill"
 
 func _handle(command: Dictionary) -> Dictionary:
 	var type := str(command.get("type",""))
+	# This command is handled before Stationary/quest cancellation paths. Its
+	# only client-supplied field is seq; transport identity is injected here by
+	# WsServer/ProfileHub and bound to this Backend's attached peer epoch.
+	if type=="quest_loot_start":return _cmd_quest_loot_start(command)
 	# Reject forged encounter/set commands before canceling activities/dialogues.
 	var position_error:=""
 	if type=="auto" and str(command.get("name",""))=="set":
@@ -512,7 +521,13 @@ func full_snapshot() -> Dictionary:
 	return {"type":"snapshot","v":PROTOCOL,"rev":rev,"profile":profile,"derived":_derived(),"options":_options(),"battle":_live_battle_state(),"battle_open":battle_open,"automation":automation.status(),"capabilities":_capabilities()}
 
 func _capabilities() -> Dictionary:
-	return {"quest_loot_enabled":QUEST_LOOT_PUBLIC_ENABLED}
+	return {"quest_loot_enabled":_quest_loot_public_enabled()}
+
+## The immutable server-side switch is shared by projection and future server
+## authorization. Tests may override this getter on an isolated Backend; no
+## client field or runtime RPC can enable the feature.
+func _quest_loot_public_enabled() -> bool:
+	return QUEST_LOOT_PUBLIC_ENABLED
 
 # ---- session ---------------------------------------------------------------
 
@@ -1765,6 +1780,20 @@ func _cmd_quest_auto_continue(command:Dictionary)->Dictionary:
 
 func _cmd_quest_auto_start(command: Dictionary) -> Dictionary:
 	return quest_auto.start(self,command)
+
+func _cmd_quest_loot_start(command:Dictionary)->Dictionary:
+	var seq_value:Variant=command.get("seq",null)
+	var seq:int=int(seq_value) if seq_value is int else 0
+	if not _quest_loot_public_enabled():return {"ok":false,"reason":"限时刷物尚未开放。","seq":seq,"type":"rejected","persisted":false}
+	for key in command:
+		if key not in ["type","seq","_quest_connection"]:return {"ok":false,"reason":"刷物启动只接受序号；来源和位置由服务端核验。","seq":seq,"type":"rejected","persisted":false}
+	if command.get("type")!="quest_loot_start" or not command.has("seq") or not seq_value is int or seq_value<=0:return {"ok":false,"reason":"无效刷物启动序号。","seq":seq,"type":"rejected","persisted":false}
+	var connection:Variant=command.get("_quest_connection",null)
+	if not connection is int or connection==-1:return {"ok":false,"reason":"刷物启动需要可信发起连接。","seq":seq,"type":"rejected","persisted":false}
+	var binding:Variant=_fee_bindings.get(connection)
+	if not binding is RefCounted or _fee_bindings.get(connection)!=binding:return {"ok":false,"reason":"刷物启动需要当前已连接的可信设备。","seq":seq,"type":"rejected","persisted":false}
+	return quest_loot.public_start(self,int(connection),binding,seq)
+
 func _cmd_quest_auto_stop(_command: Dictionary) -> Dictionary:
 	quest_auto.stop(self)
 	return {"ok":true}

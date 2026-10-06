@@ -1,5 +1,6 @@
 extends "res://tests/quest_auto_loot_crystal_prerequisite_test.gd"
-## UNRUN pilot candidate. Disclosed GM60 + the original near helper are setup
+## UNRUN pilot candidate. Natural mode discloses GM120 and V179/T178 allocation;
+## cancel mode retains GM60 and the original near helper. These are setup
 ## conveniences; the last leg is real GameScene collision walking. This is
 ## not the birth route, public loot authorization, or a seeded drop test.
 const Server=preload("res://server/ws_server.gd")
@@ -7,12 +8,16 @@ const Game=preload("res://scripts/game.gd")
 const MapFile=preload("res://scripts/map_file.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
 const Plan=preload("res://server/quest_auto_jewel_loot_plan.gd")
+const PetProgression=preload("res://server/progression.gd")
+const PetLoyalty=preload("res://server/loyalty.gd")
+const OriginalEquipment=preload("res://server/original_equipment.gd")
 const Wait=preload("res://tests/support/wait.gd")
 const GENOU="sainasu/event/genou_3@100:346:356"
 const MAX_ATTEMPTS:=360
 const MAX_BATTLES:=20
 const MAX_ROUTE_BATTLES:=20
-const HARD_LIMIT_MS:=360000
+const NATURAL_HARD_LIMIT_MS:=480000
+const CANCEL_HARD_LIMIT_MS:=360000
 const BUDGET_MINUTES:=3
 const MAX_SOURCE_CELLS:=1800
 const MAX_PATH_QUERIES:=8
@@ -32,6 +37,99 @@ const MAX_TRACE_OUTPUT_BYTES:=16777216
 const MAX_UNCOMPLETE_EVIDENCE_BYTES:=4194304
 const DISK_PATH:="user://loot-2760-natural-pilot.json"
 const UNCOMPLETE_PATH:="user://loot-2760-natural-pilot.uncomplete.json"
+
+class PilotHeartbeatTimer:
+ extends "res://server/quest_auto_loot.gd"
+ const MAX_ACTIVE_SAMPLES:=512
+ var active_invocations:=0
+ var accepted_samples:=0
+ var accepted_active_samples:=0
+ var owner_checks:=0
+ var owner_accepts:=0
+ var invalid_clock_rejections:=0
+ var cancelled_owner_rejections:=0
+ var evidence_overflow:=false
+ var p3_clock_context:Dictionary={}
+ var same_generation_rejections:=0
+ var wall_throttle_rejections:=0
+ var same_generation_probe_done:=false
+ var active_receipt_ids:Dictionary={}
+ var samples:Array[Dictionary]=[]
+ func heartbeat_owner_current(b,generation:int,entry_epoch:int)->bool:
+  owner_checks+=1
+  var accepted:bool=super.heartbeat_owner_current(b,generation,entry_epoch)
+  if accepted:owner_accepts+=1
+  return accepted
+ func heartbeat_normal_process(b,generation:int,entry_epoch:int)->void:
+  var context:Dictionary={"backend":weakref(b),"generation":generation,"entry_epoch":entry_epoch,"dispatch_epoch":b._dispatch_epoch,"process_depth":b._process_depth,"dispatch_depth":b._dispatch_boundary_depth,"observer_depth":b._observer_depth,"flush_depth":b._flush_depth,"depth":b._depth,"claimed":false,"call":null}
+  if not p3_clock_context.is_empty():
+   evidence_overflow=true
+   return
+  p3_clock_context=context
+  var state:Dictionary=b.battle._state
+  var receipt:Dictionary=b.session._pending.get("quest_loot_receipt",{})
+  var battle_id:=str(state.get("battle_id",""))
+  var active_receipt:bool=bool(state.get("active",false)) and b.battle_open and not receipt.is_empty() and receipt==battle_receipt and battle_id==str(receipt.get("ledger",{}).get("battle_id","")) and str(b.session._pending.get("battle_id",""))==battle_id
+  var before_last:int=last_ms
+  var before_sample:Dictionary=cached_sample.duplicate(true)
+  var before_stamp:Dictionary=progress_stamp.duplicate(true)
+  var before_blocked:bool=blocked
+  var before_frozen_ms:int=frozen_ms
+  var before_storage:bool=storage_paused
+  var before_receipt:Dictionary=battle_receipt.duplicate(true)
+  var before_serial:int=b.quest_save_serial
+  var before_payload:String=b.last_saved_payload
+  var before_wall:int=heartbeat_wall_ms
+  var before_clock_calls:int=b.p3_clock_calls
+  var before_generation:int=heartbeat_generation
+  var before_now:int=Time.get_ticks_msec()
+  var wall_gate_candidate:bool=is_same(b.quest_loot,self) and b._process_depth==1 and b._dispatch_boundary_depth==1 and b._observer_depth==0 and b._flush_depth==0 and b._depth==1 and b._normal_process_generation==generation and b._normal_process_entry_epoch==entry_epoch and b._dispatch_epoch==entry_epoch and generation!=before_generation and heartbeat_call==null and anchor_ms>=0 and key==State.STEP and not frozen and not blocked and not storage_paused and not battle_receipt.is_empty()
+  active_invocations+=1
+  super.heartbeat_normal_process(b,generation,entry_epoch)
+  var was_cancelled_call:bool=b.p3_cancel_requested and is_same(context.get("call",null),b.p3_cancel_call)
+  if is_same(p3_clock_context,context):p3_clock_context={}
+  var accepted:bool=last_ms!=before_last and cached_sample!=before_sample and heartbeat_generation==generation and heartbeat_wall_ms>=before_wall
+  var clock_called:bool=b.p3_clock_calls==before_clock_calls+1 and context.get("claimed",false) and context.get("call",null)!=null
+  if clock_called and b.p3_last_clock_value is bool and active_receipt:
+   var invalid_unchanged:bool=not accepted and last_ms==before_last and cached_sample==before_sample and progress_stamp==before_stamp and blocked==before_blocked and frozen_ms==before_frozen_ms and storage_paused==before_storage and battle_receipt==before_receipt and b.quest_save_serial==before_serial and b.last_saved_payload==before_payload and heartbeat_call==null
+   if invalid_unchanged:invalid_clock_rejections+=1
+   else:evidence_overflow=true
+  if b.p3_cancel_requested and active_receipt:
+   var cancelled_unchanged:bool=not accepted and last_ms==before_last and cached_sample==before_sample and progress_stamp==before_stamp and blocked==before_blocked and frozen_ms==before_frozen_ms and storage_paused==before_storage and battle_receipt==before_receipt and heartbeat_call==null
+   if cancelled_unchanged:cancelled_owner_rejections+=1
+   else:evidence_overflow=true
+   b.p3_cancel_requested=false
+  if wall_gate_candidate and before_wall>=0 and before_now>=before_wall and before_now-before_wall<1000 and heartbeat_wall_ms==before_wall and heartbeat_generation==before_generation and last_ms==before_last and cached_sample==before_sample and progress_stamp==before_stamp and b.p3_clock_calls==before_clock_calls:
+   wall_throttle_rejections+=1
+  if accepted and active_receipt and not same_generation_probe_done:
+   same_generation_probe_done=true
+   var probe_last:int=last_ms
+   var probe_sample:Dictionary=cached_sample.duplicate(true)
+   var probe_stamp:Dictionary=progress_stamp.duplicate(true)
+   var probe_blocked:bool=blocked
+   var probe_frozen:int=frozen_ms
+   var probe_calls:int=b.p3_clock_calls
+   super.heartbeat_normal_process(b,generation,entry_epoch)
+   if last_ms==probe_last and cached_sample==probe_sample and progress_stamp==probe_stamp and blocked==probe_blocked and frozen_ms==probe_frozen and b.p3_clock_calls==probe_calls and heartbeat_generation==generation:
+    same_generation_rejections+=1
+   else:evidence_overflow=true
+  if was_cancelled_call:
+   b.p3_stop_successor_heartbeat_unchanged=b.p3_successor_snapshot()==b.p3_stop_baseline
+   if not b.p3_stop_successor_heartbeat_unchanged:evidence_overflow=true
+  if is_same(p3_clock_context,context):p3_clock_context={}
+  if not accepted:return
+  accepted_samples+=1
+  if not active_receipt:return
+  accepted_active_samples+=1
+  active_receipt_ids[battle_id]=true
+  if b.quest_save_serial!=before_serial or b.last_saved_payload!=before_payload:evidence_overflow=true
+  if progress_stamp!=before_stamp:b.p3_publish_pending=true
+  if samples.size()>=MAX_ACTIVE_SAMPLES:
+   evidence_overflow=true
+   return
+  var before_stamp_record:Dictionary={"ms":before_stamp.get("ms",-1),"used_ms":before_stamp.get("used_ms",-1),"span":before_stamp.get("span",{}).duplicate(true) if before_stamp.get("span",{}) is Dictionary else {},"same_lifetime":is_same(before_stamp.get("lifetime",null),lifetime)}
+  var after_stamp_record:Dictionary={"ms":progress_stamp.get("ms",-1),"used_ms":progress_stamp.get("used_ms",-1),"span":progress_stamp.get("span",{}).duplicate(true) if progress_stamp.get("span",{}) is Dictionary else {},"same_lifetime":is_same(progress_stamp.get("lifetime",null),lifetime)}
+  samples.append({"generation":generation,"battle_id":battle_id,"turn":int(state.get("turn",0)),"phase":b.quest_auto.phase,"q_running":b.quest_auto.running,"receipt_id":battle_id,"used_ms":int(cached_sample.get("used_ms",-1)),"sample_ms":last_ms,"heartbeat_wall_ms":heartbeat_wall_ms,"before_stamp":before_stamp_record,"after_stamp":after_stamp_record,"progress_published":progress_stamp!=before_stamp})
 
 class PilotBackend:
  extends "res://server/backend.gd"
@@ -71,6 +169,122 @@ class PilotBackend:
  var pilot_initial_runner:WeakRef
  var pilot_initial_e2_connection:Variant=-1
  var pilot_initial_e2_client:=""
+ var p3_clock_overrides:Array=[]
+ var p3_use_test_clock:=false
+ var p3_invalid_clock_on_first_battle:=false
+ var p3_last_clock_value:Variant=null
+ var p3_cancel_next_heartbeat:=false
+ var p3_cancel_requested:=false
+ var p3_cancel_after_active_sample:=false
+ var p3_cancel_event_pending:=false
+ var p3_publish_pending:=false
+ var p3_observer_count:=0
+ var p3_observer_nested_rejects:=0
+ var p3_cancel_observer_count:=0
+ var p3_observer_records:Array[Dictionary]=[]
+ var p3_observer_record_overflow:=false
+ var p3_observer_failed:=false
+ var p3_clock_calls:=0
+ var p3_clock_callable_calls:=0
+ var p3_clock_unmatched_calls:=0
+ var p3_clock_override_consumptions:=0
+ var p3_clock_records:Array[Dictionary]=[]
+ var p3_clock_record_overflow:=false
+ var p3_stop_baseline:Dictionary={}
+ var p3_cancel_call:RefCounted=null
+ var p3_stop_successor_heartbeat_unchanged:=false
+ var p3_stop_successor_observer_unchanged:=false
+ var p3_observer:RefCounted
+ func _init()->void:
+  super()
+  quest_loot=PilotHeartbeatTimer.new()
+ func pilot_loot_clock()->Variant:
+  p3_clock_callable_calls+=1
+  var timer:PilotHeartbeatTimer=quest_loot
+  if not is_instance_valid(timer) or not p3_clock_context_current(timer):
+   p3_clock_unmatched_calls+=1
+   return Time.get_ticks_msec()
+  var context:Dictionary=timer.p3_clock_context
+  context.claimed=true
+  context.call=timer.heartbeat_call
+  p3_clock_calls+=1
+  var value:Variant=Time.get_ticks_msec()
+  var record:Dictionary={"generation":context.generation,"entry_epoch":context.entry_epoch,"dispatch_epoch":context.dispatch_epoch,"process_depth":context.process_depth,"dispatch_depth":context.dispatch_depth,"call":timer.heartbeat_call,"kind":"real"}
+  if not p3_clock_overrides.is_empty():
+   value=p3_clock_overrides.pop_front()
+   p3_clock_override_consumptions+=1
+   record.kind="override"
+  elif p3_cancel_next_heartbeat:
+   p3_cancel_next_heartbeat=false
+   p3_cancel_requested=true
+   p3_cancel_event_pending=true
+   p3_cancel_call=timer.heartbeat_call
+   quest_auto.stop(self,"P3 queued heartbeat cancellation fixture")
+   p3_stop_baseline=p3_successor_snapshot()
+   p3_stop_successor_heartbeat_unchanged=false
+   p3_stop_successor_observer_unchanged=false
+   record.kind="cancel"
+  if p3_clock_records.size()>=512:p3_clock_record_overflow=true
+  else:p3_clock_records.append(record)
+  p3_last_clock_value=value
+  return value
+
+ func p3_successor_snapshot()->Dictionary:
+  var timer:Dictionary=quest_loot.heartbeat_timer_snapshot()
+  timer.erase("heartbeat_call") # Retirement of the captured old call is expected after a successful stop.
+  var q:Dictionary={"running":quest_auto.running,"internal":quest_auto.internal,"detached":quest_auto.detached,"restored":quest_auto.restored,"phase":quest_auto.phase,"step":quest_auto.step.duplicate(true),"identity":quest_auto.identity.checkpoint(),"connection":quest_auto.connection,"client":quest_auto.client,"owns_battle":quest_auto.owns_battle}
+  var auto:Dictionary={"running":automation.running,"settings":automation.settings.duplicate(true),"position_map":automation.position_map,"position_cell":[automation.position_cell.x,automation.position_cell.y],"single_battle":automation.single_battle,"compact_active":automation.compact_active,"clone_override_active":automation.clone_override_active,"hunt_running":automation.hunt_running,"flow_active":automation.flow_active(),"scope":automation.loot_scope.duplicate(true),"start_lifetime":automation.start_lifetime}
+  return {"path":save_path,"profile":session._profile.duplicate(true),"pending":session._pending.duplicate(true),"settlement":session._loot_settlement.duplicate(true),"original_pending":original_quests.pending.duplicate(true),"save_serial":quest_save_serial,"saved_payload":last_saved_payload,"storage_json":_storage_json,"backend_revision":rev,"battle_open":battle_open,"battle_state":battle._state.duplicate(true),"backend_battle_state":battle_state.duplicate(true),"q":q,"automation":auto,"timer":timer,"cached_sample":quest_loot.cached_sample.duplicate(true),"progress_stamp":quest_loot.progress_stamp.duplicate(true),"last_ms":quest_loot.last_ms,"blocked":quest_loot.blocked,"frozen":quest_loot.frozen,"frozen_ms":quest_loot.frozen_ms,"storage_paused":quest_loot.storage_paused,"receipt":quest_loot.battle_receipt.duplicate(true),"heartbeat_generation":quest_loot.heartbeat_generation,"heartbeat_wall_ms":quest_loot.heartbeat_wall_ms}
+
+ func p3_clock_context_current(timer:PilotHeartbeatTimer)->bool:
+  if timer.p3_clock_context.is_empty() or timer.p3_clock_context.get("claimed",false):return false
+  var context:Dictionary=timer.p3_clock_context
+  var owner=context.get("backend")
+  if not owner is WeakRef or not is_instance_valid(owner.get_ref()):return false
+  var b=owner.get_ref()
+  if not is_same(b,self):return false
+  if not is_same(b.quest_loot,timer) or timer.heartbeat_call==null:return false
+  if b._process_depth!=1 or b._dispatch_boundary_depth!=1 or b._observer_depth!=0 or b._flush_depth!=0 or b._depth!=1:return false
+  if b._normal_process_generation!=context.generation or b._normal_process_entry_epoch!=context.entry_epoch or b._dispatch_epoch!=context.dispatch_epoch:return false
+  if context.process_depth!=1 or context.dispatch_depth!=1 or context.observer_depth!=0 or context.flush_depth!=0 or context.depth!=1:return false
+  return true
+ func observe_p3_queued_event(message:Dictionary)->void:
+  if str(message.get("type",""))!="profile":return
+  if not p3_publish_pending and not p3_cancel_event_pending:return
+  var cancelled_event:bool=p3_cancel_event_pending
+  var progress_event:bool=p3_publish_pending
+  p3_publish_pending=false
+  p3_cancel_event_pending=false
+  p3_observer_count+=1
+  var timer:PilotHeartbeatTimer=quest_loot
+  var before_last:int=timer.last_ms
+  var before_cache:Dictionary=timer.cached_sample.duplicate(true)
+  var before_stamp:Dictionary=timer.progress_stamp.duplicate(true)
+  var before_blocked:bool=timer.blocked
+  var before_storage:bool=timer.storage_paused
+  var before_receipt:Dictionary=timer.battle_receipt.duplicate(true)
+  var locked_before:bool=timer.heartbeat_call!=null
+  var nested_attempted:bool=not p3_cancel_requested
+  var nested_before:int=p3_observer_nested_rejects
+  if nested_attempted:timer.heartbeat_normal_process(self,_normal_process_generation,_normal_process_entry_epoch)
+  var unchanged:bool=timer.last_ms==before_last and timer.cached_sample==before_cache and timer.progress_stamp==before_stamp and timer.blocked==before_blocked and timer.storage_paused==before_storage and timer.battle_receipt==before_receipt and timer.heartbeat_call==null
+  if cancelled_event:
+   p3_stop_successor_observer_unchanged=not p3_stop_baseline.is_empty() and p3_successor_snapshot()==p3_stop_baseline
+   if not p3_stop_successor_observer_unchanged:p3_observer_failed=true
+  if locked_before or not unchanged:p3_observer_failed=true
+  elif cancelled_event:p3_cancel_observer_count+=1
+  else:p3_observer_nested_rejects+=1
+  var nested_rejected:bool=p3_observer_nested_rejects>nested_before
+  var publish_stamp:Dictionary=timer.progress_stamp
+  if not cancelled_event and progress_event and nested_rejected and p3_cancel_after_active_sample:
+   p3_cancel_after_active_sample=false
+   p3_cancel_next_heartbeat=true
+  if p3_observer_records.size()>=32:
+   p3_observer_record_overflow=true
+   p3_observer_failed=true
+  else:
+   p3_observer_records.append({"kind":"cancel" if cancelled_event else ("progress" if progress_event else "other"),"generation":_normal_process_generation,"progress_publish_pending":progress_event,"sample_ms":timer.last_ms,"stamp_ms":publish_stamp.get("ms",-1),"stamp_used_ms":publish_stamp.get("used_ms",-1),"call_retired":timer.heartbeat_call==null,"nested_attempted":nested_attempted,"nested_rejected":nested_rejected,"state_unchanged":unchanged})
+
  func trace_event(label:String,value:Variant)->bool:
   var encoded:String=JSON.stringify(value)
   var size:int=encoded.to_utf8_buffer().size()
@@ -277,6 +491,14 @@ class PilotBackend:
   if not copied.get("ok",false) or copied.bytes!=bytes or copied.sha256!=expected_sha:return {"ok":false,"path":destination,"readback":copied}
   return {"ok":true,"path":destination,"sha256":copied.sha256,"declared":copied.declared,"actual":copied.actual}
 
+class PilotQueuedObserver:
+ extends RefCounted
+ var backend_ref:WeakRef
+ func _init(b)->void:backend_ref=weakref(b)
+ func receive(message:Dictionary)->void:
+  var b=backend_ref.get_ref()
+  if is_instance_valid(b):b.observe_p3_queued_event(message)
+
 class PassiveAutomation:
  extends "res://server/automation.gd"
  const PILOT_MAX_NORMAL_TICKS:=200000
@@ -358,6 +580,7 @@ class CappedPilotRunner:
  var initial_e2_generation_floor:=0
  var initial_e2_last_generation:=0
  var initial_e2_retired:=false
+ var initial_e2_invalid_clock_armed:=false
  func _normal_process(b,generation:int)->bool:
   return b._process_depth==1 and b._dispatch_boundary_depth==1 and b._observer_depth==0 and b._flush_depth==0 and b._depth==1 and generation>0 and generation==b._normal_process_generation
  func _initial_e2_owner(b,generation:int,token:RefCounted,identity_snapshot:Dictionary)->bool:
@@ -422,6 +645,9 @@ class CappedPilotRunner:
    elif not reply.get("ok",false):
     _initial_e2_fail(b,"原battle已发生但E2返回失败；保留真实战斗现场。",reply)
    else:
+    if b.p3_invalid_clock_on_first_battle and not initial_e2_invalid_clock_armed:
+     b.p3_clock_overrides.append(true)
+     initial_e2_invalid_clock_armed=true
     initial_e2_retired=true
     b.pilot_initial_e2_retired=true
    return
@@ -443,10 +669,12 @@ var server
 var world
 var pilot_started_ms:=0
 var pilot_deadline_ms:=0
+var pilot_hard_limit_ms:=0
 var pilot_e1_opened_ms:=0
 var pilot_e1_anchor_ms:=-1
 var pilot_peer_id:=-1
 var pilot_client_peer_id:=-1
+var p3_cancel_reentry_mode:=false
 var route_destination:=Vector2i(-1,-1)
 var route_search_candidates:int=0
 var route_search_queries:int=0
@@ -604,7 +832,7 @@ func choose_safe_source_destination()->Vector2i:
   if Time.get_ticks_msec()>=pilot_deadline_ms:
    route_search_queries=queries
    route_search_candidates=candidates.size()
-   print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_before_next_astar","candidate_cells":route_search_candidates,"queries":route_search_queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"deadline_ms":HARD_LIMIT_MS}))
+   print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_before_next_astar","candidate_cells":route_search_candidates,"queries":route_search_queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"deadline_ms":pilot_hard_limit_ms}))
    return Vector2i(-1,-1)
   queries+=1
   route_search_queries=queries
@@ -619,7 +847,7 @@ func choose_safe_source_destination()->Vector2i:
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"astar_window_overflow","queries":queries,"search_windows":route_search_windows,"route_window_limit":MAX_ROUTE_SEARCH_WINDOWS,"candidate_search_windows":candidate_search_windows,"candidate_window_limit":MAX_ASTAR_SEARCH_WINDOWS,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells}))
    return Vector2i(-1,-1)
   if Time.get_ticks_msec()>=pilot_deadline_ms:
-   print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_during_bounded_astar","candidate_cells":candidates.size(),"queries":queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"deadline_ms":HARD_LIMIT_MS}))
+   print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_during_bounded_astar","candidate_cells":candidates.size(),"queries":queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"deadline_ms":pilot_hard_limit_ms}))
    return Vector2i(-1,-1)
   if candidate.is_empty() or candidate.back()!=cell or candidate.size()>MAX_ROUTE_CELLS:continue
   var crosses_portal:=false
@@ -669,6 +897,110 @@ func request_route_walk(goal:Vector2i)->bool:
   check(false,"Actual route planner crossed the fixed aggregate AStar search bound")
   return false
  return true
+
+func write_load_copy(path:String,bytes:PackedByteArray,label:String)->Dictionary:
+ if FileAccess.file_exists(path) or DirAccess.dir_exists_absolute(path):
+  check(false,"Independent load copy path is new: "+label)
+  return {"ok":false,"path":path,"reason":"destination_exists"}
+ var file:=FileAccess.open(path,FileAccess.WRITE)
+ var opened:int=FileAccess.get_open_error()
+ if file==null:
+  check(false,"Independent load copy opens: "+label)
+  return {"ok":false,"path":path,"open_error":opened}
+ file.store_buffer(bytes);file.flush()
+ var write_error:int=file.get_error();file.close()
+ if opened!=OK or write_error!=OK:
+  check(false,"Independent load copy writes/flushed exact source bytes: "+label)
+  return {"ok":false,"path":path,"open_error":opened,"write_error":write_error}
+ var copied:Dictionary=read_disk(path)
+ if failures:return {"ok":false,"path":path,"reason":"copy_read_failed"}
+ check(copied.get("ok",false) and copied.bytes==bytes,"Independent load copy readback equals exact source bytes: "+label)
+ return copied
+
+func independent_load_readback(b,primary:Dictionary,backup:Dictionary)->bool:
+ if failures:return false
+ for pair in [["primary",primary,false],["backup",backup,true]]:
+  var label:String=str(pair[0])
+  var source:Dictionary=pair[1]
+  var from_backup:bool=bool(pair[2])
+  if not source.get("ok",false) or not source.get("bytes") is PackedByteArray:
+   check(false,"Independent "+label+" load has a complete original source capture")
+   return false
+  var raw=JSON.parse_string(source.bytes.get_string_from_utf8())
+  check(raw is Dictionary and b.session._valid_profile(raw),"Independent "+label+" source is a complete valid saved profile")
+  if failures:return false
+  check(int(raw.get("version",-1))==Session.SAVE_VERSION,"Independent "+label+" source uses the current save shape")
+  if failures:return false
+  var player:Dictionary=raw.get("player",{})
+  var luck_time:Variant=player.get("last_luck_time",null)
+  check(luck_time is int or luck_time is float,"Independent "+label+" load can pin login-luck to the source's existing timestamp")
+  if failures:return false
+  var stable_day:int=int(luck_time)
+  var loader=Session.new(func():return stable_day)
+  var copy_path:String=b.save_path+".evidence/load-"+label+".json"
+  var copy:Dictionary={}
+  var copy_backup:String=copy_path+".bak"
+  var copy_backup_before:Dictionary={}
+  if from_backup:
+   # Exercise GameSession's real fallback: no primary, exact captured bytes at .bak.
+   copy_backup_before=write_load_copy(copy_backup,source.bytes,label+" backup fallback")
+   if failures or not copy_backup_before.get("ok",false):return false
+   check(not FileAccess.file_exists(copy_path) and not DirAccess.dir_exists_absolute(copy_path),"Independent backup recovery starts with no primary copy")
+   if failures:return false
+   copy={"ok":true,"path":copy_path,"bytes":PackedByteArray(),"sha256":copy_backup_before.sha256,"declared":0}
+  else:
+   copy=write_load_copy(copy_path,source.bytes,label)
+   if failures or not copy.get("ok",false):return false
+   check(not FileAccess.file_exists(copy_backup) and not DirAccess.dir_exists_absolute(copy_backup),"Independent primary loader cannot fall through to another backup")
+   if failures:return false
+  var loaded:bool=loader.load_game(copy_path)
+  check(loaded and loader.last_error.is_empty(),"Fresh Session.load_game accepts the isolated "+label+" profile")
+  if failures:return false
+  var expected:Dictionary=loader._normalize_numbers(raw.duplicate(true))
+  var expected_ledger:Dictionary=State.recovered(expected,from_backup)
+  check(not expected_ledger.is_empty(),"Independent "+label+" profile has a valid deterministic recovered ledger")
+  if failures:return false
+  expected.quest_loot=loader._normalize_numbers(expected_ledger)
+  var actual:Dictionary=loader._profile.duplicate(true)
+  check(actual==expected,"Fresh "+label+" load preserves the complete v8 profile; only numeric normalization and the documented backup recovery lock are expected")
+  if failures:return false
+  var copy_after:Dictionary=read_disk(copy_path)
+  if failures or not copy_after.get("ok",false):return false
+  var copy_after_profile=JSON.parse_string(copy_after.bytes.get_string_from_utf8())
+  check(copy_after_profile is Dictionary and loader._valid_profile(copy_after_profile),"Isolated "+label+" load copy remains a complete valid save after GameSession.load_game")
+  if failures:return false
+  check(loader._normalize_numbers(copy_after_profile)==actual,"The isolated "+label+" post-load bytes represent the entire loaded profile")
+  if failures:return false
+  if from_backup:
+   check(copy_after_profile.quest_loot.recovery_blocked and copy_after_profile.quest_loot.entries.get(State.STEP,{}).get("recovery_blocked",false),"Backup recovery lock is durably written only to its isolated load copy")
+   if failures:return false
+   var copy_backup_after:Dictionary=read_disk(copy_backup)
+   if failures or not copy_backup_after.get("ok",false):return false
+   check(copy_backup_after.bytes==source.bytes and copy_backup_after.sha256==source.sha256,"Fallback backup source bytes remain exact after GameSession.load_game")
+   if failures:return false
+  else:
+   check(copy_after.bytes==source.bytes and copy_after.sha256==source.sha256,"Current primary load is read-only and leaves its isolated source copy byte-identical")
+   if failures:return false
+  check(actual.get("original_items",[])==expected.get("original_items",[]) and actual.get("original_instances",[])==expected.get("original_instances",[]),"Independent "+label+" load preserves every original item and UID instance")
+  if failures:return false
+  check(actual.get("quest_loot",{})==expected.get("quest_loot",{}),"Independent "+label+" load preserves the complete ledger with only source-defined recovery flags")
+  if failures:return false
+  if from_backup:
+   check(actual.quest_loot.recovery_blocked and actual.quest_loot.entries.get(State.STEP,{}).get("recovery_blocked",false),"Backup load retains the source-defined recovery lock even when entries are otherwise empty/closed")
+   if failures:return false
+  else:
+   check(not actual.quest_loot.entries.get(State.STEP,{}).get("open_span",true),"Primary load reads the naturally closed final span")
+   if failures:return false
+  print("PILOT_LOAD_READBACK ",JSON.stringify({"source":label,"source_sha256":source.sha256,"source_length":source.declared,"copy_before_load_sha256":copy.sha256,"copy_backup_before_load_sha256":copy_backup_before.get("sha256",""),"loaded":loaded,"full_profile_equal":actual==expected,"item_count":actual.get("original_items",[]).size(),"uid_count":actual.get("original_instances",[]).size(),"ledger":actual.get("quest_loot",{}),"last_error":loader.last_error}))
+  if failures:return false
+ var primary_after:Dictionary=read_disk(b.save_path)
+ if failures:return false
+ var backup_after:Dictionary=read_disk(b.save_path+".bak")
+ if failures:return false
+ check(primary_after.get("ok",false) and primary_after.bytes==primary.bytes and primary_after.sha256==primary.sha256,"Independent load never changes the original primary bytes")
+ if failures:return false
+ check(backup_after.get("ok",false) and backup_after.bytes==backup.bytes and backup_after.sha256==backup.sha256,"Independent load never changes the original backup bytes")
+ return failures==0
 func settle_route_battle()->bool:
  route_battle_count+=1
  var reached_route_battle_limit:bool=route_battle_count>=MAX_ROUTE_BATTLES
@@ -699,7 +1031,7 @@ func settle_route_battle()->bool:
  var closed:Dictionary=await request_world({"type":"battle_close","battle_id":battle_id},"Original route battle close")
  if failures:return false
  var closed_state:Dictionary=host.battle._state
- var close_observed:bool=emit_pilot_trace("PILOT_ROUTE_CLOSE_OBSERVATION",{"battle_id":battle_id,"reply":closed.duplicate(true),"authority_state":{"active":bool(closed_state.get("active",false)),"outcome":str(closed_state.get("outcome","")),"settled":bool(closed_state.get("settled",false)),"player_hp":int(closed_state.get("player_hp",-1)),"battle_id":str(closed_state.get("battle_id",""))},"battle_open":host.battle_open,"pending_battle_id":str(host.session._pending.get("battle_id","")),"profile_location":host.session._profile.get("location",{}).duplicate(true),"player_hp":host.session._profile.get("player",{}).get("hp",-1),"player_max_hp":host.session._profile.get("player",{}).get("max_hp",-1),"authority_automation_map":host.automation.position_map,"authority_automation_cell":[host.automation.position_cell.x,host.automation.position_cell.y]})
+ var close_observed:bool=emit_pilot_trace("PILOT_ROUTE_CLOSE_OBSERVATION",{"battle_id":battle_id,"reply":closed.duplicate(true),"raw_combat_state":{"active":bool(closed_state.get("active",false)),"outcome":str(closed_state.get("outcome","")),"player_hp":int(closed_state.get("player_hp",-1)),"battle_id":str(closed_state.get("battle_id",""))},"backend_result_view":{"active":bool(host.battle_state.get("active",false)),"outcome":str(host.battle_state.get("outcome","")),"settled":bool(host.battle_state.get("settled",false)),"settlement_error":str(host.battle_state.get("settlement_error","")),"battle_id":str(host.battle_state.get("battle_id",""))},"battle_open":host.battle_open,"pending_battle_id":str(host.session._pending.get("battle_id","")),"profile_location":host.session._profile.get("location",{}).duplicate(true),"player_hp":host.session._profile.get("player",{}).get("hp",-1),"player_max_hp":host.session._profile.get("player",{}).get("max_hp",-1),"authority_automation_map":host.automation.position_map,"authority_automation_cell":[host.automation.position_cell.x,host.automation.position_cell.y]})
  check(close_observed,"Close observation fits the bounded pilot trace")
  if failures:return false
  check(closed.get("ok",false) and not host.battle_open and host.session._pending.is_empty(),"Original route battle settles and closes normally")
@@ -782,38 +1114,152 @@ func source_snapshot()->Dictionary:
  var profile:Dictionary=host.session._profile.duplicate(true)
  var cache_copy:Dictionary=ProfileCompare.validated_copy(host.session,host.last_saved_payload)
  var cache_matches:bool=baseline is Dictionary and host.session._valid_profile(baseline) and cache_copy.get("ok",false) and cache_copy.profile==host.session._normalize_numbers(profile.duplicate(true))
- return {"source":Sources.source(),"plan":Plan.select(host,Sources.matches_backend),"position":{"map":host.automation.position_map,"cell":[host.automation.position_cell.x,host.automation.position_cell.y],"area":host.encounter_catalog.area_at(host.automation.position_map,host.automation.position_cell).get("id",-1)},"entry":entry.duplicate(true),"profile":profile,"profile_valid":host.session._valid_profile(profile),"cache_valid_and_matches_profile":cache_matches,"cache":host.last_saved_payload,"serial":host.quest_save_serial,"server_peer_id":pilot_peer_id,"client_peer_id":pilot_client_peer_id,"transport_binding":host.client_peer_ids,"attempts":host.pilot_attempt_count,"saved_battles":entry.get("saved_battles",0),"new_items":entry.get("new_items",0),"running":host.quest_auto.running,"phase":host.quest_auto.phase,"battle_open":host.battle_open,"pending":host.session._pending.duplicate(true),"settlement":host.session._loot_settlement.duplicate(true),"p3":{"normal_ticks":host.automation.normal_ticks,"all_normal_active_ticks":host.automation.all_normal_active_ticks,"loot_receipt_active_after_automation_tick":host.automation.loot_receipt_active_ticks,"normal_tick_limit":MAX_NORMAL_TICKS,"transition_count":host.automation.transitions.size(),"transition_limit":MAX_NORMAL_TRANSITIONS,"active_entry_sample_count":host.automation.active_entry_samples.size(),"active_entry_sample_limit":MAX_ACTIVE_ENTRY_SAMPLES,"records":"bounded complete state-change/active-entry events; not a per-frame history","recent_transitions":host.automation.transitions.slice(maxi(0,host.automation.transitions.size()-8)),"recent_active_entries":host.automation.active_entry_samples.slice(maxi(0,host.automation.active_entry_samples.size()-8)),"initial_e2_calls":host.pilot_initial_e2_calls,"initial_e2_failure":host.pilot_initial_e2_failure,"initial_e2_retired":host.pilot_initial_e2_retired,"initial_e2_generation_floor":host.pilot_initial_e2_generation_floor,"initial_e2_last_generation":host.pilot_initial_e2_last_generation,"initial_runner_is_current":pilot_initial_runner_is_current()},"field_step_count":host.field_steps.size(),"settlement_commit_count":host.settlement_commits.size(),"closed_receipt_count":host.closed_receipts.size(),"retired_battle_count":host.retired_battles.size(),"close_attempt_count":host.close_attempts.size(),"route_report_count":host.route_reports.size(),"route_battle_count":route_battle_count,"route_walk_replans":route_walk_replans,"trace_output":{"backend_bytes":host.trace_output_bytes,"backend_limit":host.PILOT_MAX_TRACE_OUTPUT_BYTES,"test_bytes":trace_output_bytes,"test_limit":MAX_TRACE_OUTPUT_BYTES},"route_search":{"candidate_cells":route_search_candidates,"astar_queries":route_search_queries,"candidate_search_windows":candidate_search_windows,"astar_search_windows":route_search_windows,"astar_searched_cells":route_search_cell_visits,"map_cells":route_search_map_cells,"path_cells":route_path_cells}}
+ var timer:PilotHeartbeatTimer=host.quest_loot
+ var clock_records:Array[Dictionary]=[]
+ for record in host.p3_clock_records:
+  clock_records.append({"kind":record.get("kind",""),"generation":record.get("generation",0),"entry_epoch":record.get("entry_epoch",0),"dispatch_epoch":record.get("dispatch_epoch",0),"process_depth":record.get("process_depth",0),"dispatch_depth":record.get("dispatch_depth",0),"captured_call_alive":record.get("call",null) is RefCounted and is_instance_valid(record.get("call"))})
+ return {"source":Sources.source(),"plan":Plan.select(host,Sources.matches_backend),"position":{"map":host.automation.position_map,"cell":[host.automation.position_cell.x,host.automation.position_cell.y],"area":host.encounter_catalog.area_at(host.automation.position_map,host.automation.position_cell).get("id",-1)},"entry":entry.duplicate(true),"profile":profile,"profile_valid":host.session._valid_profile(profile),"cache_valid_and_matches_profile":cache_matches,"cache":host.last_saved_payload,"serial":host.quest_save_serial,"server_peer_id":pilot_peer_id,"client_peer_id":pilot_client_peer_id,"transport_binding":host.client_peer_ids,"attempts":host.pilot_attempt_count,"saved_battles":entry.get("saved_battles",0),"new_items":entry.get("new_items",0),"running":host.quest_auto.running,"phase":host.quest_auto.phase,"battle_open":host.battle_open,"pending":host.session._pending.duplicate(true),"settlement":host.session._loot_settlement.duplicate(true),"p3":{"normal_ticks":host.automation.normal_ticks,"all_normal_active_ticks":host.automation.all_normal_active_ticks,"loot_receipt_active_after_automation_tick":host.automation.loot_receipt_active_ticks,"heartbeat_normal_invocations":timer.active_invocations,"heartbeat_owner_checks":timer.owner_checks,"heartbeat_owner_accepts":timer.owner_accepts,"heartbeat_accepted_samples":timer.accepted_samples,"heartbeat_active_receipt_samples":timer.accepted_active_samples,"heartbeat_invalid_clock_rejections":timer.invalid_clock_rejections,"heartbeat_cancelled_owner_rejections":timer.cancelled_owner_rejections,"heartbeat_clock_calls":host.p3_clock_calls,"heartbeat_clock_unmatched_calls":host.p3_clock_unmatched_calls,"heartbeat_clock_override_consumptions":host.p3_clock_override_consumptions,"heartbeat_clock_records":host.p3_clock_records.size(),"heartbeat_clock_record_overflow":host.p3_clock_record_overflow,"heartbeat_clock_record_summary":clock_records,"heartbeat_same_generation_rejections":timer.same_generation_rejections,"heartbeat_wall_throttle_rejections":timer.wall_throttle_rejections,"heartbeat_sample_ids":timer.active_receipt_ids.keys(),"heartbeat_trace_limit":PilotHeartbeatTimer.MAX_ACTIVE_SAMPLES,"heartbeat_trace_count":timer.samples.size(),"heartbeat_sample_records":timer.samples.duplicate(true),"heartbeat_observation_overflow":timer.evidence_overflow,"heartbeat_observer_records":host.p3_observer_records.duplicate(true),"heartbeat_observer_record_overflow":host.p3_observer_record_overflow,"heartbeat_stop_successor_unchanged":not p3_cancel_reentry_required() or (host.p3_stop_successor_heartbeat_unchanged and host.p3_stop_successor_observer_unchanged),"queued_observers":host.p3_observer_count,"nested_observer_rejections":host.p3_observer_nested_rejects,"queued_observer_failure":host.p3_observer_failed,"normal_tick_limit":MAX_NORMAL_TICKS,"transition_count":host.automation.transitions.size(),"transition_limit":MAX_NORMAL_TRANSITIONS,"active_entry_sample_count":host.automation.active_entry_samples.size(),"active_entry_sample_limit":MAX_ACTIVE_ENTRY_SAMPLES,"records":"bounded complete state-change/active-entry events; not a per-frame history","recent_transitions":host.automation.transitions.slice(maxi(0,host.automation.transitions.size()-8)),"recent_active_entries":host.automation.active_entry_samples.slice(maxi(0,host.automation.active_entry_samples.size()-8)),"initial_e2_calls":host.pilot_initial_e2_calls,"initial_e2_failure":host.pilot_initial_e2_failure,"initial_e2_retired":host.pilot_initial_e2_retired,"initial_e2_generation_floor":host.pilot_initial_e2_generation_floor,"initial_e2_last_generation":host.pilot_initial_e2_last_generation,"initial_runner_is_current":pilot_initial_runner_is_current()},"field_step_count":host.field_steps.size(),"settlement_commit_count":host.settlement_commits.size(),"closed_receipt_count":host.closed_receipts.size(),"retired_battle_count":host.retired_battles.size(),"close_attempt_count":host.close_attempts.size(),"route_report_count":host.route_reports.size(),"route_battle_count":route_battle_count,"route_walk_replans":route_walk_replans,"trace_output":{"backend_bytes":host.trace_output_bytes,"backend_limit":host.PILOT_MAX_TRACE_OUTPUT_BYTES,"test_bytes":trace_output_bytes,"test_limit":MAX_TRACE_OUTPUT_BYTES},"route_search":{"candidate_cells":route_search_candidates,"astar_queries":route_search_queries,"candidate_search_windows":candidate_search_windows,"astar_search_windows":route_search_windows,"astar_searched_cells":route_search_cell_visits,"map_cells":route_search_map_cells,"path_cells":route_path_cells}}
+func configure_p3_pilot(backend)->void:
+ if p3_cancel_reentry_mode:
+  backend.p3_cancel_after_active_sample=true
+  backend.p3_use_test_clock=true
+  backend.p3_invalid_clock_on_first_battle=true
+func p3_cancel_reentry_required()->bool:return p3_cancel_reentry_mode
+func p3_clock_injection_required()->bool:return p3_cancel_reentry_mode
+func pilot_result_label()->String:
+ return "QUEST AUTO LOOT HEARTBEAT CANCEL REENTRY" if p3_cancel_reentry_mode else "QUEST AUTO LOOT 2760 NATURAL PILOT"
+func expected_profile_after_original_save(profile:Dictionary)->Dictionary:
+ var expected:Dictionary=profile.duplicate(true)
+ var owner:Dictionary=expected.get("player",{}).duplicate(true)
+ var equipment:Dictionary=OriginalEquipment.mods(expected)
+ owner.charm=clampi(int(owner.get("charm",60))+int(equipment.get("charm",0)),0,100)
+ for owned in expected.get("pets",[])+expected.get("pet_storage",[]):
+  if owned.has("variable_ai"):
+   PetLoyalty.refresh(owned,owner,int(owner.get("transmigration",0)))
+ return expected
+
+func expected_existing_starter_growth(profile:Dictionary,pet_id:String,target:int)->Dictionary:
+ var expected:Dictionary=profile.duplicate(true)
+ var index:=-1
+ for i in range(expected.get("pets",[]).size()):
+  if str(expected.pets[i].get("pet_id",""))==pet_id:index=i;break
+ if index!=0:return {}
+ var source_pet:Dictionary=expected.pets[index].duplicate(true)
+ var projected:Dictionary=PetProgression.project_pet(source_pet,target)
+ if projected.is_empty():return {}
+ for level in range(int(source_pet.get("level",1))+1,target+1):
+  PetLoyalty.add_variable(projected,PetLoyalty.AI_PET_LEVEL_UP)
+ projected.level=target
+ projected.xp=0
+ projected.hp=projected.max_hp
+ projected.skill_unlocked=not projected.get("learned_skills",[]).is_empty()
+ expected.pets[index]=projected
+ return expected_profile_after_original_save(expected)
+
+func prepare_existing_starter_pet()->bool:
+ if failures or p3_cancel_reentry_required():return false
+ if Time.get_ticks_msec()>=pilot_deadline_ms or host.battle_open or not host.session._pending.is_empty():
+  check(false,"Existing-starter preparation begins before the shared deadline and outside battle/receipt")
+  return false
+ var before:Dictionary=host.session._profile.duplicate(true)
+ var expected_ids:Array=["pet-1","pet-2","pet-3"]
+ var expected_species:Array=["blue_dragon","golden_tiger","red_rex"]
+ var roster_ok:bool=host.session._valid_profile(before) and bool(before.get("default_companions_claimed",false)) and bool(before.get("gm_modified",false)) and bool(before.get("player",{}).get("gm_modified",false)) and before.get("pet_storage",[]).is_empty() and int(before.get("active_pet",-2))==-1 and int(before.get("next_pet_id",0))==4 and before.get("pets",[]).size()==3
+ if roster_ok:
+  for i in range(3):
+   if str(before.pets[i].get("pet_id",""))!=expected_ids[i] or str(before.pets[i].get("species",""))!=expected_species[i] or before.pets[i].has("gm_modified") or not before.pets[i].has("growth_seed") or not before.pets[i].has("growth_weights") or not before.pets[i].has("base_stats"):roster_ok=false
+ check(roster_ok,"Freeze the three actual remote-GameScene default companions before route walking; no added/deleted pet")
+ if failures:return false
+ var expected_level:Dictionary=expected_existing_starter_growth(before,"pet-1",Session.MAX_LEVEL)
+ check(not expected_level.is_empty() and host.session._valid_profile(expected_level),"Original seeded Progression projection describes only legal pet-1 level growth plus save-time loyalty refresh")
+ if failures:return false
+ var level_serial:int=host.quest_save_serial
+ var level_reply:Dictionary=await request_world({"type":"level_pet_to","pet_id":"pet-1","target":Session.MAX_LEVEL},"Original owned starter pet level_pet_to request")
+ if failures:return false
+ if Time.get_ticks_msec()>=pilot_deadline_ms:
+  check(false,"Shared outer deadline remains before any later pet-preparation action")
+  return false
+ check(level_reply.get("ok",false)==true and str(level_reply.get("type",""))=="ack" and not level_reply.get("pending",false) and host.quest_save_serial==level_serial+1 and not host.battle_open and host.session._pending.is_empty(),"Wait for the actual level_pet_to server ACK and its original save boundary; do not treat SessionClient's pending bool as completion")
+ if failures:return false
+ var after_level:Dictionary=host.session._profile.duplicate(true)
+ check(after_level==expected_level,"Complete post-ACK profile equals the fixed pet-1 seeded-growth projection and source-defined save refresh")
+ if failures:return false
+ var expected_selected:Dictionary=expected_level.duplicate(true)
+ expected_selected.active_pet=0
+ expected_selected=expected_profile_after_original_save(expected_selected)
+ var select_serial:int=host.quest_save_serial
+ var select_reply:Dictionary=await request_world({"type":"select_pet","index":0},"Original select_pet request for fixed pet-1 index")
+ if failures:return false
+ if Time.get_ticks_msec()>=pilot_deadline_ms:
+  check(false,"Shared outer deadline remains before checkpoint/disk verification")
+  return false
+ check(select_reply.get("ok",false)==true and str(select_reply.get("type",""))=="ack" and not select_reply.get("pending",false) and host.quest_save_serial==select_serial+1 and not host.battle_open and host.session._pending.is_empty(),"Wait for the actual select_pet server ACK and original save boundary")
+ if failures:return false
+ var after_select:Dictionary=host.session._profile.duplicate(true)
+ check(after_select==expected_selected and host.session._valid_profile(after_select),"Complete post-selection profile changes only pet-1 growth/selection and save-derived loyalty fields")
+ if failures:return false
+ if not await checkpoint_world("Persist original starter-pet growth and selection through checkpoint"):return false
+ if failures:return false
+ check(host.session._profile.duplicate(true)==expected_selected,"Original checkpoint adds no unrelated profile mutation")
+ if failures:return false
+ if not await checked_pilot_disk(host,"original-starter-pet-growth-selected"):return false
+ if failures:return false
+ if not emit_pilot_trace("PILOT_EXISTING_STARTER_PET_PREP",{"target_pet_id":"pet-1","target_species":"blue_dragon","target_level":Session.MAX_LEVEL,"level_reply":level_reply,"select_reply":select_reply,"baseline":before,"expected_after_level":expected_level,"actual_after_level":after_level,"expected_after_select":expected_selected,"actual_after_select":after_select,"quest_save_serial_after":host.quest_save_serial,"checkpoint_ack":true,"primary_cache_verified":true,"growth_source":"GameSession.level_pet_to via normal _gain_xp/Progression.grow_pet; declared fixture convenience"}):return false
+ return failures==0
+
 func run()->void:
- pilot_started_ms=Time.get_ticks_msec();pilot_deadline_ms=pilot_started_ms+HARD_LIMIT_MS
+ var user_args:=OS.get_cmdline_user_args()
+ if user_args.size()>1 or (not user_args.is_empty() and user_args[0]!="--p3-cancel-reentry"):
+  push_error("Unknown natural-pilot test argument(s): %s"%[user_args])
+  quit(1);return
+ p3_cancel_reentry_mode=not user_args.is_empty()
+ pilot_hard_limit_ms=CANCEL_HARD_LIMIT_MS if p3_cancel_reentry_mode else NATURAL_HARD_LIMIT_MS
+ pilot_started_ms=Time.get_ticks_msec();pilot_deadline_ms=pilot_started_ms+pilot_hard_limit_ms
  var path:String=DISK_PATH
  if FileAccess.file_exists(UNCOMPLETE_PATH) or DirAccess.dir_exists_absolute(UNCOMPLETE_PATH):
   check(false,"Refuse a reused hard-deadline evidence path")
   quit(1);return
  if not fresh_paths(path):quit(1);return
  host=PilotBackend.new();host.save_path=path;host.automation=PassiveAutomation.new(host)
+ configure_p3_pilot(host)
+ if host.p3_use_test_clock:
+  var clock_owner:WeakRef=weakref(host)
+  host.quest_loot.clock=func()->Variant:
+   var current=clock_owner.get_ref()
+   return current.pilot_loot_clock() if is_instance_valid(current) else Time.get_ticks_msec()
+ host.p3_observer=PilotQueuedObserver.new(host)
+ host.event.connect(host.p3_observer.receive)
  root.add_child(host)
  check(host.automation.auto_tick and not host.keep_resume_current,"Pilot inherits original auto cadence and default non-resume test-host behavior")
  if failures:quit(1);return
- check(host.session.gm_raise_level(-1,60),"Disclosed GM fixture raises only the original scholar level gate")
+ var player_level_target:int=60 if p3_cancel_reentry_required() else Session.MAX_LEVEL
+ var player_allocation:Array=["vitality","strength","toughness"] if p3_cancel_reentry_required() else ["vitality","toughness"]
+ var expected_points:int=177 if p3_cancel_reentry_required() else 357
+ check(host.session.gm_raise_level(-1,player_level_target),"Disclosed GM convenience raises the player through the original level API")
  if failures:quit(1);return
  var allocation_before:Dictionary=host.session._profile.duplicate(true)
- check(host.session._pending.is_empty() and int(allocation_before.player.get("stat_points",-1))==177,"Level60 grants 177 normal stat points before any battle; allocation starts outside combat")
+ check(host.session._pending.is_empty() and int(allocation_before.player.get("stat_points",-1))==expected_points,"GM level grants exact ordinary stat points before battle; allocation begins outside combat")
  if failures:quit(1);return
- var distributed:bool=host.session.distribute_stats(["vitality","strength","toughness"])
- check(distributed,"Spend the 177 earned points through the original even-distribution API")
+ var distributed:bool=host.session.distribute_stats(player_allocation)
+ check(distributed,"Spend earned points through the original even-distribution API")
  if failures:quit(1);return
  var allocation_after:Dictionary=host.session._profile.duplicate(true)
- check(allocation_after.player.allocated_stats=={"vitality":59,"strength":59,"toughness":59,"dexterity":0} and int(allocation_after.player.stat_points)==0,"Original allocation API assigns exactly 59 each to vitality/strength/toughness and leaves zero points")
+ var expected_allocation:Dictionary={"vitality":59,"strength":59,"toughness":59,"dexterity":0} if p3_cancel_reentry_required() else {"vitality":179,"strength":0,"toughness":178,"dexterity":0}
+ var expected_base:Dictionary={"vitality":6800,"strength":6600,"toughness":5900,"dexterity":400} if p3_cancel_reentry_required() else {"vitality":18800,"strength":700,"toughness":17800,"dexterity":400}
+ check(allocation_after.player.allocated_stats==expected_allocation and int(allocation_after.player.stat_points)==0,"Original allocation API applies the mode-specific fixed point distribution")
  if failures:quit(1);return
- check(allocation_after.player.base_stats=={"vitality":6800,"strength":6600,"toughness":5900,"dexterity":400} and int(allocation_after.player.hp)==401 and int(allocation_after.player.max_hp)==401 and int(allocation_after.player.attack)==78 and int(allocation_after.player.defence)==72 and int(allocation_after.player.speed)==4,"Original progression derives expected profile after three 59-point allocations")
+ var expected_hp:int=401 if p3_cancel_reentry_required() else 941
+ var expected_attack:int=78 if p3_cancel_reentry_required() else 43
+ var expected_defence:int=72 if p3_cancel_reentry_required() else 197
+ check(allocation_after.player.base_stats==expected_base and int(allocation_after.player.hp)==expected_hp and int(allocation_after.player.max_hp)==expected_hp and int(allocation_after.player.attack)==expected_attack and int(allocation_after.player.defence)==expected_defence and int(allocation_after.player.speed)==4,"Original progression derives the unchanged cancel fixture or disclosed natural-mode level120 V/T profile")
  if failures:quit(1);return
  var allocation_before_rest:Dictionary=allocation_before.duplicate(true)
  var allocation_after_rest:Dictionary=allocation_after.duplicate(true)
  for profile in [allocation_before_rest,allocation_after_rest]:
   for field in ["allocated_stats","base_stats","stat_points","hp","max_hp","attack","defence","speed"]:profile.player.erase(field)
- check(allocation_before_rest==allocation_after_rest,"Complete profile before/after differs only in fields changed by allocate_stat/Progression")
+ check(allocation_before_rest==allocation_after_rest,"Complete profile differs only in fields changed by original level/allocation APIs")
  if failures:quit(1);return
- print("PILOT_NORMAL_STAT_ALLOCATION ",JSON.stringify({"before_points":allocation_before.player.stat_points,"allocated":allocation_after.player.allocated_stats,"remaining_points":allocation_after.player.stat_points,"base_stats":allocation_after.player.base_stats,"hp":allocation_after.player.hp,"max_hp":allocation_after.player.max_hp,"attack":allocation_after.player.attack,"defence":allocation_after.player.defence,"speed":allocation_after.player.speed}))
+ print("PILOT_NORMAL_STAT_ALLOCATION ",JSON.stringify({"mode":"cancel_reentry_original_level60" if p3_cancel_reentry_required() else "natural_existing_starter_level120","player_level":allocation_after.player.level,"gm_modified":allocation_after.get("gm_modified",false),"before_points":allocation_before.player.stat_points,"allocated":allocation_after.player.allocated_stats,"remaining_points":allocation_after.player.stat_points,"base_stats":allocation_after.player.base_stats,"hp":allocation_after.player.hp,"max_hp":allocation_after.player.max_hp,"attack":allocation_after.player.attack,"defence":allocation_after.player.defence,"speed":allocation_after.player.speed}))
  check(host.save(),"Fresh complete profile saved before original scholar request")
  if failures:quit(1);return
  server=Server.new(host,0,"127.0.0.1");root.add_child(server)
@@ -845,6 +1291,8 @@ func run()->void:
  check(before_mhasah.original_items.count(2764)==1 and host.session._profile.original_items.count(2764)==1 and host.session._profile.original_instances==before_mhasah.original_instances,"Second near setup grants no source proof or item")
  if failures:quit(1);return
  if not await checkpoint_world("Persist actual map100 starting cell"):quit(1);return
+ if not p3_cancel_reentry_required():
+  if not await prepare_existing_starter_pet():quit(1);return
  var position_start:Vector2i=world.cell
  route_destination=choose_safe_source_destination()
  check(route_destination.x>=0 and host.automation.position_map==100 and host.automation.position_cell==position_start and host.encounter_catalog.area_at(100,route_destination).get("id")==56,"Safe reachable area56 destination chosen from actual map collision/path data")
@@ -875,7 +1323,7 @@ func run()->void:
  if not checked_pilot_disk(host,"source-before-open"):quit(1);return
  if not archive_pair(host,"source-before-open"):quit(1);return
  if not activate_internal_pilot():quit(1);return
- var e1_timing:Dictionary={"pilot_started_ms":pilot_started_ms,"e1_opened_ms":pilot_e1_opened_ms,"e1_anchor_ms":pilot_e1_anchor_ms,"setup_elapsed_ms":pilot_e1_opened_ms-pilot_started_ms,"outer_ms_remaining_at_e1":maxi(0,pilot_deadline_ms-pilot_e1_opened_ms),"original_budget_ms":BUDGET_MINUTES*60000,"budget_elapsed_at_e1_ms":pilot_e1_opened_ms-pilot_e1_anchor_ms,"original_budget_remaining_at_e1_ms":maxi(0,BUDGET_MINUTES*60000-(pilot_e1_opened_ms-pilot_e1_anchor_ms))}
+ var e1_timing:Dictionary={"pilot_started_ms":pilot_started_ms,"e1_opened_ms":pilot_e1_opened_ms,"e1_anchor_ms":pilot_e1_anchor_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"setup_elapsed_ms":pilot_e1_opened_ms-pilot_started_ms,"outer_ms_remaining_at_e1":maxi(0,pilot_deadline_ms-pilot_e1_opened_ms),"original_budget_ms":BUDGET_MINUTES*60000,"budget_elapsed_at_e1_ms":pilot_e1_opened_ms-pilot_e1_anchor_ms,"original_budget_remaining_at_e1_ms":maxi(0,BUDGET_MINUTES*60000-(pilot_e1_opened_ms-pilot_e1_anchor_ms))}
  e1_timing.post_budget_outer_margin_ms=e1_timing.outer_ms_remaining_at_e1-e1_timing.original_budget_remaining_at_e1_ms
  check(emit_pilot_trace("PILOT_E1_OPEN_TIMING",e1_timing),"Read-only monotonic E1 timing fits bounded evidence")
  if failures:quit(1);return
@@ -899,7 +1347,7 @@ func run()->void:
   # Do not run the full source/profile/disk audit beyond the single hard wall.
   # There is no open battle to preserve, but the bounded result was not verified.
   var observed_ms:int=Time.get_ticks_msec()
-  print("PILOT_FINAL ",JSON.stringify({"elapsed_ms":observed_ms-pilot_started_ms,"hard_unfinished":false,"result":"DEADLINE_REACHED_BEFORE_FINAL_VERIFICATION","settled":true,"e1_anchor_ms":pilot_e1_anchor_ms,"e1_elapsed_ms":observed_ms-pilot_e1_anchor_ms,"e1_budget_remaining_ms":maxi(0,BUDGET_MINUTES*60000-(observed_ms-pilot_e1_anchor_ms)),"outer_remaining_ms":maxi(0,pilot_deadline_ms-observed_ms)}))
+  print("PILOT_FINAL ",JSON.stringify({"elapsed_ms":observed_ms-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":false,"result":"DEADLINE_REACHED_BEFORE_FINAL_VERIFICATION","settled":true,"e1_anchor_ms":pilot_e1_anchor_ms,"e1_elapsed_ms":observed_ms-pilot_e1_anchor_ms,"e1_budget_remaining_ms":maxi(0,BUDGET_MINUTES*60000-(observed_ms-pilot_e1_anchor_ms)),"outer_remaining_ms":maxi(0,pilot_deadline_ms-observed_ms)}))
   check(false,"Single hard deadline leaves time for the complete final verification")
   quit(1);return
  if hard_expired and unsettled_at_deadline:
@@ -907,7 +1355,7 @@ func run()->void:
   # verification or copying the growing observer trace after it has expired.
   # This is read-only and deliberately leaves the original open receipt untouched.
   var cutoff:=_hard_cutoff_observation()
-  var cutoff_trace_ok:bool=emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"hard_unfinished":true,"result":"UNCOMPLETE","cutoff":cutoff})
+  var cutoff_trace_ok:bool=emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":true,"result":"UNCOMPLETE","cutoff":cutoff})
   var evidence_text:String=JSON.stringify(cutoff)
   var evidence_bytes:PackedByteArray=evidence_text.to_utf8_buffer()
   if evidence_bytes.size()>MAX_UNCOMPLETE_EVIDENCE_BYTES:
@@ -938,11 +1386,16 @@ func run()->void:
  var final_observed_ms:int=Time.get_ticks_msec()
  check(host.pilot_initial_e2_calls>0 and host.pilot_attempt_count>0,"The real initial E1 was consumed by test-only E2 and reached an original field_step")
  if failures:quit(1);return
- check(emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":final_observed_ms-pilot_started_ms,"hard_unfinished":false,"result":"BOUNDED_FINISH","e1_anchor_ms":pilot_e1_anchor_ms,"e1_elapsed_ms":final_observed_ms-pilot_e1_anchor_ms,"e1_budget_remaining_ms":maxi(0,BUDGET_MINUTES*60000-(final_observed_ms-pilot_e1_anchor_ms)),"outer_remaining_ms":maxi(0,pilot_deadline_ms-final_observed_ms),"final":final}),"Complete final profile/cache/ledger summary fits output limit")
+ check(emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":final_observed_ms-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":false,"result":"BOUNDED_FINISH","e1_anchor_ms":pilot_e1_anchor_ms,"e1_elapsed_ms":final_observed_ms-pilot_e1_anchor_ms,"e1_budget_remaining_ms":maxi(0,BUDGET_MINUTES*60000-(final_observed_ms-pilot_e1_anchor_ms)),"outer_remaining_ms":maxi(0,pilot_deadline_ms-final_observed_ms),"final":final}),"Complete final profile/cache/ledger summary fits output limit")
  if failures:quit(1);return
  check(host.quest_auto.running==false and pilot_initial_runner_is_current() and not host.battle_open and host.session._pending.is_empty() and host.session._loot_settlement.is_empty(),"Bounded pilot stopped only after no original receipt remains and the original runner still owns the result")
  if failures:quit(1);return
  if not archive_pair(host,"pilot-final") or not checked_pilot_disk(host,"pilot-final"):quit(1);return
+ var primary_readback_source:Dictionary=host._capture_disk(host.save_path)
+ var backup_readback_source:Dictionary=host._capture_disk(host.save_path+".bak")
+ check(primary_readback_source.get("ok",false) and backup_readback_source.get("ok",false),"Independent load starts from complete final primary and backup captures")
+ if failures:quit(1);return
+ if not independent_load_readback(host,primary_readback_source,backup_readback_source):quit(1);return
  var actual_received:=0
  for row in host.closed_receipts:
   var result:Variant=row.get("result",null)
@@ -961,6 +1414,31 @@ func run()->void:
  if failures:quit(1);return
  check(host.session._profile.original_items.count(2760)==actual_received and host.session._profile.original_instances.filter(func(row):return int(row.get("item_id",-1))==2760).size()==actual_received,"Only actual original received drops create matching UID-backed item instances")
  if failures:quit(1);return
+ var p3_timer:PilotHeartbeatTimer=host.quest_loot
+ var clock_contract_ok:bool=false
+ if p3_clock_injection_required():
+  clock_contract_ok=p3_timer.invalid_clock_rejections>0 and host.p3_clock_calls>0 and host.p3_clock_unmatched_calls>0 and host.p3_clock_override_consumptions==1 and not host.p3_clock_record_overflow and host.p3_clock_records.size()==host.p3_clock_calls and host.p3_clock_callable_calls==host.p3_clock_calls+host.p3_clock_unmatched_calls
+  for record in host.p3_clock_records:
+   if not record.get("call",null) is RefCounted or int(record.get("generation",0))<=0 or int(record.get("process_depth",0))!=1 or int(record.get("dispatch_depth",0))!=1:clock_contract_ok=false
+ else:clock_contract_ok=p3_timer.invalid_clock_rejections==0 and host.p3_clock_calls==0 and host.p3_last_clock_value==null and host.p3_clock_overrides.is_empty()
+ check(not p3_timer.evidence_overflow and clock_contract_ok,"Only the exact real heartbeat call may consume a one-shot clock override/cancel; all other timer calls fall back to Time and the natural suite has no injected clock")
+ if failures:quit(1);return
+ check(p3_timer.accepted_active_samples>0 and p3_timer.owner_accepts>0 and not p3_timer.active_receipt_ids.is_empty(),"P3 accepts at least one exact active original receipt only after a real outer automation tick")
+ if failures:quit(1);return
+ check(p3_timer.same_generation_rejections>0,"A second heartbeat call in the same real normal-process generation is rejected without sampling")
+ if failures:quit(1);return
+ check(p3_timer.wall_throttle_rejections>0,"A later real normal generation inside one second is rejected by the wall throttle without changing the trusted sample")
+ if failures:quit(1);return
+ var p3_receipt_settled:=false
+ for sampled_battle_id in p3_timer.active_receipt_ids:
+  if host.settlement_commits.any(func(row):return str(row.get("battle_id",""))==str(sampled_battle_id)):p3_receipt_settled=true
+ check(p3_receipt_settled,"At least one receipt sampled while active later commits through the original settlement candidate and disk path")
+ if failures:quit(1);return
+ check(host.p3_observer_count>0 and host.p3_observer_nested_rejects>0 and host.p3_observer_nested_rejects+host.p3_cancel_observer_count==host.p3_observer_count and not host.p3_observer_failed,"Queued profile observers see the heartbeat call retired; a nested observer heartbeat is rejected without changing the installed sample")
+ if failures:quit(1);return
+ if p3_cancel_reentry_required():
+  check(p3_timer.cancelled_owner_rejections>0 and host.p3_cancel_observer_count==1 and host.p3_observer_count>=2 and not host.quest_auto.running and not host.p3_stop_baseline.is_empty() and host.p3_stop_successor_heartbeat_unchanged and host.p3_stop_successor_observer_unchanged,"A real stop during the next exact P3 heartbeat clock invalidates only that call; the full post-stop successor baseline survives old-call retirement and its queued publication")
+  if failures:quit(1);return
  var attempt_rows:Array=host.field_steps.filter(func(row):return bool(row.get("attempt",false)))
  var actual_attempts:bool=attempt_rows.size()==host.pilot_attempt_count
  for row in attempt_rows:
@@ -970,7 +1448,7 @@ func run()->void:
  if failures:quit(1);return
  check(emit_pilot_trace("PILOT_DROP_RESULT",{"target_2760_received":actual_received,"inventory_count":host.session._profile.original_items.count(2760),"saved_battles":entry.saved_battles,"attempts":host.pilot_attempt_count,"plan_after_pilot":Plan.select(host,Sources.matches_backend),"backend_trace_bytes":host.trace_output_bytes,"backend_trace_limit":host.PILOT_MAX_TRACE_OUTPUT_BYTES,"test_trace_bytes":trace_output_bytes,"test_trace_limit":MAX_TRACE_OUTPUT_BYTES}),"Complete drop result fits aggregate stream limits")
  if failures:quit(1);return
- print("QUEST AUTO LOOT 2760 NATURAL PILOT: %d failures; actual near setup + collision walk; no selected group/seed/drop; P3 active loot-receipt samples=%d (zero means P3 UNPROVEN)"%[failures,host.automation.loot_receipt_active_ticks])
+ print("%s: %d failures; actual near setup + collision walk; no selected group/seed/drop; P3 active loot-receipt samples=%d (zero means P3 UNPROVEN)"%[pilot_result_label(),failures,host.automation.loot_receipt_active_ticks])
  world.link.close();world.music.stop();world.effect.stop();world.queue_free()
  server.stop();server.queue_free();host.queue_free()
  await process_frame
