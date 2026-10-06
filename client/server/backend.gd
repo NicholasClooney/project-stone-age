@@ -10,6 +10,7 @@ const PROTOCOL := 1
 ## authority source for the display-only capability; clients cannot set it.
 const QUEST_LOOT_PUBLIC_ENABLED := false
 const GameSession = preload("res://server/game_session.gd")
+const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const BattleSession = preload("res://server/battle_session.gd")
 const SquadBattleSession = preload("res://server/squad_battle_session.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
@@ -364,10 +365,46 @@ func _keep_resume_file() -> void:
 ## Quest checkpoints contain intent only; original transactions already save flags/items.
 func _quest_resume_state(state: Dictionary) -> Dictionary:
 	if automation.resume_wanted() and not quest_auto.resume_state().is_empty():
-		state.quest_auto = quest_auto.resume_state()
+		var quest_state:Dictionary=quest_auto.resume_state()
+		state.quest_auto=quest_state
+		var identity:Variant=quest_state.get("identity",null)
+		var boundary:Dictionary=session._canonical_fee_attempt_profile(session._profile)
+		if boundary.get("ok",false) and boundary.get("present",false) and identity is Dictionary:
+			var lifecycle:Dictionary=boundary.record
+			if lifecycle.current.run_status=="active" and identity.get("run_id",null)==lifecycle.current.run_id:
+				# Server-derived sidecar binding; transport identity is not persisted.
+				state.fee_attempt_binding={"owner":lifecycle.owner.duplicate(true),"run_id":lifecycle.current.run_id}
 		state.map_id = automation.position_map
 		state.cell = [automation.position_cell.x,automation.position_cell.y]
 	return state
+
+func _fee_attempt_resume_allowed(profile:Variant,state:Variant)->bool:
+	if not profile is Dictionary or not state is Dictionary:return false
+	var has_record:bool=profile.has("quest_auto_fee_lifecycle")
+	var has_binding:bool=state.has("fee_attempt_binding")
+	if not has_record and not has_binding:return true
+	if not has_record or not has_binding:return false
+	var boundary:Dictionary=session._canonical_fee_attempt_profile(profile)
+	if not boundary.get("ok",false) or not boundary.get("present",false):return false
+	var record:Dictionary=boundary.record
+	var binding:Variant=state.get("fee_attempt_binding",null)
+	if not binding is Dictionary or not FeeAttemptJournal.exact_keys(binding,["owner","run_id"]):return false
+	if not binding.get("owner") is Dictionary or not FeeAttemptJournal.exact_keys(binding.owner,["profile_id","character_id"]):return false
+	if not binding.owner.get("profile_id") is String or not binding.owner.get("character_id") is String:return false
+	if not FeeAttemptJournal.opaque(binding.get("run_id")):return false
+	var quest_state:Variant=state.get("quest_auto",null)
+	if not quest_state is Dictionary:return false
+	var identity:Variant=quest_state.get("identity",null)
+	if not identity is Dictionary or not FeeAttemptJournal.exact_keys(identity,["run_id","step_id","revision"]):return false
+	if not FeeAttemptJournal.opaque(identity.get("run_id")) or not identity.get("step_id") is String or identity.step_id.length()>256:return false
+	var revision:Variant=identity.get("revision",null)
+	# Match QuestAutoState.restore's bound; reject before its partial restore path.
+	if not session._fee_raw_integer(revision,0,2147483646):return false
+	var decision:Dictionary=FeeAttemptJournal.sidecar_decision(record,binding)
+	if not decision.get("ok",false) or not decision.get("resume",false):return false
+	if identity.run_id!=binding.run_id:return false
+	# An in-flight fee call has an unknown commit result; never replay its yes.
+	return record.current.purchase.state!="attempting"
 
 ## Written to a temporary file and renamed over the old one, so a kill leaves
 ## either the previous or the new file, never half of one.
@@ -398,8 +435,9 @@ func load_resume() -> void:
 	var path := _resume_file()
 	if path.is_empty() or not FileAccess.file_exists(path):return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
-	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	var state = JSON.to_native(parsed) if parsed!=null else null
+	var allow_fee_quest_resume:bool=_fee_attempt_resume_allowed(session._profile,state)
+	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if state is Dictionary:
 		if state.get("adult_battle") is Dictionary:
 			if not AdultCheckpoint.restore(self,state.adult_battle) and str(state.adult_battle.get("battle_id","")) not in session._profile.completed_battles:return
@@ -407,10 +445,10 @@ func load_resume() -> void:
 		var quest_intent:bool=state.get("quest_auto") is Dictionary and automation.resume_wanted()
 		# A real restored battle owns its exact authority position. Ordinary quest
 		# intent has no coordinate authority: use only the validated saved profile.
-		if quest_intent and not battle_open and session._pending.is_empty():
+		if quest_intent and allow_fee_quest_resume and not battle_open and session._pending.is_empty():
 			if not _restore_quest_saved_position():return
 		if state.has("kind"):automation.load_resume(state)
-		if quest_intent:quest_auto.load_resume(self,state.quest_auto)
+		if quest_intent and allow_fee_quest_resume:quest_auto.load_resume(self,state.quest_auto)
 
 func _restore_quest_saved_position()->bool:
 	var persisted=JSON.parse_string(last_saved_payload)
@@ -1638,8 +1676,6 @@ func _cmd_permit_shop_open(command:Dictionary)->Dictionary:
 func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
-const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
-
 ## Internal-only frame factory. It is deliberately not a command or RPC. The
 ## caller still has to prove the original route/offer facts before preparing
 ## this candidate; this method only freezes the exact in-process writer owner.
