@@ -16,8 +16,11 @@ class Router extends RefCounted:
  func cancel(reason:String)->void:cancelled.append(reason)
 class LocalTravel extends Node:
  var pending:int=7
+class State extends RefCounted:
+ var derived:Dictionary={"quest_auto":{}}
+ func quest_loot_enabled()->bool:return false
 class World extends Node:
- var state:Dictionary={"derived":{"quest_auto":{}},"automation":{}}
+ var state=State.new()
  var link=Link.new()
  var battle_view=Visible.new()
  var travel_router=Router.new()
