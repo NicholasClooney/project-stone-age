@@ -57,7 +57,7 @@
 - 收尾 7 片：`/private/tmp/tmux-agents/codex-projects-stone-age-1/batch2-final-append-manifest.md`
 - 刷物核心：`/private/tmp/tmux-agents/quest-auto-v2-core/loot-final-handoff/handoff.md`，2760 试跑报告在 `final-2760-p3-ready/` 下
 - 收费：`/private/tmp/tmux-agents/quest-auto-v2-core/mainline-fees-commit/handoff.md`、`/private/tmp/tmux-agents/quest-auto-v2-ui/mainline-fees-ui-commit/handoff.md`、费用清单 `/private/tmp/tmux-agents/quest-auto-v2-navigation/regular-chains/paid-required/fee-inventory.md`
-- 44 首票：用户已定①（2026-10-07）：开始 44 自动时若无票且钱够，在大厅按原价自动买一张（项目便利）；夜间临时的②作废。
+- 44 首票合同稿：`/private/tmp/tmux-agents/quest-auto-v2-core/golden44-first-ticket-contract/`（2026-10-07 重启后已丢失）
 - 导航（常规链）：`/private/tmp/tmux-agents/quest-auto-v2-navigation/final-pause-handoff.md`
 - 片7：`/private/tmp/tmux-agents/codex-projects-stone-age-quest-auto-v2-piece7/final-pause-handoff/handoff.md`
 - 第二批规划与 SP：`/private/tmp/tmux-agents/quest-auto-batch-two-plan/report.md`
