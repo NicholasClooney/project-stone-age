@@ -150,6 +150,9 @@ var _fee_attempt_writer_executing:=false
 var _fee_attempt_close_call:RefCounted
 var _fee_attempt_close_frame:Dictionary={}
 var _fee_attempt_close_executing:=false
+## Reentrant-operation fence held from QuestAuto identity invalidation through close/retire.
+var _quest_auto_stop_operation_call:RefCounted
+var _quest_auto_stop_operation_owner:Variant
 # Server-only dynamic scope. Never accepted from commands or serialized.
 var _quest_source_call:Dictionary={}
 var _resume_key := ""
@@ -234,7 +237,8 @@ func _process(delta: float) -> void:
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
 	stationary.stop(self,"载入存档停止了原地遇敌。")
-	quest_auto.stop(self,"载入存档停止了自动任务。")
+	var stop_result:Dictionary=quest_auto.stop(self,"载入存档停止了自动任务。")
+	if not stop_result.get("ok",false):return false
 	original_quests.pending={}
 	if not session.load_game(path):return false
 	quest_arrival.reset()
@@ -475,8 +479,11 @@ func _fee_resume_io_remove()->int:
 	return DirAccess.remove_absolute(ProjectSettings.globalize_path(_resume_file()))
 
 func _begin_fee_resume_sidecar_frame(action:String,candidate:Dictionary={})->Dictionary:
+	if _quest_auto_stop_operation_call!=null:return _fee_resume_unknown_result("stop_operation_busy")
 	if action not in ["write_fence","remove_fence"]:return _fee_resume_unknown_result("invalid_action")
 	if _fee_resume_sidecar_call!=null or _fee_resume_sidecar_executing:return _fee_resume_unknown_result("busy")
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return _fee_resume_unknown_result("attempt_writer_claim_busy")
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return _fee_resume_unknown_result("close_claim_busy")
 	var path:String=_resume_file()
 	if path.is_empty() or save_path.is_empty():return _fee_resume_unknown_result("no_bound_resume_path")
 	if JSON.stringify(session._profile)!=last_saved_payload:return _fee_resume_unknown_result("profile_cache_mismatch")
@@ -635,8 +642,392 @@ func _fee_native_dictionary_key_safe(token:String)->bool:
 	var integer_text:String=token.substr(2)
 	return integer_text.is_valid_int() and str(integer_text.to_int())==integer_text
 
+## Closed-run sidecar retirement candidate. Internal-only; deliberately no caller.
+## It shares the ordinary sidecar claim. Until the separate action-isolation
+## prerequisite is applied, the old generic commit can misinterpret this action.
+func _begin_fee_resume_closed_retire_frame(stop_handle:Dictionary={})->Dictionary:
+	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current(stop_handle):return _fee_resume_retire_unknown_result("stop_operation_busy")
+	if _quest_auto_stop_operation_call==null and not stop_handle.is_empty():return _fee_resume_retire_unknown_result("stop_operation_missing")
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return _fee_resume_retire_unknown_result("busy")
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return _fee_resume_retire_unknown_result("close_claim_busy")
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return _fee_resume_retire_unknown_result("attempt_claim_busy")
+	if session==null:return _fee_resume_retire_unknown_result("no_session")
+	var path:String=_resume_file()
+	if path.is_empty() or save_path.is_empty():return _fee_resume_retire_unknown_result("no_bound_profile_or_resume_path")
+	if JSON.stringify(session._profile)!=last_saved_payload:return _fee_resume_retire_unknown_result("profile_cache_mismatch")
+	var boundary:Dictionary=session._canonical_fee_attempt_profile(session._profile)
+	if not boundary.get("ok",false) or not boundary.get("present",false):return _fee_resume_retire_unknown_result("invalid_fee_profile")
+	var record:Dictionary=boundary.record
+	if record.current.run_status!="closed":return _fee_resume_retire_unknown_result("profile_run_not_closed")
+	var owner:Dictionary={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}
+	if record.owner!=owner:return _fee_resume_retire_unknown_result("owner_mismatch")
+	var profile_bytes:PackedByteArray=JSON.stringify(session._profile).to_utf8_buffer()
+	var snapshot:Dictionary={"session":session,"profile_ref":session._profile,"profile":session._profile.duplicate(true),"owner":owner.duplicate(true),"record":record.duplicate(true),"save_path":save_path,"resume_path":path,"profile_bytes":profile_bytes.duplicate(),"cache":last_saved_payload,"serial":quest_save_serial,"stop_call":stop_handle.get("call",null),"stop_owner":stop_handle.get("owner",null)}
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("snapshot_stale_before_reads")
+	var profile_facts:Dictionary=_fee_resume_retire_profile_pair_facts(snapshot)
+	if not _fee_resume_retire_profile_state_is(profile_facts,"matches"):return _fee_resume_retire_unknown_result("closed_profile_pair_not_verified",false,false,OK,profile_facts.get("profile_pair_state","unknown"))
+	var target:Dictionary=_fee_resume_io_read(path)
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("owner_changed_after_target_read")
+	var temporary:Dictionary=_fee_resume_io_read(path+".tmp")
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("owner_changed_after_tmp_read")
+	# Sidecar readers are overridable. Re-read the closed profile pair after
+	# those callbacks so a callback that changed the profile files cannot leave
+	# an old pair observation attached to a newly published frame.
+	var profile_after_sidecar_reads:Dictionary=_fee_resume_retire_profile_pair_facts(snapshot)
+	if not _fee_resume_retire_profile_state_is(profile_after_sidecar_reads,"matches"):return _fee_resume_retire_unknown_result("closed_profile_pair_changed_during_sidecar_reads",false,false,OK,profile_after_sidecar_reads.get("profile_pair_state","unknown"))
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("owner_changed_after_profile_recheck")
+	var target_recheck:Dictionary=_fee_resume_io_read(path)
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("owner_changed_after_target_recheck")
+	var temporary_recheck:Dictionary=_fee_resume_io_read(path+".tmp")
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("owner_changed_after_tmp_recheck")
+	if not _fee_resume_bool_field_is(target,"ok",true) or not _fee_resume_bool_field_is(temporary,"ok",true):return _fee_resume_retire_unknown_result("sidecar_preflight_read")
+	var target_exists_value:Variant=target.get("exists",null)
+	var temporary_exists_value:Variant=temporary.get("exists",null)
+	if not target_exists_value is bool or not temporary_exists_value is bool:return _fee_resume_retire_unknown_result("sidecar_preflight_unknown")
+	if not _fee_resume_bool_field_is(target_recheck,"ok",true) or not _fee_resume_bool_field_is(temporary_recheck,"ok",true):return _fee_resume_retire_unknown_result("sidecar_recheck_read")
+	var target_recheck_exists:Variant=target_recheck.get("exists",null)
+	var temporary_recheck_exists:Variant=temporary_recheck.get("exists",null)
+	if not target_recheck_exists is bool or not temporary_recheck_exists is bool:return _fee_resume_retire_unknown_result("sidecar_recheck_unknown")
+	if target_recheck_exists!=target_exists_value or temporary_recheck_exists!=temporary_exists_value:return _fee_resume_retire_unknown_result("sidecar_changed_during_profile_recheck")
+	var target_exists:bool=target_exists_value
+	var temporary_exists:bool=temporary_exists_value
+	var target_recheck_exists_bool:bool=target_recheck_exists
+	var temporary_recheck_exists_bool:bool=temporary_recheck_exists
+	if not _fee_resume_retire_bytes_match(target,target_exists) or not _fee_resume_retire_bytes_match(target_recheck,target_recheck_exists_bool):return _fee_resume_retire_unknown_result("sidecar_target_bytes_invalid")
+	if not _fee_resume_retire_bytes_match(temporary,temporary_exists) or not _fee_resume_retire_bytes_match(temporary_recheck,temporary_recheck_exists_bool):return _fee_resume_retire_unknown_result("sidecar_tmp_bytes_invalid")
+	if target_exists and target.bytes!=target_recheck.bytes:return _fee_resume_retire_unknown_result("sidecar_target_changed_during_profile_recheck")
+	if temporary_exists and temporary.bytes!=temporary_recheck.bytes:return _fee_resume_retire_unknown_result("sidecar_tmp_changed_during_profile_recheck")
+	if temporary_exists:return _fee_resume_retire_unknown_result("temporary_already_exists")
+	var old_state:Dictionary={}
+	if target_exists:
+		var parser:=JSON.new()
+		if parser.parse(target.bytes.get_string_from_utf8())!=OK:return _fee_resume_retire_unknown_result("sidecar_invalid_json")
+		var parsed:Variant=parser.data
+		var budget:Array=[0]
+		if not _fee_native_sidecar_dictionary_safe(parsed,0,budget):return _fee_resume_retire_unknown_result("sidecar_invalid_native_envelope")
+		var decoded:Variant=JSON.to_native(parsed,false)
+		if not decoded is Dictionary:return _fee_resume_retire_unknown_result("sidecar_not_dictionary")
+		old_state=decoded
+		var has_quest:bool=old_state.has("quest_auto")
+		var has_binding:bool=old_state.has("fee_attempt_binding")
+		if not has_quest and not has_binding:return _fee_resume_retire_unknown_result("present_sidecar_unattributed")
+		if has_quest:
+			var quest_value:Variant=old_state.get("quest_auto",null)
+			if not quest_value is Dictionary:return _fee_resume_retire_unknown_result("quest_marker_invalid")
+			var identity_value:Variant=quest_value.get("identity",null)
+			if not identity_value is Dictionary:return _fee_resume_retire_unknown_result("quest_identity_invalid")
+			var quest_run:Variant=identity_value.get("run_id",null)
+			if not quest_run is String or not FeeAttemptJournal.opaque(quest_run):return _fee_resume_retire_unknown_result("quest_run_invalid")
+			if quest_run!=record.current.run_id:return _fee_resume_retire_unknown_result("quest_marker_foreign")
+		if has_binding:
+			var binding_value:Variant=old_state.get("fee_attempt_binding",null)
+			if not binding_value is Dictionary or not FeeAttemptJournal.exact_keys(binding_value,["owner","run_id"]):return _fee_resume_retire_unknown_result("binding_invalid")
+			var binding_owner:Variant=binding_value.get("owner",null)
+			var binding_run:Variant=binding_value.get("run_id",null)
+			if not binding_owner is Dictionary or not FeeAttemptJournal.exact_keys(binding_owner,["profile_id","character_id"]):return _fee_resume_retire_unknown_result("binding_owner_invalid")
+			if not binding_run is String or not FeeAttemptJournal.opaque(binding_run):return _fee_resume_retire_unknown_result("binding_run_invalid")
+			if binding_owner!=owner:return _fee_resume_retire_unknown_result("binding_foreign_owner")
+			if binding_run!=record.current.run_id:return _fee_resume_retire_unknown_result("binding_foreign_run")
+	var expected_state:Dictionary=old_state.duplicate(true)
+	expected_state.erase("quest_auto")
+	expected_state.erase("fee_attempt_binding")
+	var payload:=PackedByteArray()
+	var remove_target:bool=expected_state.is_empty()
+	if not remove_target:
+		payload=JSON.stringify(JSON.from_native(expected_state)).to_utf8_buffer()
+		if payload.size()>16777216:return _fee_resume_retire_unknown_result("candidate_too_large")
+	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("snapshot_stale_before_claim")
+	if not target.has("bytes") or not target.get("bytes",null) is PackedByteArray:return _fee_resume_retire_unknown_result("target_bytes_missing_or_invalid")
+	if not temporary.has("bytes") or not temporary.get("bytes",null) is PackedByteArray:return _fee_resume_retire_unknown_result("tmp_bytes_missing_or_invalid")
+	var target_bytes_value:Variant=target.get("bytes",null)
+	var temporary_bytes_value:Variant=temporary.get("bytes",null)
+	var target_bytes:PackedByteArray=target_bytes_value
+	var temporary_bytes:PackedByteArray=temporary_bytes_value
+	var call:=RefCounted.new()
+	var frame:Dictionary=snapshot.duplicate(true)
+	# Deep-copy frozen values, then restore identity-bearing references. Dictionary
+	# duplicate(true) recursively copies nested Dictionaries, so profile_ref must
+	# remain the exact live Session profile object used by the owner fence.
+	frame["session"]=snapshot.get("session")
+	frame["profile_ref"]=snapshot.get("profile_ref")
+	frame.merge({"call":call,"action":"retire_closed","stop_call":snapshot.get("stop_call",null),"stop_owner":snapshot.get("stop_owner",null),"target_exists":target_exists,"target_bytes":target_bytes.duplicate(),"temporary_exists":temporary_exists,"temporary_bytes":temporary_bytes.duplicate(),"candidate":expected_state.duplicate(true),"payload":payload,"remove_target":remove_target},true)
+	_fee_resume_sidecar_call=call
+	_fee_resume_sidecar_frame=frame
+	return {"ok":true,"stage":"prepared","call":call,"operation_attempted":false,"operation_completed":false,"profile_pair_state":"matches"}
+
+func _fee_resume_retire_snapshot_current(snapshot:Dictionary,allow_own_sidecar_claim:bool=false)->bool:
+	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current({"call":snapshot.get("stop_call"),"owner":snapshot.get("stop_owner")}):return false
+	if _quest_auto_stop_operation_call==null and snapshot.get("stop_call",null)!=null:return false
+	if snapshot.is_empty() or not is_same(session,snapshot.get("session")):return false
+	if allow_own_sidecar_claim:
+		if not is_same(_fee_resume_sidecar_call,snapshot.get("call")) or _fee_resume_sidecar_frame.is_empty():return false
+	else:
+		if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return false
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return false
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return false
+	if not is_same(session._profile,snapshot.get("profile_ref")) or session._profile!=snapshot.get("profile",{}):return false
+	if save_path!=snapshot.get("save_path") or _resume_file()!=snapshot.get("resume_path"):return false
+	if last_saved_payload!=snapshot.get("cache") or quest_save_serial!=snapshot.get("serial"):return false
+	var boundary:Dictionary=session._canonical_fee_attempt_profile(session._profile)
+	return boundary.get("ok",false) and boundary.get("present",false) and boundary.get("record",{})==snapshot.get("record",{}) and boundary.record.owner==snapshot.get("owner",{}) and boundary.record.current.run_status=="closed"
+
+func _fee_resume_retire_profile_pair_facts(snapshot:Dictionary,allow_own_sidecar_claim:bool=false)->Dictionary:
+	if not _fee_resume_retire_snapshot_current(snapshot,allow_own_sidecar_claim):return {"profile_pair_state":"unknown"}
+	var owner_session:Variant=snapshot.get("session",null)
+	var profile_path:String=str(snapshot.get("save_path",""))
+	var profile_bytes:PackedByteArray=snapshot.get("profile_bytes",PackedByteArray())
+	var primary:Dictionary=owner_session._read_fee_attempt_file(profile_path,profile_bytes)
+	if not _fee_resume_retire_snapshot_current(snapshot,allow_own_sidecar_claim):return {"profile_pair_state":"unknown","primary":primary}
+	var backup:Dictionary=owner_session._read_fee_attempt_file(profile_path+".bak",profile_bytes)
+	if not _fee_resume_retire_snapshot_current(snapshot,allow_own_sidecar_claim):return {"profile_pair_state":"unknown","primary":primary,"backup":backup}
+	var temporary:Dictionary=owner_session._read_fee_attempt_file(profile_path+".tmp",PackedByteArray())
+	if not _fee_resume_retire_snapshot_current(snapshot,allow_own_sidecar_claim):return {"profile_pair_state":"unknown","primary":primary,"backup":backup,"temporary":temporary}
+	for row:Dictionary in [primary,backup]:
+		for key:String in ["ok","exists","matches"]:
+			if not row.has(key) or not row.get(key) is bool:return {"profile_pair_state":"unknown","primary":primary,"backup":backup,"temporary":temporary}
+	if not temporary.has("ok") or not temporary.get("ok") is bool or not temporary.has("exists") or not temporary.get("exists") is bool:
+		return {"profile_pair_state":"unknown","primary":primary,"backup":backup,"temporary":temporary}
+	if not _fee_resume_bool_field_is(primary,"ok",true) or not _fee_resume_bool_field_is(backup,"ok",true) or not _fee_resume_bool_field_is(temporary,"ok",true):
+		return {"profile_pair_state":"unknown","primary":primary,"backup":backup,"temporary":temporary}
+	for row:Dictionary in [primary,backup,temporary]:
+		if not row.has("bytes") or not row.get("bytes",null) is PackedByteArray:
+			return {"profile_pair_state":"unknown","primary":primary,"backup":backup,"temporary":temporary}
+	var expected_profile_value:Variant=snapshot.get("profile_bytes",null)
+	if not expected_profile_value is PackedByteArray:return {"profile_pair_state":"unknown","primary":primary,"backup":backup,"temporary":temporary}
+	var expected_profile_bytes:PackedByteArray=expected_profile_value
+	var primary_bytes_value:Variant=primary.get("bytes",null)
+	var backup_bytes_value:Variant=backup.get("bytes",null)
+	var temporary_bytes_value:Variant=temporary.get("bytes",null)
+	var primary_bytes:PackedByteArray=primary_bytes_value
+	var backup_bytes:PackedByteArray=backup_bytes_value
+	var temporary_bytes:PackedByteArray=temporary_bytes_value
+	var primary_matches:bool=_fee_resume_bool_field_is(primary,"exists",true) and _fee_resume_bool_field_is(primary,"matches",true) and primary_bytes==expected_profile_bytes
+	var backup_matches:bool=_fee_resume_bool_field_is(backup,"exists",true) and _fee_resume_bool_field_is(backup,"matches",true) and backup_bytes==expected_profile_bytes
+	var temporary_clear:bool=_fee_resume_bool_field_is(temporary,"exists",false) and temporary_bytes.is_empty()
+	var matches:bool=primary_matches and backup_matches and temporary_clear
+	return {"profile_pair_state":"matches" if matches else "differs","primary":primary,"backup":backup,"temporary":temporary}
+
+func _fee_resume_retire_unknown_result(stage:String,attempted:bool=false,completed:bool=false,error:int=OK,profile_pair_state:Variant="unknown")->Dictionary:
+	var result:Dictionary=_fee_resume_unknown_result(stage,attempted,completed,error)
+	var pair_state:String="unknown"
+	if profile_pair_state is String and (profile_pair_state=="matches" or profile_pair_state=="differs"):pair_state=profile_pair_state
+	result["profile_pair_state"]=pair_state
+	result["temporary_clear"]="unknown"
+	return result
+
+func _fee_resume_retire_profile_state_is(row:Dictionary,expected:String)->bool:
+	var state:Variant=row.get("profile_pair_state",null)
+	return state is String and state==expected
+
+func _fee_resume_retire_tmp_clear_fact(row:Dictionary)->Variant:
+	var ok_value:Variant=row.get("ok",null)
+	var exists_value:Variant=row.get("exists",null)
+	if not ok_value is bool or not exists_value is bool or not ok_value:return "unknown"
+	var exists:bool=exists_value
+	if not _fee_resume_retire_bytes_match(row,exists):return "unknown"
+	return not exists
+
+func _fee_resume_retire_bytes_match(row:Dictionary,expected_exists:bool)->bool:
+	# Successful observations always include a typed byte field, even for absence.
+	if not row.has("bytes"):return false
+	var bytes_value:Variant=row.get("bytes",null)
+	if not bytes_value is PackedByteArray:return false
+	var bytes:PackedByteArray=bytes_value
+	if not expected_exists:return bytes.is_empty()
+	return true
+
+func _fee_resume_retire_fact_from_read(frame:Dictionary,target:Dictionary)->Dictionary:
+	var read_ok:Variant=target.get("ok",null)
+	var exists:Variant=target.get("exists",null)
+	if not read_ok is bool or not exists is bool or not read_ok:return {"sidecar_persisted":"unknown","target_state":"unknown","sidecar_exists":"unknown"}
+	if not _fee_resume_retire_bytes_match(target,exists):return {"sidecar_persisted":"unknown","target_state":"unknown","sidecar_exists":"unknown"}
+	var matches:bool=false
+	if frame.get("remove_target",false):matches=not exists
+	else:
+		var target_bytes:PackedByteArray=target.bytes
+		var payload_value:Variant=frame.get("payload",null)
+		if not payload_value is PackedByteArray:return {"sidecar_persisted":"unknown","target_state":"unknown","sidecar_exists":exists}
+		var expected_payload:PackedByteArray=payload_value
+		matches=exists and target_bytes==expected_payload
+	return {"sidecar_persisted":matches,"target_state":"matches" if matches else "differs","sidecar_exists":exists}
+
+func _fee_resume_closed_retire_frame_current(frame:Dictionary)->bool:
+	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current({"call":frame.get("stop_call"),"owner":frame.get("stop_owner")}):return false
+	if _quest_auto_stop_operation_call==null and frame.get("stop_call",null)!=null:return false
+	if frame.is_empty() or frame.get("action","")!="retire_closed" or not _fee_resume_sidecar_frame_current(frame):return false
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return false
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return false
+	return frame.get("record",{}).current.run_status=="closed" and frame.get("record",{}).owner==frame.get("owner",{})
+
+func _commit_fee_resume_closed_retire_frame(handle:Variant)->Dictionary:
+	if not handle is Dictionary or handle.size()!=1 or not handle.has("call") or not is_same(_fee_resume_sidecar_call,handle.get("call")):return _fee_resume_retire_unknown_result("invalid_handle")
+	if _fee_resume_sidecar_executing:return _fee_resume_retire_unknown_result("already_executing",false,false)
+	var frame:Dictionary=_fee_resume_sidecar_frame
+	if frame.is_empty() or not is_same(frame.get("call"),handle.get("call")):return _fee_resume_retire_unknown_result("stale_frame")
+	if frame.get("action","")!="retire_closed":return _fee_resume_retire_unknown_result("wrong_commit_action")
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_before_io_after_claim",false,false)
+	_fee_resume_sidecar_executing=true
+	# Every overridable read is followed by a current-frame check before another
+	# path is touched. The pair is sampled again after sidecar callbacks, then
+	# sidecar facts are sampled again; this is sequential evidence, not an atomic
+	# snapshot across profile and resume files.
+	var profile_before:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_initial_profile_pair",false,false)
+	var target_before:Dictionary=_fee_resume_io_read(frame.resume_path)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_target_preflight",false,false)
+	var tmp_before:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_tmp_preflight",false,false)
+	var profile_after_sidecar:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_profile_recheck",false,false)
+	var target_recheck:Dictionary=_fee_resume_io_read(frame.resume_path)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_target_recheck",false,false)
+	var tmp_recheck:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_tmp_recheck",false,false)
+	var profile_state:Variant=profile_after_sidecar.get("profile_pair_state","unknown")
+	var sidecar_unchanged:bool=_fee_resume_retire_read_matches_frame(frame,target_before,false) and _fee_resume_retire_read_matches_frame(frame,tmp_before,true) and _fee_resume_retire_read_matches_frame(frame,target_recheck,false) and _fee_resume_retire_read_matches_frame(frame,tmp_recheck,true)
+	if not _fee_resume_retire_profile_state_is(profile_before,"matches") or not _fee_resume_retire_profile_state_is(profile_after_sidecar,"matches") or not sidecar_unchanged:
+		var blocked:Dictionary=_fee_resume_retire_unknown_result("pre_io_fence_changed",false,false,OK,profile_state)
+		_end_fee_resume_sidecar_frame(handle)
+		return blocked
+	var attempted:bool=false
+	var completed:bool=false
+	var io_error:int=OK
+	var io_stage:String="verified_absence"
+	if frame.remove_target:
+		if frame.target_exists:
+			# Last check group before delete. A later external filesystem mutation
+			# is outside this in-process fence and is not claimed to be atomic.
+			var profile_before_remove:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove_pair",false,false)
+			var target_before_remove:Dictionary=_fee_resume_io_read(frame.resume_path)
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove_target",false,false)
+			var tmp_before_remove:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove_tmp",false,false)
+			if not _fee_resume_retire_read_matches_frame(frame,tmp_before_remove,true):return _fee_resume_retire_abort(handle,"remove_tmp_preflight_invalid",false,false)
+			var profile_final_remove:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove_pair_recheck",false,false)
+			var target_final_remove:Dictionary=_fee_resume_io_read(frame.resume_path)
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove_target_final",false,false)
+			var tmp_final_remove:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove_tmp_final",false,false)
+			if not _fee_resume_retire_read_matches_frame(frame,tmp_final_remove,true):return _fee_resume_retire_abort(handle,"remove_tmp_final_invalid",false,false)
+			var remove_target_ok:bool=_fee_resume_retire_read_matches_frame(frame,target_before_remove,false) and _fee_resume_retire_read_matches_frame(frame,target_final_remove,false)
+			var remove_tmp_ok:bool=_fee_resume_retire_read_matches_frame(frame,tmp_before_remove,true) and _fee_resume_retire_read_matches_frame(frame,tmp_final_remove,true)
+			if not _fee_resume_retire_profile_state_is(profile_before_remove,"matches") or not _fee_resume_retire_profile_state_is(profile_final_remove,"matches") or not remove_target_ok or not remove_tmp_ok:
+				var remove_blocked:Dictionary=_fee_resume_retire_unknown_result("pre_remove_fence_changed",false,false,OK,profile_final_remove.get("profile_pair_state","unknown"))
+				_end_fee_resume_sidecar_frame(handle)
+				return remove_blocked
+			attempted=true
+			io_error=_fee_resume_io_remove()
+			completed=io_error==OK
+			io_stage="remove"
+			if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_remove",attempted,completed,io_error)
+		else:
+			completed=true
+	else:
+		attempted=true
+		var write_result:Dictionary=_fee_resume_io_write_tmp(frame.payload)
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_tmp_write",true,false,int(write_result.get("error",OK)))
+		var tmp_written:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_tmp_write_read",true,false,int(write_result.get("error",OK)))
+		var profile_after_tmp:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_tmp_profile_pair",true,false,int(write_result.get("error",OK)))
+		var tmp_written_bytes:Variant=tmp_written.get("bytes",null)
+		var tmp_written_ok:bool=_fee_resume_bool_field_is(write_result,"ok",true) and _fee_resume_bool_field_is(tmp_written,"ok",true) and _fee_resume_bool_field_is(tmp_written,"exists",true) and tmp_written.has("bytes") and tmp_written_bytes is PackedByteArray and tmp_written_bytes==frame.payload
+		if not tmp_written_ok or not _fee_resume_retire_profile_state_is(profile_after_tmp,"matches"):
+			return _fee_resume_retire_observation_result(handle,frame,"tmp_write_or_profile_recheck_failed",true,false,int(write_result.get("error",OK)))
+		var target_pre:Dictionary=_fee_resume_io_read(frame.resume_path)
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_rename_target_read",true,false)
+		var tmp_pre:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_rename_tmp_read",true,false)
+		var profile_before_rename:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_rename_profile_pair",true,false)
+		var target_final_pre:Dictionary=_fee_resume_io_read(frame.resume_path)
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_rename_target_final",true,false)
+		var tmp_final_pre:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_rename_tmp_final",true,false)
+		var target_pre_ok:bool=_fee_resume_retire_read_matches_frame(frame,target_pre,false) and _fee_resume_retire_read_matches_frame(frame,target_final_pre,false)
+		var tmp_pre_bytes:Variant=tmp_pre.get("bytes",null)
+		var tmp_final_pre_bytes:Variant=tmp_final_pre.get("bytes",null)
+		var tmp_pre_ok:bool=_fee_resume_bool_field_is(tmp_pre,"ok",true) and _fee_resume_bool_field_is(tmp_pre,"exists",true) and tmp_pre.has("bytes") and tmp_pre_bytes is PackedByteArray and tmp_pre_bytes==frame.payload and _fee_resume_bool_field_is(tmp_final_pre,"ok",true) and _fee_resume_bool_field_is(tmp_final_pre,"exists",true) and tmp_final_pre.has("bytes") and tmp_final_pre_bytes is PackedByteArray and tmp_final_pre_bytes==frame.payload
+		if not target_pre_ok or not tmp_pre_ok or not _fee_resume_retire_profile_state_is(profile_before_rename,"matches"):
+			return _fee_resume_retire_observation_result(handle,frame,"pre_rename_fence_changed",true,false,OK)
+		io_error=_fee_resume_io_rename()
+		completed=io_error==OK
+		io_stage="rename"
+		if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_rename",true,completed,io_error)
+	# Post-operation facts are read only while the frozen owner/path remains
+	# current. A stale result never follows the successor to another path.
+	var target_after:Dictionary=_fee_resume_io_read(frame.resume_path)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_target_readback",attempted,completed,io_error)
+	var tmp_after:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_tmp_readback",attempted,completed,io_error)
+	var profile_after:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_post_operation_profile_pair",attempted,completed,io_error)
+	var target_final:Dictionary=_fee_resume_io_read(frame.resume_path)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_final_target_readback",attempted,completed,io_error)
+	var tmp_final:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_after_final_tmp_readback",attempted,completed,io_error)
+	var target_fact:Dictionary=_fee_resume_retire_fact_from_read(frame,target_final)
+	var persisted:Variant=target_fact.get("sidecar_persisted","unknown")
+	var persisted_true:bool=false
+	if persisted is bool:
+		var persisted_bool:bool=persisted
+		persisted_true=persisted_bool
+	var tmp_clear:Variant=_fee_resume_retire_tmp_clear_fact(tmp_final)
+	var tmp_clear_true:bool=false
+	if tmp_clear is bool:
+		var tmp_clear_bool:bool=tmp_clear
+		tmp_clear_true=tmp_clear_bool
+	var final_profile_state:Variant=profile_after.get("profile_pair_state","unknown")
+	var frame_current:bool=_fee_resume_closed_retire_frame_current(frame)
+	var ok:bool=completed and persisted_true and tmp_clear_true and _fee_resume_retire_profile_state_is(profile_after,"matches") and frame_current
+	var result:Dictionary=target_fact.duplicate(true)
+	result.merge({"ok":ok,"stage":io_stage if ok else "post_io_partial_or_unknown","operation_attempted":attempted,"operation_completed":completed,"temporary_clear":tmp_clear,"profile_pair_state":final_profile_state,"operation_error":io_error},true)
+	_end_fee_resume_sidecar_frame(handle)
+	return result
+
+func _fee_resume_retire_abort(handle:Dictionary,stage:String,attempted:bool,completed:bool,error:int=OK)->Dictionary:
+	# The path may now belong to a successor; do not perform another read.
+	var result:Dictionary=_fee_resume_retire_unknown_result(stage,attempted,completed,error)
+	_end_fee_resume_sidecar_frame(handle)
+	return result
+
+func _fee_resume_retire_observation_result(handle:Dictionary,frame:Dictionary,stage:String,attempted:bool,completed:bool,error:int)->Dictionary:
+	# Safe only while the frozen owner/path still matches. Facts are read after a
+	# pre-mutation error so operation failure is not confused with target state.
+	var target:Dictionary=_fee_resume_io_read(frame.resume_path)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_during_error_observation_target",attempted,completed,error)
+	var temporary:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_during_error_observation_tmp",attempted,completed,error)
+	var pair:Dictionary=_fee_resume_retire_profile_pair_facts(frame,true)
+	if not _fee_resume_closed_retire_frame_current(frame):return _fee_resume_retire_abort(handle,"stale_during_error_observation_profile_pair",attempted,completed,error)
+	var fact:Dictionary=_fee_resume_retire_fact_from_read(frame,target)
+	var temporary_clear:Variant=_fee_resume_retire_tmp_clear_fact(temporary)
+	var pair_state:Variant=pair.get("profile_pair_state","unknown")
+	var result:Dictionary=fact.duplicate(true)
+	result.merge({"ok":false,"stage":stage,"operation_attempted":attempted,"operation_completed":completed,"operation_error":error,"temporary_clear":temporary_clear,"profile_pair_state":pair_state},true)
+	_end_fee_resume_sidecar_frame(handle)
+	return result
+
+func _fee_resume_retire_read_matches_frame(frame:Dictionary,row:Dictionary,is_tmp:bool)->bool:
+	if not _fee_resume_bool_field_is(row,"ok",true):return false
+	var expected_exists:bool=frame.temporary_exists if is_tmp else frame.target_exists
+	if not _fee_resume_bool_field_is(row,"exists",expected_exists):return false
+	if not row.has("bytes"):return false
+	var bytes_value:Variant=row.get("bytes",null)
+	if not bytes_value is PackedByteArray:return false
+	var bytes:PackedByteArray=bytes_value
+	var expected_bytes:PackedByteArray=frame.temporary_bytes if is_tmp else frame.target_bytes
+	if not expected_exists:return bytes.is_empty() and expected_bytes.is_empty()
+	return bytes==expected_bytes
+
 func _fee_resume_sidecar_frame_current(frame:Dictionary)->bool:
-	if frame.is_empty() or not is_same(_fee_resume_sidecar_call,frame.get("call")):return false
+	if _quest_auto_stop_operation_call!=null and not (frame.get("action","")=="retire_closed" and is_same(_quest_auto_stop_operation_call,frame.get("stop_call"))):return false
+	if frame.is_empty() or frame.get("action","") not in ["write_fence","remove_fence","retire_closed"]:return false
+	if not is_same(_fee_resume_sidecar_call,frame.get("call")):return false
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return false
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return false
 	if not is_same(session,frame.get("session")) or not is_same(session._profile,frame.get("profile_ref")) or session._profile!=frame.get("profile"):return false
 	if save_path!=frame.get("save_path") or _resume_file()!=frame.get("resume_path"):return false
 	if last_saved_payload!=frame.get("cache") or quest_save_serial!=frame.get("serial"):return false
@@ -689,8 +1080,10 @@ func _commit_fee_resume_sidecar_frame(handle:Variant)->Dictionary:
 	if _fee_resume_sidecar_executing:return _fee_resume_unknown_result("already_executing",false,false)
 	if _fee_resume_sidecar_frame.is_empty() or not is_same(handle.get("call"),_fee_resume_sidecar_frame.get("call")):
 		return _fee_resume_unknown_result("frame_mismatch")
-	_fee_resume_sidecar_executing=true
 	var frame:Dictionary=_fee_resume_sidecar_frame
+	# Ordinary commit must never reinterpret the closed-retire action.
+	if frame.get("action","") not in ["write_fence","remove_fence"]:return _fee_resume_unknown_result("wrong_commit_action")
+	_fee_resume_sidecar_executing=true
 	if not _fee_resume_sidecar_frame_current(frame):
 		var cas_result:Dictionary=_fee_resume_sidecar_result(frame,false,"owner_or_cas_before_io",false,false)
 		_end_fee_resume_sidecar_frame(handle)
@@ -866,7 +1259,12 @@ func _handle(command: Dictionary) -> Dictionary:
 	var quest_conflict:bool=quest_auto.running and type in ["quest_talk","quest_choose","quest_close","quest_visit","quest_discard","permit_shop_open","permit_shop_choose"]
 	if quest_conflict and type in ["quest_choose","quest_close"] and quest_auto.accepts_waiting_command(self,command):quest_conflict=false
 	if quest_auto.running:
-		if type in ["warp","auto","auto_start","flow_start","hunt_start","start_hunt","open_battle","begin_battle","start_battle_config","start_wild_battle_config","start_wild_battle","field_step","wild_encounter"]:quest_auto.stop(self,"其他操作停止了自动任务。")
+		if type in ["warp","auto","auto_start","flow_start","hunt_start","start_hunt","open_battle","begin_battle","start_battle_config","start_wild_battle_config","start_wild_battle","field_step","wild_encounter"]:
+			var stop_result:Dictionary=quest_auto.stop(self,"其他操作停止了自动任务。")
+			if not stop_result.get("ok",false):
+				stop_result.seq=command.get("seq",0)
+				stop_result.type="rejected"
+				return stop_result
 	var before_position := [automation.position_map,automation.position_cell]
 	var reply: Dictionary
 	# Movement/activity invalidates the conversation even if another device
@@ -2025,7 +2423,10 @@ func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 ## caller still has to prove the original route/offer facts before preparing
 ## this candidate; this method only freezes the exact in-process writer owner.
 func _begin_fee_attempt_writer_frame(candidate:Dictionary)->Dictionary:
+	if _quest_auto_stop_operation_call!=null:return {}
 	if _depth<=0 or save_path.is_empty() or _fee_attempt_writer_call!=null or _fee_attempt_writer_executing:return {}
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return {}
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return {}
 	if battle_open or not session._pending.is_empty() or not session._loot_settlement.is_empty() or stationary.running or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return {}
 	if not quest_auto.running or not quest_auto.internal or not quest_auto.identity is Object:return {}
 	var run_id:String=str(quest_auto.identity.run_id)
@@ -2079,7 +2480,10 @@ func _begin_fee_attempt_writer_frame(candidate:Dictionary)->Dictionary:
 	return {"call":call}
 
 func _fee_attempt_writer_frame_current(frame:Dictionary)->bool:
+	if _quest_auto_stop_operation_call!=null:return false
 	if frame.is_empty() or not is_same(_fee_attempt_writer_call,frame.get("call")):return false
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return false
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return false
 	var refs:Dictionary=frame.refs
 	var v:Dictionary=frame.values
 	if not is_same(refs.session.get_ref(),session) or not is_same(refs.quest_auto.get_ref(),quest_auto) or not is_same(refs.identity.get_ref(),quest_auto.identity) or not is_same(refs.automation.get_ref(),automation) or not is_same(refs.stationary.get_ref(),stationary) or not is_same(refs.original_quests.get_ref(),original_quests) or not is_same(refs.battle.get_ref(),battle):return false
@@ -2193,7 +2597,112 @@ func _persist_fee_attempt_fence(handle:Dictionary)->Dictionary:
 ## Closed-pair candidate. This is internal-only and has no Stop/RPC caller.
 ## stopped_identity is captured before the caller invalidates the old quest frame;
 ## this factory accepts only that exact one-revision retired identity.
-func _fee_attempt_close_read_snapshot(retired_identity:Dictionary,candidate:Dictionary)->Dictionary:
+func _close_and_retire_stopped_fee_run(stopped_identity:Dictionary,stop_handle:Dictionary)->Dictionary:
+	var result:Dictionary={"ok":false,"applicable":false,"stopped_in_memory":true,"lifecycle":"legacy","profile_close":{"stage":"not_applicable","primary_closed":"unknown","backup_closed":"unknown","profile_pair_closed":"unknown","serial_before":quest_save_serial,"serial_after_w1":"unknown","serial_after_w2":"unknown"},"sidecar_retire":{"stage":"not_attempted","operation_attempted":false,"operation_completed":false,"target_state":"unknown","sidecar_exists":"unknown","temporary_clear":"unknown"}}
+	if not _quest_auto_stop_operation_current(stop_handle):
+		result.merge({"ok":false,"stage":"stop_owner_stale","lifecycle":"unknown"},true)
+		return result
+	if session==null:
+		result.merge({"ok":false,"stage":"session_missing","lifecycle":"unknown"},true)
+		return result
+	if not session._profile.has("quest_auto_fee_lifecycle"):
+		# This helper is reached only after stop() admitted a journal-bearing
+		# profile. Its disappearance after the operation claim is stale/unknown,
+		# never a legacy-success fallback.
+		result.merge({"ok":false,"applicable":true,"lifecycle":"unknown","stage":"journal_missing_after_claim"},true)
+		return result
+	result.applicable=true
+	result.lifecycle="unknown"
+	var previous:Variant=session._profile.get("quest_auto_fee_lifecycle",null)
+	if not FeeAttemptJournal.valid(previous):
+		result.stage="journal_invalid_preserved"
+		return result
+	var owner:Dictionary={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}
+	if previous.owner!=owner or previous.current.run_id!=stopped_identity.get("run_id",null):
+		result.stage="journal_owner_or_run_mismatch_preserved"
+		return result
+	if previous.current.run_status in ["active","closed"]:
+		var closed:Dictionary=FeeAttemptJournal.close_run(previous,str(stopped_identity.run_id))
+		var close_transition_ok:Variant=closed.get("ok",null)
+		if not close_transition_ok is bool:
+			result.stage="close_transition_refused"
+			return result
+		var close_transition_ok_bool:bool=close_transition_ok
+		if not close_transition_ok_bool:
+			result.stage="close_transition_refused"
+			return result
+		var candidate_value:Variant=closed.get("candidate",null)
+		if not candidate_value is Dictionary:
+			result.stage="close_candidate_invalid"
+			return result
+		var closed_journal:Dictionary=candidate_value
+		var expected_profile:Dictionary=session._profile.duplicate(true)
+		expected_profile["quest_auto_fee_lifecycle"]=closed_journal.duplicate(true)
+		if not session._valid_profile(expected_profile):
+			result.stage="close_candidate_profile_invalid"
+			return result
+		var close_handle:Dictionary=_begin_fee_attempt_close_frame(stopped_identity,expected_profile,stop_handle)
+		if close_handle.is_empty():
+			result.stage="close_frame_refused"
+			return result
+		var close_fact:Dictionary=_persist_fee_attempt_close_pair(close_handle)
+		var closed_pair:Variant=close_fact.get("profile_pair_closed","unknown")
+		var primary:Variant=close_fact.get("primary_closed","unknown")
+		var backup:Variant=close_fact.get("backup_closed","unknown")
+		var close_ok:Variant=close_fact.get("ok",null)
+		var writer1:Variant=close_fact.get("w1_writer_return","unknown")
+		var writer2:Variant=close_fact.get("w2_writer_return","unknown")
+		var close_verified:bool=false
+		var tmp_state:Variant=close_fact.get("temporary",null)
+		if close_ok is bool and closed_pair is bool and primary is bool and backup is bool and writer1 is bool and writer2 is bool and tmp_state is String:
+			var close_ok_bool:bool=close_ok
+			var closed_pair_bool:bool=closed_pair
+			var primary_bool:bool=primary
+			var backup_bool:bool=backup
+			var writer1_bool:bool=writer1
+			var writer2_bool:bool=writer2
+			var tmp_state_string:String=tmp_state
+			close_verified=close_ok_bool and closed_pair_bool and primary_bool and backup_bool and writer1_bool and writer2_bool and tmp_state_string=="absent"
+		result.profile_close={"stage":str(close_fact.get("stage","unknown")),"primary_closed":primary,"backup_closed":backup,"profile_pair_closed":closed_pair,"serial_before":close_fact.get("serial_before","unknown"),"serial_after_w1":close_fact.get("serial_after_w1","unknown"),"serial_after_w2":close_fact.get("serial_after_w2","unknown"),"w1_writer_return":writer1,"w2_writer_return":writer2}
+		if not close_verified:
+			result.stage="profile_close_partial_or_unknown"
+			return result
+		result.lifecycle="profile_closed_sidecar_pending"
+	else:
+		result.stage="journal_state_unsupported_preserved"
+		return result
+	var retire_handle:Dictionary=_begin_fee_resume_closed_retire_frame(stop_handle)
+	var retire_begin_ok:Variant=retire_handle.get("ok",null)
+	var retire_begin_ok_bool:bool=false
+	if retire_begin_ok is bool:
+		retire_begin_ok_bool=retire_begin_ok
+	if not retire_begin_ok_bool:
+		var retire_stage:String=str(retire_handle.get("stage","unknown"))
+		result.sidecar_retire={"stage":retire_stage,"operation_attempted":false,"operation_completed":false,"target_state":"unknown","sidecar_exists":"unknown","temporary_clear":"unknown","profile_pair_state":retire_handle.get("profile_pair_state","unknown"),"sidecar_preserved":retire_stage=="present_sidecar_unattributed"}
+		result.stage="sidecar_preserved_unattributed" if retire_stage=="present_sidecar_unattributed" else "sidecar_retire_begin_failed"
+		result.lifecycle="profile_closed_sidecar_partial_or_unknown"
+		return result
+	var retire_fact:Dictionary=_commit_fee_resume_closed_retire_frame({"call":retire_handle.get("call")})
+	var retire_ok_value:Variant=retire_fact.get("ok",null)
+	var persisted:Variant=retire_fact.get("sidecar_persisted","unknown")
+	var tmp_clear:Variant=retire_fact.get("temporary_clear","unknown")
+	var operation_completed:Variant=retire_fact.get("operation_completed","unknown")
+	var retire_ok:bool=false
+	var pair_state:Variant=retire_fact.get("profile_pair_state",null)
+	if retire_ok_value is bool and persisted is bool and tmp_clear is bool and operation_completed is bool and pair_state is String:
+		var retire_ok_bool:bool=retire_ok_value
+		var persisted_bool:bool=persisted
+		var tmp_clear_bool:bool=tmp_clear
+		var operation_completed_bool:bool=operation_completed
+		var pair_state_string:String=pair_state
+		retire_ok=retire_ok_bool and persisted_bool and tmp_clear_bool and operation_completed_bool and pair_state_string=="matches"
+	result.sidecar_retire={"stage":str(retire_fact.get("stage","unknown")),"operation_attempted":retire_fact.get("operation_attempted","unknown"),"operation_completed":operation_completed,"target_state":retire_fact.get("target_state","unknown"),"sidecar_persisted":persisted,"sidecar_exists":retire_fact.get("sidecar_exists","unknown"),"temporary_clear":tmp_clear,"profile_pair_state":retire_fact.get("profile_pair_state","unknown")}
+	result.ok=retire_ok
+	result.lifecycle="closed_and_retired" if retire_ok else "profile_closed_sidecar_partial_or_unknown"
+	result.stage="closed_and_retired" if retire_ok else "sidecar_retire_partial_or_unknown"
+	return result
+
+func _fee_attempt_close_read_snapshot(retired_identity:Dictionary,candidate:Dictionary,stop_handle:Dictionary={})->Dictionary:
 	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return {}
 	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return {}
 	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return {}
@@ -2214,11 +2723,14 @@ func _fee_attempt_close_read_snapshot(retired_identity:Dictionary,candidate:Dict
 		"path":save_path,"account_name":account_name,"cache":last_saved_payload,"serial":quest_save_serial,
 		"candidate_ref":candidate,"candidate":candidate.duplicate(true),
 		"depth":_depth,"dispatch_boundary_depth":_dispatch_boundary_depth,"observer_depth":_observer_depth,
-		"flush_depth":_flush_depth,"dispatch_epoch":_dispatch_epoch
+		"flush_depth":_flush_depth,"dispatch_epoch":_dispatch_epoch,
+		"stop_call":stop_handle.get("call",null),"stop_owner":stop_handle.get("owner",null)
 	}
 
 func _fee_attempt_close_read_snapshot_current(snapshot:Dictionary)->bool:
 	if snapshot.is_empty() or _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return false
+	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current({"call":snapshot.get("stop_call"),"owner":snapshot.get("stop_owner")}):return false
+	if _quest_auto_stop_operation_call==null and snapshot.get("stop_call",null)!=null:return false
 	# These are independent claims; this close frame does not make them disappear.
 	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return false
 	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return false
@@ -2239,7 +2751,34 @@ func _fee_attempt_close_read_snapshot_current(snapshot:Dictionary)->bool:
 	var live_candidate:Variant=snapshot.get("candidate_ref",null)
 	return live_candidate is Dictionary and live_candidate==snapshot.get("candidate",{})
 
-func _begin_fee_attempt_close_frame(stopped_identity:Dictionary,candidate:Dictionary)->Dictionary:
+func _begin_quest_auto_stop_operation(owner_auto:Variant)->Dictionary:
+	if _quest_auto_stop_operation_call!=null or not is_same(owner_auto,quest_auto):return {}
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return {}
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return {}
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return {}
+	var call:=RefCounted.new()
+	_quest_auto_stop_operation_call=call
+	_quest_auto_stop_operation_owner=owner_auto
+	return {"call":call,"owner":owner_auto}
+
+func _quest_auto_stop_operation_current(handle:Variant)->bool:
+	if not handle is Dictionary or handle.size()!=2 or not handle.has("call") or not handle.has("owner"):return false
+	var call_value:Variant=handle.get("call",null)
+	var owner_value:Variant=handle.get("owner",null)
+	if not call_value is RefCounted:return false
+	return is_same(_quest_auto_stop_operation_call,call_value) and is_same(_quest_auto_stop_operation_owner,owner_value) and is_same(owner_value,quest_auto)
+
+func _end_quest_auto_stop_operation(handle:Variant)->void:
+	# Release only this token. If Backend.quest_auto changed, still release our own
+	# claim; never clear a successor call/owner.
+	if not handle is Dictionary or handle.size()!=2 or not handle.has("call") or not handle.has("owner"):return
+	if not is_same(_quest_auto_stop_operation_call,handle.get("call")) or not is_same(_quest_auto_stop_operation_owner,handle.get("owner")):return
+	_quest_auto_stop_operation_call=null
+	_quest_auto_stop_operation_owner=null
+
+func _begin_fee_attempt_close_frame(stopped_identity:Dictionary,candidate:Dictionary,stop_handle:Dictionary={})->Dictionary:
+	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current(stop_handle):return {}
+	if _quest_auto_stop_operation_call==null and not stop_handle.is_empty():return {}
 	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return {}
 	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return {}
 	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return {}
@@ -2255,16 +2794,20 @@ func _begin_fee_attempt_close_frame(stopped_identity:Dictionary,candidate:Dictio
 	var profile:Dictionary=session._profile
 	var owner:Dictionary={"profile_id":str(profile.get("profile_id","")),"character_id":str(profile.get("character_id",""))}
 	var previous:Variant=profile.get("quest_auto_fee_lifecycle",null)
-	if not FeeAttemptJournal.valid(previous) or previous.current.run_status!="active" or previous.current.run_id!=stopped_identity.run_id or previous.owner!=owner:return {}
+	if not FeeAttemptJournal.valid(previous) or previous.current.run_id!=stopped_identity.run_id or previous.owner!=owner:return {}
+	var repairing:bool=previous.current.run_status=="closed"
+	# Only a live, exact Stop operation may repair its already-closed pair.
+	if repairing and (stop_handle.is_empty() or not _quest_auto_stop_operation_current(stop_handle)):return {}
+	if not repairing and previous.current.run_status!="active":return {}
 	var closed:Dictionary=FeeAttemptJournal.close_run(previous,stopped_identity.run_id)
-	if not closed.get("ok",false) or closed.get("already_closed",true):return {}
+	if not closed.get("ok",false) or bool(closed.get("already_closed",false))!=repairing:return {}
 	var expected_journal:Dictionary=closed.get("candidate",{})
 	if not FeeAttemptJournal.valid(expected_journal) or expected_journal.current.run_status!="closed":return {}
 	var expected_profile:Dictionary=profile.duplicate(true)
 	expected_profile["quest_auto_fee_lifecycle"]=expected_journal.duplicate(true)
 	if candidate!=expected_profile or not session._valid_profile(candidate):return {}
 	# Freeze all live owner/state/cache/serial facts before the first virtual read.
-	var snapshot:Dictionary=_fee_attempt_close_read_snapshot(retired_identity,candidate)
+	var snapshot:Dictionary=_fee_attempt_close_read_snapshot(retired_identity,candidate,stop_handle)
 	if snapshot.is_empty() or not _fee_attempt_close_read_snapshot_current(snapshot):return {}
 	var path:String=snapshot.path
 	var cache_bytes:PackedByteArray=str(snapshot.cache).to_utf8_buffer()
@@ -2281,7 +2824,8 @@ func _begin_fee_attempt_close_frame(stopped_identity:Dictionary,candidate:Dictio
 	var temporary_exists:bool=temporary_exists_value
 	if temporary_exists:return {}
 	var candidate_bytes:PackedByteArray=JSON.stringify(candidate).to_utf8_buffer()
-	if candidate_bytes==primary.bytes:return {}
+	# A repair must exactly retain the already-closed primary; a first close must change it.
+	if (candidate_bytes==primary.bytes)!=repairing:return {}
 	# No callback occurs between the last snapshot check and publishing the claim.
 	if not _fee_attempt_close_read_snapshot_current(snapshot):return {}
 	var call:=RefCounted.new()
@@ -2301,11 +2845,13 @@ func _begin_fee_attempt_close_frame(stopped_identity:Dictionary,candidate:Dictio
 		"temporary_before_exists":temporary.get("exists",false),"temporary_before":temporary.get("bytes",PackedByteArray()).duplicate(),
 		"depth":snapshot.depth,"dispatch_boundary_depth":snapshot.dispatch_boundary_depth,
 		"observer_depth":snapshot.observer_depth,"flush_depth":snapshot.flush_depth,"dispatch_epoch":snapshot.dispatch_epoch,
-		"phase":"prepared"
+		"phase":"prepared","repairing":repairing,"stop_call":snapshot.get("stop_call",null),"stop_owner":snapshot.get("stop_owner",null)
 	}
 	return {"call":call}
 
 func _fee_attempt_close_frame_current(frame:Dictionary)->bool:
+	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current({"call":frame.get("stop_call"),"owner":frame.get("stop_owner")}):return false
+	if _quest_auto_stop_operation_call==null and frame.get("stop_call",null)!=null:return false
 	if frame.is_empty() or not is_same(_fee_attempt_close_call,frame.get("call")):return false
 	# The close claim is separate from both pre-existing seam claims. Refuse to
 	# proceed if either old seam is outstanding at any frame checkpoint.
@@ -2415,7 +2961,7 @@ func _persist_fee_attempt_close_pair(handle:Variant)->Dictionary:
 		var disk_changed:Dictionary=_fee_close_result(frame,"disk_or_owner_changed_before_w1",null,null,primary_pre,backup_pre,tmp_pre,false)
 		_end_fee_attempt_close_frame(handle);return disk_changed
 	var s0:int=frame.serial_before
-	var first:Dictionary=session._write_fee_close_candidate_once(frame.candidate,path,frame.profile_ref,frame.profile,frame.run_id,"w1")
+	var first:Dictionary=session._write_fee_close_candidate_once(frame.candidate,path,frame.profile_ref,frame.profile,frame.run_id,"w2" if frame.get("repairing",false) else "w1")
 	frame.w1_calls=1
 	var p1:Dictionary=first.get("primary",unknown_primary)
 	var b1:Dictionary=first.get("backup",unknown_backup)
@@ -2566,7 +3112,8 @@ func _cmd_quest_choose(command: Dictionary) -> Dictionary:
 func _cmd_quest_close(command: Dictionary) -> Dictionary:
 	if quest_auto.running:
 		if not quest_auto.accepts_waiting_command(self,command):return _reject("自动任务等待已过期。")
-		quest_auto.stop(self,"已取消奖励选择，停止自动任务。")
+		var stop_result:Dictionary=quest_auto.stop(self,"已取消奖励选择，停止自动任务。")
+		if not stop_result.get("ok",false):return stop_result
 		return {"ok":true,"closed":true}
 	if original_quests.pending.is_empty() or str(command.get("token",""))!=str(original_quests.pending.token):return _reject("对话已过期。")
 	original_quests.pending={}
@@ -2663,8 +3210,11 @@ func _cmd_quest_loot_start(command:Dictionary)->Dictionary:
 	return quest_loot.public_start(self,int(connection),binding,seq)
 
 func _cmd_quest_auto_stop(_command: Dictionary) -> Dictionary:
-	quest_auto.stop(self)
-	return {"ok":true}
+	var stopped:Dictionary=quest_auto.stop(self,"已停止自动任务。",true,{},true)
+	var lifecycle_value:Variant=stopped.get("lifecycle",null)
+	var stop_ok_value:Variant=stopped.get("ok",null)
+	if lifecycle_value is String and lifecycle_value=="legacy" and stop_ok_value is bool and stop_ok_value:return {"ok":true}
+	return stopped
 
 func _revival_transaction() -> bool:
 	return bool(session._pending.get("revival_transaction",false)) or not session._pending.get("original_revival_items",[]).is_empty()
