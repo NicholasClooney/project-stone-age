@@ -87,7 +87,7 @@ func open_profile(id: String) -> String:
 	var refused := SaveLock.acquire(path)
 	if not refused.is_empty():return refused
 	if backups:SaveBackups.backup(path)
-	var backend = Backend.new()
+	var backend: Backend = _new_profile_backend()
 	backend.name = "Profile_"+id
 	backend.admin = bool(entry.admin)
 	backend.account_name = str(entry.name)
@@ -113,6 +113,11 @@ func open_profile(id: String) -> String:
 	backend.quest_visit_guard = _quest_visit_guard.bind(id)
 	backends[id] = backend
 	return ""
+
+## Factory seam for isolated ProfileHub subclasses; production always uses the
+## ordinary Backend unless an owner deliberately overrides this method.
+func _new_profile_backend() -> Backend:
+	return Backend.new()
 
 ## The profile a connection is logged into, "" when none.
 func profile_of(connection: int) -> String:
