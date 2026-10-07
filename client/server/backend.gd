@@ -11,6 +11,8 @@ const PROTOCOL := 1
 const QUEST_LOOT_PUBLIC_ENABLED := false
 const GameSession = preload("res://server/game_session.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
+const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
+var _fee_start_journal_writer = FeeStartJournalWriter.new()
 const BattleSession = preload("res://server/battle_session.gd")
 const SquadBattleSession = preload("res://server/squad_battle_session.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
@@ -2419,6 +2421,16 @@ func _cmd_permit_shop_open(command:Dictionary)->Dictionary:
 func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
+## Dormant Start journal seam. No production caller or purchase authority.
+func _begin_fee_start_journal_frame(candidate:Variant)->Dictionary:
+	return _fee_start_journal_writer.begin(self,candidate)
+
+func _persist_fee_start_journal_pair(handle:Variant)->Dictionary:
+	return _fee_start_journal_writer.persist(self,handle)
+
+func _end_fee_start_journal_frame(handle:Variant)->void:
+	_fee_start_journal_writer.end(self,handle)
+
 ## Internal-only frame factory. It is deliberately not a command or RPC. The
 ## caller still has to prove the original route/offer facts before preparing
 ## this candidate; this method only freezes the exact in-process writer owner.
