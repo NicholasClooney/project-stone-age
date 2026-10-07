@@ -249,7 +249,35 @@ func snapshot(b=null) -> Dictionary:
  result.budget=b.quest_loot.projection(b) if b!=null else {}
  result.motion=motion.duplicate(true)
  return result
-func stop(b, reason:String="已停止自动任务。", persist:bool=true, captured_idle_close:Dictionary={}) -> void:
+func stop(b, reason:String="已停止自动任务。", persist:bool=true, captured_idle_close:Dictionary={}, retry_fee_lifecycle:bool=false) -> Dictionary:
+ if b==null or not is_same(b.quest_auto,self):return {"ok":false,"stage":"stop_owner_stale","stopped_in_memory":false,"lifecycle":"unknown"}
+ if b.session==null:return {"ok":false,"stage":"session_missing","stopped_in_memory":false,"lifecycle":"unknown"}
+ # Only a persistent stop with a present fee lifecycle needs the cross-callback
+ # operation claim. Legacy runs and persist=false shutdown/suspend keep their
+ # prior cancellation path and cannot be blocked by fee-seam claims.
+ var has_fee_record:bool=b.session._profile.has("quest_auto_fee_lifecycle")
+ var needs_fee_claim:bool=persist and has_fee_record and (running or retry_fee_lifecycle or b._quest_auto_stop_operation_call!=null)
+ var operation:Dictionary={}
+ var fee_lifecycle_requested:bool=needs_fee_claim
+ if needs_fee_claim:
+  operation=b._begin_quest_auto_stop_operation(self)
+  if operation.is_empty():return {"ok":false,"stage":"stop_operation_busy","stopped_in_memory":false,"lifecycle":"unknown"}
+ var was_running:bool=running
+ var stopped_identity:Dictionary=identity.checkpoint()
+ var result_holder:Dictionary={"result":{"ok":false,"stage":"stop_aborted_before_state_change","stopped_in_memory":false,"lifecycle":"unknown"}}
+ _stop_body(b,reason,persist,captured_idle_close,operation,stopped_identity,was_running,retry_fee_lifecycle,fee_lifecycle_requested,result_holder)
+ var result_value:Variant=result_holder.get("result",null)
+ var result:Dictionary=result_value.duplicate(true) if result_value is Dictionary else {"ok":false,"stage":"stop_result_missing","stopped_in_memory":false,"lifecycle":"unknown"}
+ if not operation.is_empty():b._end_quest_auto_stop_operation(operation)
+ return result
+
+func _stop_body(b, reason:String="已停止自动任务。", persist:bool=true, captured_idle_close:Dictionary={}, operation:Dictionary={}, stopped_identity:Dictionary={}, was_running:bool=false, retry_fee_lifecycle:bool=false, fee_lifecycle_requested:bool=false, result_holder:Dictionary={}) -> void:
+ if not is_same(b.quest_auto,self) or b.session==null or (not operation.is_empty() and not b._quest_auto_stop_operation_current(operation)):
+  result_holder["result"]={"ok":false,"stage":"stop_owner_stale_before_mutation","stopped_in_memory":false,"lifecycle":"unknown"}
+  return
+ if persist and b.session._profile.has("quest_auto_fee_lifecycle") and (running or retry_fee_lifecycle or b._quest_auto_stop_operation_call!=null) and operation.is_empty():
+  result_holder["result"]={"ok":false,"stage":"fee_stop_claim_missing","stopped_in_memory":false,"lifecycle":"unknown"}
+  return
  var call:Dictionary=transition_frame(b)
  call.identity.revision+=1
  var loot_battle:Dictionary=b.quest_loot.capture_battle_cancel(b)
@@ -264,16 +292,33 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true, captur
   loot_close.keep_resume_after_close=persist or bool(loot_close.get("keep_resume_after_close",false))
  var old_source=source_frame
  if old_source!=null:old_source.cancel()
+ if fee_lifecycle_requested and b.session==null:
+  result_holder["result"]={"ok":false,"applicable":true,"stage":"session_missing_after_claim_callback","lifecycle":"unknown","stopped_in_memory":false}
+  return
  if not loot_close.is_empty() and not b.quest_loot.prepare_idle_revocation(b,loot_close,"stop"):return
  if not loot_battle.is_empty() and not b.quest_loot.prepare_battle_revocation(b,loot_battle,"stop"):return
  source_frame=null
  identity.invalidate()
+ result_holder["result"]={"ok":false,"stage":"memory_stop_in_progress","stopped_in_memory":false,"identity_invalidated":true,"lifecycle":"unknown"}
  waiting_saved=false
  boss_ready=false
  var had_shutdown_intent:=not shutdown_intent.is_empty()
  if persist:shutdown_intent={}
  if not running:
+  var idle_fee_lifecycle:Dictionary={"ok":true,"applicable":false,"lifecycle":"legacy","stage":"legacy_noop","stopped_in_memory":false}
+  if fee_lifecycle_requested:
+   idle_fee_lifecycle=b._close_and_retire_stopped_fee_run(stopped_identity,operation)
+  if not idle_fee_lifecycle.get("applicable",false):idle_fee_lifecycle["stopped_in_memory"]=false
+  var idle_ok_value:Variant=idle_fee_lifecycle.get("ok",null)
+  var idle_ok:bool=false
+  if idle_ok_value is bool:idle_ok=idle_ok_value
+  if fee_lifecycle_requested and not idle_ok:
+   message=reason+"（已停止；持久收尾仍未完成："+str(idle_fee_lifecycle.get("stage","unknown"))+"）"
+   result_holder["result"]=idle_fee_lifecycle.duplicate(true)
+   if b.session!=null and transition_current(b,call):b.publish()
+   return
   if persist and had_shutdown_intent:b.keep_resume_file()
+  result_holder["result"]=idle_fee_lifecycle.duplicate(true)
   return
  if not persist and loot_close.is_empty() and loot_battle.is_empty():shutdown_intent=resume_state()
  # A captured idle obligation proves no battle/pending/receipt is owned.
@@ -286,16 +331,38 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true, captur
  navigation.clear()
  clear_motion()
  running=false
+ var in_progress_value:Variant=result_holder.get("result",{})
+ if in_progress_value is Dictionary:
+  var progress_result:Dictionary=in_progress_value.duplicate(true)
+  progress_result["stopped_in_memory"]=true
+  result_holder["result"]=progress_result
  phase="stopped"
  message=reason
  if old_source==null or old_source.owns_pending(str(b.original_quests.pending.get("token",""))):b.original_quests.pending={}
  if not loot_close.is_empty():
   b.quest_loot.finish_idle_close(b,loot_close)
   if not b.quest_loot.idle_close_context(b,loot_close):return
+ var fee_lifecycle:Dictionary={"ok":true,"applicable":false,"lifecycle":"legacy","stage":"legacy_stop","stopped_in_memory":true}
+ if fee_lifecycle_requested and was_running:
+  fee_lifecycle=b._close_and_retire_stopped_fee_run(stopped_identity,operation)
+ var run_ok_value:Variant=fee_lifecycle.get("ok",null)
+ var run_ok:bool=false
+ if run_ok_value is bool:run_ok=run_ok_value
+ if fee_lifecycle_requested and not run_ok:
+  # Do not overwrite a sidecar when a matched journal could not be closed or
+  # an unattributed hunt/battle file was deliberately preserved.
+  message=reason+"（任务已停止；持久收尾未完成："+str(fee_lifecycle.get("stage","unknown"))+"）"
+  result_holder["result"]=fee_lifecycle.duplicate(true)
+  if b.session==null or not transition_current(b,call):return
+  if not loot_close.is_empty() and not b.quest_loot.idle_close_context(b,loot_close):return
+  b.publish()
+  return
  if persist and loot_close.is_empty():b.keep_resume_file()
  if not transition_current(b,call):return
  if not loot_close.is_empty() and not b.quest_loot.idle_close_context(b,loot_close):return
  b.publish()
+ fee_lifecycle["stopped_in_memory"]=true
+ result_holder["result"]=fee_lifecycle.duplicate(true)
 func resume_state() -> Dictionary:
  if not running:return shutdown_intent.duplicate(true)
  return {"version":3,"quest_id":quest_id,"clean_authorized":clean_authorized,"strict_walk":true,"identity":identity.checkpoint(),"phase":phase}
@@ -366,6 +433,7 @@ func select(b,selected_id:int=-1,allow_clean:Variant=null) -> Dictionary:
 func _supports_automatic_start(job_id:int,event_id:int)->bool:
  return Policy.supports(job_id,event_id)
 func start(b,command:Dictionary) -> Dictionary:
+ if b._quest_auto_stop_operation_call!=null:return b._reject("自动任务正在停止，请稍后重试。")
  if running:return b._reject("自动任务已在运行。")
  var id=command.get("quest_id",-1)
  if not (id is int or id is float) or float(id)!=floor(float(id)):return b._reject("无效任务编号。")
