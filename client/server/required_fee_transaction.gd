@@ -2,6 +2,7 @@ extends RefCounted
 # TMP review candidate. Exact original shop/gate transactions; not a generic service.
 const Session=preload("res://server/game_session.gd")
 const Brothers=preload("res://server/brothers_quests.gd")
+const FeeFact=preload("res://server/required_fee_fact.gd")
 const GATE="genout/wpm_40_13_1@40:13:1"
 const LOCK_SHA="e2dab78068f21af19e406f0f0eee10933d5c907596d4554fa59a6f227a6f0958"
 const LOCK_PATH="res://data/required-fees.json"
@@ -143,6 +144,8 @@ static func commit(b,f:Dictionary)->Dictionary:
  f.candidate=c
  f.expected=c.duplicate(true)
  f.payload=JSON.stringify(c)
+ # One identity per actual candidate submission, never a token/run/device ID.
+ f.transaction_id=Crypto.new().generate_random_bytes(16).hex_encode()
  var saved:bool=b._save_required_fee(f)
  # Only the actual base writer may mark, before virtual-return observation.
  if not f.marked:
@@ -164,7 +167,11 @@ static func publish_committed(b,f:Dictionary)->void:
   Brothers.publish_warp(b,"31301,10,104")
  var fee:int=200 if f.kind=="permit" else 300
  var fact:String="原售证：永久海底通行资格已生效" if f.kind=="permit" else "赛姆原通行费"
- b._emit({"type":"quest_result","text":fact+"，扣除%d石币，提交后余额%d。"%[fee,int(f.committed.player.gold)]})
+ var message:Dictionary={"type":"quest_result","text":fact+"，扣除%d石币，提交后余额%d。"%[fee,int(f.committed.player.gold)]}
+ # Frozen at the base writer mark, before virtual-return observers can Stop or
+ # replace the owner. This remains a profile event, not a private device ACK.
+ if FeeFact.valid(f.get("fee_fact")):message.fee_fact=f.fee_fact.duplicate(true)
+ b._emit(message)
  b.publish()
 static func writer_ready(b,f:Dictionary)->bool:
  if not current(b,f) or f.marked or not b.session._pending.is_empty():return false
@@ -178,6 +185,7 @@ static func mark_memory_committed(b,f:Dictionary)->bool:
  f.durable=false
  f.committed=f.expected.duplicate(true)
  f.committed_serial=f.serial+1
+ f.fee_fact=FeeFact.from_committed(f)
  return true
 static func mark_written(b,f:Dictionary)->void:
  # Called only by the actual private save body, after its cache update; no callbacks.
@@ -186,3 +194,4 @@ static func mark_written(b,f:Dictionary)->void:
  f.durable=true
  f.committed=f.expected.duplicate(true)
  f.committed_serial=b.quest_save_serial
+ f.fee_fact=FeeFact.from_committed(f)
