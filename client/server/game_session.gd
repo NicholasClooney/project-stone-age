@@ -1549,6 +1549,52 @@ func _write_fee_attempt_candidate_once(candidate:Dictionary,path:String,expected
 	var temporary:Dictionary=_read_fee_attempt_file(path+".tmp",PackedByteArray())
 	return {"ok":writer_return and primary.get("ok",false) and primary.get("exists",false) and primary.get("matches",false) and backup.get("ok",false) and temporary.get("ok",false) and not temporary.get("exists",true),"writer_return":writer_return,"primary":primary,"backup":backup,"temporary":temporary}
 
+## One forced physical close candidate write. Backend supplies a private,
+## captured close frame; this function admits only the exact Journal.close_run
+## transition (W1) or an identical closed candidate for that frame's W2.
+func _write_fee_close_candidate_once(candidate:Dictionary,path:String,expected_profile_ref:Dictionary,expected_profile_value:Dictionary,run_id:String,phase:String)->Dictionary:
+	if path.is_empty() or not _pending.is_empty() or not _loot_settlement.is_empty():return {"ok":false,"stage":"session_admission"}
+	if phase not in ["w1","w2"]:return {"ok":false,"stage":"invalid_phase"}
+	if not is_same(_profile,expected_profile_ref) or _profile!=expected_profile_value:return {"ok":false,"stage":"session_profile_changed"}
+	if not _valid_profile(expected_profile_value) or not _valid_profile(candidate):return {"ok":false,"stage":"profile_invalid"}
+	var previous:Variant=expected_profile_value.get("quest_auto_fee_lifecycle",null)
+	if not FeeAttemptJournal.valid(previous) or previous.current.run_id!=run_id:return {"ok":false,"stage":"journal_owner_or_run_invalid"}
+	var transition:Dictionary=FeeAttemptJournal.close_run(previous,run_id)
+	if not transition.get("ok",false):return {"ok":false,"stage":"close_transition_rejected"}
+	var expected_journal:Dictionary=transition.get("candidate",{})
+	if phase=="w1":
+		if previous.current.run_status!="active" or transition.get("already_closed",true) or not FeeAttemptJournal.valid(expected_journal):return {"ok":false,"stage":"w1_requires_active_record"}
+	else:
+		if previous.current.run_status!="closed" or not transition.get("already_closed",false) or expected_journal!=previous:return {"ok":false,"stage":"w2_requires_same_closed_record"}
+	var expected_profile:Dictionary=expected_profile_value.duplicate(true)
+	expected_profile["quest_auto_fee_lifecycle"]=expected_journal.duplicate(true)
+	if candidate!=expected_profile:return {"ok":false,"stage":"candidate_not_exact_close_transition"}
+	var candidate_bytes:PackedByteArray=JSON.stringify(candidate).to_utf8_buffer()
+	var writer_return:bool=_write_profile_candidate(candidate.duplicate(true),path)
+	var primary:Dictionary=_read_fee_attempt_file(path,candidate_bytes)
+	var backup:Dictionary=_read_fee_attempt_file(path+".bak",PackedByteArray())
+	var temporary:Dictionary=_read_fee_attempt_file(path+".tmp",PackedByteArray())
+	var p_ok_value:Variant=primary.get("ok",null)
+	var p_exists_value:Variant=primary.get("exists",null)
+	var p_matches_value:Variant=primary.get("matches",null)
+	var b_ok_value:Variant=backup.get("ok",null)
+	var b_exists_value:Variant=backup.get("exists",null)
+	var t_ok_value:Variant=temporary.get("ok",null)
+	var t_exists_value:Variant=temporary.get("exists",null)
+	var readback_ok:bool=false
+	if p_ok_value is bool and p_exists_value is bool and p_matches_value is bool and b_ok_value is bool and b_exists_value is bool and t_ok_value is bool and t_exists_value is bool:
+		var p_ok:bool=p_ok_value
+		var p_exists:bool=p_exists_value
+		var p_matches:bool=p_matches_value
+		var b_ok:bool=b_ok_value
+		var b_exists:bool=b_exists_value
+		var b_bytes:Variant=backup.get("bytes",null)
+		var t_ok:bool=t_ok_value
+		var t_exists:bool=t_exists_value
+		var backup_bytes_ok:bool=not b_exists or b_bytes is PackedByteArray
+		readback_ok=p_ok and p_exists and p_matches and b_ok and backup_bytes_ok and t_ok and not t_exists
+	return {"ok":writer_return and readback_ok,"writer_return":writer_return,"primary":primary,"backup":backup,"temporary":temporary}
+
 ## Missing is distinct from unreadable, and a successful read checks the declared
 ## length, actual buffer length and FileAccess error before returning exact bytes.
 func _read_fee_attempt_file(path:String,expected:PackedByteArray)->Dictionary:

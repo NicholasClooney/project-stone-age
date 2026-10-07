@@ -146,6 +146,10 @@ var quest_save_serial:=0
 var _fee_attempt_writer_call:RefCounted
 var _fee_attempt_writer_snapshot:Dictionary={}
 var _fee_attempt_writer_executing:=false
+## Private closed-journal pair writer candidate; deliberately has no caller.
+var _fee_attempt_close_call:RefCounted
+var _fee_attempt_close_frame:Dictionary={}
+var _fee_attempt_close_executing:=false
 # Server-only dynamic scope. Never accepted from commands or serialized.
 var _quest_source_call:Dictionary={}
 var _resume_key := ""
@@ -2185,6 +2189,318 @@ func _persist_fee_attempt_fence(handle:Dictionary)->Dictionary:
 		return {"ok":false,"persisted":false,"stage":"w1_candidate_absent_from_primary_and_backup","w1_calls":1,"serial_before":s0,"serial_after_w1":quest_save_serial,"primary":p1,"backup":b1,"temporary":t1}
 	_end_fee_attempt_writer_frame(handle)
 	return {"ok":false,"persisted":"unknown","stage":"w1_io_or_readback_ambiguous","w1_calls":1,"serial_before":s0,"serial_after_w1":quest_save_serial,"primary":p1,"backup":b1,"temporary":t1}
+
+## Closed-pair candidate. This is internal-only and has no Stop/RPC caller.
+## stopped_identity is captured before the caller invalidates the old quest frame;
+## this factory accepts only that exact one-revision retired identity.
+func _fee_attempt_close_read_snapshot(retired_identity:Dictionary,candidate:Dictionary)->Dictionary:
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return {}
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return {}
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return {}
+	if quest_auto.running or quest_auto.identity.checkpoint()!=retired_identity or quest_auto.source_frame!=null:return {}
+	if battle_open or not session._pending.is_empty() or not session._loot_settlement.is_empty() or stationary.running or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return {}
+	if JSON.stringify(session._profile)!=last_saved_payload:return {}
+	var profile:Dictionary=session._profile
+	return {
+		"session":session,"profile_ref":session._profile,"profile":profile.duplicate(true),
+		"pending_ref":session._pending,"pending":session._pending.duplicate(true),
+		"loot_ref":session._loot_settlement,"loot":session._loot_settlement.duplicate(true),
+		"quest_auto":quest_auto,"identity_ref":quest_auto.identity,"identity":quest_auto.identity.checkpoint(),
+		"retired_identity":retired_identity.duplicate(true),"source_frame":quest_auto.source_frame,
+		"automation":automation,"automation_running":automation.running,"hunt_running":automation.hunt_running,
+		"flow_active":automation.flow_active(),"stationary":stationary,"stationary_running":stationary.running,
+		"original_quests":original_quests,"page_ref":original_quests.pending,"page":original_quests.pending.duplicate(true),
+		"battle":battle,"battle_open":battle_open,"owner":{"profile_id":str(profile.get("profile_id","")),"character_id":str(profile.get("character_id",""))},
+		"path":save_path,"account_name":account_name,"cache":last_saved_payload,"serial":quest_save_serial,
+		"candidate_ref":candidate,"candidate":candidate.duplicate(true),
+		"depth":_depth,"dispatch_boundary_depth":_dispatch_boundary_depth,"observer_depth":_observer_depth,
+		"flush_depth":_flush_depth,"dispatch_epoch":_dispatch_epoch
+	}
+
+func _fee_attempt_close_read_snapshot_current(snapshot:Dictionary)->bool:
+	if snapshot.is_empty() or _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return false
+	# These are independent claims; this close frame does not make them disappear.
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return false
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return false
+	if not is_same(session,snapshot.get("session")) or not is_same(session._profile,snapshot.get("profile_ref")) or session._profile!=snapshot.get("profile",{}):return false
+	if not is_same(session._pending,snapshot.get("pending_ref")) or session._pending!=snapshot.get("pending",{}):return false
+	if not is_same(session._loot_settlement,snapshot.get("loot_ref")) or session._loot_settlement!=snapshot.get("loot",{}) or not session._loot_settlement.is_empty():return false
+	if not is_same(quest_auto,snapshot.get("quest_auto")) or not is_same(quest_auto.identity,snapshot.get("identity_ref")):return false
+	if quest_auto.identity.checkpoint()!=snapshot.get("retired_identity",{}) or quest_auto.running or quest_auto.source_frame!=snapshot.get("source_frame"):return false
+	if not is_same(automation,snapshot.get("automation")) or automation.running!=snapshot.get("automation_running",true) or automation.hunt_running!=snapshot.get("hunt_running",true) or automation.flow_active()!=snapshot.get("flow_active",true):return false
+	if not is_same(stationary,snapshot.get("stationary")) or stationary.running!=snapshot.get("stationary_running",true):return false
+	if not is_same(original_quests,snapshot.get("original_quests")) or not is_same(original_quests.pending,snapshot.get("page_ref")) or original_quests.pending!=snapshot.get("page",{}):return false
+	if not is_same(battle,snapshot.get("battle")) or battle_open!=snapshot.get("battle_open",true) or battle_open:return false
+	var owner:Dictionary={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}
+	if owner!=snapshot.get("owner",{}):return false
+	if save_path!=snapshot.get("path") or account_name!=snapshot.get("account_name"):return false
+	if last_saved_payload!=snapshot.get("cache") or quest_save_serial!=snapshot.get("serial"):return false
+	if _depth!=snapshot.get("depth") or _dispatch_boundary_depth!=snapshot.get("dispatch_boundary_depth") or _observer_depth!=snapshot.get("observer_depth") or _flush_depth!=snapshot.get("flush_depth") or _dispatch_epoch!=snapshot.get("dispatch_epoch"):return false
+	var live_candidate:Variant=snapshot.get("candidate_ref",null)
+	return live_candidate is Dictionary and live_candidate==snapshot.get("candidate",{})
+
+func _begin_fee_attempt_close_frame(stopped_identity:Dictionary,candidate:Dictionary)->Dictionary:
+	if _fee_attempt_close_call!=null or not _fee_attempt_close_frame.is_empty() or _fee_attempt_close_executing:return {}
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return {}
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return {}
+	if save_path.is_empty() or not FeeAttemptJournal.exact_keys(stopped_identity,["run_id","step_id","revision"]):return {}
+	if not FeeAttemptJournal.opaque(stopped_identity.get("run_id")) or not stopped_identity.get("step_id") is String:return {}
+	var old_revision:Variant=stopped_identity.get("revision",null)
+	if not FeeAttemptJournal.strict_int(old_revision,0,2147483645):return {}
+	var retired_identity:Dictionary=stopped_identity.duplicate(true)
+	retired_identity.revision=int(old_revision)+1
+	if quest_auto.running or quest_auto.identity.checkpoint()!=retired_identity or quest_auto.source_frame!=null:return {}
+	if battle_open or not session._pending.is_empty() or not session._loot_settlement.is_empty() or stationary.running or automation.running or automation.hunt_running or automation.flow_active() or not original_quests.pending.is_empty():return {}
+	if JSON.stringify(session._profile)!=last_saved_payload:return {}
+	var profile:Dictionary=session._profile
+	var owner:Dictionary={"profile_id":str(profile.get("profile_id","")),"character_id":str(profile.get("character_id",""))}
+	var previous:Variant=profile.get("quest_auto_fee_lifecycle",null)
+	if not FeeAttemptJournal.valid(previous) or previous.current.run_status!="active" or previous.current.run_id!=stopped_identity.run_id or previous.owner!=owner:return {}
+	var closed:Dictionary=FeeAttemptJournal.close_run(previous,stopped_identity.run_id)
+	if not closed.get("ok",false) or closed.get("already_closed",true):return {}
+	var expected_journal:Dictionary=closed.get("candidate",{})
+	if not FeeAttemptJournal.valid(expected_journal) or expected_journal.current.run_status!="closed":return {}
+	var expected_profile:Dictionary=profile.duplicate(true)
+	expected_profile["quest_auto_fee_lifecycle"]=expected_journal.duplicate(true)
+	if candidate!=expected_profile or not session._valid_profile(candidate):return {}
+	# Freeze all live owner/state/cache/serial facts before the first virtual read.
+	var snapshot:Dictionary=_fee_attempt_close_read_snapshot(retired_identity,candidate)
+	if snapshot.is_empty() or not _fee_attempt_close_read_snapshot_current(snapshot):return {}
+	var path:String=snapshot.path
+	var cache_bytes:PackedByteArray=str(snapshot.cache).to_utf8_buffer()
+	var primary:Dictionary=snapshot.session._read_fee_attempt_file(path,cache_bytes)
+	if not _fee_attempt_close_read_snapshot_current(snapshot):return {}
+	var backup:Dictionary=snapshot.session._read_fee_attempt_file(path+".bak",PackedByteArray())
+	if not _fee_attempt_close_read_snapshot_current(snapshot):return {}
+	var temporary:Dictionary=snapshot.session._read_fee_attempt_file(path+".tmp",PackedByteArray())
+	if not _fee_attempt_close_read_snapshot_current(snapshot) or candidate!=snapshot.candidate:return {}
+	if _fee_close_file_state(primary,true,cache_bytes)!="matches":return {}
+	if not _fee_close_read_complete(backup) or not _fee_close_read_complete(temporary):return {}
+	var temporary_exists_value:Variant=temporary.get("exists",null)
+	if not (temporary_exists_value is bool):return {}
+	var temporary_exists:bool=temporary_exists_value
+	if temporary_exists:return {}
+	var candidate_bytes:PackedByteArray=JSON.stringify(candidate).to_utf8_buffer()
+	if candidate_bytes==primary.bytes:return {}
+	# No callback occurs between the last snapshot check and publishing the claim.
+	if not _fee_attempt_close_read_snapshot_current(snapshot):return {}
+	var call:=RefCounted.new()
+	_fee_attempt_close_call=call
+	_fee_attempt_close_frame={
+		"call":call,"session":snapshot.session,"profile_ref":snapshot.profile_ref,"profile":snapshot.profile.duplicate(true),
+		"quest_auto":snapshot.quest_auto,"identity":snapshot.identity_ref,"automation":snapshot.automation,
+		"stationary":snapshot.stationary,"original_quests":snapshot.original_quests,"battle":snapshot.battle,
+		"pending_ref":snapshot.pending_ref,"pending":snapshot.pending.duplicate(true),
+		"loot_ref":snapshot.loot_ref,"loot":snapshot.loot.duplicate(true),
+		"page_ref":snapshot.page_ref,"page":snapshot.page.duplicate(true),"stopped_identity":snapshot.retired_identity.duplicate(true),
+		"owner":snapshot.owner.duplicate(true),"run_id":str(snapshot.retired_identity.run_id),"path":snapshot.path,
+		"account_name":snapshot.account_name,"cache":snapshot.cache,"serial_before":snapshot.serial,
+		"expected_serial":snapshot.serial,"candidate":snapshot.candidate.duplicate(true),
+		"candidate_bytes":candidate_bytes,"primary_before":primary.bytes.duplicate(),
+		"backup_before_exists":backup.get("exists",false),"backup_before":backup.get("bytes",PackedByteArray()).duplicate(),
+		"temporary_before_exists":temporary.get("exists",false),"temporary_before":temporary.get("bytes",PackedByteArray()).duplicate(),
+		"depth":snapshot.depth,"dispatch_boundary_depth":snapshot.dispatch_boundary_depth,
+		"observer_depth":snapshot.observer_depth,"flush_depth":snapshot.flush_depth,"dispatch_epoch":snapshot.dispatch_epoch,
+		"phase":"prepared"
+	}
+	return {"call":call}
+
+func _fee_attempt_close_frame_current(frame:Dictionary)->bool:
+	if frame.is_empty() or not is_same(_fee_attempt_close_call,frame.get("call")):return false
+	# The close claim is separate from both pre-existing seam claims. Refuse to
+	# proceed if either old seam is outstanding at any frame checkpoint.
+	if _fee_attempt_writer_call!=null or not _fee_attempt_writer_snapshot.is_empty() or _fee_attempt_writer_executing:return false
+	if _fee_resume_sidecar_call!=null or not _fee_resume_sidecar_frame.is_empty() or _fee_resume_sidecar_executing:return false
+	if not is_same(session,frame.get("session")) or not is_same(quest_auto,frame.get("quest_auto")) or not is_same(quest_auto.identity,frame.get("identity")):return false
+	if not is_same(automation,frame.get("automation")) or not is_same(stationary,frame.get("stationary")) or not is_same(original_quests,frame.get("original_quests")):return false
+	if quest_auto.running or quest_auto.source_frame!=null or quest_auto.identity.checkpoint()!=frame.get("stopped_identity",{}):return false
+	if save_path!=frame.get("path") or account_name!=frame.get("account_name"):return false
+	if not is_same(session._profile,frame.get("profile_ref")) or session._profile!=frame.get("profile",{}):return false
+	if not is_same(session._pending,frame.get("pending_ref")) or session._pending!=frame.get("pending",{}):return false
+	if not is_same(session._loot_settlement,frame.get("loot_ref")) or session._loot_settlement!=frame.get("loot",{}) or not session._loot_settlement.is_empty():return false
+	if not is_same(original_quests.pending,frame.get("page_ref")) or original_quests.pending!=frame.get("page",{}):return false
+	if not is_same(battle,frame.get("battle")) or battle_open:return false
+	if _depth!=frame.get("depth") or _dispatch_boundary_depth!=frame.get("dispatch_boundary_depth") or _observer_depth!=frame.get("observer_depth") or _flush_depth!=frame.get("flush_depth") or _dispatch_epoch!=frame.get("dispatch_epoch"):return false
+	var owner:Dictionary={"profile_id":str(session._profile.get("profile_id","")),"character_id":str(session._profile.get("character_id",""))}
+	if owner!=frame.get("owner",{}):return false
+	if automation.running or automation.hunt_running or automation.flow_active() or stationary.running or battle_open:return false
+	return last_saved_payload==frame.get("cache") and quest_save_serial==frame.get("expected_serial")
+
+func _fee_close_file_state(row:Dictionary,expected_exists:bool,expected_bytes:PackedByteArray)->Variant:
+	var ok_value:Variant=row.get("ok",null)
+	var exists_value:Variant=row.get("exists",null)
+	if not (ok_value is bool) or not (exists_value is bool):return "unknown"
+	var read_ok:bool=ok_value
+	var exists:bool=exists_value
+	if not read_ok:return "unknown"
+	if exists!=expected_exists:return "differs"
+	if not exists:return "matches"
+	var bytes_value:Variant=row.get("bytes",null)
+	if not bytes_value is PackedByteArray:return "unknown"
+	var bytes:PackedByteArray=bytes_value
+	return "matches" if bytes==expected_bytes else "differs"
+
+func _fee_close_fact(row:Dictionary,candidate_bytes:PackedByteArray)->Variant:
+	var state:Variant=_fee_close_file_state(row,true,candidate_bytes)
+	if state=="matches":return true
+	if state=="differs":return false
+	return "unknown"
+
+func _fee_close_read_complete(row:Variant)->bool:
+	if not row is Dictionary:return false
+	var ok_value:Variant=row.get("ok",null)
+	var exists_value:Variant=row.get("exists",null)
+	if not (ok_value is bool) or not (exists_value is bool):return false
+	var read_ok:bool=ok_value
+	var exists:bool=exists_value
+	if not read_ok:return false
+	if not exists:return true
+	return row.get("bytes",null) is PackedByteArray
+
+func _fee_close_result(frame:Dictionary,stage:String,w1_writer:Variant,w2_writer:Variant,primary:Dictionary,backup:Dictionary,temporary:Dictionary,operation_ok:bool)->Dictionary:
+	var primary_fact:Variant=_fee_close_fact(primary,frame.get("candidate_bytes",PackedByteArray()))
+	var backup_fact:Variant=_fee_close_fact(backup,frame.get("candidate_bytes",PackedByteArray()))
+	var tmp_state:Variant=_fee_close_file_state(temporary,false,PackedByteArray())
+	var pair_fact:Variant="unknown"
+	if primary_fact is bool and backup_fact is bool:
+		var primary_closed_bool:bool=primary_fact
+		var backup_closed_bool:bool=backup_fact
+		pair_fact=primary_closed_bool and backup_closed_bool
+	return {"ok":operation_ok,"stage":stage,"stop_state_current":_fee_attempt_close_frame_current(frame),
+		"profile_pair_closed":pair_fact,"primary_closed":primary_fact,"backup_closed":backup_fact,
+		"temporary":"absent" if tmp_state=="matches" else ("unknown" if tmp_state=="unknown" else "present_or_changed"),
+		"serial_before":frame.get("serial_before",-1),"serial_after_w1":frame.get("serial_after_w1",null),
+		"serial_after_w2":quest_save_serial,"w1_calls":int(frame.get("w1_calls",0)),"w2_calls":int(frame.get("w2_calls",0)),
+		"w1_writer_return":w1_writer,"w2_writer_return":w2_writer}
+
+func _end_fee_attempt_close_frame(handle:Variant)->void:
+	if not handle is Dictionary or handle.size()!=1 or not handle.has("call") or not is_same(_fee_attempt_close_call,handle.get("call")):return
+	_fee_attempt_close_call=null
+	_fee_attempt_close_frame={}
+	_fee_attempt_close_executing=false
+
+## Two forced writes of one exact Journal.close_run profile candidate. One serial
+## advance records W1 installation; W2 is physical redundancy, not a new save event.
+func _persist_fee_attempt_close_pair(handle:Variant)->Dictionary:
+	if not handle is Dictionary or handle.size()!=1 or not handle.has("call") or not is_same(_fee_attempt_close_call,handle.get("call")):
+		return {"ok":false,"stage":"invalid_handle","profile_pair_closed":"unknown","primary_closed":"unknown","backup_closed":"unknown","temporary":"unknown"}
+	if _fee_attempt_close_executing:return {"ok":false,"stage":"already_executing","profile_pair_closed":"unknown","primary_closed":"unknown","backup_closed":"unknown","temporary":"unknown"}
+	if _fee_attempt_close_frame.is_empty() or not is_same(handle.get("call"),_fee_attempt_close_frame.get("call")):
+		return {"ok":false,"stage":"frame_mismatch","profile_pair_closed":"unknown","primary_closed":"unknown","backup_closed":"unknown","temporary":"unknown"}
+	_fee_attempt_close_executing=true
+	var frame:Dictionary=_fee_attempt_close_frame
+	var unknown_primary:Dictionary={"ok":false,"exists":false}
+	var unknown_backup:Dictionary={"ok":false,"exists":false}
+	var unknown_tmp:Dictionary={"ok":false,"exists":false}
+	if not _fee_attempt_close_frame_current(frame):
+		var stale_before:Dictionary=_fee_close_result(frame,"owner_or_cas_before_w1",null,null,unknown_primary,unknown_backup,unknown_tmp,false)
+		_end_fee_attempt_close_frame(handle);return stale_before
+	var path:String=frame.path
+	var primary_pre:Dictionary=session._read_fee_attempt_file(path,frame.primary_before)
+	if not _fee_attempt_close_frame_current(frame):
+		var primary_stale:Dictionary=_fee_close_result(frame,"owner_or_claim_changed_after_primary_read",null,null,primary_pre,unknown_backup,unknown_tmp,false)
+		_end_fee_attempt_close_frame(handle);return primary_stale
+	var backup_pre:Dictionary=session._read_fee_attempt_file(path+".bak",frame.backup_before)
+	if not _fee_attempt_close_frame_current(frame):
+		var backup_stale:Dictionary=_fee_close_result(frame,"owner_or_claim_changed_after_backup_read",null,null,primary_pre,backup_pre,unknown_tmp,false)
+		_end_fee_attempt_close_frame(handle);return backup_stale
+	var tmp_pre:Dictionary=session._read_fee_attempt_file(path+".tmp",frame.temporary_before)
+	if not _fee_attempt_close_frame_current(frame):
+		var tmp_stale:Dictionary=_fee_close_result(frame,"owner_or_claim_changed_after_tmp_read",null,null,primary_pre,backup_pre,tmp_pre,false)
+		_end_fee_attempt_close_frame(handle);return tmp_stale
+	var p0_state:Variant=_fee_close_file_state(primary_pre,true,frame.primary_before)
+	var b0_state:Variant=_fee_close_file_state(backup_pre,bool(frame.backup_before_exists),frame.backup_before)
+	var t0_state:Variant=_fee_close_file_state(tmp_pre,bool(frame.temporary_before_exists),frame.temporary_before)
+	if p0_state!="matches" or b0_state!="matches" or t0_state!="matches" or not _fee_attempt_close_frame_current(frame):
+		var disk_changed:Dictionary=_fee_close_result(frame,"disk_or_owner_changed_before_w1",null,null,primary_pre,backup_pre,tmp_pre,false)
+		_end_fee_attempt_close_frame(handle);return disk_changed
+	var s0:int=frame.serial_before
+	var first:Dictionary=session._write_fee_close_candidate_once(frame.candidate,path,frame.profile_ref,frame.profile,frame.run_id,"w1")
+	frame.w1_calls=1
+	var p1:Dictionary=first.get("primary",unknown_primary)
+	var b1:Dictionary=first.get("backup",unknown_backup)
+	var t1:Dictionary=first.get("temporary",unknown_tmp)
+	var p1_fact:Variant=_fee_close_fact(p1,frame.candidate_bytes)
+	var p1_is_candidate:bool=false
+	if p1_fact is bool:
+		var p1_fact_bool:bool=p1_fact
+		p1_is_candidate=p1_fact_bool
+	var w1_return:Variant=first.get("writer_return","unknown")
+	var w1_return_is_true:bool=false
+	if w1_return is bool:
+		var w1_return_bool:bool=w1_return
+		w1_return_is_true=w1_return_bool
+	else:w1_return="unknown"
+	if p1_is_candidate:
+		if not _fee_attempt_close_frame_current(frame):
+			var landed_stale:Dictionary=_fee_close_result(frame,"w1_closed_primary_but_old_frame_changed_before_install",w1_return,null,p1,b1,t1,false)
+			_end_fee_attempt_close_frame(handle);return landed_stale
+		var installed:Dictionary=frame.candidate.duplicate(true)
+		session._profile=installed
+		last_saved_payload=JSON.stringify(installed)
+		quest_save_serial=s0+1
+		frame.profile_ref=session._profile
+		frame.profile=installed.duplicate(true)
+		frame.cache=last_saved_payload
+		frame.expected_serial=s0+1
+		frame.serial_after_w1=s0+1
+		frame.phase="w1_installed"
+		if not w1_return_is_true or _fee_close_file_state(b1,true,frame.primary_before)!="matches" or _fee_close_file_state(t1,false,PackedByteArray())!="matches":
+			var w1_partial:Dictionary=_fee_close_result(frame,"w1_landed_partial_or_wrapper_false",w1_return,null,p1,b1,t1,false)
+			_end_fee_attempt_close_frame(handle);return w1_partial
+		if not _fee_attempt_close_frame_current(frame):
+			var stale_after_install:Dictionary=_fee_close_result(frame,"owner_or_cas_after_w1_install",w1_return,null,p1,b1,t1,false)
+			_end_fee_attempt_close_frame(handle);return stale_after_install
+		var primary_w2:Dictionary=session._read_fee_attempt_file(path,frame.candidate_bytes)
+		if not _fee_attempt_close_frame_current(frame):
+			var primary_w2_stale:Dictionary=_fee_close_result(frame,"w2_owner_or_claim_changed_after_primary_read",w1_return,null,primary_w2,unknown_backup,unknown_tmp,false)
+			_end_fee_attempt_close_frame(handle);return primary_w2_stale
+		var backup_w2:Dictionary=session._read_fee_attempt_file(path+".bak",PackedByteArray())
+		if not _fee_attempt_close_frame_current(frame):
+			var backup_w2_stale:Dictionary=_fee_close_result(frame,"w2_owner_or_claim_changed_after_backup_read",w1_return,null,primary_w2,backup_w2,unknown_tmp,false)
+			_end_fee_attempt_close_frame(handle);return backup_w2_stale
+		var tmp_w2:Dictionary=session._read_fee_attempt_file(path+".tmp",PackedByteArray())
+		if not _fee_attempt_close_frame_current(frame):
+			var tmp_w2_stale:Dictionary=_fee_close_result(frame,"w2_owner_or_claim_changed_after_tmp_read",w1_return,null,primary_w2,backup_w2,tmp_w2,false)
+			_end_fee_attempt_close_frame(handle);return tmp_w2_stale
+		if _fee_close_file_state(primary_w2,true,frame.candidate_bytes)!="matches" or _fee_close_file_state(backup_w2,true,frame.primary_before)!="matches" or _fee_close_file_state(tmp_w2,false,PackedByteArray())!="matches":
+			var w2_pre:Dictionary=_fee_close_result(frame,"w2_preflight_changed",w1_return,null,primary_w2,backup_w2,tmp_w2,false)
+			_end_fee_attempt_close_frame(handle);return w2_pre
+		var second:Dictionary=session._write_fee_close_candidate_once(frame.candidate,path,frame.profile_ref,frame.profile,frame.run_id,"w2")
+		frame.w2_calls=1
+		var p2:Dictionary=second.get("primary",unknown_primary)
+		var b2:Dictionary=second.get("backup",unknown_backup)
+		var t2:Dictionary=second.get("temporary",unknown_tmp)
+		var primary_closed:Variant=_fee_close_fact(p2,frame.candidate_bytes)
+		var backup_closed:Variant=_fee_close_fact(b2,frame.candidate_bytes)
+		var tmp_state:Variant=_fee_close_file_state(t2,false,PackedByteArray())
+		var pair_closed:bool=false
+		if primary_closed is bool and backup_closed is bool and tmp_state=="matches":
+			var primary_closed_bool:bool=primary_closed
+			var backup_closed_bool:bool=backup_closed
+			pair_closed=primary_closed_bool and backup_closed_bool
+		var current:bool=_fee_attempt_close_frame_current(frame)
+		var w2_return:Variant=second.get("writer_return","unknown")
+		var w2_return_is_true:bool=false
+		var w2_return_is_false:bool=false
+		if w2_return is bool:
+			var w2_return_bool:bool=w2_return
+			w2_return_is_true=w2_return_bool
+			w2_return_is_false=not w2_return_bool
+		else:w2_return="unknown"
+		var operation_ok:bool=pair_closed and current and w2_return_is_true
+		var stage:String="pair_verified" if operation_ok else ("pair_facts_verified_wrapper_false" if pair_closed and current and w2_return_is_false else "w2_partial_or_unknown")
+		var final_result:Dictionary=_fee_close_result(frame,stage,w1_return,w2_return,p2,b2,t2,operation_ok)
+		_end_fee_attempt_close_frame(handle)
+		return final_result
+	var old_primary:Variant=_fee_close_file_state(p1,true,frame.primary_before)
+	var old_backup:Variant=_fee_close_file_state(b1,bool(frame.backup_before_exists),frame.backup_before)
+	var old_pair:Variant="unknown"
+	if old_primary=="matches" and old_backup=="matches":old_pair=false
+	var no_install:Dictionary=_fee_close_result(frame,"w1_candidate_not_read_back",w1_return,null,p1,b1,t1,false)
+	no_install.profile_pair_closed=old_pair
+	_end_fee_attempt_close_frame(handle)
+	return no_install
 
 func _save_required_fee(frame:Dictionary)->bool:
 	if not RequiredFee.writer_ready(self,frame):return false
