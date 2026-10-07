@@ -864,7 +864,7 @@ func live_server_peer(peer_id: int) -> bool:
 		if is_instance_valid(peer) and peer.get_instance_id()==peer_id:return true
 	return false
 
-func logout_peer_retirement_diagnostic(old_peer_id: int, old_client_peer_ref: WeakRef, old_server_peer_ref: WeakRef, old_scene_ref: WeakRef, old_link_lifecycle_before: Variant, old_link_lifecycle_before_test_close: Variant, old_link_lifecycle_after_test_close: Variant, old_logout_generation_before: Variant, old_logout_generation_after_switch: Variant) -> Dictionary:
+func logout_peer_retirement_diagnostic(old_peer_id: int, old_client_peer_ref: WeakRef, old_server_peer_ref: WeakRef, old_scene_ref: WeakRef, old_link_ref: WeakRef, old_link_lifecycle_before_release: Variant, logout_callbacks_empty_at_release: bool, old_logout_generation_before: Variant, old_logout_generation_after_switch: Variant) -> Dictionary:
 	var clients: Array = server.clients() if is_instance_valid(server) else []
 	var clients_examined: int = mini(clients.size(),16)
 	var server_peer_in_clients: bool = false
@@ -882,14 +882,15 @@ func logout_peer_retirement_diagnostic(old_peer_id: int, old_client_peer_ref: We
 	var old_client_weak_valid: bool = old_client_weak_peer is WebSocketPeer and is_instance_valid(old_client_weak_peer)
 	var old_server_weak_state: Variant = old_server_weak_peer.get_ready_state() if old_server_weak_valid else null
 	var old_client_weak_state: Variant = old_client_weak_peer.get_ready_state() if old_client_weak_valid else null
-	var old_link_valid: bool = is_instance_valid(link_a)
-	var old_link_peer: Variant = link_a.get("_peer") if old_link_valid else null
+	var old_link: Variant = old_link_ref.get_ref() if old_link_ref!=null and is_instance_valid(old_link_ref) else null
+	var old_link_valid: bool = old_link is RefCounted and is_instance_valid(old_link)
+	var old_link_peer: Variant = old_link.get("_peer") if old_link_valid else null
 	var old_link_peer_valid: bool = old_link_peer is WebSocketPeer and is_instance_valid(old_link_peer)
-	var old_link_lifecycle_after: Variant = link_a.get("_lifecycle") if old_link_valid else null
-	var old_link_closed: Variant = link_a.get("_closed") if old_link_valid else null
-	var old_link_started: Variant = link_a.get("_started") if old_link_valid else null
-	var old_link_online: Variant = link_a.get("online") if old_link_valid else null
-	var old_link_token_value: Variant = link_a.get("login_token") if old_link_valid else null
+	var old_link_lifecycle_at_failure: Variant = old_link.get("_lifecycle") if old_link_valid else null
+	var old_link_closed: Variant = old_link.get("_closed") if old_link_valid else null
+	var old_link_started: Variant = old_link.get("_started") if old_link_valid else null
+	var old_link_online: Variant = old_link.online if old_link_valid else null
+	var old_link_token_value: Variant = old_link.get("login_token") if old_link_valid else null
 	var old_link_token_empty: bool = old_link_token_value is String and old_link_token_value.is_empty()
 	var old_link_peer_state: Variant = old_link_peer.get_ready_state() if old_link_peer_valid else null
 	var old_link_peer_packet_count: Variant = old_link_peer.get_available_packet_count() if old_link_peer_valid else null
@@ -899,12 +900,14 @@ func logout_peer_retirement_diagnostic(old_peer_id: int, old_client_peer_ref: We
 	var old_peer_in_hub: bool = is_instance_valid(hub) and hub._connections.has(old_peer_id)
 	var old_binding_present: bool = is_instance_valid(alice_backend) and alice_backend._fee_bindings.has(old_peer_id)
 	var old_binding_identity: Dictionary = auth_binding_evidence(alice_backend,old_peer_id,a1_binding_ref)
-	var old_link_is_in_pump: bool = old_link_valid and is_instance_valid(pump) and pump.links.has(link_a)
+	var old_link_is_in_pump: bool = old_link_valid and is_instance_valid(pump) and pump.links.has(old_link)
 	var pump_link_count: int = pump.links.size() if is_instance_valid(pump) else -1
-	var old_lifecycle_after: Variant = old_link_lifecycle_after
-	var lifecycle_delta: Variant = old_lifecycle_after-old_link_lifecycle_before if old_lifecycle_after is int and old_link_lifecycle_before is int else null
+	var lifecycle_delta: Variant = old_link_lifecycle_at_failure-old_link_lifecycle_before_release if old_link_lifecycle_at_failure is int and old_link_lifecycle_before_release is int else null
 	var logout_generation_delta: Variant = old_logout_generation_after_switch-old_logout_generation_before if old_logout_generation_after_switch is int and old_logout_generation_before is int else null
-	return {"old_server_peer_id":old_peer_id,"server_peer_in_clients":server_peer_in_clients,"server_clients_count":clients.size(),"server_clients_truncated":clients.size()>clients_examined,"server_peer_state":server_peer_state,"server_peer_state_type":type_string(typeof(server_peer_state)),"server_peer_packet_count":server_peer_packet_count,"server_weak_peer_alive":old_server_weak_valid,"server_weak_peer_state":old_server_weak_state,"client_weak_peer_alive":old_client_weak_valid,"client_weak_peer_state":old_client_weak_state,"old_link_still_strongly_referenced_by_test":old_link_valid,"old_link_in_pump":old_link_is_in_pump,"pump_link_count":pump_link_count,"pump_processing":is_instance_valid(pump) and pump.is_processing(),"old_link_online":old_link_online,"old_link_closed":old_link_closed,"old_link_started":old_link_started,"old_link_token_empty":old_link_token_empty,"old_link_lifecycle_before":old_link_lifecycle_before,"old_link_lifecycle_after":old_lifecycle_after,"old_link_lifecycle_delta":lifecycle_delta,"old_link_peer_valid":old_link_peer_valid,"old_link_peer_state":old_link_peer_state,"old_link_peer_state_type":type_string(typeof(old_link_peer_state)),"old_link_peer_packet_count":old_link_peer_packet_count,"scene_weak_alive":old_scene_alive,"current_scene_valid":current_scene_valid,"old_peer_in_hub_connections":old_peer_in_hub,"old_peer_binding_present":old_binding_present,"old_binding_identity":old_binding_identity,"logout_generation_before":old_logout_generation_before,"logout_generation_after_switch":old_logout_generation_after_switch,"logout_generation_delta":logout_generation_delta,"server_valid":is_instance_valid(server),"server_processing":is_instance_valid(server) and server.is_processing(),"server_listening":is_instance_valid(server) and server.is_listening(),"server_stopping":server.get("_stopping") if is_instance_valid(server) else null,"server_stopped":server.get("_stopped") if is_instance_valid(server) else null,"test_owned_link_close_called":true,"old_link_lifecycle_before_test_close":old_link_lifecycle_before_test_close,"old_link_lifecycle_after_test_close":old_link_lifecycle_after_test_close,"old_link_test_close_lifecycle_delta":old_link_lifecycle_after_test_close-old_link_lifecycle_before_test_close if old_link_lifecycle_after_test_close is int and old_link_lifecycle_before_test_close is int else null}
+	var result: Dictionary = {"old_server_peer_id":old_peer_id,"server_peer_in_clients":server_peer_in_clients,"server_clients_count":clients.size(),"server_clients_truncated":clients.size()>clients_examined,"server_peer_state":server_peer_state,"server_peer_state_type":type_string(typeof(server_peer_state)),"server_peer_packet_count":server_peer_packet_count,"server_weak_peer_alive":old_server_weak_valid,"server_weak_peer_state":old_server_weak_state,"client_weak_peer_alive":old_client_weak_valid,"client_weak_peer_state":old_client_weak_state,"old_link_weak_alive_at_failure":old_link_valid,"old_link_in_pump_at_failure":old_link_is_in_pump,"pump_link_count":pump_link_count,"pump_processing":is_instance_valid(pump) and pump.is_processing(),"old_link_online_at_failure":old_link_online,"old_link_closed_at_failure":old_link_closed,"old_link_started_at_failure":old_link_started,"old_link_token_empty":old_link_token_empty,"old_link_lifecycle_before_release":old_link_lifecycle_before_release,"old_link_lifecycle_at_failure":old_link_lifecycle_at_failure,"old_link_lifecycle_delta":lifecycle_delta,"old_link_peer_valid_at_failure":old_link_peer_valid,"old_link_peer_state":old_link_peer_state,"old_link_peer_state_type":type_string(typeof(old_link_peer_state)),"old_link_peer_packet_count":old_link_peer_packet_count,"scene_weak_alive":old_scene_alive,"current_scene_valid":current_scene_valid,"old_peer_in_hub_connections":old_peer_in_hub,"old_peer_binding_present":old_binding_present,"old_binding_identity":old_binding_identity,"logout_generation_before":old_logout_generation_before,"logout_generation_after_switch":old_logout_generation_after_switch,"logout_generation_delta":logout_generation_delta,"server_valid":is_instance_valid(server),"server_processing":is_instance_valid(server) and server.is_processing(),"server_listening":is_instance_valid(server) and server.is_listening(),"server_stopping":server.get("_stopping") if is_instance_valid(server) else null,"server_stopped":server.get("_stopped") if is_instance_valid(server) else null,"logout_callbacks_empty_at_release":logout_callbacks_empty_at_release}
+	old_link_peer=null
+	old_link=null
+	return result
 
 func capture_server_peer_ref(peer_id: int) -> WeakRef:
 	if not is_instance_valid(server):return null
@@ -1737,16 +1740,20 @@ func authenticated_reconnect_then_logout(run_identity: Dictionary, budget_identi
 	var old_scene_ref: WeakRef=weakref(world_a)
 	var old_a1_peer_id: int=a1_server_peer_id
 	var old_a1_client_peer_ref: WeakRef=weakref(link_a._peer) if is_instance_valid(link_a) and is_instance_valid(link_a._peer) else null
+	var old_a1_link_ref: WeakRef=weakref(link_a) if is_instance_valid(link_a) else null
 	var old_a1_link_lifecycle_before: Variant=link_a.get("_lifecycle") if is_instance_valid(link_a) else null
 	var old_a1_logout_generation_before: Variant=world_a._remote.logout_generation
 	GameScene.server_url_override="ws://127.0.0.1:%d"%server.port
 	world_a._remote.switch_profile() # Actual settings hook, local revoke then real logout request.
 	var old_a1_logout_generation_after_switch: Variant=world_a._remote.logout_generation
-	if not check(link_a.login_token.is_empty(),"Explicit A1 switch_profile synchronously forgets only A1's local token"):return false
+	var old_a1_logout_generation_advanced_once: bool=old_a1_logout_generation_before is int and old_a1_logout_generation_after_switch is int and old_a1_logout_generation_after_switch==old_a1_logout_generation_before+1
+	if not check(link_a.login_token.is_empty() and old_a1_logout_generation_advanced_once,"Explicit A1 switch_profile increments its local generation once and synchronously forgets only A1's local token"):return false
 	if not await auth_wait(func():return not is_instance_id_valid(old_scene_id) and is_instance_valid(current_scene) and current_scene.get_instance_id()!=old_scene_id,"Actual LogoutReply reload retires A1's old scene and creates a new main scene"):return false
 	var replacement: Variant=current_scene
 	GameScene.server_url_override=""
 	if not check(is_instance_valid(replacement) and replacement!=world_a,"SceneTree reload creates a replacement main GameScene after real LogoutReply"):return false
+	var replacement_link_is_new: bool=is_instance_valid(link_a) and is_instance_valid(replacement.link) and not is_same(link_a,replacement.link)
+	if not check(replacement_link_is_new,"The picker reload owns a distinct newly constructed WsLink; no old-link transfer is assumed"):return false
 	worlds.append(replacement)
 	replacement.visible=true
 	var bob_original_profile_count_before_replacement_login: int=int(profile_message_counts.get("bob_original",-1))
@@ -1769,40 +1776,33 @@ func authenticated_reconnect_then_logout(run_identity: Dictionary, budget_identi
 		if is_instance_valid(owned_world):pump.links.append(owned_world.link)
 	var old_a1_binding_after_logout: Dictionary=auth_binding_evidence(alice_backend,old_a1_peer_id,a1_binding_ref)
 	var old_a1_scene_hub_binding_retired: bool=old_scene_ref.get_ref()==null and not hub._connections.has(old_a1_peer_id) and not alice_backend._fee_bindings.has(old_a1_peer_id) and not old_a1_binding_after_logout.get("same_object",true)
-	var a1_server_token_revoked_before_close: bool=not hub.accounts.verify_token("AuthAlice",a1_token_before_logout).get("ok",false)
-	var a2_server_token_valid_before_close: bool=hub.accounts.verify_token("AuthAlice",a2_token_before_reconnect).get("ok",false)
-	var alice_connections_before_close: Array=hub.connections_of(account_a)
-	var alice_only_a2_before_close: bool=alice_connections_before_close.size()==1 and alice_connections_before_close.has(a2_reconnected_server_peer_id) and not alice_connections_before_close.has(old_a1_peer_id)
+	var a1_server_token_revoked_before_release: bool=not hub.accounts.verify_token("AuthAlice",a1_token_before_logout).get("ok",false)
+	var a2_server_token_valid_before_release: bool=hub.accounts.verify_token("AuthAlice",a2_token_before_reconnect).get("ok",false)
+	var alice_connections_before_release: Array=hub.connections_of(account_a)
+	var alice_only_a2_before_release: bool=alice_connections_before_release.size()==1 and alice_connections_before_release.has(a2_reconnected_server_peer_id) and not alice_connections_before_release.has(old_a1_peer_id)
 	var old_a1_client_peer_after_logout: Variant=old_a1_client_peer_ref.get_ref() if old_a1_client_peer_ref!=null and is_instance_valid(old_a1_client_peer_ref) else null
 	var old_a1_client_peer_open_after_logout: bool=old_a1_client_peer_after_logout is WebSocketPeer and is_instance_valid(old_a1_client_peer_after_logout) and old_a1_client_peer_after_logout.get_ready_state()==WebSocketPeer.STATE_OPEN
 	var old_a1_link_still_owns_open_peer: bool=is_instance_valid(link_a) and link_a.online and link_a.get("_peer") is WebSocketPeer and is_instance_valid(link_a.get("_peer")) and old_a1_client_peer_open_after_logout and is_same(link_a.get("_peer"),old_a1_client_peer_after_logout) and live_server_peer(old_a1_peer_id)
+	var old_a1_logout_callbacks_empty: bool=is_instance_valid(link_a) and link_a._callbacks.is_empty()
+	var old_a1_link_absent_from_pump: bool=is_instance_valid(pump) and not pump.links.has(link_a)
 	old_a1_client_peer_after_logout=null
-	print("AUTH_LOGOUT_PRE_CLEANUP_EVIDENCE ",JSON.stringify({"old_scene_destroyed":old_scene_ref.get_ref()==null,"hub_connection_absent":not hub._connections.has(old_a1_peer_id),"fee_binding_absent":not alice_backend._fee_bindings.has(old_a1_peer_id),"old_binding_evidence":old_a1_binding_after_logout,"a1_local_token_empty":link_a.login_token.is_empty(),"a1_server_token_revoked":a1_server_token_revoked_before_close,"a2_server_token_valid":a2_server_token_valid_before_close,"alice_has_only_a2":alice_only_a2_before_close,"old_client_peer_open_after_logout":old_a1_client_peer_open_after_logout,"old_link_owns_open_peer":old_a1_link_still_owns_open_peer,"old_server_peer_member":live_server_peer(old_a1_peer_id)}))
-	if not check(old_a1_scene_hub_binding_retired and a1_server_token_revoked_before_close and a2_server_token_valid_before_close and alice_only_a2_before_close and old_a1_link_still_owns_open_peer,"Real logout/reload revokes A1 auth and retires scene/Hub/binding while preserving A2; the old transport remains open until test-owned cleanup"):return false
+	print("AUTH_LOGOUT_PRE_REFERENCE_RELEASE_EVIDENCE ",JSON.stringify({"old_scene_destroyed":old_scene_ref.get_ref()==null,"hub_connection_absent":not hub._connections.has(old_a1_peer_id),"fee_binding_absent":not alice_backend._fee_bindings.has(old_a1_peer_id),"old_binding_evidence":old_a1_binding_after_logout,"a1_local_token_empty":link_a.login_token.is_empty(),"a1_server_token_revoked":a1_server_token_revoked_before_release,"a2_server_token_valid":a2_server_token_valid_before_release,"alice_has_only_a2":alice_only_a2_before_release,"old_client_peer_open_after_logout":old_a1_client_peer_open_after_logout,"old_link_owns_open_peer":old_a1_link_still_owns_open_peer,"logout_generation_advanced_once":old_a1_logout_generation_advanced_once,"logout_callbacks_empty":old_a1_logout_callbacks_empty,"old_link_absent_from_pump":old_a1_link_absent_from_pump,"old_server_peer_member":live_server_peer(old_a1_peer_id)}))
+	if not check(old_a1_scene_hub_binding_retired and a1_server_token_revoked_before_release and a2_server_token_valid_before_release and alice_only_a2_before_release and old_a1_link_still_owns_open_peer and old_a1_logout_generation_advanced_once and old_a1_logout_callbacks_empty and old_a1_link_absent_from_pump,"Real logout/reload revokes A1 auth and retires scene/Hub/binding while preserving A2; the old socket is still open before the test drops its remaining owner references"):return false
 	if failures>0:return false
-	var old_a1_link_lifecycle_before_test_close: Variant=link_a.get("_lifecycle") if is_instance_valid(link_a) else null
-	var old_a1_peer_before_close: Variant=link_a.get("_peer") if is_instance_valid(link_a) else null
-	var old_a1_captured_peer_before_close: Variant=old_a1_client_peer_ref.get_ref() if old_a1_client_peer_ref!=null and is_instance_valid(old_a1_client_peer_ref) else null
-	var close_targets_original_peer: bool=old_a1_peer_before_close is WebSocketPeer and is_instance_valid(old_a1_peer_before_close) and old_a1_captured_peer_before_close is WebSocketPeer and is_instance_valid(old_a1_captured_peer_before_close) and is_same(old_a1_peer_before_close,old_a1_captured_peer_before_close)
-	old_a1_peer_before_close=null;old_a1_captured_peer_before_close=null
-	if not check(close_targets_original_peer,"Test cleanup is about to close the exact client peer captured before logout"):return false
-	link_a.close() # Explicit test-owned transport cleanup, after all logout/auth checks.
-	var old_a1_link_lifecycle_after_test_close: Variant=link_a.get("_lifecycle") if is_instance_valid(link_a) else null
-	var old_a1_client_peer_after_close: Variant=old_a1_client_peer_ref.get_ref() if old_a1_client_peer_ref!=null and is_instance_valid(old_a1_client_peer_ref) else null
-	var old_a1_client_peer_alive_after_close: bool=old_a1_client_peer_after_close is WebSocketPeer and is_instance_valid(old_a1_client_peer_after_close)
-	var old_a1_client_peer_state_after_close: Variant=old_a1_client_peer_after_close.get_ready_state() if old_a1_client_peer_alive_after_close else null
-	var old_a1_client_peer_state_type_after_close: String=type_string(typeof(old_a1_client_peer_state_after_close))
-	old_a1_client_peer_after_close=null
-	var old_a1_link_closed_once: bool=is_instance_valid(link_a) and link_a.get("_closed")==true and not link_a.online and link_a.get("_peer")==null and old_a1_link_lifecycle_after_test_close is int and old_a1_link_lifecycle_before_test_close is int and old_a1_link_lifecycle_after_test_close==old_a1_link_lifecycle_before_test_close+1
-	print("AUTH_LOGOUT_EXPLICIT_CLOSE_EVIDENCE ",JSON.stringify({"closed_flag":is_instance_valid(link_a) and link_a.get("_closed")==true,"online":link_a.online if is_instance_valid(link_a) else null,"link_peer_is_null":is_instance_valid(link_a) and link_a.get("_peer")==null,"lifecycle_before":old_a1_link_lifecycle_before_test_close,"lifecycle_after":old_a1_link_lifecycle_after_test_close,"captured_client_peer_alive_after_close":old_a1_client_peer_alive_after_close,"captured_client_peer_ready_state_after_close":old_a1_client_peer_state_after_close,"captured_client_peer_ready_state_type":old_a1_client_peer_state_type_after_close}))
-	if not check(old_a1_link_closed_once,"One test-owned WsLink.close synchronously revokes the captured local link capability after logout assertions"):return false
-	if failures>0:return false
-	var old_a1_peer_retired: bool=await Wait.until(self,func():return not live_server_peer(old_a1_peer_id))
-	if not old_a1_peer_retired:
-		print("AUTH_LOGOUT_OLD_PEER_RETIREMENT_DIAGNOSTIC ",JSON.stringify(logout_peer_retirement_diagnostic(old_a1_peer_id,old_a1_client_peer_ref,a1_server_peer_ref,old_scene_ref,old_a1_link_lifecycle_before,old_a1_link_lifecycle_before_test_close,old_a1_link_lifecycle_after_test_close,old_a1_logout_generation_before,old_a1_logout_generation_after_switch)))
-	var old_a1_binding_after_transport_close: Dictionary=auth_binding_evidence(alice_backend,old_a1_peer_id,a1_binding_ref)
-	var old_a1_binding_stays_retired: bool=not hub._connections.has(old_a1_peer_id) and not alice_backend._fee_bindings.has(old_a1_peer_id) and not old_a1_binding_after_transport_close.get("current_valid",true) and not old_a1_binding_after_transport_close.get("same_object",true)
-	if not check(old_a1_peer_retired and old_a1_binding_stays_retired,"After explicit test-owned close, WsServer polling removes only the old peer while the retired Hub/binding identity remains absent"):return false
+	var old_a1_link_lifecycle_before_release: Variant=link_a.get("_lifecycle") if is_instance_valid(link_a) else null
+	var old_a1_link_online_before_release: bool=is_instance_valid(link_a) and link_a.online
+	var old_a1_link_closed_before_release: bool=is_instance_valid(link_a) and link_a.get("_closed")==true
+	var old_a1_link_peer_matches_captured: bool=is_instance_valid(link_a) and is_instance_valid(link_a.get("_peer")) and old_a1_client_peer_ref!=null and is_instance_valid(old_a1_client_peer_ref.get_ref()) and is_same(link_a.get("_peer"),old_a1_client_peer_ref.get_ref())
+	print("AUTH_LOGOUT_TEST_REFERENCE_RELEASE ",JSON.stringify({"link_weakref_created":old_a1_link_ref is WeakRef,"world_was_old_scene":not is_instance_valid(world_a),"callbacks_empty":old_a1_logout_callbacks_empty,"pump_omits_link":old_a1_link_absent_from_pump,"link_online_before_release":old_a1_link_online_before_release,"link_closed_before_release":old_a1_link_closed_before_release,"link_peer_matches_captured":old_a1_link_peer_matches_captured,"lifecycle_before_release":old_a1_link_lifecycle_before_release,"release_action":"clear test globals; no close/poll/server-set mutation"}))
+	if not check(old_a1_link_ref is WeakRef and not is_instance_valid(world_a) and old_a1_logout_callbacks_empty and old_a1_link_absent_from_pump and old_a1_link_online_before_release and not old_a1_link_closed_before_release and old_a1_link_peer_matches_captured,"Only the test's stale globals remain as old-link owners after logout assertions; no callback or LinkPump entry retains it"):return false
+	link_a=null
+	world_a=null
+	var old_a1_link_released_and_peer_retired: bool=await Wait.until(self,func():return not is_instance_valid(old_a1_link_ref.get_ref()) and not live_server_peer(old_a1_peer_id))
+	if not old_a1_link_released_and_peer_retired:
+		print("AUTH_LOGOUT_NATURAL_PEER_RETIREMENT_DIAGNOSTIC ",JSON.stringify(logout_peer_retirement_diagnostic(old_a1_peer_id,old_a1_client_peer_ref,a1_server_peer_ref,old_scene_ref,old_a1_link_ref,old_a1_link_lifecycle_before_release,old_a1_logout_callbacks_empty,old_a1_logout_generation_before,old_a1_logout_generation_after_switch)))
+	var old_a1_binding_after_natural_retirement: Dictionary=auth_binding_evidence(alice_backend,old_a1_peer_id,a1_binding_ref)
+	var old_a1_binding_stays_retired: bool=not hub._connections.has(old_a1_peer_id) and not alice_backend._fee_bindings.has(old_a1_peer_id) and not old_a1_binding_after_natural_retirement.get("current_valid",true) and not old_a1_binding_after_natural_retirement.get("same_object",true)
+	if not check(old_a1_link_released_and_peer_retired and old_a1_binding_stays_retired,"After the test releases old-scene/link references, normal SceneTree/WebSocketServer processing observes the old peer retire while logout's retired Hub/binding identity stays absent"):return false
 	world_a=replacement
 	link_a=replacement.link
 	var bob_connections_before: Array=hub.connections_of(account_b).duplicate()
@@ -1994,8 +1994,8 @@ func auth_teardown_all() -> bool:
 			if is_instance_valid(world.link) and world.link.get("_closed")!=true:world.link.close()
 			world.stop_sounds()
 			world.queue_free()
-	# The old A1 link can outlive its reloaded scene in this test. Close it once
-	# here on failure paths; the success path already closed it before Bob login.
+	# Failure cleanup closes still-owned live worlds only after the business
+	# assertions have returned. It is not evidence for old A1 natural retirement.
 	if is_instance_valid(link_a) and link_a.get("_closed")!=true:link_a.close()
 	if is_instance_valid(server) and is_instance_valid(hub):
 		var peers_retired: bool=await Wait.until(self,func():return server.clients().is_empty() and hub._connections.is_empty(),60.0)
