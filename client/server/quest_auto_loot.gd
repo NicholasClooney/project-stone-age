@@ -19,6 +19,12 @@ var frozen_ms:=-1
 var storage_paused:=false
 var lifetime:RefCounted=RefCounted.new()
 var cached_sample:Dictionary={}
+# P3 is a passive, per-span heartbeat. The wall clock below is only a
+# once-per-second scheduler; budget time still comes exclusively from `clock`.
+const HEARTBEAT_INTERVAL_MS:=1000
+var heartbeat_wall_ms:=-1
+var heartbeat_generation:=-1
+var heartbeat_call:RefCounted=null
 func now()->int:
  var value=clock.call()
  if not State.integer(value,0,State.MAX_MSEC):blocked=true;return -1
@@ -35,7 +41,9 @@ func start_after_commit(step_id:String,entry:Dictionary,run_identity:Dictionary)
  key=step_id;binding=run_identity.duplicate(true)
  span={"budget_id":entry.budget_id,"generation":entry.generation,"issued_seq":entry.issued_seq}
  anchor_ms=current;base_used_ms=int(entry.used_ms);frozen=false;blocked=false;storage_paused=false
+ heartbeat_wall_ms=-1;heartbeat_call=null
  cached_sample={"lifetime":lifetime,"span":span.duplicate(true),"used_ms":base_used_ms}
+ progress_stamp={"lifetime":lifetime,"span":span.duplicate(true),"ms":current,"used_ms":base_used_ms}
  return true
 func used_ms()->int:
  if anchor_ms<0 or blocked:return -1
@@ -83,7 +91,7 @@ func accept_commit(ledger:Dictionary)->bool:
  var entry:Dictionary=ledger.entries[key]
  if entry.recovery_blocked:return false
  if not entry.open_span:
-  key="";binding={};span={};anchor_ms=-1;base_used_ms=0;frozen=false;storage_paused=false;cached_sample={}
+  key="";binding={};span={};anchor_ms=-1;base_used_ms=0;frozen=false;storage_paused=false;cached_sample={};heartbeat_wall_ms=-1;heartbeat_call=null
   return true
  # Keep the original time anchor across checkpoint writes/retries. It is the
  # accumulated total, never +=delta per attempted save, so failures cannot double.
@@ -329,6 +337,7 @@ func start_admission_after_commit(b,frame:Dictionary,opened:Dictionary)->Diction
  # No Callable/save/emit from this point through ready installation/return.
  last_ms=current
  lifetime=RefCounted.new()
+ heartbeat_wall_ms=-1;heartbeat_call=null
  key=State.STEP;binding=frame.identity.duplicate(true)
  span={"budget_id":entry.budget_id,"generation":entry.generation,"issued_seq":entry.issued_seq}
  anchor_ms=current;base_used_ms=int(entry.used_ms);frozen=false;blocked=false;storage_paused=false
@@ -345,6 +354,134 @@ func start_admission_after_commit(b,frame:Dictionary,opened:Dictionary)->Diction
  ready_frame.erase("continuation") # Never retain a consumed call envelope.
  next_attempt_ms=last_ms
  return {"ok":true,"persisted":true,"capability":admission,"lifetime":lifetime,"identity":frame.identity.duplicate(true),"ready_token":frame.ready_token,"open_anchor_ms":current,"continuation_call":frame.continuation.get("call"),"candidate_payload":opened.payload,"candidate_serial":serial}
+
+# P3: one passive sample after the original automation tick, inside one real
+# outer Backend._process generation. The invocation frame is local and holds
+# strong owners only until the injected clock returns; no owner backlink is
+# retained by the timer, receipt, progress stamp or automation scope.
+func heartbeat_normal_process(b,generation:int,entry_epoch:int)->void:
+ # Cheap process/timer gates run every frame; no map scan, JSON parse or
+ # profile validation is performed until this exact generation is due.
+ if not is_same(b.quest_loot,self) or generation<=0:return
+ if b._process_depth!=1 or b._dispatch_boundary_depth!=1 or b._observer_depth!=0 or b._flush_depth!=0 or b._depth!=1:return
+ if b._normal_process_generation!=generation or b._normal_process_entry_epoch!=entry_epoch or b._dispatch_epoch!=entry_epoch:return
+ if heartbeat_call!=null or heartbeat_generation==generation:return
+ if anchor_ms<0 or key!=State.STEP or frozen or blocked or storage_paused or battle_receipt.is_empty():return
+ var wall:int=Time.get_ticks_msec()
+ if wall<0 or wall>State.MAX_MSEC:return
+ if heartbeat_wall_ms>=0 and (wall<heartbeat_wall_ms or wall-heartbeat_wall_ms<HEARTBEAT_INTERVAL_MS):return
+ if not clock.is_valid():return
+ # Full authority/profile/ledger checks are expensive, so do them only after
+ # cheap gates pass. They are read-only and contain no Callable or publication.
+ if not heartbeat_owner_current(b,generation,entry_epoch):return
+ var call:RefCounted=RefCounted.new()
+ var expected_lifetime:RefCounted=lifetime
+ heartbeat_call=call
+ heartbeat_wall_ms=wall
+ heartbeat_generation=generation
+ var frame:Dictionary=capture_heartbeat_frame(b,generation,entry_epoch,call,expected_lifetime,wall)
+ var sampled=clock.call()
+ if not heartbeat_frame_current(b,frame):
+  retire_heartbeat_call(call)
+  return
+ # A bad/rewound sample rejects this observation only. It never poisons the
+ # settlement clock, freezes/stops the runner, or substitutes a cached cutoff.
+ if not State.integer(sampled,0,State.MAX_MSEC):
+  retire_heartbeat_call(call)
+  return
+ var current:int=int(sampled)
+ if current<last_ms or current<anchor_ms or base_used_ms>State.MAX_MSEC-(current-anchor_ms):
+  retire_heartbeat_call(call)
+  return
+ var total:int=base_used_ms+current-anchor_ms
+ # The full post-clock frame check above is the final owner gate. Only pure
+ # type/range arithmetic follows it; no Callable or publish can interleave.
+ last_ms=current
+ cached_sample={"lifetime":expected_lifetime,"span":span.duplicate(true),"used_ms":total}
+ var stamp:Dictionary=progress_stamp
+ var publish_progress:bool=is_same(stamp.get("lifetime"),expected_lifetime) and stamp.get("span",{})==span and State.integer(stamp.get("ms"),0,State.MAX_MSEC) and State.integer(stamp.get("used_ms"),0,State.MAX_MSEC) and current>=int(stamp.ms) and current-int(stamp.ms)>=PROGRESS_INTERVAL_MS and total>int(stamp.used_ms)
+ if publish_progress:
+  progress_stamp={"lifetime":expected_lifetime,"span":span.duplicate(true),"ms":current,"used_ms":total}
+  # _publish snapshots/publishes only; no Session save or storage write.
+  # Install the stamp first, and queue the event under the existing process
+  # depth so observers cannot reenter a half-installed sample.
+  b.publish()
+ retire_heartbeat_call(call)
+
+func heartbeat_owner_current(b,generation:int,entry_epoch:int)->bool:
+ if not is_same(b.quest_loot,self) or generation<=0:return false
+ if b._process_depth!=1 or b._dispatch_boundary_depth!=1 or b._observer_depth!=0 or b._flush_depth!=0 or b._depth!=1:return false
+ if b._normal_process_generation!=generation or b._normal_process_entry_epoch!=entry_epoch or b._dispatch_epoch!=entry_epoch:return false
+ if b.save_path.is_empty() or b.stationary.running or not b.original_quests.pending.is_empty():return false
+ if anchor_ms<0 or key!=State.STEP or frozen or blocked or storage_paused or battle_receipt.is_empty():return false
+ var q=b.quest_auto
+ var auto=b.automation
+ if not q.running or not q.internal or q.detached or q.restored or not q.owns_battle or q.phase!="loot_battle" or q.step.get("action")!="loot" or q.identity.checkpoint()!=binding:return false
+ if not auto.running or not auto.single_battle or auto.settings.get("preset")!="attack" or not auto.settings.get("compact",false) or not auto.compact_active:return false
+ if auto.clone_override_active or auto.hunt_running or auto.flow_active() or not auto.training_borrow_pending.is_empty():return false
+ if auto.loot_scope.is_empty():return false
+ var scope:Dictionary=auto.loot_scope
+ var capability=scope.get("capability")
+ if not capability is RefCounted or not is_instance_valid(capability) or not is_same(auto.start_lifetime,scope.get("token")) or not is_same(scope.get("lifetime"),lifetime):return false
+ if scope.get("path")!=b.save_path or scope.get("receipt",{})!=battle_receipt:return false
+ if not scope_owner_matches(scope,"session",b.session) or not scope_owner_matches(scope,"battle",b.battle) or not scope_owner_matches(scope,"automation",auto) or not scope_owner_matches(scope,"runner",q) or not scope_owner_matches(scope,"timer",self):return false
+ var authority:Dictionary=scope.get("authority",{})
+ if authority.get("identity",{})!=binding or authority.get("connection")!=q.connection or authority.get("client")!=q.client:return false
+ if owner_session_id!=b.session.get_instance_id() or not b.battle_open:return false
+ var pending:Dictionary=b.session._pending
+ var battle_state:Dictionary=b.battle._state
+ var battle_id:=str(battle_receipt.get("ledger",{}).get("battle_id",""))
+ if battle_id.is_empty() or str(scope.get("battle_id",""))!=battle_id or not battle_state.get("active",false) or str(battle_state.get("battle_id",""))!=battle_id or str(b.battle_state.get("battle_id",""))!=battle_id:return false
+ var source:Dictionary=battle_receipt.get("source",{})
+ if auto.position_map!=100 or b.encounter_catalog.area_at(auto.position_map,auto.position_cell).get("id")!=56 or source.get("map")!=100 or source.get("area")!=56 or source.get("cell")!=[auto.position_cell.x,auto.position_cell.y]:return false
+ if pending.get("party",false) or pending.get("capture_only",false) or pending.has("training_borrow") or pending.has("quest_guard") or not pending.get("source_encounter",false):return false
+ if pending.get("quest_loot_receipt",{})!=battle_receipt or str(pending.get("battle_id",""))!=battle_id or pending.get("wild_drop_source",{})!=battle_receipt.get("source",{}):return false
+ if not b.session._loot_settlement.is_empty():return false
+ var ledger_value=b.session._profile.get("quest_loot",{})
+ if not ledger_value is Dictionary:return false
+ var ledger:Dictionary=ledger_value
+ if not State.valid(ledger) or not same_span(ledger) or not ledger.entries[key].open_span or ledger.entries[key].recovery_blocked:return false
+ var saved=JSON.parse_string(b.last_saved_payload)
+ if not saved is Dictionary or not b.session._valid_profile(saved):return false
+ var saved_ledger_value=saved.get("quest_loot",{})
+ if not saved_ledger_value is Dictionary:return false
+ var saved_ledger:Dictionary=saved_ledger_value
+ return State.valid(saved_ledger) and same_span(saved_ledger) and saved_ledger.entries[key].open_span and not saved_ledger.entries[key].recovery_blocked
+
+func capture_heartbeat_frame(b,generation:int,entry_epoch:int,call:RefCounted,expected_lifetime:RefCounted,wall:int)->Dictionary:
+ var q=b.quest_auto
+ var auto=b.automation
+ return {"generation":generation,"entry_epoch":entry_epoch,"dispatch_epoch":b._dispatch_epoch,"call":call,"lifetime":expected_lifetime,"clock":clock,"timer":heartbeat_timer_snapshot(),"span":span.duplicate(true),"binding":binding.duplicate(true),"receipt":battle_receipt.duplicate(true),"owner_session_id":owner_session_id,"session":b.session,"path":b.save_path,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"pending_ref":b.session._pending,"pending":b.session._pending.duplicate(true),"settlement":b.session._loot_settlement.duplicate(true),"cache":b.last_saved_payload,"serial":b.quest_save_serial,"backend_rev":b.rev,"queue":b._queue.duplicate(true),"dispatch_dirty":b._dispatch_dirty,"battle":b.battle,"battle_state":b.battle._state.duplicate(true),"backend_battle_state":b.battle_state.duplicate(true),"battle_open":b.battle_open,"runner":q,"identity_object":q.identity,"identity":q.identity.checkpoint(),"connection":q.connection,"client":q.client,"phase":q.phase,"step":q.step.duplicate(true),"visit_guard":b.quest_visit_guard,"party_guard":b.party_guard,"stationary_running":b.stationary.running,"original_pending":b.original_quests.pending.duplicate(true),"position_map":auto.position_map,"position_cell":auto.position_cell,"automation":auto,"auto_scope":auto.loot_scope.duplicate(true),"auto_token":auto.start_lifetime,"auto_running":auto.running,"compact_active":auto.compact_active,"wall":wall}
+
+func heartbeat_timer_snapshot()->Dictionary:
+ # open_obligation may retain the one map grid used for E1 validation. The
+ # heartbeat checks its authority fields without copying that large grid.
+ var open:Dictionary={}
+ for field in open_obligation:
+  if field=="terrain":continue
+  var value=open_obligation[field]
+  open[field]=value.duplicate(true) if value is Dictionary or value is Array else value
+ return {"key":key,"binding":binding.duplicate(true),"span":span.duplicate(true),"anchor_ms":anchor_ms,"base_used_ms":base_used_ms,"last_ms":last_ms,"blocked":blocked,"frozen":frozen,"frozen_ms":frozen_ms,"storage_paused":storage_paused,"lifetime":lifetime,"cached_sample":cached_sample.duplicate(true),"progress_stamp":progress_stamp.duplicate(true),"heartbeat_wall_ms":heartbeat_wall_ms,"heartbeat_generation":heartbeat_generation,"heartbeat_call":heartbeat_call,"admission":admission,"ready_frame":ready_frame.duplicate(true),"next_attempt_ms":next_attempt_ms,"last_attempt_ms":last_attempt_ms,"attempt_frame":attempt_frame.duplicate(true),"attempt_call":attempt_call,"battle_receipt":battle_receipt.duplicate(true),"open_obligation":open,"close_pending":close_pending.duplicate(true),"cancelled_battle":cancelled_battle.duplicate(true),"followup":followup.duplicate(true),"consume_call":consume_call}
+
+func heartbeat_frame_current(b,frame:Dictionary)->bool:
+ if frame.is_empty() or not is_same(heartbeat_call,frame.call) or not is_same(lifetime,frame.lifetime) or clock!=frame.clock:return false
+ if not heartbeat_owner_current(b,int(frame.generation),int(frame.entry_epoch)):return false
+ var q=b.quest_auto
+ var auto=b.automation
+ if not is_same(b.session,frame.session) or b.save_path!=frame.path or not is_same(b.session._profile,frame.profile_ref) or b.session._profile!=frame.profile:return false
+ if not is_same(b.session._pending,frame.pending_ref) or b.session._pending!=frame.pending or b.session._loot_settlement!=frame.settlement:return false
+ if b.last_saved_payload!=frame.cache or b.quest_save_serial!=frame.serial or b.rev!=frame.backend_rev or b._queue!=frame.queue or b._dispatch_dirty!=frame.dispatch_dirty:return false
+ if not is_same(b.battle,frame.battle) or b.battle._state!=frame.battle_state or b.battle_state!=frame.backend_battle_state or b.battle_open!=frame.battle_open:return false
+ if not is_same(q,frame.runner) or not is_same(q.identity,frame.identity_object) or q.identity.checkpoint()!=frame.identity or q.connection!=frame.connection or q.client!=frame.client or q.phase!=frame.phase or q.step!=frame.step:return false
+ if not is_same(auto,frame.automation) or auto.loot_scope!=frame.auto_scope or not is_same(auto.start_lifetime,frame.auto_token) or auto.running!=frame.auto_running or auto.compact_active!=frame.compact_active:return false
+ if b.quest_visit_guard!=frame.visit_guard or b.party_guard!=frame.party_guard or b.stationary.running!=frame.stationary_running or b.original_quests.pending!=frame.original_pending:return false
+ if auto.position_map!=frame.position_map or auto.position_cell!=frame.position_cell:return false
+ if span!=frame.span or binding!=frame.binding or battle_receipt!=frame.receipt or owner_session_id!=frame.owner_session_id:return false
+ var timer:Dictionary=heartbeat_timer_snapshot()
+ return timer==frame.timer
+
+func retire_heartbeat_call(call:RefCounted)->void:
+ if is_same(heartbeat_call,call):heartbeat_call=null
 
 # E2: one explicit internal drive call, never a loop or a public RPC.
 const ATTEMPT_INTERVAL_MS=500

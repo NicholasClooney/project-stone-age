@@ -198,6 +198,11 @@ func _process(delta: float) -> void:
 	var started := Time.get_ticks_usec()
 	_depth += 1
 	automation.tick(delta)
+	# The P3 heartbeat is owned by this exact, outer normal SceneTree process.
+	# It runs after the existing automation step and before quest-auto follow-up;
+	# nested process/observer dispatches never acquire a heartbeat opportunity.
+	if normal and _process_depth==1 and _dispatch_boundary_depth==1 and _observer_depth==0 and _flush_depth==0 and _depth==1 and _normal_process_generation>0 and _normal_process_entry_epoch==_dispatch_epoch:
+		quest_loot.heartbeat_normal_process(self,_normal_process_generation,_normal_process_entry_epoch)
 	quest_auto.tick(self,delta)
 	stationary.tick(self,delta)
 	original_quests.refresh_npc_state()
