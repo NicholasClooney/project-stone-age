@@ -199,42 +199,46 @@ class PublicBackend:
 
 class HeldReplyServer:
 	extends "res://server/ws_server.gd"
-	var target_peer_id := -1
+	var target_peer_id: int = 0
+	var target_peer_armed := false
 	var target_seq := -1
 	var held_reply: Dictionary = {}
-	var held_peer_id := -1
+	var held_peer_id: int = 0
+	var held_peer_id_valid := false
 	var release_count := 0
 	var hold_error := ""
 
 	func arm_actual_ack(peer_id: int, sequence: int) -> bool:
-		if peer_id == -1 or sequence <= 0 or target_peer_id != -1 or not held_reply.is_empty():
+		if sequence <= 0 or target_peer_armed or held_peer_id_valid or not held_reply.is_empty():
 			hold_error = "invalid or duplicate hold request"
 			return false
 		target_peer_id = peer_id
+		target_peer_armed = true
 		target_seq = sequence
 		return true
 
 	func _send(peer: WebSocketPeer, message: Dictionary) -> void:
-		if peer.get_instance_id()==target_peer_id and message.get("reply",false) is bool and message.get("reply",false) and message.get("seq",null) is int and int(message.seq)==target_seq:
+		if target_peer_armed and peer.get_instance_id()==target_peer_id and message.get("reply",false) is bool and message.get("reply",false) and message.get("seq",null) is int and int(message.seq)==target_seq:
 			if not held_reply.is_empty():
 				hold_error = "more than one reply matched the one-shot hold"
 				return
 			held_reply = message.duplicate(true) # The actual Backend reply; never synthesized.
 			held_peer_id = peer.get_instance_id()
-			target_peer_id = -1
+			held_peer_id_valid = true
+			target_peer_armed = false
 			target_seq = -1
 			return
 		super._send(peer,message)
 
 	func release_actual_reply() -> bool:
-		if held_reply.is_empty() or held_peer_id == -1:
+		if held_reply.is_empty() or not held_peer_id_valid:
 			return false
 		for peer in clients():
 			if peer.get_instance_id()!=held_peer_id or peer.get_ready_state()!=WebSocketPeer.STATE_OPEN:
 				continue
 			var actual := held_reply.duplicate(true)
 			held_reply.clear()
-			held_peer_id = -1
+			held_peer_id_valid = false
 			release_count += 1
 			super._send(peer,actual)
 			return true
@@ -247,15 +251,21 @@ var world_a
 var world_b
 var link_a
 var link_b
-var client_peer_a_id := -1
-var client_peer_b_id := -1
-var server_peer_a_id := -1
-var server_peer_b_id := -1
+var client_peer_a_id: int = 0
+var client_peer_a_id_found := false
+var client_peer_b_id: int = 0
+var client_peer_b_id_found := false
+var server_peer_a_id: int = 0
+var server_peer_a_id_found := false
+var server_peer_b_id: int = 0
+var server_peer_b_id_found := false
 var server_peer_a_ref: WeakRef
 var server_peer_b_ref: WeakRef
 var server_peer_a_ref_captured := false
-var reconnected_client_peer_a_id := -1
-var reconnected_server_peer_a_id := -1
+var reconnected_client_peer_a_id: int = 0
+var reconnected_client_peer_a_id_found := false
+var reconnected_server_peer_a_id: int = 0
+var reconnected_server_peer_a_id_found := false
 var reconnected_server_peer_a_ref: WeakRef
 var binding_server_peer_a_ref: WeakRef
 var binding_server_peer_b_ref: WeakRef
@@ -269,7 +279,8 @@ var projection_used_watermarks: Dictionary = {}
 var failure_label := ""
 var source_step: Dictionary = {}
 var observed_ack: Dictionary = {}
-var observed_ack_server_peer_id := -1
+var observed_ack_server_peer_id: int = 0
+var observed_ack_server_peer_id_found := false
 var late_ack_evidence: Dictionary = {}
 var teardown_capture: Dictionary = {}
 
@@ -663,8 +674,8 @@ func audit_snapshot(outcome: String) -> Dictionary:
 	var final_b:Dictionary=snapshot_record(world_b) if is_instance_valid(world_b) else {}
 	var failure_boundary:Dictionary={}
 	if is_instance_valid(host):
-		failure_boundary={"native_profile":host.session._profile.duplicate(true),"cache":host.last_saved_payload,"serial":host.quest_save_serial,"backend_revision":host.rev,"disk":host._disk_set(SAVE_PATH),"runner_identity":host.quest_auto.identity.checkpoint().duplicate(true),"runner_running":host.quest_auto.running,"runner_phase":host.quest_auto.phase,"runner_connection":host.quest_auto.connection,"runner_client":host.quest_auto.client,"timer":host._timer_evidence(),"server_peer_a_binding":binding_evidence(server_peer_a_id,binding_server_peer_a_ref) if server_peer_a_id!=-1 else {},"server_peer_b_binding":binding_evidence(server_peer_b_id,binding_server_peer_b_ref) if server_peer_b_id!=-1 else {},"reconnected_server_peer_a_binding":binding_evidence(reconnected_server_peer_a_id,binding_reconnected_server_peer_a_ref) if reconnected_server_peer_a_id!=-1 else {}}
-	return {"suite":"quest_auto_loot_public_remote_ui_test","outcome":outcome,"first_failure":failure_label,"union_head":"1743372391d70406639b819856915afc6ddacd04","core_original":"dbc14b0cfc15f433735a28745439de225a1bed6b","production_capability_constant":false,"claim":"real WsServer transport peer binding, not account authentication; direct original-item eligibility fixture and test-only encounter-suppressed idle boundary prove no natural route/drop/battle","startup_before_first_scene":pre_game_profile.duplicate(true),"startup":startup_trace.duplicate(true),"prestart_profile":frozen_before.duplicate(true),"start_event_count":host.start_event_count if is_instance_valid(host) else 0,"starts":host.start_records.duplicate(true) if is_instance_valid(host) else [],"writers":host.writer_records.duplicate(true) if is_instance_valid(host) else [],"writer_event_count":host.writer_event_count if is_instance_valid(host) else 0,"writer_event_ring":host.writer_event_ring.duplicate(true) if is_instance_valid(host) else [],"profile_event_count":host.profile_event_count if is_instance_valid(host) else 0,"profile_event_ring":host.profile_event_ring.duplicate(true) if is_instance_valid(host) else [],"projection_used_watermarks":projection_used_watermarks.duplicate(true),"held_wire_envelope":observed_ack.duplicate(true),"held_server_peer_id":observed_ack_server_peer_id,"late_ack":late_ack_evidence.duplicate(true),"client_peer_a_id":client_peer_a_id,"client_peer_b_id":client_peer_b_id,"server_peer_a_id":server_peer_a_id,"server_peer_b_id":server_peer_b_id,"reconnected_client_peer_a_id":reconnected_client_peer_a_id,"reconnected_server_peer_a_id":reconnected_server_peer_a_id,"peer_mapping_trace":peer_mapping_trace.duplicate(true),"encounter_fixture":"test-only IdleEncounterCatalog.step always returns false; real Backend _process remains enabled; natural encounters/battles are outside scope","idle_encounter_step_calls":host.encounter_catalog.suppressed_step_calls if is_instance_valid(host) and host.encounter_catalog is IdleEncounterCatalog else -1,"final_a":final_a,"final_b":final_b,"failure_boundary":failure_boundary,"teardown_capture":teardown_capture.duplicate(true),"observation_error":host.observation_error if is_instance_valid(host) else "","server_hold_error":server.hold_error if is_instance_valid(server) else ""}
+		failure_boundary={"native_profile":host.session._profile.duplicate(true),"cache":host.last_saved_payload,"serial":host.quest_save_serial,"backend_revision":host.rev,"disk":host._disk_set(SAVE_PATH),"runner_identity":host.quest_auto.identity.checkpoint().duplicate(true),"runner_running":host.quest_auto.running,"runner_phase":host.quest_auto.phase,"runner_connection":host.quest_auto.connection,"runner_client":host.quest_auto.client,"timer":host._timer_evidence(),"server_peer_a_binding":binding_evidence(server_peer_a_id,binding_server_peer_a_ref) if server_peer_a_id_found else {},"server_peer_b_binding":binding_evidence(server_peer_b_id,binding_server_peer_b_ref) if server_peer_b_id_found else {},"reconnected_server_peer_a_binding":binding_evidence(reconnected_server_peer_a_id,binding_reconnected_server_peer_a_ref) if reconnected_server_peer_a_id_found else {}}
+	return {"suite":"quest_auto_loot_public_remote_ui_test","outcome":outcome,"first_failure":failure_label,"union_head":"1743372391d70406639b819856915afc6ddacd04","core_original":"dbc14b0cfc15f433735a28745439de225a1bed6b","production_capability_constant":false,"claim":"real WsServer transport peer binding, not account authentication; direct original-item eligibility fixture and test-only encounter-suppressed idle boundary prove no natural route/drop/battle","startup_before_first_scene":pre_game_profile.duplicate(true),"startup":startup_trace.duplicate(true),"prestart_profile":frozen_before.duplicate(true),"start_event_count":host.start_event_count if is_instance_valid(host) else 0,"starts":host.start_records.duplicate(true) if is_instance_valid(host) else [],"writers":host.writer_records.duplicate(true) if is_instance_valid(host) else [],"writer_event_count":host.writer_event_count if is_instance_valid(host) else 0,"writer_event_ring":host.writer_event_ring.duplicate(true) if is_instance_valid(host) else [],"profile_event_count":host.profile_event_count if is_instance_valid(host) else 0,"profile_event_ring":host.profile_event_ring.duplicate(true) if is_instance_valid(host) else [],"projection_used_watermarks":projection_used_watermarks.duplicate(true),"held_wire_envelope":observed_ack.duplicate(true),"held_server_peer_id_found":observed_ack_server_peer_id_found,"held_server_peer_id":observed_ack_server_peer_id if observed_ack_server_peer_id_found else null,"late_ack":late_ack_evidence.duplicate(true),"client_peer_a_id_found":client_peer_a_id_found,"client_peer_a_id":client_peer_a_id if client_peer_a_id_found else null,"client_peer_b_id_found":client_peer_b_id_found,"client_peer_b_id":client_peer_b_id if client_peer_b_id_found else null,"server_peer_a_id_found":server_peer_a_id_found,"server_peer_a_id":server_peer_a_id if server_peer_a_id_found else null,"server_peer_b_id_found":server_peer_b_id_found,"server_peer_b_id":server_peer_b_id if server_peer_b_id_found else null,"reconnected_client_peer_a_id_found":reconnected_client_peer_a_id_found,"reconnected_client_peer_a_id":reconnected_client_peer_a_id if reconnected_client_peer_a_id_found else null,"reconnected_server_peer_a_id_found":reconnected_server_peer_a_id_found,"reconnected_server_peer_a_id":reconnected_server_peer_a_id if reconnected_server_peer_a_id_found else null,"peer_mapping_trace":peer_mapping_trace.duplicate(true),"encounter_fixture":"test-only IdleEncounterCatalog.step always returns false; real Backend _process remains enabled; natural encounters/battles are outside scope","idle_encounter_step_calls":host.encounter_catalog.suppressed_step_calls if is_instance_valid(host) and host.encounter_catalog is IdleEncounterCatalog else -1,"final_a":final_a,"final_b":final_b,"failure_boundary":failure_boundary,"teardown_capture":teardown_capture.duplicate(true),"observation_error":host.observation_error if is_instance_valid(host) else "","server_hold_error":server.hold_error if is_instance_valid(server) else ""}
 
 func write_audit(body: Dictionary) -> bool:
 	if FileAccess.file_exists(AUDIT_PATH):
@@ -733,8 +744,10 @@ func run() -> void:
 	world_a=await create_remote_scene("a")
 	if not is_instance_valid(world_a):await abort("client A startup");return
 	client_peer_a_id=link_a._peer.get_instance_id()
+	client_peer_a_id_found=true
 	if not await ready(func():return server.clients().size()==1 and server.clients()[0].get_ready_state()==WebSocketPeer.STATE_OPEN,"A is the only promoted server transport peer before B connects"):await abort("server peer A promotion");return
 	server_peer_a_id=server.clients()[0].get_instance_id()
+	server_peer_a_id_found=true
 	server_peer_a_ref=weakref(server.clients()[0])
 	server_peer_a_ref_captured=server_peer_a_ref!=null and is_instance_valid(server_peer_a_ref) and server_peer_a_ref.get_ref() is WebSocketPeer and is_instance_valid(server_peer_a_ref.get_ref())
 	binding_server_peer_a_ref=capture_binding_ref(server_peer_a_id)
@@ -742,9 +755,11 @@ func run() -> void:
 	world_b=await create_remote_scene("b")
 	if not is_instance_valid(world_b):await abort("client B startup");return
 	client_peer_b_id=link_b._peer.get_instance_id()
+	client_peer_b_id_found=true
 	if not await ready(func():return server.clients().size()==2 and link_a.online and link_b.online,"Both real transport peers are promoted and online"):await abort("peer promotion");return
 	var server_a_retained_first:=peer_ref_is_current(server_peer_a_ref,server.clients()[0])
 	server_peer_b_id=server.clients()[1].get_instance_id()
+	server_peer_b_id_found=true
 	server_peer_b_ref=weakref(server.clients()[1])
 	binding_server_peer_b_ref=capture_binding_ref(server_peer_b_id)
 	var binding_a_evidence:=binding_evidence(server_peer_a_id,binding_server_peer_a_ref)
@@ -874,6 +889,7 @@ func run() -> void:
 	late_ack_evidence={"client_peer_id":a_peer_before_release.get_instance_id(),"server_peer_id":held_server_peer_id,"lifecycle_before":a_lifecycle_before_release,"messages_in_before":a_messages_in_before_release,"callbacks_before":link_a._callbacks.size(),"server_release_count_before":server.release_count}
 	observed_ack=server.held_reply.duplicate(true)
 	observed_ack_server_peer_id=server.held_peer_id
+	observed_ack_server_peer_id_found=server.held_peer_id_valid
 	if not check(server.release_actual_reply() and server.release_count==1,"Release the exact captured Backend reply through the original still-open server peer"):await abort("late reply release");return
 	if not await ready(func():return link_a._callbacks.is_empty() and link_a.messages_in>a_messages_in_before_release,"Real WsLink consumes the released reply after the former UI callback owner was freed"):await abort("late reply delivered");return
 	if not check(link_a._peer==a_peer_before_release and int(link_a.get("_lifecycle"))==a_lifecycle_before_release,"Held-reply delivery used A's same live peer and link lifecycle, not a fabricated cross-epoch dispatch"):await abort("late reply same epoch");return
@@ -924,7 +940,9 @@ func run() -> void:
 		await abort("real peer reconnect")
 		return
 	reconnected_client_peer_a_id=link_a._peer.get_instance_id()
+	reconnected_client_peer_a_id_found=true
 	reconnected_server_peer_a_id=server.clients()[1].get_instance_id()
+	reconnected_server_peer_a_id_found=true
 	reconnected_server_peer_a_ref=weakref(server.clients()[1])
 	binding_reconnected_server_peer_a_ref=capture_binding_ref(reconnected_server_peer_a_id)
 	peer_mapping_trace.append({"tag":"a-reconnected","client_peer_id":reconnected_client_peer_a_id,"server_peer_id":reconnected_server_peer_a_id,"server_clients_count":server.clients().size(),"binding_id":captured_binding_id(binding_reconnected_server_peer_a_ref),"binding_evidence":binding_evidence(reconnected_server_peer_a_id,binding_reconnected_server_peer_a_ref),"mapping_basis":"B retained by object in slot [0], reconnecting A newly promoted into [1]"})
