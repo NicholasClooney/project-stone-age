@@ -45,7 +45,7 @@
 - 答题、口令按原数据自动作答；猜拳原随机，只做合法重试。
 - 刷物按时间封顶，每步默认 30 分钟，可调 1–180。
 - 必需费用自动付（用户选 B）：通行证 200、赛姆过路费 300，以及 44 第一张入场票。额外/可选消费仍手动。清单见 ideas.md。
-- 44 首票语义：推荐 A，即每次玩家亲手按开始、没票、钱够就买一张，同一次运行里补票手动。**用户尚未确认**，实现前要先问。
+- 44 首票：用户已定①（2026-10-07）：开始 44 自动时若无票且钱够，在大厅按原价自动买一张（项目便利）；夜间临时的②作废。
 - 金羊拆两段可选任务；四精灵袋/箱/献宠、哥亚 END6 换宠都是单独可选任务。
 - 精灵王最终确认永远手动。
 
@@ -57,7 +57,7 @@
 - 收尾 7 片：`/private/tmp/tmux-agents/codex-projects-stone-age-1/batch2-final-append-manifest.md`
 - 刷物核心：`/private/tmp/tmux-agents/quest-auto-v2-core/loot-final-handoff/handoff.md`，2760 试跑报告在 `final-2760-p3-ready/` 下
 - 收费：`/private/tmp/tmux-agents/quest-auto-v2-core/mainline-fees-commit/handoff.md`、`/private/tmp/tmux-agents/quest-auto-v2-ui/mainline-fees-ui-commit/handoff.md`、费用清单 `/private/tmp/tmux-agents/quest-auto-v2-navigation/regular-chains/paid-required/fee-inventory.md`
-- 44 首票：`/private/tmp/tmux-agents/quest-auto-v2-core/golden44-first-ticket-contract/`
+- 44 首票：用户已定①（2026-10-07）：开始 44 自动时若无票且钱够，在大厅按原价自动买一张（项目便利）；夜间临时的②作废。
 - 导航（常规链）：`/private/tmp/tmux-agents/quest-auto-v2-navigation/final-pause-handoff.md`
 - 片7：`/private/tmp/tmux-agents/codex-projects-stone-age-quest-auto-v2-piece7/final-pause-handoff/handoff.md`
 - 第二批规划与 SP：`/private/tmp/tmux-agents/quest-auto-batch-two-plan/report.md`
@@ -73,5 +73,5 @@
 ## 重启时
 
 - 第二批用完了一个 Codex 账号的额度（约 1.5 天）。建议同时只开核心、UI、导航三个负责人，Codex 主面板每 1–2 小时批审一次。
-- 44 首票：2026-10-06 用户让继续，暂按 A 实现（每次亲手按开始、没票就自动买一张）；如用户改主意，main agent 会转达。
+- 44 首票：用户已定①（2026-10-07）：开始 44 自动时若无票且钱够，在大厅按原价自动买一张（项目便利）；夜间临时的②作废。
 - 第一件事：刷物 P3 和 2760 掉落验收，然后打开 `QUEST_LOOT_PUBLIC_ENABLED`，跑全量测试上线。
