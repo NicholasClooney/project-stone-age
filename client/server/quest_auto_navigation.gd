@@ -11,9 +11,12 @@ var grid_key:=""
 var nav:AStarGrid2D
 var block_key:=""
 var block_cells:Dictionary={}
+var entry_routes=preload("res://server/quest_auto_entry_routes.gd").new()
+var entry_context:Dictionary={}
 func clear()->void:
  route.clear()
  key=""
+ entry_context={}
 func data(b,map_id:int)->Dictionary:
  if not maps.has(map_id):maps[map_id]=MapFile.load_map(b.quest_helper.places.file(map_id))
  return maps[map_id]
@@ -137,7 +140,7 @@ func plan(b,npc:Dictionary)->Array:
     if not candidate.is_empty() and (best.is_empty() or candidate.size()<best.size()):best=candidate
  else:
   var chain:=map_route(b,map_id,int(npc.map_id))
-  if chain.size()<2:return []
+  if chain.size()<2:return _entry_fallback(b,npc)
   for link in b.quest_helper.places.links(map_id).values():
    if int(link.to_map)!=int(chain[1]) or not usable(b,link):continue
    var goal:=Vector2i(int(link.cell[0]),int(link.cell[1]))
@@ -147,9 +150,16 @@ func plan(b,npc:Dictionary)->Array:
    candidate.append({"map_id":int(link.to_map),"cell":link.target.duplicate(),"portal":link.duplicate(true)})
    if best.is_empty() or candidate.size()<best.size():best=candidate
  if best.is_empty():best=Gates.path(self,b,goals,occupied)
- if not best.is_empty():best.pop_front()
+ if best.is_empty():return _entry_fallback(b,npc)
+ best.pop_front()
  return best
+func _entry_fallback(b,npc:Dictionary)->Array:
+ var result:Array=entry_routes.find(self,b,npc)
+ # Owned frozen snapshot: share internally without another world-sized copy.
+ entry_context=entry_routes.last_context if not result.is_empty() else {}
+ return result
 func prepare_route(b,npc:Dictionary)->void:
+ if not entry_context.is_empty() and not entry_routes.matches_context(b,npc,entry_context):clear()
  var signature:=str(npc.id)+str(npc.map_id)+str(npc.cell)+str(b.original_quests.npc_state.version)+str(hash(b.quest_catalog.npc_overrides))+str(hash(b.quest_catalog.enabled_events))
  if key!=signature:clear();key=signature
  # Cached geometry is never an instruction to keep walking from an old cell.

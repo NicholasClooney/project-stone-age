@@ -49,6 +49,30 @@ static func same_source(a:Variant,b:Variant)->bool:
 static func commission_proposal(b)->Dictionary:
  var current:=select(b,22)
  if current.get("stage","")!="commission":return current
+ return _recipe_proposal(b,"commission")
+
+## Unregistered exact ordinary actions. Refills remain manual until separately reviewed.
+static func axe_proposal(b)->Dictionary:
+ var current:=select(b,22)
+ if current.get("status")=="done":return current
+ var stage:=str(current.get("stage",""))
+ if stage not in ["commission","request_axe","fill_water","claim_axe"]:return current
+ return _recipe_proposal(b,stage)
+
+## Ordinary NPC projection only; raw identity must already have passed in full.
+## Preserve fixed source placement and every field except activation filtering.
+static func expected_active(expected:Dictionary,enabled_events:Array)->Dictionary:
+ var projected:Dictionary=expected.duplicate(true)
+ projected.branches=[]
+ for branch in expected.get("branches",[]):
+  if branch.get("enabled",false) and branch.get("events",[]).any(func(event):return int(event) in enabled_events):
+   projected.branches.append(branch.duplicate(true))
+ return projected
+
+static func matches_active(expected:Dictionary,active:Dictionary,enabled_events:Array)->bool:
+ return same_source(active,expected_active(expected,enabled_events))
+
+static func _recipe_proposal(b,key:String)->Dictionary:
  var table:=source_table()
  if table.is_empty():return hold("source_changed","哈恩完整锁源描述缺失或改变。")
  # Lock all original branches, including forbidden branches and their order.
@@ -65,24 +89,51 @@ static func commission_proposal(b)->Dictionary:
   return hold("source_changed","原job22/event18映射已改变。")
  if not 18 in b.quest_catalog.enabled_events or not 19 in b.quest_catalog.enabled_events:
   return hold("source_changed","原18/19事件未开放。")
- var recipe:Dictionary=table.recipes.commission
+ var recipe:Dictionary=table.recipes[key]
  var expected:Dictionary={}
  for candidate in table.npcs:
   if candidate.id==recipe.npc_id:expected=candidate
  # Read-only projection; don't call npc_by_id(), which refreshes spawn state.
  var npc:Dictionary=b.quest_catalog.active_npc(recipe.npc_id)
- if not same_source(npc,expected):return hold("source_changed","当前人物位置/分支投影与原源不符。")
+ if not matches_active(expected,npc,b.quest_catalog.enabled_events):return hold("source_changed","当前人物位置/分支投影与原源不符。")
  var branch:Dictionary=b.original_quests.branch_for(npc,profile)
  var locked:Dictionary=expected.branches[int(recipe.branch_index)]
- if not same_source(branch,locked):return hold("source_changed","当前先匹配分支不是原委托REQUEST。")
- if Rules.flag(profile,"now",18):return hold("cancel_forbidden","不确认原REQUEST取消流程。")
- if Rules.Session.bag_slots(profile)+1>15:return hold("bag_full","原委托需要一格道具空间。")
+ if not same_source(branch,locked):return hold("source_changed","当前先匹配分支不是受审制斧步骤。")
+ if str(branch.type) not in ["REQUEST","ACCEPT"]:return hold("unsupported_action","补件MESSAGE须独立审核。")
+ if str(branch.type)=="REQUEST" and Rules.flag(profile,"now",int(branch.event)):
+  return hold("cancel_forbidden","不确认原REQUEST取消流程。")
+ var worn:=Rules.worn_item_hint(profile,str(branch.condition))
+ if not worn.is_empty():return hold("worn_item",worn)
+ var received:int=Rules.item_list(str(branch.actions.get("GetItem",""))).size()
+ # Original REQUEST checks before deletion; ACCEPT checks net capacity.
+ if str(branch.type)=="REQUEST" and Rules.Session.bag_slots(profile)+received>15:
+  return hold("bag_full","原REQUEST道具栏空间不足。")
+ var capacity:=profile.duplicate(true)
+ Rules.remove_items(capacity,str(branch.actions.get("DelItem","")))
+ if Rules.Session.bag_slots(capacity)+received>15:return hold("bag_full","原交易净道具空间不足。")
  if not b.quest_arrival.has_arrival(b,b.automation.position_map,b.automation.position_cell):
   return hold("arrival_required","当前保护位置缺少原合法到达，不以提案恢复proof。")
- return {"status":"step","step":{"id":"harn:commission","npc_id":str(npc.id),
+ return {"status":"step","step":{"id":"harn:"+key,"npc_id":str(npc.id),
   "map_id":int(npc.map_id),"cell":npc.cell.duplicate(),"current":true,"done":false,"actionable":true,
-  "label":"沿原路领取制斧委托","auto_choices":["yes","ok"],
+  "label":"沿原路完成制斧步骤："+key,"auto_choices":["yes","ok"],
   "source":{"npc_id":str(npc.id),"branch":int(recipe.branch_index),"type":str(branch.type),
    "condition":str(branch.condition),"actions":branch.actions.duplicate(true),"branch_data":branch.duplicate(true),
-   "audit_policy":"harn_commission_v1","source_line":int(recipe.source_line),
+   "audit_policy":"harn_"+key+"_v1","source_line":int(recipe.source_line),
    "source_sha":str(table.sources[recipe.npc_id].sha256)}}}
+
+## Exact audited original portal only; never establishes arrival or chooses a route.
+static func reviewed_portal(b,point:Dictionary)->bool:
+ if not point.get("portal") is Dictionary:return false
+ var link:Dictionary=point.portal
+ var from_map:int=b.automation.position_map
+ var to_map:int=point.get("map_id",-1)
+ var wood_from:=from_map>=20501 and from_map<=20508
+ var wood_to:=to_map>=20501 and to_map<=20508
+ if not ((wood_from and wood_to) or (from_map==200 and to_map==20501) or (from_map==20501 and to_map==200) or (from_map==20508 and to_map==200) or [from_map,to_map] in [[3300,200],[200,3300]]):return false
+ if bool(link.get("disabled",false)) or link.has("gate_source"):return false
+ var table:=source_table()
+ if table.is_empty():return false
+ for original in table.portals:
+  if same_source(link,original) and same_source(point.cell,original.target):
+   return from_map==int(original.from_map) and to_map==int(original.to_map) and b.automation.position_cell==Vector2i(int(original.cell[0]),int(original.cell[1]))
+ return false
