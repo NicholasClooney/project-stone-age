@@ -136,6 +136,10 @@ const RESUME_INTERVAL_MSEC := 10000
 var resume_clock: Callable = Time.get_ticks_msec
 ## Writes of the resume file, for tests.
 var resume_writes := 0
+## Private verified fee-resume sidecar transaction. No command/RPC caller.
+var _fee_resume_sidecar_call: RefCounted
+var _fee_resume_sidecar_frame: Dictionary = {}
+var _fee_resume_sidecar_executing := false
 ## Successful persistence boundaries for synchronous quest transactions.
 var quest_save_serial:=0
 ## Short-lived server-only capability for a two-copy fee-attempt fence.
@@ -427,6 +431,343 @@ func _write_resume_file(path: String, state: Dictionary) -> void:
 
 func _remove_resume_file(path: String) -> void:
 	if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
+
+func _fee_resume_io_read(path:String)->Dictionary:
+	var base:String=_resume_file()
+	if base.is_empty() or path not in [base,base+".tmp"]:return {"ok":false,"exists":false,"error":ERR_INVALID_PARAMETER,"bytes":PackedByteArray()}
+	var absolute:String=ProjectSettings.globalize_path(path)
+	if DirAccess.dir_exists_absolute(absolute):return {"ok":false,"exists":true,"error":ERR_FILE_CANT_READ,"bytes":PackedByteArray()}
+	var file:=FileAccess.open(path,FileAccess.READ)
+	if file==null:
+		var open_error:int=FileAccess.get_open_error()
+		return {"ok":open_error==ERR_FILE_NOT_FOUND,"exists":false,"missing":open_error==ERR_FILE_NOT_FOUND,"error":open_error,"bytes":PackedByteArray()}
+	var declared:int=file.get_length()
+	if declared<0 or declared>16777216:
+		file.close()
+		return {"ok":false,"exists":true,"error":ERR_FILE_CANT_READ,"bytes":PackedByteArray()}
+	var bytes:PackedByteArray=file.get_buffer(declared)
+	var error:int=file.get_error()
+	file.close()
+	if error!=OK or bytes.size()!=declared:return {"ok":false,"exists":true,"error":error,"length":declared,"bytes":bytes}
+	return {"ok":true,"exists":true,"error":OK,"length":declared,"bytes":bytes}
+
+func _fee_resume_io_write_tmp(payload:PackedByteArray)->Dictionary:
+	var path:String=_resume_file()+".tmp"
+	if FileAccess.file_exists(path) or DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(path)):
+		return {"ok":false,"stage":"temporary_already_exists","error":ERR_ALREADY_EXISTS}
+	var file:=FileAccess.open(path,FileAccess.WRITE)
+	if file==null:return {"ok":false,"stage":"open_tmp","error":FileAccess.get_open_error()}
+	file.store_buffer(payload)
+	file.flush()
+	var error:int=file.get_error()
+	file.close()
+	return {"ok":error==OK,"stage":"flush_tmp" if error!=OK else "tmp_written","error":error}
+
+func _fee_resume_io_rename()->int:
+	var absolute:String=ProjectSettings.globalize_path(_resume_file())
+	return DirAccess.rename_absolute(absolute+".tmp",absolute)
+
+func _fee_resume_io_remove()->int:
+	return DirAccess.remove_absolute(ProjectSettings.globalize_path(_resume_file()))
+
+func _begin_fee_resume_sidecar_frame(action:String,candidate:Dictionary={})->Dictionary:
+	if action not in ["write_fence","remove_fence"]:return _fee_resume_unknown_result("invalid_action")
+	if _fee_resume_sidecar_call!=null or _fee_resume_sidecar_executing:return _fee_resume_unknown_result("busy")
+	var path:String=_resume_file()
+	if path.is_empty() or save_path.is_empty():return _fee_resume_unknown_result("no_bound_resume_path")
+	if JSON.stringify(session._profile)!=last_saved_payload:return _fee_resume_unknown_result("profile_cache_mismatch")
+	var boundary:Dictionary=session._canonical_fee_attempt_profile(session._profile)
+	if not boundary.get("ok",false) or not boundary.get("present",false):return _fee_resume_unknown_result("invalid_fee_profile")
+	var record:Dictionary=boundary.record
+	var expected_status:String="active" if action=="write_fence" else "closed"
+	if record.current.run_status!=expected_status:return _fee_resume_unknown_result("wrong_run_status")
+	var owner:Dictionary={"profile_id":str(session._profile.profile_id),"character_id":str(session._profile.character_id)}
+	if record.owner!=owner:return _fee_resume_unknown_result("owner_mismatch")
+	var target:Dictionary=_fee_resume_io_read(path)
+	var temporary:Dictionary=_fee_resume_io_read(path+".tmp")
+	var target_exists_value:Variant=target.get("exists",null)
+	var temporary_exists_value:Variant=temporary.get("exists",null)
+	if not _fee_resume_bool_field_is(target,"ok",true) or not _fee_resume_bool_field_is(temporary,"ok",true) or not (target_exists_value is bool) or not (temporary_exists_value is bool):return _fee_resume_unknown_result("sidecar_preflight_read")
+	var target_exists:bool=target_exists_value
+	var temporary_exists:bool=temporary_exists_value
+	if temporary_exists:return _fee_resume_unknown_result("temporary_already_exists")
+	var old_state:Dictionary={}
+	if target_exists:
+		var parser:=JSON.new()
+		var parse_error:int=parser.parse(target.bytes.get_string_from_utf8())
+		if parse_error!=OK:return _fee_resume_unknown_result("existing_sidecar_invalid_json")
+		var parsed:Variant=parser.data
+		# The legacy writer stores JSON.from_native(state), not a plain JSON
+		# Dictionary. Validate a bounded, default-deny subset before to_native:
+		# untyped Array, Dictionary envelopes, primitive tokens, and the exact
+		# built-in Array[String] envelope emitted by Godot 4.6. Other typed,
+		# custom, Object and script envelopes remain refused.
+		var node_budget:Array=[0]
+		if not _fee_native_sidecar_dictionary_safe(parsed,0,node_budget):return _fee_resume_unknown_result("existing_sidecar_invalid_native_envelope")
+		var native:Variant=JSON.to_native(parsed,false)
+		if not native is Dictionary:return _fee_resume_unknown_result("existing_sidecar_not_dictionary")
+		old_state=native
+	var binding:Dictionary={"owner":owner.duplicate(true),"run_id":record.current.run_id}
+	var payload:=PackedByteArray()
+	if action=="write_fence":
+		var expected:Dictionary=old_state.duplicate(true)
+		expected.erase("quest_auto")
+		expected["fee_attempt_binding"]=binding
+		if candidate!=expected:return _fee_resume_unknown_result("candidate_not_exact_fence")
+		payload=JSON.stringify(JSON.from_native(candidate)).to_utf8_buffer()
+		if payload.size()>16777216:return _fee_resume_unknown_result("candidate_too_large")
+	else:
+		if candidate.size()!=0:return _fee_resume_unknown_result("delete_candidate_supplied")
+		if target.get("exists",false):
+			if old_state.has("quest_auto") or old_state.get("fee_attempt_binding",null)!=binding:return _fee_resume_unknown_result("existing_sidecar_not_this_fence")
+			# Refuse hunt/battle/other recovery keys; deletion is only for the standalone fee marker.
+			if not FeeAttemptJournal.exact_keys(old_state,["fee_attempt_binding"]):return _fee_resume_unknown_result("fence_not_standalone")
+	var call:=RefCounted.new()
+	_fee_resume_sidecar_call=call
+	var frame:Dictionary={
+		"call":call,"action":action,"session":session,"profile_ref":session._profile,
+		"profile":session._profile.duplicate(true),"owner":owner.duplicate(true),"record":record.duplicate(true),
+		"save_path":save_path,"resume_path":path,"cache":last_saved_payload,"serial":quest_save_serial,
+		"target_exists":target_exists,"target_bytes":target.get("bytes",PackedByteArray()),
+		"temporary_exists":temporary_exists,"temporary_bytes":temporary.get("bytes",PackedByteArray()),
+		"candidate":candidate.duplicate(true),"payload":payload
+	}
+	_fee_resume_sidecar_frame=frame
+	var prepared_fact:Dictionary=_fee_resume_sidecar_fact(frame)
+	prepared_fact.merge({"ok":true,"call":call,"stage":"prepared","operation_attempted":false,"operation_completed":false},true)
+	return prepared_fact
+
+func _fee_native_sidecar_dictionary_safe(value:Variant,depth:int,node_budget:Array)->bool:
+	if depth>64 or node_budget.is_empty():return false
+	var visited:int=int(node_budget[0])+1
+	if visited>100000:return false
+	node_budget[0]=visited
+	if not value is Dictionary:return false
+	var envelope:Dictionary=value
+	if envelope.size()!=2 or not envelope.has("type") or not envelope.has("args"):return false
+	var type_value:Variant=envelope.get("type",null)
+	var args_value:Variant=envelope.get("args",null)
+	if not (type_value is String) or type_value!="Dictionary" or not (args_value is Array):return false
+	var args:Array=args_value
+	if args.size()%2!=0:return false
+	var seen_keys:Dictionary={}
+	var seen_string_like_keys:Dictionary={}
+	for index in range(0,args.size(),2):
+		var key_value:Variant=args[index]
+		if not key_value is String:return false
+		var key:String=key_value
+		if not _fee_native_dictionary_key_safe(key) or seen_keys.has(key):return false
+		seen_keys[key]=true
+		var string_like_name:String=""
+		if key.begins_with("s:"):string_like_name=key.substr(2)
+		elif key.begins_with("sn:"):string_like_name=key.substr(3)
+		if key.begins_with("s:") or key.begins_with("sn:"):
+			# Godot Dictionary compares equal-content String and StringName keys
+			# as the same key. Reject that alias before JSON.to_native can overwrite it.
+			if seen_string_like_keys.has(string_like_name):return false
+			seen_string_like_keys[string_like_name]=true
+		if not _fee_native_sidecar_value_safe(args[index+1],depth+1,node_budget):return false
+	return true
+
+func _fee_native_typed_string_array_safe(value:Variant,depth:int,node_budget:Array)->bool:
+	if depth>64 or node_budget.is_empty() or not value is Dictionary:return false
+	var visited:int=int(node_budget[0])+1
+	if visited>100000:return false
+	node_budget[0]=visited
+	var envelope:Dictionary=value
+	if envelope.size()!=3 or not envelope.has("type") or not envelope.has("elem_type") or not envelope.has("args"):return false
+	var type_value:Variant=envelope.get("type",null)
+	var element_type:Variant=envelope.get("elem_type",null)
+	var args_value:Variant=envelope.get("args",null)
+	if not (type_value is String) or type_value!="Array":return false
+	if not (element_type is String) or element_type!="String":return false
+	if not (args_value is Array):return false
+	var args:Array=args_value
+	for child:Variant in args:
+		var element_visit:int=int(node_budget[0])+1
+		if element_visit>100000:return false
+		node_budget[0]=element_visit
+		if not (child is String):return false
+		var token:String=child
+		if not token.begins_with("s:"):return false
+	return true
+
+func _fee_native_sidecar_value_safe(value:Variant,depth:int,node_budget:Array)->bool:
+	if depth>64 or node_budget.is_empty():return false
+	var visited:int=int(node_budget[0])+1
+	if visited>100000:return false
+	node_budget[0]=visited
+	var kind:int=typeof(value)
+	if kind==TYPE_NIL or kind==TYPE_BOOL:return true
+	if kind==TYPE_STRING:
+		var token:String=value
+		if token.begins_with("i:"):
+			var integer_text:String=token.substr(2)
+			return integer_text.is_valid_int() and str(integer_text.to_int())==integer_text
+		if token.begins_with("f:"):
+			var float_text:String=token.substr(2)
+			if not float_text.is_valid_float():return false
+			var number:float=float_text.to_float()
+			return is_finite(number)
+		return token.begins_with("s:") or token.begins_with("sn:") or token.begins_with("np:")
+	if kind==TYPE_ARRAY:
+		var array_value:Array=value
+		for child:Variant in array_value:
+			if not _fee_native_sidecar_value_safe(child,depth+1,node_budget):return false
+		return true
+	if kind==TYPE_DICTIONARY:
+		var dictionary_value:Dictionary=value
+		var type_value:Variant=dictionary_value.get("type",null)
+		if dictionary_value.has("elem_type") or (type_value is String and type_value=="Array"):
+			return _fee_native_typed_string_array_safe(dictionary_value,depth,node_budget)
+		return _fee_native_sidecar_dictionary_safe(dictionary_value,depth,node_budget)
+	# JSON parser numbers and all other Variant types are not emitted directly
+	# by JSON.from_native for this sidecar subset.
+	return false
+
+func _fee_native_dictionary_key_safe(token:String)->bool:
+	if token.begins_with("s:") or token.begins_with("sn:"):return true
+	if not token.begins_with("i:"):return false
+	var integer_text:String=token.substr(2)
+	return integer_text.is_valid_int() and str(integer_text.to_int())==integer_text
+
+func _fee_resume_sidecar_frame_current(frame:Dictionary)->bool:
+	if frame.is_empty() or not is_same(_fee_resume_sidecar_call,frame.get("call")):return false
+	if not is_same(session,frame.get("session")) or not is_same(session._profile,frame.get("profile_ref")) or session._profile!=frame.get("profile"):return false
+	if save_path!=frame.get("save_path") or _resume_file()!=frame.get("resume_path"):return false
+	if last_saved_payload!=frame.get("cache") or quest_save_serial!=frame.get("serial"):return false
+	var boundary:Dictionary=session._canonical_fee_attempt_profile(session._profile)
+	return boundary.get("ok",false) and boundary.get("present",false) and boundary.get("record",{})==frame.get("record",{}) and boundary.record.owner==frame.get("owner",{})
+
+func _end_fee_resume_sidecar_frame(handle:Dictionary)->void:
+	if handle.size()!=1 or not handle.has("call") or not is_same(_fee_resume_sidecar_call,handle.call):return
+	_fee_resume_sidecar_call=null
+	_fee_resume_sidecar_frame={}
+	_fee_resume_sidecar_executing=false
+
+func _fee_resume_unknown_result(stage:String,attempted:bool=false,completed:bool=false,error:int=OK)->Dictionary:
+	return {"ok":false,"operation_attempted":attempted,"operation_completed":completed,"sidecar_persisted":"unknown","target_state":"unknown","sidecar_exists":"unknown","stage":stage,"operation_error":error}
+
+func _fee_resume_bool_field_is(row:Dictionary,key:String,expected:bool)->bool:
+	var value:Variant=row.get(key,null)
+	if not (value is bool):return false
+	var typed:bool=value
+	return typed==expected
+
+func _fee_resume_sidecar_fact_from_read(frame:Dictionary,target:Dictionary)->Dictionary:
+	var read_ok_value:Variant=target.get("ok",null)
+	var exists_value:Variant=target.get("exists",null)
+	if not (read_ok_value is bool) or not (exists_value is bool):return {"sidecar_persisted":"unknown","target_state":"unknown","sidecar_exists":"unknown"}
+	var read_ok:bool=read_ok_value
+	var exists:bool=exists_value
+	if not read_ok:return {"sidecar_persisted":"unknown","target_state":"unknown","sidecar_exists":"unknown"}
+	var matches:bool=false
+	if frame.get("action","")=="write_fence":
+		matches=exists and target.get("bytes",PackedByteArray())==frame.get("payload",PackedByteArray())
+	else:
+		matches=not exists
+	return {"sidecar_persisted":matches,"target_state":"matches" if matches else "differs","sidecar_exists":exists}
+
+func _fee_resume_sidecar_fact(frame:Dictionary)->Dictionary:
+	return _fee_resume_sidecar_fact_from_read(frame,_fee_resume_io_read(str(frame.get("resume_path",""))))
+
+func _fee_resume_sidecar_result(frame:Dictionary,success:bool,stage:String,attempted:bool,completed:bool,error:int=OK)->Dictionary:
+	var result:Dictionary=_fee_resume_sidecar_fact(frame)
+	var tmp:Dictionary=_fee_resume_io_read(str(frame.get("resume_path",""))+".tmp")
+	var tmp_clear:bool=_fee_resume_bool_field_is(tmp,"ok",true) and _fee_resume_bool_field_is(tmp,"exists",false)
+	result.merge({"ok":success,"operation_attempted":attempted,"operation_completed":completed,"stage":stage,"operation_error":error,"temporary_clear":tmp_clear,"temporary_exists":tmp.get("exists","unknown")},true)
+	return result
+
+func _commit_fee_resume_sidecar_frame(handle:Variant)->Dictionary:
+	if not handle is Dictionary:return _fee_resume_unknown_result("invalid_handle")
+	if _fee_resume_sidecar_call==null or handle.size()!=1 or not handle.has("call") or not is_same(_fee_resume_sidecar_call,handle.get("call")):
+		return _fee_resume_unknown_result("invalid_handle")
+	if _fee_resume_sidecar_executing:return _fee_resume_unknown_result("already_executing",false,false)
+	if _fee_resume_sidecar_frame.is_empty() or not is_same(handle.get("call"),_fee_resume_sidecar_frame.get("call")):
+		return _fee_resume_unknown_result("frame_mismatch")
+	_fee_resume_sidecar_executing=true
+	var frame:Dictionary=_fee_resume_sidecar_frame
+	if not _fee_resume_sidecar_frame_current(frame):
+		var cas_result:Dictionary=_fee_resume_sidecar_result(frame,false,"owner_or_cas_before_io",false,false)
+		_end_fee_resume_sidecar_frame(handle)
+		return cas_result
+	var before:Dictionary=_fee_resume_io_read(frame.resume_path)
+	var tmp_before:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	if not _fee_resume_bool_field_is(before,"ok",true) or not _fee_resume_bool_field_is(before,"exists",frame.target_exists) or (frame.target_exists and before.get("bytes",PackedByteArray())!=frame.target_bytes) or not _fee_resume_bool_field_is(tmp_before,"ok",true) or not _fee_resume_bool_field_is(tmp_before,"exists",frame.temporary_exists) or (frame.temporary_exists and tmp_before.get("bytes",PackedByteArray())!=frame.temporary_bytes):
+		var disk_result:Dictionary=_fee_resume_sidecar_result(frame,false,"disk_changed_before_io",false,false)
+		_end_fee_resume_sidecar_frame(handle)
+		return disk_result
+	# Both preflight reads are overridable seams. Recheck after their callbacks and
+	# exact byte comparison so a stale frame cannot write/remove a successor path.
+	if not _fee_resume_sidecar_frame_current(frame):
+		var stale_preflight_result:Dictionary=_fee_resume_sidecar_result(frame,false,"owner_or_cas_after_preflight_reads_before_io",false,false)
+		_end_fee_resume_sidecar_frame(handle)
+		return stale_preflight_result
+	var operation_attempted:bool=false
+	var operation_completed:bool=false
+	var operation_error:int=OK
+	if frame.action=="write_fence":
+		operation_attempted=true
+		var write_result:Dictionary=_fee_resume_io_write_tmp(frame.payload)
+		var tmp_written:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+		if not _fee_resume_bool_field_is(write_result,"ok",true) or not _fee_resume_bool_field_is(tmp_written,"ok",true) or not _fee_resume_bool_field_is(tmp_written,"exists",true) or tmp_written.get("bytes",PackedByteArray())!=frame.payload:
+			operation_error=int(write_result.get("error",OK))
+			var tmp_fail_result:Dictionary=_fee_resume_sidecar_result(frame,false,"tmp_write_or_readback_failed",true,false,operation_error)
+			tmp_fail_result["io_stage"]=write_result.get("stage","")
+			tmp_fail_result["temporary_read_error"]=tmp_written.get("error",OK)
+			_end_fee_resume_sidecar_frame(handle)
+			return tmp_fail_result
+		if not _fee_resume_sidecar_frame_current(frame):
+			var stale_tmp_result:Dictionary=_fee_resume_sidecar_result(frame,false,"owner_or_cas_after_tmp_before_rename",true,false)
+			_end_fee_resume_sidecar_frame(handle)
+			return stale_tmp_result
+		var target_pre:Dictionary=_fee_resume_io_read(frame.resume_path)
+		var tmp_pre:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+		# Both reads are overridable seams. Re-check after the final read so a
+		# callback changing owner/path/serial cannot pass into rename.
+		if not _fee_resume_sidecar_frame_current(frame):
+			var stale_read_result:Dictionary=_fee_resume_sidecar_result(frame,false,"owner_or_cas_after_target_reads_before_rename",true,false)
+			_end_fee_resume_sidecar_frame(handle)
+			return stale_read_result
+		if not _fee_resume_bool_field_is(target_pre,"ok",true) or not _fee_resume_bool_field_is(target_pre,"exists",frame.target_exists) or (frame.target_exists and target_pre.get("bytes",PackedByteArray())!=frame.target_bytes) or not _fee_resume_bool_field_is(tmp_pre,"ok",true) or not _fee_resume_bool_field_is(tmp_pre,"exists",true) or tmp_pre.get("bytes",PackedByteArray())!=frame.payload:
+			var target_result:Dictionary=_fee_resume_sidecar_result(frame,false,"target_or_tmp_changed_before_rename",true,false)
+			target_result["target_pre_error"]=target_pre.get("error",OK)
+			target_result["temporary_pre_error"]=tmp_pre.get("error",OK)
+			_end_fee_resume_sidecar_frame(handle)
+			return target_result
+		operation_error=_fee_resume_io_rename()
+		operation_completed=operation_error==OK
+	else:
+		if not _fee_resume_sidecar_frame_current(frame):
+			var stale_remove_result:Dictionary=_fee_resume_sidecar_result(frame,false,"owner_or_cas_before_remove",false,false)
+			_end_fee_resume_sidecar_frame(handle)
+			return stale_remove_result
+		if frame.target_exists:
+			operation_attempted=true
+			operation_error=_fee_resume_io_remove()
+			operation_completed=operation_error==OK
+		else:
+			operation_completed=true # Verified absence; no mutation was attempted.
+	var after:Dictionary=_fee_resume_io_read(frame.resume_path)
+	var tmp_after:Dictionary=_fee_resume_io_read(frame.resume_path+".tmp")
+	var fact:Dictionary=_fee_resume_sidecar_fact_from_read(frame,after)
+	var persisted:Variant=fact.get("sidecar_persisted","unknown")
+	var persisted_matches:bool=false
+	if persisted is bool:
+		persisted_matches=persisted
+	var current:bool=_fee_resume_sidecar_frame_current(frame)
+	var tmp_clear:bool=_fee_resume_bool_field_is(tmp_after,"ok",true) and _fee_resume_bool_field_is(tmp_after,"exists",false)
+	var success:bool=operation_completed and persisted_matches and current and tmp_clear
+	var stage:String="verified"
+	if not current and persisted_matches:stage="owner_changed_after_io"
+	elif not _fee_resume_bool_field_is(after,"ok",true) or not _fee_resume_bool_field_is(tmp_after,"ok",true):stage="readback_unknown"
+	elif not operation_completed:stage="io_return_failed"
+	elif not persisted_matches:stage="target_state_not_verified"
+	elif not tmp_clear:stage="temporary_not_cleared"
+	var final_result:Dictionary=fact.duplicate(true)
+	final_result.merge({"ok":success,"operation_attempted":operation_attempted,"operation_completed":operation_completed,"stage":stage,"operation_error":operation_error,"temporary_clear":tmp_clear,"temporary_exists":tmp_after.get("exists","unknown")},true)
+	_end_fee_resume_sidecar_frame(handle)
+	return final_result
 
 ## After load_profile: a run written down at the last shutdown goes on once
 ## the character stands where it ran (automation.gd try_resume). The file is
