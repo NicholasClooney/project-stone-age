@@ -8,6 +8,7 @@ const SAVE_VERSION := 8
 const ENTITY_TRAVEL_PASS_ENABLED := false
 const LootState=preload("res://server/quest_auto_loot_state.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
+const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 const TransmigrationState=preload("res://server/transmigration_state.gd")
 const ItemStorage=preload("res://server/item_storage.gd")
 const OriginalRevival = preload("res://server/original_revival.gd")
@@ -1548,6 +1549,30 @@ func _write_fee_attempt_candidate_once(candidate:Dictionary,path:String,expected
 	var backup:Dictionary=_read_fee_attempt_file(path+".bak",payload)
 	var temporary:Dictionary=_read_fee_attempt_file(path+".tmp",PackedByteArray())
 	return {"ok":writer_return and primary.get("ok",false) and primary.get("exists",false) and primary.get("matches",false) and backup.get("ok",false) and temporary.get("ok",false) and not temporary.get("exists",true),"writer_return":writer_return,"primary":primary,"backup":backup,"temporary":temporary}
+
+## Journal-only Start W1 or identical active W2; caller owns the private CAS frame.
+func _write_fee_start_candidate_once(candidate:Variant,path:String,expected_profile_ref:Dictionary,expected_profile_value:Dictionary,phase:String)->Dictionary:
+	if path.is_empty() or not _pending.is_empty() or not _loot_settlement.is_empty():return {"ok":false,"stage":"session_admission"}
+	if not is_same(_profile,expected_profile_ref) or not FeeStartJournalWriter.same_value(_profile,expected_profile_value):return {"ok":false,"stage":"session_profile_changed"}
+	if phase=="w1":
+		if not FeeStartJournalWriter.transition(expected_profile_value,candidate):return {"ok":false,"stage":"invalid_start_transition"}
+	elif phase=="w2":
+		var before_owner:Dictionary=FeeStartJournalWriter.owner(expected_profile_value)
+		var candidate_owner:Dictionary=FeeStartJournalWriter.owner(candidate)
+		if before_owner.is_empty() or candidate_owner.is_empty() or before_owner!=candidate_owner:return {"ok":false,"stage":"invalid_owner"}
+		var journal:Variant=candidate.get("quest_auto_fee_lifecycle")
+		var previous:Variant=expected_profile_value.get("quest_auto_fee_lifecycle")
+		if not FeeAttemptJournal.valid(previous) or not FeeAttemptJournal.valid(journal):return {"ok":false,"stage":"invalid_journal"}
+		if journal.owner!=candidate_owner or previous.owner!=before_owner or journal.current.run_status!="active" or journal.current.purchase.state not in ["none","manual_only"]:return {"ok":false,"stage":"invalid_w2"}
+		if not FeeStartJournalWriter.same_value(candidate,expected_profile_value):return {"ok":false,"stage":"w2_not_identical"}
+	else:return {"ok":false,"stage":"invalid_phase"}
+	if not _valid_profile(expected_profile_value) or not _valid_profile(candidate):return {"ok":false,"stage":"invalid_profile"}
+	var bytes:PackedByteArray=JSON.stringify(candidate).to_utf8_buffer()
+	var writer_return:bool=_write_profile_candidate(candidate.duplicate(true),path)
+	var primary:Dictionary=_read_fee_attempt_file(path,bytes)
+	var backup:Dictionary=_read_fee_attempt_file(path+".bak",bytes)
+	var temporary:Dictionary=_read_fee_attempt_file(path+".tmp",PackedByteArray())
+	return {"writer_return":writer_return,"primary":primary,"backup":backup,"temporary":temporary}
 
 ## One forced physical close candidate write. Backend supplies a private,
 ## captured close frame; this function admits only the exact Journal.close_run
