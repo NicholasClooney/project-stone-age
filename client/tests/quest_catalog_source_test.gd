@@ -2,6 +2,13 @@ extends "res://tests/quest_catalog_lookup_test.gd"
 const Backend=preload("res://server/backend.gd")
 class FullCatalog extends "res://scripts/quest_catalog.gd":
  func active_npcs_by_source(_source_script:String)->Array:return active_npcs()
+# Freeze only the NPC input boundary; projection and full snapshots stay real.
+class FrozenNpcState extends "res://server/quest_npc_state.gd":
+ var input:Dictionary={}
+ func expire()->bool:return false
+ func spawn_areas(_npcs:Array,_events:Array)->bool:return false
+ func refresh_time_visuals(_npcs:Array,_events:Array)->bool:return false
+ func snapshot()->Dictionary:return input.duplicate(true)
 var scripts:Array=["","missing/source"]
 func compare_sources(catalog,label:String)->void:
  var original:Array=catalog.npcs.duplicate(true)
@@ -44,6 +51,69 @@ func compare_entries(catalog,old,label:String)->void:
    for arguments in variants:
     if helper.callv("entry",[{"quest_catalog":catalog}]+arguments)!=helper.callv("entry",[{"quest_catalog":old}]+arguments):equal=false
   check(equal,label+" "+pair[0]+" entry preserves source/map/id/branch/first selection")
+func snapshot_step(snapshot:Dictionary,id:String)->Dictionary:
+ for quest in snapshot.quests:
+  for step in quest.steps:
+   if str(step.id)==id:return step
+ return {}
+func source_point(npc:Dictionary,walkable:String)->Dictionary:
+ # Restrict the imported source rectangle to its first matching cell. A one-cell
+ # rectangle forces randi_range(0,0): no seed search or fake legal coordinates.
+ if not npc.has("source_spawn"):return {}
+ var rule:Dictionary=npc.source_spawn.duplicate(true)
+ var offset:int=str(rule.walkable).find(walkable)
+ if offset<0:return {}
+ var rect:Array=rule.rect
+ var width:int=int(rect[2])-int(rect[0])+1
+ var x:int=int(rect[0])+offset%width
+ var y:int=int(rect[1])+int(offset/width)
+ rule.rect=[x,y,x,y];rule.walkable=walkable
+ return rule
+func birth_boundary()->Dictionary:
+ var b=Backend.new();b.session.gm_raise_level(-1,80)
+ var catalog=FullCatalog.new()
+ b.quest_catalog=catalog;b.original_quests.catalog=catalog
+ var npc:Dictionary={}
+ for candidate in catalog.npcs:
+  if candidate.get("source_script","")=="seimu/event/event02_1" and candidate.has("source_spawn"):
+   npc=candidate;break
+ var blocked:Dictionary=source_point(npc,"0")
+ var legal:Dictionary=source_point(npc,"1")
+ check(not blocked.is_empty() and not legal.is_empty(),"source Katan rectangle contains blocked and legal birth cells")
+ if blocked.is_empty() or legal.is_empty():b.free();return {}
+ var source_rule:Dictionary=npc.source_spawn.duplicate(true)
+ var state=preload("res://server/quest_npc_state.gd").new()
+ var now:Array=[100.0]
+ state.clock=func():return now[0]
+ b.original_quests.npc_state=state
+ # Keep other area births outside this boundary, without changing their source.
+ for other in catalog.npcs:
+  if other.has("source_spawn") and str(other.id)!=str(npc.id):state.spawn_attempts[str(other.id)]=101.0
+ npc.source_spawn=blocked
+ b.original_quests.refresh_npc_state()
+ check(not state.records.has(str(npc.id)) and state.spawn_attempts[str(npc.id)]==100.0,"blocked source cell leaves Katan unborn after one actual attempt")
+ b.quest_helper.cached_key=""
+ var before:Dictionary=b.quest_helper.snapshot(b)
+ npc.source_spawn=legal;now[0]=100.999
+ b.original_quests.refresh_npc_state()
+ check(not state.records.has(str(npc.id)) and state.spawn_attempts[str(npc.id)]==100.0,"legal source cell cannot retry before one second")
+ now[0]=101.0
+ b.original_quests.refresh_npc_state()
+ var cell:Array=[legal.rect[0],legal.rect[1]]
+ check(state.records.get(str(npc.id),{}).get("cell",[])==cell and state.spawn_attempts[str(npc.id)]==101.0,"one-second boundary births Katan on imported legal source cell")
+ npc.source_spawn=source_rule
+ b.quest_helper.cached_key=""
+ var after:Dictionary=b.quest_helper.snapshot(b)
+ for id in ["katan:request","katan:first","katan:second"]:
+  var absent:Dictionary=snapshot_step(before,id)
+  var born:Dictionary=snapshot_step(after,id)
+  check(absent.is_empty() and born.get("npc_id","")==str(npc.id) and born.get("cell",[])==cell,"birth boundary adds concrete complete-snapshot step "+id)
+  print("SOURCE BIRTH STEP ",JSON.stringify({"id":id,"before":absent,"after":born}))
+ check(before!=after,"same full-array catalog changes complete snapshot across actual birth boundary")
+ var input:Dictionary=state.snapshot()
+ print("SOURCE BIRTH FIXTURE ",JSON.stringify({"npc_id":npc.id,"blocked":blocked.rect,"legal":legal.rect,"attempts":state.spawn_attempts,"input":input}))
+ b.free()
+ return input
 func run()->void:
  var catalog=Catalog.new();var old=FullCatalog.new()
  for npc in catalog.npcs+catalog.service_npcs:
@@ -91,18 +161,26 @@ func run()->void:
  var old_us:int=Time.get_ticks_usec()-start;start=Time.get_ticks_usec()
  for source in scripts:catalog.active_npcs_by_source(source)
  print("SOURCE LOOKUP scripts=",scripts.size()," full_us=",old_us," projected_us=",Time.get_ticks_usec()-start)
+ var npc_input:Dictionary=birth_boundary()
  var b=Backend.new();b.session.gm_raise_level(-1,80)
+ var frozen=FrozenNpcState.new();b.original_quests.npc_state=frozen
  for state in [0,1,2]:
   catalog.npc_overrides.clear()
   if state==1:catalog.npc_overrides[str(first_npc.id)]={"map_id":31705,"cell":[2,3],"hidden":true}
   if state==2:catalog.enabled_events.erase(46)
+  frozen.input=npc_input.duplicate(true)
+  frozen.input.merge(catalog.npc_overrides,true)
+  frozen.version+=1
+  catalog.npc_overrides=frozen.snapshot()
   sync_old(catalog,old)
+  var input_before:Dictionary=frozen.snapshot()
   b.automation.position_changed(100 if state==0 else 31705,Vector2i(10,10))
   b.quest_catalog=old;b.original_quests.catalog=old;b.quest_helper.cached_key=""
   start=Time.get_ticks_usec();var expected:Dictionary=b.quest_helper.snapshot(b);old_us=Time.get_ticks_usec()-start
   b.quest_catalog=catalog;b.original_quests.catalog=catalog;b.quest_helper.cached_key=""
   start=Time.get_ticks_usec();var actual:Dictionary=b.quest_helper.snapshot(b);var new_us:int=Time.get_ticks_usec()-start
   check(actual==expected,"representative complete snapshot exact old full-array input state"+str(state))
+  check(catalog.npc_overrides==input_before and old.npc_overrides==input_before and frozen.snapshot()==input_before,"both complete snapshots retain identical frozen NPC input state"+str(state))
   print("SOURCE SNAPSHOT state=",state," old_us=",old_us," new_us=",new_us)
  b.free()
  print("QUEST CATALOG SOURCE: %d failures"%failures);quit(1 if failures else 0)
