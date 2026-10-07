@@ -5,6 +5,7 @@ extends RefCounted
 ## the state; see docs/technical/game-scripts.md.
 const WaitingScreen = preload("res://scripts/waiting_screen.gd")
 const LoginScreen = preload("res://scripts/login_screen.gd")
+const ManualFeeFeedback = preload("res://scripts/game/manual_fee_feedback.gd")
 const QUEST_RECEIPT_FIELDS=["quest_run_id","quest_step_id","quest_revision","quest_segment_id","quest_position_seq"]
 class LogoutReply extends RefCounted:
 	var owner_ref:WeakRef
@@ -32,6 +33,7 @@ class LogoutReply extends RefCounted:
 		if not is_instance_valid(scene) or scene.link!=link or link._lifecycle!=guard.lifecycle or link._peer!=peer or target.logout_generation!=guard.generation:return
 		if scene.is_inside_tree():scene.get_tree().reload_current_scene()
 
+var manual_fee_feedback := ManualFeeFeedback.new()
 var logout_generation:=0
 var quest_prefix:Array=[]
 var quest_prefix_id:=""
@@ -382,6 +384,11 @@ func acknowledge_presentation() -> void:
 	game.link.request({"type":"presented","battle_id":str(game.state.battle.get("battle_id","")),"turn":int(game.state.battle.get("turn",0))})
 
 func _on_backend_message(event: Dictionary) -> void:
+	if str(event.get("type", "")) in ["snapshot", "profile"]:
+		var stale_fee_text: String = manual_fee_feedback.stale_text(game.state.profile)
+		if not stale_fee_text.is_empty():
+			if game.last_adventure_message == stale_fee_text:game.last_adventure_message = ""
+			if is_instance_valid(game.message) and game.message.text == stale_fee_text:game.message.text = ""
 	# LAN phase 2: other players and 一般频道, even before the map is built.
 	if str(event.get("type","")) in ["presence","chat"]:
 		if is_instance_valid(game.remote_players):game.remote_players.on_event(event)
@@ -420,8 +427,10 @@ func _on_backend_message(event: Dictionary) -> void:
 			var reason := str(event.get("reason",""))
 			if not reason.is_empty():game.message.text = "未连接服务器，操作未发送。" if reason=="offline" else "服务器拒绝：%s" % reason
 		"quest_result":
-			game.last_adventure_message=str(event.get("text",""))
-			game.message.text=game.last_adventure_message
+			var feedback: Dictionary = manual_fee_feedback.consume(event, game.state.profile, not game.link.is_local())
+			if feedback.is_empty():return
+			game.last_adventure_message=feedback.text
+			if game.message.text != feedback.text:game.message.text=feedback.text
 		"position":
 			if event.has("quest_position_seq"):
 				if not accept_quest_position(event):return
