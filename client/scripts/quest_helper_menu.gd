@@ -8,6 +8,8 @@ var settings_feedback:=""
 var settings_panel:Control
 var world: Node
 var body: VBoxContainer
+var header: HBoxContainer
+var settings_button: Button
 var last_model := ""
 var selected_id := -1
 var selected_steps := {}
@@ -122,18 +124,26 @@ func rebuild(save_scroll:bool=true) -> void:
 	viewport_size=world.get_viewport_rect().size
 	narrow=viewport_size.x<720
 	last_model=refresh_key()
-	for child in get_children():remove_child(child);child.queue_free()
-	list_scroll=null;detail_scroll=null
-	body=column(self)
-	var header:=HBoxContainer.new();body.add_child(header)
-	label(header,"任务助手",20)
-	var minimize:=button(header,"最小化",close_menu,"QuestHelperMinimize")
-	minimize.size_flags_horizontal=Control.SIZE_SHRINK_END
-	minimize.autowrap_mode=TextServer.AUTOWRAP_OFF
-	var close:=button(header,"关闭 · Esc",close_menu,"QuestHelperClose")
-	close.size_flags_horizontal=Control.SIZE_SHRINK_END
-	close.custom_minimum_size.x=110
-	close.autowrap_mode=TextServer.AUTOWRAP_OFF
+	# Window actions outlive projection refreshes: replacing them between mouse
+	# hover/press/release loses the user's click while background state updates.
+	if not is_instance_valid(body):
+		body=column(self)
+		header=HBoxContainer.new();body.add_child(header)
+		label(header,"任务助手",20)
+		var minimize:=button(header,"最小化",close_menu,"QuestHelperMinimize")
+		minimize.size_flags_horizontal=Control.SIZE_SHRINK_END
+		minimize.autowrap_mode=TextServer.AUTOWRAP_OFF
+		var close:=button(header,"关闭 · Esc",close_menu,"QuestHelperClose")
+		close.size_flags_horizontal=Control.SIZE_SHRINK_END
+		close.custom_minimum_size.x=110
+		close.autowrap_mode=TextServer.AUTOWRAP_OFF
+		settings_button=button(body,"自动任务设置",func():settings_open=true;settings_feedback="";rebuild(),"QuestAutoSettingsOpen")
+	for child in body.get_children():
+		if child==header or child==settings_button:continue
+		body.remove_child(child)
+		child.queue_free()
+	list_scroll=null;detail_scroll=null;settings_panel=null
+	settings_button.visible=not settings_open
 	if settings_open:
 		var settings_scroll:=scroll(body,"QuestAutoSettingsScroll")
 		settings_panel=AutoSettings.new()
@@ -143,7 +153,6 @@ func rebuild(save_scroll:bool=true) -> void:
 		present_auto_settings()
 		relayout()
 		return
-	button(body,"自动任务设置",func():settings_open=true;settings_feedback="";rebuild(),"QuestAutoSettingsOpen")
 	append_public_loot_start(body)
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false) or world.quest_helper_travel.active:
