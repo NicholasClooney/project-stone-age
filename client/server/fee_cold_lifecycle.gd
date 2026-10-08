@@ -67,6 +67,7 @@ func _idle_for_retire(b) -> bool:
 
 ## Called by every existing exact-retire snapshot CAS only during this cold call.
 func retire_guard_current(b) -> bool:
+	if _frame.has("departure"):return _departure_retire_current(b)
 	return _call_current(b) and _frame.has("retire") and b._fee_recovered_close_writer.retire_current(b, self, _frame.retire) and _idle_for_retire(b)
 
 ## Existing exact writer invokes this only at its internal verified success exit.
@@ -169,3 +170,44 @@ func open(b) -> bool:
 	else:facts.sidecar = "retire_partial_or_unknown"
 	_finish(b, call)
 	return true
+
+## Protection only. Never a load receipt or a close/retire permission.
+func hold_departure(b) -> void:
+	if handles_current(b):
+		_scope.protect=true
+		return
+	_scope=_capture(b)
+	_scope.protect=true
+	_diagnostic={"profile":"departure_unverified","sidecar":"preserved","pending":true,"anchor":"existing_journal_not_failure_log"}
+
+## Extra guard on a REAL live Stop claim through the existing exact-retire hooks.
+## This is not a cold permission and cannot authorize a no-Stop recovered writer.
+func begin_departure(b,f:Dictionary)->bool:
+	if has_call() or not b._fee_departure_current(f):return false
+	hold_departure(b)
+	_frame={"call":RefCounted.new(),"scope":_scope,"departure":f,"stop":{}}
+	return true
+func bind_departure_stop(b,f:Dictionary)->void:
+	if not _frame.has("departure") or not is_same(_frame.departure,f) or not b._fee_departure_current(f):return
+	var stop:Dictionary={"call":b._quest_auto_stop_operation_call,"owner":f.runner}
+	if b._quest_auto_stop_operation_current(stop):_frame.stop=stop
+func end_departure(f:Dictionary)->void:
+	if _frame.has("departure") and is_same(_frame.departure,f):_frame={}
+func _departure_retire_current(b)->bool:
+	if not _frame.has("departure") or not b._fee_departure_current(_frame.departure):return false
+	if not handles_current(b) or not b._quest_auto_stop_operation_current(_frame.stop):return false
+	var candidate:Dictionary=b._fee_resume_sidecar_frame
+	if candidate.is_empty():return true # Preflight only; actual frame is checked before I/O.
+	if not is_same(candidate.get("cold_call"),_frame.call) or not is_same(candidate.get("stop_call"),_frame.stop.call):return false
+	if not candidate.get("target_exists",false):return true
+	var parser:=JSON.new()
+	if parser.parse(candidate.target_bytes.get_string_from_utf8())!=OK:return false
+	var budget:Array=[0]
+	if not b._fee_native_sidecar_dictionary_safe(parser.data,0,budget):return false
+	var state:Variant=JSON.to_native(parser.data,false)
+	return state is Dictionary and not b.quest_loot.State.resume_is_loot(state.get("quest_auto"))
+
+## Only the real guarded five-file observation calls this at its absent exit.
+func finish_departure_absent(b,f:Dictionary)->void:
+	if not _frame.has("departure") or not is_same(_frame.departure,f) or not b._fee_departure_current(f) or not handles_current(b):return
+	_scope.protect=false
