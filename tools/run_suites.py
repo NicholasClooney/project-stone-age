@@ -65,6 +65,8 @@ def suite_timeout(name):
             "original_quest_auto_test": 480, "original_herb_auto_test": 600,
             # Natural 2760 loot pilot: 313.5 s alone (180 s business cap plus setup); 480 s covers full-run load.
             "quest_auto_loot_2760_natural_pilot_test": 480,
+            # Loot initial failure combo: 184.6 s alone (56 cases, 195 s of Waits); 420 s covers full-run load.
+            "quest_auto_loot_initial_failure_test": 420,
             # Same pilot with its isolated heartbeat-cancel test mode and its own process budget.
             "quest_auto_loot_heartbeat_cancel_test": 360,
             "quest_auto_loot_public_start_test": 180}.get(name, TIMEOUT)
