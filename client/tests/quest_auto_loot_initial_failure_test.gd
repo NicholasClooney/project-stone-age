@@ -63,7 +63,6 @@ class FailureHost:
   session=FaultSession.new() # Install before original _init wires the two session hooks.
   super()
   quest_loot=FaultTimer.new()
- func _quest_loot_public_enabled()->bool:return true
 func new_failure_case(label:String):
  var path:String="user://loot-initial-failure-"+label+".json"
  if not fresh_path(path) or FileAccess.file_exists(path.get_basename()+".resume.json"):check(false,"Fresh failure path");return null

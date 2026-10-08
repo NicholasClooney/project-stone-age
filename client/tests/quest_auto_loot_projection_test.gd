@@ -1,9 +1,11 @@
 extends "res://tests/quest_auto_loot_state_test.gd"
 const Backend=preload("res://server/backend.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
+class ClosedBackend:
+ extends "res://server/backend.gd"
+ func _quest_loot_public_enabled()->bool:return false
 class EnabledCapabilityBackend:
  extends "res://server/backend.gd"
- func _quest_loot_public_enabled()->bool:return true
 class PreflightCountingLoot:
  extends "res://server/quest_auto_loot.gd"
  var full_preflight_calls:=0
@@ -12,17 +14,16 @@ class PreflightCountingLoot:
   return super.public_start_reason(b)
 class ProjectionBackend:
  extends "res://server/backend.gd"
- func _quest_loot_public_enabled()->bool:return true
 func run()->void:
- var b=Backend.new();b.set_process(false);b.save_path="user://loot-projection.json"
+ var b=ClosedBackend.new();b.set_process(false);b.save_path="user://loot-projection.json"
  var full:Dictionary=b.full_snapshot()
- check(full.get("capabilities") is Dictionary and full.capabilities.get("quest_loot_enabled") is bool and not full.capabilities.quest_loot_enabled,"Full snapshot exposes the strict server-owned disabled loot capability")
+ check(full.get("capabilities") is Dictionary and full.capabilities.get("quest_loot_enabled") is bool and not full.capabilities.quest_loot_enabled,"Explicit ClosedBackend snapshot exposes strict disabled loot capability")
  if failures:b.free();quit(1);return
  var published:Array=[]
  b.event.connect(func(message:Dictionary):published.append(message.duplicate(true)))
  b.publish()
  var profile_events:Array=published.filter(func(message):return message.get("type","")=="profile")
- check(profile_events.size()==1 and profile_events[0].get("capabilities") is Dictionary and profile_events[0].capabilities.get("quest_loot_enabled") is bool and not profile_events[0].capabilities.quest_loot_enabled,"Ordinary profile publication carries the same strict disabled capability")
+ check(profile_events.size()==1 and profile_events[0].get("capabilities") is Dictionary and profile_events[0].capabilities.get("quest_loot_enabled") is bool and not profile_events[0].capabilities.quest_loot_enabled,"Explicit ClosedBackend profile publication carries the same strict disabled capability")
  if failures:b.free();quit(1);return
  var created:Dictionary=State.acquire(State.empty(),KEY,ID,RUN,1,0)
  check(created.get("ok",false),"Projection ledger acquire fixture succeeds")
@@ -133,7 +134,7 @@ func run()->void:
  var enabled:=EnabledCapabilityBackend.new()
  var enabled_capabilities:Dictionary=enabled._capabilities()
  var enabled_projection:Dictionary=enabled.quest_loot.projection(enabled)
- check(enabled_capabilities.get("quest_loot_enabled",false)==true and enabled_projection.get("enabled",false)==true and not enabled_projection.get("can_start",true) and not enabled_projection.get("can_stop",true) and not enabled_projection.get("can_adjust_limit",true) and not enabled_projection.get("can_reset",true),"One server-owned immutable test getter feeds both projection and capability; enabling display alone creates no command")
+ check(enabled_capabilities.get("quest_loot_enabled",false)==true and enabled_projection.get("enabled",false)==true and not enabled_projection.get("can_start",true) and not enabled_projection.get("can_stop",true) and not enabled_projection.get("can_adjust_limit",true) and not enabled_projection.get("can_reset",true),"Inherited production getter feeds projection and capability; missing eligibility still creates no command")
  if failures:enabled.free();quit(1);return
  enabled.free()
  var projection_only:=ProjectionBackend.new()

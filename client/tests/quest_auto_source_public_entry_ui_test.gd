@@ -90,7 +90,7 @@ func public_case(kind:String)->bool:
  if not check(entry.get("job_id")==2 and entry.get("enabled",false) and entry.get("effective_mode")=="A",kind+": source admission is authority projection"):return false
  if not check(action.disabled==(not entry.get("can_start",false)) and action.text=="自动推进",kind+": button consumes projected eligibility and original-route label"):return false
  var details=menu.find_child("QuestAutoSourceDetails",true,false)
- if not check(is_instance_valid(details) and details.text.contains("唯一 Lv1") and details.text.contains("不保证获胜") and details.text.contains("尚未开放"),kind+": source-specific reward/random/loot boundaries shown"):return false
+ if not check(is_instance_valid(details) and details.text.contains("唯一 Lv1") and details.text.contains("不保证获胜") and details.text.contains("此金布伊任务路径不会自动送往大厅、购票或刷物。"),kind+": source-specific reward/random/loot boundaries shown"):return false
  if kind=="eligible":
   if not check(entry.can_start and not action.disabled,"Qualified public source start enabled"):return false
   if not await observed_click("QuestAutoSettingsOpen"):return false
