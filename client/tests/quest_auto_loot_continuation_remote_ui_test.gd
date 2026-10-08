@@ -256,7 +256,14 @@ func verify_isolated_recovery()->bool:
  if not check(source_profile.get("ok",false) and source_profile.profile==live_before.native,"Actual source bytes validate as the complete live reopened profile"):return false
  var expected:Dictionary=live_before.native.duplicate(true)
  if not check(expected.quest_loot.entries.size()==1 and expected.quest_loot.entries.has(State.STEP) and expected.quest_loot.entries[State.STEP].open_span and not expected.quest_loot.entries[State.STEP].recovery_blocked and not expected.quest_loot.recovery_blocked,"Isolated recovery precondition is the sole actual unlocked open entry"):return false
- expected.quest_loot.entries[State.STEP].recovery_blocked=true # Expected copy only; no recovered() oracle.
+ # Independent cold retirement from the exact primary; no recovered()/reset() oracle.
+ var cold_entry:Dictionary=expected.quest_loot.entries[State.STEP]
+ if not check(cold_entry.revision<2147483647,"Source revision permits the single cold-retirement transition"):return false
+ cold_entry.open_span=false
+ cold_entry.settled_seq=cold_entry.issued_seq
+ cold_entry.revision+=1
+ cold_entry.recovery_blocked=false
+ expected.quest_loot.recovery_blocked=false
  var copy_path:String="user://loot-continuation-independent-recovery.json"
  for suffix in ["",".bak",".tmp"]:
   if not check(not FileAccess.file_exists(copy_path+suffix) and not DirAccess.dir_exists_absolute(ProjectSettings.globalize_path(copy_path+suffix)),"Isolated recovery destination is new: "+suffix):return false
@@ -279,7 +286,12 @@ func verify_isolated_recovery()->bool:
  if not diagnostic_ok():return false
  if not check(live_after==live_before and is_same(host.quest_loot.ready_frame,ready_ref) and is_same(host.quest_loot.ready_frame.get("continuation_gate"),gate_ref),"Isolated loader preserves full live primary backup cache native serial owner ready and gate"):return false
  if not check(loaded,"Independent copy loads through the actual recovery loader"):return false
- if not check(loaded_profile==expected,"Complete loaded profile differs only by the one required entry recovery lock"):return false
+ if not check(loaded_profile==expected,"Complete loaded profile equals independent cold retirement, preserving budget lower bound, rewards and UIDs"):return false
+ var source_entry:Dictionary=live_before.native.quest_loot.entries[State.STEP]
+ var loaded_entry:Dictionary=loaded_profile.quest_loot.entries[State.STEP]
+ for key in ["budget_id","origin_run_id","generation","limit_ms","used_ms","existing_items","new_items","saved_battles","issued_seq"]:
+  if not check(loaded_entry[key]==source_entry[key],"Cold retirement preserves source entry field: "+key):return false
+ if not check(maxi(0,loaded_entry.limit_ms-loaded_entry.used_ms)==maxi(0,source_entry.limit_ms-source_entry.used_ms),"Cold retirement preserves same-step remaining budget without reset"):return false
  var recovered_primary:Dictionary=checked_disk_bytes(copy_path)
  if recovered_primary.is_empty():return false
  var recovered_backup:Dictionary=checked_disk_bytes(copy_path+".bak")
