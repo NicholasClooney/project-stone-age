@@ -357,6 +357,25 @@ func _initial_e2_owner(b,frame:Dictionary,check_writer:bool)->bool:
  if check_writer and (not is_same(b.session._profile,frame.profile_ref) or b.session._profile!=frame.profile or b.last_saved_payload!=frame.payload or b.quest_save_serial!=frame.serial):return false
  return true
 
+# Only the original outer-process resume writer may advance an unchanged
+# initial E2 serial seal. Generic save/checkpoint calls retain the strict fence.
+# Depth 2 is outer _process (1) plus keep_resume_file wrapper (1).
+func capture_initial_resume_save(b)->Dictionary:
+ if not b.keep_resume_current or b._process_depth!=1 or b._dispatch_boundary_depth!=2 or b._depth!=0 or b._observer_depth!=0 or b._flush_depth!=0 or not b._queue.is_empty():return {}
+ var frame:Dictionary=initial_e2
+ if not _initial_e2_owner(b,frame,true) or b.battle_open or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or attempt_call!=null or not attempt_frame.is_empty():return {}
+ return {"frame":frame,"ready":ready_frame,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"payload":b.last_saved_payload,"serial":b.quest_save_serial,"generation":b._normal_process_generation}
+func finish_initial_resume_save(b,ticket:Dictionary,saved:bool)->void:
+ if ticket.is_empty() or not saved:return
+ if not b.keep_resume_current or b._process_depth!=1 or b._dispatch_boundary_depth!=2 or b._depth!=0 or b._observer_depth!=0 or b._flush_depth!=0 or not b._queue.is_empty() or b._normal_process_generation!=ticket.generation:return
+ var frame:Dictionary=ticket.frame
+ if not is_same(initial_e2,frame) or not is_same(ready_frame,ticket.ready) or not _initial_e2_owner(b,frame,false):return
+ if b.battle_open or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or attempt_call!=null or not attempt_frame.is_empty():return
+ if frame.serial!=ticket.serial or b.quest_save_serial!=ticket.serial+1 or b.last_saved_payload!=ticket.payload or frame.payload!=ticket.payload:return
+ if not is_same(b.session._profile,ticket.profile_ref) or b.session._profile!=ticket.profile or frame.profile!=ticket.profile:return
+ # No callback, writer, publication, re-admission or new budget here.
+ frame.serial=b.quest_save_serial
+
 func _initial_e2_battle_current(b,frame:Dictionary,battle_id:String)->bool:
  if frame.is_empty() or not is_same(initial_e2,frame):return false
  var q=frame.runner.get_ref() if frame.get("runner") is WeakRef else null
