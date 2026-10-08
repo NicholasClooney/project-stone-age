@@ -9,6 +9,7 @@ const ENTITY_TRAVEL_PASS_ENABLED := false
 const LootState=preload("res://server/quest_auto_loot_state.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
+const FeeLoadedBaselineWriter=preload("res://server/fee_loaded_baseline_writer.gd")
 const TransmigrationState=preload("res://server/transmigration_state.gd")
 const ItemStorage=preload("res://server/item_storage.gd")
 const OriginalRevival = preload("res://server/original_revival.gd")
@@ -1719,6 +1720,30 @@ func _read_fee_attempt_file(path:String,expected:PackedByteArray)->Dictionary:
 		return {"ok":false,"exists":true,"missing":false,"error":read_error,"matches":false,"length":declared,"bytes":bytes}
 	return {"ok":true,"exists":true,"missing":false,"error":OK,"matches":bytes==expected,"length":declared,"bytes":bytes}
 
+## Private evidence from the ORIGINAL successful loader only. No persisted schema.
+var _fee_loaded_receipt:Dictionary={}
+func _fee_loaded_receipt_current(receipt:Dictionary)->bool:
+	if receipt.is_empty() or not is_same(_fee_loaded_receipt,receipt):return false
+	if not receipt.get("token") is RefCounted or not receipt.get("used") is bool or receipt.used:return false
+	return is_same(_profile,receipt.profile_ref) and FeeStartJournalWriter.same_value(_profile,receipt.profile)
+
+## No arbitrary candidate argument: write only this real loader's exact product.
+func _write_fee_loaded_baseline_once(receipt:Dictionary,path:String,profile_ref:Dictionary,profile_value:Dictionary,writer:Variant,host)->Dictionary:
+	if not writer is FeeLoadedBaselineWriter or not is_instance_valid(host) or not writer.authorizes_session_write(host,receipt):return {"stage":"writer_claim_rejected"}
+	if not _fee_loaded_receipt_current(receipt) or path!=receipt.path or path.is_empty():return {"stage":"receipt_rejected"}
+	if not _pending.is_empty() or not _loot_settlement.is_empty() or not _loot_failure_active.is_empty():return {"stage":"session_busy"}
+	if not is_same(_profile,profile_ref) or not FeeStartJournalWriter.same_value(_profile,profile_value) or not _valid_profile(profile_value):return {"stage":"profile_changed"}
+	var boundary:Dictionary=_canonical_fee_attempt_profile(profile_value)
+	if not boundary.get("ok",false) or not boundary.get("present",false) or boundary.record!=receipt.journal:return {"stage":"journal_changed"}
+	if not _fee_loaded_receipt_current(receipt) or not _loot_failure_active.is_empty() or not writer.authorizes_session_write(host,receipt):return {"stage":"receipt_changed"}
+	receipt.used=true
+	var written:bool=_write_profile_candidate(receipt.profile.duplicate(true),path)
+	# These are consecutive observations of the old path, not per-read Backend CAS.
+	var primary:Dictionary=_read_fee_attempt_file(path,receipt.loaded_bytes)
+	var backup:Dictionary=_read_fee_attempt_file(path+".bak",PackedByteArray())
+	var temporary:Dictionary=_read_fee_attempt_file(path+".tmp",PackedByteArray())
+	return {"writer_return":written,"primary":primary,"backup":backup,"temporary":temporary}
+
 func load_game(path: String) -> bool:
 	last_load_source = ""
 	if not _pending.is_empty():
@@ -1726,7 +1751,8 @@ func load_game(path: String) -> bool:
 	for candidate in [path,path + ".bak"]:
 		if not FileAccess.file_exists(candidate):
 			continue
-		var parsed = _parse_save(FileAccess.get_file_as_string(candidate))
+		var source_text:String=FileAccess.get_file_as_string(candidate)
+		var parsed = _parse_save(source_text)
 		if _valid_profile(parsed):
 			var fee_boundary:Dictionary=_canonical_fee_attempt_profile(parsed)
 			if not fee_boundary.get("ok",false):continue
@@ -1818,6 +1844,11 @@ func load_game(path: String) -> bool:
 				last_loot_cold_retirement={"source":"primary" if candidate==path else "backup","ledger":ledger.duplicate(true),"lower_bound_only":true,"reason":"备份未保存预算条目，余额无法核实，刷物仍未开放恢复。" if ledger.entries.is_empty() else "上次刷物已退休；保留所载存档的已存用时下界与已结算收益，未知时长未补计。"}
 			_loot_failure_write={}
 			last_load_source="primary" if candidate==path else "backup"
+			_fee_loaded_receipt={}
+			if fee_present:
+				_fee_loaded_receipt={"token":RefCounted.new(),"used":false,"path":path,"source":last_load_source,
+					"source_bytes":source_text.to_utf8_buffer(),"loader_wrote":persist_recovery,"journal":fee_expected.duplicate(true),
+					"profile_ref":_profile,"profile":_profile.duplicate(true),"loaded_bytes":JSON.stringify(_profile).to_utf8_buffer()}
 			return true
 	last_error = "No valid save or backup."
 	return false

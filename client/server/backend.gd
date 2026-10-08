@@ -13,6 +13,7 @@ const GameSession = preload("res://server/game_session.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 var _fee_start_journal_writer = FeeStartJournalWriter.new()
+var _fee_loaded_baseline_writer = preload("res://server/fee_loaded_baseline_writer.gd").new()
 const BattleSession = preload("res://server/battle_session.gd")
 const SquadBattleSession = preload("res://server/squad_battle_session.gd")
 const EncounterCatalog = preload("res://server/encounter_catalog.gd")
@@ -252,6 +253,7 @@ func load_profile(path: String) -> bool:
 	if not stop_result.get("ok",false):return false
 	original_quests.pending={}
 	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
+	var previous_fee_receipt:Dictionary=load_owner._fee_loaded_receipt
 	if not load_owner.load_game(path):return false
 	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
 	# Successful cold load retires old in-memory loot authority only.
@@ -259,7 +261,9 @@ func load_profile(path: String) -> bool:
 	quest_arrival.reset()
 	transmigration.reset()
 	last_saved_payload = JSON.stringify(session.snapshot())
+	var fee_load_token:RefCounted=_fee_loaded_baseline_writer.bind_loaded(self,load_owner,path,previous_fee_receipt)
 	_publish()
+	_fee_loaded_baseline_writer.finish_load_publication(self,fee_load_token)
 	return true
 
 func handle(command: Dictionary) -> Dictionary:
@@ -2444,6 +2448,16 @@ func _cmd_permit_shop_open(command:Dictionary)->Dictionary:
 func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
+## Dormant B2a baseline execution seam. load_profile only binds evidence.
+func _begin_fee_loaded_baseline()->Dictionary:
+	return _fee_loaded_baseline_writer.begin(self)
+
+func _persist_fee_loaded_baseline(handle:Variant)->Dictionary:
+	return _fee_loaded_baseline_writer.persist(self,handle)
+
+func _end_fee_loaded_baseline(handle:Variant)->void:
+	_fee_loaded_baseline_writer.end(self,handle)
+
 ## Dormant Start journal seam. No production caller or purchase authority.
 func _begin_fee_start_journal_frame(candidate:Variant)->Dictionary:
 	return _fee_start_journal_writer.begin(self,candidate)
