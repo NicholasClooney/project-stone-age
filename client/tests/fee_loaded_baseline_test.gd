@@ -127,7 +127,7 @@ func done(c: Dictionary) -> void:
 	print("B2A_TRACE END ordinal=%d path=%s tick_us=%d checks=%d failures=%d" % [ordinal, c.path, Time.get_ticks_usec(), checks, failures])
 
 func success_cases() -> void:
-	for kind: String in ["pretty", "canonical", "loot", "fallback", "known_edge", "closed", "manual_only", "unknown", "attempting", "ticket_committed", "entry_committed"]:
+	for kind: String in ["pretty", "canonical", "loot", "fallback", "known_edge", "closed", "manual_only", "unknown", "attempting", "ticket_committed", "entry_committed", "snapshot_migration"]:
 		var c: Dictionary = fixture(kind, kind)
 		var h: Dictionary = c.b._begin_fee_loaded_baseline()
 		check(not h.is_empty() and c.s.reads == 3, "real receipt seals frame: " + kind)
@@ -168,7 +168,7 @@ func fault_cases() -> void:
 		done(c)
 
 func guards() -> void:
-	for kind: String in ["foreign_run", "foreign_owner", "legacy", "snapshot_migration"]:
+	for kind: String in ["foreign_run", "foreign_owner", "legacy"]:
 		var c: Dictionary = fixture(kind, kind)
 		check(c.b._begin_fee_loaded_baseline().is_empty() and c.s.writes == 0 and triple(c.path) == c.disk_before, "foreign/legacy cannot gain authority: " + kind)
 		done(c)

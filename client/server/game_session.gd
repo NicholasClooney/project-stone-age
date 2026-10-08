@@ -1722,6 +1722,56 @@ func _read_fee_attempt_file(path:String,expected:PackedByteArray)->Dictionary:
 
 ## Private evidence from the ORIGINAL successful loader only. No persisted schema.
 var _fee_loaded_receipt:Dictionary={}
+var _fee_storage_normalization:Dictionary={}
+var _fee_storage_normalization_receipt:Dictionary={}
+
+func _cancel_fee_loaded_storage_normalization()->void:
+	_fee_storage_normalization={}
+
+## Real receipt only; immutable values and identity references are kept separately.
+func _begin_fee_loaded_storage_normalization(receipt:Dictionary,host)->RefCounted:
+	if not _fee_storage_normalization.is_empty() or is_same(receipt,_fee_storage_normalization_receipt) or not _fee_loaded_receipt_current(receipt):return null
+	if not is_instance_valid(host) or not is_same(host.session,self):return null
+	var before:Dictionary=receipt.profile
+	var present:int=0
+	for key:String in ["item_storage","legacy_item_storage","item_storage_revision"]:present+=int(before.has(key))
+	if present not in [0,3]:return null
+	var expected:Dictionary=before.duplicate(true)
+	if present==0:
+		expected.item_storage=[]
+		expected.legacy_item_storage={}
+		expected.item_storage_revision=0
+	var values:Dictionary=receipt.duplicate(false)
+	values.erase("token");values.erase("profile_ref")
+	var call:=RefCounted.new()
+	_fee_storage_normalization_receipt=receipt
+	_fee_storage_normalization={"call":call,"host":weakref(host),"receipt":receipt,"receipt_token":receipt.token,
+		"profile_ref":_profile,"receipt_values":values.duplicate(true),"expected":expected,
+		"path":host.save_path,"account":host.account_name,"serial":host.quest_save_serial,
+		"cache":host.last_saved_payload,"timer":host.quest_loot,"timer_lifetime":host.quest_loot.lifetime}
+	return call
+
+## A failed normalization only denies authority; it never undoes snapshot or IO.
+func _finish_fee_loaded_storage_normalization(call:RefCounted,host)->bool:
+	if call==null or _fee_storage_normalization.is_empty() or not is_same(call,_fee_storage_normalization.call):return false
+	var f:Dictionary=_fee_storage_normalization
+	_fee_storage_normalization={} # consume before checking; never revive on failure
+	if not is_instance_valid(host) or not is_same(f.host.get_ref(),host) or not is_same(host.session,self):return false
+	var r:Dictionary=_fee_loaded_receipt
+	if not is_same(r,f.receipt) or not is_same(r.get("token"),f.receipt_token) or not is_same(r.get("profile_ref"),f.profile_ref):return false
+	if not r.get("used") is bool or r.used:return false
+	var values:Dictionary=r.duplicate(false)
+	values.erase("token");values.erase("profile_ref")
+	if not FeeStartJournalWriter.same_value(values,f.receipt_values):return false
+	if not is_same(_profile,f.profile_ref) or not FeeStartJournalWriter.same_value(_profile,f.expected):return false
+	if host.save_path!=f.path or host.account_name!=f.account or host.quest_save_serial!=f.serial:return false
+	# Backend's existing snapshot call sets precisely this cache before finishing.
+	if host.last_saved_payload!=JSON.stringify(f.expected):return false
+	if not is_same(host.quest_loot,f.timer) or not is_same(host.quest_loot.lifetime,f.timer_lifetime):return false
+	r.profile=f.expected.duplicate(true)
+	r.loaded_bytes=JSON.stringify(f.expected).to_utf8_buffer()
+	return true
+
 func _fee_loaded_receipt_current(receipt:Dictionary)->bool:
 	if receipt.is_empty() or not is_same(_fee_loaded_receipt,receipt):return false
 	if not receipt.get("token") is RefCounted or not receipt.get("used") is bool or receipt.used:return false
@@ -1848,7 +1898,7 @@ func load_game(path: String) -> bool:
 			if fee_present:
 				_fee_loaded_receipt={"token":RefCounted.new(),"used":false,"path":path,"source":last_load_source,
 					"source_bytes":source_text.to_utf8_buffer(),"loader_wrote":persist_recovery,"journal":fee_expected.duplicate(true),
-					"profile_ref":_profile,"profile":_profile.duplicate(true),"loaded_bytes":JSON.stringify(_profile).to_utf8_buffer()}
+					"profile_ref":_profile,"profile":_profile.duplicate(true),"loaded_bytes":JSON.stringify(_profile).to_utf8_buffer(),"loader_profile_bytes":JSON.stringify(_profile).to_utf8_buffer()}
 			return true
 	last_error = "No valid save or backup."
 	return false

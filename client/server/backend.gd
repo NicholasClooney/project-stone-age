@@ -248,6 +248,7 @@ func _process(delta: float) -> void:
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
 	_fee_loaded_baseline_writer.revoke_loaded_authority()
+	if session!=null:session._cancel_fee_loaded_storage_normalization()
 	var load_owner=session
 	var load_scope_path:String=save_path
 	stationary.stop(self,"载入存档停止了原地遇敌。")
@@ -262,8 +263,13 @@ func load_profile(path: String) -> bool:
 	quest_loot = preload("res://server/quest_auto_loot.gd").new()
 	quest_arrival.reset()
 	transmigration.reset()
+	var fee_normalization:RefCounted=null
+	if not is_same(load_owner._fee_loaded_receipt,previous_fee_receipt):
+		fee_normalization=load_owner._begin_fee_loaded_storage_normalization(load_owner._fee_loaded_receipt,self)
 	last_saved_payload = JSON.stringify(session.snapshot())
-	var fee_load_token:RefCounted=_fee_loaded_baseline_writer.bind_loaded(self,load_owner,path,previous_fee_receipt)
+	var fee_normalized:bool=load_owner._finish_fee_loaded_storage_normalization(fee_normalization,self)
+	var fee_load_token:RefCounted=null
+	if fee_normalized:fee_load_token=_fee_loaded_baseline_writer.bind_loaded(self,load_owner,path,previous_fee_receipt)
 	_publish()
 	_fee_loaded_baseline_writer.finish_load_publication(self,fee_load_token)
 	return true

@@ -105,7 +105,7 @@ func _disk_allowed(b, rows: Array) -> bool:
 	var backup: Dictionary = _decode(c.session, rows[1])
 	if not _current(b):return false
 	if r.loader_wrote:
-		if Exact.row_state(rows[0], true, r.loaded_bytes) != "matches" or Exact.row_state(rows[1], true, r.source_bytes) != "matches":return false
+		if Exact.row_state(rows[0], true, r.loader_profile_bytes) != "matches" or Exact.row_state(rows[1], true, r.source_bytes) != "matches":return false
 	elif r.source == "primary":
 		if Exact.row_state(rows[0], true, r.source_bytes) != "matches":return false
 	else:
