@@ -144,6 +144,9 @@ var _fee_resume_sidecar_frame: Dictionary = {}
 var _fee_resume_sidecar_executing := false
 ## Successful persistence boundaries for synchronous quest transactions.
 var quest_save_serial:=0
+# Ephemeral source identity owned only by the original normal-process tail.
+var _loot_outer_resume_call:RefCounted
+var _loot_resume_envelope:Dictionary={}
 ## Short-lived server-only capability for a two-copy fee-attempt fence.
 var _fee_attempt_writer_call:RefCounted
 var _fee_attempt_writer_snapshot:Dictionary={}
@@ -228,7 +231,11 @@ func _process(delta: float) -> void:
 	_depth -= 1
 	_record_releases()
 	_flush()
-	if keep_resume_current:keep_resume_file()
+	if keep_resume_current:
+		var resume_origin:RefCounted=RefCounted.new() if normal else null
+		if normal:_loot_outer_resume_call=resume_origin
+		keep_resume_file()
+		if normal and is_same(_loot_outer_resume_call,resume_origin):_loot_outer_resume_call=null
 	tick_usec = Time.get_ticks_usec()-started
 	tick_avg_usec = lerpf(tick_avg_usec,float(tick_usec),0.1)
 	_process_depth-=1
@@ -376,9 +383,12 @@ func _keep_resume_file() -> void:
 	# battle open the save waits; the battle is fought again after a restart.
 	if session._pending.is_empty():
 		session.set_location(int(state.map_id),int(state.cell[0]),int(state.cell[1]))
-		var initial_resume:Dictionary=quest_loot.capture_initial_resume_save(self)
-		var saved:bool=save()
-		quest_loot.finish_initial_resume_save(self,initial_resume,saved)
+		var resume_timer=quest_loot
+		var resume:Dictionary=resume_timer.capture_outer_resume_save(self)
+		var saved:bool=false
+		if resume.is_empty():saved=save()
+		elif resume_timer.outer_resume_current(self,resume,int(resume.serial)):saved=_save_profile_boundary(resume)
+		resume_timer.finish_outer_resume_save(self,resume,saved)
 		if not saved:
 			printerr("Could not save %s; the resume file waits for the next save." % save_path)
 			_resume_written_msec = -1
@@ -2241,7 +2251,9 @@ func _save_profile_boundary(checkpoint:Dictionary={}) -> bool:
 	var payload := JSON.stringify(session.snapshot())
 	if payload==last_saved_payload:
 		quest_save_serial+=1
-		if not checkpoint.is_empty():checkpoint.timer.mark_followup_checkpoint_saved(self,checkpoint,payload)
+		if not checkpoint.is_empty():
+			if is_same(checkpoint,_loot_resume_envelope):checkpoint.timer.mark_outer_resume_saved(self,checkpoint,payload)
+			else:checkpoint.timer.mark_followup_checkpoint_saved(self,checkpoint,payload)
 		return true
 	if not session.save_game(save_path):return false
 	last_saved_payload = payload

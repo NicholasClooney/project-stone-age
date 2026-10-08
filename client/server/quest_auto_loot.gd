@@ -381,6 +381,8 @@ func capture_initial_resume_save(b)->Dictionary:
  return {"frame":frame,"ready":ready_frame,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"payload":b.last_saved_payload,"serial":b.quest_save_serial,"generation":b._normal_process_generation}
 func finish_initial_resume_save(b,ticket:Dictionary,saved:bool)->void:
  if ticket.is_empty() or not saved:return
+ var fact:Dictionary=ticket.get("writer_fact",{})
+ if not fact.get("eligible",false) or not fact.get("written") is bool or not fact.written or not is_same(fact.get("saved_call"),fact.get("call")) or not fact.get("saved_serial") is int or fact.saved_serial!=int(ticket.serial)+1:return
  if not b.keep_resume_current or b._process_depth!=1 or b._dispatch_boundary_depth!=2 or b._depth!=0 or b._observer_depth!=0 or b._flush_depth!=0 or not b._queue.is_empty() or b._normal_process_generation!=ticket.generation:return
  var frame:Dictionary=ticket.frame
  if not is_same(initial_e2,frame) or not is_same(ready_frame,ticket.ready) or not _initial_e2_owner(b,frame,false):return
@@ -613,6 +615,12 @@ func retry_failed_initial_once(b)->bool:
 
 func _tick_initial_e2(b)->void:
  var frame:Dictionary=initial_e2
+ if not failed_initial_resume.is_empty():
+  var rejected:Dictionary=failed_initial_resume
+  failed_initial_resume={}
+  if is_same(rejected,frame):
+   _retire_initial_failure(b,frame)
+   return
  if not _initial_e2_owner(b,frame,true):
   _retire_initial_failure(b,frame)
   return
@@ -1189,14 +1197,14 @@ func capture_followup_close(b)->Dictionary:
  var ticket:Dictionary=followup
  if ticket.is_empty():return {}
  if not followup_current(b,ticket) or ticket.closed or not b.battle_open or b.battle.snapshot().active or not b.battle_state.get("settled",false):
-  if is_same(followup,ticket):followup={}
+  reject_followup_execution(b,ticket)
   return {}
  return ticket
 func record_followup_close(b,ticket:Dictionary,saved:bool)->void:
  if ticket.is_empty() or not is_same(followup,ticket):return
  # This is the return of close_battle's one existing save, before any publish.
  if not saved or not followup_owner(b,ticket) or b.battle_open or not b.session._pending.is_empty() or b.quest_save_serial!=ticket.serial+1 or b.session.snapshot()!=ticket.profile or b.last_saved_payload!=ticket.payload:
-  if is_same(followup,ticket):followup={}
+  reject_followup_execution(b,ticket)
   return
  ticket.serial=b.quest_save_serial;ticket.closed=true
  ticket.dispatch_barrier=b.continuation_dispatch_checkpoint()
@@ -1204,7 +1212,7 @@ func followup_status(b)->Dictionary:
  var ticket:Dictionary=followup
  if ticket.is_empty():return {}
  if not followup_current(b,ticket):
-  if is_same(followup,ticket):followup={}
+  reject_followup_execution(b,ticket)
   return {}
  # Does NOT mean callbacks were flushed. C2 must supply a real dispatch barrier.
  return {"token":ticket.token,"closed":ticket.closed,"auto_stopped":not b.automation.running,"battle_id":ticket.battle_id}
@@ -1251,7 +1259,15 @@ func consume_followup(b)->Dictionary:
  return result
 func consume_followup_locked(b,call:RefCounted)->Dictionary:
  var ticket:Dictionary=followup
- if ticket.is_empty() or not followup_current(b,ticket) or not ticket.closed or b.automation.running or b.battle_open:return {"ok":false,"persisted":false,"reason":"没有当前已关闭战果凭据。"}
+ if not failed_followup_resume.is_empty():
+  finish_followup_execution_failure(b)
+  return State.denied("刷物续行保存校验失败，停止新尝试。")
+ if ticket.is_empty():return State.denied("没有当前已关闭战果凭据。")
+ if not followup_current(b,ticket):
+  reject_followup_execution(b,ticket)
+  finish_followup_execution_failure(b)
+  return State.denied("原战果凭据已失效，停止新尝试。")
+ if not ticket.closed or b.automation.running or b.battle_open:return {"ok":true,"waiting":true}
  if not b.continuation_dispatch_ready(ticket.get("dispatch_barrier",{})):return {"ok":true,"waiting":true}
  if ticket.clock!=clock or not State.integer(ticket.last_attempt_ms,0,State.MAX_MSEC-ATTEMPT_INTERVAL_MS) or ticket.deadline_ms!=ticket.last_attempt_ms+ATTEMPT_INTERVAL_MS or last_attempt_ms!=ticket.last_attempt_ms or next_attempt_ms!=ticket.deadline_ms:return State.denied("原尝试节拍身份已变化。")
  var c:Dictionary=ticket.duplicate(true)
@@ -1410,3 +1426,116 @@ func finish_followup_checkpoint(b,c:Dictionary,saved:bool)->void:
  # Preserve original immutable candidate/profile/payload/closed/barrier and
  # owner identity. Only this exact successful no-op checkpoint advances serial.
  c.ticket.serial=c.saved_serial
+
+# Only two long-lived objects may bridge an original no-op resume writer.
+# Rejection is separate from resealing; it never creates a disk/close permission.
+var failed_initial_resume:Dictionary={}
+var failed_followup_resume:Dictionary={}
+func outer_resume_persistent_claims_idle(b)->bool:
+ return b._fee_attempt_writer_call==null and b._fee_attempt_writer_snapshot.is_empty() and not b._fee_attempt_writer_executing and b._fee_attempt_close_call==null and b._fee_attempt_close_frame.is_empty() and not b._fee_attempt_close_executing and b._fee_resume_sidecar_call==null and b._fee_resume_sidecar_frame.is_empty() and not b._fee_resume_sidecar_executing and b._quest_auto_stop_operation_call==null and b._quest_auto_stop_operation_owner==null and b._fee_start_journal_writer._frame.is_empty() and not b._fee_start_journal_writer._executing
+func outer_resume_context(b)->bool:
+ return outer_resume_persistent_claims_idle(b) and b._loot_outer_resume_call!=null and b.keep_resume_current and b._process_depth==1 and b._dispatch_boundary_depth==2 and b._depth==0 and b._observer_depth==0 and b._flush_depth==0 and b._queue.is_empty() and consume_call==null and attempt_call==null and attempt_frame.is_empty() and heartbeat_call==null
+func resume_followup_identity(b,ticket:Dictionary)->bool:
+ # Same fields as followup_owner, using already-resident battle state. No
+ # snapshot/migration/capture-player hook may run inside mark/finish/revocation.
+ if ticket.is_empty() or not is_same(b.quest_loot,self):return false
+ var q=b.quest_auto;var auto=b.automation
+ for pair in [["session",b.session],["battle",b.battle],["automation",auto],["runner",q],["identity_object",q.identity],["timer",self]]:
+  if not scope_owner_matches(ticket,pair[0],pair[1]):return false
+ return b.save_path==ticket.path and is_same(lifetime,ticket.lifetime) and is_same(auto.start_lifetime,ticket.auto_token) and str(b.battle._state.get("battle_id",""))==ticket.battle_id and q.running and q.internal and not q.detached and not q.restored and q.phase=="loot_battle" and q.identity.checkpoint()==ticket.identity and q.connection==ticket.connection and q.client==ticket.client and q.step==ticket.step and auto.position_map==ticket.map_id and auto.position_cell==ticket.cell
+func followup_execution_owner(b,ticket:Dictionary)->bool:
+ if not resume_followup_identity(b,ticket):return false
+ var scope:Dictionary=b.automation.loot_scope
+ if not scope.is_empty() and (not is_same(scope.get("capability"),ticket.scope_capability) or not is_same(scope.get("token"),ticket.auto_token) or scope.get("receipt",{})!=ticket.receipt):return false
+ var prior:Variant=ticket.get("profile")
+ if not prior is Dictionary:return false
+ var expected:Variant=prior.get("profile_id")
+ var current:Variant=b.session._profile.get("profile_id")
+ return expected is String and current is String and expected==current
+func reject_followup_execution(b,ticket:Dictionary)->void:
+ if ticket.is_empty() or not is_same(followup,ticket):return
+ # Execution authority deliberately does not depend on a writer/profile seal.
+ # It still requires the original runner/identity/session/timer/battle owners.
+ if not followup_execution_owner(b,ticket):
+  if is_same(followup,ticket):followup={}
+  return
+ if failed_followup_resume.is_empty():failed_followup_resume=ticket
+func finish_followup_execution_failure(b)->void:
+ var ticket:Dictionary=failed_followup_resume
+ if ticket.is_empty():return
+ if not is_same(followup,ticket) or not followup_execution_owner(b,ticket):
+  if is_same(failed_followup_resume,ticket):failed_followup_resume={}
+  return
+ # Do not interfere with the original settled battle's close/automatic exit.
+ # In particular this is not generic Stop and never calls save/close_battle.
+ if b.battle_open or b.automation.running:return
+ if not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or b.battle._state.get("active",true):return
+ var q=b.quest_auto
+ # Only the stopped original scope checked above is retired. A replacement
+ # capability/token/receipt fails execution ownership before reaching this point.
+ if not b.automation.loot_scope.is_empty():b.automation.loot_scope={}
+ followup={};failed_followup_resume={}
+ # Retire only old execution-owned readiness, not a different lifetime/frame.
+ if is_same(ready_frame.get("runner"),q) and is_same(ready_frame.get("lifetime"),ticket.lifetime) and ready_frame.get("identity")==ticket.identity:
+  ready_frame={};admission=RefCounted.new()
+ if not initial_e2.is_empty() and is_same(initial_e2.get("lifetime"),ticket.lifetime) and initial_e2.get("identity")==ticket.identity:initial_e2={}
+ q.running=false;q.owns_battle=false;q.phase="stopped"
+ q.message="刷物续行保存校验失败；原战果保留，已停止新尝试。"
+ q.pause_reason=q.message
+ # All mutations above precede the last callback. Never touch a successor after it.
+ b.publish()
+func capture_outer_resume_save(b)->Dictionary:
+ if not outer_resume_context(b) or not b._loot_resume_envelope.is_empty():return {}
+ if not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty() or b.save_path.is_empty():return {}
+ if not failed_initial_resume.is_empty() and not is_same(failed_initial_resume,initial_e2):failed_initial_resume={}
+ if not failed_followup_resume.is_empty() and (not is_same(failed_followup_resume,followup) or not followup_execution_owner(b,failed_followup_resume)):failed_followup_resume={}
+ if not failed_followup_resume.is_empty() or not failed_initial_resume.is_empty():return {}
+ var scope_ref:Dictionary=b.automation.loot_scope
+ var scope_value:Dictionary=scope_ref.duplicate(true)
+ var initial:Dictionary=capture_initial_resume_save(b) # Keep the existing observer seam.
+ var ticket:Dictionary=followup
+ var c1:bool=not ticket.is_empty() and followup_current(b,ticket) and not b.battle._state.get("active",true) and b.battle_state.get("settled",false)
+ if c1 and (not followup_execution_owner(b,ticket) or not is_same(b.automation.loot_scope,scope_ref) or b.automation.loot_scope!=scope_value or not is_same(followup,ticket) or b.quest_save_serial!=ticket.serial or b.session._profile!=ticket.profile or b.last_saved_payload!=ticket.payload):c1=false
+ if not initial.is_empty() and c1:
+  failed_initial_resume=initial.frame
+  reject_followup_execution(b,ticket)
+  return {} # Never choose one of two conflicting capabilities.
+ if not ticket.is_empty() and not c1:reject_followup_execution(b,ticket)
+ if initial.is_empty() and not c1:return {}
+ var kind:String="initial" if not initial.is_empty() else "followup"
+ var target:Dictionary=initial.frame if kind=="initial" else ticket
+ var fact:Dictionary={"call":RefCounted.new(),"written":false}
+ if kind=="initial":initial.writer_fact=fact
+ var envelope:Dictionary={"timer":self,"origin":b._loot_outer_resume_call,"kind":kind,"scope_ref":scope_ref,"scope_value":scope_value,"target":target,"value":target.duplicate(true),"initial":initial,"ready":ready_frame,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"payload":b.last_saved_payload,"serial":b.quest_save_serial,"generation":b._normal_process_generation,"battle_open":b.battle_open,"auto_running":b.automation.running,"fact":fact}
+ b._loot_resume_envelope=envelope
+ return envelope
+func outer_resume_current(b,e:Dictionary,expected_serial:int)->bool:
+ if e.is_empty() or not is_same(b._loot_resume_envelope,e) or not is_same(b.quest_loot,self) or not is_same(e.timer,self):return false
+ if not outer_resume_context(b) or not is_same(b._loot_outer_resume_call,e.origin) or b._normal_process_generation!=e.generation:return false
+ if not is_same(b.session._profile,e.profile_ref) or b.session._profile!=e.profile or b.last_saved_payload!=e.payload or b.quest_save_serial!=expected_serial:return false
+ if e.target.serial!=e.serial or e.target!=e.value or b.battle_open!=e.battle_open or b.automation.running!=e.auto_running or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty():return false
+ if e.kind=="initial":
+  return is_same(initial_e2,e.target) and is_same(ready_frame,e.ready) and _initial_e2_owner(b,e.target,false)
+ if e.kind!="followup" or not is_same(followup,e.target) or not followup_execution_owner(b,e.target):return false
+ if not is_same(b.automation.loot_scope,e.scope_ref) or b.automation.loot_scope!=e.scope_value:return false
+ return not b.battle._state.get("active",true) and b.battle_state.get("settled",false) and b.session._profile==e.target.profile and e.payload==e.target.payload
+func mark_outer_resume_saved(b,e:Dictionary,payload:String)->void:
+ # Called only by Backend's actual equal-payload branch after its +1.
+ if not outer_resume_current(b,e,int(e.serial)+1) or payload!=e.payload or e.fact.written:return
+ e.fact.written=true;e.fact.saved_call=e.fact.call;e.fact.saved_serial=b.quest_save_serial
+func finish_outer_resume_save(b,e:Dictionary,result:Variant)->void:
+ if e.is_empty():return
+ var owns:bool=is_same(b._loot_resume_envelope,e)
+ var success:bool=result is bool and result==true
+ var fact:Dictionary=e.fact
+ var eligible:bool=owns and success and fact.get("written") is bool and fact.written and is_same(fact.get("saved_call"),fact.call) and fact.get("saved_serial") is int and fact.saved_serial==int(e.serial)+1 and outer_resume_current(b,e,fact.saved_serial)
+ if e.kind=="initial":
+  # Keep actual bool return visible to the legacy observer, independently
+  # from writer provenance and final eligibility. Unknown is never true.
+  fact.eligible=eligible
+  finish_initial_resume_save(b,e.initial,success)
+  if not eligible and is_same(initial_e2,e.target) and _initial_failure_execution(b,e.target):failed_initial_resume=e.target
+ elif e.kind=="followup":
+  if eligible:e.target.serial=fact.saved_serial
+  else:reject_followup_execution(b,e.target)
+ if owns and is_same(b._loot_resume_envelope,e):b._loot_resume_envelope={}
