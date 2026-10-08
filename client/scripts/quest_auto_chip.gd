@@ -50,13 +50,13 @@ func _process(_delta:float) -> void:
 	if shown and not visible:move_to_front()
 	visible=shown
 	if not visible:return
-	var step:String=world.quest_helper_travel.auto_status()
+	var step:String=world.quest_helper_travel.auto_status(not (loot_enabled and not budget.is_empty()))
 	var heading:String=world.quest_helper_travel.auto_heading()
 	if world.quest_helper_travel.auto_pending():heading="自动任务准备中"
 	elif history and not auto.get("running",false) and not manual:heading="任务预算记录"
 	loot_panel.visible=loot_enabled and not budget.is_empty()
 	if loot_panel.visible:loot_panel.present_snapshot(auto,not world.link.is_local() and not world.link.online)
-	restore_button.text=heading if loot_panel.visible else heading+"\n"+step
+	restore_button.text=heading+"\n"+step
 	stop_button.visible=not manual and (auto.get("running",false) or world.quest_helper_travel.auto_pending())
 	restore_button.tooltip_text=step+"\n点击重开任务助手"
 	stop_button.disabled=not (world.link.is_local() or world.link.online)

@@ -347,7 +347,7 @@ func _finish_public_loot_start(reply:Dictionary,guard:LootStartReply)->void:
 		loot_start_feedback="服务端已确认持久化并启动；正在等待匹配的服务端状态，不会重复开始。"
 		_request_public_loot_snapshot(guard)
 
-func auto_status() -> String:
+func auto_status(include_budget:bool=true) -> String:
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto_pending():return "正在准备任务地图…"
 	if str(auto.get("phase",""))=="manual":
@@ -362,7 +362,7 @@ func auto_status() -> String:
 		else:message="任务已停止 · "+message
 	if not str(auto.get("mode_notice","")).is_empty():message+="\n"+str(auto.mode_notice)
 	var budget:Dictionary=auto.get("budget",{})
-	if not budget.is_empty():
+	if include_budget and not budget.is_empty():
 		if world.state.quest_loot_enabled():
 			# Render one cached authoritative projection; never interpret old seconds.
 			var view=preload("res://scripts/quest_auto_loot_view.gd").new()

@@ -20,6 +20,7 @@ var detail_scroll: ScrollContainer
 var list_position := 0
 var detail_positions := {}
 var viewport_size := Vector2.ZERO
+var status_scroll: ScrollContainer
 
 func configure(owner: Node) -> void:
 	world=owner
@@ -44,6 +45,8 @@ func close_menu() -> void:
 func relayout() -> void:
 	var available:Vector2=world.get_viewport_rect().size
 	custom_minimum_size=Vector2.ZERO
+	if is_instance_valid(status_scroll):
+		status_scroll.custom_minimum_size.y=available.y*0.3
 	size=Vector2(minf(1100,available.x-16),maxf(180,available.y-32))
 	position=(available-size)/2
 func model() -> Dictionary:
@@ -142,7 +145,7 @@ func rebuild(save_scroll:bool=true) -> void:
 		if child==header or child==settings_button:continue
 		body.remove_child(child)
 		child.queue_free()
-	list_scroll=null;detail_scroll=null;settings_panel=null
+	list_scroll=null;detail_scroll=null;settings_panel=null;status_scroll=null
 	settings_button.visible=not settings_open
 	if settings_open:
 		var settings_scroll:=scroll(body,"QuestAutoSettingsScroll")
@@ -153,25 +156,30 @@ func rebuild(save_scroll:bool=true) -> void:
 		present_auto_settings()
 		relayout()
 		return
-	append_public_loot_start(body)
 	var auto:Dictionary=world.state.derived.get("quest_auto",{})
 	if auto.get("running",false) or world.quest_helper_travel.active:
 		button(body,"停止自动任务 / 导航",func():world.quest_helper_travel.cancel();rebuild(),"QuestAutoStop")
-		label(body,world.quest_helper_travel.auto_heading(),12)
+	status_scroll=scroll(body,"QuestHelperStatusScroll")
+	status_scroll.size_flags_vertical=Control.SIZE_SHRINK_BEGIN
+	var status_body:=column(status_scroll)
+	append_public_loot_start(status_body)
+	if auto.get("running",false) or world.quest_helper_travel.active:
+		label(status_body,world.quest_helper_travel.auto_heading(),12)
 		if str(auto.get("phase","")) in ["waiting_boss","waiting_reward"]:
-			label(body,world.quest_helper_travel.auto_mode(),12)
+			label(status_body,world.quest_helper_travel.auto_mode(),12)
 		if str(auto.get("phase",""))=="waiting_boss":
-			var resume:=button(body,"胜利后继续任务",func():world.quest_helper_travel.continue_auto(auto.duplicate(true)),"QuestAutoContinue")
+			var resume:=button(status_body,"胜利后继续任务",func():world.quest_helper_travel.continue_auto(auto.duplicate(true)),"QuestAutoContinue")
 			resume.disabled=not auto.get("can_continue",false) or not (world.link.is_local() or world.link.online)
 		if str(auto.get("phase",""))=="waiting_reward":
-			var reward:=button(body,"选择任务奖励",func():
+			var reward:=button(status_body,"选择任务奖励",func():
 				close_menu();world.quest_helper_travel.open_auto_reward(),"QuestAutoReward")
 			reward.disabled=auto.get("waiting",{}).get("dialogue",{}).is_empty() or not (world.link.is_local() or world.link.online)
-			label(body,"请选择原任务奖励；成功选择并保存后自动继续。取消或失败不会继续。",12)
-		label(body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
+			label(status_body,"请选择原任务奖励；成功选择并保存后自动继续。取消或失败不会继续。",12)
+		label(status_body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
 	elif str(auto.get("phase",""))=="manual":
-		label(body,"已停止 · 待手动处理；处理后请再次点击自动推进。",12)
-		label(body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
+		label(status_body,"已停止 · 待手动处理；处理后请再次点击自动推进。",12)
+		label(status_body,world.quest_helper_travel.auto_status(),12).name="QuestAutoMessage"
+	status_scroll.visible=status_body.get_child_count()>0
 	var panes:=HBoxContainer.new();panes.size_flags_vertical=Control.SIZE_EXPAND_FILL;panes.add_theme_constant_override("separation",20);body.add_child(panes)
 	var quests:Array=model().get("quests",[])
 	var selected:Dictionary={}
