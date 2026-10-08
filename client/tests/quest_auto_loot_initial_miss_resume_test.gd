@@ -180,7 +180,6 @@ class ResumeBackend:
  var cadence_rows:Array[Dictionary]=[]
  var cadence_overflow:=false
  var resume_noops:=0
- func _quest_loot_public_enabled()->bool:return true
  func _cmd_field_step(command:Dictionary)->Dictionary:
   var observed_call:bool=quest_loot.attempt_call!=null
   var before_sample:int=quest_loot.last_attempt_ms
@@ -248,7 +247,7 @@ func make_case(path:String,resume:bool,observe_cadence:bool=false):
  b.fee_attach(101)
  var pre_e1:Dictionary=b.session._profile.duplicate(true)
  var ack:Dictionary=b.handle(start_command(1,101))
- check(Backend.QUEST_LOOT_PUBLIC_ENABLED==false and b.automation.auto_tick and ack.get("ok",false) and ack.get("persisted",false),"Original public E1 with immutable test capability, normal auto_tick")
+ check(Backend.QUEST_LOOT_PUBLIC_ENABLED==true and b._quest_loot_public_enabled() and b.automation.auto_tick and ack.get("ok",false) and ack.get("persisted",false),"Original public E1 with real production capability/getter, normal auto_tick")
  if failures:b.free();return null
  var acquired:Dictionary=State.acquire(pre_e1.quest_loot,State.STEP,str(ack.budget_identity.budget_id),str(ack.run_identity.run_id),30,0)
  check(acquired.get("ok",false),"Independent E1 acquire oracle")

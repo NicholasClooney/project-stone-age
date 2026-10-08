@@ -29,7 +29,7 @@ func run()->void:
   if failures:b.free();quit(1);return
   if offset in [1000,2000]:
    var view:Dictionary=p2_profiles.back().derived.quest_auto.budget
-   check(view.entry.used_ms==b.quest_loot.base_used_ms+offset and view.entry.saved_used_ms==baseline.profile.quest_loot.entries[KEY].used_ms and view.entry.revision==old_revision and not view.enabled,"Queued v1 sample changes used_ms within same saved revision; still disabled")
+   check(view.entry.used_ms==b.quest_loot.base_used_ms+offset and view.entry.saved_used_ms==baseline.profile.quest_loot.entries[KEY].used_ms and view.entry.revision==old_revision and view.enabled==true,"Queued v1 sample changes used_ms within same saved revision; real public capability enabled")
    if failures:b.free();quit(1);return
  check(b.field_calls==fields+2,"Four actual processes, exactly two original no-hit steps")
  if failures:b.free();quit(1);return

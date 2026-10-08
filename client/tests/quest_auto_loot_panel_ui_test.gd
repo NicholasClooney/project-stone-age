@@ -1,19 +1,22 @@
 extends "res://tests/quest_auto_background_ui_test.gd"
 ## Real remote snapshot reaches ClientState and the production chip stays
-## closed. Synthetic state below tests only the display's strict gate.
+## closed via explicit ClosedBackend. Synthetic state tests the display strict gate.
+class ClosedBackend:
+	extends "res://server/backend.gd"
+	func _quest_loot_public_enabled()->bool:return false
 func projection()->Dictionary:
 	return {"running":false,"phase":"stopped","message":"合成预算记录","budget":{"enabled":false,"reason":"限时刷物尚未开放。","default_limit_minutes":30,"activity":"storage_paused","finish_current_battle":false,"recovery_blocked":false,"can_start":false,"can_stop":false,"can_adjust_limit":false,"can_reset":false,"entry":{"step_id":"jewels:hunt:2760","budget_id":"aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa","generation":0,"revision":1,"target_item_id":2760,"target_count":1,"limit_ms":1000,"saved_used_ms":500,"used_ms":1200,"limit_reached":true,"existing_items":2,"new_items":1,"saved_battles":3}}}
 func run()->void:
 	root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
 	remote_mode=true
-	backend_node=Backend.new();backend_node.set_process(false);root.add_child(backend_node)
+	backend_node=ClosedBackend.new();backend_node.set_process(false);root.add_child(backend_node)
 	server_node=preload("res://server/ws_server.gd").new(backend_node,0,"127.0.0.1");root.add_child(server_node)
 	if not check(server_node.start()==OK,"Capability UI server starts on port zero"):return
 	if not await create_world():return
 	world.set_process(false)
 	world.quest_helper_menu.close_menu()
 	var chip=world.find_child("QuestAutoChip",true,false)
-	if not check(world.backend==null and world.state.capabilities.get("quest_loot_enabled") is bool and not world.state.quest_loot_enabled(),"Remote production snapshot carries a disabled server-owned capability"):return
+	if not check(world.backend==null and world.state.capabilities.get("quest_loot_enabled") is bool and not world.state.quest_loot_enabled(),"Remote ClosedBackend snapshot carries a disabled server-owned capability"):return
 	if not await ready(func():return not chip.visible,"Empty disabled ledger adds no background chip"):return
 	# Even if a stale/internal projection claims enabled and contains counters,
 	# the actual remote capability remains the only UI gate.
