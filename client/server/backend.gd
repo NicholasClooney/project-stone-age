@@ -370,7 +370,10 @@ func _keep_resume_file() -> void:
 	# battle open the save waits; the battle is fought again after a restart.
 	if session._pending.is_empty():
 		session.set_location(int(state.map_id),int(state.cell[0]),int(state.cell[1]))
-		if not save():
+		var initial_resume:Dictionary=quest_loot.capture_initial_resume_save(self)
+		var saved:bool=save()
+		quest_loot.finish_initial_resume_save(self,initial_resume,saved)
+		if not saved:
 			printerr("Could not save %s; the resume file waits for the next save." % save_path)
 			_resume_written_msec = -1
 			return
