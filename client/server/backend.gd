@@ -13,6 +13,8 @@ const GameSession = preload("res://server/game_session.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 var _fee_start_journal_writer = FeeStartJournalWriter.new()
+const FEE_COLD_LIFECYCLE_ENABLED := false
+var _fee_cold_lifecycle = preload("res://server/fee_cold_lifecycle.gd").new()
 var _fee_recovered_close_writer = preload("res://server/fee_recovered_close_writer.gd").new()
 var _fee_loaded_baseline_writer = preload("res://server/fee_loaded_baseline_writer.gd").new()
 const BattleSession = preload("res://server/battle_session.gd")
@@ -247,6 +249,8 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	_fee_recovered_close_writer.revoke_retire()
+	_fee_cold_lifecycle.revoke_call()
 	_fee_loaded_baseline_writer.revoke_loaded_authority()
 	if session!=null:session._cancel_fee_loaded_storage_normalization()
 	var load_owner=session
@@ -373,6 +377,7 @@ func keep_resume_file() -> void:
 	_complete_dispatch_barrier()
 
 func _keep_resume_file() -> void:
+	if _fee_cold_lifecycle.protects_resume(self):return
 	var path := _resume_file()
 	if path.is_empty():return
 	var now := int(resume_clock.call())
@@ -454,6 +459,7 @@ func _fee_attempt_resume_allowed(profile:Variant,state:Variant)->bool:
 ## Written to a temporary file and renamed over the old one, so a kill leaves
 ## either the previous or the new file, never half of one.
 func _write_resume_file(path: String, state: Dictionary) -> void:
+	if _fee_cold_lifecycle.protects_resume(self) and path==_resume_file():return
 	var file := FileAccess.open(path+".tmp",FileAccess.WRITE)
 	if file==null:
 		printerr("Could not write %s; the automation will not resume." % path)
@@ -471,6 +477,7 @@ func _write_resume_file(path: String, state: Dictionary) -> void:
 	resume_writes += 1
 
 func _remove_resume_file(path: String) -> void:
+	if _fee_cold_lifecycle.protects_resume(self) and path==_resume_file():return
 	if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func _fee_resume_io_read(path:String)->Dictionary:
@@ -696,6 +703,7 @@ func _begin_fee_resume_closed_retire_frame(stop_handle:Dictionary={})->Dictionar
 	if record.owner!=owner:return _fee_resume_retire_unknown_result("owner_mismatch")
 	var profile_bytes:PackedByteArray=JSON.stringify(session._profile).to_utf8_buffer()
 	var snapshot:Dictionary={"session":session,"profile_ref":session._profile,"profile":session._profile.duplicate(true),"owner":owner.duplicate(true),"record":record.duplicate(true),"save_path":save_path,"resume_path":path,"profile_bytes":profile_bytes.duplicate(),"cache":last_saved_payload,"serial":quest_save_serial,"stop_call":stop_handle.get("call",null),"stop_owner":stop_handle.get("owner",null)}
+	if _fee_cold_lifecycle.has_call():snapshot["cold_call"]=_fee_cold_lifecycle.current_call()
 	if not _fee_resume_retire_snapshot_current(snapshot):return _fee_resume_retire_unknown_result("snapshot_stale_before_reads")
 	var profile_facts:Dictionary=_fee_resume_retire_profile_pair_facts(snapshot)
 	if not _fee_resume_retire_profile_state_is(profile_facts,"matches"):return _fee_resume_retire_unknown_result("closed_profile_pair_not_verified",false,false,OK,profile_facts.get("profile_pair_state","unknown"))
@@ -789,6 +797,7 @@ func _begin_fee_resume_closed_retire_frame(stop_handle:Dictionary={})->Dictionar
 	return {"ok":true,"stage":"prepared","call":call,"operation_attempted":false,"operation_completed":false,"profile_pair_state":"matches"}
 
 func _fee_resume_retire_snapshot_current(snapshot:Dictionary,allow_own_sidecar_claim:bool=false)->bool:
+	if snapshot.has("cold_call") and (not _fee_cold_lifecycle.owns_call(snapshot.cold_call) or not _fee_cold_lifecycle.retire_guard_current(self)):return false
 	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current({"call":snapshot.get("stop_call"),"owner":snapshot.get("stop_owner")}):return false
 	if _quest_auto_stop_operation_call==null and snapshot.get("stop_call",null)!=null:return false
 	if snapshot.is_empty() or not is_same(session,snapshot.get("session")):return false
@@ -885,6 +894,7 @@ func _fee_resume_retire_fact_from_read(frame:Dictionary,target:Dictionary)->Dict
 	return {"sidecar_persisted":matches,"target_state":"matches" if matches else "differs","sidecar_exists":exists}
 
 func _fee_resume_closed_retire_frame_current(frame:Dictionary)->bool:
+	if frame.has("cold_call") and (not _fee_cold_lifecycle.owns_call(frame.cold_call) or not _fee_cold_lifecycle.retire_guard_current(self)):return false
 	if _quest_auto_stop_operation_call!=null and not _quest_auto_stop_operation_current({"call":frame.get("stop_call"),"owner":frame.get("stop_owner")}):return false
 	if _quest_auto_stop_operation_call==null and frame.get("stop_call",null)!=null:return false
 	if frame.is_empty() or frame.get("action","")!="retire_closed" or not _fee_resume_sidecar_frame_current(frame):return false
@@ -1017,6 +1027,7 @@ func _commit_fee_resume_closed_retire_frame(handle:Variant)->Dictionary:
 	var ok:bool=completed and persisted_true and tmp_clear_true and _fee_resume_retire_profile_state_is(profile_after,"matches") and frame_current
 	var result:Dictionary=target_fact.duplicate(true)
 	result.merge({"ok":ok,"stage":io_stage if ok else "post_io_partial_or_unknown","operation_attempted":attempted,"operation_completed":completed,"temporary_clear":tmp_clear,"profile_pair_state":final_profile_state,"operation_error":io_error},true)
+	if ok and _fee_cold_lifecycle.has_call():_fee_cold_lifecycle.mark_retired_from_writer(self,frame)
 	_end_fee_resume_sidecar_frame(handle)
 	return result
 
@@ -1203,6 +1214,7 @@ func _commit_fee_resume_sidecar_frame(handle:Variant)->Dictionary:
 ## the character stands where it ran (automation.gd try_resume). The file is
 ## used once.
 func load_resume() -> void:
+	if _fee_cold_lifecycle.handles_current(self):return
 	var path := _resume_file()
 	if path.is_empty() or not FileAccess.file_exists(path):return
 	var parsed = JSON.parse_string(FileAccess.get_file_as_string(path))
@@ -2457,6 +2469,15 @@ func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
 ## Dormant B2a baseline execution seam. load_profile only binds evidence.
+func _fee_cold_lifecycle_enabled()->bool:
+	return FEE_COLD_LIFECYCLE_ENABLED
+
+func _prepare_fee_cold_open()->bool:
+	return _fee_cold_lifecycle.open(self) if _fee_cold_lifecycle_enabled() else false
+
+func _fee_cold_open_handled()->bool:
+	return _fee_cold_lifecycle.handles_current(self)
+
 func _begin_fee_recovered_close()->Dictionary:
 	return _fee_recovered_close_writer.begin(self)
 
