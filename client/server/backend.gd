@@ -8,7 +8,7 @@ const PROTOCOL := 1
 ## Public loot controls remain closed until the complete server entry and
 ## client integration have passed their acceptance windows. This is also the
 ## authority source for the display-only capability; clients cannot set it.
-const QUEST_LOOT_PUBLIC_ENABLED := false
+const QUEST_LOOT_PUBLIC_ENABLED := true
 const GameSession = preload("res://server/game_session.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")

@@ -1,10 +1,13 @@
 extends "res://tests/quest_auto_loot_state_test.gd"
-## Server-side public-start candidate. Test subclasses only supply the immutable
-## server capability and a post-writer reentry; the command still uses Backend,
+## Public production start with explicit closed negative fixture and post-writer
+## reentry observation; the command still uses Backend,
 ## GameSession, E1 and the original field-step path.
 const Backend=preload("res://server/backend.gd")
 const MapFile=preload("res://scripts/map_file.gd")
 const Wait=preload("res://tests/support/wait.gd")
+class ClosedBackend:
+ extends "res://server/backend.gd"
+ func _quest_loot_public_enabled()->bool:return false
 class EnabledBackend:
  extends "res://server/backend.gd"
  var replace_identity_after_open:=false
@@ -14,7 +17,6 @@ class EnabledBackend:
  var field_process_depth:=-1
  var field_had_initial_frame:=false
  var replaced_identity_value:Dictionary={}
- func _quest_loot_public_enabled()->bool:return true
  func _loot_settlement_written(payload:String,owner,path:String)->void:
   super._loot_settlement_written(payload,owner,path)
   if not replace_identity_after_open or owner!=session or path!=save_path:return
@@ -94,13 +96,21 @@ func prepare_source(b,path:String,closed_budget:bool=false)->bool:
 func start_command(seq:int,connection:int)->Dictionary:
  return {"type":"quest_loot_start","seq":seq,"_quest_connection":connection}
 func run()->void:
- # The actual production constant remains false. No request field can enable it.
- var closed:=Backend.new();closed.set_process(false)
+ # Production is open; unauthenticated input still cannot create an E1.
+ var production:=Backend.new();production.set_process(false)
+ check(Backend.QUEST_LOOT_PUBLIC_ENABLED and production._quest_loot_public_enabled() and production._capabilities().get("quest_loot_enabled")==true,"Actual production constant/getter/projection enable public loot")
+ var production_before:Dictionary=production.session.snapshot()
+ var unbound:Dictionary=production.handle({"type":"quest_loot_start","seq":1,"_quest_connection":404})
+ check(not unbound.get("ok",true) and unbound.get("persisted")==false and production.session.snapshot()==production_before and production.last_saved_payload.is_empty(),"Open production still rejects an unattached transport without mutation")
+ production.free()
+ if failures:quit(1);return
+ # Explicit closed fixture retains every capability-revocation negative case.
+ var closed:=ClosedBackend.new();closed.set_process(false)
  var caps:Dictionary=closed._capabilities()
  var before:Dictionary=closed.session.snapshot()
  var disabled:Dictionary=closed.handle({"type":"quest_loot_start","seq":1,"_quest_connection":404})
- check(caps.get("quest_loot_enabled") is bool and not caps.quest_loot_enabled and not closed._quest_loot_public_enabled(),"Production capability defaults to the immutable closed server getter")
- check(not disabled.get("ok",true) and disabled.get("persisted") is bool and not disabled.persisted and closed.session.snapshot()==before and closed.last_saved_payload.is_empty(),"Default-disabled handler rejects with persisted=false and no session mutation")
+ check(caps.get("quest_loot_enabled") is bool and not caps.quest_loot_enabled and not closed._quest_loot_public_enabled(),"Explicit ClosedBackend projects the immutable closed server getter")
+ check(not disabled.get("ok",true) and disabled.get("persisted") is bool and not disabled.persisted and closed.session.snapshot()==before and closed.last_saved_payload.is_empty(),"Explicitly disabled handler rejects with persisted=false and no session mutation")
  var forged:Dictionary=closed.handle({"type":"quest_loot_start","seq":1,"_quest_connection":404,"quest_loot_enabled":true})
  check(not forged.get("ok",true) and forged.get("persisted") is bool and not forged.persisted and not closed._quest_loot_public_enabled(),"Client payload cannot alter the server-owned immutable capability")
  closed.free()
@@ -174,7 +184,7 @@ func run()->void:
  var binding=enabled.fee_attach(connection)
  var enable_caps:Dictionary=enabled._capabilities()
  var first:Dictionary=enabled.handle(start_command(1,connection))
- check(enable_caps.get("quest_loot_enabled")==true and enabled._quest_loot_public_enabled() and is_same(enabled._fee_bindings.get(connection),binding),"Only the server test subclass's immutable getter and current attached transport authorize this fixture")
+ check(enable_caps.get("quest_loot_enabled")==true and enabled._quest_loot_public_enabled() and is_same(enabled._fee_bindings.get(connection),binding),"Production immutable getter and current attached transport authorize this callback fixture")
  check(first.get("ok",false) and first.get("persisted") is bool and first.persisted and first.get("type","")=="ack" and first.get("seq")==1,"Real public handler returns ACK only after durable E1 and E2 frame installation")
  if failures:enabled.free();quit(1);return
  check(first.get("run_identity",{}).keys().size()==3 and first.run_identity.has_all(["run_id","step_id","revision"]) and first.get("budget_identity",{}).keys().size()==3 and first.budget_identity.has_all(["budget_id","generation","revision"]),"ACK exposes only the frozen three-key run and budget identities")
@@ -224,6 +234,6 @@ func run()->void:
  e2.set_process(false)
  check(reached and e2.field_calls==1 and e2.field_had_initial_frame and e2.field_process_depth==1 and e2.field_generation>generation_floor,"Original one-shot initial E2 reaches the real field handler only on a later normal Backend process generation")
  if failures:e2.free();quit(1);return
- print("QUEST AUTO LOOT PUBLIC START: %d failures; real Backend handler/E1 writer/first E2, test-only immutable capability and callback injection; no live WS authentication claim"%failures)
+ print("QUEST AUTO LOOT PUBLIC START: %d failures; real Backend handler/E1 writer/first E2, production open capability, explicit closed negative fixture and callback injection; no live WS authentication claim"%failures)
  e2.free()
  quit(1 if failures else 0)

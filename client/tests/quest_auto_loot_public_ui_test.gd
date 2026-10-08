@@ -1,6 +1,10 @@
 extends "res://tests/quest_auto_background_ui_test.gd"
-## Closed production capability plus isolated consumer/callback guards. The
+## Explicit closed capability fixture plus isolated consumer/callback guards. The
 ## synthetic true event and reply cases below are not public-server admission.
+class ClosedBackend:
+	extends "res://server/backend.gd"
+	func _quest_loot_public_enabled()->bool:return false
+
 class TestPeer extends RefCounted:
 	pass
 
@@ -82,14 +86,14 @@ func run()->void:
 	root.content_scale_size=Vector2i.ZERO
 	root.size=Vector2i(1280,720)
 	remote_mode=true
-	backend_node=Backend.new();backend_node.set_process(false);root.add_child(backend_node)
+	backend_node=ClosedBackend.new();backend_node.set_process(false);root.add_child(backend_node)
 	server_node=preload("res://server/ws_server.gd").new(backend_node,0,"127.0.0.1");root.add_child(server_node)
 	if not check(server_node.start()==OK,"Closed public UI test server starts on port zero"):return
 	if not await create_world():return
 	world.set_physics_process(false)
 	var menu=world.quest_helper_menu
 	menu.open_menu()
-	if not check(world.backend==null and not world.state.quest_loot_enabled(),"Real remote production snapshot keeps public loot capability false"):return
+	if not check(world.backend==null and not world.state.quest_loot_enabled(),"Real remote ClosedBackend snapshot keeps public loot capability false"):return
 	if not check(menu.find_child("QuestLootStart",true,false)==null,"Missing/false capability hides the public start entry completely"):return
 	if not check(not world.quest_helper_travel.start_public_loot(),"Closed capability cannot dispatch a start request"):return
 	apply_synthetic_profile("true",true,"")
