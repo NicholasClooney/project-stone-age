@@ -102,8 +102,10 @@ func open_profile(id: String) -> String:
 			return "存档 %s 无法读取；为免覆盖，暂不能登录这个角色。" % ProjectSettings.globalize_path(path)
 	backend.save_path = path
 	backend.keep_resume_current = true
-	backend.save()
-	backend.load_resume()
+	var fee_cold_routed:bool=backend._prepare_fee_cold_open()
+	if not fee_cold_routed and not backend._fee_cold_open_handled():
+		backend.save()
+		backend.load_resume()
 	backend.event.connect(_on_backend_event.bind(id))
 	backend.party_battle_hook = party_battles.open.bind(id)
 	backend.stationary_party_member = party.in_party.bind(id)

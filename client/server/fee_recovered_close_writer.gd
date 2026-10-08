@@ -1,10 +1,11 @@
 extends RefCounted
-## Private, single-use loaded-baseline continuation. No execution caller.
+## Private, single-use loaded-baseline continuation; dormant cold-retire handoff.
 ## JSON profile boundary; neither sidecar execution nor cross-file atomicity.
 const Exact = preload("res://server/fee_start_journal_writer.gd")
 const Journal = preload("res://server/fee_attempt_lifecycle.gd")
 var _frame: Dictionary = {}
 var _executing := false
+var _retire: Dictionary = {}
 
 func owns_claim(claim: RefCounted) -> bool:
 	return not _frame.is_empty() and is_same(_frame.claim, claim)
@@ -131,4 +132,39 @@ func persist(b, h: Variant) -> Dictionary:
 	var w2: Variant = second.get("writer_return")
 	var succeeded: bool = _current(b) and Exact.strict_true(w2) and Exact.row_state(rows[0], true, f.bytes) == "matches" \
 		and Exact.row_state(rows[1], true, f.bytes) == "matches" and Exact.row_state(rows[2], false, PackedByteArray()) == "matches"
+	if succeeded:_mint_retire(b)
 	return _finish(b, h, _result(b, "pair_verified" if succeeded else "w2_partial_or_unknown", rows, w1, w2, succeeded))
+
+## Only the internal verified pair exit can mint; diagnostics never enter here.
+func _mint_retire(b) -> void:
+	if not _executing or not _current(b):return
+	_retire = {"token": RefCounted.new(), "state": "ready", "origin": _frame.continuation,
+		"profile_ref": b.session._profile, "profile": b.session._profile.duplicate(true),
+		"cache": b.last_saved_payload, "serial": b.quest_save_serial}
+
+func revoke_retire() -> void:
+	_retire = {}
+
+func _retire_owner(b, r: Dictionary) -> bool:
+	if r.is_empty() or not b._fee_loaded_baseline_writer._continuation_owner_current(b, r.origin):return false
+	return is_same(b.session._profile, r.profile_ref) and Exact.same_value(b.session._profile, r.profile) \
+		and b.last_saved_payload == r.cache and b.quest_save_serial == r.serial
+
+func take_retire(b, consumer, call: RefCounted) -> Dictionary:
+	if _retire.is_empty() or _retire.state != "ready":return {}
+	if not is_same(consumer, b._fee_cold_lifecycle) or not consumer.owns_call(call):return {}
+	if _executing or not _frame.is_empty() or not _retire_owner(b, _retire) or not b._fee_loaded_baseline_writer._idle(b):
+		_retire = {}
+		return {}
+	_retire.state = "taken"
+	_retire.consumer = weakref(consumer)
+	_retire.call = call
+	return _retire
+
+func retire_current(b, consumer, r: Dictionary) -> bool:
+	return not r.is_empty() and is_same(r, _retire) and r.state == "taken" \
+		and is_same(consumer, b._fee_cold_lifecycle) and is_same(r.consumer.get_ref(), consumer) \
+		and consumer.owns_call(r.call) and _retire_owner(b, r)
+
+func end_retire(consumer, r: Dictionary) -> void:
+	if not r.is_empty() and is_same(r, _retire) and r.state == "taken" and is_same(r.consumer.get_ref(), consumer):_retire = {}
