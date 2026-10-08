@@ -69,6 +69,10 @@ def suite_timeout(name):
             "quest_auto_loot_initial_failure_test": 420,
             # Unified resume combo: 446.9 s alone (65 cases); 900 s covers full-run load.
             "quest_auto_loot_unified_resume_test": 900,
+            # Fee B2a/B2b/B3b suites: 150.1 / 113.6 / 123.7 s alone; budgets cover full-run load.
+            "fee_loaded_baseline_test": 420,
+            "fee_recovered_close_writer_test": 360,
+            "fee_start_intent_test": 360,
             # Same pilot with its isolated heartbeat-cancel test mode and its own process budget.
             "quest_auto_loot_heartbeat_cancel_test": 360,
             "quest_auto_loot_public_start_test": 180}.get(name, TIMEOUT)
