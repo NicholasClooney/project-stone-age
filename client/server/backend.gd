@@ -13,6 +13,8 @@ const GameSession = preload("res://server/game_session.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 var _fee_start_journal_writer = FeeStartJournalWriter.new()
+const FEE_START_INTENT_ENABLED := false
+var _fee_start_intent = preload("res://server/fee_start_intent.gd").new()
 const FEE_COLD_LIFECYCLE_ENABLED := false
 var _fee_cold_lifecycle = preload("res://server/fee_cold_lifecycle.gd").new()
 var _fee_recovered_close_writer = preload("res://server/fee_recovered_close_writer.gd").new()
@@ -249,6 +251,8 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	_fee_start_intent.revoke()
+	_fee_start_journal_writer.revoke_start()
 	_fee_recovered_close_writer.revoke_retire()
 	_fee_cold_lifecycle.revoke_call()
 	_fee_loaded_baseline_writer.revoke_loaded_authority()
@@ -289,6 +293,7 @@ func handle(command: Dictionary) -> Dictionary:
 	_depth += 1
 	stationary.diagnostic_command = command
 	var reply := _handle(command)
+	var fee_delivery:Dictionary=_fee_start_intent.take_delivery(reply)
 	if str(command.get("type","")).begins_with("stationary_") and not bool(reply.get("ok",false)):
 		stationary.audit(self,"reject",str(reply.get("reason","")),command)
 	stationary.diagnostic_command = {}
@@ -299,6 +304,7 @@ func handle(command: Dictionary) -> Dictionary:
 	if not source_scope.is_empty():quest_auto.internal=source_internal
 	_dispatch_boundary_depth-=1
 	_complete_dispatch_barrier()
+	_fee_start_intent.finish_delivery(self,fee_delivery,reply)
 	return reply
 
 ## Appends the pets released or caught by the last command or tick to
@@ -2269,6 +2275,12 @@ func save() -> bool:
 	return _save_profile_boundary()
 
 func _save_profile_boundary(checkpoint:Dictionary={}) -> bool:
+	var fee_save:Dictionary=_fee_start_intent.begin_save(self)
+	var saved:bool=_save_profile_boundary_body(checkpoint)
+	_fee_start_intent.finish_save(self,fee_save,saved)
+	return saved
+
+func _save_profile_boundary_body(checkpoint:Dictionary={}) -> bool:
 	if save_path.is_empty():
 		quest_save_serial+=1
 		return true
@@ -2450,6 +2462,7 @@ func fee_attach(connection:int)->RefCounted:
 	_fee_bindings[connection]=binding
 	return binding
 func fee_detach(connection:int)->void:
+	_fee_start_intent.detach(self,connection,_fee_bindings.get(connection))
 	var binding=_fee_bindings.get(connection)
 	var page:Dictionary=original_quests.pending
 	if binding!=null and page.get("phase","")=="permit_shop" and page.get("permit_connection")==connection and page.get("permit_binding")==binding:
@@ -3280,7 +3293,11 @@ func _restore_wood_battle(saved: Dictionary) -> bool:
 func _cmd_quest_auto_continue(command:Dictionary)->Dictionary:
 	return quest_auto.continue_boss(self,command)
 
+func _fee_start_intent_enabled()->bool:
+	return FEE_START_INTENT_ENABLED
+
 func _cmd_quest_auto_start(command: Dictionary) -> Dictionary:
+	if _fee_start_intent_enabled() and _fee_start_intent.classified(command):return _fee_start_intent.start(self,command)
 	return quest_auto.start(self,command)
 
 func _cmd_quest_loot_start(command:Dictionary)->Dictionary:

@@ -433,7 +433,7 @@ func select(b,selected_id:int=-1,allow_clean:Variant=null) -> Dictionary:
  return {}
 func _supports_automatic_start(job_id:int,event_id:int)->bool:
  return Policy.supports(job_id,event_id)
-func start(b,command:Dictionary) -> Dictionary:
+func prepare_start(b,command:Dictionary) -> Dictionary:
  if b._quest_auto_stop_operation_call!=null:return b._reject("自动任务正在停止，请稍后重试。")
  if running:return b._reject("自动任务已在运行。")
  var id=command.get("quest_id",-1)
@@ -447,23 +447,34 @@ func start(b,command:Dictionary) -> Dictionary:
  if str(command.get("client","")).is_empty():return b._reject("缺少发起设备。")
  if int(id)==2:
   if not command.get("_quest_connection") is int or int(command._quest_connection)==-1:return b._reject("缺少可信发起连接。")
-  return begin_source_run(b,str(command.client),int(command._quest_connection))
+  var admitted:Dictionary=source_admission(b)
+  if not admitted.ok:return b._reject(str(admitted.reason))
+  return {"ok":true,"source":true,"quest_id":2,"client":str(command.client),"connection":int(command._quest_connection)}
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  var first:Dictionary=strict_select(b,int(id),bool(quest.get("can_restart",false)))
  if first.get("status","")!="step" or not safe_step(first.get("step",{}),int(id),bool(quest.get("can_restart",false))):return b._reject(str(first.get("reason",quest.get("blocked_reason","")))+" 当前没有可自动执行的已审核原任务步骤。")
- quest_id=int(id)
+ return {"ok":true,"source":false,"quest_id":int(id),"client":str(command.client),"connection":int(command.get("_quest_connection",-1)),"clean":bool(quest.get("can_restart",false)),"first":first.step.duplicate(true)}
+func start(b,command:Dictionary) -> Dictionary:
+ if b._fee_start_intent_enabled() and b._fee_start_intent.classified(command):return b._reject("收费启动必须经过可信后端入口。")
+ var prepared:Dictionary=prepare_start(b,command)
+ if not prepared.get("ok",false):return prepared
+ if prepared.source:
+  _install_source_start(prepared.client,prepared.connection)
+  b.publish()
+  return {"ok":true}
+ quest_id=prepared.quest_id
  strict_walk=true
  clear_motion()
  identity.begin()
  pause_reason=""
  navigation.clear()
- clean_authorized=bool(quest.get("can_restart",false))
- step=first.step.duplicate(true)
+ clean_authorized=prepared.clean
+ step=prepared.first.duplicate(true)
  shutdown_intent={}
  restored=false
  detached=false
- client=str(command.client)
- connection=int(command.get("_quest_connection",-1))
+ client=prepared.client
+ connection=prepared.connection
  running=true
  execution_mode=selected_mode(b)
  phase="travel"
@@ -1037,17 +1048,26 @@ func source_entry(b)->Dictionary:
  return {"job_id":2,"enabled":Source.job_enabled(b,2),"can_start":bool(admission.ok),"reason":str(admission.reason),"effective_mode":"A"}
 ## Public start dispatch and internal callers share the same original guards.
 func begin_source_run(b,device:String,peer:int)->Dictionary:
+ if b._fee_start_intent_enabled():return b._reject("收费启动必须经过可信后端入口。")
  if device.is_empty() or peer==-1:return b._reject("缺少可信发起连接。")
  var checked:Dictionary=source_admission(b)
  if not checked.ok:return b._reject(str(checked.reason))
+ _install_source_start(device,peer)
+ b.publish()
+ return {"ok":true}
+func _install_source_start(device:String,peer:int,staged:RefCounted=null)->void:
  quest_id=2;client=device;connection=peer;running=true;strict_walk=true
  restored=false;detached=false;owns_battle=false;shutdown_intent={}
  source_frame=null;source_after_landing="travel"
- identity.begin();step={};target={};path.clear();herb_path.clear();navigation.clear();clear_motion()
+ if staged==null:identity.begin()
+ else:identity=staged
+ step={};target={};path.clear();herb_path.clear();navigation.clear();clear_motion()
  phase="travel";elapsed=0.0;waited=0.0;execution_mode="A";pause_reason=""
  message="沿审核原路前往原道场人物。"
- b.publish()
- return {"ok":true}
+func install_fee_start(b,prepared:Dictionary,staged:RefCounted)->void:
+ if not b._fee_start_intent.install_permitted(b,self,prepared,staged):return
+ _install_source_start(prepared.client,prepared.connection,staged)
+ b._fee_start_intent.mark_installed(b,self,staged)
 func advance_source(b)->void:
  if phase=="source_dialogue":
   source_reply(b,source_next(b))

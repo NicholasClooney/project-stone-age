@@ -1,9 +1,10 @@
 extends RefCounted
-## Private journal-only seam. No command caller, source admission, purchase,
-## sidecar, running-state installation or fresh-Start capability is provided.
+## Exact journal writer. Only a verified real double-write may mint the
+## private caller-bound Start installation handoff; no payment or sidecar I/O.
 const Journal = preload("res://server/fee_attempt_lifecycle.gd")
 var _frame: Dictionary = {}
 var _executing := false
+var _start:Dictionary={}
 
 static func owner(profile: Variant) -> Dictionary:
 	if not profile is Dictionary:return {}
@@ -112,6 +113,7 @@ func _capture(b, candidate: Dictionary) -> Dictionary:
 func _current(b) -> bool:
 	if _frame.is_empty() or not _idle(b):return false
 	var f: Dictionary = _frame
+	if f.has("intent_call") and not b._fee_start_intent.writer_current(b,f.intent_call):return false
 	if not is_same(b._fee_attempt_writer_call, f.claim):return false
 	if not is_same(b.session, f.session) or not is_same(b.session._profile, f.profile_ref) or not same_value(b.session._profile, f.profile):return false
 	if JSON.stringify(b.session._profile) != f.cache:return false
@@ -134,6 +136,7 @@ func begin(b, candidate: Variant) -> Dictionary:
 	if not b.session._valid_profile(b.session._profile) or not b.session._valid_profile(candidate):return {}
 	if JSON.stringify(b.session._profile) != b.last_saved_payload:return {}
 	_frame = _capture(b, candidate)
+	if b._fee_start_intent.has_call():_frame.intent_call=b._fee_start_intent.current_call()
 	_frame.call = RefCounted.new()
 	_frame.claim = RefCounted.new() # Separate reservation: old seam handles cannot consume this Start handle.
 	b._fee_attempt_writer_call = _frame.claim
@@ -225,4 +228,20 @@ func persist(b, handle: Variant) -> Dictionary:
 	var rows2: Array = [second.get("primary"), second.get("backup"), second.get("temporary")]
 	var pair: bool = row_state(rows2[0], true, f.candidate_bytes) == "matches" and row_state(rows2[1], true, f.candidate_bytes) == "matches" and row_state(rows2[2], false, PackedByteArray()) == "matches"
 	var success: bool = pair and strict_true(second.get("writer_return")) and _current(b)
+	if success and _frame.has("intent_call"):_mint_start(b)
 	return _finish(b, handle, _result(b, "pair_verified" if success else "w2_partial_or_owner_changed", rows2, success))
+
+## Real private W1/W2 success only, not the returned diagnostic.
+func _mint_start(b)->void:
+	if not _executing or not _current(b):return
+	_start={"call":_frame.intent_call,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"cache":b.last_saved_payload,"serial":b.quest_save_serial,"token":RefCounted.new()}
+func revoke_start(call:RefCounted=null)->void:
+	if call==null or (not _start.is_empty() and is_same(_start.call,call)):_start={}
+func take_start(b,consumer,call:RefCounted)->Dictionary:
+	if not is_same(consumer,b._fee_start_intent) or not consumer.owns_call(call):return {}
+	if _start.is_empty() or not is_same(_start.call,call):return {}
+	var value:Dictionary=_start
+	_start={} # A real owner attempt is single-use even if the post fence fails.
+	if _executing or not _frame.is_empty() or not consumer.writer_current(b,call):return {}
+	if not is_same(value.profile_ref,b.session._profile) or not same_value(value.profile,b.session._profile) or value.cache!=b.last_saved_payload or value.serial!=b.quest_save_serial:return {}
+	return value
