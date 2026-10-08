@@ -251,6 +251,8 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	_cancel_fee_departure(_fee_departure_call)
+	_fee_departure_pending={};_fee_pending_record={};_fee_departure_status={}
 	_fee_start_intent.revoke()
 	_fee_start_journal_writer.revoke_start()
 	_fee_recovered_close_writer.revoke_retire()
@@ -2457,6 +2459,7 @@ func _stale(reason: String) -> Dictionary:
 # Opaque transport epochs only, no backend/session backreference. Never serialized.
 var _fee_bindings:Dictionary={}
 func fee_attach(connection:int)->RefCounted:
+	_fee_departure_before_attach()
 	fee_detach(connection)
 	var binding=RefCounted.new()
 	_fee_bindings[connection]=binding
@@ -2468,6 +2471,7 @@ func fee_detach(connection:int)->void:
 	if binding!=null and page.get("phase","")=="permit_shop" and page.get("permit_connection")==connection and page.get("permit_binding")==binding:
 		original_quests.pending={}
 	_fee_bindings.erase(connection)
+	if not _fee_departure_call.is_empty() and _fee_departure_call.peer==connection and is_same(_fee_departure_call.binding,binding):_fee_departure_call.binding=null
 const RequiredFee=preload("res://server/required_fee_transaction.gd")
 func _permit_entry_refusal(command:Dictionary)->Dictionary:
 	if str(command.get("type","")) not in ["permit_shop_open","permit_shop_choose"]:return {}
@@ -3297,6 +3301,7 @@ func _fee_start_intent_enabled()->bool:
 	return FEE_START_INTENT_ENABLED
 
 func _cmd_quest_auto_start(command: Dictionary) -> Dictionary:
+	if _fee_departure_enabled() and _fee_start_intent.classified(command) and _fee_cold_lifecycle.protects_resume(self):return _reject("收费任务收尾尚未核实，请先重试收尾或重新载入角色。")
 	if _fee_start_intent_enabled() and _fee_start_intent.classified(command):return _fee_start_intent.start(self,command)
 	return quest_auto.start(self,command)
 
@@ -3328,3 +3333,175 @@ func _cmd_item_storage_transfer(command: Dictionary) -> Dictionary:
 
 func _cmd_transmigration(command:Dictionary)->Dictionary:
 	return transmigration.command(self,command)
+
+## Private departure provenance. These are not persistent failure records/caps.
+const FEE_DEPARTURE_ENABLED := false
+var _fee_departure_call: Dictionary = {}
+var _fee_departure_pending: Dictionary = {}
+var _fee_pending_record:Dictionary={}
+var _fee_departure_status: Dictionary = {}
+func _fee_departure_enabled() -> bool:return FEE_DEPARTURE_ENABLED
+func _fee_departure_applies()->bool:
+	if not _fee_departure_enabled() or session==null or not session._profile.has("quest_auto_fee_lifecycle"):return false
+	# B3b admits only job2. Other live jobs, including loot, keep their old path.
+	return not quest_auto.running or quest_auto.quest_id==2
+
+func _fee_departure_owner(f: Dictionary) -> bool:
+	if not f.has_all(["session","runner","path","account","identity","owner","run","checkpoint","automation","auto_token","battle","peer"]):return false
+	if not f.run is String or not f.path is String or not f.account is String or not f.peer is int or not f.owner is Dictionary or not f.checkpoint is Dictionary:return false
+	if not is_same(session,f.session) or not is_same(quest_auto,f.runner):return false
+	if save_path!=f.path or account_name!=f.account or not is_same(quest_auto.identity,f.identity):return false
+	if not FeeStartJournalWriter.same_value(FeeStartJournalWriter.owner(session._profile),f.owner):return false
+	return quest_auto.identity.run_id==f.run
+
+func _fee_departure_current(f: Dictionary) -> bool:
+	if not is_same(f,_fee_departure_call) or not _fee_departure_owner(f):return false
+	if not f.guard.is_valid() or not f.guard.call():return false
+	return quest_auto.identity.checkpoint()==f.checkpoint and quest_auto.connection==f.runner_connection \
+		and quest_auto.client==f.client and is_same(automation,f.automation) and is_same(automation.start_lifetime,f.auto_token) \
+		and is_same(battle,f.battle) and is_same(_fee_bindings.get(f.peer),f.binding)
+
+func _begin_fee_departure(peer: int, binding: RefCounted, guard: Callable) -> Dictionary:
+	if not _fee_departure_applies() or not _fee_departure_call.is_empty() or not guard.is_valid() or not guard.call():return {}
+	if binding==null or not is_same(_fee_bindings.get(peer),binding):return {}
+	if not session._profile.has("quest_auto_fee_lifecycle"):return {}
+	# Protect the actual sidecar even when journal/live ownership cannot be proved.
+	_fee_cold_lifecycle.hold_departure(self)
+	var owner:Dictionary=FeeStartJournalWriter.owner(session._profile)
+	if owner.is_empty() or quest_auto.identity.run_id.is_empty():return {}
+	if quest_auto.connection!=peer and not quest_auto.detached:return {}
+	var f:Dictionary={"token":RefCounted.new(),"session":session,"runner":quest_auto,"identity":quest_auto.identity,
+		"owner":owner,"run":quest_auto.identity.run_id,"path":save_path,"account":account_name,"checkpoint":quest_auto.identity.checkpoint(),
+		"runner_connection":quest_auto.connection,"client":quest_auto.client,"automation":automation,"auto_token":automation.start_lifetime,
+		"battle":battle,"peer":peer,"binding":binding,"guard":guard,"stop_entered":false}
+	_fee_departure_call=f
+	return f
+
+## Called at the real Stop invalidation boundary; never restores an old identity.
+func _fee_departure_after_invalidate(runner, before: Dictionary) -> void:
+	var f:Dictionary=_fee_departure_call
+	if f.is_empty() or not _fee_departure_owner(f) or not is_same(runner,f.runner) or before!=f.checkpoint:return
+	var expected:Dictionary=before.duplicate(true);expected.revision+=1
+	if runner.identity.checkpoint()==expected:
+		f.checkpoint=expected
+		_fee_cold_lifecycle.bind_departure_stop(self,f)
+
+## A nested attach revokes the exact old execution before installing its binding.
+## No callback/I/O: an in-flight writer will subsequently fail its identity CAS.
+func _fee_departure_before_attach() -> void:
+	var f:Dictionary=_fee_departure_call
+	if f.is_empty() or not _fee_departure_owner(f) or quest_auto.identity.checkpoint()!=f.checkpoint:return
+	quest_auto.revoke_fee_execution(self,f,"连接已被后续登录接管。",false)
+
+func _finish_fee_departure(f: Dictionary, reason: String) -> void:
+	if not _fee_departure_current(f):
+		_end_fee_departure(f)
+		return
+	f.stop_entered=true;f.reason=reason
+	if not _fee_cold_lifecycle.begin_departure(self,f):
+		quest_auto.revoke_fee_execution(self,f,reason)
+		_end_fee_departure(f)
+		return
+	var journal:Variant=session._profile.get("quest_auto_fee_lifecycle")
+	var result:Dictionary={"ok":false,"stage":"journal_owner_or_run_unknown_preserved"}
+	if FeeAttemptJournal.valid(journal) and FeeStartJournalWriter.same_value(journal.owner,f.owner) and journal.current.run_id==f.run:
+		if journal.current.run_status=="closed" and journal.current.purchase.state=="attempting":result={"ok":false,"stage":"closed_nonidempotent_hold"}
+		else:result=quest_auto.stop(self,reason,true,{},true)
+	# Public result never authorizes cancellation, retry or releases disk protection.
+	if _fee_departure_current(f):
+		quest_auto.revoke_fee_execution(self,f,reason)
+		var diagnostic_stage:Variant=result.get("stage")
+		if diagnostic_stage is String and diagnostic_stage=="closed_nonidempotent_hold":quest_auto.message="收费记录状态需核验；已停止执行，没有重试扣款。"
+		if _fee_departure_current(f):
+			_fee_departure_pending=f.duplicate() # refs stay identities; checkpoint is copied below
+			_fee_departure_pending.checkpoint=quest_auto.identity.checkpoint().duplicate(true)
+			_fee_departure_pending.erase("guard")
+			_fee_departure_pending.token=RefCounted.new()
+			_fee_pending_record=_fee_departure_pending
+			_fee_departure_status={"pending":true,"profile":"not_reverified","sidecar":"preserved_until_reverified","stop_diagnostic":result.duplicate(true),"anchor":"existing_journal_and_actual_sidecar_only"}
+			_observe_fee_departure(f)
+	_end_fee_departure(f)
+
+func _end_fee_departure(f: Dictionary) -> void:
+	if not f.is_empty() and is_same(f,_fee_departure_call):
+		_fee_cold_lifecycle.end_departure(f)
+		_fee_departure_call={}
+
+func _retry_fee_departure(guard: Callable) -> void:
+	if not _fee_departure_enabled() or not _fee_departure_call.is_empty():return
+	var old:Dictionary=_fee_departure_pending
+	if old.is_empty() or not is_same(old,_fee_pending_record):return
+	if not _fee_departure_owner(old) or quest_auto.identity.checkpoint()!=old.checkpoint:return
+	if not guard.is_valid() or not guard.call() or quest_auto.running or quest_auto.source_frame!=null:return
+	if not is_same(automation,old.automation) or not is_same(automation.start_lifetime,old.auto_token) or not is_same(battle,old.battle):return
+	if _fee_bindings.get(old.peer)!=null:return
+	_fee_pending_record={} # Single take; only a real new departure can mint another.
+	var f:Dictionary=old.duplicate()
+	f.token=RefCounted.new();f.guard=guard;f.binding=null;f.runner_connection=quest_auto.connection;f.client=quest_auto.client
+	_fee_departure_call=f
+	_finish_fee_departure(f,"上次收费任务仍待持久收尾。")
+
+## Per-invocation non-loot fee scope; an empty scope leaves old behavior intact.
+func _fee_execution_scope() -> Dictionary:
+	if not _fee_departure_enabled() or session==null or quest_auto.quest_id!=2 or not quest_auto.owns_battle:return {}
+	if not session._profile.has("quest_auto_fee_lifecycle"):return {}
+	var j:Variant=session._profile.get("quest_auto_fee_lifecycle")
+	var owner:Dictionary=FeeStartJournalWriter.owner(session._profile)
+	if not FeeAttemptJournal.valid(j) or owner.is_empty():return {"invalid":true}
+	if not FeeStartJournalWriter.same_value(j.owner,owner) or j.current.run_id!=quest_auto.identity.run_id:return {"invalid":true}
+	var peer:int=quest_auto.connection
+	var binding:Variant=_fee_bindings.get(peer)
+	var departure:Dictionary=_fee_departure_call
+	if binding==null and not _fee_departure_current(departure):return {"invalid":true}
+	return {"session":session,"path":save_path,"account":account_name,"owner":owner,"run":j.current.run_id,"runner":quest_auto,
+		"identity":quest_auto.identity,"checkpoint":quest_auto.identity.checkpoint(),"connection":peer,"binding":binding,
+		"automation":automation,"auto_token":automation.start_lifetime,"battle":battle,"departure":departure}
+
+func _fee_execution_current(f: Dictionary) -> bool:
+	if f.is_empty():return true
+	if f.has("invalid"):return false
+	if not _fee_departure_enabled() or not quest_auto.running or not quest_auto.owns_battle or not is_same(session,f.session) or not is_same(quest_auto,f.runner) or not is_same(quest_auto.identity,f.identity):return false
+	if save_path!=f.path or account_name!=f.account or quest_auto.identity.checkpoint()!=f.checkpoint or quest_auto.connection!=f.connection:return false
+	if not is_same(automation,f.automation) or not is_same(automation.start_lifetime,f.auto_token) or not is_same(battle,f.battle):return false
+	if not FeeStartJournalWriter.same_value(FeeStartJournalWriter.owner(session._profile),f.owner):return false
+	if not is_same(_fee_bindings.get(f.connection),f.binding):return false
+	if not f.departure.is_empty() and not _fee_departure_current(f.departure):return false
+	var j:Variant=session._profile.get("quest_auto_fee_lifecycle")
+	return FeeAttemptJournal.valid(j) and FeeStartJournalWriter.same_value(j.owner,f.owner) and j.current.run_id==f.run
+
+## Read-only projection, never permission for a writer or a recovered receipt.
+func _observe_fee_departure(f:Dictionary)->void:
+	if not _fee_departure_current(f):return
+	var observation:Dictionary={"profile_ref":session._profile,"profile":session._profile.duplicate(true),"cache":last_saved_payload,"serial":quest_save_serial}
+	var expected:PackedByteArray=JSON.stringify(session._profile).to_utf8_buffer()
+	var rows:Array=[]
+	for path:String in [f.path,f.path+".bak",f.path+".tmp",_resume_file(),_resume_file()+".tmp"]:
+		if not _fee_departure_observation_current(f,observation):return
+		rows.append(session._read_fee_attempt_file(path,expected))
+		if not _fee_departure_observation_current(f,observation):return
+	var known:bool=true
+	for item:Variant in rows:
+		if not FeeStartJournalWriter.row_complete(item):known=false
+	if not known:return
+	var j:Variant=session._profile.get("quest_auto_fee_lifecycle")
+	var pair:bool=FeeAttemptJournal.valid(j) and j.current.run_status=="closed" and j.current.purchase.state!="attempting" and rows[0].exists and rows[1].exists and rows[0].bytes==expected and rows[1].bytes==expected and not rows[2].exists
+	var absent:bool=not rows[3].exists and not rows[4].exists
+	_fee_departure_status.profile="closed_pair_observed" if pair else "not_closed_pair"
+	_fee_departure_status.sidecar="absent_observed" if absent else "present_preserved"
+	_fee_departure_status.pending=not (pair and absent)
+	if pair and absent:
+		_fee_departure_pending={};_fee_pending_record={}
+		quest_auto.message=f.reason
+		_fee_cold_lifecycle.finish_departure_absent(self,f)
+
+func _cancel_fee_departure(f:Dictionary)->void:
+	if f.is_empty() or not is_same(f,_fee_departure_call):return
+	if _fee_departure_owner(f):quest_auto.revoke_fee_execution(self,f,"连接操作已被替代。",false)
+	_end_fee_departure(f)
+
+func _fee_departure_projection()->Dictionary:
+	if not _fee_departure_enabled() or _fee_departure_status.is_empty() or not _fee_cold_lifecycle.handles_current(self):return {}
+	return {"pending":_fee_departure_status.pending,"profile":_fee_departure_status.profile,"sidecar":_fee_departure_status.sidecar,"anchor":"existing_journal_and_actual_sidecar_only"}
+
+func _fee_departure_observation_current(f:Dictionary,o:Dictionary)->bool:
+	return _fee_departure_current(f) and is_same(session._profile,o.profile_ref) and FeeStartJournalWriter.same_value(session._profile,o.profile) and last_saved_payload==o.cache and quest_save_serial==o.serial

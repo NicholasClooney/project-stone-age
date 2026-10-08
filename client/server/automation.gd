@@ -295,6 +295,7 @@ func _start_internal_current(loot_start:Dictionary,prior_scope:Dictionary)->bool
 	return _loot_current(prior_scope) and backend.quest_loot.auto_context_current(backend,loot_start) and backend.session._pending.get("quest_loot_receipt",{})==loot_start.get("receipt",{})
 
 func start(command: Dictionary, loot_start:Dictionary={}) -> Dictionary:
+	var fee_call:Dictionary=_fee_frame()
 	var entry:Dictionary=_start_entry()
 	var prior_scope:Dictionary=_loot_frame()
 	var guarded:bool=not loot_scope.is_empty() or not loot_start.is_empty()
@@ -302,9 +303,9 @@ func start(command: Dictionary, loot_start:Dictionary={}) -> Dictionary:
 	if command.get("filter") is Dictionary and command.filter.has("capture_only") and not command.filter.capture_only is bool:return _reply(false,"capture_only must be boolean")
 	for flag in ["select_troops","borrow_troops"]:
 		if command.get("settings") is Dictionary and command.settings.has(flag) and not command.settings[flag] is bool:return _reply(false,"%s must be bool"%flag)
-	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"旧自动启动已失效")
+	if not _fee_current(fee_call) or not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"旧自动启动已失效")
 	var position_error: String=backend.encounter_command_error(command,false)
-	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"启动检查期间归属已改变")
+	if not _fee_current(fee_call) or not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"启动检查期间归属已改变")
 	if not position_error.is_empty():return _reply(false,position_error)
 	if str(command.get("kind","")) not in ["battle","capture_battle","pet_train","hunt","find_pet"]:return {"ok":false,"reason":"unknown automation"}
 	var call:RefCounted=RefCounted.new()
@@ -539,8 +540,10 @@ func tick(delta: float) -> void:
 	if flow_active():flow_step()
 
 func tick_battle(delta: float) -> void:
+	var fee_call:Dictionary=_fee_frame()
 	var loot_tick:Dictionary=_loot_frame()
 	_flush_progress_status()
+	if not _fee_current(fee_call):return
 	if not _loot_current(loot_tick):return
 	if not running:return
 	_training_yield=false
@@ -548,9 +551,9 @@ func tick_battle(delta: float) -> void:
 	if bool(settings.compact) and (compact_active or not backend.battle_open):
 		var until := Time.get_ticks_usec()+frame_budget(COMPACT_BUDGET_USEC)
 		while running and (compact_active or not backend.battle_open) and Time.get_ticks_usec()<until and not party_waiting() and not _training_yield:
-			if not _loot_step_current(loot_tick):return
+			if not _fee_current(fee_call) or not _loot_step_current(loot_tick):return
 			step()
-			if not _loot_step_current(loot_tick):return
+			if not _fee_current(fee_call) or not _loot_step_current(loot_tick):return
 		return
 	cooldown -= delta
 	if cooldown > 0:return
@@ -559,9 +562,10 @@ func tick_battle(delta: float) -> void:
 
 ## One battle-runner step.
 func step() -> void:
+	var fee_call:Dictionary=_fee_frame()
 	if not running:return
 	var loot_call:Dictionary=_loot_frame()
-	if not _loot_step_current(loot_call):return
+	if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 	if not training_borrow_pending.is_empty():
 		_advance_training_borrow();return
 	if position_map!=origin_map or position_cell!=origin_cell:
@@ -581,7 +585,8 @@ func step() -> void:
 			# this run's own command (LAN phase 4c).
 			if backend.party_battle() and bool(backend.battle_state.get("settled",false)):record_result(backend.battle_state)
 			_close_battle()
-			if not _loot_step_current(loot_call):return
+			if not _fee_current(fee_call):return
+			if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 			if outcome=="defeat":
 				# Defeat returns the player to the village and ends the run. An
 				# attached client reports that arrival itself.
@@ -589,14 +594,17 @@ func step() -> void:
 					var pause := position_changed(backend.VILLAGE.map_id,Vector2i(backend.VILLAGE.x,backend.VILLAGE.y),true)
 					if not pause.is_empty():_emit_event({"kind":"flow_paused","reason":pause})
 				release_clone_override()
-				if not _loot_step_current(loot_call):return
+				if not _fee_current(fee_call):return
+				if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 				running = false
 				stop_reason = "战斗失败"
 				_emit_status()
-				if not _loot_step_current(loot_call):return
+				if not _fee_current(fee_call):return
+				if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 				return
 			_emit_status()
-			if not _loot_step_current(loot_call):return
+			if not _fee_current(fee_call):return
+			if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 			var clear_caught := int(state.get("clear_capture_target",-1))>=0 and bool(state.enemies[int(state.clear_capture_target)].get("captured",false))
 			# A capture run leaves after the catch (no experience for the weaken
 			# pet): escaping with the target caught is a finished capture.
@@ -607,17 +615,20 @@ func step() -> void:
 		if party_waiting():return
 		# Reset before healing too, matching the forecast turn for turn.
 		backend.set_capture_assist(str(settings.preset)=="capture")
-		if not _loot_step_current(loot_call):return
+		if not _fee_current(fee_call):return
+		if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 		# The 恢复护符 heals the battle pet for free (no 气力): before any 精灵,
 		# and before the 停机线 could stop the run.
 		if not backend.party_battle() and bool(state.get("healing_available",false)) and int(state.get("pet_hp",0))>0 and int(state.get("pet_hp",0))*100<=int(state.get("pet_max_hp",1))*maxi(50,int(settings.hp)):
 			backend.battle.set_pet_command("defend")
 			var charmed: Dictionary = backend.battle_command({"action":"heal_pet","target":-1})
-			if not _loot_step_current(loot_call):return
+			if not _fee_current(fee_call):return
+			if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 			turns += 1
 			if charmed.get("settled",false):record_result(charmed)
 			turn_text = "第 %d 回合 · 恢复护符治疗宠物" % turns
 			_emit_status(true)
+			if not _fee_current(fee_call):return
 			return
 		# 用精灵补血: a healing 精灵 while the 气力 lasts, before a 回复药 or a
 		# stop (the player, its pet or mount at the line; in a party battle a
@@ -627,11 +638,13 @@ func step() -> void:
 			if not cast.is_empty():
 				backend.battle.set_pet_command("defend")
 				var healed: Dictionary = backend.battle_command({"action":str(cast.action),"target":int(cast.target)})
-				if not _loot_step_current(loot_call):return
+				if not _fee_current(fee_call):return
+				if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 				turns += 1
 				if healed.get("settled",false) and not backend.party_battle():record_result(healed)
 				turn_text = "第 %d 回合 · 用精灵补血 · 气力 %d" % [turns,int(healed.get("player_mp",0))]
 				_emit_status(true)
+				if not _fee_current(fee_call):return
 				return
 		var reason := health_reason(state)
 		if not reason.is_empty() and backend.party_battle():
@@ -641,10 +654,12 @@ func step() -> void:
 			if not heal.is_empty():
 				backend.battle.set_pet_command("defend")
 				backend.battle_command({"action":heal,"target":-1})
-				if not _loot_step_current(loot_call):return
+				if not _fee_current(fee_call):return
+				if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 				turns += 1
 				turn_text = "第 %d 回合 · %s" % [turns,"喝回复药" if heal=="item" else "恢复护符治疗宠物"]
 				_emit_status(true)
+				if not _fee_current(fee_call):return
 				return
 			reason += heal_note(reason,bool(state.get("healing_available",false)))
 		if not reason.is_empty() and bool(settings.get("spirit",true)):reason += spirit_note(reason,state)
@@ -661,23 +676,29 @@ func step() -> void:
 		else:decision = Policy.decide(state,settings,capture_target)
 		if decision.has("stop"):stop(str(decision.stop));return
 		backend.set_capture_assist(bool(decision.get("assist",str(settings.preset)=="capture")))
-		if not _loot_step_current(loot_call):return
+		if not _fee_current(fee_call):return
+		if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 		# A disobeying pet only skips its action in a run (battle_session.gd).
 		backend.battle.automated = true
 		backend.battle.set_pet_command(str(decision.pet))
 		var next: Dictionary = backend.battle_command({"action":str(decision.action),"target":int(decision.target),"pet_target":int(decision.target),"switch_pet":int(decision.get("switch",-2))})
-		if not _loot_step_current(loot_call):return
+		if not _fee_current(fee_call):return
+		if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 		turns += 1
 		if next.get("settled",false) and not backend.party_battle():record_result(next)
 		turn_text = "第 %d 回合 · 体力 %d/%d · 气力 %d\n%s" % [turns,next.player_hp,next.player_max_hp,int(next.get("player_mp",0))," / ".join(next.events)]
 		_emit_status(true)
+		if not _fee_current(fee_call):return
 		return
 	var position_error: String=backend.encounter_position_error(origin_map,origin_cell)
+	if not _fee_current(fee_call):return
 	if not position_error.is_empty():stop(position_error);return
 	# 练级保护 brings every carried pet back to full between battles.
 	if (backend.session.restore_carried_pets() if bool(settings.get("protect",true)) else backend.session.heal_carried_pets()):
 		backend.save()
+		if not _fee_current(fee_call):return
 		backend.publish()
+		if not _fee_current(fee_call):return
 	var p: Dictionary = backend.session.snapshot()
 	if not training_pet_id.is_empty():
 		var selected := -1
@@ -694,7 +715,9 @@ func step() -> void:
 			if training_falls>=TRAINING_FALL_LIMIT:stop("目标宠物连续倒下%d次，这里的敌人对它太强，请换个地方练级" % TRAINING_FALL_LIMIT);return
 			if flow_active() and flow_phase=="train" and flow_stop_pending.is_empty() and backend.session.revive_carried_pet(training_pet_id):
 				backend.save()
+				if not _fee_current(fee_call):return
 				backend.publish()
+				if not _fee_current(fee_call):return
 				_showcase_line("retry","%s 倒下了，已救回，继续练级（第%d次）。" % [str(p.pets[selected].get("name","")),training_falls])
 			else:stop("目标宠物已倒下");return
 		elif int(p.pets[selected].level)>training_fall_level:
@@ -707,23 +730,28 @@ func step() -> void:
 	# (恢复护符, 回复药) and checked at their own 停机线 first.
 	if backend.party_guard.is_valid():
 		var why := str(backend.party_guard.call())
+		if not _fee_current(fee_call):return
 		if not why.is_empty():stop(why);return
 	# 用精灵补血 between battles too: 治愈 / 滋润 are FIELD_ALL spells.
 	if bool(settings.get("spirit",true)) and backend.session.spirit_heal_to_line(int(settings.hp),[int(backend.session._profile.active_pet),int(backend.session._profile.get("ride_pet",-1))]):
 		backend.save()
+		if not _fee_current(fee_call):return
 		backend.publish()
+		if not _fee_current(fee_call):return
 	var reason := profile_health_reason()
 	if not reason.is_empty():stop(reason);return
 
 	compact_active = bool(settings.compact)
 	_emit_status()
-	if not _loot_step_current(loot_call):return
+	if not _fee_current(fee_call):return
+	if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 	backend.session.protect_pets = bool(settings.get("protect",true))
 	var training_groups: Variant=null
 	if (bool(settings.get("select_troops",true)) or bool(settings.get("borrow_troops",true))) and str(settings.get("preset","attack"))!="capture" and not single_battle:
 		var reward_settings: Dictionary=settings.duplicate()
 		reward_settings.target_level=training_pet_level if not training_pet_id.is_empty() else (120 if int(settings.get("level",0))<=0 else int(settings.level))
 		var party_rewards: Dictionary=backend.training_reward_context.call() if backend.training_reward_context.is_valid() else {}
+		if not _fee_current(fee_call):return
 		training_selection.prepare(backend.encounter_catalog,origin_map,origin_cell,backend.session.snapshot(),reward_settings,backend.session.clone_squad_enabled,backend.session.clone_best_others,party_rewards)
 		training_selection.advance(1000)
 		if not training_selection.ready:
@@ -734,6 +762,7 @@ func step() -> void:
 		if bool(settings.get("select_troops",true)) and training_selection.allowed.is_empty():stop(str(training_selection.participant.get("unavailable","当地没有可进入且能获得经验的练级敌群，请换个位置或关闭挑敌群。")));return
 		if bool(settings.get("select_troops",true)):training_groups=training_selection.allowed
 	var opened: Dictionary = backend.wild_encounter(origin_map,origin_cell,training_groups) if backend.session.world_catalog.field(origin_map) else {"ok":false,"skipped":""}
+	if not _fee_current(fee_call):return
 	if not opened.ok:
 		compact_active = false
 		if str(opened.get("skipped",""))=="training":
@@ -746,6 +775,7 @@ func step() -> void:
 			turn_text = "该敌群原版素材不可用，已跳过，无奖励。"
 			if unavailable_streak >= 100:stop("连续100组缺素材，请更换区域")
 			else:_emit_status()
+			if not _fee_current(fee_call):return
 			return
 		stop("当前位置遇敌数据或条件不可用，请换个位置");return
 	unavailable_streak = 0
@@ -756,9 +786,11 @@ func step() -> void:
 		for i in range(battle_state.enemies.size()):
 			if battle_state.enemies[i].get("can_capture",false) and int(battle_state.enemies[i].hp) > 0:capture_target = i;break
 	backend.set_capture_assist(str(settings.preset)=="capture")
-	if not _loot_step_current(loot_call):return
+	if not _fee_current(fee_call):return
+	if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 	_emit_status()
-	if not _loot_step_current(loot_call):return
+	if not _fee_current(fee_call):return
+	if not _fee_current(fee_call) or not _loot_step_current(loot_call):return
 
 func _presentation_done(state: Dictionary) -> bool:
 	if not client_attached:return true
@@ -802,10 +834,11 @@ func _close_battle() -> void:
 # ---- battle runner lifecycle -----------------------------------------------
 
 func _start_battle_runner(command: Dictionary, loot_start:Dictionary={}, call:RefCounted=null, guarded:bool=false, entry:Dictionary={}, prior_scope:Dictionary={}) -> Dictionary:
+	var fee_call:Dictionary=_fee_frame()
 	# Both encounter checks share the outermost entry, never adopt a successor.
-	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"旧自动启动已失效")
+	if not _fee_current(fee_call) or not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"旧自动启动已失效")
 	var position_error: String=backend.encounter_command_error(command,false)
-	if not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"启动检查期间归属已改变")
+	if not _fee_current(fee_call) or not _start_entry_current(entry) or not _start_internal_current(loot_start,prior_scope):return _reply(false,"启动检查期间归属已改变")
 	if not position_error.is_empty():return _reply(false,position_error)
 	# Pure preflight before changing this runner's settings or capability.
 	if guarded:
@@ -814,8 +847,10 @@ func _start_battle_runner(command: Dictionary, loot_start:Dictionary={}, call:Re
 		var refusal:String=_training_refusal(candidate)
 		if not refusal.is_empty():return _reply(false,refusal)
 	_load_settings(command)
+	if not _fee_current(fee_call):return _reply(false,"收费战斗配置期间归属变化")
 	if command.has("capture_target"):capture_target = int(command.capture_target)
 	var started:bool=start_training(loot_start,call)
+	if not fee_call.is_empty() and not _fee_started_matches(fee_call,call):return _reply(false,"收费战斗启动归属已变化")
 	if guarded and not is_same(start_lifetime,call):return _reply(false,"启动发布期间自动任务已替换")
 	return _reply(started and running if guarded else running,stop_reason)
 
@@ -829,6 +864,7 @@ func _training_call_current(frame:Dictionary,call:RefCounted,guarded:bool)->bool
 	return (not guarded or is_same(start_lifetime,call)) and _loot_current(frame)
 
 func start_training(loot_start:Dictionary={}, call:RefCounted=null) -> bool:
+	var fee_call:Dictionary=_fee_frame()
 	if backend.session._pending.has("quest_loot_receipt") and not backend.battle.snapshot().active and not backend.battle_state.get("settled",false):return false
 	var guarded:bool=not loot_scope.is_empty() or not loot_start.is_empty()
 	if not loot_start.is_empty() and not backend.quest_loot.auto_context_current(backend,loot_start):return false
@@ -841,6 +877,7 @@ func start_training(loot_start:Dictionary={}, call:RefCounted=null) -> bool:
 		return false
 	if call==null:call=RefCounted.new()
 	# Accepted boundary: no refusal remains; subsequent false means superseded.
+	if not _fee_accept_lifetime(fee_call,call):return false
 	start_lifetime=call
 	loot_scope=loot_start.duplicate()
 	if not loot_scope.is_empty():loot_scope.token=call
@@ -855,16 +892,23 @@ func start_training(loot_start:Dictionary={}, call:RefCounted=null) -> bool:
 	battles = 0;skipped = 0;training_skipped = 0;training_borrowed=0;training_borrow_pending={};unavailable_streak = 0;earned_xp = 0;earned_pet_xp = 0;turns = 0;cooldown = 0;stop_reason = "";starting_ride = -1;turn_text = ""
 	if str(settings.preset)=="train_pet":
 		acquire_clone_override()
-		if not _training_call_current(frame,call,guarded):return false
+		if not _fee_current(fee_call):return false
+		if not _fee_current(fee_call) or not _training_call_current(frame,call,guarded):return false
 	backend.set_capture_assist(str(settings.preset)=="capture")
-	if not _training_call_current(frame,call,guarded):return false
+	if not _fee_current(fee_call):return false
+	if not _fee_current(fee_call) or not _training_call_current(frame,call,guarded):return false
 	running = true
 	backend.publish()
-	if not _training_call_current(frame,call,guarded):return false
+	if not _fee_current(fee_call):return false
+	if not _fee_current(fee_call) or not _training_call_current(frame,call,guarded):return false
 	_emit_status()
+	if not _fee_current(fee_call):return false
+	if not fee_call.is_empty():_fee_remember_started(fee_call,call)
 	return _training_call_current(frame,call,guarded)
 
 func start_capture_battle(target: int, finish_battle: bool = false, extra: Dictionary = {}) -> bool:
+	var fee_call:Dictionary=_fee_frame()
+	if not _fee_current(fee_call):return false
 	if not backend.battle.snapshot().active:return false
 	if not loot_scope.is_empty() and not _training_refusal({"preset":"capture"}).is_empty():return false
 	_load_settings({"settings":extra})
@@ -873,9 +917,11 @@ func start_capture_battle(target: int, finish_battle: bool = false, extra: Dicti
 	var guarded:bool=not loot_scope.is_empty()
 	var call:RefCounted=RefCounted.new()
 	var started:bool=start_training({},call)
+	if not fee_call.is_empty() and not _fee_started_matches(fee_call,call):return false
 	if guarded and (not started or not is_same(start_lifetime,call)):return false
 	finish_after_capture = finish_battle
 	_emit_status()
+	if not fee_call.is_empty() and not _fee_started_matches(fee_call,call):return false
 	if guarded and not is_same(start_lifetime,call):return false
 	return running
 
@@ -963,16 +1009,20 @@ func _protect_pets() -> void:
 	backend.session.protect_pets = bool(profile_settings().get("protect",true))
 
 func stop(reason: String) -> void:
+	var fee_call:Dictionary=_fee_frame()
+	if not fee_call.is_empty() and _fee_current(fee_call):_fee_started={}
 	var loot_call:Dictionary=_loot_frame()
-	if not _loot_current(loot_call):return
+	if not _fee_current(fee_call) or not _loot_current(loot_call):return
 	training_borrow_pending={}
 	release_clone_override()
-	if not _loot_current(loot_call):return
+	if not _fee_current(fee_call):return
+	if not _fee_current(fee_call) or not _loot_current(loot_call):return
 	backend.session.protect_pets = false
 	running = false
 	stop_reason = reason
 	backend.set_capture_assist(false)
-	if not _loot_current(loot_call):return
+	if not _fee_current(fee_call):return
+	if not _fee_current(fee_call) or not _loot_current(loot_call):return
 	# A battle the player takes over obeys the full loyalty rules again.
 	backend.battle.automated = false
 	var takeover := false
@@ -981,13 +1031,15 @@ func stop(reason: String) -> void:
 	if compact_active and not backend.battle.snapshot().active and not unsettled_capture:
 		battles += 1
 		_close_battle()
-		if not _loot_current(loot_call):return
+		if not _fee_current(fee_call):return
+		if not _fee_current(fee_call) or not _loot_current(loot_call):return
 	if compact_active:
 		# The battle continues under manual control in the full battle view.
 		compact_active = false
 		takeover = true
 	_emit_status()
-	if not _loot_current(loot_call):return
+	if not _fee_current(fee_call):return
+	if not _fee_current(fee_call) or not _loot_current(loot_call):return
 	_emit_event({"kind":"battle_stopped","reason":reason,"battles":battles,"takeover":takeover})
 
 func record_result(state: Dictionary) -> void:
@@ -2869,3 +2921,64 @@ func capture_decision(pet: Dictionary, source: String) -> Dictionary:
 ## A replayable wild hit has no owned pet_id yet; roll/seed/slot identify it.
 static func _capture_hit_uid(entry: Dictionary) -> String:
 	return "%s:%s:%s" % [str(entry.get("run_seed","")),str(entry.get("index","")),str(entry.get("slot",""))]
+
+## Fee invocation fences are distinct from the loot envelope; no empty-loot change.
+func _fee_frame() -> Dictionary:
+	_fee_prune_started()
+	return backend._fee_execution_scope()
+func _fee_current(f:Dictionary) -> bool:return f.is_empty() or backend._fee_execution_current(f)
+func _fee_accept_lifetime(f:Dictionary,call:RefCounted)->bool:
+	if f.is_empty():return true
+	if not _fee_current(f):return false
+	# Adjacent to the original accepted assignment; no callback in this handoff.
+	_fee_started={} # Accepted replacement abandons only this Automation's old handoff.
+	f.prior_token=f.auto_token
+	f.auto_token=call
+	return true
+func revoke_fee_execution(f:Dictionary,reason:String)->void:
+	if not is_same(f,backend._fee_departure_call) or not backend._fee_departure_owner(f) or backend.quest_auto.identity.checkpoint()!=f.checkpoint:return
+	if not is_same(f.automation,self) or not is_same(backend.automation,self) or not is_same(start_lifetime,f.auto_token) or not is_same(backend.battle,f.battle):return
+	# Only called with Backend's live private departure provenance. Keep pending,
+	# battle contents and loot claims. The existing battle remains manually playable.
+	if not loot_scope.is_empty():return
+	_fee_started={}
+	running=false;compact_active=false;training_borrow_pending={};_status_pending=false
+	backend.battle.automated=false
+	stop_reason=reason
+
+var _fee_started:Dictionary={}
+func _fee_started_matches(before:Dictionary,token:RefCounted)->bool:
+	_fee_prune_started()
+	if not before.has_all(["auto_token","runner","identity","checkpoint","binding","session","path","battle"]):return false
+	if _fee_started.is_empty() or not is_same(_fee_started.token,token):return false
+	var f:Dictionary=_fee_started_scope()
+	return _fee_current(f) and is_same(f.prior_token,before.auto_token) and is_same(f.runner,before.runner) and is_same(f.identity,before.identity) and f.checkpoint==before.checkpoint and is_same(f.binding,before.binding) and is_same(f.session,before.session) and f.path==before.path and is_same(f.battle,before.battle)
+func take_fee_battle_start(before:Dictionary)->bool:
+	if _fee_started.is_empty():return false
+	var valid:bool=_fee_started_matches(before,_fee_started.token)
+	if valid:_fee_started={}
+	return valid
+
+# Retain exact values, but never retain self or the departure dictionary whose
+# automation member may point back to self. Resolution cannot adopt a new token.
+func _fee_remember_started(f:Dictionary,token:RefCounted)->void:
+	var value:Dictionary=f.duplicate(false)
+	var departure:Dictionary=value.departure
+	value.erase("automation");value.erase("departure")
+	_fee_started={"scope":value,"automation":weakref(self),"token":token,
+		"departure_token":weakref(departure.token) if not departure.is_empty() else null}
+func _fee_started_scope()->Dictionary:
+	if _fee_started.is_empty() or _fee_started.automation.get_ref()!=self:return {}
+	var f:Dictionary=_fee_started.scope.duplicate(false)
+	f.automation=self
+	f.departure={}
+	if _fee_started.departure_token!=null:
+		var token:Variant=_fee_started.departure_token.get_ref()
+		var current:Dictionary=backend._fee_departure_call
+		if token==null or current.is_empty() or not is_same(current.get("token"),token):return {}
+		f.departure=current
+	return f
+func _fee_prune_started()->void:
+	if _fee_started.is_empty():return
+	var f:Dictionary=_fee_started_scope()
+	if f.is_empty() or not _fee_current(f):_fee_started={}

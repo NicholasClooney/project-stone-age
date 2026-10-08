@@ -224,10 +224,17 @@ func start_battle(b) -> void:
  phase="battle"
  var transition_identity:Dictionary=identity.checkpoint()
  var transition_connection:int=connection
+ var fee_battle_scope:Dictionary=b._fee_execution_scope()
  # Receipt-clearing battle profiles must follow the current authority cell.
  b.emit_event({"type":"auto_status","status":b.automation.status()})
  if not running or detached or connection!=transition_connection or identity.checkpoint()!=transition_identity:return
+ if not b._fee_execution_current(fee_battle_scope):return
  b.automation.start({"kind":"battle","settings":{"preset":"attack","compact":true}})
+ if not fee_battle_scope.is_empty():
+  if not b.automation.take_fee_battle_start(fee_battle_scope):return
+  # start_training owns the legitimate token replacement; all other refs stay exact.
+  if not running or detached or identity.checkpoint()!=transition_identity or connection!=transition_connection:return
+  if not is_same(b.session,fee_battle_scope.session) or not is_same(b.automation,fee_battle_scope.automation) or not is_same(b.battle,fee_battle_scope.battle) or not is_same(b._fee_bindings.get(connection),fee_battle_scope.binding):return
  b.automation.compact_active=true
  message="沿途遇敌：原自动战斗中，结算后继续。"
  b.publish()
@@ -248,6 +255,9 @@ func snapshot(b=null) -> Dictionary:
  result.can_continue=running and phase=="waiting_boss" and boss_ready
  result.budget=b.quest_loot.projection(b) if b!=null else {}
  result.motion=motion.duplicate(true)
+ if b!=null:
+  var departure:Dictionary=b._fee_departure_projection()
+  if not departure.is_empty():result.fee_departure=departure
  return result
 func stop(b, reason:String="已停止自动任务。", persist:bool=true, captured_idle_close:Dictionary={}, retry_fee_lifecycle:bool=false) -> Dictionary:
  if b==null or not is_same(b.quest_auto,self):return {"ok":false,"stage":"stop_owner_stale","stopped_in_memory":false,"lifecycle":"unknown"}
@@ -257,11 +267,15 @@ func stop(b, reason:String="已停止自动任务。", persist:bool=true, captur
  # prior cancellation path and cannot be blocked by fee-seam claims.
  var has_fee_record:bool=b.session._profile.has("quest_auto_fee_lifecycle")
  var needs_fee_claim:bool=persist and has_fee_record and (running or retry_fee_lifecycle or b._quest_auto_stop_operation_call!=null)
+ var departure_entry:Dictionary=b._fee_departure_call
  var operation:Dictionary={}
  var fee_lifecycle_requested:bool=needs_fee_claim
  if needs_fee_claim:
   operation=b._begin_quest_auto_stop_operation(self)
   if operation.is_empty():return {"ok":false,"stage":"stop_operation_busy","stopped_in_memory":false,"lifecycle":"unknown"}
+ if not departure_entry.is_empty() and not b._fee_departure_current(departure_entry):
+  if not operation.is_empty():b._end_quest_auto_stop_operation(operation)
+  return {"ok":false,"stage":"departure_superseded","stopped_in_memory":false,"lifecycle":"unknown"}
  var was_running:bool=running
  var stopped_identity:Dictionary=identity.checkpoint()
  var result_holder:Dictionary={"result":{"ok":false,"stage":"stop_aborted_before_state_change","stopped_in_memory":false,"lifecycle":"unknown"}}
@@ -298,7 +312,9 @@ func _stop_body(b, reason:String="已停止自动任务。", persist:bool=true, 
  if not loot_close.is_empty() and not b.quest_loot.prepare_idle_revocation(b,loot_close,"stop"):return
  if not loot_battle.is_empty() and not b.quest_loot.prepare_battle_revocation(b,loot_battle,"stop"):return
  source_frame=null
+ var fee_before_invalidation:Dictionary=identity.checkpoint()
  identity.invalidate()
+ b._fee_departure_after_invalidate(self,fee_before_invalidation)
  result_holder["result"]={"ok":false,"stage":"memory_stop_in_progress","stopped_in_memory":false,"identity_invalidated":true,"lifecycle":"unknown"}
  waiting_saved=false
  boss_ready=false
@@ -1149,3 +1165,21 @@ func reconnect_source(b,command:Dictionary)->bool:
  emit_position(b,{"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}, {},phase=="landing")
  b.publish()
  return true
+
+## Exact, silent revocation only; does not close/settle or steal a writer claim.
+func revoke_fee_execution(b,f:Dictionary,reason:String,require_guard:bool=true)->void:
+ if not b._fee_departure_owner(f) or not is_same(self,f.runner) or identity.checkpoint()!=f.checkpoint:return
+ if require_guard and not b._fee_departure_current(f):return
+ if not is_same(b.automation,f.automation) or not is_same(b.automation.start_lifetime,f.auto_token) or not is_same(b.battle,f.battle):return
+ if owns_battle:b.automation.revoke_fee_execution(f,reason)
+ var old_source=source_frame
+ if old_source!=null:old_source.cancel()
+ if old_source!=null and old_source.owns_pending(str(b.original_quests.pending.get("token",""))):b.original_quests.pending={}
+ source_frame=null
+ identity.invalidate()
+ f.checkpoint=identity.checkpoint()
+ running=false;detached=true;restored=false;owns_battle=false
+ connection=-1;client="";f.runner_connection=-1;f.client=""
+ waiting_saved=false;boss_ready=false;shutdown_intent={}
+ path.clear();herb_path.clear();navigation.clear();clear_motion()
+ phase="stopped";message=reason+"（持久收尾需重新核验。）"

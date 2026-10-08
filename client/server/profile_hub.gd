@@ -43,6 +43,7 @@ var last_error := ""
 var _connections: Dictionary = {}
 # Short operation tokens only; frames/owners are never stored here.
 var _connection_calls: Dictionary = {}
+var _fee_departures:Dictionary={}
 ## LAN phase 2: who stands where, and 一般频道 chat (server/presence.gd).
 var presence = Presence.new()
 ## Milliseconds for presence ticks and the chat rate limit (tests fake it).
@@ -173,6 +174,10 @@ func handle(connection: int, command: Dictionary) -> Dictionary:
 
 # Connection-map retirement guards. No PIN/token policy or account schema change.
 func _connection_call(connection:int)->Dictionary:
+	if _fee_departures.has(connection):
+		var old:Dictionary=_fee_departures[connection]
+		if is_instance_valid(old.owner):old.owner._cancel_fee_departure(old.frame)
+		_fee_departures.erase(connection)
 	var call=RefCounted.new()
 	_connection_calls[connection]=call
 	var record:Dictionary=_connections.get(connection,{})
@@ -191,7 +196,13 @@ func _connection_current(f:Dictionary)->bool:
 		if not is_instance_valid(f.target) or backends.get(f.target_id)!=f.target or f.target.session!=f.target_session or f.target.save_path!=f.target_path:return false
 	return true
 func _connection_done(f:Dictionary)->void:
+	if f.has("departure") and _fee_departures.has(f.connection) and is_same(_fee_departures[f.connection].frame,f.departure):_fee_departures.erase(f.connection)
+	if f.has("departure_owner") and is_instance_valid(f.departure_owner):f.departure_owner._end_fee_departure(f.departure)
 	if _connection_calls.get(f.connection)==f.call:_connection_calls.erase(f.connection)
+	# Break only this call's H -> departure -> guard -> H ownership cycle.
+	# Keep CAS fields intact for a late old guard; never touch successor state.
+	f.erase("departure")
+	f.erase("departure_owner")
 func _connection_superseded(f:Dictionary)->Dictionary:
 	_connection_done(f)
 	return {"ok":false,"reason":"连接操作已被后续操作替代。","stale":true}
@@ -258,8 +269,16 @@ func _logout(connection:int)->Dictionary:
 	if id.is_empty():
 		_connection_done(f)
 		return {"ok":true}
-	if not _retire_fee(f):return _connection_superseded(f)
-	if f.owner.quest_auto.connection==connection or f.owner.quest_auto.detached:
+	var departure:Dictionary=f.owner._begin_fee_departure(connection,f.binding,func():return _connection_current(f))
+	f.departure_owner=f.owner;f.departure=departure
+	if not departure.is_empty():_fee_departures[connection]={"owner":f.owner,"frame":departure}
+	if not _retire_fee(f):
+		f.owner._end_fee_departure(departure)
+		return _connection_superseded(f)
+	if not departure.is_empty():
+		f.owner._finish_fee_departure(departure,"已退出角色。")
+		if not _connection_current(f):return _connection_superseded(f)
+	elif not f.owner._fee_departure_applies() and (f.owner.quest_auto.connection==connection or f.owner.quest_auto.detached):
 		f.owner.quest_auto.stop(f.owner,"已退出角色。")
 		if not _connection_current(f):return _connection_superseded(f)
 	# Never read a possibly replaced _connections entry after a callback.
@@ -281,6 +300,13 @@ func _enter(connection:int,entry:Dictionary,token:String)->Dictionary:
 		_connection_done(f)
 		return {"ok":false,"reason":error}
 	var backend=backends[id]
+	backend._retry_fee_departure(func():return _connection_current(f))
+	if not _connection_current(f):return _connection_superseded(f)
+	var departure:Dictionary={}
+	if f.owner!=null and f.owner_id!=id:departure=f.owner._begin_fee_departure(connection,f.binding,func():return _connection_current(f))
+	if not departure.is_empty():
+		f.departure_owner=f.owner;f.departure=departure
+		_fee_departures[connection]={"owner":f.owner,"frame":departure}
 	f.target=backend;f.target_id=id;f.target_session=backend.session;f.target_path=backend.save_path
 	if not _retire_fee(f):return _connection_superseded(f)
 	if backend.admin!=wanted_admin:
@@ -301,7 +327,10 @@ func _enter(connection:int,entry:Dictionary,token:String)->Dictionary:
 	_party_sent.erase(connection)
 	if previous!=id:
 		var old_backend=f.previous_owner
-		if old_backend!=null and old_backend.quest_auto.connection==connection:
+		if not departure.is_empty():
+			old_backend._finish_fee_departure(departure,"发起设备已切换角色。")
+			if not _connection_current(f):return _connection_superseded(f)
+		elif old_backend!=null and not old_backend._fee_departure_applies() and old_backend.quest_auto.connection==connection:
 			old_backend.quest_auto.stop(old_backend,"发起设备已切换角色。")
 			if not _connection_current(f):return _connection_superseded(f)
 		_attach(previous)
