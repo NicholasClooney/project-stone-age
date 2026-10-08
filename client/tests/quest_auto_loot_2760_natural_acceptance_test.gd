@@ -648,6 +648,41 @@ func auth_owner_current()->bool:
   if peer.get_instance_id()==accepted_peer_id:return peer.get_ready_state()==WebSocketPeer.STATE_OPEN
  return false
 
+# Retain only observed objects, never acquire a production authority or callback.
+# A replaced timer cannot erase the old timer's failure record from this test.
+var e1_observed_timer:RefCounted
+var e1_observed_runner:RefCounted
+var e1_observed_session:RefCounted
+var e1_observed_run:Dictionary={}
+func natural_e1_failure_free()->bool:
+ var timer_current:bool=is_same(host.quest_loot,e1_observed_timer)
+ var runner_current:bool=is_same(host.quest_auto,e1_observed_runner)
+ var session_current:bool=is_same(host.session,e1_observed_session)
+ var record:Variant=e1_observed_timer.get("initial_failure") if e1_observed_timer!=null else null
+ if timer_current and runner_current and session_current and record is Dictionary and record.is_empty():return true
+ var run_matches:=false
+ var frame_owner_matches:=false
+ var persisted:=false
+ var present:bool=record is Dictionary and not record.is_empty()
+ if present:
+  var frame:Variant=record.get("frame")
+  if frame is Dictionary:
+   var identity:Variant=frame.get("identity")
+   run_matches=not e1_observed_run.is_empty() and identity is Dictionary and identity==e1_observed_run
+   var runner_ref:Variant=frame.get("runner")
+   var session_ref:Variant=frame.get("session")
+   var timer_ref:Variant=frame.get("loot")
+   frame_owner_matches=runner_ref is WeakRef and session_ref is WeakRef and timer_ref is WeakRef and is_same(runner_ref.get_ref(),e1_observed_runner) and is_same(session_ref.get_ref(),e1_observed_session) and is_same(timer_ref.get_ref(),e1_observed_timer)
+  var result:Variant=record.get("result")
+  if result is Dictionary:
+   var closed:Variant=result.get("budget_close")
+   persisted=closed is String and closed=="persisted"
+ failures+=1
+ # Scalars only: no clock, snapshot, disk capture or generic check() failure IO.
+ print("ACCEPTANCE_FAILURE ",JSON.stringify({"result":"FAIL","reason":"initial_failure_or_changed_e1_observation","record_present":present,"record_dictionary":record is Dictionary,"run_matches":run_matches,"frame_owner_matches":frame_owner_matches,"timer_current":timer_current,"runner_current":runner_current,"session_current":session_current,"persisted":persisted}))
+ push_error("Natural E1 failure/owner change is not normal completion, including at budget expiry")
+ return false
+
 func open_authenticated_e1()->bool:
  var overrides:Dictionary=host.session.automation_settings()
  var quest_override:Variant=overrides.get("quest",{})
@@ -656,7 +691,14 @@ func open_authenticated_e1()->bool:
  var effective:Dictionary=Settings.effective(overrides)
  check(effective.get("loot_minutes") is int and effective.loot_minutes==30 and effective.loot_minutes*60000==ACTIVE_MS,"Original server settings API returns top-level default loot_minutes=30 / 1800000ms")
  if failures:return false
+ e1_observed_timer=host.quest_loot
+ e1_observed_runner=host.quest_auto
+ e1_observed_session=host.session
+ if not natural_e1_failure_free():return false # Fresh E1 cannot inherit an old failure.
  var reply:Dictionary=await request_world({"type":"quest_loot_start"},"Actual authenticated public quest_loot_start ACK")
+ var observed_identity:Variant=reply.get("run_identity")
+ if observed_identity is Dictionary:e1_observed_run=observed_identity.duplicate(true)
+ if not natural_e1_failure_free():return false # Also covers failure before the ACK round trip returns.
  if failures:return false
  var record:Dictionary=host.e1_record
  var wire_body:Dictionary=reply.duplicate(true)
@@ -692,6 +734,7 @@ func finished_original_run()->bool:
  return not host.quest_auto.running and not host.battle_open and host.session._pending.is_empty() and host.session._loot_settlement.is_empty()
 
 func final_oracles()->bool:
+ if not natural_e1_failure_free():return false
  if not checked_pilot_disk(host,"natural-final") or not archive_pair(host,"natural-final"):return false
  var primary:Dictionary=host._capture_disk(host.save_path)
  var backup:Dictionary=host._capture_disk(host.save_path+".bak")
@@ -730,6 +773,7 @@ func final_oracles()->bool:
  if failures:return false
  check(pilot_trace_ok() and Time.get_ticks_msec()<pilot_deadline_ms,"Final oracle stays within evidence and verification hard limits")
  if failures:return false
+ if not natural_e1_failure_free():return false # Final classification guard, no failure record can earn UNPROVEN.
  var summary:Dictionary={"result":"PASS" if target_proven and p3_proven else "UNPROVEN","target":"PROVEN" if target_proven else "TARGET_UNPROVEN","p3":"PROVEN" if p3_proven else "P3_NATURAL_UNPROVEN","received_2760":received,"target_uids":uids,"attempts":host.pilot_attempt_count,"route_battles":route_battle_count,"e1_saved_battles":entry.saved_battles,"budget_limit_ms":entry.limit_ms,"budget_used_ms":entry.used_ms,"e1_anchor_ms":e1_anchor,"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"p3_samples":host.quest_loot.accepted_active,"p3_publications":host.p3_publications,"primary_sha256":primary.sha256,"backup_sha256":backup.sha256,"primary_and_backup_may_differ":true,"event_bytes":host.trace_output_bytes,"event_count":host.trace_count,"blob_bytes_by_class":host.evidence.charged.duplicate(),"unique_blobs":host.evidence.index.size(),"run_once_no_retry":true,"setup_conveniences":["original remote default three companions","original GM120","original V179/T178 allocation","fixed pet-1 original level_pet_to120/select_pet0","original near scholar and GENOU; last collision leg only"],"rendered_pixels_proven":false,"cpu":"UNKNOWN","external_watchdog_exit":"record separately by approved supervisor"}
  check(emit_pilot_trace("ACCEPTANCE_RESULT",summary),"Persist complete independent result categories")
  if failures:return false
@@ -794,6 +838,7 @@ func run()->void:
  var outstanding_battle:=""
  var outstanding_since:=-1
  while Time.get_ticks_msec()<pilot_deadline_ms:
+  if not natural_e1_failure_free():quit(1);return
   if not pilot_trace_ok():check(false,"Passive observation/evidence failed; preserve original disk");quit(1);return
   if not auth_owner_current():check(false,"Authenticated owner/peer/binding changed during natural run");quit(1);return
   if host.pilot_attempt_count>ATTEMPTS_LIMIT:check(false,"Natural attempt monitor exceeded 3601; no Stop/save rescue");quit(1);return
@@ -808,6 +853,7 @@ func run()->void:
   if finished_original_run():break
   if Time.get_ticks_msec()>=e1_anchor+ACTIVE_MS:stage="original-settlement"
   await physics_frame
+ if not natural_e1_failure_free():quit(1);return # Before a deadline can classify this as UNCOMPLETE.
  check(finished_original_run() and Time.get_ticks_msec()<pilot_deadline_ms,"UNCOMPLETE active/settlement stage hard limit; original pending receipt is preserved")
  if failures:quit(1);return
  stage="verification"
