@@ -1,7 +1,7 @@
 extends "res://tests/quest_auto_loot_public_remote_ui_test.gd"
 ## UNRUN authenticated extension of the accepted 392b remote UI oracle.
 ## Requires only the reviewed ProfileHub factory seam in profile-hub-factory.patch.
-## Test-only capability override is immutable and shared by projection/admission.
+## Production immutable capability is shared by projection/admission; no test getter override.
 const HubScript = preload("res://server/profile_hub.gd")
 const PublicRemoteTest = preload("res://tests/quest_auto_loot_public_remote_ui_test.gd")
 const BackendScript = preload("res://server/backend.gd")
@@ -410,8 +410,6 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 				var expected_nonempty: bool = expected_value is Dictionary and not expected_value.is_empty()
 				result.append({"index":index,"classification":record.get("classification",null),"checkpoint_empty":record.get("checkpoint_empty",null),"outer_before":record.get("outer_before",{}),"outer_after":record.get("outer_after",{}),"outer_record_valid":_initial_outer_resume_record_ok(record) if record.get("classification")=="outer_resume_initial_same_payload" else false,"ok":record.get("ok",null),"frame_before":record.get("frame_before",null),"frame_after":record.get("frame_after",null),"serial_before":record.get("serial_before",null),"serial_after":record.get("serial_after",null),"revision_before":record.get("revision_before",null),"revision_after":record.get("revision_after",null),"profile_events_before":record.get("profile_events_before",null),"profile_events_after":record.get("profile_events_after",null),"native_equal":record.get("native_before",null)==native_value,"native_matches_expected":expected_nonempty and native_value==expected_value,"cache_equal":record.get("cache_before",null)==record.get("cache_after",null),"disk_slots":_checkpoint_disk_slots_summary(record.get("disk_before",null),record.get("disk_after",null)),"production_snapshot_payload_matches_cache":record.get("production_snapshot_payload_matches_cache",null),"same_payload_fast_path_inferred":record.get("same_payload_fast_path_inferred",false)})
 		return result
-	func _quest_loot_public_enabled() -> bool:
-		return true
 	func _cmd_quest_loot_start(command: Dictionary) -> Dictionary:
 		var writer_count_before: int = writer_event_count
 		var writer_records_before: int = writer_records.size()
@@ -1418,8 +1416,8 @@ func authenticate_and_start_stop() -> bool:
 	bob_save_path=hub.accounts.save_path(hub.accounts.by_id(account_b))
 	alice_backend=hub.backends[account_a]
 	bob_backend=hub.backends[account_b]
-	if not check(alice_backend is AuthLootBackend and bob_backend is AuthLootBackend and not is_same(alice_backend,bob_backend) and alice_backend.admin and not bob_backend.admin and alice_save_path!=bob_save_path,"Hub factory owns distinct Alice-admin and Bob-ordinary profile backends with separate save paths while production constant remains false"):return false
-	if not check(BackendScript.QUEST_LOOT_PUBLIC_ENABLED==false and alice_backend._quest_loot_public_enabled() and bob_backend._quest_loot_public_enabled(),"Only the test subclass's one immutable getter enables its snapshot and admission"):return false
+	if not check(alice_backend is AuthLootBackend and bob_backend is AuthLootBackend and not is_same(alice_backend,bob_backend) and alice_backend.admin and not bob_backend.admin and alice_save_path!=bob_save_path,"Hub factory owns distinct Alice-admin and Bob-ordinary profile backends with separate save paths with the production capability enabled"):return false
+	if not check(BackendScript.QUEST_LOOT_PUBLIC_ENABLED==true and alice_backend._quest_loot_public_enabled() and bob_backend._quest_loot_public_enabled(),"Production constant and both inherited production getters enable snapshot and admission"):return false
 	host=alice_backend
 	server=HeldReplyServer.new(hub,0,"127.0.0.1")
 	root.add_child(server)
@@ -1523,7 +1521,7 @@ func authenticate_and_start_stop() -> bool:
 	if not await auth_wait(func():
 		var candidate: Variant=a1.quest_helper_menu.find_child("QuestLootStart",true,false)
 		return candidate is Button and not candidate.disabled,
-		"A1's real public start control reflects the test-only immutable capability"):return false
+		"A1's real public start control reflects the production immutable capability"):return false
 	a1.visible=true;a2.visible=false;bob.visible=false
 	var start_button: Button=a1.quest_helper_menu.find_child("QuestLootStart",true,false)
 	if not await auth_click(start_button):return false

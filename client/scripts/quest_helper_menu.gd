@@ -218,6 +218,7 @@ func rebuild(save_scroll:bool=true) -> void:
 func append_public_loot_start(parent:Node)->void:
 	var state:Dictionary=world.quest_helper_travel.public_loot_ui_state()
 	if not state.visible:return
+	label(parent,"低血量时自动停下，交给玩家手动接管。",12).name="QuestLootSafetyNotice"
 	var action:=button(parent,"开始限时刷物",func():world.quest_helper_travel.start_public_loot(),"QuestLootStart")
 	action.disabled=not state.can_start or state.pending or state.waiting_snapshot or not state.link_ready
 	if state.pending:
@@ -252,7 +253,7 @@ func build_detail(content:VBoxContainer,quest:Dictionary) -> void:
 		if not source_job:
 			label(content,("仅推进当前所选任务，不会自动接续尚未开放的任务链。普通随机战成功后继续；Boss 由玩家手动战斗，胜利后按继续；奖励等待玩家选择，成功保存后继续当前任务。最终转生确认和交宠仍由玩家操作。" if world.state.derived.get("quest_auto",{}).has("settings") else ("连续按原路自动推进并确认已审核的送物交易；普通随机遇敌沿用自动战斗，成功后继续。缺物、需手动选择或战斗失败等停止时，处理后请再次点击自动推进。" if strict else "便利导航模式：使用任务便捷传送并确认原交易，不是连续原路行走。"))+"关窗、Esc 或最小化后继续，点击停止可中止。",12)
 	if source_job:
-		label(content,"金布伊原路自动：请先自行到合资格的原大厅，或处于已有真实到达资格的运行路线；不会自动送往大厅、购票或刷物（尚未开放）。自动模式查原公开题目答案是项目便利；猜拳沿用原随机规则和合法重试，不保证获胜，缺票即停止。按原流程自动领取会员证并兑换唯一 Lv1 金布伊，此任务无需每次手选奖励。",12).name="QuestAutoSourceDetails"
+		label(content,"金布伊原路自动：请先自行到合资格的原大厅，或处于已有真实到达资格的运行路线；此金布伊任务路径不会自动送往大厅、购票或刷物。自动模式查原公开题目答案是项目便利；猜拳沿用原随机规则和合法重试，不保证获胜，缺票即停止。按原流程自动领取会员证并兑换唯一 Lv1 金布伊，此任务无需每次手选奖励。",12).name="QuestAutoSourceDetails"
 		label(content,"本任务实际执行 %s（正常原路）；已保存的 B/C 偏好保留给其他支持任务，不改变全局偏好。"%str(source_entry.get("effective_mode","A")),12).name="QuestAutoSourceMode"
 	var steps:Array=quest.get("steps",[])
 	var chosen:Dictionary={}

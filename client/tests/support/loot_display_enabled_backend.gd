@@ -1,5 +1,7 @@
 extends "res://server/backend.gd"
-## Test-only capability fixture for remote suites that exercise budget display.
-## It never changes ledger enabled/can_* fields or production configuration.
+## Display-only fixture: visible budget projection, no public admission.
+## Production configuration is unchanged; explicit closed getter preserves negative controls.
+func _quest_loot_public_enabled()->bool:
+	return false
 func _capabilities()->Dictionary:
 	return {"quest_loot_enabled":true}
