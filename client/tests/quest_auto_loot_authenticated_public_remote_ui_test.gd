@@ -300,6 +300,40 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 			observation_error = "writer callback classification did not reconcile with the observed event counter"
 			return
 		writer_kind_counts[kind] = prior + 1
+	# Passive memory-only source proof. This authenticated idle suite admits only
+	# an initial outer-resume envelope; unrelated nonempty capabilities stay invalid.
+	func _initial_outer_resume_probe(envelope: Dictionary) -> Dictionary:
+		var proof: Dictionary={"valid":false}
+		if envelope.is_empty() or not is_same(envelope,_loot_resume_envelope):return proof
+		var kind: Variant=envelope.get("kind")
+		var serial: Variant=envelope.get("serial")
+		var generation: Variant=envelope.get("generation")
+		var target: Variant=envelope.get("target")
+		var value: Variant=envelope.get("value")
+		var profile: Variant=envelope.get("profile")
+		var profile_ref: Variant=envelope.get("profile_ref")
+		var payload: Variant=envelope.get("payload")
+		var fact: Variant=envelope.get("fact")
+		var origin: Variant=envelope.get("origin")
+		if not kind is String or kind!="initial" or not serial is int or not generation is int:return proof
+		if not target is Dictionary or not value is Dictionary or not profile is Dictionary or not profile_ref is Dictionary or not payload is String or not fact is Dictionary:return proof
+		var written: Variant=fact.get("written")
+		var call: Variant=fact.get("call")
+		if not origin is RefCounted or not call is RefCounted or not written is bool:return proof
+		proof={"valid":true,"serial":serial,"written":written,"saved_serial":fact.get("saved_serial"),"saved_call_same":is_same(fact.get("saved_call"),call),"origin_same":is_same(origin,_loot_outer_resume_call),"timer_same":is_same(envelope.get("timer"),quest_loot),"generation_same":generation==_normal_process_generation,"normal_tail":keep_resume_current and _process_depth==1 and _dispatch_boundary_depth==2 and _depth==0 and _observer_depth==0 and _flush_depth==0 and _queue.is_empty(),"target_same":is_same(target,quest_loot.initial_e2),"target_value_same":target==value,"ready_same":is_same(envelope.get("ready"),quest_loot.ready_frame),"profile_ref_same":is_same(profile_ref,session._profile),"profile_value_same":profile==session._profile,"payload_same":payload==last_saved_payload,"pending_empty":session._pending.is_empty() and session._loot_settlement.is_empty(),"idle":not battle_open and not automation.running}
+		for key in ["origin_same","timer_same","generation_same","normal_tail","target_same","target_value_same","ready_same","profile_ref_same","profile_value_same","payload_same","pending_empty","idle"]:
+			if not proof[key]:proof.valid=false
+		return proof
+	func _initial_outer_resume_record_ok(record: Dictionary) -> bool:
+		var before: Variant=record.get("outer_before")
+		var after: Variant=record.get("outer_after")
+		if not before is Dictionary or not after is Dictionary:return false
+		if not (before.get("valid") is bool) or not before.valid or not (after.get("valid") is bool) or not after.valid:return false
+		if not (before.get("written") is bool) or before.written or not (after.get("written") is bool) or not after.written:return false
+		if not (before.get("serial") is int) or not (after.get("serial") is int) or not (after.get("saved_serial") is int):return false
+		for key in ["outer_envelope_same","outer_target_same","outer_fact_same","outer_call_same"]:
+			if not (record.get(key) is bool) or not record[key]:return false
+		return before.serial==record.serial_before and after.serial==record.serial_before and after.saved_serial==record.serial_after and after.get("saved_call_same") is bool and after.saved_call_same
 	func _checkpoint_record_ok(record: Variant) -> bool:
 		if not record is Dictionary:
 			return false
@@ -312,12 +346,14 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 		var disk_after: Variant = record.get("disk_after", null)
 		var serial_before: Variant = record.get("serial_before", null)
 		var serial_after: Variant = record.get("serial_after", null)
-		var shared_ok: bool = record.get("kind", null) == "save_profile_boundary" and record.get("ok", null) is bool and record.get("ok", false) and record.get("owner_is_current_session", null) is bool and record.get("owner_is_current_session", false) and record.get("session_identity_unchanged", null) is bool and record.get("session_identity_unchanged", false) and record.get("production_snapshot_expression", null) is String and record.production_snapshot_expression == "JSON.stringify(session.snapshot())" and record.get("path_is_current", null) is bool and record.get("path_is_current", false) and record.get("path_nonempty", null) is bool and record.get("path_nonempty", false) and record.get("checkpoint_empty", null) is bool and record.get("checkpoint_empty", false) and native_before is Dictionary and native_after is Dictionary and cache_before is String and not cache_before.is_empty() and cache_after is String and disk_before is Dictionary and disk_after is Dictionary and serial_before is int and serial_after is int and serial_after == serial_before + 1 and record.get("revision_before", null) is int and record.get("revision_after", null) is int and record.revision_after == record.revision_before and record.get("profile_events_before", null) is int and record.get("profile_events_after", null) is int and record.profile_events_after == record.profile_events_before
+		var shared_ok: bool = record.get("kind", null) == "save_profile_boundary" and record.get("ok", null) is bool and record.get("ok", false) and record.get("owner_is_current_session", null) is bool and record.get("owner_is_current_session", false) and record.get("session_identity_unchanged", null) is bool and record.get("session_identity_unchanged", false) and record.get("production_snapshot_expression", null) is String and record.production_snapshot_expression == "JSON.stringify(session.snapshot())" and record.get("path_is_current", null) is bool and record.get("path_is_current", false) and record.get("path_nonempty", null) is bool and record.get("path_nonempty", false) and record.get("checkpoint_empty", null) is bool and native_before is Dictionary and native_after is Dictionary and cache_before is String and not cache_before.is_empty() and cache_after is String and disk_before is Dictionary and disk_after is Dictionary and serial_before is int and serial_after is int and serial_after == serial_before + 1 and record.get("revision_before", null) is int and record.get("revision_after", null) is int and record.revision_after == record.revision_before and record.get("profile_events_before", null) is int and record.get("profile_events_after", null) is int and record.profile_events_after == record.profile_events_before
 		if not shared_ok:
 			return false
 		var classification: Variant = record.get("classification", null)
+		if classification == "outer_resume_initial_same_payload":
+			return not record.checkpoint_empty and _initial_outer_resume_record_ok(record) and native_before == native_after and cache_after == cache_before and disk_after == disk_before and record.get("production_snapshot_payload_matches_cache", null) is bool and record.production_snapshot_payload_matches_cache and record.get("same_payload_fast_path_inferred", null) is bool and record.same_payload_fast_path_inferred
 		if classification == "hub_same_payload_checkpoint":
-			return native_before == native_after and cache_after == cache_before and disk_after == disk_before and record.get("production_snapshot_payload_matches_cache", null) is bool and record.production_snapshot_payload_matches_cache and record.get("same_payload_fast_path_inferred", null) is bool and record.same_payload_fast_path_inferred
+			return record.checkpoint_empty and native_before == native_after and cache_after == cache_before and disk_after == disk_before and record.get("production_snapshot_payload_matches_cache", null) is bool and record.production_snapshot_payload_matches_cache and record.get("same_payload_fast_path_inferred", null) is bool and record.same_payload_fast_path_inferred
 		if classification == "gm_grant_points_commit":
 			var payload: Variant = record.get("payload", null)
 			var expected_payload_profile: Variant = expected_native
@@ -331,7 +367,7 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 			var decoded_normalized: Variant = session._normalize_numbers(decoded_payload.duplicate(true)) if decoded_valid else null
 			var expected_normalized: Variant = session._normalize_numbers(expected_payload_profile.duplicate(true)) if is_instance_valid(session) and expected_payload_profile is Dictionary else null
 			var payload_valid: bool = decoded_valid and decoded_normalized is Dictionary and expected_normalized is Dictionary and decoded_normalized == expected_normalized
-			return expected_payload_profile is Dictionary and native_before == expected_payload_profile and native_after == expected_payload_profile and payload is String and payload_valid and cache_after == payload and primary is Dictionary and primary.get("ok", null) is bool and primary.ok and primary_bytes is PackedByteArray and primary_bytes == payload.to_utf8_buffer() and backup is Dictionary and backup.get("ok", null) is bool and backup.ok and backup.get("bytes", null) is PackedByteArray and backup_before is Dictionary and backup_before.get("bytes", null) is PackedByteArray and backup.bytes == backup_before.bytes and temporary is Dictionary and temporary.get("exists", null) is bool and not temporary.exists and record.get("production_snapshot_payload_matches_cache", null) is bool and not record.production_snapshot_payload_matches_cache and record.get("same_payload_fast_path_inferred", null) is bool and not record.same_payload_fast_path_inferred
+			return record.checkpoint_empty and expected_payload_profile is Dictionary and native_before == expected_payload_profile and native_after == expected_payload_profile and payload is String and payload_valid and cache_after == payload and primary is Dictionary and primary.get("ok", null) is bool and primary.ok and primary_bytes is PackedByteArray and primary_bytes == payload.to_utf8_buffer() and backup is Dictionary and backup.get("ok", null) is bool and backup.ok and backup.get("bytes", null) is PackedByteArray and backup_before is Dictionary and backup_before.get("bytes", null) is PackedByteArray and backup.bytes == backup_before.bytes and temporary is Dictionary and temporary.get("exists", null) is bool and not temporary.exists and record.get("production_snapshot_payload_matches_cache", null) is bool and not record.production_snapshot_payload_matches_cache and record.get("same_payload_fast_path_inferred", null) is bool and not record.same_payload_fast_path_inferred
 		return false
 	func _checkpoint_count_reconciles() -> bool:
 		var count: Variant = writer_kind_counts.get("save_profile_boundary", null)
@@ -372,7 +408,7 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 				var expected_value: Variant = record.get("expected_native_after", null)
 				var native_value: Variant = record.get("native_after", null)
 				var expected_nonempty: bool = expected_value is Dictionary and not expected_value.is_empty()
-				result.append({"index":index,"classification":record.get("classification",null),"ok":record.get("ok",null),"frame_before":record.get("frame_before",null),"frame_after":record.get("frame_after",null),"serial_before":record.get("serial_before",null),"serial_after":record.get("serial_after",null),"revision_before":record.get("revision_before",null),"revision_after":record.get("revision_after",null),"profile_events_before":record.get("profile_events_before",null),"profile_events_after":record.get("profile_events_after",null),"native_equal":record.get("native_before",null)==native_value,"native_matches_expected":expected_nonempty and native_value==expected_value,"cache_equal":record.get("cache_before",null)==record.get("cache_after",null),"disk_slots":_checkpoint_disk_slots_summary(record.get("disk_before",null),record.get("disk_after",null)),"production_snapshot_payload_matches_cache":record.get("production_snapshot_payload_matches_cache",null),"same_payload_fast_path_inferred":record.get("same_payload_fast_path_inferred",false)})
+				result.append({"index":index,"classification":record.get("classification",null),"checkpoint_empty":record.get("checkpoint_empty",null),"outer_before":record.get("outer_before",{}),"outer_after":record.get("outer_after",{}),"outer_record_valid":_initial_outer_resume_record_ok(record) if record.get("classification")=="outer_resume_initial_same_payload" else false,"ok":record.get("ok",null),"frame_before":record.get("frame_before",null),"frame_after":record.get("frame_after",null),"serial_before":record.get("serial_before",null),"serial_after":record.get("serial_after",null),"revision_before":record.get("revision_before",null),"revision_after":record.get("revision_after",null),"profile_events_before":record.get("profile_events_before",null),"profile_events_after":record.get("profile_events_after",null),"native_equal":record.get("native_before",null)==native_value,"native_matches_expected":expected_nonempty and native_value==expected_value,"cache_equal":record.get("cache_before",null)==record.get("cache_after",null),"disk_slots":_checkpoint_disk_slots_summary(record.get("disk_before",null),record.get("disk_after",null)),"production_snapshot_payload_matches_cache":record.get("production_snapshot_payload_matches_cache",null),"same_payload_fast_path_inferred":record.get("same_payload_fast_path_inferred",false)})
 		return result
 	func _quest_loot_public_enabled() -> bool:
 		return true
@@ -425,9 +461,16 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 		var disk_before: Dictionary = _disk_set(save_path) if observe_before and not startup_noop_save_observe else {}
 		var path_before: String = save_path
 		var checkpoint_empty_before: bool = checkpoint.is_empty()
+		var outer_before: Dictionary=_initial_outer_resume_probe(checkpoint) if observe_before else {}
+		var outer_target: Variant=checkpoint.get("target")
+		var outer_fact: Variant=checkpoint.get("fact")
+		var outer_call: Variant=outer_fact.get("call") if outer_fact is Dictionary else null
 		var classification_before: String = "gm_grant_points_commit" if expected_profile_save_phase == "gm_grant_points" else "hub_same_payload_checkpoint" if expected_profile_save_phase.is_empty() else "unknown_phase:" + expected_profile_save_phase
+		if expected_profile_save_phase.is_empty() and not checkpoint_empty_before:
+			classification_before="outer_resume_initial_same_payload" if outer_before.get("valid",false) else "unknown_nonempty_boundary"
 		var expected_native_before: Dictionary = expected_profile_save_native.duplicate(true) if classification_before == "gm_grant_points_commit" and not expected_profile_save_native.is_empty() else {}
 		var result: bool = super._save_profile_boundary(checkpoint)
+		var outer_after: Dictionary=_initial_outer_resume_probe(checkpoint) if observe_before else {}
 		var serial_after: int = quest_save_serial
 		var revision_after: int = rev
 		var profile_events_after: int = profile_event_count
@@ -453,6 +496,7 @@ class AuthLootBackend extends PublicRemoteTest.PublicBackend:
 			var production_payload_matches_cache: bool = result and not path_before.is_empty() and cache_after == cache_before and serial_after == serial_before + 1
 			var fast_path_inferred: bool = production_payload_matches_cache
 			var record: Dictionary = {"kind":"save_profile_boundary","classification":classification_before,"ok":result,"owner_is_current_session":session_identity_unchanged,"session_identity_unchanged":session_identity_unchanged,"session_before_valid":session_before_valid,"session_after_valid":session_after_valid,"current_session_valid_after":current_session_valid,"path_is_current":path_before == save_path,"path_nonempty":not path_before.is_empty(),"checkpoint_empty":checkpoint_empty_before,"native_before":native_before,"native_after":native_after,"expected_native_after":expected_native_before,"payload":last_saved_payload,"cache_before":cache_before,"cache_after":cache_after,"disk_before":disk_before,"disk_after":disk_after,"serial_before":serial_before,"serial_after":serial_after,"revision_before":revision_before,"revision_after":revision_after,"profile_events_before":profile_events_before,"profile_events_after":profile_events_after,"frame_before":frame_before,"frame_after":frame_after,"production_snapshot_expression":"JSON.stringify(session.snapshot())","production_snapshot_payload_matches_cache":production_payload_matches_cache,"same_payload_fast_path_inferred":fast_path_inferred}
+			record.merge({"outer_before":outer_before,"outer_after":outer_after,"outer_envelope_same":is_same(checkpoint,_loot_resume_envelope),"outer_target_same":is_same(checkpoint.get("target"),outer_target),"outer_fact_same":is_same(checkpoint.get("fact"),outer_fact),"outer_call_same":outer_fact is Dictionary and is_same(outer_fact.get("call"),outer_call)})
 			if not startup_noop_save_observe:
 				if ordinary_checkpoint_records.size() < CHECKPOINT_RECORD_LIMIT:
 					ordinary_checkpoint_records.append(record)
@@ -1562,7 +1606,7 @@ func authenticate_and_start_stop() -> bool:
 		"writer_event_ring_tail":pre_duplicate_writer_ring
 	}
 	print("AUTH_PUBLIC_LOOT_PRE_DUPLICATE_WRITER_DIAGNOSTIC ",JSON.stringify(pre_duplicate_writer_diagnostic))
-	if not check(pre_duplicate_settlement_eq_two and pre_duplicate_records_eq_two and pre_duplicate_checkpoints_valid and pre_duplicate_writer_counts_reconcile,"Exactly two E1 settlement callbacks remain; every ordinary Hub checkpoint callback is independently proven same-payload/no-disk-change") :return false
+	if not check(pre_duplicate_settlement_eq_two and pre_duplicate_records_eq_two and pre_duplicate_checkpoints_valid and pre_duplicate_writer_counts_reconcile,"Exactly two E1 settlement callbacks remain; each ordinary checkpoint or marked initial outer-resume callback has its own source and complete same-payload/no-disk-change proof") :return false
 	var writer_count_before_duplicate_rpc: int=alice_backend.writer_event_count
 	var writer_records_before_duplicate_rpc: int=alice_backend.writer_records.size()
 	var writer_kinds_before_duplicate_rpc: Dictionary=alice_backend._writer_kind_snapshot()
