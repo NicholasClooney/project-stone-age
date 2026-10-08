@@ -31,13 +31,33 @@ static func valid_profile(profile:Dictionary)->bool:
  if profile.has("quest_loot"):return valid(profile.quest_loot)
  return integer(profile.get("version"),1,7)
 static func recovered(profile:Dictionary,from_backup:bool)->Dictionary:
- # Only after Session validates the entire original save. Never repair bad v8.
+ # Approved cold retirement: retain the selected source's saved lower bound.
+ # No reset, no new budget/generation, no invented elapsed time or rewards.
  if not valid_profile(profile):return {}
  var ledger:Dictionary=profile.get("quest_loot",empty()).duplicate(true)
- if from_backup:ledger.recovery_blocked=true
+ if ledger.entries.is_empty():
+  # A backup without an entry cannot prove that no budget ever existed.
+  if from_backup:ledger.recovery_blocked=true
+  return ledger
  for key in ledger.entries:
-  if from_backup or ledger.entries[key].open_span:ledger.entries[key].recovery_blocked=true
+  var entry:Dictionary=ledger.entries[key]
+  if from_backup or ledger.recovery_blocked or entry.recovery_blocked or entry.open_span:
+   entry.open_span=false
+   entry.settled_seq=entry.issued_seq
+   if entry.revision<MAX_COUNTER:entry.revision+=1
+   # At counter exhaustion the existing open gate still denies a new span.
+   entry.recovery_blocked=false
+ ledger.recovery_blocked=false
  return ledger
+static func resume_is_loot(value:Variant)->bool:
+ if not value is Dictionary:return false
+ var identity_value:Variant=value.get("identity")
+ if identity_value is Dictionary:
+  var step_value:Variant=identity_value.get("step_id")
+  if step_value is String and step_value==STEP:return true
+ var phase_value:Variant=value.get("phase")
+ var quest_value:Variant=value.get("quest_id")
+ return phase_value is String and phase_value in ["loot_admission","loot_battle"] and integer(quest_value,-1,-1)
 static func denied(reason:String)->Dictionary:return {"ok":false,"reason":reason}
 static func result(ledger:Dictionary)->Dictionary:return {"ok":true,"ledger":ledger}
 static func identity(entry:Dictionary)->Dictionary:

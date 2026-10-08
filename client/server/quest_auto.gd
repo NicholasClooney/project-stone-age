@@ -388,6 +388,7 @@ func suspend(b) -> void:
  if not loot_close.is_empty() and not b.quest_loot.idle_close_owner(b,loot_close):return
  stop(b,"服务器已停止。",false,loot_close)
 func load_resume(b,state:Dictionary) -> void:
+ if b.quest_loot.State.resume_is_loot(state):return
  if int(state.get("version",0)) not in [1,2,3] or not Policy.JOB_EVENTS.has(int(state.get("quest_id",-1))):return
  if int(Policy.JOB_EVENTS[int(state.quest_id)]) not in b.quest_catalog.enabled_events:return
  quest_id=int(state.quest_id)

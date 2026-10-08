@@ -33,6 +33,120 @@ class ObservedTimer:
   super.finish_initial_resume_save(b,ticket,saved)
   b.finish_seen=true
   if not b.inject_mode.is_empty():b.set_process(false) # Observe this boundary only; no next tick masks its outcome.
+# UNRUN passive oracle. Only the positive resume fixture installs this timer.
+# Independent 500 is the reviewed contract, never imported from timer fields.
+class CadenceObserver:
+ extends RefCounted
+ const CONTRACT_MS:=500
+ var original:Callable
+ var active:Dictionary={}
+ var inner:Dictionary={}
+ var attempts:=0
+ var calls:=0
+ var returns:=0
+ var field_count:=0
+ var early_zero:=0
+ var accepted:=0
+ var expected_next:=-1
+ var previous_raw:=-1
+ var accepted_clock_ordinal:=-1
+ var owner_context:Dictionary={}
+ var history:Array[Dictionary]=[]
+ var issues:Array[String]=[]
+ var overflow:=false
+ func problem(reason:String)->void:
+  if issues.size()<16:issues.append(reason)
+  else:overflow=true
+ func context(b,timer)->Dictionary:
+  return {"session":b.session.get_instance_id(),"runner":b.quest_auto.get_instance_id(),"identity":b.quest_auto.identity.checkpoint(),"lifetime":timer.lifetime.get_instance_id()}
+ func enter_attempt(b,timer)->Dictionary:
+  attempts+=1
+  var frame:Dictionary={"ordinal":attempts,"context":context(b,timer),"clock_count":0,"samples":0,"fields":0,"raw":null,"sample_call":-1,"clock_ordinal":-1,"threshold":expected_next,"last_field_clock":-1,"field_wall":-1,"early":false}
+  if not active.is_empty():problem("nested outer attempt")
+  if owner_context.is_empty():owner_context=frame.context.duplicate(true)
+  elif owner_context!=frame.context:problem("owner/run/lifetime changed: independent deadline cannot be reused")
+  return frame
+ func observe_clock()->Variant:
+  calls+=1
+  var ordinal:int=calls
+  var scope:Dictionary=active
+  var sample_scope:Dictionary=inner
+  # Exactly ONE original call, original Variant returned verbatim.
+  var value:Variant=original.call()
+  returns+=1
+  if not scope.is_empty():scope.clock_count+=1
+  if not sample_scope.is_empty():
+   sample_scope.count+=1
+   if not is_same(active,scope) or not is_same(inner,sample_scope):problem("clock callback replaced observation scope")
+   if scope.is_empty():problem("sample without outer attempt")
+   else:
+    scope.raw=value;scope.clock_ordinal=ordinal
+  return value
+ func field_entry(call:Variant)->void:
+  field_count+=1
+  if active.is_empty():problem("field outside complete attempt");return
+  active.fields+=1
+  active.field_wall=Time.get_ticks_msec() # Wall is diagnostic only.
+  if not inner.is_empty():problem("field before sample method returned")
+  if active.samples!=1 or active.clock_count!=1:problem("field not paired with exactly one original clock sample")
+  if not call is RefCounted:problem("field missing original attempt identity");return
+  if call.get_instance_id()!=active.sample_call:problem("field belongs to another original attempt")
+  if active.fields!=1:problem("sample reused for multiple field callbacks")
+  var raw:Variant=active.raw
+  if not raw is int:problem("original clock result not int");return
+  if active.clock_ordinal<=accepted_clock_ordinal:problem("clock ordinal reused")
+  active.last_field_clock=active.clock_ordinal
+  accepted_clock_ordinal=active.clock_ordinal
+  if previous_raw>=0 and raw<previous_raw:problem("original clock decreased")
+  if active.threshold>=0 and raw<active.threshold:problem("field below independent raw+500 deadline")
+  if raw>9007199254740991-CONTRACT_MS:problem("independent deadline overflow");return
+  # This is the observer's accepted-call history, not production last/next.
+  previous_raw=raw;expected_next=raw+CONTRACT_MS;accepted+=1
+ func leave_attempt(b,timer,frame:Dictionary,result:Dictionary)->void:
+  if context(b,timer)!=frame.context:problem("attempt exit owner changed")
+  if frame.samples>1 or frame.clock_count>1:problem("more than one sample in complete attempt")
+  if frame.fields>1:problem("more than one field in complete attempt")
+  if frame.fields>0 and frame.samples!=1:problem("field without unique sample")
+  if frame.raw is int and frame.threshold>=0 and frame.raw<frame.threshold:
+   frame.early=true
+   if frame.fields!=0:problem("early sample produced a field callback")
+   # Count only a real completed sampled attempt explicitly returning no attempt.
+   elif frame.samples==1 and frame.clock_count==1 and result.get("ok") is bool and result.ok and result.get("attempted") is bool and not result.attempted:early_zero+=1
+  if result.get("attempted") is bool and result.attempted!=(frame.fields==1):problem("reported attempt disagrees with observed field count")
+  if history.size()<4096:history.append(frame.duplicate(true))
+  else:overflow=true
+ func report()->Dictionary:
+  var status:String="FAIL" if not issues.is_empty() else ("UNPROVEN" if overflow or calls!=returns or early_zero==0 or accepted<3 else "PROVEN")
+  return {"status":status,"attempts":attempts,"original_calls":calls,"original_returns":returns,"accepted_fields":accepted,"all_fields":field_count,"early_sample_zero_field":early_zero,"overflow":overflow,"issues":issues.duplicate(),"last_attempts":history.slice(maxi(0,history.size()-4)).duplicate(true)}
+class CadenceTimer:
+ extends ObservedTimer
+ var observer:=CadenceObserver.new()
+ func _init()->void:
+  observer.original=clock # Default original callable captured before public E1.
+  clock=observer.observe_clock # Stable wrapper identity for the whole fixture.
+ func attempt_once(b)->Dictionary:
+  var prior:Dictionary=observer.active
+  var frame:Dictionary=observer.enter_attempt(b,self)
+  observer.active=frame
+  var reply:Dictionary=super.attempt_once(b) # Includes sample return AND field.
+  observer.leave_attempt(b,self,frame,reply)
+  observer.active=prior
+  return reply
+ func sample_attempt_sealed(b,frame:Dictionary,fence:Dictionary)->Dictionary:
+  var prior:Dictionary=observer.inner
+  var scope:Dictionary={"count":0}
+  if observer.active.is_empty():observer.problem("sample entry without outer attempt")
+  else:
+   observer.active.samples+=1
+   var call:Variant=frame.get("attempt_call")
+   if call is RefCounted:observer.active.sample_call=call.get_instance_id()
+   else:observer.problem("sample entry has no original attempt call")
+  observer.inner=scope
+  var reply:Dictionary=super.sample_attempt_sealed(b,frame,fence)
+  observer.inner=prior
+  # A rejected pre-clock sample may legitimately count zero, but cannot field.
+  if scope.count>1:observer.problem("sample method invoked clock more than once")
+  return reply
 class ResumeBackend:
  extends "res://server/backend.gd"
  var expected_e1_primary:Dictionary={}
@@ -63,13 +177,23 @@ class ResumeBackend:
  var replacement_owner
  var field_calls:=0
  var field_times:Array[int]=[]
+ var cadence_rows:Array[Dictionary]=[]
+ var cadence_overflow:=false
  var resume_noops:=0
  func _quest_loot_public_enabled()->bool:return true
  func _cmd_field_step(command:Dictionary)->Dictionary:
+  var observed_call:bool=quest_loot.attempt_call!=null
+  var before_sample:int=quest_loot.last_attempt_ms
+  var before_deadline:int=quest_loot.next_attempt_ms
+  var before_wall:int=Time.get_ticks_msec()
+  if quest_loot is CadenceTimer:quest_loot.observer.field_entry(quest_loot.attempt_call)
   var reply:Dictionary=super._cmd_field_step(command)
   if quest_loot.attempt_call!=null:
    field_calls+=1
-   field_times.append(Time.get_ticks_msec())
+   field_times.append(Time.get_ticks_msec()) # Preserve original return-wall observation.
+   if cadence_rows.size()<128:
+    cadence_rows.append({"ordinal":field_calls,"call_present_before":observed_call,"wall_before":before_wall,"wall_return":field_times.back(),"sample_before":before_sample,"deadline_before":before_deadline,"sample_after":quest_loot.last_attempt_ms,"deadline_after":quest_loot.next_attempt_ms})
+   else:cadence_overflow=true
   return reply
  func _save_profile_boundary(checkpoint:Dictionary={})->bool:
   var before:String=last_saved_payload
@@ -95,13 +219,13 @@ class ResumeBackend:
    if inject_mode=="successor_frame":quest_loot.initial_e2=quest_loot.initial_e2.duplicate(true)
   if ok and _process_depth==1 and _depth==0 and last_saved_payload==before and quest_save_serial==serial+1:resume_noops+=1
   return ok
-func make_case(path:String,resume:bool):
+func make_case(path:String,resume:bool,observe_cadence:bool=false):
  if not fresh_path(path) or FileAccess.file_exists(path.get_basename()+".resume.json"):
   check(false,"New isolated regression profile/resume path")
   return null
  var b=ResumeBackend.new()
  b.encounter_catalog=MissCatalog.new()
- b.quest_loot=ObservedTimer.new()
+ b.quest_loot=CadenceTimer.new() if observe_cadence else ObservedTimer.new()
  root.add_child(b)
  if not prepare_source(b,path):check(false,"Original prepared source fixture");b.free();return null
  # The inherited helper moves automation authority but save() does not copy
@@ -161,8 +285,30 @@ func emit_wait_diagnostic(b,label:String,reached:bool,entry_frame:Dictionary)->v
   print("INITIAL_MISS_RESUME_DIAGNOSTIC ",JSON.stringify({"ordinal":diagnostic_count,"overflow":true}))
   return
  print("INITIAL_MISS_RESUME_DIAGNOSTIC ",encoded)
+func emit_cadence_diagnostic(b)->void:
+ # At most four violating pairs, emitted BEFORE the unchanged first check.
+ # All values are already stored scalars; no clock/sample/snapshot/disk/save.
+ var pairs:Array[Dictionary]=[]
+ var violations:=0
+ for i in range(1,b.field_times.size()):
+  var wall_delta:int=b.field_times[i]-b.field_times[i-1]
+  if wall_delta>=500:continue
+  violations+=1
+  if pairs.size()>=4:continue
+  var pair:Dictionary={"index":i,"wall_previous":b.field_times[i-1],"wall_current":b.field_times[i],"wall_delta":wall_delta,"callback_rows_available":i<b.cadence_rows.size()}
+  if i<b.cadence_rows.size():
+   var previous:Dictionary=b.cadence_rows[i-1]
+   var current:Dictionary=b.cadence_rows[i]
+   pair.previous=previous.duplicate(true);pair.current=current.duplicate(true)
+   pair.sample_delta=current.sample_before-previous.sample_before
+   pair.previous_sample_to_return=previous.wall_return-previous.sample_before
+   pair.current_sample_to_return=current.wall_return-current.sample_before
+   pair.previous_callback_wall=previous.wall_return-previous.wall_before
+   pair.current_callback_wall=current.wall_return-current.wall_before
+  pairs.append(pair)
+ print("LOOT_CADENCE_DIAGNOSTIC ",JSON.stringify({"wall_source":"Time.get_ticks_msec after super field return","sample_source":"existing timer last_attempt_ms/next_attempt_ms; not independent oracle","attempts":b.field_times.size(),"stored_rows":b.cadence_rows.size(),"overflow":b.cadence_overflow,"violations":violations,"pairs":pairs}))
 func positive_and_external()->void:
- var b=make_case("user://loot-initial-miss-resume-short.json",true)
+ var b=make_case("user://loot-initial-miss-resume-short.json",true,true)
  if b==null:quit(1);return
  var frame:Dictionary=b.quest_loot.initial_e2
  var serial:int=b.quest_save_serial
@@ -177,7 +323,14 @@ func positive_and_external()->void:
  if failures:b.free();quit(1);return
  check(b.resume_noops>=2 and b.quest_save_serial>serial and is_same(b.quest_loot.initial_e2,frame) and frame.serial==b.quest_save_serial,"Only actual same-payload resume writes advance this captured serial seal")
  check(b.session._profile==profile and b.last_saved_payload==payload and read_disk(b.save_path).bytes==primary.bytes and read_disk(b.save_path+".bak").bytes==backup.bytes,"Full profile/cache/primary/backup unchanged across misses and no-op resume saves")
- for i in range(1,b.field_times.size()):check(b.field_times[i]-b.field_times[i-1]>=500,"Original 500ms cadence is not bypassed")
+ emit_cadence_diagnostic(b)
+ check(b.quest_loot is CadenceTimer,"Positive fixture must install the independent cadence observer")
+ if failures:b.free();quit(1);return
+ var evidence:Dictionary=b.quest_loot.observer.report()
+ print("LOOT_CADENCE_ORACLE ",JSON.stringify(evidence))
+ check(evidence.status=="PROVEN","Independent original-clock cadence status: "+str(evidence.status))
+ if failures:b.free();quit(1);return
+ # Return-wall pairs remain diagnostic; only independent original raw+500 is acceptance.
  check(b.quest_auto.phase=="loot_admission" and b.quest_auto.running and not b.battle_open and b.session._pending.is_empty() and FileAccess.file_exists(b._resume_file()),"Idle admission keeps its original runner and actual resume file")
  assert_pair(b,b.expected_e1_primary,b.expected_e1_backup,primary.bytes,backup.bytes,"Positive complete profiles/bytes")
  b.free() # No rescue save/Stop; isolated fixture artifacts retained.
@@ -195,16 +348,30 @@ func positive_and_external()->void:
  var external_primary:Dictionary=read_disk(external.save_path)
  var external_backup:Dictionary=read_disk(external.save_path+".bak")
  var external_cache:String=external.last_saved_payload
+ # Test-only clock for this external-save case; derive full close from E1,
+ # never from the returned candidate, result or observed closed disk.
+ var close_sample:int=maxi(Time.get_ticks_msec(),external.quest_loot.last_ms)+1000
+ var expected_used:int=external.quest_loot.base_used_ms+close_sample-external.quest_loot.anchor_ms
+ var close_plan:Dictionary=State.progress(external.expected_e1_primary.quest_loot,State.STEP,State.identity(external.expected_e1_primary.quest_loot.entries[State.STEP]),expected_used,true)
+ check(close_plan.get("ok",false),"Independent external close plan")
+ if failures:external.free();quit(1);return
+ var expected_closed:Dictionary=external.expected_e1_primary.duplicate(true)
+ expected_closed.quest_loot=close_plan.ledger
+ external.quest_loot.clock=func():return close_sample
  check(external.save() and external.quest_save_serial==old_serial+1,"Ordinary save still increments its serial outside the resume ticket")
  check(not external.quest_loot._initial_e2_owner(external,stale,true),"Generic no-op save retains the strict initial writer rejection")
+ check(external.session._profile==external.expected_e1_primary and external.last_saved_payload==external_cache,"Ordinary save itself never changes full budget/profile")
+ assert_pair(external,external.expected_e1_primary,external.expected_e1_backup,external_primary.bytes,external_backup.bytes,"Ordinary save before failure tick")
+ if failures:external.free();quit(1);return
  var retired:bool=await Wait.until(self,func():return external.quest_loot.initial_e2.is_empty(),12.0)
  emit_wait_diagnostic(external,"external-retired",retired,stale)
  check(retired,"Next normal process retires the stale initial frame")
  if failures:external.free();quit(1);return
  check(external.field_calls==count,"No unauthorized attempt after ordinary save invalidates the old frame")
  check(external.capture_calls==0 and external.finish_calls==0 and external.capture_ticket.is_empty() and stale.serial==old_serial,"Ordinary save never obtains any resume ticket or reseals the retired frame")
- check(external.session._profile==external.expected_e1_primary and external.last_saved_payload==external_cache and external.quest_save_serial==old_serial+1,"Generic save preserves complete profile and budget with exactly one writer")
- assert_pair(external,external.expected_e1_primary,external.expected_e1_backup,external_primary.bytes,external_backup.bytes,"Generic save negative")
+ check(not external.quest_auto.running and external.quest_auto.phase=="stopped" and external.quest_loot.initial_failure.result.budget_close=="persisted","Stale seal revokes execution and independently closes the same budget")
+ check(external.session._profile==expected_closed and external.last_saved_payload==JSON.stringify(expected_closed) and external.quest_save_serial==old_serial+2,"Exactly ordinary writer plus verified close; no new budget")
+ assert_pair(external,expected_closed,external.expected_e1_primary,JSON.stringify(expected_closed).to_utf8_buffer(),external_primary.bytes,"Independent closed primary / original open backup")
  external.free()
 
 # Expected profiles are derived from the pre-injection full baseline, never

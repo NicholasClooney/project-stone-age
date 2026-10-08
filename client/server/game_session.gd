@@ -1517,9 +1517,90 @@ func save_settings_on_saved_profile(saved_payload:String,overrides:Dictionary,pa
 func _write_profile(path:String)->bool:
 	return _write_profile_candidate(_profile,path)
 
+# Close-only proof, private to this Session. Weak host/timer links prevent a
+# Session -> bound Callable -> timer record -> Session reference cycle.
+var _loot_failure_write:Dictionary={}
+var _loot_failure_active:Dictionary={}
+var last_loot_cold_retirement:Dictionary={}
+func _loot_failure_scope_current(frame:Dictionary)->bool:
+	if not is_same(_loot_failure_write,frame) or not is_same(_profile,frame.profile_ref) or _profile!=frame.profile or not _pending.is_empty() or not _loot_settlement.is_empty():return false
+	var host=frame.host.get_ref()
+	var timer=frame.timer.get_ref()
+	if not is_instance_valid(host) or not is_instance_valid(timer):return false
+	if not is_same(host.session,self) or host.save_path!=frame.path or not is_same(host.quest_loot,timer):return false
+	var record:Dictionary=timer.initial_failure
+	return not record.is_empty() and is_same(record.revoked_cap,frame.caller_cap) and record.expected==frame.candidate and timer._failure_close_current(host,record)
+func _loot_failure_pre_io_ready()->bool:
+	# Narrow test seam; production is always ready. Only the ORIGINAL writer
+	# records its refusal before FileAccess.open, not an outer bool override.
+	return true
+func begin_loot_failure_close(expected:Dictionary,args:Dictionary,path:String,host,timer,caller_cap:RefCounted)->Dictionary:
+	if not _loot_failure_active.is_empty() or not is_instance_valid(host) or not is_instance_valid(timer):return {"ok":false,"stage":"close_scope_rejected"}
+	if not is_same(host.session,self) or host.save_path!=path or not is_same(host.quest_loot,timer):return {"ok":false,"stage":"close_owner_rejected"}
+	var record:Dictionary=timer.initial_failure
+	if record.is_empty() or not is_same(record.revoked_cap,caller_cap) or not timer._failure_close_current(host,record):return {"ok":false,"stage":"close_record_rejected"}
+	if not _loot_failure_write.is_empty() and is_same(_loot_failure_write.caller_cap,caller_cap):return {"ok":false,"stage":"duplicate_close_operation"}
+	if not _valid_profile(expected) or _profile!=expected or path.is_empty():return {"ok":false,"stage":"close_input_rejected"}
+	if not LootState.exact(args,["step_id","expected_entry","total_used_ms"]):return {"ok":false,"stage":"close_args_rejected"}
+	var step_value:Variant=args.get("step_id")
+	var identity_value:Variant=args.get("expected_entry")
+	var used_value:Variant=args.get("total_used_ms")
+	if not step_value is String or not identity_value is Dictionary or not used_value is int:return {"ok":false,"stage":"close_args_rejected"}
+	if step_value!=LootState.STEP or not LootState.exact(identity_value,["budget_id","generation","revision"]):return {"ok":false,"stage":"close_args_rejected"}
+	var budget_value:Variant=identity_value.get("budget_id")
+	var generation_value:Variant=identity_value.get("generation")
+	var revision_value:Variant=identity_value.get("revision")
+	if not budget_value is String or not generation_value is int or not revision_value is int:return {"ok":false,"stage":"close_args_rejected"}
+	if not LootState.opaque(budget_value) or generation_value<0 or generation_value>LootState.MAX_COUNTER or revision_value<0 or revision_value>LootState.MAX_COUNTER:return {"ok":false,"stage":"close_args_rejected"}
+	if used_value<0 or used_value>LootState.MAX_MSEC:return {"ok":false,"stage":"close_args_rejected"}
+	if not expected.quest_loot.entries.has(LootState.STEP):return {"ok":false,"stage":"close_args_rejected"}
+	var source_entry:Dictionary=expected.quest_loot.entries[LootState.STEP]
+	if identity_value!=LootState.identity(source_entry) or used_value<source_entry.used_ms:return {"ok":false,"stage":"close_args_rejected"}
+	var plan:Dictionary=LootState.progress(expected.quest_loot,LootState.STEP,args.expected_entry,args.total_used_ms,true)
+	if not plan.get("ok",false):return {"ok":false,"stage":"close_plan_rejected"}
+	var candidate:Dictionary=expected.duplicate(true);candidate.quest_loot=plan.ledger
+	if candidate!=record.expected or JSON.stringify(candidate)!=record.expected_payload:return {"ok":false,"stage":"close_candidate_changed"}
+	var frame:Dictionary={"token":RefCounted.new(),"profile_ref":_profile,"profile":expected.duplicate(true),"candidate":candidate,"args":args.duplicate(true),"path":path,"host":weakref(host),"timer":weakref(timer),"caller_cap":caller_cap,"attempts":0,"retries":0,"entries":0,"io_entered":false,"pre_io_refused":false,"result":{},"receipts":[]}
+	_loot_failure_write=frame
+	return _execute_loot_failure_close(frame)
+func loot_failure_retryable(token:Variant)->bool:
+	var frame:Dictionary=_loot_failure_write
+	if frame.is_empty() or not is_same(frame.token,token) or not _loot_failure_active.is_empty():return false
+	return frame.attempts==1 and frame.retries==0 and frame.entries==1 and not frame.io_entered and frame.pre_io_refused and frame.result.get("ok") is bool and frame.result.ok==false and _loot_failure_scope_current(frame)
+func retry_loot_failure_close(token:Variant)->Dictionary:
+	if not loot_failure_retryable(token):return {"ok":false,"stage":"retry_not_proven"}
+	var frame:Dictionary=_loot_failure_write
+	frame.retries=1 # Consume BEFORE any guard/hook/writer reentry.
+	return _execute_loot_failure_close(frame)
+func _loot_failure_bool_fact(result:Dictionary,key:String)->Variant:
+	var value:Variant=result.get(key)
+	return value if value is bool else null # null = unproven; never invent false.
+func _execute_loot_failure_close(frame:Dictionary)->Dictionary:
+	frame.attempts+=1;frame.entries=0;frame.io_entered=false;frame.pre_io_refused=false
+	if not _loot_failure_scope_current(frame):return {"ok":false,"stage":"close_scope_changed"}
+	var host=frame.host.get_ref()
+	_loot_failure_active=frame
+	# No bound callback is retained in the receipt after this synchronous call.
+	var result:Dictionary=commit_loot_idle_transition(frame.profile,frame.profile.quest_loot,"close",frame.args,frame.path,host._loot_settlement_written.bind(self,frame.path))
+	if is_same(_loot_failure_active,frame):_loot_failure_active={}
+	frame.result=result.duplicate(true)
+	frame.receipts.append({"attempt":frame.attempts,"entries":frame.entries,"io_entered":frame.io_entered,"pre_io_refused":frame.pre_io_refused,"ok":_loot_failure_bool_fact(result,"ok"),"installed":_loot_failure_bool_fact(result,"installed")})
+	return {"ok":_loot_failure_bool_fact(result,"ok"),"token":frame.token,"result":result.duplicate(true),"attempt":frame.attempts,"retries":frame.retries,"receipts":frame.receipts.duplicate(true)}
+
 ## Pure candidate writer: no profile swaps, normalization or publication.
 ## Callers retain their own admission rules, including save_game's battle ban.
 func _write_profile_candidate(candidate:Dictionary,path:String)->bool:
+	var proof:Dictionary=_loot_failure_active
+	if not proof.is_empty():
+		proof.entries+=1
+		if proof.entries!=1 or path!=proof.path or candidate!=proof.candidate or not _loot_failure_scope_current(proof):return false
+		var ready:bool=_loot_failure_pre_io_ready()
+		# The seam can reenter or replace owner; no old write follows it.
+		if proof.entries!=1 or not is_same(_loot_failure_active,proof) or not _loot_failure_scope_current(proof):return false
+		if not ready:
+			proof.pre_io_refused=true
+			return false
+		proof.io_entered=true # From here ANY failure is partial/unknown.
 	var file := FileAccess.open(path + ".tmp",FileAccess.WRITE)
 	if file == null:
 		last_error = "Cannot create save."
@@ -1730,6 +1811,12 @@ func load_game(path: String) -> bool:
 				login_rng.state=previous_login_rng_state
 				last_error="Cannot persist uncertain loot budget recovery."
 				return false
+			# Replace disclosure only after this load succeeds; failed loads retain it.
+			last_loot_cold_retirement={}
+			# In-memory disclosure only; persistent authority remains exact ledger v1.
+			if persist_recovery:
+				last_loot_cold_retirement={"source":"primary" if candidate==path else "backup","ledger":ledger.duplicate(true),"lower_bound_only":true,"reason":"备份未保存预算条目，余额无法核实，刷物仍未开放恢复。" if ledger.entries.is_empty() else "上次刷物已退休；保留所载存档的已存用时下界与已结算收益，未知时长未补计。"}
+			_loot_failure_write={}
 			last_load_source="primary" if candidate==path else "backup"
 			return true
 	last_error = "No valid save or backup."

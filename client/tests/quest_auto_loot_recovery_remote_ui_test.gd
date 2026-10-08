@@ -76,24 +76,26 @@ func run()->void:
  root.add_child(host);host.set_process(false)
  if not persisted("h2-first-load"):return
  var loaded:Dictionary=host.session.snapshot()
- if not check(loaded.quest_loot.entries[State.STEP].recovery_blocked,"Actual open-span load installed recovery uncertainty lock"):return
+ var expected_retired:Dictionary=open_entry.duplicate(true)
+ expected_retired.open_span=false;expected_retired.settled_seq=expected_retired.issued_seq;expected_retired.revision+=1
+ if not check(loaded.quest_loot.entries[State.STEP]==expected_retired and not loaded.quest_loot.recovery_blocked,"Actual loader retires span and preserves all independent original budget/reward fields"):return
  var disk_after_load:Dictionary=archive("h2-loaded")
  if disk_after_load.is_empty():return
  var independent=Session.new()
  if not check(independent.load_game(path) and independent.snapshot()==loaded,"Independent second loader verifies complete persisted native profile"):return
- if not check(FileAccess.get_file_as_bytes(path)==disk_after_load.primary.bytes,"Second read preserves locked primary bytes"):return
+ if not check(FileAccess.get_file_as_bytes(path)==disk_after_load.primary.bytes,"Second read preserves retired primary bytes"):return
  if not persisted("after-independent-load"):return
  # Only validated recovery/cache/primary may be exposed to a NEW server/client.
  server=Server.new(host,0,"127.0.0.1");root.add_child(server)
  if not check(server.start()==OK,"S2 starts only after recovery fully verified"):return
  var restored=await connect_scene("recovery-h2")
  if restored==null:return
- if not await ready(func():return budget(restored).get("recovery_blocked",false) and panel(restored).visible and panel(restored).content().contains("中断时段用时不确定"),"New scene receives real authenticated recovery-lock projection"):return
- if not check(budget(restored).activity=="recovery_locked" and budget(restored).entry.budget_id==open_entry.budget_id and budget(restored).entry.saved_used_ms==open_entry.used_ms,"Recovery displays actual retained identity and saved lower bound"):return
+ if not await ready(func():return not budget(restored).get("recovery_blocked",true) and panel(restored).visible and panel(restored).content().contains("未知时长未补计"),"New scene receives explicit cold-retirement lower-bound disclosure"):return
+ if not check(budget(restored).activity=="stopped" and budget(restored).entry.budget_id==open_entry.budget_id and budget(restored).entry.saved_used_ms==open_entry.used_ms,"Recovery displays actual retained identity and saved lower bound"):return
  for key in ["enabled","can_start","can_stop","can_adjust_limit","can_reset"]:
   if not check(budget(restored).get(key)==false,"Recovery cannot enable "+key):return
  if not check(panel(restored).controls.disabled and panel(restored).controls.pressed.get_connections().is_empty(),"Locked display offers no command"):return
- lifecycle("h2-authenticated-locked")
+ lifecycle("h2-authenticated-retired")
  var retired_restored_id:int=restored.get_instance_id()
  restored.link.close();restored.music.stop();restored.effect.stop();restored.queue_free()
  if not await ready(func():return not is_instance_id_valid(retired_restored_id),"Recovered scene disposed"):return

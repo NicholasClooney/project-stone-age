@@ -129,18 +129,20 @@ func run()->void:
  var recovered=Session.new()
  check(recovered.load_game("user://loot-crash.json"),"Crash recovers original profile conservatively")
  if failures:quit(1);return
- check(recovered.snapshot().quest_loot.entries[KEY].recovery_blocked and recovered.snapshot().quest_loot.entries[KEY].used_ms==0,"Unknown elapsed remains lower bound, not invented duration")
+ var cold_expected:Dictionary=active.duplicate(true)
+ cold_expected.entries[KEY].open_span=false;cold_expected.entries[KEY].settled_seq=cold_expected.entries[KEY].issued_seq;cold_expected.entries[KEY].revision+=1
+ check(recovered.snapshot().quest_loot==cold_expected,"Independent exact cold retirement retains unknown elapsed as saved lower bound")
  if failures:quit(1);return
  var disk_copy:Dictionary=ProfileCompare.validated_copy(recovered,FileAccess.get_file_as_string("user://loot-crash.json"))
  check(disk_copy.ok,"Complete recovery disk profile validates before comparison normalization")
  if failures:quit(1);return
  var recovered_profile:Dictionary=recovered.snapshot()
- check(disk_copy.profile==recovered_profile,"Recovery lock and complete profile durable before successful load")
+ check(disk_copy.profile==recovered_profile,"Cold retirement and complete profile durable before successful load")
  if failures:quit(1);return
  var repeat=Session.new()
- check(repeat.load_game("user://loot-crash.json"),"Restart loads persisted recovery lock")
+ check(repeat.load_game("user://loot-crash.json"),"Restart loads persisted retired budget")
  if failures:quit(1);return
- check(repeat.snapshot().quest_loot==recovered_profile.quest_loot and repeat.snapshot().quest_loot==disk_copy.profile.quest_loot,"Restart does not clear recovery lock")
+ check(repeat.snapshot().quest_loot==recovered_profile.quest_loot and repeat.snapshot().quest_loot==disk_copy.profile.quest_loot,"Restart never refreshes retired budget or changes its counters")
  if failures:quit(1);return
  var baseline:Dictionary=session.snapshot();baseline.quest_loot=ledger
  write_json("user://loot-backup.json.bak",baseline)
@@ -148,7 +150,9 @@ func run()->void:
  write_json("user://loot-backup.json",broken)
  if failures:quit(1);return
  var backup=Session.new()
- check(backup.load_game("user://loot-backup.json") and backup.snapshot().quest_loot.recovery_blocked and backup.snapshot().quest_loot.entries[KEY].recovery_blocked,"Bad v8 fallback preserves old entry under uncertainty lock")
+ var backup_expected:Dictionary=ledger.duplicate(true)
+ backup_expected.entries[KEY].revision+=1
+ check(backup.load_game("user://loot-backup.json") and backup.snapshot().quest_loot==backup_expected,"Bad primary fallback retires only the selected old generation, without inventing newer counters")
  if failures:quit(1);return
  baseline.version=7;baseline.erase("quest_loot")
  write_json("user://loot-missing-backup.json.bak",baseline)
