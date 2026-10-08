@@ -1,5 +1,6 @@
 extends "res://tests/quest_auto_loot_crystal_prerequisite_test.gd"
-## UNRUN static candidate: one authenticated natural pilot, default E1 30 minutes.
+## Basic natural acceptance: one authentic P3 publication plus a received 2760 primary readback.
+## UNRUN revision; the product E1 budget stays at its default 30 minutes.
 ## Historical pilots remain byte-identical; no test registration or product change.
 const Server=preload("res://server/ws_server.gd")
 const Game=preload("res://scripts/game.gd")
@@ -48,6 +49,7 @@ var pilot_deadline_ms:=0
 var e1_anchor:=-1
 var stage:="setup"
 var failure_saved:=false
+var primary_load_proven:=false
 var route_destination:=Vector2i(-1,-1)
 var route_search_candidates:int=0
 var route_search_queries:int=0
@@ -61,6 +63,78 @@ var route_search_windows:=0
 var candidate_search_windows:=0
 var route_search_searches_baseline:=0
 var route_search_cells_baseline:=0
+
+# Memory-only, last eight changes. Generation/serial annotate, never trigger a change.
+var passive_changes:Array[Dictionary]=[]
+var passive_last:Dictionary={}
+var passive_stop:Dictionary={}
+var passive_printed:=false
+func passive_owner_ref(value:Variant,owner:Object)->bool:
+ return value is WeakRef and is_same(value.get_ref(),owner)
+func passive_memory()->Dictionary:
+ var auto=host.automation
+ var q=host.quest_auto
+ var raw:Dictionary=host.battle._state
+ var scope:Dictionary=auto.loot_scope
+ var identity:Dictionary={"run_id":q.identity.run_id,"step_id":q.identity.step_id,"revision":q.identity.revision}
+ var authority:Variant=scope.get("authority")
+ var receipt:Variant=host.session._pending.get("quest_loot_receipt")
+ var battle_id:Variant=raw.get("battle_id")
+ var same_run:bool=not e1_observed_run.is_empty() and identity.run_id==e1_observed_run.get("run_id") and identity.step_id==e1_observed_run.get("step_id") and is_same(q,e1_observed_runner) and is_same(host.quest_loot,e1_observed_timer) and is_same(host.session,e1_observed_session)
+ var same_battle:bool=battle_id is String and not battle_id.is_empty() and battle_id==host.session._pending.get("battle_id") and battle_id==scope.get("battle_id")
+ var bound:bool=same_run and same_battle and authority is Dictionary and authority.get("identity")==identity and receipt is Dictionary and not receipt.is_empty() and receipt==scope.get("receipt") and receipt==host.quest_loot.battle_receipt and scope.get("token")!=null and is_same(scope.get("token"),auto.start_lifetime) and is_same(scope.get("lifetime"),host.quest_loot.lifetime) and passive_owner_ref(scope.get("runner"),q) and passive_owner_ref(scope.get("automation"),auto) and passive_owner_ref(scope.get("battle"),host.battle) and passive_owner_ref(scope.get("session"),host.session) and passive_owner_ref(scope.get("timer"),host.quest_loot)
+ var row:Dictionary={"run_id":identity.run_id,"step_id":identity.step_id,"revision":identity.revision,"battle_id":battle_id,"same_run":same_run,"same_battle":same_battle,"scope_bound":bound,"q_running":q.running,"auto_running":auto.running,"auto_tick":auto.auto_tick,"compact_active":auto.compact_active,"battle_open":host.battle_open,"active":raw.get("active"),"turn":raw.get("turn"),"player_hp":raw.get("player_hp"),"player_max_hp":raw.get("player_max_hp"),"hp_line":auto.settings.get("hp"),"stop_reason":auto.stop_reason.left(256),"settlement_empty":host.session._loot_settlement.is_empty(),"pending_empty":host.session._pending.is_empty()}
+ var previous:Dictionary=passive_last.duplicate()
+ previous.erase("generation");previous.erase("serial")
+ var changed:bool=previous!=row
+ row.generation=host._normal_process_generation;row.serial=host.quest_save_serial
+ passive_last=row
+ if changed:
+  if passive_changes.size()==8:passive_changes.pop_front()
+  passive_changes.append(row.duplicate())
+ return row
+func passive_event(message:Dictionary)->void:
+ if not passive_stop.is_empty() or message.get("type")!="auto_event":return
+ var detail:Variant=message.get("detail")
+ if not detail is Dictionary or detail.get("kind")!="battle_stopped":return
+ var row:Dictionary=passive_memory()
+ if not row.scope_bound:return
+ var reason:Variant=detail.get("reason")
+ if not reason is String:return
+ passive_stop={"kind":"battle_stopped","reason":reason.left(256),"takeover":detail.get("takeover"),"memory":row.duplicate(),"attribution":"original synchronous event; current E1 scope/receipt/run/battle"}
+func passive_diagnostic()->void:
+ if passive_printed:return
+ passive_printed=true
+ print("NATURAL_PASSIVE_DIAGNOSTIC ",JSON.stringify({"changes":passive_changes,"latest":passive_last,"battle_stopped":passive_stop,"maximum_changes":8,"no_clock_or_snapshot":true}))
+func confirmed_player_protection()->bool:
+ if passive_stop.is_empty() or passive_last.is_empty():return false
+ var row:Dictionary=passive_stop.memory
+ if passive_stop.takeover!=true or not passive_stop.reason.begins_with("玩家体力达到停机线"):return false
+ for key in ["player_hp","player_max_hp","hp_line"]:
+  if not row.get(key) is int and not row.get(key) is float:return false
+ if row.player_max_hp<=0 or row.player_hp<0 or row.hp_line!=10 or float(row.player_hp)/float(row.player_max_hp)*100.0>row.hp_line:return false
+ return row.scope_bound and row.active==true and row.battle_open and not row.auto_running and not row.compact_active and row.settlement_empty and not row.pending_empty and passive_last.scope_bound and passive_last.battle_id==row.battle_id and passive_last.run_id==row.run_id and passive_last.active==true and passive_last.battle_open and not passive_last.auto_running and not passive_last.compact_active and passive_last.stop_reason==row.stop_reason and passive_last.player_hp==row.player_hp and passive_last.player_max_hp==row.player_max_hp and passive_last.settlement_empty and not passive_last.pending_empty
+func finish_protection_unproven()->void:
+ passive_diagnostic()
+ # Keep pending, primary, backup and sidecar exactly as observed. No Stop/close/save.
+ var summary:Dictionary={"result":"UNPROVEN","target":"TARGET_UNPROVEN","p3":"PROVEN" if host.p3_publications>0 else "P3_NATURAL_UNPROVEN","classification":"CONFIRMED_PLAYER_HEALTH_PROTECTION","primary_load_proven":false,"pending_preserved":true,"no_forced_settlement":true,"p3_samples":host.quest_loot.accepted_active,"p3_publications":host.p3_publications,"battle_stopped":passive_stop,"prior_p3_evidence":"natural-basic-window-1: two real publications; historical UNCOMPLETE unchanged"}
+ print("NATURAL_ACCEPTANCE_RESULT ",JSON.stringify(summary))
+ quit(3)
+func prepare_existing_potions()->bool:
+ # Up to two already owned starter potions; stop when full or none remain.
+ for index in range(2):
+  var before:Dictionary=host.session._profile.duplicate(true)
+  if host.session._pending.is_empty() and (before.player.hp>=before.player.max_hp or before.inventory.potion<=0):break
+  check(host.session._pending.is_empty() and before.inventory.potion>=1 and before.player.hp<before.player.max_hp,"Existing potion is owned and usable before E1")
+  if failures:return false
+  var reply:Dictionary=await request_world({"type":"use_item","item":"potion"},"Use existing starter potion through actual session request")
+  if failures:return false
+  var expected:Dictionary=before.duplicate(true)
+  expected.inventory.potion-=1
+  expected.player.hp=mini(expected.player.max_hp,expected.player.hp+30)
+  check(reply.get("ok",false) and host.session._profile==expected,"Full profile changes only by original potion consumption and original +30 capped recovery")
+  if failures:return false
+ return true
 
 func emit_pilot_trace(label:String,value:Variant)->bool:
  var ok:bool=host!=null and host.trace_event(label,value)
@@ -85,6 +159,7 @@ func check(ok:bool,label:String)->void:
  failures+=1
  if not failure_saved:
   failure_saved=true
+  passive_diagnostic() # Already observed memory only, before the original failure capture.
   # Do not stop/close/save/disconnect the live run to rescue a failed oracle.
   var row:Dictionary={"result":"UNCOMPLETE" if Time.get_ticks_msec()>=pilot_deadline_ms or label.contains("UNCOMPLETE") else "FAIL","stage":stage,"reason":label,"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms}
   if host!=null:
@@ -354,9 +429,11 @@ func verify_loaded_budget_remainder(source:Dictionary,loaded:Dictionary,label:St
   expected_open.entries[State.STEP].issued_seq+=1
   check(opened.get("ok",false) and opened.get("ledger",{})==expected_open,label+" same-step new span changes only open/revision/issued, never limit/used/rewards")
  return failures==0
-func independent_load_readback(b,primary:Dictionary,backup:Dictionary)->bool:
+func independent_load_readback(b,primary:Dictionary,backup:Dictionary,primary_only:bool=false)->bool:
  if failures:return false
- for pair in [["primary",primary,false],["backup-direct",backup,false],["corrupt-primary-fallback",backup,true]]:
+ var load_cases:Array=[["primary",primary,false],["backup-direct",backup,false],["corrupt-primary-fallback",backup,true]]
+ if primary_only:load_cases=[load_cases[0]]
+ for pair in load_cases:
   var label:String=str(pair[0])
   var source:Dictionary=pair[1]
   var from_backup:bool=bool(pair[2])
@@ -694,6 +771,7 @@ func open_authenticated_e1()->bool:
  e1_observed_timer=host.quest_loot
  e1_observed_runner=host.quest_auto
  e1_observed_session=host.session
+ host.event.connect(passive_event)
  if not natural_e1_failure_free():return false # Fresh E1 cannot inherit an old failure.
  var reply:Dictionary=await request_world({"type":"quest_loot_start"},"Actual authenticated public quest_loot_start ACK")
  var observed_identity:Variant=reply.get("run_identity")
@@ -740,7 +818,9 @@ func final_oracles()->bool:
  var backup:Dictionary=host._capture_disk(host.save_path+".bak")
  check(primary.get("ok",false) and backup.get("ok",false) and primary.bytes.get_string_from_utf8()==host.disk_primary_expected and backup.bytes.get_string_from_utf8()==host.disk_backup_expected,"Final primary and backup match their separately observed actual writer generations")
  if failures:return false
- if not independent_load_readback(host,primary,backup):return false
+ # Basic policy requires one actual primary load; historical backup/fallback code is preserved.
+ if not independent_load_readback(host,primary,backup,true):return false
+ primary_load_proven=true
  var received:=0
  var uids:Array=[]
  for row in host.closed_receipts:
@@ -768,13 +848,13 @@ func final_oracles()->bool:
  for battle_id in host.quest_loot.sample_ids:
   if host.closed_receipts.any(func(row):return row.battle_id==battle_id):sampled_settled=true
  p3_proven=p3_proven and sampled_settled
- var target_proven:bool=received>0 and Plan.select(host,Sources.matches_backend).get("status")=="done"
+ var target_proven:bool=primary_load_proven and received>0 and Plan.select(host,Sources.matches_backend).get("status")=="done"
  check(received>0 or int(entry.used_ms)>=ACTIVE_MS,"Zero target can be TARGET_UNPROVEN only after the original full default budget naturally completes")
  if failures:return false
  check(pilot_trace_ok() and Time.get_ticks_msec()<pilot_deadline_ms,"Final oracle stays within evidence and verification hard limits")
  if failures:return false
  if not natural_e1_failure_free():return false # Final classification guard, no failure record can earn UNPROVEN.
- var summary:Dictionary={"result":"PASS" if target_proven and p3_proven else "UNPROVEN","target":"PROVEN" if target_proven else "TARGET_UNPROVEN","p3":"PROVEN" if p3_proven else "P3_NATURAL_UNPROVEN","received_2760":received,"target_uids":uids,"attempts":host.pilot_attempt_count,"route_battles":route_battle_count,"e1_saved_battles":entry.saved_battles,"budget_limit_ms":entry.limit_ms,"budget_used_ms":entry.used_ms,"e1_anchor_ms":e1_anchor,"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"p3_samples":host.quest_loot.accepted_active,"p3_publications":host.p3_publications,"primary_sha256":primary.sha256,"backup_sha256":backup.sha256,"primary_and_backup_may_differ":true,"event_bytes":host.trace_output_bytes,"event_count":host.trace_count,"blob_bytes_by_class":host.evidence.charged.duplicate(),"unique_blobs":host.evidence.index.size(),"run_once_no_retry":true,"setup_conveniences":["original remote default three companions","original GM120","original V179/T178 allocation","fixed pet-1 original level_pet_to120/select_pet0","original near scholar and GENOU; last collision leg only"],"rendered_pixels_proven":false,"cpu":"UNKNOWN","external_watchdog_exit":"record separately by approved supervisor"}
+ var summary:Dictionary={"result":"PASS" if target_proven and p3_proven else "UNPROVEN","target":"PROVEN" if target_proven else "TARGET_UNPROVEN","p3":"PROVEN" if p3_proven else "P3_NATURAL_UNPROVEN","received_2760":received,"target_uids":uids,"attempts":host.pilot_attempt_count,"route_battles":route_battle_count,"e1_saved_battles":entry.saved_battles,"budget_limit_ms":entry.limit_ms,"budget_used_ms":entry.used_ms,"e1_anchor_ms":e1_anchor,"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"p3_samples":host.quest_loot.accepted_active,"p3_publications":host.p3_publications,"primary_sha256":primary.sha256,"backup_sha256":backup.sha256,"primary_and_backup_may_differ":true,"event_bytes":host.trace_output_bytes,"event_count":host.trace_count,"blob_bytes_by_class":host.evidence.charged.duplicate(),"unique_blobs":host.evidence.index.size(),"run_once_no_retry":true,"acceptance_contract":"basic_p3_and_received_2760_primary_readback","primary_load_proven":primary_load_proven,"load_modes":["primary"],"backup_fallback_loads":"NOT_RUN_BY_BASIC_POLICY","setup_conveniences":["up to two existing starter potions via original use_item before E1 (+30 each capped; stop when full/empty; no new items)","original remote default three companions","original GM120","original V179/T178 allocation","fixed pet-1 original level_pet_to120/select_pet0","original near scholar and GENOU; last collision leg only"],"rendered_pixels_proven":false,"cpu":"UNKNOWN","external_watchdog_exit":"record separately by approved supervisor"}
  check(emit_pilot_trace("ACCEPTANCE_RESULT",summary),"Persist complete independent result categories")
  if failures:return false
  print("NATURAL_ACCEPTANCE_RESULT ",JSON.stringify(summary))
@@ -830,6 +910,7 @@ func run()->void:
  if not await checkpoint_world("Persist actual walked source-area checkpoint"):quit(1);return
  check(host.encounter_catalog.area_at(100,host.automation.position_cell).get("id")==56 and host.session._profile.original_items.count(2764)==1 and not host.session._profile.original_items.has(2760) and host.session._valid_profile(host.session._profile),"Actual area56, original prerequisite and complete native/cache baseline before E1")
  if failures:quit(1);return
+ if not await prepare_existing_potions():quit(1);return
  if not checked_pilot_disk(host,"source-before-open"):quit(1);return
  if not archive_pair(host,"source-before-open"):quit(1);return
  if not await open_authenticated_e1():quit(1);return
@@ -844,6 +925,8 @@ func run()->void:
   if host.pilot_attempt_count>ATTEMPTS_LIMIT:check(false,"Natural attempt monitor exceeded 3601; no Stop/save rescue");quit(1);return
   var battle_id:String=str(host.session._pending.get("battle_id",""))
   if battle_id.is_empty() and (host.battle_open or not host.session._loot_settlement.is_empty()):battle_id=str(host.battle._state.get("battle_id","unidentified-open-obligation"))
+  passive_memory()
+  if confirmed_player_protection():finish_protection_unproven();return
   if not battle_id.is_empty() and battle_id!=outstanding_battle:
    outstanding_battle=battle_id;outstanding_since=Time.get_ticks_msec()
   if not battle_id.is_empty() and Time.get_ticks_msec()-outstanding_since>=SETTLEMENT_MS:
