@@ -238,11 +238,17 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	var load_owner=session
+	var load_scope_path:String=save_path
 	stationary.stop(self,"载入存档停止了原地遇敌。")
 	var stop_result:Dictionary=quest_auto.stop(self,"载入存档停止了自动任务。")
 	if not stop_result.get("ok",false):return false
 	original_quests.pending={}
-	if not session.load_game(path):return false
+	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
+	if not load_owner.load_game(path):return false
+	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
+	# Successful cold load retires old in-memory loot authority only.
+	quest_loot = preload("res://server/quest_auto_loot.gd").new()
 	quest_arrival.reset()
 	transmigration.reset()
 	last_saved_payload = JSON.stringify(session.snapshot())
@@ -1182,6 +1188,8 @@ func load_resume() -> void:
 	var allow_fee_quest_resume:bool=_fee_attempt_resume_allowed(session._profile,state)
 	DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 	if state is Dictionary:
+		# Never resurrect any companion automation from an old loot sidecar.
+		if quest_loot.State.resume_is_loot(state.get("quest_auto")):return
 		if state.get("adult_battle") is Dictionary:
 			if not AdultCheckpoint.restore(self,state.adult_battle) and str(state.adult_battle.get("battle_id","")) not in session._profile.completed_battles:return
 		if state.get("wood_battle") is Dictionary:_restore_wood_battle(state.wood_battle)

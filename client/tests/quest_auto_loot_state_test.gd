@@ -56,10 +56,17 @@ func run()->void:
  check(not State.settle(ledger,KEY,receipt,receipt.battle_id,1809999,1).ok,"Latest duplicate still refused")
  ledger=State.open(ledger,KEY,State.identity(ledger.entries[KEY])).ledger
  var recovered:=State.recovered({"version":8,"quest_loot":ledger},false)
- check(recovered.entries[KEY].recovery_blocked and recovered.entries[KEY].used_ms==ledger.entries[KEY].used_ms,"Crash preserves known lower bound and locks")
- check(not State.acquire(recovered,KEY,RUN,ID,30,0).ok,"Start cannot clear recovery")
- check(not State.reset(recovered,KEY,State.identity(recovered.entries[KEY]),30).ok,"Recovery reset requires explicit confirmation")
- var reset:=State.reset(recovered,KEY,State.identity(recovered.entries[KEY]),30,true)
+ var cold_expected:Dictionary=ledger.duplicate(true)
+ cold_expected.entries[KEY].open_span=false
+ cold_expected.entries[KEY].settled_seq=cold_expected.entries[KEY].issued_seq
+ cold_expected.entries[KEY].revision+=1
+ check(recovered==cold_expected and not recovered.entries[KEY].recovery_blocked,"Cold retirement retains every budget/counter field except explicit span/revision transition")
+ check(State.acquire(recovered,KEY,RUN,ID,30,99).ledger==cold_expected,"New run cannot refresh old limit/used/reward history")
+ check(State.recovered({"version":8,"quest_loot":recovered},false)==recovered,"Primary cold retirement is idempotent")
+ var explicitly_locked:Dictionary=recovered.duplicate(true)
+ explicitly_locked.entries[KEY].recovery_blocked=true
+ check(not State.reset(explicitly_locked,KEY,State.identity(explicitly_locked.entries[KEY]),30).ok,"Unchanged explicit-reset API still requires confirmation for locks")
+ var reset:=State.reset(explicitly_locked,KEY,State.identity(explicitly_locked.entries[KEY]),30,true)
  check(reset.ok and reset.ledger.entries[KEY].generation==1 and reset.ledger.entries[KEY].saved_battles==132 and reset.ledger.entries[KEY].issued_seq==133,"Reset preserves historical stats/high water")
  var backup:=State.recovered({"version":7},true)
  check(backup.recovery_blocked and not State.acquire(backup,KEY,ID,RUN,30,0).ok,"Older backup cannot become fresh budget")

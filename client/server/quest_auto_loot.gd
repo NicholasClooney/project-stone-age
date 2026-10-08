@@ -181,6 +181,10 @@ func projection(b)->Dictionary:
  var ledger:Dictionary=baseline.quest_loot
  var entry:Dictionary=ledger.entries.get(State.STEP,{})
  view.recovery_blocked=ledger.recovery_blocked or (not entry.is_empty() and entry.recovery_blocked)
+ var cold:Dictionary=b.session.last_loot_cold_retirement
+ if not cold.is_empty():
+  view.cold_retirement=cold.duplicate(true)
+  view.reason=str(cold.reason)
  if entry.is_empty():
   if view.recovery_blocked:view.activity="recovery_locked";view.reason="备份预算历史不确定，尚未开放恢复操作。"
   return view
@@ -196,7 +200,9 @@ func projection(b)->Dictionary:
  if sample_current:used=maxi(used,int(cached_sample.used_ms))
  view.entry={"step_id":State.STEP,"budget_id":entry.budget_id,"generation":int(entry.generation),"revision":int(entry.revision),"target_item_id":2760,"target_count":1,"limit_ms":int(entry.limit_ms),"saved_used_ms":int(entry.used_ms),"used_ms":used,"limit_reached":used>=int(entry.limit_ms),"existing_items":int(entry.existing_items),"new_items":int(entry.new_items),"saved_battles":int(entry.saved_battles)}
  view.finish_current_battle=battle_current and (view.entry.limit_reached or not run_current or q.detached)
- if view.recovery_blocked:
+ if failure_pending_for_profile(b):
+  view.activity="storage_paused";view.reason="刷物记录待确认。"
+ elif view.recovery_blocked:
   view.activity="recovery_locked";view.reason="中断时段用时不确定，显示已存下界。"
  elif closing_current or (sample_current and storage_paused):
   view.activity="storage_paused"
@@ -219,6 +225,7 @@ func projection(b)->Dictionary:
 ## not parse the save cache, scan source data, load terrain, or sample time.
 ## The server command never treats this advisory as authorization.
 func public_start_projection_reason(b)->String:
+ if failure_pending_for_profile(b):return "刷物记录待确认。"
  if not b._quest_loot_public_enabled():return "限时刷物尚未开放。"
  if b.save_path.is_empty() or b.last_saved_payload.is_empty():return "刷物需要可信真实存档。"
  var q=b.quest_auto
@@ -272,6 +279,13 @@ func public_start(b,connection:int,transport:RefCounted,seq:int)->Dictionary:
 func _public_start_locked(b,connection:int,transport:RefCounted,seq:int,call:RefCounted)->Dictionary:
  if not b._quest_loot_public_enabled():return State.denied("限时刷物尚未开放。")
  if not is_instance_valid(transport) or connection==-1 or b._fee_bindings.get(connection)!=transport:return State.denied("刷物启动需要当前已连接的可信设备。")
+ # Only this loot entry requests one source-proven retry or read-only
+ # confirmation. No generic Stop/resume gate, RPC or successor permission.
+ if failure_pending_for_profile(b):
+  retry_failed_initial_once(b)
+  confirm_failed_initial_readonly(b)
+  if failure_pending_for_profile(b):return State.denied("刷物记录待确认。")
+  if not is_same(public_start_call,call) or b._fee_bindings.get(connection)!=transport:return State.denied("刷物确认期间连接已变化。")
  var reason:String=public_start_reason(b)
  if not reason.is_empty():return State.denied(reason)
  var planned:Dictionary=JewelPlan.select(b,Sources.matches_backend)
@@ -388,10 +402,219 @@ func _initial_e2_battle_current(b,frame:Dictionary,battle_id:String)->bool:
  if b._fee_bindings.get(frame.connection)!=frame.transport or not b.battle_open or str(b.session._pending.get("battle_id",""))!=battle_id:return false
  return not battle_receipt.is_empty() and b.session._pending.get("quest_loot_receipt",{})==battle_receipt and str(battle_receipt.get("ledger",{}).get("battle_id",""))==battle_id
 
+# UNRUN candidate: execution revocation is separate from durable-close authority.
+var initial_failure:Dictionary={}
+func _initial_failure_execution(b,frame:Dictionary)->bool:
+ if frame.is_empty() or not is_same(initial_e2,frame) or not is_same(b.quest_loot,self):return false
+ for pair in [["session",b.session],["runner",b.quest_auto],["loot",self],["identity_object",b.quest_auto.identity]]:
+  var ref:Variant=frame.get(pair[0])
+  if not ref is WeakRef or not is_same(ref.get_ref(),pair[1]):return false
+ var q=b.quest_auto
+ return b.save_path==frame.path and is_same(lifetime,frame.lifetime) and q.identity.checkpoint()==frame.identity and q.step==frame.step and q.running and q.internal and q.phase=="loot_admission" and q.connection==frame.connection and q.client==frame.client and not q.detached and not q.restored and not b.battle_open and b.session._pending.is_empty() and b.session._loot_settlement.is_empty() and battle_receipt.is_empty() and attempt_call==null and attempt_frame.is_empty()
+func _initial_failure_current(b,record:Dictionary)->bool:
+ if record.is_empty() or not is_same(initial_failure,record) or not is_same(b.quest_loot,self) or not initial_e2.is_empty() or not ready_frame.is_empty() or not is_same(admission,record.revoked_cap):return false
+ var frame:Dictionary=record.frame
+ for pair in [["session",b.session],["runner",b.quest_auto],["loot",self],["identity_object",b.quest_auto.identity]]:
+  var ref:Variant=frame.get(pair[0])
+  if not ref is WeakRef or not is_same(ref.get_ref(),pair[1]):return false
+ var q=b.quest_auto
+ return b.save_path==frame.path and is_same(lifetime,frame.lifetime) and q.identity.checkpoint()==frame.identity and q.step==frame.step and q.connection==frame.connection and q.client==frame.client and not q.running and q.phase=="stopped" and not b.battle_open and b.session._pending.is_empty() and b.session._loot_settlement.is_empty()
+# In-memory failure ownership survives runner identity changes. Cold loading
+# retires the selected persisted ledger without recreating the old run.
+func failure_pending_for_profile(b)->bool:
+ if initial_failure.is_empty() or initial_failure.result.budget_close=="persisted":return false
+ if not is_same(b.quest_loot,self) or b.session==null or b.save_path!=initial_failure.path:return false
+ var profile_id:Variant=b.session._profile.get("profile_id")
+ # character_id is a changeable appearance, not the persistent save owner.
+ if not profile_id is String:return true
+ return profile_id==initial_failure.profile_id
+func _failure_confirm_current(b,record:Dictionary,scope:Dictionary)->bool:
+ if not is_same(initial_failure,record) or not failure_pending_for_profile(b):return false
+ var owner:Variant=record.frame.get("session")
+ if not owner is WeakRef or not is_same(owner.get_ref(),b.session):return false
+ if not record.installed_proven or record.expected.is_empty() or not is_same(b.session._profile,record.installed_ref):return false
+ if not is_same(lifetime,record.frame.lifetime) or not is_same(open_obligation,record.obligation):return false
+ if b.battle_open or not b.session._pending.is_empty() or not b.session._loot_settlement.is_empty():return false
+ return _failure_observation_current(b,scope) and b.quest_save_serial==record.serial+1 and b.session._profile==record.expected and b.last_saved_payload==record.expected_payload and State.valid(b.session._profile.get("quest_loot",{})) and b.session._profile.quest_loot==record.expected.quest_loot
+func confirm_failed_initial_readonly(b)->bool:
+ if not failure_pending_for_profile(b):return false
+ var record:Dictionary=initial_failure
+ var scope:Dictionary=_failure_observation(b)
+ if not _failure_confirm_current(b,record,scope):return false
+ var facts:Array[Dictionary]=[]
+ # Bounded latest read-only observation; original writer facts remain immutable.
+ record.confirm_facts=[]
+ for path in [record.path,record.path+".bak",record.path+".tmp"]:
+  if not _failure_confirm_current(b,record,scope):return false
+  var raw:Variant=_failure_disk(path)
+  if not _failure_confirm_current(b,record,scope):return false
+  # Append facts to this exact obligation, never adopt a successor profile.
+  record.confirm_facts.append(raw.duplicate(true))
+  facts.append(_failure_fact(raw))
+ if _failure_matches(facts[0],record.expected_payload.to_utf8_buffer())!="matches" or _failure_matches(facts[1],str(record.payload).to_utf8_buffer())!="matches" or facts[2].state!="missing":return false
+ # Retire only the proven original timer span. No q.message/profile/save/publish.
+ if not same_span(record.expected.quest_loot):return false
+ if not accept_commit(record.expected.quest_loot):return false
+ if is_same(open_obligation,record.obligation):open_obligation={}
+ record.result={"ok":true,"stopped_in_memory":true,"budget_close":"persisted","stage":"readonly_confirmed","reason":"原刷物关闭记录已只读确认。"}
+ return true
+func _failure_disk(path:String)->Dictionary:
+ var file:=FileAccess.open(path,FileAccess.READ)
+ var open_error:int=FileAccess.get_open_error()
+ if file==null:return {"state":"missing" if open_error==ERR_FILE_NOT_FOUND else "unknown","open_error":open_error}
+ var length:int=file.get_length()
+ var length_error:int=file.get_error()
+ # No new profile-size limit; exact original length or unknown I/O facts.
+ if length_error!=OK or length<0:file.close();return {"state":"unknown"}
+ var bytes:PackedByteArray=file.get_buffer(length)
+ var error:int=file.get_error()
+ file.close()
+ if error!=OK or bytes.size()!=length:return {"state":"unknown","declared":length,"error":error,"bytes":bytes}
+ return {"state":"read","bytes":bytes}
+# Only canonical, typed observations reach comparisons. Extra/contradictory shape
+# is unknown, never evidence of absence. This is not a profile-size contract.
+func _failure_fact(raw:Variant)->Dictionary:
+ if not raw is Dictionary:return {"state":"unknown"}
+ var state_value:Variant=raw.get("state")
+ if not state_value is String:return {"state":"unknown"}
+ var state:String=state_value
+ if state=="read":
+  var bytes_value:Variant=raw.get("bytes")
+  if raw.size()!=2 or not bytes_value is PackedByteArray:return {"state":"unknown"}
+  return {"state":"read","bytes":bytes_value}
+ if state=="missing":
+  var error_value:Variant=raw.get("open_error")
+  if raw.size()!=2 or not error_value is int:return {"state":"unknown"}
+  if error_value==ERR_FILE_NOT_FOUND:return {"state":"missing","open_error":ERR_FILE_NOT_FOUND}
+ return {"state":"unknown"}
+func _failure_matches(raw:Variant,expected:PackedByteArray)->String:
+ var fact:Dictionary=_failure_fact(raw)
+ var state:String=fact.state
+ if state!="read":return state
+ var bytes:PackedByteArray=fact.bytes
+ return "matches" if bytes==expected else "different"
+func _failure_observation(b)->Dictionary:
+ return {"serial":b.quest_save_serial,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"payload":b.last_saved_payload,"obligation":open_obligation,"obligation_value":open_obligation.duplicate(true),"clock":clock,"anchor":anchor_ms,"base":base_used_ms,"last":last_ms,"frozen":frozen,"blocked":blocked,"paused":storage_paused,"map":b.automation.position_map,"cell":b.automation.position_cell,"transport":b._fee_bindings.get(b.quest_auto.connection)}
+func _failure_observation_current(b,scope:Dictionary)->bool:
+ return b.quest_save_serial==scope.serial and is_same(b.session._profile,scope.profile_ref) and b.session._profile==scope.profile and b.last_saved_payload==scope.payload and is_same(open_obligation,scope.obligation) and open_obligation==scope.obligation_value and clock==scope.clock and anchor_ms==scope.anchor and base_used_ms==scope.base and last_ms==scope.last and frozen==scope.frozen and blocked==scope.blocked and storage_paused==scope.paused and b.automation.position_map==scope.map and b.automation.position_cell==scope.cell and b._fee_bindings.get(b.quest_auto.connection)==scope.transport
+func _failure_close_baseline(b,frame:Dictionary,evidence:Dictionary)->bool:
+ # This slice does not acquire or close a separate fee lifecycle obligation.
+ if b.session._profile.has("quest_auto_fee_lifecycle") or not _initial_e2_owner(b,frame,false):return false
+ if not is_same(b.session._profile,frame.profile_ref) or b.session._profile!=frame.profile or b.last_saved_payload!=frame.payload:return false
+ if not b.session._valid_profile(frame.profile) or not State.valid(frame.profile.get("quest_loot",{})):return false
+ var entry:Dictionary=frame.profile.quest_loot.entries.get(State.STEP,{})
+ if not State.valid_entry(entry) or not entry.open_span or entry.recovery_blocked or frame.profile.quest_loot.recovery_blocked or State.identity(entry)!=frame.entry:return false
+ if open_obligation.is_empty() or not is_same(open_obligation.owner,b.session) or not is_same(open_obligation.runner,b.quest_auto) or open_obligation.path!=frame.path or open_obligation.identity!=frame.identity or not is_same(open_obligation.lifetime,lifetime) or open_obligation.entry!=frame.entry:return false
+ var scope:Dictionary=_failure_observation(b)
+ var facts:Array[Dictionary]=[]
+ for path in [frame.path,frame.path+".bak",frame.path+".tmp"]:
+  if not _initial_failure_execution(b,frame) or not _failure_observation_current(b,scope):return false
+  var raw:Variant=_failure_disk(path)
+  if not _initial_failure_execution(b,frame) or not _failure_observation_current(b,scope):return false
+  evidence.facts.append(raw.duplicate(true))
+  facts.append(_failure_fact(raw))
+ if _failure_matches(facts[0],str(frame.payload).to_utf8_buffer())!="matches" or facts[1].state!="read" or facts[2].state!="missing":return false
+ var backup_bytes:PackedByteArray=facts[1].bytes
+ var old_backup:Variant=JSON.parse_string(backup_bytes.get_string_from_utf8())
+ return old_backup is Dictionary and b.session._valid_profile(old_backup)
+func _failure_close_current(b,record:Dictionary)->bool:
+ return _initial_failure_current(b,record) and b.quest_save_serial==record.serial and is_same(b.session._profile,record.profile_ref) and b.session._profile==record.profile and b.last_saved_payload==record.payload and is_same(open_obligation,record.obligation) and clock==record.clock and anchor_ms==record.anchor and base_used_ms==record.base and last_ms==record.last and not frozen and not blocked and not storage_paused and b._fee_bindings.get(record.frame.connection)==record.frame.transport and b.automation.position_map==record.frame.position_map and b.automation.position_cell==record.frame.position_cell
+func _retire_initial_failure(b,frame:Dictionary)->Dictionary:
+ if not _initial_failure_execution(b,frame):
+  # No Stop/capture/close/message/publication on behalf of an old call.
+  if is_same(initial_e2,frame):initial_e2={}
+  return {"ok":false,"stopped_in_memory":false,"budget_close":"unknown","stage":"stale_or_nonidle"}
+ var observation_serial:int=b.quest_save_serial
+ var evidence:Dictionary={"facts":[]}
+ var close_allowed:bool=_failure_close_baseline(b,frame,evidence)
+ # Disk reads above are observation only; never learn a successor authority.
+ if not _initial_failure_execution(b,frame):return {"ok":false,"stopped_in_memory":false,"budget_close":"unknown","stage":"stale_after_observation"}
+ close_allowed=close_allowed and b.quest_save_serial==observation_serial and is_same(b.session._profile,frame.profile_ref) and b.session._profile==frame.profile and b.last_saved_payload==frame.payload
+ var record:Dictionary={"frame":frame,"revoked_cap":RefCounted.new(),"serial":b.quest_save_serial,"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"payload":b.last_saved_payload,"obligation":open_obligation,"clock":clock,"anchor":anchor_ms,"base":base_used_ms,"last":last_ms,"result":{"ok":false,"stopped_in_memory":true,"budget_close":"not_attempted","stage":"execution_revoked","reason":"刷物校验失效，已停止新尝试；预算关闭未确认，未新增刷物尝试。"}}
+ # Ledger owner is captured from the actual sealed profile, not a new runner.
+ record.path=frame.path;record.profile_id=str(frame.profile.get("profile_id",""));record.character_id=str(frame.profile.get("character_id",""))
+ record.ledger_owner={"step_id":State.STEP,"entry":frame.entry.duplicate(true),"issued_seq":frame.profile.quest_loot.entries[State.STEP].issued_seq}
+ record.expected={};record.expected_payload="";record.cutoff=-1
+ record.write_token=null;record.write_receipts=[];record.writer_attempts=0;record.retry_count=0;record.prewrite_proven=false;record.installed_proven=false;record.installed_ref={}
+ record.baseline_facts=evidence.facts;record.writer_result={};record.readback_facts=[];record.confirm_facts=[]
+ initial_failure=record
+ # No callback, snapshot, Stop, capture_idle_close or resume write in this revocation.
+ initial_e2={};ready_frame={};admission=record.revoked_cap
+ var q=b.quest_auto
+ q.running=false;q.owns_battle=false;q.phase="stopped";q.message=record.result.reason
+ q.clear_motion()
+ if close_allowed and _failure_close_current(b,record) and record.anchor>=0 and record.clock.is_valid():
+  # Clock output is local until the entire captured scope is rechecked.
+  var sample:Variant=record.clock.call()
+  if _failure_close_current(b,record) and State.integer(sample,0,State.MAX_MSEC) and sample>=record.last and sample>=record.anchor and record.base<=State.MAX_MSEC-(sample-record.anchor):
+   var used:int=record.base+int(sample)-record.anchor
+   var planned:Dictionary=State.progress(record.profile.quest_loot,State.STEP,frame.entry,used,true)
+   if planned.get("ok",false):
+    var expected:Dictionary=record.profile.duplicate(true)
+    expected.quest_loot=planned.ledger
+    # Freeze once before the real writer; false never earns retry authority.
+    record.expected=expected.duplicate(true);record.expected_payload=JSON.stringify(expected);record.cutoff=int(sample)
+    record.writer_attempts=1
+    record.result={"ok":false,"stopped_in_memory":true,"budget_close":"unknown","stage":"writer_in_flight","reason":"刷物记录待确认；已停止本次刷物。"}
+    var envelope:Dictionary=b.session.begin_loot_failure_close(record.profile,{"step_id":State.STEP,"expected_entry":frame.entry,"total_used_ms":used},frame.path,b,self,record.revoked_cap)
+    _finish_failure_write(b,record,envelope)
+ if _initial_failure_current(b,record):
+  q.message=record.result.reason
+  b.publish() # Last action: no returning old-call mutation after publication.
+ return record.result.duplicate(true)
+
+func _finish_failure_write(b,record:Dictionary,envelope:Dictionary)->bool:
+ # No old-call side effect after the original writer can replace its owner.
+ if not _initial_failure_current(b,record):return false
+ var token:Variant=envelope.get("token")
+ if token is RefCounted:record.write_token=token
+ var result_value:Variant=envelope.get("result",{})
+ var result:Dictionary=result_value if result_value is Dictionary else {}
+ record.write_receipts.append(envelope.duplicate(true))
+ record.writer_result=result.duplicate(true)
+ record.prewrite_proven=b.session.loot_failure_retryable(record.write_token)
+ record.installed_proven=result.get("ok") is bool and result.ok and result.get("installed") is bool and result.installed and b.quest_save_serial==record.serial+1 and b.session._profile==record.expected and b.last_saved_payload==record.expected_payload
+ if record.installed_proven:record.installed_ref=b.session._profile
+ var read_scope:Dictionary=_failure_observation(b)
+ var facts:Array[Dictionary]=[]
+ for path in [record.path,record.path+".bak",record.path+".tmp"]:
+  if not _initial_failure_current(b,record) or not _failure_observation_current(b,read_scope):return false
+  var raw:Variant=_failure_disk(path)
+  if not _initial_failure_current(b,record) or not _failure_observation_current(b,read_scope):return false
+  record.readback_facts.append(raw.duplicate(true))
+  facts.append(_failure_fact(raw))
+ record.result={"ok":false,"stopped_in_memory":true,"budget_close":"unknown","stage":"close_partial_or_unknown","reason":"刷物记录待确认；已停止本次刷物。","writer_ok":result.get("ok","unknown"),"primary_candidate":_failure_matches(facts[0],record.expected_payload.to_utf8_buffer()),"backup_previous":_failure_matches(facts[1],str(record.payload).to_utf8_buffer()),"temporary_state":facts[2].state}
+ if record.installed_proven and record.result.primary_candidate=="matches" and record.result.backup_previous=="matches" and facts[2].state=="missing":
+  record.result.ok=true;record.result.budget_close="persisted";record.result.stage="close_verified"
+  record.result.reason="刷物校验失效，已停止；原预算时段已保存关闭。"
+  accept_commit(record.expected.quest_loot)
+  if is_same(open_obligation,record.obligation):open_obligation={}
+ return record.result.ok
+func retry_failed_initial_once(b)->bool:
+ if not failure_pending_for_profile(b):return false
+ var record:Dictionary=initial_failure
+ if record.retry_count!=0 or record.expected.is_empty() or not _failure_close_current(b,record):return false
+ if not b.session.loot_failure_retryable(record.write_token):return false
+ record.retry_count=1 # Consume locally BEFORE any read or callback/reentry.
+ var facts:Array[Dictionary]=[]
+ for path in [record.path,record.path+".bak",record.path+".tmp"]:
+  if not _failure_close_current(b,record):return false
+  var raw:Variant=_failure_disk(path)
+  if not _failure_close_current(b,record):return false
+  facts.append(_failure_fact(raw))
+ if record.baseline_facts.size()!=3:return false
+ var original_backup:Dictionary=_failure_fact(record.baseline_facts[1])
+ if original_backup.state!="read" or _failure_matches(facts[0],str(record.payload).to_utf8_buffer())!="matches" or _failure_matches(facts[1],original_backup.bytes)!="matches" or facts[2].state!="missing":return false
+ if not _failure_close_current(b,record):return false
+ record.writer_attempts=2
+ record.result={"ok":false,"stopped_in_memory":true,"budget_close":"unknown","stage":"retry_in_flight","reason":"刷物记录待确认；已停止本次刷物。"}
+ var envelope:Dictionary=b.session.retry_loot_failure_close(record.write_token)
+ return _finish_failure_write(b,record,envelope)
+
 func _tick_initial_e2(b)->void:
  var frame:Dictionary=initial_e2
  if not _initial_e2_owner(b,frame,true):
-  if is_same(initial_e2,frame):initial_e2={}
+  _retire_initial_failure(b,frame)
   return
  if not b.continuation_dispatch_ready(frame.dispatch):return
  var generation:int=b._normal_process_generation
@@ -401,7 +624,7 @@ func _tick_initial_e2(b)->void:
  frame.last_generation=generation
  var reply:Dictionary=attempt_once(b)
  if reply.get("_sample_stale",false):
-  if is_same(initial_e2,frame):initial_e2={}
+  _retire_initial_failure(b,frame)
   return
  var battle_id:String=str(reply.get("battle_id",""))
  if reply.get("battle",false):
@@ -409,7 +632,7 @@ func _tick_initial_e2(b)->void:
   elif is_same(initial_e2,frame):initial_e2={}
   return
  if not _initial_e2_owner(b,frame,false):
-  if is_same(initial_e2,frame):initial_e2={}
+  _retire_initial_failure(b,frame)
   return
  if reply.get("ok",false):
   var sample:Variant=reply.get("_progress_sample",{})
