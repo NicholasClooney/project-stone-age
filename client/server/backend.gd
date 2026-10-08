@@ -13,6 +13,7 @@ const GameSession = preload("res://server/game_session.gd")
 const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 var _fee_start_journal_writer = FeeStartJournalWriter.new()
+var _fee_recovered_close_writer = preload("res://server/fee_recovered_close_writer.gd").new()
 var _fee_loaded_baseline_writer = preload("res://server/fee_loaded_baseline_writer.gd").new()
 const BattleSession = preload("res://server/battle_session.gd")
 const SquadBattleSession = preload("res://server/squad_battle_session.gd")
@@ -246,6 +247,7 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	_fee_loaded_baseline_writer.revoke_loaded_authority()
 	var load_owner=session
 	var load_scope_path:String=save_path
 	stationary.stop(self,"载入存档停止了原地遇敌。")
@@ -2449,6 +2451,15 @@ func _cmd_permit_shop_choose(command:Dictionary)->Dictionary:
 	if not command.get("token") is String or not command.get("choice") is String:return _reject("无效的原售证确认。")
 	return RequiredFee.choose_shop(self,command.token,command.choice,command)
 ## Dormant B2a baseline execution seam. load_profile only binds evidence.
+func _begin_fee_recovered_close()->Dictionary:
+	return _fee_recovered_close_writer.begin(self)
+
+func _persist_fee_recovered_close(handle:Variant)->Dictionary:
+	return _fee_recovered_close_writer.persist(self,handle)
+
+func _end_fee_recovered_close(handle:Variant)->void:
+	_fee_recovered_close_writer.end(self,handle)
+
 func _begin_fee_loaded_baseline()->Dictionary:
 	return _fee_loaded_baseline_writer.begin(self)
 

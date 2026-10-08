@@ -6,6 +6,7 @@ const Journal = preload("res://server/fee_attempt_lifecycle.gd")
 var _bound: Dictionary = {}
 var _frame: Dictionary = {}
 var _executing := false
+var _close_continuation: Dictionary = {}
 
 func bind_loaded(b, loaded_session, path: String, previous_receipt: Dictionary) -> RefCounted:
 	var r: Dictionary = loaded_session._fee_loaded_receipt
@@ -164,6 +165,8 @@ func persist(b, h: Variant) -> Dictionary:
 	var serial: int = c.serial
 	if Exact.row_state(rows[0], true, r.loaded_bytes) == "matches":
 		r.used = true # One receipt, no file write, no artificial save serial.
+		_frame.verified_rows = rows.duplicate(true)
+		_mint_close_continuation(b)
 		return _finish(b, h, {"ok": true, "stage": "already_matches", "writer_return": "not_called", "primary": "matches", "backup": "unchanged", "temporary": "matches", "installed": false, "serial_before": serial, "serial_after": serial})
 	# Session consumes the receipt before raw I/O; nested commit/end cannot reuse it.
 	var result: Dictionary = c.session._write_fee_loaded_baseline_once(r, c.path, c.profile_ref, c.profile, self, b)
@@ -179,6 +182,9 @@ func persist(b, h: Variant) -> Dictionary:
 		b.quest_save_serial = serial + 1
 		installed = true # Profile was the exact load product already; never swap a successor.
 	var succeeded: bool = installed and k == "matches" and t == "matches" and Exact.strict_true(result.get("writer_return"))
+	if succeeded:
+		_frame.verified_rows = [result.primary.duplicate(true), result.backup.duplicate(true), result.temporary.duplicate(true)]
+		_mint_close_continuation(b)
 	return _finish(b, h, {"ok": succeeded, "stage": "baseline_verified" if succeeded else "partial_or_unknown",
 		"writer_return": Exact.writer_state(result.get("writer_return")), "primary": p, "backup": k, "temporary": t,
 		"installed": installed, "serial_before": serial, "serial_after": b.quest_save_serial})
@@ -202,3 +208,70 @@ func _owner_after_consumption(b) -> bool:
 		and is_same(b.quest_auto, c.runner) and is_same(b.quest_auto.identity, c.identity_ref) and b.quest_auto.identity.checkpoint() == c.identity \
 		and is_same(b.automation, c.automation) and is_same(b.automation.start_lifetime, c.auto_token) \
 		and is_same(b.stationary, c.stationary) and is_same(b.battle, c.battle) and is_same(b.original_quests, c.original)
+
+## Memory-only revocation at every Backend load entry, including failed loads.
+## Never steals an executing frame or another writer's claim.
+func revoke_loaded_authority() -> void:
+	_bound = {}
+	_close_continuation = {}
+
+## Only persist's two internally verified success branches reach this method.
+## Diagnostics are not an input and the envelope never leaves the private writer pair.
+func _mint_close_continuation(b) -> void:
+	if not _executing or _frame.is_empty() or not _frame.has("verified_rows"):return
+	if not is_same(_bound, _frame.bound) or not is_same(b._fee_loaded_baseline_writer, self):return
+	_close_continuation = {"token": RefCounted.new(), "state": "ready", "bound": _bound,
+		"receipt_token": _bound.receipt.token, "receipt_profile_ref": _bound.receipt.profile_ref, "receipt_value": _receipt_value(_bound.receipt),
+		"profile_ref": b.session._profile, "profile": b.session._profile.duplicate(true),
+		"cache": b.last_saved_payload, "serial": b.quest_save_serial,
+		"rows": _frame.verified_rows.duplicate(true), "pending": _frame.pending, "loot": _frame.loot,
+		"page": _frame.page, "depth": _frame.depth, "dispatch_depth": _frame.dispatch_depth,
+		"observer_depth": _frame.observer_depth, "flush_depth": _frame.flush_depth, "epoch": _frame.epoch}
+
+func _receipt_value(r: Dictionary) -> Dictionary:
+	var value: Dictionary = r.duplicate(false)
+	value.erase("token")
+	value.erase("profile_ref")
+	return value.duplicate(true)
+
+func _continuation_owner_current(b, c: Dictionary) -> bool:
+	if c.is_empty() or not is_same(_bound, c.bound) or _bound.is_empty():return false
+	var a: Dictionary = c.bound
+	if not is_same(b.session, a.session) or not is_same(b.session._fee_loaded_receipt, a.receipt) or not Exact.strict_true(a.receipt.get("used")):return false
+	if not is_same(a.receipt.get("token"), c.receipt_token) or not is_same(a.receipt.get("profile_ref"), c.receipt_profile_ref) or not Exact.same_value(_receipt_value(a.receipt), c.receipt_value):return false
+	return b.save_path == a.path and b.account_name == a.account \
+		and is_same(b.quest_loot, a.timer) and is_same(b.quest_loot.lifetime, a.timer_lifetime) \
+		and is_same(b.quest_auto, a.runner) and is_same(b.quest_auto.identity, a.identity_ref) and b.quest_auto.identity.checkpoint() == a.identity \
+		and is_same(b.automation, a.automation) and is_same(b.automation.start_lifetime, a.auto_token) \
+		and is_same(b.stationary, a.stationary) and is_same(b.battle, a.battle) and is_same(b.original_quests, a.original) \
+		and is_same(b.session._pending, c.pending) and is_same(b.session._loot_settlement, c.loot) and is_same(b.original_quests.pending, c.page) \
+		and b._depth == c.depth and b._dispatch_boundary_depth == c.dispatch_depth and b._observer_depth == c.observer_depth \
+		and b._flush_depth == c.flush_depth and b._dispatch_epoch == c.epoch
+
+func take_close_continuation(b, consumer, claim: RefCounted) -> Dictionary:
+	if _close_continuation.is_empty() or _close_continuation.state != "ready":return {}
+	if not is_same(consumer, b._fee_recovered_close_writer) or claim == null or not is_same(b._fee_attempt_close_call, claim):return {}
+	if not consumer.owns_claim(claim):return {}
+	var c: Dictionary = _close_continuation
+	if _executing or not _frame.is_empty() or not _continuation_owner_current(b, c) or not _idle(b) \
+		or not is_same(b.session._profile, c.profile_ref) or not Exact.same_value(b.session._profile, c.profile) \
+		or b.last_saved_payload != c.cache or b.quest_save_serial != c.serial:
+		_close_continuation = {}
+		return {}
+	c.state = "taken"
+	c.consumer = weakref(consumer)
+	c.claim = claim
+	return c
+
+## Profile/cache/serial CAS belongs to the consumer after take: W1 changes them.
+func close_continuation_current(b, consumer, c: Dictionary) -> bool:
+	return not c.is_empty() and is_same(c, _close_continuation) and c.state == "taken" \
+		and is_same(consumer, b._fee_recovered_close_writer) and is_same(c.consumer.get_ref(), consumer) \
+		and is_same(b._fee_attempt_close_call, c.claim) and _continuation_owner_current(b, c)
+
+func end_close_continuation(consumer, c: Dictionary) -> void:
+	if c.is_empty() or not is_same(c, _close_continuation) or c.state != "taken":return
+	if is_same(c.consumer.get_ref(), consumer):_close_continuation = {}
+
+func discard_ready_continuation() -> void:
+	if not _close_continuation.is_empty() and _close_continuation.state == "ready":_close_continuation = {}
