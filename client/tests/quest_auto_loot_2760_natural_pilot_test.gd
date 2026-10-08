@@ -917,6 +917,51 @@ func write_load_copy(path:String,bytes:PackedByteArray,label:String)->Dictionary
  check(copied.get("ok",false) and copied.bytes==bytes,"Independent load copy readback equals exact source bytes: "+label)
  return copied
 
+func expected_cold_ledger_from_source(profile:Dictionary,from_backup:bool)->Dictionary:
+ # Independent oracle from the selected normalized source, never State.recovered.
+ var expected:Dictionary=profile.quest_loot.duplicate(true)
+ if expected.entries.is_empty():
+  if from_backup:expected.recovery_blocked=true
+  return expected
+ var prior_root_blocked:bool=expected.recovery_blocked
+ for key in expected.entries:
+  var entry:Dictionary=expected.entries[key]
+  if from_backup or prior_root_blocked or entry.recovery_blocked or entry.open_span:
+   entry.open_span=false
+   entry.settled_seq=entry.issued_seq
+   if entry.revision<2147483647:entry.revision+=1
+   entry.recovery_blocked=false
+ expected.recovery_blocked=false
+ return expected
+func verify_loaded_budget_remainder(source:Dictionary,loaded:Dictionary,label:String)->bool:
+ var original_ledger:Dictionary=source.quest_loot
+ var actual_ledger:Dictionary=loaded.quest_loot
+ if original_ledger.entries.is_empty():
+  check(actual_ledger.entries.is_empty(),label+" empty source never manufactures an entry")
+  return failures==0
+ var prior:Dictionary=original_ledger.entries[State.STEP]
+ var entry:Dictionary=actual_ledger.entries[State.STEP]
+ for key in ["budget_id","origin_run_id","generation","limit_ms","used_ms","existing_items","new_items","saved_battles","issued_seq"]:
+  check(entry[key]==prior[key],label+" retains selected-source field "+key)
+  if failures:return false
+ check(maxi(0,int(entry.limit_ms)-int(entry.used_ms))==maxi(0,int(prior.limit_ms)-int(prior.used_ms)),label+" remaining budget uses only selected-source stored lower bound")
+ if failures:return false
+ # Pure candidate exercise only: no actual restart, writer, reward or timer.
+ var new_run:String="cccccccccccccccccccccccccccccccc" if prior.origin_run_id!="cccccccccccccccccccccccccccccccc" else "dddddddddddddddddddddddddddddddd"
+ var acquired:Dictionary=State.acquire(actual_ledger,State.STEP,"eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee",new_run,180,999)
+ check(acquired.get("ok",false) and acquired.get("ledger",{})==actual_ledger,label+" another run/limit/baseline cannot refresh existing budget")
+ if failures:return false
+ var identity:Dictionary={"budget_id":entry.budget_id,"generation":entry.generation,"revision":entry.revision}
+ var opened:Dictionary=State.open(acquired.ledger,State.STEP,identity)
+ if entry.used_ms>=entry.limit_ms or entry.revision>=2147483647 or entry.issued_seq>=2147483647:
+  check(not opened.get("ok",false),label+" exhausted balance/counters cannot open a new span")
+ else:
+  var expected_open:Dictionary=actual_ledger.duplicate(true)
+  expected_open.entries[State.STEP].open_span=true
+  expected_open.entries[State.STEP].revision+=1
+  expected_open.entries[State.STEP].issued_seq+=1
+  check(opened.get("ok",false) and opened.get("ledger",{})==expected_open,label+" same-step new span changes only open/revision/issued, never limit/used/rewards")
+ return failures==0
 func independent_load_readback(b,primary:Dictionary,backup:Dictionary)->bool:
  if failures:return false
  for pair in [["primary",primary,false],["backup",backup,true]]:
@@ -957,12 +1002,13 @@ func independent_load_readback(b,primary:Dictionary,backup:Dictionary)->bool:
   check(loaded and loader.last_error.is_empty(),"Fresh Session.load_game accepts the isolated "+label+" profile")
   if failures:return false
   var expected:Dictionary=loader._normalize_numbers(raw.duplicate(true))
-  var expected_ledger:Dictionary=State.recovered(expected,from_backup)
+  var source_profile:Dictionary=expected.duplicate(true)
+  var expected_ledger:Dictionary=expected_cold_ledger_from_source(source_profile,from_backup)
   check(not expected_ledger.is_empty(),"Independent "+label+" profile has a valid deterministic recovered ledger")
   if failures:return false
   expected.quest_loot=loader._normalize_numbers(expected_ledger)
   var actual:Dictionary=loader._profile.duplicate(true)
-  check(actual==expected,"Fresh "+label+" load preserves the complete v8 profile; only numeric normalization and the documented backup recovery lock are expected")
+  check(actual==expected,"Fresh "+label+" load preserves the complete v8 profile; only numeric normalization and independently specified cold retirement are expected")
   if failures:return false
   var copy_after:Dictionary=read_disk(copy_path)
   if failures or not copy_after.get("ok",false):return false
@@ -972,25 +1018,31 @@ func independent_load_readback(b,primary:Dictionary,backup:Dictionary)->bool:
   check(loader._normalize_numbers(copy_after_profile)==actual,"The isolated "+label+" post-load bytes represent the entire loaded profile")
   if failures:return false
   if from_backup:
-   check(copy_after_profile.quest_loot.recovery_blocked and copy_after_profile.quest_loot.entries.get(State.STEP,{}).get("recovery_blocked",false),"Backup recovery lock is durably written only to its isolated load copy")
+   check(loader._normalize_numbers(copy_after_profile.quest_loot)==expected_ledger,"Independent selected-backup cold ledger is durably written only to isolated load copy")
    if failures:return false
    var copy_backup_after:Dictionary=read_disk(copy_backup)
    if failures or not copy_backup_after.get("ok",false):return false
    check(copy_backup_after.bytes==source.bytes and copy_backup_after.sha256==source.sha256,"Fallback backup source bytes remain exact after GameSession.load_game")
    if failures:return false
-  else:
+  elif expected_ledger==source_profile.quest_loot:
    check(copy_after.bytes==source.bytes and copy_after.sha256==source.sha256,"Current primary load is read-only and leaves its isolated source copy byte-identical")
+   if failures:return false
+  if not from_backup and expected_ledger!=source_profile.quest_loot:
+   var rotated_copy:Dictionary=read_disk(copy_backup)
+   if failures or not rotated_copy.get("ok",false):return false
+   check(rotated_copy.bytes==source.bytes,"Cold retirement rotates only its isolated selected source generation")
    if failures:return false
   check(actual.get("original_items",[])==expected.get("original_items",[]) and actual.get("original_instances",[])==expected.get("original_instances",[]),"Independent "+label+" load preserves every original item and UID instance")
   if failures:return false
-  check(actual.get("quest_loot",{})==expected.get("quest_loot",{}),"Independent "+label+" load preserves the complete ledger with only source-defined recovery flags")
+  check(actual.get("quest_loot",{})==expected.get("quest_loot",{}),"Independent "+label+" load preserves the complete ledger with only independently specified span/revision retirement")
   if failures:return false
   if from_backup:
-   check(actual.quest_loot.recovery_blocked and actual.quest_loot.entries.get(State.STEP,{}).get("recovery_blocked",false),"Backup load retains the source-defined recovery lock even when entries are otherwise empty/closed")
+   check(actual.quest_loot==expected_ledger and (actual.quest_loot.recovery_blocked if source_profile.quest_loot.entries.is_empty() else not actual.quest_loot.recovery_blocked),"Fallback empty history stays blocked; known budget retires without refresh")
    if failures:return false
   else:
    check(not actual.quest_loot.entries.get(State.STEP,{}).get("open_span",true),"Primary load reads the naturally closed final span")
    if failures:return false
+  if not verify_loaded_budget_remainder(source_profile,actual,label):return false
   print("PILOT_LOAD_READBACK ",JSON.stringify({"source":label,"source_sha256":source.sha256,"source_length":source.declared,"copy_before_load_sha256":copy.sha256,"copy_backup_before_load_sha256":copy_backup_before.get("sha256",""),"loaded":loaded,"full_profile_equal":actual==expected,"item_count":actual.get("original_items",[]).size(),"uid_count":actual.get("original_instances",[]).size(),"ledger":actual.get("quest_loot",{}),"last_error":loader.last_error}))
   if failures:return false
  var primary_after:Dictionary=read_disk(b.save_path)
