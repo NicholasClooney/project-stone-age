@@ -22,3 +22,10 @@ static func saton_request(b,job_id:int)->Dictionary:
   return {"status":"manual","stage":"unexpected_footprint","reason":"足迹与委托状态不一致，请手动核实。"}
  return Saton.request_proposal(b)
 const RulesForSaton=preload("res://server/original_quests.gd")
+
+const Munde=preload("res://server/quest_auto_munde_plan.gd")
+static func munde_request(b,job_id:int)->Dictionary:
+ if job_id!=8 or not b._munde_request_enabled():return {"status":"manual","reason":"梦德首请求尚未开放。"}
+ if preload("res://server/original_quests.gd").flag(b.session._profile,"now",9) or preload("res://server/original_quests.gd").flag(b.session._profile,"ended",9):
+  return {"status":"manual","stage":"request9_complete","reason":"梦德首委托已处理；后续任务请手动进行。"}
+ return Munde.request_proposal(b,job_id)
