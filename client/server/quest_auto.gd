@@ -104,6 +104,28 @@ func _munde_return(b,f:Dictionary)->bool:
 
 
 
+# Private lifetime for the dormant ordinary Brothers route; never a fee capability.
+var _brothers_scope:Dictionary={}
+func _brothers_start_frame(b,command:Dictionary)->Dictionary:
+ var peer:Variant=command.get("_quest_connection")
+ if b.automation.position_map!=31701 or not b.quest_arrival.has_arrival(b,31701,b.automation.position_cell):return {}
+ if not peer is int or peer==-1 or not b._fee_bindings.get(peer) is RefCounted:return {}
+ return {"arrival":weakref(b.quest_arrival),"epoch":b.quest_arrival._epoch,"transition":transition_frame(b),"peer":peer,"binding":b._fee_bindings.get(peer),"account":b.account_name,"profile":b.session._profile.get("profile_id"),"character":b.session._profile.get("character_id")}
+func _brothers_start_current(b,f:Dictionary)->bool:
+ return not f.is_empty() and is_same(b.quest_arrival,f.arrival.get_ref()) and b.quest_arrival._epoch==f.epoch and b.automation.position_map==31701 and b.quest_arrival.has_arrival(b,31701,b.automation.position_cell) and b._brothers_request_enabled() and transition_current(b,f.transition) and b.account_name==f.account and b.session._profile.get("profile_id")==f.profile and b.session._profile.get("character_id")==f.character and is_same(b._fee_bindings.get(f.peer),f.binding)
+func _brothers_live(b)->bool:
+ if _brothers_scope.is_empty() or b.session==null:return false
+ var f:Dictionary=_brothers_scope
+ return b._brothers_request_enabled() and is_same(b.quest_arrival,f.arrival.get_ref()) and b.quest_arrival._epoch==f.epoch and b.automation.position_map==31701 and b.quest_arrival.has_arrival(b,31701,b.automation.position_cell) and is_same(b.quest_auto,self) and is_same(b.session,f.session.get_ref()) and is_same(identity,f.identity.get_ref()) and identity.run_id==f.run and b.save_path==f.path and b.account_name==f.account and b.session._profile.get("profile_id")==f.profile and b.session._profile.get("character_id")==f.character and connection==f.connection and is_same(b._fee_bindings.get(connection),f.binding)
+func _brothers_capture(b)->Dictionary:
+ if _brothers_scope.is_empty():return {}
+ return {"scope":_brothers_scope,"transition":transition_frame(b)}
+func _brothers_return(b,f:Dictionary)->bool:
+ return f.is_empty() or (is_same(_brothers_scope,f.scope) and _brothers_live(b) and transition_current(b,f.transition))
+
+
+
+
 func delivery_supports(id:int)->bool:
  return Registry.supports(id)
 func transition_frame(b)->Dictionary:
@@ -126,6 +148,7 @@ func strict_select(b,selected_id:int=-1,allow_clean:Variant=null)->Dictionary:
  if id==6 and b._doctor_request_enabled():return Registry.doctor_request(b,id)
  if id==10 and b._saton_request_enabled():return Registry.saton_request(b,id)
  if id==8 and b._munde_request_enabled():return Registry.munde_request(b,id)
+ if id==18 and b._brothers_request_enabled():return Registry.brothers_request(b,id)
  if delivery_supports(id):return Registry.select(b,id)
  var selected:=select(b,id,allow_clean)
  if not selected.is_empty():return {"status":"step","step":selected}
@@ -515,7 +538,7 @@ func prepare_start(b,command:Dictionary) -> Dictionary:
  var id=command.get("quest_id",-1)
  if not (id is int or id is float) or float(id)!=floor(float(id)):return b._reject("无效任务编号。")
  var quest:=row(b,int(id))
- if quest.is_empty() or not (_supports_automatic_start(int(id),int(quest.event)) or (b._doctor_request_enabled() and int(id)==6 and int(quest.event)==15) or (b._saton_request_enabled() and int(id)==10 and int(quest.event)==13) or (b._munde_request_enabled() and int(id)==8 and int(quest.event)==9)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("此任务尚未开放自动推进。")
+ if quest.is_empty() or not (_supports_automatic_start(int(id),int(quest.event)) or (b._doctor_request_enabled() and int(id)==6 and int(quest.event)==15) or (b._saton_request_enabled() and int(id)==10 and int(quest.event)==13) or (b._munde_request_enabled() and int(id)==8 and int(quest.event)==9) or (b._brothers_request_enabled() and int(id)==18 and int(quest.event)==28)) or not int(quest.event) in b.quest_catalog.enabled_events:return b._reject("此任务尚未开放自动推进。")
  if b._doctor_request_enabled() and int(id)==6:
   var peer:Variant=command.get("_quest_connection")
   if not peer is int or peer==-1 or not b._fee_bindings.get(peer) is RefCounted:return b._reject("博士首请求需要当前可信连接。")
@@ -525,6 +548,10 @@ func prepare_start(b,command:Dictionary) -> Dictionary:
  if b._munde_request_enabled() and int(id)==8:
   var peer:Variant=command.get("_quest_connection")
   if not peer is int or peer==-1 or not b._fee_bindings.get(peer) is RefCounted:return b._reject("梦德首请求需要当前可信连接。")
+ if b._brothers_request_enabled() and int(id)==18:
+  var peer:Variant=command.get("_quest_connection")
+  if not peer is int or peer==-1 or not b._fee_bindings.get(peer) is RefCounted:return b._reject("五兄弟首请求需要当前可信连接。")
+  if b.automation.position_map!=31701 or not b.quest_arrival.has_arrival(b,31701,b.automation.position_cell):return b._reject("请先手动沿原入口进入五兄弟一层。")
  if b.battle_open or not b.session._pending.is_empty() or b.automation.running or b.automation.hunt_running or b.automation.flow_active() or not b.original_quests.pending.is_empty():return b._reject("当前正忙。")
  if b.quest_visit_guard.is_valid():
   var reason:=str(b.quest_visit_guard.call())
@@ -544,12 +571,15 @@ func start(b,command:Dictionary) -> Dictionary:
  var doctor_admission:Dictionary={}
  var saton_admission:Dictionary={}
  var munde_admission:Dictionary={}
+ var brothers_admission:Dictionary={}
  var doctor_id:Variant=command.get("quest_id")
  var saton_id:Variant=command.get("quest_id")
  var munde_id:Variant=command.get("quest_id")
+ var brothers_id:Variant=command.get("quest_id")
  var doctor_start:bool=b._doctor_request_enabled() and (doctor_id is int or doctor_id is float) and doctor_id==6
  var saton_start:bool=b._saton_request_enabled() and (saton_id is int or saton_id is float) and saton_id==10
  var munde_start:bool=b._munde_request_enabled() and (munde_id is int or munde_id is float) and munde_id==8
+ var brothers_start:bool=b._brothers_request_enabled() and (brothers_id is int or brothers_id is float) and brothers_id==18
  if doctor_start:
   doctor_admission=_doctor_start_frame(b,command)
   if doctor_admission.is_empty():return b._reject("博士首请求需要当前可信连接。")
@@ -559,14 +589,19 @@ func start(b,command:Dictionary) -> Dictionary:
  if munde_start:
   munde_admission=_munde_start_frame(b,command)
   if munde_admission.is_empty():return b._reject("梦德首请求需要当前可信连接。")
+ if brothers_start:
+  brothers_admission=_brothers_start_frame(b,command)
+  if brothers_admission.is_empty():return b._reject("五兄弟首请求需要当前可信连接。")
  var prepared:Dictionary=prepare_start(b,command)
  if not prepared.get("ok",false):return prepared
  if doctor_start and not _doctor_start_current(b,doctor_admission):return b._reject("博士首请求发起身份已改变。")
  if saton_start and not _saton_start_current(b,saton_admission):return b._reject("萨顿首请求发起身份已改变。")
  if munde_start and not _munde_start_current(b,munde_admission):return b._reject("梦德首请求发起身份已改变。")
+ if brothers_start and not _brothers_start_current(b,brothers_admission):return b._reject("五兄弟首请求发起身份已改变。")
  _doctor_scope={}
  _saton_scope={}
  _munde_scope={}
+ _brothers_scope={}
  if prepared.source:
   _install_source_start(prepared.client,prepared.connection)
   b.publish()
@@ -591,6 +626,8 @@ func start(b,command:Dictionary) -> Dictionary:
   _saton_scope={"session":weakref(b.session),"identity":weakref(identity),"run":identity.run_id,"path":b.save_path,"account":b.account_name,"profile":b.session._profile.get("profile_id"),"character":b.session._profile.get("character_id"),"connection":connection,"binding":b._fee_bindings.get(connection)}
  if quest_id==8 and b._munde_request_enabled():
   _munde_scope={"session":weakref(b.session),"identity":weakref(identity),"run":identity.run_id,"path":b.save_path,"account":b.account_name,"profile":b.session._profile.get("profile_id"),"character":b.session._profile.get("character_id"),"connection":connection,"binding":b._fee_bindings.get(connection)}
+ if quest_id==18 and b._brothers_request_enabled():
+  _brothers_scope={"arrival":weakref(b.quest_arrival),"epoch":b.quest_arrival._epoch,"session":weakref(b.session),"identity":weakref(identity),"run":identity.run_id,"path":b.save_path,"account":b.account_name,"profile":b.session._profile.get("profile_id"),"character":b.session._profile.get("character_id"),"connection":connection,"binding":b._fee_bindings.get(connection)}
  execution_mode=selected_mode(b)
  phase="travel"
  message=title(b)+"自动任务：准备前往原 NPC。"
@@ -617,6 +654,7 @@ func tick(b,delta:float) -> void:
  if not _doctor_scope.is_empty() and not b._doctor_request_call.is_empty():return
  if not _saton_scope.is_empty() and not b._saton_request_call.is_empty():return
  if not _munde_scope.is_empty() and not b._munde_request_call.is_empty():return
+ if not _brothers_scope.is_empty() and not b._brothers_request_call.is_empty():return
  if not _doctor_scope.is_empty() and not _doctor_live(b):
   # Abandon only this captured run, with no save/publish or pending mutation.
   if is_same(identity,_doctor_scope.identity.get_ref()) and identity.run_id==_doctor_scope.run:running=false;internal=false
@@ -628,6 +666,10 @@ func tick(b,delta:float) -> void:
  if not _munde_scope.is_empty() and not _munde_live(b):
   # Abandon only this captured run, with no save/publish or pending mutation.
   if is_same(identity,_munde_scope.identity.get_ref()) and identity.run_id==_munde_scope.run:running=false;internal=false
+  return
+ if not _brothers_scope.is_empty() and not _brothers_live(b):
+  # Abandon only this captured run, with no save/publish or pending mutation.
+  if is_same(identity,_brothers_scope.identity.get_ref()) and identity.run_id==_brothers_scope.run:running=false;internal=false
   return
  # A cancelled receipt may finish only its already-running original battle.
  if b.quest_loot.cancelled_battle_owner(b,b.quest_loot.cancelled_battle):return
@@ -673,11 +715,13 @@ func tick(b,delta:float) -> void:
  var doctor_tick:Dictionary=_doctor_scope
  var saton_tick:Dictionary=_saton_scope
  var munde_tick:Dictionary=_munde_scope
+ var brothers_tick:Dictionary=_brothers_scope
  internal=true
  advance(b)
  if not doctor_tick.is_empty() and (not is_same(_doctor_scope,doctor_tick) or not _doctor_live(b) or not b._doctor_request_call.is_empty()):return
  if not saton_tick.is_empty() and (not is_same(_saton_scope,saton_tick) or not _saton_live(b) or not b._saton_request_call.is_empty()):return
  if not munde_tick.is_empty() and (not is_same(_munde_scope,munde_tick) or not _munde_live(b) or not b._munde_request_call.is_empty()):return
+ if not brothers_tick.is_empty() and (not is_same(_brothers_scope,brothers_tick) or not _brothers_live(b) or not b._brothers_request_call.is_empty()):return
  internal=false
  if not defer_tick:elapsed=0.0
 func herb_travel(b,npc:Dictionary)->void:
@@ -825,14 +869,17 @@ func strict_advance(b)->void:
  if not _doctor_scope.is_empty() and not _doctor_live(b):return
  if not _saton_scope.is_empty() and not _saton_live(b):return
  if not _munde_scope.is_empty() and not _munde_live(b):return
+ if not _brothers_scope.is_empty() and not _brothers_live(b):return
  if phase=="travel":
   var doctor_selection:Dictionary=_doctor_capture(b)
   var saton_selection:Dictionary=_saton_capture(b)
   var munde_selection:Dictionary=_munde_capture(b)
+  var brothers_selection:Dictionary=_brothers_capture(b)
   var selection:=strict_select(b)
   if not _doctor_return(b,doctor_selection):return
   if not _saton_return(b,saton_selection):return
   if not _munde_return(b,munde_selection):return
+  if not _brothers_return(b,brothers_selection):return
   if str(selection.get("status","manual"))=="done":stop(b,title(b)+"已完成。");return
   if str(selection.get("status","manual"))!="step":handoff(b,str(selection.get("reason","请手动处理当前任务步骤。")));return
   step=selection.get("step",{})
@@ -853,31 +900,38 @@ func strict_advance(b)->void:
    var doctor_call:Dictionary=_doctor_capture(b)
    var saton_call:Dictionary=_saton_capture(b)
    var munde_call:Dictionary=_munde_capture(b)
+   var brothers_call:Dictionary=_brothers_capture(b)
    var doctor_private:Dictionary=b._begin_doctor_request_call(self) if not _doctor_scope.is_empty() else {}
    var saton_private:Dictionary=b._begin_saton_request_call(self) if not _saton_scope.is_empty() else {}
    var munde_private:Dictionary=b._begin_munde_request_call(self) if not _munde_scope.is_empty() else {}
+   var brothers_private:Dictionary=b._begin_brothers_request_call(self) if not _brothers_scope.is_empty() else {}
    if not _doctor_scope.is_empty() and doctor_private.is_empty():return
    if not _saton_scope.is_empty() and saton_private.is_empty():return
    if not _munde_scope.is_empty() and munde_private.is_empty():return
+   if not _brothers_scope.is_empty() and brothers_private.is_empty():return
    var reply:Dictionary=b.original_quests.talk(b,str(npc.id))
    var doctor_private_live:bool=b._doctor_request_call_live(doctor_private)
    var saton_private_live:bool=b._saton_request_call_live(saton_private)
    var munde_private_live:bool=b._munde_request_call_live(munde_private)
+   var brothers_private_live:bool=b._brothers_request_call_live(brothers_private)
    b._end_doctor_request_call(doctor_private)
    b._end_saton_request_call(saton_private)
    b._end_munde_request_call(munde_private)
+   b._end_brothers_request_call(brothers_private)
    if not doctor_private_live:return
    if not saton_private_live:return
    if not munde_private_live:return
+   if not brothers_private_live:return
    if not _doctor_return(b,doctor_call):return
    if not _saton_return(b,saton_call):return
    if not _munde_return(b,munde_call):return
+   if not _brothers_return(b,brothers_call):return
    if not reply.get("ok",false):handoff(b,str(reply.get("reason","原对话失败。")));return
    dialogue_choices=step.get("auto_choices",["ok"] if str(step.source.type)=="MESSAGE" else ["yes","ok"]).duplicate()
    phase="strict_dialogue"
    strict_dialogue_reply(b,reply)
    return
-  execution_mode="A" if not _saton_scope.is_empty() or not _munde_scope.is_empty() else selected_mode(b)
+  execution_mode="A" if not _saton_scope.is_empty() or not _munde_scope.is_empty() or not _brothers_scope.is_empty() else selected_mode(b)
   var point:Dictionary={}
   if execution_mode=="A":point=navigation.next(b,npc)
   else:
@@ -894,6 +948,8 @@ func strict_advance(b)->void:
    handoff(b,"萨顿首请求仅允许审核的无收费原路线。");return
   if not _munde_scope.is_empty() and (point.has("gate") or (point.has("portal") and (point.portal.get("disabled",false) or not str(point.portal.get("gate_source","")).is_empty() or point.portal.get("requires_travel_pass",false) or preload("res://scripts/passage_rules.gd").requires_permit(map_id,int(point.get("map_id",-1)))))):
    handoff(b,"梦德首请求仅允许审核的无收费原路线。");return
+  if not _brothers_scope.is_empty() and (int(point.get("map_id",-1))!=31701 or point.has("portal") or point.has("gate")):
+   handoff(b,"五兄弟首请求仅允许一层原路步行。");return
   if point.has("gate"):
    advance_permit_gate(b,point)
    return
@@ -903,18 +959,22 @@ func strict_advance(b)->void:
    var doctor_passage:Dictionary=_doctor_capture(b)
    var saton_passage:Dictionary=_saton_capture(b)
    var munde_passage:Dictionary=_munde_capture(b)
+   var brothers_passage:Dictionary=_brothers_capture(b)
    var passage:Dictionary=b._cmd_check_passage({"from_map":map_id,"to_map":int(point.map_id)})
    if not _doctor_return(b,doctor_passage):return
    if not _saton_return(b,saton_passage):return
    if not _munde_return(b,munde_passage):return
+   if not _brothers_return(b,brothers_passage):return
    if not passage.get("ok",false):handoff(b,str(passage.get("reason","原入口拒绝通行。")));return
   var doctor_move:Dictionary=_doctor_capture(b)
   var saton_move:Dictionary=_saton_capture(b)
   var munde_move:Dictionary=_munde_capture(b)
+  var brothers_move:Dictionary=_brothers_capture(b)
   b.automation.position_changed(int(point.map_id),Vector2i(int(point.cell[0]),int(point.cell[1])),changed,"walk")
   if not _doctor_return(b,doctor_move):return
   if not _saton_return(b,saton_move):return
   if not _munde_return(b,munde_move):return
+  if not _brothers_return(b,brothers_move):return
   if not b.quest_arrival.has_arrival(b,int(point.map_id),b.automation.position_cell):handoff(b,"原路线资格已变化，停止推进。");return
   target={"map_id":int(point.map_id),"cell":point.cell.duplicate()}
   if changed:
@@ -926,12 +986,14 @@ func strict_advance(b)->void:
   if not _doctor_return(b,doctor_move):return
   if not _saton_return(b,saton_move):return
   if not _munde_return(b,munde_move):return
+  if not _brothers_return(b,brothers_move):return
   if not running or identity.checkpoint()!=move_identity:return
   if not changed:
    var encounter:Dictionary=b._cmd_field_step({"map_id":map_id,"cell":point.cell.duplicate(),"encounter":true})
    if not _doctor_return(b,doctor_move):return
    if not _saton_return(b,saton_move):return
    if not _munde_return(b,munde_move):return
+   if not _brothers_return(b,brothers_move):return
    if encounter.get("battle",false):start_battle(b);return
   message="沿原路线步行前往"+str(npc.get("name","任务人物"))+"；沿途普通遇敌自动战斗后继续。"
   b.publish()
@@ -944,30 +1006,38 @@ func strict_advance(b)->void:
   var doctor_call:Dictionary=_doctor_capture(b)
   var saton_call:Dictionary=_saton_capture(b)
   var munde_call:Dictionary=_munde_capture(b)
+  var brothers_call:Dictionary=_brothers_capture(b)
   var doctor_private:Dictionary=b._begin_doctor_request_call(self) if not _doctor_scope.is_empty() else {}
   var saton_private:Dictionary=b._begin_saton_request_call(self) if not _saton_scope.is_empty() else {}
   var munde_private:Dictionary=b._begin_munde_request_call(self) if not _munde_scope.is_empty() else {}
+  var brothers_private:Dictionary=b._begin_brothers_request_call(self) if not _brothers_scope.is_empty() else {}
   if not _doctor_scope.is_empty() and doctor_private.is_empty():return
   if not _saton_scope.is_empty() and saton_private.is_empty():return
   if not _munde_scope.is_empty() and munde_private.is_empty():return
+  if not _brothers_scope.is_empty() and brothers_private.is_empty():return
   var reply:Dictionary=b.original_quests.choose(b,str(pending.get("token","")),str(dialogue_choices.pop_front()))
   var doctor_private_live:bool=b._doctor_request_call_live(doctor_private)
   var saton_private_live:bool=b._saton_request_call_live(saton_private)
   var munde_private_live:bool=b._munde_request_call_live(munde_private)
+  var brothers_private_live:bool=b._brothers_request_call_live(brothers_private)
   b._end_doctor_request_call(doctor_private)
   b._end_saton_request_call(saton_private)
   b._end_munde_request_call(munde_private)
+  b._end_brothers_request_call(brothers_private)
   if not doctor_private_live:return
   if not saton_private_live:return
   if not munde_private_live:return
+  if not brothers_private_live:return
   if not _doctor_return(b,doctor_call):return
   if not _saton_return(b,saton_call):return
   if not _munde_return(b,munde_call):return
+  if not _brothers_return(b,brothers_call):return
   if not reply.get("ok",false):handoff(b,str(reply.get("reason","原交易失败。")));return
   strict_dialogue_reply(b,reply)
   if not _doctor_return(b,doctor_call):return
   if not _saton_return(b,saton_call):return
   if not _munde_return(b,munde_call):return
+  if not _brothers_return(b,brothers_call):return
   if running and (before_map!=b.automation.position_map or before_cell!=b.automation.position_cell):
    target={"map_id":b.automation.position_map,"cell":[b.automation.position_cell.x,b.automation.position_cell.y]}
    navigation.clear()
@@ -1273,6 +1343,7 @@ func _install_source_start(device:String,peer:int,staged:RefCounted=null)->void:
  _doctor_scope={}
  _saton_scope={}
  _munde_scope={}
+ _brothers_scope={}
  quest_id=2;client=device;connection=peer;running=true;strict_walk=true
  restored=false;detached=false;owns_battle=false;shutdown_intent={}
  source_frame=null;source_after_landing="travel"

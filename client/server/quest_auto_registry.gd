@@ -29,3 +29,11 @@ static func munde_request(b,job_id:int)->Dictionary:
  if preload("res://server/original_quests.gd").flag(b.session._profile,"now",9) or preload("res://server/original_quests.gd").flag(b.session._profile,"ended",9):
   return {"status":"manual","stage":"request9_complete","reason":"梦德首委托已处理；后续任务请手动进行。"}
  return Munde.request_proposal(b,job_id)
+
+const Brothers=preload("res://server/quest_auto_brothers_plan.gd")
+static func brothers_request(b,job_id:int)->Dictionary:
+ if job_id!=18 or not b._brothers_request_enabled():return {"status":"manual","reason":"五兄弟首请求尚未开放。"}
+ if b.automation.position_map!=31701 or not b.quest_arrival.has_arrival(b,31701,b.automation.position_cell):return {"status":"manual","reason":"请先手动沿原入口进入五兄弟一层。"}
+ if preload("res://server/original_quests.gd").flag(b.session._profile,"now",28) or preload("res://server/original_quests.gd").flag(b.session._profile,"ended",28):
+  return {"status":"manual","stage":"request28_complete","reason":"五兄弟首委托已处理；后续任务请手动进行。"}
+ return Brothers.request_proposal(b,job_id)
