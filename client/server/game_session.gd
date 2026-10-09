@@ -1590,7 +1590,32 @@ func _execute_loot_failure_close(frame:Dictionary)->Dictionary:
 
 ## Pure candidate writer: no profile swaps, normalization or publication.
 ## Callers retain their own admission rules, including save_game's battle ban.
+# C purchase only. Night decision pending user confirmation: unresolved real IO
+# may block every writer for this captured owner/path, including manual save.
+# Pure provenance + weak host only; no closure, strong host/session, or authority.
+var _fee_purchase_hold:Dictionary={}
+var _fee_purchase_loader_write:Dictionary={}
+func _fee_purchase_write_refused(candidate:Dictionary,path:String)->bool:
+	var h:Dictionary=_fee_purchase_hold
+	if h.is_empty() or not is_same(h.session.get_ref(),self) or path!=h.path or not FeeStartJournalWriter.same_value(FeeStartJournalWriter.owner(candidate),h.owner):return false
+	var host=h.host.get_ref()
+	if is_instance_valid(host) and is_same(host.session,self) and not host._fee_lobby_ticket_enabled():return false
+	var call:Dictionary=_fee_purchase_loader_write
+	if not call.is_empty() and is_same(call.hold,h) and not call.used and path==call.path and call.source==path \
+		and is_same(_profile,call.profile_ref) and is_same(candidate,call.profile_ref) and FeeStartJournalWriter.same_value(candidate,call.profile) \
+		and FeeStartJournalWriter.same_value(FeeStartJournalWriter.owner(candidate),h.owner) \
+		and is_instance_valid(host) and is_same(host.session,self) and host.save_path==h.path and host.account_name==h.account:
+		var boundary:Dictionary=_canonical_fee_attempt_profile(candidate)
+		if boundary.get("present",false) and boundary.get("ok",false) and boundary.record.current.run_id==h.run_id \
+			and FileAccess.file_exists(call.source) and FileAccess.get_file_as_bytes(call.source)==call.source_bytes:
+			call.used=true # Only the actual load's single exact retirement write.
+			return false
+	last_error="购票结果未确认，请重新进入存档"
+	if is_instance_valid(host):host._fee_lobby_ticket.note_refused_save()
+	return true
+
 func _write_profile_candidate(candidate:Dictionary,path:String)->bool:
+	if _fee_purchase_write_refused(candidate,path):return false
 	var proof:Dictionary=_loot_failure_active
 	if not proof.is_empty():
 		proof.entries+=1
@@ -1882,7 +1907,18 @@ func load_game(path: String) -> bool:
 				login_rng.state=previous_login_rng_state
 				continue
 			# Recovery uncertainty must survive the next restart before play resumes.
-			if persist_recovery and not _write_profile(path):
+			var purchase_load_write:Dictionary={}
+			if persist_recovery and not _fee_purchase_hold.is_empty():
+				purchase_load_write={"hold":_fee_purchase_hold,"path":path,"source":candidate,"source_bytes":source_text.to_utf8_buffer(),"profile_ref":_profile,"profile":_profile.duplicate(true),"used":false}
+				# No capability leaves load_game. Nested recovery cannot replace a
+				# pending load's exception or clear another call's frame.
+				if not _fee_purchase_loader_write.is_empty():
+					_profile=previous_profile;login_rng.state=previous_login_rng_state
+					return false
+				_fee_purchase_loader_write=purchase_load_write
+			var recovery_written:bool=not persist_recovery or _write_profile(path)
+			if not purchase_load_write.is_empty() and is_same(_fee_purchase_loader_write,purchase_load_write):_fee_purchase_loader_write={}
+			if not recovery_written:
 				_profile=previous_profile
 				login_rng.state=previous_login_rng_state
 				last_error="Cannot persist uncertain loot budget recovery."

@@ -464,7 +464,7 @@ func prepare_start(b,command:Dictionary) -> Dictionary:
  if int(id)==2:
   if not command.get("_quest_connection") is int or int(command._quest_connection)==-1:return b._reject("缺少可信发起连接。")
   var admitted:Dictionary=source_admission(b)
-  if not admitted.ok:return b._reject(str(admitted.reason))
+  if not admitted.ok and not b._fee_lobby_ticket.propose(b):return b._reject(str(admitted.reason))
   return {"ok":true,"source":true,"quest_id":2,"client":str(command.client),"connection":int(command._quest_connection)}
  if int(quest.event)==4 and int(b.session._profile.player.level)<30:return b._reject("原成人仪式入口需要等级30；自动任务不能绕过等级门。")
  var first:Dictionary=strict_select(b,int(id),bool(quest.get("can_restart",false)))
@@ -1085,6 +1085,7 @@ func install_fee_start(b,prepared:Dictionary,staged:RefCounted)->void:
  _install_source_start(prepared.client,prepared.connection,staged)
  b._fee_start_intent.mark_installed(b,self,staged)
 func advance_source(b)->void:
+ if b._fee_lobby_ticket.advance(b):return
  if phase=="source_dialogue":
   source_reply(b,source_next(b))
   return
