@@ -1087,7 +1087,9 @@ func install_fee_start(b,prepared:Dictionary,staged:RefCounted)->void:
 func advance_source(b)->void:
  if b._fee_lobby_ticket.advance(b):return
  if phase=="source_dialogue":
-  source_reply(b,source_next(b))
+  var entry_reply:Dictionary=b._fee_lobby_ticket_entry.begin_reply(b,self)
+  var response:Dictionary=source_next(b)
+  if b._fee_lobby_ticket_entry.finish_reply(b,self,entry_reply):source_reply(b,response)
   return
  if phase!="travel":return
  var selected:Dictionary=SourcePlan.select(b,2)
@@ -1114,7 +1116,9 @@ func advance_source(b)->void:
  var npc:Dictionary=checked.npc
  var offset:Vector2i=b.automation.position_cell-Vector2i(int(npc.cell[0]),int(npc.cell[1]))
  if b.automation.position_map==int(npc.map_id) and maxi(absi(offset.x),absi(offset.y))<=2:
-  source_reply(b,source_open(b,step))
+  var entry_reply:Dictionary=b._fee_lobby_ticket_entry.begin_reply(b,self)
+  var response:Dictionary=source_open(b,step)
+  if b._fee_lobby_ticket_entry.finish_reply(b,self,entry_reply):source_reply(b,response)
  else:source_walk(b,navigation.next(b,npc))
 func source_reply(b,reply:Dictionary)->void:
  if not running:return

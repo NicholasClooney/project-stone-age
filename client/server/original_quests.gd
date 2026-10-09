@@ -408,6 +408,10 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 	if phase not in ["cancel","CLEAN"]:
 		if branch.actions.has("Charm"):candidate.player.charm=clampi(int(candidate.player.get("charm",0))+int(branch.actions.Charm),0,100)
 		if branch.actions.has("Warp"):Brothers.warp_profile(candidate,str(branch.actions.Warp))
+	# Only this run's privately purchased 44 entry bypasses the old rollback.
+	# The candidate above was built by the real DelItem/Warp path.
+	if backend._fee_entry_handles(npc_id,branch,phase):
+		return backend._transact_lobby_ticket_entry(profile,candidate,npc_id,branch,phase)
 	backend.session._profile=candidate
 	if not backend.save_quest_source_transaction(npc_id,branch,phase):
 		backend.session._profile=profile
