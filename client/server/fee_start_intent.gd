@@ -64,6 +64,7 @@ func start(b,command:Dictionary)->Dictionary:
  if not command.get("type") is String or command.type!="quest_auto_start" or not command.get("client") is String or command.client.is_empty():return _failure("收费启动设备字段无效。",seq)
  var binding:Variant=b._fee_bindings.get(connection)
  if not binding is RefCounted or not _scope(b) or b.save_path.is_empty() or Exact.owner(b.session._profile).is_empty():return _failure("收费启动归属无法确认。",seq)
+ if b._fee_lobby_ticket.held(b):return _failure(b._fee_lobby_ticket.HOLD_TEXT,seq)
  if has_call():return _failure("收费启动正在处理。",seq)
  var previous_command:Dictionary=_seen.get(binding,{})
  if not previous_command.is_empty():
@@ -81,6 +82,7 @@ func start(b,command:Dictionary)->Dictionary:
  if not Exact.strict_true(prepared.get("ok")):return _finish(b,call,prepared)
  if not Exact.strict_true(prepared.get("source")) or not prepared.get("quest_id") is int or prepared.quest_id!=2:return _finish(b,call,_failure("未审核的收费任务。",seq))
  if not is_same(b.session._profile,f.profile_ref) or not Exact.same_value(b.session._profile,f.profile) or b.last_saved_payload!=f.cache or b.quest_save_serial!=f.serial:return _finish(b,call,_failure("启动校验改变了存档。",seq))
+ var purchase_plan:Dictionary=b._fee_lobby_ticket.take_proposal(b,call)
  _live={}
  var staged=Identity.new();staged.begin()
  var candidate:Dictionary=f.profile.duplicate(true)
@@ -88,10 +90,11 @@ func start(b,command:Dictionary)->Dictionary:
  if candidate.has("quest_auto_fee_lifecycle"):
   var previous:Variant=candidate.quest_auto_fee_lifecycle
   if not Journal.valid(previous):return _finish(b,call,_failure("原收费记录无法确认。",seq))
-  var replaced:Dictionary=Journal.replace_closed_for_start(previous,f.owner.profile_id,f.owner.character_id,staged.run_id,false)
+  var replaced:Dictionary=Journal.replace_closed_for_start(previous,f.owner.profile_id,f.owner.character_id,staged.run_id,not purchase_plan.is_empty())
   if not Exact.strict_true(replaced.get("ok")):return _finish(b,call,_failure("上次收费意图尚未安全关闭。",seq))
   record=replaced.candidate
- else:record=Journal.empty_record(f.owner.profile_id,f.owner.character_id,staged.run_id,false)
+ else:record=Journal.empty_record(f.owner.profile_id,f.owner.character_id,staged.run_id,not purchase_plan.is_empty())
+ if not purchase_plan.is_empty() and record.current.purchase.state!="none":return _finish(b,call,_failure("原未完成收费记录禁止再次购票。",seq))
  candidate.quest_auto_fee_lifecycle=record
  f.staged=staged;f.prepared=prepared;f.record=record.duplicate(true)
  var handle:Dictionary=b._begin_fee_start_journal_frame(candidate)
@@ -111,7 +114,7 @@ func start(b,command:Dictionary)->Dictionary:
   return _finish(b,call,lost)
  _live={"token":RefCounted.new(),"session":f.session,"owner":f.owner,"path":f.path,"account":f.account,"connection":connection,"binding":binding,
   "runner":f.runner,"timer":f.timer,"timer_token":f.timer_token,"automation":f.automation,"auto_token":f.auto_token,"identity":staged,"checkpoint":staged.checkpoint(),"source":b.quest_auto.source_frame,
-  "record":record.duplicate(true),"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"cache":b.last_saved_payload,"serial":b.quest_save_serial,"purchase_allowed":false}
+  "record":record.duplicate(true),"profile_ref":b.session._profile,"profile":b.session._profile.duplicate(true),"cache":b.last_saved_payload,"serial":b.quest_save_serial,"purchase_allowed":not purchase_plan.is_empty(),"purchase_plan":purchase_plan}
  b.publish()
  var accepted:bool=owns_call(call) and live_current(b)
  var result:Dictionary={"ok":accepted,"seq":seq,"persisted_intent":true,"run_id":staged.run_id}
@@ -160,3 +163,11 @@ func finish_delivery(b,guard:Dictionary,reply:Dictionary)->void:
  if not is_same(_live,guard.live) or not live_current(b):
   reply.ok=false;reply.type="rejected";reply.stale=true;reply.reason="收费意图已保存；发布期间运行归属已变化。"
  if is_same(_seen.get(guard.binding),guard.entry):guard.entry.reply=reply.duplicate(true)
+
+## Consume a genuine live Start token only once; neither the journal slot nor
+## a diagnostic dictionary is authority. Legal base save may refresh _live.
+func take_purchase(b,consumer)->Dictionary:
+ if not is_same(consumer,b._fee_lobby_ticket) or not b._fee_lobby_ticket_enabled() or not live_current(b):return {}
+ if not _live.purchase_allowed:return {}
+ _live.purchase_allowed=false
+ return {"plan":_live.purchase_plan.duplicate(true),"run_id":_live.identity.run_id}

@@ -14,6 +14,8 @@ const FeeAttemptJournal=preload("res://server/fee_attempt_lifecycle.gd")
 const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 var _fee_start_journal_writer = FeeStartJournalWriter.new()
 const FEE_START_INTENT_ENABLED := false
+const FEE_LOBBY_TICKET_ENABLED := false
+var _fee_lobby_ticket = preload("res://server/fee_lobby_ticket_purchase.gd").new()
 var _fee_start_intent = preload("res://server/fee_start_intent.gd").new()
 const FEE_COLD_LIFECYCLE_ENABLED := false
 var _fee_cold_lifecycle = preload("res://server/fee_cold_lifecycle.gd").new()
@@ -251,6 +253,7 @@ func _process(delta: float) -> void:
 ## Loads an existing save. Returns false for unreadable files; the caller then
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
+	var purchase_load:Dictionary=_fee_lobby_ticket.before_load(self,path)
 	_cancel_fee_departure(_fee_departure_call)
 	_fee_departure_pending={};_fee_pending_record={};_fee_departure_status={}
 	_fee_start_intent.revoke()
@@ -263,7 +266,7 @@ func load_profile(path: String) -> bool:
 	var load_scope_path:String=save_path
 	stationary.stop(self,"载入存档停止了原地遇敌。")
 	var stop_result:Dictionary=quest_auto.stop(self,"载入存档停止了自动任务。")
-	if not stop_result.get("ok",false):return false
+	if not stop_result.get("ok",false) and not _fee_lobby_ticket.stopped_for_load(self,purchase_load):return false
 	original_quests.pending={}
 	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
 	var previous_fee_receipt:Dictionary=load_owner._fee_loaded_receipt
@@ -280,6 +283,7 @@ func load_profile(path: String) -> bool:
 	var fee_normalized:bool=load_owner._finish_fee_loaded_storage_normalization(fee_normalization,self)
 	var fee_load_token:RefCounted=null
 	if fee_normalized:fee_load_token=_fee_loaded_baseline_writer.bind_loaded(self,load_owner,path,previous_fee_receipt)
+	_fee_lobby_ticket.after_load(self,purchase_load)
 	_publish()
 	_fee_loaded_baseline_writer.finish_load_publication(self,fee_load_token)
 	return true
@@ -385,7 +389,7 @@ func keep_resume_file() -> void:
 	_complete_dispatch_barrier()
 
 func _keep_resume_file() -> void:
-	if _fee_cold_lifecycle.protects_resume(self):return
+	if _fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self):return
 	var path := _resume_file()
 	if path.is_empty():return
 	var now := int(resume_clock.call())
@@ -467,7 +471,7 @@ func _fee_attempt_resume_allowed(profile:Variant,state:Variant)->bool:
 ## Written to a temporary file and renamed over the old one, so a kill leaves
 ## either the previous or the new file, never half of one.
 func _write_resume_file(path: String, state: Dictionary) -> void:
-	if _fee_cold_lifecycle.protects_resume(self) and path==_resume_file():return
+	if (_fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self)) and path==_resume_file():return
 	var file := FileAccess.open(path+".tmp",FileAccess.WRITE)
 	if file==null:
 		printerr("Could not write %s; the automation will not resume." % path)
@@ -485,7 +489,7 @@ func _write_resume_file(path: String, state: Dictionary) -> void:
 	resume_writes += 1
 
 func _remove_resume_file(path: String) -> void:
-	if _fee_cold_lifecycle.protects_resume(self) and path==_resume_file():return
+	if (_fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self)) and path==_resume_file():return
 	if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func _fee_resume_io_read(path:String)->Dictionary:
@@ -2277,6 +2281,7 @@ func save() -> bool:
 	return _save_profile_boundary()
 
 func _save_profile_boundary(checkpoint:Dictionary={}) -> bool:
+	if _fee_lobby_ticket.refuse_save(self):return false
 	var fee_save:Dictionary=_fee_start_intent.begin_save(self)
 	var saved:bool=_save_profile_boundary_body(checkpoint)
 	_fee_start_intent.finish_save(self,fee_save,saved)
@@ -3505,3 +3510,11 @@ func _fee_departure_projection()->Dictionary:
 
 func _fee_departure_observation_current(f:Dictionary,o:Dictionary)->bool:
 	return _fee_departure_current(f) and is_same(session._profile,o.profile_ref) and FeeStartJournalWriter.same_value(session._profile,o.profile) and last_saved_payload==o.cache and quest_save_serial==o.serial
+
+func _fee_lobby_ticket_enabled()->bool:
+	return FEE_LOBBY_TICKET_ENABLED and _fee_start_intent_enabled()
+func _persist_lobby_ticket_purchase(call:RefCounted)->Dictionary:
+	return _fee_lobby_ticket.persist(self,call)
+
+func _write_lobby_ticket_candidate(call:RefCounted,candidate:Dictionary)->bool:
+	return _fee_lobby_ticket.write_physical(self,call,candidate)
