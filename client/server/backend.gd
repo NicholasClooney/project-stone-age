@@ -3592,3 +3592,53 @@ func _doctor_request_install(f:Dictionary,candidate:Dictionary)->bool:
 	if candidate!=expected:return false
 	f.installed=candidate;f.expected=expected
 	return true
+
+# 6b: dormant Saton first REQUEST only; no fee issuer or pet selection.
+const SATON_REQUEST_ENABLED := false
+func _saton_request_enabled()->bool:return SATON_REQUEST_ENABLED
+
+# Only the dormant Saton runner creates this synchronous call. Never serialized.
+var _saton_request_call:Dictionary={}
+func _begin_saton_request_call(runner)->Dictionary:
+	if not _saton_request_enabled() or not _saton_request_call.is_empty() or not is_same(quest_auto,runner) or not runner.running or not runner.internal or runner.detached or not runner._saton_live(self):return {}
+	var step:Dictionary=runner.step
+	var source:Dictionary=step.get("source",{})
+	var table:Dictionary=runner.Registry.Saton.source_table()
+	if table.is_empty() or step.get("id")!="saton:request" or source.get("npc_id")!="sainasu/event/event13_1@1112:16:15" or source.get("type")!="REQUEST":return {}
+	if not _doctor_request_call.is_empty() or not runner._doctor_scope.is_empty():return {}
+	var proposal:Dictionary=runner.Registry.saton_request(self,10)
+	# An end page after commit has NOW13; keep only the exact same original step.
+	if not preload("res://server/original_quests.gd").flag(session._profile,"now",13) and proposal.get("status")!="step":return {}
+	var branch:Dictionary=original_quests.npc_by_id(str(table.request.npc_id)).branches[int(table.request.branch_index)]
+	if not runner.Registry.Saton.same_source(source.get("branch_data"),branch):return {}
+	var f:Dictionary={"call":RefCounted.new(),"runner":weakref(runner),"session":weakref(session),"router":weakref(original_quests),"arrival":weakref(quest_arrival),"scope":runner._saton_scope,"transition":runner.transition_frame(self),"branch":branch.duplicate(true),"profile_ref":session._profile,"profile":session._profile.duplicate(true)}
+	_saton_request_call=f
+	return f
+func _capture_saton_request_call(npc:String,branch:Dictionary)->Dictionary:
+	if _saton_request_call.is_empty():return {}
+	# Return the original frame even if stale, so the caller can reject it.
+	return _saton_request_call if npc=="sainasu/event/event13_1@1112:16:15" and quest_auto.Registry.Saton.same_source(branch,_saton_request_call.branch) else {"stale":true}
+func _saton_request_call_live(f:Dictionary)->bool:
+	if f.is_empty():return true
+	if not is_same(_saton_request_call,f) or session==null:return false
+	var runner=f.runner.get_ref()
+	if f.has("installed") and (not is_same(session,f.session.get_ref()) or not is_same(session._profile,f.installed) or session._profile!=f.expected):return false
+	return is_same(_saton_request_call,f) and runner!=null and is_same(quest_auto,runner) and is_same(session,f.session.get_ref()) and is_same(original_quests,f.router.get_ref()) and is_same(quest_arrival,f.arrival.get_ref()) and is_same(runner._saton_scope,f.scope) and runner._saton_live(self) and runner.transition_current(self,f.transition)
+func _end_saton_request_call(f:Dictionary)->void:
+	if not f.is_empty() and is_same(_saton_request_call,f):_saton_request_call={}
+func _saton_request_install(f:Dictionary,candidate:Dictionary)->bool:
+	if f.is_empty():return true
+	if not _saton_request_call_live(f) or f.has("installed") or not is_same(session._profile,f.profile_ref) or session._profile!=f.profile:return false
+	var expected:Dictionary=f.profile.duplicate(true)
+	if not expected.get("next_original_uid") is int or int(expected.next_original_uid)<=0:return false
+	if not expected.get("original_items") is Array or not expected.get("original_instances") is Array:return false
+	if 2431 in expected.original_items:return false
+	for item in expected.original_instances:
+		if not item is Dictionary or item.get("item_id")==2431 or item.get("uid")==expected.next_original_uid:return false
+	expected.original_events.now[0]=int(expected.original_events.now[0]) | (1 << 13)
+	expected.original_items.append(2431)
+	expected.original_instances.append({"uid":expected.next_original_uid,"item_id":2431,"durability":0})
+	expected.next_original_uid+=1
+	if candidate!=expected:return false
+	f.installed=candidate;f.expected=expected
+	return true
