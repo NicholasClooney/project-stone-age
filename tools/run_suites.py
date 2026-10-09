@@ -78,6 +78,9 @@ def suite_timeout(name):
             # Fee C purchase/entry: 89.5 / 122.4 s alone.
             "fee_lobby_ticket_purchase_test": 360,
             "fee_lobby_ticket_entry_test": 420,
+            # Fee D0 runner transaction/cross: 85.1 / 78.1 s alone.
+            "required_fee_runner_test": 360,
+            "required_fee_runner_cross_test": 360,
             # Same pilot with its isolated heartbeat-cancel test mode and its own process budget.
             "quest_auto_loot_heartbeat_cancel_test": 360,
             "quest_auto_loot_public_start_test": 180}.get(name, TIMEOUT)
