@@ -15,6 +15,10 @@ const FeeStartJournalWriter=preload("res://server/fee_start_journal_writer.gd")
 var _fee_start_journal_writer = FeeStartJournalWriter.new()
 const FEE_START_INTENT_ENABLED := false
 const FEE_LOBBY_TICKET_ENABLED := false
+const REQUIRED_FEE_RUNNER_ENABLED := false
+var _required_fee_runner = preload("res://server/required_fee_runner_transaction.gd").new()
+# D0 intentionally has no production issuer or execution caller.
+var _required_fee_runner_authority:RefCounted
 var _fee_lobby_ticket = preload("res://server/fee_lobby_ticket_purchase.gd").new()
 var _fee_lobby_ticket_entry = preload("res://server/fee_lobby_ticket_entry.gd").new()
 var _fee_start_intent = preload("res://server/fee_start_intent.gd").new()
@@ -255,6 +259,8 @@ func _process(delta: float) -> void:
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
 	var purchase_load:Dictionary=_fee_lobby_ticket.before_load(self,path)
+	var required_load:Dictionary=_required_fee_runner.before_load(self,path)
+	_required_fee_runner_authority=null
 	_fee_lobby_ticket_entry.revoke()
 	_cancel_fee_departure(_fee_departure_call)
 	_fee_departure_pending={};_fee_pending_record={};_fee_departure_status={}
@@ -268,12 +274,13 @@ func load_profile(path: String) -> bool:
 	var load_scope_path:String=save_path
 	stationary.stop(self,"载入存档停止了原地遇敌。")
 	var stop_result:Dictionary=quest_auto.stop(self,"载入存档停止了自动任务。")
-	if not stop_result.get("ok",false) and not _fee_lobby_ticket.stopped_for_load(self,purchase_load):return false
+	if not stop_result.get("ok",false) and not _fee_lobby_ticket.stopped_for_load(self,purchase_load) and not _required_fee_runner.stopped_for_load(self,required_load):return false
 	original_quests.pending={}
 	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
 	var previous_fee_receipt:Dictionary=load_owner._fee_loaded_receipt
 	if not load_owner.load_game(path):return false
 	if not is_same(session,load_owner) or save_path!=load_scope_path:return false
+	_required_fee_runner.after_load(self,required_load)
 	# Successful cold load retires old in-memory loot authority only.
 	quest_loot = preload("res://server/quest_auto_loot.gd").new()
 	quest_arrival.reset()
@@ -391,7 +398,7 @@ func keep_resume_file() -> void:
 	_complete_dispatch_barrier()
 
 func _keep_resume_file() -> void:
-	if _fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self):return
+	if _fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self) or _required_fee_runner.held(self):return
 	var path := _resume_file()
 	if path.is_empty():return
 	var now := int(resume_clock.call())
@@ -473,7 +480,7 @@ func _fee_attempt_resume_allowed(profile:Variant,state:Variant)->bool:
 ## Written to a temporary file and renamed over the old one, so a kill leaves
 ## either the previous or the new file, never half of one.
 func _write_resume_file(path: String, state: Dictionary) -> void:
-	if (_fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self)) and path==_resume_file():return
+	if (_fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self) or _required_fee_runner.held(self)) and path==_resume_file():return
 	var file := FileAccess.open(path+".tmp",FileAccess.WRITE)
 	if file==null:
 		printerr("Could not write %s; the automation will not resume." % path)
@@ -491,7 +498,7 @@ func _write_resume_file(path: String, state: Dictionary) -> void:
 	resume_writes += 1
 
 func _remove_resume_file(path: String) -> void:
-	if (_fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self)) and path==_resume_file():return
+	if (_fee_cold_lifecycle.protects_resume(self) or _fee_lobby_ticket.held(self) or _required_fee_runner.held(self)) and path==_resume_file():return
 	if FileAccess.file_exists(path):DirAccess.remove_absolute(ProjectSettings.globalize_path(path))
 
 func _fee_resume_io_read(path:String)->Dictionary:
@@ -2283,7 +2290,7 @@ func save() -> bool:
 	return _save_profile_boundary()
 
 func _save_profile_boundary(checkpoint:Dictionary={}) -> bool:
-	if _fee_lobby_ticket_entry.refuses_save(self) or _fee_lobby_ticket.refuse_save(self):return false
+	if _required_fee_runner.refuse_save(self) or _fee_lobby_ticket_entry.refuses_save(self) or _fee_lobby_ticket.refuse_save(self):return false
 	var fee_save:Dictionary=_fee_start_intent.begin_save(self)
 	var saved:bool=_save_profile_boundary_body(checkpoint)
 	_fee_start_intent.finish_save(self,fee_save,saved)
@@ -2476,6 +2483,7 @@ func fee_attach(connection:int)->RefCounted:
 	_fee_bindings[connection]=binding
 	return binding
 func fee_detach(connection:int)->void:
+	_required_fee_runner.detach(connection,_fee_bindings.get(connection))
 	_fee_lobby_ticket_entry.detach(connection,_fee_bindings.get(connection))
 	_fee_start_intent.detach(self,connection,_fee_bindings.get(connection))
 	var binding=_fee_bindings.get(connection)
@@ -3535,3 +3543,14 @@ func _persist_lobby_ticket_entry(call:RefCounted,candidate:Dictionary)->Dictiona
 	return _fee_lobby_ticket_entry.persist(self,call,candidate)
 func _write_lobby_ticket_entry_candidate(call:RefCounted,candidate:Dictionary)->bool:
 	return _fee_lobby_ticket_entry.write_physical(self,call,candidate)
+
+# D0 only: no command, route or Start producer calls these entry points.
+func _required_fee_runner_enabled()->bool:return REQUIRED_FEE_RUNNER_ENABLED
+func _prepare_required_fee_runner(issuer:RefCounted,kind:String,source:String)->RefCounted:
+	return _required_fee_runner.prepare(self,issuer,kind,source)
+func _execute_required_fee_runner(call:RefCounted)->Dictionary:
+	return _required_fee_runner.execute(self,call)
+func _persist_required_fee_runner(call:RefCounted,candidate:Dictionary)->bool:
+	return _required_fee_runner.persist(self,call,candidate)
+func _write_required_fee_runner(call:RefCounted,candidate:Dictionary)->bool:
+	return _required_fee_runner.write_physical(self,call,candidate)
