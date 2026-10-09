@@ -75,6 +75,9 @@ def suite_timeout(name):
             "fee_start_intent_test": 360,
             # Fee B3c departure scope: 95.0 s alone.
             "fee_departure_scope_test": 360,
+            # Fee C purchase/entry: 89.5 / 122.4 s alone.
+            "fee_lobby_ticket_purchase_test": 360,
+            "fee_lobby_ticket_entry_test": 420,
             # Same pilot with its isolated heartbeat-cancel test mode and its own process budget.
             "quest_auto_loot_heartbeat_cancel_test": 360,
             "quest_auto_loot_public_start_test": 180}.get(name, TIMEOUT)
