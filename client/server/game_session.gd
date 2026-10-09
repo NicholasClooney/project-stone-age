@@ -1590,7 +1590,7 @@ func _execute_loot_failure_close(frame:Dictionary)->Dictionary:
 
 ## Pure candidate writer: no profile swaps, normalization or publication.
 ## Callers retain their own admission rules, including save_game's battle ban.
-# C purchase only. Night decision pending user confirmation: unresolved real IO
+# C purchase/privately continued entry only. Same night decision pending user confirmation: unresolved real IO
 # may block every writer for this captured owner/path, including manual save.
 # Pure provenance + weak host only; no closure, strong host/session, or authority.
 var _fee_purchase_hold:Dictionary={}
@@ -1610,7 +1610,7 @@ func _fee_purchase_write_refused(candidate:Dictionary,path:String)->bool:
 			and FileAccess.file_exists(call.source) and FileAccess.get_file_as_bytes(call.source)==call.source_bytes:
 			call.used=true # Only the actual load's single exact retirement write.
 			return false
-	last_error="购票结果未确认，请重新进入存档"
+	last_error="入场结果未确认，请重新进入存档" if h.get("kind")=="entry" else "购票结果未确认，请重新进入存档"
 	if is_instance_valid(host):host._fee_lobby_ticket.note_refused_save()
 	return true
 

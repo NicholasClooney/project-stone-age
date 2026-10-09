@@ -16,6 +16,7 @@ var _fee_start_journal_writer = FeeStartJournalWriter.new()
 const FEE_START_INTENT_ENABLED := false
 const FEE_LOBBY_TICKET_ENABLED := false
 var _fee_lobby_ticket = preload("res://server/fee_lobby_ticket_purchase.gd").new()
+var _fee_lobby_ticket_entry = preload("res://server/fee_lobby_ticket_entry.gd").new()
 var _fee_start_intent = preload("res://server/fee_start_intent.gd").new()
 const FEE_COLD_LIFECYCLE_ENABLED := false
 var _fee_cold_lifecycle = preload("res://server/fee_cold_lifecycle.gd").new()
@@ -254,6 +255,7 @@ func _process(delta: float) -> void:
 ## disables persistence so the original file is never replaced.
 func load_profile(path: String) -> bool:
 	var purchase_load:Dictionary=_fee_lobby_ticket.before_load(self,path)
+	_fee_lobby_ticket_entry.revoke()
 	_cancel_fee_departure(_fee_departure_call)
 	_fee_departure_pending={};_fee_pending_record={};_fee_departure_status={}
 	_fee_start_intent.revoke()
@@ -2281,7 +2283,7 @@ func save() -> bool:
 	return _save_profile_boundary()
 
 func _save_profile_boundary(checkpoint:Dictionary={}) -> bool:
-	if _fee_lobby_ticket.refuse_save(self):return false
+	if _fee_lobby_ticket_entry.refuses_save(self) or _fee_lobby_ticket.refuse_save(self):return false
 	var fee_save:Dictionary=_fee_start_intent.begin_save(self)
 	var saved:bool=_save_profile_boundary_body(checkpoint)
 	_fee_start_intent.finish_save(self,fee_save,saved)
@@ -2334,6 +2336,7 @@ func _emit(message: Dictionary) -> void:
 			# Prepare authority before later snapshots are constructed. Delivery
 			# still owns the final capability check and the original plain event.
 			var packet:Dictionary=quest_auto.source_position_packet(self,source,message)
+			_fee_lobby_ticket_entry.position_prepared(self,source,packet)
 			queued={"_source_position":source,"message":message,"packet":packet}
 	if _depth > 0:
 		_queue.append(queued)
@@ -2398,19 +2401,22 @@ func call_quest_source(frame,proposal:Dictionary,choice:Dictionary={}) -> Dictio
 	if call==null:return _reject("原服务调用已在进行。")
 	var source:Dictionary={"frame":frame,"call":call,"step":proposal.duplicate(true),"identity":quest_auto.identity.checkpoint(),"connection":quest_auto.connection,"character_id":str(session._profile.get("character_id","")),"profile_id":str(session._profile.get("profile_id","")),"saved":false,"origin":{"map_id":automation.position_map,"cell":[automation.position_cell.x,automation.position_cell.y]}}
 	_quest_source_call=source
+	_fee_lobby_ticket_entry.capture_source(self,source)
+	var entry_source_guard:Dictionary=_fee_lobby_ticket_entry.source_guard(source)
 	var reply:Dictionary=original_quests.talk(self,str(proposal.npc_id)) if choice.is_empty() else original_quests.choose(self,str(choice.token),str(choice.choice),str(choice.get("text","")))
 	frame.close_save_window(call)
-	if not reply.get("ok",false):frame.cancel()
-	if reply.get("dialogue") is Dictionary:
+	var entry_source_current:bool=_fee_lobby_ticket_entry.finalize_source_allowed(self,source,entry_source_guard)
+	if entry_source_current and not reply.get("ok",false):frame.cancel()
+	if entry_source_current and reply.get("dialogue") is Dictionary:
 		frame.receive_page(call,reply.dialogue,str(original_quests.pending.get("token","")))
 	var result:Dictionary=frame.complete_call(call,quest_auto.identity.checkpoint(),quest_auto.connection)
 	result.continued=quest_source_call_live(source)
 	result.warp=source.has("warp")
 	result.durable=bool(source.get("durable",false))
 	result.candidate_sha=str(source.get("candidate_sha",""))
-	_quest_source_call={}
+	if is_same(_quest_source_call,source):_quest_source_call={}
 	# Clean only pages issued by this frame, never a newer manual window.
-	if not result.continued and frame.owns_pending(str(original_quests.pending.get("token",""))):original_quests.pending={}
+	if entry_source_current and not result.continued and frame.owns_pending(str(original_quests.pending.get("token",""))):original_quests.pending={}
 	reply.source_commit=result
 	return reply
 
@@ -2470,6 +2476,7 @@ func fee_attach(connection:int)->RefCounted:
 	_fee_bindings[connection]=binding
 	return binding
 func fee_detach(connection:int)->void:
+	_fee_lobby_ticket_entry.detach(connection,_fee_bindings.get(connection))
 	_fee_start_intent.detach(self,connection,_fee_bindings.get(connection))
 	var binding=_fee_bindings.get(connection)
 	var page:Dictionary=original_quests.pending
@@ -3518,3 +3525,13 @@ func _persist_lobby_ticket_purchase(call:RefCounted)->Dictionary:
 
 func _write_lobby_ticket_candidate(call:RefCounted,candidate:Dictionary)->bool:
 	return _fee_lobby_ticket.write_physical(self,call,candidate)
+
+# C-entry only: real original DelItem/Warp candidate and private continuation.
+func _fee_entry_handles(npc_id:String,branch:Dictionary,phase:String)->bool:
+	return _fee_lobby_ticket_entry.handles(self,npc_id,branch,phase)
+func _transact_lobby_ticket_entry(before:Dictionary,candidate:Dictionary,npc_id:String,branch:Dictionary,phase:String)->Dictionary:
+	return _fee_lobby_ticket_entry.transact(self,before,candidate,npc_id,branch,phase)
+func _persist_lobby_ticket_entry(call:RefCounted,candidate:Dictionary)->Dictionary:
+	return _fee_lobby_ticket_entry.persist(self,call,candidate)
+func _write_lobby_ticket_entry_candidate(call:RefCounted,candidate:Dictionary)->bool:
+	return _fee_lobby_ticket_entry.write_physical(self,call,candidate)

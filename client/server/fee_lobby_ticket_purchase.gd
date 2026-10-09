@@ -12,7 +12,10 @@ var _op:Dictionary={}
 var _hold:Dictionary={}
 var _fact:Dictionary={}
 var rejected_saves:int=0 # Process diagnostic; not a durable fact.
-const HOLD_TEXT="购票结果未确认，请重新进入存档"
+const PURCHASE_HOLD_TEXT="购票结果未确认，请重新进入存档"
+var HOLD_TEXT:String:
+ get:return hold_text()
+func hold_text()->String:return "入场结果未确认，请重新进入存档" if _hold.get("kind")=="entry" else PURCHASE_HOLD_TEXT
 func propose(b)->bool:
  _proposal={}
  if not b._fee_lobby_ticket_enabled() or held(b):return false
@@ -36,7 +39,7 @@ func refuse_save(b)->bool:
  if not _op.is_empty() and is_same(b.session,_op.session) and b.save_path==_op.path and Exact.same_value(Exact.owner(b.session._profile),_op.owner):return true
  if not held(b):return false
  note_refused_save()
- b.session.last_error=HOLD_TEXT
+ b.session.last_error=hold_text()
  return true
 func note_refused_save()->void:
  rejected_saves+=1
@@ -179,6 +182,7 @@ func persist(b,call:RefCounted)->Dictionary:
  if uid!=before.next_original_uid or not Exact.same_value(candidate,exact):return {"ok":false}
  if not _write(b,f,candidate,false):return {"ok":false,"stage":"purchase_incomplete"}
  f.committed=true
+ b._fee_lobby_ticket_entry.accept_purchase(b,self,f.call)
  _fact={"schema":1,"scope":"profile","origin":"explicit_start","owner":f.owner.duplicate(true),"transaction_id":f.transaction_id,"fee_kind":"golden44_lobby_ticket","phase":"ticket_purchase","run_id":f.run_id,"step_id":"golden44:lobby_purchase","attempt_id":f.attempt_id,"source_id":f.plan.source_id,"offer_id":f.plan.offer_id,"currency":"stone","amount":f.plan.amount,"balance_before":before.player.gold,"balance_after":candidate.player.gold,"item_id":f.plan.item_id,"ticket_uid":uid,"status":"committed","durability":"disk","save_serial":f.serial,"candidate_sha256":f.cache.sha256_text()}
  if not Fact.valid(_fact):_fact={}
  return {"ok":true,"stage":"purchase_committed"}
@@ -201,5 +205,21 @@ func advance(b)->bool:
  var fact:Dictionary=_fact;_fact={}
  if not fact.is_empty():b._emit({"type":"quest_result","fee_fact":fact})
  if not f.committed and is_same(b.session,f.session) and is_same(b.quest_auto,f.runner) and is_same(b.quest_auto.identity,f.identity) and b.quest_auto.identity.checkpoint()==f.checkpoint and b.save_path==f.path and b.account_name==f.account and Exact.same_value(Exact.owner(b.session._profile),f.owner) and is_same(b.automation,f.automation) and is_same(b.automation.start_lifetime,f.auto_token):
-  b.quest_auto.stop(b,HOLD_TEXT if held(b) else "首票未完成，本次不再自动购买。",false)
+  b.quest_auto.stop(b,hold_text() if held(b) else "首票未完成，本次不再自动购买。",false)
  return true
+
+## Only the actual still-current purchase writer success can mint an entry
+## continuation. Neither the fact nor a public result is accepted here.
+func take_entry_handoff(b,consumer,call:RefCounted)->Dictionary:
+ if not is_same(consumer,b._fee_lobby_ticket_entry) or _op.is_empty() or not is_same(_op.call,call):return {}
+ var f:Dictionary=_op
+ if not f.committed or f.get("entry_handed",false) or not _current(b,f):return {}
+ f.entry_handed=true
+ return {"session":f.session,"runner":f.runner,"identity":f.identity,"automation":f.automation,"auto_token":f.auto_token,"owner":f.owner,"path":f.path,"account":f.account,"run_id":f.run_id,"connection":f.connection,"binding":f.binding,"purchase":f.profile.quest_auto_fee_lifecycle.current.purchase.duplicate(true),"purchase_tx":f.transaction_id}
+func hold_entry(b,producer,call:RefCounted)->void:
+ if not is_same(producer,b._fee_lobby_ticket_entry):return
+ var f:Dictionary=producer.hold_proof(b,self,call)
+ if f.is_empty():return
+ # Same provisional night decision, extended only to actual C entry IO.
+ _hold={"kind":"entry","session":weakref(f.session),"path":f.path,"account":f.account,"owner":f.owner.duplicate(true),"run_id":f.run_id,"attempt_id":f.attempt_id,"host":f.host}
+ f.session._fee_purchase_hold=_hold
