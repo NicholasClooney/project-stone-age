@@ -3642,3 +3642,46 @@ func _saton_request_install(f:Dictionary,candidate:Dictionary)->bool:
 	if candidate!=expected:return false
 	f.installed=candidate;f.expected=expected
 	return true
+
+# 6c: dormant Munde first REQUEST only; no fee issuer or pet selection.
+const MUNDE_REQUEST_ENABLED := false
+func _munde_request_enabled()->bool:return MUNDE_REQUEST_ENABLED
+
+# Only the dormant Munde runner creates this synchronous call. Never serialized.
+var _munde_request_call:Dictionary={}
+func _begin_munde_request_call(runner)->Dictionary:
+	if not _munde_request_enabled() or not _munde_request_call.is_empty() or not is_same(quest_auto,runner) or not runner.running or not runner.internal or runner.detached or not runner._munde_live(self):return {}
+	var step:Dictionary=runner.step
+	var source:Dictionary=step.get("source",{})
+	var table:Dictionary=runner.Registry.Munde.source_table()
+	if table.is_empty() or step.get("id")!="munde:request:9" or source.get("npc_id")!="sainasu/event/event09@1200:97:75" or source.get("type")!="REQUEST":return {}
+	if not _doctor_request_call.is_empty() or not runner._doctor_scope.is_empty() or not _saton_request_call.is_empty() or not runner._saton_scope.is_empty():return {}
+	var proposal:Dictionary=runner.Registry.munde_request(self,8)
+	# An end page after commit has NOW9; keep only the exact same original step.
+	if not preload("res://server/original_quests.gd").flag(session._profile,"now",9) and proposal.get("status")!="step":return {}
+	var branch:Dictionary=table.npc.branches[1]
+	if not runner.Registry.Munde.same_source(source.get("branch_data"),branch):return {}
+	var f:Dictionary={"call":RefCounted.new(),"runner":weakref(runner),"session":weakref(session),"router":weakref(original_quests),"arrival":weakref(quest_arrival),"scope":runner._munde_scope,"transition":runner.transition_frame(self),"branch":branch.duplicate(true),"profile_ref":session._profile,"profile":session._profile.duplicate(true)}
+	_munde_request_call=f
+	return f
+func _capture_munde_request_call(npc:String,branch:Dictionary)->Dictionary:
+	if _munde_request_call.is_empty():return {}
+	# Return the original frame even if stale, so the caller can reject it.
+	return _munde_request_call if npc=="sainasu/event/event09@1200:97:75" and quest_auto.Registry.Munde.same_source(branch,_munde_request_call.branch) else {"stale":true}
+func _munde_request_call_live(f:Dictionary)->bool:
+	if f.is_empty():return true
+	if not is_same(_munde_request_call,f) or session==null:return false
+	var runner=f.runner.get_ref()
+	if f.has("installed") and (not is_same(session,f.session.get_ref()) or not is_same(session._profile,f.installed) or session._profile!=f.expected):return false
+	return is_same(_munde_request_call,f) and runner!=null and is_same(quest_auto,runner) and is_same(session,f.session.get_ref()) and is_same(original_quests,f.router.get_ref()) and is_same(quest_arrival,f.arrival.get_ref()) and is_same(runner._munde_scope,f.scope) and runner._munde_live(self) and runner.transition_current(self,f.transition)
+func _end_munde_request_call(f:Dictionary)->void:
+	if not f.is_empty() and is_same(_munde_request_call,f):_munde_request_call={}
+func _munde_request_install(f:Dictionary,candidate:Dictionary)->bool:
+	if f.is_empty():return true
+	if not _munde_request_call_live(f) or f.has("installed") or not is_same(session._profile,f.profile_ref) or session._profile!=f.profile:return false
+	var expected:Dictionary=f.profile.duplicate(true)
+	if preload("res://server/original_quests.gd").flag(expected,"now",9) or preload("res://server/original_quests.gd").flag(expected,"ended",9):return false
+	expected.original_events.now[0]=int(expected.original_events.now[0]) | (1 << 9)
+	if candidate!=expected:return false
+	f.installed=candidate;f.expected=expected
+	return true
