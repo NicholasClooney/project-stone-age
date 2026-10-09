@@ -248,6 +248,8 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 	if pending.is_empty() or token!=str(pending.token):return {"ok":false,"reason":"对话已过期。"}
 	if pending.get("phase","")=="permit_shop":return {"ok":false,"reason":"请使用原售证确认。"}
 	var current: Dictionary=pending.duplicate(true)
+	var doctor_call:Dictionary=backend._capture_doctor_request_call(str(current.npc.id),current.get("branch",{}))
+	if not backend._doctor_request_call_live(doctor_call):return {"ok":false,"reason":"doctor_call_stale"}
 	var source_call:Dictionary=backend.capture_quest_source_call(str(current.npc.id))
 	pending={}
 	var fee_frame:Dictionary=RequiredFee.capture(backend,"seimu",RequiredFee.GATE) if str(current.npc.id)==RequiredFee.GATE and str(current.phase)=="FREEWARP" else {}
@@ -302,12 +304,16 @@ func choose(backend, token: String, choice: String, text: String = "", selected_
 		return reply
 	if choice!=("ok" if phase=="reward" else "yes"):return {"ok":false,"reason":"无效选择。"}
 	var result := transact(backend,profile,branch,phase,"",str(npc.id),current.get("selected_pet_ids",[]))
+	if not backend._doctor_request_call_live(doctor_call):return {"ok":false,"reason":"doctor_call_stale"}
 	if not result.ok:return result
 	if not source_call.is_empty() and not backend.quest_source_call_live(source_call):return {"ok":true,"closed":true}
 	var key := "EndStopMsg" if phase=="cancel" else ("CleanFlgMsg" if phase=="CLEAN" else "ThanksMsg")
 	return {"ok":true,"closed":true} if phase=="reward" else window(npc,branch,"end",message(branch.texts,key),false)
 
 func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, notice: String = "", npc_id: String = "", selected_ids: Array = [], fee_frame:Dictionary = {}) -> Dictionary:
+	var doctor_call:Dictionary=backend._capture_doctor_request_call(npc_id,branch)
+	if not doctor_call.is_empty() and phase!="REQUEST":return {"ok":false,"reason":"doctor_call_stale"}
+	if not backend._doctor_request_call_live(doctor_call):return {"ok":false,"reason":"doctor_call_stale"}
 	if npc_id==RequiredFee.GATE and phase=="FREEWARP":
 		if fee_frame.is_empty():return {"ok":false,"reason":"原收费确认已过期。"}
 		return RequiredFee.seimu(backend,profile,branch,fee_frame)
@@ -412,9 +418,13 @@ func transact(backend, profile: Dictionary, branch: Dictionary, phase: String, n
 	# The candidate above was built by the real DelItem/Warp path.
 	if backend._fee_entry_handles(npc_id,branch,phase):
 		return backend._transact_lobby_ticket_entry(profile,candidate,npc_id,branch,phase)
+	if not backend._doctor_request_install(doctor_call,candidate):return {"ok":false,"reason":"doctor_call_stale"}
 	backend.session._profile=candidate
-	if not backend.save_quest_source_transaction(npc_id,branch,phase):
+	var saved:bool=backend.save_quest_source_transaction(npc_id,branch,phase)
+	if not backend._doctor_request_call_live(doctor_call):return {"ok":false,"reason":"doctor_call_stale"}
+	if not saved:
 		backend.session._profile=profile
+		if not doctor_call.is_empty():doctor_call.installed=profile;doctor_call.expected=profile.duplicate(true)
 		return {"ok":false,"reason":"save_failed"}
 	backend.quest_arrival.action_committed(backend,source_npc,branch,phase)
 	if not npc_destinations.is_empty():
