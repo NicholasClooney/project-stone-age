@@ -83,6 +83,8 @@ def suite_timeout(name):
             "required_fee_runner_cross_test": 360,
             # Doctor first request guard: 142.9 s alone.
             "doctor_request_gated_guard_test": 480,
+            # Saton first request guard: 141.1 s alone.
+            "saton_request_gated_guard_test": 480,
             # Same pilot with its isolated heartbeat-cancel test mode and its own process budget.
             "quest_auto_loot_heartbeat_cancel_test": 360,
             "quest_auto_loot_public_start_test": 180}.get(name, TIMEOUT)
