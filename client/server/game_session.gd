@@ -1614,7 +1614,31 @@ func _fee_purchase_write_refused(candidate:Dictionary,path:String)->bool:
 	if is_instance_valid(host):host._fee_lobby_ticket.note_refused_save()
 	return true
 
+# D0 private protection, independent of the C ticket/entry hold.
+# Night decision pending user confirmation. Empty adds no physical IO.
+var _required_fee_hold:Dictionary={}
+var _required_fee_loader_write:Dictionary={}
+var _required_fee_loaded_receipt:Dictionary={}
+func _required_fee_write_refused(candidate:Dictionary,path:String)->bool:
+	var h:Dictionary=_required_fee_hold
+	if h.is_empty() or not is_same(h.session.get_ref(),self) or path!=h.path or not FeeStartJournalWriter.same_value(FeeStartJournalWriter.owner(candidate),h.owner):return false
+	var host=h.host.get_ref()
+	if is_instance_valid(host) and is_same(host.session,self) and not host._required_fee_runner_enabled():return false
+	var call:Dictionary=_required_fee_loader_write
+	if not call.is_empty() and is_same(call.hold,h) and not call.used and path==call.path and call.source==path \
+		and is_same(_profile,call.profile_ref) and is_same(candidate,call.profile_ref) and FeeStartJournalWriter.same_value(candidate,call.profile) \
+		and is_instance_valid(host) and is_same(host.session,self) and host.save_path==h.path and host.account_name==h.account \
+		and FileAccess.file_exists(call.source) and FileAccess.get_file_as_bytes(call.source)==call.source_bytes:
+		call.used=true
+		return false
+	last_error="必需费用结果未确认，请重新进入存档"
+	if is_instance_valid(host):
+		host._required_fee_runner.rejected_saves+=1
+		print("REQUIRED_FEE_SAVE_HOLD count=",host._required_fee_runner.rejected_saves)
+	return true
+
 func _write_profile_candidate(candidate:Dictionary,path:String)->bool:
+	if _required_fee_write_refused(candidate,path):return false
 	if _fee_purchase_write_refused(candidate,path):return false
 	var proof:Dictionary=_loot_failure_active
 	if not proof.is_empty():
@@ -1916,7 +1940,16 @@ func load_game(path: String) -> bool:
 					_profile=previous_profile;login_rng.state=previous_login_rng_state
 					return false
 				_fee_purchase_loader_write=purchase_load_write
+			var required_load_write:Dictionary={}
+			if persist_recovery and not _required_fee_hold.is_empty():
+				if not _required_fee_loader_write.is_empty():
+					_profile=previous_profile;login_rng.state=previous_login_rng_state
+					if not purchase_load_write.is_empty() and is_same(_fee_purchase_loader_write,purchase_load_write):_fee_purchase_loader_write={}
+					return false
+				required_load_write={"hold":_required_fee_hold,"path":path,"source":candidate,"source_bytes":source_text.to_utf8_buffer(),"profile_ref":_profile,"profile":_profile.duplicate(true),"used":false}
+				_required_fee_loader_write=required_load_write
 			var recovery_written:bool=not persist_recovery or _write_profile(path)
+			if not required_load_write.is_empty() and is_same(_required_fee_loader_write,required_load_write):_required_fee_loader_write={}
 			if not purchase_load_write.is_empty() and is_same(_fee_purchase_loader_write,purchase_load_write):_fee_purchase_loader_write={}
 			if not recovery_written:
 				_profile=previous_profile
@@ -1930,6 +1963,10 @@ func load_game(path: String) -> bool:
 				last_loot_cold_retirement={"source":"primary" if candidate==path else "backup","ledger":ledger.duplicate(true),"lower_bound_only":true,"reason":"备份未保存预算条目，余额无法核实，刷物仍未开放恢复。" if ledger.entries.is_empty() else "上次刷物已退休；保留所载存档的已存用时下界与已结算收益，未知时长未补计。"}
 			_loot_failure_write={}
 			last_load_source="primary" if candidate==path else "backup"
+			# A receipt exists only for a real successful load while D protection exists.
+			# Backend validates it before its ordinary snapshot normalization/publication.
+			if not _required_fee_hold.is_empty():
+				_required_fee_loaded_receipt={"token":RefCounted.new(),"hold":_required_fee_hold,"path":path,"source":last_load_source,"profile_ref":_profile,"profile":_profile.duplicate(true),"bytes":JSON.stringify(_profile).to_utf8_buffer() if persist_recovery else source_text.to_utf8_buffer()}
 			_fee_loaded_receipt={}
 			if fee_present:
 				_fee_loaded_receipt={"token":RefCounted.new(),"used":false,"path":path,"source":last_load_source,
