@@ -111,3 +111,10 @@
   - B3b：显式 Start 意图，只对 job2/event44，同 binding 去重，不跨重启保证 exactly-once。
 - 已知边界：资源包加载前的点击可能在新 binding 首次发送，但不会重发；closed 首写失败的组合没有单独测试。
 - 还剩：B3c（Hub 登出/切换，验证中）、C（44 大厅首票）、D（200/300 运行器付款桥）。
+
+## 2026-10-09 收费 B3c 合主
+
+- main 快进到 `d2855fc9`，全量测试 603/604。唯一的失败是 `quest_auto_munde_request9_keyword_route_test`（存档读回不一致），单跑和负载下各重跑共 3/3 通过；B3c 没有改 Session，判为负载下偶发，待查。
+- B3c：Hub 登出/切换时的收费离开处理，默认关闭；修了两处引用环（Hub departure、Automation 自持有），退出时不再有对象泄漏。
+- 夜间决定（待用户确认）：44 大厅购票结果不明时，暂停该角色所有存档写入，直到可信重新加载，见 ideas.md。
+- 还剩：C-purchase（验证中）、C-entry、D（200/300 付款桥）。
