@@ -4,6 +4,24 @@ A restoration of the classic MMORPG **石器时代 (StoneAge)** as a Godot 4.6 g
 
 Play it on a Mac, in a browser, on Vision Pro, or on several devices at once against one backend running on your Mac. See the [feature guide](docs/development/feature-guide.md) for what is restored.
 
+<table>
+  <tr>
+    <td width="33%"><img src="docs/screenshots/marina-village.png" alt="玛丽娜丝渔村"><br>玛丽娜丝渔村 / Marina village</td>
+    <td width="33%"><img src="docs/screenshots/pet-status.png" alt="Pet page"><br>宠物 / Pet page</td>
+    <td width="33%"><img src="docs/screenshots/map-navigation.png" alt="Map navigation"><br>地图导航 / Map navigation and fast teleport</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/pet-comparison.png" alt="Pet comparison"><br>同种比较 / Pet comparison</td>
+    <td><img src="docs/screenshots/game-helper.png" alt="Game helper"><br>游戏助手 / Game helper</td>
+    <td><img src="docs/screenshots/auto-pet-hunt.png" alt="Auto pet hunt"><br>自动抓极品 / Auto pet hunt</td>
+  </tr>
+  <tr>
+    <td><img src="docs/screenshots/leveling-teleport.png" alt="Leveling teleport"><br>刷怪传送 / Leveling teleport</td>
+    <td><img src="docs/screenshots/pet-encyclopedia.png" alt="Pet encyclopedia"><br>宠物大全 / Pet encyclopedia</td>
+    <td><img src="docs/screenshots/auto-leveling.png" alt="Auto leveling"><br>自动练级 / Auto leveling</td>
+  </tr>
+</table>
+
 ## Setup: one command
 
 The original game data is not in this repository. One script downloads and imports everything a working checkout has, including the web client:
