@@ -1,5 +1,7 @@
 # Project Stone Age
 
+English | [简体中文](README.zh-CN.md)
+
 A restoration of the classic MMORPG **石器时代 (StoneAge)** as a Godot 4.6 game, built around 萨姆吉尔村 / Samgir and the surrounding islands. It uses the original maps, sprites, menus, animations, music and sound effects, and follows the original server rules where the source is known.
 
 Play it on a Mac, in a browser, on Vision Pro, or on several devices at once against one backend running on your Mac. See the [feature guide](docs/development/feature-guide.md) for what is restored.
