@@ -6,6 +6,8 @@ A restoration of the classic MMORPG **石器时代 (StoneAge)** as a Godot 4.6 g
 
 Play it on a Mac, in a browser, on Vision Pro, or on several devices at once against one backend running on your Mac. See the [feature guide](docs/development/feature-guide.md) for what is restored.
 
+It runs on your phone too: open the web page in your phone's browser.
+
 <table>
   <tr>
     <td width="33%"><img src="docs/screenshots/marina-village.png" alt="玛丽娜丝渔村"><br>玛丽娜丝渔村 / Marina village</td>
@@ -21,6 +23,10 @@ Play it on a Mac, in a browser, on Vision Pro, or on several devices at once aga
     <td><img src="docs/screenshots/leveling-teleport.png" alt="Leveling teleport"><br>刷怪传送 / Leveling teleport</td>
     <td><img src="docs/screenshots/pet-encyclopedia.png" alt="Pet encyclopedia"><br>宠物大全 / Pet encyclopedia</td>
     <td><img src="docs/screenshots/auto-leveling.png" alt="Auto leveling"><br>自动练级 / Auto leveling</td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/screenshots/vision-pro.png" alt="Apple Vision Pro" width="100%"><br>Apple Vision Pro</td>
+    <td align="center"><img src="docs/screenshots/phone.png" alt="Phone" height="340"><br>手机 / Phone</td>
   </tr>
 </table>
 

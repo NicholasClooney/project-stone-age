@@ -6,6 +6,8 @@
 
 可以在 Mac、浏览器、Vision Pro 上玩，也可以多台设备同时连到 Mac 上跑的同一个后端。已经复原了哪些内容，见[功能指南](docs/development/feature-guide.md)。
 
+手机上也能玩：用手机浏览器打开网页版就行。
+
 <table>
   <tr>
     <td width="33%"><img src="docs/screenshots/marina-village.png" alt="玛丽娜丝渔村"><br>玛丽娜丝渔村</td>
@@ -21,6 +23,10 @@
     <td><img src="docs/screenshots/leveling-teleport.png" alt="刷怪传送"><br>刷怪传送</td>
     <td><img src="docs/screenshots/pet-encyclopedia.png" alt="宠物大全"><br>宠物大全</td>
     <td><img src="docs/screenshots/auto-leveling.png" alt="自动练级"><br>自动练级</td>
+  </tr>
+  <tr>
+    <td colspan="2" align="center"><img src="docs/screenshots/vision-pro.png" alt="Apple Vision Pro" width="100%"><br>Apple Vision Pro</td>
+    <td align="center"><img src="docs/screenshots/phone.png" alt="手机" height="340"><br>手机</td>
   </tr>
 </table>
 
