@@ -24,15 +24,15 @@ Whenever a main agent starts in this project (including starting the chain), bri
 
 ## Agent roles and messages
 
-Three agents work together in tmux panes: main agent → coordinator → worker.
+Three agents work together in tmux panes as an agent chain (agent-chain skill): main agent → secondary → worker. Names follow `<kind>-projects-stone-age-<role>` (for example `claude-projects-stone-age-main`, `codex-projects-stone-age-worker`), but always address agents by the names `tmux-peers` shows now.
 
-- **main agent (Claude, `claude-projects-stone-age-2`)**: interfaces with the user and the other agents: clarifies intent, turns it into self-contained tasks and relays user decisions. Does not investigate or implement.
-- **coordinator (Claude, `claude-projects-stone-age-1`)**: coordinates Codex and owns the main checkout: merges Codex commits, runs importers, backs up saves, relaunches the server, runs tests and records decisions in docs. Sends anything that needs a user decision to the main agent, not to the user.
-- **worker (Codex, `codex-projects-stone-age-1` and its sub agents)**: main implementer. Sub agents split work by file ownership to avoid conflicts (for example, one owns `quest_helper_menu.gd`).
+- **main agent**: interfaces with the user and the other agents: clarifies intent, turns it into self-contained tasks and relays user decisions. Does not investigate or implement.
+- **secondary**: coordinates the worker and owns the main checkout: merges the worker's commits, runs importers, backs up saves, relaunches the server, runs tests and records decisions in docs. Sends anything that needs a user decision to the main agent, not to the user.
+- **worker (and its sub agents)**: main implementer. Sub agents split work by file ownership to avoid conflicts (for example, one owns `quest_helper_menu.gd`).
 Messages:
 
 - Everything goes through `tmux-ask`. Long reports go in a file; the message is a short summary plus the path.
-- The user reads coordinator→main agent messages directly, so the main agent does not restate them; it surfaces a decision as a one-line summary plus options.
+- The user reads secondary→main agent messages directly, so the main agent does not restate them; it surfaces a decision as a one-line summary plus options.
 - Mark FYIs "无需回复". A decision request states the default and what is blocked meanwhile.
 - An instruction the user gives directly to any agent wins; that agent tells the others what changed.
 - Original-source bugs: keep ones that only make play easier, with a "原版行为" note in UI/changelog; ask the user case by case about ones that affect progression or the economy (repeatable rewards, item/gold farming, skipping key gates or rebirth requirements). See the rule in [rebirth bonus quest audit](docs/reverse-engineering/rebirth-quest-bonus-audit.md) (「原版源码漏洞的通用处理规则」).
@@ -47,15 +47,15 @@ While big work is in flight after 22:00, assume the user is asleep. All three ro
 - Never take destructive or irreversible actions without the user: deleting saves or worktrees, force push, history rewrite, save-format changes without migration.
 - In the morning the main agent gives the user a short list of the night's provisional decisions to confirm or change.
 
-### Coordinator watchdog
+### Secondary watchdog
 
-While a multi-agent batch runs (currently: auto-quest batch 2, resumed 2026-10-06 from [the batch 2 handoff](docs/product/batch2-handoff.md)), the coordinator checks Codex's pane and every sub agent pane (`agents-projects-stone-age` tmux session) every 30 minutes with a scheduled job, plus `python3 tools/worktree_pool.py status`:
+While a multi-agent batch runs (currently: auto-quest batch 2, resumed 2026-10-06 from [the batch 2 handoff](docs/product/batch2-handoff.md)), the secondary checks the worker's pane and every sub agent pane (`agents-projects-stone-age` tmux session) every 30 minutes with a scheduled job, plus `python3 tools/worktree_pool.py status`:
 
-- Idle with pending work (commits not forwarded for merging, waiting on an interface that has already landed, a free pool slot while planned tasks have not started): nudge Codex via `tmux-ask` with exactly what to do next.
+- Idle with pending work (commits not forwarded for merging, waiting on an interface that has already landed, a free pool slot while planned tasks have not started): nudge the worker via `tmux-ask` with exactly what to do next.
 - Tell the main agent only when something waits on a permission prompt, needs a user decision, or the same nudge already failed once.
-- The scheduled job lives only in the coordinator's Claude session: re-create it after a restart. Stop it when the batch is done or the user says so.
+- The scheduled job lives only in the secondary's session: re-create it after a restart. Stop it when the batch is done or the user says so.
 
-## Working in the main checkout (the coordinator session, not subagents)
+## Working in the main checkout (the secondary, not subagents)
 
 The main checkout serves the user's live game (`./scripts/relaunch.sh`).
 
