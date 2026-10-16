@@ -6,6 +6,14 @@
 - Gameplay authority lives in `client/server/backend.gd` and `client/server/automation.gd`. UI code reads `world.state` / `world.session.snapshot()` and changes anything only through `world.session`, `world.battle_session` or `world.link.request`; never mutate `world.backend` from UI. A remote client has no backend at all. See [backend interface](docs/technical/backend-interface.md).
 - `scripts/test-all.sh` reports every suite; `scripts/test.sh` stops at the first failure. `scripts/test.sh` ignores its arguments and runs every suite one by one; run a single suite with `./scripts/run.sh --headless --script res://tests/<name>.gd`.
 
+## Session start: game server
+
+Whenever a main agent starts in this project (including starting the chain), bring the user's game server up with Tailscale forwarding. In a chain the secondary does this, since it owns the main checkout, and the main agent only relays the Tailscale reminder to the user. Without a chain the main agent does it itself.
+
+1. **Already running?** If 8780 and 8781 both listen (`lsof -nP -iTCP:8780 -iTCP:8781 -sTCP:LISTEN`) and the Tailscale forwards are set (`tailscale serve status`), report the URL and stop. Don't restart a healthy server.
+2. **Tailscale up?** Check `tailscale status`. If the daemon isn't running (`relaunch.sh` would fail at its last step with `/var/run/tailscaled.socket: no such file`), ask the user to start the Tailscale app and wait for their confirmation. If they choose LAN only, run `./scripts/serve.sh --accounts=user://lan/accounts.json` in the background instead of step 3.
+3. **Start.** Back up the saves (`single-player.json` and `lan/*.json` in the game's user:// folder, as `<file>.before-relaunch-<stamp>`). If a stale server holds a port, stop it with `./scripts/stop-server.sh`. Run `./scripts/relaunch.sh` (default LAN profiles; add `--skip-build` when `build/web` is current) in the background, wait for `Ready:` and report the URL it prints. Don't copy that URL into tracked files: it contains the tailnet hostname.
+
 ## Effort estimates: project story points
 
 - Use this project's **story points (SP)** for effort estimates, including research reports and delegated tasks. The user's original playable MVP / completed Samgir slice is **1 SP**; completed villager conversation is **0.5 SP**. Do not substitute a generic team's point scale or treat the later, larger M004 MVP as the 1 SP anchor.
