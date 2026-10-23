@@ -27,10 +27,13 @@ func _initialize() -> void:
 	check(not Riding.can_mount(profile,0).is_empty(),"unconscious pet cannot mount")
 	pet.hp = 30
 	pet.level = 7
-	check(not Riding.can_mount(profile,0).is_empty(),"source playerplus5 level bound")
-	pet.level = 2
-	profile.player.riding_level = 1
+	check(Riding.can_mount(profile,0).is_empty(),"project convenience allows mounts above player level plus five")
+	pet.level = 140
+	check(Riding.can_mount(profile,0).is_empty(),"mount has no owner level gap bound")
+	profile.player.riding_level = 139
 	check(not Riding.can_mount(profile,0).is_empty(),"learned riding level is enforced when supplied")
+	profile.player.riding_level = 140
+	check(Riding.can_mount(profile,0).is_empty(),"mount at learned riding level remains allowed")
 	var stats := Riding.adjusted_stats({"attack":10,"defence":10,"speed":10},{"attack":20,"defence":20,"speed":20})
 	check(is_equal_approx(stats.attack,24) and is_equal_approx(stats.defence,21) and is_equal_approx(stats.speed,15),"classic melee riding uses native80/70/50percent blends")
 	check(is_equal_approx(Riding.adjusted_stats({"speed":10},{"speed":20},"reference").speed,18),"reference riding attack agility20/80")

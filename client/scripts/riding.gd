@@ -86,7 +86,7 @@ static func compatible_characters(pet_sprite: int) -> Array[String]:
 	return result
 
 ## The pet window permits choosing a compatible appearance, never bypassing
-## the ordinary health, loyalty, level, deployment or certificate rules.
+## the ordinary health, loyalty, learned riding level, deployment or certificate rules.
 static func selection_reason(profile: Dictionary, pet_index: int) -> String:
 	if pet_index < 0 or pet_index >= profile.get("pets",[]).size():return "没有这只伙伴。"
 	var candidates := compatible_characters(int(profile.pets[pet_index].get("sprite",0)))
@@ -104,9 +104,9 @@ static func pet_name(pet_sprite: int) -> String:
 
 ## Why this pet cannot be ridden now, or "" when it can. Source order and rules:
 ## family.c FAMILY_RidePet (battle pet, already riding, learned riding level,
-## loyalty 100, player level + 5, exact ridePetTable match or a certificate
+## loyalty 100, exact ridePetTable match or a certificate
 ## mount, see REQUIRE_RIDING_CERTIFICATES) and the client's checkRidePet
-## (menu.cpp:21965).
+## (menu.cpp:21965). Project convenience: omit the source player level + 5 bound.
 static func can_mount(profile: Dictionary, index: int) -> String:
 	var pets: Array = profile.get("pets",[])
 	if index < 0 or index >= pets.size(): return "没有这只伙伴。"
@@ -118,7 +118,6 @@ static func can_mount(profile: Dictionary, index: int) -> String:
 	var player: Dictionary = profile.get("player",{})
 	if player.has("riding_level") and int(pet.get("level",1)) > int(player.riding_level): return "骑乘等级不足，只能骑乘%d级以下的宠物。" % int(player.riding_level)
 	if int(pet.get("loyalty",100)) < 100: return "骑乘需要忠诚度100。"
-	if int(pet.get("level",1)) > int(player.get("level",1))+5: return "伙伴等级不能超过人物等级5级。"
 	var character := str(profile.get("character_id","100000"))
 	if composite(character,int(pet.get("sprite",0))) < 0:
 		var names := PackedStringArray()

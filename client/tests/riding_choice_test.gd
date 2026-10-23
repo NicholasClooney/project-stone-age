@@ -62,11 +62,15 @@ func backend_rules() -> void:
 	check(session.mount_pet(0) and int(session.snapshot().ride_pet) == 0,"rideable source mount is accepted")
 	check(not session.mount_pet(2) and session.last_error.contains("下骑"),"a second mount needs a dismount first")
 	check(session.mount_pet(-1) and int(session.snapshot().ride_pet) == -1,"dismount")
-	session._profile.pets[0].loyalty = 99
+	session._profile.pets[0].variable_ai = -10000
 	check(not session.mount_pet(0) and session.last_error.contains("忠诚"),"loyalty 100 required")
-	session._profile.pets[0].loyalty = 100
+	session._profile.pets[0].variable_ai = 10000
 	session._profile.pets[0].level = 7
-	check(not session.mount_pet(0) and session.last_error.contains("5"),"player level + 5 bound")
+	check(session.mount_pet(0) and int(session.snapshot().ride_pet) == 0,"backend accepts mount above player level plus five")
+	session.mount_pet(-1)
+	session._profile.player.riding_level = 6
+	check(not session.mount_pet(0) and session.last_error.contains("骑乘等级"),"backend retains learned riding level bound")
+	session._profile.player.erase("riding_level")
 	session._profile.pets[0].level = 1
 	session.select_pet(0)
 	check(not session.mount_pet(0) and session.last_error.contains("出战"),"battling pet cannot be ridden")
@@ -110,11 +114,12 @@ func certificate_mounts() -> void:
 	session._profile.pets[1].level = 1
 	check(session.mount_pet(1) and int(session.snapshot().ride_pet) == 1,"扬奇洛斯 can be ridden without a certificate")
 	session.mount_pet(-1)
-	session._profile.pets[1].loyalty = 99
+	session._profile.pets[1].variable_ai = -10000
 	check(not session.mount_pet(1) and session.last_error.contains("忠诚"),"certificate mounts keep the loyalty rule")
-	session._profile.pets[1].loyalty = 100
+	session._profile.pets[1].variable_ai = 10000
 	session._profile.pets[1].level = 7
-	check(not session.mount_pet(1) and session.last_error.contains("5"),"certificate mounts keep the level rule")
+	check(session.mount_pet(1) and int(session.snapshot().ride_pet) == 1,"certificate mounts also omit owner level gap bound")
+	session.mount_pet(-1)
 	session._profile.pets[1].level = 1
 	session.set_character("100020")
 	check(session.mount_pet(1) and Riding.composite(str(session.snapshot().character_id),100288) == 101313+4,"another character rides it with its own composite")
@@ -134,12 +139,13 @@ func menu_button() -> void:
 	menu.rebuild()
 	var button: Button = menu.panel.find_child("PetMount",true,false)
 	var reason = menu.panel.find_child("PetMountReason",true,false)
-	check(button != null and button.disabled and button.text.contains("金虎"),"ride button is disabled for a pet this character cannot ride")
-	check(reason != null and reason.text.contains("格鲁西斯"),"disabled ride button explains why")
+	check(button != null and not button.disabled and button.text.contains("金虎"),"ride button allows choosing a compatible appearance")
+	check(reason == null,"compatible appearance selection has no blocking reason")
+	world.session._profile.pets[0].level = 140
 	menu.selected_pet = 0
 	menu.rebuild()
 	button = menu.panel.find_child("PetMount",true,false)
-	check(not button.disabled and button.text.begins_with("骑乘"),"ride button enabled for a rideable pet")
+	check(not button.disabled and button.text.begins_with("骑乘"),"ride button enabled for a high level rideable pet")
 	button.pressed.emit()
 	await process_frame
 	check(int(world.session.snapshot().ride_pet) == 0,"ride button mounts the selected pet")

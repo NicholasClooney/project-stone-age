@@ -437,7 +437,7 @@ func _update_mount_status(label: Label, character: String) -> void:
 	var characters := Riding.compatible_characters(sprite)
 	label.text = "当前造型可骑" if direct else ("换造型可骑" if not characters.is_empty() else "暂无可选骑乘造型")
 	label.add_theme_color_override("font_color",PetTable.GOOD if direct else PetTable.GOLD)
-	label.tooltip_text = "造型匹配提示；实际骑乘还需满足待机、忠诚度、等级等条件。\n可选兼容造型：%d种。可在宠物窗口点「骑乘」选择。" % characters.size()
+	label.tooltip_text = "造型匹配提示；实际骑乘还需满足存活、待机、忠诚度100及已设定的骑乘等级等条件。\n项目便利：不限制宠物与人物的等级差。\n可选兼容造型：%d种。可在宠物窗口点「骑乘」选择。" % characters.size()
 
 func _refresh_mount_status() -> void:
 	var character := str(world.session.snapshot().get("character_id","100000"))
