@@ -1,12 +1,12 @@
 extends RefCounted
-## Original npc_poolitemshop.c:706 and char_base.c:1426. Direct free access is
-## a project convenience. This module never allocates or combines original UIDs.
+## Original npc_poolitemshop.c:706 and char_base.c:1426. Free access and
+## accepting all backpack item types are project conveniences.
+## This module never allocates or combines original UIDs.
 const Equipment=preload("res://server/original_equipment.gd")
 const Spirits=preload("res://server/spirits.gd")
 const MAX_CAPACITY:=3000 # Project override; original hook remains disabled.
 const STACK_LIMIT:=64
 static var _catalog: Dictionary={}
-const LEGACY_IDS:={"potion":1500,"club":100,"mirror_charm":1460,"haru_armor":1011,"freya_robe":1112,"teo_robe":1113,"koyala_charm":1450}
 const FIELDS:=["item_storage","legacy_item_storage","item_storage_revision"]
 
 static func migrate(profile: Dictionary) -> void:
@@ -29,7 +29,7 @@ static func stackable(entry: Dictionary, data: Dictionary) -> bool:
 	# Current instances contain exactly UID/template/durability. Any future
 	# binding, rolled modifier or unique state makes the instance independent.
 	var raw: Array=data.get("raw_columns",[])
-	return entry.size()==3 and int(entry.get("durability",-1))==0 and raw.size()>81 and int(raw[19]) in [16,20] and reason(data).is_empty()
+	return entry.size()==3 and int(entry.get("durability",-1))==0 and raw.size()>81 and int(raw[19]) in [16,20]
 
 static func groups(profile: Dictionary) -> Array:
 	var result: Array=[]
@@ -51,12 +51,9 @@ static func used(profile: Dictionary) -> int:
 		total+=int(ceil(float(count)/STACK_LIMIT)) if key=="potion" else count
 	return total
 
-static func reason(data: Dictionary) -> String:
-	var columns: Array=data.get("raw_columns",[])
-	if columns.size()<=81:return "原物品仓库标记尚未核实。"
-	if str(columns[78])=="1":return "原版规则：登出消失物品不能寄存。"
-	if str(columns[79])=="1":return "原版规则：丢弃消失物品不能寄存。"
-	if str(columns[81])!="1":return "原版规则：不可宠邮物品不能寄存。"
+## Item template flags do not restrict this project convenience. Instance and
+## ownership validation still run independently before committing a transfer.
+static func reason(_data: Dictionary) -> String:
 	return ""
 
 static func legacy_worn(profile: Dictionary, key: String) -> bool:
@@ -70,7 +67,7 @@ static func valid(profile: Dictionary) -> bool:
 	if not profile.item_storage is Array or not profile.legacy_item_storage is Dictionary or not Equipment.integer(profile.item_storage_revision,0,2147483646):return false
 	if profile.item_storage.size()>MAX_CAPACITY*STACK_LIMIT or not Equipment.valid(profile):return false
 	for key in profile.legacy_item_storage:
-		if not key in LEGACY_IDS or not Equipment.integer(profile.legacy_item_storage[key],1,MAX_CAPACITY*STACK_LIMIT):return false
+		if not (key is String or key is StringName) or str(key).is_empty() or not Equipment.integer(profile.legacy_item_storage[key],1,MAX_CAPACITY*STACK_LIMIT):return false
 	var seen: Dictionary={}
 	for entry in profile.original_instances:seen[int(entry.uid)]=true
 	for entry in profile.item_storage:
@@ -80,7 +77,6 @@ static func valid(profile: Dictionary) -> bool:
 		var spec: Dictionary=Equipment.ITEMS.get(int(entry.item_id),{})
 		if not Equipment.integer(entry.get("durability"),0,int(spec.get("durability",0))):return false
 		if int(spec.get("durability",0))>0 and int(entry.durability)==0:return false
-		if not reason(catalog().get(str(int(entry.item_id)),{})).is_empty():return false
 		seen[int(entry.uid)]=true
 	return used(profile)<=capacity(profile)
 
@@ -93,7 +89,7 @@ static func rows(profile: Dictionary, specs: Dictionary, deposit: bool) -> Array
 	for group in grouped:
 		var entry: Dictionary=group[0]
 		var data: Dictionary=specs.get(str(int(entry.item_id)),{})
-		var refusal: String=reason(data) if deposit else ""
+		var refusal: String=""
 		if deposit and Equipment.worn(profile,int(entry.uid)):refusal="请先卸下已穿戴的装备。"
 		var selector: Dictionary={"uid":int(entry.uid)} if deposit else {"uids":group.map(func(member):return int(member.uid))}
 		result.append({"selector":selector,"id":"uid_%d"%int(entry.uid),"name":str(data.get("name",str(entry.item_id))),"count":group.size(),"durability":int(entry.durability),"reason":refusal,"icon":str(data.get("icon_path",""))})
@@ -101,13 +97,12 @@ static func rows(profile: Dictionary, specs: Dictionary, deposit: bool) -> Array
 	for key in counts:
 		if int(counts[key])<=0:continue
 		var refusal:=""
-		if not LEGACY_IDS.has(key):refusal="项目辅助物品暂不支持寄存。"
 		if deposit and legacy_worn(profile,key):refusal="请先卸下已穿戴的装备。"
 		var title: String=Spirits.ITEMS.get(key,{}).get("name",{"potion":"耐久力回复药","club":"小棍棒","healing_charm":"恢复宠物"}.get(key,key))
 		var offset:=0
 		while offset<int(counts[key]):
 			var count: int=int(counts[key]) if deposit else mini(STACK_LIMIT if key=="potion" else 1,int(counts[key])-offset)
-			result.append({"selector":{"key":key,"count":count,"offset":offset},"id":"legacy_%s_%d"%[key,offset],"name":title,"count":count,"reason":refusal,"durability":-1,"icon":""})
+			result.append({"selector":{"key":str(key),"count":count,"offset":offset},"id":"legacy_%s_%d"%[key,offset],"name":title,"count":count,"reason":refusal,"durability":-1,"icon":""})
 			offset+=count
 	return result
 

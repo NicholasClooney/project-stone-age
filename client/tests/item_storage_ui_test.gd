@@ -55,14 +55,16 @@ func run() -> void:
  if not await ready(func():return menu.visible,"Actual bag button opens warehouse"):return
  if not await press(menu,"StorageRow_uid_1"):return
  if not await press(menu,"StorageRow_uid_2"):return
+ if not await press(menu,"StorageRow_uid_3"):return
  await proof("desktop-multiple-deposit")
  if not await press(menu,"StorageTransfer"):return
- if not await ready(func():return not menu.busy and world.session.snapshot().item_storage.size()==2,"Clicked batch deposit committed"):return
+ if not await ready(func():return not menu.busy and world.session.snapshot().item_storage.size()==3,"Clicked batch including formerly forbidden quest item deposit committed"):return
  await request(second,{"type":"ping"})
  if not check(second_state.profile.item_storage==world.session.snapshot().item_storage,"LAN second device sees same UIDs"):return
  if not await press(menu,"StorageWarehouseTab"):return
  if not await press(menu,"StorageRow_uid_1"):return
  if not await press(menu,"StorageRow_uid_2"):return
+ if not await press(menu,"StorageRow_uid_3"):return
  await proof("desktop-multiple-withdraw")
  if not await press(menu,"StorageTransfer"):return
  if not await ready(func():return not menu.busy and world.session.snapshot().item_storage.is_empty(),"Clicked batch withdraw committed"):return
@@ -137,6 +139,18 @@ func run() -> void:
  if not check(b.session.snapshot().original_instances.map(func(e):return int(e.uid))==[first_uid,first_uid+1,first_uid+2],"UI split returns deterministic original UIDs"):return
  if not check(int(b.session.snapshot().player.gold)==20,"All clicked free transactions preserve gold"):return
  await proof("portrait-stack-split-complete")
+ # Runtime helper keys may be StringName; selectors must survive JSON transport.
+ b.session._profile.inventory.healing_charm=1;await push(b)
+ if not await press(menu,"StorageBagTab"):return
+ if not await press(menu,"StorageRow_legacy_healing_charm_0"):return
+ if not await press(menu,"StorageTransfer"):return
+ if not await ready(func():return not menu.busy and int(world.session.snapshot().legacy_item_storage.get("healing_charm",0))==1,"Remote helper deposit accepts canonical key"):return
+ await request(second,{"type":"ping"})
+ if not check(int(second_state.profile.legacy_item_storage.get("healing_charm",0))==1,"Second device sees stored helper"):return
+ if not await press(menu,"StorageWarehouseTab"):return
+ if not await press(menu,"StorageRow_legacy_healing_charm_0"):return
+ if not await press(menu,"StorageTransfer"):return
+ if not await ready(func():return not menu.busy and int(world.session.snapshot().inventory.get("healing_charm",0))==1,"Remote helper withdrawal restores count"):return
  second.close();world.link.close();server.stop();world.music.stop();world.effect.stop()
  world.queue_free();server.queue_free();b.queue_free();await process_frame
  for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(path+suffix)

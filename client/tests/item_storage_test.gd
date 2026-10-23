@@ -26,10 +26,19 @@ func run() -> void:
  for n in [0,1,2,5,100]:
   profile.player.transmigration=n
   check(Storage.original_capacity(profile)==mini(10+4*n,30) and Storage.capacity(profile)==3000,"Original rebirth hook remains disabled")
- for id in [2401,2416,2507,2547,2548,2708]:check(not Storage.reason(b.quest_catalog.items[str(id)]).is_empty(),"Actual forbidden item flags %d"%id)
- for id in [2468,2424,2450,2605]:check(Storage.reason(b.quest_catalog.items[str(id)]).is_empty(),"Actual allowed item flags %d"%id)
- var uid:=add(b,2605);var herb:=add(b,2401)
- unchanged(b,command(b,[{"uid":uid},{"uid":herb}]),"Forbidden member refuses entire batch")
+ # Original no-mail/disappear flags and absent catalogue metadata do not bar storage.
+ for id in [2401,2416,2507,2547,2548,2708,2468,2424,2450,2605,2147483647]:
+  var test_uid:=add(b,id)
+  var exact:Dictionary=b.session.snapshot().original_instances.back().duplicate(true)
+  var quest_before:Dictionary=b.session.snapshot().quest.duplicate(true)
+  var events_before:Dictionary=b.session.snapshot().original_events.duplicate(true)
+  check(one(b,test_uid).ok,"Every original item type can deposit %d"%id)
+  check(b.session.snapshot().item_storage==[exact],"Stored instance remains exact %d"%id)
+  check(not preload("res://server/original_quests.gd").matches(b.session.snapshot(),"ITEM=%d"%id),"Stored quest item is not carried %d"%id)
+  check(one(b,test_uid,"withdraw").ok,"Every original item type can withdraw %d"%id)
+  check(b.session.snapshot().original_instances.back()==exact and b.session.snapshot().quest==quest_before and b.session.snapshot().original_events==events_before,"Round trip retains instance and quest state %d"%id)
+  Equipment.remove(b.session._profile,id)
+ var uid:=add(b,2605)
  unchanged(b,command(b,[{"uid":uid},{"uid":uid}]),"Duplicate selection refuses entire batch")
  unchanged(b,command(b,[{"uid":uid},{"uid":99999}]),"Foreign UID refuses entire batch")
  b.session._profile.player.level=60
@@ -117,6 +126,16 @@ func run() -> void:
  check(b.handle(free).ok and b.session.snapshot().player.gold==0,"Deposit never charges or accepts client price")
  rows=Storage.rows(b.session.snapshot(),b.quest_catalog.items,false)
  check(b.handle(command(b,[Storage.take(rows[0],2)],"withdraw")).ok and b.session.snapshot().player.gold==0,"Withdrawal is also free")
+ b.queue_free()
+ b=fresh();b.session._profile.inventory.healing_charm=2
+ var helper:=[{"key":"healing_charm","count":2,"offset":0}]
+ var helper_reply:Dictionary=b.handle(command(b,helper))
+ check(helper_reply.ok and b.session.snapshot().inventory.healing_charm==0,"Project helper item can deposit: "+str(helper_reply))
+ check(b.session._valid_profile(b.session.snapshot()),"Stored helper validates")
+ rows=Storage.rows(b.session.snapshot(),b.quest_catalog.items,false)
+ check(not rows.is_empty() and b.handle(command(b,[Storage.take(rows[0],1)],"withdraw")).ok and b.session.snapshot().inventory.healing_charm==1,"Project helper withdraws without loss")
+ b.save_path=path
+ check(b.save() and loaded.load_game(path) and loaded.snapshot()==b.session.snapshot(),"Helper storage persists exactly")
  b.queue_free()
  for suffix in ["",".bak",".tmp",".old",".old.bak"]:DirAccess.remove_absolute(path+suffix)
  await process_frame

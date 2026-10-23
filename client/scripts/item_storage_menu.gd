@@ -36,7 +36,7 @@ func _ready() -> void:
 	var title_row:=HBoxContainer.new();box.add_child(title_row)
 	heading=Label.new();heading.size_flags_horizontal=Control.SIZE_EXPAND_FILL;title_row.add_child(heading)
 	var close:=button("返回背包","StorageClose",title_row);close.pressed.connect(close_menu)
-	var help:=Label.new();help.text="项目改动：3000格，无个体状态物品每堆64。\n直接打开；装备独立占格，存前先卸下。";help.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;box.add_child(help)
+	var help:=Label.new();help.text="项目改动：3000格，无个体状态物品每堆64。\n所有背包道具均可存；装备存前先卸下。\n任务物品入仓后不算随身，交任务前请取出。";help.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;box.add_child(help)
 	policy=Label.new();policy.autowrap_mode=TextServer.AUTOWRAP_WORD_SMART;box.add_child(policy)
 	var tabs:=HBoxContainer.new();box.add_child(tabs)
 	bag_tab=button("背包 · 存入","StorageBagTab",tabs);bag_tab.pressed.connect(func():change_tab(true))
