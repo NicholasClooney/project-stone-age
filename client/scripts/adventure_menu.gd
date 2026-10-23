@@ -4,6 +4,7 @@ var world: Node
 var kind := "status"
 var panel: Control
 var feedback := ""
+var quick_transmigration_menu: Control
 var item_storage_menu: Control
 var allocation_amount := 1
 var allocation_stats: Array = ["vitality","strength","toughness","dexterity"]
@@ -105,6 +106,7 @@ var selected_item_slot := "potion"
 const Highlight = preload("res://scripts/legacy_ui_highlight.gd")
 var readable_font: FontVariation
 func _sync_dev_visibility() -> void:
+	if not visible:close_quick_transmigration()
 	if world==null or not is_instance_valid(world.ui_layer):return
 	if is_instance_valid(world.adventure_hint):world.adventure_hint.visible=not visible
 	for root_control in world.ui_layer.get_children():
@@ -127,6 +129,7 @@ func _has_point(point: Vector2) -> bool:
 	return point.y < size.y-40
 
 func open_menu(next_kind: String) -> void:
+	close_quick_transmigration()
 	if is_instance_valid(item_storage_menu):item_storage_menu.hide()
 	kind = next_kind
 	pet_view = "list"
@@ -354,6 +357,7 @@ func _rebuild_panel() -> void:
 	# GUI hit testing follows sibling order, not z_index. Profile pushes rebuild
 	# the bag underneath the open warehouse, never above its controls.
 	if is_instance_valid(item_storage_menu) and item_storage_menu.visible:item_storage_menu.move_to_front()
+	if is_instance_valid(quick_transmigration_menu):quick_transmigration_menu.move_to_front()
 	var profile: Dictionary = world.session.snapshot()
 	var p: Dictionary = profile.player
 	if kind=="quest":
@@ -520,6 +524,21 @@ func status_panel(profile: Dictionary) -> void:
 		var distribute:=choice("剩余点均分到勾选项",Vector2(289,201),"distribute_stats")
 		distribute.name="DistributeStats"
 		label("只分配剩余点；余数按体腕耐速分配。",Vector2(294,244),225,12)
+
+
+	var quick:=Button.new();quick.name="QuickTransmigration";quick.text="快速转生 · 作弊便利"
+	quick.position=Vector2(8,364);quick.size=Vector2(256,44)
+	quick.pressed.connect(open_quick_transmigration);panel.add_child(quick)
+
+func open_quick_transmigration() -> void:
+	if is_instance_valid(quick_transmigration_menu):return
+	quick_transmigration_menu=preload("res://scripts/quick_transmigration_menu.gd").new()
+	add_child(quick_transmigration_menu);quick_transmigration_menu.setup(world)
+	quick_transmigration_menu.dismissed.connect(close_quick_transmigration)
+
+func close_quick_transmigration() -> void:
+	if not is_instance_valid(quick_transmigration_menu):return
+	quick_transmigration_menu.shutdown();quick_transmigration_menu.queue_free();quick_transmigration_menu=null
 
 ## The creation screen's 属性 choice: 10 points over at most two neighbouring
 ## elements, with the original buttons' rules (Elements.creation_step).
