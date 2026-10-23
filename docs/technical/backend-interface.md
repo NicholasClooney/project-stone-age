@@ -410,3 +410,31 @@ Legacy pending capture-only config without `capture_destination` retains its ori
 任务助手公开原对白、五层所有答案及五种守卫/奖励，不自动代选；瞬移是明确的项目便利。新增套件 `brothers_golden_quests_test`、`brothers_golden_ui_test`；后者使用真实WebSocket的无backend客户端和实际GUI点击，设置 `STONE_AGE_PROOF_DIR` 时必须使用真实renderer输出像素。
 
 组队包含1060的保存重试：`session._pending.party_settlement`只接收服务器`party_turn`传入的个人slice及自己的drop claims，深拷贝冻结。保存失败回滚时保留这组数据，`battle_close`从同一冻结结果重试，而不是把共享party snapshot当个人结算。成功后随pending清除；反复关闭或已经消费的party push不会再次发奖。队长/成员/双方真实保存失败均覆盖，恢复后持久化结果逐字段与原个人slice一致，真实之眼只给原击杀归属者。它仍是当前服务端进程内的重试，不宣称新增组队断电恢复。
+
+
+### 项目便利：人物快速转生
+
+所有登录玩家可对自己的角色发送 `quick_transmigration`，不要求管理员。
+它独立于 `transmigration` 精灵王自然入口；自然入口的任务、守护兽和路线门禁不变。
+一次确认只增加一转，最多五转，不做宠物转生，不更改人物/宠物自然120级上限。
+
+- `action: "preview"` 必须带 `level_mode: "current" | "120" | "130"`、
+  `bonus_quests: 0 | 20`、非空且不重复的 `allocation_stats` 数组，元素只允许
+  `vitality/strength/toughness/dexterity`。current不足80拒绝；模拟目标低于真实等级拒绝。
+- 服务端把已有自由点与 `3 * (target_level - actual_level)` 新增点，按所选属性均分，
+  余数固定体/腕/耐/速顺序。已配属性不洗点。130仅参与纯候选计算，绝不先保存130级。
+- 成功返回 `quick_transmigration`，包含 `token/new_count/level_mode/actual_level/target_level`、
+  `existing_points/gained_points/allocation: [{stat, points}]/pre_base_stats/base_stats/stat_points`、
+  `quest_count/equation/reward: {enemy_id, template_id, name}/location/warning`。
+  四维为原定点整数，自由点与分配量为整数；`pre_base_stats` 是分配后的转前四维。
+  `quest_count` 仅本轮0或20，`equation` 是累计Q高16位与累计L低16位的原打包整数；
+  不补写历史Q/L，Q0不抹历史。UI默认120由客户端选择，服务端不默填缺失选项。
+- `action: "confirm" | "cancel"` 只接受 `token`，共同运输信封为
+  `type/action/seq/client/_quest_connection`。属性、seed、奖励、祭品等额外字段整体拒绝。
+  confirm返回 `ok/closed/new_count/location/transaction_id`；失败返回 `ok: false, reason`。
+- 预览冻结前态、rev、选项及奖励seed；确认保存整个候选成功后才刷新位置、任务NPC状态、
+  助手缓存与自动化引用。过期token、并发重复确认、保存失败均不能部分转生或重复发奖。
+  持久层沿用 `history: "natural"` 表示完整可计算继承历史，并非完成自然前置的证明。
+- 免任务与守护兽且不扣宠，不伪造任务完成或补发关联任务奖励。仍按正常结算继承、
+  清留任务旗标、返出生村、卸骑、重算忠诚、校验装备并直接发当轮奖励宠（第五转机暴）。
+  随身宠满30格拒绝，未知历史/无效存档/战斗或自动活动/组队限制及写盘保护仍生效。

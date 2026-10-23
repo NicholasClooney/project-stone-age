@@ -12,17 +12,58 @@ static func build(before:Dictionary,selected_ids:Array,reward_definition:Diction
  if int(before.player.level)<80:return {"ok":false,"reason":"人物等级需要达到80级。"}
  for event in [39,40,42,46]:
   if not Rules._flag(before.original_events.ended,event):return {"ok":false,"reason":"需要完成地、水、火、风四项试炼。"}
- if transaction_id.is_empty() or transaction_id.length()>128:return {"ok":false,"reason":"转生事务身份无效。"}
- if pet_capacity<1 or before.pets.size()>pet_capacity:return {"ok":false,"reason":"随身宠物容量状态无效。"}
  var count:int=int(before.player.transmigration)+1
  var selected:=Rules.select_sacrifices(before.pets,count,selected_ids)
  if not selected.ok:return selected
- if before.pets.size()-selected.indices.size()+1>pet_capacity:return {"ok":false,"reason":"宠物栏没有奖励宠物的空间。"}
+ var quests:=Rules.quest_count(before.original_events)
+ var inherited:=Rules.inherit(before.player.base_stats,before.rebirth.equation,before.player.level,count,quests)
+ return _settle(before,selected,reward_definition,seed_value,transaction_id,pet_capacity,quests,inherited)
+
+## Project convenience policy. Simulated levels/points exist only as formula
+## inputs, never as an installed or saved intermediate player profile.
+static func build_quick(before:Dictionary,options:Dictionary,reward_definition:Dictionary,seed_value:int,transaction_id:String,pet_capacity:int)->Dictionary:
+ var reason:=State.continuation_error(before)
+ if not reason.is_empty():return {"ok":false,"reason":reason}
+ var mode:Variant=options.get("level_mode")
+ var quests:Variant=options.get("bonus_quests")
+ var stats:Variant=options.get("allocation_stats")
+ if not mode is String or mode not in ["current","120","130"]:return {"ok":false,"reason":"请选择当前等级、120或130级模拟。"}
+ if not Rules.integer(quests,0,20) or int(quests) not in [0,20]:return {"ok":false,"reason":"本轮任务加成只允许0或20。"}
+ if not stats is Array or stats.is_empty() or stats.size()>4:return {"ok":false,"reason":"请至少选择一项加点属性。"}
+ var seen:Dictionary={}
+ for stat in stats:
+  if not stat is String or stat not in Rules.STATS or seen.has(stat):return {"ok":false,"reason":"加点属性无效或重复。"}
+  seen[stat]=true
+ var actual:int=int(before.player.level)
+ var target:int=actual if mode=="current" else int(mode)
+ if target<actual:return {"ok":false,"reason":"模拟目标不能低于真实等级。"}
+ if target<80:return {"ok":false,"reason":"当前等级不足80级，请选择120或130级模拟。"}
+ var existing:int=int(before.player.stat_points)
+ var gained:int=3*(target-actual)
+ var points:int=existing+gained
+ var base:Dictionary=before.player.base_stats.duplicate()
+ var allocation:Array=[]
+ var remainder:int=points%stats.size()
+ for stat in Rules.STATS:
+  if not seen.has(stat):continue
+  var assigned:int=points/stats.size()+(1 if remainder>0 else 0)
+  remainder-=1
+  allocation.append({"stat":stat,"points":assigned})
+  base[stat]=int(base[stat])+100*assigned
+ var inherited:=Rules.inherit(base,before.rebirth.equation,target,int(before.player.transmigration)+1,int(quests))
+ var result:=_settle(before,{"ok":true,"indices":[],"pet_ids":[]},reward_definition,seed_value,transaction_id,pet_capacity,int(quests),inherited)
+ if result.ok:result.merge({"level_mode":mode,"actual_level":actual,"target_level":target,"existing_points":existing,"gained_points":gained,"allocation":allocation,"pre_base_stats":base})
+ return result
+
+## Shared settlement receives only server policy results, never RPC fields.
+static func _settle(before:Dictionary,selected:Dictionary,reward_definition:Dictionary,seed_value:int,transaction_id:String,pet_capacity:int,quests:int,inherited:Dictionary)->Dictionary:
+ if transaction_id.is_empty() or transaction_id.length()>128:return {"ok":false,"reason":"转生事务身份无效。"}
+ if pet_capacity<1 or before.pets.size()>pet_capacity:return {"ok":false,"reason":"随身宠物容量状态无效。"}
+ if before.pets.size()-selected.indices.size()+1>pet_capacity:return {"ok":false,"reason":"宠物栏没有奖励宠物的空间，请先整理随身宠物。"}
+ var count:int=int(before.player.transmigration)+1
  var reward:=Rules.reward_for(before.original_savepoint_bits,count)
  if not reward.ok:return reward
  if int(reward_definition.get("enemy_id",-1))!=int(reward.enemy_id) or int(reward_definition.get("template_id",-1))!=int(reward.template_id) or reward_definition.get("species")!="original_%d"%int(reward.template_id) or int(reward_definition.get("level",-1))!=1:return {"ok":false,"reason":"原奖励宠物来源不匹配。"}
- var quests:=Rules.quest_count(before.original_events)
- var inherited:=Rules.inherit(before.player.base_stats,before.rebirth.equation,before.player.level,count,quests)
  if not inherited.ok:return inherited
  var flags:=Rules.flags_after(before.original_events,count)
  if not flags.ok:return flags

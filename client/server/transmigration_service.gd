@@ -87,7 +87,13 @@ func confirm(b,n:Dictionary)->Dictionary:
  var reply:Dictionary={"ok":true,"closed":true,"transaction_id":pending.token,"new_count":candidate.player.transmigration,"location":candidate.location.duplicate()}
  b.last_saved_payload=JSON.stringify(b.session.snapshot())
  b.quest_arrival.consume_action_context(pending.proof)
+ after_commit(b,candidate)
+ return reply
+
+## Shared post-save synchronization for both admission policies.
+func after_commit(b,candidate:Dictionary)->void:
  pending.clear()
+ b.quick_transmigration.reset()
  b.original_quests.pending.clear()
  _reset_round_npcs(b)
  b.quest_helper.cached_key="";b.quest_helper.cached_snapshot={}
@@ -98,7 +104,6 @@ func confirm(b,n:Dictionary)->Dictionary:
  b.automation.position_changed(int(location.map_id),Vector2i(int(location.x),int(location.y)),b.automation.position_map!=int(location.map_id),"project")
  b._emit({"type":"position","map_id":int(location.map_id),"cell":[int(location.x),int(location.y)],"client":""})
  b.publish()
- return reply
 func _reset_round_npcs(b)->void:
  var state=b.original_quests.npc_state
  var changed:=false

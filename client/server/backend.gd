@@ -108,6 +108,7 @@ var stationary = preload("res://server/stationary_encounters.gd").new()
 var stationary_party_member: Callable
 var quest_auto = preload("res://server/quest_auto.gd").new()
 var quest_loot = preload("res://server/quest_auto_loot.gd").new()
+var quick_transmigration = preload("res://server/quick_transmigration_service.gd").new()
 var transmigration = preload("res://server/transmigration_service.gd").new()
 var original_quests = preload("res://server/original_quests.gd").new()
 var _npc_state_published_version := 0
@@ -285,6 +286,7 @@ func load_profile(path: String) -> bool:
 	quest_loot = preload("res://server/quest_auto_loot.gd").new()
 	quest_arrival.reset()
 	transmigration.reset()
+	quick_transmigration.reset()
 	var fee_normalization:RefCounted=null
 	if not is_same(load_owner._fee_loaded_receipt,previous_fee_receipt):
 		fee_normalization=load_owner._begin_fee_loaded_storage_normalization(load_owner._fee_loaded_receipt,self)
@@ -3350,6 +3352,9 @@ func _revival_transaction() -> bool:
 
 func _cmd_item_storage_transfer(command: Dictionary) -> Dictionary:
 	return GameSession.ItemStorage.transfer(self,command)
+
+func _cmd_quick_transmigration(command:Dictionary)->Dictionary:
+	return quick_transmigration.command(self,command)
 
 func _cmd_transmigration(command:Dictionary)->Dictionary:
 	return transmigration.command(self,command)
