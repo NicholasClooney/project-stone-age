@@ -228,8 +228,8 @@ func _receive(reply: Dictionary, action: String) -> void:
 	var equation:=int(value.get("equation",0))
 	_label(details,"新一轮自由点：%d；本轮任务加成计数：%d\n继承计算累计：任务加成Q=%d，转生等级L=%d（含模拟，不代表真实完成任务数）。" % [int(value.get("stat_points",0)),int(value.get("quest_count",0)),equation >> 16,equation & 65535])
 	var reward: Dictionary=value.get("reward",{});var location: Dictionary=value.get("location",{})
-	_label(details,"奖励：Lv1 %s（模板%d，原敌人编号%d）\n返村：地图%d，坐标(%d, %d)。" % [str(reward.get("name","奖励宠物")),int(reward.get("template_id",0)),int(reward.get("enemy_id",0)),int(location.get("map_id",0)),int(location.get("x",0)),int(location.get("y",0))])
-	_label(details,"免祭品，不扣宠。本轮任务按转生原规则清除；保留原已置位的 END69–72、109、118、122、127、131、158、159 和 NOW69–72，补记本次转生旗标。四信物 END53 奖励不开放。骑乘解除，宠物忠诚重算，不合条件装备卸入背包；金币按10亿上限处理，仓库存量保留。")
+	_label(details,"奖励：Lv1 %s\n返回出生村，坐标(%d, %d)。" % [str(reward.get("name","奖励宠物")),int(location.get("x",0)),int(location.get("y",0))])
+	_label(details,"免祭品，不扣宠。大部分本轮任务进度重置，原规则保留的进度不变。若走自然转生路线，四精灵试炼需重新完成；本入口仍免任务前置。骑乘解除，宠物忠诚重算，不合条件装备卸入背包；金币及仓库存量保留。")
 	if not str(value.get("warning","")).is_empty():_label(details,str(value.warning))
 	status.text="角色状态已改变，请重新获取预览。" if stale else "请核对预览；确认只执行本次一转。"
 	refresh.text="重新获取预览";_buttons()
