@@ -257,11 +257,22 @@ func make_host(stage:String,mode:String):
  check(reply.get("ok",false) and reply.get("persisted",false) and not b.quest_loot.initial_e2.is_empty(),"Actual public handler E1 seal; test-only capability")
  if failures:b.free();return null
  return b
+# Keep the shared condition deadline: seed4101 needs 41 real field attempts
+# before the first battle, and initial E2 permits only one per normal generation.
+# Diagnostics only observe memory after the original condition wait returns.
+func wait_progress(b,label:String,condition:Callable)->bool:
+ var started:int=Time.get_ticks_msec()
+ var generation:int=b._normal_process_generation
+ var fields:int=b.field_calls
+ var reached:bool=await Wait.until(self,condition)
+ print("UNIFIED_RESUME_WAIT ",b.stage,"/",b.mode,"/",label," ",JSON.stringify({"condition_met":reached,"failures":failures,"elapsed_ms":Time.get_ticks_msec()-started,"deadline_ms":int(Wait.DEADLINE*1000),"generation":b._normal_process_generation,"generation_delta":b._normal_process_generation-generation,"fields":b.field_calls,"field_delta":b.field_calls-fields,"phase":b.quest_auto.phase,"q_running":b.quest_auto.running,"battle_open":b.battle_open,"settled":b.battle_state.get("settled",false),"settlements":b.settlement_calls,"close_calls":b.close_calls,"initial_serial":b.quest_loot.initial_e2.get("serial",-1),"followup_serial":b.quest_loot.followup.get("serial",-1),"finished":b.finished,"injected":b.injected}))
+ return reached
+
 func run_case(stage:String,mode:String)->void:
  var b=make_host(stage,mode)
  if b==null:return
  b.set_process(true)
- var arrived:bool=await Wait.until(self,func():return b.finished or failures>0,12.0)
+ var arrived:bool=await wait_progress(b,"selected_resume",func():return b.finished or failures>0)
  if failures:b.free();return
  log_fact(stage+"/"+mode+"/wait_return",b.facts())
  check(arrived and b.injected and b.finished and not b.before.is_empty() and not b.process_tail.is_empty(),"Actual selected resume and complete process tail: "+stage+"/"+mode)
@@ -338,7 +349,7 @@ func run_case(stage:String,mode:String)->void:
     reached[0]=true;host.set_process(false)
  b.test_clock+=500
  b.set_process(true)
- var progressed:bool=await Wait.until(self,func():return reached[0] or failures>0,12.0)
+ var progressed:bool=await wait_progress(b,"next_disposition",func():return reached[0] or failures>0)
  if failures:b.free();return
  check(progressed and reached[0],"Bounded next real process reached its disposition")
  if failures:b.free();return
@@ -356,7 +367,7 @@ func run_case(stage:String,mode:String)->void:
    b.quest_auto.after=func(host):
     if host.field_calls>fields:rolled[0]=true;host.set_process(false)
    b.test_clock+=500;b.set_process(true)
-   var attempted:bool=await Wait.until(self,func():return rolled[0] or failures>0,12.0)
+   var attempted:bool=await wait_progress(b,"successor_attempt",func():return rolled[0] or failures>0)
    if failures:b.free();return
    check(attempted and b.field_calls==fields+1,"Exactly one actual successor E2, no RNG reset")
    if failures:b.free();return
@@ -397,7 +408,7 @@ func run_successor_case(kind:String,late:bool=false,unknown:bool=false)->void:
  if b==null:return
  b.successor_kind=kind;b.successor_late=late;b.successor_unknown=unknown
  b.set_process(true)
- var arrived:bool=await Wait.until(self,func():return b.finished or failures>0,12.0)
+ var arrived:bool=await wait_progress(b,"selected_resume",func():return b.finished or failures>0)
  if failures:b.free();return
  check(arrived and b.successor_installed and b.finished and not b.process_tail.is_empty(),"Real closed C1 resume returned through injected successor callback")
  if failures:b.free();return
@@ -415,7 +426,7 @@ func run_successor_case(kind:String,late:bool=false,unknown:bool=false)->void:
  var tick_before:Dictionary=b.facts()
  b.quest_auto.after=func(host):reached[0]=true;host.set_process(false)
  b.set_process(true)
- var ticked:bool=await Wait.until(self,func():return reached[0] or failures>0,12.0)
+ var ticked:bool=await wait_progress(b,"next_disposition",func():return reached[0] or failures>0)
  if failures:b.free();return
  check(ticked and reached[0] and b.field_calls==fields,"Next original tick arrives without an old E2")
  if failures or not successor_unchanged(b,"Next original tick and its resume tail"):b.free();return
@@ -453,7 +464,7 @@ func run_claim_case(point:String)->void:
  if b==null:return
  b.claim_mode=point
  b.set_process(true)
- var arrived:bool=await Wait.until(self,func():return b.finished or failures>0,12.0)
+ var arrived:bool=await wait_progress(b,"selected_resume",func():return b.finished or failures>0)
  if failures:b.free();return
  check(arrived and b.finished and b.claim_prepared and b.claim_preserved and b._quest_auto_stop_operation_current(b.claim_handle),"Actual Stop begin claim survives capture/writer-return rejection and full original tail: "+point)
  if failures:b.free();return
@@ -478,7 +489,7 @@ func run_claim_case(point:String)->void:
  b.quest_auto.after=func(host):
   if not host.quest_auto.running:disposed[0]=true;host.set_process(false)
  b.set_process(true)
- var stopped:bool=await Wait.until(self,func():return disposed[0] or failures>0,12.0)
+ var stopped:bool=await wait_progress(b,"claim_retirement",func():return disposed[0] or failures>0)
  if failures:b.free();return
  check(stopped and disposed[0] and b.field_calls==fields and b.quest_loot.followup.is_empty() and b.quest_loot.failed_followup_resume.is_empty() and b.quest_loot.ready_frame.is_empty() and b.automation.loot_scope.is_empty(),"Release does not revive invalid old C1; original current-owner failure exits without E2")
  if failures or not pair(b,source.profile,source.primary,source.backup,"Claim released old current execution retired without disk close"):b.free();return
@@ -502,7 +513,7 @@ func run_claim_case(point:String)->void:
   if host.field_calls>fields:rolled[0]=true;host.set_process(false)
  b._resume_written_msec=-1 # Disclosed due marker: observe the new legal original resume too.
  b.test_clock+=500;b.set_process(true)
- var attempted:bool=await Wait.until(self,func():return rolled[0] or failures>0,12.0)
+ var attempted:bool=await wait_progress(b,"successor_attempt",func():return rolled[0] or failures>0)
  if failures:b.free();return
  check(attempted and rolled[0] and b.field_calls==fields+1 and b.mark_calls==new_marks+1 and next_frame.serial==b.quest_save_serial and b._loot_resume_envelope.is_empty() and b._loot_outer_resume_call==null and b._quest_auto_stop_operation_call==null,"New actual E2 and original resume succeed; no old envelope or Stop claim blocks successor")
  if failures or not pair(b,reopened,reopened_bytes,source.primary,"New E2/resume full generations"):b.free();return
