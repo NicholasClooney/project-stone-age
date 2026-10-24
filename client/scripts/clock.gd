@@ -17,13 +17,13 @@ extends Node
 ## (how much work fits before the frame ends), unique tokens made from
 ## get_ticks_usec, and performance measurements. They measure the machine,
 ## not the game.
-static var virtual := false
+# Static initializers, not _init: a suite script and the objects it builds
+# exist before the ClockDriver autoload does, and must read the same clock.
+static var virtual: bool = OS.get_environment("STONE_AGE_TEST_CLOCK") == "virtual"
 static var _virtual_usec: int = 0
-static var _unix_origin: float = 0.0
+static var _unix_origin: float = Time.get_unix_time_from_system()
 
 func _init() -> void:
-	virtual = OS.get_environment("STONE_AGE_TEST_CLOCK") == "virtual"
-	_unix_origin = Time.get_unix_time_from_system()
 	# Advance before any other node sees this frame.
 	process_priority = -1000
 
