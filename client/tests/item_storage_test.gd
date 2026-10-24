@@ -134,8 +134,18 @@ func run() -> void:
  check(b.session._valid_profile(b.session.snapshot()),"Stored helper validates")
  rows=Storage.rows(b.session.snapshot(),b.quest_catalog.items,false)
  check(not rows.is_empty() and b.handle(command(b,[Storage.take(rows[0],1)],"withdraw")).ok and b.session.snapshot().inventory.healing_charm==1,"Project helper withdraws without loss")
+ check(rows[0].name=="恢复护符（辅助）","Helper rows show the readable item name instead of the key: "+str(rows[0].name))
  b.save_path=path
  check(b.save() and loaded.load_game(path) and loaded.snapshot()==b.session.snapshot(),"Helper storage persists exactly")
+ b.queue_free()
+ b=fresh();b.session._profile.inventory.healing_charm=99
+ check(b.handle(command(b,[{"key":"healing_charm","count":99,"offset":0}])).ok and Storage.used(b.session.snapshot())==2,"99 helper charms stack into two warehouse slots like potions")
+ rows=Storage.rows(b.session.snapshot(),b.quest_catalog.items,false)
+ check(rows.size()==2 and int(rows[0].count)==64 and int(rows[1].count)==35,"Stackable helper withdraws in 64-stacks: "+str(rows.map(func(row):return row.count)))
+ b.session._profile.inventory.club=3
+ check(b.handle(command(b,[{"key":"club","count":3,"offset":0}])).ok and Storage.used(b.session.snapshot())==5,"Non-stackable legacy items still take one slot each")
+ rows=Storage.rows(b.session.snapshot(),b.quest_catalog.items,false)
+ check(rows.filter(func(row):return str(row.selector.key)=="club").size()==3 and rows.all(func(row):return str(row.name)!=str(row.selector.key)),"Every legacy row carries a display name")
  b.queue_free()
  for suffix in ["",".bak",".tmp",".old",".old.bak"]:DirAccess.remove_absolute(path+suffix)
  await process_frame

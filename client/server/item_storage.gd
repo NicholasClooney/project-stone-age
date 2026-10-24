@@ -6,6 +6,12 @@ const Equipment=preload("res://server/original_equipment.gd")
 const Spirits=preload("res://server/spirits.gd")
 const MAX_CAPACITY:=3000 # Project override; original hook remains disabled.
 const STACK_LIMIT:=64
+## Legacy keys that stack STACK_LIMIT per warehouse slot; every other legacy
+## key and every original instance takes one slot each.
+const STACKABLE_LEGACY:=["potion","healing_charm"]
+## Display names for inventory keys outside Spirits.ITEMS; the UI shows the
+## raw key only when neither table knows it.
+const LEGACY_NAMES:={"potion":"耐久力回复药","club":"小棍棒","healing_charm":"恢复护符（辅助）","mirror_charm":"美丽尼亚护身符1"}
 static var _catalog: Dictionary={}
 const FIELDS:=["item_storage","legacy_item_storage","item_storage_revision"]
 
@@ -48,8 +54,16 @@ static func used(profile: Dictionary) -> int:
 	var total:=groups(profile).size()
 	for key in profile.get("legacy_item_storage",{}):
 		var count:=int(profile.legacy_item_storage[key])
-		total+=int(ceil(float(count)/STACK_LIMIT)) if key=="potion" else count
+		total+=stack_count(str(key),count)
 	return total
+
+static func stack_count(key: String, count: int) -> int:
+	return int(ceil(float(count)/STACK_LIMIT)) if key in STACKABLE_LEGACY else count
+
+static func legacy_name(key: String, specs: Dictionary) -> String:
+	if Spirits.ITEMS.has(key):return str(Spirits.ITEMS[key].get("name",key))
+	if LEGACY_NAMES.has(key):return LEGACY_NAMES[key]
+	return str(specs.get(key,{}).get("name",key))
 
 ## Item template flags do not restrict this project convenience. Instance and
 ## ownership validation still run independently before committing a transfer.
@@ -98,10 +112,10 @@ static func rows(profile: Dictionary, specs: Dictionary, deposit: bool) -> Array
 		if int(counts[key])<=0:continue
 		var refusal:=""
 		if deposit and legacy_worn(profile,key):refusal="请先卸下已穿戴的装备。"
-		var title: String=Spirits.ITEMS.get(key,{}).get("name",{"potion":"耐久力回复药","club":"小棍棒","healing_charm":"恢复宠物"}.get(key,key))
+		var title: String=legacy_name(str(key),specs)
 		var offset:=0
 		while offset<int(counts[key]):
-			var count: int=int(counts[key]) if deposit else mini(STACK_LIMIT if key=="potion" else 1,int(counts[key])-offset)
+			var count: int=int(counts[key]) if deposit else mini(STACK_LIMIT if key in STACKABLE_LEGACY else 1,int(counts[key])-offset)
 			result.append({"selector":{"key":str(key),"count":count,"offset":offset},"id":"legacy_%s_%d"%[key,offset],"name":title,"count":count,"reason":refusal,"durability":-1,"icon":""})
 			offset+=count
 	return result
