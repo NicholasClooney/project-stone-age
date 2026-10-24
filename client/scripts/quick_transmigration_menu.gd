@@ -63,6 +63,8 @@ var busy := false
 var stale := true
 var serial := 0
 var token := ""
+var inflight := ""
+var close_requested := false
 var baseline: Dictionary = {}
 var request_baseline: Dictionary = {}
 var card: PanelContainer
@@ -190,8 +192,15 @@ func _confirm() -> void:
 		_state_changed("snapshot");return
 	_send({"type":"quick_transmigration","action":"confirm","token":token},"confirm")
 
+## The owner asks before freeing the view. A confirmation already sent cannot be
+## taken back, so the view hides and closes itself once the reply has landed,
+## leaving its outcome in the world message instead of dropping it silently.
+func request_close() -> bool:
+	if not (live and busy and inflight=="confirm"):return true
+	close_requested=true;hide();return false
+
 func _send(command: Dictionary, action: String) -> void:
-	busy=true;_buttons()
+	busy=true;inflight=action;_buttons()
 	status.text="确认已提交，正在保存；关闭不会撤销已提交操作。" if action=="confirm" else "正在获取服务器预览……"
 	cancel.text="关闭（确认已提交）" if action=="confirm" else "取消"
 	var guard:=ReplyGuard.new();guard.target=weakref(self);guard.link=link;guard.serial=serial;guard.action=action;guard.bookkeeping=finish_preview
@@ -199,7 +208,10 @@ func _send(command: Dictionary, action: String) -> void:
 	link.request(command,ReplyGuard.deliver.bind(guard))
 
 func _receive(reply: Dictionary, action: String) -> void:
-	busy=false;cancel.text="取消"
+	busy=false;inflight="";cancel.text="取消"
+	if close_requested:
+		world.message.text="快速转生成功，已保存并返回村庄；当前Lv1。" if bool(reply.get("ok",false)) else "快速转生未执行："+str(reply.get("reason","操作失败。"))
+		dismissed.emit();return
 	if not bool(reply.get("ok",false)):
 		stale=true
 		status.text=str(reply.get("reason","操作失败。"))+"\n请重新获取预览后再确认。"

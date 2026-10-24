@@ -538,6 +538,8 @@ func open_quick_transmigration() -> void:
 
 func close_quick_transmigration() -> void:
 	if not is_instance_valid(quick_transmigration_menu):return
+	# A confirmation in flight finishes first; the view closes itself on reply.
+	if not quick_transmigration_menu.request_close():return
 	quick_transmigration_menu.shutdown();quick_transmigration_menu.queue_free();quick_transmigration_menu=null
 
 ## The creation screen's 属性 choice: 10 points over at most two neighbouring

@@ -110,6 +110,15 @@ func run() -> void:
 		view=open_view();view._request_preview();world.link.answer(world.link.sent.size()-1,preview("done"))
 		view._confirm();world.link.answer(world.link.sent.size()-1,{"ok":true,"closed":true,"new_count":1,"location":{},"transaction_id":"fixture"})
 		check(not view.live and world.message.text.contains("Lv1"),"success closes, no automatic next turn")
+		# Closing while a confirmation is in flight defers the close and keeps the outcome.
+		for outcome in [{"ok":true,"closed":true,"new_count":1,"location":{},"transaction_id":"fixture"},{"ok":false,"reason":"人物状态已改变，请重新预览转生。"}]:
+			view=open_view();view._request_preview();world.link.answer(world.link.sent.size()-1,preview("inflight"))
+			view._confirm();var sent_before: int=world.link.sent.size();world.message.text=""
+			check(not view.request_close() and not view.visible and view.live and world.link.sent.size()==sent_before,"close during confirmation waits for the reply without cancelling")
+			world.link.answer(sent_before-1,outcome)
+			check(not view.live and world.message.text.contains("Lv1" if outcome.ok else "人物状态已改变"),"deferred close reports the confirmation outcome: "+world.message.text)
+			await process_frame
+		view=open_view();check(view.request_close(),"idle view closes immediately");view.shutdown();view.queue_free()
 		view=open_view();view._request_preview();var orphan: int=world.link.sent.size()-1
 		var held=world.link;world.queue_free();await process_frame
 		held.answer(orphan,preview("orphan"))
