@@ -1,5 +1,4 @@
 extends "res://tests/original_fixed_guards_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 const Wind=preload("res://server/transmigration_wind_helper.gd")
 const Driver=preload("res://tests/support/original_route_driver.gd")
 var measured_route:int=0

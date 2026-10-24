@@ -1,5 +1,4 @@
 extends "res://tests/original_fixed_guards_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 const WaterRoute=preload("res://tests/support/water_route_driver.gd")
 var unit_battle_ms:int=0
 const Water=preload("res://server/transmigration_water_helper.gd")

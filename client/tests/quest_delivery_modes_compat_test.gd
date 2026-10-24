@@ -1,5 +1,4 @@
 extends "res://tests/quest_delivery_routes_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Actual six-job source transactions/routes. Random encounters are explicitly
 ## disabled ONLY in this mode-compatibility fixture, not natural-battle evidence.
 const Arrival=preload("res://server/quest_arrival_policy.gd")

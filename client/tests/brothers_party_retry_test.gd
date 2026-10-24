@@ -1,5 +1,4 @@
 extends "res://tests/brothers_golden_quests_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Every original party slice/UID/save assertion is retained in the shared driver.
 func run()->void:
  for failed_slot in [0,1,2]:

@@ -1,5 +1,4 @@
 extends "res://tests/quest_auto_public_corridors_execution_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Separate deterministic original-encounter proof, not a natural-rate benchmark.
 ## Strong stats and initial village position are inherited explicit fixtures.
 ## Random encounters are suppressed ONLY during the actual request/village exit

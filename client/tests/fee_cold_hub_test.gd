@@ -1,5 +1,4 @@
 extends "res://tests/support/fee_cold_harness.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## UNRUN actual Accounts/ProfileHub open/login/logout/failed-target path.
 const ProfileHub = preload("res://server/profile_hub.gd")
 const SaveLock = preload("res://server/save_lock.gd")

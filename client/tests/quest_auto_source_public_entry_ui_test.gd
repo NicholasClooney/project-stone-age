@@ -1,5 +1,4 @@
 extends "res://tests/quest_auto_source_remote_ui_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Public admission only, not another natural route. Independent public811
 ## fixtures; completed END44 is a denial fixture, not terminal-route proof.
 const PublicPolicy=preload("res://scripts/quest_auto_policy.gd")

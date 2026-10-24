@@ -1,5 +1,4 @@
 extends "res://tests/quest_catalog_lookup_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 const Backend=preload("res://server/backend.gd")
 class FullCatalog extends "res://scripts/quest_catalog.gd":
  func active_npcs_by_source(_source_script:String)->Array:return active_npcs()

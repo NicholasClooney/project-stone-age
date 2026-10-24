@@ -1,5 +1,4 @@
 extends "res://tests/quest_auto_public_corridors_execution_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Diagnostic A/C only, original uncontrolled NPC births. No B repetition.
 ## Full sequence assertions remain strict even when inputs prove unequal.
 func controlled_world()->bool:return false

@@ -1,5 +1,4 @@
 extends "res://tests/support/fee_recovered_close_harness.gd"
-const Clock=preload("res://scripts/clock.gd")
 const ColdBackend = preload("res://tests/support/fee_cold_backend.gd")
 func fixture(tag: String, kind: String = "pretty", load_mode: String = "") -> Dictionary:
 	ordinal += 1

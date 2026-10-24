@@ -1,5 +1,4 @@
 extends "res://tests/quest_auto_public_corridors_execution_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Register this B-only entry, never the uncontrolled A/C diagnostic base.
 func run()->void:
  deadline=Clock.ticks_msec()+50000

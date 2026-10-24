@@ -1,5 +1,4 @@
 extends "res://tests/fee_loaded_baseline_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 const StorageFault = preload("res://tests/support/fee_loaded_storage_fault_session.gd")
 class OriginalLoadBackend extends "res://server/backend.gd":
 	func load_profile(path: String) -> bool:

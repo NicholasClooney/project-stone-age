@@ -1,5 +1,4 @@
 extends "res://tests/support/quest_auto_public25_support.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Explicit player walk back to Jaja after24, then a fresh manual25 start.
 ## Not continuous25 acceleration. No event/proof/position injection after24.
 func run()->void:

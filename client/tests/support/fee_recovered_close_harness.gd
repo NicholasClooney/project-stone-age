@@ -1,5 +1,4 @@
 extends "res://tests/fee_loaded_baseline_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 const RecoveryFault = preload("res://tests/support/fee_recovered_close_fault_session.gd")
 var legacy_loader := false
 class LegacyLoadBackend extends "res://server/backend.gd":

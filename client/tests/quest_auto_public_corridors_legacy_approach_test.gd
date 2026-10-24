@@ -1,5 +1,4 @@
 extends "res://tests/quest_auto_public_corridors_letters_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Incremental approach only: never complete the old adult/herb/shell chains.
 const Motion=preload("res://server/quest_auto_motion.gd")
 const CASES=[

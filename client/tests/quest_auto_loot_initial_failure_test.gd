@@ -1,5 +1,4 @@
 extends "res://tests/quest_auto_loot_initial_miss_resume_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## UNRUN independent failure-exit oracle. Fixed clock/physical partial-write seams
 ## are unit conveniences, never natural encounter or reward proof.
 class FaultSession:

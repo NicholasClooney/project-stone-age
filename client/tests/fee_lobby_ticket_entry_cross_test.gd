@@ -1,5 +1,4 @@
 extends "res://tests/fee_lobby_ticket_cross_writer_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Reuse independent original public-writer expected values, not product helpers.
 ## Only held origin changes from purchase unknown to true entry unknown.
 func setup(tag:String,level:int=35,ticket:bool=false)->Dictionary:

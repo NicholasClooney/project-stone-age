@@ -1,5 +1,4 @@
 extends "res://tests/brothers_golden_quests_test.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Independent source route, not a larger timeout on the five-guard suite.
 func run()->void:
  var b=fresh()

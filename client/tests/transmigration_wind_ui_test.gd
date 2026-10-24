@@ -1,5 +1,4 @@
 extends "res://tests/support/transmigration_wind_route.gd"
-const Clock=preload("res://scripts/clock.gd")
 ## Same entire natural route, with real NPC/choice mouse input at phone width.
 var shot_serial:=0
 func run()->void:

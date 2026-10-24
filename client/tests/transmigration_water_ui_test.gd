@@ -1,5 +1,4 @@
 extends "res://tests/support/water_walking_ui.gd"
-const Clock=preload("res://scripts/clock.gd")
 func run()->void:
  root.unfocusable=true;root.position=Vector2i(-10000,-10000);root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
