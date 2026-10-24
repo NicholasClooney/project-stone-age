@@ -1,4 +1,5 @@
 extends Node
+const Clock=preload("res://scripts/clock.gd")
 ## One server, many profiles (LAN phase 1, docs/development/lan-profiles.md):
 ## every character in the accounts file (server/accounts.gd) gets its own
 ## Backend, with its own save, save lock, automation, battle, pet logs,
@@ -47,13 +48,13 @@ var _fee_departures:Dictionary={}
 ## LAN phase 2: who stands where, and 一般频道 chat (server/presence.gd).
 var presence = Presence.new()
 ## Milliseconds for presence ticks and the chat rate limit (tests fake it).
-var presence_clock: Callable = Time.get_ticks_msec
+var presence_clock: Callable = Clock.ticks_msec
 ## LAN phase 3: 组队 on the map (server/party.gd).
 var party = Party.new()
 ## LAN phase 4a: the parties' shared battles (server/party_battles.gd), and
 ## the milliseconds their turn timers run on (tests fake it).
 var party_battles = PartyBattles.new(self)
-var battle_clock: Callable = Time.get_ticks_msec
+var battle_clock: Callable = Clock.ticks_msec
 ## connection -> the last `party` event it was sent (JSON), so only changes go out.
 var _party_sent: Dictionary = {}
 var _party_tick_msec := -100000

@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## A pet log file: one JSON line per entry, newest last, in its own file next
 ## to the save so loading the save never reads it. The backend keeps three:
 ## 放生记录 (<save>.release-log.jsonl, entry below), 抓宠记录
@@ -32,7 +33,7 @@ var _count := -1
 ## decided on (the Lv120 projection for younger pets), or {} for current stats.
 static func entry(pet: Dictionary, where: String, source: String, reason: String, beaten_by: Array = [], judged: Dictionary = {}) -> Dictionary:
 	var quality: Dictionary = PetComparison.quality(pet)
-	var result := {"time":int(Time.get_unix_time_from_system()), "pet_id":str(pet.get("pet_id", "")), "name":str(pet.get("name", "")),
+	var result := {"time":int(Clock.unix_time()), "pet_id":str(pet.get("pet_id", "")), "name":str(pet.get("name", "")),
 		"template_id":int(pet.get("template_id", -1)), "species":PetComparison.species_key(pet), "level":int(pet.get("level", 1)),
 		"attack":int(pet.get("attack", 0)), "defence":int(pet.get("defence", 0)), "speed":int(pet.get("speed", 0)), "max_hp":int(pet.get("max_hp", 0)),
 		"offsets":quality.get("offsets", []), "full":bool(quality.get("full", false)), "where":where, "source":source, "reason":reason, "beaten_by":beaten_by}

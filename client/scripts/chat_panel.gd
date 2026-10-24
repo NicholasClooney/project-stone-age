@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 ## 一般频道 (LAN phase 2): the chat lines of everyone on this map, bottom left
 ## above the classic bar as in the original (chat.cpp ChatBufferToFontBuffer:
 ## lines stacked upwards from x 8, y 400, no background), and the line to
@@ -25,7 +26,7 @@ var log_button: Button
 ## 频道 (LAN phase 3): 一般 or 队伍, shown while in a party.
 var channel_button: Button
 var channel := "一般"
-var clock: Callable = func() -> float:return Time.get_ticks_msec()/1000.0
+var clock: Callable = func() -> float:return Clock.ticks_msec()/1000.0
 
 func configure(owner: Node2D) -> void:
 	world = owner

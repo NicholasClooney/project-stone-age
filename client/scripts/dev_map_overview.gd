@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 const MapFile = preload("res://scripts/map_file.gd")
 ## Developer-only whole-map view. Colors come from original automap metadata.
 ## Every marker carries a name label (Label nodes built once per map/tab and
@@ -467,7 +468,7 @@ func _finish_project_move(reply:Dictionary,map_id:int,destination:Vector2i,ticke
 		world.message.text=note.text
 		return
 	var expected:Array=[map_id,destination]
-	var deadline:int=Time.get_ticks_msec()+30000
+	var deadline:int=Clock.ticks_msec()+30000
 	while _project_wait_valid(ticket):
 		# A newer authority event supersedes this request even while its
 		# earlier map/scene transition is still settling.
@@ -481,7 +482,7 @@ func _finish_project_move(reply:Dictionary,map_id:int,destination:Vector2i,ticke
 			world.checkpoint()
 			close_map()
 			return
-		if (incoming.is_empty() and world._followed!=expected) or Time.get_ticks_msec()>deadline:
+		if (incoming.is_empty() and world._followed!=expected) or Clock.ticks_msec()>deadline:
 			_project_travel_pending=false
 			note.text="权威位置已改变，请重新选择落点。"
 			return

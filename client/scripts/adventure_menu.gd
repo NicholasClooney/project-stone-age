@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 ## Original resource frames with a narrow, functional single-player menu set.
 var world: Node
 var kind := "status"
@@ -1635,7 +1636,7 @@ func open_release_log(template_id:int=-1)->void:
 ## shown until the new one arrives instead of showing it loading.
 func fetch_records(quiet:=false)->void:
 	records_loading=not quiet
-	_records_fetched_msec=Time.get_ticks_msec()
+	_records_fetched_msec=Clock.ticks_msec()
 	var sort:Array=records_sorts.get(records_tab,["",false])
 	var asked:=[records_tab,records_page,records_template,records_run,sort.duplicate(),records_uncaught]
 	var arrived:=func(data:Dictionary):
@@ -1680,7 +1681,7 @@ static func _queue_signature(status:Dictionary)->String:
 func _refresh_records()->void:
 	if not visible or not pet_records_open or _records_refresh_pending:return
 	# Never inside the event itself: the fetch is a backend request.
-	var wait:=maxi(0,RECORDS_REFRESH_MSEC-(Time.get_ticks_msec()-_records_fetched_msec))
+	var wait:=maxi(0,RECORDS_REFRESH_MSEC-(Clock.ticks_msec()-_records_fetched_msec))
 	_records_refresh_pending=true
 	get_tree().create_timer(wait/1000.0).timeout.connect(func():
 		_records_refresh_pending=false

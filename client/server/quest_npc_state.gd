@@ -1,7 +1,8 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## Project policy B: one instance per character Backend; never serialized.
 ## Original NPC state was global. Here each character owns its own runtime state.
-var clock:Callable=func():return Time.get_unix_time_from_system()
+var clock:Callable=func():return Clock.unix_time()
 var records:Dictionary={}
 var version:=0
 func expire()->bool:

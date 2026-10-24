@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 ## Optional single-player data inspection. Rolls real local troops; never grants rewards.
 ## Scanning runs in the backend (res://server/automation.gd); this menu edits
 ## the character's hunt settings (profile automation_settings: hunt, capture,
@@ -743,8 +744,8 @@ func _process(delta: float) -> void:
 		stop_hunt("场景状态变化，筛选已停止。");return
 	# In-process, this frame drives the backend scan with the same budget.
 	if world.link.is_local():world.link.request({"type":"auto","name":"hunt_process","delta":delta})
-	if running and Time.get_ticks_msec()-_status_shown_msec>=refresh_msec:
-		_status_shown_msec=Time.get_ticks_msec();update_status()
+	if running and Clock.ticks_msec()-_status_shown_msec>=refresh_msec:
+		_status_shown_msec=Clock.ticks_msec();update_status()
 	if _chip_dirty and minimized:_update_chip()
 ## Test seam: one backend scan now.
 func scan_once() -> void:
@@ -1110,8 +1111,8 @@ func load_stat_settings()->void:
 ## projected.
 func refresh_stat_thresholds(now: bool = false) -> void:
 	if _stat_species_shown<0 or stat_results.is_empty():return
-	if not now and Time.get_ticks_msec()-_thresholds_msec<1000:return
-	_thresholds_msec=Time.get_ticks_msec()
+	if not now and Clock.ticks_msec()-_thresholds_msec<1000:return
+	_thresholds_msec=Clock.ticks_msec()
 	var fixed:=_threshold_mode_shown()=="absolute"
 	var best:=shown_maxima()
 	var key:="%d|%s|%s|%s" % [_stat_species_shown,JSON.stringify(best),fixed,",".join(StatFilter.METRICS.map(func(metric):return "%d/%d" % [int(stat_numbers[metric].value),int(stat_values[metric].value)]))]
@@ -1251,7 +1252,7 @@ var _status_shown_msec := -100000
 
 func _update_chip() -> void:
 	if not is_instance_valid(chip):return
-	var now := Time.get_ticks_msec()
+	var now := Clock.ticks_msec()
 	if now-_chip_shown_msec<refresh_msec:
 		_chip_dirty=true;return
 	_chip_shown_msec=now;_chip_dirty=false

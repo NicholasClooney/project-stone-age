@@ -1,7 +1,7 @@
 extends RefCounted
 ## No navigation receipt crosses a timed entrance, maze room or final guard.
 const Rules=preload("res://server/original_quests.gd")
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 const MapFile=preload("res://scripts/map_file.gd")
 static var components:Dictionary={}
 static func region(map_id:int,cell:Vector2i)->int:
@@ -27,7 +27,7 @@ static func region(map_id:int,cell:Vector2i)->int:
  return int(components[map_id].get(cell,-1))
 static func stage_key(backend)->Array:
  var map_id:int=backend.automation.position_map
- if map_id==400:return ["dream",400,Clock.phase_at(Clock.hour())]
+ if map_id==400:return ["dream",400,WorldClock.phase_at(WorldClock.hour())]
  if map_id in [41,42]:
   var sage:Dictionary=entry(backend,"seimu/event/event01_2",4,map_id)
   var reward_ready:bool=not sage.is_empty() and backend.quest_arrival.check_action(backend,sage.npc,sage.branch,"ACCEPT").is_empty()

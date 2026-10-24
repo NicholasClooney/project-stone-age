@@ -33,6 +33,14 @@ case "$script" in
     esac
     # Godot's own log would otherwise rotate the real game's user://logs.
     set -- --log-file "$data_root/$STONE_AGE_TEST_USER_DIR/logs/godot.log" "$@"
+    # Suites never wait for wall time: every frame counts as 1/60 s however
+    # long it took (--fixed-fps) and the game clock (client/scripts/clock.gd)
+    # advances with the frames. STONE_AGE_TEST_REALTIME=1 runs a suite on the
+    # real clock again, only to tell a clock problem from a logic problem.
+    if [ "${STONE_AGE_TEST_REALTIME:-0}" != "1" ]; then
+      export STONE_AGE_TEST_CLOCK=virtual
+      set -- --fixed-fps 60 "$@"
+    fi
     ;;
 esac
 # Automated verification must not steal focus or play desktop audio.

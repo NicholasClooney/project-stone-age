@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 ## 宠物大全: every pet species, family by family (网格) or ranked by its
 ## full-grade Lv.120 potential (列表), with a detail page per species: the
 ## animated battle sprite, template stats, Lv.120 prediction, the player's own
@@ -554,7 +555,7 @@ func _update_thumbs() -> void:
 	if _thumbs.is_empty() or not is_instance_valid(scroll):return
 	var area := scroll.get_global_rect()
 	var started := Time.get_ticks_usec()
-	var retry := Time.get_ticks_msec() >= _thumb_retry_msec
+	var retry := Clock.ticks_msec() >= _thumb_retry_msec
 	var waiting: Array = []
 	for item in _thumbs.duplicate():
 		var picture: TextureRect = item[0]
@@ -582,7 +583,7 @@ func _update_thumbs() -> void:
 		else:continue
 		_thumbs.erase(item)
 	if retry:
-		_thumb_retry_msec = Time.get_ticks_msec()+800
+		_thumb_retry_msec = Clock.ticks_msec()+800
 		if not waiting.is_empty() and world.asset_packs.enabled:world.asset_packs.prefetch(world.asset_packs.sprite_packs(waiting))
 
 ## Starts the thumbnail packs (if the game has not yet) and shows how far
@@ -592,8 +593,8 @@ func _update_thumbs_progress() -> void:
 	var packs := Thumbs.atlas_packs(world.asset_packs)
 	var progress: Vector2i = world.asset_packs.progress_of(packs) if not packs.is_empty() else Vector2i.ZERO
 	var loading := not packs.is_empty() and progress.y > 0 and progress.x < progress.y
-	if loading and Time.get_ticks_msec() >= _thumb_pack_retry_msec:
-		_thumb_pack_retry_msec = Time.get_ticks_msec()+2000
+	if loading and Clock.ticks_msec() >= _thumb_pack_retry_msec:
+		_thumb_pack_retry_msec = Clock.ticks_msec()+2000
 		world.asset_packs.prefetch(packs)
 	thumbs_bar.visible = loading
 	thumbs_caption.visible = loading
@@ -965,7 +966,7 @@ func turn_portrait(step: int) -> void:
 	facing = posmod(facing+step,8)
 	portrait.facing = facing
 	portrait.current_image = -1
-	portrait._update(Time.get_ticks_msec())
+	portrait._update(Clock.ticks_msec())
 
 static func _centered(label: Label, bounds: Vector2) -> Label:
 	label.size = bounds
@@ -1263,7 +1264,7 @@ func _await_arrival(plan: Dictionary) -> void:
 	_travel_ticket+=1
 	_reviewed_pending=false
 	pending_hunt = plan
-	_pending_deadline = Time.get_ticks_msec()+60000
+	_pending_deadline = Clock.ticks_msec()+60000
 
 ## Back to 宠物大全 with why the teleport did not happen.
 func _travel_failed(why: String) -> void:
@@ -1274,7 +1275,7 @@ func _travel_failed(why: String) -> void:
 	rebuild()
 
 func _check_arrival() -> void:
-	if Time.get_ticks_msec() > _pending_deadline:
+	if Clock.ticks_msec() > _pending_deadline:
 		_travel_ticket+=1
 		_reviewed_pending=false
 		pending_hunt = {}

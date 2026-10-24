@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## Internal timer/candidate preparation with dormant battle settlement hooks.
 ## No public registration; only the sealed internal continuation driver is wired.
 ## Authoritative commit hooks must accept a candidate before accept_commit;
@@ -6,7 +7,7 @@ extends RefCounted
 const State=preload("res://server/quest_auto_loot_state.gd")
 const Sources=preload("res://server/quest_auto_loot_sources.gd")
 const Settings=preload("res://server/quest_auto_settings_rules.gd")
-var clock:Callable=Time.get_ticks_msec
+var clock:Callable=Clock.ticks_msec
 var key:=""
 var binding:Dictionary={}
 var span:Dictionary={}
@@ -813,7 +814,7 @@ func heartbeat_normal_process(b,generation:int,entry_epoch:int)->void:
  if b._normal_process_generation!=generation or b._normal_process_entry_epoch!=entry_epoch or b._dispatch_epoch!=entry_epoch:return
  if heartbeat_call!=null or heartbeat_generation==generation:return
  if anchor_ms<0 or key!=State.STEP or frozen or blocked or storage_paused or battle_receipt.is_empty():return
- var wall:int=Time.get_ticks_msec()
+ var wall:int=Clock.ticks_msec()
  if wall<0 or wall>State.MAX_MSEC:return
  if heartbeat_wall_ms>=0 and (wall<heartbeat_wall_ms or wall-heartbeat_wall_ms<HEARTBEAT_INTERVAL_MS):return
  if not clock.is_valid():return

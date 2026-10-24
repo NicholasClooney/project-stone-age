@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## One server per save: server_main.gd takes `<save>.lock` (JSON with its
 ## process id) before it loads the save and removes it on exit, and refuses to
 ## start while another running server holds it. A lock whose process is gone
@@ -20,7 +21,7 @@ static func acquire(save_path: String, pid: int = OS.get_process_id(), alive: Ca
 	if not folder.is_empty():DirAccess.make_dir_recursive_absolute(folder)
 	var file := FileAccess.open(path,FileAccess.WRITE)
 	if file==null:return "无法写入存档锁 %s。" % ProjectSettings.globalize_path(path)
-	file.store_string(JSON.stringify({"pid":pid,"since":int(Time.get_unix_time_from_system()),"save":ProjectSettings.globalize_path(save_path)}))
+	file.store_string(JSON.stringify({"pid":pid,"since":int(Clock.unix_time()),"save":ProjectSettings.globalize_path(save_path)}))
 	file.close()
 	return ""
 

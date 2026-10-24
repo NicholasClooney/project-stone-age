@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## 本机极速模式: runs the pet hunt scan in the native helper (tools/fast_hunt,
 ## built to build/fast_hunt, fast_hunt.exe on Windows) on every CPU core, for
 ## automation.gd.
@@ -115,7 +116,7 @@ func launch(catalog: Dictionary, area: Dictionary, filter: Dictionary, flow: boo
 func poll(force := false) -> Dictionary:
 	if not _unreaped.is_empty():reap()
 	if not running():return {}
-	var now := Time.get_ticks_msec()
+	var now := Clock.ticks_msec()
 	if not force and now-_polled_msec < POLL_MSEC:return {}
 	_polled_msec = now
 	var report := _read()

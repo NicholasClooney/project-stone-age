@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## LAN accounts for one server hosting many profiles (server/profile_hub.gd,
 ## docs/development/lan-profiles.md): a name, a PIN, a save and an admin flag
 ## per character, in one JSON file next to the saves:
@@ -19,7 +20,7 @@ const MAX_PROFILES := 32
 
 var path := ""
 ## Unix seconds; tests pass a fake.
-var clock: Callable = Time.get_unix_time_from_system
+var clock: Callable = Clock.unix_time
 var data: Dictionary = {"version":VERSION,"allow_create":true,"profiles":[]}
 ## Why the last load failed, "" when it did not.
 var last_error := ""

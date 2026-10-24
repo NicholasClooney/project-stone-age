@@ -10,7 +10,7 @@ config_version=5
 
 [application]
 
-config/version="v0.288.2"
+config/version="v0.289.0"
 
 config/name="Stone Age — 萨姆吉尔村"
 config/description="Original StoneAge resources rendered in Godot. Local Samgir exploration."
@@ -20,6 +20,7 @@ config/features=PackedStringArray("4.6", "GL Compatibility")
 [autoload]
 
 TestUserDir="res://scripts/test_user_dir.gd"
+ClockDriver="res://scripts/clock.gd"
 
 [audio]
 

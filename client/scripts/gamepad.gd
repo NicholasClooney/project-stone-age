@@ -1,4 +1,5 @@
 extends Node
+const Clock=preload("res://scripts/clock.gd")
 ## Game controller support on top of the original mouse-driven UI.
 ##
 ## World: left stick / D-pad walk, A talks to whoever is near, B cancels,
@@ -174,7 +175,7 @@ func _process(delta: float) -> void:
 ## The highlight appears once a controller is in use, so mouse play looks unchanged.
 var _last_pad_msec := -100000
 func _used_recently() -> bool:
-	return Time.get_ticks_msec()-_last_pad_msec < 30000 or Input.get_connected_joypads().size()>0
+	return Clock.ticks_msec()-_last_pad_msec < 30000 or Input.get_connected_joypads().size()>0
 
 func _initial(options: Array[Control]) -> Control:
 	if options.is_empty():return null
@@ -197,7 +198,7 @@ func _replacement(root: Control, options: Array[Control]) -> Control:
 
 ## Moves the highlight to the nearest control in a screen direction.
 func move(direction: Vector2) -> void:
-	_last_pad_msec = Time.get_ticks_msec()
+	_last_pad_msec = Clock.ticks_msec()
 	var root := panel()
 	if root==null:return
 	var options := candidates(root)
@@ -218,7 +219,7 @@ func move(direction: Vector2) -> void:
 
 ## A real left click at the control's centre, as the mouse would produce.
 func click(control: Control) -> void:
-	_last_pad_msec = Time.get_ticks_msec()
+	_last_pad_msec = Clock.ticks_msec()
 	var point: Vector2 = get_viewport().get_final_transform()*_screen_rect(control).get_center()
 	var motion := InputEventMouseMotion.new()
 	motion.position = point
@@ -241,7 +242,7 @@ func page(root: Control, forward: bool) -> void:
 
 ## A in the world: talk to the villager or resident in reach, else approach the nearest one.
 func interact() -> void:
-	_last_pad_msec = Time.get_ticks_msec()
+	_last_pad_msec = Clock.ticks_msec()
 	if world.paused_input or world.moving:return
 	if not world.npc_data.is_empty() and world.in_talk_range(world.cell):
 		world.open_dialogue();return

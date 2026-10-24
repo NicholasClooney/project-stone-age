@@ -2,7 +2,7 @@ extends RefCounted
 ## Per-character authority memory. Never serialize this object or its receipts.
 const Policy=preload("res://server/quest_arrival_policy.gd")
 const MapFile=preload("res://scripts/map_file.gd")
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 const DENIED="项目补充：请从原入口沿原路线通过门、迷宫及守卫；项目瞬移不授予任务到达资格。"
 var _epoch: int=0
 var _serial: int=0
@@ -255,7 +255,7 @@ func _portal(backend, from_map: int, from_cell: Vector2i, to_map: int, to_cell: 
 	if link.has("gate_source") and str(link.gate_source)!="genout/wpm_10202_31_13":return false
 	if int(backend.session._profile.get("player",{}).get("level",0))<int(link.get("requires_level",0)):return false
 	if bool(link.get("requires_travel_pass",false)) and not backend.session.has_travel_pass():return false
-	if link.has("requires_time") and not Clock.allows(str(link.requires_time),Clock.hour()):return false
+	if link.has("requires_time") and not WorldClock.allows(str(link.requires_time),WorldClock.hour()):return false
 	if reviewed_landing:
 		var data: Dictionary=_map_data(backend,to_map)
 		return not data.is_empty() and _floor(data,{},to_cell)

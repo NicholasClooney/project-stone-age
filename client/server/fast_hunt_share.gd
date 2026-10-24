@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## 本机极速模式 shared by every server on this computer (LAN profiles, one
 ## server process per profile; see docs/product/lan-multiplayer-study.md §5a
 ## and docs/development/lan-profiles.md). All helpers share one thread budget
@@ -26,9 +27,9 @@ var dir := DEFAULT_DIR
 ## This hunt's registry name: the process id plus an instance id, so several
 ## backends in one process (tests) do not collide.
 var id := ""
-## Wall-clock seconds shared by every process (Time.get_unix_time_from_system);
+## Wall-clock seconds shared by every process (Clock.unix_time);
 ## tests pass a fake.
-var clock: Callable = Time.get_unix_time_from_system
+var clock: Callable = Clock.unix_time
 ## When this hunt joined, -1 while it is not registered.
 var since := -1.0
 ## This hunt's share, the number of hunts sharing and the budget, as of the

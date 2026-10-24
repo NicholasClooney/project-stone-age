@@ -1,4 +1,5 @@
 extends Node
+const Clock=preload("res://scripts/clock.gd")
 ## Gameplay authority host. Clients send JSON-safe commands to handle() and
 ## present the events it emits; nothing here touches scene nodes, textures or
 ## audio. See docs/technical/backend-interface.md for the message contract.
@@ -149,7 +150,7 @@ var _pet_log_sent_msec := -1000
 var resume_path := ""
 var keep_resume_current := false
 const RESUME_INTERVAL_MSEC := 10000
-var resume_clock: Callable = Time.get_ticks_msec
+var resume_clock: Callable = Clock.ticks_msec
 ## Writes of the resume file, for tests.
 var resume_writes := 0
 ## Private verified fee-resume sidecar transaction. No command/RPC caller.
@@ -340,9 +341,9 @@ func _record_releases() -> void:
 	if appended:
 		pet_log_revision += 1
 		_pet_log_pending = true
-	if _pet_log_pending and ((appended and not queue_only) or Time.get_ticks_msec()-_pet_log_sent_msec>=1000):
+	if _pet_log_pending and ((appended and not queue_only) or Clock.ticks_msec()-_pet_log_sent_msec>=1000):
 		_pet_log_pending = false
-		_pet_log_sent_msec = Time.get_ticks_msec()
+		_pet_log_sent_msec = Clock.ticks_msec()
 		_emit({"type":"pet_log_changed","revision":pet_log_revision})
 
 ## The logs' files follow the save: <save>.release-log.jsonl and

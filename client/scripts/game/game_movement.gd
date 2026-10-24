@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## Walking in the game scene (scripts/game.gd): single steps, routes to a
 ## clicked cell or toward a blocked one, walking up to the villager, 瞬移,
 ## resetting to the square, and the per-frame step that moves the character
@@ -141,9 +142,9 @@ func step_frame(delta: float) -> void:
 	if game.area_transition_busy:return
 	if game.data.is_empty():
 		return
-	if not game._settings_dirty.is_empty() and Time.get_ticks_msec()-game._settings_dirty_msec>=GameScene.SETTINGS_SEND_MSEC:game.flush_automation_settings()
+	if not game._settings_dirty.is_empty() and Clock.ticks_msec()-game._settings_dirty_msec>=GameScene.SETTINGS_SEND_MSEC:game.flush_automation_settings()
 	if game._ui_stale and not game._ui_refresh_held():
-		game._ui_refreshed_msec = Time.get_ticks_msec()
+		game._ui_refreshed_msec = Clock.ticks_msec()
 		game._ui_stale = game.refresh_open_panels()
 	if game.moving:
 		var d := game.target_cell-game.from_cell

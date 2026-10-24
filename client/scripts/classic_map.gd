@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 var world: Node2D
 ## Image id whose colour each cell shows (y*width+x): the ground tile, or the
 ## object drawn over it; 0 = black. Colours are looked up per drawn cell.
@@ -49,7 +50,7 @@ func map_color(ident: int) -> Color:
 	return color
 
 func _process(_delta: float) -> void:
-	var flash := int(Time.get_ticks_msec()/1000)%2
+	var flash := int(Clock.ticks_msec()/1000)%2
 	if last_cell != world.cell or flash != last_flash:
 		last_cell = world.cell
 		last_flash = flash

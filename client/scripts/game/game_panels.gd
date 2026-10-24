@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## Redrawing open panels for the game scene (scripts/game.gd) when backend
 ## data changes: throttling while automation runs, keeping each list's scroll
 ## place, and not rebuilding under text the player is typing. The timestamps
@@ -40,7 +41,7 @@ func _mark_ui_stale() -> void:
 ## never under a held mouse button, so a click lands on the button it pressed.
 func _ui_refresh_held() -> bool:
 	if not game._automation_running():return false
-	return Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Time.get_ticks_msec()-game._ui_refreshed_msec < GameScene.UI_REFRESH_MSEC
+	return Input.is_mouse_button_pressed(MOUSE_BUTTON_LEFT) or Clock.ticks_msec()-game._ui_refreshed_msec < GameScene.UI_REFRESH_MSEC
 
 ## Lifts the field-input lock unless a battle, the adventure menu or minimized
 ## automation still needs it.
@@ -96,4 +97,4 @@ func _scroll_areas(root: Node) -> Array[ScrollContainer]:
 ## 同种比较 list missing a newly caught pet) until focus moved elsewhere.
 func _typing_in(panel: Control) -> bool:
 	var focused := game.get_viewport().gui_get_focus_owner()
-	return focused is LineEdit and panel.is_ancestor_of(focused) and Time.get_ticks_msec()-game._last_typing_msec < GameScene.TYPING_GRACE_MSEC
+	return focused is LineEdit and panel.is_ancestor_of(focused) and Clock.ticks_msec()-game._last_typing_msec < GameScene.TYPING_GRACE_MSEC

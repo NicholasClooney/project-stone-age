@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## Backend automation: auto battles (attack, capture, pet training), hunt
 ## scanning and the find-pet workflow. These run on the backend tick whether or
 ## not a client is attached. Settings come from the character profile
@@ -249,7 +250,7 @@ var flow_stop_pending := ""
 ## species' 保留规则, as the helper does), replays them, and catches what the
 ## keep rule would keep of them. After that the thresholds roll as usual.
 var survey_seconds: int = AutomationSettings.SURVEY_SECONDS
-var survey_clock: Callable = Time.get_ticks_msec
+var survey_clock: Callable = Clock.ticks_msec
 ## {} or {templates: [ids], started: msec, candidates: key -> candidate,
 ## runs: [run seeds in order]}; a candidate is {run_seed, index, slot,
 ## template_id, prediction, serial}.
@@ -261,7 +262,7 @@ var survey_picks: Array = []
 var survey_last: Dictionary = {}
 ## The pet the cycle is catching was picked by a survey: it counts as found.
 var flow_target_survey := false
-var timer_clock: Callable = Time.get_ticks_msec
+var timer_clock: Callable = Clock.ticks_msec
 var timer_started_msec := 0
 var timer_frozen_seconds := 0.0
 var timer_running := false
@@ -798,8 +799,8 @@ func _presentation_done(state: Dictionary) -> bool:
 	if key==_presented_key:return true
 	if key!=_shown_key:
 		_shown_key = key
-		_shown_msec = Time.get_ticks_msec()
-	return Time.get_ticks_msec()-_shown_msec >= (SHOWN_PRESENT_TIMEOUT_MSEC if showcase_show_battle else PRESENT_TIMEOUT_MSEC)
+		_shown_msec = Clock.ticks_msec()
+	return Clock.ticks_msec()-_shown_msec >= (SHOWN_PRESENT_TIMEOUT_MSEC if showcase_show_battle else PRESENT_TIMEOUT_MSEC)
 
 ## Planning consumes an independent persisted roll once. Forecast continuations
 ## use a pure copy; profile/target/clone/member/config changes cannot open it.
@@ -1102,7 +1103,7 @@ func start_hunt(filter: Dictionary) -> bool:
 	hunt_fast_wanted = bool(filter.get("fast",false))
 	fast_unavailable = FastHunt.unavailable_reason()
 	hunt_fast_note = fast_unavailable if hunt_fast_wanted else ""
-	hunt_started_usec = Time.get_ticks_usec()
+	hunt_started_usec = Clock.ticks_usec()
 	hunt_running = true
 	hunt_status = ""
 	_emit_status()
@@ -1139,7 +1140,7 @@ func _hunt_process(delta: float) -> void:
 		fast_hunt.stop();_share_leave();return
 	if (backend.battle_open and not flow_active()) or position_map!=hunt_map or position_cell!=hunt_cell:
 		stop_hunt("场景状态变化，筛选已停止。");return
-	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
+	hunt_elapsed = (Clock.ticks_usec()-hunt_started_usec)/1000000.0
 	if _predicting():
 		refresh_maxima()
 		if not hunt_running:return
@@ -1148,7 +1149,7 @@ func _hunt_process(delta: float) -> void:
 	# Discard old backlog after a stall; never catch up with an unbounded burst.
 	# A rate of 0 or less is unlimited: scan for the whole frame budget.
 	if _fast_process():
-		hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
+		hunt_elapsed = (Clock.ticks_usec()-hunt_started_usec)/1000000.0
 		if hunt_running:_emit_status(true)
 		return
 	var unlimited := int(hunt_filter.rate)<=0
@@ -1157,7 +1158,7 @@ func _hunt_process(delta: float) -> void:
 	while hunt_running and (unlimited or hunt_credit>=1) and Time.get_ticks_usec()<until:
 		if not unlimited:hunt_credit -= 1
 		scan_once()
-	hunt_elapsed = (Time.get_ticks_usec()-hunt_started_usec)/1000000.0
+	hunt_elapsed = (Clock.ticks_usec()-hunt_started_usec)/1000000.0
 	if hunt_running:_emit_status(true)
 
 ## One GDScript scan step: the next roll of this run.
@@ -1711,7 +1712,7 @@ func start_cycle(continuing: bool) -> bool:
 		flow_reason = "宠物栏已满，请自行存放伙伴后再开始。";return false
 	if not continuing or flow_run_id.is_empty():
 		_flow_run_serial += 1
-		flow_run_id = "%d-%d" % [int(Time.get_unix_time_from_system()),_flow_run_serial]
+		flow_run_id = "%d-%d" % [int(Clock.unix_time()),_flow_run_serial]
 	if not continuing:
 		flow_stored_count = 0;flow_pruned_count = 0;flow_kept_count = 0;flow_collected_count = 0;flow_predicted_rejects = 0;flow_best_predicted = {};flow_last_result = "";flow_last_stored_id = "";flow_run_reject_ids = [];flow_released_count = 0;flow_held_count = 0
 		flow_skip_kind = "";flow_skip_streak = 0;flow_skipped_count = 0;flow_skip_note = ""
@@ -1944,7 +1945,7 @@ static func same_capture(pet: Dictionary, actor: Dictionary) -> bool:
 ## its own) or flow (the find-pet cycle); outcome: 停止, 暂停, 已跳过, 已重试,
 ## 完成 or 找到 (a scan on its own found its pet). Counts are the run's so far.
 func _record_stop(scope: String, outcome: String, reason: String, pet: Dictionary = {}) -> void:
-	var entry := {"time":int(Time.get_unix_time_from_system()),"scope":scope,"outcome":outcome,"reason":reason,
+	var entry := {"time":int(Clock.unix_time()),"scope":scope,"outcome":outcome,"reason":reason,
 		"capture_only":flow_capture_only if scope=="flow" else false,"phase":flow_phase if scope=="flow" else "hunt","run":flow_run_id if scope=="flow" else "",
 		"rolls":hunt_rolls,"collected":flow_collected_count,"stored":flow_stored_count,"skipped":flow_skipped_count,"released":flow_released_count,
 		"map_id":position_map,"map_name":backend.map_name(position_map) if position_map>=0 else "","cell":[position_cell.x,position_cell.y],"pet_id":str(pet.get("pet_id","")),"name":str(pet.get("name",""))}
@@ -2020,7 +2021,7 @@ func resume_state() -> Dictionary:
 		# Restarted again before it could resume: keep what was waiting.
 		return pending_resume.duplicate(true)
 	if kind.is_empty() or map<0:return {}
-	var state := {"version":RESUME_VERSION,"kind":kind,"time":int(Time.get_unix_time_from_system()),"map_id":map,"cell":[at.x,at.y],"settings":settings.duplicate(true)}
+	var state := {"version":RESUME_VERSION,"kind":kind,"time":int(Clock.unix_time()),"map_id":map,"cell":[at.x,at.y],"settings":settings.duplicate(true)}
 	if hunt_running:
 		state.hunt = {"filter":hunt_filter.duplicate(true),"run_seed":hunt_run_seed,"rolls":hunt_rolls,"inspected":hunt_inspected,"best":hunt_best,"mixed":hunt_mixed_skips,"elapsed":hunt_elapsed}
 	if kind=="flow":
@@ -2086,7 +2087,7 @@ func _restore_hunt(saved: Dictionary) -> bool:
 	hunt_inspected = int(saved.inspected)
 	hunt_best = int(saved.best)
 	hunt_mixed_skips = int(saved.get("mixed",0))
-	hunt_started_usec = Time.get_ticks_usec()-int(float(saved.get("elapsed",0.0))*1000000.0)
+	hunt_started_usec = Clock.ticks_usec()-int(float(saved.get("elapsed",0.0))*1000000.0)
 	_emit_status()
 	return true
 
@@ -2363,7 +2364,7 @@ func _showcase_enqueue(index: int, slot: int, troop: Dictionary, quality: Dictio
 ## Queues an entry (a hit, or a survey pick marked survey) in its species'
 ## queue, best first; each species' queue keeps at most queue_limit().
 func _showcase_add(entry: Dictionary) -> void:
-	entry["queued_at"] = Time.get_unix_time_from_system()
+	entry["queued_at"] = Clock.unix_time()
 	showcase_queue.append(entry)
 	_sort_queue()
 	_prune_not_retained()
@@ -2444,7 +2445,7 @@ func _take_queued() -> Dictionary:
 			chosen = int(id);break
 	var entry: Dictionary = _species_queue(chosen)[0]
 	entry["queue_departure_rank"] = 1
-	entry["dequeued_at"] = Time.get_unix_time_from_system()
+	entry["dequeued_at"] = Clock.unix_time()
 	showcase_queue.erase(entry)
 	showcase_last_template = chosen
 	return entry
@@ -2823,11 +2824,11 @@ func thresholds_text() -> String:
 ## Only progress/queue churn is coalesced; callers keep transitions immediate.
 ## Build the complete snapshot only when sending, never for a deferred tick.
 func _emit_status(progress: bool = false) -> void:
-	if progress and Time.get_ticks_msec()-_status_sent_msec<STATUS_PROGRESS_MSEC:
+	if progress and Clock.ticks_msec()-_status_sent_msec<STATUS_PROGRESS_MSEC:
 		_status_pending = true
 		return
 	_status_pending = false
-	_status_sent_msec = Time.get_ticks_msec()
+	_status_sent_msec = Clock.ticks_msec()
 	backend.emit_event({"type":"auto_status","status":status()})
 
 func _queue_drop_names() -> Dictionary:
@@ -2836,7 +2837,7 @@ func _queue_drop_names() -> Dictionary:
 	return names
 
 func _flush_progress_status() -> void:
-	if _status_pending and Time.get_ticks_msec()-_status_sent_msec>=STATUS_PROGRESS_MSEC:
+	if _status_pending and Clock.ticks_msec()-_status_sent_msec>=STATUS_PROGRESS_MSEC:
 		_emit_status(true)
 
 func _emit_event(detail: Dictionary) -> void:

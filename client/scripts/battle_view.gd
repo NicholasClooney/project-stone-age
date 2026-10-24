@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 ## Presentation only: the caller submits commands to the authority and supplies snapshots.
 signal action_requested(action: String)
 signal pet_command_requested(command: String)
@@ -649,7 +650,7 @@ func _apply_party_state() -> void:
 	if not in_party_battle() or not built:
 		if built:party_status.hide()
 		return
-	party_deadline_msec = Time.get_ticks_msec()+int(state.party.get("seconds",0))*1000
+	party_deadline_msec = Clock.ticks_msec()+int(state.party.get("seconds",0))*1000
 	var idle := bool(state.party.get("sent",false)) or bool(party_me().get("down",false)) or bool(party_me().get("auto",false))
 	if bool(state.get("active",false)) and idle and command_phase!="waiting":
 		_enter_party_wait()
@@ -670,7 +671,7 @@ func _enter_party_wait() -> void:
 
 ## The status line: the turn timer, and who the turn still waits for.
 func _party_status_text() -> String:
-	var seconds := maxi(0,ceili((party_deadline_msec-Time.get_ticks_msec())/1000.0))
+	var seconds := maxi(0,ceili((party_deadline_msec-Clock.ticks_msec())/1000.0))
 	var waiting: PackedStringArray = []
 	for member in state.party.get("members",[]):
 		if int(member.get("slot",-1))==int(state.party.get("slot",-2)):continue

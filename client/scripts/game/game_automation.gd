@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## The automation windows of the game scene (scripts/game.gd): the character's
 ## automation settings and their batched sending, reopening windows after a
 ## reload, and whether minimized automation is running. The windows and the
@@ -40,7 +41,7 @@ func stat_filter(template_id: int) -> Dictionary:
 ## pauses (SETTINGS_SEND_MSEC), so spinbox ticks do not each reach the backend.
 func mark_settings_dirty(window: Node) -> void:
 	if not window in game._settings_dirty:game._settings_dirty.append(window)
-	game._settings_dirty_msec = Time.get_ticks_msec()
+	game._settings_dirty_msec = Clock.ticks_msec()
 
 ## Sends every pending window's changes now (on Apply / Start / Close).
 func flush_automation_settings() -> void:

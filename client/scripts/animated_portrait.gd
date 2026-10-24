@@ -1,4 +1,5 @@
 extends Control
+const Clock=preload("res://scripts/clock.gd")
 ## A looping battle-manifest animation anchored like the original MakeAnimDisp
 ## (menu.cpp:1865): the node sits at the sprite anchor and each frame is drawn
 ## at its bitmap and frame offsets. Frames follow a global clock, so a rebuilt
@@ -43,10 +44,10 @@ func setup(ident: String, direction: int, on_turn: Callable = Callable()) -> voi
 	turned = on_turn
 	mouse_filter = Control.MOUSE_FILTER_STOP if on_turn.is_valid() else Control.MOUSE_FILTER_IGNORE
 	texture_filter = CanvasItem.TEXTURE_FILTER_NEAREST
-	_update(Time.get_ticks_msec())
+	_update(Clock.ticks_msec())
 
 func _process(_delta: float) -> void:
-	_update(Time.get_ticks_msec())
+	_update(Clock.ticks_msec())
 
 func _update(msec: int) -> void:
 	if _art.is_empty() or str(_art.key) != sprite:_art = BattleArt.art(sprite)
@@ -76,6 +77,6 @@ func _gui_input(event: InputEvent) -> void:
 	if event is InputEventMouseButton and event.pressed and event.button_index == MOUSE_BUTTON_LEFT and turned.is_valid():
 		facing = (facing+1)%8
 		current_image = -1
-		_update(Time.get_ticks_msec())
+		_update(Clock.ticks_msec())
 		turned.call(facing)
 		accept_event()

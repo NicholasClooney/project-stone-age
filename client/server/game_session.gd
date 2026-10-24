@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 var world_catalog = preload("res://scripts/world_catalog.gd").new()
 ## Single-player authority. Prototype rules; original art/data do not imply formula parity.
 ## 4: 气力 (player.mp) and the 精灵 equipment (equipment, spirit items).
@@ -99,7 +100,7 @@ func _init(clock: Callable = Callable(), luck_random: RandomNumberGenerator = nu
 	_refresh_login_luck()
 
 func _refresh_login_luck() -> void:
-	var now:=int(login_clock.call()) if login_clock.is_valid() else int(Time.get_unix_time_from_system())
+	var now:=int(login_clock.call()) if login_clock.is_valid() else int(Clock.unix_time())
 	ClassicLuck.login(_profile.player,now,login_rng)
 
 # Original item 2422: reusable undersea passage permit, sold for 200 stone.

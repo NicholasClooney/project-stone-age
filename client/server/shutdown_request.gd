@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## A graceful stop asked for from outside (scripts/stop-server.sh): the file at
 ## `path` appears, the server notices within a second, removes it and quits
 ## after writing everything down (server_main.gd). Godot runs no _finalize on
@@ -7,7 +8,7 @@ extends RefCounted
 const INTERVAL_MSEC := 1000
 
 var path := ""
-var clock: Callable = Time.get_ticks_msec
+var clock: Callable = Clock.ticks_msec
 var _checked_msec := -1
 
 func _init(request_path: String = "") -> void:

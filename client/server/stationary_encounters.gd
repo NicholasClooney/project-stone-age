@@ -1,4 +1,5 @@
 extends RefCounted
+const Clock=preload("res://scripts/clock.gd")
 ## Project convenience. Reuses ordinary walking pressure, RNG and troop selection.
 const INTERVAL := 0.5
 const LEASE := 5.0
@@ -116,7 +117,7 @@ func _tick(b, delta: float) -> void:
 ## request payloads, filesystem paths or the character profile.
 func audit(b, event: String, why: String, source: Dictionary = {}) -> void:
 	var origin: Dictionary = diagnostic_command if source.is_empty() else source
-	var record := {"event":event,"time_utc":Time.get_datetime_string_from_system(true),"monotonic_ms":Time.get_ticks_msec(),
+	var record := {"event":event,"time_utc":Time.get_datetime_string_from_system(true),"monotonic_ms":Clock.ticks_msec(),
 		"character":b.account_name,"reason":why,"source":str(origin.get("type","server")),
 		"connection":origin.get("_quest_connection",null),"owner_connection":connection,
 		"battle_id":battle_id,"active":bool(b.battle.snapshot().get("active",false)),"running":running,
