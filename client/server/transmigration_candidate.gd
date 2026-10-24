@@ -46,8 +46,8 @@ static func build_quick(before:Dictionary,options:Dictionary,reward_definition:D
  var remainder:int=points%stats.size()
  for stat in Rules.STATS:
   if not seen.has(stat):continue
-  var assigned:int=points/stats.size()+(1 if remainder>0 else 0)
-  remainder-=1
+  var assigned:int=points/stats.size()
+  if remainder>0:assigned+=1;remainder-=1
   allocation.append({"stat":stat,"points":assigned})
   base[stat]=int(base[stat])+100*assigned
  var inherited:=Rules.inherit(base,before.rebirth.equation,target,int(before.player.transmigration)+1,int(quests))
