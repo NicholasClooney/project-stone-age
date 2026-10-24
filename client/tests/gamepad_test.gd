@@ -1,6 +1,7 @@
 extends SceneTree
 ## Plays with simulated controller events only: walking, menus, paging,
 ## dialogue and a battle command, without any mouse hover.
+const Wait=preload("res://tests/support/wait.gd")
 var failures := 0
 
 func _initialize() -> void:call_deferred("run")
@@ -42,12 +43,17 @@ func run() -> void:
 	game.session.grant_starter_pets()
 	await press(JOY_BUTTON_X)
 	check(game.adventure_menu.visible and game.adventure_menu.kind=="status","X opens the status menu")
-	await frames()
-	# The 属性 bars (PlayerElements) are the status window's only live control.
+	check(await Wait.until(self,func():return is_instance_valid(pad.target) and pad.target.name=="PlayerElements"),"status controller starts at the element editor")
+	# Both enabled entry controls are reachable; zero-point allocation stays out.
 	var status_controls: Array = pad.candidates(game.adventure_menu).map(func(control): return str(control.name))
-	check(status_controls==["PlayerElements"],"disabled allocation arrows are never highlighted")
+	status_controls.sort()
+	check(status_controls==["PlayerElements","QuickTransmigration"],"exact status candidates include quick rebirth and exclude disabled allocation arrows")
+	await press(JOY_BUTTON_DPAD_DOWN)
+	check(await Wait.until(self,func():return is_instance_valid(pad.target) and pad.target.name=="QuickTransmigration"),"D-pad selects the quick rebirth entry")
+	await press(JOY_BUTTON_A)
+	check(await Wait.until(self,func():return is_instance_valid(game.adventure_menu.quick_transmigration_menu) and game.adventure_menu.quick_transmigration_menu.live),"A opens the real quick rebirth menu")
 	await press(JOY_BUTTON_B)
-	check(not game.adventure_menu.visible,"B closes the menu")
+	check(await Wait.until(self,func():return not game.adventure_menu.visible and not is_instance_valid(game.adventure_menu.quick_transmigration_menu)),"B closes the menu and its quick rebirth overlay")
 
 	for i in range(8):game.session._profile.pets.append(game.session._profile.pets[0].duplicate(true))
 	game.sync_state()
