@@ -1,5 +1,5 @@
 extends "res://tests/yam_axe_ui_test.gd"
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 class ObservedBackend extends "res://server/backend.gd":
  var checked:=[false,Vector2i.ZERO]
  var cross_phase:Callable
@@ -13,22 +13,22 @@ class ObservedBackend extends "res://server/backend.gd":
   var result:Dictionary=super._cmd_report_position(command)
   if int(command.get("map_id",0))==41 and not result.ok:denied_arrival=true
   return result
-var seconds:=Clock.ERA
+var seconds:=WorldClock.ERA
 func run()->void:
  root.unfocusable=true;root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
- var original:=Clock.clock;Clock.clock=func():return seconds
+ var original:=WorldClock.clock;WorldClock.clock=func():return seconds
  await crossing(false)
  await crossing(true)
- Clock.clock=original
+ WorldClock.clock=original
  print("DREAM TIME WALKING UI: %d failures"%failures);quit(1 if failures else 0)
 func crossing(change_phase:bool)->void:
- seconds=Clock.ERA+int(ceil(930.0*5400.0/1024.0))
+ seconds=WorldClock.ERA+int(ceil(930.0*5400.0/1024.0))
  var backend=ObservedBackend.new();root.add_child(backend)
  backend.session._profile.default_companions_claimed=true;backend.session._profile.no_random_encounters=true
  backend.automation.position_changed(400,Vector2i(99,119))
- if change_phase:backend.cross_phase=func():seconds=Clock.ERA+int(ceil(931.0*5400.0/1024.0))
+ if change_phase:backend.cross_phase=func():seconds=WorldClock.ERA+int(ceil(931.0*5400.0/1024.0))
  var server=preload("res://server/ws_server.gd").new(backend,0,"127.0.0.1");root.add_child(server)
  if not check(server.start()==OK,"timed walk port0"):return
  var script=load("res://scripts/game.gd");script.server_url_override="ws://127.0.0.1:%d"%server.port

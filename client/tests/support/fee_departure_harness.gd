@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Backend=preload("res://server/backend.gd")
 const Session=preload("res://server/game_session.gd")
 const Probe=preload("res://tests/support/fee_departure_backend.gd")
@@ -73,7 +74,7 @@ func disks(path:String)->Array:return [image(path),image(path+".bak"),image(path
 func side(b)->Array:return [image(b._resume_file()),image(b._resume_file()+".tmp")]
 func fixture(tag:String,gate:bool=true,distinct_owner:bool=false)->Dictionary:
 	fixtures+=1
-	var dir:String="user://fee-departure-%d-%02d-%s"%[Time.get_ticks_usec(),fixtures,tag]
+	var dir:String="user://fee-departure-%d-%02d-%s"%[Clock.ticks_usec(),fixtures,tag]
 	check(DirAccess.make_dir_recursive_absolute(dir)==OK,"fixture directory")
 	paths.append(ProjectSettings.globalize_path(dir))
 	var hub:=Hub.new(dir+"/accounts.json")

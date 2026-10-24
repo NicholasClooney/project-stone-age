@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_public_start_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN draft: focused deterministic resume/initial-E2 regression, NOT natural loot proof.
 ## Reuses only prepare_source/read_disk/start_command; never parent's one-step Backend.
 class MissCatalog:
@@ -86,7 +87,7 @@ class CadenceObserver:
   field_count+=1
   if active.is_empty():problem("field outside complete attempt");return
   active.fields+=1
-  active.field_wall=Time.get_ticks_msec() # Wall is diagnostic only.
+  active.field_wall=Clock.ticks_msec() # Wall is diagnostic only.
   if not inner.is_empty():problem("field before sample method returned")
   if active.samples!=1 or active.clock_count!=1:problem("field not paired with exactly one original clock sample")
   if not call is RefCounted:problem("field missing original attempt identity");return
@@ -184,12 +185,12 @@ class ResumeBackend:
   var observed_call:bool=quest_loot.attempt_call!=null
   var before_sample:int=quest_loot.last_attempt_ms
   var before_deadline:int=quest_loot.next_attempt_ms
-  var before_wall:int=Time.get_ticks_msec()
+  var before_wall:int=Clock.ticks_msec()
   if quest_loot is CadenceTimer:quest_loot.observer.field_entry(quest_loot.attempt_call)
   var reply:Dictionary=super._cmd_field_step(command)
   if quest_loot.attempt_call!=null:
    field_calls+=1
-   field_times.append(Time.get_ticks_msec()) # Preserve original return-wall observation.
+   field_times.append(Clock.ticks_msec()) # Preserve original return-wall observation.
    if cadence_rows.size()<128:
     cadence_rows.append({"ordinal":field_calls,"call_present_before":observed_call,"wall_before":before_wall,"wall_return":field_times.back(),"sample_before":before_sample,"deadline_before":before_deadline,"sample_after":quest_loot.last_attempt_ms,"deadline_after":quest_loot.next_attempt_ms})
    else:cadence_overflow=true
@@ -305,7 +306,7 @@ func emit_cadence_diagnostic(b)->void:
    pair.previous_callback_wall=previous.wall_return-previous.wall_before
    pair.current_callback_wall=current.wall_return-current.wall_before
   pairs.append(pair)
- print("LOOT_CADENCE_DIAGNOSTIC ",JSON.stringify({"wall_source":"Time.get_ticks_msec after super field return","sample_source":"existing timer last_attempt_ms/next_attempt_ms; not independent oracle","attempts":b.field_times.size(),"stored_rows":b.cadence_rows.size(),"overflow":b.cadence_overflow,"violations":violations,"pairs":pairs}))
+ print("LOOT_CADENCE_DIAGNOSTIC ",JSON.stringify({"wall_source":"Clock.ticks_msec after super field return","sample_source":"existing timer last_attempt_ms/next_attempt_ms; not independent oracle","attempts":b.field_times.size(),"stored_rows":b.cadence_rows.size(),"overflow":b.cadence_overflow,"violations":violations,"pairs":pairs}))
 func positive_and_external()->void:
  var b=make_case("user://loot-initial-miss-resume-short.json",true,true)
  if b==null:quit(1);return
@@ -349,7 +350,7 @@ func positive_and_external()->void:
  var external_cache:String=external.last_saved_payload
  # Test-only clock for this external-save case; derive full close from E1,
  # never from the returned candidate, result or observed closed disk.
- var close_sample:int=maxi(Time.get_ticks_msec(),external.quest_loot.last_ms)+1000
+ var close_sample:int=maxi(Clock.ticks_msec(),external.quest_loot.last_ms)+1000
  var expected_used:int=external.quest_loot.base_used_ms+close_sample-external.quest_loot.anchor_ms
  var close_plan:Dictionary=State.progress(external.expected_e1_primary.quest_loot,State.STEP,State.identity(external.expected_e1_primary.quest_loot.entries[State.STEP]),expected_used,true)
  check(close_plan.get("ok",false),"Independent external close plan")

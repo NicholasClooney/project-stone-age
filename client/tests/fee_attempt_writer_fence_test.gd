@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 
 # UNRUN test candidate. Private frame setup is a test fixture, not a public
 # command, authenticated purchase, route proof, or original price assertion.
@@ -51,7 +52,7 @@ func setup_case(tag: String, mode: String = "", attempt_id: String = ATTEMPT, am
 	case_index += 1
 	var host = Backend.new()
 	host.set_process(false)
-	host.save_path = "user://fee-attempt-writer-%d-%02d-%s.json" % [Time.get_ticks_usec(), case_index, tag]
+	host.save_path = "user://fee-attempt-writer-%d-%02d-%s.json" % [Clock.ticks_usec(), case_index, tag]
 	var session = FaultSession.new()
 	session.bind_host(host)
 	host.session = session

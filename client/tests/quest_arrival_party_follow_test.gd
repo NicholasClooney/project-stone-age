@@ -1,8 +1,8 @@
 extends "res://tests/lan_party_test.gd"
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 const Route=preload("res://tests/support/original_route_driver.gd")
 func run()->void:
- var old:Callable=Clock.clock;Clock.clock=func():return Clock.ERA+100
+ var old:Callable=WorldClock.clock;WorldClock.clock=func():return WorldClock.ERA+100
  dir="user://arrival-party-%d"%OS.get_process_id();DirAccess.make_dir_recursive_absolute(dir)
  var h=ProfileHub.new(dir+"/accounts.json");root.add_child(h);check(h.start(),"arrival party real Hub starts")
  for info in [[1,"Alice","1111"],[2,"Bob","2222"]]:check(h.handle(info[0],{"type":"create_profile","name":info[1],"pin":info[2]}).ok,"create party character")
@@ -41,5 +41,5 @@ func run()->void:
  h.handle(3,{"type":"report_position","map_id":41,"cell":[11,8],"client":"party","arrival_kind":"party","evidence":{"leader_from_map":400,"leader_from_cell":[97,119],"leader_to_map":41,"leader_to_cell":[11,8]}})
  var outsider=h.backend_of(3)
  check(not outsider.quest_arrival.has_arrival(outsider,41,Vector2i(11,8)),"client-named party origin and plausible leader evidence cannot issue root proof")
- h.shut_down();h.queue_free();await process_frame;remove_tree(dir);Clock.clock=old
+ h.shut_down();h.queue_free();await process_frame;remove_tree(dir);WorldClock.clock=old
  print("QUEST ARRIVAL PARTY FOLLOW: %d failures"%failures);quit(1 if failures else 0)

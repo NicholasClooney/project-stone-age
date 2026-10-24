@@ -1,12 +1,13 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Backend=preload("res://server/backend.gd")
 const Rules=preload("res://server/original_quests.gd")
 const Session=preload("res://server/game_session.gd")
 const Hub=preload("res://server/profile_hub.gd")
 const KUY="king/event69_1"
 var failures:=0
-var suite_started:int=Time.get_ticks_msec()
-func timing(label:String,started:int)->void:print("TIMING "+label+" "+str(Time.get_ticks_msec()-started)+" ms")
+var suite_started:int=Clock.ticks_msec()
+func timing(label:String,started:int)->void:print("TIMING "+label+" "+str(Clock.ticks_msec()-started)+" ms")
 func _initialize() -> void:call_deferred("run")
 func check(ok:bool,note:String) -> void:
  print(("PASS: " if ok else "FAIL: ")+note)
@@ -92,7 +93,7 @@ func return_from_brother_trap(b,choice:int)->bool:
  if not trade(b,"genout/wpm_31705_25_8").get("ok",false):return false
  return true
 func brothers(b) -> void:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  check(trade(b,"giiru/event/ev28_0").ok,"brothers REQUEST28")
  # Select the actual source branch that issues each correct paper.
  for item in [2507,2509,2511,2513,2515]:
@@ -104,18 +105,18 @@ func brothers(b) -> void:
  check(trade(b,"genout/wpm_31705_25_8").ok and b.automation.position_map==31706,"source floor gate")
  timing("brothers papers/crystal/request",started)
  for choice in range(1,6):
-  started=Time.get_ticks_msec()
+  started=Clock.ticks_msec()
   brother_guard(b,choice)
   timing("brothers guard%d savefail/retry"%choice,started)
   if choice!=5:
-   started=Time.get_ticks_msec()
+   started=Clock.ticks_msec()
    check(return_from_brother_trap(b,choice),"walk original decoy exit and original reentry")
    timing("brothers original decoy%d return"%choice,started)
  check(brother_walk(b,"giiru/event/ev28_ed5"),"actual fifth corridor establishes reward hall arrival")
  # Alternatives to one real, source-earned pre-reward state. Arrival/marks are
  # never copied or assigned; each alternative walks within the actual hall.
  var earned:Dictionary=b.session.snapshot()
- started=Time.get_ticks_msec()
+ started=Clock.ticks_msec()
  for choice in range(1,6):
   b.session._profile=earned.duplicate(true)
   b.original_quests.pending={}
@@ -219,7 +220,7 @@ func run() -> void:
   if not preload("res://server/brothers_arrival_helper.gd").owns(npc) and not preload("res://server/golden_arrival_helper.gd").owns(npc):check(not b.quest_helper.destination(b,npc,"near").is_empty(),"NPC reachable neighbour "+str(npc.id))
  check(b.original_quests.npc_by_id("giiru/event/event30_5").is_empty() and not b.original_quests.npc_by_id(KUY).is_empty(),"actual create binding only")
  adult(b);brothers(b)
- var phase_started:int=Time.get_ticks_msec()
+ var phase_started:int=Clock.ticks_msec()
  golden(b);timing("golden original mirror route",phase_started)
  b.free()
  b=fresh();Rules.set_flag(b.session._profile,"ended",28,true)

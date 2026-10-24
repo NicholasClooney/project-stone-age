@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Independent public25 support. Player deliberately walks back to Jaja
 ## AFTER earning END7. This is never continuous25 or a planner detour.
 const Rules=preload("res://server/original_quests.gd")
@@ -14,7 +15,7 @@ class CountedBackend extends "res://server/backend.gd":
   return result
 var assertions:=0
 var failures:=0
-var began:int=Time.get_ticks_msec()
+var began:int=Clock.ticks_msec()
 var deadline:int=0
 var summaries:Array=[]
 var outbound_portals:Array=[]
@@ -71,7 +72,7 @@ func reviewed_lane(id:String)->Dictionary:
   if lane.id==id:return lane
  return {}
 func drive(b,mode:String,job:int)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var event_id:int=7 if job==24 else 8
  var letter:int=2425 if job==24 else 2426
  if job==25:
@@ -90,7 +91,7 @@ func drive(b,mode:String,job:int)->bool:
  var response:Dictionary=b.handle({"type":"quest_auto_start","quest_id":job,"client":"public-goya","_quest_connection":17})
  var started_ok:bool=check(response.get("ok",false) and b.quest_auto.strict_walk,"Actual original job starts %s/%d"%[mode,job])
  var ticks:=0
- while started_ok and b.quest_auto.running and Time.get_ticks_msec()<deadline:
+ while started_ok and b.quest_auto.running and Clock.ticks_msec()<deadline:
   var old_map:int=b.automation.position_map
   var old:Vector2i=b.automation.position_cell
   b.quest_auto.tick(b,0.05)
@@ -155,7 +156,7 @@ func drive(b,mode:String,job:int)->bool:
   else:check(b.session._profile.original_items.count(1206)==1 and Rules.flag(b.session._profile,"ended",7),"Original reply grants exactly one1206 and preserves END7")
   readback(b,"%s-%d"%[mode,job])
  stats.field_calls=b.field_calls.size()-start_fields
- stats.wall_ms=Time.get_ticks_msec()-started
+ stats.wall_ms=Clock.ticks_msec()-started
  stats.complete=complete
  stats.saw_actual_letter=saw_letter
  stats.saw_actual_flower=saw_flower
@@ -189,7 +190,7 @@ func manual_walk(b,nav,goal:Vector2i)->bool:
  var path:Array=nav.local_path(b,map_id,origin,goal,nav.blocked(b,map_id))
  if not check(not path.is_empty() and point(path[0].cell)==origin and point(path[-1].cell)==goal,"Actual manual original geometry reaches requested original endpoint without teleport"):return false
  for index in range(1,path.size()):
-  if Time.get_ticks_msec()>=deadline:return check(false,"Manual walk condition deadline")
+  if Clock.ticks_msec()>=deadline:return check(false,"Manual walk condition deadline")
   var old:Vector2i=b.automation.position_cell
   var cell:Vector2i=point(path[index].cell)
   if not check(absi(old.x-cell.x)+absi(old.y-cell.y)==1 and int(path[index].map_id)==map_id,"Manual excursion uses adjacent same-map logical cells"):return false
@@ -203,7 +204,7 @@ func manual_walk(b,nav,goal:Vector2i)->bool:
   if index%100==0:await process_frame
  return true
 func return_to_jaja(b)->bool:
- var began_manual:int=Time.get_ticks_msec()
+ var began_manual:int=Clock.ticks_msec()
  if not check(not b.quest_auto.running and b.automation.position_map==20406 and Rules.flag(b.session._profile,"ended",7),"Start actual player excursion only after completed24"):return false
  var nav=Nav.new()
  var reversed:Array=outbound_portals.duplicate(true)
@@ -225,5 +226,5 @@ func return_to_jaja(b)->bool:
  # blocked by local_path. Do not choose alternate goals to manufacture a hit.
  if not await manual_walk(b,nav,Vector2i(570,376)):return false
  readback(b,"B-independent-public-start")
- summaries.append({"phase":"player_excursion_after24_before25","wall_ms":Time.get_ticks_msec()-began_manual,"moves":manual_trace.size(),"exit_cell":[exit_cell.x,exit_cell.y],"original_reverse_portals":used,"start25":{"map_id":200,"cell":[570,376]},"trace":manual_trace.duplicate(true),"credited_to_quest25":false})
+ summaries.append({"phase":"player_excursion_after24_before25","wall_ms":Clock.ticks_msec()-began_manual,"moves":manual_trace.size(),"exit_cell":[exit_cell.x,exit_cell.y],"original_reverse_portals":used,"start25":{"map_id":200,"cell":[570,376]},"trace":manual_trace.duplicate(true),"credited_to_quest25":false})
  return true

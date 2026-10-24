@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Static candidate, UNRUN. Full independent profile and three-file oracles.
 ## Synthetic transport binding uses the real fee_attach; no account auth claim.
 const Backend=preload("res://tests/support/fee_start_intent_backend.gd")
@@ -39,7 +40,7 @@ func setup(tag:String,kind:String="absent",ticket:bool=true)->Dictionary:
  for key in s._profile.inventory:s._profile.inventory[key]=0
  if ticket:Equipment.add(s._profile,2755)
  b.automation.position_changed(811,Vector2i(30,22),true)
- b.save_path="user://start-intent-%d-%03d-%s.json"%[Time.get_ticks_usec(),fixtures,tag]
+ b.save_path="user://start-intent-%d-%03d-%s.json"%[Clock.ticks_usec(),fixtures,tag]
  if kind!="absent":s._profile.quest_auto_fee_lifecycle=journal(s._profile,OLD,kind!="active",kind=="unknown")
  check(s._valid_profile(s.snapshot()) and b.save(),tag+": original full save")
  b.fee_attach(71);b.entry_identity=b.quest_auto.identity

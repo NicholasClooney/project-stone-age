@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Backend=preload("res://server/backend.gd")
 const Catalog=preload("res://server/encounter_catalog.gd")
 const Selection=preload("res://server/training_troops.gd")
@@ -22,8 +23,8 @@ func fresh():
 	b.handle({"type":"gm_heal"})
 	return b
 func finish(plan) -> bool:
-	var deadline:=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
-	while not plan.ready and Time.get_ticks_msec()<deadline:
+	var deadline:=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+	while not plan.ready and Clock.ticks_msec()<deadline:
 		plan.advance(1000);await process_frame
 	return plan.ready
 func row(plan,id: int) -> Dictionary:
@@ -112,11 +113,11 @@ func run() -> void:
 	check(begin(b),"automatic training starts with selection")
 	b.automation.training_selection.prepare(b.encounter_catalog,MAP,CELL,b.session.snapshot(),b.automation.settings,b.session.clone_squad_enabled)
 	await finish(b.automation.training_selection)
-	var deadline:=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
-	var tick_start:=Time.get_ticks_usec();b.automation.tick_battle(0.016)
-	check(b.automation.training_skipped==1 and Time.get_ticks_usec()-tick_start<1000000,"one compact tick yields after one low group instead of spinning")
+	var deadline:=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+	var tick_start:=Clock.ticks_usec();b.automation.tick_battle(0.016)
+	check(b.automation.training_skipped==1 and Clock.ticks_usec()-tick_start<1000000,"one compact tick yields after one low group instead of spinning")
 	check(not b.battle_open and b.encounter_rng.state==states[0] and b.encounter_catalog.pressure==int(b.encounter_catalog.area_at(MAP,CELL).probability_min),"low roll consumes exact original RNG/pressure and never opens battle")
-	while not b.battle_open and b.automation.running and Time.get_ticks_msec()<deadline:
+	while not b.battle_open and b.automation.running and Clock.ticks_msec()<deadline:
 		b.automation.step();await process_frame
 	check(b.battle_open and b.automation.training_skipped==expected_rolls.size()-1 and same(expected_rolls.back(),b) and b.encounter_rng.state==states.back(),"first accepted high group keeps exact enemies, growth, drops and encounter RNG")
 	var total:=0
@@ -151,8 +152,8 @@ func run() -> void:
 	for condition in raw.conditions.values():condition.enabled=false
 	check(flow.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y],"filter":{"templates":[113],"total":-8,"offsets":[],"clean_only":false,"fast":false,"showcase":true},"stat_filters":{"113":raw},"settings":{"capture_hp":100,"select_troops":true}}).ok,"real showcase flow starts")
 	var saw_capture:=false;var saw_training:=false
-	deadline=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
-	while flow.automation.flow_active() and Time.get_ticks_msec()<deadline:
+	deadline=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+	while flow.automation.flow_active() and Clock.ticks_msec()<deadline:
 		flow._process(0.5)
 		if flow.battle_open and flow.automation.flow_phase=="capture":saw_capture=saw_capture or int(flow.session._pending.get("group_id",-1))==88
 		if flow.battle_open and flow.automation.flow_phase=="train":
@@ -165,8 +166,8 @@ func run() -> void:
 	Art._validation["100297"]=false;Art._validation["100298"]=false
 	no_group.encounter_rng.seed=555;var unchanged: int=no_group.encounter_rng.state
 	check(begin(no_group),"no-eligible training starts validation")
-	deadline=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
-	while no_group.automation.running and Time.get_ticks_msec()<deadline:no_group.automation.tick_battle(0.016);await process_frame
+	deadline=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+	while no_group.automation.running and Clock.ticks_msec()<deadline:no_group.automation.tick_battle(0.016);await process_frame
 	check(not no_group.automation.running and not no_group.battle_open and no_group.encounter_rng.state==unchanged and no_group.automation.stop_reason.contains("没有可进入"),"no renderable eligible group pauses clearly without roll or battle")
 	Art._validation=old_art;no_group.queue_free();await process_frame
 	print("TRAINING TROOPS: %d failures" % failures);quit(1 if failures else 0)

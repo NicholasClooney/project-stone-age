@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## STATIC C candidate, UNRUN. No test cleans product private authority fields.
 const Backend=preload("res://tests/support/fee_lobby_ticket_backend.gd")
 const Fault=preload("res://tests/support/fee_lobby_ticket_fault_session.gd")
@@ -33,7 +34,7 @@ func setup(tag:String,level:int=35,ticket:bool=false)->Dictionary:
   var id:int=2757 if level>=70 else (2756 if level>=50 else 2755)
   preload("res://server/original_equipment.gd").add(s._profile,id)
  b.automation.position_changed(851 if level>=70 else 811,Vector2i(29 if level>=70 else (28 if level>=50 else 30),22),true)
- b.save_path="user://lobby-shutdown.json" if tag=="shutdown" else "user://lobby-%d-%03d-%s.json"%[Time.get_ticks_usec(),fixtures,tag]
+ b.save_path="user://lobby-shutdown.json" if tag=="shutdown" else "user://lobby-%d-%03d-%s.json"%[Clock.ticks_usec(),fixtures,tag]
  s.set_location(b.automation.position_map,b.automation.position_cell.x,b.automation.position_cell.y)
  check(s._valid_profile(s.snapshot()) and b.save(),tag+": original setup saved")
  load_calls+=1

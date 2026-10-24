@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_crystal_prerequisite_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Basic natural acceptance: one authentic P3 publication plus a received 2760 primary readback.
 ## UNRUN revision; the product E1 budget stays at its default 30 minutes.
 ## Historical pilots remain byte-identical; no test registration or product change.
@@ -141,11 +142,11 @@ func emit_pilot_trace(label:String,value:Variant)->bool:
  if not ok:check(false,"Bounded event evidence failed: "+label)
  return ok
 func pilot_remaining_seconds()->float:
- return maxf(0.0,float(pilot_deadline_ms-Time.get_ticks_msec())/1000.0)
+ return maxf(0.0,float(pilot_deadline_ms-Clock.ticks_msec())/1000.0)
 func pilot_trace_ok()->bool:
  return host==null or (not host.route_trace_overflow and not host.settlement_trace_overflow and not host.settlement_failed and not host.settlement_observation_failed and not host.close_observation_failed and not host.transport_binding_changed and not host.invalid_transport_binding and not host.trace_output_overflow and not host.observation_failed and not host.quest_loot.observation_failed)
 func pilot_wait(condition:Callable,label:String)->bool:
- while Time.get_ticks_msec()<pilot_deadline_ms:
+ while Clock.ticks_msec()<pilot_deadline_ms:
   if failures:return false
   if not pilot_trace_ok():check(false,"Evidence/receipt observation failure: "+label);return false
   if condition.call():return true
@@ -153,7 +154,7 @@ func pilot_wait(condition:Callable,label:String)->bool:
  check(false,"UNCOMPLETE stage deadline: "+stage+" / "+label)
  return false
 func check(ok:bool,label:String)->void:
- if ok and pilot_deadline_ms>0 and Time.get_ticks_msec()>=pilot_deadline_ms:
+ if ok and pilot_deadline_ms>0 and Clock.ticks_msec()>=pilot_deadline_ms:
   ok=false;label="UNCOMPLETE stage deadline: "+stage+" / "+label
  if ok:return
  failures+=1
@@ -161,7 +162,7 @@ func check(ok:bool,label:String)->void:
   failure_saved=true
   passive_diagnostic() # Already observed memory only, before the original failure capture.
   # Do not stop/close/save/disconnect the live run to rescue a failed oracle.
-  var row:Dictionary={"result":"UNCOMPLETE" if Time.get_ticks_msec()>=pilot_deadline_ms or label.contains("UNCOMPLETE") else "FAIL","stage":stage,"reason":label,"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms}
+  var row:Dictionary={"result":"UNCOMPLETE" if Clock.ticks_msec()>=pilot_deadline_ms or label.contains("UNCOMPLETE") else "FAIL","stage":stage,"reason":label,"elapsed_ms":Clock.ticks_msec()-pilot_started_ms}
   if host!=null:
    row.profile=host.session._profile.duplicate(true)
    row.pending=host.session._pending.duplicate(true)
@@ -296,7 +297,7 @@ func choose_safe_source_destination()->Vector2i:
  for cell in candidates:
   if queries>=MAX_PATH_QUERIES:break
   if candidate_search_windows>=MAX_ASTAR_SEARCH_WINDOWS:break
-  if Time.get_ticks_msec()>=pilot_deadline_ms:
+  if Clock.ticks_msec()>=pilot_deadline_ms:
    route_search_queries=queries
    route_search_candidates=candidates.size()
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_before_next_astar","candidate_cells":route_search_candidates,"queries":route_search_queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"stage_deadline_ms":pilot_deadline_ms,"outer_limit_ms":OUTER_MS}))
@@ -313,7 +314,7 @@ func choose_safe_source_destination()->Vector2i:
   if candidate_search_windows>MAX_ASTAR_SEARCH_WINDOWS or route_search_windows>MAX_ROUTE_SEARCH_WINDOWS:
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"astar_window_overflow","queries":queries,"search_windows":route_search_windows,"route_window_limit":MAX_ROUTE_SEARCH_WINDOWS,"candidate_search_windows":candidate_search_windows,"candidate_window_limit":MAX_ASTAR_SEARCH_WINDOWS,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells}))
    return Vector2i(-1,-1)
-  if Time.get_ticks_msec()>=pilot_deadline_ms:
+  if Clock.ticks_msec()>=pilot_deadline_ms:
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_during_bounded_astar","candidate_cells":candidates.size(),"queries":queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"stage_deadline_ms":pilot_deadline_ms,"outer_limit_ms":OUTER_MS}))
    return Vector2i(-1,-1)
   if candidate.is_empty() or candidate.back()!=cell or candidate.size()>MAX_ROUTE_CELLS:continue
@@ -592,7 +593,7 @@ func expected_existing_starter_growth(profile:Dictionary,pet_id:String,target:in
 
 func prepare_existing_starter_pet()->bool:
  if failures:return false
- if Time.get_ticks_msec()>=pilot_deadline_ms or host.battle_open or not host.session._pending.is_empty():
+ if Clock.ticks_msec()>=pilot_deadline_ms or host.battle_open or not host.session._pending.is_empty():
   check(false,"Existing-starter preparation begins before the shared deadline and outside battle/receipt")
   return false
  var before:Dictionary=host.session._profile.duplicate(true)
@@ -611,7 +612,7 @@ func prepare_existing_starter_pet()->bool:
  var level_serial:int=host.quest_save_serial
  var level_reply:Dictionary=await request_world({"type":"level_pet_to","pet_id":"pet-1","target":Session.MAX_LEVEL},"Original owned starter pet level_pet_to request")
  if failures:return false
- if Time.get_ticks_msec()>=pilot_deadline_ms:
+ if Clock.ticks_msec()>=pilot_deadline_ms:
   check(false,"Shared outer deadline remains before any later pet-preparation action")
   return false
  check(level_reply.get("ok",false)==true and str(level_reply.get("type",""))=="ack" and not level_reply.get("pending",false) and host.quest_save_serial==level_serial+1 and not host.battle_open and host.session._pending.is_empty(),"Wait for the actual level_pet_to server ACK and its original save boundary; do not treat SessionClient's pending bool as completion")
@@ -626,7 +627,7 @@ func prepare_existing_starter_pet()->bool:
  var select_serial:int=host.quest_save_serial
  var select_reply:Dictionary=await request_world({"type":"select_pet","index":0},"Original select_pet request for fixed pet-1 index")
  if failures:return false
- if Time.get_ticks_msec()>=pilot_deadline_ms:
+ if Clock.ticks_msec()>=pilot_deadline_ms:
   check(false,"Shared outer deadline remains before checkpoint/disk verification")
   return false
  check(select_reply.get("ok",false)==true and str(select_reply.get("type",""))=="ack" and not select_reply.get("pending",false) and host.quest_save_serial==select_serial+1 and not host.battle_open and host.session._pending.is_empty(),"Wait for the actual select_pet server ACK and original save boundary")
@@ -851,10 +852,10 @@ func final_oracles()->bool:
  var target_proven:bool=primary_load_proven and received>0 and Plan.select(host,Sources.matches_backend).get("status")=="done"
  check(received>0 or int(entry.used_ms)>=ACTIVE_MS,"Zero target can be TARGET_UNPROVEN only after the original full default budget naturally completes")
  if failures:return false
- check(pilot_trace_ok() and Time.get_ticks_msec()<pilot_deadline_ms,"Final oracle stays within evidence and verification hard limits")
+ check(pilot_trace_ok() and Clock.ticks_msec()<pilot_deadline_ms,"Final oracle stays within evidence and verification hard limits")
  if failures:return false
  if not natural_e1_failure_free():return false # Final classification guard, no failure record can earn UNPROVEN.
- var summary:Dictionary={"result":"PASS" if target_proven and p3_proven else "UNPROVEN","target":"PROVEN" if target_proven else "TARGET_UNPROVEN","p3":"PROVEN" if p3_proven else "P3_NATURAL_UNPROVEN","received_2760":received,"target_uids":uids,"attempts":host.pilot_attempt_count,"route_battles":route_battle_count,"e1_saved_battles":entry.saved_battles,"budget_limit_ms":entry.limit_ms,"budget_used_ms":entry.used_ms,"e1_anchor_ms":e1_anchor,"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"p3_samples":host.quest_loot.accepted_active,"p3_publications":host.p3_publications,"primary_sha256":primary.sha256,"backup_sha256":backup.sha256,"primary_and_backup_may_differ":true,"event_bytes":host.trace_output_bytes,"event_count":host.trace_count,"blob_bytes_by_class":host.evidence.charged.duplicate(),"unique_blobs":host.evidence.index.size(),"run_once_no_retry":true,"acceptance_contract":"basic_p3_and_received_2760_primary_readback","primary_load_proven":primary_load_proven,"load_modes":["primary"],"backup_fallback_loads":"NOT_RUN_BY_BASIC_POLICY","setup_conveniences":["up to two existing starter potions via original use_item before E1 (+30 each capped; stop when full/empty; no new items)","original remote default three companions","original GM120","original V179/T178 allocation","fixed pet-1 original level_pet_to120/select_pet0","original near scholar and GENOU; last collision leg only"],"rendered_pixels_proven":false,"cpu":"UNKNOWN","external_watchdog_exit":"record separately by approved supervisor"}
+ var summary:Dictionary={"result":"PASS" if target_proven and p3_proven else "UNPROVEN","target":"PROVEN" if target_proven else "TARGET_UNPROVEN","p3":"PROVEN" if p3_proven else "P3_NATURAL_UNPROVEN","received_2760":received,"target_uids":uids,"attempts":host.pilot_attempt_count,"route_battles":route_battle_count,"e1_saved_battles":entry.saved_battles,"budget_limit_ms":entry.limit_ms,"budget_used_ms":entry.used_ms,"e1_anchor_ms":e1_anchor,"elapsed_ms":Clock.ticks_msec()-pilot_started_ms,"p3_samples":host.quest_loot.accepted_active,"p3_publications":host.p3_publications,"primary_sha256":primary.sha256,"backup_sha256":backup.sha256,"primary_and_backup_may_differ":true,"event_bytes":host.trace_output_bytes,"event_count":host.trace_count,"blob_bytes_by_class":host.evidence.charged.duplicate(),"unique_blobs":host.evidence.index.size(),"run_once_no_retry":true,"acceptance_contract":"basic_p3_and_received_2760_primary_readback","primary_load_proven":primary_load_proven,"load_modes":["primary"],"backup_fallback_loads":"NOT_RUN_BY_BASIC_POLICY","setup_conveniences":["up to two existing starter potions via original use_item before E1 (+30 each capped; stop when full/empty; no new items)","original remote default three companions","original GM120","original V179/T178 allocation","fixed pet-1 original level_pet_to120/select_pet0","original near scholar and GENOU; last collision leg only"],"rendered_pixels_proven":false,"cpu":"UNKNOWN","external_watchdog_exit":"record separately by approved supervisor"}
  check(emit_pilot_trace("ACCEPTANCE_RESULT",summary),"Persist complete independent result categories")
  if failures:return false
  print("NATURAL_ACCEPTANCE_RESULT ",JSON.stringify(summary))
@@ -864,7 +865,7 @@ func final_oracles()->bool:
  return true
 
 func run()->void:
- pilot_started_ms=Time.get_ticks_msec();pilot_deadline_ms=pilot_started_ms+SETUP_MS
+ pilot_started_ms=Clock.ticks_msec();pilot_deadline_ms=pilot_started_ms+SETUP_MS
  check(OS.get_cmdline_user_args().is_empty(),"Fixed single-run protocol accepts no seed/mode/budget arguments")
  if failures:quit(1);return
  if not await authenticated_setup():quit(1);return
@@ -918,7 +919,7 @@ func run()->void:
  pilot_deadline_ms=mini(pilot_started_ms+OUTER_MS,e1_anchor+ACTIVE_MS+SETTLEMENT_MS)
  var outstanding_battle:=""
  var outstanding_since:=-1
- while Time.get_ticks_msec()<pilot_deadline_ms:
+ while Clock.ticks_msec()<pilot_deadline_ms:
   if not natural_e1_failure_free():quit(1);return
   if not pilot_trace_ok():check(false,"Passive observation/evidence failed; preserve original disk");quit(1);return
   if not auth_owner_current():check(false,"Authenticated owner/peer/binding changed during natural run");quit(1);return
@@ -928,19 +929,19 @@ func run()->void:
   passive_memory()
   if confirmed_player_protection():finish_protection_unproven();return
   if not battle_id.is_empty() and battle_id!=outstanding_battle:
-   outstanding_battle=battle_id;outstanding_since=Time.get_ticks_msec()
-  if not battle_id.is_empty() and Time.get_ticks_msec()-outstanding_since>=SETTLEMENT_MS:
+   outstanding_battle=battle_id;outstanding_since=Clock.ticks_msec()
+  if not battle_id.is_empty() and Clock.ticks_msec()-outstanding_since>=SETTLEMENT_MS:
    check(false,"UNCOMPLETE original battle exceeded 180s settlement hard limit");quit(1);return
   if not host.retired_battles.is_empty() and host.retired_battles.back().get("outcome","")!="win":
    check(false,"Natural battle did not end in original victory; no recovery fixture");quit(1);return
   if finished_original_run():break
-  if Time.get_ticks_msec()>=e1_anchor+ACTIVE_MS:stage="original-settlement"
+  if Clock.ticks_msec()>=e1_anchor+ACTIVE_MS:stage="original-settlement"
   await physics_frame
  if not natural_e1_failure_free():quit(1);return # Before a deadline can classify this as UNCOMPLETE.
- check(finished_original_run() and Time.get_ticks_msec()<pilot_deadline_ms,"UNCOMPLETE active/settlement stage hard limit; original pending receipt is preserved")
+ check(finished_original_run() and Clock.ticks_msec()<pilot_deadline_ms,"UNCOMPLETE active/settlement stage hard limit; original pending receipt is preserved")
  if failures:quit(1);return
  stage="verification"
- pilot_deadline_ms=mini(pilot_started_ms+OUTER_MS,Time.get_ticks_msec()+VERIFY_MS)
+ pilot_deadline_ms=mini(pilot_started_ms+OUTER_MS,Clock.ticks_msec()+VERIFY_MS)
  if not final_oracles():quit(1);return
 
 func archive_pair(b,stage_name:String)->bool:

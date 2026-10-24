@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Preserve the catalog replacement contract while avoiding one full resident
 ## scan for every quest NPC. Compare to the former algorithm on actual data.
 const WorldCatalog = preload("res://scripts/world_catalog.gd")
@@ -10,17 +11,17 @@ func check(ok: bool, note: String) -> void:
  if not ok:failures += 1
 func replaced(residents: Array, previous, provider, note: String) -> Array:
  var expected := residents.duplicate(true)
- var started := Time.get_ticks_usec()
+ var started := Clock.ticks_usec()
  for entry in previous.npcs+previous.service_npcs:
   expected = expected.filter(func(resident):return str(resident.get("id",""))!=str(entry.id))
  expected.append_array(provider.active_npcs())
- print("PROJECTION reference %s: %.3fms" % [note,(Time.get_ticks_usec()-started)/1000.0])
+ print("PROJECTION reference %s: %.3fms" % [note,(Clock.ticks_usec()-started)/1000.0])
  return expected
 func compare(world, provider, note: String) -> void:
  var expected := replaced(world.residents,world.quest_catalog,provider,note)
- var started := Time.get_ticks_usec()
+ var started := Clock.ticks_usec()
  world.set_quest_catalog(provider)
- print("PROJECTION %s: %.3fms" % [note,(Time.get_ticks_usec()-started)/1000.0])
+ print("PROJECTION %s: %.3fms" % [note,(Clock.ticks_usec()-started)/1000.0])
  check(world.residents==expected,note+": exact residents, order and nested fields")
 func run() -> void:
  var world = WorldCatalog.new()

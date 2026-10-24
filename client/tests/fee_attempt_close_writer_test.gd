@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN private writer-candidate oracle. No Stop caller, RPC, source authority,
 ## ticket price, route, sidecar or user-facing behavior is exercised.
 const Backend = preload("res://server/backend.gd")
@@ -103,7 +104,7 @@ func setup_case(tag: String, mode: String = "", attempting: bool = false, open_f
 	case_index += 1
 	var host = Backend.new()
 	host.set_process(false)
-	host.save_path = "user://fee-close-%d-%02d-%s.json" % [Time.get_ticks_usec(), case_index, tag]
+	host.save_path = "user://fee-close-%d-%02d-%s.json" % [Clock.ticks_usec(), case_index, tag]
 	var session = FaultSession.new()
 	session.bind_host(host)
 	host.session = session

@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## New public-v2-yam-mati authority execution only; no unchanged full quest chain.
 ## Mode comparison explicitly disables random encounters. The separate encounter
 ## suite uses the original encounter catalog and does not mock field_step.
@@ -41,14 +42,14 @@ class ObservedBackend extends "res://server/backend.gd":
   return result
 var failures:=0
 var assertions:=0
-var suite_started:int=Time.get_ticks_msec()
+var suite_started:int=Clock.ticks_msec()
 var deadline:int=0
 func check(value:bool,label:String)->bool:
  assertions+=1
  if not value:failures+=1;push_error(label)
  return value
 func _initialize()->void:call_deferred("run")
-func in_time()->bool:return Time.get_ticks_msec()<deadline
+func in_time()->bool:return Clock.ticks_msec()<deadline
 func configure_birth_fixture(_b)->void:
  pass # Original uncontrolled independent-world fixture remains the default.
 func fixture(mode:String):
@@ -108,7 +109,7 @@ func persisted(b,label:String)->void:
   check(restored._profile.location==b.session._profile.location,"Readback preserves normally saved location without forcing a destination "+label)
  for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
 func route(mode:String)->Dictionary:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var b=fixture(mode)
  var packets:Array=listen(b)
  if not await prepare(b,packets):b.free();return {}
@@ -171,7 +172,7 @@ func route(mode:String)->Dictionary:
  b.handle({"type":"quest_auto_stop"})
  persisted(b,mode)
  b.free()
- print("PUBLIC EXECUTION mode=%s simulated_public_seconds=%.3f fast_packets=%d logical_field_calls=%d wall_ms=%d"%[mode,result.seconds,result.fast,result.field_cells.size(),Time.get_ticks_msec()-started])
+ print("PUBLIC EXECUTION mode=%s simulated_public_seconds=%.3f fast_packets=%d logical_field_calls=%d wall_ms=%d"%[mode,result.seconds,result.fast,result.field_cells.size(),Clock.ticks_msec()-started])
  return result
 func first_difference(left:Array,right:Array)->Dictionary:
  for index in range(maxi(left.size(),right.size())):
@@ -179,7 +180,7 @@ func first_difference(left:Array,right:Array)->Dictionary:
    return {"index":index,"left_size":left.size(),"right_size":right.size(),"left_neighbours":left.slice(maxi(0,index-2),mini(left.size(),index+3)),"right_neighbours":right.slice(maxi(0,index-2),mini(right.size(),index+3))}
  return {}
 func run()->void:
- deadline=Time.get_ticks_msec()+55000
+ deadline=Clock.ticks_msec()+55000
  var results:Dictionary={}
  for mode in ["A","C","B"]:
   results[mode]=await route(mode)
@@ -200,5 +201,5 @@ func run()->void:
   check(results.B.seconds<results.C.seconds,"B audited public landing uses less simulated movement time")
  else:check(false,"All three actual modes must finish within the allocated short suite")
  check(in_time(),"Suite condition deadline not exceeded")
- print("QUEST AUTO PUBLIC CORRIDORS EXECUTION: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Time.get_ticks_msec()-suite_started])
+ print("QUEST AUTO PUBLIC CORRIDORS EXECUTION: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Clock.ticks_msec()-suite_started])
  quit(1 if failures else 0)

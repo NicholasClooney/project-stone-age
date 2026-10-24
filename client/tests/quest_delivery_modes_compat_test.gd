@@ -1,4 +1,5 @@
 extends "res://tests/quest_delivery_routes_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Actual six-job source transactions/routes. Random encounters are explicitly
 ## disabled ONLY in this mode-compatibility fixture, not natural-battle evidence.
 const Arrival=preload("res://server/quest_arrival_policy.gd")
@@ -15,7 +16,7 @@ func mode_fixture(map_id:int,cell:Vector2i):
  check(b.handle({"type":"set_automation_settings","settings":{"quest":{"mode":mode}}}).ok,"Persist selected mode "+mode)
  return b
 func mode_drive(b,job:int)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var events:Array=[]
  var observe:Callable=func(event):
   if event.get("type")=="position":events.append(event.duplicate(true))
@@ -25,8 +26,8 @@ func mode_drive(b,job:int)->bool:
  if not result.get("ok",false):b.event.disconnect(observe);return false
  var start_moves:int=moves
  var start_fast:int=fast_packets
- var deadline:int=Time.get_ticks_msec()+120000
- while b.quest_auto.running and Time.get_ticks_msec()<deadline:
+ var deadline:int=Clock.ticks_msec()+120000
+ while b.quest_auto.running and Clock.ticks_msec()<deadline:
   var old_map:int=b.automation.position_map
   var old:Vector2i=b.automation.position_cell
   var gate:bool=b.quest_auto.phase=="strict_dialogue" and b.original_quests.pending.get("phase","")=="FREEWARP"
@@ -62,7 +63,7 @@ func mode_drive(b,job:int)->bool:
   check(not b.battle_open,"Explicit encounter-off fixture remains route-only evidence")
  var success:bool=not b.quest_auto.running and Rules.flag(b.session.snapshot(),"ended",Plan.JOB_EVENTS[job])
  check(success,"Complete actual "+mode+" job "+str(job)+": "+b.quest_auto.message)
- print("COMPAT mode=",mode," job=",job," moves=",moves-start_moves," fast=",fast_packets-start_fast," wall_ms=",Time.get_ticks_msec()-started)
+ print("COMPAT mode=",mode," job=",job," moves=",moves-start_moves," fast=",fast_packets-start_fast," wall_ms=",Clock.ticks_msec()-started)
  b.event.disconnect(observe)
  return success
 func run()->void:

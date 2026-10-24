@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Candidate audit only: no production whitelist changes or executor claims.
 ## Reads actual imported maps; prints each accepted/rejected directional lane.
 const Backend=preload("res://server/backend.gd")
@@ -62,7 +63,7 @@ func classify(nav,b,lane:Dictionary)->Dictionary:
  check(not public_candidate(nav,b,map_id,door,occupied),"Original door remains a separate real step")
  return {"reason":"","cells":path.size()-1,"outside":[outside.x,outside.y],"start_is_portal":b.quest_helper.places.links(map_id).has(start)}
 func run()->void:
- var began:=Time.get_ticks_msec()
+ var began:=Clock.ticks_msec()
  var table=JSON.parse_string(FileAccess.get_file_as_string(DATA))
  if not table is Dictionary:check(false,"Candidate table loads");quit(1);return
  check(table.lanes.size()==37,"Review contains exactly 37 new directional candidates")
@@ -83,6 +84,6 @@ func run()->void:
   check(not public_candidate(nav,b,map_id,Vector2i(10,10),{}),"Caves and script entry pockets never become public by scope omission")
  for cell in [Vector2i(105,228),Vector2i(108,225),Vector2i(103,228),Vector2i(109,226)]:
   check(not public_candidate(nav,b,300,cell,{}),"Outer/inner gate and approach pocket always excluded")
- print("PUBLIC_CANDIDATE_SUMMARY ",JSON.stringify({"accepted":accepted.size(),"rejected":rejected.size(),"assertions":assertions,"failures":failures,"wall_ms":Time.get_ticks_msec()-began}))
+ print("PUBLIC_CANDIDATE_SUMMARY ",JSON.stringify({"accepted":accepted.size(),"rejected":rejected.size(),"assertions":assertions,"failures":failures,"wall_ms":Clock.ticks_msec()-began}))
  b.free()
  quit(1 if failures else 0)

@@ -1,10 +1,11 @@
 extends "res://tests/quest_auto_public_corridors_execution_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Separate deterministic original-encounter proof, not a natural-rate benchmark.
 ## Strong stats and initial village position are inherited explicit fixtures.
 ## Random encounters are suppressed ONLY during the actual request/village exit
 ## and after the first-hit assertion while testing real saved battle continuation.
 func run()->void:
- deadline=Time.get_ticks_msec()+55000
+ deadline=Clock.ticks_msec()+55000
  var b=fixture("C")
  var packets:Array=listen(b)
  if not await prepare(b,packets):b.free();quit(1);return
@@ -69,5 +70,5 @@ func run()->void:
  persisted(b,"encounter")
  b.free()
  check(in_time(),"Encounter condition deadline not exceeded")
- print("QUEST AUTO PUBLIC CORRIDORS ENCOUNTER: %d assertions, %d failures; oracle_seed=%d wall_ms=%d"%[assertions,failures,chosen,Time.get_ticks_msec()-suite_started])
+ print("QUEST AUTO PUBLIC CORRIDORS ENCOUNTER: %d assertions, %d failures; oracle_seed=%d wall_ms=%d"%[assertions,failures,chosen,Clock.ticks_msec()-suite_started])
  quit(1 if failures else 0)

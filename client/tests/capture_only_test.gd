@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Real encounter rolls, queued replay, battle capture, authority settlement,
 ## isolated save/reload and automation resume. No fabricated reward results.
 const Backend = preload("res://server/backend.gd")
@@ -19,13 +20,13 @@ func capacity(value: int) -> void:
 func begin(backend) -> Dictionary:
 	return backend.handle({"type":"auto_start","kind":"find_pet","map_id":100,"cell":[637,493]})
 func fill_queue(automation, minimum: int = 3, species_minimum: int = 1) -> void:
-	var deadline := Time.get_ticks_msec()+30000
-	while (automation.showcase_queue.size()<minimum or automation._queue_templates().size()<species_minimum) and automation.hunt_running and Time.get_ticks_msec()<deadline:automation.scan_once()
+	var deadline := Clock.ticks_msec()+30000
+	while (automation.showcase_queue.size()<minimum or automation._queue_templates().size()<species_minimum) and automation.hunt_running and Clock.ticks_msec()<deadline:automation.scan_once()
 	check(automation.showcase_queue.size()>=minimum,"real encounter rolls populate the capture queue")
 func finish_capture(backend, reconcile: bool = true) -> void:
 	var automation = backend.automation
-	var deadline := Time.get_ticks_msec()+30000
-	while automation.running and Time.get_ticks_msec()<deadline:automation.step()
+	var deadline := Clock.ticks_msec()+30000
+	while automation.running and Clock.ticks_msec()<deadline:automation.step()
 	if reconcile:automation.flow_step()
 func run() -> void:
 	ServerSettings.path_override = "user://capture-only-server.cfg"

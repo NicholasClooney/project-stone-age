@@ -1,4 +1,5 @@
 extends "res://tests/support/transmigration_wind_route.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Same entire natural route, with real NPC/choice mouse input at phone width.
 var shot_serial:=0
 func run()->void:
@@ -9,7 +10,7 @@ func run()->void:
 func use(npc:Dictionary,keyword:String="")->bool:
  print("WIND click ",npc.get("id","")," map=",world.data.map_id," cell=",world.cell)
  if not check(await approach(npc),"Natural walk reaches actual NPC click"):return false
- var ui_started:int=Time.get_ticks_msec()
+ var ui_started:int=Clock.ticks_msec()
  var entries:Array=world.world_travel.entries
  var matches:Array=entries.filter(func(n):return str(n.id)==str(npc.id))
  if not check(matches.size()==1,"Actual source NPC rendered exactly once"):return false
@@ -48,9 +49,9 @@ func use(npc:Dictionary,keyword:String="")->bool:
   if not await choose("yes"):return false
  if is_instance_valid(d) and d.active:
   if not await choose("ok"):return false
- timing_ui+=Time.get_ticks_msec()-ui_started
+ timing_ui+=Clock.ticks_msec()-ui_started
  if host.battle_open:
-  var battle_started:int=Time.get_ticks_msec()
+  var battle_started:int=Clock.ticks_msec()
   for turn in range(100):
    var state:Dictionary=host.battle.snapshot()
    if not state.active:break
@@ -60,7 +61,7 @@ func use(npc:Dictionary,keyword:String="")->bool:
    host.handle({"type":"battle_command","action":"attack","target":target})
   if not check(host.handle({"type":"battle_close"}).ok,"Naturally clicked source battle settles"):return false
   if not await ready(func():return not world.battle_view.visible,"Actual remote battle view closes"):return false
-  timing_battle+=Time.get_ticks_msec()-battle_started
+  timing_battle+=Clock.ticks_msec()-battle_started
  return await Wait.settle(self,world)
 
 func after_completion()->bool:

@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_initial_miss_resume_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN independent failure-exit oracle. Fixed clock/physical partial-write seams
 ## are unit conveniences, never natural encounter or reward proof.
 class FaultSession:
@@ -90,7 +91,7 @@ func contract_case(mode:String)->void:
  var primary:Dictionary=read_disk(b.save_path)
  var backup:Dictionary=read_disk(b.save_path+".bak")
  var backup_profile:Dictionary=disk_profile(backup,b.session)
- var sample:int=maxi(Time.get_ticks_msec(),b.quest_loot.last_ms)+1000
+ var sample:int=maxi(Clock.ticks_msec(),b.quest_loot.last_ms)+1000
  var used:int=b.quest_loot.base_used_ms+sample-b.quest_loot.anchor_ms
  var plan:Dictionary=State.progress(baseline.quest_loot,State.STEP,State.identity(baseline.quest_loot.entries[State.STEP]),used,true)
  check(plan.get("ok",false),"Independent frozen close plan")
@@ -181,7 +182,7 @@ func retry_case(mode:String)->void:
  var primary:Dictionary=read_disk(b.save_path);var backup:Dictionary=read_disk(b.save_path+".bak")
  var backup_profile:Dictionary=disk_profile(backup,b.session)
  var serial:int=b.quest_save_serial
- var sample:int=maxi(Time.get_ticks_msec(),b.quest_loot.last_ms)+1000
+ var sample:int=maxi(Clock.ticks_msec(),b.quest_loot.last_ms)+1000
  var used:int=b.quest_loot.base_used_ms+sample-b.quest_loot.anchor_ms
  var plan:Dictionary=State.progress(profile.quest_loot,State.STEP,State.identity(profile.quest_loot.entries[State.STEP]),used,true)
  check(plan.get("ok",false),"Independent retry close plan")
@@ -359,7 +360,7 @@ func boundary_case(kind:String,value:Variant)->void:
  var profile:Dictionary=b.session._profile.duplicate(true)
  var primary:Dictionary=read_disk(b.save_path);var backup:Dictionary=read_disk(b.save_path+".bak")
  var serial:int=b.quest_save_serial
- var sample:int=maxi(Time.get_ticks_msec(),b.quest_loot.last_ms)+1000
+ var sample:int=maxi(Clock.ticks_msec(),b.quest_loot.last_ms)+1000
  var used:int=b.quest_loot.base_used_ms+sample-b.quest_loot.anchor_ms
  b.quest_loot.clock=func():return sample
  b.session.mode="pre_io_always"

@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN: real QuestAuto.start/tick/strict_advance candidate acceptance.
 ## Policy/Registry files and their normal job-8 closure remain unchanged.
 const Backend = preload("res://server/backend.gd")
@@ -261,7 +262,7 @@ func start_snapshot_check() -> bool:
 	return check(not manifest.is_empty() and manifest.sha256_text() == WORLD_MANIFEST_SHA, "complete original world manifest matches the reviewed portal identity set")
 
 func run() -> void:
-	started_msec = Time.get_ticks_msec()
+	started_msec = Clock.ticks_msec()
 	if not start_snapshot_check():finish();return
 	if not prepare_backend("munde-request9-11-runner-candidate.json"):finish();return
 	var first: Dictionary = Candidate.select(backend, 8)
@@ -271,7 +272,7 @@ func run() -> void:
 	target = first.step.duplicate(true)
 	if not start_candidate():finish();return
 	if not check(runner().step.id == first.step.id and runner().step.source == first.step.source, "actual QuestAuto.start selected the same full source-locked REQUEST9 step"):finish();return
-	wait_deadline_msec = Time.get_ticks_msec() + int(WAIT_PER_REQUEST * 1000)
+	wait_deadline_msec = Clock.ticks_msec() + int(WAIT_PER_REQUEST * 1000)
 	var reached: bool = await Wait.until(self, drive_request11, WAIT_PER_REQUEST)
 	if failed:finish();return
 	if not check(reached and phase == "request11" and runner().step.id == "munde:request11", "runner's first native transaction advances to the selected REQUEST11 step within Wait 150"):finish();return
@@ -282,7 +283,7 @@ func run() -> void:
 	if not check(second.step.source.type == "REQUEST" and second.step.source.branch_index == 3 and second.step.source.source_line == 41 and second.step.source.source_sha == "e6b9230968cbd1669bcade7223c0fc7c4d7b6213320fc0311db0f1394a0540f3" and second.step.source.actions.is_empty() and second.step.auto_choices == ["yes","ok"], "full selected REQUEST11 branch3 source and empty actions"):finish();return
 	if not check(Auto.new().safe_step(second.step, 8), "the existing strict REQUEST guard accepts the earned next step"):finish();return
 	target = second.step.duplicate(true)
-	wait_deadline_msec = Time.get_ticks_msec() + int(WAIT_PER_REQUEST * 1000)
+	wait_deadline_msec = Clock.ticks_msec() + int(WAIT_PER_REQUEST * 1000)
 	reached = await Wait.until(self, drive_request11_manual, WAIT_PER_REQUEST)
 	if failed:finish();return
 	if not check(reached and done and phase == "manual" and not runner().running, "second original transaction reaches the candidate manual stop boundary within Wait 150"):finish();return
@@ -293,13 +294,13 @@ func run() -> void:
 	if not check(logical_points <= MAX_LOGICAL_POINTS and backend.candidate_field_calls == ordinary_walks and portals > 0, "all ordinary runner movements executed one original field step; total logical points stay <= 6000"):finish();return
 	if not check(not backend.battle_open and backend.original_quests.pending.is_empty() and backend.session._pending.is_empty() and backend.quest_arrival._scope.is_empty() and backend.quest_arrival._marks.is_empty() and backend.quest_arrival._stages.is_empty(), "no open transaction/battle or fabricated protected proof"):finish();return
 	var observed = navigation()
-	print("MUNDE RUNNER REQUEST9->11: points=%d walks=%d portals=%d fields=%d sources=%s next=%d plans=%d local_path=%d grid_rebuilds=%d grid_cells=%d elapsed_ms=%d stop=request10_manual" % [logical_points,ordinary_walks,portals,backend.candidate_field_calls,str(portal_sequence),observed.next_calls,observed.plan_calls,observed.local_path_calls,observed.grid_rebuilds,observed.grid_rebuild_cells,Time.get_ticks_msec()-started_msec])
+	print("MUNDE RUNNER REQUEST9->11: points=%d walks=%d portals=%d fields=%d sources=%s next=%d plans=%d local_path=%d grid_rebuilds=%d grid_cells=%d elapsed_ms=%d stop=request10_manual" % [logical_points,ordinary_walks,portals,backend.candidate_field_calls,str(portal_sequence),observed.next_calls,observed.plan_calls,observed.local_path_calls,observed.grid_rebuilds,observed.grid_rebuild_cells,Clock.ticks_msec()-started_msec])
 	finish()
 
 func drive_request11() -> bool:
 	if failed:return true
 	if phase == "request11" and runner().step.get("id", "") == "munde:request11":return true
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "REQUEST9 Wait 150 deadline; do not begin another synchronous runner/AStar call")
 		return true
 	if not runner().running:
@@ -310,7 +311,7 @@ func drive_request11() -> bool:
 func drive_request11_manual() -> bool:
 	if failed:return true
 	if done:return true
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "REQUEST11 Wait 150 deadline; do not begin another synchronous runner/AStar call")
 		return true
 	if not runner().running and runner().phase != "manual":
@@ -320,7 +321,7 @@ func drive_request11_manual() -> bool:
 
 func runner_frame() -> bool:
 	if failed or done:return true
-	if Time.get_ticks_msec() - started_msec > int(HARD_EXTERNAL_PROPOSAL * 1000):
+	if Clock.ticks_msec() - started_msec > int(HARD_EXTERNAL_PROPOSAL * 1000):
 		check(false, "300 second hard external wall limit (checked between synchronous runner calls only)")
 		return true
 	if runner().phase == "landing":

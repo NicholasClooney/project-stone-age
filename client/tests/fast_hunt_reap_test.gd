@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Finished fast-hunt helpers are reaped (server/fast_hunt.gd): a long hunt
 ## used to leave one zombie per hit or restart until the user's process limit
 ## was exhausted.
@@ -23,17 +24,17 @@ func _initialize() -> void:
 	for i in range(20):
 		hunt.pid = OS.create_process("/bin/sleep",["0"])
 		hunt._forget_pid()
-	var deadline := Time.get_ticks_msec()+3000
-	while not hunt._unreaped.is_empty() and Time.get_ticks_msec()<deadline:
-		OS.delay_msec(20)
+	var deadline := Clock.ticks_msec()+3000
+	while not hunt._unreaped.is_empty() and Clock.ticks_msec()<deadline:
+		await process_frame
 		hunt.reap()
 	check(hunt._unreaped.is_empty(),"every finished helper is reaped")
 	check(zombies()<=before,"no zombie children are left behind (%d before, %d after)" % [before,zombies()])
 	hunt.pid = OS.create_process("/bin/sleep",["5"])
 	hunt.stop()
-	deadline = Time.get_ticks_msec()+3000
-	while not hunt._unreaped.is_empty() and Time.get_ticks_msec()<deadline:
-		OS.delay_msec(20)
+	deadline = Clock.ticks_msec()+3000
+	while not hunt._unreaped.is_empty() and Clock.ticks_msec()<deadline:
+		await process_frame
 		hunt.reap()
 	check(hunt._unreaped.is_empty() and zombies()<=before,"a stopped (killed) helper is reaped too")
 	print("FAST HUNT REAP: %d failures" % failures)

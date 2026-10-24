@@ -1,9 +1,9 @@
 extends "res://tests/original_fixed_guards_test.gd"
 const Dream=preload("res://server/dream_cave_helper.gd")
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 const ELDER="seimu/event/event01_1@6000:73:54"
 const SAGE="seimu/event/event01_2@41:34:25"
-var seconds:=Clock.ERA
+var seconds:=WorldClock.ERA
 func forbidden(b)->void:
  for map_id in [41,42]:
   for mode in ["near","arrival"]:
@@ -15,7 +15,7 @@ const Route=preload("res://tests/support/original_route_driver.gd")
 func maze(b,map_id:int)->void:
  check(Route.walk(b,map_id,Vector2i(34,42),[map_id]).ok,"every original maze step reaches guard through production reports")
 func run()->void:
- var old:=Clock.clock;Clock.clock=func():return seconds
+ var old:=WorldClock.clock;WorldClock.clock=func():return seconds
  var b=fresh();adult(b)
  var replay_profile:Dictionary={}
  for event in [32,33,34]:
@@ -23,7 +23,7 @@ func run()->void:
   check(not Rules.flag(b.session.snapshot(),"ended",34),"third END34 not prematurely written")
   forbidden(b)
   var map_id:=42 if event==33 else 41
-  seconds=Clock.ERA+int(ceil(float(400 if map_id==42 else 200)*5400.0/1024.0))
+  seconds=WorldClock.ERA+int(ceil(float(400 if map_id==42 else 200)*5400.0/1024.0))
   var door:=[87,101] if map_id==42 else [97,119]
   b.automation.position_changed(400,Vector2i(int(door[0]),int(door[1])))
   check(b.handle({"type":"check_passage","from_map":400,"to_map":map_id}).ok,"original phase permits chosen gate")
@@ -38,7 +38,7 @@ func run()->void:
   maze(b,map_id);forbidden(b)
   var guard:="400/sb_muge%d.arg@%d:%d:41"%[2 if event==33 else 1,map_id,33 if event==33 else 34]
   check(choose(b,talk(b,guard),"yes").ok and b.battle_open,"actual bound dream guard starts")
-  if not b.battle_open:b.free();Clock.clock=old;quit(1);return
+  if not b.battle_open:b.free();WorldClock.clock=old;quit(1);return
   check(b.session._pending.enemies.map(func(e):return int(e.source_enemy_id))==[1095,1095,1095,1087,1086,1096,1096,1096,1096,1096],"exact ten source enemies unchanged")
   var before:Dictionary=b.session.snapshot();b.save_path="user://dream-no-parent/save.json"
   fight(b)
@@ -65,7 +65,7 @@ func run()->void:
  var path:="user://dream-three-rounds.json";check(b.session.save_game(path),"three rounds save")
  var restored=Session.new();check(restored.load_game(path) and [32,33,34].all(func(e):return Rules.flag(restored.snapshot(),"ended",e)),"all three exact END bits survive reload")
  for suffix in ["",".bak",".tmp"]:DirAccess.remove_absolute(ProjectSettings.globalize_path(path+suffix))
- b.free();await dream_lan(replay_profile);Clock.clock=old
+ b.free();await dream_lan(replay_profile);WorldClock.clock=old
  print("DREAM CAVE: %d failures"%failures);quit(1 if failures else 0)
 
 func dream_lan(earned:Dictionary)->void:

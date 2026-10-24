@@ -2,12 +2,12 @@ extends RefCounted
 ## Test driver only: traverses production GameScene movement and original portals.
 const Wait=preload("res://tests/support/wait.gd")
 const Dream=preload("res://server/dream_cave_helper.gd")
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 static func enter_and_reach(tree:SceneTree,game,target:Vector2i)->bool:
- var original:Callable=Clock.clock
- Clock.clock=func():return Clock.ERA+int(ceil(930.0*5400.0/1024.0))
+ var original:Callable=WorldClock.clock
+ WorldClock.clock=func():return WorldClock.ERA+int(ceil(930.0*5400.0/1024.0))
  var reached:bool=await _enter_and_reach(tree,game,target)
- Clock.clock=original
+ WorldClock.clock=original
  return reached
 static func _enter_and_reach(tree:SceneTree,game,target:Vector2i)->bool:
  var overview=game.dev_map_overview

@@ -1,4 +1,5 @@
 extends "res://tests/quest_catalog_lookup_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 const Backend=preload("res://server/backend.gd")
 class FullCatalog extends "res://scripts/quest_catalog.gd":
  func active_npcs_by_source(_source_script:String)->Array:return active_npcs()
@@ -156,11 +157,11 @@ func run()->void:
  compare_sources(catalog,"duplicate ID and same source multi-map")
  compare_entries(catalog,old,"duplicate ID and same source multi-map")
  catalog=Catalog.new();old=FullCatalog.new()
- var start:int=Time.get_ticks_usec()
+ var start:int=Clock.ticks_usec()
  for source in scripts:old.active_npcs().filter(func(n):return str(n.get("source_script",""))==source)
- var old_us:int=Time.get_ticks_usec()-start;start=Time.get_ticks_usec()
+ var old_us:int=Clock.ticks_usec()-start;start=Clock.ticks_usec()
  for source in scripts:catalog.active_npcs_by_source(source)
- print("SOURCE LOOKUP scripts=",scripts.size()," full_us=",old_us," projected_us=",Time.get_ticks_usec()-start)
+ print("SOURCE LOOKUP scripts=",scripts.size()," full_us=",old_us," projected_us=",Clock.ticks_usec()-start)
  var npc_input:Dictionary=birth_boundary()
  var b=Backend.new();b.session.gm_raise_level(-1,80)
  var frozen=FrozenNpcState.new();b.original_quests.npc_state=frozen
@@ -176,9 +177,9 @@ func run()->void:
   var input_before:Dictionary=frozen.snapshot()
   b.automation.position_changed(100 if state==0 else 31705,Vector2i(10,10))
   b.quest_catalog=old;b.original_quests.catalog=old;b.quest_helper.cached_key=""
-  start=Time.get_ticks_usec();var expected:Dictionary=b.quest_helper.snapshot(b);old_us=Time.get_ticks_usec()-start
+  start=Clock.ticks_usec();var expected:Dictionary=b.quest_helper.snapshot(b);old_us=Clock.ticks_usec()-start
   b.quest_catalog=catalog;b.original_quests.catalog=catalog;b.quest_helper.cached_key=""
-  start=Time.get_ticks_usec();var actual:Dictionary=b.quest_helper.snapshot(b);var new_us:int=Time.get_ticks_usec()-start
+  start=Clock.ticks_usec();var actual:Dictionary=b.quest_helper.snapshot(b);var new_us:int=Clock.ticks_usec()-start
   check(actual==expected,"representative complete snapshot exact old full-array input state"+str(state))
   check(catalog.npc_overrides==input_before and old.npc_overrides==input_before and frozen.snapshot()==input_before,"both complete snapshots retain identical frozen NPC input state"+str(state))
   print("SOURCE SNAPSHOT state=",state," old_us=",old_us," new_us=",new_us)

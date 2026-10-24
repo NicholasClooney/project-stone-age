@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN: real QuestAuto lifecycle through REQUEST9/11/10, one original WPM
 ## KEYWORD transaction, source-rooted Warp, and first Boss BATTLE page (before yes).
 ## Policy/Registry files and their normal job-8 closure remain unchanged.
@@ -187,7 +188,7 @@ func arrival_auxiliary_unchanged(before: Dictionary, after: Dictionary) -> bool:
 	return saved_equal(before_marks,after_marks) and saved_equal(before_stages,after_stages) and not after_marks.has("munde_final") and not after_stages.has("munde_final")
 
 func phase_deadline_open(label: String) -> bool:
-	if wait_deadline_msec <= 0 or Time.get_ticks_msec() < wait_deadline_msec:return true
+	if wait_deadline_msec <= 0 or Clock.ticks_msec() < wait_deadline_msec:return true
 	check(false,label)
 	return false
 
@@ -1278,7 +1279,7 @@ func start_snapshot_check() -> bool:
 	return check(not manifest.is_empty() and manifest.sha256_text() == WORLD_MANIFEST_SHA, "complete original world manifest matches the reviewed portal identity set")
 
 func run() -> void:
-	started_msec = Time.get_ticks_msec()
+	started_msec = Clock.ticks_msec()
 	if not start_snapshot_check():finish();return
 	if not prepare_backend("munde-request9-10-runner-candidate.json"):finish();return
 	var initial_nav_observation: Dictionary = runner().navigation_observation_probe()
@@ -1292,7 +1293,7 @@ func run() -> void:
 	target = first.step.duplicate(true)
 	if not start_candidate():finish();return
 	if not check(runner().step.id == first.step.id and Plan.same_source(runner().step.source,first.step.source), "actual QuestAuto.start selected the same full source-locked REQUEST9 step"):finish();return
-	wait_deadline_msec = Time.get_ticks_msec() + int(WAIT_PER_REQUEST * 1000)
+	wait_deadline_msec = Clock.ticks_msec() + int(WAIT_PER_REQUEST * 1000)
 	var reached: bool = await Wait.until(self, drive_request11, WAIT_PER_REQUEST)
 	if failed:finish();return
 	if not check(reached and phase == "request11" and runner().step.id == "munde:request11", "runner's first native transaction advances to the selected REQUEST11 step within Wait 150"):finish();return
@@ -1305,7 +1306,7 @@ func run() -> void:
 	if not check(Auto.new().safe_step(second.step, 8), "the existing strict REQUEST guard accepts the earned next step"):finish();return
 	if not phase_deadline_open("REQUEST9 phase deadline expired before the next phase starts"):finish();return
 	target = second.step.duplicate(true)
-	wait_deadline_msec = Time.get_ticks_msec() + int(WAIT_PER_REQUEST * 1000)
+	wait_deadline_msec = Clock.ticks_msec() + int(WAIT_PER_REQUEST * 1000)
 	reached = await Wait.until(self, drive_request10_manual, WAIT_PER_REQUEST)
 	if failed:finish();return
 	if not check(reached and done and phase == "first_boss" and not runner().running and not runner().boss_page_observation.is_empty(), "real REQUEST9/11/10 continuation captures the first original Boss page, then stops before yes within Wait 150"):finish();return
@@ -1328,12 +1329,12 @@ func run() -> void:
 	var keyword_save_after: Variant = runner().keyword_observation.get("save_serial_after")
 	if not check(keyword_save_after is int and not keyword_save_after is bool and boss_profile_value is Dictionary and saved_equal(backend.session.snapshot(),boss_profile_value) and backend.quest_save_serial == keyword_save_after, "manual Boss page and stop add no save/transaction after the one source KEYWORD transaction"):finish();return
 	var observed: Variant = navigation()
-	print("MUNDE RUNNER REQUEST9->FIRST_BOSS_PAGE_CAPTURED_THEN_CLEARED: points=%d walks=%d portals=%d script_warps=%d fields=%d sources=%s tx=[9,11,10,KEYWORD] next=%d plans=%d local_path=%d grid_rebuilds=%d grid_cells=%d elapsed_ms=%d stop=manual_reopen_battle_page_before_yes" % [logical_points,ordinary_walks,portals,original_script_warps,backend.candidate_field_calls,str(portal_sequence),observed.next_calls,observed.plan_calls,observed.local_path_calls,observed.grid_rebuilds,observed.grid_rebuild_cells,Time.get_ticks_msec()-started_msec])
+	print("MUNDE RUNNER REQUEST9->FIRST_BOSS_PAGE_CAPTURED_THEN_CLEARED: points=%d walks=%d portals=%d script_warps=%d fields=%d sources=%s tx=[9,11,10,KEYWORD] next=%d plans=%d local_path=%d grid_rebuilds=%d grid_cells=%d elapsed_ms=%d stop=manual_reopen_battle_page_before_yes" % [logical_points,ordinary_walks,portals,original_script_warps,backend.candidate_field_calls,str(portal_sequence),observed.next_calls,observed.plan_calls,observed.local_path_calls,observed.grid_rebuilds,observed.grid_rebuild_cells,Clock.ticks_msec()-started_msec])
 	finish()
 
 func drive_request11() -> bool:
 	if failed:return true
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "REQUEST9 Wait 150 deadline; do not begin another synchronous runner/AStar call")
 		return true
 	if phase == "request11" and runner().step.get("id", "") == "munde:request11":return true
@@ -1344,7 +1345,7 @@ func drive_request11() -> bool:
 
 func drive_request10_manual() -> bool:
 	if failed:return true
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "REQUEST11→REQUEST10 continuation Wait 150 deadline; do not begin another synchronous runner/AStar call")
 		return true
 	if done:return true
@@ -1356,7 +1357,7 @@ func drive_request10_manual() -> bool:
 func runner_frame() -> bool:
 	current_ordinary_failure_detail = {}
 	if failed or done:return true
-	if Time.get_ticks_msec() - started_msec > int(HARD_EXTERNAL_PROPOSAL * 1000):
+	if Clock.ticks_msec() - started_msec > int(HARD_EXTERNAL_PROPOSAL * 1000):
 		check(false, "300 second hard external wall limit (checked between synchronous runner calls only)")
 		return true
 	if not phase_deadline_open("absolute phase deadline reached before the next synchronous runner call"):return true
@@ -1370,7 +1371,7 @@ func runner_frame() -> bool:
 		var before_phase: String = runner().phase
 		if not phase_deadline_open("phase deadline reached before original portal ACK handling"):return true
 		var ack: Dictionary = backend.handle(ack_for(receipt))
-		var ack_returned_msec: int = Time.get_ticks_msec()
+		var ack_returned_msec: int = Clock.ticks_msec()
 		if wait_deadline_msec > 0 and ack_returned_msec >= wait_deadline_msec:
 			trace.append({"kind":"portal_ack_deadline_overrun","phase":before_phase,"returned_msec":ack_returned_msec,"deadline_msec":wait_deadline_msec,"receipt":receipt_trace_dto(receipt),"ack":ack.duplicate(true),"state":state(),"arrival":arrival_observation()})
 			check(false, "phase deadline expired during portal ACK handling; stop before another runner call")
@@ -1401,7 +1402,7 @@ func runner_frame() -> bool:
 	var before_arrival: Dictionary = arrival_observation()
 	if not phase_deadline_open("phase deadline reached before synchronous runner tick"):return true
 	runner().tick(backend, 0.21)
-	var tick_returned_msec: int = Time.get_ticks_msec()
+	var tick_returned_msec: int = Clock.ticks_msec()
 	var phase_deadline_expired: bool = wait_deadline_msec > 0 and tick_returned_msec >= wait_deadline_msec
 	var after_map: int = backend.automation.position_map
 	var after_cell: Vector2i = backend.automation.position_cell

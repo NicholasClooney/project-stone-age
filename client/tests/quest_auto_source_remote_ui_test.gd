@@ -1,4 +1,5 @@
 extends "res://tests/quest_delivery_loading_ui_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Real public WS admission; button-click proof lives in the public-entry UI suite.
 ## All subsequent map loading, following and receipt ACKs use the real remote
 ## scene. Natural encounters/source RNG; strong stats are not normal Lv35 power.
@@ -12,7 +13,7 @@ class RecordingBackend extends "res://server/backend.gd":
   var reply:Dictionary=super.handle(command)
   if command.get("type")=="report_position":
    reports.append({"command":command.duplicate(true),"reply":reply.duplicate(true)})
-   print("SOURCE REPORT ",JSON.stringify({"t":Time.get_ticks_msec(),"command":command,"reply":reply,"phase_after":quest_auto.phase,"identity_after":quest_auto.identity.checkpoint()}))
+   print("SOURCE REPORT ",JSON.stringify({"t":Clock.ticks_msec(),"command":command,"reply":reply,"phase_after":quest_auto.phase,"identity_after":quest_auto.identity.checkpoint()}))
   if command.get("type")=="checkpoint":checkpoints.append({"command":command.duplicate(true),"reply":reply.duplicate(true)})
   return reply
 var ticks:=0
@@ -22,7 +23,7 @@ func trace_scene(label:String)->void:
  if not is_instance_valid(world) or not is_instance_valid(backend_node):return
  var data:Dictionary={"map":world.data.get("map_id",-1),"cell":str(world.cell),"moving":world.moving,"transition":world.area_transition_busy,"followed":world._followed,"receipt":world.get_meta("quest_position_receipt",{}),"auto":world.state.derived.get("quest_auto",{}),"source_phase":backend_node.quest_auto.phase,"source_identity":backend_node.quest_auto.identity.checkpoint()}
  var serialized:String=JSON.stringify(data)
- if label!="frame" or serialized!=previous_scene_trace:print("SOURCE SCENE ",label," t=",Time.get_ticks_msec()," ",serialized)
+ if label!="frame" or serialized!=previous_scene_trace:print("SOURCE SCENE ",label," t=",Clock.ticks_msec()," ",serialized)
  previous_scene_trace=serialized
 func _process(_delta:float)->bool:
  if first_floor_trace:trace_scene("frame")
@@ -46,8 +47,8 @@ func paid_page()->bool:
  var frame=backend_node.quest_auto.source_frame
  return backend_node.quest_auto.phase=="source_dialogue" and frame!=null and str(frame.page.get("text","")).begins_with("猜谜 第")
 func drive_to(predicate:Callable,label:String,hold_landing:bool=false)->bool:
- var deadline:int=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
- while Time.get_ticks_msec()<deadline:
+ var deadline:int=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+ while Clock.ticks_msec()<deadline:
   if predicate.call():return check(true,label)
   if not backend_node.quest_auto.running:return check(false,label+": "+backend_node.quest_auto.message)
   ticks+=1;backend_node._process(0.21)
@@ -66,7 +67,7 @@ func fresh_source()->bool:
  backend_node.event.connect(func(message:Dictionary):
   if message.get("type")=="position" and message.has("quest_position_seq"):backend_node.packets.append(message.duplicate(true))
   if first_floor_trace and message.get("type") in ["position","profile","snapshot"]:
-   print("SOURCE EVENT ",JSON.stringify({"t":Time.get_ticks_msec(),"type":message.get("type"),"packet":message if message.get("type")=="position" else {},"auto":message.get("derived",{}).get("quest_auto",{}),"live_identity":backend_node.quest_auto.identity.checkpoint(),"live_phase":backend_node.quest_auto.phase})))
+   print("SOURCE EVENT ",JSON.stringify({"t":Clock.ticks_msec(),"type":message.get("type"),"packet":message if message.get("type")=="position" else {},"auto":message.get("derived",{}).get("quest_auto",{}),"live_identity":backend_node.quest_auto.identity.checkpoint(),"live_phase":backend_node.quest_auto.phase})))
  var profile:Dictionary=backend_node.session._profile
  profile.player.level=35
  profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
@@ -85,7 +86,7 @@ func fresh_source()->bool:
  if not await create_world():return false
  world.link.message.connect(func(message:Dictionary):
   if first_floor_trace and message.get("type") in ["position","profile","snapshot"]:
-   print("SOURCE WS ",JSON.stringify({"t":Time.get_ticks_msec(),"type":message.get("type"),"packet":message if message.get("type")=="position" else {},"auto":message.get("derived",{}).get("quest_auto",{})}))
+   print("SOURCE WS ",JSON.stringify({"t":Clock.ticks_msec(),"type":message.get("type"),"packet":message if message.get("type")=="position" else {},"auto":message.get("derived",{}).get("quest_auto",{})}))
    trace_scene("after-client-consume"))
  if not await ready(shown,"Remote scene restores actual public811 entrance"):return false
  if not check(await Wait.settle(self,world),"Public initial position settles"):return false

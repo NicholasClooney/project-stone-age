@@ -1,4 +1,5 @@
 extends "res://tests/fee_loaded_baseline_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 const StorageFault = preload("res://tests/support/fee_loaded_storage_fault_session.gd")
 class OriginalLoadBackend extends "res://server/backend.gd":
 	func load_profile(path: String) -> bool:
@@ -55,7 +56,7 @@ func make_case(shape: String, mutation: String = "", old_loader: bool = false, l
 		loaded.quest_loot.entries[STEP].revision = 6
 	var expected: Dictionary = loaded.duplicate(true)
 	if shape in ["absent", "loot_absent", "fallback_absent"]:expected.merge({"item_storage": [], "legacy_item_storage": {}, "item_storage_revision": 0})
-	var path: String = "user://fee-storage-%d-%03d.json" % [Time.get_ticks_usec(), ordinal]
+	var path: String = "user://fee-storage-%d-%03d.json" % [Clock.ticks_usec(), ordinal]
 	kept.append(ProjectSettings.globalize_path(path))
 	var bytes: PackedByteArray = JSON.stringify(before, "\t").to_utf8_buffer()
 	put(path, "bad-json".to_utf8_buffer() if shape == "fallback_absent" else bytes)

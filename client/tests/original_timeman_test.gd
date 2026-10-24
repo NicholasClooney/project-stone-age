@@ -1,13 +1,13 @@
 extends "res://tests/original_fixed_guards_test.gd"
-const Clock=preload("res://server/original_world_clock.gd")
-var seconds:=Clock.ERA
+const WorldClock=preload("res://server/original_world_clock.gd")
+var seconds:=WorldClock.ERA
 var time_npcs:Array=[]
 func install(b)->void:
  b.quest_catalog.npcs.append_array(time_npcs.duplicate(true))
  if 34 not in b.quest_catalog.enabled_events:b.quest_catalog.enabled_events.append(34)
-func at_hour(value:int)->void:seconds=Clock.ERA+int(ceil(float(value)*5400.0/1024.0))
+func at_hour(value:int)->void:seconds=WorldClock.ERA+int(ceil(float(value)*5400.0/1024.0))
 func run()->void:
- var previous:=Clock.clock;Clock.clock=func():return seconds
+ var previous:=WorldClock.clock;WorldClock.clock=func():return seconds
  time_npcs=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/dream-timeman.json")).module.npcs
  var b=Backend.new();install(b)
  var before:Dictionary=b.session.snapshot()
@@ -29,7 +29,7 @@ func run()->void:
  check(before==after,"TimeMan dialogue changes no inventory, event flags or profile data")
  b.free()
  await remote_projection()
- Clock.clock=previous
+ WorldClock.clock=previous
  print("ORIGINAL TIMEMAN: %d failures"%failures)
  quit(1 if failures else 0)
 func remote_projection()->void:

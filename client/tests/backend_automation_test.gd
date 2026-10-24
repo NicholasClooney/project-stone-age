@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Backend automation without any game scene: the detached runner settles and
 ## saves battles on its own tick, and an attached client can pace it only up
 ## to the presentation ceiling.
@@ -75,7 +76,7 @@ func run() -> void:
 	check(int(backend.battle.snapshot().turn)==1,"acknowledged presentation releases the next turn")
 	backend.handle({"type":"auto_step"})
 	var waited := int(backend.battle.snapshot().turn)
-	OS.delay_msec(backend.automation.PRESENT_TIMEOUT_MSEC+100)
+	Clock.advance((backend.automation.PRESENT_TIMEOUT_MSEC+100)/1000.0)
 	backend.handle({"type":"auto_step"})
 	check(waited==1 and (int(backend.battle.snapshot().turn)==2 or not backend.battle.snapshot().active),"an unresponsive client cannot stall automation past the ceiling")
 	backend.handle({"type":"auto_stop"})

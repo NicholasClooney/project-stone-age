@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## 后台搜宠 (hunt.showcase, AutomationSettings.SHOWCASE_NAME) in the find-pet
 ## cycle (server/automation.gd): hits found while the player watches wait in a
 ## queue (hunt.queue long, best first; the worst over the limit is written to
@@ -243,7 +244,7 @@ func run() -> void:
 	automation.client_attached = true
 	automation._presented_key = ""
 	automation._shown_key = "b:1"
-	automation._shown_msec = Time.get_ticks_msec()-6000
+	automation._shown_msec = Clock.ticks_msec()-6000
 	automation.showcase_show_battle = true
 	check(not automation._presentation_done({"battle_id":"b","turn":1}),"a watched turn is waited for past 5 s")
 	automation.showcase_show_battle = false

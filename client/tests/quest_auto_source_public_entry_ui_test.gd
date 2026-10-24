@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_source_remote_ui_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Public admission only, not another natural route. Independent public811
 ## fixtures; completed END44 is a denial fixture, not terminal-route proof.
 const PublicPolicy=preload("res://scripts/quest_auto_policy.gd")
@@ -22,7 +23,7 @@ func ui_trace(label:String,detail:Dictionary={}) -> void:
  if not is_instance_valid(menu):return
  var auto:Dictionary=world.state.derived.get("quest_auto",{})
  var stop=menu.find_child("QuestAutoStop",true,false)
- print("PUBLIC UI TRACE ",JSON.stringify({"t":Time.get_ticks_msec(),"frame":Engine.get_process_frames(),"physics_frame":Engine.get_physics_frames(),"stage":ui_stage,"label":label,"detail":detail,"menu_key":menu.refresh_key(),"menu_last":menu.last_model,"viewport":str(menu.viewport_size),"stop_id":stop.get_instance_id() if is_instance_valid(stop) else 0,"client_phase":auto.get("phase",""),"client_identity":{"run_id":auto.get("run_id",""),"step_id":auto.get("step_id",""),"revision":auto.get("revision",-1)},"source_entry":auto.get("source_entry",{}),"server_phase":backend_node.quest_auto.phase,"server_identity":backend_node.quest_auto.identity.checkpoint()}))
+ print("PUBLIC UI TRACE ",JSON.stringify({"t":Clock.ticks_msec(),"frame":Engine.get_process_frames(),"physics_frame":Engine.get_physics_frames(),"stage":ui_stage,"label":label,"detail":detail,"menu_key":menu.refresh_key(),"menu_last":menu.last_model,"viewport":str(menu.viewport_size),"stop_id":stop.get_instance_id() if is_instance_valid(stop) else 0,"client_phase":auto.get("phase",""),"client_identity":{"run_id":auto.get("run_id",""),"step_id":auto.get("step_id",""),"revision":auto.get("revision",-1)},"source_entry":auto.get("source_entry",{}),"server_phase":backend_node.quest_auto.phase,"server_identity":backend_node.quest_auto.identity.checkpoint()}))
 func _process(_delta:float)->bool:
  if not is_instance_valid(world) or not is_instance_valid(backend_node):return false
  var menu=world.quest_helper_menu

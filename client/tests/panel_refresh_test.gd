@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Panels refreshed for new backend data keep the player's scroll position.
 const Warehouse=preload("res://tests/support/warehouse.gd")
 const Wait=preload("res://tests/support/wait.gd")
@@ -125,7 +126,7 @@ func run() -> void:
 	check(not deferred and not menu.is_ancestor_of(threshold),"a focused but idle number box does not stop the panel refreshing")
 	var fresh: SpinBox = menu.find_child("CompareThresholdValue",true,false)
 	fresh.get_line_edit().grab_focus()
-	game._last_typing_msec = Time.get_ticks_msec()
+	game._last_typing_msec = Clock.ticks_msec()
 	check(game.refresh_open_panels() and menu.is_ancestor_of(fresh),"while the player is typing the panel waits")
 	game._last_typing_msec = -100000
 

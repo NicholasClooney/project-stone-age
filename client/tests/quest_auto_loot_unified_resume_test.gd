@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_public_start_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN static candidate. One combined entry; no natural/P3/2760 claim.
 ## Initial uses disclosed miss-only catalog. C1 uses original seed4101/group169,
 ## strong player and a fixed fixture clock; no seed search or synthetic reward.
@@ -261,11 +262,11 @@ func make_host(stage:String,mode:String):
 # before the first battle, and initial E2 permits only one per normal generation.
 # Diagnostics only observe memory after the original condition wait returns.
 func wait_progress(b,label:String,condition:Callable)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var generation:int=b._normal_process_generation
  var fields:int=b.field_calls
  var reached:bool=await Wait.until(self,condition)
- print("UNIFIED_RESUME_WAIT ",b.stage,"/",b.mode,"/",label," ",JSON.stringify({"condition_met":reached,"failures":failures,"elapsed_ms":Time.get_ticks_msec()-started,"deadline_ms":int(Wait.DEADLINE*1000),"generation":b._normal_process_generation,"generation_delta":b._normal_process_generation-generation,"fields":b.field_calls,"field_delta":b.field_calls-fields,"phase":b.quest_auto.phase,"q_running":b.quest_auto.running,"battle_open":b.battle_open,"settled":b.battle_state.get("settled",false),"settlements":b.settlement_calls,"close_calls":b.close_calls,"initial_serial":b.quest_loot.initial_e2.get("serial",-1),"followup_serial":b.quest_loot.followup.get("serial",-1),"finished":b.finished,"injected":b.injected}))
+ print("UNIFIED_RESUME_WAIT ",b.stage,"/",b.mode,"/",label," ",JSON.stringify({"condition_met":reached,"failures":failures,"elapsed_ms":Clock.ticks_msec()-started,"deadline_ms":int(Wait.DEADLINE*1000),"generation":b._normal_process_generation,"generation_delta":b._normal_process_generation-generation,"fields":b.field_calls,"field_delta":b.field_calls-fields,"phase":b.quest_auto.phase,"q_running":b.quest_auto.running,"battle_open":b.battle_open,"settled":b.battle_state.get("settled",false),"settlements":b.settlement_calls,"close_calls":b.close_calls,"initial_serial":b.quest_loot.initial_e2.get("serial",-1),"followup_serial":b.quest_loot.followup.get("serial",-1),"finished":b.finished,"injected":b.injected}))
  return reached
 
 func run_case(stage:String,mode:String)->void:

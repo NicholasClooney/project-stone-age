@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Catalog=preload("res://scripts/quest_catalog.gd")
 const FINAL_TAGS=[48,49,50,51,52]
 const FINAL_SERVICE_IDS=["777/ten.arg@32021:31:28","genout/wpm_117_6_5@117:6:5","genout/wpm_110_37_20@110:37:20","genout/wpm_110_37_24@110:37:24","genout/wpm_110_37_28@110:37:28","genout/wpm_110_37_32@110:37:32"]
@@ -41,20 +42,20 @@ func run()->void:
  for id in FINAL_SERVICE_IDS:check(catalog.active_npc(id).is_empty(),"explicit disabled service absent "+id)
  catalog.enabled_events=enabled_final
  var initial:Array=reference(catalog);var ids:Array=initial.map(func(n):return str(n.id))
- var start:int=Time.get_ticks_usec()
+ var start:int=Clock.ticks_usec()
  for id in ids:first(reference(catalog),id)
- var old_usec:int=Time.get_ticks_usec()-start;start=Time.get_ticks_usec()
+ var old_usec:int=Clock.ticks_usec()-start;start=Clock.ticks_usec()
  for id in ids:catalog.active_npc(id)
- print("LOOKUP COST ids=",ids.size()," original_us=",old_usec," single_us=",Time.get_ticks_usec()-start)
+ print("LOOKUP COST ids=",ids.size()," original_us=",old_usec," single_us=",Clock.ticks_usec()-start)
  var ordinary_branches:int=0
  for npc in catalog.npcs:
   if npc.get("handler","")=="TimeMan" or str(npc.get("kind","")) in ["golden_bui_quiz","golden_bui_janken","golden_bui_gate","original_jug_shop"]:continue
   if catalog._enabled(npc.get("events",[])) and not npc.has("source_spawn"):ordinary_branches+=npc.get("branches",[]).size()
- start=Time.get_ticks_usec()
+ start=Clock.ticks_usec()
  for i in 100:reference(catalog)
- var reference_us:int=Time.get_ticks_usec()-start;start=Time.get_ticks_usec()
+ var reference_us:int=Clock.ticks_usec()-start;start=Clock.ticks_usec()
  for i in 100:catalog.active_npcs()
- print("PROJECTION COST iterations=100 old_us=",reference_us," new_us=",Time.get_ticks_usec()-start," discarded_branch_copies_avoided_per_projection=",ordinary_branches)
+ print("PROJECTION COST iterations=100 old_us=",reference_us," new_us=",Clock.ticks_usec()-start," discarded_branch_copies_avoided_per_projection=",ordinary_branches)
  var events:Array=catalog.enabled_events.duplicate();catalog.enabled_events.erase(46)
  compare(catalog,"water46 disabled with independent event4 gates")
  catalog.enabled_events=events

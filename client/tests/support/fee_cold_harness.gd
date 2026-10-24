@@ -1,8 +1,9 @@
 extends "res://tests/support/fee_recovered_close_harness.gd"
+const Clock=preload("res://scripts/clock.gd")
 const ColdBackend = preload("res://tests/support/fee_cold_backend.gd")
 func fixture(tag: String, kind: String = "pretty", load_mode: String = "") -> Dictionary:
 	ordinal += 1
-	print("B3A_TRACE BEGIN ordinal=%d tag=%s tick_us=%d checks=%d failures=%d" % [ordinal, tag, Time.get_ticks_usec(), checks, failures])
+	print("B3A_TRACE BEGIN ordinal=%d tag=%s tick_us=%d checks=%d failures=%d" % [ordinal, tag, Clock.ticks_usec(), checks, failures])
 	var rng := RandomNumberGenerator.new();rng.seed = 8317
 	var source = Session.new(Callable(self, "clock"), rng)
 	var before: Dictionary = source.snapshot()
@@ -26,7 +27,7 @@ func fixture(tag: String, kind: String = "pretty", load_mode: String = "") -> Di
 		expected.quest_loot.entries[STEP].open_span = false
 		expected.quest_loot.entries[STEP].settled_seq = 3
 		expected.quest_loot.entries[STEP].revision = 6
-	var path: String = "user://fee-cold-%d-%03d-%s.json" % [Time.get_ticks_usec(), ordinal, tag]
+	var path: String = "user://fee-cold-%d-%03d-%s.json" % [Clock.ticks_usec(), ordinal, tag]
 	kept.append(ProjectSettings.globalize_path(path))
 	var source_bytes: PackedByteArray = JSON.stringify(before, "" if kind == "canonical" else "\t").to_utf8_buffer()
 	put(path, "not-json".to_utf8_buffer() if kind == "fallback" else source_bytes)
@@ -38,7 +39,7 @@ func fixture(tag: String, kind: String = "pretty", load_mode: String = "") -> Di
 		put(path + ".bak", JSON.stringify(backup).to_utf8_buffer())
 	var sidecar: PackedByteArray = "{\"sentinel\":\"fee-loot-mixed-untouched\"}".to_utf8_buffer()
 	put(path + ".sidecar", sidecar)
-	print("B3A_TRACE SEEDED ordinal=%d path=%s tick_us=%d" % [ordinal, path, Time.get_ticks_usec()])
+	print("B3A_TRACE SEEDED ordinal=%d path=%s tick_us=%d" % [ordinal, path, Clock.ticks_usec()])
 	var b = ColdBackend.new()
 	b.set_process(false)
 	var load_rng := RandomNumberGenerator.new();load_rng.seed = 8317
@@ -64,12 +65,12 @@ func fixture(tag: String, kind: String = "pretty", load_mode: String = "") -> Di
 	var result: Dictionary = {"b": b, "s": s, "path": path, "before": before, "expected": expected, "source_bytes": source_bytes,
 		"disk_before": triple(path), "sidecar": sidecar, "loaded": loaded, "kind": kind, "initial_profile": initial_profile, "initial_cache": initial_cache}
 	s.mode = "";s.writes = 0;s.reads = 0
-	print("B3A_TRACE READY ordinal=%d path=%s tick_us=%d checks=%d failures=%d" % [ordinal, path, Time.get_ticks_usec(), checks, failures])
+	print("B3A_TRACE READY ordinal=%d path=%s tick_us=%d checks=%d failures=%d" % [ordinal, path, Clock.ticks_usec(), checks, failures])
 	return result
 func done(c: Dictionary) -> void:
 	check(image_of(c.b.resume_path).bytes == c.sidecar, "entire sidecar remains untouched")
 	c.b.free() # Preserve all successful and failed disk fixtures.
-	print("B3A_TRACE END ordinal=%d path=%s tick_us=%d checks=%d failures=%d" % [ordinal, c.path, Time.get_ticks_usec(), checks, failures])
+	print("B3A_TRACE END ordinal=%d path=%s tick_us=%d checks=%d failures=%d" % [ordinal, c.path, Clock.ticks_usec(), checks, failures])
 
 
 

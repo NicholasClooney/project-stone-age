@@ -1,4 +1,5 @@
 extends "res://tests/golden_bui_ui_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 const Fire=preload("res://server/transmigration_fire_helper.gd")
 const Jug=preload("res://server/original_jug_shop_service.gd")
 var route:Dictionary={}
@@ -14,7 +15,7 @@ func outside(map_id:int,cell:Vector2i)->bool:
  host.publish();host._emit({"type":"position","map_id":map_id,"cell":[cell.x,cell.y],"client":"fire-route-exterior-fixture"})
  return await ready(func():return int(world.data.get("map_id",-1))==map_id and world.cell==cell and not world.area_transition_busy,"open exterior arrival") and await Wait.settle(self,world)
 func walk(target:Vector2i,portal:Dictionary={})->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var map_id:=int(world.data.map_id)
  if world.cell==target and not portal.is_empty():
   for delta in [Vector2i.LEFT,Vector2i.RIGHT,Vector2i.UP,Vector2i.DOWN]:
@@ -34,7 +35,7 @@ func walk(target:Vector2i,portal:Dictionary={})->bool:
   if not await ready(func():return int(world.data.map_id)==int(portal.to_map) and world.cell==Vector2i(portal.target[0],portal.target[1]) and not world.moving and not world.area_transition_busy,"actual original portal destination"):return false
   print("NATURAL PORTAL ",map_id," ",target," -> ",portal.to_map," ",portal.target)
  var settled:bool=check(await Wait.settle(self,world),"natural walk report settles")
- print("TIMING fire walk ",map_id," -> ",target,": ",(Time.get_ticks_msec()-started)/1000.0," seconds")
+ print("TIMING fire walk ",map_id," -> ",target,": ",(Clock.ticks_msec()-started)/1000.0," seconds")
  return settled
 func click_source(script:String)->bool:
  var npc:=source(script)
@@ -76,7 +77,7 @@ func click_enemy(button: Button) -> bool:
   root.push_input(event,true)
  return true
 func battle(script:String)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  if not await click_source(script) or not await choose("yes"):return false
  world.set_battle_speed(8.0)
  if not await ready(func():return world.battle_view.visible and world.battle_view.transition_tiles.is_empty() and not world.battle_view.is_animating(),"original ten-enemy encounter rendered"):return false
@@ -96,7 +97,7 @@ func battle(script:String)->bool:
  if not await ready(func():return world.battle_view.return_button.visible,"victory return button"):return false
  if not await click(world.battle_view.return_button):return false
  var settled:bool=await ready(func():return not world.battle_view.visible and not world.area_transition_busy,"real battle victory warp") and await Wait.settle(self,world)
- print("TIMING fire battle ",script,": ",(Time.get_ticks_msec()-started)/1000.0," seconds")
+ print("TIMING fire battle ",script,": ",(Clock.ticks_msec()-started)/1000.0," seconds")
  return settled
 func follow(edges:Array)->bool:
  for edge in edges:

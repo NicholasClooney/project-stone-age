@@ -1,18 +1,19 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 const Wind=preload("res://server/transmigration_wind_helper.gd")
 const Driver=preload("res://tests/support/original_route_driver.gd")
 var measured_route:int=0
 var measured_battle:int=0
 var measured_fixture:int=0
 func route_walk(b,map_id:int,cell:Vector2i,maps:Array)->Dictionary:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var result:Dictionary=Driver.walk(b,map_id,cell,maps)
- measured_route+=Time.get_ticks_msec()-started
+ measured_route+=Clock.ticks_msec()-started
  return result
 func setup():
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var b=fresh();Rules.set_flag(b.session._profile,"ended",4,true)
- measured_fixture+=Time.get_ticks_msec()-started
+ measured_fixture+=Clock.ticks_msec()-started
  return b
 func near_source(b,n:Dictionary)->bool:
  if int(b.automation.position_map)!=int(n.map_id):return false
@@ -30,17 +31,17 @@ func local_trade(b,n:Dictionary,keyword:String="")->Dictionary:
  r=b.handle({"type":"quest_choose","token":r.dialogue.token,"choice":"submit" if not keyword.is_empty() else "yes","text":keyword})
  if r.has("dialogue"):r=choose(b,r,"ok")
  if b.battle_open:
-  var started:int=Time.get_ticks_msec()
+  var started:int=Clock.ticks_msec()
   fight(b);r=b.handle({"type":"battle_close"})
-  measured_battle+=Time.get_ticks_msec()-started
+  measured_battle+=Clock.ticks_msec()-started
  return r
 func source_leg(b,name:String,target:Dictionary={})->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var routes:Dictionary=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-wind-routes.json"))
  for edge in routes[name]:
   if not target.is_empty() and int(b.automation.position_map)==int(target.map_id) and near_source(b,target):
-   print("WIND ROUTE TIMING ",name," ms=",Time.get_ticks_msec()-started);return true
-  print("WIND CHAIN DOOR ",name," map=",edge.from_map," elapsed_ms=",Time.get_ticks_msec()-started)
+   print("WIND ROUTE TIMING ",name," ms=",Clock.ticks_msec()-started);return true
+  print("WIND CHAIN DOOR ",name," map=",edge.from_map," elapsed_ms=",Clock.ticks_msec()-started)
   if edge.has("npc_id"):
    if not local_trade(b,b.original_quests.npc_by_id(str(edge.npc_id))).ok:return false
    continue
@@ -76,11 +77,11 @@ func exchange(b,n:Dictionary)->Dictionary:
 var timer_started:int=0
 var timer_previous:int=0
 func timed(label:String)->void:
- var now:int=Time.get_ticks_msec()
+ var now:int=Clock.ticks_msec()
  print("WIND TIMING ",label," segment_ms=",now-timer_previous," total_ms=",now-timer_started)
  timer_previous=now
 func run()->void:
- timer_started=Time.get_ticks_msec();timer_previous=timer_started
+ timer_started=Clock.ticks_msec();timer_previous=timer_started
  var b=core()
  timed("core")
  offerings(b)
@@ -89,7 +90,7 @@ func run()->void:
  b.free()
  boundaries()
  timed("boundaries")
- print("WIND CHAIN COST route_ms=",measured_route," battle_ms=",measured_battle," fixture_ms=",measured_fixture," transaction_ms=",Time.get_ticks_msec()-timer_started-measured_route-measured_battle-measured_fixture)
+ print("WIND CHAIN COST route_ms=",measured_route," battle_ms=",measured_battle," fixture_ms=",measured_fixture," transaction_ms=",Clock.ticks_msec()-timer_started-measured_route-measured_battle-measured_fixture)
  print("WIND CHAIN: %d failures"%failures);quit(1 if failures else 0)
 func core():
  var b=setup();Rules.set_flag(b.session._profile,"ended",4,true)
@@ -117,11 +118,11 @@ func core():
  b.save_path="user://wind-core-chain.json"
  check(exchange(b,will).ok and Rules.flag(b.session.snapshot(),"ended",42) and not Rules.flag(b.session.snapshot(),"now",42) and 2735 in b.session.snapshot().original_items and not 2736 in b.session.snapshot().original_items,"core ends42 and replaces harp with wind lock")
  check(not choose(b,r,"ok").ok,"core old reward cannot replay")
- var reload_started:int=Time.get_ticks_msec()
+ var reload_started:int=Clock.ticks_msec()
  var loaded=Backend.new();check(loaded.load_profile(b.save_path) and Rules.flag(loaded.session.snapshot(),"ended",42),"core persisted completion reloads")
  check(not loaded.quest_arrival.check_action(loaded,will,will.branches[0],"reward").is_empty(),"reload cannot restore an in-memory final arrival")
  loaded.free()
- measured_fixture+=Time.get_ticks_msec()-reload_started
+ measured_fixture+=Clock.ticks_msec()-reload_started
  for mode in ["near","arrival"]:
   var standing:Vector2i=b.automation.position_cell
   check(b.handle({"type":"quest_visit","npc_id":will.id,"mode":mode}).ok and b.automation.position_cell==standing,"legal nearby helper stays stationary "+mode)

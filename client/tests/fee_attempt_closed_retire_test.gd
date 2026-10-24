@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Internal closed-retire seam oracle. This test source is prepared only; it has
 ## not been parsed or run. No Stop caller, RPC, source authorization, or UI path.
 const Journal = preload("res://server/fee_attempt_lifecycle.gd")
@@ -36,7 +37,7 @@ class ProbeBackend extends "res://server/backend.gd":
 		var result:Dictionary=super._fee_resume_io_read(path)
 		read_count+=1
 		if read_count==read_mutation_at:
-			if read_mutation=="change_path":save_path="user://closed-retire-successor-%d.json" % Time.get_ticks_usec()
+			if read_mutation=="change_path":save_path="user://closed-retire-successor-%d.json" % Clock.ticks_usec()
 			elif read_mutation=="change_serial":quest_save_serial+=1
 			elif read_mutation=="replace_profile":session._profile=session._profile.duplicate(true)
 			elif read_mutation=="change_profile_disk":
@@ -74,7 +75,7 @@ class ProbeSession extends "res://tests/support/fee_attempt_close_fault_session.
 		if profile_read_count==mutate_profile_read_at:
 			var host:Variant=mutate_host.get_ref() if mutate_host!=null else null
 			if host is ProbeBackend:
-				if host.read_mutation=="profile_change_path":host.save_path="user://closed-retire-profile-successor-%d.json" % Time.get_ticks_usec()
+				if host.read_mutation=="profile_change_path":host.save_path="user://closed-retire-profile-successor-%d.json" % Clock.ticks_usec()
 				elif host.read_mutation=="profile_change_serial":host.quest_save_serial+=1
 				elif host.read_mutation=="profile_change_owner":host.session._profile["profile_id"]="closed-retire-successor-owner"
 		if profile_read_count==profile_read_override_at:return profile_read_override.duplicate(true)
@@ -180,7 +181,7 @@ func start_active_fixture(label:String,write_source_sidecar:bool)->Dictionary:
 	var host:ProbeBackend=ProbeBackend.new()
 	if host==null:return fail_setup(label+": Backend subclass construction")
 	host.set_process(false)
-	host.save_path="user://closed-retire-%d-%03d-%s.json" % [Time.get_ticks_usec(),serial,label]
+	host.save_path="user://closed-retire-%d-%03d-%s.json" % [Clock.ticks_usec(),serial,label]
 	var session:ProbeSession=ProbeSession.new() as ProbeSession
 	if session==null:return fail_setup(label+": session construction",host)
 	session.bind_host(host)
@@ -937,7 +938,7 @@ func case_stale_commit_releases_own_claim()->void:
 		var frame:Dictionary=begin_retire(fx)
 		if not frame.get("ok",false):check(false,mutation+": retire frame prepares");finish_fixture(fx);return
 		var old_handle:Dictionary={"call":frame.get("call")}
-		if mutation=="path":fx.host.save_path="user://closed-retire-stale-successor-%d.json" % Time.get_ticks_usec()
+		if mutation=="path":fx.host.save_path="user://closed-retire-stale-successor-%d.json" % Clock.ticks_usec()
 		elif mutation=="serial":fx.host.quest_save_serial+=1
 		else:fx.session._profile=fx.session._profile.duplicate(true)
 		fx.host.read_count=0

@@ -1,4 +1,5 @@
 extends "res://tests/original_quest_auto_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 const SAVE="user://herb-auto-resume.json"
 func start(b) -> Dictionary:
  return b.handle({"type":"quest_auto_start","quest_id":30,"client":"test"})
@@ -54,7 +55,7 @@ func route_checks()->void:
  b.free()
 
 func run() -> void:
- var started_at:=Time.get_ticks_msec()
+ var started_at:=Clock.ticks_msec()
  route_checks()
  for id in ["herb:request","herb:medicine","herb:return"]:
   for phase in ["landing","talk","yes","ok"]:
@@ -104,7 +105,7 @@ func run() -> void:
   finish(b)
   check(b.session.snapshot()==before and b.quest_auto.message=="save_failed","Atomic failed save at "+id)
   b.free()
- print("HERB MATRIX MS: ",Time.get_ticks_msec()-started_at)
+ print("HERB MATRIX MS: ",Clock.ticks_msec()-started_at)
  for action in ["eat","discard"]:
   clear_save()
   var b=fresh();start(b);reach(b,"herb:return","landing")
@@ -133,10 +134,10 @@ func run() -> void:
  for id in [6,7]:check(not b.handle({"type":"quest_auto_start","quest_id":id,"client":"test"}).ok,"Reviewed doctor job refuses auto")
  b.free()
  clear_save()
- var remote_at:=Time.get_ticks_msec()
+ var remote_at:=Clock.ticks_msec()
  print("HERB FIXTURES MS: ",remote_at-started_at)
  await remote_auto()
- print("HERB REMOTE MS: ",Time.get_ticks_msec()-remote_at)
+ print("HERB REMOTE MS: ",Clock.ticks_msec()-remote_at)
  print("ORIGINAL HERB AUTO: %d failures" % failures)
  quit(1 if failures else 0)
 func remote_auto() -> void:

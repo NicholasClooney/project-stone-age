@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Actual public Jaja approach -> job24 -> continuous protected job25.
 ## Explicit language-shell prerequisite and encounter-off mode compatibility.
 ## Never leave the cave to manufacture a fast return-mail route.
@@ -15,7 +16,7 @@ class CountedBackend extends "res://server/backend.gd":
   return result
 var assertions:=0
 var failures:=0
-var began:int=Time.get_ticks_msec()
+var began:int=Clock.ticks_msec()
 var deadline:int=0
 var summaries:Array=[]
 func check(value:bool,label:String)->bool:
@@ -68,7 +69,7 @@ func reviewed_lane(id:String)->Dictionary:
   if lane.id==id:return lane
  return {}
 func drive(b,mode:String,job:int)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var event_id:int=7 if job==24 else 8
  var letter:int=2425 if job==24 else 2426
  if job==25:
@@ -86,7 +87,7 @@ func drive(b,mode:String,job:int)->bool:
  var response:Dictionary=b.handle({"type":"quest_auto_start","quest_id":job,"client":"public-goya","_quest_connection":17})
  var started_ok:bool=check(response.get("ok",false) and b.quest_auto.strict_walk,"Actual original job starts %s/%d"%[mode,job])
  var ticks:=0
- while started_ok and b.quest_auto.running and Time.get_ticks_msec()<deadline:
+ while started_ok and b.quest_auto.running and Clock.ticks_msec()<deadline:
   var old_map:int=b.automation.position_map
   var old:Vector2i=b.automation.position_cell
   b.quest_auto.tick(b,0.05)
@@ -150,7 +151,7 @@ func drive(b,mode:String,job:int)->bool:
   else:check(b.session._profile.original_items.count(1206)==1 and Rules.flag(b.session._profile,"ended",7),"Original reply grants exactly one1206 and preserves END7")
   readback(b,"%s-%d"%[mode,job])
  stats.field_calls=b.field_calls.size()-start_fields
- stats.wall_ms=Time.get_ticks_msec()-started
+ stats.wall_ms=Clock.ticks_msec()-started
  stats.complete=complete
  stats.saw_actual_letter=saw_letter
  stats.saw_actual_flower=saw_flower
@@ -166,18 +167,18 @@ func drive(b,mode:String,job:int)->bool:
  b.event.disconnect(observer)
  return complete
 func run()->void:
- deadline=Time.get_ticks_msec()+140000
+ deadline=Clock.ticks_msec()+140000
  for mode in ["B","C"]:
   var b=fixture(mode)
   if await drive(b,mode,24):await drive(b,mode,25)
   b.free()
-  if Time.get_ticks_msec()>=deadline:break
+  if Clock.ticks_msec()>=deadline:break
  check(summaries.size()==4,"Both modes complete both actual jobs")
- check(Time.get_ticks_msec()<deadline,"Original complete routes fit allocated condition deadline")
+ check(Clock.ticks_msec()<deadline,"Original complete routes fit allocated condition deadline")
  var path:="user://public-corridors-goya-results.json"
  var output=FileAccess.open(path,FileAccess.WRITE)
  if output!=null:output.store_string(JSON.stringify({"summaries":summaries,"assertions":assertions,"failures":failures}));output.close()
  check(output!=null,"Retain per-job real benefit/transaction evidence")
  print("PUBLIC GOYA TRACE ",ProjectSettings.globalize_path(path))
- print("QUEST AUTO PUBLIC CORRIDORS GOYA: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Time.get_ticks_msec()-began])
+ print("QUEST AUTO PUBLIC CORRIDORS GOYA: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Clock.ticks_msec()-began])
  quit(1 if failures else 0)

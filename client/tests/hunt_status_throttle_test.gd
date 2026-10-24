@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Real encounter/core queue, real clock and two WebSocket devices. Progress
 ## coalesces without dropping transitions, records or restart counters.
 const Backend = preload("res://server/backend.gd")
@@ -52,7 +53,7 @@ func run() -> void:
 	backend.event.connect(func(message):
 		if message.type=="auto_status":messages.append(message.duplicate(true))
 		if message.type=="pet_log_changed":log_messages.append(message.duplicate(true)))
-	var sent_at := Time.get_ticks_msec()
+	var sent_at := Clock.ticks_msec()
 	backend.automation._emit_status()
 	messages.clear()
 	var automation = backend.automation
@@ -78,7 +79,7 @@ func run() -> void:
 		automation.tick_battle(0.0)
 		backend._record_releases()
 		return messages.size()==1 and log_messages.size()==2),"pending progress flushes using the real clock")
-	check(Time.get_ticks_msec()-sent_at>=1000,"progress flush waits for its one-second deadline")
+	check(Clock.ticks_msec()-sent_at>=1000,"progress flush waits for its one-second deadline")
 	await settle()
 	check(log_messages.size()==2 and log_messages.back().revision==backend.pet_log_revision,"records invalidation eventually carries the newest revision")
 	check(states.all(func(state):return int(state.automation.flow.queue_dropped)==30),"both devices receive the same accumulated count")

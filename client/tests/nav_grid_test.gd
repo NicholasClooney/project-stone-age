@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## scripts/nav_grid.gd against the whole-map AStarGrid2D it replaces, on real
 ## imported maps: the same routes (length, ends, reachability) at a fraction
 ## of the memory.
@@ -58,9 +59,9 @@ func run() -> void:
 			if not whole.is_in_boundsv(to) or whole.is_point_solid(to):continue
 			tried += 1
 			var expected := whole.get_id_path(from,to)
-			var started := Time.get_ticks_usec()
+			var started := Clock.ticks_usec()
 			var got: Array = nav.get_id_path(from,to)
-			slow = maxf(slow,(Time.get_ticks_usec()-started)/1000.0)
+			slow = maxf(slow,(Clock.ticks_usec()-started)/1000.0)
 			if expected.is_empty() == got.is_empty() and (expected.is_empty() or (got.front() == from and got.back() == to and absf(cost(got)-cost(expected)) < 0.01)):same += 1
 			else:print("  differs %s→%s: whole %d steps (%.2f), nav %d (%.2f)" % [from,to,expected.size(),cost(expected),got.size(),cost(got)])
 		check(tried > 30 and same == tried,"map %d: %d/%d routes as short as the whole-map grid's (slowest %.0f ms)" % [id,same,tried,slow])

@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN test-only proposal. Actual default-closed Backend.save; independent
 ## c9939efe contract oracle, no copied production implementation or fee token.
 const Backend=preload("res://server/backend.gd")
@@ -26,7 +27,7 @@ func run()->void:
   s.battle_pets_hook=b._live_battle_pets;s.capture_entry_hook=b._capture_entry
   check(s._valid_profile(s.snapshot()),"normalized actual valid fixture")
   var before:Dictionary=s._profile.duplicate(true)
-  var path:String="user://fee-gatefalse-save-%d-%s.json"%[Time.get_ticks_usec(),mode]
+  var path:String="user://fee-gatefalse-save-%d-%s.json"%[Clock.ticks_usec(),mode]
   b.save_path="" if mode=="empty_path" else path
   if mode not in ["empty_path","first_write"]:check(b.save(),"initial real save")
   if mode=="empty_path":b.last_saved_payload="sentinel-empty-path"

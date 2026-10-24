@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Real original rolls, seeded prediction, queue replay and battle settlement.
 const Backend=preload("res://server/backend.gd")
 const Settings=preload("res://scripts/automation_settings.gd")
@@ -22,8 +23,8 @@ func create_backend():
 func configure(backend,background:bool,show:bool,battle:bool,only:bool=false)->bool:
 	return backend.handle({"type":"set_automation_settings","settings":{"hunt":{"background_search":background,"show_battles":show,"battle_training":battle,"capture_only":only,"total":-8,"offsets":[-2,-2,-2,-2],"fast":false,"stop_after":0},"training":{"borrow_troops":false,"select_troops":false,"xp":100}}}).ok
 func queue(backend)->bool:
-	var deadline:=Time.get_ticks_msec()+30000
-	while backend.automation.showcase_queue.is_empty() and backend.automation.hunt_running and Time.get_ticks_msec()<deadline:backend.automation.scan_once()
+	var deadline:=Clock.ticks_msec()+30000
+	while backend.automation.showcase_queue.is_empty() and backend.automation.hunt_running and Clock.ticks_msec()<deadline:backend.automation.scan_once()
 	return not backend.automation.showcase_queue.is_empty()
 func run()->void:
 	var old:=Settings.sanitize({"hunt":{"showcase":false}})
@@ -62,8 +63,8 @@ func run()->void:
 			var replayed:Array=restored_queue.filter(func(candidate):return candidate.actor.growth_seed==auto.flow_matched_actor.get("growth_seed",-1))
 			check(auto.flow_phase=="capture" and replayed.size()==1,"restart replays exact saved queued candidate after current priority checks")
 			if replayed.size()==1:entry=replayed[0]
-			var deadline:=Time.get_ticks_msec()+30000
-			while auto.running and Time.get_ticks_msec()<deadline:auto.step()
+			var deadline:=Clock.ticks_msec()+30000
+			while auto.running and Clock.ticks_msec()<deadline:auto.step()
 			auto.flow_step()
 			check(auto.flow_phase in ["restart","compare"] and auto.flow_collected_count==1,"real captured pet completes quick cultivation and counts once")
 			var found:Dictionary={}
@@ -76,8 +77,8 @@ func run()->void:
 	check(configure(backend,false,false,true),"choose real training without visible battle")
 	check(backend.handle({"type":"auto_start","kind":"find_pet","map_id":100,"cell":[637,493]}).ok and queue(backend),"real training run has queued candidate")
 	auto.flow_step()
-	var deadline:=Time.get_ticks_msec()+30000
-	while auto.running and Time.get_ticks_msec()<deadline:auto.step()
+	var deadline:=Clock.ticks_msec()+30000
+	while auto.running and Clock.ticks_msec()<deadline:auto.step()
 	auto.flow_step()
 	check(auto.flow_phase=="train" and auto.running and auto.settings.compact and auto.training_pet_level==120 and int(auto._flow_pet().level)<120,"hidden real training remains actual battles, not direct level assignment")
 	var before:int=auto.hunt_rolls

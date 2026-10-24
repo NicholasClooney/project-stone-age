@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN: real QuestAuto.start/tick/strict_advance from the canonical public save spawn
 ## to the original Munde REQUEST, through only original ordinary portals.
 ## no_random_encounters is a route-compatibility fixture, not natural-play evidence.
@@ -148,8 +149,8 @@ func binary_source_hash(path: String, expected: String, label: String) -> bool:
 	return check(digest.hex_encode() == expected, label + " map SHA matches frozen packed source")
 
 func run() -> void:
-	started_msec = Time.get_ticks_msec()
-	var unique: String = str(Time.get_ticks_usec())
+	started_msec = Clock.ticks_msec()
+	var unique: String = str(Clock.ticks_usec())
 	trace_path = "user://munde-public-spawn-request-" + unique + "-trace.json"
 	if not check(not FileAccess.file_exists(trace_path), "diagnostic trace is not reused from a prior run"):finish();return
 	if not source_hash("res://assets/legacy/world/manifest.json", MANIFEST_SHA, "world manifest"):finish();return
@@ -178,7 +179,7 @@ func run() -> void:
 	var locked_branch:Dictionary=table.npc.branches[1]
 	if not check(actual_step.id=="munde:request:9" and actual_step.source.type=="REQUEST" and actual_step.source.branch_index==1 and actual_step.source.source_line==14 and actual_step.source.source_sha==EVENT_SOURCE_SHA and actual_step.source.actions.is_empty() and Diff.first(actual_step.source.branch_data,locked_branch).is_empty(),"real first source selected; no 11/10 or reward branch"):finish();return
 	if not check(Auto.new().safe_step(actual_step,10,false), "existing strict ordinary REQUEST allowlist accepts this exact source action"):finish();return
-	wait_deadline_msec = Time.get_ticks_msec() + int(WAIT_SECONDS * 1000.0)
+	wait_deadline_msec = Clock.ticks_msec() + int(WAIT_SECONDS * 1000.0)
 	var reached: bool = await Wait.until(self, drive_until_stop, WAIT_SECONDS)
 	if failed:finish();return
 	if not check(reached and done and runner().phase == "manual" and not runner().running, "actual QuestAuto lifecycle stops at the post-REQUEST manual boundary within one global Wait 150"):finish();return
@@ -188,7 +189,7 @@ func run() -> void:
 	if not check(not backend.battle_open and backend.original_quests.pending.is_empty() and backend.session._pending.is_empty() and not runner().owns_battle, "no battle or pending dialogue is left open at the manual stop"):finish();return
 	if not check(backend.quest_arrival._scope.is_empty() and backend.quest_arrival._marks.is_empty() and backend.quest_arrival._stages.is_empty(), "no protected authority, arrival mark or stage was injected"):finish();return
 	var observed = navigation()
-	print("MUNDE PUBLIC REQUEST candidate: points=%d walks=%d portals=%d fields=%d route=%s next=%d plans=%d local_path=%d rebuilds=%d cells=%d elapsed_ms=%d stop=NOW9_manual" % [logical_points,ordinary_walks,portals,backend.candidate_field_calls,str(portal_sequence),observed.next_calls,observed.plan_calls,observed.local_path_calls,observed.grid_rebuilds,observed.grid_rebuild_cells,Time.get_ticks_msec()-started_msec])
+	print("MUNDE PUBLIC REQUEST candidate: points=%d walks=%d portals=%d fields=%d route=%s next=%d plans=%d local_path=%d rebuilds=%d cells=%d elapsed_ms=%d stop=NOW9_manual" % [logical_points,ordinary_walks,portals,backend.candidate_field_calls,str(portal_sequence),observed.next_calls,observed.plan_calls,observed.local_path_calls,observed.grid_rebuilds,observed.grid_rebuild_cells,Clock.ticks_msec()-started_msec])
 	finish()
 
 func prepare_backend(unique: String) -> bool:
@@ -261,10 +262,10 @@ func ack_for(receipt: Dictionary) -> Dictionary:
 
 func drive_until_stop() -> bool:
 	if failed or done:return true
-	if float(Time.get_ticks_msec() - started_msec) / 1000.0 >= EXTERNAL_HARD_SECONDS:
+	if float(Clock.ticks_msec() - started_msec) / 1000.0 >= EXTERNAL_HARD_SECONDS:
 		check(false, "300 second fallback check; an external monitor must terminate a blocked synchronous AStar call")
 		return true
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "single global Wait 150 deadline reached; no next runner/AStar call")
 		return true
 	if not runner().running and runner().phase != "manual":
@@ -391,7 +392,7 @@ func write_trace() -> void:
 	if out == null:
 		trace_io_error = "cannot create isolated candidate trace: " + trace_path
 		return
-	var serialized: String = JSON.stringify({"trace":trace,"first_failure":first_failure,"points":logical_points,"walks":ordinary_walks,"portals":portal_sequence,"field_calls":backend.candidate_field_calls if backend != null else 0,"navigation":nav_trace,"elapsed_ms":Time.get_ticks_msec()-started_msec},"  ")
+	var serialized: String = JSON.stringify({"trace":trace,"first_failure":first_failure,"points":logical_points,"walks":ordinary_walks,"portals":portal_sequence,"field_calls":backend.candidate_field_calls if backend != null else 0,"navigation":nav_trace,"elapsed_ms":Clock.ticks_msec()-started_msec},"  ")
 	out.store_string(serialized)
 	out.flush()
 	var write_error: Error = out.get_error()

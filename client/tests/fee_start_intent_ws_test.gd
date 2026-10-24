@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## One real loopback WsServer/WsLink, no authenticated ProfileHub or GUI pixels.
 ## Explicit raw duplicate is adversarial test traffic, NOT client retry behavior.
 const Backend=preload("res://tests/support/fee_start_intent_backend.gd")
@@ -33,7 +34,7 @@ func run()->void:
  for key in b.session._profile.inventory:b.session._profile.inventory[key]=0
  Equipment.add(b.session._profile,2755)
  b.automation.position_changed(811,Vector2i(30,22),true)
- b.save_path="user://fee-start-ws-%d.json"%Time.get_ticks_usec()
+ b.save_path="user://fee-start-ws-%d.json"%Clock.ticks_usec()
  check(b.session._valid_profile(b.session.snapshot()) and b.save(),"full initial save")
  var before:Dictionary=b.session._profile.duplicate(true)
  var serial:int=b.quest_save_serial

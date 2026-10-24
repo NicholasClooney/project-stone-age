@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## 本机极速模式 end to end on a backend: the helper finds the same roll the
 ## GDScript scan finds, a find-pet cycle's Lv120 prediction hands off to
 ## capture, a missing helper falls back to GDScript, and a helper report the
@@ -28,9 +29,9 @@ func new_backend():
 
 ## Ticks the backend until the hunt stops; notes whether the helper ran.
 func hunt_until_stopped(backend, seconds: float = 60.0) -> Dictionary:
-	var deadline := Time.get_ticks_msec()+int(seconds*1000)
+	var deadline := Clock.ticks_msec()+int(seconds*1000)
 	var saw_fast := false
-	while backend.automation.hunt_running and not (backend.automation.flow_active() and backend.automation.flow_phase!="hunt") and Time.get_ticks_msec() < deadline:
+	while backend.automation.hunt_running and not (backend.automation.flow_active() and backend.automation.flow_phase!="hunt") and Clock.ticks_msec() < deadline:
 		backend._process(0.016)
 		saw_fast = saw_fast or backend.automation.fast_hunt.running()
 		await process_frame

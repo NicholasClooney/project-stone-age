@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_battle_cancel_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Controlled transaction regression, NOT the natural 2760 pilot or public entry.
 ## Existing seed4101/group169 E1/E2 fixture; no seed search or injected receipt.
 ## auto_tick=false holds the original active battle across real wall deadlines.
@@ -75,7 +76,7 @@ func prepare_attempt(b,path:String,time:Array)->bool:
  preload("res://server/progression.gd").refresh(b.session._profile.player)
  b.session._profile.player.hp=b.session._profile.player.max_hp
  if not b.save():return false
- clock_base=time;wall_origin=Time.get_ticks_msec()
+ clock_base=time;wall_origin=Clock.ticks_msec()
  # Install once BEFORE E1 seals the Callable. E2's existing explicit 500 ms
  # increments remain disclosed fixture input; P3/settlement use only wall time.
  b.quest_loot.clock=read_clock.bind(weakref(b))
@@ -84,7 +85,7 @@ func prepare_attempt(b,path:String,time:Array)->bool:
  return failures==0
 
 func real_clock()->int:
- return int(clock_base[0])+Time.get_ticks_msec()-wall_origin
+ return int(clock_base[0])+Clock.ticks_msec()-wall_origin
 
 func clock_context_current(b,timer:ObservedHeartbeat)->bool:
  var c:Dictionary=timer.context
@@ -232,7 +233,7 @@ func one_process(b)->bool:
  return failures==0
 
 func wait_due(b)->bool:
- var arrived:bool=await Wait.until(self,func():return Time.get_ticks_msec()>=b.quest_loot.heartbeat_wall_ms+Loot.HEARTBEAT_INTERVAL_MS and real_clock()>=int(b.quest_loot.progress_stamp.ms)+Loot.PROGRESS_INTERVAL_MS)
+ var arrived:bool=await Wait.until(self,func():return Clock.ticks_msec()>=b.quest_loot.heartbeat_wall_ms+Loot.HEARTBEAT_INTERVAL_MS and real_clock()>=int(b.quest_loot.progress_stamp.ms)+Loot.PROGRESS_INTERVAL_MS)
  check(arrived and not b.is_processing() and not b.automation.auto_tick and b.battle._state==held_battle and b.battle._state.active,"Real wall gates expire while the same original active battle is held")
  return failures==0
 

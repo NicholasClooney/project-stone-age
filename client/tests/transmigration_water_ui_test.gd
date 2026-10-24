@@ -1,11 +1,12 @@
 extends "res://tests/support/water_walking_ui.gd"
+const Clock=preload("res://scripts/clock.gd")
 func run()->void:
  root.unfocusable=true;root.position=Vector2i(-10000,-10000);root.content_scale_size=Vector2i.ZERO;root.size=Vector2i(390,844)
  proof_dir=OS.get_environment("STONE_AGE_PROOF_DIR")
  if not proof_dir.is_empty():DirAccess.make_dir_recursive_absolute(proof_dir)
  var backend=Backend.new();host=backend;root.add_child(backend)
  Engine.time_scale=30.0
- var started_at:int=Time.get_ticks_msec()
+ var started_at:int=Clock.ticks_msec()
  backend.session._profile.no_random_encounters=true;backend.session._profile.default_companions_claimed=true
  backend.session.gm_raise_level(-1,80)
  backend.session._profile.player.base_stats={"vitality":50000,"strength":50000,"toughness":50000,"dexterity":50000}
@@ -29,9 +30,9 @@ func run()->void:
  backend.automation.position_changed(200,Vector2i(74,696))
  backend._emit({"type":"position","map_id":200,"cell":[74,696],"client":"server"});backend.publish()
  if not await ready(func():return int(world.data.map_id)==200 and world.cell==Vector2i(74,696) and not world.area_transition_busy,"public adult approach fixture synchronizes"):return
- var route_start:int=Time.get_ticks_msec()
+ var route_start:int=Clock.ticks_msec()
  if not await to_sage():return
- print("WATER TIMING outward_route_ms=",Time.get_ticks_msec()-route_start)
+ print("WATER TIMING outward_route_ms=",Clock.ticks_msec()-route_start)
  for id in [2767,2768]:backend.handle({"type":"quest_discard","item_id":id})
  backend.publish()
  if not check(await Wait.settle(self,world),"post-door original material discard settles"):return
@@ -39,9 +40,9 @@ func run()->void:
  await proof("water-02-original-or-synthesis")
  if not await choose("yes") or not await choose("ok"):return
  if not check(2769 in world.session.snapshot().original_items,"real server OR synthesis without materials"):return
- route_start=Time.get_ticks_msec()
+ route_start=Clock.ticks_msec()
  if not await return_to_goddess():return
- print("WATER TIMING return_route_ms=",Time.get_ticks_msec()-route_start)
+ print("WATER TIMING return_route_ms=",Clock.ticks_msec()-route_start)
  if not await stage("water46:reward",46):return
  if not await choose("yes"):return
  await proof("water-03-water-ring-reward")
@@ -71,5 +72,5 @@ func run()->void:
  await proof("water-06-box-equipment-inactive-magic")
  world.link.close();world.music.stop();world.effect.stop();world.queue_free();server.stop();server.queue_free();backend.queue_free();await process_frame
  Engine.time_scale=1.0
- print("WATER TIMING total_ms=",Time.get_ticks_msec()-started_at," walking_ms=",walking_ms," battle_ms=",battle_ms," setup_ui_and_gate_ms=",Time.get_ticks_msec()-started_at-walking_ms-battle_ms)
+ print("WATER TIMING total_ms=",Clock.ticks_msec()-started_at," walking_ms=",walking_ms," battle_ms=",battle_ms," setup_ui_and_gate_ms=",Clock.ticks_msec()-started_at-walking_ms-battle_ms)
  print("TRANSMIGRATION WATER UI: %d failures"%failures);quit(1 if failures else 0)

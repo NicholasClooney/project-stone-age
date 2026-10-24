@@ -1,16 +1,17 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Wait=preload("res://tests/support/wait.gd")
 ## Bracket the real portrait process pass without assuming a frame is <=60ms.
 class ClockStart extends Node:
 	var tick := -1
-	func _process(_delta:float)->void:tick=Time.get_ticks_msec()
+	func _process(_delta:float)->void:tick=Clock.ticks_msec()
 class ClockEnd extends Node:
 	var start:ClockStart
 	var portrait:Control
 	var sample:Dictionary={}
 	func _process(_delta:float)->void:
 		if start.tick<0:return
-		sample={"from":start.tick,"to":Time.get_ticks_msec(),"image":portrait.current_image,
+		sample={"from":start.tick,"to":Clock.ticks_msec(),"image":portrait.current_image,
 			"visible":portrait.is_visible_in_tree(),"processing":portrait.is_processing()}
 		set_process(false);start.set_process(false)
 var failures:=0
@@ -72,26 +73,26 @@ func run()->void:
 	var sample:Dictionary=await process_sample(portrait)
 	if sample.is_empty():quit(1);return
 	check(sample.visible and sample.processing,"portrait is visible and automatically processing")
-	print("PET CLOCK: process interval=",sample.from,"..",sample.to," image=",sample.image," observation_age_ms=",Time.get_ticks_msec()-int(sample.to))
+	print("PET CLOCK: process interval=",sample.from,"..",sample.to," image=",sample.image," observation_age_ms=",Clock.ticks_msec()-int(sample.to))
 	check(shows_clock(portrait,standing,sample),"portrait frame follows the shared clock")
 	var first:int=portrait.current_image
-	var deadline:=Time.get_ticks_msec()+3000
-	while portrait.current_image==first and Time.get_ticks_msec()<deadline:await process_frame
+	var deadline:=Clock.ticks_msec()+3000
+	while portrait.current_image==first and Clock.ticks_msec()<deadline:await process_frame
 	check(portrait.current_image!=first,"portrait advances frames over time")
 	var turn:=InputEventMouseButton.new()
 	turn.button_index=MOUSE_BUTTON_LEFT
 	turn.pressed=true
 	portrait._gui_input(turn)
 	check(portrait.facing==2 and menu.pet_portrait_facing==2,"clicking the portrait turns it one facing")
-	var rebuild_from:=Time.get_ticks_msec()
+	var rebuild_from:=Clock.ticks_msec()
 	menu.rebuild()
-	var rebuild_to:=Time.get_ticks_msec()
+	var rebuild_to:=Clock.ticks_msec()
 	var rebuilt=menu.panel.get_node("PetPortrait")
 	var turned:Dictionary=rebuilt.animation_for("100250",3,2)
 	check(rebuilt.facing==2 and shows_clock(rebuilt,turned,{"from":rebuild_from,"to":rebuild_to,"image":rebuilt.current_image}),"rebuilt portrait keeps its facing and clock position")
 	var shown:int=rebuilt.current_image
-	deadline=Time.get_ticks_msec()+3000
-	while rebuilt.current_image==shown and Time.get_ticks_msec()<deadline:await process_frame
+	deadline=Clock.ticks_msec()+3000
+	while rebuilt.current_image==shown and Clock.ticks_msec()<deadline:await process_frame
 	check(rebuilt.current_image!=shown,"portrait keeps animating after a menu rebuild")
 	await capture("/tmp/pet-window-detail.png")
 	menu.pet_switch_view("skills")

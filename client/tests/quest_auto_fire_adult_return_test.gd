@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN tmp. Real adult acquisition then ordinary stop/return only; no Fire traffic.
 const Rules=preload("res://server/original_quests.gd")
 const Wait=preload("res://tests/support/wait.gd")
@@ -86,7 +87,7 @@ var baseline_checks:Array=[]
 var first_failure:Dictionary={}
 var after_stop_events:Array=[]
 var stop_started:bool=false
-var began:int=Time.get_ticks_msec()
+var began:int=Clock.ticks_msec()
 func _initialize()->void:call_deferred("run")
 static func same(a:Variant,c:Variant)->bool:
  if a is bool or c is bool:return a is bool and c is bool and a==c
@@ -305,7 +306,7 @@ func finish()->void:
   if b!=null:b.free()
   print("quest_auto_fire_adult_return_test: %d assertions, %d failures"%[assertions,failures])
   quit(1);return
- var result:Dictionary={"assertions":assertions,"failures":failures,"elapsed_msec":Time.get_ticks_msec()-began,"points":points,"moves":moves,"completed":saw_completed,"final_authority":final_authority,"final_evidence":final_evidence,"return_walk":return_walk,"return_portals":return_portals,"returned":returned,"quest_ticks":quest_ticks,"ticks_at_stop":ticks_at_stop,"return_trace":return_trace,"stop_trace":stop_trace,"stopped_baseline":stopped_baseline,"baseline_checks":baseline_checks,"first_failure":first_failure,"after_stop_events":after_stop_events}
+ var result:Dictionary={"assertions":assertions,"failures":failures,"elapsed_msec":Clock.ticks_msec()-began,"points":points,"moves":moves,"completed":saw_completed,"final_authority":final_authority,"final_evidence":final_evidence,"return_walk":return_walk,"return_portals":return_portals,"returned":returned,"quest_ticks":quest_ticks,"ticks_at_stop":ticks_at_stop,"return_trace":return_trace,"stop_trace":stop_trace,"stopped_baseline":stopped_baseline,"baseline_checks":baseline_checks,"first_failure":first_failure,"after_stop_events":after_stop_events}
  if b!=null:
   result.transactions=b.transactions;result.fields=b.fields;result.diagnostic_errors=b.diagnostic_errors
   # Captured transaction candidate only, never a new snapshot/projection during failure handling.

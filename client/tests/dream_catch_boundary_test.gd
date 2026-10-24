@@ -1,4 +1,5 @@
 extends "res://tests/rare_teleport_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 class ObservedBackend extends "res://server/backend.gd":
  var denied_capture_reports:=0
  func _cmd_report_position(command:Dictionary)->Dictionary:
@@ -13,8 +14,8 @@ func shot(game,name:String)->void:
  var result:int=game.get_viewport().get_texture().get_image().save_png(proof_dir.path_join(name+".png"))
  check(result==OK,"real rendered capture screenshot "+name)
 func reveal(button:Button)->bool:
- var deadline:int=Time.get_ticks_msec()+60000
- while Time.get_ticks_msec()<deadline and is_instance_valid(button):
+ var deadline:int=Clock.ticks_msec()+60000
+ while Clock.ticks_msec()<deadline and is_instance_valid(button):
   var ancestor:Node=button.get_parent()
   while ancestor!=null:
    if ancestor is ScrollContainer:ancestor.ensure_control_visible(button)

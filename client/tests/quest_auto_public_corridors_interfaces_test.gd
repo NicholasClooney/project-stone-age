@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Production policy/navigation interfaces; no runner execution or speed claims.
 const Backend=preload("res://server/backend.gd")
 const Navigation=preload("res://server/quest_auto_navigation.gd")
@@ -22,7 +23,7 @@ func make_segment(b,audit:Dictionary,kind:String)->Dictionary:
  var points:Array=[audit.points[-1].duplicate(true)] if kind=="public_jump" else audit.points.slice(0,mini(3,audit.points.size())).duplicate(true)
  return {"kind":kind,"audit_id":audit.id,"points":points,"from_map":b.automation.position_map,"from_cell":[b.automation.position_cell.x,b.automation.position_cell.y]}
 func run()->void:
- var began:=Time.get_ticks_msec()
+ var began:=Clock.ticks_msec()
  var b=Backend.new()
  var nav=Navigation.new()
  check(nav.public_routes.LANES.size()==7 and Extra.LANES.size()==29 and nav.public_routes.lanes().size()==36,"Original seven plus exactly 29 reviewed additions")
@@ -111,5 +112,5 @@ func run()->void:
  at(b,-1,Vector2i.ZERO);nav.clear()
  check(nav.next_segment(b,shell,"B",3).is_empty(),"Unknown A geometry is not hidden by B")
  b.free()
- print("PUBLIC_INTERFACES_SUMMARY ",JSON.stringify({"assertions":assertions,"failures":failures,"next_fast":next_fast,"next_fallback":next_fallback,"wall_ms":Time.get_ticks_msec()-began}))
+ print("PUBLIC_INTERFACES_SUMMARY ",JSON.stringify({"assertions":assertions,"failures":failures,"next_fast":next_fast,"next_fallback":next_fallback,"wall_ms":Clock.ticks_msec()-began}))
  quit(1 if failures else 0)

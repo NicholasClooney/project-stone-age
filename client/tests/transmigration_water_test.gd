@@ -1,4 +1,5 @@
 extends "res://tests/original_fixed_guards_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 const WaterRoute=preload("res://tests/support/water_route_driver.gd")
 var unit_battle_ms:int=0
 const Water=preload("res://server/transmigration_water_helper.gd")
@@ -37,14 +38,14 @@ func execute(b,npc:Dictionary)->Dictionary:
 func run()->void:
  activation()
  prerequisites()
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var b=guards_and_gates()
- print("WATER TIMING unit_route_and_guard_ms=",Time.get_ticks_msec()-started)
+ print("WATER TIMING unit_route_and_guard_ms=",Clock.ticks_msec()-started)
  exchanges(b)
  await water_lan(b)
  navigation(b)
  b.free()
- print("WATER TIMING unit_total_ms=",Time.get_ticks_msec()-started," real_guard_battle_ms=",unit_battle_ms)
+ print("WATER TIMING unit_total_ms=",Clock.ticks_msec()-started," real_guard_battle_ms=",unit_battle_ms)
  print("TRANSMIGRATION WATER: %d failures"%failures);quit(1 if failures else 0)
 func activation()->void:
  var b=setup()
@@ -142,8 +143,8 @@ func guards_and_gates():
   check(choose(b,r,"yes").ok and b.battle_open,"water original guard starts")
   check(b.session._pending.enemies.map(func(e):return int(e.source_enemy_id))==npc.branches[0].guard.enemy_ids.map(func(e):return int(e)),"all10 original enemies in order")
   var before:Dictionary=b.session.snapshot();b.save_path="user://missing-water-parent/fail.json"
-  var battle_started:int=Time.get_ticks_msec();fight(b)
-  unit_battle_ms+=Time.get_ticks_msec()-battle_started
+  var battle_started:int=Clock.ticks_msec();fight(b)
+  unit_battle_ms+=Clock.ticks_msec()-battle_started
   check(b.session.snapshot()==before,"guard failed save rolls back")
   b.save_path="";check(b.handle({"type":"battle_close"}).ok,"same guard victory retries")
   var warp:PackedStringArray=str(npc.branches[0].actions.Warp).split(",")

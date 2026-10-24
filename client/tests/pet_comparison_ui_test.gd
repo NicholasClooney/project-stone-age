@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Compare=preload("res://scripts/pet_comparison.gd")
 var failures:=0
 func _initialize():call_deferred("run")
@@ -57,9 +58,9 @@ func run():
  var large:=profile.duplicate(true);large.pet_storage=[]
  for i in range(300):
   var clone:=twin.duplicate(true);clone.pet_id="pet-%d"%(1000+i);large.pet_storage.append(clone)
- var started:=Time.get_ticks_usec();var large_rows:=Compare.rows(large,source,"speed",true)
+ var started:=Clock.ticks_usec();var large_rows:=Compare.rows(large,source,"speed",true)
  check(large_rows.size()==301,"large warehouse comparison retains every same-species pet")
- print("300-pet comparison data ms: ",(Time.get_ticks_usec()-started)/1000.0)
+ print("300-pet comparison data ms: ",(Clock.ticks_usec()-started)/1000.0)
  check(Compare.quality(twin).full and Compare.quality(twin).total==8,"full innate grade uses actual weights")
  game.session._profile.pet_storage=[twin];game.session._profile.next_pet_id=1000
  var menu=game.adventure_menu

@@ -1,4 +1,5 @@
 extends "res://tests/quest_delivery_remote_ui_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Regression for same-cell source step publication, NOT terminal/reward
 ## acceptance. Public authority and prior receipt are explicit initial-state
 ## fixtures; actual production selection/validation and WS consumers run.
@@ -53,7 +54,7 @@ func observe(label:String,message:Dictionary={})->void:
  if message.get("type")=="profile":event.auto=message.derived.quest_auto.duplicate(true)
  elif message.get("type")=="auto_status":event.position=message.status.position.duplicate(true)
  elif message.get("type")=="position":event=message.duplicate(true)
- var record:Dictionary={"label":label,"t":Time.get_ticks_msec(),"event":event,"authority":str(backend_node.automation.position_cell),"live_step":backend_node.quest_auto.identity.step_id,"live_revision":backend_node.quest_auto.identity.revision,"live_phase":backend_node.quest_auto.phase}
+ var record:Dictionary={"label":label,"t":Clock.ticks_msec(),"event":event,"authority":str(backend_node.automation.position_cell),"live_step":backend_node.quest_auto.identity.step_id,"live_revision":backend_node.quest_auto.identity.revision,"live_phase":backend_node.quest_auto.phase}
  if is_instance_valid(world):
   record.scene=str(world.cell);record.follow=world._follow.duplicate();record.followed=world._followed.duplicate()
   record.receipt=world.get_meta("quest_position_receipt",{}).duplicate(true)

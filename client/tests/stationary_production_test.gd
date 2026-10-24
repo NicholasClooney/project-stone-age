@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const Wait = preload("res://tests/support/wait.gd")
@@ -121,13 +122,13 @@ func run():
 		menu.open_menu();await Wait.settle(self,game);await layout(menu);await shot(tag+"-helper")
 		b.encounter_rng.seed=fixture_seed(b,point,12);b.encounter_catalog.pressure=0
 		var before:int=b.session.snapshot().original_items.count(2468)
-		var start:int=Time.get_ticks_msec()
+		var start:int=Clock.ticks_msec()
 		await click(menu.find_child("HelperStationaryEncounters",true,false))
 		await request(game,{"type":"report_position","map_id":200,"cell":[point.x,point.y]})
 		await request(game,{"type":"set_automation_settings","settings":game.automation_settings()})
 		check(b.stationary.running,"unchanged position and saved window settings preserve run")
 		check(await Wait.until(self,func():return b.battle_open,60),"natural stationary tree encounter "+tag)
-		print("NATURAL ms=",Time.get_ticks_msec()-start," lease=",b.stationary.lease," owner=",b.stationary.connection," commands=",b.requests)
+		print("NATURAL ms=",Clock.ticks_msec()-start," lease=",b.stationary.lease," owner=",b.stationary.connection," commands=",b.requests)
 		check(b.battle.snapshot().enemies.any(func(e):return int(e.get("source_enemy_id",-1))==563),"actual source tree monster "+tag)
 		await win(game,b,tag)
 		check(b.session.snapshot().original_items.count(2468)>before,"actual victory increases wood count "+tag)
@@ -173,5 +174,5 @@ class TraceBackend extends Backend:
 	func handle(command: Dictionary) -> Dictionary:
 		var reply=super.handle(command)
 		var type:String=str(command.get("type",""));requests[type]=int(requests.get(type,0))+1
-		print("REQUEST ms=",Time.get_ticks_msec()," ",command," ok=",reply.get("ok")," running=",stationary.running," reason=",stationary.reason)
+		print("REQUEST ms=",Clock.ticks_msec()," ",command," ok=",reply.get("ok")," running=",stationary.running," reason=",stationary.reason)
 		return reply

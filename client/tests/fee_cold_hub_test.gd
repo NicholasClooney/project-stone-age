@@ -1,4 +1,5 @@
 extends "res://tests/support/fee_cold_harness.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN actual Accounts/ProfileHub open/login/logout/failed-target path.
 const ProfileHub = preload("res://server/profile_hub.gd")
 const SaveLock = preload("res://server/save_lock.gd")
@@ -24,7 +25,7 @@ func run()->void:
 	var total_loads:=0
 	for kind:String in ["default_off","fee_failure","foreign","legacy","loot","bad_target"]:
 		ordinal+=1
-		var dir:String="user://fee-cold-hub-%d-%d"%[Time.get_ticks_usec(),ordinal]
+		var dir:String="user://fee-cold-hub-%d-%d"%[Clock.ticks_usec(),ordinal]
 		check(DirAccess.make_dir_recursive_absolute(dir)==OK,"isolated Hub directory")
 		var hub:=TestHub.new(dir+"/accounts.json")
 		hub.tick=false;hub.backups=false;hub.share_dir=""

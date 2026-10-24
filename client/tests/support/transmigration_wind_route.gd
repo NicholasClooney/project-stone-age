@@ -1,4 +1,5 @@
 extends "res://tests/brothers_golden_ui_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Full original route using GameScene walking/doors and actual quest commands.
 var host
 var routes:Dictionary
@@ -57,7 +58,7 @@ func use(npc:Dictionary,keyword:String="")->bool:
   if not await ready(func():return not world.battle_view.visible,"Battle close releases walking"):return false
  return await Wait.settle(self,world)
 func follow(name:String)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  for edge in routes[name]:
   print("WIND route ",name," ",edge.from_map," ",edge.cell," -> ",edge.to_map)
   if not check(int(world.data.map_id)==int(edge.from_map),"Route starts on actual prior landing"):return false
@@ -88,11 +89,11 @@ func follow(name:String)->bool:
     if point!=source and not await Wait.until(self,func():return world.cell==point and not world.moving,90.0):return false
    if not check(await Wait.until(self,func():return int(world.data.map_id)==int(edge.to_map) and world.cell==destination and not world.moving and not world.area_transition_busy,90.0),"Original door lands exactly "+str(edge.source)):return false
    if not await Wait.settle(self,world):return false
- print("WIND LEG TIMING ",name," ms=",Time.get_ticks_msec()-started)
+ print("WIND LEG TIMING ",name," ms=",Clock.ticks_msec()-started)
  return true
 func after_completion()->bool:return true
 func run()->void:
- timing_started=Time.get_ticks_msec()
+ timing_started=Clock.ticks_msec()
  root.unfocusable=true;Engine.time_scale=20.0
  print("WIND startup")
  routes=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/transmigration-wind-routes.json"))
@@ -111,7 +112,7 @@ func run()->void:
  world.profile_persistence=false;world.viewer_prefs_path="user://wind-route.cfg";root.add_child(world)
  if not await ready(func():return not world.data.is_empty() and world.link.online,"Natural wind remote startup"):return
  if not check(await Wait.settle(self,world) and world.backend==null,"Natural route remote authority"):return
- timing_setup=Time.get_ticks_msec()-timing_started
+ timing_setup=Clock.ticks_msec()-timing_started
  if not await use(find_npc("genout/wpm_100_278_325")):return
  if not await follow("wind-up"):return
  if not await use(find_npc("sainasu/event/genou_1")):return
@@ -130,6 +131,6 @@ func run()->void:
  if not await after_completion():return
  world.link.close();world.music.stop();world.effect.stop();world.queue_free();server.stop();server.queue_free();host.queue_free()
  await process_frame;Engine.time_scale=1.0
- var total:int=Time.get_ticks_msec()-timing_started
+ var total:int=Clock.ticks_msec()-timing_started
  print("WIND TIMING total_ms=",total," setup_ms=",timing_setup," route_ms=",total-timing_setup-timing_ui-timing_battle," battle_ms=",timing_battle," ui_wait_ms=",timing_ui)
  print("WIND NATURAL ROUTE: %d failures"%failures);quit(1 if failures else 0)

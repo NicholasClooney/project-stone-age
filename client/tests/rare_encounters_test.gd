@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Rare Lv.1 encounters (data/rare-encounters.json, merged into the encounter
 ## catalog by tools/import_encounters.py): every added pet is in its area's
 ## troop table at Lv.1 with the documented weight, seeded rolls meet it, and a
@@ -172,8 +173,8 @@ func run() -> void:
 	backend.handle({"type":"report_position","map_id":500,"cell":[cell.x,cell.y]})
 	var started: Dictionary = backend.handle({"type":"auto_start","kind":"hunt","map_id":500,"cell":[cell.x,cell.y],"filter":{"template":302,"level_one":true,"total":-8,"offsets":[],"auto_capture":false,"limit":0,"fast":false}})
 	check(started.get("ok",false),"a 左迪洛斯 Lv.1 hunt starts at 五十年前波拉岛 %s" % started.get("reason",""))
-	var deadline := Time.get_ticks_msec()+120000
-	while backend.automation.hunt_running and Time.get_ticks_msec() < deadline:
+	var deadline := Clock.ticks_msec()+120000
+	while backend.automation.hunt_running and Clock.ticks_msec() < deadline:
 		backend._process(0.016)
 		await process_frame
 	var hit: Dictionary = backend.automation.hunt_last_hit

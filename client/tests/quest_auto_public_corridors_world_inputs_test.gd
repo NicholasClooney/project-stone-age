@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_public_corridors_execution_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Diagnostic A/C only, original uncontrolled NPC births. No B repetition.
 ## Full sequence assertions remain strict even when inputs prove unequal.
 func controlled_world()->bool:return false
@@ -26,7 +27,7 @@ func compare_inputs(a:Dictionary,c:Dictionary)->Dictionary:
   if not changes.is_empty():differences.append({"index":index,"changes":changes})
  return {"equal":differences.is_empty(),"A_call_count":left.size(),"C_call_count":right.size(),"differences":differences}
 func run()->void:
- deadline=Time.get_ticks_msec()+55000
+ deadline=Clock.ticks_msec()+55000
  var results:Dictionary={}
  for mode in ["A","C"]:
   results[mode]=await route(mode)
@@ -49,5 +50,5 @@ func run()->void:
   check(results.C.seconds>0.0 and absf(results.A.seconds/results.C.seconds-2.0)<0.05,"C simulated public cadence is approximately twice A")
  else:check(false,"Both actual A/C routes finish; no partial diagnostic success")
  check(in_time(),"A/C input diagnostic deadline not exceeded")
- print("QUEST AUTO PUBLIC CORRIDORS WORLD INPUTS controlled=%s: %d assertions, %d failures; wall_ms=%d"%[controlled_world(),assertions,failures,Time.get_ticks_msec()-suite_started])
+ print("QUEST AUTO PUBLIC CORRIDORS WORLD INPUTS controlled=%s: %d assertions, %d failures; wall_ms=%d"%[controlled_world(),assertions,failures,Clock.ticks_msec()-suite_started])
  quit(1 if failures else 0)

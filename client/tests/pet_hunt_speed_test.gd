@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Wait=preload("res://tests/support/wait.gd")
 var failures:=0
 func check(ok:bool,note:String):
@@ -34,22 +35,22 @@ func run():
  menu.set_process(false)
  var core=game.backend.automation
  check(not core.auto_tick,"local client drives scans while backend still flushes progress")
- var sample_started:=Time.get_ticks_usec()
+ var sample_started:=Clock.ticks_usec()
  menu._process(1.0/60.0)
- var sample_usec:=Time.get_ticks_usec()-sample_started
+ var sample_usec:=Clock.ticks_usec()-sample_started
  print("REAL SCAN: %d rolls, UI snapshot %d rolls, in %d usec; budget %d usec" % [core.hunt_rolls,menu.rolls,sample_usec,core.frame_budget(core.HUNT_FRAME_BUDGET_USEC)])
  check(core.hunt_rolls>0,"real encounter work runs under the frame budget")
  var before_stall:int=core.hunt_rolls
  menu._process(2.0)
  check(core.hunt_credit<=200.0 and core.hunt_rolls-before_stall<=201,"long stall retains at most 100ms of requested work")
- var progress_started:=Time.get_ticks_msec()
+ var progress_started:=Clock.ticks_msec()
  check(await Wait.until(self,func():return menu.rolls==core.hunt_rolls),"one-second progress publishes the real scan count")
- print("LOCAL PROGRESS FLUSH: core %d, UI %d, waited %d msec" % [core.hunt_rolls,menu.rolls,Time.get_ticks_msec()-progress_started])
+ print("LOCAL PROGRESS FLUSH: core %d, UI %d, waited %d msec" % [core.hunt_rolls,menu.rolls,Clock.ticks_msec()-progress_started])
  check(menu.status.text.contains("目标 2000") and menu.status.text.contains("实际"),"requested and actual throughput are visible")
  menu.filter.rate=0;var before_unlimited:int=core.hunt_rolls
- sample_started=Time.get_ticks_usec()
+ sample_started=Clock.ticks_usec()
  menu._process(1.0/60.0)
- sample_usec=Time.get_ticks_usec()-sample_started
+ sample_usec=Clock.ticks_usec()-sample_started
  print("REAL UNLIMITED SCAN: %d additional rolls in %d usec; budget %d usec" % [core.hunt_rolls-before_unlimited,sample_usec,core.frame_budget(core.HUNT_FRAME_BUDGET_USEC)])
  check(sample_usec>=core.frame_budget(core.HUNT_FRAME_BUDGET_USEC),"unlimited real scan consumes the full frame budget")
  check(core.hunt_rolls>before_unlimited,"rate 0 scans for the whole frame budget without throttling")

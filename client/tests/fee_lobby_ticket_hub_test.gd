@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Real Accounts and Hub handlers, synchronous transport (no WebSocket).
 const B=preload("res://tests/support/fee_lobby_ticket_backend.gd")
 const S=preload("res://tests/support/fee_lobby_ticket_fault_session.gd")
@@ -40,7 +41,7 @@ func raw(path:String)->Dictionary:
 func disks(b)->Array:return [raw(b.save_path),raw(b.save_path+".bak"),raw(b.save_path+".tmp"),raw(b._resume_file()),raw(b._resume_file()+".tmp")]
 func one(kind:String)->void:
  fixtures+=1
- var dir:String="user://lobby-hub-%d-%d-%s"%[Time.get_ticks_usec(),fixtures,kind]
+ var dir:String="user://lobby-hub-%d-%d-%s"%[Clock.ticks_usec(),fixtures,kind]
  check(DirAccess.make_dir_recursive_absolute(dir)==OK,"fixture directory")
  var hub=Hub.new(dir+"/accounts.json");hub.accounts=Accounts.new(dir+"/accounts.json");hub.tick=false;hub.backups=false;hub.share_dir=""
  check(hub.accounts.load_file(),"real accounts load")

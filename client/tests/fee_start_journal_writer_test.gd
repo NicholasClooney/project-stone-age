@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Unrun B1 candidate: private Start journal I/O only. No public Start,
 ## purchase, sidecar, cold recovery, Hub caller or durable ACK is exercised.
 const Backend = preload("res://server/backend.gd")
@@ -53,7 +54,7 @@ func setup(tag: String, kind: String = "absent", seal: bool = true) -> Dictionar
 	s.host = weakref(b)
 	s.battle_pets_hook = b._live_battle_pets
 	s.capture_entry_hook = b._capture_entry
-	b.save_path = "user://fee-start-%d-%03d-%s.json" % [Time.get_ticks_usec(), index, tag]
+	b.save_path = "user://fee-start-%d-%03d-%s.json" % [Clock.ticks_usec(), index, tag]
 	paths.append(ProjectSettings.globalize_path(b.save_path))
 	var owner: Dictionary = {"profile_id": s._profile.profile_id, "character_id": s._profile.character_id}
 	if kind != "absent":s._profile.quest_auto_fee_lifecycle = literal(owner, OLD, "active" if kind == "active" else "closed", kind == "unknown")

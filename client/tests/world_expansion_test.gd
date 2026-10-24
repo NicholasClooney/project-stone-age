@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Loads every imported map, which takes minutes, so the work is split into
 ## parts that run as separate suites in parallel (world_expansion_*_test.gd
 ## extend this and pick one part). Run directly, it does every part.
@@ -22,7 +23,7 @@ func run():
  var catalog=game.world_catalog
  check(catalog.maps.size()>=103,"original villages, interiors, wilderness and crossing route imported")
  for id in ([1000,2000,3000,4000,100,200,1100,1300,1400,3100,3200,3300,3400,10201,10202,10203] if wants("destinations") else []):
-  var start=Time.get_ticks_msec()
+  var start=Clock.ticks_msec()
   check(game.dev_visit(id),"developer destination loads original map %d" % id)
   await frames()
   game.camera.reset_smoothing()
@@ -37,7 +38,7 @@ func run():
   check(bridges_ok,"map %d respects original bridge drawing priority" % id)
   check(game.props.visible_props.size()<3000,"map %d streams nearby scenery instead of entire island" % id)
   check(game.music.stream.resource_path.get_file().get_basename()==str(catalog.info(id).music).get_file().get_basename(),"map %d uses source music" % id)
-  print("WORLD LOAD %d: %dms / %d visible props" % [id,Time.get_ticks_msec()-start,game.props.visible_props.size()])
+  print("WORLD LOAD %d: %dms / %d visible props" % [id,Clock.ticks_msec()-start,game.props.visible_props.size()])
   if DisplayServer.get_name()!="headless":
    await RenderingServer.frame_post_draw
    root.get_texture().get_image().save_png("res://../artifacts/world-%d.png" % id)

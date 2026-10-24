@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Real scene/player lifecycles, silent PCM and Dummy output; no audible device.
 const Wait = preload("res://tests/support/wait.gd")
 var game
@@ -60,12 +61,12 @@ func run() -> void:
 	old_voice.finished.connect(func():completions+=1,CONNECT_ONE_SHOT)
 	game._audio.play_effect(effect)
 	check(game.effect!=old_voice and old_voice.playing,"identical sounds keep distinct uninterrupted voices")
-	var began := Time.get_ticks_msec()
+	var began := Clock.ticks_msec()
 	close()
 	check(old_voice.playing and game._audio._fade_level==122,"close preserves SE and starts source full-volume fade at122")
 	check(await Wait.until(self,func():return game.music.volume_db < -1.0),"actual frame processing reduces music volume")
 	check(await Wait.until(self,map_playing),"ordinary music fades then map plays")
-	var elapsed := (Time.get_ticks_msec()-began)/1000.0
+	var elapsed := (Clock.ticks_msec()-began)/1000.0
 	check(elapsed>=0.70 and elapsed<10.0,"source122+1 ticks at6ms gives nominal0.738s, with scheduler allowance: %.3f"%elapsed)
 	check(await Wait.until(self,func():return completions==1),"pre-close SE emits real finished after map return")
 

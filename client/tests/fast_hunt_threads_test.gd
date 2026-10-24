@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## 本机极速模式 线程数: a setting of the server's computer (server_settings.gd),
 ## not the character's. It is validated and saved by the backend, published in
 ## the automation status, changed from any device's 自动抓极品 window, handed
@@ -69,8 +70,8 @@ func backend_commands() -> void:
 		"filter":{"template":92,"level_one":true,"total":8,"offsets":[2,2,2,2],"auto_capture":false,"limit":0,"fast":true,"showcase":false},"settings":{"capture_hp":100}})
 	check(reply.ok,"a fast find-pet cycle starts %s" % reply)
 	var ticked := func(condition: Callable, seconds: float) -> bool:
-		var deadline := Time.get_ticks_msec()+int(seconds*1000)
-		while Time.get_ticks_msec() < deadline:
+		var deadline := Clock.ticks_msec()+int(seconds*1000)
+		while Clock.ticks_msec() < deadline:
 			backend._process(0.016)
 			if condition.call():return true
 			await process_frame

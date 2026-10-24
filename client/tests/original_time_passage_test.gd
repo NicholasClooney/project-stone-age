@@ -1,28 +1,28 @@
 extends "res://tests/original_fixed_guards_test.gd"
-const Clock=preload("res://server/original_world_clock.gd")
-var seconds:=Clock.ERA
+const WorldClock=preload("res://server/original_world_clock.gd")
+var seconds:=WorldClock.ERA
 var gates:Array=[]
 func install(b)->void:
  for gate in gates:
   var key:=str(int(gate.from_map))
   if not b.quest_helper.places.portals.has(key):b.quest_helper.places.portals[key]={}
   b.quest_helper.places.portals[key][Vector2i(int(gate.cell[0]),int(gate.cell[1]))]=gate.duplicate(true)
-func at_hour(value:int)->void:seconds=Clock.ERA+int(ceil(float(value)*5400.0/1024.0))
+func at_hour(value:int)->void:seconds=WorldClock.ERA+int(ceil(float(value)*5400.0/1024.0))
 func run()->void:
- var previous:=Clock.clock
- Clock.clock=func():return seconds
+ var previous:=WorldClock.clock
+ WorldClock.clock=func():return seconds
  gates=JSON.parse_string(FileAccess.get_file_as_string("res://tests/fixtures/dream-time-gates.json"))
  for entry in [[-5401,0],[-5400,0],[-5399,-1023],[-1,0],[0,0],[1,0],[5399,1023],[5400,0],[5401,0]]:
-  check(Clock.hour_at(Clock.ERA+entry[0])==entry[1],"original signed C clock boundary %d"%entry[0])
+  check(WorldClock.hour_at(WorldClock.ERA+entry[0])==entry[1],"original signed C clock boundary %d"%entry[0])
  for entry in [[0,"A"],[126,"A"],[127,"A"],[200,"A"],[201,"E"],[299,"E"],[300,"E"],[301,"N"],[700,"N"],[701,"M"],[930,"M"],[931,"A"],[1023,"A"]]:
-  at_hour(entry[0]);check(Clock.hour()==entry[0] and Clock.phase_at(Clock.hour())==entry[1],"original phase boundary %d"%entry[0])
-  check(Clock.after_at(entry[0])==(entry[0]>126 and entry[0]<300),"AFTER is independent strict interval")
+  at_hour(entry[0]);check(WorldClock.hour()==entry[0] and WorldClock.phase_at(WorldClock.hour())==entry[1],"original phase boundary %d"%entry[0])
+  check(WorldClock.after_at(entry[0])==(entry[0]>126 and entry[0]<300),"AFTER is independent strict interval")
  var b=Backend.new();install(b)
  for gate in gates:
   for value in [200,201,300,301,700,701,930,931]:
    at_hour(value)
    b.automation.position_changed(400,Vector2i(int(gate.cell[0]),int(gate.cell[1])))
-   var expected:=Clock.allows(str(gate.requires_time),value)
+   var expected:=WorldClock.allows(str(gate.requires_time),value)
    check(b.handle({"type":"check_passage","from_map":400,"to_map":gate.to_map,"hour":701}).ok==expected,"server checks source gate and ignores client hour")
    var r:Dictionary=b.handle({"type":"report_position","map_id":gate.to_map,"cell":gate.target,"client":"party"})
    check(r.ok==expected,"arrival repeats time check; client party label grants no authority")
@@ -40,7 +40,7 @@ func run()->void:
  b.free()
  party_time_gate()
  await remote_time_gate()
- Clock.clock=previous
+ WorldClock.clock=previous
  print("ORIGINAL TIME PASSAGE: %d failures"%failures)
  quit(1 if failures else 0)
 func remote_time_gate()->void:

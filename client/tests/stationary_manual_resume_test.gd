@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Backend = preload("res://server/backend.gd")
 const WsServer = preload("res://server/ws_server.gd")
 const Wait = preload("res://tests/support/wait.gd")
@@ -184,7 +185,7 @@ class TraceBackend extends Backend:
 	func handle(command: Dictionary) -> Dictionary:
 		var reply=super.handle(command)
 		var type:String=str(command.get("type",""));requests[type]=int(requests.get(type,0))+1
-		print("REQUEST ms=",Time.get_ticks_msec()," ",command," ok=",reply.get("ok")," running=",stationary.running," reason=",stationary.reason," battle_id=",stationary.battle_id," saved_win=",stationary.saved_win," active=",battle.snapshot().get("active",false))
+		print("REQUEST ms=",Clock.ticks_msec()," ",command," ok=",reply.get("ok")," running=",stationary.running," reason=",stationary.reason," battle_id=",stationary.battle_id," saved_win=",stationary.saved_win," active=",battle.snapshot().get("active",false))
 		return reply
 
 class DelayedBattlePacks extends "res://scripts/asset_packs.gd":

@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Static candidate. Fixtures use genuine Start/source pages with synthetic
 ## fee_attach bindings and legal lobby placement; not authenticated WS.
 const B=preload("res://tests/support/fee_entry_backend.gd")
@@ -40,7 +41,7 @@ func setup(tag:String,level:int=35,map_id:int=811,manual:bool=false,parent:bool=
  b.start_enabled=not legacy;b.purchase_enabled=not legacy
  b.automation.position_changed(map_id,Vector2i(x,22),true)
  s.set_location(map_id,x,22)
- b.save_path="user://entry-%d-%03d-%s.json"%[Time.get_ticks_usec(),fixtures,tag]
+ b.save_path="user://entry-%d-%03d-%s.json"%[Clock.ticks_usec(),fixtures,tag]
  check(b.save(),tag+": seed save")
  loads+=1;check(b.load_profile(b.save_path),tag+": real normalizing load")
  b.automation.position_changed(map_id,Vector2i(x,22),true);check(b.save(),tag+": canonical seed")

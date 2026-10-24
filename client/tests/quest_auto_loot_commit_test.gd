@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_battle_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Explicit strong-character prepared-span fixture; actual original roll/apply/
 ## candidate writer. Observer runs at the narrow commit return boundary, after
 ## actual write/cache update, never by substituting a fabricated save serial.
@@ -227,7 +228,7 @@ func run()->void:
   host.session.OriginalEquipment.add(host.session._profile,1052)
   # Reuse the already reviewed original-pool seed convention. The assertion
   # after setup makes a mismatch a fixture failure; this never retries a seed.
-  var fields_clock:Array=[Time.get_ticks_msec()]
+  var fields_clock:Array=[Clock.ticks_msec()]
   host.fields_step_clock=fields_clock
   host.quest_loot.clock=func():return fields_clock[0]
   host.fields_step_armed=true

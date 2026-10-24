@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 # Manual 60Hz wall-clock pacing; no graphics, no save files. Test-only impossible
 # quality cutoff prevents hits but exercises the real RNG, troops and quality scan.
 func _initialize():call_deferred("run")
@@ -24,20 +25,20 @@ func run():
     menu.filter.total=9;menu.filter.level_one=false
     # Warm up real generation and dictionary/resource caches before measurement.
     for i in range(30):menu._process(1.0/60.0)
-    menu.rolls=0;menu.inspected=0;menu.credit=0;menu.started_usec=Time.get_ticks_usec()
-    var started:=Time.get_ticks_usec()
+    menu.rolls=0;menu.inspected=0;menu.credit=0;menu.started_usec=Clock.ticks_usec()
+    var started:=Clock.ticks_usec()
     var previous:=started
     var frame:=0
     var costs:=[]
-    while Time.get_ticks_usec()-started<2000000:
-     var now:=Time.get_ticks_usec()
+    while Clock.ticks_usec()-started<2000000:
+     var now:=Clock.ticks_usec()
      menu._process((now-previous)/1000000.0)
-     costs.append(Time.get_ticks_usec()-now);previous=now;frame+=1
-     var wait:=started+int(frame*1000000.0/60.0)-Time.get_ticks_usec()
+     costs.append(Clock.ticks_usec()-now);previous=now;frame+=1
+     var wait:=started+int(frame*1000000.0/60.0)-Clock.ticks_usec()
      if wait>0:OS.delay_usec(wait)
-    var seconds:float=(Time.get_ticks_usec()-started)/1000000.0
-    var stop_start:=Time.get_ticks_usec();menu.stop_hunt("benchmark")
-    var stop_usec:=Time.get_ticks_usec()-stop_start
+    var seconds:float=(Clock.ticks_usec()-started)/1000000.0
+    var stop_start:=Clock.ticks_usec();menu.stop_hunt("benchmark")
+    var stop_usec:=Clock.ticks_usec()-stop_start
     var record:={"workload":fixture.name,"requested":target,"repetition":repetition+1,"groups":menu.rolls,"actors_inspected":menu.inspected,"seconds":seconds,"achieved":menu.rolls/seconds,"p50_ms":percentile(costs,0.5),"p95_ms":percentile(costs,0.95),"p99_ms":percentile(costs,0.99),"max_ms":costs.max()/1000.0,"stop_ms":stop_usec/1000.0}
     output.samples.append(record);print(JSON.stringify(record))
   menu.close_menu()

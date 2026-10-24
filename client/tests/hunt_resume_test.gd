@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## 重启后自动恢复 (hunt.resume, server/automation.gd record_shutdown and
 ## try_resume): a server restart is simulated by recording the shutdown and
 ## saving, then building a fresh backend from the save and its resume file.
@@ -302,7 +303,7 @@ func remote_device() -> void:
 	prepare(backend,{"rate":1})
 	backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y]})
 	var fresh = restart(backend)
-	fresh.automation.timer_clock = Time.get_ticks_msec
+	fresh.automation.timer_clock = Clock.ticks_msec
 	fresh.set_process(true)
 	var port := 0 # any free port; the server reports the one it got
 	var server = WsServer.new(fresh,port,"127.0.0.1")

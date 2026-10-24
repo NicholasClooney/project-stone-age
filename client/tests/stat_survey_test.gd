@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## 属性条件 最高 − x bootstrap and legacy native pool parity (server/automation.gd, scripts/pet_stat_filter.gd):
 ## the find-pet cycle's thresholds are the best Lv120 values among the player's
 ## own pets of the species minus x and rise as better pets arrive; with no pet
@@ -89,8 +90,8 @@ func helper_pool() -> void:
 	var survey_filter := func(_id):return StatFilter.defaults(92)
 	check(helper.launch(catalog,area,filter,true,survey_filter,run_seed,0,2,{92:pool_rule}),"the helper starts a survey")
 	var report := {}
-	var deadline := Time.get_ticks_msec()+30000
-	while Time.get_ticks_msec()<deadline:
+	var deadline := Clock.ticks_msec()+30000
+	while Clock.ticks_msec()<deadline:
 		report = helper.poll(true)
 		if not report.is_empty() and str(report.kind)!="progress":break
 		await process_frame
@@ -130,8 +131,8 @@ func cycle() -> void:
 	var filter := {"template":92,"level_one":true,"total":-8,"offsets":[-2,-2,-2,-2],"auto_capture":false,"limit":0,"rate":0,"fast":false,"showcase":false}
 	check(backend.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":CELL,"filter":filter}).ok,"no-background cycle starts without owning this species")
 	check(automation.owned_maxima(92).is_empty(),"species has no initial owned baseline")
-	var deadline := Time.get_ticks_msec()+30000
-	while automation.showcase_queue.is_empty() and automation.hunt_running and Time.get_ticks_msec()<deadline:automation.scan_once()
+	var deadline := Clock.ticks_msec()+30000
+	while automation.showcase_queue.is_empty() and automation.hunt_running and Clock.ticks_msec()<deadline:automation.scan_once()
 	check(not automation.showcase_queue.is_empty() and automation.survey.is_empty() and automation.survey_picks.is_empty(),"first qualifying original roll queues immediately without survey")
 	if not automation.showcase_queue.is_empty():
 		var entry: Dictionary = automation.showcase_queue[0]

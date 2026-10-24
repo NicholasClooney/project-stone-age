@@ -98,8 +98,9 @@ func accounts() -> void:
 	tool.find("客人").admin = true
 	tool.save_file()
 	var mtime := FileAccess.get_modified_time(path)
+	# The file's modified time has one-second resolution; frames, not sleeps, until it moves.
 	while FileAccess.get_modified_time(path)==mtime:
-		OS.delay_msec(50)
+		await process_frame
 		tool.save_file()
 	book.reload_if_changed()
 	check(book.find("客人").admin,"a running server picks up the edited file")

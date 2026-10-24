@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN 6a product route. Navigation instrumentation only; admission and selector are production.
 ## no_random_encounters is only a disclosed route fixture, not natural-play evidence.
 const Backend = preload("res://server/backend.gd")
@@ -194,8 +195,8 @@ func ack_for(receipt: Dictionary) -> Dictionary:
 	return ack
 
 func run() -> void:
-	started_msec = Time.get_ticks_msec()
-	var unique: String = str(Time.get_ticks_usec())
+	started_msec = Clock.ticks_msec()
+	var unique: String = str(Clock.ticks_usec())
 	trace_path = "user://doctor-public-request-" + unique + "-trace.json"
 	backend = DiagnosticBackend.new()
 	backend.set_process(false)
@@ -316,7 +317,7 @@ func run() -> void:
 	target = request_step.duplicate(true)
 	var admission: Dictionary = backend.handle({"type": "quest_auto_start", "quest_id": 6, "client": CLIENT, "_quest_connection": CONNECTION})
 	if not check(admission.get("ok", false) and runner().running and runner().strict_walk and runner().phase == "travel" and same_source(runner().step, request_step), "real QuestAuto.start captures the same proposal through gated production admission"): finish(); return
-	wait_deadline_msec = Time.get_ticks_msec() + int(WAIT_SECONDS * 1000.0)
+	wait_deadline_msec = Clock.ticks_msec() + int(WAIT_SECONDS * 1000.0)
 	var started: bool = await Wait.until(self, drive, WAIT_SECONDS)
 	if failed: finish(); return
 	if not check(started and done and not runner().running and runner().phase == "manual", "real runner reaches its post-REQUEST manual stop within Wait 150"): finish(); return
@@ -325,15 +326,15 @@ func run() -> void:
 		if not check(portal_sequence[index + 1] == DOCTOR_CHAIN[index], "actual Doctor source portal order %d" % index): finish(); return
 	if not check(logical_points <= MAX_LOGICAL_POINTS and ordinary_walks > 0 and backend.candidate_field_calls == ordinary_walks, "all ordinary moves have exactly one field step and remain under 6000 points"): finish(); return
 	if not check(not backend.battle_open and backend.original_quests.pending.is_empty() and backend.session._pending.is_empty(), "no battle/dialogue/pet transaction remains open"): finish(); return
-	print("DOCTOR RUNNER REQUEST15: points=%d walks=%d portals=%s fields=%d elapsed_ms=%d manual=manual_uid" % [logical_points, ordinary_walks, str(portal_sequence), backend.candidate_field_calls, Time.get_ticks_msec() - started_msec])
+	print("DOCTOR RUNNER REQUEST15: points=%d walks=%d portals=%s fields=%d elapsed_ms=%d manual=manual_uid" % [logical_points, ordinary_walks, str(portal_sequence), backend.candidate_field_calls, Clock.ticks_msec() - started_msec])
 	finish()
 
 func drive() -> bool:
 	if failed or done: return true
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "single Wait 150-second absolute deadline reached before another ACK/tick/AStar call")
 		return true
-	if Time.get_ticks_msec() - started_msec >= int(HARD_EXTERNAL_SECONDS * 1000.0):
+	if Clock.ticks_msec() - started_msec >= int(HARD_EXTERNAL_SECONDS * 1000.0):
 		check(false, "external hard 300-second budget reached between synchronous runner calls")
 		return true
 	if logical_points >= MAX_LOGICAL_POINTS and runner().phase == "travel":
@@ -356,7 +357,7 @@ func drive() -> bool:
 	var before_serial: int = backend.quest_save_serial
 	var fields_before: int = backend.candidate_field_calls
 	runner().tick(backend, 0.21)
-	if Time.get_ticks_msec() >= wait_deadline_msec:
+	if Clock.ticks_msec() >= wait_deadline_msec:
 		check(false, "single Wait 150-second absolute deadline elapsed during synchronous runner/AStar call; preserve its resulting state")
 		return true
 	var after_map: int = backend.automation.position_map
@@ -460,7 +461,7 @@ func write_trace() -> void:
 	if file == null:
 		trace_error = "cannot write unique route trace"
 		return
-	var serialized: String = JSON.stringify({"trace": trace, "first_failure": first_failure, "state": state(), "points": logical_points, "walks": ordinary_walks, "portals": portal_sequence, "field_calls": backend.candidate_field_calls if backend != null else 0, "next_calls": navigation().next_calls if backend != null else 0, "plan_calls": navigation().plan_calls if backend != null else 0, "local_path_calls": navigation().local_path_calls if backend != null else 0, "elapsed_ms": Time.get_ticks_msec() - started_msec}, "  ")
+	var serialized: String = JSON.stringify({"trace": trace, "first_failure": first_failure, "state": state(), "points": logical_points, "walks": ordinary_walks, "portals": portal_sequence, "field_calls": backend.candidate_field_calls if backend != null else 0, "next_calls": navigation().next_calls if backend != null else 0, "plan_calls": navigation().plan_calls if backend != null else 0, "local_path_calls": navigation().local_path_calls if backend != null else 0, "elapsed_ms": Clock.ticks_msec() - started_msec}, "  ")
 	file.store_string(serialized)
 	file.flush()
 	var write_error: Error = file.get_error()

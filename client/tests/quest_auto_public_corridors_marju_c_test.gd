@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## C ONLY: actual Marju job5 -> job9, original FREEWARP and maze/exit.
 ## Explicit encounter-off route compatibility, never natural-battle evidence.
 ## No task item, event, arrival proof, original enemy or reward manipulation.
@@ -15,7 +16,7 @@ class CountedBackend extends "res://server/backend.gd":
   return result
 var assertions:=0
 var failures:=0
-var began:int=Time.get_ticks_msec()
+var began:int=Clock.ticks_msec()
 var deadline:int=0
 var summaries:Array=[]
 func check(value:bool,label:String)->bool:
@@ -65,7 +66,7 @@ func reviewed_lane(id:String)->Dictionary:
   if lane.id==id:return lane
  return {}
 func drive(b,mode:String,job:int)->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var event_id:int=37 if job==5 else 38
  var letter:int=2687
  if job==9:
@@ -82,7 +83,7 @@ func drive(b,mode:String,job:int)->bool:
  var response:Dictionary=b.handle({"type":"quest_auto_start","quest_id":job,"client":"public-marju-c","_quest_connection":17})
  var started_ok:bool=check(response.get("ok",false) and b.quest_auto.strict_walk,"Actual original job starts %s/%d"%[mode,job])
  var ticks:=0
- while started_ok and b.quest_auto.running and Time.get_ticks_msec()<deadline:
+ while started_ok and b.quest_auto.running and Clock.ticks_msec()<deadline:
   var old_map:int=b.automation.position_map
   var old:Vector2i=b.automation.position_cell
   var original_gate:bool=b.quest_auto.phase=="strict_dialogue" and b.original_quests.pending.get("phase","")=="FREEWARP" and b.quest_auto.step.get("npc_id","")=="genout/wpm_120_19_15@120:19:15"
@@ -158,7 +159,7 @@ func drive(b,mode:String,job:int)->bool:
    check(stats.source_freewarps==0 and b.automation.position_map==1300,"Actual9 uses original maze exit back to Marju, no repeated script entry")
   readback(b,"%s-%d"%[mode,job])
  stats.field_calls=b.field_calls.size()-start_fields
- stats.wall_ms=Time.get_ticks_msec()-started
+ stats.wall_ms=Clock.ticks_msec()-started
  stats.complete=complete
  stats.saw_actual_letter=saw_letter
  stats.final_original_items=b.session._profile.original_items.duplicate()
@@ -172,18 +173,18 @@ func drive(b,mode:String,job:int)->bool:
  b.event.disconnect(observer)
  return complete
 func run()->void:
- deadline=Time.get_ticks_msec()+170000
+ deadline=Clock.ticks_msec()+170000
  for mode in ["C"]:
   var b=fixture(mode)
   if await drive(b,mode,5):await drive(b,mode,9)
   b.free()
-  if Time.get_ticks_msec()>=deadline:break
+  if Clock.ticks_msec()>=deadline:break
  check(summaries.size()==2,"C mode completes both actual jobs5/9")
- check(Time.get_ticks_msec()<deadline,"Original complete routes fit allocated condition deadline")
+ check(Clock.ticks_msec()<deadline,"Original complete routes fit allocated condition deadline")
  var path:="user://public-corridors-marju-c-results.json"
  var output=FileAccess.open(path,FileAccess.WRITE)
  if output!=null:output.store_string(JSON.stringify({"summaries":summaries,"assertions":assertions,"failures":failures}));output.close()
  check(output!=null,"Retain per-job real benefit/transaction evidence")
  print("PUBLIC MARJU C TRACE ",ProjectSettings.globalize_path(path))
- print("QUEST AUTO PUBLIC CORRIDORS MARJU C: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Time.get_ticks_msec()-began])
+ print("QUEST AUTO PUBLIC CORRIDORS MARJU C: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Clock.ticks_msec()-began])
  quit(1 if failures else 0)

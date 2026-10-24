@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Real original routes and transactions; only the ordinary encounter toggle is off.
 const Backend=preload("res://server/backend.gd")
 const Rules=preload("res://server/original_quests.gd")
@@ -7,7 +8,7 @@ func check(value:bool,label:String)->void:
  if not value:failures+=1;push_error(label)
 func _initialize()->void:call_deferred("run")
 func run()->void:
- var started:=Time.get_ticks_msec()
+ var started:=Clock.ticks_msec()
  for spec in [[1,4,1000,2418,[1000,100,1100,10201,10202,10204]],[11,2,1000,2414,[1000,100,2000]],[30,1,3100,2427,[3100,3110,200,20101,20102,20103,20104,20105]]]:
   var b=Backend.new()
   b.quest_catalog.enabled_events=[int(spec[1])]
@@ -43,7 +44,7 @@ func run()->void:
   print("A ROUTE ",spec[0]," moves=",moves," maps=",seen.keys())
   b.free()
  replan()
- print("QUEST AUTO NAVIGATION: %d failures; %.2fs"%[failures,(Time.get_ticks_msec()-started)/1000.0])
+ print("QUEST AUTO NAVIGATION: %d failures; %.2fs"%[failures,(Clock.ticks_msec()-started)/1000.0])
  quit(1 if failures else 0)
 func replan()->void:
  var b=Backend.new()

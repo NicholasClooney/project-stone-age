@@ -1,4 +1,5 @@
 extends "res://tests/yam_axe_ui_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Real production walking and portal transitions after a stated entrance fixture.
 ## Fixtures: level/prerequisites, combat stats, and two acquired materials.
 ## No interior location fixture or helper teleport is used after initial entry.
@@ -27,7 +28,7 @@ func path_to(target:Vector2i)->Array[Vector2i]:
  while point!=world.cell:point=parents[point];result.push_front(point)
  return result
 func walk(target:Vector2i,portal:Dictionary={})->bool:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var points:Array[Vector2i]=path_to(target)
  if not check(not points.is_empty(),"cardinal original path exists map%d to%s"%[int(world.data.map_id),target]):return false
  points.pop_front()
@@ -37,7 +38,7 @@ func walk(target:Vector2i,portal:Dictionary={})->bool:
    if not await ready(func():return int(world.data.map_id)==int(portal.to_map) and world.cell==Vector2i(int(portal.target[0]),int(portal.target[1])) and not world.area_transition_busy,"production source portal arrives"):return false
   elif not await ready(func():return world.cell==point and not world.moving,"production adjacent walking"):return false
  var settled:bool=check(await Wait.settle(self,world),"walk reports settled")
- walking_ms+=Time.get_ticks_msec()-started
+ walking_ms+=Clock.ticks_msec()-started
  return settled
 func walk_to_npc(npc:Dictionary)->bool:
  if not check(int(world.data.map_id)==int(npc.map_id),"NPC on naturally reached map"):return false
@@ -65,7 +66,7 @@ func floor_to(map_id:int)->bool:
 func guard(script:String)->bool:
  if not await converse(script):return false
  if not await ready(func():return host.battle_open and world.battle_view.visible,"natural guard opened"):return false
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  for i in range(100):
   var state:Dictionary=host.battle.snapshot()
   if not state.active:break
@@ -74,7 +75,7 @@ func guard(script:String)->bool:
    if int(state.enemies[j].hp)>0:target=j;break
   await rpc({"type":"battle_command","action":"attack","target":target})
  var closed:Dictionary=await rpc({"type":"battle_close"})
- battle_ms+=Time.get_ticks_msec()-started
+ battle_ms+=Clock.ticks_msec()-started
  print("GUARD CLOSE ",script," result=",closed," host=",host.automation.position_map,"/",host.automation.position_cell," view=",world.cell)
  if not check(closed.get("outcome","")=="win","actual guard outcome must be victory"):return false
  return await ready(func():return not world.battle_view.visible and not world.area_transition_busy and world.cell==host.automation.position_cell,"original guard victory Warp settles")

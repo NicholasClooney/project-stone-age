@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## LAN phase 4c (docs/development/lan-profiles.md "Phase 4c"): automation in a
 ## party. The leader runs 自动练级 and every troop it meets is a party battle
 ## the members enter; a member with 组队自动战斗 commands at once from its own
@@ -50,7 +51,7 @@ static func remove_tree(folder: String) -> void:
 	DirAccess.remove_absolute(folder)
 
 func run() -> void:
-	print("LAN PARTY AUTO seed=",fixture_seed," started=",Time.get_unix_time_from_system())
+	print("LAN PARTY AUTO seed=",fixture_seed," started=",Clock.unix_time())
 	dir = "user://lan-party-auto-test-%d" % OS.get_process_id()
 	remove_tree(dir)
 	DirAccess.make_dir_recursive_absolute(dir)
@@ -188,8 +189,8 @@ func selection_context() -> void:
 	check(actual.get("party",false) and actual.players==3 and actual.active_pets==1 and actual.share_exp,"training estimate reads the real three-player party and participating pet")
 	var chooser=preload("res://server/training_troops.gd").new()
 	chooser.prepare(backend.encounter_catalog,100,Vector2i(637,493),backend.session.snapshot(),{"xp":10},false,false,actual)
-	var deadline:=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
-	while not chooser.ready and Time.get_ticks_msec()<deadline:chooser.advance(1000);await process_frame
+	var deadline:=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+	while not chooser.ready and Clock.ticks_msec()<deadline:chooser.advance(1000);await process_frame
 	var row: Dictionary={}
 	for value in chooser.rows:
 		if int(value.group_id)==88:row=value

@@ -1,16 +1,16 @@
 extends RefCounted
 ## Integration fixture uses real passage, every original maze step, actual
 ## guard commands and saved original Warp. It never writes an arrival proof.
-const Clock=preload("res://server/original_world_clock.gd")
+const WorldClock=preload("res://server/original_world_clock.gd")
 const Route=preload("res://tests/support/original_route_driver.gd")
 static func guard(b,map_id:int=41)->Dictionary:
- var old:Callable=Clock.clock
- Clock.clock=func():return Clock.ERA+int(ceil(float(400 if map_id==42 else 200)*5400.0/1024.0))
+ var old:Callable=WorldClock.clock
+ WorldClock.clock=func():return WorldClock.ERA+int(ceil(float(400 if map_id==42 else 200)*5400.0/1024.0))
  b.automation.position_changed(400,Vector2i(87,101) if map_id==42 else Vector2i(97,119))
  var reply:Dictionary=b.handle({"type":"check_passage","from_map":400,"to_map":map_id})
  if reply.ok:reply=b.handle({"type":"report_position","map_id":map_id,"cell":[11,8]})
  if reply.ok:reply=Route.walk(b,map_id,Vector2i(34,42),[map_id])
- Clock.clock=old
+ WorldClock.clock=old
  return reply
 static func sage(b)->Dictionary:
  return Route.walk(b,41,Vector2i(34,27),[41])

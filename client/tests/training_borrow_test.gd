@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 const Backend=preload("res://server/backend.gd")
 const Borrow=preload("res://server/training_borrow.gd")
 const Selection=preload("res://server/training_troops.gd")
@@ -229,8 +230,8 @@ func run() -> void:
 	for condition in raw.conditions.values():condition.enabled=false
 	check(flow.handle({"type":"auto_start","kind":"find_pet","map_id":MAP,"cell":[CELL.x,CELL.y],"filter":{"templates":[113],"total":-8,"offsets":[],"clean_only":false,"fast":false,"showcase":true},"stat_filters":{"113":raw},"settings":{"capture_hp":100,"xp":10}}).ok,"actual showcase capture-to-borrow workflow starts")
 	var saw_capture:=false;var saw_borrow:=false;var capture_unchanged:=true
-	var deadline:=Time.get_ticks_msec()+int(Wait.DEADLINE*1000)
-	while flow.automation.flow_active() and Time.get_ticks_msec()<deadline:
+	var deadline:=Clock.ticks_msec()+int(Wait.DEADLINE*1000)
+	while flow.automation.flow_active() and Clock.ticks_msec()<deadline:
 		flow._process(0.5)
 		if flow.battle_open and flow.automation.flow_phase=="capture":
 			saw_capture=true;capture_unchanged=capture_unchanged and not flow.battle.snapshot().has("training_borrow") and flow.session.training_borrow_rng().is_empty()

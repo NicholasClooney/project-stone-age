@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_public_corridors_letters_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## Incremental approach only: never complete the old adult/herb/shell chains.
 const Motion=preload("res://server/quest_auto_motion.gd")
 const CASES=[
@@ -35,7 +36,7 @@ func approach_fixture(mode:String,spec:Dictionary):
  print("LEGACY APPROACH INITIAL ",JSON.stringify({"mode":mode,"case":spec,"actual_selected":selected}))
  return b
 func approach(b,mode:String,spec:Dictionary)->void:
- var started:int=Time.get_ticks_msec()
+ var started:int=Clock.ticks_msec()
  var packets:Array=[]
  var observer:Callable=func(event:Dictionary):
   if event.get("type")=="position" and event.has("quest_segment_id"):
@@ -50,7 +51,7 @@ func approach(b,mode:String,spec:Dictionary)->void:
  var reached:=false
  var ticks:=0
  var previous_was_door_walk:=false
- while accepted and b.quest_auto.running and not reached and Time.get_ticks_msec()<deadline:
+ while accepted and b.quest_auto.running and not reached and Clock.ticks_msec()<deadline:
   var old_map:int=b.automation.position_map
   var old:Vector2i=b.automation.position_cell
   b.quest_auto.tick(b,0.05)
@@ -117,22 +118,22 @@ func approach(b,mode:String,spec:Dictionary)->void:
  # Missing new-audit hit is honestly reported as fallback; never change A/goal.
  b.handle({"type":"quest_auto_stop"})
  readback(b,"legacy-"+str(spec.label)+"-"+mode)
- stats.wall_ms=Time.get_ticks_msec()-started
+ stats.wall_ms=Clock.ticks_msec()-started
  summaries.append(stats)
  print("PUBLIC LEGACY APPROACH ",JSON.stringify(stats))
  b.event.disconnect(observer)
 func run()->void:
- deadline=Time.get_ticks_msec()+140000
+ deadline=Clock.ticks_msec()+140000
  for mode in ["B","C"]:
   for spec in CASES:
    var b=approach_fixture(mode,spec)
    await approach(b,mode,spec)
    b.free()
-   if Time.get_ticks_msec()>=deadline:break
-  if Time.get_ticks_msec()>=deadline:break
- check(summaries.size()==6 and Time.get_ticks_msec()<deadline,"All six bounded incremental approaches finish in allocated window")
+   if Clock.ticks_msec()>=deadline:break
+  if Clock.ticks_msec()>=deadline:break
+ check(summaries.size()==6 and Clock.ticks_msec()<deadline,"All six bounded incremental approaches finish in allocated window")
  var output=FileAccess.open("user://public-corridors-legacy-approach-results.json",FileAccess.WRITE)
  if output!=null:output.store_string(JSON.stringify({"summaries":summaries,"assertions":assertions,"failures":failures}));output.close()
  check(output!=null,"Retain actual incremental targets, boundaries and fallback results")
- print("QUEST AUTO PUBLIC CORRIDORS LEGACY APPROACH: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Time.get_ticks_msec()-began])
+ print("QUEST AUTO PUBLIC CORRIDORS LEGACY APPROACH: %d assertions, %d failures; wall_ms=%d"%[assertions,failures,Clock.ticks_msec()-began])
  quit(1 if failures else 0)

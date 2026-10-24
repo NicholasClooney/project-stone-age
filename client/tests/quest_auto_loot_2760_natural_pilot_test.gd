@@ -1,4 +1,5 @@
 extends "res://tests/quest_auto_loot_crystal_prerequisite_test.gd"
+const Clock=preload("res://scripts/clock.gd")
 ## UNRUN pilot candidate. Natural mode discloses GM120 and V179/T178 allocation;
 ## cancel mode retains GM60 and the original near helper. These are setup
 ## conveniences; the last leg is real GameScene collision walking. This is
@@ -82,7 +83,7 @@ class PilotHeartbeatTimer:
   var before_wall:int=heartbeat_wall_ms
   var before_clock_calls:int=b.p3_clock_calls
   var before_generation:int=heartbeat_generation
-  var before_now:int=Time.get_ticks_msec()
+  var before_now:int=Clock.ticks_msec()
   var wall_gate_candidate:bool=is_same(b.quest_loot,self) and b._process_depth==1 and b._dispatch_boundary_depth==1 and b._observer_depth==0 and b._flush_depth==0 and b._depth==1 and b._normal_process_generation==generation and b._normal_process_entry_epoch==entry_epoch and b._dispatch_epoch==entry_epoch and generation!=before_generation and heartbeat_call==null and anchor_ms>=0 and key==State.STEP and not frozen and not blocked and not storage_paused and not battle_receipt.is_empty()
   active_invocations+=1
   super.heartbeat_normal_process(b,generation,entry_epoch)
@@ -203,12 +204,12 @@ class PilotBackend:
   var timer:PilotHeartbeatTimer=quest_loot
   if not is_instance_valid(timer) or not p3_clock_context_current(timer):
    p3_clock_unmatched_calls+=1
-   return Time.get_ticks_msec()
+   return Clock.ticks_msec()
   var context:Dictionary=timer.p3_clock_context
   context.claimed=true
   context.call=timer.heartbeat_call
   p3_clock_calls+=1
-  var value:Variant=Time.get_ticks_msec()
+  var value:Variant=Clock.ticks_msec()
   var record:Dictionary={"generation":context.generation,"entry_epoch":context.entry_epoch,"dispatch_epoch":context.dispatch_epoch,"process_depth":context.process_depth,"dispatch_depth":context.dispatch_depth,"call":timer.heartbeat_call,"kind":"real"}
   if not p3_clock_overrides.is_empty():
    value=p3_clock_overrides.pop_front()
@@ -701,9 +702,9 @@ func emit_pilot_trace(label:String,value:Variant)->bool:
  print(label," ",encoded)
  return true
 func pilot_remaining_seconds()->float:
- return maxf(0.0,float(pilot_deadline_ms-Time.get_ticks_msec())/1000.0)
+ return maxf(0.0,float(pilot_deadline_ms-Clock.ticks_msec())/1000.0)
 func pilot_wait(condition:Callable,label:String)->bool:
- while Time.get_ticks_msec()<pilot_deadline_ms:
+ while Clock.ticks_msec()<pilot_deadline_ms:
   if failures>0:return false
   if not pilot_trace_ok():check(false,"Pilot observation/evidence overflow or settlement/transport mismatch");return false
   if condition.call():return true
@@ -829,7 +830,7 @@ func choose_safe_source_destination()->Vector2i:
  for cell in candidates:
   if queries>=MAX_PATH_QUERIES:break
   if candidate_search_windows>=MAX_ASTAR_SEARCH_WINDOWS:break
-  if Time.get_ticks_msec()>=pilot_deadline_ms:
+  if Clock.ticks_msec()>=pilot_deadline_ms:
    route_search_queries=queries
    route_search_candidates=candidates.size()
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_before_next_astar","candidate_cells":route_search_candidates,"queries":route_search_queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"deadline_ms":pilot_hard_limit_ms}))
@@ -846,7 +847,7 @@ func choose_safe_source_destination()->Vector2i:
   if candidate_search_windows>MAX_ASTAR_SEARCH_WINDOWS or route_search_windows>MAX_ROUTE_SEARCH_WINDOWS:
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"astar_window_overflow","queries":queries,"search_windows":route_search_windows,"route_window_limit":MAX_ROUTE_SEARCH_WINDOWS,"candidate_search_windows":candidate_search_windows,"candidate_window_limit":MAX_ASTAR_SEARCH_WINDOWS,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells}))
    return Vector2i(-1,-1)
-  if Time.get_ticks_msec()>=pilot_deadline_ms:
+  if Clock.ticks_msec()>=pilot_deadline_ms:
    print("PILOT_ROUTE_SEARCH_REJECT ",JSON.stringify({"reason":"hard_deadline_during_bounded_astar","candidate_cells":candidates.size(),"queries":queries,"query_limit":MAX_PATH_QUERIES,"searched_cells":route_search_cell_visits,"cell_visit_limit":MAX_ASTAR_CELL_VISITS,"map_cells":route_search_map_cells,"deadline_ms":pilot_hard_limit_ms}))
    return Vector2i(-1,-1)
   if candidate.is_empty() or candidate.back()!=cell or candidate.size()>MAX_ROUTE_CELLS:continue
@@ -1150,7 +1151,7 @@ func activate_internal_pilot()->bool:
  host.pilot_initial_e2_last_generation=q.initial_e2_generation_floor
  host.pilot_initial_e2_connection=q.initial_e2_connection
  host.pilot_initial_e2_client=q.initial_e2_client
- pilot_e1_opened_ms=Time.get_ticks_msec()
+ pilot_e1_opened_ms=Clock.ticks_msec()
  pilot_e1_anchor_ms=host.quest_loot.anchor_ms
  check(pilot_e1_anchor_ms>=0 and pilot_e1_opened_ms>=pilot_e1_anchor_ms and pilot_e1_generation_ok(q),"E1 records read-only monotonic open time/anchor without sampling the timer")
  return failures==0
@@ -1210,7 +1211,7 @@ func expected_existing_starter_growth(profile:Dictionary,pet_id:String,target:in
 
 func prepare_existing_starter_pet()->bool:
  if failures or p3_cancel_reentry_required():return false
- if Time.get_ticks_msec()>=pilot_deadline_ms or host.battle_open or not host.session._pending.is_empty():
+ if Clock.ticks_msec()>=pilot_deadline_ms or host.battle_open or not host.session._pending.is_empty():
   check(false,"Existing-starter preparation begins before the shared deadline and outside battle/receipt")
   return false
  var before:Dictionary=host.session._profile.duplicate(true)
@@ -1228,7 +1229,7 @@ func prepare_existing_starter_pet()->bool:
  var level_serial:int=host.quest_save_serial
  var level_reply:Dictionary=await request_world({"type":"level_pet_to","pet_id":"pet-1","target":Session.MAX_LEVEL},"Original owned starter pet level_pet_to request")
  if failures:return false
- if Time.get_ticks_msec()>=pilot_deadline_ms:
+ if Clock.ticks_msec()>=pilot_deadline_ms:
   check(false,"Shared outer deadline remains before any later pet-preparation action")
   return false
  check(level_reply.get("ok",false)==true and str(level_reply.get("type",""))=="ack" and not level_reply.get("pending",false) and host.quest_save_serial==level_serial+1 and not host.battle_open and host.session._pending.is_empty(),"Wait for the actual level_pet_to server ACK and its original save boundary; do not treat SessionClient's pending bool as completion")
@@ -1242,7 +1243,7 @@ func prepare_existing_starter_pet()->bool:
  var select_serial:int=host.quest_save_serial
  var select_reply:Dictionary=await request_world({"type":"select_pet","index":0},"Original select_pet request for fixed pet-1 index")
  if failures:return false
- if Time.get_ticks_msec()>=pilot_deadline_ms:
+ if Clock.ticks_msec()>=pilot_deadline_ms:
   check(false,"Shared outer deadline remains before checkpoint/disk verification")
   return false
  check(select_reply.get("ok",false)==true and str(select_reply.get("type",""))=="ack" and not select_reply.get("pending",false) and host.quest_save_serial==select_serial+1 and not host.battle_open and host.session._pending.is_empty(),"Wait for the actual select_pet server ACK and original save boundary")
@@ -1266,7 +1267,7 @@ func run()->void:
   quit(1);return
  p3_cancel_reentry_mode=not user_args.is_empty()
  pilot_hard_limit_ms=CANCEL_HARD_LIMIT_MS if p3_cancel_reentry_mode else NATURAL_HARD_LIMIT_MS
- pilot_started_ms=Time.get_ticks_msec();pilot_deadline_ms=pilot_started_ms+pilot_hard_limit_ms
+ pilot_started_ms=Clock.ticks_msec();pilot_deadline_ms=pilot_started_ms+pilot_hard_limit_ms
  var path:String=DISK_PATH
  if FileAccess.file_exists(UNCOMPLETE_PATH) or DirAccess.dir_exists_absolute(UNCOMPLETE_PATH):
   check(false,"Refuse a reused hard-deadline evidence path")
@@ -1278,7 +1279,7 @@ func run()->void:
   var clock_owner:WeakRef=weakref(host)
   host.quest_loot.clock=func()->Variant:
    var current=clock_owner.get_ref()
-   return current.pilot_loot_clock() if is_instance_valid(current) else Time.get_ticks_msec()
+   return current.pilot_loot_clock() if is_instance_valid(current) else Clock.ticks_msec()
  host.p3_observer=PilotQueuedObserver.new(host)
  host.event.connect(host.p3_observer.receive)
  root.add_child(host)
@@ -1393,12 +1394,12 @@ func run()->void:
   if attempts>=MAX_ATTEMPTS or int(entry.get("saved_battles",0))>=MAX_BATTLES:
    if not host.battle_open and host.session._pending.is_empty() and host.session._loot_settlement.is_empty():break
   await physics_frame
- var hard_expired:bool=Time.get_ticks_msec()>=pilot_deadline_ms
+ var hard_expired:bool=Clock.ticks_msec()>=pilot_deadline_ms
  var unsettled_at_deadline:bool=host.quest_auto.running or host.battle_open or not host.session._pending.is_empty() or not host.session._loot_settlement.is_empty()
  if hard_expired and not unsettled_at_deadline:
   # Do not run the full source/profile/disk audit beyond the single hard wall.
   # There is no open battle to preserve, but the bounded result was not verified.
-  var observed_ms:int=Time.get_ticks_msec()
+  var observed_ms:int=Clock.ticks_msec()
   print("PILOT_FINAL ",JSON.stringify({"elapsed_ms":observed_ms-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":false,"result":"DEADLINE_REACHED_BEFORE_FINAL_VERIFICATION","settled":true,"e1_anchor_ms":pilot_e1_anchor_ms,"e1_elapsed_ms":observed_ms-pilot_e1_anchor_ms,"e1_budget_remaining_ms":maxi(0,BUDGET_MINUTES*60000-(observed_ms-pilot_e1_anchor_ms)),"outer_remaining_ms":maxi(0,pilot_deadline_ms-observed_ms)}))
   check(false,"Single hard deadline leaves time for the complete final verification")
   quit(1);return
@@ -1407,7 +1408,7 @@ func run()->void:
   # verification or copying the growing observer trace after it has expired.
   # This is read-only and deliberately leaves the original open receipt untouched.
   var cutoff:=_hard_cutoff_observation()
-  var cutoff_trace_ok:bool=emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":Time.get_ticks_msec()-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":true,"result":"UNCOMPLETE","cutoff":cutoff})
+  var cutoff_trace_ok:bool=emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":Clock.ticks_msec()-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":true,"result":"UNCOMPLETE","cutoff":cutoff})
   var evidence_text:String=JSON.stringify(cutoff)
   var evidence_bytes:PackedByteArray=evidence_text.to_utf8_buffer()
   if evidence_bytes.size()>MAX_UNCOMPLETE_EVIDENCE_BYTES:
@@ -1435,7 +1436,7 @@ func run()->void:
   check(false,"Hard pilot deadline arrived before original receipt settlement; preserve pending and report UNCOMPLETE")
   quit(1);return
  var final:Dictionary=source_snapshot()
- var final_observed_ms:int=Time.get_ticks_msec()
+ var final_observed_ms:int=Clock.ticks_msec()
  check(host.pilot_initial_e2_calls>0 and host.pilot_attempt_count>0,"The real initial E1 was consumed by test-only E2 and reached an original field_step")
  if failures:quit(1);return
  check(emit_pilot_trace("PILOT_FINAL",{"elapsed_ms":final_observed_ms-pilot_started_ms,"outer_hard_limit_ms":pilot_hard_limit_ms,"hard_unfinished":false,"result":"BOUNDED_FINISH","e1_anchor_ms":pilot_e1_anchor_ms,"e1_elapsed_ms":final_observed_ms-pilot_e1_anchor_ms,"e1_budget_remaining_ms":maxi(0,BUDGET_MINUTES*60000-(final_observed_ms-pilot_e1_anchor_ms)),"outer_remaining_ms":maxi(0,pilot_deadline_ms-final_observed_ms),"final":final}),"Complete final profile/cache/ledger summary fits output limit")
@@ -1519,7 +1520,7 @@ func _hard_cutoff_observation()->Dictionary:
  var recent_transitions:Array=transitions.slice(maxi(0,transitions.size()-8))
  var active_entries:Array=host.automation.active_entry_samples
  var recent_active_entries:Array=active_entries.slice(maxi(0,active_entries.size()-8))
- var observed_ms:int=Time.get_ticks_msec()
+ var observed_ms:int=Clock.ticks_msec()
  var retired_summary:Array=[]
  for row in host.retired_battles:
   var commit:Dictionary=row.get("settlement_commit",{})

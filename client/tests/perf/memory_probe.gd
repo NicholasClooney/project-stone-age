@@ -1,4 +1,5 @@
 extends SceneTree
+const Clock=preload("res://scripts/clock.gd")
 ## Memory probe: plays a fixed tour of the real game scene and records, after
 ## each step, Godot's memory monitors, the process footprint and where the
 ## memory goes (textures by folder, audio, parsed JSON, the game's own caches).
@@ -30,7 +31,7 @@ func _initialize() -> void:
 	call_deferred("run")
 
 func run() -> void:
-	started_msec = Time.get_ticks_msec()
+	started_msec = Clock.ticks_msec()
 	for argument in OS.get_cmdline_user_args():
 		if argument.begins_with("--out="):out_path = argument.trim_prefix("--out=")
 	_collect_assets(LEGACY)
@@ -101,7 +102,7 @@ func run() -> void:
 	game.music.stop();game.effect.stop()
 	game.queue_free()
 	await frames(5)
-	print("[probe] done in %.1f s" % ((Time.get_ticks_msec()-started_msec)/1000.0))
+	print("[probe] done in %.1f s" % ((Clock.ticks_msec()-started_msec)/1000.0))
 	quit(0)
 
 # ---- tour steps ----------------------------------------------------------------
@@ -138,8 +139,8 @@ func walk_around(steps: int) -> void:
 			goal += Vector2i(signi(offset.x),signi(offset.y))
 		if not game.is_walkable(goal):continue
 		game.walk_to(goal)
-		var limit := Time.get_ticks_msec()+4000
-		while (game.moving or not game.path.is_empty()) and Time.get_ticks_msec() < limit:await process_frame
+		var limit := Clock.ticks_msec()+4000
+		while (game.moving or not game.path.is_empty()) and Clock.ticks_msec() < limit:await process_frame
 	await frames(5)
 
 func battle(action: String) -> void:
@@ -271,7 +272,7 @@ func sample(step: String, in_battle: bool = false) -> void:
 	var footprint := _footprint()
 	var row := {
 		"step":step,
-		"seconds":(Time.get_ticks_msec()-started_msec)/1000.0,
+		"seconds":(Clock.ticks_msec()-started_msec)/1000.0,
 		"map":int(game.data.get("map_id",-1)) if is_instance_valid(game) and game.data is Dictionary else -1,
 		"static_mb":Performance.get_monitor(Performance.MEMORY_STATIC)/MB,
 		"static_max_mb":Performance.get_monitor(Performance.MEMORY_STATIC_MAX)/MB,
