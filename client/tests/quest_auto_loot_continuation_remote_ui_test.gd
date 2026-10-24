@@ -276,7 +276,11 @@ func verify_isolated_recovery()->bool:
  if copied.is_empty():return false
  if not check(copied.bytes==primary.bytes and copied.evidence==primary.evidence,"Independent copy exactly preserves original primary length SHA and bytes"):return false
  print("ISOLATED RECOVERY BEFORE ",JSON.stringify({"path":copy_path,"live":live_before,"copy":copied.evidence,"expected":expected}))
- var independent=Session.new()
+ # This audit isolates cold ledger retirement, not native-day login luck.
+ # Preserve every profile field by keeping this independent login on the source day.
+ # Cross-day clock/seed behavior is covered by classic_luck_test.
+ var source_login_time:int=int(source_profile.profile.player.last_luck_time)
+ var independent=Session.new(func():return source_login_time)
  var loaded:bool=independent.load_game(copy_path) # Original loader once, own independent path only.
  print("ISOLATED RECOVERY RETURN ",JSON.stringify({"loaded":loaded,"last_error":independent.last_error}))
  var loaded_profile:Dictionary=independent.snapshot().duplicate(true)

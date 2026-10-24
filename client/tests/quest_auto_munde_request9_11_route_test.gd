@@ -136,6 +136,24 @@ func saved_equal(a: Variant, b: Variant) -> bool:
 		return true
 	return typeof(a) == typeof(b) and a == b
 
+## Diagnostic only: use the same complete numeric/type comparison as saved_equal.
+func saved_difference(expected: Variant, actual: Variant, path: String = "$profile") -> Dictionary:
+	if saved_equal(expected, actual):return {}
+	if expected is Dictionary and actual is Dictionary:
+		for key in expected:
+			var child_path := path + "." + str(key)
+			if not actual.has(key):return {"path":child_path,"expected":expected[key],"actual_missing":true}
+			var child := saved_difference(expected[key], actual[key], child_path)
+			if not child.is_empty():return child
+		for key in actual:
+			if not expected.has(key):return {"path":path + "." + str(key),"expected_missing":true,"actual":actual[key]}
+	elif expected is Array and actual is Array:
+		if expected.size() != actual.size():return {"path":path + ".size","expected":expected.size(),"actual":actual.size()}
+		for index in range(expected.size()):
+			var child := saved_difference(expected[index], actual[index], "%s[%d]" % [path,index])
+			if not child.is_empty():return child
+	return {"path":path,"expected":expected,"actual":actual,"expected_type":typeof(expected),"actual_type":typeof(actual)}
+
 func reviewed_portal(link: Dictionary) -> bool:
 	if link.size() != 5:return false
 	for expected in REVIEWED_PORTALS:
@@ -429,8 +447,19 @@ func record_transaction() -> bool:
 	var expected: Dictionary = transaction_before.duplicate(true)
 	Rules.set_flag(expected, "now", event_id, true)
 	if not check(saved_equal(earned, expected), "full profile diff is exactly the runner-earned NOW%d flag" % event_id):return false
-	var disk = Session.new()
-	if not check(disk.load_game(backend.save_path) and saved_equal(disk.snapshot(), earned), "normal native transaction save reads back the complete profile"):return false
+	# Verify transaction persistence within the earned profile's native login day.
+	# Cross-day luck refresh is a separate clock/seed-tested behavior, not a save diff.
+	var earned_login_time: int = int(earned.player.last_luck_time)
+	var disk = Session.new(func():return earned_login_time)
+	var loaded: bool = disk.load_game(backend.save_path)
+	var readback: Dictionary = disk.snapshot()
+	var same_profile: bool = saved_equal(readback, earned)
+	if not loaded or not same_profile:
+		var diagnostic := {"kind":"transaction_readback_failure","event":event_id,"loaded":loaded,"last_error":disk.last_error,"login_time":earned_login_time,"difference":saved_difference(earned,readback),"expected":earned,"actual":readback}
+		trace.append(diagnostic)
+		print("MUNDE TRANSACTION READBACK FAILURE ",JSON.stringify(diagnostic))
+	if not check(loaded, "normal native transaction save loads successfully"):return false
+	if not check(same_profile, "normal native transaction save reads back the complete profile"):return false
 	var following: Dictionary = Candidate.select(backend, 8)
 	if event_id == 9:
 		if not check(following.get("status") == "step" and following.step.id == "munde:request11" and Rules.flag(earned,"now",9), "only actually committed NOW9 enables the next source REQUEST"):return false
