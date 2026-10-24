@@ -65,8 +65,10 @@ func run()->void:
  if not check(world.session.snapshot().original_items.count(2766)==0 and world.session.snapshot().original_items.size()==2,"actual box click consumes all shells for one reward"):return
  world.show_adventure_menu("inventory")
  if not await click(world.adventure_menu.panel.get_node("OriginalItemSlot_1")):return
- var effects:Label=world.adventure_menu.panel.find_child("OriginalEffectsMetadata",true,false)
- if not check(is_instance_valid(effects) and effects.text.contains("未生效"),"actual box equipment magic remains explicitly inactive"):return
+ # The details panel fills on a later frame than the click; wait for it.
+ if not await ready(func():
+  var effects:Label=world.adventure_menu.panel.find_child("OriginalEffectsMetadata",true,false)
+  return is_instance_valid(effects) and effects.text.contains("未生效"),"actual box equipment magic remains explicitly inactive"):return
  await scroll_details()
  await proof("water-06-box-equipment-inactive-magic")
  world.link.close();world.music.stop();world.effect.stop();world.queue_free();server.stop();server.queue_free();backend.queue_free();await process_frame
