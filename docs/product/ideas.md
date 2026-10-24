@@ -881,3 +881,10 @@
 - 想法：把服务器逻辑放进浏览器里单机运行，静态托管（GitHub Pages 一类），不需要服务器就能玩 demo。
 - 顾虑：原版素材的版权，以及素材体积。
 - 去向：用户 2026-10-08 说先不做，也不需要评估。
+
+## 2026-10-24 · 全量测试继续提速 · 💤 以后再看
+
+- 现状：虚拟时钟改造（v0.289.x）后等墙钟的 suite 快 2.5 到 5 倍，8 路全量在负载 29 时 49 min。剩余瓶颈是纯 CPU 的 loot/fee 大组合 suite（65/56 case 一个进程）和并行度。
+- 候选：拆组合 suite、profile 每 case 的重复准备、按负载动态调 jobs、按 diff 选 suite。细节与数据见 [全量测试耗时与提速方向](../development/test-suite-performance.md)。
+- 遗留：`clean_hunt_test` 暂按真实时钟运行待用户确认；`quest_auto_loot_2760_natural_pilot_test` 需重写。
+- 去向：用户 2026-10-24 说先存档，以后再回来做。
