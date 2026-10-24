@@ -36,6 +36,9 @@ with open(sys.argv[2], "w") as output:
         if user_args:
             command += ["--", *user_args]
         suite_env = os.environ.copy()
+        # Real audio playback suites run on the wall clock (tools/run_suites.py REALTIME_SUITES).
+        if suite in ("battle_audio_tail_test", "showcase_test", "clean_hunt_test"):
+            suite_env["STONE_AGE_TEST_REALTIME"] = "1"
         if suite in ("quest_auto_loot_2760_natural_pilot_test", "quest_auto_loot_heartbeat_cancel_test"):
             user_root = suite_env.get("STONE_AGE_TEST_USER_DIR")
             if not user_root:

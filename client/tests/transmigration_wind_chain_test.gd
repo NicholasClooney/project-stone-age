@@ -178,7 +178,8 @@ func cooldowns(b)->void:
  var state=b.original_quests.npc_state
  var old:Callable=state.clock
  for id in state.records.keys():
-  if not str(id).begins_with("100/sb_kbu.arg") or not state.records[id].has("dead_until"):continue
+  # On the game clock every guard fell in the same frame, so one deadline+1 refresh expires them all.
+  if not state.records.has(id) or not str(id).begins_with("100/sb_kbu.arg") or not state.records[id].has("dead_until"):continue
   var deadline:int=state.records[id].dead_until
   state.clock=func():return deadline
   b.original_quests.refresh_npc_state()
