@@ -126,4 +126,4 @@ Tests run headless and muted and need the imported assets. Read [AGENTS.md](AGEN
 | `docs/` | Design, reverse-engineering evidence and development notes |
 | `references/`, `.tools/` | Ignored: upstream source checkouts, engine, original client data |
 
-The bundled Noto Sans SC font is distributed under its included OFL license.
+The project's own code and docs are licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE.md). The original game's assets and reference source are not part of this repository and are not covered by that license. The bundled Noto Sans SC font is distributed under its included OFL license.

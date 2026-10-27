@@ -126,4 +126,4 @@
 | `docs/` | 设计、逆向工程证据和开发笔记 |
 | `references/`、`.tools/` | 被忽略：上游源码 checkout、引擎、原版客户端数据 |
 
-附带的 Noto Sans SC 字体按其附带的 OFL 许可证分发。
+本项目自己的代码和文档按 [PolyForm Noncommercial License 1.0.0](LICENSE.md) 授权。原版游戏素材和参考源码不在本仓库中，也不在该许可范围内。附带的 Noto Sans SC 字体按其附带的 OFL 许可证分发。
