@@ -1,0 +1,9 @@
+{
+  "scheme": "beta",
+  "notes_dir": "docs/development/changelog-notes",
+  "legacy_minor_entries": 43,
+  "outputs": {
+    "json": "client/data/changelog.json",
+    "version_file": {"path": "client/project.godot", "line": "config/version=\"{version}\"", "after": "[application]"}
+  }
+}

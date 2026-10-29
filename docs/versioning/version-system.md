@@ -77,6 +77,13 @@ only `client/data/changelog.json` and `client/project.godot`; refactor/chore not
 do not bump versions or appear in the player log. Shared commits require a separate
 `chore(changelog)` regeneration commit.
 
+The builder and refresh script are project-agnostic copies vendored from the
+`new-project-setup` skill (dotfiles, `.agents/skills/local/new-project-setup/templates/`),
+which holds the canonical version; change them there and copy back. StoneAge's
+settings (beta scheme, the 43 legacy entries, the JSON and `project.godot` outputs)
+live in `tools/build_changelog.json`. `tools/test_build_changelog.py` is the shared
+test suite; StoneAge-only checks go in `tools/test_changelog_history.py`.
+
 For cherry-picks and rebases, retain both independent Markdown files. If a subject
 is duplicated, keep one authoritative note; if a filename collides, rename one
 with a distinct valid timestamp/slug. Generated JSON and project-version conflicts

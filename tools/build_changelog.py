@@ -1,5 +1,6 @@
-"""Build the in-game log from first-parent conventional feat/fix commits.
+"""Build the changelog from first-parent conventional feat/fix commits and Markdown notes.
 
+Settings live in tools/build_changelog.json; without it the defaults below apply.
 No commit hash is embedded, so refreshing and amending the current commit is stable.
 """
 import argparse
@@ -10,31 +11,37 @@ from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-PATTERN = re.compile(r'^(feat|fix)(?:\([^)]*\))?!?:\s+(.+)$')
+CONFIG = ROOT/'tools/build_changelog.json'
+PATTERN = re.compile(r'^(feat|fix)(?:\([^)]*\))?(!?):\s+(.+)$')
+SCHEMES = ('beta', 'semver', 'calver')
+DEFAULTS = dict(scheme='beta', notes_dir='docs/development/changelog-notes', legacy_minor_entries=0,
+                outputs=dict(markdown='CHANGELOG.md'))
+OUTPUTS = ('json', 'markdown', 'version_file')
 
 
-# Entries 1..43 predate patch releases and keep their v0.N.0 numbers (tag v0.43.0).
-# Afterwards feat bumps the minor version and fix bumps the patch version.
-LEGACY_ENTRIES = 43
-
-
-def build(records, notes, legacy=LEGACY_ENTRIES):
+# beta:   v0.MINOR.PATCH. feat bumps MINOR and resets PATCH, fix bumps PATCH. The first
+#         `legacy` entries predate patch releases and each bump MINOR.
+# semver: vMAJOR.MINOR.PATCH. Like beta, and a `!` subject (feat!: ...) bumps MAJOR.
+# calver: releases are dated tags chosen by hand, so entries carry only their date.
+def build(records, notes, scheme='beta', legacy=0):
     entries = []
-    minor = patch = 0
+    major = minor = patch = 0
     for subject, date in records:
         match = PATTERN.match(subject)
         if not match:
             continue
-        kind = match.group(1)
-        if len(entries) < legacy or kind == 'feat':
+        kind, breaking, fallback = match.groups()
+        if scheme == 'semver' and breaking:
+            major, minor, patch = major+1, 0, 0
+        elif kind == 'feat' or (scheme == 'beta' and len(entries) < legacy):
             minor, patch = minor+1, 0
         else:
             patch += 1
-        entry = notes.get(subject, {})
-        entries.append(dict(version=f'v0.{minor}.{patch}', date=date,
-                            kind=kind, title=entry.get('title', match.group(2)),
-                            details=entry.get('details', [])))
-    return dict(version=f'v0.{minor}.{patch}', count=len(entries),
+        note = notes.get(subject, {})
+        entry = {} if scheme == 'calver' else dict(version=f'v{major}.{minor}.{patch}')
+        entry.update(date=date, kind=kind, title=note.get('title', fallback), details=note.get('details', []))
+        entries.append(entry)
+    return dict(version=None if scheme == 'calver' else f'v{major}.{minor}.{patch}', count=len(entries),
                 feature_count=sum(e['kind']=='feat' for e in entries),
                 fix_count=sum(e['kind']=='fix' for e in entries), entries=list(reversed(entries)))
 
@@ -49,6 +56,8 @@ def read_notes(directory):
     if not directory.exists():
         return notes
     for path in sorted(directory.glob('*.md')):
+        if path.name == 'README.md':
+            continue
         try:
             match = NOTE_FILENAME.fullmatch(path.name)
             if not match:
@@ -88,32 +97,81 @@ def read_notes(directory):
     return notes
 
 
-def outputs():
+def render_markdown(data):
+    lines = ['# Changelog', '']
+    if not data['entries']:
+        lines += ['No feature or fix commits yet.']
+    for entry in data['entries']:
+        meta = [f"`{entry['version']}`"] if 'version' in entry else []
+        meta += [entry['date'], 'Feature' if entry['kind'] == 'feat' else 'Fix']
+        lines += ['## '+entry['title'].replace('\n', ' '), '', ' · '.join(meta), '']
+        lines += ['- '+detail.replace('\n', '\n  ') for detail in entry['details']]
+        if entry['details']:
+            lines.append('')
+    return '\n'.join(line.rstrip() for line in '\n'.join(lines).split('\n')).rstrip('\n')+'\n'
 
-    log = subprocess.check_output(['git','log','--first-parent','--reverse','--date=short','--format=%s%x1f%ad'], cwd=ROOT, text=True)
+
+# version_file: {"path": ..., "line": "version = \"{version}\"", "after": optional anchor}.
+# Replaces the line that starts like `line`, or inserts it after `after`, or appends it.
+# A `line` of just "{version}" makes the whole file the version (a VERSION file).
+def update_version_line(current, spec, version):
+    line = spec['line'].format(version=version)
+    if spec['line'].startswith('{version}'):
+        return line+'\n'
+    prefix = re.compile('^'+re.escape(spec['line'].split('{version}')[0])+'.*$', re.M)
+    if prefix.search(current):
+        return prefix.sub(lambda _: line, current)
+    anchor = spec.get('after')
+    if anchor and anchor in current:
+        return current.replace(anchor, anchor+'\n\n'+line, 1)
+    return (current.rstrip('\n')+'\n' if current else '')+line+'\n'
+
+
+def load_config():
+    config = json.loads(CONFIG.read_text(encoding='utf-8')) if CONFIG.exists() else {}
+    unknown = set(config)-set(DEFAULTS) | set(config.get('outputs', {}))-set(OUTPUTS)
+    if unknown:
+        raise SystemExit(f'{CONFIG.name}: unknown settings: '+', '.join(sorted(unknown)))
+    settings = {**DEFAULTS, **config}
+    if settings['scheme'] not in SCHEMES:
+        raise SystemExit(f'{CONFIG.name}: scheme must be one of '+', '.join(SCHEMES))
+    return settings
+
+
+def outputs():
+    settings = load_config()
+    has_commits = subprocess.run(['git','rev-parse','--verify','-q','HEAD'], cwd=ROOT, capture_output=True).returncode == 0
+    log = subprocess.check_output(['git','log','--first-parent','--reverse','--date=short','--format=%s%x1f%ad'], cwd=ROOT, text=True) if has_commits else ''
     records = [line.rsplit('\x1f',1) for line in log.splitlines() if '\x1f' in line]
-    data = build(records, read_notes(ROOT/'docs/development/changelog-notes'))
-    project = ROOT/'client/project.godot'
-    current = project.read_text()
-    line = 'config/version="'+data['version']+'"'
-    if re.search(r'^config/version=', current, re.M):
-        config = re.sub(r'^config/version=.*$', line, current, flags=re.M)
-    else:
-        config = current.replace('[application]', '[application]\n\n'+line, 1)
-    return {ROOT/'client/data/changelog.json':json.dumps(data,ensure_ascii=False,indent=2)+'\n', project:config}
+    data = build(records, read_notes(ROOT/settings['notes_dir']), settings['scheme'], settings['legacy_minor_entries'])
+    targets = settings['outputs']
+    result = {}
+    if targets.get('json'):
+        result[ROOT/targets['json']] = json.dumps(data,ensure_ascii=False,indent=2)+'\n'
+    if targets.get('markdown'):
+        result[ROOT/targets['markdown']] = render_markdown(data)
+    spec = targets.get('version_file')
+    if spec and data['version']:
+        path = ROOT/spec['path']
+        result[path] = update_version_line(path.read_text(encoding='utf-8') if path.exists() else '', spec, data['version'])
+    return result
 
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument('--check',action='store_true')
+    parser.add_argument('--check',action='store_true',help='fail if a generated file is stale')
+    parser.add_argument('--outputs',action='store_true',help='print the generated paths, one per line')
     args = parser.parse_args()
+    if args.outputs:
+        for path in outputs():print(path.relative_to(ROOT))
+        return
     stale = []
     for path, content in outputs().items():
         if args.check:
-            if not path.exists() or path.read_text()!=content:stale.append(str(path.relative_to(ROOT)))
+            if not path.exists() or path.read_text(encoding='utf-8')!=content:stale.append(str(path.relative_to(ROOT)))
         else:
             path.parent.mkdir(parents=True,exist_ok=True)
-            path.write_text(content)
+            path.write_text(content,encoding='utf-8')
     if stale:raise SystemExit('Changelog needs refresh: '+', '.join(stale))
 
 if __name__=='__main__':main()
